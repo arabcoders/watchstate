@@ -141,10 +141,10 @@ final class Webhooks
 
         if (true !== $metadataOnly && true !== (bool)ag($backend, 'import.enabled')) {
             $response = api_response(Status::NOT_ACCEPTABLE);
-            $this->write($request, Level::Error, r("Import are disabled for '{user}@{backend}'.", [
+            $this->write($request, Level::Warning, "Import are disabled for '{user}@{backend}'.", context: [
                 'user' => $userContext->name,
                 'backend' => $client->getName(),
-            ]), forceContext: true);
+            ], forceContext: true);
 
             return $response;
         }
@@ -157,10 +157,10 @@ final class Webhooks
 
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
             $this->write(
-                $request,
-                Level::Info,
-                "Ignoring '{user}@{backend}' {item.type} '{item.title}'. No valid/supported external ids.",
-                [
+                request: $request,
+                level: Level::Info,
+                message: "Ignoring '{user}@{backend}' {item.type} '{item.title}'. No valid/supported external ids.",
+                context: [
                     'user' => $userContext->name,
                     'backend' => $entity->via,
                     'item' => [
@@ -175,10 +175,10 @@ final class Webhooks
 
         if ((0 === (int)$entity->episode || null === $entity->season) && $entity->isEpisode()) {
             $this->write(
-                $request,
-                Level::Notice,
-                "Ignoring '{user}@{backend}' {item.type} '{item.title}'. No episode/season number present.",
-                [
+                request: $request,
+                level: Level::Notice,
+                message: "Ignoring '{user}@{backend}' {item.type} '{item.title}'. No episode/season number present.",
+                context: [
                     'user' => $userContext->name,
                     'backend' => $entity->via,
                     'item' => [
@@ -213,24 +213,25 @@ final class Webhooks
         ]);
 
         $this->write(
-            $request,
-            Level::Info,
-            "Queued {tainted} request '{user}@{backend}: {event}' {item.type} '{item.title}' - 'state: {state}, progress: {has_progress}'. request_id '{req}'.",
-            [
+            request: $request,
+            level: Level::Info,
+            message: "Queuing '{user}@{backend}' {tainted} request for {item.type} '{item.title}'. {data}.",
+            context: [
                 'user' => $userContext->name,
                 'backend' => $entity->via,
-                'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT),
-                'has_progress' => $entity->hasPlayProgress() ? 'Yes' : 'No',
-                'req' => ag($request->getServerParams(), 'X_REQUEST_ID', '-'),
-                'state' => $entity->isWatched() ? 'played' : 'unplayed',
                 'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
                 'item' => [
-                    'title' => $entity->getName(),
                     'type' => $entity->type,
-                    'played' => $entity->isWatched() ? 'Yes' : 'No',
+                    'title' => $entity->getName(),
+                ],
+                'data' => arrayToString([
+                    'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, '?'),
+                    'played' => $entity->isWatched(),
+                    'has_progress' => $entity->hasPlayProgress(),
+                    'request_id' => ag($request->getServerParams(), 'X_REQUEST_ID', '-'),
                     'queue_id' => $itemId,
                     'progress' => $entity->hasPlayProgress() ? $entity->getPlayProgress() : null,
-                ]
+                ]),
             ]
         );
 

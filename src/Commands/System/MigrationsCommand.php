@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace App\Commands\System;
 
 use App\Command;
+use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Database\DatabaseInterface as iDB;
-use Symfony\Component\Console\Input\InputInterface;
+use App\Libs\Mappers\Import\DirectMapper;
+use App\Libs\Mappers\ImportInterface as iImport;
 use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Input\InputInterface as iInput;
+use Symfony\Component\Console\Output\OutputInterface as iOutput;
+use Psr\Log\LoggerInterface as iLogger;
 
 /**
  * Class MigrationsCommand
@@ -22,13 +26,15 @@ final class MigrationsCommand extends Command
     public const string ROUTE = 'system:db:migrations';
 
     /**
-     * Class Constructor.
+     * Class constructor.
      *
-     * @param iDB $db The database connection object.
-     *
+     * @param iDB $db An instance of the iDB class.
      */
-    public function __construct(private iDB $db)
-    {
+    public function __construct(
+        #[Inject(DirectMapper::class)]
+        private readonly iImport $mapper,
+        private readonly iLogger $logger,
+    ) {
         parent::__construct();
     }
 
@@ -54,24 +60,24 @@ final class MigrationsCommand extends Command
     /**
      * Make sure the command is not running in parallel.
      *
-     * @param InputInterface $input The input object containing the command data.
-     * @param OutputInterface $output The output object for displaying command output.
+     * @param iInput $input The input object containing the command data.
+     * @param iOutput $output The output object for displaying command output.
      *
      * @return int The exit code of the command execution.
      */
-    protected function runCommand(InputInterface $input, OutputInterface $output): int
+    protected function runCommand(iInput $input, iOutput $output): int
     {
-        return $this->single(fn(): int => $this->process($input), $output);
+        return $this->single(fn (): int => $this->process($input, $output), $output);
     }
 
     /**
      * Run the command to migrate the database.
      *
-     * @param InputInterface $input The input object representing the command inputs.
+     * @param iInput $input The input object representing the command inputs.
      *
      * @return int The exit code of the command execution.
      */
-    protected function process(InputInterface $input): int
+    protected function process(iInput $input, iOutput $output): int
     {
         $opts = [];
 
@@ -79,6 +85,14 @@ final class MigrationsCommand extends Command
             $opts['fresh'] = true;
         }
 
-        return $this->db->migrations(iDB::MIGRATE_UP, $opts);
+        foreach (getUsersContext(mapper:$this->mapper, logger:$this->logger) as $userContext) {
+            $output->writeln(r("Running database migrations for '{user}' database.", [
+                'user' => $userContext->name
+            ]), iOutput::VERBOSITY_VERBOSE);
+
+            $userContext->db->migrations(iDB::MIGRATE_UP, $opts);
+        }
+
+        return self::SUCCESS;
     }
 }

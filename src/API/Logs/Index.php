@@ -30,6 +30,12 @@ final class Index
     public const string URL_FILE = '%{api.prefix}/log';
     private const int DEFAULT_LIMIT = 1000;
     private int $counter = 1;
+    private array $users = [];
+
+    public function __construct(iImport $mapper, iLogger $logger)
+    {
+        $this->users = array_keys(getUsersContext(mapper: $mapper, logger: $logger));
+    }
 
     #[Get(self::URL . '[/]', name: 'logs')]
     public function logsList(iRequest $request): iResponse
@@ -61,10 +67,8 @@ final class Index
     }
 
     #[Get(Index::URL . '/recent[/]', name: 'logs.recent')]
-    public function recent(iRequest $request, iImport $mapper, iLogger $logger): iResponse
+    public function recent(iRequest $request): iResponse
     {
-        $users = array_keys(getUsersContext(mapper: $mapper, logger: $logger));
-
         $path = fixPath(Config::get('tmpDir') . '/logs');
 
         $list = [];
@@ -74,9 +78,6 @@ final class Index
         $params = DataUtil::fromArray($request->getQueryParams());
         $limit = (int)$params->get('limit', 50);
         $limit = $limit < 1 ? 50 : $limit;
-        $dateRegex = '/^\[([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?[+-][0-9]{2}:[0-9]{2})]/i';
-        $identRegex = "/\'(?P<user>\w+)\@(?P<backend>\w+)\'/i";
-        $idRegex = "/\'#(?P<id>\d+)\:/";
 
         foreach (glob($path . '/*.*.log') as $file) {
             preg_match('/(\w+)\.(\w+)\.log/i', basename($file), $matches);
@@ -108,35 +109,16 @@ final class Index
                         continue;
                     }
 
-                    $match = preg_match($dateRegex, $line, $matches);
-                    $idMatch = preg_match($idRegex, $line, $idMatches);
-                    $identMatch = preg_match($identRegex, $line, $identMatches);
-
-                    $logLine = [
-                        'id' => null,
-                        'user' => null,
-                        'backend' => null,
-                        'date' => 1 === $match ? $matches[1] : null,
-                        'text' => 1 === $match ? trim(preg_replace($dateRegex, '', $line)) : $line,
-                    ];
-
-                    if (1 === $idMatch) {
-                        $logLine['id'] = $idMatches['id'];
-                    }
-
-                    if (1 === $identMatch && in_array($identMatches['user'], $users, true)) {
-                        $logLine['user'] = $identMatches['user'];
-                        $logLine['backend'] = $identMatches['backend'];
-                    }
-
-                    $builder['lines'][] = $logLine;
+                    $builder['lines'][] = self::formatLog($line, $this->users);
                 }
             }
 
             $list[] = $builder;
         }
 
-        return api_response(Status::OK, $list);
+        return api_response(Status::OK, $list, headers: [
+            'X-No-AccessLog' => '1'
+        ]);
     }
 
     #[Route(['GET', 'DELETE'], Index::URL_FILE . '/{filename}[/]', name: 'logs.view')]
@@ -191,12 +173,7 @@ final class Index
 
         foreach ($it as $line) {
             $line = trim((string)$line);
-
-            if (empty($line)) {
-                continue;
-            }
-
-            $stream->write($line . PHP_EOL);
+            $stream->write(json_encode(self::formatLog($line, $this->users)) . PHP_EOL);
         }
 
         $stream->rewind();
@@ -240,7 +217,7 @@ final class Index
                                 if (!is_string($data)) {
                                     return null;
                                 }
-                                return 'data: ' . trim($data);
+                                return 'data: ' . json_encode(self::formatLog(trim($data), $this->users));
                             },
                             (array)preg_split("/\R/", $data)
                         )
@@ -294,5 +271,45 @@ final class Index
             'Connection' => 'keep-alive',
             'X-Accel-Buffering' => 'no',
         ]);
+    }
+
+    /**
+     * Format log line.
+     *
+     * @param string $line
+     * @param array $users
+     *
+     * @return array
+     */
+    public static function formatLog(string $line, array $users = []): array
+    {
+        if (empty($line)) {
+            return ['item_id' => null, 'user' => null, 'backend' => null, 'date' => null, 'text' => $line];
+        }
+
+        $dateRegex = '/^\[([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?[+-][0-9]{2}:[0-9]{2})]/i';
+
+        $dateMatch = preg_match($dateRegex, $line, $matches);
+        $idMatch = preg_match("/'#(?P<item_id>\d+):/", $line, $idMatches);
+        $identMatch = preg_match("/'((?P<client>\w+):\s)?(?P<user>\w+)@(?P<backend>\w+)'/i", $line, $identMatches);
+
+        $logLine = [
+            'item_id' => null,
+            'user' => null,
+            'backend' => null,
+            'date' => 1 === $dateMatch ? $matches[1] : null,
+            'text' => 1 === $dateMatch ? trim(preg_replace($dateRegex, '', $line)) : $line,
+        ];
+
+        if (1 === $idMatch) {
+            $logLine['item_id'] = $idMatches['item_id'];
+        }
+
+        if (1 === $identMatch && in_array($identMatches['user'], $users, true)) {
+            $logLine['user'] = $identMatches['user'];
+            $logLine['backend'] = $identMatches['backend'];
+        }
+
+        return $logLine;
     }
 }

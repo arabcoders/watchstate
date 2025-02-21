@@ -8,6 +8,7 @@ use App\Libs\Attributes\Route\Delete;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Attributes\Route\Patch;
 use App\Libs\Attributes\Route\Post;
+use App\Libs\Database\DBLayer;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Model\Events\Event as EntityItem;
@@ -73,6 +74,16 @@ final readonly class Events
         }
 
         return api_response(Status::OK, $arr);
+    }
+
+    #[Delete(pattern: self::URL . '[/]')]
+    public function removeAll(): iResponse
+    {
+        $this->repo->remove([
+            EntityTable::COLUMN_STATUS => [DBLayer::IS_NOT_EQUAL, EventStatus::PENDING->value],
+        ]);
+
+        return api_response(Status::OK);
     }
 
     #[Post(pattern: self::URL . '[/]')]

@@ -9,6 +9,7 @@ use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Response;
 use App\Backends\Plex\PlexActionTrait;
+use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Method;
@@ -127,7 +128,7 @@ class Progress
 
             if ($context->backendName === $entity->via) {
                 $this->logger->info(
-                    message: "{action}: Not processing '{item.title}' for '{client}: {user}@{backend}'. Event originated from this backend.",
+                    message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. Event originated from this backend.",
                     context: $logContext,
                 );
                 continue;
@@ -135,7 +136,7 @@ class Progress
 
             if (null === ag($metadata, iState::COLUMN_ID, null)) {
                 $this->logger->warning(
-                    message: "{action}: Not processing '{item.title}' for '{client}: {user}@{backend}'. No metadata was found.",
+                    message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. No metadata was found.",
                     context: $logContext,
                 );
                 continue;
@@ -144,7 +145,7 @@ class Progress
             $senderDate = ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_DATE);
             if (null === $senderDate) {
                 $this->logger->warning(
-                    message: "{action}: Not processing '{item.title}' for '{client}: {user}@{backend}'. The event originator did not set a date.",
+                    message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. The event originator did not set a date.",
                     context: $logContext,
 
                 );
@@ -157,7 +158,7 @@ class Progress
 
             if (false === $ignoreDate && null !== $datetime && makeDate($datetime)->getTimestamp() > $senderDate) {
                 $this->logger->warning(
-                    message: "{action}: Not processing '{item.title}' for '{client}: {user}@{backend}'. Event date is older than backend local item date.",
+                    message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. Event date is older than backend local item date.",
                     context: [
                         ...$logContext,
                         'compare' => ['remote' => makeDate($datetime), 'sender' => makeDate($senderDate),],
@@ -170,7 +171,7 @@ class Progress
 
             if (array_key_exists($logContext['remote']['id'], $sessions)) {
                 $this->logger->notice(
-                    message: "{action}: Not processing '{item.title}' for '{client}: {user}@{backend}'. The item is playing right now.",
+                    message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. The item is playing right now.",
                     context: $logContext,
                 );
                 continue;
@@ -187,7 +188,7 @@ class Progress
 
                 if (false === $ignoreDate && makeDate($remoteItem->updated)->getTimestamp() > $senderDate) {
                     $this->logger->info(
-                        message: "{action}: Not processing '{item.title}' for '{client}: {user}@{backend}'. Event date is older than backend remote item date.",
+                        message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. Event date is older than backend remote item date.",
                         context: [
                             ...$logContext,
                             'compare' => [
@@ -200,16 +201,20 @@ class Progress
                 }
 
                 if ($remoteItem->isWatched()) {
-                    $this->logger->info(
-                        message: "{action}: Not processing '{item.title}' for '{client}: {user}@{backend}'. The backend says the item is marked as watched.",
-                        context: $logContext,
-                    );
-                    continue;
+                    $allowUpdate = (int)Config::get('progress.threshold', 0);
+                    $minThreshold = (int)Config::get('progress.minThreshold', 86_400);
+                    if (false === ($allowUpdate >= $minThreshold && time() > ($entity->updated + $allowUpdate))) {
+                        $this->logger->info(
+                            message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. The backend says the item is marked as watched.",
+                            context: $logContext,
+                        );
+                        continue;
+                    }
                 }
             } catch (\App\Libs\Exceptions\RuntimeException|RuntimeException|InvalidArgumentException $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' get {item.type} '{item.title}' status. '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' get {item.type} '#{item.id}: {item.title}' status. '{error.message}' at '{error.file}:{error.line}'.",
                         context: [
                             'error' => [
                                 'kind' => $e::class,
@@ -248,7 +253,7 @@ class Progress
                 $logContext['remote']['url'] = (string)$url;
 
                 $this->logger->debug(
-                    message: "{action}: Updating '{client}: {user}@{backend}' {item.type} '{item.title}' watch progress to '{progress}'.",
+                    message: "{action}: Updating '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' watch progress to '{progress}'.",
                     context: [
                         ...$logContext,
                         'progress' => formatDuration($entity->getPlayProgress()),
@@ -270,7 +275,7 @@ class Progress
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' change {item.type} '{item.title}' watch progress. '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' change {item.type} '#{item.id}: {item.title}' watch progress. '{error.message}' at '{error.file}:{error.line}'.",
                         context: [
                             'error' => [
                                 'kind' => $e::class,

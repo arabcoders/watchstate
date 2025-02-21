@@ -181,6 +181,28 @@ return (function () {
             'description' => 'The path to save the profiler data.',
             'type' => 'string',
         ],
+        [
+            'key' => 'WS_PROGRESS_THRESHOLD',
+            'description' => 'Allow watch progress sync for played items. Expects seconds. Minimum 180. 0 to disable.',
+            'type' => 'string',
+            'validate' => function (mixed $value): string {
+                if (!is_numeric($value) && empty($value)) {
+                    throw new ValidationException('Invalid progress threshold. Empty value.');
+                }
+
+                if (false === is_numeric($value)) {
+                    throw new ValidationException('Invalid progress threshold. Must be a number.');
+                }
+
+                $cmp = (int)$value;
+
+                if (0 !== $cmp && $cmp < 180) {
+                    throw new ValidationException('Invalid progress threshold. Must be at least 180 seconds.');
+                }
+
+                return $value;
+            },
+        ],
     ];
 
     $validateCronExpression = function (string $value): string {

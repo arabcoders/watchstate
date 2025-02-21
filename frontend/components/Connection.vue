@@ -136,7 +136,7 @@
 </template>
 
 <script setup>
-import {defineEmits, ref} from 'vue'
+import {ref} from 'vue'
 import {useStorage} from '@vueuse/core'
 import {notification} from '~/utils/index'
 import awaiter from '~/utils/awaiter'

@@ -9,6 +9,19 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ## Updates
 
+### 2025-02-19
+
+We have introduced new experimental feature to allow syncing watch progress for played items. This feature is still in
+early stages, and might not work as expected. and there are probably still many bugs that we need to fix. Please report
+any issues you might face.
+
+The feature is disabled by default, to enable it you need to run add this environment variable `WS_PROGRESS_THRESHOLD`
+with seconds as value, the minimum value is `180` seconds. `0` seconds means it's disabled. We think reasonable value is
+`86400` or more this number is about 1day.
+
+We are still not keen on this feature, and it might be removed in future releases if we aren't able to deal with the
+issues we are facing.
+
 ### 2025-02-11
 
 We recently have added support to generate accesstoken for external `Plex` users, i.e. `not home users`. so the
@@ -21,27 +34,6 @@ We have added initial support to browse the WebUI as sub user, it's still in ear
 it.
 We have also added support to webhooks to allow sub users, you simply have to add new hooks using `user@backend`. Please
 take look at [this FAQ](FAQ.md#how-to-add-webhooks) to learn how to use it for sub users.
-
-### 2025-02-02
-
-We are happy to announce that we have merged in direct support for multi-user in `state:import` and `state:export`
-commands and tasks. Therefore, `state:sync` command has been removed. Once you generate the sub users configs. it will
-start working alongside the main user.
-
-### 2025-02-01
-
-Breaking changes as of version 20250201~, in earlier versions, if you want to sync multi-user play state, you only had
-to run `state:sync` command, However, due to us extending support for more operation to support multi-user data, we
-needed a way to generate per user config instead of relying on `state:sync`, thus we have introduced a new command
-called `backends:create`, the purpose of this command is to generate the needed config files for each user.
-
-This change allow us to support more operations in the future.
-
-We also have minor breaking change in per user db name, before it was named `user_name.db`, now it's named `user.db`
-this change shouldn't effect you as we have backward compatibility in place to rename the old db to the new name.
-
-for more information about multi-user, Please read the FAQ entry about it
-at [this link](FAQ.md#is-there-support-for-multi-user-setup).
 
 --- 
 Refer to [NEWS](NEWS.md) for old updates.

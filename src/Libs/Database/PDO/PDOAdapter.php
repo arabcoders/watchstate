@@ -7,6 +7,7 @@ namespace App\Libs\Database\PDO;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Database\DBLayer;
+use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\DBAdapterException as DBException;
 use App\Libs\Options;
@@ -276,6 +277,7 @@ final class PDOAdapter implements iDB
         $list = [];
 
         foreach ($items as $item) {
+            /** @var iState $item */
             if (null === ($entity = $this->get($item))) {
                 continue;
             }

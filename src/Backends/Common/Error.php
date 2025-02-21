@@ -18,12 +18,14 @@ final readonly class Error implements Stringable
      * @param array $context Error message context.
      * @param Levels $level Which log level the error should be logged into.
      * @param Throwable|null $previous Previous exception stack trace.
+     * @param array $extra Extra information to pass.
      */
     public function __construct(
         public string $message,
         public array $context = [],
         public Levels $level = Levels::ERROR,
         public Throwable|null $previous = null,
+        public array $extra = [],
     ) {
     }
 

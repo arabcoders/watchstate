@@ -1424,7 +1424,7 @@ if (!function_exists('addCors')) {
     {
         $headers += [
             'Access-Control-Max-Age' => 600,
-            'Access-Control-Allow-Headers' => 'X-Application-Version, X-Request-Id, *',
+            'Access-Control-Allow-Headers' => 'X-Application-Version, X-Request-Id, Authorization, *',
             'Access-Control-Allow-Origin' => '*',
         ];
 

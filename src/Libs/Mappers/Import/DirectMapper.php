@@ -333,7 +333,13 @@ class DirectMapper implements ImportInterface
                 $this->removePointers($local)->addPointers($local, $local->id);
 
                 $changes = $local->diff(fields: $keys);
-                $progress = !$entity->isWatched() && $playChanged && $entity->hasPlayProgress();
+                $allowUpdate = (int)Config::get('progress.threshold', 0);
+                $minThreshold = (int)Config::get('progress.minThreshold', 86_400);
+
+                $progress = $playChanged && $entity->hasPlayProgress();
+                if ($entity->isWatched() && $allowUpdate < $minThreshold) {
+                    $progress = false;
+                }
 
                 if (count($changes) >= 1) {
                     $_keys = array_merge($keys, [iState::COLUMN_EXTRA]);
@@ -356,7 +362,7 @@ class DirectMapper implements ImportInterface
 
                 if (false === $inDryRunMode) {
                     $this->db->update($local);
-                    if (true === $entity->hasPlayProgress() && !$entity->isWatched()) {
+                    if (true === $progress) {
                         $itemId = r('{type}://{id}:{tainted}@{backend}', [
                             'type' => $entity->type,
                             'backend' => $entity->via,
@@ -437,13 +443,16 @@ class DirectMapper implements ImportInterface
         }
 
         if ($this->inTraceMode()) {
-            $this->logger->info("{mapper}: [T] Ignoring '{user}@{backend}' - '#{id}: {title}'. No metadata changes detected.", [
-                'user' => $this->userContext?->name ?? 'main',
-                'mapper' => afterLast(self::class, '\\'),
-                'id' => $local->id ?? 'New',
-                'backend' => $entity->via,
-                'title' => $local->getName(),
-            ]);
+            $this->logger->info(
+                "{mapper}: [T] Ignoring '{user}@{backend}' - '#{id}: {title}'. No metadata changes detected.",
+                [
+                    'user' => $this->userContext?->name ?? 'main',
+                    'mapper' => afterLast(self::class, '\\'),
+                    'id' => $local->id ?? 'New',
+                    'backend' => $entity->via,
+                    'title' => $local->getName(),
+                ]
+            );
         }
 
         return $this;
@@ -545,7 +554,13 @@ class DirectMapper implements ImportInterface
                     $this->removePointers($cloned)->addPointers($local, $local->id);
 
                     $changes = $local->diff(fields: $keys);
-                    $progress = !$entity->isWatched() && $playChanged && $entity->hasPlayProgress();
+                    $allowUpdate = (int)Config::get('progress.threshold', 0);
+                    $minThreshold = (int)Config::get('progress.minThreshold', 86_400);
+
+                    $progress = $playChanged && $entity->hasPlayProgress();
+                    if ($entity->isWatched() && $allowUpdate < $minThreshold) {
+                        $progress = false;
+                    }
 
                     if (count($changes) >= 1) {
                         $_keys = array_merge($keys, [iState::COLUMN_EXTRA]);
@@ -568,8 +583,7 @@ class DirectMapper implements ImportInterface
 
                     if (false === $inDryRunMode) {
                         $this->db->update($local);
-
-                        if (true === $entity->hasPlayProgress() && !$entity->isWatched()) {
+                        if ($progress) {
                             $itemId = r('{type}://{id}:{tainted}@{backend}', [
                                 'type' => $entity->type,
                                 'backend' => $entity->via,

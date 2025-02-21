@@ -86,17 +86,17 @@
             </NuxtLink>
           </span>
         </h1>
-        <code class="box logs-container"><span class="is-block" v-for="(item, index) in log.lines"
-                                               :key="log.filename + '-' + index">
-          <template v-if="item?.date">[<span class="has-tooltip"
+        <code class="box logs-container">
+          <span class="is-block" v-for="(item, index) in log.lines" :key="log.filename + '-' + index">
+            <template v-if="item?.date">[<span class="has-tooltip"
                                              v-tooltip="`${moment(item.date).format(TOOLTIP_DATE_FORMAT)}`">
             {{ moment(item.date).format('HH:mm:ss') }}</span>]
           </template>
-          <template v-if="item?.id">
-            <NuxtLink @click="gotoHistoryItem(item)">
+          <template v-if="item?.item_id">
+            <NuxtLink @click="goto_history_item(item)">
               <span class="icon-text">
-                <span class="icon"> <i class="fas fa-hashtag"/> </span>
-                <span>View Item</span>
+                <span class="icon"><i class="fas fa-history"/></span>
+                <span>View</span>
               </span>
             </NuxtLink>&nbsp;
           </template>
@@ -142,7 +142,7 @@
 import request from '~/utils/request'
 import moment from 'moment'
 import Message from '~/components/Message'
-import {formatDuration, makeName, TOOLTIP_DATE_FORMAT} from '../utils/index'
+import {formatDuration, makeName, TOOLTIP_DATE_FORMAT, goto_history_item} from '~/utils/index'
 import {NuxtLink} from '#components'
 import {useStorage} from '@vueuse/core'
 
@@ -195,21 +195,4 @@ const reloadLogs = async () => {
 
 onMounted(async () => loadContent())
 onUpdated(() => document.querySelectorAll('.logs-container').forEach((el) => el.scrollTop = el.scrollHeight))
-
-const gotoHistoryItem = async item => {
-  if (!item.id) {
-    return
-  }
-
-  const log_user = item?.user ?? api_user.value
-
-  if (log_user !== api_user.value) {
-    if (false === confirm(`This item is related to '${item.user}' user. And you are currently using '${api_user.value}' Do you want to switch to view the item?`)) {
-      return
-    }
-    api_user.value = log_user
-  }
-
-  await navigateTo(`/history/${item.id}`)
-}
 </script>

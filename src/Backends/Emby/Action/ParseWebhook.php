@@ -14,6 +14,7 @@ use App\Backends\Emby\EmbyActionTrait;
 use App\Backends\Emby\EmbyClient;
 use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Libs\Config;
+use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
@@ -152,7 +153,12 @@ final class ParseWebhook
         }
 
         try {
-            $obj = $this->getItemDetails(context: $context, id: $id);
+            $resp = Container::get(GetMetaData::class)(context: $context, id: $id);
+            if (!$resp->isSuccessful()) {
+                return $resp;
+            } else {
+                $obj = $resp->response;
+            }
 
             if ('item.markplayed' === $event || 'playback.scrobble' === $event) {
                 $isPlayed = 1;

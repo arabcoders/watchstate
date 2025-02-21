@@ -62,20 +62,19 @@ final readonly class ProcessRequestEvent
             $lastSync = makeDate($lastSync);
         }
 
-        $message = r(
-            "Processing {tainted} request '{user}@{backend}: {event}' {title} - 'state: {played}, progress: {has_progress}'. request_id '{req}'.",
-            [
-                'backend' => $entity->via,
-                'req' => ag($e->getOptions(), Options::REQUEST_ID, '-'),
-                'played' => $entity->isWatched() ? 'played' : 'unplayed',
-                'title' => $entity->getName(),
+        $message = r("Processing '{user}@{backend}' {tainted} request '{title}'. {data}", [
+            'backend' => $entity->via,
+            'title' => $entity->getName(),
+            'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
+            'lastSync' => $lastSync,
+            'user' => $userContext->name,
+            'data' => arrayToString([
                 'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, '??'),
-                'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
-                'has_progress' => $entity->hasPlayProgress() ? 'Yes' : 'No',
-                'lastSync' => $lastSync,
-                'user' => $userContext->name,
-            ]
-        );
+                'state' => $entity->isWatched() ? 'played' : 'unplayed',
+                'progress' => $entity->hasPlayProgress() ? 'Yes' : 'No',
+                'request_id' => ag($e->getOptions(), Options::REQUEST_ID, '-'),
+            ]),
+        ]);
 
         $writer(Level::Notice, $message);
 
@@ -95,7 +94,7 @@ final readonly class ProcessRequestEvent
 
         $mapper->add($entity, [
             Options::IMPORT_METADATA_ONLY => (bool)ag($e->getOptions(), Options::IMPORT_METADATA_ONLY),
-            Options::STATE_UPDATE_EVENT => fn(iState $state) => queuePush(entity: $state, userContext: $userContext),
+            Options::STATE_UPDATE_EVENT => fn (iState $state) => queuePush(entity: $state, userContext: $userContext),
             'after' => $lastSync,
         ]);
 

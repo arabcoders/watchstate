@@ -8,21 +8,27 @@
         </span>
         <div class="is-pulled-right">
           <div class="field is-grouped">
-            <div class="control has-icons-left" v-if="toggleFilter">
+            <div class="control has-icons-left" v-if="toggleFilter || query">
               <input type="search" v-model.lazy="query" class="input" id="filter" placeholder="Filter">
-              <span class="icon is-left"><i class="fas fa-filter"></i></span>
+              <span class="icon is-left"><i class="fas fa-filter"/></span>
             </div>
 
             <div class="control">
               <button class="button is-danger is-light" @click="toggleFilter = !toggleFilter">
-                <span class="icon"><i class="fas fa-filter"></i></span>
+                <span class="icon"><i class="fas fa-filter"/></span>
+              </button>
+            </div>
+
+            <div class="control">
+              <button class="button is-danger" @click="deleteAll" v-tooltip.bottom="'Remove All non pending events.'">
+                <span class="icon"><i class="fas fa-trash"/></span>
               </button>
             </div>
 
             <p class="control">
-              <button class="button is-info" @click="loadContent(page, false)"
-                      :class="{'is-loading': isLoading}" :disabled="isLoading">
-                <span class="icon"><i class="fas fa-sync"></i></span>
+              <button class="button is-info" @click="loadContent(page, false)" :class="{ 'is-loading': isLoading }"
+                      :disabled="isLoading">
+                <span class="icon"><i class="fas fa-sync"/></span>
               </button>
             </p>
           </div>
@@ -56,21 +62,19 @@
         <div class="card">
           <header class="card-header is-align-self-flex-end">
             <div class="card-header-title is-block">
-              <NuxtLink :to="`/events/view/?id=${item.id}`" v-text="makeName(item.id)"/>
+              <NuxtLink @click="quick_view = item.id" v-text="makeName(item.id)"/>
               <div class="is-pulled-right is-hidden-tablet">
                 <span class="tag" :class="getStatusClass(item.status)">{{ statuses[item.status].name }}</span>
               </div>
             </div>
-            <div class="card-header-icon" @click="item._display = !item._display"
-                 v-if="Object.keys(item.event_data).length > 0">
-              <span class="icon">
-                <i class="fas" :class="{'fa-arrow-up': item?._display, 'fa-arrow-down': !item?._display }"></i>
+            <div class="card-header-icon">
+              <span class="icon" @click="item._display = !item._display" v-if="Object.keys(item.event_data).length > 0">
+                <i class="fas" :class="{ 'fa-arrow-up': item?._display, 'fa-arrow-down': !item?._display }"/>
               </span>
             </div>
           </header>
           <div class="card-content p-0 m-0" v-if="item._display">
-            <pre class="p-0 is-pre" style="position: relative; max-height:30vh; overflow-y:scroll;"><code
-                class="language-json">{{
+            <pre class="p-0 is-pre" style="position: relative; max-height:30vh; overflow-y:scroll;"><code>{{
                 JSON.stringify(item.event_data, null, 2)
               }}</code><button class="button is-small m-4"
                                @click="() => copyText(JSON.stringify(item.event_data), false)"
@@ -133,6 +137,12 @@
         </Message>
       </div>
     </div>
+
+    <template v-if="quick_view">
+      <Overlay @closeOverlay="quick_view = null" :title="`#${makeName(quick_view)}`">
+        <EventView :id="quick_view" @delete="item => deleteItem(item)"/>
+      </Overlay>
+    </template>
   </div>
 </template>
 
@@ -156,8 +166,9 @@ const isLoading = ref(false)
 const toggleDispatcher = ref(false)
 const items = ref([])
 const statuses = ref([])
-const query = ref()
+const query = ref(route.query.filter ?? '')
 const toggleFilter = ref(false)
+const quick_view = ref()
 const show_page_tips = useStorage('show_page_tips', true)
 
 watch(toggleFilter, () => {
@@ -199,6 +210,9 @@ const loadContent = async (pageNumber, updateHistory = true) => {
     let queryParams = new URLSearchParams()
     queryParams.append('page', pageNumber)
     queryParams.append('perpage', p_perpage)
+    if (query.value) {
+      queryParams.append('filter', query.value)
+    }
 
     isLoading.value = true
     toggleDispatcher.value = false
@@ -217,13 +231,16 @@ const loadContent = async (pageNumber, updateHistory = true) => {
     useHead({title})
 
     if (true === Boolean(updateHistory)) {
-      await useRouter().push({
-        path: '/events',
-        query: {
-          perpage: p_perpage,
-          page: pageNumber,
-        }
-      })
+      let history_query = {
+        perpage: p_perpage,
+        page: pageNumber,
+      }
+
+      if (query.value) {
+        history_query.filter = query.value
+      }
+
+      await useRouter().push({path: '/events', query: history_query})
     }
 
     if ('paging' in json) {
@@ -278,7 +295,9 @@ const deleteItem = async item => {
       return
     }
 
-    items.value = items.value.filter(i => i.id !== item.id)
+    deletedItem(item.id)
+
+    notification('success', 'Success', `Event '${makeName(item.id)}' successfully deleted.`)
   } catch (e) {
     console.error(e)
     notification('crit', 'Error', `Events delete Request failure. ${e.message}`
@@ -320,4 +339,64 @@ const resetEvent = async (item, status = 0) => {
     )
   }
 }
+
+const deleteAll = async () => {
+  if (!confirm('Delete all non pending events?')) {
+    return
+  }
+
+  try {
+    const response = await request(`/system/events/`, {method: 'DELETE'})
+    if (200 !== response.status) {
+      const json = await parse_api_response(response)
+      notification('error', 'Error', `Failed to delete events. ${json.error.code}: ${json.error.message}`)
+      return
+    }
+
+    window.location.reload(true)
+  } catch (e) {
+    console.error(e)
+    notification('crit', 'Error', `Events view patch Request failure. ${e.message}`
+    )
+  }
+}
+
+const deletedItem = id => {
+  items.value = items.value.filter(i => i.id !== id)
+  if (quick_view.value) {
+    quick_view.value = null
+  }
+}
+
+watch(query, val => {
+  const route = useRoute()
+  const router = useRouter()
+  if (!val) {
+    if (!route?.query['filter']) {
+      return;
+    }
+
+    router.push({
+      'path': '/events',
+      'query': {
+        ...route.query,
+        'filter': undefined
+      }
+    })
+    return;
+  }
+
+  if (route?.query['filter'] === val) {
+    return;
+  }
+
+  router.push({
+    'path': '/events',
+    'query': {
+      ...route.query,
+      'filter': val
+    }
+  })
+})
+
 </script>
