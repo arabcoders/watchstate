@@ -101,7 +101,7 @@ class GetMetaData
                     );
 
                     if (Status::OK !== Status::from($response->getStatusCode())) {
-                        $response = new Response(
+                        return new Response(
                             status: false,
                             error: new Error(
                                 message: "{action}: Request for '{client}: {user}@{backend}' - '{id}' item returned with unexpected '{status_code}' status code.",
@@ -111,8 +111,6 @@ class GetMetaData
                                 ]
                             )
                         );
-                        $context->logger?->error($response->getError()->message, $response->getError()->context);
-                        return $response;
                     }
 
                     $item = json_decode(
