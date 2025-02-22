@@ -206,7 +206,10 @@ final class ParseWebhook
                 ]);
             }
 
-            if (false === $isPlayed && null !== ($progress = ag($item, 'viewOffset', null))) {
+            $allowUpdate = (int)Config::get('progress.threshold', 0);
+            $progCheck = $allowUpdate || 0 === $isPlayed;
+
+            if ($progCheck && null !== ($progress = ag($item, 'viewOffset', null))) {
                 // -- Plex reports play progress in milliseconds already no need to convert.
                 $fields[iState::COLUMN_META_DATA][$context->backendName][iState::COLUMN_META_DATA_PROGRESS] = (string)$progress;
             }
