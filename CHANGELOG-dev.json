@@ -1,7 +1,19 @@
 [
     {
-        "tag": "dev-20250221-89c284a",
-        "date": "2025-02-21T14:38:26+00:00",
+        "tag": "dev-20250222-1f495b3",
+        "date": "2025-02-22T12:21:40+00:00",
+        "commits": [
+            {
+                "sha": "1f495b3",
+                "message": "Fixed watch progress for jellyfin webhooks and enable watch progress for webhooks events",
+                "author": "ArabCoders",
+                "date": "2025-02-22T12:21:40+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250221-4758e86",
+        "date": "2025-02-21T14:45:57+00:00",
         "commits": [
             {
                 "sha": "89c284a",
