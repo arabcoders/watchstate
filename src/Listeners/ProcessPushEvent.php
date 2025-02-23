@@ -136,10 +136,14 @@ final readonly class ProcessPushEvent
             } catch (Throwable $e) {
                 $writer(
                     Level::Error,
-                    "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' push events. '{error.message}' at '{error.file}:{error.line}'.",
+                    "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' - '#{item.id}: {item.title}' push event handling. {error.message} at '{error.file}:{error.line}'.",
                     [
                         'user' => $user,
                         'backend' => $name,
+                        'item' => [
+                            'id' => $item->id,
+                            'title' => $item->getName(),
+                        ],
                         'error' => [
                             'kind' => $e::class,
                             'line' => $e->getLine(),
@@ -164,12 +168,14 @@ final readonly class ProcessPushEvent
             return $e;
         }
 
-        $writer(Level::Notice, "Processing '{user}: {id}' - '{via}: {title}' '{state}' push event.", [
+        $writer(Level::Notice, "Processing '{user}@{via}' - '#{id}: {title}' push event. {data}", [
             'user' => $user,
             'id' => $item->id,
             'via' => $item->via,
             'title' => $item->getName(),
-            'state' => $item->isWatched() ? 'played' : 'unplayed',
+            'data' => arrayToString([
+                'played' => $item->isWatched(),
+            ]),
         ]);
 
         foreach ($this->queue->getQueue() as $response) {
@@ -181,7 +187,7 @@ final readonly class ProcessPushEvent
                 if (Status::OK !== Status::from($response->getStatusCode())) {
                     $writer(
                         Level::Error,
-                        "Request to change '{user}@{backend}: {item.title}' play state returned with unexpected '{status_code}' status code.",
+                        "Request to change '{user}@{backend}' - '#{item.id}: {item.title}' play state returned with unexpected '{status_code}' status code.",
                         $context
                     );
                     continue;
@@ -189,13 +195,13 @@ final readonly class ProcessPushEvent
 
                 $writer(
                     Level::Notice,
-                    "Updated '{user}@{backend}: {item.title}' watch state to '{play_state}'.",
+                    "Updated '{user}@{backend}' - '#{item.id}: {item.title}' watch state to '{play_state}'.",
                     $context
                 );
             } catch (Throwable $e) {
                 $writer(
                     Level::Error,
-                    "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to change play state of {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                    "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to change play state of {item.type} '#{item.id}: {item.title}'. {error.message} at '{error.file}:{error.line}'.",
                     [
                         'error' => [
                             'kind' => $e::class,
