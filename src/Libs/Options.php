@@ -47,6 +47,7 @@ final class Options
     public const string ALT_ID = 'ALT_ID';
     public const string CONTEXT_USER = 'CONTEXT_USER';
     public const string GET_TOKENS = 'tokens';
+    public const string LOG_CONTEXT = 'LOG_CONTEXT';
 
     private function __construct()
     {

@@ -73,7 +73,7 @@ final class ParseWebhook
      */
     public function __invoke(Context $context, iGuid $guid, iRequest $request): Response
     {
-        return $this->tryResponse(context: $context, fn: fn() => $this->parse($context, $guid, $request));
+        return $this->tryResponse(context: $context, fn: fn () => $this->parse($context, $guid, $request));
     }
 
     /**
@@ -136,7 +136,9 @@ final class ParseWebhook
         }
 
         try {
-            $obj = $this->getItemDetails(context: $context, id: $id);
+            $obj = $this->getItemDetails(context: $context, id: $id, opts: [
+                Options::LOG_CONTEXT => ['request' => $json],
+            ]);
 
             $isPlayed = (bool)ag($json, 'Played');
             $lastPlayedAt = true === $isPlayed ? makeDate() : null;

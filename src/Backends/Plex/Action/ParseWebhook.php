@@ -62,7 +62,7 @@ final class ParseWebhook
     {
         return $this->tryResponse(
             context: $context,
-            fn: fn() => $this->parse($context, $guid, $request),
+            fn: fn () => $this->parse($context, $guid, $request),
             action: $this->action
         );
     }
@@ -119,7 +119,7 @@ final class ParseWebhook
         }
 
         if (null !== ($ignoreIds = ag($context->options, 'ignore', null))) {
-            $ignoreIds = array_map(fn($v) => trim($v), explode(',', (string)$ignoreIds));
+            $ignoreIds = array_map(fn ($v) => trim($v), explode(',', (string)$ignoreIds));
         }
 
         if (null !== $ignoreIds && in_array(ag($item, 'librarySectionID', '???'), $ignoreIds)) {
@@ -130,7 +130,9 @@ final class ParseWebhook
         }
 
         try {
-            $obj = ag($this->getItemDetails(context: $context, id: $id), 'MediaContainer.Metadata.0', []);
+            $obj = ag($this->getItemDetails(context: $context, id: $id, opts: [
+                Options::LOG_CONTEXT => ['request' => $json],
+            ]), 'MediaContainer.Metadata.0', []);
 
             $isPlayed = (bool)ag($item, 'viewCount', false);
             $lastPlayedAt = true === $isPlayed ? ag($item, 'lastViewedAt') : null;

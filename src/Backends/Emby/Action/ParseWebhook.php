@@ -88,7 +88,7 @@ final class ParseWebhook
     {
         return $this->tryResponse(
             context: $context,
-            fn: fn() => $this->parse($context, $guid, $request),
+            fn: fn () => $this->parse($context, $guid, $request),
             action: $this->action,
         );
     }
@@ -153,7 +153,9 @@ final class ParseWebhook
         }
 
         try {
-            $resp = Container::get(GetMetaData::class)(context: $context, id: $id);
+            $resp = Container::get(GetMetaData::class)(context: $context, id: $id, opts:[
+                Options::LOG_CONTEXT => ['request' => $json],
+            ]);
             if (!$resp->isSuccessful()) {
                 return $resp;
             } else {
