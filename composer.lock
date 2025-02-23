@@ -783,16 +783,16 @@
     },
     {
       "name": "perftools/php-profiler",
-      "version": "1.1.2",
+      "version": "1.2.0",
       "source": {
         "type": "git",
         "url": "https://github.com/perftools/php-profiler.git",
-        "reference": "b5051e96679aa0d6cb3afe9a13a4e6a1fd890fea"
+        "reference": "1105db3deded46d56879900d22c447808e39d0a9"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/perftools/php-profiler/zipball/b5051e96679aa0d6cb3afe9a13a4e6a1fd890fea",
-        "reference": "b5051e96679aa0d6cb3afe9a13a4e6a1fd890fea",
+        "url": "https://api.github.com/repos/perftools/php-profiler/zipball/1105db3deded46d56879900d22c447808e39d0a9",
+        "reference": "1105db3deded46d56879900d22c447808e39d0a9",
         "shasum": ""
       },
       "require": {
@@ -839,9 +839,9 @@
       "description": "PHP Profiling based on XHGui",
       "support": {
         "issues": "https://github.com/perftools/php-profiler/issues",
-        "source": "https://github.com/perftools/php-profiler/tree/1.1.2"
+        "source": "https://github.com/perftools/php-profiler/tree/1.2.0"
       },
-      "time": "2024-04-16T05:42:45+00:00"
+      "time": "2025-02-21T04:11:27+00:00"
     },
     {
       "name": "psr/cache",
@@ -3072,16 +3072,16 @@
     },
     {
       "name": "phpstan/phpstan",
-      "version": "2.1.5",
+      "version": "2.1.6",
       "source": {
         "type": "git",
         "url": "https://github.com/phpstan/phpstan.git",
-        "reference": "451b17f9665481ee502adc39be987cb71067ece2"
+        "reference": "6eaec7c6c9e90dcfe46ad1e1ffa5171e2dab641c"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/phpstan/phpstan/zipball/451b17f9665481ee502adc39be987cb71067ece2",
-        "reference": "451b17f9665481ee502adc39be987cb71067ece2",
+        "url": "https://api.github.com/repos/phpstan/phpstan/zipball/6eaec7c6c9e90dcfe46ad1e1ffa5171e2dab641c",
+        "reference": "6eaec7c6c9e90dcfe46ad1e1ffa5171e2dab641c",
         "shasum": ""
       },
       "require": {
@@ -3126,7 +3126,7 @@
           "type": "github"
         }
       ],
-      "time": "2025-02-13T12:49:56+00:00"
+      "time": "2025-02-19T15:46:42+00:00"
     },
     {
       "name": "phpunit/php-code-coverage",
@@ -3453,16 +3453,16 @@
     },
     {
       "name": "phpunit/phpunit",
-      "version": "11.5.7",
+      "version": "11.5.9",
       "source": {
         "type": "git",
         "url": "https://github.com/sebastianbergmann/phpunit.git",
-        "reference": "e1cb706f019e2547039ca2c839898cd5f557ee5d"
+        "reference": "c91c830e7108a81e5845aeb6ba8fe3c1a4351c0b"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/e1cb706f019e2547039ca2c839898cd5f557ee5d",
-        "reference": "e1cb706f019e2547039ca2c839898cd5f557ee5d",
+        "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/c91c830e7108a81e5845aeb6ba8fe3c1a4351c0b",
+        "reference": "c91c830e7108a81e5845aeb6ba8fe3c1a4351c0b",
         "shasum": ""
       },
       "require": {
@@ -3472,7 +3472,7 @@
         "ext-mbstring": "*",
         "ext-xml": "*",
         "ext-xmlwriter": "*",
-        "myclabs/deep-copy": "^1.12.1",
+        "myclabs/deep-copy": "^1.13.0",
         "phar-io/manifest": "^2.0.4",
         "phar-io/version": "^3.2.1",
         "php": ">=8.2",
@@ -3534,7 +3534,7 @@
       "support": {
         "issues": "https://github.com/sebastianbergmann/phpunit/issues",
         "security": "https://github.com/sebastianbergmann/phpunit/security/policy",
-        "source": "https://github.com/sebastianbergmann/phpunit/tree/11.5.7"
+        "source": "https://github.com/sebastianbergmann/phpunit/tree/11.5.9"
       },
       "funding": [
         {
@@ -3550,7 +3550,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2025-02-06T16:10:05+00:00"
+      "time": "2025-02-21T06:08:50+00:00"
     },
     {
       "name": "psalm/phar",
@@ -3593,12 +3593,12 @@
       "source": {
         "type": "git",
         "url": "https://github.com/Roave/SecurityAdvisories.git",
-        "reference": "74a1f3e080759ad7d1e7f2d68c1f4d754b401acd"
+        "reference": "23b2141a1db97b4e3278510ed9e74a16361619b1"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/74a1f3e080759ad7d1e7f2d68c1f4d754b401acd",
-        "reference": "74a1f3e080759ad7d1e7f2d68c1f4d754b401acd",
+        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/23b2141a1db97b4e3278510ed9e74a16361619b1",
+        "reference": "23b2141a1db97b4e3278510ed9e74a16361619b1",
         "shasum": ""
       },
       "conflict": {
@@ -3615,7 +3615,7 @@
         "airesvsg/acf-to-rest-api": "<=3.1",
         "akaunting/akaunting": "<2.1.13",
         "akeneo/pim-community-dev": "<5.0.119|>=6,<6.0.53",
-        "alextselegidis/easyappointments": "<1.5",
+        "alextselegidis/easyappointments": "<=1.5",
         "alterphp/easyadmin-extension-bundle": ">=1.2,<1.2.11|>=1.3,<1.3.1",
         "amazing/media2click": ">=1,<1.3.3",
         "ameos/ameos_tarteaucitron": "<1.2.23",
@@ -3690,7 +3690,7 @@
         "cesnet/simplesamlphp-module-proxystatistics": "<3.1",
         "chriskacerguis/codeigniter-restserver": "<=2.7.1",
         "civicrm/civicrm-core": ">=4.2,<4.2.9|>=4.3,<4.3.3",
-        "ckeditor/ckeditor": "<4.24",
+        "ckeditor/ckeditor": "<4.25",
         "cockpit-hq/cockpit": "<2.7|==2.7",
         "codeception/codeception": "<3.1.3|>=4,<4.1.22",
         "codeigniter/framework": "<3.1.9",
@@ -3937,6 +3937,7 @@
         "league/commonmark": "<2.6",
         "league/flysystem": "<1.1.4|>=2,<2.1.1",
         "league/oauth2-server": ">=8.3.2,<8.4.2|>=8.5,<8.5.3",
+        "leantime/leantime": "<3.3",
         "lexik/jwt-authentication-bundle": "<2.10.7|>=2.11,<2.11.3",
         "libreform/libreform": ">=2,<=2.0.8",
         "librenms/librenms": "<2017.08.18",
@@ -3961,7 +3962,7 @@
         "mantisbt/mantisbt": "<=2.26.3",
         "marcwillmann/turn": "<0.3.3",
         "matyhtf/framework": "<3.0.6",
-        "mautic/core": "<4.4.13|>=5,<5.1.1",
+        "mautic/core": "<4.4.13|>=5.0.0.0-alpha,<5.1.1",
         "mautic/core-lib": ">=1.0.0.0-beta,<4.4.13|>=5.0.0.0-alpha,<5.1.1",
         "maximebf/debugbar": "<1.19",
         "mdanter/ecc": "<2",
@@ -4460,7 +4461,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2025-02-12T18:06:17+00:00"
+      "time": "2025-02-21T23:05:15+00:00"
     },
     {
       "name": "sebastian/cli-parser",
