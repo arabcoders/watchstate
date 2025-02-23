@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250223-0a7b98d",
-        "date": "2025-02-23T16:54:19+00:00",
+        "tag": "dev-20250223-6a9db8f",
+        "date": "2025-02-23T17:06:39+00:00",
         "commits": [
+            {
+                "sha": "6a9db8f",
+                "message": "added seconds to full log view",
+                "author": "ArabCoders",
+                "date": "2025-02-23T17:06:39+00:00"
+            },
             {
                 "sha": "0a7b98d",
                 "message": "minor changes to some log message to make them more clear",
