@@ -1,8 +1,20 @@
 [
     {
-        "tag": "dev-20250223-7849e6f",
-        "date": "2025-02-23T13:50:54+00:00",
+        "tag": "dev-20250223-0a7b98d",
+        "date": "2025-02-23T16:54:19+00:00",
         "commits": [
+            {
+                "sha": "0a7b98d",
+                "message": "minor changes to some log message to make them more clear",
+                "author": "ArabCoders",
+                "date": "2025-02-23T16:54:19+00:00"
+            },
+            {
+                "sha": "c4d3a7b",
+                "message": "dependencies update",
+                "author": "ArabCoders",
+                "date": "2025-02-23T16:54:04+00:00"
+            },
             {
                 "sha": "7849e6f",
                 "message": "log item data in parse webhook incase getMetData request failed.",
