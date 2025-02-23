@@ -300,5 +300,5 @@ onUpdated(() => {
   updateScroll()
 });
 
-const formatDate = dt => moment(dt).format('DD/MM HH:mm')
+const formatDate = dt => moment(dt).format('DD/MM HH:mm:ss')
 </script>
