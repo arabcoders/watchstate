@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250222-5fabbf7",
-        "date": "2025-02-22T15:06:21+00:00",
+        "tag": "dev-20250223-7849e6f",
+        "date": "2025-02-23T13:50:54+00:00",
         "commits": [
+            {
+                "sha": "7849e6f",
+                "message": "log item data in parse webhook incase getMetData request failed.",
+                "author": "ArabCoders",
+                "date": "2025-02-23T13:50:54+00:00"
+            },
             {
                 "sha": "5fabbf7",
                 "message": "Dont double log on getMetadata error",
