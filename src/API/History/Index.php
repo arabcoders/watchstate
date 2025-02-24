@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\API\History;
 
 use App\API\Player\Subtitle;
+use App\Libs\APIResponse;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Delete;
 use App\Libs\Attributes\Route\Get;
@@ -12,6 +13,7 @@ use App\Libs\Attributes\Route\Route;
 use App\Libs\Container;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Guid;
@@ -621,5 +623,63 @@ final class Index
         queuePush($item, userContext: $userContext);
 
         return $this->read($request, $id);
+    }
+
+    #[Get(self::URL . '/{id:\d+}/images/{type:poster|background}[/]', name: 'history.item.images')]
+    public function fanart(iRequest $request, string $id, string $type): iResponse
+    {
+        if ($request->hasHeader('if-modified-since')) {
+            return api_response(Status::NOT_MODIFIED, headers: ['Cache-Control' => 'public, max-age=25920000']);
+        }
+
+        try {
+            $userContext = $this->getUserContext(request: $request, mapper: $this->mapper, logger: $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
+
+        $entity = Container::get(iState::class)::fromArray([iState::COLUMN_ID => $id]);
+
+        if (null === ($item = $userContext->db->get($entity))) {
+            return api_error('Not found.', Status::NOT_FOUND);
+        }
+
+        if (null === ($rId = ag($item->getMetadata($item->via), $item->isMovie() ? 'id' : 'show', null))) {
+            return api_error('Remote item id not found.', Status::NOT_FOUND);
+        }
+
+        try {
+            $client = $this->getClient(name: $item->via, userContext: $userContext);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
+
+        $images = $client->getImagesUrl($rId);
+        if (false === array_key_exists($type, $images)) {
+            return api_error('Invalid image type.', Status::BAD_REQUEST);
+        }
+
+        $apiRequest = $client->proxy(Method::GET, $images[$type]);
+
+        if (false === $apiRequest->isSuccessful()) {
+            $this->logger->log($apiRequest->error->level(), $apiRequest->error->message, $apiRequest->error->context);
+            return api_error('Failed to fetch image.', Status::BAD_REQUEST);
+        }
+
+        $response = $apiRequest->response;
+        assert($response instanceof APIResponse);
+
+        if (Status::OK !== $response->status) {
+            return api_error(r("Failed to fetch image."), $response->status);
+        }
+
+        return api_response($response->status, body: $response->stream, headers: [
+            'Pragma' => 'public',
+            'Cache-Control' => sprintf('public, max-age=%s', time() + 31536000),
+            'Last-Modified' => sprintf('%s GMT', gmdate('D, d M Y H:i:s', time())),
+            'Expires' => sprintf('%s GMT', gmdate('D, d M Y H:i:s', time() + 31536000)),
+            'Content-Type' => ag($response->headers, 'content-type', 'image/jpeg'),
+            'X-Via' => r('{user}@{backend}', ['user' => $userContext->name, 'backend' => $item->via]),
+        ]);
     }
 }

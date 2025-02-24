@@ -12,6 +12,7 @@ use App\Backends\Common\Response;
 use App\Backends\Plex\Action\Backup;
 use App\Backends\Plex\Action\Export;
 use App\Backends\Plex\Action\GetIdentifier;
+use App\Backends\Plex\Action\getImagesUrl;
 use App\Backends\Plex\Action\GetInfo;
 use App\Backends\Plex\Action\GetLibrariesList;
 use App\Backends\Plex\Action\GetLibrary;
@@ -25,6 +26,7 @@ use App\Backends\Plex\Action\Import;
 use App\Backends\Plex\Action\InspectRequest;
 use App\Backends\Plex\Action\ParseWebhook;
 use App\Backends\Plex\Action\Progress;
+use App\Backends\Plex\Action\Proxy;
 use App\Backends\Plex\Action\Push;
 use App\Backends\Plex\Action\SearchId;
 use App\Backends\Plex\Action\SearchQuery;
@@ -419,6 +421,34 @@ class PlexClient implements iClient
         }
 
         return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getImagesUrl(string|int $id, array $opts = []): array
+    {
+        $response = Container::get(getImagesUrl::class)(context: $this->context, id: $id, opts: $opts);
+
+        if (false === $response->isSuccessful()) {
+            $this->throwError($response);
+        }
+
+        return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function proxy(Method $method, iUri $uri, array|iStream $body = [], array $opts = []): Response
+    {
+        return Container::get(Proxy::class)(
+            context: $this->context,
+            method: $method,
+            uri: $uri,
+            body: $body,
+            opts: $opts
+        );
     }
 
     /**
