@@ -626,7 +626,7 @@ final class Index
     }
 
     #[Get(self::URL . '/{id:\d+}/images/{type:poster|background}[/]', name: 'history.item.images')]
-    public function fanart(iRequest $request, string $id, string $type): iResponse
+    public function images(iRequest $request, string $id, string $type): iResponse
     {
         if ($request->hasHeader('if-modified-since')) {
             return api_response(Status::NOT_MODIFIED, headers: ['Cache-Control' => 'public, max-age=25920000']);
@@ -657,6 +657,10 @@ final class Index
         $images = $client->getImagesUrl($rId);
         if (false === array_key_exists($type, $images)) {
             return api_error('Invalid image type.', Status::BAD_REQUEST);
+        }
+
+        if (null === ($images[$type] ?? null)) {
+            return api_error('Image not available via this backend.', Status::NOT_FOUND);
         }
 
         $apiRequest = $client->proxy(Method::GET, $images[$type]);
