@@ -168,12 +168,12 @@ $exitCode = $profiler->process(function () use ($request) {
 
         $out(
             r(
-                text: "HTTP: Exception '{kind}' was thrown unhandled during HTTP boot context. Error '{message} @ {file}:{line}'.",
+                text: "HTTP: Exception '{kind}' was thrown unhandled during HTTP boot context. {message} at {file}:{line}.",
                 context: [
                     'kind' => $e::class,
                     'line' => $e->getLine(),
                     'message' => $e->getMessage(),
-                    'file' => after($e->getFile(), ROOT_PATH),
+                    'file' => $e->getFile(),
                 ]
             )
         );

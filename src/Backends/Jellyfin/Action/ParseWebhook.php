@@ -73,7 +73,7 @@ final class ParseWebhook
      */
     public function __invoke(Context $context, iGuid $guid, iRequest $request): Response
     {
-        return $this->tryResponse(context: $context, fn: fn() => $this->parse($context, $guid, $request));
+        return $this->tryResponse(context: $context, fn: fn () => $this->parse($context, $guid, $request));
     }
 
     /**
@@ -136,7 +136,9 @@ final class ParseWebhook
         }
 
         try {
-            $obj = $this->getItemDetails(context: $context, id: $id);
+            $obj = $this->getItemDetails(context: $context, id: $id, opts: [
+                Options::LOG_CONTEXT => ['request' => $json],
+            ]);
 
             $isPlayed = (bool)ag($json, 'Played');
             $lastPlayedAt = true === $isPlayed ? makeDate() : null;
@@ -212,18 +214,21 @@ final class ParseWebhook
                 ]);
             }
 
+            $allowUpdate = (int)Config::get('progress.threshold', 0);
+            $progCheck = $allowUpdate || 0 === $isPlayed;
+
+            if ($progCheck && null !== ($progress = ag($json, 'PlaybackPositionTicks', null))) {
+                $fields[iState::COLUMN_META_DATA][$context->backendName][iState::COLUMN_META_DATA_PROGRESS] = (string)floor(
+                    $progress / 1_00_00
+                ); // -- Convert to milliseconds.
+            }
+
             $entity = $this->createEntity(
                 context: $context,
                 guid: $guid,
                 item: $obj,
                 opts: ['override' => $fields, Options::DISABLE_GUID => $disableGuid],
             )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
-
-            if (false === $isPlayed && null !== ($progress = ag($json, 'PlaybackPositionTicks', null))) {
-                $fields[iState::COLUMN_META_DATA][$context->backendName][iState::COLUMN_META_DATA_PROGRESS] = (string)floor(
-                    $progress / 10_000
-                ); // -- Convert to milliseconds.
-            }
 
             if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
                 return new Response(

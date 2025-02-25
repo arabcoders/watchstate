@@ -15,6 +15,7 @@ use App\Backends\Jellyfin\Action\Backup;
 use App\Backends\Jellyfin\Action\Export;
 use App\Backends\Jellyfin\Action\GenerateAccessToken;
 use App\Backends\Jellyfin\Action\GetIdentifier;
+use App\Backends\Jellyfin\Action\getImagesUrl;
 use App\Backends\Jellyfin\Action\GetInfo;
 use App\Backends\Jellyfin\Action\GetLibrariesList;
 use App\Backends\Jellyfin\Action\GetLibrary;
@@ -27,6 +28,7 @@ use App\Backends\Jellyfin\Action\Import;
 use App\Backends\Jellyfin\Action\InspectRequest;
 use App\Backends\Jellyfin\Action\ParseWebhook;
 use App\Backends\Jellyfin\Action\Progress;
+use App\Backends\Jellyfin\Action\Proxy;
 use App\Backends\Jellyfin\Action\Push;
 use App\Backends\Jellyfin\Action\SearchId;
 use App\Backends\Jellyfin\Action\SearchQuery;
@@ -35,6 +37,7 @@ use App\Backends\Jellyfin\Action\UpdateState;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Enums\Http\Method;
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Exceptions\Backends\UnexpectedVersionException;
 use App\Libs\Exceptions\HttpException;
@@ -47,7 +50,7 @@ use App\Libs\UserContext;
 use DateTimeInterface as iDate;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Http\Message\StreamInterface as iStream;
-use Psr\Http\Message\UriInterface;
+use Psr\Http\Message\UriInterface as iUri;
 use Psr\Log\LoggerInterface as iLogger;
 use Throwable;
 
@@ -439,17 +442,39 @@ class JellyfinClient implements iClient
      */
     public function getMetadata(string|int $id, array $opts = []): array
     {
-        $response = Container::get(GetMetaData::class)(
-            context: $this->context,
-            id: $id,
-            opts: $opts
-        );
-
+        $response = Container::get(GetMetaData::class)(context: $this->context, id: $id, opts: $opts);
         if (false === $response->isSuccessful()) {
             $this->throwError($response);
         }
 
         return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getImagesUrl(string|int $id, array $opts = []): array
+    {
+        $response = Container::get(getImagesUrl::class)(context: $this->context, id: $id, opts: $opts);
+        if (false === $response->isSuccessful()) {
+            $this->throwError($response);
+        }
+
+        return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function proxy(Method $method, iUri $uri, array|iStream $body = [], array $opts = []): Response
+    {
+        return Container::get(Proxy::class)(
+            context: $this->context,
+            method: $method,
+            uri: $uri,
+            body: $body,
+            opts: $opts
+        );
     }
 
     /**
@@ -584,7 +609,7 @@ class JellyfinClient implements iClient
     /**
      * @inheritdoc
      */
-    public function getWebUrl(string $type, int|string $id): UriInterface
+    public function getWebUrl(string $type, int|string $id): iUri
     {
         $response = Container::get(GetWebUrl::class)($this->context, $type, $id);
 

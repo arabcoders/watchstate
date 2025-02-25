@@ -1,3 +1,16 @@
+<style scoped>
+.transparent-bg {
+  opacity: 0.8;
+}
+
+.bg-fanart {
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-blend-mode: darken;
+}
+</style>
 <template>
   <div>
     <div class="columns is-multiline">
@@ -10,11 +23,17 @@
         </span>
         <div class="is-pulled-right" v-if="data?.via">
           <div class="field is-grouped">
+            <p class="control">
+              <button @click="api_show_photos = !api_show_photos" class="button is-purple"
+                      v-tooltip.bottom="`${api_show_photos ? 'Hide' : 'Show'} fanart`">
+                <span class="icon"><i class="fas fa-image"/></span>
+              </button>
+            </p>
             <p class="control" v-if="data?.files?.length>0">
               <button @click="navigateTo(`/play/${data.id}`)" class="button has-text-white has-background-danger-50"
                       v-tooltip.bottom="`${data.content_exists ? 'Play media' : 'Media is inaccessible'}`"
                       :disabled="!data.content_exists">
-                <span class="icon"><i class="fas fa-play"></i></span>
+                <span class="icon"><i class="fas fa-play"/></span>
               </button>
             </p>
             <p class="control">
@@ -22,7 +41,7 @@
                       :class="{ 'is-success': !data.watched, 'is-danger': data.watched }"
                       v-tooltip.bottom="'Toggle watch state'">
                 <span class="icon">
-                  <i class="fas" :class="{'fa-eye-slash':data.watched,'fa-eye':!data.watched}"></i>
+                  <i class="fas" :class="{'fa-eye-slash':data.watched,'fa-eye':!data.watched}"/>
                 </span>
               </button>
             </p>
@@ -81,9 +100,11 @@
           </ul>
         </Message>
       </div>
+    </div>
 
+    <div class="columns is-multiline" :style="styleInfo" :class="{'bg-fanart': styleInfo}">
       <div class="column is-12" v-if="data?.via">
-        <div class="card" :class="{ 'is-success': parseInt(data.watched) }">
+        <div class="card" :class="{ 'is-success': parseInt(data.watched), 'transparent-bg': styleInfo }">
           <header class="card-header">
             <div class="card-header-title is-clickable is-unselectable" @click="data._toggle = !data._toggle">
               <span class="icon">
@@ -268,7 +289,7 @@
 
       <div class="column is-12" v-if="data?.via && Object.keys(data.metadata).length>0">
         <div class="card" v-for="(item, key) in data.metadata" :key="key"
-             :class="{ 'is-success': parseInt(item.watched) }">
+             :class="{ 'is-success': parseInt(item.watched), 'transparent-bg': styleInfo}">
           <header class="card-header">
             <div class="card-header-title is-clickable is-unselectable" @click="item._toggle = !item._toggle">
               <span class="icon">
@@ -417,7 +438,9 @@
           </div>
         </div>
       </div>
+    </div>
 
+    <div class="columns is-multiline">
       <div class="column is-12">
         <span class="title is-4 is-clickable" @click="showRawData = !showRawData">
           <span class="icon-text">
@@ -444,7 +467,6 @@
           </button>
         </div>
       </div>
-
       <div class="column is-12">
         <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
                  @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
@@ -495,7 +517,7 @@ import {
   ucFirst
 } from '~/utils/index'
 import moment from 'moment'
-import {useStorage} from '@vueuse/core'
+import {useBreakpoints, useStorage} from '@vueuse/core'
 import Message from '~/components/Message'
 
 const id = useRoute().params.id
@@ -505,8 +527,23 @@ useHead({title: `History : ${id}`})
 const isLoading = ref(true)
 const showRawData = ref(false)
 const show_page_tips = useStorage('show_page_tips', true)
+const api_show_photos = useStorage('api_show_photos', true)
 const show_history_page_warning = useStorage('show_history_page_warning', true)
 const isDeleting = ref(false)
+const breakpoints = useBreakpoints({mobile: 0, desktop: 640})
+const loadedImages = ref({poster: null, background: null})
+
+const bgImage = ref()
+
+const styleInfo = computed(() => {
+  if (!bgImage.value || !api_show_photos.value) {
+    return ''
+  }
+
+  return {
+    backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(${bgImage.value})`,
+  }
+})
 
 const data = ref({
   id: id,
@@ -543,6 +580,33 @@ const loadContent = async (id) => {
   data.value._toggle = true
 
   useHead({title: `History : ${makeName(json) ?? id}`})
+  await loadImage()
+}
+
+watch(breakpoints.active(), async () => await loadImage())
+watch(api_show_photos, async () => await loadImage())
+
+const loadImage = async (t = null) => {
+  if (!api_show_photos.value) {
+    return
+  }
+
+  try {
+    let bgType = t;
+    if (null === t) {
+      bgType = 'mobile' === breakpoints.active().value ? 'poster' : 'background'
+    }
+
+    if (loadedImages.value[bgType]) {
+      bgImage.value = loadedImages.value[bgType]
+      return
+    }
+
+    const imgRequest = await request(`/history/${id}/images/${bgType}`)
+    loadedImages.value[bgType] = URL.createObjectURL(await imgRequest.blob())
+    bgImage.value = loadedImages.value[bgType]
+  } catch (e) {
+  }
 }
 
 const deleteItem = async (item) => {

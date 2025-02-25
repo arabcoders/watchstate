@@ -11,6 +11,7 @@ use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Extends\HttpClient;
 use App\Libs\Options;
 use DateInterval;
 use Psr\Log\LoggerInterface as iLogger;
@@ -47,7 +48,7 @@ class GetMetaData
      *
      * @param Context $context Backend context.
      * @param string|int $id the backend id.
-     * @param array{query?:array,headers?:array,CACHE_TTL?:DateInterval,NO_CACHE?:bool} $opts (Optional) options.
+     * @param array{query?:array,headers?:array,CACHE_TTL?:DateInterval,NO_CACHE?:bool,LOG_CONTEXT?:array} $opts (Optional) options.
      *
      * @return Response The wrapped response.
      */
@@ -83,6 +84,7 @@ class GetMetaData
                     'backend' => $context->backendName,
                     'user' => $context->userContext->name,
                     'url' => (string)$url,
+                    ...ag($opts, Options::LOG_CONTEXT, []),
                 ];
 
                 $this->logger->debug(
@@ -94,6 +96,7 @@ class GetMetaData
                     $item = $this->cache->get(key: $cacheKey);
                     $fromCache = true;
                 } else {
+                    assert($this->http instanceof HttpClient);
                     $response = $this->http->request(
                         method: Method::GET,
                         url: (string)$url,
@@ -101,7 +104,7 @@ class GetMetaData
                     );
 
                     if (Status::OK !== Status::from($response->getStatusCode())) {
-                        $response = new Response(
+                        return new Response(
                             status: false,
                             error: new Error(
                                 message: "{action}: Request for '{client}: {user}@{backend}' - '{id}' item returned with unexpected '{status_code}' status code.",
@@ -111,8 +114,6 @@ class GetMetaData
                                 ]
                             )
                         );
-                        $context->logger?->error($response->getError()->message, $response->getError()->context);
-                        return $response;
                     }
 
                     $item = json_decode(

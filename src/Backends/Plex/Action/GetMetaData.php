@@ -10,6 +10,7 @@ use App\Backends\Common\Error;
 use App\Backends\Common\Response;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Extends\HttpClient;
 use App\Libs\Options;
 use DateInterval;
 use Psr\Log\LoggerInterface as iLogger;
@@ -34,7 +35,7 @@ final class GetMetaData
      *
      * @param Context $context
      * @param string|int $id the backend id.
-     * @param array $opts optional options.
+     * @param array{query?:array,headers?:array,CACHE_TTL?:DateInterval,NO_CACHE?:bool,LOG_CONTEXT?:array} $opts (Optional) options.
      *
      * @return Response
      */
@@ -59,6 +60,7 @@ final class GetMetaData
                     'user' => $context->userContext->name,
                     'url' => (string)$url,
                     'id' => $id,
+                    ...ag($opts, Options::LOG_CONTEXT, []),
                 ];
 
                 $this->logger->debug(
@@ -70,6 +72,7 @@ final class GetMetaData
                     $item = $this->cache->get(key: $cacheKey);
                     $fromCache = true;
                 } else {
+                    assert($this->http instanceof HttpClient);
                     $response = $this->http->request(
                         method: Method::GET,
                         url: (string)$url,
@@ -77,15 +80,13 @@ final class GetMetaData
                     );
 
                     if (Status::OK !== Status::from($response->getStatusCode())) {
-                        $response = new Response(
+                        return new Response(
                             status: false,
                             error: new Error(
                                 message: "{action}: Request for '{client}: {user}@{backend}' - '{id}' item returned with unexpected '{status_code}' status code.",
                                 context: [...$logContext, 'status_code' => $response->getStatusCode()]
                             )
                         );
-                        $context->logger?->error($response->getError()->message, $response->getError()->context);
-                        return $response;
                     }
 
                     $content = $response->getContent();

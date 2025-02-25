@@ -13,6 +13,7 @@ use App\Backends\Emby\Action\Backup;
 use App\Backends\Emby\Action\Export;
 use App\Backends\Emby\Action\GenerateAccessToken;
 use App\Backends\Emby\Action\GetIdentifier;
+use App\Backends\Emby\Action\getImagesUrl;
 use App\Backends\Emby\Action\GetInfo;
 use App\Backends\Emby\Action\GetLibrariesList;
 use App\Backends\Emby\Action\GetLibrary;
@@ -25,6 +26,7 @@ use App\Backends\Emby\Action\Import;
 use App\Backends\Emby\Action\InspectRequest;
 use App\Backends\Emby\Action\ParseWebhook;
 use App\Backends\Emby\Action\Progress;
+use App\Backends\Emby\Action\Proxy;
 use App\Backends\Emby\Action\Push;
 use App\Backends\Emby\Action\SearchId;
 use App\Backends\Emby\Action\SearchQuery;
@@ -34,6 +36,7 @@ use App\Backends\Jellyfin\JellyfinClient;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Enums\Http\Method;
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Exceptions\HttpException;
 use App\Libs\Mappers\Import\ReadOnlyMapper;
@@ -44,8 +47,8 @@ use App\Libs\Uri;
 use App\Libs\UserContext;
 use DateTimeInterface as iDate;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\StreamInterface;
-use Psr\Http\Message\UriInterface;
+use Psr\Http\Message\StreamInterface as iStream;
+use Psr\Http\Message\UriInterface as iUri;
 use Psr\Log\LoggerInterface as iLogger;
 use Throwable;
 
@@ -252,7 +255,7 @@ class EmbyClient implements iClient
     /**
      * @inheritdoc
      */
-    public function backup(iImport $mapper, StreamInterface|null $writer = null, array $opts = []): array
+    public function backup(iImport $mapper, iStream|null $writer = null, array $opts = []): array
     {
         $response = Container::get(Backup::class)(
             context: $this->context,
@@ -395,17 +398,39 @@ class EmbyClient implements iClient
      */
     public function getMetadata(string|int $id, array $opts = []): array
     {
-        $response = Container::get(GetMetaData::class)(
-            context: $this->context,
-            id: $id,
-            opts: $opts
-        );
-
+        $response = Container::get(GetMetaData::class)(context: $this->context, id: $id, opts: $opts);
         if (false === $response->isSuccessful()) {
             $this->throwError($response);
         }
 
         return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getImagesUrl(string|int $id, array $opts = []): array
+    {
+        $response = Container::get(getImagesUrl::class)(context: $this->context, id: $id, opts: $opts);
+        if (false === $response->isSuccessful()) {
+            $this->throwError($response);
+        }
+
+        return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function proxy(Method $method, iUri $uri, array|iStream $body = [], array $opts = []): Response
+    {
+        return Container::get(Proxy::class)(
+            context: $this->context,
+            method: $method,
+            uri: $uri,
+            body: $body,
+            opts: $opts
+        );
     }
 
     /**
@@ -540,7 +565,7 @@ class EmbyClient implements iClient
     /**
      * @inheritdoc
      */
-    public function getWebUrl(string $type, int|string $id): UriInterface
+    public function getWebUrl(string $type, int|string $id): iUri
     {
         $response = Container::get(GetWebUrl::class)($this->context, $type, $id);
 

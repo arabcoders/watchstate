@@ -88,7 +88,7 @@ final class ParseWebhook
     {
         return $this->tryResponse(
             context: $context,
-            fn: fn() => $this->parse($context, $guid, $request),
+            fn: fn () => $this->parse($context, $guid, $request),
             action: $this->action,
         );
     }
@@ -153,7 +153,9 @@ final class ParseWebhook
         }
 
         try {
-            $resp = Container::get(GetMetaData::class)(context: $context, id: $id);
+            $resp = Container::get(GetMetaData::class)(context: $context, id: $id, opts:[
+                Options::LOG_CONTEXT => ['request' => $json],
+            ]);
             if (!$resp->isSuccessful()) {
                 return $resp;
             } else {
@@ -248,11 +250,13 @@ final class ParseWebhook
                 $fields[iState::COLUMN_META_DATA][$context->backendName][iState::COLUMN_META_PATH] = $path;
             }
 
-            if (null !== ($progress = ag($json, 'PlaybackInfo.PositionTicks', null)) && 0 === $isPlayed) {
-                // -- Convert to milliseconds.
+            $allowUpdate = (int)Config::get('progress.threshold', 0);
+            $progCheck = $allowUpdate || 0 === $isPlayed;
+
+            if ($progCheck && null !== ($progress = ag($json, 'PlaybackInfo.PositionTicks', null))) {
                 $fields[iState::COLUMN_META_DATA][$context->backendName][iState::COLUMN_META_DATA_PROGRESS] = (string)floor(
                     $progress / 1_00_00
-                );
+                ); // -- Convert to milliseconds.
             }
 
             $entity = $this->createEntity(

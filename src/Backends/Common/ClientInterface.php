@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Backends\Common;
 
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Enums\Http\Method;
 use App\Libs\Exceptions\Backends\InvalidContextException;
 use App\Libs\Exceptions\Backends\NotImplementedException;
 use App\Libs\Exceptions\Backends\UnexpectedVersionException;
@@ -172,6 +173,28 @@ interface ClientInterface
      * @return array empty array if not found.
      */
     public function getMetadata(string|int $id, array $opts = []): array;
+
+    /**
+     * Get backend item specific images url.
+     *
+     * @param string|int $id item id.
+     * @param array $opts options.
+     *
+     * @return array<array-key,iUri> empty array if not found.
+     */
+    public function getImagesUrl(string|int $id, array $opts = []): array;
+
+    /**
+     * Proxy request to backend.
+     *
+     * @param Method $method request method.
+     * @param iUri $uri request uri.
+     * @param array|iStream $body request body. Optional.
+     * @param array $opts options.
+     *
+     * @return Response
+     */
+    public function proxy(Method $method, iUri $uri, array|iStream $body = [], array $opts = []): Response;
 
     /**
      * Get entire library content.
