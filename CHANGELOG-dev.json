@@ -1,8 +1,20 @@
 [
     {
-        "tag": "dev-20250224-7c9c1ed",
-        "date": "2025-02-24T17:37:07+00:00",
+        "tag": "dev-20250225-1e73822",
+        "date": "2025-02-25T14:05:59+00:00",
         "commits": [
+            {
+                "sha": "1e73822",
+                "message": "show 404 for non existing image",
+                "author": "ArabCoders",
+                "date": "2025-02-25T14:05:59+00:00"
+            },
+            {
+                "sha": "cecb604",
+                "message": "show poster image for mobile devices and fanart for desktop",
+                "author": "ArabCoders",
+                "date": "2025-02-25T14:05:45+00:00"
+            },
             {
                 "sha": "7c9c1ed",
                 "message": "Added background to item history page",
