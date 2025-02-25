@@ -517,7 +517,7 @@ import {
   ucFirst
 } from '~/utils/index'
 import moment from 'moment'
-import {useStorage} from '@vueuse/core'
+import {useBreakpoints, useStorage} from '@vueuse/core'
 import Message from '~/components/Message'
 
 const id = useRoute().params.id
@@ -530,6 +530,9 @@ const show_page_tips = useStorage('show_page_tips', true)
 const api_show_photos = useStorage('api_show_photos', true)
 const show_history_page_warning = useStorage('show_history_page_warning', true)
 const isDeleting = ref(false)
+const breakpoints = useBreakpoints({mobile: 0, desktop: 640})
+const loadedImages = ref({poster: null, background: null})
+
 const bgImage = ref()
 
 const styleInfo = computed(() => {
@@ -577,27 +580,34 @@ const loadContent = async (id) => {
   data.value._toggle = true
 
   useHead({title: `History : ${makeName(json) ?? id}`})
-  if (api_show_photos.value) {
-    try {
-      const imgRequest = await request(`/history/${id}/images/background`)
-      bgImage.value = URL.createObjectURL(await imgRequest.blob())
-    } catch (e) {
-    }
-  }
+  await loadImage()
 }
 
-watch(api_show_photos, async (value) => {
-  if (!value || bgImage.value) {
+watch(breakpoints.active(), async () => await loadImage())
+watch(api_show_photos, async () => await loadImage())
+
+const loadImage = async (t = null) => {
+  if (!api_show_photos.value) {
     return
   }
 
   try {
-    const imgRequest = await request(`/history/${id}/images/background`)
-    bgImage.value = URL.createObjectURL(await imgRequest.blob())
+    let bgType = t;
+    if (null === t) {
+      bgType = 'mobile' === breakpoints.active().value ? 'poster' : 'background'
+    }
+
+    if (loadedImages.value[bgType]) {
+      bgImage.value = loadedImages.value[bgType]
+      return
+    }
+
+    const imgRequest = await request(`/history/${id}/images/${bgType}`)
+    loadedImages.value[bgType] = URL.createObjectURL(await imgRequest.blob())
+    bgImage.value = loadedImages.value[bgType]
   } catch (e) {
   }
-
-})
+}
 
 const deleteItem = async (item) => {
   if (isDeleting.value) {
