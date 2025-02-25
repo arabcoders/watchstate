@@ -1,5 +1,77 @@
 [
     {
+        "tag": "master-20250225-708e9a4",
+        "date": "2025-02-25T14:14:51+00:00",
+        "commits": [
+            {
+                "sha": "1e73822",
+                "message": "show 404 for non existing image",
+                "author": "ArabCoders",
+                "date": "2025-02-25T14:05:59+00:00"
+            },
+            {
+                "sha": "cecb604",
+                "message": "show poster image for mobile devices and fanart for desktop",
+                "author": "ArabCoders",
+                "date": "2025-02-25T14:05:45+00:00"
+            },
+            {
+                "sha": "7c9c1ed",
+                "message": "Added background to item history page",
+                "author": "ArabCoders",
+                "date": "2025-02-24T17:37:07+00:00"
+            },
+            {
+                "sha": "f8a3b5c",
+                "message": "Made it possible to request show/movie fanart/poster via API",
+                "author": "ArabCoders",
+                "date": "2025-02-24T16:38:04+00:00"
+            },
+            {
+                "sha": "ff07c73",
+                "message": "Added support to proxy requests to backends",
+                "author": "ArabCoders",
+                "date": "2025-02-24T16:36:54+00:00"
+            },
+            {
+                "sha": "6a9db8f",
+                "message": "added seconds to full log view",
+                "author": "ArabCoders",
+                "date": "2025-02-23T17:06:39+00:00"
+            },
+            {
+                "sha": "0a7b98d",
+                "message": "minor changes to some log message to make them more clear",
+                "author": "ArabCoders",
+                "date": "2025-02-23T16:54:19+00:00"
+            },
+            {
+                "sha": "c4d3a7b",
+                "message": "dependencies update",
+                "author": "ArabCoders",
+                "date": "2025-02-23T16:54:04+00:00"
+            },
+            {
+                "sha": "7849e6f",
+                "message": "log item data in parse webhook incase getMetData request failed.",
+                "author": "ArabCoders",
+                "date": "2025-02-23T13:50:54+00:00"
+            },
+            {
+                "sha": "5fabbf7",
+                "message": "Dont double log on getMetadata error",
+                "author": "ArabCoders",
+                "date": "2025-02-22T15:06:21+00:00"
+            },
+            {
+                "sha": "1f495b3",
+                "message": "Fixed watch progress for jellyfin webhooks and enable watch progress for webhooks events",
+                "author": "ArabCoders",
+                "date": "2025-02-22T12:21:40+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250221-4758e86",
         "date": "2025-02-21T14:45:57+00:00",
         "commits": [
