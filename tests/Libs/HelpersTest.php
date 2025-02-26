@@ -680,20 +680,13 @@ class HelpersTest extends TestCase
     {
         $this->assertTrue(isValidName('foo'), 'When name is valid, true is returned.');
         $this->assertTrue(isValidName('foo_bar'), 'When name is valid, true is returned.');
+        $this->assertFalse(isValidName('foo_baR'), 'When name is invalid, false is returned.');
+        $this->assertFalse(isValidName('3oo_bar'), 'When name is invalid, false is returned.');
 
-        $invalidNames = [
-            'foo bar',
-            'foo-bar',
-            'foo/bar',
-            'foo?bar',
-            'foo*bar',
-        ];
+        $invalidNames = ['foo bar', 'foo-bar', 'foo/bar', 'foo?bar', 'foo*bar', '1foo', 'foo_baR', 'FOOBAR'];
 
         foreach ($invalidNames as $name) {
-            $this->assertFalse(
-                isValidName($name),
-                "When name ({$name}) is invalid, false is returned."
-            );
+            $this->assertFalse(isValidName($name), "When given name is '{$name}', false should be is returned.");
         }
     }
 

@@ -45,10 +45,26 @@
         <form id="backend_edit_form" @submit.prevent="saveContent">
           <div class="card">
             <header class="card-header">
-              <p class="card-header-title is-justify-center">Edit Backend - {{ backend.name }}</p>
+              <p class="card-header-title">
+                Edit Backend:&nbsp;<u class="has-text-danger">{{ api_user }}</u>@{{ backend.name }}</p>
             </header>
 
             <div class="card-content">
+              <div class="field">
+                <label class="label">Local User</label>
+                <div class="control has-icons-left">
+                  <div class="select is-fullwidth">
+                    <select class="is-capitalized" disabled>
+                      <option v-text="api_user"/>
+                    </select>
+                  </div>
+                  <div class="icon is-left">
+                    <i class="fas fa-users"></i>
+                  </div>
+                  <p class="help">The local user which this backend is associated with.</p>
+                </div>
+              </div>
+
               <div class="field">
                 <label class="label">Name</label>
                 <div class="control has-icons-left">
@@ -70,6 +86,11 @@
                   <div class="icon is-left">
                     <i class="fas fa-server"></i>
                   </div>
+                  <p class="help">
+                    The backend server type. The supported types are <code>{{
+                      supported.map(v => ucFirst(v)).join(', ')
+                    }}</code>.
+                  </p>
                 </div>
               </div>
 
@@ -347,6 +368,8 @@
 import 'assets/css/bulma-switch.css'
 import {notification, ucFirst} from '~/utils/index'
 import Message from '~/components/Message'
+import {useStorage} from "@vueuse/core";
+import request from "~/utils/request.js";
 
 const id = useRoute().params.backend
 const redirect = useRoute().query?.redirect ?? `/backend/${id}`
@@ -363,9 +386,11 @@ const backend = ref({
   webhook: {match: {user: false, uuid: false}},
   options: {}
 })
+
 const showOptions = ref(false)
 const isLoading = ref(true)
 const users = ref([])
+const supported = ref([])
 const usersLoading = ref(false)
 const uuidLoading = ref(false)
 const optionsList = ref([])
@@ -375,6 +400,7 @@ const exposeToken = ref(false)
 const servers = ref([])
 const serversLoading = ref(false)
 const isLimitedToken = computed(() => Boolean(backend.value.options?.is_limited_token))
+const api_user = useStorage('api_user', 'main')
 
 const selectedOptionHelp = computed(() => {
   const option = optionsList.value.find(v => v.key === selectedOption.value)
@@ -384,6 +410,8 @@ const selectedOptionHelp = computed(() => {
 useHead({title: 'Backends - Edit: ' + id})
 
 const loadContent = async () => {
+  supported.value = await (await request('/system/supported')).json()
+
   const content = await request(`/backend/${id}`)
   let json = await content.json()
 

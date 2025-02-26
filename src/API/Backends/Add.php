@@ -53,7 +53,10 @@ final class Add
         }
 
         if (false === isValidName($name)) {
-            return api_error('Invalid name was given.', Status::BAD_REQUEST);
+            return api_error(
+                'Invalid name was given. Backend name must only contain [lowercase a-z, 0-9, _].',
+                Status::BAD_REQUEST
+            );
         }
 
         $backend = $this->getBackends(name: $name, userContext: $userContext);

@@ -542,7 +542,7 @@ class CreateUsersCommand extends Command
 
             // Build final row: "name" + sub-array "backends"
             $row = [
-                'name' => $finalName,
+                'name' => strtolower($finalName),
                 'backends' => [],
             ];
 
