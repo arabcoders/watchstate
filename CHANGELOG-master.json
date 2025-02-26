@@ -1,5 +1,17 @@
 [
     {
+        "tag": "master-20250226-60a4a26",
+        "date": "2025-02-26T14:26:01+00:00",
+        "commits": [
+            {
+                "sha": "8a998eb",
+                "message": "re-enforce the backend/user name requirement of being a-z_0-9, due to recent refactor the check was not working as expected we added new tests to cover invalid names.",
+                "author": "ArabCoders",
+                "date": "2025-02-26T14:11:23+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250225-708e9a4",
         "date": "2025-02-25T14:14:51+00:00",
         "commits": [
