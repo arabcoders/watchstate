@@ -1,11 +1,12 @@
 <template>
   <Message title="Important" message_class="has-background-warning-80 has-text-dark" icon="fas fa-info-circle">
     <ul>
-      <li>
-        WatchState is single user tool. It doesn't support syncing multiple users play state.
+      <li v-if="api_user === 'main'">
+        Support for sub users is in early stages. For more information please visit
         <NuxtLink target="_blank" v-text="'Visit this link'"
                   to="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#is-there-support-for-multi-user-setup"/>
-        to learn more.
+        to learn more. <b>DO NOT</b> add sub users backends directly. Use the create sub-users button after setting up
+        the main user.
       </li>
       <li>
         If you are adding new backend that is fresh and doesn't have your current watch state, you should turn off
@@ -17,11 +18,10 @@
     </ul>
   </Message>
 
-
   <form id="backend_add_form" @submit.prevent="stage<4 ? changeStep() : addBackend()">
     <div class="card">
       <div class="card-header">
-        <p class="card-header-title is-justify-center">Add Backend</p>
+        <p class="card-header-title">Add backend to '<u class="has-text-danger">{{ api_user }}</u>' user config.</p>
       </div>
 
       <div class="card-content">
@@ -32,6 +32,25 @@
           </Message>
         </div>
         <template v-if="stage>=0">
+
+          <div class="field">
+            <label class="label">Local User</label>
+            <div class="control has-icons-left">
+              <div class="select is-fullwidth">
+                <select class="is-capitalized" disabled>
+                  <option v-text="api_user"/>
+                </select>
+              </div>
+              <div class="icon is-left">
+                <i class="fas fa-users"></i>
+              </div>
+              <p class="help">
+                The local user which this backend will be associated with. You can change this user via the users icon
+                on top.
+              </p>
+            </div>
+          </div>
+
           <div class="field">
             <label class="label">Type</label>
             <div class="control has-icons-left">
@@ -46,8 +65,8 @@
                 <i class="fas fa-server"></i>
               </div>
               <p class="help">
-                Select the type of backend you want to add. Supported backends are: <code>{{
-                  supported.join(', ')
+                The backend server type. The supported types are <code>{{
+                  supported.map(v => ucFirst(v)).join(', ')
                 }}</code>.
               </p>
             </div>
@@ -61,8 +80,8 @@
                 <i class="fas fa-id-badge"></i>
               </div>
               <p class="help">
-                Choose a unique name for this backend. You cannot change it later. Backend name must be in <code>lower
-                case a-z, 0-9 and _</code> only.
+                Choose a unique name for this backend. <b class="has-text-danger">You CANNOT change it later</b>.
+                Backend name must be in <code>lower case a-z, 0-9 and _</code> and cannot start with number.
               </p>
             </div>
           </div>
@@ -94,7 +113,8 @@
                   <template v-if="'plex'===backend.type">
                     Enter the <code>X-Plex-Token</code>.
                     <NuxtLink target="_blank" to="https://support.plex.tv/articles/204059436"
-                              v-text="'Visit This article for more information.'"/>
+                              v-text="'Visit This link'"/>
+                    to learn how to get the token.
                   </template>
                   <template v-else>
                     Generate a new API Key from <code>Dashboard > Settings > API Keys</code>.<br>
@@ -114,7 +134,8 @@
               <input class="input" type="text" v-model="backend.options.PLEX_USER_PIN" :disabled="stage > 1">
               <div class="icon is-left"><i class="fas fa-key"></i></div>
               <p class="help">
-                If the user you going to select is using <code>PIN</code> to login, enter the PIN here.
+                If the user you are going to select has <code>PIN</code> enabled, you need to enter the pin here.
+                Otherwise it will fail to authenticate.
               </p>
             </div>
           </template>
@@ -292,7 +313,7 @@
         </div>
 
         <div class="card-footer-item" v-if="stage < maxStages">
-          <button class="button is-fullwidth is-info" type="submit" @click="changeStep()">
+          <button class="button is-fullwidth is-info" type="button" @click="changeStep()">
             <span class="icon"><i class="fas fa-arrow-right"></i></span>
             <span>Next Step</span>
           </button>
@@ -311,7 +332,8 @@
 <script setup>
 import 'assets/css/bulma-switch.css'
 import request from '~/utils/request'
-import {awaitElement, explode, notification} from '~/utils/index'
+import {awaitElement, explode, notification, ucFirst} from '~/utils/index'
+import {useStorage} from "@vueuse/core";
 
 const emit = defineEmits(['addBackend', 'forceExport', 'runImport'])
 
@@ -343,6 +365,7 @@ const backend = ref({
   },
   options: {}
 })
+const api_user = useStorage('api_user', 'main')
 const users = ref([])
 const supported = ref([])
 const servers = ref([])
@@ -518,8 +541,7 @@ const getUsers = async (showAlert = true) => {
 }
 
 onMounted(async () => {
-  const response = await request('/system/supported')
-  supported.value = await response.json()
+  supported.value = await (await request('/system/supported')).json()
   backend.value.type = supported.value[0]
 })
 
@@ -535,6 +557,11 @@ const changeStep = async () => {
           notification('error', 'Error', `Please fill the required field: ${v}.`)
         }
       })
+      return
+    }
+
+    if (false === /^[a-z_0-9]+$/.test(backend.value.name)) {
+      notification('error', 'Error', `Backend name must be in lower case a-z, 0-9 and _ only.`)
       return
     }
 

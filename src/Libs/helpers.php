@@ -904,7 +904,11 @@ if (!function_exists('isValidName')) {
      */
     function isValidName(string $name): bool
     {
-        return 1 === preg_match('/^\w+$/', $name);
+        if (true === ctype_digit($name[0])) {
+            return false;
+        }
+
+        return 1 === preg_match('/^[a-z_0-9]+$/', $name);
     }
 }
 
@@ -2413,10 +2417,7 @@ if (!function_exists('perUserCacheAdapter')) {
         }
 
         $ns = getAppVersion();
-
-        if (true === isValidName($user)) {
-            $ns .= isValidName($user) ? '.' . $user : '.' . md5($user);
-        }
+        $ns .= isValidName($user) ? '.' . $user : '.' . md5($user);
 
         try {
             $backend = new RedisAdapter(redis: Container::get(Redis::class), namespace: $ns);

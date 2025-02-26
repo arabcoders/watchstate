@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace App\API\System;
 
 use App\Libs\Attributes\Route\Delete;
-use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Enums\Http\Status;
-use Psr\Http\Message\ResponseInterface as iResponse;
-use Psr\Http\Message\ServerRequestInterface as iRequest;
-use Redis;
-use RedisException;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Traits\APITraits;
+use Psr\Http\Message\ResponseInterface as iResponse;
+use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Log\LoggerInterface as iLogger;
+use Redis;
+use RedisException;
 
 final class Reset
 {
@@ -33,10 +33,7 @@ final class Reset
 
         try {
             $ns = getAppVersion();
-
-            if (true === isValidName($user)) {
-                $ns .= isValidName($user) ? '.' . $user : '.' . md5($user);
-            }
+            $ns .= isValidName($user) ? '.' . $user : '.' . md5($user);
 
             $keys = $redis->keys("{$ns}*");
 
