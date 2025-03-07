@@ -2,6 +2,22 @@
 
 import path from 'path'
 
+let extraNitro = {}
+try {
+    const API_URL = import.meta.env.NUXT_API_URL;
+    if (API_URL) {
+        extraNitro = {
+            devProxy: {
+                '/v1/api/': {
+                    target: API_URL,
+                    changeOrigin: true
+                }
+            }
+        }
+    }
+} catch (e) {
+}
+
 export default defineNuxtConfig({
     ssr: false,
     devtools: {enabled: true},
@@ -37,7 +53,8 @@ export default defineNuxtConfig({
     nitro: {
         output: {
             publicDir: path.join(__dirname, 'exported')
-        }
+        },
+        ...extraNitro,
     },
 
     build: {
