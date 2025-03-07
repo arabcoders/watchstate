@@ -1,5 +1,17 @@
 [
     {
+        "tag": "master-20250307-200d6a4",
+        "date": "2025-03-07T01:08:48+00:00",
+        "commits": [
+            {
+                "sha": "ffbb079",
+                "message": "update dependencies and include new logo",
+                "author": "Abdulmohsen B. A. A.",
+                "date": "2025-03-07T01:03:38+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250226-60a4a26",
         "date": "2025-02-26T14:26:01+00:00",
         "commits": [
