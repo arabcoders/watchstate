@@ -51,6 +51,9 @@ Refer to [NEWS](NEWS.md) for old updates.
 * Sync your watch progress via webhooks or scheduled tasks.
 * Check if your media backends have stale references to old files.
 
+If you like my work, you might also like my other project [YTPTube](https://github.com/arabcoders/ytptube), which is
+simple and to the point yt-dlp frontend to help download content from all supported sites by yt-dlp.
+
 ----
 
 # Install
