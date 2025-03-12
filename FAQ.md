@@ -418,7 +418,7 @@ These environment variables relates to the tool itself, You should manage them v
 command via CLI.
 
 | Key                     | Type    | Description                                                             | Default                  |
-| ----------------------- | ------- | ----------------------------------------------------------------------- | ------------------------ |
+|-------------------------|---------|-------------------------------------------------------------------------|--------------------------|
 | WS_DATA_PATH            | string  | Where to store main data. (config, db).                                 | `${BASE_PATH}/var`       |
 | WS_TMP_DIR              | string  | Where to store temp data. (logs, cache)                                 | `${WS_DATA_PATH}`        |
 | WS_TZ                   | string  | Set timezone. Fallback to to `TZ` variable if `WS_TZ` not set.          | `UTC`                    |
@@ -463,7 +463,7 @@ $ docker exec -ti watchstate console system:env --list
 > the `compose.yaml` file.
 
 | Key           | Type    | Description                          | Default  |
-| ------------- | ------- | ------------------------------------ | -------- |
+|---------------|---------|--------------------------------------|----------|
 | WEBUI_ENABLED | bool    | Enable WebUI. Value casted to a bool | `true`   |
 | DISABLE_HTTP  | integer | Disable included `HTTP Server`.      | `0`      |
 | DISABLE_CRON  | integer | Disable included `Task Scheduler`.   | `0`      |
@@ -536,32 +536,6 @@ Click `Add Webhook / Save`
 
 -----
 
-#### Plex (You need `Plex Pass` to use webhooks)
-
-Go to your Plex Web UI > Settings > Your Account > Webhooks > (Click ADD WEBHOOK)
-
-##### URL:
-
-`http://localhost:8080/v1/api/backend/[USER]@[BACKEND_NAME]/webhook`
-
-* Replace `[BACKEND_NAME]` with the name you have chosen for your backend.
-* Replace `[USER]` with the `main` for main user or the sub user username.
-
-> [!IMPORTANT]
-> If you have enabled `WS_SECURE_API_ENDPOINTS`, you have to add `?apikey=yourapikey` to the end of the URL.
-
-Click `Save Changes`
-
-> [!NOTE]
-> If you share your plex server with other users, i,e. `Home/managed users`, you have to enable match user id, otherwise
-> their play state will end up changing your play state.
->
-> If you use multiple plex servers and use the same PlexPass account for all of them, You have to add each backend
-> using the same method above, while enabling `limit webhook events to` `selected user` and `backend unique id`.
-> Essentially, this method replaced the old unified webhook token for backends.
-
------
-
 #### Jellyfin (Free)
 
 go to your jellyfin dashboard > plugins > Catalog > install: Notifications > Webhook, restart your jellyfin. After that
@@ -600,6 +574,167 @@ Toggle this checkbox.
 
 Click `Save`
 
+-----
+
+#### Plex (You need `Plex Pass` to use webhooks)
+
+Go to your Plex Web UI > Settings > Your Account > Webhooks > (Click ADD WEBHOOK)
+
+##### URL:
+
+`http://localhost:8080/v1/api/backend/[USER]@[BACKEND_NAME]/webhook`
+
+* Replace `[BACKEND_NAME]` with the name you have chosen for your backend.
+* Replace `[USER]` with the `main` for main user or the sub user username.
+
+> [!IMPORTANT]
+> If you have enabled `WS_SECURE_API_ENDPOINTS`, you have to add `?apikey=yourapikey` to the end of the URL.
+
+Click `Save Changes`
+
+> [!NOTE]
+> If you share your plex server with other users, i,e. `Home/managed users`, you have to enable match user id, otherwise
+> their play state will end up changing your play state.
+>
+> If you use multiple plex servers and use the same PlexPass account for all of them, You have to add each backend
+> using the same method above, while enabling `limit webhook events to` `selected user` and `backend unique id`.
+> Essentially, this method replaced the old unified webhook token for backends.
+
+---- 
+
+#### Plex Via tautulli
+
+Go to options > Notification Agents > Add a new notification agent > Webhook
+
+##### Webhook URL:
+
+`http://localhost:8080/v1/api/backend/[USER]@[BACKEND_NAME]/webhook`
+
+* Replace `[BACKEND_NAME]` with the name you have chosen for your backend.
+* Replace `[USER]` with the `main` for main user or the sub user username.
+
+> [!IMPORTANT]
+> If you have enabled `WS_SECURE_API_ENDPOINTS`, you have to add `?apikey=yourapikey` to the end of the URL.
+
+##### Webhook Method
+
+`PUT`
+
+#### Description
+
+it's recommended to use something like `webhook for user XX for backend XX`.
+
+### Triggers
+
+Select the following events.
+
+- Playback Start
+- Playback Stop
+- Playback Pause
+- Playback Resume
+- Watched
+- Recently Added
+
+### Data
+
+For each event there is a corresponding headers/data fields that you need to set using the following format.
+
+> [!IMPORTANT]
+> It's extremely important that you copy the headers and data as it is, don't alter them if you don't know what you are
+> doing.
+
+#### JSON headers
+
+```json
+{
+    "user-agent": "Tautulli/{tautulli_version}"
+}
+```
+
+#### JSON Data
+
+```json
+{
+    "event": "tautulli.{action}",
+    "Account": {
+        "id": "{user_id}",
+        "thumb": "{user_thumb}",
+        "title": "{username}"
+    },
+    "Server": {
+        "title": "{server_name}",
+        "uuid": "{server_machine_id}",
+        "version": "{server_version}"
+    },
+    "Player": {
+        "local": "{stream_local}",
+        "publicAddress": "{ip_address}",
+        "title": "{player}",
+        "uuid": "{machine_id}"
+    },
+    "Metadata": {
+        "librarySectionType": null,
+        "ratingKey": "{rating_key}",
+        "key": null,
+        "parentRatingKey": "{parent_rating_key}",
+        "grandparentRatingKey": "{grandparent_rating_key}",
+        "guid": "{guid}",
+        "parentGuid": null,
+        "grandparentGuid": null,
+        "grandparentSlug": null,
+        "type": "{media_type}",
+        "title": "{episode_name}",
+        "grandparentKey": null,
+        "parentKey": null,
+        "librarySectionTitle": "{library_name}",
+        "librarySectionID": "{section_id}",
+        "librarySectionKey": null,
+        "grandparentTitle": "{show_name}",
+        "parentTitle": "{season_name}",
+        "contentRating": "{content_rating}",
+        "summary": "{summary}",
+        "index": "{episode_num}",
+        "parentIndex": "{season_num}",
+        "audienceRating": "{audience_rating}",
+        "viewOffset": "{view_offset}",
+        "skipCount": null,
+        "lastViewedAt": "{last_viewed_date}",
+        "year": "{show_year}",
+        "thumb": "{poster_thumb}",
+        "art": "{art}",
+        "parentThumb": "{parent_thumb}",
+        "grandparentThumb": "{grandparent_thumb}",
+        "grandparentArt": null,
+        "grandparentTheme": null,
+        "duration": "{duration_ms}",
+        "originallyAvailableAt": "{air_date}",
+        "addedAt": "{added_date}",
+        "updatedAt": "{updated_date}",
+        "audienceRatingImage": null,
+        "userRating": "{user_rating}",
+        "Guids": {
+            "imdb": "{imdb_id}",
+            "tvdb": "{thetvdb_id}",
+            "tmdb": "{themoviedb_id}",
+            "tvmaze": "{tvmaze_id}"
+        },
+        "file": "{file}",
+        "file_size": "{file_size_bytes}"
+    }
+}
+```
+
+You need to do this for each event that you enabled in `Triggers` section.
+
+Click `Save`
+
+> [!NOTE]
+> Tautulli Doesn't support sending user id with `created` event. as such if you enabled `Match webhook user`, new items
+> will not be added and fail with `Request user id '' does not match configured value`.
+>
+> Marked as unplayed will most likely not work with Tautulli webhook events as it's missing critical data we need to
+> determine if the item is marked as unplayed.
+
 ---
 
 ### What are the webhook limitations?
@@ -611,6 +746,13 @@ Those are some webhook limitations we discovered for the following media backend
 * Plex does not send webhooks events for "marked as played/unplayed" for all item types.
 * Sometimes does not send events if you add more than one item at time.
 * When you mark items as unwatched, Plex reset the date on the object.
+
+#### Plex Via Tautulli
+
+* Tautulli does not send user id with itemAdd `created` event. as such if you enabled `Match webhook user`, new items
+  will not be added and fail with `Request user id '' does not match configured value`.
+* Marked as unplayed will most likely not work with Tautulli webhook events as it's missing critical data we need to
+  determine if the item is marked as unplayed.
 
 #### Emby
 
@@ -1089,7 +1231,7 @@ the event log.
 
 ### API/WebUI endpoints that supports sub users.
 
-These endpoints supports sub-users via `?user=username` query parameter, or via `X-User` header. The recommended 
+These endpoints supports sub-users via `?user=username` query parameter, or via `X-User` header. The recommended
 approach is to use the header.
 
 * `/v1/api/backend/*`.

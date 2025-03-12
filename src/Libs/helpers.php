@@ -423,8 +423,9 @@ if (!function_exists('saveRequestPayload')) {
             'attributes' => $request->getAttributes(),
         ];
 
-        $stream = $file ?? new Stream(r('{path}/debug/request.{id}.json', [
+        $stream = $file ?? new Stream(r('{path}/debug/request.{time}.{id}.json', [
             'path' => Config::get('tmpDir'),
+            'time' => time(),
             'id' => ag($request->getServerParams(), 'X_REQUEST_ID', (string)time()),
         ]), 'w');
 
