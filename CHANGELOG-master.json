@@ -1,5 +1,17 @@
 [
     {
+        "tag": "master-20250307-b392827",
+        "date": "2025-03-07T18:04:19+00:00",
+        "commits": [
+            {
+                "sha": "e70ea4e",
+                "message": "semi self-plug for YTPTube project.",
+                "author": "Abdulmohsen B. A. A.",
+                "date": "2025-03-07T17:56:21+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250307-200d6a4",
         "date": "2025-03-07T01:08:48+00:00",
         "commits": [
