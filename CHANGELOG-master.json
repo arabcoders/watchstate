@@ -1,8 +1,20 @@
 [
     {
-        "tag": "master-20250307-b392827",
-        "date": "2025-03-07T18:04:19+00:00",
+        "tag": "master-20250318-e80c0a6",
+        "date": "2025-03-18T22:20:02+00:00",
         "commits": [
+            {
+                "sha": "8ba321d",
+                "message": "to support boxSets, add collapseBoxSetItems to get the item in response. Closes #625",
+                "author": "Abdulmohsen B. A. A.",
+                "date": "2025-03-18T22:10:04+00:00"
+            },
+            {
+                "sha": "c1c3a47",
+                "message": "Added webhook support for plex via tautulli",
+                "author": "ArabCoders",
+                "date": "2025-03-12T22:20:21+00:00"
+            },
             {
                 "sha": "e70ea4e",
                 "message": "semi self-plug for YTPTube project.",
