@@ -19,16 +19,16 @@ It will show you the relevant information regarding the command and some frequen
 
 ----
 
-### How to turn on scheduled tasks for import/export?
+# How to turn on scheduled tasks for import/export?
 
 Scheduled tasks are configured via specific environment variables refers
 to [environment variables](#environment-variables) section,
 
-#### Via WebUI
+## Via WebUI
 
 Simply go to `Tasks` page and enable the tasks you want to run.
 
-#### Via CLI
+## Via CLI
 
 ```bash
 $ docker exec -ti watchstate console system:env -k WS_CRON_IMPORT -e true
@@ -41,14 +41,14 @@ check your cron expression is [crontab.guru](https://crontab.guru/).
 
 While we think they are reasonable defaults, you can change them by setting the following environment variables:
 
-#### Via WebUI
+## Via WebUI
 
 Go to the `env` page, click on `+` button, then select the key in this case `WS_CRON_IMPORT_AT`, `WS_CRON_EXPORT_AT`
 and set the value to a valid cron expression. Then click save to apply the new timer. This will be change later to be
 included with
 the tasks page.
 
-#### Via CLI
+## Via CLI
 
 Execute the following commands:
 
@@ -59,11 +59,11 @@ $ docker exec -ti watchstate console system:env -k WS_CRON_EXPORT_AT -e '"30 */1
 
 For Values with space, they must be enclosed in double quotes. to see the status of your scheduled tasks,
 
-#### Via WebUI
+## Via WebUI
 
 Go to the `Tasks` page, you will see the status of each task.
 
-#### Via CLI
+## Via CLI
 
 ```bash
 $ docker exec -ti watchstate console system:tasks
@@ -75,7 +75,7 @@ $ docker exec -ti watchstate console system:tasks
 
 ----
 
-### Container is crashing on startup?
+# Container is crashing on startup?
 
 This is likely due to misconfigured `user:` in `compose.yaml`, the container is rootless as such it will crash if
 the tool unable to access the data path. to check permissions simply do the following
@@ -94,7 +94,7 @@ Use the ids as parameters for `user:` in this case it should be `user:"1000:1000
 
 ----
 
-### How to find the apikey?
+# How to find the apikey?
 
 You can find the apikey inside the following file `/config/config/.env`. The apikey is stored inside this
 variable `WS_API_KEY=`.
@@ -106,7 +106,7 @@ $ docker exec -ti console system:apikey
 
 ----
 
-### What the API key used for?
+# What the API key used for?
 
 The API key is used to authenticate the requests to the tool, it's used to prevent unauthorized access. The API key is
 required for all endpoints except the `/v1/api/[backend_name]/webhook` endpoint which is open by default unless you have
@@ -118,7 +118,7 @@ mode.
 
 ----
 
-### MAPPER: Watch state conflict detected in [BACKEND_NAME]...?
+# MAPPER: Watch state conflict detected in [BACKEND_NAME]...?
 
 This warning occurs when the database has the movie/episode marked as played but a backend reporting the
 item as unplayed and there is no metadata that indicates that the movie was previously imported from the backend.
@@ -132,7 +132,7 @@ $ docker exec -ti console state:export -fi -s [BACKEND_NAME]
 
 ----
 
-### How to use Jellyfin, Emby oauth tokens?
+# How to use Jellyfin, Emby oauth tokens?
 
 Due to limitation on jellyfin/emby side, the way we implemented support for oauth token require that you provide the
 username and password in `username:password` format, This is due to the API not providing a way for us to inquiry about
@@ -144,7 +144,7 @@ is a one time process, and you should not need to do it again. Your `username` a
 
 ----
 
-### My new backend overriding my old backend state / My watch state is not correct?
+# My new backend overriding my old backend state / My watch state is not correct?
 
 This likely due to the new backend reporting newer date than your old backend. as such the typical setup is to
 prioritize items with newer date compared to old ones. This is what you want to happen normally. However, if the new
@@ -179,7 +179,7 @@ In `WebUI` you can enable import by going to the `backends` page and click on im
 
 ----
 
-### My new backend watch state not being updated?
+# My new backend watch state not being updated?
 
 The likely cause of this problem is date related problem, as we check the date on backend object and compare that to the
 date in local database, to make sure this is the error you are facing please do the following.
@@ -209,7 +209,7 @@ database state back to the selected backend.
 
 ----
 
-### Is there support for Multi-user setup?
+# Is there support for Multi-user setup?
 
 We are on early stage of supporting multi-user setups, initially few operations are supported. To get started, first you
 need to create your own main user backends using admin token for Plex and api key for Jellyfin/Emby.
@@ -231,7 +231,7 @@ If your users usernames are different between the backends, you can use the `map
 the backends. For more information about the `mapper.yaml` file, please refer to
 the [mapper.yaml](#whats-the-schema-for-the-mapperyaml-file) section.
 
-#### Whats the schema for the `mapper.yaml` file?
+# Whats the schema for the `mapper.yaml` file?
 
 The schema is simple, it's a list of users in the following format:
 
@@ -259,13 +259,18 @@ The schema is simple, it's a list of users in the following format:
 #.... more users
 ```
 
+> ![NOTE]
+> the server names `my_plex_server`, `my_jellyfin_server`, `my_emby_server` are the names you have chosen for your
+> backends.
+> the `name` is the real username for that user from the backend.
+
 This yaml file helps map your users username in the different backends, so the tool can sync the correct user data. If
 you added or updated mapping, you should delete `users` directory and generate new data. by running the `backend:create`
 command as described in the previous section.
 
 ----
 
-### How do i migrate invited friends i.e. (external user) data from from plex to emby/jellyfin?
+# How do i migrate invited friends i.e. (external user) data from from plex to emby/jellyfin?
 
 As this tool is designed to work with single user, You have to treat each invited friend as a separate user. what is
 needed, you need to contact that friend of yours and ask him/her to give you a copy of
@@ -286,13 +291,13 @@ You have to repeat these steps for each user you want to migrate their data off 
 
 ----
 
-### Does this tool require webhooks to work?
+# Does this tool require webhooks to work?
 
 No, You can use the `task scheduler` or on `on demand sync` if you want.
 
 ---
 
-### I get tired of writing the whole command everytime is there an easy way run the commands?
+# I get tired of writing the whole command everytime is there an easy way run the commands?
 
 Good News, There is a way to make your life easier, We recently added a `WebUI` which should cover most of the use
 cases.
@@ -308,7 +313,7 @@ after that you can do `./ws command` for example, `./ws db:list`
 
 ---
 
-### I am using media backends hosted behind HTTPS, and see errors related to HTTP/2?
+# I am using media backends hosted behind HTTPS, and see errors related to HTTP/2?
 
 Sometimes there are problems related to HTTP/2, so before reporting bug please try running the following command:
 
@@ -321,7 +326,7 @@ about it.
 
 ---
 
-### Sync operations are failing due to request timeout?
+# Sync operations are failing due to request timeout?
 
 If you want to increase the timeout for specific backend you can run the following command:
 
@@ -333,7 +338,7 @@ where `600` is the number of seconds before the timeout handler will kill the re
 
 ---
 
-### How to fix corrupt SQLite database?
+# How to fix corrupt SQLite database?
 
 Sometimes your SQLite database will be corrupted, and you will get an error similar to this
 `General error: 11 database disk image is malformed`. To fix this error simply execute the following commands:
@@ -357,7 +362,7 @@ $ mv /config/db/watchstate_v01-repaired.db /config/db/watchstate_v01.db
 
 ---
 
-### Which external db ids `GUIDS` supported for Plex Media Server?
+# Which external db ids `GUIDS` supported for Plex Media Server?
 
 * tvdb://(id) `New plex agent`
 * imdb://(id) `New plex agent`
@@ -377,7 +382,7 @@ $ mv /config/db/watchstate_v01-repaired.db /config/db/watchstate_v01.db
 
 ---
 
-### Which external db ids supported for Jellyfin and Emby?
+# Which external db ids supported for Jellyfin and Emby?
 
 * imdb://(id)
 * tvdb://(id)
@@ -394,7 +399,7 @@ $ mv /config/db/watchstate_v01-repaired.db /config/db/watchstate_v01.db
 
 ---
 
-### Environment Variables
+# Environment Variables
 
 The recommended approach is for keys that starts with `WS_` use the `WebUI > Env` page, or `system:env` command via CLI.
 For other keys that aren't directly related to the tool, you **MUST** load them via container environment or
@@ -402,17 +407,17 @@ the `compose.yaml` file.
 
 to see list of loaded environment variables
 
-#### Via WebUI
+## Via WebUI
 
 Go to `Env` page, you will see all the environment variables loaded.
 
-#### Via CLI
+## Via CLI
 
 ```shell
 $ docker exec -ti watchstate console system:env
 ```
 
-#### Tool specific environment variables.
+## Tool specific environment variables.
 
 These environment variables relates to the tool itself, You should manage them via `WebUI > Env` page or `system:env`
 command via CLI.
@@ -446,17 +451,17 @@ $ docker exec -ti watchstate console system:tasks
 > [!NOTE]
 > To see all supported tool specific environment variables
 
-#### Via WebUI
+### Via WebUI
 
 Go to the `Env` page, click `+` button, you will get list of all supported keys with description.
 
-#### Via CLI
+### Via CLI
 
 ```bash
 $ docker exec -ti watchstate console system:env --list
 ```
 
-#### Container specific environment variables.
+## Container specific environment variables.
 
 > [!IMPORTANT]
 > These environment variables relates to the container itself, and MUST be added via container environment or by
@@ -477,7 +482,7 @@ $ docker exec -ti watchstate console system:env --list
 
 ---
 
-### How to add webhooks?
+# How to add webhooks?
 
 The Webhook URL is backend specific, the request path is `/v1/api/backend/[USER]@[BACKEND_NAME]/webhook`,
 Where `[USER]` is the username for sub user or `main` for main user and `[BACKEND_NAME]` is the name of the backend you
@@ -495,22 +500,22 @@ click on `Copy Webhook URL`.
 
 -----
 
-#### Emby (you need `Emby Premiere` to use webhooks).
+## Emby (you need `Emby Premiere` to use webhooks).
 
 Go to your Manage Emby Server > Server > Webhooks > (Click Add Webhook)
 
-##### Webhook/Notifications URL:
+### Webhook/Notifications URL:
 
 `http://localhost:8080/v1/api/backend/[USER]@[BACKEND_NAME]/webhook`
 
 * Replace `[BACKEND_NAME]` with the name you have chosen for your backend.
 * Replace `[USER]` with the `main` for main user or the sub user username.
 
-##### Request content type (Emby v4.9+):
+### Request content type (Emby v4.9+):
 
 `application/json`
 
-##### Webhook Events:
+### Webhook Events:
 
 #### v4.7.9 or higher
 
@@ -524,11 +529,11 @@ Go to your Manage Emby Server > Server > Webhooks > (Click Add Webhook)
 * Playback events
 * User events
 
-##### Limit user events to:
+### Limit user events to:
 
 * Select your user.
 
-##### Limit library events to:
+### Limit library events to:
 
 * Select libraries that you want to sync or leave it blank for all libraries.
 
@@ -536,34 +541,34 @@ Click `Add Webhook / Save`
 
 -----
 
-#### Jellyfin (Free)
+## Jellyfin (Free)
 
 go to your jellyfin dashboard > plugins > Catalog > install: Notifications > Webhook, restart your jellyfin. After that
 go back again to dashboard > plugins > webhook. Add `Add Generic Destination`,
 
-##### Webhook Name:
+### Webhook Name:
 
 `Watchstate-Webhook`
 
-##### Webhook Url:
+#### Webhook Url:
 
 `http://localhost:8080/v1/api/backend/[USER]@[BACKEND_NAME]/webhook`
 
 * Replace `[BACKEND_NAME]` with the name you have chosen for your backend.
 * Replace `[USER]` with the `main` for main user or the sub user username.
 
-##### Notification Type:
+#### Notification Type:
 
 * Item Added
 * User Data Saved
 * Playback Start
 * Playback Stop
 
-##### User Filter:
+#### User Filter:
 
 * Select your user.
 
-##### Item Type:
+#### Item Type:
 
 * Movies
 * Episodes
@@ -576,11 +581,11 @@ Click `Save`
 
 -----
 
-#### Plex (You need `Plex Pass` to use webhooks)
+## Plex (You need `Plex Pass` to use webhooks)
 
 Go to your Plex Web UI > Settings > Your Account > Webhooks > (Click ADD WEBHOOK)
 
-##### URL:
+### URL:
 
 `http://localhost:8080/v1/api/backend/[USER]@[BACKEND_NAME]/webhook`
 
@@ -602,11 +607,11 @@ Click `Save Changes`
 
 ---- 
 
-#### Plex Via tautulli
+## Plex Via tautulli
 
 Go to options > Notification Agents > Add a new notification agent > Webhook
 
-##### Webhook URL:
+### Webhook URL:
 
 `http://localhost:8080/v1/api/backend/[USER]@[BACKEND_NAME]/webhook`
 
@@ -616,11 +621,11 @@ Go to options > Notification Agents > Add a new notification agent > Webhook
 > [!IMPORTANT]
 > If you have enabled `WS_SECURE_API_ENDPOINTS`, you have to add `?apikey=yourapikey` to the end of the URL.
 
-##### Webhook Method
+### Webhook Method
 
 `PUT`
 
-#### Description
+### Description
 
 it's recommended to use something like `webhook for user XX for backend XX`.
 
@@ -643,7 +648,7 @@ For each event there is a corresponding headers/data fields that you need to set
 > It's extremely important that you copy the headers and data as it is, don't alter them if you don't know what you are
 > doing.
 
-#### JSON headers
+### JSON headers
 
 ```json
 {
@@ -651,7 +656,7 @@ For each event there is a corresponding headers/data fields that you need to set
 }
 ```
 
-#### JSON Data
+### JSON Data
 
 ```json
 {
@@ -737,24 +742,24 @@ Click `Save`
 
 ---
 
-### What are the webhook limitations?
+# What are the webhook limitations?
 
 Those are some webhook limitations we discovered for the following media backends.
 
-#### Plex
+## Plex
 
 * Plex does not send webhooks events for "marked as played/unplayed" for all item types.
 * Sometimes does not send events if you add more than one item at time.
 * When you mark items as unwatched, Plex reset the date on the object.
 
-#### Plex Via Tautulli
+## Plex Via Tautulli
 
 * Tautulli does not send user id with itemAdd `created` event. as such if you enabled `Match webhook user`, new items
   will not be added and fail with `Request user id '' does not match configured value`.
 * Marked as unplayed will most likely not work with Tautulli webhook events as it's missing critical data we need to
   determine if the item is marked as unplayed.
 
-#### Emby
+## Emby
 
 * Emby does not send webhooks events for newly added items.
   ~~[See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/)~~
@@ -763,7 +768,7 @@ Those are some webhook limitations we discovered for the following media backend
   works, play something or do mark an item as played or unplayed you should see changes reflected in
   `docker exec -ti watchstate console db:list`.
 
-#### Jellyfin
+## Jellyfin
 
 * If you don't select a user id, the plugin will send `itemAdd` event without user data, and will fail the check if you
   happen to enable `webhook.match.user` for jellyfin.
@@ -774,7 +779,7 @@ Those are some webhook limitations we discovered for the following media backend
 
 ---
 
-### Sometimes newly added episodes or movies don't make it to webhook endpoint?
+# Sometimes newly added episodes or movies don't make it to webhook endpoint?
 
 As stated in webhook limitation section sometimes media backends don't make it easy to receive those events, as such, to
 complement webhooks, you should enable import/export tasks by settings their respective environment variables in
@@ -783,7 +788,7 @@ command.
 
 ---
 
-### How to disable the included HTTP server and use external server?
+# How to disable the included HTTP server and use external server?
 
 Set this environment variable in your `compose.yaml` file `DISABLE_HTTP` with value of `1`. your external
 server need to send correct fastcgi environment variables. Example caddy file:
@@ -809,19 +814,19 @@ https://watchstate.example.org {
 
 ---
 
-### WS_API_AUTO
+# WS_API_AUTO
 
 The purpose of this environment variable is to automate the configuration process. It's mainly used for people who use
 many browsers to access the `WebUI` and want to automate the configuration process. as it's requires the API settings to
 be configured before it can be used. This environment variable can be enabled by setting `WS_API_AUTO=true` in
 `${WS_DATA_PATH}/config/.env`.
 
-#### Why you should use it?
+## Why you should use it?
 
 You normally should not use it, as it's a **GREAT SECURITY RISK**. However, if you are using the tool in a secure
 environment and not worried about exposing your API key, you can use it to automate the configuration process.
 
-#### Why you should not use it?
+## Why you should not use it?
 
 Because, by exposing your API key, you are also exposing every data you have in the tool. This is a **GREAT SECURITY
 RISK**, any person or bot that are able to access the `WebUI` will also be able to visit `/v1/api/system/auto` and get
@@ -835,7 +840,7 @@ the internet.
 
 ---
 
-### How to disable the included cache server and use external cache server?
+# How to disable the included cache server and use external cache server?
 
 Set this environment variable in your `compose.yaml` file `DISABLE_CACHE` with value of `1`. to use external redis
 server you need to alter the value of `WS_CACHE_URL` environment variable. the format for this variable is
@@ -847,7 +852,7 @@ Once that done, restart the container.
 
 ---
 
-### How to get WatchState working with YouTube content/library?
+# How to get WatchState working with YouTube content/library?
 
 Due to the nature on how people name their youtube files i had to pick something specific for it to work cross supported
 media agents. Please visit [this link](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin#usage) to know how to
@@ -858,18 +863,18 @@ For example, if you have `20231030 my awesome youtube video [youtube-RandomStrin
 have `20231030 my awesome youtube video [youtube-RandomString].info.json` in the same directory. In the future,
 I plan to make `.info.json` optional However at the moment the file is required for emby/jellyfin plugin to work.
 
-#### Plex Setup
+## Plex Setup
 
 * Download this agent [ytinforeader.bundle](https://github.com/arabcoders/plex-ytdlp-info-reader-agent) please follow
   the instructions on how to install it from the link itself. It's important to use the specified scanner otherwise the
   syncing will not work.
 
-#### Jellyfin Setup
+## Jellyfin Setup
 
 * Download this plugin [jf-ytdlp-info-reader-plugin](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin). Please
   refer to the link on how to install it.
 
-#### Emby Setup
+## Emby Setup
 
 * Download this plugin [emby-ytdlp-info-reader-plugin](https://github.com/arabcoders/emby-ytdlp-info-reader-plugin).
   Please refer to the link on how to install it.
@@ -880,7 +885,7 @@ relevant data if they are not matching correctly, and we hopefully can resolve i
 
 ---
 
-### How to check if the container able to communicate with the media backends?
+# How to check if the container able to communicate with the media backends?
 
 If you having problem adding a backend to `WatchState`, it most likely network related problem, where the container
 isn't able to communicate with the media backend. Thus, you will get errors. To make sure the container is able to
@@ -888,7 +893,7 @@ communicate with the media backend, you can run the following command and check 
 
 If the command fails for any reason, then you most likely have network related problem or invalid apikey/token.
 
-#### For Plex.
+## For Plex.
 
 ```bash
 $ docker exec -ti watchstate bash
@@ -904,7 +909,7 @@ $ curl -H "Accept: application/json" -H "X-Plex-Token: [PLEX_TOKEN]" http://[PLE
 
 If everything is working correctly you should see something like this previous json output.
 
-#### For Jellyfin & Emby.
+## For Jellyfin & Emby.
 
 ```bash
 $ docker exec -ti watchstate bash
@@ -923,9 +928,9 @@ If everything is working correctly you should see something like this previous j
 
 ----
 
-### I keep receiving this warning in log
+# I keep receiving this warning in logs
 
-`INFO: Ignoring [xxx] Episode range, and treating it as single episode. Backend says it covers [00-00]`?
+## INFO: Ignoring [xxx] Episode range, and treating it as single episode. Backend says it covers [00-00]?
 
 We recently added guard clause to prevent backends from sending possibly invalid episode ranges, as such if you see
 this,
@@ -942,9 +947,7 @@ $ docker exec -ti watchstate console config:edit --key options.MAX_EPISODE_RANGE
 where `10` is the new limit. You can set it to any number you want. However, Please do inspect the reported records as
 it most likely you have incorrect metadata in your library.
 
----
-
-### I Keep receiving [jellyfin] item [id: name] is marked as [played] vs local state [unplayed], However due to the remote item date [date] being older than the last backend sync date [date]. it was not considered as valid state.
+## I Keep receiving 'jellyfin' item 'id: name' is marked as 'played' vs local state 'unplayed', However due to the remote item date 'date' being older than the last backend sync date 'date'. it was not considered as valid state.
 
 Sadly, this is due to bug in jellyfin, where it marks the item as played without updating the LastPlayedDate, and as
 such, watchstate doesn't really know the item has changed since last sync. Unfortunately, there is no way to fix this
@@ -955,12 +958,12 @@ jellyfin devs fixes the issue. Please take look at the webhooks section to enabl
 
 ---
 
-### Bare metal installation
+# Bare metal installation
 
 We officially only support the docker container, however for the brave souls who want to install the tool directly on
 their server, You can follow these steps.
 
-#### Requirements
+## Requirements
 
 * [PHP 8.4](http://https://www.php.net/downloads.php) with both the `CLI` and `fpm` mode.
 * PHP Extensions `pdo`, `pdo-sqlite`, `mbstring`, `json`, `ctype`, `curl`, `redis`, `sodium` and `simplexml`.
@@ -971,7 +974,7 @@ their server, You can follow these steps.
   support for fastcgi.
 * [Node.js v20+](https://nodejs.org/en/download/) for `WebUI` compilation.
 
-#### Installation
+## Installation
 
 * Clone the repository.
 
@@ -1056,14 +1059,14 @@ For more information, please refer to the [Dockerfile](/Dockerfile). On how we d
 
 ---
 
-### How does the file integrity feature works?
+# How does the file integrity feature works?
 
 The feature first scan your entire history for reported media file paths. Depending on the results we do the following:
 
 * If metadata reports a path, then we will run stat check on each component of the path from lowest to highest.
 * If no metadata reports a path, then simply the record will be marked as OK.
 
-#### Here is the break-down example
+## Here is the break-down example
 
 Lets says you have a media file `/media/series/season 1/episode 1.mkv` The scanner does the following:
 
@@ -1085,7 +1088,7 @@ the stat check once. Assuming all your media backends are using same path for th
 
 ---
 
-### How to use hardware acceleration for video transcoding in the WebUI?
+# How to use hardware acceleration for video transcoding in the WebUI?
 
 As the container is rootless, we cannot do the necessary changes to the container to enable hardware acceleration.
 However, We do have the drivers and ffmpeg already installed and the CPU transcoding should work regardless. To enable
@@ -1132,7 +1135,7 @@ Note: the tip about adding the group_add came from the user `binarypancakes` in 
 
 ---
 
-### Advanced: How to extend the GUID parser to support more GUIDs or custom ones?
+# Advanced: How to extend the GUID parser to support more GUIDs or custom ones?
 
 By going to `More > Custom GUIDs` in the WebUI, you can add custom GUIDs to the parser. We know not all people,
 like using GUI, as such You can extend the parser by creating new file at `/config/config/guid.yaml` with the following
@@ -1207,7 +1210,7 @@ database indexes with the new guids.
 
 ---
 
-### Sync watch progress.
+# Sync watch progress.
 
 In order to sync the watch progress between media backends, you need to enable the following environment variable
 `WS_SYNC_PROGRESS` in `(WebUI) > Env` page or via the cli using the following command:
@@ -1227,11 +1230,11 @@ the event log.
 
 ---
 
-### Sub users support.
+# Sub users support.
 
 ### API/WebUI endpoints that supports sub users.
 
-These endpoints supports sub-users via `?user=username` query parameter, or via `X-User` header. The recommended
+These endpoints support sub-users via `?user=username` query parameter, or via `X-User` header. The recommended
 approach is to use the header.
 
 * `/v1/api/backend/*`.

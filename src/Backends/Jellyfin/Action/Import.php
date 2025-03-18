@@ -320,6 +320,7 @@ class Import
                     'sortOrder' => 'Ascending',
                     'parentId' => ag($logContext, 'library.id'),
                     'recursive' => 'true',
+                    'collapseBoxSetItems' => 'false',
                     'excludeLocationTypes' => 'Virtual',
                     'includeItemTypes' => implode(',', [JFC::TYPE_MOVIE, JFC::TYPE_EPISODE]),
                     'startIndex' => 0,
@@ -646,6 +647,7 @@ class Import
                         http_build_query([
                             'sortBy' => 'DateCreated',
                             'sortOrder' => 'Ascending',
+                            'collapseBoxSetItems' => 'false',
                             'parentId' => ag($logContext, 'library.id'),
                             'recursive' => 'true',
                             'enableUserData' => 'true',
