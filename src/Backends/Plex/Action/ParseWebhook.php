@@ -38,6 +38,14 @@ final class ParseWebhook
         'media.resume',
         'media.pause',
         'media.scrobble',
+        // -- Tautulli events
+        'tautulli.start',
+        'tautulli.play',
+        'tautulli.stop',
+        'tautulli.pause',
+        'tautulli.resume',
+        'tautulli.watched',
+        'tautulli.created',
     ];
 
     protected const array WEBHOOK_TAINTED_EVENTS = [
@@ -45,6 +53,12 @@ final class ParseWebhook
         'media.stop',
         'media.resume',
         'media.pause',
+        // -- Tautulli events
+        'tautulli.start',
+        'tautulli.play',
+        'tautulli.stop',
+        'tautulli.pause',
+        'tautulli.resume',
     ];
 
     private string $action = 'plex.parseWebhook';
@@ -62,7 +76,7 @@ final class ParseWebhook
     {
         return $this->tryResponse(
             context: $context,
-            fn: fn () => $this->parse($context, $guid, $request),
+            fn: fn() => $this->parse($context, $guid, $request),
             action: $this->action
         );
     }
@@ -111,7 +125,7 @@ final class ParseWebhook
             ]);
         }
 
-        if (null === $id) {
+        if (empty($id)) {
             return new Response(status: false, extra: [
                 'http_code' => Status::BAD_REQUEST->value,
                 'message' => r('{user}@{backend}: No item id was found in body.', $logContext),
@@ -119,7 +133,7 @@ final class ParseWebhook
         }
 
         if (null !== ($ignoreIds = ag($context->options, 'ignore', null))) {
-            $ignoreIds = array_map(fn ($v) => trim($v), explode(',', (string)$ignoreIds));
+            $ignoreIds = array_map(fn($v) => trim($v), explode(',', (string)$ignoreIds));
         }
 
         if (null !== $ignoreIds && in_array(ag($item, 'librarySectionID', '???'), $ignoreIds)) {
