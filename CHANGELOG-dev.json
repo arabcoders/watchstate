@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250313-c1c3a47",
-        "date": "2025-03-12T22:20:21+00:00",
+        "tag": "dev-20250319-8ba321d",
+        "date": "2025-03-18T22:10:04+00:00",
         "commits": [
+            {
+                "sha": "8ba321d",
+                "message": "to support boxSets, add collapseBoxSetItems to get the item in response. Closes #625",
+                "author": "Abdulmohsen B. A. A.",
+                "date": "2025-03-18T22:10:04+00:00"
+            },
             {
                 "sha": "c1c3a47",
                 "message": "Added webhook support for plex via tautulli",
