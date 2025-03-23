@@ -96,7 +96,7 @@
           <span>{{ !toggleData ? 'Show' : 'Hide' }} attached data</span>
         </h2>
         <div v-if="toggleData" class="is-relative">
-          <code class="text-container is-block" :class="{ 'is-pre': !wrapLines, 'is-pre-wrap': wrapLines }">
+          <code class="text-container is-block p-4" :class="{ 'is-pre': !wrapLines, 'is-pre-wrap': wrapLines }">
             {{ JSON.stringify(item.event_data, null, 2) }}
           </code>
           <button class="button m-4" v-tooltip="'Copy event data'"
@@ -115,7 +115,7 @@
           <span>{{ !toggleLogs ? 'Show' : 'Hide' }} event logs</span>
         </h2>
         <div v-if="toggleLogs" class="is-relative">
-          <code class="is-block text-container" :class="{ 'is-pre': !wrapLines, 'is-pre-wrap': wrapLines }">
+          <code class="is-block text-container p-4" :class="{ 'is-pre': !wrapLines, 'is-pre-wrap': wrapLines }">
             <span class="is-log-line is-block pt-1" v-for="(item, index) in filteredRows" :key="'log_line-' + index"
                   v-text="item"/>
           </code>
@@ -134,7 +134,7 @@
           <span>{{ !toggleOptions ? 'Show' : 'Hide' }} attached options</span>
         </h2>
         <div v-if="toggleOptions" class="is-relative">
-          <code class="is-block text-container" :class="{ 'is-pre': !wrapLines, 'is-pre-wrap': wrapLines }">
+          <code class="is-block text-container p-4" :class="{ 'is-pre': !wrapLines, 'is-pre-wrap': wrapLines }">
             {{ JSON.stringify(item.options, null, 2) }}
           </code>
           <button class="button m-4" v-tooltip="'Copy options'"

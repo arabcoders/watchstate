@@ -1,16 +1,3 @@
-<style scoped>
-.transparent-bg {
-  opacity: 0.8;
-}
-
-.bg-fanart {
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-  background-repeat: no-repeat;
-  background-blend-mode: darken;
-}
-</style>
 <template>
   <div>
     <div class="columns is-multiline">
@@ -453,7 +440,7 @@
         </span>
         <p class="subtitle">Useful for debugging.</p>
         <div v-if="showRawData" class="mt-2" style="position: relative;">
-          <code class="is-block is-pre-wrap">{{
+          <code class="is-block is-pre-wrap p-4">{{
               JSON.stringify(Object.keys(data)
                   .filter(key => !['files', 'hardware', 'content_exists', '_toggle'].includes(key))
                   .reduce((obj, key) => {

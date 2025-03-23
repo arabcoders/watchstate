@@ -19,6 +19,7 @@ use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Database\DBLayer;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Events\DataEvent;
 use App\Libs\Exceptions\AppExceptionInterface;
@@ -1549,14 +1550,14 @@ if (!function_exists('APIRequest')) {
     /**
      * Make internal request to the API.
      *
-     * @param string $method The request method.
+     * @param Method|string $method The request method.
      * @param string $path The request path.
      * @param array $json The request body.
      * @param array{ server: array, query: array, headers: array} $opts Additional options.
      *
      * @return APIResponse The response object.
      */
-    function APIRequest(string $method, string $path, array $json = [], array $opts = []): APIResponse
+    function APIRequest(Method|string $method, string $path, array $json = [], array $opts = []): APIResponse
     {
         $initializer = Container::get(Initializer::class);
 
@@ -1566,7 +1567,7 @@ if (!function_exists('APIRequest')) {
         $uri = new Uri($path);
 
         $server = [
-            'REQUEST_METHOD' => $method,
+            'REQUEST_METHOD' => ($method instanceof Method) ? $method->value : strtoupper($method),
             'SCRIPT_FILENAME' => realpath(__DIR__ . '/../../public/index.php'),
             'REMOTE_ADDR' => '127.0.0.1',
             'REQUEST_URI' => Config::get('api.prefix') . $uri->getPath(),

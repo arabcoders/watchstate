@@ -9,6 +9,11 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ## Updates
 
+### 2025-03-13
+
+We have recently added support for plex webhooks via tautulli which you can use if you don't have PlexPass. This should help
+close the gap with other media servers.
+
 ### 2025-02-19
 
 We have introduced new experimental feature to allow syncing watch progress for played items. This feature is still in
