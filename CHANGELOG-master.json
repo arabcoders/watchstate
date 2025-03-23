@@ -1,5 +1,23 @@
 [
     {
+        "tag": "master-20250323-8fb21d0",
+        "date": "2025-03-23T23:49:28+00:00",
+        "commits": [
+            {
+                "sha": "23ab782",
+                "message": "Minor WebUI design update to include random background",
+                "author": "ArabCoders",
+                "date": "2025-03-23T23:29:32+00:00"
+            },
+            {
+                "sha": "c4f79e1",
+                "message": "update README",
+                "author": "ArabCoders",
+                "date": "2025-03-20T18:44:21+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250318-e80c0a6",
         "date": "2025-03-18T22:20:02+00:00",
         "commits": [
