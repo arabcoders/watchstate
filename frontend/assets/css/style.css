@@ -14,8 +14,7 @@
     border-radius: 15px;
 }
 
-html,
-body {
+html {
     background-color: #eaeaea;
 }
 
@@ -60,8 +59,7 @@ body {
         border-radius: 15px;
     }
 
-    html,
-    body {
+    html {
         background-color: #000000;
     }
 
@@ -81,6 +79,7 @@ body {
     .is-full-mask :not(figure) {
         text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
     }
+
     .has-tooltip {
         border-bottom-color: rgba(255, 255, 255, 0.3);
     }
@@ -163,19 +162,18 @@ body {
     color: #5f00d1;
 }
 
-@media screen and (min-width: 769px),
-print {
+@media screen and (min-width: 769px), print {
     .field.is-grouped-tablet {
         display: flex;
         gap: 0.75rem;
         justify-content: flex-start;
     }
 
-    .field.is-grouped-tablet>.control {
+    .field.is-grouped-tablet > .control {
         flex-shrink: 0;
     }
 
-    .field.is-grouped-tablet>.control.is-expanded {
+    .field.is-grouped-tablet > .control.is-expanded {
         flex-grow: 1;
         flex-shrink: 1;
     }
@@ -213,4 +211,16 @@ print {
 .page-enter-from,
 .page-leave-to {
     opacity: 0;
+}
+
+.transparent-bg {
+    opacity: 0.8;
+}
+
+.bg-fanart {
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-blend-mode: darken;
 }

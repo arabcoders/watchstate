@@ -74,7 +74,8 @@
                 </span>
               </NuxtLink>
 
-              <NuxtLink class="navbar-item" to="/processes" @click.native="(e) => changeRoute(e)" v-if="hasAPISettings">
+              <NuxtLink class="navbar-item" to="/processes" @click.native="(e) => changeRoute(e)"
+                        v-if="hasAPISettings">
                 <span class="icon-text">
                   <span class="icon"><i class="fas fa-microchip"/></span>
                   <span>Processes</span>
@@ -159,7 +160,8 @@
           </div>
 
           <div class="navbar-item">
-            <button class="button is-dark" @click="showConnection = !showConnection" v-tooltip="'Configure connection'">
+            <button class="button is-dark" @click="showConnection = !showConnection"
+                    v-tooltip="'Configure connection'">
               <span class="icon"><i class="fas fa-cog"/></span>
             </button>
           </div>
@@ -215,11 +217,11 @@ import {ref} from 'vue'
 import 'assets/css/bulma.css'
 import 'assets/css/style.css'
 import 'assets/css/all.css'
-import {useStorage} from '@vueuse/core'
+import {useBreakpoints, useStorage} from '@vueuse/core'
 import request from '~/utils/request'
 import Markdown from '~/components/Markdown'
 import UserSelection from '~/components/UserSelection'
-import Connection from "~/components/Connection"
+import Connection from '~/components/Connection'
 
 const selectedTheme = useStorage('theme', (() => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')())
 const showUserSelection = ref(false)
@@ -227,7 +229,13 @@ const showConnection = ref(false)
 
 const api_url = useStorage('api_user', 'main')
 const api_token = useStorage('api_token', '')
+const bg_enable = useStorage('bg_enable', true)
+const bg_opacity = useStorage('bg_opacity', 0.95)
 const api_version = ref()
+const bgImage = ref({src: '', type: ''})
+const loadedImages = ref({poster: '', background: ''})
+
+const breakpoints = useBreakpoints({mobile: 0, desktop: 640})
 
 const changelog_url = ref('/changelog')
 watch(() => api_version.value, () => changelog_url.value = `/changelog?version=${api_version.value}`)
@@ -291,6 +299,7 @@ onMounted(async () => {
     }
 
     await getVersion()
+    await loadImage()
   } catch (e) {
   }
 })
@@ -350,6 +359,97 @@ const selectTheme = theme => {
 const handleConnection = data => {
   api_version.value = data.version
   showConnection.value = false
+}
+
+watch(bgImage, async v => {
+  if (false === hasAPISettings.value || false === bg_enable.value) {
+    return
+  }
+
+  const html = document.documentElement;
+  if ('' === v || 'failed' === v.src || '' === v.src) {
+    if (html.getAttribute("style")) {
+      html.removeAttribute("style");
+    }
+    return
+  }
+
+  const style = {
+    "background-color": "unset",
+    "display": 'block',
+    "min-height": '100%',
+    "min-width": '100%',
+    "background-image": `url(${v.src})`,
+  }
+
+  html.setAttribute("style", Object.keys(style).map(k => `${k}: ${style[k]}`).join('; ').trim())
+  html.classList.add('bg-fanart')
+  document.querySelector('body').setAttribute("style", "opacity: 0.95");
+}, {immediate: true})
+
+watch(bg_opacity, v => {
+  if (false === hasAPISettings.value || false === bg_enable.value) {
+    return
+  }
+  document.querySelector('body').setAttribute("style", `opacity: ${v}`)
+})
+watch(hasAPISettings, async () => await loadImage())
+watch(breakpoints.active(), async () => await loadImage())
+watch(bg_enable, async v => {
+  if (true === v) {
+    await loadImage()
+    return
+  }
+
+  if ('' === bgImage.value.src) {
+    return
+  }
+
+  loadedImages.value = []
+  bgImage.value = {src: '', type: ''}
+
+
+  const html = document.documentElement;
+  if (!html.getAttribute("style")) {
+    return
+  }
+
+  html.removeAttribute("style");
+  document.querySelector('body').setAttribute("style", "");
+})
+
+const loadImage = async () => {
+  if (!bg_enable.value || !hasAPISettings) {
+    return
+  }
+
+  const bg_type = 'mobile' === breakpoints.active().value ? 'poster' : 'background'
+
+  if (bgImage.value && bgImage.value.type === bg_type) {
+    return
+  }
+
+  if (loadedImages.value[bg_type]) {
+    bgImage.value = {src: loadedImages.value[bg_type], type: bg_type}
+    return
+  }
+
+  const imgRequest = await request(`/system/images/${bg_type}`)
+  if (200 !== imgRequest.status) {
+    bgImage.value = {src: 'failed', type: bg_type}
+    return
+  }
+
+  try {
+    loadedImages.value[bg_type] = URL.createObjectURL(await imgRequest.blob())
+
+    bgImage.value = {
+      src: loadedImages.value[bg_type],
+      type: bg_type
+    }
+  } catch (e) {
+    bgImage.value = {src: 'failed', type: bg_type}
+  }
 }
 
 </script>

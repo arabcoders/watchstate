@@ -1450,16 +1450,16 @@
     },
     {
       "name": "ramsey/collection",
-      "version": "2.1.0",
+      "version": "2.1.1",
       "source": {
         "type": "git",
         "url": "https://github.com/ramsey/collection.git",
-        "reference": "3c5990b8a5e0b79cd1cf11c2dc1229e58e93f109"
+        "reference": "344572933ad0181accbf4ba763e85a0306a8c5e2"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/ramsey/collection/zipball/3c5990b8a5e0b79cd1cf11c2dc1229e58e93f109",
-        "reference": "3c5990b8a5e0b79cd1cf11c2dc1229e58e93f109",
+        "url": "https://api.github.com/repos/ramsey/collection/zipball/344572933ad0181accbf4ba763e85a0306a8c5e2",
+        "reference": "344572933ad0181accbf4ba763e85a0306a8c5e2",
         "shasum": ""
       },
       "require": {
@@ -1520,9 +1520,9 @@
       ],
       "support": {
         "issues": "https://github.com/ramsey/collection/issues",
-        "source": "https://github.com/ramsey/collection/tree/2.1.0"
+        "source": "https://github.com/ramsey/collection/tree/2.1.1"
       },
-      "time": "2025-03-02T04:48:29+00:00"
+      "time": "2025-03-22T05:38:12+00:00"
     },
     {
       "name": "ramsey/uuid",
@@ -3059,16 +3059,16 @@
     },
     {
       "name": "phpstan/phpstan",
-      "version": "2.1.8",
+      "version": "2.1.10",
       "source": {
         "type": "git",
         "url": "https://github.com/phpstan/phpstan.git",
-        "reference": "f9adff3b87c03b12cc7e46a30a524648e497758f"
+        "reference": "051a3b6b9b80df4ba3a7f801a8b53ad7d8f1c15f"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/phpstan/phpstan/zipball/f9adff3b87c03b12cc7e46a30a524648e497758f",
-        "reference": "f9adff3b87c03b12cc7e46a30a524648e497758f",
+        "url": "https://api.github.com/repos/phpstan/phpstan/zipball/051a3b6b9b80df4ba3a7f801a8b53ad7d8f1c15f",
+        "reference": "051a3b6b9b80df4ba3a7f801a8b53ad7d8f1c15f",
         "shasum": ""
       },
       "require": {
@@ -3113,7 +3113,7 @@
           "type": "github"
         }
       ],
-      "time": "2025-03-09T09:30:48+00:00"
+      "time": "2025-03-23T14:57:55+00:00"
     },
     {
       "name": "phpunit/php-code-coverage",
@@ -3440,16 +3440,16 @@
     },
     {
       "name": "phpunit/phpunit",
-      "version": "11.5.13",
+      "version": "11.5.15",
       "source": {
         "type": "git",
         "url": "https://github.com/sebastianbergmann/phpunit.git",
-        "reference": "3bbb8d54b3a6718e51fd48cd478079f5f49b82bd"
+        "reference": "4b6a4ee654e5e0c5e1f17e2f83c0f4c91dee1f9c"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/3bbb8d54b3a6718e51fd48cd478079f5f49b82bd",
-        "reference": "3bbb8d54b3a6718e51fd48cd478079f5f49b82bd",
+        "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/4b6a4ee654e5e0c5e1f17e2f83c0f4c91dee1f9c",
+        "reference": "4b6a4ee654e5e0c5e1f17e2f83c0f4c91dee1f9c",
         "shasum": ""
       },
       "require": {
@@ -3469,7 +3469,7 @@
         "phpunit/php-text-template": "^4.0.1",
         "phpunit/php-timer": "^7.0.1",
         "sebastian/cli-parser": "^3.0.2",
-        "sebastian/code-unit": "^3.0.2",
+        "sebastian/code-unit": "^3.0.3",
         "sebastian/comparator": "^6.3.1",
         "sebastian/diff": "^6.0.2",
         "sebastian/environment": "^7.2.0",
@@ -3521,7 +3521,7 @@
       "support": {
         "issues": "https://github.com/sebastianbergmann/phpunit/issues",
         "security": "https://github.com/sebastianbergmann/phpunit/security/policy",
-        "source": "https://github.com/sebastianbergmann/phpunit/tree/11.5.13"
+        "source": "https://github.com/sebastianbergmann/phpunit/tree/11.5.15"
       },
       "funding": [
         {
@@ -3537,7 +3537,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2025-03-18T13:41:57+00:00"
+      "time": "2025-03-23T16:02:11+00:00"
     },
     {
       "name": "psalm/phar",
@@ -3580,12 +3580,12 @@
       "source": {
         "type": "git",
         "url": "https://github.com/Roave/SecurityAdvisories.git",
-        "reference": "74f7ebd1c51cf5a6682c4fad1697cb1fab3c17cf"
+        "reference": "786548323f3a9452244ddf83672e34c260d6b717"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/74f7ebd1c51cf5a6682c4fad1697cb1fab3c17cf",
-        "reference": "74f7ebd1c51cf5a6682c4fad1697cb1fab3c17cf",
+        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/786548323f3a9452244ddf83672e34c260d6b717",
+        "reference": "786548323f3a9452244ddf83672e34c260d6b717",
         "shasum": ""
       },
       "conflict": {
@@ -4216,7 +4216,7 @@
         "sylius/admin-bundle": ">=1,<1.0.17|>=1.1,<1.1.9|>=1.2,<1.2.2",
         "sylius/grid": ">=1,<1.1.19|>=1.2,<1.2.18|>=1.3,<1.3.13|>=1.4,<1.4.5|>=1.5,<1.5.1",
         "sylius/grid-bundle": "<1.10.1",
-        "sylius/paypal-plugin": "<1.6.1|>=1.7,<1.7.1|>=2,<2.0.1",
+        "sylius/paypal-plugin": "<1.6.2|>=1.7,<1.7.2|>=2,<2.0.2",
         "sylius/resource-bundle": ">=1,<1.3.14|>=1.4,<1.4.7|>=1.5,<1.5.2|>=1.6,<1.6.4",
         "sylius/sylius": "<1.12.19|>=1.13.0.0-alpha1,<1.13.4",
         "symbiote/silverstripe-multivaluefield": ">=3,<3.1",
@@ -4262,7 +4262,7 @@
         "t3/dce": "<0.11.5|>=2.2,<2.6.2",
         "t3g/svg-sanitizer": "<1.0.3",
         "t3s/content-consent": "<1.0.3|>=2,<2.0.2",
-        "tastyigniter/tastyigniter": "<3.3",
+        "tastyigniter/tastyigniter": "<4",
         "tcg/voyager": "<=1.8",
         "tecnickcom/tc-lib-pdf-font": "<2.6.4",
         "tecnickcom/tcpdf": "<6.8",
@@ -4452,7 +4452,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2025-03-18T22:05:07+00:00"
+      "time": "2025-03-21T18:06:15+00:00"
     },
     {
       "name": "sebastian/cli-parser",
@@ -4513,16 +4513,16 @@
     },
     {
       "name": "sebastian/code-unit",
-      "version": "3.0.2",
+      "version": "3.0.3",
       "source": {
         "type": "git",
         "url": "https://github.com/sebastianbergmann/code-unit.git",
-        "reference": "ee88b0cdbe74cf8dd3b54940ff17643c0d6543ca"
+        "reference": "54391c61e4af8078e5b276ab082b6d3c54c9ad64"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/sebastianbergmann/code-unit/zipball/ee88b0cdbe74cf8dd3b54940ff17643c0d6543ca",
-        "reference": "ee88b0cdbe74cf8dd3b54940ff17643c0d6543ca",
+        "url": "https://api.github.com/repos/sebastianbergmann/code-unit/zipball/54391c61e4af8078e5b276ab082b6d3c54c9ad64",
+        "reference": "54391c61e4af8078e5b276ab082b6d3c54c9ad64",
         "shasum": ""
       },
       "require": {
@@ -4558,7 +4558,7 @@
       "support": {
         "issues": "https://github.com/sebastianbergmann/code-unit/issues",
         "security": "https://github.com/sebastianbergmann/code-unit/security/policy",
-        "source": "https://github.com/sebastianbergmann/code-unit/tree/3.0.2"
+        "source": "https://github.com/sebastianbergmann/code-unit/tree/3.0.3"
       },
       "funding": [
         {
@@ -4566,7 +4566,7 @@
           "type": "github"
         }
       ],
-      "time": "2024-12-12T09:59:06+00:00"
+      "time": "2025-03-19T07:56:08+00:00"
     },
     {
       "name": "sebastian/code-unit-reverse-lookup",

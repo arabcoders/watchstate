@@ -84,6 +84,26 @@
               </div>
             </div>
 
+            <div class="field">
+              <label class="label" for="random_bg">Backgrounds</label>
+              <div class="control">
+                <input id="random_bg" type="checkbox" class="switch is-success" v-model="bg_enable">
+                <label for="random_bg">Enable</label>
+                <p class="help">Use random background image from your media backends.</p>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="label" for="random_bg_opacity">
+                Background Visibility: (<code>{{ bg_opacity }}</code>)
+              </label>
+              <div class="control">
+                <input id="random_bg_opacity" style="width: 100%" type="range" v-model="bg_opacity" min="0.60"
+                       max="1.00" step="0.05">
+                <p class="help">How visible the background image should be.</p>
+              </div>
+            </div>
+
             <div class="field has-text-right">
               <div class="control">
                 <button type="submit" class="button is-primary" :disabled="!api_url || !api_token">
@@ -148,12 +168,15 @@ const real_api_url = useStorage('api_url', window.location.origin)
 const real_api_path = useStorage('api_path', '/v1/api')
 const real_api_token = useStorage('api_token', '')
 
+
 const api_url = ref(toRaw(real_api_url.value))
 const api_path = ref(toRaw(real_api_path.value))
 const api_user = ref(toRaw(real_api_user.value))
 const api_token = ref(toRaw(real_api_token.value))
-
 const exposeToken = ref(false)
+
+const bg_enable = useStorage('bg_enable', true)
+const bg_opacity = useStorage('bg_opacity', 0.95)
 
 const testApi = async () => {
   try {
