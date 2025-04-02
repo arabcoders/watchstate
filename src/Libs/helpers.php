@@ -2183,6 +2183,9 @@ if (!function_exists('queueEvent')) {
         if (ag_exists($opts, Options::CONTEXT_USER) && !empty($opts[Options::CONTEXT_USER])) {
             $item->options[Options::CONTEXT_USER] = $opts[Options::CONTEXT_USER];
         }
+        if (ag_exists($opts, Options::DELAY_BY) && !empty($opts[Options::DELAY_BY])) {
+            $item->options[Options::DELAY_BY] = $opts[Options::DELAY_BY];
+        }
 
         if ($reference) {
             $item->reference = $reference;
@@ -2514,6 +2517,26 @@ if (!function_exists('readFileFromArchive')) {
 
         if (true !== $zip->open($archive)) {
             throw new InvalidArgumentException(r("Unable to open archive '{archive}'.", ['archive' => $archive]));
+        }
+
+        if (true === str_contains($file, "*")) {
+            $found = false;
+
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $zip_file = $zip->getNameIndex($i);
+                if (true === fnmatch($file, $zip_file)) {
+                    $file = $zip_file;
+                    $found = true;
+                    break;
+                }
+            }
+
+            if (false === $found) {
+                throw new InvalidArgumentException(r("Unable to find file '{match}' in archive '{archive}'.", [
+                    'archive' => $archive,
+                    'match' => $file,
+                ]));
+            }
         }
 
         if (false === ($stream = $zip->getStream($file))) {

@@ -12,9 +12,12 @@ use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Extends\Date;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
+use App\Libs\UserContext;
 use Cron\CronExpression;
 use LimitIterator;
+use Psr\Log\LoggerInterface as iLogger;
 use RuntimeException;
 use SplFileObject;
 use Symfony\Component\Console\Input\InputInterface as iInput;
@@ -33,6 +36,8 @@ final class ReportCommand extends Command
 {
     public const string ROUTE = 'system:report';
 
+    private const int DEFAULT_LIMIT = 10;
+
     /**
      * Class Constructor.
      *
@@ -40,7 +45,7 @@ final class ReportCommand extends Command
      *
      * @return void
      */
-    public function __construct(private iDB $db)
+    public function __construct(private iDB $db, private iImport $mapper, private iLogger $logger)
     {
         parent::__construct();
     }
@@ -52,7 +57,13 @@ final class ReportCommand extends Command
     {
         $this->setName(self::ROUTE)
             ->setDescription('Show basic information for diagnostics.')
-            ->addOption('limit', 'l', InputOption::VALUE_OPTIONAL, 'Show last X number of log lines.', 10)
+            ->addOption(
+                'limit',
+                'l',
+                InputOption::VALUE_OPTIONAL,
+                'Show last X number of log lines.',
+                self::DEFAULT_LIMIT
+            )
             ->addOption(
                 'include-db-sample',
                 's',
@@ -143,131 +154,147 @@ final class ReportCommand extends Command
     {
         $includeSample = (bool)$input->getOption('include-db-sample');
 
-        foreach (Config::get('servers', []) as $name => $backend) {
-            try {
-                $version = $this->getBackend($name, $backend)->getVersion();
-            } catch (Throwable) {
-                $version = 'Unknown';
-            }
+        $usersContext = getUsersContext($this->mapper, $this->logger);
 
-            foreach (Index::BLACK_LIST as $hideValue) {
-                if (true === ag_exists($backend, $hideValue)) {
-                    $backend = ag_set($backend, $hideValue, '**HIDDEN**');
+        if (count($usersContext) > 1) {
+            $output->writeln(
+                r('Users? {users}' . PHP_EOL, [
+                    'users' => implode(', ', array_keys($usersContext)),
+                ])
+            );
+        }
+
+        foreach ($usersContext as $username => $userContext) {
+            foreach ($userContext->config->getAll() as $name => $backend) {
+                try {
+                    $version = makeBackend(backend: $backend, name: $name, options: [
+                        UserContext::class => $userContext,
+                    ])->setLogger($this->logger)->getVersion();
+                } catch (Throwable) {
+                    $version = 'Unknown';
                 }
-            }
-            $output->writeln(
-                r('[ <value>{type} ({version}) ==> {name}</value> ]' . PHP_EOL, [
-                    'name' => $name,
-                    'type' => ucfirst(ag($backend, 'type')),
-                    'version' => $version,
-                ])
-            );
 
-            $output->writeln(
-                r('Is backend URL HTTPS? <flag>{answer}</flag>', [
-                    'answer' => str_starts_with(ag($backend, 'url'), 'https:') ? 'Yes' : 'No',
-                ])
-            );
-
-            $output->writeln(
-                r('Has Unique Identifier? <flag>{answer}</flag>', [
-                    'answer' => null !== ag($backend, 'uuid') ? 'Yes' : 'No',
-                ])
-            );
-
-            $output->writeln(
-                r('Has User? <flag>{answer}</flag>', [
-                    'answer' => null !== ag($backend, 'user') ? 'Yes' : 'No',
-                ])
-            );
-
-            $output->writeln(
-                r('Export Enabled? <flag>{answer}</flag>', [
-                    'answer' => null !== ag($backend, 'export.enabled') ? 'Yes' : 'No',
-                ])
-            );
-
-            if (null !== ag($backend, 'export.enabled')) {
-                $output->writeln(
-                    r('Time since last export? <flag>{answer}</flag>', [
-                        'answer' => null === ag($backend, 'export.lastSync') ? 'Never' : gmdate(
-                            Date::ATOM,
-                            ag($backend, 'export.lastSync')
-                        ),
-                    ])
-                );
-            }
-
-            $output->writeln(
-                r('Play state import enabled? <flag>{answer}</flag>', [
-                    'answer' => null !== ag($backend, 'import.enabled') ? 'Yes' : 'No',
-                ])
-            );
-
-            $output->writeln(
-                r('Metadata only import enabled? <flag>{answer}</flag>', [
-                    'answer' => null !== ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY) ? 'Yes' : 'No',
-                ])
-            );
-
-            if (null !== ag($backend, 'import.enabled')) {
-                $output->writeln(
-                    r('Time since last import? <flag>{answer}</flag>', [
-                        'answer' => null === ag($backend, 'import.lastSync') ? 'Never' : gmdate(
-                            Date::ATOM,
-                            ag($backend, 'import.lastSync')
-                        ),
-                    ])
-                );
-            }
-
-            $output->writeln(
-                r('Is webhook match user id enabled? <flag>{answer}</flag>', [
-                    'answer' => true === (bool)ag($backend, 'webhook.match.user') ? 'Yes' : 'No',
-                ])
-            );
-
-            $output->writeln(
-                r('Is webhook match backend unique id enabled? <flag>{answer}</flag>', [
-                    'answer' => true === (bool)ag($backend, 'webhook.match.uuid') ? 'Yes' : 'No',
-                ])
-            );
-
-            $opts = ag($backend, 'options', []);
-            $output->writeln(
-                r('Has custom options? <flag>{answer}</flag>' . PHP_EOL . '{opts}', [
-                    'answer' => count($opts) >= 1 ? 'Yes' : 'No',
-                    'opts' => count($opts) >= 1 ? json_encode(
-                        $opts,
-                        JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
-                    ) : '{}',
-                ])
-            );
-
-            if (true === $includeSample) {
-                $sql = "SELECT * FROM state WHERE via = :name ORDER BY updated DESC LIMIT 3";
-                $stmt = $this->db->getDBLayer()->prepare($sql);
-                $stmt->execute([
-                    'name' => $name,
-                ]);
-
-                $entries = [];
-
-                foreach ($stmt as $row) {
-                    $entries[] = StateEntity::fromArray($row);
+                foreach (Index::BLACK_LIST as $hideValue) {
+                    if (true === ag_exists($backend, $hideValue)) {
+                        $backend = ag_set($backend, $hideValue, '**HIDDEN**');
+                    }
                 }
 
                 $output->writeln(
-                    r('Sample db entries related to backend.' . PHP_EOL . '{json}', [
-                        'json' => count($entries) >= 1 ? json_encode(
-                            $entries,
+                    r('[ <value>{type} ({version}) ==> {username}@{name}</value> ]' . PHP_EOL, [
+                        'name' => $name,
+                        'username' => $username,
+                        'type' => ucfirst(ag($backend, 'type')),
+                        'version' => $version,
+                    ])
+                );
+
+                $output->writeln(
+                    r('Is backend URL HTTPS? <flag>{answer}</flag>', [
+                        'answer' => str_starts_with(ag($backend, 'url'), 'https:') ? 'Yes' : 'No',
+                    ])
+                );
+
+                $output->writeln(
+                    r('Has Unique Identifier? <flag>{answer}</flag>', [
+                        'answer' => null !== ag($backend, 'uuid') ? 'Yes' : 'No',
+                    ])
+                );
+
+                $output->writeln(
+                    r('Has User? <flag>{answer}</flag>', [
+                        'answer' => null !== ag($backend, 'user') ? 'Yes' : 'No',
+                    ])
+                );
+
+                $output->writeln(
+                    r('Export Enabled? <flag>{answer}</flag>', [
+                        'answer' => null !== ag($backend, 'export.enabled') ? 'Yes' : 'No',
+                    ])
+                );
+
+                if (null !== ag($backend, 'export.enabled')) {
+                    $output->writeln(
+                        r('Time since last export? <flag>{answer}</flag>', [
+                            'answer' => null === ag($backend, 'export.lastSync') ? 'Never' : gmdate(
+                                Date::ATOM,
+                                ag($backend, 'export.lastSync')
+                            ),
+                        ])
+                    );
+                }
+
+                $output->writeln(
+                    r('Play state import enabled? <flag>{answer}</flag>', [
+                        'answer' => null !== ag($backend, 'import.enabled') ? 'Yes' : 'No',
+                    ])
+                );
+
+                $output->writeln(
+                    r('Metadata only import enabled? <flag>{answer}</flag>', [
+                        'answer' => null !== ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY) ? 'Yes' : 'No',
+                    ])
+                );
+
+                if (null !== ag($backend, 'import.enabled')) {
+                    $output->writeln(
+                        r('Time since last import? <flag>{answer}</flag>', [
+                            'answer' => null === ag($backend, 'import.lastSync') ? 'Never' : gmdate(
+                                Date::ATOM,
+                                ag($backend, 'import.lastSync')
+                            ),
+                        ])
+                    );
+                }
+
+                $output->writeln(
+                    r('Is webhook match user id enabled? <flag>{answer}</flag>', [
+                        'answer' => true === (bool)ag($backend, 'webhook.match.user') ? 'Yes' : 'No',
+                    ])
+                );
+
+                $output->writeln(
+                    r('Is webhook match backend unique id enabled? <flag>{answer}</flag>', [
+                        'answer' => true === (bool)ag($backend, 'webhook.match.uuid') ? 'Yes' : 'No',
+                    ])
+                );
+
+                $opts = ag($backend, 'options', []);
+                $output->writeln(
+                    r('Has custom options? <flag>{answer}</flag>' . PHP_EOL . '{opts}', [
+                        'answer' => count($opts) >= 1 ? 'Yes' : 'No',
+                        'opts' => count($opts) >= 1 ? json_encode(
+                            $opts,
                             JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
                         ) : '{}',
                     ])
                 );
-            }
 
-            $output->writeln('');
+                if (true === $includeSample) {
+                    $sql = "SELECT * FROM state WHERE via = :name ORDER BY updated DESC LIMIT 3";
+                    $stmt = $userContext->db->getDBLayer()->prepare($sql);
+                    $stmt->execute([
+                        'name' => $name,
+                    ]);
+
+                    $entries = [];
+
+                    foreach ($stmt as $row) {
+                        $entries[] = StateEntity::fromArray($row);
+                    }
+
+                    $output->writeln(
+                        r('Sample db entries related to backend.' . PHP_EOL . '{json}', [
+                            'json' => count($entries) >= 1 ? json_encode(
+                                $entries,
+                                JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+                            ) : '{}',
+                        ])
+                    );
+                }
+
+                $output->writeln('');
+            }
         }
     }
 
@@ -340,14 +367,20 @@ final class ReportCommand extends Command
         $limit = $input->getOption('limit');
 
         foreach (LogsCommand::getTypes() as $type) {
-            $this->handleLog($output, $type, $todayAffix, $limit);
-            /** @noinspection DisconnectedForeachInstructionInspection */
+            $linesLimit = $limit;
+            if (self::DEFAULT_LIMIT === $limit) {
+                $linesLimit = $type === 'task' ? 75 : self::DEFAULT_LIMIT;
+            }
+            $this->handleLog($output, $type, $todayAffix, $linesLimit);
             $output->writeln('');
         }
 
         foreach (LogsCommand::getTypes() as $type) {
-            $this->handleLog($output, $type, $yesterdayAffix, $limit);
-            /** @noinspection DisconnectedForeachInstructionInspection */
+            $linesLimit = $limit;
+            if (self::DEFAULT_LIMIT === $limit) {
+                $linesLimit = $type === 'task' ? 75 : self::DEFAULT_LIMIT;
+            }
+            $this->handleLog($output, $type, $yesterdayAffix, $linesLimit);
             $output->writeln('');
         }
     }

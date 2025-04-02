@@ -269,34 +269,30 @@
               </p>
             </div>
           </div>
-          <div class="field" v-if="backends.length > 0">
+          <div class="field">
             <hr>
-            <label class="label has-text-danger" for="force_export">
-              Export current local database state to this backend?
+            <label class="label has-text-danger" for="backup_data">
+              Create backup for this backend data?
             </label>
             <div class="control">
-              <input id="force_export" type="checkbox" class="switch is-success"
-                     v-model="forceExport">
-              <label for="force_export">Yes</label>
+              <input id="backup_data" type="checkbox" class="switch is-success" v-model="backup_data">
+              <label for="backup_data">Yes</label>
               <p class="help">
-                <span class="icon has-text-danger"><i class="fas fa-exclamation-triangle"></i></span>
-                If this is a new backend, you need to get it in sync with your current database,
-                enabling this option will initiate a one time force export the current local database state to the
-                backend. This will override the backend state to be inline with the local database state.
+                This will run a one time backup for the backend data.
               </p>
             </div>
           </div>
-          <div class="field" v-else>
+          <div class="field" v-if="backends.length > 0">
             <hr>
-            <label class="label has-text-danger" for="run_import">
-              Export current local database state to this backend?
+            <label class="label has-text-danger" for="force_export">
+              Force Export local data to this backend?
             </label>
             <div class="control">
-              <input id="run_import" type="checkbox" class="switch is-success" v-model="runImport">
-              <label for="run_import">Yes</label>
-              <p class="help">
-                <span class="icon has-text-danger"><i class="fas fa-info-circle"></i></span>
-                Do you want to run a one time import for this backend after adding this backend?
+              <input id="force_export" type="checkbox" class="switch is-success" v-model="force_export">
+              <label for="force_export">Yes</label>
+              <p class="help has-text-danger">
+                <span class="icon"><i class="fas fa-info-circle"></i></span>
+                THIS OPTION WILL OVERRIDE THE BACKEND DATA with locally stored data.
               </p>
             </div>
           </div>
@@ -335,7 +331,7 @@ import request from '~/utils/request'
 import {awaitElement, explode, notification, ucFirst} from '~/utils/index'
 import {useStorage} from "@vueuse/core";
 
-const emit = defineEmits(['addBackend', 'forceExport', 'runImport'])
+const emit = defineEmits(['addBackend', 'backupData', 'forceExport'])
 
 const props = defineProps({
   backends: {
@@ -377,8 +373,8 @@ const uuidLoading = ref(false)
 const serversLoading = ref(false)
 const exposeToken = ref(false)
 const error = ref()
-const forceExport = ref(false)
-const runImport = ref(false)
+const backup_data = ref(true)
+const force_export = ref(false)
 
 const isLimited = ref(false)
 const accessTokenResponse = ref({})
@@ -674,16 +670,15 @@ const addBackend = async () => {
 
   notification('success', 'Information', `Backend ${backend.value.name} added successfully.`)
 
-  let event
-  if (true === Boolean(forceExport?.value ?? false)) {
-    event = 'forceExport'
-  } else if (true === Boolean(runImport?.value ?? false)) {
-    event = 'runImport'
-  } else {
-    event = 'addBackend'
+  if (true === Boolean(backup_data?.value ?? false)) {
+    emit('backupData', backend)
   }
 
-  emit(event, backend)
+  if (true === Boolean(force_export?.value ?? false)) {
+    emit('forceExport', backend)
+  }
+
+  emit('addBackend')
 
   return true
 }

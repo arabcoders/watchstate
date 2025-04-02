@@ -133,9 +133,8 @@ final class RestoreMapper implements iImport
     {
         if (false === ($this->file instanceof Stream)) {
             if (true === str_ends_with($this->file, '.zip')) {
-                $fileName = ag($this->options, 'file_name', fn() => before(basename($this->file), '.zip'));
                 /** @noinspection PhpUnusedLocalVariableInspection */
-                [$stream, $_] = readFileFromArchive($this->file, $fileName);
+                [$stream, $_] = readFileFromArchive($this->file, '*.json');
             } else {
                 $stream = Stream::make($this->file, 'r');
             }

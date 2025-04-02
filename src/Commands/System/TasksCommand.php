@@ -38,6 +38,7 @@ use Throwable;
 final class TasksCommand extends Command
 {
     public const string NAME = 'run_task';
+    public const string CNAME = 'run_console';
     public const string ROUTE = 'system:tasks';
 
     private array $logs = [];
@@ -70,8 +71,10 @@ final class TasksCommand extends Command
     {
         $tasksName = implode(
             ', ',
-            array_map(fn($val) => '<comment>' . strtoupper($val) . '</comment>',
-                array_keys(Config::get('tasks.list', [])))
+            array_map(
+                fn($val) => '<comment>' . strtoupper($val) . '</comment>',
+                array_keys(Config::get('tasks.list', []))
+            )
         );
 
         $this->setName(self::ROUTE)
@@ -187,19 +190,35 @@ final class TasksCommand extends Command
     }
 
     #[EventListener(self::NAME)]
-    public function runEventTask(DataEvent $event): DataEvent
+    #[EventListener(self::CNAME)]
+    public function runEvent(DataEvent $event): DataEvent
     {
         $event->stopPropagation();
+        $eventName = $event->getEvent()->event;
 
-        if (null === ($name = ag($event->getData(), 'name'))) {
-            $event->addLog(r('No task name was specified.'));
-            return $event;
-        }
+        switch ($eventName) {
+            case self::NAME:
+            {
+                if (null === ($name = ag($event->getData(), 'name'))) {
+                    $event->addLog(r('No task name was specified.'));
+                    return $event;
+                }
 
-        $task = self::getTasks($name);
-        if (empty($task)) {
-            $event->addLog(r("Invalid task '{name}'. There are no task with that name registered.", ['name' => $name]));
-            return $event;
+                $task = self::getTasks($name);
+                if (empty($task)) {
+                    $event->addLog(
+                        r("Invalid task '{name}'. There are no task with that name registered.", ['name' => $name])
+                    );
+                    return $event;
+                }
+            }
+            case self::CNAME:
+            {
+                if (null === ag($event->getData(), 'command')) {
+                    $event->addLog(r('No command name was specified.'));
+                    return $event;
+                }
+            }
         }
 
         try {
@@ -235,12 +254,29 @@ final class TasksCommand extends Command
                 }
             };
 
-            $event->addLog(r("Task: Run '{command}'.", ['command' => ag($task, 'command')]));
-            $exitCode = $this->runTask($task, $input, Container::get(iOutput::class));
-            $event->addLog(r("Task: End '{command}' (Exit Code: {code})", [
-                'command' => ag($task, 'command'),
-                'code' => $exitCode,
-            ]));
+
+            if (self::CNAME === $eventName) {
+                $event->addLog(r("Task: Run '{name}'.", ['name' => $eventName]));
+                $exitCode = $this->run_command(
+                    ag($event->getData(), 'command'),
+                    ag($event->getData(), 'args', []),
+                    $input,
+                    Container::get(iOutput::class)
+                );
+                $event->addLog(r("Task: End '{name}' (Exit Code: {code})", [
+                    'name' => $eventName,
+                    'code' => $exitCode,
+                ]));
+            }
+
+            if (self::NAME === $eventName && !empty($task)) {
+                $event->addLog(r("Task: Run '{command}'.", ['command' => ag($task, 'command')]));
+                $exitCode = $this->runTask($task, $input, Container::get(iOutput::class));
+                $event->addLog(r("Task: End '{command}' (Exit Code: {code})", [
+                    'command' => ag($task, 'command'),
+                    'code' => $exitCode,
+                ]));
+            }
         } finally {
             $this->needToSave = false;
             $this->writer = $this->clear = null;
@@ -440,6 +476,121 @@ final class TasksCommand extends Command
         $this->write('--------------------------', $input, $output);
         $this->write(r('Task: {name} (Started: {startDate})', [
             'name' => $task['name'],
+            'startDate' => $started->format('D, H:i:s T'),
+        ]), $input, $output);
+        $this->write(r('Command: {cmd}', ['cmd' => $process->getCommandLine()]), $input, $output);
+        $this->write(r('Exit Code: {code}:{status} (Ended: {end_date}) - Took {duration}s', [
+            'status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
+            'code' => $process->getExitCode() ?? self::INVALID,
+            'end_date' => $ended->format('D, H:i:s T'),
+            'duration' => $ended->getTimestamp() - $started->getTimestamp(),
+        ]), $input, $output);
+        $this->write('--------------------------', $input, $output);
+        $this->write(' ' . PHP_EOL, $input, $output);
+
+        foreach ($this->taskOutput as $line) {
+            $this->write($line, $input, $output);
+        }
+
+        $this->taskOutput = [];
+
+        return $process->getExitCode() ?? self::INVALID;
+    }
+
+    private function run_command(string $command, array $args, iInput $input, iOutput $output): int
+    {
+        $cmd = [];
+
+        $cmd[] = ROOT_PATH . '/bin/console';
+        $cmd[] = $command;
+
+        if (count($args) > 0) {
+            foreach ($args as $v) {
+                if (empty($v)) {
+                    continue;
+                }
+                $cmd[] = $v;
+            }
+        }
+
+        $process = Process::fromShellCommandline(implode(' ', $cmd), timeout: null);
+
+        $started = makeDate();
+
+        $process->start(function ($std, $out) use ($input, $output) {
+            assert($output instanceof ConsoleOutputInterface);
+            $out = trim((string)$out);
+
+            if (empty($out)) {
+                return;
+            }
+
+            foreach (explode(PHP_EOL, $out) as $line) {
+                if (empty($line)) {
+                    continue;
+                }
+
+                $this->taskOutput[] = $line;
+            }
+
+            if (null !== $this->writer && false === $this->suppressor->isSuppressed($out)) {
+                try {
+                    ($this->writer)($out);
+                } catch (Throwable) {
+                    // Do nothing
+                }
+            }
+
+            if (!$input->hasOption('live') && $input->getOption('live')) {
+                return;
+            }
+
+            ('err' === $std ? $output->getErrorOutput() : $output)->writeln($out);
+        });
+
+        if ($process->isRunning()) {
+            if (null === $this->save) {
+                $process->wait();
+            } else {
+                while ($process->isRunning()) {
+                    try {
+                        if (true === $this->needToSave) {
+                            $this->needToSave = false;
+                            ($this->save)();
+                        }
+                        $process->checkTimeout();
+                        usleep($this->sleep);
+                    } catch (ProcessException $e) {
+                        $process->stop();
+                        $this->write(r('Command: {command} (Failed). ({type}: {message}', [
+                            'command' => $command,
+                            'startDate' => $started->format('D, H:i:s T'),
+                            'type' => $e::class,
+                            'message' => $e->getMessage(),
+                        ]), $input, $output);
+                        break;
+                    }
+                }
+            }
+        }
+
+        $ended = makeDate();
+
+        if (count($this->taskOutput) < 1) {
+            return $process->getExitCode() ?? self::INVALID;
+        }
+
+        if (null !== $this->clear) {
+            try {
+                ($this->clear)();
+            } catch (Throwable) {
+                // Do nothing
+            }
+        }
+
+        $this->write('--------------------------', $input, $output);
+        $this->write(r('Command: {name} (Started: {startDate})', [
+            'command' => $command,
             'startDate' => $started->format('D, H:i:s T'),
         ]), $input, $output);
         $this->write(r('Command: {cmd}', ['cmd' => $process->getCommandLine()]), $input, $output);
