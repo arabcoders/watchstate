@@ -74,9 +74,32 @@ final class DispatchCommand extends Command
 
     protected function runEvents(bool $debug = false): int
     {
-        $events = $this->repo
-                    ->setSort(EventsTable::COLUMN_CREATED_AT)->setAscendingOrder()
-                    ->findAll([EventsTable::COLUMN_STATUS => Status::PENDING->value]);
+        $repo = $this->repo
+            ->setSort(EventsTable::COLUMN_CREATED_AT)->setAscendingOrder()
+            ->findAll([EventsTable::COLUMN_STATUS => Status::PENDING->value]);
+
+        $events = [];
+        $now = time();
+
+        foreach ($repo as $event) {
+            $delay = ag($event->options, Options::DELAY_BY, 0);
+            $created = $event->created_at->getTimestamp() + $delay;
+
+            if ($created > $now) {
+                $this->logger->debug(
+                    "Event '{id}: {event}' is delayed by '{delay}s' seconds. Waiting for '{wait}s' seconds.",
+                    [
+                        'id' => $event->id,
+                        'event' => $event->event,
+                        'delay' => $delay,
+                        'wait' => $created - $now,
+                    ]
+                );
+                continue;
+            }
+
+            $events[] = $event;
+        }
 
         if (count($events) < 1) {
             $this->logger->debug('No pending queued events found.');
@@ -138,7 +161,12 @@ final class DispatchCommand extends Command
             $ref = new DataEvent($event);
             $this->dispatcher->dispatch($ref, $event->event);
 
-            $event->status = Status::SUCCESS;
+            if (Status::RUNNING !== $ref->getStatus()) {
+                $event->status = $ref->getStatus();
+            } else {
+                $event->status = Status::SUCCESS;
+            }
+
             $event->updated_at = (string)makeDate();
             $event->logs[] = r("Event '{event}' was dispatched.", ['event' => $event->event]);
 

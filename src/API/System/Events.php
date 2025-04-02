@@ -11,6 +11,7 @@ use App\Libs\Attributes\Route\Post;
 use App\Libs\Database\DBLayer;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Options;
 use App\Model\Events\Event as EntityItem;
 use App\Model\Events\EventsRepository;
 use App\Model\Events\EventsTable as EntityTable;
@@ -97,8 +98,16 @@ final readonly class Events
             ]);
         }
 
+        $opts = [
+            EventsRepository::class => $this->repo
+        ];
+
+        if (null !== ($delay = $params->get(Options::DELAY_BY))) {
+            $opts[Options::DELAY_BY] = (int)$delay;
+        }
+
         $data = (array)$params->get(EntityTable::COLUMN_EVENT_DATA, []);
-        $item = queueEvent($event, $data, [EventsRepository::class => $this->repo]);
+        $item = queueEvent($event, $data, $opts);
 
         return api_message(r("Event '{event}' was queued.", [
             'event' => $item->event,

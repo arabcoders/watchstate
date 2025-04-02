@@ -48,6 +48,7 @@ final class Options
     public const string CONTEXT_USER = 'CONTEXT_USER';
     public const string GET_TOKENS = 'tokens';
     public const string LOG_CONTEXT = 'LOG_CONTEXT';
+    public const string DELAY_BY = 'DELAY_BY';
 
     private function __construct()
     {
