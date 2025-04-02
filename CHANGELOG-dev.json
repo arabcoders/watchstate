@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250403-32843de",
-        "date": "2025-04-02T21:45:16+00:00",
+        "tag": "dev-20250403-c921430",
+        "date": "2025-04-02T22:18:04+00:00",
         "commits": [
+            {
+                "sha": "c921430",
+                "message": "Make config:list user aware",
+                "author": "arabcoders",
+                "date": "2025-04-02T22:18:04+00:00"
+            },
             {
                 "sha": "32843de",
                 "message": "updating dependencies",
