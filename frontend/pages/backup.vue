@@ -60,9 +60,13 @@
               <div class="control is-expanded">
                 <div class="select is-fullwidth">
                   <select v-model="item.selected" class="is-capitalized" required>
-                    <option value="" selected disabled>Restore To this Backend</option>
-                    <option v-for="backend in backends" :key="backend.name" :value="backend.name"
-                      v-text="backend.name" />
+                    <option value="" selected disabled>Restore To...</option>
+                    <template v-for="user in users" :key="user.user">
+                      <optgroup :label="`User: ${user.user}`">
+                        <option v-for="backend in user.backends" :key="`${user.user}@${backend}`"
+                          :value="`${user.user}@${backend}`" v-text="backend" />
+                      </optgroup>
+                    </template>
                   </select>
                 </div>
               </div>
@@ -110,7 +114,8 @@
               <NuxtLink to="/backends"><span class="icon"><i class="fas fa-server"></i></span> Backends</NuxtLink>
               page and from the drop down menu select the 4th option `Backup this backend play state`, or via cli
               using
-              <code>state:backup</code> command from the console. or by <span class="icon"><i class="fas fa-terminal" /></span>
+              <code>state:backup</code> command from the console. or by <span class="icon"><i
+                  class="fas fa-terminal" /></span>
               <NuxtLink :to="makeConsoleCommand('state:backup -s [backend] --file /config/backup/[file]')"
                 v-text="'Web Console'" />
               page.
@@ -135,11 +140,11 @@ import { useStorage } from '@vueuse/core'
 
 useHead({ title: 'Backups' })
 const items = ref([])
-const backends = ref([])
 const isLoading = ref(false)
 const queued = ref(true)
 const show_page_tips = useStorage('show_page_tips', true)
 const api_user = useStorage('api_user', 'main')
+const users = ref([])
 
 const loadContent = async () => {
   items.value = []
@@ -249,14 +254,15 @@ const isQueued = async () => {
 }
 
 onMounted(async () => {
-  const response = await request('/backends')
-  backends.value = await response.json()
+  const response = await (await request('/system/users')).json()
+  users.value = response.users
   await loadContent()
 })
 
 const generateCommand = async item => {
-  const user = api_user.value
-  const backend = item.selected
+  const selected = item.selected.split('@')
+  const user = selected[0]
+  const backend = selected[1]
   const file = item.filename
 
   if (false === confirm(`Are you sure you want to restore '${user}@${backend}' using '${file}'?`)) {
