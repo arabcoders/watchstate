@@ -74,7 +74,10 @@ final class DispatchCommand extends Command
 
     protected function runEvents(bool $debug = false): int
     {
-        $events = $this->repo->findAll([EventsTable::COLUMN_STATUS => Status::PENDING->value]);
+        $events = $this->repo
+                    ->setSort(EventsTable::COLUMN_CREATED_AT)->setAscendingOrder()
+                    ->findAll([EventsTable::COLUMN_STATUS => Status::PENDING->value]);
+
         if (count($events) < 1) {
             $this->logger->debug('No pending queued events found.');
             return self::SUCCESS;
