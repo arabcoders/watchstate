@@ -35,8 +35,9 @@
       </div>
 
       <div class="column is-12" v-if="toggleForm">
-        <BackendAdd @forceExport="e => handleEvents('forceExport', e)" :backends="backends"
-                    @runImport="e => handleEvents('runImport', e)" @addBackend="e => handleEvents('addBackend', e)"/>
+        <BackendAdd @backupData="e => handleEvents('backupData', e)" :backends="backends"
+                    @forceExport="e => handleEvents('forceExport', e)"
+                    @addBackend="e => handleEvents('addBackend', e)"/>
       </div>
       <template v-else>
         <div class="column is-12" v-if="backends.length<1">
@@ -188,7 +189,7 @@ import 'assets/css/bulma-switch.css'
 import moment from 'moment'
 import request from '~/utils/request'
 import BackendAdd from '~/components/BackendAdd'
-import {ag, copyText, makeConsoleCommand, notification, r, TOOLTIP_DATE_FORMAT} from '~/utils/index'
+import {ag, copyText, makeConsoleCommand, notification, queue_event, r, TOOLTIP_DATE_FORMAT} from '~/utils/index'
 import {useStorage} from '@vueuse/core'
 import Message from '~/components/Message'
 
@@ -206,31 +207,31 @@ const usefulCommands = {
   export_now: {
     id: 1,
     title: "Run normal export.",
-    command: 'state:export -v -s {name}',
+    command: 'state:export -v -u {user} -s {name}',
     state_key: 'export.enabled',
   },
   import_now: {
     id: 2,
     title: "Run normal import.",
-    command: 'state:import -v -s {name}',
+    command: 'state:import -v -u {user} -s {name}',
     state_key: 'import.enabled'
   },
   force_export: {
     id: 3,
     title: "Force export local play state to this backend.",
-    command: 'state:export -fi -v -s {name}',
+    command: 'state:export -fi -v -u {user} -s {name}',
     state_key: 'export.enabled',
   },
   backup_now: {
     id: 4,
     title: "Backup this backend play state.",
-    command: "state:backup -v -s {name} --file '{date}.manual_{name}.json'",
+    command: "state:backup -v -u {user} -s {name} --file '{date}.manual_{name}.json'",
     state_key: 'import.enabled',
   },
   metadata_only: {
     id: 5,
     title: "Import this backend metadata.",
-    command: "state:import -v --metadata-only -s {name}",
+    command: "state:import -v --metadata-only -u {user} -s {name}",
     state_key: 'import.enabled',
   },
 }
@@ -247,7 +248,7 @@ const forwardCommand = async backend => {
     date: moment().format('YYYYMMDD'),
   }
 
-  await navigateTo(makeConsoleCommand(r(usefulCommands[index].command, {...backend, ...util})));
+  await navigateTo(makeConsoleCommand(r(usefulCommands[index].command, {...backend, ...util, user: api_user.value})));
 }
 
 const loadContent = async () => {
@@ -285,13 +286,48 @@ const updateValue = async (backend, key, newValue) => {
 
 const handleEvents = async (event, backend) => {
   switch (event) {
-    case 'forceExport':
-      notification('warning', 'Warning', `We are going to sync '${backend.value.name}' play state to match the current local database.`, 10000)
-      await navigateTo(makeConsoleCommand(`state:export -fi -v -s ${backend.value.name}`, true))
+    case 'backupData':
+      try {
+        const backup_status = await queue_event('run_console', {
+          command: 'state:backup',
+          args: [
+            '-v',
+            '--user',
+            api_user.value,
+            '--select-backend',
+            backend.value.name,
+            '--file',
+            '{user}.{backend}.{date}.initial_backup.json',
+          ]
+        })
+        console.log(backup_status);
+
+        notification('info', 'Info', `We are going to initiate a backup for '${backend.value.name}' in little bit.`, 5000)
+      } catch (e) {
+        notification('error', 'Error', `Failed to queue backup request. ${e.message}`)
+      }
       break
-    case 'runImport':
-      notification('info', 'Info', `We are going to import '${backend.value.name}' play state to the local database.`, 10000)
-      await navigateTo(makeConsoleCommand(`state:import -v -s ${backend.value.name}`, true))
+    case 'forceExport':
+      try {
+        const export_status = await queue_event('run_console', {
+          command: 'state:export',
+          args: [
+            '-fi',
+            '-v',
+            '--user',
+            api_user.value,
+            '--dry-run',
+            '--select-backend',
+            backend.value.name,
+          ]
+        }, 180)
+
+        console.log(export_status);
+
+        notification('info', 'Info', `Soon we are going to force export the local data to '${backend.value.name}'.`, 5000)
+      } catch (e) {
+        notification('error', 'Error', `Failed to queue force export request. ${e.message}`)
+      }
       break
     case 'addBackend':
       toggleForm.value = false
@@ -299,4 +335,5 @@ const handleEvents = async (event, backend) => {
       break
   }
 }
+
 </script>

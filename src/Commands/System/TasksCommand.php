@@ -69,10 +69,13 @@ final class TasksCommand extends Command
      */
     protected function configure(): void
     {
-        $tasksName = implode(', ', array_map(
-            fn ($val) => '<comment>' . strtoupper($val) . '</comment>',
-            array_keys(Config::get('tasks.list', []))
-        ));
+        $tasksName = implode(
+            ', ',
+            array_map(
+                fn($val) => '<comment>' . strtoupper($val) . '</comment>',
+                array_keys(Config::get('tasks.list', []))
+            )
+        );
 
         $this->setName(self::ROUTE)
             ->addOption('run', null, InputOption::VALUE_NONE, 'Run scheduled tasks.')
@@ -194,7 +197,8 @@ final class TasksCommand extends Command
         $eventName = $event->getEvent()->event;
 
         switch ($eventName) {
-            case self::NAME: {
+            case self::NAME:
+            {
                 if (null === ($name = ag($event->getData(), 'name'))) {
                     $event->addLog(r('No task name was specified.'));
                     return $event;
@@ -202,11 +206,14 @@ final class TasksCommand extends Command
 
                 $task = self::getTasks($name);
                 if (empty($task)) {
-                    $event->addLog(r("Invalid task '{name}'. There are no task with that name registered.", ['name' => $name]));
+                    $event->addLog(
+                        r("Invalid task '{name}'. There are no task with that name registered.", ['name' => $name])
+                    );
                     return $event;
                 }
             }
-            case self::CNAME: {
+            case self::CNAME:
+            {
                 if (null === ag($event->getData(), 'command')) {
                     $event->addLog(r('No command name was specified.'));
                     return $event;
@@ -223,9 +230,9 @@ final class TasksCommand extends Command
             $input->setOption('save-log', true);
             $input->setOption('live', false);
 
-            $this->clear = fn () => $event->clearLogs();
+            $this->clear = fn() => $event->clearLogs();
 
-            $this->save = fn () => $this->eventsRepo->save($event->getEvent());
+            $this->save = fn() => $this->eventsRepo->save($event->getEvent());
 
             $this->writer = function ($msg) use (&$event) {
                 static $lastSave = null;
@@ -260,8 +267,9 @@ final class TasksCommand extends Command
                     'name' => $eventName,
                     'code' => $exitCode,
                 ]));
+            }
 
-            } else {
+            if (self::NAME === $eventName && !empty($task)) {
                 $event->addLog(r("Task: Run '{command}'.", ['command' => ag($task, 'command')]));
                 $exitCode = $this->runTask($task, $input, Container::get(iOutput::class));
                 $event->addLog(r("Task: End '{command}' (Exit Code: {code})", [

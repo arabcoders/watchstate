@@ -8,18 +8,18 @@ use App\API\Backends\Index;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Extends\Date;
-use App\Libs\UserContext;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
+use App\Libs\UserContext;
 use Cron\CronExpression;
 use LimitIterator;
+use Psr\Log\LoggerInterface as iLogger;
 use RuntimeException;
 use SplFileObject;
-use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
@@ -57,7 +57,13 @@ final class ReportCommand extends Command
     {
         $this->setName(self::ROUTE)
             ->setDescription('Show basic information for diagnostics.')
-            ->addOption('limit', 'l', InputOption::VALUE_OPTIONAL, 'Show last X number of log lines.', self::DEFAULT_LIMIT)
+            ->addOption(
+                'limit',
+                'l',
+                InputOption::VALUE_OPTIONAL,
+                'Show last X number of log lines.',
+                self::DEFAULT_LIMIT
+            )
             ->addOption(
                 'include-db-sample',
                 's',
@@ -153,7 +159,7 @@ final class ReportCommand extends Command
         if (count($usersContext) > 1) {
             $output->writeln(
                 r('Users? {users}' . PHP_EOL, [
-                    'users' => count($usersContext) >= 1 ? implode(', ', array_keys($usersContext)) : 'None',
+                    'users' => implode(', ', array_keys($usersContext)),
                 ])
             );
         }
@@ -392,12 +398,12 @@ final class ReportCommand extends Command
     private function handleLog(iOutput $output, string $type, string|int $date, int|string $limit): void
     {
         $logFile = Config::get('tmpDir') . '/logs/' . r(
-            '{type}.{date}.log',
-            [
+                '{type}.{date}.log',
+                [
                     'type' => $type,
                     'date' => $date
                 ]
-        );
+            );
 
         $output->writeln(r('[ <value>{logFile}</value> ]' . PHP_EOL, ['logFile' => $logFile]));
 

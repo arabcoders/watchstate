@@ -253,7 +253,7 @@ const makeGUIDLink = (type, source, guid, data) => {
 
     const link = ag(guid_links, `${type}.${source}`, null)
 
-    return null == link ? '' : r(link, { _guid: guid, ...toRaw(data) })
+    return null == link ? '' : r(link, {_guid: guid, ...toRaw(data)})
 }
 
 /**
@@ -339,7 +339,7 @@ const makeSearchLink = (type, query) => {
  * @param detail
  * @returns {boolean}
  */
-const dEvent = (eventName, detail = {}) => window.dispatchEvent(new CustomEvent(eventName, { detail }))
+const dEvent = (eventName, detail = {}) => window.dispatchEvent(new CustomEvent(eventName, {detail}))
 
 /**
  * Make name
@@ -358,7 +358,7 @@ const makeName = (item, asMovie = false) => {
     const type = ag(item, 'type', 'movie');
 
     if (['show', 'movie'].includes(type) || asMovie) {
-        return r('{title} ({year})', { title, year })
+        return r('{title} ({year})', {title, year})
     }
 
     return r('{title} ({year}) - {season}x{episode}', {
@@ -470,7 +470,7 @@ const parse_api_response = async r => {
     try {
         return await r.json()
     } catch (e) {
-        return { error: { code: r.status, message: r.statusText } }
+        return {error: {code: r.status, message: r.statusText}}
     }
 }
 
@@ -491,6 +491,39 @@ const goto_history_item = async item => {
     }
 
     await navigateTo(`/history/${item.item_id}`)
+}
+
+/**
+ * Queue event.
+ *
+ * @param {string} event The event name.
+ * @param {object} event_data The event data.
+ * @param {int} delay delay running the event in XXX seconds.
+ * @param {object} opts additional options.
+ *
+ * @returns {Promise<number>} The status code of the response.
+ */
+const queue_event = async (event, event_data = {}, delay = 0, opts = {}) => {
+    let reqData = {event}
+    if (event_data) {
+        reqData.event_data = event_data
+    }
+
+    delay = parseInt(delay)
+
+    if (0 !== delay) {
+        reqData.DELAY_BY = delay
+    }
+
+    if (opts) {
+        reqData = {...reqData, ...opts}
+    }
+
+    const resp = await request(`/system/events`, {
+        method: 'POST', body: JSON.stringify(reqData)
+    })
+
+    return resp.status
 }
 
 export {
@@ -515,5 +548,6 @@ export {
     explode,
     basename,
     parse_api_response,
-    goto_history_item
+    goto_history_item,
+    queue_event
 }
