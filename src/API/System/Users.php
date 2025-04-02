@@ -21,8 +21,15 @@ final class Users
     #[Get(self::URL . '[/]', name: 'system.users')]
     public function __invoke(iRequest $request, iImport $mapper, iLogger $logger): iResponse
     {
-        return api_response(Status::OK, [
-            'users' => array_keys(getUsersContext($mapper, $logger)),
-        ]);
+        $users = [];
+        $usersContext = getUsersContext($mapper, $logger);
+        foreach ($usersContext as $username => $userContext) {
+            $users[] = [
+                'user' => $username,
+                'backends' => array_keys($userContext->config->getAll())
+            ];
+        }
+
+        return api_response(Status::OK, ['users' => $users]);
     }
 }

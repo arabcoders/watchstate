@@ -50,7 +50,12 @@ onMounted(async () => {
     }
     const json = await response.json();
     if ('users' in json) {
-      users.value = json?.users;
+      json.users.forEach(user => {
+        const username = user.user
+        if (!users.value.includes(username)) {
+          users.value.push(username);
+        }
+      });
     }
   } catch (e) {
     notification('error', `Failed to fetch users. ${e}`);
