@@ -1,7 +1,67 @@
 [
     {
-        "tag": "dev-20250324-23ab782",
-        "date": "2025-03-23T23:29:32+00:00",
+        "tag": "dev-20250403-abd6071",
+        "date": "2025-04-02T21:31:17+00:00",
+        "commits": [
+            {
+                "sha": "abd6071",
+                "message": "Support for doing both auto backup on backend creation and force export",
+                "author": "arabcoders",
+                "date": "2025-04-02T21:31:17+00:00"
+            },
+            {
+                "sha": "7b61660",
+                "message": "changing file format",
+                "author": "arabcoders",
+                "date": "2025-04-02T21:30:41+00:00"
+            },
+            {
+                "sha": "5c6f6f8",
+                "message": "Added delay support triggering events",
+                "author": "arabcoders",
+                "date": "2025-04-02T21:30:10+00:00"
+            },
+            {
+                "sha": "9c98017",
+                "message": "Make sure dispatch events in received order.",
+                "author": "arabcoders",
+                "date": "2025-04-02T17:23:36+00:00"
+            },
+            {
+                "sha": "cbc94f6",
+                "message": "Make it possible to queue commands via events",
+                "author": "arabcoders",
+                "date": "2025-04-02T16:44:09+00:00"
+            },
+            {
+                "sha": "74e9179",
+                "message": "Show all users and backends in the backups page.",
+                "author": "arabcoders",
+                "date": "2025-04-02T16:23:55+00:00"
+            },
+            {
+                "sha": "86c0561",
+                "message": "The restore mapper shouldn't assume the file name inside archive is exactly same as the archive name.",
+                "author": "arabcoders",
+                "date": "2025-04-02T16:22:04+00:00"
+            },
+            {
+                "sha": "4551c16",
+                "message": "update the system/users endpoint to include user backends names.",
+                "author": "arabcoders",
+                "date": "2025-04-02T15:54:43+00:00"
+            },
+            {
+                "sha": "7b12883",
+                "message": "Update system:report to include sub-users",
+                "author": "arabcoders",
+                "date": "2025-04-02T14:34:09+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250323-8fb21d0",
+        "date": "2025-03-23T23:49:28+00:00",
         "commits": [
             {
                 "sha": "23ab782",
