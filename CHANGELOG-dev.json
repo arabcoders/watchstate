@@ -1,8 +1,20 @@
 [
     {
-        "tag": "dev-20250403-abd6071",
-        "date": "2025-04-02T21:31:17+00:00",
+        "tag": "dev-20250403-32843de",
+        "date": "2025-04-02T21:45:16+00:00",
         "commits": [
+            {
+                "sha": "32843de",
+                "message": "updating dependencies",
+                "author": "arabcoders",
+                "date": "2025-04-02T21:45:16+00:00"
+            },
+            {
+                "sha": "6c7cde4",
+                "message": "Make system reset perform reset for all users.",
+                "author": "arabcoders",
+                "date": "2025-04-02T21:42:28+00:00"
+            },
             {
                 "sha": "abd6071",
                 "message": "Support for doing both auto backup on backend creation and force export",
