@@ -33,15 +33,16 @@
           <Message message_class="is-background-warning-80 has-text-dark" title="Important information"
                    icon="fas fa-exclamation-triangle">
             <p>
-              Are you sure you want to reset <span class="has-text-danger is-bold is-underlined">{{ api_user }}</span> user local state?
+              Are you sure you want to reset <span class="has-text-danger is-bold is-underlined">all users</span> local
+              state?
             </p>
 
             <h5 class="has-text-dark">This operation will do the following:</h5>
 
             <ul>
-              <li>Remove all data from user local database.</li>
-              <li>Attempt to flush the cache related to user.</li>
-              <li>Reset the user backends last sync date.</li>
+              <li>Remove all data from local databases.</li>
+              <li>Flush to cached data.</li>
+              <li>Reset all users backends last sync date.</li>
             </ul>
 
             <p>There is no undo operation. This action is irreversible.</p>
@@ -49,8 +50,7 @@
         </div>
 
         <div class="column is-12">
-          <Confirm @confirmed="resetSystem()"
-                   :title="`Perform local state reset for: ${api_user}`"
+          <Confirm @confirmed="resetSystem()" :title="`Perform local state reset for all users`"
                    title-icon="fa-redo"
                    warning="Depending on your hardware speed, the reset operation might take long time. do not interrupt the process, or close the browser tab. You will be redirected to the index page automatically once the process is complete. Otherwise, you might end up with a corrupted database and/or state."
           />
