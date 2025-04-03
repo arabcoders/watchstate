@@ -15,6 +15,19 @@
                 <span>{{ !queued ? 'Queue backup' : 'Remove from queue' }}</span>
               </button>
             </p>
+
+            <div class="control has-icons-left" v-if="toggleFilter || query">
+              <input type="search" v-model.lazy="query" class="input" id="filter"
+                     placeholder="Filter displayed content">
+              <span class="icon is-left"><i class="fas fa-filter"/></span>
+            </div>
+
+            <div class="control">
+              <button class="button is-danger is-light" @click="toggleFilter = !toggleFilter">
+                <span class="icon"><i class="fas fa-filter"/></span>
+              </button>
+            </div>
+
             <p class="control">
               <button class="button is-info" @click="loadContent" :disabled="isLoading"
                       :class="{ 'is-loading': isLoading }">
@@ -30,21 +43,22 @@
         </div>
       </div>
 
-      <div class="column is-12" v-if="items.length < 1 || isLoading">
+      <div class="column is-12" v-if="filteredItems.length < 1 || isLoading">
         <Message v-if="isLoading" message_class="is-background-info-90 has-text-dark" icon="fas fa-spinner fa-spin"
                  title="Loading" message="Loading data. Please wait..."/>
-        <Message v-else title="Warning" message_class="is-background-warning-80 has-text-dark"
-                 icon="fas fa-exclamation-triangle">
-          No backups found.
+        <Message v-else
+                 :title="query ? 'Search results' : 'Warning'"
+                 message_class="is-background-warning-80 has-text-dark" icon="fas fa-exclamation-triangle">
+          <span v-if="query">No results found for <strong>{{ query }}</strong></span>
+          <span v-else>No backups found.</span>
         </Message>
       </div>
 
-      <div class="column is-6-tablet" v-for="(item, index) in items" :key="'backup-' + index">
+      <div class="column is-6-tablet" v-for="(item, index) in filteredItems" :key="'backup-' + index">
         <div class="card">
           <header class="card-header">
             <p class="card-header-title is-text-overflow pr-1">
-              <span class="icon"><i class="fas fa-download"
-                                    :class="{ 'fa-spin': item?.isDownloading }"></i>&nbsp;</span>
+              <span class="icon"><i class="fas fa-download" :class="{ 'fa-spin': item?.isDownloading }"/>&nbsp;</span>
               <span>
                 <NuxtLink @click="downloadFile(item)" v-text="item.filename"/>
               </span>
@@ -112,9 +126,8 @@
             <li>
               To generate a manual backup, go to the
               <NuxtLink to="/backends"><span class="icon"><i class="fas fa-server"></i></span> Backends</NuxtLink>
-              page and from the drop down menu select the 4th option `Backup this backend play state`, or via cli
-              using
-              <code>state:backup</code> command from the console. or by <span class="icon"><i
+              page and from the drop down menu select the 4th option <code>Backup this backend play state</code>, or via
+              cli using <code>state:backup</code> command from the console. or by <span class="icon"><i
                 class="fas fa-terminal"/></span>
               <NuxtLink :to="makeConsoleCommand('state:backup -s [backend] --file /config/backup/[file]')"
                         v-text="'Web Console'"/>
@@ -139,13 +152,29 @@ import {humanFileSize, makeConsoleCommand, notification, TOOLTIP_DATE_FORMAT} fr
 import Message from '~/components/Message'
 import {useStorage} from '@vueuse/core'
 
+const route = useRoute()
+
 useHead({title: 'Backups'})
+
 const items = ref([])
 const isLoading = ref(false)
 const queued = ref(true)
 const show_page_tips = useStorage('show_page_tips', true)
-const api_user = useStorage('api_user', 'main')
 const users = ref([])
+const query = ref(route.query.filter ?? '')
+const toggleFilter = ref(false)
+watch(toggleFilter, () => {
+  if (!toggleFilter.value) {
+    query.value = ''
+  }
+});
+
+const filteredItems = computed(() => {
+  if (!query.value) {
+    return items.value
+  }
+  return items.value.filter(item => item.filename.toLowerCase().includes(query.value.toLowerCase()))
+})
 
 const loadContent = async () => {
   items.value = []

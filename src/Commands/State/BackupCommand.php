@@ -254,14 +254,6 @@ class BackupCommand extends Command
                 continue;
             }
 
-            if (true !== (bool)ag($backend, 'import.enabled')) {
-                $this->logger->info("SYSTEM: Ignoring '{user}@{backend}'. Import disabled.", [
-                    'user' => $userContext->name,
-                    'backend' => $backendName
-                ]);
-                continue;
-            }
-
             if (!isset($supported[$type])) {
                 $this->logger->error("SYSTEM: Ignoring '{user}@{backend}'. Unexpected type '{type}'.", [
                     'user' => $userContext->name,
@@ -270,6 +262,24 @@ class BackupCommand extends Command
                     'types' => implode(', ', array_keys($supported)),
                 ]);
                 continue;
+            }
+
+            if (true !== (bool)ag($backend, 'import.enabled')) {
+                if ($isCustom) {
+                    $this->logger->notice(
+                        "SYSTEM: The backend '{user}@{backend}' has import disabled, However the check is skipped due to --select-backend.",
+                        [
+                            'user' => $userContext->name,
+                            'backend' => $backendName
+                        ]
+                    );
+                } else {
+                    $this->logger->info("SYSTEM: Ignoring '{user}@{backend}'. Import disabled.", [
+                        'user' => $userContext->name,
+                        'backend' => $backendName
+                    ]);
+                    continue;
+                }
             }
 
             if (null === ($url = ag($backend, 'url')) || false === isValidURL($url)) {

@@ -32,9 +32,14 @@ final readonly class Events
     #[Get(pattern: self::URL . '[/]')]
     public function list(iRequest $request): iResponse
     {
+        $params = DataUtil::fromRequest($request, true);
         [$page, $perpage, $start] = getPagination($request, 1, self::PERPAGE);
 
         $arrParams = [];
+
+        if (null !== ($filter = $params->get('filter'))) {
+            $arrParams['event'] = [DBLayer::IS_LIKE, $filter];
+        }
 
         $this->repo->setPerpage($perpage)->setStart($start)->setDescendingOrder();
 
@@ -193,6 +198,10 @@ final readonly class Events
     {
         $data = $entity->getAll();
         $data['status_name'] = $entity->getStatusText();
+
+        if ($delay = ag($entity->options, Options::DELAY_BY)) {
+            $data['delay_by'] = $delay;
+        }
 
         return $data;
     }

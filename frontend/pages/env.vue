@@ -8,6 +8,18 @@
         </span>
         <div class="is-pulled-right">
           <div class="field is-grouped">
+            <div class="control has-icons-left" v-if="toggleFilter || query">
+              <input type="search" v-model.lazy="query" class="input" id="filter"
+                     placeholder="Filter displayed content">
+              <span class="icon is-left"><i class="fas fa-filter"/></span>
+            </div>
+
+            <div class="control">
+              <button class="button is-danger is-light" @click="toggleFilter = !toggleFilter">
+                <span class="icon"><i class="fas fa-filter"/></span>
+              </button>
+            </div>
+
             <p class="control">
               <button class="button is-primary" v-tooltip.bottom="'Add new variable'" @click="toggleForm = !toggleForm"
                       :disabled="isLoading">
@@ -31,12 +43,16 @@
         </div>
       </div>
 
-      <div class="column is-12" v-if="!toggleForm && items.length < 1">
+      <div class="column is-12" v-if="!toggleForm && filteredRows.length < 1">
         <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
                  icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
-        <Message v-else message_class="has-background-warning-90 has-text-dark" title="Information"
+        <Message v-else message_class="has-background-warning-90 has-text-dark"
+                 :title="query ? 'No results' : 'Information'"
                  icon="fas fa-info-circle">
-          <p>
+          <p v-if="query">
+            No environment variables found matching <strong>{{ query }}</strong>. Please try a different filter.
+          </p>
+          <p v-else>
             No environment variables configured yet. Click on the
             <i @click="toggleForm=true" class="is-clickable fa fa-add"></i> button to add a new variable.
           </p>
@@ -116,9 +132,9 @@
           </div>
         </form>
       </div>
-      <div v-else class="column is-12" v-if="items">
+      <div v-else class="column is-12" v-if="filteredRows">
         <div class="columns is-multiline">
-          <div class="column" v-for="item in filteredRows(items)" :key="item.key"
+          <div class="column" v-for="item in filteredRows" :key="item.key"
                :class="{'is-4':!item?.danger,'is-12':item.danger}">
             <div class="card" :class="{ 'is-danger': item?.danger }">
               <header class="card-header">
@@ -220,6 +236,8 @@ import {awaitElement, copyText, notification} from '~/utils/index'
 import {useStorage} from '@vueuse/core'
 import Message from '~/components/Message'
 
+const route = useRoute()
+
 useHead({title: 'Environment Variables'})
 
 const items = ref([])
@@ -230,6 +248,13 @@ const form_type = ref()
 const show_page_tips = useStorage('show_page_tips', true)
 const isLoading = ref(true)
 const file = ref('.env')
+const query = ref(route.query.filter ?? '')
+const toggleFilter = ref(false)
+watch(toggleFilter, () => {
+  if (!toggleFilter.value) {
+    query.value = ''
+  }
+});
 
 const loadContent = async () => {
   const route = useRoute()
@@ -400,7 +425,13 @@ const getHelp = key => {
 
 const fixBool = v => [true, 'true', '1'].includes(v)
 
-const filteredRows = rows => rows.filter(i => i.value !== undefined)
+const filteredRows = computed(() => {
+  if (!query.value) {
+    return items.value.filter(i => i.value !== undefined)
+  }
+
+  return items.value.filter(i => i.key.toLowerCase().includes(query.value.toLowerCase())).filter(i => i.value !== undefined)
+})
 
 const stateCallBack = async e => {
   if (!e.state && !e.detail) {
