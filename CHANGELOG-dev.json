@@ -1,7 +1,19 @@
 [
     {
-        "tag": "dev-20250403-c921430",
-        "date": "2025-04-02T22:18:04+00:00",
+        "tag": "dev-20250404-ad2f7b3",
+        "date": "2025-04-03T22:10:10+00:00",
+        "commits": [
+            {
+                "sha": "ad2f7b3",
+                "message": "Mostly WebUI changes to make easier to filter stuff",
+                "author": "arabcoders",
+                "date": "2025-04-03T22:10:10+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250402-01e1b3c",
+        "date": "2025-04-02T22:32:09+00:00",
         "commits": [
             {
                 "sha": "c921430",
