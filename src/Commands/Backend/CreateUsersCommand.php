@@ -487,7 +487,7 @@ class CreateUsersCommand extends Command
         $usersBy = [];
         foreach ($users as $user) {
             $backend = $user['backend'];
-            $nameLower = strtolower($user['name']);
+            $nameLower = (string)strtolower((string)$user['name']);
             if (ag($user, 'id') === ag($user, 'client_data.options.' . Options::ALT_ID)) {
                 $this->logger->debug('Skipping main user "{backend}: {name}".', [
                     'name' => $user['name'],
@@ -498,7 +498,7 @@ class CreateUsersCommand extends Command
             if (!isset($usersBy[$backend])) {
                 $usersBy[$backend] = [];
             }
-            $usersBy[$backend][$nameLower] = $user;
+            $usersBy[$backend][(string)$nameLower] = $user;
         }
 
         $results = [];
@@ -507,7 +507,7 @@ class CreateUsersCommand extends Command
         $used = [];
 
         // Helper: check if a (backend, nameLower) is already used.
-        $alreadyUsed = fn(string $b, string $n): bool => in_array([$b, $n], $used, true);
+        $alreadyUsed = fn($b, $n): bool => in_array([$b, $n], $used, true);
 
         /**
          * Build a "unified" row from matched users across backends.
@@ -531,7 +531,7 @@ class CreateUsersCommand extends Command
             $names = [];
             foreach ($allBackends as $b) {
                 if (isset($backendDict[$b])) {
-                    $names[] = $backendDict[$b]['name'];
+                    $names[] = (string)$backendDict[$b]['name'];
                 }
             }
 
@@ -568,6 +568,8 @@ class CreateUsersCommand extends Command
                 }
             }
 
+            $finalName = (string)$finalName;
+
             // Build final row: "name" + sub-array "backends"
             $row = [
                 'name' => strtolower($finalName),
@@ -593,6 +595,8 @@ class CreateUsersCommand extends Command
 
             // For each user in this backend
             foreach ($usersBy[$backend] as $nameLower => $userObj) {
+                $nameLower = (string)$nameLower;
+
                 // Skip if already used
                 if ($alreadyUsed($backend, $nameLower)) {
                     continue;
