@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250404-ad2f7b3",
-        "date": "2025-04-03T22:10:10+00:00",
+        "tag": "dev-20250405-45017b2",
+        "date": "2025-04-05T16:03:18+00:00",
         "commits": [
+            {
+                "sha": "45017b2",
+                "message": "update mapper.yaml spec",
+                "author": "arabcoders",
+                "date": "2025-04-05T16:03:18+00:00"
+            },
             {
                 "sha": "ad2f7b3",
                 "message": "Mostly WebUI changes to make easier to filter stuff",
