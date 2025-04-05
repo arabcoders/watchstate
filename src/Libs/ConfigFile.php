@@ -31,6 +31,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
      * @param string $type The content type. Default to 'yaml'.
      * @param bool $autoSave Auto save changes. Default to 'true'.
      * @param bool $autoCreate Auto create the file if it does not exist. Default is 'false'.
+     * @param bool $autoBackup Auto backup the file. Default is 'true'.
      * @param array $opts Additional options.
      *
      * @throws InvalidArgumentException If the content type is invalid.
@@ -50,7 +51,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
             ]));
         }
 
-        if (false === file_exists($this->file)) {
+        if (false === file_exists($this->file) && false === str_starts_with($this->file, 'php://')) {
             if (false === $this->autoCreate) {
                 throw new InvalidArgumentException(r("File '{file}' does not exist.", ['file' => $file]));
             }
@@ -62,8 +63,20 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
         $this->loadData();
     }
 
+    /**
+     * Open a config file.
+     *
+     * @param string|resource $file The config file.
+     * @param string $type The content type. Default to 'yaml'.
+     * @param bool $autoSave Auto save changes. Default to 'true'.
+     * @param bool $autoCreate Auto create the file if it does not exist. Default is 'false'.
+     * @param bool $autoBackup Auto backup the file. Default is 'true'.
+     * @param array $opts Additional options.
+     *
+     * @return self
+     */
     public static function open(
-        string $file,
+        mixed $file,
         string $type = 'yaml',
         bool $autoSave = true,
         bool $autoCreate = false,
@@ -161,6 +174,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
         if (false === $override) {
             clearstatcache(true, $this->file);
             $newHash = $this->getFileHash();
+
             if (false === hash_equals($this->file_hash, $newHash)) {
                 $this->logger?->warning(
                     "File '{file}' has been modified since last load. re-applying changes on top of the new data.",
@@ -189,7 +203,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
             }
         }
 
-        $stream = new Stream($this->file, 'w');
+        $stream = Stream::make($this->file, 'w');
         $stream->write(
             match ($this->type) {
                 'yaml' => Yaml::dump($this->data, inline: 8, indent: 2),
@@ -199,6 +213,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
                 ])),
             }
         );
+
         $stream->close();
 
         $this->operations = [];
@@ -259,7 +274,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
             $jsonOpts = $this->opts['json_decode'];
         }
 
-        $stream = $stream ?? new Stream($this->file, 'r');
+        $stream = Stream::make($this->file, 'r');
 
         if ($stream->isSeekable()) {
             $stream->seek(0);

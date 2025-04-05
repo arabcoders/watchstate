@@ -78,8 +78,9 @@
                  @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
           <ul>
             <li>
-              You can also run a command from the task page by clicking on the <strong>Run via console</strong>. The
-              command will be pre-filled for you.
+              You don't need to write <code>console</code> or <code>docker exec -ti watchstate console</code> Using
+              this interface. Use the command followed by the options directly. For example, <code>db:list --output
+              yaml</code>.
             </li>
             <li>
               Clicking close connection does not stop the command. It only stops the output from being displayed. The
@@ -87,12 +88,8 @@
             </li>
             <li>
               The majority of the commands will not show any output unless error has occurred or important information
-              needs to be communicated. To see all output, add the <code>-vvv</code> flag.
-            </li>
-            <li>
-              There is no need to write <code>console</code> or <code>docker exec -ti watchstate console</code> Using
-              this interface. Use the command followed by the options directly. For example, <code>db:list --output
-              yaml</code>.
+              needs to be communicated. Use the <code>-v[v[v]]</code> option to increase verbosity. <code>-v</code>
+              should be enough for most people, If you are debugging, then use <code>-vv --context</code>.
             </li>
             <li>
               There is an environment variable <code>WS_CONSOLE_ENABLE_ALL</code> that can be set to <code>true</code>
@@ -133,6 +130,9 @@ const isLoading = ref(false)
 const outputConsole = ref()
 const command_input = ref()
 const executedCommands = useStorage('executedCommands', [])
+
+const bg_enable = useStorage('bg_enable', true)
+const bg_opacity = useStorage('bg_opacity', 0.95)
 
 const hasPrefix = computed(() => command.value.startsWith('console') || command.value.startsWith('docker'))
 const hasPlaceholder = computed(() => command.value && command.value.match(/\[.*\]/))
@@ -273,9 +273,17 @@ onUnmounted(() => {
   if (sse) {
     sse.close()
   }
+
+  if (bg_enable.value && bg_opacity.value) {
+    document.querySelector('body').setAttribute("style", `opacity: ${bg_opacity.value}`)
+  }
 })
 
 onMounted(async () => {
+  if (bg_enable.value) {
+    document.querySelector('body').setAttribute("style", "opacity: 1");
+  }
+
   window.addEventListener("resize", reSizeTerminal);
   command_input.value.focus()
 
@@ -289,6 +297,7 @@ onMounted(async () => {
       cols: 108,
       rows: 10,
       disableStdin: true,
+      convertEol: true,
     })
     terminal.value.open(outputConsole.value)
     terminal.value.loadAddon(terminalFit.value)

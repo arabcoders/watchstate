@@ -109,6 +109,7 @@ final class Command
                         'LANG' => 'en_US.UTF-8',
                         'LC_ALL' => 'en_US.UTF-8',
                         'TERM' => 'xterm-256color',
+                        'FORCE_COLOR' => (string)$data->get('force_color', 'true'),
                         'PWD' => $path,
                     ], $_ENV),
                     timeout: $data->get('timeout', 7200),

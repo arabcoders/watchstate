@@ -236,35 +236,42 @@ the [mapper.yaml](#whats-the-schema-for-the-mapperyaml-file) section.
 The schema is simple, it's a list of users in the following format:
 
 ```yaml
-# 1st user...
--   my_plex_server:
-        name: "mike_jones"
-        options: { }
-    my_jellyfin_server:
-        name: "jones_mike"
-        options: { }
-    my_emby_server:
-        name: "mikeJones"
-        options: { }
-# 2nd user...
--   my_emby_server:
-        name: "jiji_jones"
-        options: { }
-    my_plex_server:
-        name: "jones_jiji"
-        options: { }
-    my_jellyfin_server:
-        name: "jijiJones"
-        options: { }
-#.... more users
+version: "1.5"
+map:
+    # 1st user...
+    -   my_plex_server:
+            name: "mike_jones"
+            options: { } # optional key.
+        my_jellyfin_server:
+            name: "jones_mike"
+        my_emby_server:
+            name: "mikeJones"
+            replace_with: "mike_jones" # optional action, to replace the username with the new one.
+    # 2nd user...
+    -   my_emby_server:
+            name: "jiji_jones"
+            options: { } # optional key.
+        my_plex_server:
+            name: "jones_jiji"
+        my_jellyfin_server:
+            name: "jijiJones"
+            replace_with: "jiji_jones" # optional action, to replace the username with the new one.
+    #.... more users
 ```
 
-> ![NOTE]
-> the server names `my_plex_server`, `my_jellyfin_server`, `my_emby_server` are the names you have chosen for your
-> backends.
-> the `name` is the real username for that user from the backend.
+> [!IMPORTANT]
+> As we enforce specific naming convention for backend names and usernames they must follow the following format
+> `^[a-z_0-9]+$` which means, lowercase letters, numbers and `_` are allowed. No spaces, uppercase letters or special
+> characters are allowed. you can use the `replace_with` key to replace the username with the new one. if it's not
+> complying with the naming convention, or you want to force specific display name.
 
-This yaml file helps map your users username in the different backends, so the tool can sync the correct user data. If
+> [!NOTE]
+> the backend names `my_plex_server`, `my_jellyfin_server`, `my_emby_server` are the names you have chosen for
+> your> backends.
+>
+> The `name` field is whatever the backend is reporting the username as.
+
+This yaml file helps map your users usernames in the different backends, so the tool can sync the correct user data. If
 you added or updated mapping, you should delete `users` directory and generate new data. by running the `backend:create`
 command as described in the previous section.
 

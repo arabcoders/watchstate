@@ -3,27 +3,28 @@
     <div class="columns is-multiline">
       <div class="column is-12 is-clearfix">
         <span class="title is-4">
-          <span class="icon"><i class="fas fa-globe" /></span>
+          <span class="icon"><i class="fas fa-globe"/></span>
           Logs
         </span>
         <div class="is-pulled-right">
           <div class="field is-grouped">
             <div class="control has-icons-left" v-if="toggleFilter">
-              <input type="search" v-model.lazy="query" class="input" id="filter" placeholder="Filter">
-              <span class="icon is-left"><i class="fas fa-filter" /></span>
+              <input type="search" v-model.lazy="query" class="input" id="filter"
+                     placeholder="Filter displayed content">
+              <span class="icon is-left"><i class="fas fa-filter"/></span>
             </div>
 
             <div class="control">
               <button class="button is-danger is-light" v-tooltip.bottom="'Filter files.'"
-                @click="toggleFilter = !toggleFilter">
-                <span class="icon"><i class="fas fa-filter" /></span>
+                      @click="toggleFilter = !toggleFilter">
+                <span class="icon"><i class="fas fa-filter"/></span>
               </button>
             </div>
 
             <p class="control">
               <button class="button is-info" @click="loadContent" :disabled="isLoading"
-                :class="{ 'is-loading': isLoading }">
-                <span class="icon"><i class="fas fa-sync" /></span>
+                      :class="{ 'is-loading': isLoading }">
+                <span class="icon"><i class="fas fa-sync"/></span>
               </button>
             </p>
           </div>
@@ -33,11 +34,16 @@
         </div>
       </div>
 
-      <div class="column is-12" v-if="logs.length < 1 || isLoading">
+      <div class="column is-12" v-if="filterItems.length < 1 || isLoading">
         <Message v-if="isLoading" message_class="is-background-info-90 has-text-dark" icon="fas fa-spinner fa-spin"
-          title="Loading" message="Loading data. Please wait..." />
-        <Message v-else title="Warning" message_class="is-background-warning-80 has-text-dark"
-          icon="fas fa-exclamation-triangle" message="No logs files found." />
+                 title="Loading" message="Loading data. Please wait..."/>
+        <Message v-else
+                 :title="query ? 'No results' : 'Warning'"
+                 message_class="is-background-warning-80 has-text-dark"
+                 icon="fas fa-exclamation-triangle">
+          <span v-if="query">No results found for <strong>{{ query }}</strong></span>
+          <span v-else>No logs found.</span>
+        </Message>
       </div>
 
       <div class="column is-4-tablet" v-for="(item, index) in filterItems" :key="'log-' + index">
@@ -47,22 +53,22 @@
               <NuxtLink :to="'/logs/' + item.filename">{{ item.filename ?? item.date }}</NuxtLink>
             </p>
             <span class="card-header-icon">
-              <span class="icon" v-if="'access' === item.type"><i class="fas fa-key" /></span>
-              <span class="icon" v-if="'task' === item.type"><i class="fas fa-tasks" /></span>
-              <span class="icon" v-if="'app' === item.type"><i class="fas fa-bugs" /></span>
-              <span class="icon" v-if="'webhook' === item.type"><i class="fas fa-book" /></span>
+              <span class="icon" v-if="'access' === item.type"><i class="fas fa-key"/></span>
+              <span class="icon" v-if="'task' === item.type"><i class="fas fa-tasks"/></span>
+              <span class="icon" v-if="'app' === item.type"><i class="fas fa-bugs"/></span>
+              <span class="icon" v-if="'webhook' === item.type"><i class="fas fa-book"/></span>
               <span class="is-capitalized">{{ item.type }}</span>
             </span>
           </header>
           <div class="card-footer">
             <p class="card-footer-item">
-              <span class="icon"><i class="fas fa-calendar" />&nbsp;</span>
+              <span class="icon"><i class="fas fa-calendar"/>&nbsp;</span>
               <span class="has-tooltip" v-tooltip="`Last Update: ${moment(item.modified).format(TOOLTIP_DATE_FORMAT)}`">
                 {{ moment(item.modified).fromNow() }}
               </span>
             </p>
             <p class="card-footer-item">
-              <span class="icon"><i class="fas fa-hdd" />&nbsp;</span>
+              <span class="icon"><i class="fas fa-hdd"/>&nbsp;</span>
               <span>{{ humanFileSize(item.size) }}</span>
             </p>
           </div>
@@ -75,10 +81,10 @@
 <script setup>
 import request from '~/utils/request'
 import moment from 'moment'
-import { humanFileSize, TOOLTIP_DATE_FORMAT } from '~/utils/index'
+import {humanFileSize, TOOLTIP_DATE_FORMAT} from '~/utils/index'
 import Message from '~/components/Message'
 
-useHead({ title: 'Logs' })
+useHead({title: 'Logs'})
 
 const query = ref()
 const logs = ref([])

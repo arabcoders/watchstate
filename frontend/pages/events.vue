@@ -9,8 +9,10 @@
         <div class="is-pulled-right">
           <div class="field is-grouped">
             <div class="control has-icons-left" v-if="toggleFilter || query">
-              <input type="search" v-model.lazy="query" class="input" id="filter" placeholder="Filter">
-              <span class="icon is-left"><i class="fas fa-filter"/></span>
+              <form @submit.prevent="loadContent">
+                <input type="search" v-model="query" class="input" id="filter" placeholder="Search & Filter">
+                <span class="icon is-left"><i class="fas fa-filter"/></span>
+              </form>
             </div>
 
             <div class="control">
@@ -63,6 +65,12 @@
           <header class="card-header is-align-self-flex-end">
             <div class="card-header-title is-block">
               <NuxtLink @click="quick_view = item.id" v-text="makeName(item.id)"/>
+              <span v-if="item?.delay_by" class="tag is-warning is-pulled-right is-hidden-mobile has-tooltip"
+                    v-tooltip="'The event dispatching was delayed by this many seconds.'">
+                <span class="icon"><i class="fas fa-clock"/></span>
+                <span>{{ item.delay_by }}s</span>
+              </span>
+
               <div class="is-pulled-right is-hidden-tablet">
                 <span class="tag" :class="getStatusClass(item.status)">{{ statuses[item.status].name }}</span>
               </div>
@@ -133,6 +141,9 @@
             <li>Resetting event will return it to the queue to be dispatched again.</li>
             <li>Stopping event will prevent it from being dispatched.</li>
             <li>Events with status of <span class="tag is-warning">Running</span> Cannot be cancelled or stopped.</li>
+            <li>The filter <i class="fa fa-filter"/> button on top can be used for both filtering the displayed
+              results, and on submit it will search the backend for the given event name.
+            </li>
           </ul>
         </Message>
       </div>
