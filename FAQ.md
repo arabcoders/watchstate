@@ -265,7 +265,7 @@ mapping:
 > characters are allowed. you can use the `replace_with` key to replace the username with the new one. if it's not
 > complying with the naming convention, or you want to force specific display name.
 
-> ![NOTE]
+> [!NOTE]
 > the backend names `my_plex_server`, `my_jellyfin_server`, `my_emby_server` are the names you have chosen for
 > your> backends.
 >
