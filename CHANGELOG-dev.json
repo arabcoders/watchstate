@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250405-eece04c",
-        "date": "2025-04-05T17:17:21+00:00",
+        "tag": "dev-20250405-6d8dfd4",
+        "date": "2025-04-05T17:32:11+00:00",
         "commits": [
+            {
+                "sha": "6d8dfd4",
+                "message": "in backend:create, cast user names to string, sometimes we get intgers",
+                "author": "arabcoders",
+                "date": "2025-04-05T17:32:11+00:00"
+            },
             {
                 "sha": "eece04c",
                 "message": "minor fixes",
