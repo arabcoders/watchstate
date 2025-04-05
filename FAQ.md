@@ -237,7 +237,7 @@ The schema is simple, it's a list of users in the following format:
 
 ```yaml
 version: "1.5"
-mapping:
+map:
     # 1st user...
     -   my_plex_server:
             name: "mike_jones"

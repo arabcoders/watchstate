@@ -142,10 +142,16 @@ class CreateUsersCommand extends Command
         if (file_exists($mapFile) && filesize($mapFile) > 10) {
             $map = ConfigFile::open(Config::get('mapper_file'), 'yaml');
             $mapping = $map->get('map', $map->getAll());
-            if (false === $map->has('version') || false === $map->has('map')) {
-                $this->logger->warning(
-                    "SYSTEM: UPGRADE your mapper.yaml file to v1.5 format spec, check the FAQ.md for the updated format. Th old format will be removed in future releases.",
-                );
+            if (!empty($mapping)) {
+                if (false === $map->has('version') || false === $map->has('map')) {
+                    $this->logger->warning(
+                        "SYSTEM: Please upgrade your mapper.yaml file to v1.5 format spec for better compatibility and features, check the FAQ.md for the updated format.",
+                    );
+                }
+
+                $this->logger->info("SYSTEM: Mapper file found, using it to map users.", [
+                    'map' => arrayToString($mapping)
+                ]);
             }
         }
 
@@ -202,7 +208,27 @@ class CreateUsersCommand extends Command
 
                     $user = $this->map_actions($user, ag($backend, 'name'), $mapping);
 
+                    $_name = (string)ag($user, 'name');
+
+                    if (false === isValidName($_name)) {
+                        $rename = substr(md5($_name), 0, 8);
+                        $this->logger->error(
+                            message: "SYSTEM: Renaming invalid user name '{backend}: {name}' to '{backend}: {renamed}'. username must be in [a-z_0-9] format.",
+                            context: [
+                                'name' => $_name,
+                                'backend' => ag($backend, 'name'),
+                                'renamed' => $rename
+                            ]
+                        );
+                        $user = ag_set($user, 'name', $rename);
+                    }
+
+                    // -- user here refers to user_id not the name.
                     $info['user'] = ag($user, 'id', ag($info, 'user'));
+
+                    // -- The display name is used to create user directory.
+                    $info['displayName'] = ag($user, 'name');
+
                     $info['backendName'] = strtolower(r("{backend}_{user}", [
                         'backend' => ag($backend, 'name'),
                         'user' => ag($user, 'name'),
@@ -215,16 +241,6 @@ class CreateUsersCommand extends Command
                             context: ['name' => $info['backendName'], 'renamed' => $rename]
                         );
                         $info['backendName'] = $rename;
-                    }
-
-                    $info['displayName'] = ag($user, 'name');
-                    if (false === isValidName($info['displayName'])) {
-                        $rename = substr(md5($info['displayName']), 0, 8);
-                        $this->logger->error(
-                            message: "SYSTEM: Renaming invalid display username '{name}'. username must be in [a-z_0-9], renaming to '{renamed}'",
-                            context: ['name' => $info['displayName'], 'renamed' => $rename]
-                        );
-                        $info['displayName'] = $rename;
                     }
 
                     $info = ag_delete($info, 'options.' . Options::PLEX_USER_PIN);
@@ -685,6 +701,18 @@ class CreateUsersCommand extends Command
     private function map_actions(array $user, string $backend, array $mapping): array
     {
         if (null === ($username = ag($user, 'name'))) {
+            $this->logger->debug("SYSTEM: No username found for '{backend}' backend.", [
+                'backend' => $backend
+            ]);
+            return $user;
+        }
+
+        // -- check if backend has mapping
+        $hasMapping = array_filter($mapping, fn($map) => array_key_exists($backend, $map));
+        if (empty($hasMapping)) {
+            $this->logger->debug("No mapping found for '{backend}' backend.", [
+                'backend' => $backend
+            ]);
             return $user;
         }
 
@@ -708,6 +736,10 @@ class CreateUsersCommand extends Command
         }
 
         if (false === $found) {
+            $this->logger->debug("No mapping found for '{backend}: {username}'.", [
+                'backend' => $backend,
+                'username' => $username
+            ]);
             return $user;
         }
 
