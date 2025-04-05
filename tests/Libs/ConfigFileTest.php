@@ -228,6 +228,23 @@ class ConfigFileTest extends TestCase
         }
     }
 
+    public function test_configFile_set_php_stream_wrapper()
+    {
+        file_put_contents('php://temp', file_get_contents(__DIR__ . '/../Fixtures/test_servers.yaml'));
+        $params['file'] = 'php://temp';
+
+        try {
+            $class = new ConfigFile(...$params);
+            $this->assertInstanceOf(ConfigFile::class, $class);
+        } catch (Throwable $e) {
+            $this->fail("it shouldn't throw exception for php:// streams. {$e->getMessage()}");
+        }
+
+        $class = ConfigFile::open(...$params);
+        $this->assertInstanceOf(ConfigFile::class, $class);
+        $this->assertEmpty($class->getAll(), 'php:// streams should be empty, when re-opened.');
+    }
+
     public function test_configFile_set()
     {
         $params['file'] = tempnam(sys_get_temp_dir(), 'test');

@@ -27,7 +27,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
     /**
      * ConfigFile constructor.
      *
-     * @param string|resource $file The config file.
+     * @param string $file The config file.
      * @param string $type The content type. Default to 'yaml'.
      * @param bool $autoSave Auto save changes. Default to 'true'.
      * @param bool $autoCreate Auto create the file if it does not exist. Default is 'false'.
@@ -37,7 +37,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
      * @throws InvalidArgumentException If the content type is invalid.
      */
     public function __construct(
-        private readonly mixed $file,
+        private readonly string $file,
         private readonly string $type = 'yaml',
         private readonly bool $autoSave = true,
         private readonly bool $autoCreate = false,
@@ -51,7 +51,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
             ]));
         }
 
-        if (false === is_resource($file) && false === file_exists($this->file)) {
+        if (false === file_exists($this->file) && false === str_starts_with($this->file, 'php://')) {
             if (false === $this->autoCreate) {
                 throw new InvalidArgumentException(r("File '{file}' does not exist.", ['file' => $file]));
             }
@@ -174,6 +174,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
         if (false === $override) {
             clearstatcache(true, $this->file);
             $newHash = $this->getFileHash();
+
             if (false === hash_equals($this->file_hash, $newHash)) {
                 $this->logger?->warning(
                     "File '{file}' has been modified since last load. re-applying changes on top of the new data.",
@@ -194,7 +195,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
             $json_encode = $this->opts['json_encode'];
         }
 
-        if (true === $this->autoBackup && false === is_resource($this->file)) {
+        if (true === $this->autoBackup) {
             try {
                 copy($this->file, $this->file . '.bak');
             } catch (\Exception) {
@@ -202,7 +203,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
             }
         }
 
-        $stream = new Stream($this->file, 'w');
+        $stream = Stream::make($this->file, 'w');
         $stream->write(
             match ($this->type) {
                 'yaml' => Yaml::dump($this->data, inline: 8, indent: 2),
@@ -212,6 +213,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
                 ])),
             }
         );
+
         $stream->close();
 
         $this->operations = [];
@@ -364,10 +366,6 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
 
     private function getFileHash(): string
     {
-        if (is_resource($this->file)) {
-            return hash('sha256', (string)Stream::make($this->file, 'r'));
-        }
-
         return hash_file('sha256', $this->file);
     }
 }

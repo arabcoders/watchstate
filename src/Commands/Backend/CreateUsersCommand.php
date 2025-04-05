@@ -323,7 +323,7 @@ class CreateUsersCommand extends Command
             ]);
 
             $perUser = ConfigFile::open(
-                file: $dryRun ? fopen("php://memory", 'a') : $config_file,
+                file: $dryRun ? "php://memory" : $config_file,
                 type: 'yaml',
                 autoSave: !$dryRun,
                 autoCreate: !$dryRun,
