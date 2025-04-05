@@ -1,5 +1,47 @@
 [
     {
+        "tag": "master-20250405-ef0c91a",
+        "date": "2025-04-05T18:23:32+00:00",
+        "commits": [
+            {
+                "sha": "608473f",
+                "message": "backend:create when renaming user make sure to update it early to propgate for the rest of the code",
+                "author": "arabcoders",
+                "date": "2025-04-05T18:20:12+00:00"
+            },
+            {
+                "sha": "6d8dfd4",
+                "message": "in backend:create, cast user names to string, sometimes we get intgers",
+                "author": "arabcoders",
+                "date": "2025-04-05T17:32:11+00:00"
+            },
+            {
+                "sha": "eece04c",
+                "message": "minor fixes",
+                "author": "arabcoders",
+                "date": "2025-04-05T17:17:21+00:00"
+            },
+            {
+                "sha": "23f9657",
+                "message": "Fixed FAQ formatting",
+                "author": "arabcoders",
+                "date": "2025-04-05T16:23:09+00:00"
+            },
+            {
+                "sha": "45017b2",
+                "message": "update mapper.yaml spec",
+                "author": "arabcoders",
+                "date": "2025-04-05T16:03:18+00:00"
+            },
+            {
+                "sha": "ad2f7b3",
+                "message": "Mostly WebUI changes to make easier to filter stuff",
+                "author": "arabcoders",
+                "date": "2025-04-03T22:10:10+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250402-01e1b3c",
         "date": "2025-04-02T22:32:09+00:00",
         "commits": [
