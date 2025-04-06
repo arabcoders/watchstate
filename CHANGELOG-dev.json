@@ -1,7 +1,19 @@
 [
     {
-        "tag": "dev-20250406-7951ee6",
-        "date": "2025-04-06T00:00:11+00:00",
+        "tag": "dev-20250406-a2ad617",
+        "date": "2025-04-06T19:16:57+00:00",
+        "commits": [
+            {
+                "sha": "a2ad617",
+                "message": "Completely re-worked how backend:create command works",
+                "author": "arabcoders",
+                "date": "2025-04-06T19:16:57+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250406-59c02f8",
+        "date": "2025-04-06T00:03:12+00:00",
         "commits": [
             {
                 "sha": "7951ee6",
