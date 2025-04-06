@@ -1,5 +1,17 @@
 [
     {
+        "tag": "master-20250406-59c02f8",
+        "date": "2025-04-06T00:03:12+00:00",
+        "commits": [
+            {
+                "sha": "7951ee6",
+                "message": "fixed bug that prevents run_task from actually running",
+                "author": "arabcoders",
+                "date": "2025-04-06T00:00:11+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250405-ef0c91a",
         "date": "2025-04-05T18:23:32+00:00",
         "commits": [

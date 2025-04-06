@@ -1,7 +1,19 @@
 [
     {
-        "tag": "dev-20250405-608473f",
-        "date": "2025-04-05T18:20:12+00:00",
+        "tag": "dev-20250406-7951ee6",
+        "date": "2025-04-06T00:00:11+00:00",
+        "commits": [
+            {
+                "sha": "7951ee6",
+                "message": "fixed bug that prevents run_task from actually running",
+                "author": "arabcoders",
+                "date": "2025-04-06T00:00:11+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250405-ef0c91a",
+        "date": "2025-04-05T18:23:32+00:00",
         "commits": [
             {
                 "sha": "608473f",
