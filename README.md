@@ -14,7 +14,7 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 We have recently re-worked how the `backend:create` command works, and we no longer generate random name for invalid
 backends names or usernames. We do a normalization step to make sure the name is valid. This should help with the
 confusion of having random names. This means if you re-run the `backend:create` you most likely will get a different
-name then before. So, we suggest to re-run the command with `--re-create` flag. This flag will delete the current
+name than before. So, we suggest to re-run the command with `--re-create` flag. This flag will delete the current
 sub-users, and regenerate updated config files.
 
 We have also added new guard for the command, so if you already generated your sub-users, re-running the command will
