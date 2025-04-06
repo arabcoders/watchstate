@@ -211,6 +211,7 @@ final class TasksCommand extends Command
                     );
                     return $event;
                 }
+                break;
             }
             case self::CNAME:
             {
@@ -218,6 +219,7 @@ final class TasksCommand extends Command
                     $event->addLog(r('No command name was specified.'));
                     return $event;
                 }
+                break;
             }
         }
 
