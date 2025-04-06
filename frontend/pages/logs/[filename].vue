@@ -117,7 +117,7 @@ code {
 }
 
 .logbox {
-  background-color: #333;
+  background-color: #1f2229;
   box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
   min-width: 100%;
   max-height: 73vh;
@@ -276,20 +276,24 @@ const scrollToBottom = () => {
   })
 }
 
-onMounted(() => {
-  loadContent()
-  if (bg_enable.value) {
-    document.querySelector('body').setAttribute("style", `opacity: 1.0`)
-  }
+onMounted(async () => {
+  await loadContent()
+  await nextTick(() => {
+    if (bg_enable.value) {
+      document.querySelector('body').setAttribute("style", `opacity: 1.0`)
+    }
+  })
 });
 
 onBeforeUnmount(() => closeStream());
 
-onUnmounted(() => {
+onUnmounted(async () => {
   closeStream()
-  if (bg_enable.value) {
-    document.querySelector('body').setAttribute("style", `opacity: ${bg_opacity.value}`)
-  }
+  await nextTick(() => {
+    if (bg_enable.value) {
+      document.querySelector('body').setAttribute("style", `opacity: ${bg_opacity.value}`)
+    }
+  })
 });
 
 const watchLog = () => {
