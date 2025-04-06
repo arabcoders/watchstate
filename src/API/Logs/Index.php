@@ -18,6 +18,7 @@ use LimitIterator;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Log\LoggerInterface as iLogger;
+use Random\RandomException;
 use SplFileObject;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
@@ -28,7 +29,8 @@ final class Index
 
     public const string URL = '%{api.prefix}/logs';
     public const string URL_FILE = '%{api.prefix}/log';
-    private const int DEFAULT_LIMIT = 1000;
+    private const int MAX_LIMIT = 100;
+
     private int $counter = 1;
     private array $users = [];
 
@@ -66,6 +68,9 @@ final class Index
         return api_response(Status::OK, $list);
     }
 
+    /**
+     * @throws RandomException
+     */
     #[Get(Index::URL . '/recent[/]', name: 'logs.recent')]
     public function recent(iRequest $request): iResponse
     {
@@ -121,6 +126,9 @@ final class Index
         ]);
     }
 
+    /**
+     * @throws RandomException
+     */
     #[Route(['GET', 'DELETE'], Index::URL_FILE . '/{filename}[/]', name: 'logs.view')]
     public function logView(iRequest $request, array $args = []): iResponse
     {
@@ -156,32 +164,48 @@ final class Index
             return $this->stream($filePath);
         }
 
-        if ($file->getSize() < 1) {
-            return api_response(Status::OK);
+        if (0 === ($offset = (int)$params->get('offset', 0)) || $offset < 0) {
+            $offset = self::MAX_LIMIT;
         }
 
-        $limit = (int)$params->get('limit', self::DEFAULT_LIMIT);
-        $limit = $limit < 1 ? self::DEFAULT_LIMIT : $limit;
+        if ($file->getSize() < 1) {
+            return api_response(Status::OK, [
+                'filename' => basename($filePath),
+                'offset' => $offset,
+                'next' => null,
+                'max' => 0,
+                'lines' => [],
+            ]);
+        }
 
         $file->seek(PHP_INT_MAX);
-
         $lastLine = $file->key();
 
-        $it = new LimitIterator($file, max(0, $lastLine - $limit), $lastLine);
-
-        $stream = new Stream(fopen('php://memory', 'w'));
-
-        foreach ($it as $line) {
-            $line = trim((string)$line);
-            $stream->write(json_encode(self::formatLog($line, $this->users)) . PHP_EOL);
+        if ($offset === self::MAX_LIMIT && self::MAX_LIMIT >= $lastLine) {
+            $offset = $lastLine;
         }
 
-        $stream->rewind();
+        $data = [
+            'filename' => basename($filePath),
+            'offset' => $offset,
+            'next' => null,
+            'max' => $lastLine,
+            'lines' => [],
+        ];
 
-        return api_response(Status::OK, $stream, headers: [
-            'Content-Type' => 'text/plain',
-            'X-No-AccessLog' => '1'
-        ]);
+        if ($offset <= $lastLine) {
+            $start = max(0, $lastLine - $offset);
+            $it = new LimitIterator($file, $start, self::MAX_LIMIT);
+
+            foreach ($it as $line) {
+                $data['lines'][] = self::formatLog(trim((string)$line), $this->users);
+            }
+
+            $hasMore = $lastLine > $offset;
+            $data['next'] = $hasMore ? min($offset + self::MAX_LIMIT, $lastLine) : null;
+        }
+
+        return api_response(Status::OK, $data, headers: ['X-No-AccessLog' => '1']);
     }
 
     private function download(string $filePath): iResponse
@@ -280,11 +304,19 @@ final class Index
      * @param array $users
      *
      * @return array
+     * @throws RandomException
      */
     public static function formatLog(string $line, array $users = []): array
     {
         if (empty($line)) {
-            return ['item_id' => null, 'user' => null, 'backend' => null, 'date' => null, 'text' => $line];
+            return [
+                'id' => md5((string)(hrtime(true) + random_int(1, 10000))),
+                'item_id' => null,
+                'user' => null,
+                'backend' => null,
+                'date' => null,
+                'text' => $line
+            ];
         }
 
         $dateRegex = '/^\[([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?[+-][0-9]{2}:[0-9]{2})]/i';
@@ -294,6 +326,7 @@ final class Index
         $identMatch = preg_match("/'((?P<client>\w+):\s)?(?P<user>\w+)@(?P<backend>\w+)'/i", $line, $identMatches);
 
         $logLine = [
+            'id' => md5($line . hrtime(true) + random_int(1, 10000)),
             'item_id' => null,
             'user' => null,
             'backend' => null,
