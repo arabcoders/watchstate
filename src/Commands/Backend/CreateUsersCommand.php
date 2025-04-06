@@ -579,21 +579,20 @@ class CreateUsersCommand extends Command
                 <<<Text
                 <error>ERROR:</error> Users configuration already exists.
 
-                If you want to re-create the users configuration, run the same command with [<flag>-r, --re-create</flag>] flag,
-                This will do the following:
+                If you want to re-create the users configuration, run the same command with [<flag>-r, --re-create</flag>] flag, This will do the following:
 
                 1. Delete the current sub-users configuration and data.
                 2. Re-create the sub-users configuration.
 
-                Otherwise, you can use the [<flag>--run</flag>] to keep current configuration and update it with the new
-                users.
+                Otherwise, you can use the [<flag>--run</flag>] to keep current configuration and update it with the new users.
                 <value>
                 Beware, we have recently changed how we do matching, most likely if you run without re-creating the configuration.
                 it will result in double users for same user or more.
-                </value>
-                <notice>
+
+                -------
+
                 We suggest to re-create the configuration. If you generated your users before date 2025-04-06.
-                </notice>
+                </value>
                 Text
             );
             return self::FAILURE;

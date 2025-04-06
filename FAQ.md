@@ -259,9 +259,10 @@ map:
     #.... more users
 ```
 
-If you create a map for a user, it SHOULD include all the backends you want to sync the user data with. while th matcher
-might automatically detect the other backends even if not included in the map, it best to manually set them in group to
-prevent any issues that might arise. Each list item is a user, and each user has a list of backends. Each backend
+If you create a map for a user, it SHOULD include all the backends you want to sync the user data with. while the
+matcher might automatically detect the other backends even if not included in the map, it best to manually set them in
+group to prevent any issues that might arise. Each list item is a user, and each user has a list of backends. Each
+backend.
 
 > [!NOTE]
 > the backend names `my_plex_server`, `my_jellyfin_server`, `my_emby_server` are the names you have chosen for
