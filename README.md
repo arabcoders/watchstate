@@ -9,9 +9,27 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ## Updates
 
+## 2025-04-06
+
+We have recently re-worked how the `backend:create` command works, and we no longer generate random name for invalid
+backends names or usernames. We do a normalization step to make sure the name is valid. This should help with the
+confusion of having random names. This means if you re-run the `backend:create` you most likely will get a different
+name then before. So, we suggest to re-run the command with `--re-create` flag. This flag will delete the current
+sub-users, and regenerate updated config files.
+
+We have also added new guard for the command, so if you already generated your sub-users, re-running the command will
+show you a warning message and exit without doing anything. to run the command again either you need to use
+`--re-create`or `--run` flag. The `--run` flag will run the command without deleting the current sub-users.
+
+We have also updated `mapper.yaml` file format to v1.5, please take moment to read the
+related the [FAQ](FAQ.md#whats-the-schema-for-the-mapperyaml-file)
+about it. The new format has added support for renaming the usernames, and the new spec is more versatile which should
+help us if we need to update something or add new features in the future.
+
 ### 2025-03-13
 
-We have recently added support for plex webhooks via tautulli which you can use if you don't have PlexPass. This should help
+We have recently added support for plex webhooks via tautulli which you can use if you don't have PlexPass. This should
+help
 close the gap with other media servers.
 
 ### 2025-02-19
@@ -26,19 +44,6 @@ with seconds as value, the minimum value is `180` seconds. `0` seconds means it'
 
 We are still not keen on this feature, and it might be removed in future releases if we aren't able to deal with the
 issues we are facing.
-
-### 2025-02-11
-
-We recently have added support to generate accesstoken for external `Plex` users, i.e. `not home users`. so the
-`backends:create` command now supports generating the needed config files for external users. Beware the support for
-this is still in early stages, and might not work as expected. report any issues you might face.
-
-### 2025-02-05
-
-We have added initial support to browse the WebUI as sub user, it's still in early stages, only few Endpoints support
-it.
-We have also added support to webhooks to allow sub users, you simply have to add new hooks using `user@backend`. Please
-take look at [this FAQ](FAQ.md#how-to-add-webhooks) to learn how to use it for sub users.
 
 --- 
 Refer to [NEWS](NEWS.md) for old updates.
