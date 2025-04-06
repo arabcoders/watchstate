@@ -255,8 +255,7 @@ final class TasksCommand extends Command
                     $this->needToSave = true;
                 }
             };
-
-
+            
             if (self::CNAME === $eventName) {
                 $event->addLog(r("Task: Run '{name}'.", ['name' => $eventName]));
                 $exitCode = $this->run_command(

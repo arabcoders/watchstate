@@ -239,41 +239,54 @@ The schema is simple, it's a list of users in the following format:
 version: "1.5"
 map:
     # 1st user...
-    -   my_plex_server:
+    -   my_plex_server: # your main user backend name
             name: "mike_jones"
             options: { } # optional key.
-        my_jellyfin_server:
+        my_jellyfin_server: # your main user backend name
             name: "jones_mike"
-        my_emby_server:
+        my_emby_server: # your main user backend name
             name: "mikeJones"
             replace_with: "mike_jones" # optional action, to replace the username with the new one.
     # 2nd user...
-    -   my_emby_server:
+    -   my_emby_server: # your main user backend name
             name: "jiji_jones"
             options: { } # optional key.
-        my_plex_server:
+        my_plex_server: # your main user backend name
             name: "jones_jiji"
-        my_jellyfin_server:
-            name: "jijiJones"
+        my_jellyfin_server: # your main user backend name
+            name: "jiji.jones"
             replace_with: "jiji_jones" # optional action, to replace the username with the new one.
     #.... more users
 ```
 
-> [!IMPORTANT]
-> As we enforce specific naming convention for backend names and usernames they must follow the following format
-> `^[a-z_0-9]+$` which means, lowercase letters, numbers and `_` are allowed. No spaces, uppercase letters or special
-> characters are allowed. you can use the `replace_with` key to replace the username with the new one. if it's not
-> complying with the naming convention, or you want to force specific display name.
+If you create a map for a user, it SHOULD include all the backends you want to sync the user data with. while th matcher
+might automatically detect the other backends even if not included in the map, it best to manually set them in group to
+prevent any issues that might arise. Each list item is a user, and each user has a list of backends. Each backend
 
 > [!NOTE]
 > the backend names `my_plex_server`, `my_jellyfin_server`, `my_emby_server` are the names you have chosen for
-> your> backends.
+> your backends.
 >
-> The `name` field is whatever the backend is reporting the username as.
+> The `name` field must match the name after normalization, so if you have a backend with the name `Mike Jones` as
+> username, the `name:` in the `mapper.yaml` file should be `mike_jones` as the `backend:create` command will normalize
+> the name before passing it to the mapper which the mapper will convert it to `mike_jones`.
+
+## Important
+
+We enforce strict naming convention for backend names and usernames, So they must follow the following format
+`^[a-z_0-9]+$` which means, lowercase letters, numbers and `_` are allowed. No spaces, uppercase letters or special
+characters or name entirely made of digits are allowed. If the username is not complying with the naming convention, we
+forcibly normalize it to make it comply with the naming convention.
+
+If you want another name, you can use `replace_with` key to replace the username with the new one. However, the name
+also must comply with the naming convention.
 
 This yaml file helps map your users usernames in the different backends, so the tool can sync the correct user data. If
 you added or updated mapping, you should delete `users` directory and generate new data. by running the `backend:create`
 command as described in the previous section.
+
+You can run the `backend:create` command with `-v --dry-run` to see what it will do and if you need to create a mapping
+file or not.
 
 ----
 

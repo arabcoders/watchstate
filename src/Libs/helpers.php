@@ -858,20 +858,23 @@ if (!function_exists('getAppVersion')) {
             if (is_dir($gitDir)) {
                 try {
                     // Get the current branch name.
-                    $cmdBranch = 'git --git-dir={cwd} rev-parse --abbrev-ref HEAD';
+                    $cmdBranch = 'git --git-path
+                    ={cwd} rev-parse --abbrev-ref HEAD';
                     $procBranch = Process::fromShellCommandline(r($cmdBranch, ['cwd' => escapeshellarg($gitDir)]));
                     $procBranch->run();
                     $branch = $procBranch->isSuccessful() ? trim($procBranch->getOutput()) : 'unknown';
 
                     // Get the short commit hash.
-                    $cmdCommit = 'git --git-dir={cwd} rev-parse --short HEAD';
+                    $cmdCommit = 'git --git-path
+                    ={cwd} rev-parse --short HEAD';
                     $procCommit = Process::fromShellCommandline(r($cmdCommit, ['cwd' => escapeshellarg($gitDir)]));
                     $procCommit->run();
                     $commit = $procCommit->isSuccessful() ? trim($procCommit->getOutput()) : 'unknown';
 
                     // Get the commit date (from HEAD) in YYYYMMDD format.
                     // This uses "git show" with a custom date format.
-                    $cmdDate = 'git --git-dir={cwd} show -s --format=%cd --date=format:%Y%m%d HEAD';
+                    $cmdDate = 'git --git-path
+                    ={cwd} show -s --format=%cd --date=format:%Y%m%d HEAD';
                     $procDate = Process::fromShellCommandline(r($cmdDate, ['cwd' => escapeshellarg($gitDir)]));
                     $procDate->run();
                     $commitDate = $procDate->isSuccessful() ? trim($procDate->getOutput()) : date('Ymd');
@@ -1165,13 +1168,16 @@ if (false === function_exists('generateRoutes')) {
         try {
             $dirs = [__DIR__ . '/../Commands'];
             foreach (array_keys(Config::get('supported', [])) as $backend) {
-                $dir = r(__DIR__ . '/../Backends/{backend}/Commands', ['backend' => ucfirst($backend)]);
+                $path
+                    = r(__DIR__ . '/../Backends/{backend}/Commands', ['backend' => ucfirst($backend)]);
 
-                if (!file_exists($dir)) {
+                if (!file_exists(
+                    $path
+                )) {
                     continue;
                 }
 
-                $dirs[] = $dir;
+                $dirs[] = $path;
             }
             foreach (AttributesScanner::scan($dirs, allowNonInvokable: true)->for(Cli::class) as $item) {
                 $routes_cli[] = [
@@ -2592,17 +2598,33 @@ if (!function_exists('getUsersContext')) {
         }
 
         if (false === is_readable($usersDir)) {
-            throw new RuntimeException(r("Unable to read '{dir}' directory.", ['dir' => $usersDir]));
+            throw new RuntimeException(
+                r(
+                    "Unable to read '{path
+            }' directory.",
+                    [
+                        'path
+            ' => $usersDir
+                    ]
+                )
+            );
         }
 
-        foreach (new DirectoryIterator(Config::get('path') . '/users') as $dir) {
-            if ($dir->isDot() || false === $dir->isDir()) {
+        foreach (new DirectoryIterator(Config::get('path') . '/users') as $path
+        ) {
+            if ($path
+                    ->isDot() || false === $path
+                    ->isDir()) {
                 continue;
             }
 
-            $config = perUserConfig($dir->getBasename());
+            $config = perUserConfig(
+                $path
+                    ->getBasename()
+            );
 
-            $userName = $dir->getBasename();
+            $userName = $path
+                ->getBasename();
             $perUserCache = perUserCacheAdapter($userName);
             $db = perUserDb($userName);
             if (count($dbOpts) > 0) {
@@ -2651,5 +2673,71 @@ if (!function_exists('getUserContext')) {
         }
 
         return $users[$user];
+    }
+}
+
+
+if (!function_exists('deletePath')) {
+    /**
+     * Delete the contents of given path.
+     *
+     * @param string $path The path to delete.
+     * @param iLogger|null $logger The logger instance.
+     * @param bool $dryRun (Optional) Whether to perform a dry run.
+     *
+     * @return bool Whether the operation was successful.
+     */
+    function deletePath(string $path, iLogger|null $logger = null, bool $dryRun = false): bool
+    {
+        if (false === is_dir($path)) {
+            return false;
+        }
+
+        $iterator = new RecursiveIteratorIterator(
+            iterator: new RecursiveDirectoryIterator(
+                directory: $path,
+                flags: RecursiveDirectoryIterator::SKIP_DOTS
+            ),
+            mode: RecursiveIteratorIterator::CHILD_FIRST
+        );
+
+        foreach ($iterator as $item) {
+            if (null !== $logger) {
+                $context = [
+                    'path' => $item->getPathname(),
+                    'type' => $item->isDir() ? 'directory' : 'file'
+                ];
+                $logger->info("Removing {type} '{path}'.", $context);
+            }
+
+            if (true === $dryRun) {
+                continue;
+            }
+
+            if (true === $item->isDir()) {
+                @rmdir($item->getPathname());
+                continue;
+            }
+
+            @unlink($item->getPathname());
+        }
+
+        return true;
+    }
+}
+
+if (!function_exists('normalizeName')) {
+    /**
+     * Normalize the name to be in [a-z_0-9] format.
+     *
+     * @param string $name The name to normalize.
+     *
+     * @return string The normalized name.
+     */
+    function normalizeName(string $name): string
+    {
+        $name = strtolower($name);
+        $name = preg_replace('/[^a-z0-9_]/', '_', $name);
+        return trim($name);
     }
 }

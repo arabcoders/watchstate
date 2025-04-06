@@ -1,5 +1,18 @@
 # Old Updates
 
+### 2025-02-11
+
+We recently have added support to generate accesstoken for external `Plex` users, i.e. `not home users`. so the
+`backends:create` command now supports generating the needed config files for external users. Beware the support for
+this is still in early stages, and might not work as expected. report any issues you might face.
+
+### 2025-02-05
+
+We have added initial support to browse the WebUI as sub user, it's still in early stages, only few Endpoints support
+it.
+We have also added support to webhooks to allow sub users, you simply have to add new hooks using `user@backend`. Please
+take look at [this FAQ](FAQ.md#how-to-add-webhooks) to learn how to use it for sub users.
+
 ### 2025-02-02
 
 We are happy to announce that we have merged in direct support for multi-user in `state:import` and `state:export`

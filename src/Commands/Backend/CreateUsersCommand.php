@@ -7,6 +7,8 @@ namespace App\Commands\Backend;
 use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Plex\PlexClient;
 use App\Command;
+use App\Commands\State\BackupCommand;
+use App\Commands\System\TasksCommand;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\ConfigFile;
@@ -42,8 +44,22 @@ class CreateUsersCommand extends Command
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
+            ->addOption(
+                're-create',
+                'r',
+                InputOption::VALUE_NONE,
+                'Delete current users configuration files and re-create them.'
+            )
             ->addOption('regenerate-tokens', 'g', InputOption::VALUE_NONE, 'Generate new tokens for PLEX users.')
-            ->addOption('--dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
+            ->addOption('run', null, InputOption::VALUE_NONE, 'Allow creating the users even if data already exists.')
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
+            ->addOption(
+                'generate-backup',
+                'B',
+                InputOption::VALUE_NONE,
+                'Generate initial backups for the remote user data.'
+            )
             ->addOption(
                 'update',
                 'u',
@@ -74,25 +90,28 @@ class CreateUsersCommand extends Command
                     Mapping is done automatically based on the username, however, if your users have different usernames
                     on each backend, you can create <value>{path}/config/mapper.yaml</value> file with the following format:
 
-                    -   my_plex_server:
+                    version: "1.5"
+                    map:
+                        # first user
+                        -
+                          my_plex_server:
                             name: "mike_jones"
-                            options: { }
-                        my_jellyfin_server:
+                          my_jellyfin_server:
                             name: "jones_mike"
                             options: { }
-                        my_emby_server:
+                          my_emby_server:
                             name: "mikeJones"
-                            options: { }
-                    # second user
-                    -   my_emby_server:
+                            replace_with: "mike_jones"
+                        # second user
+                        -
+                          my_emby_server:
                             name: "jiji_jones"
                             options: { }
-                        my_plex_server:
+                          my_plex_server:
                             name: "jones_jiji"
-                            options: { }
-                        my_jellyfin_server:
+                          my_jellyfin_server:
                             name: "jijiJones"
-                            options: { }
+                            replace_with: "jiji_jones"
 
                     <question># How to regenerate tokens?</question>
 
@@ -116,46 +135,30 @@ class CreateUsersCommand extends Command
             );
     }
 
-    /**
-     * Executes the command.
-     *
-     * @param iInput $input The input interface.
-     * @param iOutput $output The output interface.
-     *
-     * @return int The exit code. 0 for success, 1 for failure.
-     */
-    protected function runCommand(iInput $input, iOutput $output): int
+    private function purgeUsersConfig(string $path, bool $dryRun): void
     {
-        $dryRun = $input->getOption('dry-run');
-
-        if ($dryRun) {
-            $this->logger->notice('SYSTEM: Running in dry-run mode. No changes will be made.');
+        if (false === is_dir($path)) {
+            return;
         }
 
+        $this->logger->notice("SYSTEM: Deleting users directory '{path}' contents.", [
+            'path' => $path
+        ]);
+
+        deletePath(path: $path, logger: $this->logger, dryRun: $dryRun);
+    }
+
+    /**
+     * Load current user backends.
+     *
+     * @return array The list of backends.
+     */
+    private function loadBackends(): array
+    {
+        $backends = [];
         $supported = Config::get('supported', []);
         $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
         $configFile->setLogger($this->logger);
-
-        $mapFile = Config::get('mapper_file');
-        $mapping = [];
-
-        if (file_exists($mapFile) && filesize($mapFile) > 10) {
-            $map = ConfigFile::open(Config::get('mapper_file'), 'yaml');
-            $mapping = $map->get('map', $map->getAll());
-            if (!empty($mapping)) {
-                if (false === $map->has('version') || false === $map->has('map')) {
-                    $this->logger->warning(
-                        "SYSTEM: Please upgrade your mapper.yaml file to v1.5 format spec for better compatibility and features, check the FAQ.md for the updated format.",
-                    );
-                }
-
-                $this->logger->info("SYSTEM: Mapper file found, using it to map users.", [
-                    'map' => arrayToString($mapping)
-                ]);
-            }
-        }
-
-        $backends = [];
 
         foreach ($configFile->getAll() as $backendName => $backend) {
             $type = strtolower(ag($backend, 'type', 'unknown'));
@@ -182,21 +185,62 @@ class CreateUsersCommand extends Command
             $backends[$backendName] = $backend;
         }
 
-        if (empty($backends)) {
-            $this->logger->error('SYSTEM: No valid backends were found.');
-            return self::FAILURE;
+        return $backends;
+    }
+
+    /**
+     * Load user mappings from the mapper file.
+     *
+     * @return array The list of user mappings. or empty array.
+     */
+    private function loadMappings(): array
+    {
+        $mapFile = Config::get('mapper_file');
+
+        if (false === file_exists($mapFile) || filesize($mapFile) < 10) {
+            return [];
         }
 
-        $this->logger->notice("SYSTEM: Getting users list from '{backends}'.", [
-            'backends' => join(', ', array_keys($backends))
+        $map = ConfigFile::open(Config::get('mapper_file'), 'yaml');
+
+        $mapping = $map->get('map', $map->getAll());
+
+        if (empty($mapping)) {
+            return [];
+        }
+
+        if (false === $map->has('version')) {
+            $this->logger->warning("SYSTEM: Starting with mapper.yaml v1.5, the version key is required.");
+        }
+
+        if (false === $map->has('map')) {
+            $this->logger->warning("SYSTEM: Please upgrade your mapper.yaml file to v1.5 format spec.");
+        }
+
+        $this->logger->info("SYSTEM: Mapper file found, using it to map users.", [
+            'map' => arrayToString($mapping)
         ]);
 
+        return $mapping;
+    }
+
+    /**
+     * Get backends users.
+     *
+     * @param array $backends The list of backends.
+     * @param array $map The user mappings.
+     *
+     * @return array The list of backends users.
+     */
+    private function get_backends_users(array $backends, array &$map): array
+    {
         $users = [];
 
         foreach ($backends as $backend) {
             /** @var iClient $client */
             $client = ag($backend, 'class');
             assert($backend instanceof iClient);
+
             $this->logger->info("SYSTEM: Getting users from '{backend}'.", [
                 'backend' => $client->getContext()->backendName
             ]);
@@ -206,41 +250,41 @@ class CreateUsersCommand extends Command
                     /** @var array $info */
                     $info = $backend;
 
-                    $user = $this->map_actions($user, ag($backend, 'name'), $mapping);
+                    $backedName = ag($backend, 'name');
 
-                    $_name = (string)ag($user, 'name');
+                    // -- this was source of lots of bugs and confusion for users,
+                    // -- we decided to normalize the user-names early in the process.
+                    $user['name'] = normalizeName((string)$user['name']);
 
-                    if (false === isValidName($_name)) {
-                        $rename = substr(md5($_name), 0, 8);
+                    // -- run map actions.
+                    $this->map_actions($backedName, $user, $map);
+
+                    // -- If normalization fails, ignore the user.
+                    if (false === isValidName($user['name'])) {
                         $this->logger->error(
-                            message: "SYSTEM: Renaming invalid user name '{backend}: {name}' to '{backend}: {renamed}'. username must be in [a-z_0-9] format.",
-                            context: [
-                                'name' => $_name,
-                                'backend' => ag($backend, 'name'),
-                                'renamed' => $rename
-                            ]
+                            message: "SYSTEM: Invalid user name '{backend}: {name}'. User names must be in [a-z_0-9] format. Skipping user.",
+                            context: ['name' => $user['name'], 'backend' => $backedName]
                         );
-                        $user = ag_set($user, 'name', $rename);
+                        continue;
                     }
 
                     // -- user here refers to user_id not the name.
                     $info['user'] = ag($user, 'id', ag($info, 'user'));
 
                     // -- The display name is used to create user directory.
-                    $info['displayName'] = ag($user, 'name');
+                    $info['displayName'] = $user['name'];
 
-                    $info['backendName'] = strtolower(r("{backend}_{user}", [
-                        'backend' => ag($backend, 'name'),
-                        'user' => ag($user, 'name'),
+                    $info['backendName'] = normalizeName(r("{backend}_{user}", [
+                        'backend' => $backedName,
+                        'user' => $user['name']
                     ]));
 
                     if (false === isValidName($info['backendName'])) {
-                        $rename = substr(md5($info['backendName']), 0, 8);
                         $this->logger->error(
-                            message: "SYSTEM: Renaming invalid backend name '{name}'. backend name must be in [a-z_0-9], renaming to '{renamed}'",
-                            context: ['name' => $info['backendName'], 'renamed' => $rename]
+                            message: "SYSTEM: Invalid backend name '{name}'. Backend name must be in [a-z_0-9] format. skipping the associated users.",
+                            context: ['name' => $info['backendName']]
                         );
-                        $info['backendName'] = $rename;
+                        continue;
                     }
 
                     $info = ag_delete($info, 'options.' . Options::PLEX_USER_PIN);
@@ -249,7 +293,7 @@ class CreateUsersCommand extends Command
                         'options.' . Options::ALT_ID => ag($backend, 'user')
                     ]);
 
-                    // -- of course, Plex has to be special.
+                    // -- Of course, Plex has to be special.
                     if (PlexClient::CLIENT_NAME === ucfirst(ag($backend, 'type'))) {
                         $info = ag_sets($info, [
                             'token' => 'reuse_or_generate_token',
@@ -265,8 +309,7 @@ class CreateUsersCommand extends Command
                         }
                     }
 
-                    $user['backend'] = ag($backend, 'name');
-                    $user['client_data'] = $info;
+                    $user = ag_sets($user, ['backend' => $backedName, 'client_data' => $info]);
                     $users[] = $user;
                 }
             } catch (Throwable $e) {
@@ -293,50 +336,67 @@ class CreateUsersCommand extends Command
             }
         }
 
-        $users = $this->generate_users_list($users);
+        return $users;
+    }
 
-        if (count($users) < 1) {
-            $this->logger->warning('No users were found.');
-            return self::FAILURE;
-        }
-
-        $this->logger->notice("SYSTEM: User matching results {results}.", [
-            'results' => arrayToString($this->usersList($users)),
-        ]);
+    /**
+     * Create user configuration files.
+     *
+     * @param iInput $input The input interface.
+     * @param array $users The list of users to create.
+     *
+     * @return void
+     */
+    private function create_user(iInput $input, array $users): void
+    {
+        $dryRun = (bool)$input->getOption('dry-run');
+        $updateUsers = (bool)$input->getOption('update');
+        $regenerateTokens = (bool)$input->getOption('regenerate-tokens');
+        $generateBackups = (bool)$input->getOption('generate-backup');
+        $isReCreate = (bool)$input->getOption('re-create');
 
         foreach ($users as $user) {
-            $userName = strtolower(ag($user, 'name', 'unknown'));
+            // -- User subdirectory name.
+            $userName = normalizeName(ag($user, 'name', 'unknown'));
+
             if (false === isValidName($userName)) {
-                $rename = substr(md5($userName), 0, 8);
                 $this->logger->error(
-                    message: "SYSTEM: Renaming invalid username '{user}'. Username must be in [a-z_0-9], renaming to '{renamed}'",
-                    context: ['user' => $userName, 'renamed' => $rename]
+                    message: "SYSTEM: Invalid username '{user}'. User names must be in [a-z_0-9] format. skipping user.",
+                    context: ['user' => $userName]
                 );
-                $userName = $rename;
+                continue;
             }
 
             $subUserPath = r(fixPath(Config::get('path') . '/users/{user}'), ['user' => $userName]);
 
-            if (false === is_dir($subUserPath)) {
-                $this->logger->info("SYSTEM: Creating '{user}' directory '{path}'.", [
+            $this->logger->info(
+                false === is_dir(
+                    $subUserPath
+                ) ? "SYSTEM: Creating '{user}' directory '{path}'." : "SYSTEM: '{user}' directory '{path}' already exists.",
+                [
+                    'user' => $userName,
+                    'path' => $subUserPath,
+                ]
+            );
+
+            if (false === $dryRun && false === is_dir($subUserPath) && false === mkdir($subUserPath, 0755, true)) {
+                $this->logger->error("SYSTEM: Failed to create '{user}' directory '{path}'.", [
                     'user' => $userName,
                     'path' => $subUserPath
                 ]);
-
-                if (false === $dryRun && false === mkdir($subUserPath, 0755, true)) {
-                    $this->logger->error("SYSTEM: Failed to create '{user}' directory '{path}'.", [
-                        'user' => $userName,
-                        'path' => $subUserPath
-                    ]);
-                    continue;
-                }
+                continue;
             }
 
             $config_file = "{$subUserPath}/servers.yaml";
-            $this->logger->notice("SYSTEM: Creating '{user}' configuration file '{file}'.", [
-                'user' => $userName,
-                'file' => $config_file
-            ]);
+            $this->logger->notice(
+                file_exists(
+                    $config_file
+                ) ? "SYSTEM: '{user}' configuration file '{file}' already exists." : "SYSTEM: Creating '{user}' configuration file '{file}'.",
+                [
+                    'user' => $userName,
+                    'file' => $config_file
+                ]
+            );
 
             $perUser = ConfigFile::open(
                 file: $dryRun ? "php://memory" : $config_file,
@@ -347,17 +407,16 @@ class CreateUsersCommand extends Command
             );
 
             $perUser->setLogger($this->logger);
-            $regenerateTokens = $input->getOption('regenerate-tokens');
 
             foreach (ag($user, 'backends', []) as $backend) {
                 $name = ag($backend, 'client_data.backendName');
+
                 if (false === isValidName($name)) {
-                    $rename = substr(md5($name), 0, 8);
                     $this->logger->error(
-                        message: "SYSTEM: Renaming invalid backend name '{name}'. backend name must be in [a-z_0-9], renaming to '{renamed}'",
-                        context: ['name' => $name, 'renamed' => $rename]
+                        message: "SYSTEM: Invalid backend name '{name}'. Backend name must be in [a-z_0-9] format. skipping backend.",
+                        context: ['name' => $name]
                     );
-                    $name = $rename;
+                    continue;
                 }
 
                 $clientData = ag_delete(ag($backend, 'client_data'), 'class');
@@ -371,7 +430,7 @@ class CreateUsersCommand extends Command
                 } else {
                     $clientData = ag_delete($clientData, ['token', 'import.lastSync', 'export.lastSync']);
                     $clientData = array_replace_recursive($perUser->get($name), $clientData);
-                    if ($input->getOption('update')) {
+                    if (true === $updateUsers) {
                         $update = [
                             'url' => ag($backend, 'client_data.url'),
                             'options.ALT_NAME' => ag($backend, 'client_data.name'),
@@ -464,21 +523,118 @@ class CreateUsersCommand extends Command
                 }
             }
 
-            $dbFile = r($subUserPath . "/{user}.db", ['user' => 'user']);
-            if (false === file_exists($dbFile)) {
-                $this->logger->notice("SYSTEM: Creating '{user}' database '{db}'.", [
+            $dbFile = $subUserPath . "/user.db";
+            $this->logger->notice(
+                file_exists(
+                    $dbFile
+                ) ? "SYSTEM: '{user}' database file '{db}' already exists." : "SYSTEM: Creating '{user}' database file '{db}'.",
+                [
                     'user' => $userName,
                     'db' => $dbFile
-                ]);
-                if (false === $dryRun) {
-                    perUserDb($userName);
-                }
-            }
+                ]
+            );
 
             if (false === $dryRun) {
+                if (false === file_exists($dbFile)) {
+                    perUserDb($userName);
+                }
+
                 $perUser->persist();
             }
+
+            if (true === $generateBackups && false === $isReCreate) {
+                $this->logger->notice("SYSTEM: Queuing event to backup '{user}' remote watch state.", [
+                    'user' => $userName
+                ]);
+
+                if (false === $dryRun) {
+                    queueEvent(TasksCommand::CNAME, [
+                        'command' => BackupCommand::ROUTE,
+                        'args' => ['-v', '-u', $userName, '--file', '{user}.{backend}.{date}.initial_backup.json'],
+                    ]);
+                }
+            }
         }
+    }
+
+    /**
+     * Executes the command.
+     *
+     * @param iInput $input The input interface.
+     * @param iOutput $output The output interface.
+     *
+     * @return int The exit code. 0 for success, 1 for failure.
+     */
+    protected function runCommand(iInput $input, iOutput $output): int
+    {
+        if (true === ($dryRun = $input->getOption('dry-run'))) {
+            $this->logger->notice('SYSTEM: Running in dry-run mode. No changes will be made.');
+        }
+
+        $usersPath = Config::get('path') . '/users';
+        $hasConfig = is_dir($usersPath) && count(glob($usersPath . '/*/*.yaml')) > 0;
+
+        if ($hasConfig && (false === $input->getOption('run') && false === $input->getOption('re-create'))) {
+            $output->writeln(
+                <<<Text
+                <error>ERROR:</error> Users configuration already exists.
+
+                If you want to re-create the users configuration, run the same command with [<flag>-r, --re-create</flag>] flag,
+                This will do the following:
+
+                1. Delete the current sub-users configuration and data.
+                2. Re-create the sub-users configuration.
+
+                Otherwise, you can use the [<flag>--run</flag>] to keep current configuration and update it with the new
+                users.
+                <value>
+                Beware, we have recently changed how we do matching, most likely if you run without re-creating the configuration.
+                it will result in double users for same user or more.
+                </value>
+                <notice>
+                We suggest to re-create the configuration. If you generated your users before date 2025-04-06.
+                </notice>
+                Text
+            );
+            return self::FAILURE;
+        }
+
+        if (true === $input->getOption('re-create')) {
+            $this->purgeUsersConfig($usersPath, $dryRun);
+        }
+
+        $backends = $this->loadBackends();
+
+        if (empty($backends)) {
+            $this->logger->error('SYSTEM: No valid backends were found.');
+            return self::FAILURE;
+        }
+
+        $mapping = $this->loadMappings();
+
+        $this->logger->notice("SYSTEM: Getting users list from '{backends}'.", [
+            'backends' => join(', ', array_keys($backends))
+        ]);
+
+        $backendsUser = $this->get_backends_users($backends, $mapping);
+
+        if (count($backendsUser) < 1) {
+            $this->logger->error('SYSTEM: No Backend users were found.');
+            return self::FAILURE;
+        }
+
+        $users = $this->generate_users_list($backendsUser, $mapping);
+
+        if (count($users) < 1) {
+            $this->logger->warning("We weren't able to match any users across backends.");
+            return self::FAILURE;
+        }
+
+        $this->logger->notice("SYSTEM: User matching results {results}.", [
+            'results' => arrayToString($this->usersList($users)),
+        ]);
+
+        $this->create_user(input: $input, users: $users);
 
         return self::SUCCESS;
     }
@@ -487,10 +643,11 @@ class CreateUsersCommand extends Command
      * Generate a list of users that are matched across all backends.
      *
      * @param array $users The list of users from all backends.
+     * @param array{string: array{string: string, options: array}} $map The map of users to match.
      *
      * @return array{name: string, backends: array<string, array<string, mixed>>}[] The list of matched users.
      */
-    private function generate_users_list(array $users): array
+    private function generate_users_list(array $users, array $map = []): array
     {
         $allBackends = [];
         foreach ($users as $u) {
@@ -501,20 +658,19 @@ class CreateUsersCommand extends Command
 
         // Build a lookup: $usersBy[backend][lowercased_name] = userObject
         $usersBy = [];
+        $usersList = [];
         foreach ($users as $user) {
             $backend = $user['backend'];
-            $nameLower = (string)strtolower((string)$user['name']);
+            $nameLower = strtolower($user['name']);
             if (ag($user, 'id') === ag($user, 'client_data.options.' . Options::ALT_ID)) {
-                $this->logger->debug('Skipping main user "{backend}: {name}".', [
-                    'name' => $user['name'],
-                    'backend' => $user['backend'],
-                ]);
+                $this->logger->debug('Skipping main user "{name}".', ['name' => $user['name']]);
                 continue;
             }
             if (!isset($usersBy[$backend])) {
                 $usersBy[$backend] = [];
             }
-            $usersBy[$backend][(string)$nameLower] = $user;
+            $usersBy[$backend][$nameLower] = $user;
+            $usersList[$backend][] = $nameLower;
         }
 
         $results = [];
@@ -547,7 +703,7 @@ class CreateUsersCommand extends Command
             $names = [];
             foreach ($allBackends as $b) {
                 if (isset($backendDict[$b])) {
-                    $names[] = (string)$backendDict[$b]['name'];
+                    $names[] = $backendDict[$b]['name'];
                 }
             }
 
@@ -584,8 +740,6 @@ class CreateUsersCommand extends Command
                 }
             }
 
-            $finalName = (string)$finalName;
-
             // Build final row: "name" + sub-array "backends"
             $row = [
                 'name' => strtolower($finalName),
@@ -611,11 +765,88 @@ class CreateUsersCommand extends Command
 
             // For each user in this backend
             foreach ($usersBy[$backend] as $nameLower => $userObj) {
-                $nameLower = (string)$nameLower;
-
                 // Skip if already used
                 if ($alreadyUsed($backend, $nameLower)) {
                     continue;
+                }
+
+                // Map-based matching first
+                $matchedMapEntry = null;
+                foreach ($map as $mapRow) {
+                    if (ag($mapRow, "{$backend}.name") === $nameLower) {
+                        $this->logger->notice("Mapper: Found map entry for '{backend}: {user}'", [
+                            'backend' => $backend,
+                            'user' => $nameLower,
+                            'map' => $mapRow,
+                        ]);
+                        $matchedMapEntry = $mapRow;
+                        break;
+                    }
+                }
+
+                if ($matchedMapEntry) {
+                    // Build mapMatch from the map row.
+                    $mapMatch = [$backend => $userObj];
+
+                    // Gather all the other backends from the map
+                    foreach ($allBackends as $otherBackend) {
+                        if ($otherBackend === $backend) {
+                            continue;
+                        }
+                        if (isset($matchedMapEntry[$otherBackend]['name'])) {
+                            $mappedNameLower = strtolower($matchedMapEntry[$otherBackend]['name']);
+                            if (isset($usersBy[$otherBackend][$mappedNameLower])) {
+                                $mapMatch[$otherBackend] = $usersBy[$otherBackend][$mappedNameLower];
+                            }
+                        }
+                    }
+
+                    // If we matched ≥ 2 backends, unify them
+                    if (count($mapMatch) >= 2) {
+                        // --- MERGE map-based "options" into client_data => options, if any ---
+                        foreach ($mapMatch as $b => &$matchedUser) {
+                            // If the map entry has an 'options' array for this backend,
+                            // merge it into $matchedUser['client_data']['options'].
+                            if (isset($matchedMapEntry[$b]['options']) && is_array($matchedMapEntry[$b]['options'])) {
+                                $mapOptions = $matchedMapEntry[$b]['options'];
+
+                                // Ensure $matchedUser['client_data'] is an array
+                                if (!isset($matchedUser['client_data']) || !is_array($matchedUser['client_data'])) {
+                                    $matchedUser['client_data'] = [];
+                                }
+
+                                // Ensure $matchedUser['client_data']['options'] is an array
+                                if (!isset($matchedUser['client_data']['options']) || !is_array(
+                                        $matchedUser['client_data']['options']
+                                    )) {
+                                    $matchedUser['client_data']['options'] = [];
+                                }
+
+                                // Merge the map's options
+                                $matchedUser['client_data']['options'] = array_replace_recursive(
+                                    $matchedUser['client_data']['options'],
+                                    $mapOptions
+                                );
+                            }
+                        }
+                        unset($matchedUser); // break reference from the loop
+
+                        // Build final row
+                        $results[] = $buildUnifiedRow($mapMatch);
+
+                        // Mark & remove from $usersBy
+                        foreach ($mapMatch as $b => $mu) {
+                            $nm = strtolower($mu['name']);
+                            $used[] = [$b, $nm];
+                            unset($usersBy[$b][$nm]);
+                        }
+                        continue;
+                    } else {
+                        $this->logger->error("No partial fallback match via map for '{backend}: {user}'", [
+                            'backend' => $userObj['backend'],
+                            'user' => $userObj['name'],
+                        ]);
+                    }
                 }
 
                 // Direct-name matching if map fails
@@ -645,9 +876,11 @@ class CreateUsersCommand extends Command
                 }
 
                 // If neither map nor direct matched for ≥2
-                $this->logger->error("Direct mapping failed for '{backend}: {user}' no match found.", [
+                $this->logger->error("No other users were found that match '{backend}: {user}'.", [
                     'backend' => $userObj['backend'],
-                    'user' => $userObj['name']
+                    'user' => $userObj['name'],
+                    'map' => arrayToString($map),
+                    'list' => arrayToString($usersList),
                 ]);
             }
         }
@@ -684,8 +917,6 @@ class CreateUsersCommand extends Command
      * @param string $backend The backend name.
      * @param array $mapping the mapper file data.
      *
-     * @return array the modified user data if any.
-     *
      * - my_plex_server:
      *      name: "mike_jones"
      *      options: { }
@@ -698,67 +929,63 @@ class CreateUsersCommand extends Command
      *      options: { }
      * ```
      */
-    private function map_actions(array $user, string $backend, array $mapping): array
+    private function map_actions(string $backend, array &$user, array &$mapping): void
     {
         if (null === ($username = ag($user, 'name'))) {
-            $this->logger->debug("SYSTEM: No username found for '{backend}' backend.", [
+            $this->logger->error("MAPPER: No username was given from one user of '{backend}' backend.", [
                 'backend' => $backend
             ]);
-            return $user;
+            return;
         }
 
-        // -- check if backend has mapping
         $hasMapping = array_filter($mapping, fn($map) => array_key_exists($backend, $map));
-        if (empty($hasMapping)) {
-            $this->logger->debug("No mapping found for '{backend}' backend.", [
+        if (count($hasMapping) < 1) {
+            $this->logger->info("MAPPER: No mapping exists for '{backend}' backend.", [
                 'backend' => $backend
             ]);
-            return $user;
+            return;
         }
 
         $found = false;
         $user_map = [];
 
-        foreach ($mapping as $map) {
-            $map_backend = array_keys($map)[0];
-
-            if ($backend !== $map_backend) {
-                continue;
+        foreach ($mapping as &$map) {
+            foreach ($map as $map_backend => &$loop_map) {
+                if ($backend !== $map_backend) {
+                    continue;
+                }
+                if (ag($loop_map, "name") !== $username) {
+                    continue;
+                }
+                $found = true;
+                $user_map = &$loop_map;
+                break 2;
             }
-
-            if (ag($map, "{$backend}.name") !== $username) {
-                continue;
-            }
-
-            $found = true;
-            $user_map = ag($map, $backend, []);
-            break;
         }
 
         if (false === $found) {
-            $this->logger->debug("No mapping found for '{backend}: {username}'.", [
+            $this->logger->debug("MAPPER: No map exists for '{backend}: {username}'.", [
                 'backend' => $backend,
                 'username' => $username
             ]);
-            return $user;
+            return;
         }
 
-        // -- replace_with action.
         if (null !== ($newUsername = ag($user_map, 'replace_with'))) {
-            if (!is_string($newUsername) || false === isValidName($newUsername)) {
+            if (false === is_string($newUsername) || false === isValidName($newUsername)) {
                 $this->logger->error(
-                    message: "SYSTEM: Mapper failed to rename '{backend}: {username}' to '{backend}: {new_username}' name must be in [a-z_0-9] format.",
+                    message: "MAPPER: Failed to replace '{backend}: {username}' with '{backend}: {new_username}' name must be in [a-z_0-9] format.",
                     context: [
                         'backend' => $backend,
                         'username' => $username,
                         'new_username' => $newUsername
                     ]
                 );
-                return $user;
+                return;
             }
 
             $this->logger->notice(
-                message: "SYSTEM: Mapper is renaming '{backend}: {username}' to '{backend}: {new_username}'.",
+                message: "MAPPER: Renaming '{backend}: {username}' to '{backend}: {new_username}'.",
                 context: [
                     'backend' => $backend,
                     'username' => $username,
@@ -767,8 +994,7 @@ class CreateUsersCommand extends Command
             );
 
             $user['name'] = $newUsername;
+            $user_map['name'] = $newUsername;
         }
-
-        return $user;
     }
 }
