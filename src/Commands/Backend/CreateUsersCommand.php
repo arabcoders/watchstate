@@ -590,9 +590,9 @@ class CreateUsersCommand extends Command
                 it will result in double users for same user or more.
 
                 -------
-                
+
                 We suggest to re-create the configuration. If you generated your users before date 2025-04-06.
-                </notice>
+                </value>
                 Text
             );
             return self::FAILURE;
