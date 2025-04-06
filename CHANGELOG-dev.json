@@ -1,7 +1,25 @@
 [
     {
-        "tag": "dev-20250406-a2ad617",
-        "date": "2025-04-06T19:16:57+00:00",
+        "tag": "dev-20250406-8213b99",
+        "date": "2025-04-06T19:28:39+00:00",
+        "commits": [
+            {
+                "sha": "8213b99",
+                "message": "Fix Incorrectly nested style tag found. error",
+                "author": "arabcoders",
+                "date": "2025-04-06T19:28:39+00:00"
+            },
+            {
+                "sha": "d0ea7c7",
+                "message": "Fix minor typo",
+                "author": "arabcoders",
+                "date": "2025-04-06T19:27:34+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250406-0e75261",
+        "date": "2025-04-06T19:23:12+00:00",
         "commits": [
             {
                 "sha": "a2ad617",
