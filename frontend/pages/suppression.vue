@@ -152,12 +152,12 @@
                   <div class="column is-12">
                     <span class="icon">
                       <i class="fa"
-                         :class="{ 'fa-code': 'regex' === formData.type, 'fa-heading': 'contains' === formData.type }"></i>
+                         :class="{ 'fa-code': 'regex' === formData.type, 'fa-r': 'contains' === formData.type }"></i>
                     </span>
                     <code>{{ item.rule }}</code>
                   </div>
                   <div class="column is-12">
-                    <span class="icon"><i class="fa fa-font"></i></span>
+                    <span class="icon"><i class="fa fa-e"></i></span>
                     <code>{{ item.example }}</code>
                   </div>
                 </div>

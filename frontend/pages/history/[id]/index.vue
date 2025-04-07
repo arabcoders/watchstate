@@ -439,8 +439,8 @@
           </span>
         </span>
         <p class="subtitle">Useful for debugging.</p>
-        <div v-if="showRawData" class="mt-2" style="position: relative;">
-          <code class="is-block is-pre-wrap p-4">{{
+        <div v-if="showRawData" class="mt-2" style="position: relative; max-height: 400px; overflow-y: auto;">
+          <code class="is-terminal is-block is-pre-wrap p-4">{{
               JSON.stringify(Object.keys(data)
                   .filter(key => !['files', 'hardware', 'content_exists', '_toggle'].includes(key))
                   .reduce((obj, key) => {

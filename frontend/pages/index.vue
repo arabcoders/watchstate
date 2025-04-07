@@ -86,22 +86,20 @@
             </NuxtLink>
           </span>
         </h1>
-        <code class="box logs-container">
+        <code class="box logs-container is-terminal" style="border-radius: 0 !important;">
           <span class="is-block" v-for="(item, index) in log.lines" :key="log.filename + '-' + index">
             <template v-if="item?.date">[<span class="has-tooltip"
-                                             v-tooltip="`${moment(item.date).format(TOOLTIP_DATE_FORMAT)}`">
-            {{ moment(item.date).format('HH:mm:ss') }}</span>]
-          </template>
-          <template v-if="item?.item_id">
-            <NuxtLink @click="goto_history_item(item)">
-              <span class="icon-text">
+                                               v-tooltip="`${moment(item.date).format(TOOLTIP_DATE_FORMAT)}`">
+              {{ moment(item.date).format('HH:mm:ss') }}</span>]
+            </template>
+            <template v-if="item?.item_id">
+              <span @click="goto_history_item(item)" class="is-clickable has-tooltip">
                 <span class="icon"><i class="fas fa-history"/></span>
                 <span>View</span>
-              </span>
-            </NuxtLink>&nbsp;
-          </template>
-          <span>{{ item.text }}</span>
-        </span></code>
+              </span>&nbsp;
+            </template>
+            <span>{{ item.text }}</span>
+          </span></code>
       </div>
 
       <div class="column is-12">
@@ -142,7 +140,7 @@
 import request from '~/utils/request'
 import moment from 'moment'
 import Message from '~/components/Message'
-import {formatDuration, makeName, TOOLTIP_DATE_FORMAT, goto_history_item} from '~/utils/index'
+import {formatDuration, goto_history_item, makeName, TOOLTIP_DATE_FORMAT} from '~/utils/index'
 import {NuxtLink} from '#components'
 import {useStorage} from '@vueuse/core'
 

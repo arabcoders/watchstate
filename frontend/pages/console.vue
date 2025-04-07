@@ -28,7 +28,7 @@
             </p>
           </header>
           <section class="card-content p-0 m-0">
-            <div ref="outputConsole" style="min-height: 60vh;max-height:70vh;"/>
+            <div ref="outputConsole" style="min-height: 60vh; max-height:70vh;"/>
           </section>
           <section class="card-content p-1 m-1">
             <div class="field">
@@ -106,6 +106,17 @@
     </div>
   </div>
 </template>
+<style>
+.xterm {
+  padding: 0.50rem !important;
+
+}
+
+.xterm-viewport {
+  background-color: #1f2229 !important;
+}
+
+</style>
 
 <script setup>
 import "@xterm/xterm/css/xterm.css"
@@ -293,11 +304,13 @@ onMounted(async () => {
       fontSize: 16,
       fontFamily: "'JetBrains Mono', monospace",
       cursorBlink: false,
-      cursorStyle: 'underline',
+      cursorStyle: 'none',
       cols: 108,
       rows: 10,
       disableStdin: true,
       convertEol: true,
+      altClickMovesCursor: false,
+
     })
     terminal.value.open(outputConsole.value)
     terminal.value.loadAddon(terminalFit.value)

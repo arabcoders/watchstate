@@ -40,16 +40,17 @@
                  icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
         <Message v-else class="has-background-warning-80 has-text-dark" title="Warning"
                  icon="fas fa-exclamation-triangle" :use-close="true" @close="filter = ''">
-          <div class="icon-text">
+          <div>
+            <span class="icon" v-if="filter"><i class="fas fa-filter"/></span>
             No items found.
-            <span v-if="filter">For <code><strong>Filter</strong> : <strong>{{ filter }}</strong></code></span>
+            <span v-if="filter">For query: <code class="is-underlined is-bold" v-text="filter"/></span>
           </div>
         </Message>
       </div>
 
       <div v-else class="column is-12" v-if="items">
-        <div class="table-container">
-          <table class="table is-fullwidth is-hoverable is-striped">
+        <div class="table-container" style="max-height: 70vh; overflow-y: auto">
+          <table class="table is-fullwidth is-hoverable is-striped is-bordered">
             <thead>
             <tr>
               <th>PID</th>

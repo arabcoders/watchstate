@@ -227,7 +227,8 @@
                   </div>
                 </div>
                 <div class="card-content p-0 m-0" v-if="item?.showRawData">
-                  <pre style="position: relative; max-height: 343px;"><code>{{ JSON.stringify(item, null, 2) }}</code>
+                  <pre style="position: relative; max-height: 343px;"
+                       class="is-terminal"><code>{{ JSON.stringify(item, null, 2) }}</code>
                     <button class="button is-small m-4" @click="() => copyText(JSON.stringify(item, null, 2))"
                             style="position: absolute; top:0; right:0;">
                       <span class="icon"><i class="fas fa-copy"></i></span>

@@ -100,7 +100,13 @@
             </div>
           </div>
           <div class="card-content p-0 m-0" v-if="item?.showItem">
-            <pre><code>{{ JSON.stringify(item, null, 2) }}</code></pre>
+            <div class="mt-2" style="position: relative; max-height: 343px; overflow-y: auto;">
+              <code class="is-terminal is-block is-pre-wrap" v-text="JSON.stringify(item, null, 2)"/>
+              <button class="button m-4" v-tooltip="'Copy text'" style="position: absolute; top:0; right:0;"
+                      @click="() => copyText(JSON.stringify(item, null, 2))">
+                <span class="icon"><i class="fas fa-copy"/></span>
+              </button>
+            </div>
           </div>
           <div class="card-footer">
             <div class="card-footer-item">

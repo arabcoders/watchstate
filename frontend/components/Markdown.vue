@@ -23,9 +23,9 @@ onMounted(async () => {
 
   marked.use({
     gfm: true,
-    renderer: {
-      text: (text) => {
-        // -- replace github [!] with icon
+    hooks: {
+      postprocess: (text) => {
+        // -- replace github [! with icon
         text = text.replace(/\[!IMPORTANT\]/g, `
         <span class="is-block title is-4">
             <span class="icon-text">

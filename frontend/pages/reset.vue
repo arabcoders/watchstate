@@ -45,7 +45,7 @@
               <li>Reset all users backends last sync date.</li>
             </ul>
 
-            <p>There is no undo operation. This action is irreversible.</p>
+            <p class="is-underlined is-bold">There is no undo operation. This action is irreversible.</p>
           </Message>
         </div>
 
