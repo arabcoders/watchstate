@@ -1,8 +1,20 @@
 [
     {
-        "tag": "dev-20250407-dc82277",
-        "date": "2025-04-06T23:22:39+00:00",
+        "tag": "dev-20250407-0c58c28",
+        "date": "2025-04-07T18:51:45+00:00",
         "commits": [
+            {
+                "sha": "0c58c28",
+                "message": "css style update",
+                "author": "arabcoders",
+                "date": "2025-04-07T18:51:45+00:00"
+            },
+            {
+                "sha": "42c3c81",
+                "message": "minor design update & fix markdown pages display",
+                "author": "arabcoders",
+                "date": "2025-04-07T18:50:40+00:00"
+            },
             {
                 "sha": "dc82277",
                 "message": "make the log view console a bit more darker",
