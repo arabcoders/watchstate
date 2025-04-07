@@ -239,3 +239,18 @@ html {
 .is-terminal > span:nth-child(odd), .is-terminal > code > span:nth-child(odd) {
     color: #e3c981;
 }
+
+.is-terminal {
+    background-color: #1f2229 !important;
+    color: #e3c981;
+    padding: 0.50rem;
+    line-height: 1.7;
+}
+
+.is-terminal > span:nth-child(even), .is-terminal > code > span:nth-child(even) {
+    color: #ffc9d4;
+}
+
+.is-terminal > span:nth-child(odd), .is-terminal > code > span:nth-child(odd) {
+    color: #e3c981;
+}
