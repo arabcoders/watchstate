@@ -1,7 +1,25 @@
 [
     {
-        "tag": "dev-20250408-0feba24",
-        "date": "2025-04-08T16:23:48+00:00",
+        "tag": "dev-20250408-4f68729",
+        "date": "2025-04-08T19:33:13+00:00",
+        "commits": [
+            {
+                "sha": "4f68729",
+                "message": "minor webui changes",
+                "author": "arabcoders",
+                "date": "2025-04-08T19:33:13+00:00"
+            },
+            {
+                "sha": "d5e4d29",
+                "message": "Make possible again to get raw response from plex api for getUsersList. Add new command to check validity of plex token",
+                "author": "arabcoders",
+                "date": "2025-04-08T19:16:00+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250408-1446ce7",
+        "date": "2025-04-08T16:37:51+00:00",
         "commits": [
             {
                 "sha": "0feba24",
