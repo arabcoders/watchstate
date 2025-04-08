@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250407-0c58c28",
-        "date": "2025-04-07T18:51:45+00:00",
+        "tag": "dev-20250408-0feba24",
+        "date": "2025-04-08T16:23:48+00:00",
         "commits": [
+            {
+                "sha": "0feba24",
+                "message": "Enhance name normalization and validation with logging and additional tests",
+                "author": "arabcoders",
+                "date": "2025-04-08T16:23:48+00:00"
+            },
             {
                 "sha": "0c58c28",
                 "message": "css style update",
