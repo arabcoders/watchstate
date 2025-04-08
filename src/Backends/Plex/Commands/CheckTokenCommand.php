@@ -8,7 +8,6 @@ use App\Backends\Plex\PlexClient;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Options;
-use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
@@ -21,7 +20,7 @@ final class CheckTokenCommand extends Command
 {
     public const string ROUTE = 'plex:check_token';
 
-    public function __construct(private iHttp $http, protected iLogger $logger)
+    public function __construct(private iHttp $http)
     {
         parent::__construct();
     }
@@ -73,7 +72,7 @@ final class CheckTokenCommand extends Command
 
         try {
             $status = PlexClient::validate_token($this->http, $input->getArgument('token'), $opts);
-            
+
             if (true === $status) {
                 $output->writeln('<info>SUCCESS</info> <value>Token is valid</value>');
                 return self::SUCCESS;
