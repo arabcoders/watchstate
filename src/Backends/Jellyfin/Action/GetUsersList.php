@@ -75,6 +75,9 @@ class GetUsersList
             return $limited;
         }
 
+        $callback = ag($opts, Options::RAW_RESPONSE_CALLBACK, null);
+        $logRequests = $callback && ag($opts, Options::RAW_RESPONSE, false);
+
         $url = $context->backendUrl->withPath('/Users/');
 
         $logContext = [
@@ -144,11 +147,11 @@ class GetUsersList
                 $data['token'] = $context->backendToken;
             }
 
-            if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
-                $data['raw'] = $user;
-            }
-
             $list[] = $data;
+        }
+
+        if ($logRequests) {
+            $callback([['url' => (string)$url, 'headers' => $response->getHeaders(false), 'body' => $json]]);
         }
 
         return new Response(status: true, response: $list);

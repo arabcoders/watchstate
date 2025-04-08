@@ -49,6 +49,7 @@ final class Options
     public const string GET_TOKENS = 'tokens';
     public const string LOG_CONTEXT = 'LOG_CONTEXT';
     public const string DELAY_BY = 'DELAY_BY';
+    public const string RAW_RESPONSE_CALLBACK = 'RAW_RESPONSE_CALLBACK';
 
     private function __construct()
     {
