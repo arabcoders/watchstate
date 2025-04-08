@@ -53,6 +53,17 @@
           </Message>
         </div>
 
+        <div class="column is-12">
+          <div class="content">
+            <h1 class="title is-4">Tools</h1>
+            <ul>
+              <li>
+                <NuxtLink :to="`/plex_token`" v-text="'Validate plex token'"/>
+              </li>
+            </ul>
+          </div>
+        </div>
+
         <div v-for="backend in backends" :key="backend.name" class="column is-6-tablet is-12-mobile">
           <div class="card">
             <header class="card-header">
@@ -162,6 +173,7 @@
             </footer>
           </div>
         </div>
+
         <div class="column is-12">
           <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
                    @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">

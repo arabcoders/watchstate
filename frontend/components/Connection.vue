@@ -1,6 +1,7 @@
 <template>
-  <div class="columns is-multiline">
-    <div class="column is-12 mt-2">
+  <div class="columns is-multiline mb-2">
+
+    <div class="column is-6-tablet">
       <div class="card">
         <header class="card-header">
           <p class="card-header-title">
@@ -11,7 +12,7 @@
           </span>
         </header>
         <div class="card-content">
-          <form @submit.prevent="testApi">
+          <form id="api_connection" @submit.prevent="testApi">
             <div class="field">
               <label class="label" for="api_token">
                 <span class="icon-text">
@@ -37,8 +38,7 @@
                   <p class="help">
                     You can obtain the <code>API TOKEN</code> by using the <code>system:apikey</code> command or by
                     viewing the <code>/config/.env</code> inside <code>WS_DATA_PATH</code> variable and looking for
-                    the
-                    <code>WS_API_KEY=</code> key.
+                    the <code>WS_API_KEY=</code> key.
                   </p>
                 </div>
               </div>
@@ -83,48 +83,80 @@
                 </div>
               </div>
             </div>
-
-            <div class="field">
-              <label class="label" for="random_bg">Backgrounds</label>
-              <div class="control">
-                <input id="random_bg" type="checkbox" class="switch is-success" v-model="bg_enable">
-                <label for="random_bg">Enable</label>
-                <p class="help">Use random background image from your media backends.</p>
-              </div>
-            </div>
-
-            <div class="field">
-              <label class="label" for="random_bg_opacity">
-                Background Visibility: (<code>{{ bg_opacity }}</code>)
-              </label>
-              <div class="control">
-                <input id="random_bg_opacity" style="width: 100%" type="range" v-model="bg_opacity" min="0.60"
-                       max="1.00" step="0.05">
-                <p class="help">How visible the background image should be.</p>
-              </div>
-            </div>
-
-            <div class="field has-text-right">
-              <div class="control">
-                <button type="submit" class="button is-primary" :disabled="!api_url || !api_token">
-                  <span class="icon-text">
-                    <span class="icon"><i class="fas fa-save"/></span>
-                    <span>Save</span>
-                  </span>
-                </button>
-              </div>
-              <p class="help has-text-left">
-                <span class="icon-text">
-                  <span class="icon has-text-danger"><i class="fas fa-info"/></span>
-                  <span>These settings are stored locally in your browser. You need to re-add them if you access
-                    the
-                    <code>WebUI</code> from different browser.</span>
-                </span>
-              </p>
-            </div>
           </form>
         </div>
       </div>
+    </div>
+
+    <div class="column is-6-tablet">
+      <div class="card">
+        <header class="card-header">
+          <p class="card-header-title">
+            WebUI Look & Feel
+          </p>
+          <span class="card-header-icon">
+            <span class="icon"><i class="fas fa-paint-brush"/></span>
+          </span>
+        </header>
+        <div class="card-content">
+          <div class="field">
+            <label class="label" for="random_bg">Color scheme</label>
+            <div class="control">
+              <label for="auto" class="radio">
+                <input id="auto" type="radio" v-model="webui_theme" value="auto"> System Default
+              </label>
+              <label for="light" class="radio">
+                <input id="light" type="radio" v-model="webui_theme" value="light"> Light
+              </label>
+              <label for="dark" class="radio">
+                <input id="dark" type="radio" v-model="webui_theme" value="dark"> Dark
+              </label>
+            </div>
+            <p class="help">
+              <span class="icon"><i class="fa-solid fa-info"/></span>
+              <span>Select the color scheme for the WebUI.</span>
+            </p>
+          </div>
+
+          <div class="field">
+            <label class="label" for="random_bg">Backgrounds</label>
+            <div class="control">
+              <input id="random_bg" type="checkbox" class="switch is-success" v-model="bg_enable">
+              <label for="random_bg">Enable</label>
+              <p class="help">Use random background image from your media backends.</p>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="label" for="random_bg_opacity">
+              Background Visibility: (<code>{{ bg_opacity }}</code>)
+            </label>
+            <div class="control">
+              <input id="random_bg_opacity" style="width: 100%" type="range" v-model="bg_opacity" min="0.60"
+                     max="1.00" step="0.05">
+              <p class="help">How visible the background image should be.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="column is-12">
+      <div class="control">
+        <button form="api_connection" type="submit" class="button is-primary is-fullwidth"
+                :disabled="!api_url || !api_token">
+          <span class="icon-text">
+            <span class="icon"><i class="fas fa-save"/></span>
+            <span>Save</span>
+          </span>
+        </button>
+      </div>
+      <p class="has-text-left">
+        <span class="icon has-text-danger"><i class="fas fa-info"/></span>
+        <span>These settings are stored locally in your browser. You need to re-add them if you access the
+          <code>WebUI</code> from different browser.
+        </span>
+      </p>
     </div>
 
     <div class="column is-12 mt-2">
@@ -167,6 +199,8 @@ const real_api_user = useStorage('api_user', 'main')
 const real_api_url = useStorage('api_url', window.location.origin)
 const real_api_path = useStorage('api_path', '/v1/api')
 const real_api_token = useStorage('api_token', '')
+
+const webui_theme = useStorage('theme', 'auto')
 
 
 const api_url = ref(toRaw(real_api_url.value))

@@ -46,6 +46,7 @@ use App\Libs\Options;
 use App\Libs\QueueRequests;
 use App\Libs\Uri;
 use App\Libs\UserContext;
+use Closure;
 use DateTimeInterface as iDate;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Http\Message\StreamInterface as iStream;
@@ -864,6 +865,78 @@ class PlexClient implements iClient
         }
 
         return $list;
+    }
+
+    /**
+     * Check if given plex token is valid.
+     *
+     * @param iHttp $http The HTTP client used to send the request.
+     * @param string $token The Plex authentication token.
+     * @param array $opts (Optional) options.
+     *
+     * @return bool return true if token is valid.
+     *
+     * @throws RuntimeException When an unexpected status code is returned or a network-related exception occurs.
+     * @throws ClientExceptionInterface When a client error is encountered.
+     * @throws RedirectionExceptionInterface When a redirection error is encountered.
+     * @throws ServerExceptionInterface When a server error is encountered.
+     */
+    public static function validate_token(iHttp $http, string $token, array $opts = []): bool
+    {
+        try {
+            $url = 'https://plex.tv/api/users';
+            $response = $http->request(
+                method: Method::GET,
+                url: $url,
+                options: ['headers' => ['X-Plex-Token' => $token]]
+            );
+
+            $status = Status::from($response->getStatusCode());
+
+            try {
+                $body = $response->getContent(false);
+                $payload = json_decode(
+                    json: json_encode(simplexml_load_string($body)),
+                    associative: true,
+                    flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                );
+                if (false === is_array($payload)) {
+                    $payload = ['body' => $body];
+                }
+            } catch (Throwable $e) {
+                $payload = [
+                    'body' => $e->getMessage(),
+                ];
+            }
+
+            if (Status::UNAUTHORIZED === $status) {
+                throw new RuntimeException(r("{client}: plex.tv says the token is invalid. '{status}: {msg}'", [
+                    'client' => static::CLIENT_NAME,
+                    'status' => $status->value,
+                    'msg' => ag($payload, ['error', 'body'], '??'),
+                ]), $status->value);
+            }
+
+            $callback = ag($opts, Options::RAW_RESPONSE_CALLBACK, null);
+
+            if (true === ($callback instanceof Closure)) {
+                ($callback)([['url' => $url, 'headers' => $response->getHeaders(false), 'body' => $payload]]);
+            }
+
+            return true;
+        } catch (TransportExceptionInterface $e) {
+            throw new RuntimeException(
+                r(
+                    text: "PlexClient: Exception '{kind}' was thrown unhandled during request for plex servers list, likely network related error. {error} at '{file}:{line}'.",
+                    context: [
+                        'kind' => $e::class,
+                        'error' => $e->getMessage(),
+                        'line' => $e->getLine(),
+                        'file' => after($e->getFile(), ROOT_PATH),
+                    ]
+                ), code: 500, previous: $e
+            );
+        }
     }
 
     /**

@@ -14,6 +14,7 @@ use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Extends\RetryableHttpClient;
 use App\Libs\Options;
+use Closure;
 use DateInterval;
 use JsonException;
 use Psr\Http\Message\UriInterface as iUri;
@@ -29,6 +30,11 @@ final class GetUsersList
     private int $maxRetry = 3;
     private string $action = 'plex.getUsersList';
     private iHttp $http;
+
+    private bool $logRequests = false;
+
+    private array $rawRequests = [];
+
 
     public function __construct(iHttp $http, protected iLogger $logger)
     {
@@ -60,6 +66,9 @@ final class GetUsersList
      */
     private function action(Context $context, array $opts = []): Response
     {
+        $callback = ag($opts, Options::RAW_RESPONSE_CALLBACK, null);
+        $this->logRequests = $callback && ag($opts, Options::RAW_RESPONSE, false);
+
         if (true === (bool)ag($opts, Options::PLEX_EXTERNAL_USER, false)) {
             $cls = fn() => $this->getExternalUsers($context, $opts);
             return true === (bool)ag($opts, Options::NO_CACHE) ? $cls() : $this->tryCache(
@@ -73,13 +82,19 @@ final class GetUsersList
 
         $cls = fn() => $this->getHomeUsers($this->getExternalUsers($context, $opts), $context, $opts);
 
-        return true === (bool)ag($opts, Options::NO_CACHE) ? $cls() : $this->tryCache(
+        $data = true === (bool)ag($opts, Options::NO_CACHE) ? $cls() : $this->tryCache(
             $context,
             $context->backendName . '_users_' . md5(json_encode($opts)),
             $cls,
             new DateInterval('PT5M'),
             $this->logger
         );
+
+        if (count($this->rawRequests) > 0 && ($callback instanceof Closure)) {
+            ($callback)($this->rawRequests);
+        }
+
+        return $data;
     }
 
     /**
@@ -234,6 +249,14 @@ final class GetUsersList
             flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
         );
 
+        if ($this->logRequests) {
+            $this->rawRequests[] = [
+                'url' => (string)$url,
+                'headers' => $response->getHeaders(false),
+                'body' => $data,
+            ];
+        }
+
         if ($context->trace) {
             $this->logger->debug("Parsing '{user}@{backend}' external users list payload.", [
                 'backend' => $context->backendName,
@@ -286,6 +309,14 @@ final class GetUsersList
             flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
         );
 
+        if ($this->logRequests) {
+            $this->rawRequests[] = [
+                'url' => (string)$url,
+                'headers' => $response->getHeaders(false),
+                'body' => $json,
+            ];
+        }
+
         if ($context->trace) {
             $this->logger->debug("Parsing '{user}@{backend}' users list payload.", [
                 'backend' => $context->backendName,
@@ -334,6 +365,14 @@ final class GetUsersList
             associative: true,
             flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
         );
+
+        if ($this->logRequests) {
+            $this->rawRequests[] = [
+                'url' => (string)$url,
+                'headers' => $response->getHeaders(false),
+                'body' => $json,
+            ];
+        }
 
         if ($context->trace) {
             $this->logger->debug("Parsing '{user}@{backend}' home users list payload.", [

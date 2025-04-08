@@ -117,8 +117,13 @@ final class ListCommand extends Command
             $opts[Options::NO_CACHE] = true;
         }
 
-        if ($input->getOption('include-raw-response')) {
+        $raw = [];
+
+        if ($input->getOption('include-raw-response') && 'table' !== $mode) {
             $opts[Options::RAW_RESPONSE] = true;
+            $opts[Options::RAW_RESPONSE_CALLBACK] = function (array $response) use (&$raw) {
+                $raw = $response;
+            };
         }
 
         if ($input->getOption('use-token')) {
@@ -137,6 +142,10 @@ final class ListCommand extends Command
         }
 
         $users = $backend->getUsersList(opts: $opts);
+
+        if ($raw) {
+            $users = ['users' => $users, Options::RAW_RESPONSE => $raw];
+        }
 
         if (count($users) < 1) {
             $output->writeln(r("<error>ERROR: No users found for '{backend}'.</error>", ['backend' => $name]));
