@@ -138,22 +138,7 @@
           </div>
         </div>
         <div class="navbar-end pr-3">
-          <div class="navbar-item">
-            <button class="button is-dark has-tooltip-bottom" v-tooltip.bottom="'Switch to Light theme'"
-                    v-if="'auto' === selectedTheme" @click="selectTheme('light')">
-              <span class="icon has-text-warning"><i class="fas fa-sun"/></span>
-            </button>
-            <button class="button is-dark has-tooltip-bottom" v-tooltip.bottom="'Switch to Dark theme'"
-                    v-if="'light' === selectedTheme" @click="selectTheme('dark')">
-              <span class="icon"><i class="fas fa-moon"/></span>
-            </button>
-            <button class="button is-dark has-tooltip-bottom" v-tooltip.bottom="'Switch to Auto theme'"
-                    v-if="'dark' === selectedTheme" @click="selectTheme('auto')">
-              <span class="icon"><i class="fas fa-microchip"/></span>
-            </button>
-          </div>
-
-          <div class="navbar-item" v-if="hasAPISettings">
+          <div class="navbar-item" v-if="hasAPISettings && !showConnection">
             <button class="button is-dark" @click="showUserSelection = !showUserSelection" v-tooltip="'Change User'">
               <span class="icon"><i class="fas fa-users"/></span>
             </button>
@@ -223,7 +208,7 @@ import Markdown from '~/components/Markdown'
 import UserSelection from '~/components/UserSelection'
 import Connection from '~/components/Connection'
 
-const selectedTheme = useStorage('theme', (() => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')())
+const selectedTheme = useStorage('theme', 'auto')
 const showUserSelection = ref(false)
 const showConnection = ref(false)
 
@@ -306,6 +291,10 @@ onMounted(async () => {
 
 watch(selectedTheme, value => {
   try {
+    if ('auto' === value) {
+      applyPreferredColorScheme(window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      return
+    }
     applyPreferredColorScheme(value)
   } catch (e) {
   }
@@ -346,13 +335,6 @@ const changeRoute = async (_, callback) => {
   document.querySelectorAll('div.has-dropdown').forEach(el => el.classList.remove('is-active'))
   if (callback) {
     callback()
-  }
-}
-
-const selectTheme = theme => {
-  selectedTheme.value = theme
-  if ('auto' === theme) {
-    return window.location.reload()
   }
 }
 
