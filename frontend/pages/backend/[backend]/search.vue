@@ -112,7 +112,7 @@
                 <p class="card-header-title is-text-overflow">
                   <NuxtLink :to="item.webUrl" v-text="makeName(item)" target="_blank"/>
                 </p>
-                <span class="card-header-icon">
+                <span class="card-header-icon" @click="item.showItem = !item.showItem">
                   <span class="icon">
                     <i class="fas"
                        :class="{'fa-folder': 'show' === item.type, 'fa-tv': 'episode' === item.type, 'fa-film': 'movie' === item.type}"></i>
@@ -137,6 +137,15 @@
                       <NuxtLink :to="makeSearchLink('path',item.content_path)" v-text="item.content_path"/>
                     </div>
                   </div>
+                </div>
+              </div>
+              <div class="card-content p-0 m-0" v-if="item?.showItem">
+                <div class="mt-2" style="position: relative; max-height: 343px; overflow-y: auto;">
+                  <code class="is-terminal is-block is-pre-wrap" v-text="JSON.stringify(item, null, 2)"/>
+                  <button class="button m-4" v-tooltip="'Copy text'" style="position: absolute; top:0; right:0;"
+                          @click="() => copyText(JSON.stringify(item, null, 2))">
+                    <span class="icon"><i class="fas fa-copy"/></span>
+                  </button>
                 </div>
               </div>
               <div class="card-footer">

@@ -3,13 +3,20 @@
     <div class="columns is-multiline">
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4">
-          <span class="icon"><i class="fas fa-globe"></i>&nbsp;</span>
+          <span class="icon"><i class="fas fa-globe" :class="{'fa-spin': isLoading || isTodayLog}"/>&nbsp;</span>
           <NuxtLink to="/logs">Logs</NuxtLink>
           : {{ filename }}
         </span>
 
         <div class="is-pulled-right" v-if="!error">
           <div class="field is-grouped">
+            <div class="control">
+              <button v-if="!autoScroll" @click="scrollToBottom" class="button is-primary"
+                      v-tooltip.bottom="'Go to bottom'">
+                <span class="icon"><i class="fas fa-arrow-down"></i></span>
+              </button>
+            </div>
+
             <div class="control has-icons-left" v-if="toggleFilter">
               <input type="search" v-model.lazy="query" class="input" id="filter" placeholder="Filter">
               <span class="icon is-left"><i class="fas fa-filter"/></span>
@@ -35,13 +42,6 @@
               </button>
             </p>
 
-            <p class="control" v-if="filename.includes(moment().format('YYYYMMDD'))">
-              <button class="button" v-tooltip.bottom="'Watch log'" @click="watchLog"
-                      :class="{ 'is-primary': !stream, 'is-danger': stream }">
-                <span class="icon"><i class="fas fa-stream"/></span>
-              </button>
-            </p>
-
             <p class="control">
               <button class="button is-warning" @click="wrapLines = !wrapLines" v-tooltip.bottom="'Toggle wrap line'">
                 <span class="icon"><i class="fas fa-text-width"/></span>
@@ -49,49 +49,47 @@
             </p>
 
             <p class="control">
-              <button class="button is-info" @click="loadContent" :disabled="isLoading"
-                      :class="{ 'is-loading': isLoading }">
-                <span class="icon"><i class="fas fa-sync"/></span>
+              <button class="button" v-tooltip.bottom="'Copy showing logs'"
+                      @click="() => copyText(filterItems.map(i => i.text).join('\n'))">
+                <span class="icon"><i class="fas fa-copy"/></span>
               </button>
             </p>
-
           </div>
+        </div>
+        <div class="is-hidden-mobile">
+          <span class="subtitle">Scroll-up to load older logs.</span>
         </div>
       </div>
 
       <div class="column is-12">
-        <div class="notification has-background-info-90 has-text-dark" v-if="stream">
-          <button class="delete" @click="watchLog"></button>
-          <span class="icon-text">
-            <span class="icon"><i class="fas fa-spinner fa-pulse"></i></span>
-            <span>Streaming log content...</span>
-          </span>
-        </div>
-
-        <div class="is-relative" v-if="!error">
-          <code ref="logContainer" class="box logs-container"
-                :class="{ 'is-pre': !wrapLines, 'is-pre-wrap': wrapLines }">
-            <span class="is-log-line is-block pt-1" v-for="(item, index) in filterItems" :key="'log_line-' + index">
-              <span v-if="item.date">
-                [<span class="has-tooltip" :title="item.date">{{ formatDate(item.date) }}</span>]:&nbsp;
+        <div class="logbox is-grid" ref="logContainer" v-if="!error" @scroll.passive="handleScroll">
+          <code id="logView" class="p-1 logline is-block" :class="{ 'is-pre-wrap': wrapLines, 'is-pre': !wrapLines }">
+            <span class="is-block m-0 notification is-info is-dark has-text-centered" v-if="reachedEnd && !query">
+              <span class="notification-title">
+                <span class="icon"><i class="fas fa-exclamation-triangle"/></span>
+                No more logs available for this file.
               </span>
-              <span v-if="item?.item_id">
-                <NuxtLink @click="goto_history_item(item)">
-                  <span class="icon-text">
-                    <span class="icon"><i class="fas fa-history"/></span>
-                    <span>View</span>
-                  </span>
-                </NuxtLink>&nbsp;
-              </span>
+            </span>
+            <span v-for="item in filterItems" :key="item.id" class="is-block">
+              <span v-if="item.date">[<span class="has-tooltip" :title="item.date">{{ formatDate(item.date) }}</span>]:&nbsp;</span>
+              <span v-if="item?.item_id"><span class="is-clickable has-tooltip" @click="goto_history_item(item)"><span
+                  class="icon"><i class="fas fa-history"/></span><span>View</span></span>&nbsp;</span>
               <span>{{ item.text }}</span>
             </span>
+            <span class="is-block" v-if="filterItems.length < 1">
+              <span class="is-block m-0 notification is-warning is-dark has-text-centered" v-if="query">
+                <span class="notification-title is-danger">
+                  <span class="icon"><i class="fas fa-filter"/></span>
+                  No logs match this query: <u>{{ query }}</u>
+                </span>
+              </span>
+              <span v-else>
+                <span class="has-text-danger">No logs available</span></span>
+            </span>
           </code>
-          <button class="button m-4" v-tooltip="'Copy logs'"
-                  @click="() => copyText(filterItems.map(i => i.text).join('\n'))"
-                  style="position: absolute; top:0; right:0;">
-            <span class="icon"><i class="fas fa-copy"></i></span>
-          </button>
+          <div ref="bottomMarker"></div>
         </div>
+
         <Message v-if="error" title="API Error" message_class="has-background-warning-90 has-text-dark" :message="error"
                  :use-close="true" @close="router.push('/logs')"/>
       </div>
@@ -100,10 +98,42 @@
 </template>
 
 <style scoped>
-.logs-container {
-  min-height: 50vh;
-  max-height: 60vh;
+#logView {
+  min-height: 72vh;
+  min-width: inherit;
+  max-width: 100%;
+}
+
+#logView > span:nth-child(even) {
+  color: #ffc9d4;
+}
+
+#logView > span:nth-child(odd) {
+  color: #e3c981;
+}
+
+code {
+  background-color: unset;
+}
+
+.logbox {
+  background-color: #1f2229;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+  min-width: 100%;
+  max-height: 73vh;
   overflow-y: auto;
+  overflow-x: auto;
+}
+
+div.logbox pre {
+  background-color: rgb(31, 34, 41);
+}
+
+.logline {
+  word-break: break-all;
+  line-height: 2.3em;
+  padding: 1em;
+  color: #fff1b8;
 }
 </style>
 
@@ -111,7 +141,7 @@
 import Message from '~/components/Message'
 import moment from 'moment'
 import {useStorage} from '@vueuse/core'
-import {goto_history_item, notification} from '~/utils/index'
+import {goto_history_item, notification, parse_api_response} from '~/utils/index'
 import request from '~/utils/request'
 
 const router = useRouter()
@@ -126,12 +156,20 @@ const wrapLines = useStorage('logs_wrap_lines', false)
 const isDownloading = ref(false)
 const isLoading = ref(false)
 const toggleFilter = ref(false)
+const autoScroll = ref(true)
+const isTodayLog = computed(() => filename.includes(moment().format('YYYYMMDD')))
+const reachedEnd = ref(false)
+const offset = ref(0)
+let scrollTimeout = null
+
+const bg_enable = useStorage('bg_enable', true)
+const bg_opacity = useStorage('bg_opacity', 0.95)
 
 const api_path = useStorage('api_path', '/v1/api')
 const api_url = useStorage('api_url', '')
 const api_token = useStorage('api_token', '')
 
-watch(toggleFilter, () => {
+watch(toggleFilter, async () => {
   if (!toggleFilter.value) {
     query.value = ''
   }
@@ -150,46 +188,55 @@ const stream = ref(null)
 /** @type {Ref<HTMLPreElement|null>} */
 const logContainer = ref(null)
 
+/** @type {Ref<HTMLPreElement|null>} */
+const bottomMarker = ref(null)
+
 const loadContent = async () => {
   try {
     isLoading.value = true
-    const response = await request(`/log/${filename}`)
-    if (response.ok) {
-      const text = await response.text()
+    const response = await request(`/log/${filename}?offset=${offset.value}`)
+    const json = await parse_api_response(response)
 
-      if (useRoute().name !== 'logs-filename') {
-        return
-      }
+    if (200 !== response.status) {
+      error.value = `${json.error.code}: ${json.error.message}`
+      return
+    }
 
-      const lines = []
+    if (useRoute().name !== 'logs-filename') {
+      return
+    }
 
-      text.trim().split('\n').forEach(i => {
-        try {
-          const line = String(i).trim()
-          lines.push(line ? JSON.parse(line) : {
-            "backend": null,
-            "user": null,
-            "date": null,
-            "item_id": null,
-            "text": line,
-          });
-        } catch (error) {
-          console.error(error)
-        }
-      })
+    const lines = []
 
-      data.value = lines;
-    } else {
+    json?.lines.forEach(i => {
       try {
-        const json = await response.json();
-        if (useRoute().name !== 'logs-filename') {
-          return
-        }
-        error.value = `${json.error.code}: ${json.error.message}`
-      } catch (e) {
-        error.value = `${response.status}: ${response.statusText}`
+        const line = String(i).trim()
+        lines.push(line);
+      } catch (error) {
+        console.error(error)
+      }
+    })
+
+    if (json?.lines?.length > 0) {
+      data.value.unshift(...json.lines)
+    }
+
+    if ("next" in json) {
+      offset.value = json.next ?? offset.value;
+      if (null === json.next) {
+        reachedEnd.value = true;
       }
     }
+
+    // Auto-scroll only if the user was already at the bottom
+    await nextTick(() => {
+      if (autoScroll.value && bottomMarker.value) {
+        bottomMarker.value.scrollIntoView({behavior: 'auto'})
+      }
+    })
+
+    watchLog()
+
   } catch (e) {
     error.value = e
   } finally {
@@ -197,19 +244,67 @@ const loadContent = async () => {
   }
 }
 
-onMounted(() => loadContent());
+const handleScroll = () => {
+  if (!logContainer.value || query.value) {
+    return
+  }
+
+  const container = logContainer.value
+  const nearBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 50
+  const nearTop = container.scrollTop < 50
+  autoScroll.value = nearBottom
+
+  if (nearTop && !isLoading.value && !scrollTimeout && !reachedEnd.value) {
+    scrollTimeout = setTimeout(async () => {
+      const previousHeight = container.scrollHeight
+      await loadContent()
+      await nextTick(() => {
+        const newHeight = container.scrollHeight
+        container.scrollTop += newHeight - previousHeight
+      })
+      scrollTimeout = null
+    }, 300)
+  }
+}
+
+const scrollToBottom = () => {
+  autoScroll.value = true
+  nextTick(() => {
+    if (bottomMarker.value) {
+      bottomMarker.value.scrollIntoView({behavior: 'smooth'})
+    }
+  })
+}
+
+onMounted(async () => {
+  await loadContent()
+  await nextTick(() => {
+    if (bg_enable.value) {
+      document.querySelector('body').setAttribute("style", `opacity: 1.0`)
+    }
+  })
+});
+
 onBeforeUnmount(() => closeStream());
-onUnmounted(() => closeStream());
+
+onUnmounted(async () => {
+  closeStream()
+  await nextTick(() => {
+    if (bg_enable.value) {
+      document.querySelector('body').setAttribute("style", `opacity: ${bg_opacity.value}`)
+    }
+  })
+});
 
 const watchLog = () => {
-  if (null !== stream.value) {
+  if (!isTodayLog.value || null !== stream.value) {
     closeStream();
     return;
   }
 
   // noinspection JSValidateTypes
   stream.value = new EventSource(`${api_url.value}${api_path.value}/log/${filename}?stream=1&apikey=${api_token.value}`)
-  stream.value.addEventListener('data', e => {
+  stream.value.addEventListener('data', async (e) => {
     let lines = e.data.split(/\n/g);
     for (let x = 0; x < lines.length; x++) {
       try {
@@ -218,6 +313,12 @@ const watchLog = () => {
           continue
         }
         data.value.push(JSON.parse(line))
+
+        await nextTick(() => {
+          if (autoScroll.value && bottomMarker.value) {
+            bottomMarker.value.scrollIntoView({behavior: 'smooth'})
+          }
+        })
       } catch (error) {
         console.error(error)
       }
@@ -241,7 +342,7 @@ const downloadFile = () => {
     response.then(async res => {
       isDownloading.value = false;
 
-      return res.body.pipeTo(await (await showSaveFilePicker({
+      return res.body.pipeTo(await (await window.showSaveFilePicker({
         suggestedName: `${filename}`
       })).createWritable())
 
@@ -290,15 +391,6 @@ const deleteFile = async () => {
     notification('error', 'Error', `Failed to request to delete a logfile. ${e}.`)
   }
 }
-
-const updateScroll = () => logContainer.value.scrollTop = logContainer.value.scrollHeight;
-
-onUpdated(() => {
-  if (error.value) {
-    return
-  }
-  updateScroll()
-});
 
 const formatDate = dt => moment(dt).format('DD/MM HH:mm:ss')
 </script>

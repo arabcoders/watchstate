@@ -96,7 +96,8 @@
           <span>{{ !toggleData ? 'Show' : 'Hide' }} attached data</span>
         </h2>
         <div v-if="toggleData" class="is-relative">
-          <code class="text-container is-block p-4" :class="{ 'is-pre': !wrapLines, 'is-pre-wrap': wrapLines }">
+          <code class="text-container is-block p-4 is-terminal"
+                :class="{ 'is-pre': !wrapLines, 'is-pre-wrap': wrapLines }">
             {{ JSON.stringify(item.event_data, null, 2) }}
           </code>
           <button class="button m-4" v-tooltip="'Copy event data'"
@@ -115,8 +116,9 @@
           <span>{{ !toggleLogs ? 'Show' : 'Hide' }} event logs</span>
         </h2>
         <div v-if="toggleLogs" class="is-relative">
-          <code class="is-block text-container p-4" :class="{ 'is-pre': !wrapLines, 'is-pre-wrap': wrapLines }">
-            <span class="is-log-line is-block pt-1" v-for="(item, index) in filteredRows" :key="'log_line-' + index"
+          <code class="is-block text-container p-4 is-terminal"
+                :class="{ 'is-pre': !wrapLines, 'is-pre-wrap': wrapLines }">
+            <span class="is-block pt-1" v-for="(item, index) in filteredRows" :key="'log_line-' + index"
                   v-text="item"/>
           </code>
           <button class="button m-4" v-tooltip="'Copy logs'" @click="() => copyText(filteredRows.join('\n'))"
@@ -134,7 +136,8 @@
           <span>{{ !toggleOptions ? 'Show' : 'Hide' }} attached options</span>
         </h2>
         <div v-if="toggleOptions" class="is-relative">
-          <code class="is-block text-container p-4" :class="{ 'is-pre': !wrapLines, 'is-pre-wrap': wrapLines }">
+          <code class="is-block text-container p-4 is-terminal"
+                :class="{ 'is-pre': !wrapLines, 'is-pre-wrap': wrapLines }">
             {{ JSON.stringify(item.options, null, 2) }}
           </code>
           <button class="button m-4" v-tooltip="'Copy options'"
@@ -168,6 +171,9 @@ const toggleData = useStorage('events_toggle_data', true)
 const toggleOptions = useStorage('events_toggle_options', true)
 const wrapLines = useStorage('logs_wrap_lines', false)
 
+const bg_enable = useStorage('bg_enable', true)
+const bg_opacity = useStorage('bg_opacity', 0.95)
+
 watch(toggleFilter, () => {
   if (!toggleFilter.value) {
     query.value = ''
@@ -182,6 +188,9 @@ const filteredRows = computed(() => {
 });
 
 onMounted(async () => {
+  if (bg_enable.value) {
+    document.querySelector('body').setAttribute("style", "opacity: 1");
+  }
   if (!props.id) {
     throw createError({
       statusCode: 404,
@@ -189,6 +198,12 @@ onMounted(async () => {
     })
   }
   return await loadContent()
+})
+
+onUnmounted(async () => {
+  if (bg_enable.value && bg_opacity.value) {
+    document.querySelector('body').setAttribute("style", `opacity: ${bg_opacity.value}`)
+  }
 })
 
 const loadContent = async () => {

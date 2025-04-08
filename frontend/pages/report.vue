@@ -9,8 +9,18 @@
         <div class="is-pulled-right" v-if="false === show_report_warning">
           <div class="field is-grouped">
             <p class="control">
-              <button class="button is-primary" @click="copyText(data.join('\n'))" v-tooltip.bottom="'Copy Report'">
-                <span class="icon"><i class="fas fa-copy"></i></span>
+              <button class="button is-info" @click="scrollToTop" v-tooltip.bottom="'Scroll to top'">
+                <span class="icon"><i class="fas fa-arrow-up"/></span>
+              </button>
+            </p>
+            <p class="control">
+              <button class="button is-warning" @click="scrollToBottom" v-tooltip.bottom="'Scroll to bottom'">
+                <span class="icon"><i class="fas fa-arrow-down"/></span>
+              </button>
+            </p>
+            <p class="control">
+              <button class="button is-primary" @click="copyText(data.join('\n'))" v-tooltip.bottom="'Copy report'">
+                <span class="icon"><i class="fas fa-copy"/></span>
               </button>
             </p>
           </div>
@@ -32,7 +42,7 @@
             <NuxtLink class="is-block is-fullwidth is-primary" @click="show_report_warning = false">
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-thumbs-up"></i></span>
-                <span>I Understand. Show me the report.</span>
+                <span>I understand. Show me the report.</span>
               </span>
             </NuxtLink>
           </div>
@@ -40,8 +50,10 @@
         <Message message_class="has-background-info-90 has-text-dark" v-if="!show_report_warning && data.length < 1"
                  title="Loading" icon="fas fa-spinner fa-spin" message="Generating the report. Please wait..."/>
         <template v-if="!show_report_warning && data.length > 0">
-        <pre style="min-height: 60vh;max-height:70vh; overflow-y: scroll" id="report-content"
-        ><code><span v-for="(item, index) in data" :key="index" class="is-block">{{ item }}</span></code></pre>
+          <pre style="min-height: 60vh;max-height:70vh; overflow-y: scroll" class="is-terminal"
+               ref="data-content"><code><div ref="topMarker"></div><span v-for="(item, index) in data" :key="index"
+                                                                         class="is-block">{{ item }}</span></code><div
+              ref="bottomMarker"></div></pre>
         </template>
       </div>
     </div>
@@ -57,6 +69,12 @@ useHead({title: `System Report`})
 const data = ref([])
 const show_report_warning = ref(true)
 
+/** @type {Ref<HTMLPreElement|null>} */
+const bottomMarker = ref(null)
+
+/** @type {Ref<HTMLPreElement|null>} */
+const topMarker = ref(null)
+
 watch(show_report_warning, async v => {
   if (false !== v) {
     return
@@ -71,4 +89,15 @@ watch(show_report_warning, async v => {
 
   data.value = json
 })
+
+const scrollToTop = () => {
+  if (topMarker.value) {
+    topMarker.value.scrollIntoView({behavior: 'smooth'})
+  }
+}
+const scrollToBottom = () => {
+  if (bottomMarker.value) {
+    bottomMarker.value.scrollIntoView({behavior: 'smooth'})
+  }
+}
 </script>
