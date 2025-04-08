@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250408-4f68729",
-        "date": "2025-04-08T19:33:13+00:00",
+        "tag": "dev-20250408-c15050e",
+        "date": "2025-04-08T20:16:45+00:00",
         "commits": [
+            {
+                "sha": "c15050e",
+                "message": "Added new API endpoint to validate plex token and a webpage to support it",
+                "author": "arabcoders",
+                "date": "2025-04-08T20:16:45+00:00"
+            },
             {
                 "sha": "4f68729",
                 "message": "minor webui changes",
