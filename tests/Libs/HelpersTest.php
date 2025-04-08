@@ -678,12 +678,12 @@ class HelpersTest extends TestCase
 
     public function test_isValidName(): void
     {
-        $this->assertTrue(isValidName('foo'), 'When name is valid, true is returned.');
-        $this->assertTrue(isValidName('foo_bar'), 'When name is valid, true is returned.');
-        $this->assertFalse(isValidName('foo_baR'), 'When name is invalid, false is returned.');
-        $this->assertFalse(isValidName('3oo_bar'), 'When name is invalid, false is returned.');
+        $validNames = ['foo', '123', 'foo_bar', '1foo_bar'];
+        $invalidNames = ['foo bar', 'foo-bar', 'foo/bar', 'foo?bar', 'foo*bar', 'foo_baR', 'FOOBAR'];
 
-        $invalidNames = ['foo bar', 'foo-bar', 'foo/bar', 'foo?bar', 'foo*bar', '1foo', 'foo_baR', 'FOOBAR'];
+        foreach ($validNames as $name) {
+            $this->assertTrue(isValidName($name), "When given name is '{$name}', true should be is returned.");
+        }
 
         foreach ($invalidNames as $name) {
             $this->assertFalse(isValidName($name), "When given name is '{$name}', false should be is returned.");
@@ -1631,5 +1631,37 @@ class HelpersTest extends TestCase
             'If not in container, it should return argv[0] or defaults to php bin/console.'
         );
         unset($_ENV['IN_CONTAINER']);
+    }
+
+    public function test_normalizeName()
+    {
+        $isValid = ['foo','foo_bar','0user','user_123','user_123_foo','user_123_foo_bar'];
+        foreach ($isValid as $name) {
+            $this->assertSame(
+                $name,
+                normalizeName($name),
+                "When valid name '{$name}' is passed, it should return same string."
+            );
+        }
+
+        $this->assertSame(
+            'user_123',
+            normalizeName('123'),
+            'When name is made entirely of numbers, it should prepend user_ to it.'
+        );
+
+        $invalidNames = [
+            'foo bar',
+            'foo-bar',
+            'foo@baR',
+        ];
+
+        foreach ($invalidNames as $name) {
+            $this->assertSame(
+                'foo_bar',
+                normalizeName($name),
+                "When invalid name '{$name}' is passed, it should return same string with underscores."
+            );
+        }
     }
 }

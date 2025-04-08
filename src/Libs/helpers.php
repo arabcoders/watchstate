@@ -730,7 +730,7 @@ if (!function_exists('makeBackend')) {
                 backendUrl: new Uri(ag($backend, 'url')),
                 cache: $cache,
                 userContext: $userContext ?? Container::get(UserContext::class),
-                logger: ag($options, iLogger::class, fn() => Container::get(iLogger::class)),
+                logger: ag($options, iLogger::class, fn () => Container::get(iLogger::class)),
                 backendId: ag($backend, 'uuid', null),
                 backendToken: ag($backend, 'token', null),
                 backendUser: ag($backend, 'user', null),
@@ -909,10 +909,6 @@ if (!function_exists('isValidName')) {
      */
     function isValidName(string $name): bool
     {
-        if (true === ctype_digit($name[0])) {
-            return false;
-        }
-
         return 1 === preg_match('/^[a-z_0-9]+$/', $name);
     }
 }
@@ -949,7 +945,7 @@ if (false === function_exists('array_keys_diff')) {
      */
     function array_keys_diff(array $base, array $list, bool $has = true): array
     {
-        return array_filter($base, fn($key) => $has === in_array($key, $list), ARRAY_FILTER_USE_KEY);
+        return array_filter($base, fn ($key) => $has === in_array($key, $list), ARRAY_FILTER_USE_KEY);
     }
 }
 
@@ -1354,7 +1350,7 @@ if (!function_exists('parseConfigValue')) {
     function parseConfigValue(mixed $value, Closure|null $callback = null): mixed
     {
         if (is_string($value) && preg_match('#%{(.+?)}#s', $value)) {
-            $val = preg_replace_callback('#%{(.+?)}#s', fn($match) => Config::get($match[1], $match[1]), $value);
+            $val = preg_replace_callback('#%{(.+?)}#s', fn ($match) => Config::get($match[1], $match[1]), $value);
             return null !== $callback && null !== $val ? $callback($val) : $val;
         }
 
@@ -1389,7 +1385,7 @@ if (!function_exists('checkIgnoreRule')) {
         if (false === in_array('guid_' . $db, $sources)) {
             throw new RuntimeException(r("Invalid db source name '{db}' was given. Expected values are '{dbs}'.", [
                 'db' => $db,
-                'dbs' => implode(', ', array_map(fn($f) => after($f, 'guid_'), $sources)),
+                'dbs' => implode(', ', array_map(fn ($f) => after($f, 'guid_'), $sources)),
             ]));
         }
 
@@ -2112,8 +2108,8 @@ if (!function_exists('registerEvents')) {
         /** @var array<ScannerItem> $list */
         $list = cacheableItem(
             'event_listeners',
-            fn() => AttributesScanner::scan(Config::get('events.listeners.locations', []))->for(EventListener::class),
-            Config::get('events.listeners.cache', fn() => new DateInterval('PT1H')),
+            fn () => AttributesScanner::scan(Config::get('events.listeners.locations', []))->for(EventListener::class),
+            Config::get('events.listeners.cache', fn () => new DateInterval('PT1H')),
             $ignoreCache
         );
 
@@ -2147,7 +2143,7 @@ if (!function_exists('queueEvent')) {
      */
     function queueEvent(string $event, array $data = [], array $opts = []): EventInfo
     {
-        $repo = ag($opts, EventsRepository::class, fn() => Container::get(EventsRepository::class));
+        $repo = ag($opts, EventsRepository::class, fn () => Container::get(EventsRepository::class));
         assert($repo instanceof EventsRepository);
 
         $item = null;
@@ -2428,7 +2424,7 @@ if (!function_exists('perUserCacheAdapter')) {
         }
 
         $ns = getAppVersion();
-        $ns .= isValidName($user) ? '.' . $user : '.' . md5($user);
+        $ns .= isValidName($user) ? ".{$user}" : '.' . md5($user);
 
         try {
             $backend = new RedisAdapter(redis: Container::get(Redis::class), namespace: $ns);
@@ -2731,13 +2727,28 @@ if (!function_exists('normalizeName')) {
      * Normalize the name to be in [a-z_0-9] format.
      *
      * @param string $name The name to normalize.
+     * @param iLogger |null $logger (Optional) The logger instance.
      *
      * @return string The normalized name.
      */
-    function normalizeName(string $name): string
+    function normalizeName(string $name, iLogger|null $logger = null,array $opts=[]): string
     {
-        $name = strtolower($name);
-        $name = preg_replace('/[^a-z0-9_]/', '_', $name);
-        return trim($name);
+        if (true === ctype_digit($name)) {
+            $newName = 'user_' . $name;
+        } else {
+            $newName = strtolower($name);
+            $newName = preg_replace('/[^a-z0-9_]/', '_', $newName);
+            $newName = trim($newName);
+        }
+
+        if ($newName !== $name && null !== $logger) {
+            $logger->notice(ag($opts, 'log_message', "Normalized '{name}' to '{new_name}'."), [
+                'name' => $name,
+                'new_name' => $newName,
+                ...ag($opts,'context',[])
+            ]);
+        }
+
+        return $newName;
     }
 }

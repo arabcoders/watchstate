@@ -254,7 +254,10 @@ class CreateUsersCommand extends Command
 
                     // -- this was source of lots of bugs and confusion for users,
                     // -- we decided to normalize the user-names early in the process.
-                    $user['name'] = normalizeName((string)$user['name']);
+                    $user['name'] = normalizeName((string)$user['name'], $this->logger, [
+                        'log_message' => "Normalized '{backend}: {name}' to '{backend}: {new_name}'",
+                        'context' => [ 'backend' => $backedName ],
+                    ]);
 
                     // -- run map actions.
                     $this->map_actions($backedName, $user, $map);
@@ -277,7 +280,7 @@ class CreateUsersCommand extends Command
                     $info['backendName'] = normalizeName(r("{backend}_{user}", [
                         'backend' => $backedName,
                         'user' => $user['name']
-                    ]));
+                    ]),$this->logger);
 
                     if (false === isValidName($info['backendName'])) {
                         $this->logger->error(
@@ -357,7 +360,7 @@ class CreateUsersCommand extends Command
 
         foreach ($users as $user) {
             // -- User subdirectory name.
-            $userName = normalizeName(ag($user, 'name', 'unknown'));
+            $userName = normalizeName(ag($user, 'name', 'unknown'), $this->logger);
 
             if (false === isValidName($userName)) {
                 $this->logger->error(
