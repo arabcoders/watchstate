@@ -1,5 +1,29 @@
 [
     {
+        "tag": "master-20250408-7cd543d",
+        "date": "2025-04-08T20:24:11+00:00",
+        "commits": [
+            {
+                "sha": "c15050e",
+                "message": "Added new API endpoint to validate plex token and a webpage to support it",
+                "author": "arabcoders",
+                "date": "2025-04-08T20:16:45+00:00"
+            },
+            {
+                "sha": "4f68729",
+                "message": "minor webui changes",
+                "author": "arabcoders",
+                "date": "2025-04-08T19:33:13+00:00"
+            },
+            {
+                "sha": "d5e4d29",
+                "message": "Make possible again to get raw response from plex api for getUsersList. Add new command to check validity of plex token",
+                "author": "arabcoders",
+                "date": "2025-04-08T19:16:00+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250408-1446ce7",
         "date": "2025-04-08T16:37:51+00:00",
         "commits": [
