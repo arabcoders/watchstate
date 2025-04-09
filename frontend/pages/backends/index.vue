@@ -58,7 +58,7 @@
             <h1 class="title is-4">Tools</h1>
             <ul>
               <li>
-                <NuxtLink :to="`/plex_token`" v-text="'Validate plex token'"/>
+                <NuxtLink :to="`/tools/plex_token`" v-text="'Validate plex token'"/>
               </li>
             </ul>
           </div>

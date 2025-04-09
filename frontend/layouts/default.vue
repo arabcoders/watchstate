@@ -3,10 +3,8 @@
     <nav class="navbar is-dark mb-4 is-unselectable">
       <div class="navbar-brand pl-5">
         <NuxtLink class="navbar-item" to="/" @click.native="(e) => changeRoute(e)">
-          <span class="icon-text">
-            <span class="icon"><i class="fas fa-home"/></span>
-            <span>Home</span>
-          </span>
+          <span class="icon"><i class="fas fa-home"/></span>
+          <span>Home</span>
         </NuxtLink>
 
         <a class="navbar-item is-hidden-tablet" id="top" href="#bottom">
@@ -23,63 +21,68 @@
       <div class="navbar-menu" :class="{ 'is-active': showMenu }">
         <div class="navbar-start" v-if="hasAPISettings && !showConnection">
           <NuxtLink class="navbar-item" to="/backends" @click.native="(e) => changeRoute(e)">
-            <span class="icon-text">
-              <span class="icon"><i class="fas fa-server"/></span>
-              <span>Backends</span>
-            </span>
+            <span class="icon"><i class="fas fa-server"/></span>
+            <span>Backends</span>
           </NuxtLink>
 
           <NuxtLink class="navbar-item" to="/history"
                     @click.native="(e) => changeRoute(e, () => dEvent('history_main_link_clicked', { 'clear': true }))">
-            <span class="icon-text">
-              <span class="icon"><i class="fas fa-history"/></span>
-              <span>History</span>
-            </span>
+            <span class="icon"><i class="fas fa-history"/></span>
+            <span>History</span>
           </NuxtLink>
 
           <NuxtLink class="navbar-item" to="/tasks" @click.native="(e) => changeRoute(e)">
-            <span class="icon-text">
-              <span class="icon"><i class="fas fa-tasks"/></span>
-              <span>Tasks</span>
-            </span>
+            <span class="icon"><i class="fas fa-tasks"/></span>
+            <span>Tasks</span>
           </NuxtLink>
 
           <NuxtLink class="navbar-item" to="/env" @click.native="(e) => changeRoute(e)">
-            <span class="icon-text">
-              <span class="icon"><i class="fas fa-cogs"/></span>
-              <span>Env</span>
-            </span>
+            <span class="icon"><i class="fas fa-cogs"/></span>
+            <span>Env</span>
           </NuxtLink>
 
           <NuxtLink class="navbar-item" to="/logs" @click.native="(e) => changeRoute(e)">
-            <span class="icon-text">
-              <span class="icon"><i class="fas fa-globe"/></span>
-              <span>Logs</span>
-            </span>
+            <span class="icon"><i class="fas fa-globe"/></span>
+            <span>Logs</span>
           </NuxtLink>
 
           <div class="navbar-item has-dropdown">
             <a class="navbar-link" @click="(e) => openMenu(e)">
-              <span class="icon-text">
-                <span class="icon"><i class="fas fa-ellipsis-vertical"/></span>
-                <span>More</span>
-              </span>
+              <span class="icon"><i class="fas fa-tools"/></span>
+              <span>Tools</span>
+            </a>
+
+            <div class="navbar-dropdown">
+              <NuxtLink class="navbar-item" to="/tools/plex_token" @click.native="(e) => changeRoute(e)"
+                        v-if="hasAPISettings">
+                <span class="icon"><i class="fas fa-key"/></span>
+                <span>Plex Token</span>
+              </NuxtLink>
+
+              <NuxtLink class="navbar-item" to="/tools/sub_users" @click.native="(e) => changeRoute(e)"
+                        v-if="hasAPISettings">
+                <span class="icon"><i class="fas fa-users"/></span>
+                <span>Sub Users</span>
+              </NuxtLink>
+            </div>
+          </div>
+
+          <div class="navbar-item has-dropdown">
+            <a class="navbar-link" @click="(e) => openMenu(e)">
+              <span class="icon"><i class="fas fa-ellipsis-vertical"/></span>
+              <span>More</span>
             </a>
             <div class="navbar-dropdown">
 
               <NuxtLink class="navbar-item" to="/console" @click.native="(e) => changeRoute(e)" v-if="hasAPISettings">
-                <span class="icon-text">
-                  <span class="icon"><i class="fas fa-terminal"/></span>
-                  <span>Console</span>
-                </span>
+                <span class="icon"><i class="fas fa-terminal"/></span>
+                <span>Console</span>
               </NuxtLink>
 
               <NuxtLink class="navbar-item" to="/processes" @click.native="(e) => changeRoute(e)"
                         v-if="hasAPISettings">
-                <span class="icon-text">
-                  <span class="icon"><i class="fas fa-microchip"/></span>
-                  <span>Processes</span>
-                </span>
+                <span class="icon"><i class="fas fa-microchip"/></span>
+                <span>Processes</span>
               </NuxtLink>
 
               <hr class="navbar-divider">

@@ -49,6 +49,11 @@
                     "name": "autoscroll",
                     "description": "Automatically scroll to an element.",
                     "doc-url": ""
+                },
+                {
+                    "name": "sortable",
+                    "description": "Automatically sort.",
+                    "doc-url": ""
                 }
             ],
             "vue-components": [
