@@ -389,7 +389,7 @@ class ExportCommand extends Command
                                                     'id' => $entity->id,
                                                     'title' => $entity->getName(),
                                                 ],
-                                                'added_at' => makeDate($addedDate),
+                                                'added_at' => $addedDate,
                                                 'data' => $input->getOption('trace') ? $entity->getAll() : [],
                                             ]
                                         );
