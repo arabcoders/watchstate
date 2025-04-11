@@ -1,7 +1,31 @@
 [
     {
-        "tag": "dev-20250411-3ed2c9b",
-        "date": "2025-04-11T16:17:35+00:00",
+        "tag": "dev-20250411-748c8bb",
+        "date": "2025-04-11T18:23:19+00:00",
+        "commits": [
+            {
+                "sha": "748c8bb",
+                "message": "Switch to DirectMapper as default mapper for import operations and deprecate MemoryMapper",
+                "author": "arabcoders",
+                "date": "2025-04-11T18:23:19+00:00"
+            },
+            {
+                "sha": "9ff5255",
+                "message": "Split utils from helpers as the file was getting big",
+                "author": "arabcoders",
+                "date": "2025-04-11T18:22:30+00:00"
+            },
+            {
+                "sha": "859b56a",
+                "message": "move common logic to a helper functions for WebUI",
+                "author": "arabcoders",
+                "date": "2025-04-11T18:21:49+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250411-fce8d09",
+        "date": "2025-04-11T16:24:07+00:00",
         "commits": [
             {
                 "sha": "3ed2c9b",
