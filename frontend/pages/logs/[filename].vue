@@ -3,7 +3,7 @@
     <div class="columns is-multiline">
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4">
-          <span class="icon"><i class="fas fa-globe" :class="{'fa-spin': isLoading || isTodayLog}"/>&nbsp;</span>
+          <span class="icon"><i class="fas fa-globe" :class="{'fa-spin': isLoading }"/>&nbsp;</span>
           <NuxtLink to="/logs">Logs</NuxtLink>
           : {{ filename }}
         </span>
@@ -57,7 +57,10 @@
           </div>
         </div>
         <div class="is-hidden-mobile">
-          <span class="subtitle">Scroll-up to load older logs.</span>
+          <span class="subtitle">
+            <template v-if="isTodayLog">The logs are being streamed in real-time.</template>
+            Scroll-up to load older logs.
+          </span>
         </div>
       </div>
 
@@ -141,7 +144,7 @@ div.logbox pre {
 import Message from '~/components/Message'
 import moment from 'moment'
 import {useStorage} from '@vueuse/core'
-import {goto_history_item, notification, parse_api_response} from '~/utils/index'
+import {disableOpacity, enableOpacity, goto_history_item, notification, parse_api_response} from '~/utils/index'
 import request from '~/utils/request'
 
 const router = useRouter()
@@ -278,22 +281,14 @@ const scrollToBottom = () => {
 
 onMounted(async () => {
   await loadContent()
-  await nextTick(() => {
-    if (bg_enable.value) {
-      document.querySelector('body').setAttribute("style", `opacity: 1.0`)
-    }
-  })
+  await nextTick(() => disableOpacity())
 });
 
 onBeforeUnmount(() => closeStream());
 
 onUnmounted(async () => {
   closeStream()
-  await nextTick(() => {
-    if (bg_enable.value) {
-      document.querySelector('body').setAttribute("style", `opacity: ${bg_opacity.value}`)
-    }
-  })
+  await nextTick(() => enableOpacity())
 });
 
 const watchLog = () => {

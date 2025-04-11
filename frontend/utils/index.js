@@ -531,6 +531,21 @@ const queue_event = async (event, event_data = {}, delay = 0, opts = {}) => {
     return resp.status
 }
 
+const enableOpacity = () => {
+    const bg_enable = useStorage('bg_enable', true)
+    const bg_opacity = useStorage('bg_opacity', 0.95)
+    if (bg_enable.value && bg_opacity.value) {
+        document.querySelector('body').setAttribute("style", `opacity: ${bg_opacity.value}`)
+    }
+}
+
+const disableOpacity = () => {
+    const bg_enable = useStorage('bg_enable', true)
+    if (bg_enable.value) {
+        document.querySelector('body').setAttribute("style", "opacity: 1");
+    }
+}
+
 export {
     r,
     ag_set,
@@ -554,5 +569,7 @@ export {
     basename,
     parse_api_response,
     goto_history_item,
-    queue_event
+    queue_event,
+    enableOpacity,
+    disableOpacity,
 }

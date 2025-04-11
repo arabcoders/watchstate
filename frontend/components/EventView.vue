@@ -152,7 +152,14 @@
 </template>
 
 <script setup>
-import {copyText, notification, parse_api_response, TOOLTIP_DATE_FORMAT} from '~/utils/index'
+import {
+  copyText,
+  disableOpacity,
+  enableOpacity,
+  notification,
+  parse_api_response,
+  TOOLTIP_DATE_FORMAT
+} from '~/utils/index'
 import request from '~/utils/request'
 import moment from 'moment'
 import {getStatusClass, makeName} from '~/utils/events/helpers'
@@ -188,9 +195,7 @@ const filteredRows = computed(() => {
 });
 
 onMounted(async () => {
-  if (bg_enable.value) {
-    document.querySelector('body').setAttribute("style", "opacity: 1");
-  }
+  disableOpacity()
   if (!props.id) {
     throw createError({
       statusCode: 404,
@@ -200,11 +205,7 @@ onMounted(async () => {
   return await loadContent()
 })
 
-onUnmounted(async () => {
-  if (bg_enable.value && bg_opacity.value) {
-    document.querySelector('body').setAttribute("style", `opacity: ${bg_opacity.value}`)
-  }
-})
+onUnmounted(async () => enableOpacity())
 
 const loadContent = async () => {
   try {
