@@ -1,385 +1,349 @@
 # FAQ
 
-To see list of all the available commands run
+# How to find the API key?
 
-```shell
-$ docker exec -ti watchstate console list
+There are two ways to locate the API key:
+
+## Via `.env` file
+
+The API key is stored in the following file `/config/config/.env`, Open the file and look for the line starting with:
+
+```
+WS_API_KEY=random_string
 ```
 
-This command will list all available commands, and each command has help document attached to it, simply run
+The value after the equals sign is your API key.
 
-```shell
-$ docker exec -ti watchstate console help [COMMAND_NAME]
+## Via command
+
+You can also retrieve the API key by running the following command on the docker host machine:
+
+```bash
+docker exec watchstate console system:apikey
 ```
 
-It will show you the relevant information regarding the command and some frequently asked question about that command.
+This command will show the following lines:
+
+```
+Current API key:
+random_string
+```
+
+The `random_string` is your API key.
+
+----
+
+# What Is the API key used for?
+
+The API key is used to authenticate requests to the system and prevent unauthorized access.
+
+It is required for all API endpoints, **except** the following:
+
+```
+/v1/api/[user@backend_name]/webhook
+```
+
+This webhook endpoint is open by default, unless you have enabled the `WS_SECURE_API_ENDPOINTS` environment variable.  
+If enabled, the API key will also be required for webhook access.
 
 > [!IMPORTANT]
-> **The help document attached to each command is more up to date and precise. So, please read it.**
+> The WebUI operates in standalone mode and is decoupled from the backend, so it requires the API key to fetch and
+> display data.
 
 ----
 
-# How to turn on scheduled tasks for import/export?
+# How to enable scheduled/automatic tasks?
 
-Scheduled tasks are configured via specific environment variables refers
-to [environment variables](#environment-variables) section,
+To turn on automatic import or export tasks:
 
-## Via WebUI
+1. Go to the `Tasks` page in the WebUI.
+2. Enable the tasks you want to schedule for automatic execution.
 
-Simply go to `Tasks` page and enable the tasks you want to run.
+By default:
 
-## Via CLI
+- **Import** task runs every **1 hour**
+- **Export** task runs every **1 hour and 30 minutes**
 
-```bash
-$ docker exec -ti watchstate console system:env -k WS_CRON_IMPORT -e true
-$ docker exec -ti watchstate console system:env -k WS_CRON_EXPORT -e true
-```
+If you want to customize the schedule, you can do so by adding environment variables with valid cron expressions:
 
-By default, `import` is scheduled to run every `1hour` while `export` is scheduled to run every `1hour 30minutes`, you
-can alter the time when the tasks are run via adding the following variables with valid cron expression. good source to
-check your cron expression is [crontab.guru](https://crontab.guru/).
+- **WS_CRON_IMPORT_AT**
+- **WS_CRON_EXPORT_AT**
 
-While we think they are reasonable defaults, you can change them by setting the following environment variables:
-
-## Via WebUI
-
-Go to the `env` page, click on `+` button, then select the key in this case `WS_CRON_IMPORT_AT`, `WS_CRON_EXPORT_AT`
-and set the value to a valid cron expression. Then click save to apply the new timer. This will be change later to be
-included with
-the tasks page.
-
-## Via CLI
-
-Execute the following commands:
-
-```bash
-$ docker exec -ti watchstate console system:env -k WS_CRON_IMPORT_AT -e '"*/1 * * * *"'
-$ docker exec -ti watchstate console system:env -k WS_CRON_EXPORT_AT -e '"30 */1 * * *"'
-```
-
-For Values with space, they must be enclosed in double quotes. to see the status of your scheduled tasks,
-
-## Via WebUI
-
-Go to the `Tasks` page, you will see the status of each task.
-
-## Via CLI
-
-```bash
-$ docker exec -ti watchstate console system:tasks
-```
+You can set these variables from the <code>Env</code> page.
 
 > [!NOTE]
-> All scheduled tasks are configured via the same variables style, refer
-> to [Tool specific environment variables](#tool-specific-environment-variables) for more information.
+> A great tool to validate your cron expression is [crontab.guru](https://crontab.guru/)
 
-----
+After making changes, visit the `Tasks` page again to see the updated schedule next to `Next Run`.
 
-# Container is crashing on startup?
+---
 
-This is likely due to misconfigured `user:` in `compose.yaml`, the container is rootless as such it will crash if
-the tool unable to access the data path. to check permissions simply do the following
+# Container is crashing on start-up?
+
+This usually happens due to a misconfigured `user:` in your `compose.yaml` file or an incorrect `--user` argument. The
+container runs in **rootless mode**, so it will crash if it doesn’t have permission to access the data directory.
+
+## Check permissions
+
+Run the following command to inspect ownership of your data directory:
 
 ```bash
 $ stat data/config/ | grep 'Uid:'
 ```
 
-It should show something like
+The path `data/config/` refers to where you have mounted your data directory. Adjust it if necessary.
+
+You should see output like:
 
 ```
 Access: (0755/drwxr-xr-x)  Uid: ( 1000/  user)   Gid: ( 1000/  user)
 ```
 
-Use the ids as parameters for `user:` in this case it should be `user:"1000:1000"`.
+## Fixing the issue
 
-----
+Use the UID and GID from the output as parameters:
 
-# How to find the apikey?
+### compose.yaml
 
-You can find the apikey inside the following file `/config/config/.env`. The apikey is stored inside this
-variable `WS_API_KEY=`.
-Or you can run the following command to get it directly:
+```yaml
+  user: "1000:1000"
+```
+
+### docker run
 
 ```bash
-$ docker exec -ti console system:apikey
+docker run ... --user 1000:1000
 ```
 
-----
-
-# What the API key used for?
-
-The API key is used to authenticate the requests to the tool, it's used to prevent unauthorized access. The API key is
-required for all endpoints except the `/v1/api/[backend_name]/webhook` endpoint which is open by default unless you have
-enabled `WS_SECURE_API_ENDPOINTS` environment variable. which then you also need to use the apikey for it webhook
-endpoint.
-
-The new `WebUI` will also require the API key to access data as it's decoupled from the backend and run in standalone
-mode.
+Make sure the container has the correct permissions to access all necessary data paths to prevent crashes.
 
 ----
 
-# MAPPER: Watch state conflict detected in [BACKEND_NAME]...?
+# MAPPER: Conflict Detected in `'user@backend_name`...?
 
-This warning occurs when the database has the movie/episode marked as played but a backend reporting the
-item as unplayed and there is no metadata that indicates that the movie was previously imported from the backend.
-So, Preserving your current watch state takes priority, and thus we mark the item as tainted and re-process it.
-To Fix this conflict you should re-export your database state back to the problematic backend using the following
-command:
+This warning appears when there is a mismatch between the local database and a backend regarding the watch state of a
+movie or episode. Specifically, it means:
+
+- The item is marked as **played** in the local database.
+- The backend is reporting it as **unplayed**.
+- There is no metadata indicating that the item was previously imported from that backend to make it possible to mark it
+  as unplayed.
+
+In this case, the system prioritizes preserving your local play state. The item is marked as **tainted** and will be
+re-processed accordingly.
+
+## How to resolve the conflict?
+
+To resolve this conflict and sync the backend with your local state:
+
+* Go to the `WebUI > Backends`.
+* Under the relevant backend, find the **Frequently used commands** list.
+* Select **3. Force export local play state to this backend.**
+
+This operation will overwrite the backend's watch state with your current local state to bring them back in sync.
+
+----
+
+# How to Use Jellyfin or Emby OAuth Tokens
+
+Due to limitations on the Jellyfin/Emby side, our implementation requires you to provide your credentials in the
+`username:password` format. This is necessary because their API does not allow us to determine the currently
+authenticated user directly.
+
+When prompted for the API key, simply enter your credentials like this:
+
+```
+username:password
+```
+
+WatchState will then generate an OAuth token for you and automatically replace the username and password with the token.
+This is a one-time process, and you won’t need to repeat it.
+
+Your `username` and `password` are **not** stored.
+
+----
+
+# My New Backend Is Overriding My Old Backend’s State / My Watch State Is Incorrect
+
+This issue typically occurs when a newly added backend reports **newer timestamps** than an existing backend.  
+By default, the system prioritizes data with the latest timestamps, which usually ensures the most up-to-date watch
+state is preserved.
+
+However, if the new backend's state is incorrect, it may unintentionally override your accurate local watch history.
+
+## How to Fix the the play state
+
+To synchronize both backends correctly:
+
+* **Add the backend** that contains the correct watch state first.
+* Enable **Full Import** for that backend.
+* Go to `Tasks` page, and run the **Import** task via `Run via console` button.
+* Once the import is complete, **add the second backend** (the one with incorrect or outdated play state).
+* Under the newly added backend, locate the **Frequently used commands** section.
+* Select **3. Force export local play state to this backend.**
+
+This will push your local watch state to the backend and ensure both are in sync.
+
+----
+
+# My New Backend Watch State Is Not Being Updated?
+
+This issue is most likely caused by a **date mismatch**. When exporting watch state, the system compares the date of the
+item on the backend with the date stored in the local database. If the backend's date is equal to or newer than the
+local one, the export may be skipped.
+
+To confirm if this is the issue, follow these steps:
+
+1. Go to the `WebUI > Backends`.
+2. Under the relevant backend, locate the **Frequently Used Commands** section.
+3. Select **7. Run export and save debug log.**
+
+This will generate a log file at `/config/user@backend_name.export.txt` If the file is too large to view in a regular
+text editor, you can read it using:
 
 ```bash
-$ docker exec -ti console state:export -fi -s [BACKEND_NAME]
+docker exec -ti watchstate bash -c "cat /config/user@backend_name.export.txt | more"
 ```
 
-----
-
-# How to use Jellyfin, Emby oauth tokens?
-
-Due to limitation on jellyfin/emby side, the way we implemented support for oauth token require that you provide the
-username and password in `username:password` format, This is due to the API not providing a way for us to inquiry about
-the current user.
-
-Simply, when asked for API Key, provide the username and password in the following format `username:password`.
-`WatchState` will then generate the token for you. and replace the username and password with the generated token. This
-is a one time process, and you should not need to do it again. Your `username` and `password` will not be stored.
-
-----
-
-# My new backend overriding my old backend state / My watch state is not correct?
-
-This likely due to the new backend reporting newer date than your old backend. as such the typical setup is to
-prioritize items with newer date compared to old ones. This is what you want to happen normally. However, if the new
-media backend state is not correct this might override your current watch state. The solution to get both in sync, and
-to do so follow these steps:
-
-Add your backend that has correct watch state and enable full import. Second, add your new backend as metadata source.
-
-In `CLI` context Answer `N` to the question `Enable importing of metadata and play state from this backend?`. Make sure
-to select yes
-for export to get the option to select the backend as metadata source.
-
-In `WebUI` if you disable import, you will get an extra option that is normally hidden to select the backend as metadata
-source.
-
-After that, do single backend export by using the following command:
-
-```bash
-$ docker exec -ti watchstate console state:export -vvif -s new_backend_name
-```
-
-Running this command will force full export your current database state to the selected backend. Once that done you can
-turn on import from the new backend.
-
-In `CLI` context you can enable import by running the following command:
-
-```bash
-$ docker exec -ti watchstate console config:manage -s backend_name
-```
-
-In `WebUI` you can enable import by going to the `backends` page and click on import for the new backend.
-
-----
-
-# My new backend watch state not being updated?
-
-The likely cause of this problem is date related problem, as we check the date on backend object and compare that to the
-date in local database, to make sure this is the error you are facing please do the following.
+Look for lines like the following:
 
 ```
-$ docker exec -ti watchstate console state:export -s new_backend_name --debug --logfile /config/export.txt
+[YYYY-MM-DDTHH:MM:SS-ZZ] DEBUG: Ignoring 'user@backend_name' 'Title - (Year or episode)'. reason. { ..., (comparison: [ ... ]) }
 ```
 
-After running the command, open the log file and look for episode and movie that has the problem and read the text next
-to it. The error usually looks like:
+If you see messages such as `Backend date is equal or newer than database date.` that confirms the issue.
 
-```
-[YYYY-MM-DDTHH:MM:SS-ZZ] DEBUG: Ignoring [backend_name] [Title - (Year or episode)]. reason. { ..., (comparison: [ ... ]) }
-```
+## How to Fix It
 
-In this case the error text should be `Backend date is equal or newer than database date.`
+To override the date check and force an update do the following:
 
-To bypass the date check you need to force ignore date comparison by using the `[-i, --ignore-date]` flag, so to get
-your new backend in sync with your old database, do the following:
+* Go to the `WebUI > Backends`.
+* Under the relevant backend, find the **Frequently used commands** list.
+* Select **3. Force export local play state to this backend.**
 
-```bash
-$ docker exec -ti watchstate console state:export -vvif -s new_backend_name
-```
-
-This command will ignore your `lastSync` date and will also ignore `object date comparison` and thus will mirror your
-database state back to the selected backend.
+This will sync your local database state to the backend, ignoring date comparisons.
 
 ----
 
 # Is there support for Multi-user setup?
 
-We are on early stage of supporting multi-user setups, initially few operations are supported. To get started, first you
-need to create your own main user backends using admin token for Plex and api key for Jellyfin/Emby.
+There is **basic** support for multi-user setups, but it's not fully developed yet. The tool is primarily designed for
+single-user use, and multi-user functionality is built on top of that. Because of this, you might encounter some issues
+when using it with multiple users.
 
-Once your own main user is added, make sure to turn on the `import` and `export` for all backends, as the sub users are
-initial configuration is based on your own main user configuration. Once your own user is working, turn on the `import`
-and `export` tasks in the Tasks page.
+## Getting started with a multi-user setup
 
-Now, to create the sub users configurations, you need to run `backend:create` command, which can be done via
-`WebUI > Backends > Purple button (users) icon` or via CLI by running the following command:
+1. **Add your backends** as you normally would. Make sure to include the backends for your main user.
+2. For the `Plex` backend, you must use an **Admin-level `X-Plex-Token`**. Without it, we won’t be able to retrieve the
+   list of users.  
+   You can check your token by going to `Tools > Plex Token`.
+    - If you see a success message, you’re good to go.
+    - If you see an error message, it likely means your token has limited permissions and can’t be used to access the
+      user list.
+3. For `Jellyfin` and `Emby` backends, use an **API key**, which can be generated from your server settings:
+    - Go to `Dashboard > Advanced > API Keys` and create a new key.
+4. After setting up your backends and verifying they work, go to `Tools > Sub Users`.  
+   The system will attempt to automatically group users based on their names. However, because naming can vary between
+   setups, not all users may be matched correctly. You can manually organize the groups by dragging and dropping
+   users.
+5. Once you're satisfied with the setup, click the `Create Sub-users` button to generate the configuration.
 
-```bash
-$ docker exec -ti watchstate console backend:create -v
-```
+> [!NOTE]  
+> The sub-user configurations are based on your current main user settings. If you change the main configuration (e.g.,
+> backend URL), you must either:
+> * Manually update the sub-user backends, or
+> * Click `Update Sub-users`, which will try to update them automatically. This action can also **create new sub-users**
+    if they don’t already exist—so use it carefully.
 
-Once the sub users configuration is created, You can start using the multi-user functionality.
-
-If your users usernames are different between the backends, you can use the `mapper.yaml` file to map the users between
-the backends. For more information about the `mapper.yaml` file, please refer to
-the [mapper.yaml](#whats-the-schema-for-the-mapperyaml-file) section.
-
-# Whats the schema for the `mapper.yaml` file?
-
-The schema is simple, it's a list of users in the following format:
-
-```yaml
-version: "1.5"
-map:
-    # 1st user...
-    -   my_plex_server: # your main user backend name
-            name: "mike_jones"
-            options: { } # optional key.
-        my_jellyfin_server: # your main user backend name
-            name: "jones_mike"
-        my_emby_server: # your main user backend name
-            name: "mikeJones"
-            replace_with: "mike_jones" # optional action, to replace the username with the new one.
-    # 2nd user...
-    -   my_emby_server: # your main user backend name
-            name: "jiji_jones"
-            options: { } # optional key.
-        my_plex_server: # your main user backend name
-            name: "jones_jiji"
-        my_jellyfin_server: # your main user backend name
-            name: "jiji.jones"
-            replace_with: "jiji_jones" # optional action, to replace the username with the new one.
-    #.... more users
-```
-
-If you create a map for a user, it SHOULD include all the backends you want to sync the user data with. while the
-matcher might automatically detect the other backends even if not included in the map, it best to manually set them in
-group to prevent any issues that might arise. Each list item is a user, and each user has a list of backends. Each
-backend.
-
-> [!NOTE]
-> the backend names `my_plex_server`, `my_jellyfin_server`, `my_emby_server` are the names you have chosen for
-> your backends.
->
-> The `name` field must match the name after normalization, so if you have a backend with the name `Mike Jones` as
-> username, the `name:` in the `mapper.yaml` file should be `mike_jones` as the `backend:create` command will normalize
-> the name before passing it to the mapper which the mapper will convert it to `mike_jones`.
+Once your sub-user setup is ready, you can start using the multi-user features.
 
 ## Important
 
-We enforce strict naming convention for backend names and usernames, So they must follow the following format
-`^[a-z_0-9]+$` which means, lowercase letters, numbers and `_` are allowed. No spaces, uppercase letters or special
-characters or name entirely made of digits are allowed. If the username is not complying with the naming convention, we
-forcibly normalize it to make it comply with the naming convention.
+We enforce a strict naming convention for both backend names and usernames:
 
-If you want another name, you can use `replace_with` key to replace the username with the new one. However, the name
-also must comply with the naming convention.
+**Format:** `^[a-z_0-9]+$`
 
-This yaml file helps map your users usernames in the different backends, so the tool can sync the correct user data. If
-you added or updated mapping, you should delete `users` directory and generate new data. by running the `backend:create`
-command as described in the previous section.
+Which means
 
-You can run the `backend:create` command with `-v --dry-run` to see what it will do and if you need to create a mapping
-file or not.
+* Allowed: lowercase letters, numbers, and underscores (`_`)
+* Not allowed: spaces, uppercase letters, or special characters
+
+If any username doesn’t follow this convention, we’ll **automatically normalize** it, if the name is made entirely of
+digits, we’ll automatically prefix it with `user_`.
 
 ----
 
-# How do i migrate invited friends i.e. (external user) data from from plex to emby/jellyfin?
+# Does WatchState requires Webhooks to work?
 
-As this tool is designed to work with single user, You have to treat each invited friend as a separate user. what is
-needed, you need to contact that friend of yours and ask him/her to give you a copy of
-the [X-Plex-Token](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/),
-then create new container and add the backend with the token you got from your friend.
-
-After that, add your other backends like emby/jellyfin using your regular API key. jellyfin/emby differentiate between
-users by using the userId which you should select at the start of the add process.
-
-After that. run the `state:import -f -s [plex_server_name]` command to import the user watch state. After that, you can
-run the `state:export -fi -s [emby/jellyfin_server_name]` to export the watch state to the new backend.
-
-You have to repeat these steps for each user you want to migrate their data off the plex server.
-
-> [!IMPORTANT]
-> YOU MUST always start with fresh data for **EACH USER**, otherwise unexpected things might happen.
-> Make sure to delete compose.yaml `./data` directory. to start fresh.
-
-----
-
-# Does this tool require webhooks to work?
-
-No, You can use the `task scheduler` or on `on demand sync` if you want.
+No, webhooks are **not required** for the tool to function. You can use the built-in **scheduled tasks** or manually run
+**import/export operations** on demand through the WebUI or console.
 
 ---
 
-# I get tired of writing the whole command everytime is there an easy way run the commands?
+# I'm Using Media Backends Hosted Behind HTTPS and See Errors Related to HTTP/2
 
-Good News, There is a way to make your life easier, We recently added a `WebUI` which should cover most of the use
-cases.
-However, if you still want to use the `CLI` You can create a shell script to omit
-the `docker exec -ti watchstate console`
+In some cases, issues may arise due to HTTP/2 compatibility problems with our internal http client. Before submitting a
+bug report, please try the following workaround:
 
-```bash
-$ echo 'docker exec -ti watchstate console "$@"' > ws
-$ chmod +x ws
-```
+* Go to the `WebUI > Backends`.
+* Find the backend where the issue occurs and click the **Edit** button.
+* Expand the **Additional options...** section.
+* Under **Add new option**, select `client.http_version` from the dropdown list.
+* Click the green **+** add button.
+* Once the option appears, set its value to `1.0`.
+* Click **Save Settings**.
 
-after that you can do `./ws command` for example, `./ws db:list`
-
----
-
-# I am using media backends hosted behind HTTPS, and see errors related to HTTP/2?
-
-Sometimes there are problems related to HTTP/2, so before reporting bug please try running the following command:
-
-```bash
-$ docker exec -ti watchstate console config:edit --key options.client.http_version --set 1.0 -s backend_name 
-```
-
-This will force set the internal http client to use `http/v1` if it does not fix your problem, please open bug report
-about it.
+This setting forces the internal HTTP client to use **HTTP/1.1** instead of HTTP/2. If the issue persists after making
+this change, please open a bug report so it can be investigated further.
 
 ---
 
 # Sync operations are failing due to request timeout?
 
-If you want to increase the timeout for specific backend you can run the following command:
+If you're encountering request timeouts during sync operations, you can increase the timeout for a specific backend by
+following these steps:
 
-```bash
-$ docker exec -ti watchstate console config:edit --key options.client.timeout --set 600 -s backend_name
-```
+* Go to the `WebUI > Backends`.
+* Find the backend where the issue occurs and click the **Edit** button.
+* Expand the **Additional options...** section.
+* Under **Add new option**, select `client.timeout` from the dropdown list.
+* Click the green **+** add button.
+* Once the option appears, set its value to `600`.
+* Click **Save Settings**.
 
-where `600` is the number of seconds before the timeout handler will kill the request.
+The value `600` represents the number of seconds the system will wait before terminating the request due to a timeout.
 
 ---
 
-# How to fix corrupt SQLite database?
+# How to fix a corrupt sqlite database
 
-Sometimes your SQLite database will be corrupted, and you will get an error similar to this
-`General error: 11 database disk image is malformed`. To fix this error simply execute the following commands:
+If your SQLite database becomes corrupted, you may see an error like:
+
+```
+General error: 11 database disk image is malformed
+```
+
+To repair the database, follow these steps:
 
 ```bash
 $ docker exec -ti watchstate bash
 $ sqlite3 /config/db/watchstate_v01.db '.dump' | sqlite3 /config/db/watchstate_v01-repaired.db
 ```
 
-After executing the previous command you should run `integrity check`, by running the following command:
+Once the dump and rebuild are complete, perform an integrity check:
 
 ```bash
 $ sqlite3 /config/db/watchstate_v01-repaired.db 'PRAGMA integrity_check'
 ```
 
-it should simply say `ok`. then you should run the following command to replace the corrupted database.
+If the output is simply `ok`, the repaired database is valid. You can then replace the corrupted database with the
+repaired one:
 
 ```bash
 $ mv /config/db/watchstate_v01-repaired.db /config/db/watchstate_v01.db
 ```
+
+Your system should now use the repaired database without errors.
 
 ---
 
@@ -426,22 +390,11 @@ The recommended approach is for keys that starts with `WS_` use the `WebUI > Env
 For other keys that aren't directly related to the tool, you **MUST** load them via container environment or
 the `compose.yaml` file.
 
-to see list of loaded environment variables
-
-## Via WebUI
-
-Go to `Env` page, you will see all the environment variables loaded.
-
-## Via CLI
-
-```shell
-$ docker exec -ti watchstate console system:env
-```
+to see list of loaded environment variables, click on `Env` page in the WebUI.
 
 ## Tool specific environment variables.
 
-These environment variables relates to the tool itself, You should manage them via `WebUI > Env` page or `system:env`
-command via CLI.
+These environment variables relates to the tool itself, You should manage them via `WebUI > Env` page
 
 | Key                     | Type    | Description                                                             | Default                  |
 |-------------------------|---------|-------------------------------------------------------------------------|--------------------------|
@@ -462,25 +415,12 @@ command via CLI.
 | WS_SECURE_API_ENDPOINTS | bool    | Disregard the open route policy and require API key for all endpoints.  | `false`                  |
 
 > [!IMPORTANT]
-> for environment variables that has `{TASK}` tag, you **MUST** replace it with one
-> of `IMPORT`, `EXPORT`, `BACKUP`, `PRUNE`, `INDEXES`. To see tasks active settings run
+> for environment variables that has `{TASK}` tag, you **MUST** replace it with one of `IMPORT`, `EXPORT`, `BACKUP`,
+`PRUNE`, `INDEXES`.
 
-```bash
-$ docker exec -ti watchstate console system:tasks
-```
-
-> [!NOTE]
-> To see all supported tool specific environment variables
-
-### Via WebUI
+## Add tool specific environment variables
 
 Go to the `Env` page, click `+` button, you will get list of all supported keys with description.
-
-### Via CLI
-
-```bash
-$ docker exec -ti watchstate console system:env --list
-```
 
 ## Container specific environment variables.
 
@@ -503,27 +443,50 @@ $ docker exec -ti watchstate console system:env --list
 
 ---
 
-# How to add webhooks?
+# How to Add Webhooks
 
-The Webhook URL is backend specific, the request path is `/v1/api/backend/[USER]@[BACKEND_NAME]/webhook`,
-Where `[USER]` is the username for sub user or `main` for main user and `[BACKEND_NAME]` is the name of the backend you
-want to add webhook for. Typically, the full URL
-is `http://localhost:8080/v1/api/backend/[USER]@[BACKEND_NAME]/webhook`. Or simply go to the `WebUI > Backends` and
-click on `Copy Webhook URL`.
+Webhook URLs are **backend-specific** and follow this structure:
 
-> [!NOTE]
-> You will keep seeing the `webhook.token` key, it's being kept for backward compatibility, and will be removed in the
-> future. It has no effect except as pointer to the new method.
+```
+/v1/api/backend/[USER]@[BACKEND_NAME]/webhook
+```
+
+- `[USER]` should be the username of the sub-user, or `main` for the main user.
+- `[BACKEND_NAME]` is the name of the backend you want to configure the webhook for.
+
+A typical full URL might look like:
+
+```
+http://localhost:8080/v1/api/backend/main@plex_foo/webhook
+```
+
+To get the correct URL easily:
+
+* Go to `WebUI > Backends`.
+* Click on **Copy Webhook URL** next to the relevant backend.
 
 > [!IMPORTANT]
-> As support more sub users expands, it's important to turn on `Webhook match user` for all backends to prevent
-> sub users from changing the main user watch state. in case of plex backend.
+> If you have enabled `WS_SECURE_API_ENDPOINTS`, you have to add `?apikey=yourapikey` to the end of the the webhook URL.
+
+> [!NOTE]  
+> You may see a `webhook.token` key in older configurations. This is retained only for backward compatibility and has no
+> effect. It will be removed in future versions.
+>
+> If you're using Plex and have sub-users, make sure to enable **Webhook Match User** to prevent sub-user activity from
+> affecting the main user's watch state.
 
 -----
 
 ## Emby (you need `Emby Premiere` to use webhooks).
 
-Go to your Manage Emby Server > Server > Webhooks > (Click Add Webhook)
+Go to your Manage Emby Server:
+
+* Old Emby versions: Server > Webhooks > (Click Add Webhook) `Old version`
+* New Emby versions: username Preferences > Notifications > + Add Notification > Webhooks
+
+### Name (Emby v4.9+):
+
+`user@backend` or whatever you want, i simply prefer the name to reflect which user it belongs to.
 
 ### Webhook/Notifications URL:
 
@@ -569,7 +532,7 @@ go back again to dashboard > plugins > webhook. Add `Add Generic Destination`,
 
 ### Webhook Name:
 
-`Watchstate-Webhook`
+`user@backend` or whatever you want, i simply prefer the name to reflect which user it belongs to.
 
 #### Webhook Url:
 
@@ -612,9 +575,6 @@ Go to your Plex Web UI > Settings > Your Account > Webhooks > (Click ADD WEBHOOK
 
 * Replace `[BACKEND_NAME]` with the name you have chosen for your backend.
 * Replace `[USER]` with the `main` for main user or the sub user username.
-
-> [!IMPORTANT]
-> If you have enabled `WS_SECURE_API_ENDPOINTS`, you have to add `?apikey=yourapikey` to the end of the URL.
 
 Click `Save Changes`
 
@@ -763,60 +723,67 @@ Click `Save`
 
 ---
 
-# What are the webhook limitations?
+# Webhook Limitations by Media Backend
 
-Those are some webhook limitations we discovered for the following media backends.
+Below are known limitations and issues when using webhooks with different media backends:
 
 ## Plex
 
-* Plex does not send webhooks events for "marked as played/unplayed" for all item types.
-* Sometimes does not send events if you add more than one item at time.
-* When you mark items as unwatched, Plex reset the date on the object.
+- Webhooks are **not sent** for "marked as played/unplayed" actions on all item types.
+- Webhook events may be **skipped** if multiple items are added at once.
+- When items are marked as **unwatched**, Plex resets the date on the media object.
 
-## Plex Via Tautulli
+## Plex via Tautulli
 
-* Tautulli does not send user id with itemAdd `created` event. as such if you enabled `Match webhook user`, new items
-  will not be added and fail with `Request user id '' does not match configured value`.
-* Marked as unplayed will most likely not work with Tautulli webhook events as it's missing critical data we need to
-  determine if the item is marked as unplayed.
+- Tautulli does **not send user IDs** with `itemAdd` (`created`) events. If `Match webhook user` is enabled, the request
+  will fail with: `Request user id '' does not match configured value`.
+- **Marking items as unplayed** is not reliable, as Tautulli's webhook payload lacks critical data required to detect
+  this change.
 
 ## Emby
 
-* Emby does not send webhooks events for newly added items.
-  ~~[See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/)~~
-  implemented in `4.7.9` ~~still does not work as expected no metadata being sent when the item notification goes out.
-* Emby webhook test event does not contain data~~. It seems to have been fixed in `4.9.0.37+` To test if your setup
-  works, play something or do mark an item as played or unplayed you should see changes reflected in
-  `docker exec -ti watchstate console db:list`.
+- Emby does **not send webhook events** for newly added items.
+  ~~[See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/)~~ This
+  was implemented in version `4.7.9`, but still does **not include metadata**, making it ineffective.
+- The Emby **webhook test event** previously contained no data. This appears to be **fixed in `4.9.0.37+`**.
+- To verify if your Emby webhook setup is working, try playing or marking an item as played/unplayed, go to the history
+  page after a min or two and check if the changes are reflected in the database.
 
 ## Jellyfin
 
-* If you don't select a user id, the plugin will send `itemAdd` event without user data, and will fail the check if you
-  happen to enable `webhook.match.user` for jellyfin.
-* Sometimes jellyfin will fire webhook `itemAdd` event without the item being matched.
-* Even if you select user id, sometimes `itemAdd` event will fire without user data.
-* Items might be marked as unplayed if Libraries > Display - `Date added behavior for new content:` is set
-  to `Use date scanned into library`. This happens if the media file has been replaced.
+- If no user ID is selected in the plugin, the `itemAdd` event will be sent **without user data**, which will cause a
+  failure if `webhook.match.user` is enabled.
+- Occasionally, Jellyfin will fire `itemAdd` events that **without it being matched**.
+- Even if a user ID is selected, Jellyfin may **still send events without user data**.
+- Items may be marked as **unplayed** if the following setting is enabled **Libraries > Display > Date added behavior
+  for new content: `Use date scanned into library`** This often happens when media files are replaced or updated.
 
 ---
 
-# Sometimes newly added episodes or movies don't make it to webhook endpoint?
+# Sometimes newly added episodes or movies don't reach the webhook endpoint?
 
-As stated in webhook limitation section sometimes media backends don't make it easy to receive those events, as such, to
-complement webhooks, you should enable import/export tasks by settings their respective environment variables in
-your `compose.yaml` file. For more information run help on `system:env` command as well as `system:tasks`
-command.
+As noted in the webhook limitations section, some media backends do not reliably send webhook events for newly added
+content. To address this, you should enable **import/export tasks** to complement webhook functionality.
+
+Simply, visit the `Tasks` page and enable the `import` and `export` task.
 
 ---
 
 # How to disable the included HTTP server and use external server?
 
-Set this environment variable in your `compose.yaml` file `DISABLE_HTTP` with value of `1`. your external
-server need to send correct fastcgi environment variables. Example caddy file:
+To disable the built-in HTTP server, set the following environment variable and restart the container:
+
+```
+DISABLE_HTTP=1
+```
+
+Your external web server must forward requests using the correct **FastCGI** environment variables.
+
+## Example: Caddy Configuration
 
 ```caddyfile
 https://watchstate.example.org {
-    # Change "172.23.1.2" to your watchstate container ip e.g. "172.23.20.20"
+    # Replace "172.23.1.2" with the actual IP address of your WatchState container
     reverse_proxy 172.23.1.2:9000 {
         transport fastcgi {
             root /opt/app/public
@@ -829,47 +796,73 @@ https://watchstate.example.org {
 }
 ```
 
+> [!NOTE]
+> If you change the FastCGI Process Manager port using the `FPM_PORT` environment variable, make sure to update the port
+> in the reverse proxy configuration as well.
+
 > [!IMPORTANT]
-> If you change the FastCGI Process Manager TCP port via FPM_PORT environment variable, you should change the port in
-> the caddy file as well.
+> This configuration mode is **not officially supported** by WatchState. If issues arise, please verify your web server
+> setup. Support does not cover external web server configurations.
 
 ---
 
 # WS_API_AUTO
 
-The purpose of this environment variable is to automate the configuration process. It's mainly used for people who use
-many browsers to access the `WebUI` and want to automate the configuration process. as it's requires the API settings to
-be configured before it can be used. This environment variable can be enabled by setting `WS_API_AUTO=true` in
-`${WS_DATA_PATH}/config/.env`.
+The `WS_API_AUTO` environment variable is designed to **automate the initial configuration process**, particularly
+useful for users who access the WebUI from multiple browsers or devices. Since the WebUI requires API settings to be
+configured before use, enabling this variable allows the system to auto-configure itself.
 
-## Why you should use it?
+To enable it, write `WS_API_AUTO=true` to `/config/.env` file, note the file may not exist, and you may need to create
+it.
 
-You normally should not use it, as it's a **GREAT SECURITY RISK**. However, if you are using the tool in a secure
-environment and not worried about exposing your API key, you can use it to automate the configuration process.
+## Why You Might Use It
 
-## Why you should not use it?
+You may consider using this if:
 
-Because, by exposing your API key, you are also exposing every data you have in the tool. This is a **GREAT SECURITY
-RISK**, any person or bot that are able to access the `WebUI` will also be able to visit `/v1/api/system/auto` and get
-your API key. And with this key they can do anything they want with your data. including viewing your media servers API
-keys. So, please while we have this option available, we strongly recommend not to use it if `WatchState` is exposed to
-the internet.
+- You're operating in a **secure, local environment**.
+- You want to **automate setup** across multiple devices or browsers without repeatedly entering API details.
 
-> [!IMPORTANT]
-> This environment variable is **GREAT SECURITY RISK**, and we strongly recommend not to use it if `WatchState` is
-> exposed to the internet. I cannot stress this enough, please do not use it unless you are in a secure environment.
+## Why You Should **NOT** Use It (Recommended)
+
+Enabling this poses a **serious security risk**:
+
+- It **exposes your API key** publicly through the endpoint `/v1/api/system/auto`.
+- Anyone (or any bot) that can access the WebUI can retrieve your API key and gain **access** to any and all data that
+  is exposed by the API including your media servers API keys.
+
+**If WatchState is exposed to the internet, do not enable this setting.**
+
+> [!IMPORTANT]  
+> The `WS_API_AUTO` variable is a **major security risk**. It should only be used in isolated or trusted environments.  
+> We strongly recommend keeping this option disabled.
 
 ---
 
-# How to disable the included cache server and use external cache server?
+# How to disable the included cache server and use an external cache server?
 
-Set this environment variable in your `compose.yaml` file `DISABLE_CACHE` with value of `1`. to use external redis
-server you need to alter the value of `WS_CACHE_URL` environment variable. the format for this variable is
-`redis://host:port?password=auth&db=db_num`, for example to use redis from another container you could use something
-like `redis://172.23.1.10:6379?password=my_secert_password&db=8`. We only support `redis` and API compatible
-alternative.
+To disable the built-in cache server and connect to an external Redis instance, follow these steps:
 
-Once that done, restart the container.
+In your `compose.yaml` file, set the following environment variable `DISABLE_CACHE=1`.
+
+Configure the external Redis connection by setting the `WS_CACHE_URL` environment variable.
+
+The format is:
+
+```
+redis://host:port?password=your_password&db=db_number
+```
+
+For example, to connect to a Redis server running in another container:
+
+```
+redis://172.23.1.10:6379?password=my_secret_password&db=8
+```
+
+> [!NOTE]
+
+* Only **Redis** and **API-compatible alternatives** are supported.
+
+After updating the environment variables, **restart the container** to apply the changes.
 
 ---
 

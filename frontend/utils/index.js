@@ -161,12 +161,17 @@ const ucFirst = (str) => {
  * @param {string} title The title of the notification.
  * @param {string} text The text of the notification.
  * @param {number} duration The duration of the notification.
+ * @param {object} opts Additional options for the notification.
  *
  * @returns {void}
  */
-const notification = (type, title, text, duration = 3000) => {
+const notification = (type, title, text, duration = 3000, opts = {}) => {
     let method = '', options = {
         timeout: duration,
+    }
+
+    if (opts) {
+        options = {...options, ...opts}
     }
 
     switch (type.toLowerCase()) {
