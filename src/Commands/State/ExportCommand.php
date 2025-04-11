@@ -23,9 +23,9 @@ use App\Libs\UserContext;
 use Monolog\Level;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface as iLogger;
-use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Output\OutputInterface as iOutput;
 use Throwable;
 
 /**
@@ -79,63 +79,25 @@ class ExportCommand extends Command
                 InputOption::VALUE_IS_ARRAY | InputOption::VALUE_OPTIONAL,
                 'Select backend.'
             )
-            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backend logic.')
+            ->addOption(
+                'exclude',
+                'e',
+                InputOption::VALUE_NONE,
+                'Inverse --select-backend logic. Exclude selected backends.'
+            )
             ->addOption('ignore-date', 'i', InputOption::VALUE_NONE, 'Ignore date comparison.')
-            ->addOption('logfile', null, InputOption::VALUE_REQUIRED, 'Save console output to file.')
-            ->setHelp(
-                r(
-                    <<<HELP
-
-                    This command export your <notice>current</notice> play state to backends.
-                    This command provide powerful options. do read them.
-
-                    -------
-                    <notice>[ FAQ ]</notice>
-                    -------
-
-                    <question># How to force export play state to a backend?</question>
-
-                    You have to use the following flags [<flag>-f</flag>, <flag>-f</flag>] and [<flag>-i</flag>, <flag>-i</flag>]. For example,
-
-                    {cmd} <cmd>{route}</cmd> <flag>-fi</flag> <flag>-s</flag> <value>backend_name</value>
-
-                    <question># how to see what will be changed without committing them?</question>
-
-                    You have to use the [<flag>--dry-run</flag>]. For example,
-
-                    {cmd} <cmd>{route}</cmd> <flag>-v --dry-run -s</flag> <value>backend_name</value>
-
-                    <question># Ignoring [backend_name] [item_title]. [Movie|Episode] Is not imported yet.</question>
-
-                    This error indicates that the item is not imported possibly because the backend in the question is
-                    set as metadata only, and thus it will not import the item unless it's already exists in the
-                    database. if you are sure it's already exists on the other backend. Then this likely means
-                    that you have mismatched IDs. Run,
-
-                    {cmd} <cmd>db:list</cmd> <flag>--output</flag> <value>yaml</value> <flag>--title</flag> <value>"showName"</value>
-
-                    This command will show you which items are linked to given title,
-                    you can replace  <flag>--title</flag> <value>"showName"</value> with <flag>--parent</flag> <value>tvdb://id</value> to check specific show id
-
-                    HELP,
-                    [
-                        'cmd' => trim(commandContext()),
-                        'route' => self::ROUTE,
-
-                    ]
-                )
-            );
+            ->addOption('logfile', null, InputOption::VALUE_REQUIRED, 'Save console output to file.');
     }
 
     /**
      * Make sure the command is not running in parallel.
      *
-     * @param InputInterface $input The input object containing the command data.
-     * @param OutputInterface $output The output object for displaying command output.
+     * @param iInput $input The input object containing the command data.
+     * @param iOutput $output The output object for displaying command output.
      *
      * @return int The exit code of the command execution.
      */
-    protected function runCommand(InputInterface $input, OutputInterface $output): int
+    protected function runCommand(iInput $input, iOutput $output): int
     {
         return $this->single(fn(): int => $this->process($input, $output), $output, [
             iLogger::class => $this->logger,
@@ -146,11 +108,11 @@ class ExportCommand extends Command
     /**
      * Process the command by pulling and comparing status and then pushing.
      *
-     * @param InputInterface $input
-     * @param OutputInterface $output
+     * @param iInput $input
+     * @param iOutput $output
      * @return int
      */
-    protected function process(InputInterface $input, OutputInterface $output): int
+    protected function process(iInput $input, iOutput $output): int
     {
         if (null !== ($logfile = $input->getOption('logfile')) && true === ($this->logger instanceof Logger)) {
             $this->logger->setHandlers([
@@ -631,24 +593,33 @@ class ExportCommand extends Command
             'backends' => implode(', ', array_keys($backends)),
         ]);
 
-        $this->logger->notice("SYSTEM: Preloading '{user}' - '{mapper}' data. Memory usage '{memory.now}'.", [
-            'user' => $userContext->name,
-            'mapper' => afterLast($userContext->mapper::class, '\\'),
-            'memory' => [
-                'now' => getMemoryUsage(),
-                'peak' => getPeakMemoryUsage(),
-            ],
-        ]);
+        $this->logger->notice(
+            message: "SYSTEM: Preloading user '{user}: {mapper}' data. Memory usage '{memory.now}'.",
+            context: [
+                'user' => $userContext->name,
+                'mapper' => afterLast($userContext->mapper::class, '\\'),
+                'memory' => [
+                    'now' => getMemoryUsage(),
+                    'peak' => getPeakMemoryUsage(),
+                ],
+            ]
+        );
 
+        $time = microtime(true);
         $userContext->mapper->reset()->loadData();
 
-        $this->logger->notice("SYSTEM: Preloading '{mapper}' data is complete. Memory usage '{memory.now}'.", [
-            'mapper' => afterLast($userContext->mapper::class, '\\'),
-            'memory' => [
-                'now' => getMemoryUsage(),
-                'peak' => getPeakMemoryUsage(),
-            ],
-        ]);
+        $this->logger->notice(
+            message: "SYSTEM: Preloading user '{user}: {mapper}' data completed in '{duration}s'. Memory usage '{memory.now}'.",
+            context: [
+                'user' => $userContext->name,
+                'mapper' => afterLast($userContext->mapper::class, '\\'),
+                'duration' => round(microtime(true) - $time, 4),
+                'memory' => [
+                    'now' => getMemoryUsage(),
+                    'peak' => getPeakMemoryUsage(),
+                ],
+            ]
+        );
 
         $requests = [];
 

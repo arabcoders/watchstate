@@ -232,7 +232,7 @@ const usefulCommands = {
   },
   metadata_only: {
     id: 5,
-    title: "Import this backend metadata.",
+    title: "Run metadata import from this backend.",
     command: "state:import -v --metadata-only -u {user} -s {name}",
   },
   import_debug: {
@@ -244,6 +244,11 @@ const usefulCommands = {
     id: 7,
     title: "Run export and save debug log.",
     command: "state:export -v --debug -u {user} -s {name} --logfile '/config/{user}@{name}.export.txt'",
+  },
+  force_import: {
+    id: 8,
+    title: "Force import local play state from this backend.",
+    command: "state:import -f -v -u {user} -s {name}",
   },
 }
 

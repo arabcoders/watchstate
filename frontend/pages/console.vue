@@ -107,7 +107,8 @@
     </div>
   </div>
 </template>
-<style>
+
+<style scoped>
 .xterm {
   padding: 0.50rem !important;
 
@@ -116,7 +117,6 @@
 .xterm-viewport {
   background-color: #1f2229 !important;
 }
-
 </style>
 
 <script setup>
@@ -124,7 +124,7 @@ import "@xterm/xterm/css/xterm.css"
 import {Terminal} from "@xterm/xterm"
 import {FitAddon} from "@xterm/addon-fit"
 import {useStorage} from '@vueuse/core'
-import {notification} from '~/utils/index'
+import {disableOpacity, enableOpacity, notification} from '~/utils/index'
 import Message from '~/components/Message'
 import request from "~/utils/request.js";
 
@@ -143,9 +143,6 @@ const outputConsole = ref()
 const commandInput = ref()
 const executedCommands = useStorage('executedCommands', [])
 const exitCode = ref(0)
-
-const bg_enable = useStorage('bg_enable', true)
-const bg_opacity = useStorage('bg_opacity', 0.95)
 
 const hasPrefix = computed(() => command.value.startsWith('console') || command.value.startsWith('docker'))
 const hasPlaceholder = computed(() => command.value && command.value.match(/\[.*]/))
@@ -167,7 +164,7 @@ const RunCommand = async () => {
   }
 
   // use regex to check if command contains [...]
-  if (userCommand.match(/\[.*\]/)) {
+  if (userCommand.match(/\[.*]/)) {
     if (!confirm(`The command contains placeholders '[...]'. Are you sure you want to run as it is?`)) {
       return
     }
@@ -290,16 +287,11 @@ onUnmounted(() => {
   if (sse) {
     sse.close()
   }
-
-  if (bg_enable.value && bg_opacity.value) {
-    document.querySelector('body').setAttribute("style", `opacity: ${bg_opacity.value}`)
-  }
+  enableOpacity()
 })
 
 onMounted(async () => {
-  if (bg_enable.value) {
-    document.querySelector('body').setAttribute("style", "opacity: 1");
-  }
+  disableOpacity()
 
   window.addEventListener("resize", reSizeTerminal);
   commandInput.value.focus()

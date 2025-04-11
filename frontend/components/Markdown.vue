@@ -6,6 +6,7 @@
 import {useStorage} from '@vueuse/core'
 import {marked} from 'marked'
 import {baseUrl} from 'marked-base-url'
+import {disableOpacity, enableOpacity} from "~/utils/index.js";
 
 const props = defineProps({
   file: {
@@ -18,6 +19,8 @@ const content = ref('')
 const api_url = useStorage('api_url', '')
 
 onMounted(async () => {
+  disableOpacity()
+
   const response = await fetch(`${api_url.value}${props.file}?_=${Date.now()}`)
   const text = await response.text()
 
@@ -49,5 +52,7 @@ onMounted(async () => {
 
   content.value = marked.parse(text)
 });
+
+onUnmounted(() => enableOpacity())
 
 </script>

@@ -66,7 +66,8 @@
     },
     "autoload": {
         "files": [
-            "src/Libs/helpers.php"
+            "src/Libs/helpers.php",
+            "src/Libs/Utils.php"
         ],
         "psr-4": {
             "App\\": "src/"
