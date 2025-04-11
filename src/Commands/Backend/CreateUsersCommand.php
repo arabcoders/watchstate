@@ -31,8 +31,11 @@ class CreateUsersCommand extends Command
 {
     public const string ROUTE = 'backend:create';
 
-    public function __construct(private iLogger $logger)
+    private static iLogger|null $logger = null;
+
+    public function __construct(iLogger $logger)
     {
+        self::$logger = $logger;
         parent::__construct();
     }
 
@@ -141,11 +144,11 @@ class CreateUsersCommand extends Command
             return;
         }
 
-        $this->logger->notice("SYSTEM: Deleting users directory '{path}' contents.", [
+        self::$logger?->notice("SYSTEM: Deleting users directory '{path}' contents.", [
             'path' => $path
         ]);
 
-        deletePath(path: $path, logger: $this->logger, dryRun: $dryRun);
+        deletePath(path: $path, logger: self::$logger, dryRun: $dryRun);
     }
 
     /**
@@ -153,18 +156,20 @@ class CreateUsersCommand extends Command
      *
      * @return array The list of backends.
      */
-    private function loadBackends(): array
+    public static function loadBackends(): array
     {
         $backends = [];
         $supported = Config::get('supported', []);
         $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
-        $configFile->setLogger($this->logger);
+        if (null !== self::$logger) {
+            $configFile->setLogger(self::$logger);
+        }
 
         foreach ($configFile->getAll() as $backendName => $backend) {
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
             if (!isset($supported[$type])) {
-                $this->logger->error("SYSTEM: Ignoring '{backend}'. Unexpected backend type '{type}'.", [
+                self::$logger?->error("SYSTEM: Ignoring '{backend}'. Unexpected backend type '{type}'.", [
                     'type' => $type,
                     'backend' => $backendName,
                     'types' => implode(', ', array_keys($supported)),
@@ -173,7 +178,7 @@ class CreateUsersCommand extends Command
             }
 
             if (null === ($url = ag($backend, 'url')) || false === isValidURL($url)) {
-                $this->logger->error("SYSTEM: Ignoring '{backend}'. Invalid url '{url}'.", [
+                self::$logger?->error("SYSTEM: Ignoring '{backend}'. Invalid url '{url}'.", [
                     'url' => $url ?? 'None',
                     'backend' => $backendName,
                 ]);
@@ -181,7 +186,13 @@ class CreateUsersCommand extends Command
             }
 
             $backend['name'] = $backendName;
-            $backend['class'] = $this->getBackend($backendName, $backend)->setLogger($this->logger);
+            $backend['class'] = makeBackend($backend, $backendName);
+
+
+            if (null !== self::$logger) {
+                $backend['class']->setLogger(self::$logger);
+            }
+
             $backends[$backendName] = $backend;
         }
 
@@ -193,7 +204,7 @@ class CreateUsersCommand extends Command
      *
      * @return array The list of user mappings. or empty array.
      */
-    private function loadMappings(): array
+    public static function loadMappings(): array
     {
         $mapFile = Config::get('mapper_file');
 
@@ -210,14 +221,14 @@ class CreateUsersCommand extends Command
         }
 
         if (false === $map->has('version')) {
-            $this->logger->warning("SYSTEM: Starting with mapper.yaml v1.5, the version key is required.");
+            self::$logger?->warning("SYSTEM: Starting with mapper.yaml v1.5, the version key is required.");
         }
 
         if (false === $map->has('map')) {
-            $this->logger->warning("SYSTEM: Please upgrade your mapper.yaml file to v1.5 format spec.");
+            self::$logger?->warning("SYSTEM: Please upgrade your mapper.yaml file to v1.5 format spec.");
         }
 
-        $this->logger->info("SYSTEM: Mapper file found, using it to map users.", [
+        self::$logger?->info("SYSTEM: Mapper file found, using it to map users.", [
             'map' => arrayToString($mapping)
         ]);
 
@@ -229,10 +240,11 @@ class CreateUsersCommand extends Command
      *
      * @param array $backends The list of backends.
      * @param array $map The user mappings.
+     * @param bool $noMapActions If true, do not run map actions.
      *
      * @return array The list of backends users.
      */
-    private function get_backends_users(array $backends, array &$map): array
+    public static function get_backends_users(array $backends, array &$map, bool $noMapActions = false): array
     {
         $users = [];
 
@@ -241,7 +253,7 @@ class CreateUsersCommand extends Command
             $client = ag($backend, 'class');
             assert($backend instanceof iClient);
 
-            $this->logger->info("SYSTEM: Getting users from '{backend}'.", [
+            self::$logger?->info("SYSTEM: Getting users from '{backend}'.", [
                 'backend' => $client->getContext()->backendName
             ]);
 
@@ -252,19 +264,22 @@ class CreateUsersCommand extends Command
 
                     $backedName = ag($backend, 'name');
 
+                    $user['real_name'] = ag($user, 'name');
+
                     // -- this was source of lots of bugs and confusion for users,
                     // -- we decided to normalize the user-names early in the process.
-                    $user['name'] = normalizeName((string)$user['name'], $this->logger, [
+                    $user['name'] = normalizeName((string)ag($user, 'name'), self::$logger, [
                         'log_message' => "Normalized '{backend}: {name}' to '{backend}: {new_name}'",
-                        'context' => [ 'backend' => $backedName ],
+                        'context' => ['backend' => $backedName],
                     ]);
 
-                    // -- run map actions.
-                    $this->map_actions($backedName, $user, $map);
+                    if (false === $noMapActions) {
+                        self::map_actions($backedName, $user, $map);
+                    }
 
                     // -- If normalization fails, ignore the user.
                     if (false === isValidName($user['name'])) {
-                        $this->logger->error(
+                        self::$logger?->error(
                             message: "SYSTEM: Invalid user name '{backend}: {name}'. User names must be in [a-z_0-9] format. Skipping user.",
                             context: ['name' => $user['name'], 'backend' => $backedName]
                         );
@@ -280,10 +295,10 @@ class CreateUsersCommand extends Command
                     $info['backendName'] = normalizeName(r("{backend}_{user}", [
                         'backend' => $backedName,
                         'user' => $user['name']
-                    ]),$this->logger);
+                    ]), self::$logger);
 
                     if (false === isValidName($info['backendName'])) {
-                        $this->logger->error(
+                        self::$logger?->error(
                             message: "SYSTEM: Invalid backend name '{name}'. Backend name must be in [a-z_0-9] format. skipping the associated users.",
                             context: ['name' => $info['backendName']]
                         );
@@ -316,7 +331,7 @@ class CreateUsersCommand extends Command
                     $users[] = $user;
                 }
             } catch (Throwable $e) {
-                $this->logger->error(
+                self::$logger?->error(
                     "Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' get users list. '{error.message}' at '{error.file}:{error.line}'.",
                     [
                         'client' => $client->getContext()->clientName,
@@ -350,7 +365,7 @@ class CreateUsersCommand extends Command
      *
      * @return void
      */
-    private function create_user(iInput $input, array $users): void
+    public static function create_user(iInput $input, array $users): void
     {
         $dryRun = (bool)$input->getOption('dry-run');
         $updateUsers = (bool)$input->getOption('update');
@@ -360,10 +375,10 @@ class CreateUsersCommand extends Command
 
         foreach ($users as $user) {
             // -- User subdirectory name.
-            $userName = normalizeName(ag($user, 'name', 'unknown'), $this->logger);
+            $userName = normalizeName(ag($user, 'name', 'unknown'), self::$logger);
 
             if (false === isValidName($userName)) {
-                $this->logger->error(
+                self::$logger?->error(
                     message: "SYSTEM: Invalid username '{user}'. User names must be in [a-z_0-9] format. skipping user.",
                     context: ['user' => $userName]
                 );
@@ -372,7 +387,7 @@ class CreateUsersCommand extends Command
 
             $subUserPath = r(fixPath(Config::get('path') . '/users/{user}'), ['user' => $userName]);
 
-            $this->logger->info(
+            self::$logger?->info(
                 false === is_dir(
                     $subUserPath
                 ) ? "SYSTEM: Creating '{user}' directory '{path}'." : "SYSTEM: '{user}' directory '{path}' already exists.",
@@ -383,7 +398,7 @@ class CreateUsersCommand extends Command
             );
 
             if (false === $dryRun && false === is_dir($subUserPath) && false === mkdir($subUserPath, 0755, true)) {
-                $this->logger->error("SYSTEM: Failed to create '{user}' directory '{path}'.", [
+                self::$logger?->error("SYSTEM: Failed to create '{user}' directory '{path}'.", [
                     'user' => $userName,
                     'path' => $subUserPath
                 ]);
@@ -391,7 +406,7 @@ class CreateUsersCommand extends Command
             }
 
             $config_file = "{$subUserPath}/servers.yaml";
-            $this->logger->notice(
+            self::$logger?->notice(
                 file_exists(
                     $config_file
                 ) ? "SYSTEM: '{user}' configuration file '{file}' already exists." : "SYSTEM: Creating '{user}' configuration file '{file}'.",
@@ -409,13 +424,15 @@ class CreateUsersCommand extends Command
                 autoBackup: !$dryRun
             );
 
-            $perUser->setLogger($this->logger);
+            if (null !== self::$logger) {
+                $perUser->setLogger(self::$logger);
+            }
 
             foreach (ag($user, 'backends', []) as $backend) {
                 $name = ag($backend, 'client_data.backendName');
 
                 if (false === isValidName($name)) {
-                    $this->logger->error(
+                    self::$logger?->error(
                         message: "SYSTEM: Invalid backend name '{name}'. Backend name must be in [a-z_0-9] format. skipping backend.",
                         context: ['name' => $name]
                     );
@@ -466,7 +483,7 @@ class CreateUsersCommand extends Command
                             $update['options.' . Options::ADMIN_TOKEN] = $adminToken;
                         }
 
-                        $this->logger->info("SYSTEM: Updating user configuration for '{user}@{name}' backend.", [
+                        self::$logger?->info("SYSTEM: Updating user configuration for '{user}@{name}' backend.", [
                             'name' => $name,
                             'user' => $userName,
                         ]);
@@ -493,7 +510,7 @@ class CreateUsersCommand extends Command
                                 opts: $requestOpts,
                             );
                             if (false === $token) {
-                                $this->logger->error(
+                                self::$logger?->error(
                                     message: "Failed to generate access token for '{user}@{backend}' backend.",
                                     context: ['user' => $userName, 'backend' => $name]
                                 );
@@ -503,7 +520,7 @@ class CreateUsersCommand extends Command
                         }
                     }
                 } catch (Throwable $e) {
-                    $this->logger->error(
+                    self::$logger?->error(
                         message: "Failed to generate access token for '{user}@{name}' backend. {error} at '{file}:{line}'.",
                         context: [
                             'name' => $name,
@@ -527,7 +544,7 @@ class CreateUsersCommand extends Command
             }
 
             $dbFile = $subUserPath . "/user.db";
-            $this->logger->notice(
+            self::$logger?->notice(
                 file_exists(
                     $dbFile
                 ) ? "SYSTEM: '{user}' database file '{db}' already exists." : "SYSTEM: Creating '{user}' database file '{db}'.",
@@ -546,7 +563,7 @@ class CreateUsersCommand extends Command
             }
 
             if (true === $generateBackups && false === $isReCreate) {
-                $this->logger->notice("SYSTEM: Queuing event to backup '{user}' remote watch state.", [
+                self::$logger?->notice("SYSTEM: Queuing event to backup '{user}' remote watch state.", [
                     'user' => $userName
                 ]);
 
@@ -571,13 +588,10 @@ class CreateUsersCommand extends Command
     protected function runCommand(iInput $input, iOutput $output): int
     {
         if (true === ($dryRun = $input->getOption('dry-run'))) {
-            $this->logger->notice('SYSTEM: Running in dry-run mode. No changes will be made.');
+            self::$logger?->notice('SYSTEM: Running in dry-run mode. No changes will be made.');
         }
 
-        $usersPath = Config::get('path') . '/users';
-        $hasConfig = is_dir($usersPath) && count(glob($usersPath . '/*/*.yaml')) > 0;
-
-        if ($hasConfig && (false === $input->getOption('run') && false === $input->getOption('re-create'))) {
+        if (self::hasUsers() && (false === $input->getOption('run') && false === $input->getOption('re-create'))) {
             $output->writeln(
                 <<<Text
                 <error>ERROR:</error> Users configuration already exists.
@@ -602,41 +616,42 @@ class CreateUsersCommand extends Command
         }
 
         if (true === $input->getOption('re-create')) {
-            $this->purgeUsersConfig($usersPath, $dryRun);
+            self::purgeUsersConfig(Config::get('path') . '/users', $dryRun);
         }
 
-        $backends = $this->loadBackends();
+        $backends = self::loadBackends();
 
         if (empty($backends)) {
-            $this->logger->error('SYSTEM: No valid backends were found.');
+            self::$logger?->error('SYSTEM: No valid backends were found.');
             return self::FAILURE;
         }
 
-        $mapping = $this->loadMappings();
+        $mapping = self::loadMappings();
 
-        $this->logger->notice("SYSTEM: Getting users list from '{backends}'.", [
+        self::$logger?->notice("SYSTEM: Getting users list from '{backends}'.", [
             'backends' => join(', ', array_keys($backends))
         ]);
 
-        $backendsUser = $this->get_backends_users($backends, $mapping);
+        $backendsUser = self::get_backends_users($backends, $mapping);
 
         if (count($backendsUser) < 1) {
-            $this->logger->error('SYSTEM: No Backend users were found.');
+            self::$logger?->error('SYSTEM: No Backend users were found.');
             return self::FAILURE;
         }
 
-        $users = $this->generate_users_list($backendsUser, $mapping);
+        $obj = self::generate_users_list($backendsUser, $mapping);
+        $users = ag($obj, 'matched', []);
 
         if (count($users) < 1) {
-            $this->logger->warning("We weren't able to match any users across backends.");
+            self::$logger?->warning("We weren't able to match any users across backends.");
             return self::FAILURE;
         }
 
-        $this->logger->notice("SYSTEM: User matching results {results}.", [
-            'results' => arrayToString($this->usersList($users)),
+        self::$logger?->notice("SYSTEM: Matched '{results}'.", [
+            'results' => arrayToString(self::usersList($users)),
         ]);
 
-        $this->create_user(input: $input, users: $users);
+        self::create_user(input: $input, users: $users);
 
         return self::SUCCESS;
     }
@@ -647,9 +662,10 @@ class CreateUsersCommand extends Command
      * @param array $users The list of users from all backends.
      * @param array{string: array{string: string, options: array}} $map The map of users to match.
      *
+     * @return array{matched: array{name: string, backends: array<string, array<string, mixed>>,unmatched: array<array-key,string>} The list of matched users and unmatched.
      * @return array{name: string, backends: array<string, array<string, mixed>>}[] The list of matched users.
      */
-    private function generate_users_list(array $users, array $map = []): array
+    public static function generate_users_list(array $users, array $map = []): array
     {
         $allBackends = [];
         foreach ($users as $u) {
@@ -665,7 +681,7 @@ class CreateUsersCommand extends Command
             $backend = $user['backend'];
             $nameLower = strtolower($user['name']);
             if (ag($user, 'id') === ag($user, 'client_data.options.' . Options::ALT_ID)) {
-                $this->logger->debug('Skipping main user "{name}".', ['name' => $user['name']]);
+                self::$logger?->debug('Skipping main user "{name}".', ['name' => $user['name']]);
                 continue;
             }
             if (!isset($usersBy[$backend])) {
@@ -675,6 +691,7 @@ class CreateUsersCommand extends Command
             $usersList[$backend][] = $nameLower;
         }
 
+        $unmatched = [];
         $results = [];
 
         // Track used combos: array of [backend, nameLower].
@@ -776,7 +793,7 @@ class CreateUsersCommand extends Command
                 $matchedMapEntry = null;
                 foreach ($map as $mapRow) {
                     if (ag($mapRow, "{$backend}.name") === $nameLower) {
-                        $this->logger->notice("Mapper: Found map entry for '{backend}: {user}'", [
+                        self::$logger?->notice("Mapper: Found map entry for '{backend}: {user}'", [
                             'backend' => $backend,
                             'user' => $nameLower,
                             'map' => $mapRow,
@@ -844,7 +861,7 @@ class CreateUsersCommand extends Command
                         }
                         continue;
                     } else {
-                        $this->logger->error("No partial fallback match via map for '{backend}: {user}'", [
+                        self::$logger?->error("No partial fallback match via map for '{backend}: {user}'", [
                             'backend' => $userObj['backend'],
                             'user' => $userObj['name'],
                         ]);
@@ -878,19 +895,29 @@ class CreateUsersCommand extends Command
                 }
 
                 // If neither map nor direct matched for ≥2
-                $this->logger->error("No other users were found that match '{backend}: {user}'.", [
+                self::$logger?->error("No other users were found that match '{backend}: {user}{real_name}'.", [
                     'backend' => $userObj['backend'],
                     'user' => $userObj['name'],
+                    'real_name' => $userObj['real_name'] !== $userObj['name'] ? r(' ({rl})', [
+                        'rl' => $userObj['real_name']
+                    ]) : '',
                     'map' => arrayToString($map),
                     'list' => arrayToString($usersList),
                 ]);
+
+                $unmatched[] = [
+                    'id' => $userObj['id'],
+                    'name' => $userObj['name'],
+                    'backend' => $backend,
+                    'real_name' => $userObj['real_name'] ?? null,
+                ];
             }
         }
 
-        return $results;
+        return ['matched' => $results, 'unmatched' => $unmatched];
     }
 
-    private function usersList(array $list): array
+    public static function usersList(array $list): array
     {
         $chunks = [];
 
@@ -931,10 +958,12 @@ class CreateUsersCommand extends Command
      *      options: { }
      * ```
      */
-    private function map_actions(string $backend, array &$user, array &$mapping): void
+    public static function map_actions(string $backend, array &$user, array &$mapping): void
     {
+        static $reported = [];
+
         if (null === ($username = ag($user, 'name'))) {
-            $this->logger->error("MAPPER: No username was given from one user of '{backend}' backend.", [
+            self::$logger?->error("MAPPER: No username was given from one user of '{backend}' backend.", [
                 'backend' => $backend
             ]);
             return;
@@ -942,9 +971,12 @@ class CreateUsersCommand extends Command
 
         $hasMapping = array_filter($mapping, fn($map) => array_key_exists($backend, $map));
         if (count($hasMapping) < 1) {
-            $this->logger->info("MAPPER: No mapping exists for '{backend}' backend.", [
-                'backend' => $backend
-            ]);
+            if (!isset($reported[$backend])) {
+                $reported[$backend] = true;
+                self::$logger?->info("MAPPER: No mapping with '{backend}' as backend exists.", [
+                    'backend' => $backend
+                ]);
+            }
             return;
         }
 
@@ -966,7 +998,7 @@ class CreateUsersCommand extends Command
         }
 
         if (false === $found) {
-            $this->logger->debug("MAPPER: No map exists for '{backend}: {username}'.", [
+            self::$logger?->debug("MAPPER: No map exists for '{backend}: {username}'.", [
                 'backend' => $backend,
                 'username' => $username
             ]);
@@ -975,7 +1007,7 @@ class CreateUsersCommand extends Command
 
         if (null !== ($newUsername = ag($user_map, 'replace_with'))) {
             if (false === is_string($newUsername) || false === isValidName($newUsername)) {
-                $this->logger->error(
+                self::$logger?->error(
                     message: "MAPPER: Failed to replace '{backend}: {username}' with '{backend}: {new_username}' name must be in [a-z_0-9] format.",
                     context: [
                         'backend' => $backend,
@@ -986,7 +1018,7 @@ class CreateUsersCommand extends Command
                 return;
             }
 
-            $this->logger->notice(
+            self::$logger?->notice(
                 message: "MAPPER: Renaming '{backend}: {username}' to '{backend}: {new_username}'.",
                 context: [
                     'backend' => $backend,
@@ -998,5 +1030,11 @@ class CreateUsersCommand extends Command
             $user['name'] = $newUsername;
             $user_map['name'] = $newUsername;
         }
+    }
+
+    public static function hasUsers(): bool
+    {
+        $usersPath = Config::get('path') . '/users';
+        return is_dir($usersPath) && count(glob($usersPath . '/*/*.yaml')) > 0;
     }
 }

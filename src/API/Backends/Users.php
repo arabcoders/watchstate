@@ -12,22 +12,16 @@ use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
-use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerInterface as iLogger;
 use Throwable;
 
 final class Users
 {
     use APITraits;
 
-    public function __construct(private readonly LoggerInterface $logger) {}
-
-    #[Route(['GET', 'POST'], Index::URL . '/users/{type}[/]', name: 'backends.get.users')]
-    public function __invoke(iRequest $request, array $args = []): iResponse
+    #[Route(['GET', 'POST'], Index::URL . '/users/{type}[/]', name: 'backends.get.backend.users')]
+    public function __invoke(iRequest $request, string $type, iLogger $logger): iResponse
     {
-        if (null === ($type = ag($args, 'type'))) {
-            return api_error('Invalid value for type path parameter.', Status::BAD_REQUEST);
-        }
-
         $params = DataUtil::fromRequest($request, true);
 
         try {
@@ -51,7 +45,7 @@ final class Users
                 $users[] = $user;
             }
         } catch (Throwable $e) {
-            $this->logger->error($e->getMessage(), ['trace' => $e->getTrace()]);
+            $logger->error($e->getMessage(), $e->getTrace());
             return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);
         }
 

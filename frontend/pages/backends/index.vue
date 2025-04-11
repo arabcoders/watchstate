@@ -3,28 +3,21 @@
     <div class="columns is-multiline">
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4">
-          <span class="icon"><i class="fas fa-server"></i></span>
+          <span class="icon"><i class="fas fa-server"/></span>
           Backends
         </span>
         <div class="is-pulled-right">
           <div class="field is-grouped">
-            <p class="control" v-if="backends && backends.length>0">
-              <button class="button is-purple" v-tooltip.bottom="'Create sub users backends.'"
-                      @click="navigateTo(makeConsoleCommand('backend:create -B -v', true))"
-                      :disabled="'main' !== api_user">
-                <span class="icon"><i class="fas fa-users"></i></span>
-              </button>
-            </p>
             <p class="control">
               <button class="button is-primary" v-tooltip.bottom="'Add New Backend'"
                       @click="toggleForm = !toggleForm" :disabled="isLoading">
-                <span class="icon"><i class="fas fa-add"></i></span>
+                <span class="icon"><i class="fas fa-add"/></span>
               </button>
             </p>
             <p class="control">
               <button class="button is-info" @click="loadContent" :disabled="isLoading"
                       :class="{'is-loading':isLoading}">
-                <span class="icon"><i class="fas fa-sync"></i></span>
+                <span class="icon"><i class="fas fa-sync"/></span>
               </button>
             </p>
           </div>
@@ -48,17 +41,22 @@
             No backends found. Please add new backends to start using the tool. You can add new backend by
             <NuxtLink @click="toggleForm=true" v-text="'clicking here'"/>
             or by clicking the <span class="icon is-clickable" @click="toggleForm=true"><i
-              class="fas fa-add"></i></span>
+              class="fas fa-add"/></span>
             button above.
           </Message>
         </div>
 
         <div class="column is-12">
           <div class="content">
-            <h1 class="title is-4">Tools</h1>
+            <h1 class="title is-4">
+              <span class="icon"><i class="fas fa-tools"/></span> Tools
+            </h1>
             <ul>
               <li>
-                <NuxtLink :to="`/plex_token`" v-text="'Validate plex token'"/>
+                <NuxtLink :to="`/tools/plex_token`" v-text="'Validate plex token'"/>
+              </li>
+              <li v-if="backends && backends.length>0">
+                <NuxtLink :to="`/tools/sub_users`" v-text="'Create sub-users'"/>
               </li>
             </ul>
           </div>
@@ -77,12 +75,12 @@
                   <div class="control">
                     <NuxtLink :to="`/backend/${backend.name}/edit?redirect=/backends`"
                               v-tooltip="'Edit backend settings'">
-                      <span class="icon has-text-warning"><i class="fas fa-cog"></i></span>
+                      <span class="icon has-text-warning"><i class="fas fa-cog"/></span>
                     </NuxtLink>
                   </div>
                   <div class="control">
                     <NuxtLink :to="`/backend/${backend.name}/delete?redirect=/backends`" v-tooltip="'Delete backend'">
-                      <span class="icon has-text-danger"><i class="fas fa-trash"></i></span>
+                      <span class="icon has-text-danger"><i class="fas fa-trash"/></span>
                     </NuxtLink>
                   </div>
                 </div>
@@ -147,7 +145,7 @@
               <div class="card-footer-item">
                 <NuxtLink :to="api_url + backend.urls.webhook" class="is-info is-light"
                           @click.prevent="copyUrl(backend)">
-                  <span class="icon"><i class="fas fa-copy"></i></span>
+                  <span class="icon"><i class="fas fa-copy"/></span>
                   <span class="is-hidden-mobile">Copy Webhook URL</span>
                   <span class="is-hidden-tablet">Webhook</span>
                 </NuxtLink>
@@ -166,7 +164,7 @@
                     </select>
                   </div>
                   <div class="icon is-left">
-                    <i class="fas fa-terminal"></i>
+                    <i class="fas fa-terminal"/>
                   </div>
                 </div>
               </div>
@@ -183,10 +181,6 @@
               </li>
               <li>
                 <strong>Export</strong> means pushing data from the local database to the backends.
-              </li>
-              <li v-if="backends && backends.length>0">
-                To create sub users backends, click on the <span class="icon has-text-purple"><i class="fas fa-users"/></span>
-                button.
               </li>
             </ul>
           </Message>
@@ -240,6 +234,16 @@ const usefulCommands = {
     id: 5,
     title: "Import this backend metadata.",
     command: "state:import -v --metadata-only -u {user} -s {name}",
+  },
+  import_debug: {
+    id: 6,
+    title: "Run import and save debug log.",
+    command: "state:import -v --debug -u {user} -s {name} --logfile '/config/{user}@{name}.import.txt'",
+  },
+  export_debug: {
+    id: 7,
+    title: "Run export and save debug log.",
+    command: "state:export -v --debug -u {user} -s {name} --logfile '/config/{user}@{name}.export.txt'",
   },
 }
 
