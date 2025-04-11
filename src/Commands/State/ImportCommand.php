@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Commands\State;
 
 use App\Command;
-use App\Commands\Backend\Library\UnmatchedCommand;
-use App\Commands\Config\EditCommand;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
@@ -54,7 +52,7 @@ class ImportCommand extends Command
      *
      */
     public function __construct(
-        #[Inject(MemoryMapper::class)]
+        #[Inject(DirectMapper::class)]
         private iImport $mapper,
         private iLogger $logger,
         private LogSuppressor $suppressor
@@ -82,12 +80,18 @@ class ImportCommand extends Command
                 InputOption::VALUE_IS_ARRAY | InputOption::VALUE_OPTIONAL,
                 'Select backend.'
             )
-            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backend logic.')
             ->addOption(
-                'direct-mapper',
+                'exclude',
+                'e',
+                InputOption::VALUE_NONE,
+                'Inverse --select-backend logic. Exclude selected backends.'
+            )
+            ->addOption('direct-mapper', null, InputOption::VALUE_NONE, "Memory efficient mapper.")
+            ->addOption(
+                'memory-mapper',
                 null,
                 InputOption::VALUE_NONE,
-                'Direct mapper is memory efficient, However its slower than the default mapper.'
+                "The memory mapper is a memory hungry mapper. However, might be faster for your use case. *DEPRECATED*"
             )
             ->addOption(
                 'metadata-only',
@@ -102,131 +106,7 @@ class ImportCommand extends Command
                 'Mapper option. Always update the locally stored metadata from backend.'
             )
             ->addOption('show-messages', null, InputOption::VALUE_NONE, 'Show internal messages.')
-            ->addOption('logfile', null, InputOption::VALUE_REQUIRED, 'Save console output to file.')
-            ->setHelp(
-                r(
-                    <<<HELP
-
-                    This command import <notice>metadata</notice> and the <notice>play state</notice> of items from backends.
-
-                    ------------------
-                    <notice>[ Important info ]</notice>
-                    ------------------
-
-                    You MUST import the metadata as minimum to have efficient push/export.
-
-                    -------
-                    <notice>[ FAQ ]</notice>
-                    -------
-
-                    <question># How to import from specific backend?</question>
-
-                    {cmd} <cmd>{route}</cmd> <flag>-s</flag> <value>backend_name</value>
-
-                    <question># How to Import the metadata only?</question>
-
-                    {cmd} <cmd>{route}</cmd> <flag>--metadata-only</flag>
-
-                    <question># Import is failing due to timeout?</question>
-
-                    If you want to permanently increase the <notice>timeout</notice> for specific backend, you can do the following
-
-                    {cmd} <cmd>{config_edit}</cmd> <flag>-k</flag> <value>options.client.timeout</value> <flag>-e</flag> <value>600.0</value> <flag>-s</flag> <value>backend_name</value>
-
-                    <value>600.0</value> seconds is equal to 10 minutes before the timeout handler kicks in. Alternatively, you can also increase the
-                    timeout temporarily by using the [<flag>--timeout</flag>] flag. It will increase the timeout for all backends during this run.
-
-                    {cmd} <cmd>{route}</cmd> <flag>--timeout</flag> <value>600.0</value>
-
-                    <question># Import is failing due to memory constraint?</question>
-
-                    This is a tricky situation, the default mapper we use is a memory mapper that load the entire state into memory, However
-                    This may not be possible for memory constraint systems, You can use the alternative mapper implementation, it's less
-                    memory hungry. However, it is slower than the default mapper. to use alternative mapper you can do the following:
-
-                    {cmd} <cmd>{route}</cmd> <flag>--direct-mapper</flag>
-
-                    <question># Run import to see changes without altering the database?</question>
-
-                    Most important commands have [<flag>--dry-run</flag>] flag. This flag signal that the changes will not be committed if the flag is used.
-                    To see the changes that will happen during an import run you could for example run the following command
-
-                    {cmd} <cmd>{route}</cmd> <flag>--dry-run</flag> <flag>-vvv</flag>
-
-                    <question># Import command does not show any output?</question>
-
-                    By default commands only show log level <value>WARNING</value> and higher, to see more verbose output
-                    You can use the [<flag>-v|-vv|-vvv</flag>] flag to signal that you want more output. And you can enable
-                    even more info by using [<flag>--debug</flag>] flag. Be warned the output is quite excessive
-                    and shouldn't be used unless told by the team.
-
-                    {cmd} <cmd>{route}</cmd> <flag>-vvv --trace --context</flag>
-
-                    <question># The Import operation keep updating some items repeatedly even when play state did not change?</question>
-
-                    This most likely means your media backends have conflicting external ids for the reported items, and thus triggering an
-                    Update as the importer see different external ids on each item from backends. you could diagnose the problem by
-                    viewing each item and comparing the external ids being reported. This less likely to happen if you have parsing
-                    external guids for episodes disabled by using the environment variable [<flag>WS_EPISODES_DISABLE_GUID</flag>=<value>1</value>].
-
-                    <question># "No valid/supported external ids." in logs?</question>
-
-                    This most likely means that the item is not matched in your media backend.
-
-                    For [<comment>Movies</comment>] check the following:
-
-                    [<info>jellyfin/emby</info>]: Go to the movie, click edit metadata and make sure there are external ids listed.
-                    [<info>Plex</info>]: Go to the movie, click the (...), and click view info, then click view xml and look for tag called [<info>Guid</info>] tag.
-
-                    For [<comment>Series</comment>] check the following:
-
-                    [<info>jellyfin/emby</info>]: Go to the series, click edit metadata and make sure there are external ids listed.
-                    [<info>Plex</info>]: Go to the series, click the (...), then click view info, then click view xml and look for tag called [<info>Guid</info>] tag.
-
-                    or you could use the built-in unmatched checker.
-
-                    {cmd} <cmd>{unmatched_route}</cmd> <flag>-s</flag> <value>backend_name</value>
-
-                    If you don't have any unmatched items, this likely means you are using unsupported external db ids.
-
-                    <question># I removed the database and the import command is not importing the metadata again?</question>
-
-                    This is caused by the key [<value>import.lastSync</value>] found in [<value>servers.yaml</value>]. You have to bypass it
-                    by using [<flag>-f</flag>, <flag>--force-full</flag>] flag. This flag will cause the importer to not consider the last
-                    import date and instead import all the items.
-
-                    {cmd} <cmd>{route}</cmd> <flag>-force-full</flag>
-
-                    <question># My new backend overriding my old backend state / My watch state is not correct?</question>
-
-                    This likely due to the new backend reporting newer date than your old backend. as such the typical setup is to
-                    prioritize items with newer date compared to old ones. This is what you want to happen normally. However, if the new
-                    media backend state is not correct this might override your current watch state.
-
-                    The solution to get both in sync, and to do so follow these steps:
-
-                    1. Add your backend that has correct watch state and enable full import.
-                    2. Add your new backend as metadata source only, when adding a backend you will get
-                       asked <question>Enable importing of metadata and play state from this backend?</question> answer with <value>N</value> for the new backend.
-
-                    After that, do single backend export by using the following command:
-
-                    {cmd} <cmd>state:export</cmd> <flag>-vv -ifs</flag> <value>new_backend_name</value>
-
-                    Running this command will force full export your current database state to the selected backend. Once that done you can
-                    turn on import from the new backend. by editing the backend setting:
-
-                    {cmd} <cmd>config:manage</cmd> <flag>-s</flag> <value>backend_name</value>
-
-                    HELP,
-                    [
-                        'cmd' => trim(commandContext()),
-                        'route' => self::ROUTE,
-                        'config_edit' => EditCommand::ROUTE,
-                        'unmatched_route' => UnmatchedCommand::ROUTE,
-                    ]
-                )
-            );
+            ->addOption('logfile', null, InputOption::VALUE_REQUIRED, 'Save console output to file.');
     }
 
     /**
@@ -262,7 +142,14 @@ class ImportCommand extends Command
         }
 
         if ($input->getOption('direct-mapper')) {
-            $this->mapper = Container::get(DirectMapper::class);
+            $this->logger->warning(
+                'Direct mapper is now the default mapper and the option --direct-mapper is deprecated.'
+            );
+        }
+
+        if ($input->getOption('memory-mapper')) {
+            $this->logger->warning('You are using a deprecated mapper. Please use --direct-mapper instead.');
+            $this->mapper = Container::get(MemoryMapper::class);
         }
 
         $mapperOpts = $dbOpts = [];
@@ -286,6 +173,7 @@ class ImportCommand extends Command
         $users = getUsersContext(mapper: $this->mapper, logger: $this->logger, opts: [
             DatabaseInterface::class => $dbOpts,
         ]);
+
         if (null !== ($user = $input->getOption('user'))) {
             $users = array_filter($users, fn($k) => $k === $user, mode: ARRAY_FILTER_USE_KEY);
             if (empty($users)) {
@@ -388,7 +276,7 @@ class ImportCommand extends Command
             $queue = [];
 
             $this->logger->notice(
-                message: "SYSTEM: Preloading user '{user}: {mapper}' mapping data. Memory usage '{memory.now}'.",
+                message: "SYSTEM: Preloading user '{user}: {mapper}' data. Memory usage '{memory.now}'.",
                 context: [
                     'user' => $userContext->name,
                     'mapper' => afterLast($userContext->mapper::class, '\\'),
@@ -400,10 +288,10 @@ class ImportCommand extends Command
             );
 
             $time = microtime(true);
-            $userContext->mapper->loadData();
+            $userContext->mapper->reset()->loadData();
 
             $this->logger->notice(
-                message: "SYSTEM: Preloading user '{user}: {mapper}' mapping data completed in '{duration}s'. Memory usage '{memory.now}'.",
+                message: "SYSTEM: Preloading user '{user}: {mapper}' data completed in '{duration}s'. Memory usage '{memory.now}'.",
                 context: [
                     'user' => $userContext->name,
                     'mapper' => afterLast($userContext->mapper::class, '\\'),
