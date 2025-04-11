@@ -53,6 +53,7 @@
             </a>
 
             <div class="navbar-dropdown">
+
               <NuxtLink class="navbar-item" to="/tools/plex_token" @click.native="(e) => changeRoute(e)"
                         v-if="hasAPISettings">
                 <span class="icon"><i class="fas fa-key"/></span>
@@ -64,20 +65,8 @@
                 <span class="icon"><i class="fas fa-users"/></span>
                 <span>Sub Users</span>
               </NuxtLink>
-            </div>
-          </div>
 
-          <div class="navbar-item has-dropdown">
-            <a class="navbar-link" @click="(e) => openMenu(e)">
-              <span class="icon"><i class="fas fa-ellipsis-vertical"/></span>
-              <span>More</span>
-            </a>
-            <div class="navbar-dropdown">
-
-              <NuxtLink class="navbar-item" to="/console" @click.native="(e) => changeRoute(e)" v-if="hasAPISettings">
-                <span class="icon"><i class="fas fa-terminal"/></span>
-                <span>Console</span>
-              </NuxtLink>
+              <hr class="navbar-divider">
 
               <NuxtLink class="navbar-item" to="/processes" @click.native="(e) => changeRoute(e)"
                         v-if="hasAPISettings">
@@ -96,33 +85,19 @@
                 <span class="icon"><i class="fas fa-file"/></span>
                 <span>Files Integrity</span>
               </NuxtLink>
-              <hr class="navbar-divider">
 
-              <NuxtLink class="navbar-item" to="/events" @click.native="(e) => changeRoute(e)">
-                <span class="icon"><i class="fas fa-calendar-alt"/></span>
-                <span>Events</span>
-              </NuxtLink>
+              <hr class="navbar-divider">
 
               <NuxtLink class="navbar-item" to="/ignore" @click.native="(e) => changeRoute(e)">
                 <span class="icon"><i class="fas fa-ban"/></span>
                 <span>Ignore List</span>
               </NuxtLink>
 
-              <NuxtLink class="navbar-item" to="/report" @click.native="(e) => changeRoute(e)">
-                <span class="icon"><i class="fas fa-flag"/></span>
-                <span>Basic Report</span>
-              </NuxtLink>
-              <hr class="navbar-divider">
-
               <NuxtLink class="navbar-item" to="/suppression" @click.native="(e) => changeRoute(e)">
                 <span class="icon"><i class="fas fa-bug-slash"/></span>
                 <span>Log Suppression</span>
               </NuxtLink>
 
-              <NuxtLink class="navbar-item" to="/custom" @click.native="(e) => changeRoute(e)">
-                <span class="icon"><i class="fas fa-map"/></span>
-                <span>Custom GUIDs</span>
-              </NuxtLink>
 
               <hr class="navbar-divider">
 
@@ -137,6 +112,42 @@
                 <span class="icon"><i class="fas fa-redo"/></span>
                 <span>System reset</span>
               </NuxtLink>
+
+            </div>
+          </div>
+
+          <div class="navbar-item has-dropdown">
+            <a class="navbar-link" @click="(e) => openMenu(e)">
+              <span class="icon"><i class="fas fa-ellipsis-vertical"/></span>
+              <span>More</span>
+            </a>
+            <div class="navbar-dropdown">
+
+              <NuxtLink class="navbar-item" to="/console" @click.native="(e) => changeRoute(e)" v-if="hasAPISettings">
+                <span class="icon"><i class="fas fa-terminal"/></span>
+                <span>Console</span>
+              </NuxtLink>
+              <hr class="navbar-divider">
+
+              <NuxtLink class="navbar-item" to="/events" @click.native="(e) => changeRoute(e)">
+                <span class="icon"><i class="fas fa-calendar-alt"/></span>
+                <span>Events</span>
+              </NuxtLink>
+
+              <hr class="navbar-divider">
+
+              <NuxtLink class="navbar-item" to="/report" @click.native="(e) => changeRoute(e)">
+                <span class="icon"><i class="fas fa-flag"/></span>
+                <span>Basic Report</span>
+              </NuxtLink>
+
+              <hr class="navbar-divider">
+
+              <NuxtLink class="navbar-item" to="/custom" @click.native="(e) => changeRoute(e)">
+                <span class="icon"><i class="fas fa-map"/></span>
+                <span>Custom GUIDs</span>
+              </NuxtLink>
+
             </div>
           </div>
         </div>

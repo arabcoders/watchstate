@@ -38,7 +38,7 @@
                     <input type="text" class="input is-fullwidth" v-model="command"
                            :placeholder="`system:view ${allEnabled ? 'or $ ls' : ''}`"
                            list="recent_commands"
-                           autocomplete="off" ref="command_input" @keydown.enter="RunCommand" :disabled="isLoading">
+                           autocomplete="off" ref="commandInput" @keydown.enter="RunCommand" :disabled="isLoading">
                     <span class="icon is-left"><i class="fas fa-terminal" :class="{'fa-spin':isLoading}"></i></span>
                   </p>
                   <p class="control" v-if="!isLoading">
@@ -53,49 +53,50 @@
                   </p>
                 </div>
               </div>
-              <p class="help" v-if="hasPrefix">
-                <span class="icon-text">
-                  <span class="icon has-text-danger"><i class="fas fa-exclamation-triangle"></i></span>
-                  <span>Remove the <code>console</code> or <code>docker exec -ti watchstate console</code> from the
-                    input. You should use the command directly, For example i.e <code>db:list --output
-                      yaml</code></span>
-                </span>
-              </p>
-              <p class="help" v-if="hasPlaceholder">
-                <span class="icon-text">
-                  <span class="icon has-text-warning"><i class="fas fa-exclamation-circle"></i></span>
-                  <span>The command contains <code>[...]</code> which are considered a placeholder, So, please replace
-                    <code>[...]</code> with the intended value if applicable.</span>
-                </span>
-              </p>
+
             </div>
           </section>
         </div>
+      </div>
+
+      <div class="column is-12" v-if="hasPrefix || hasPlaceholder">
+
+        <Message message_class="has-background-warning-90 has-text-dark" title="Warning"
+                 icon="fas fa-exclamation-triangle" v-if="hasPrefix">
+          <p>Use the command directly, For example i.e. <code>db:list -o yaml</code></p>
+        </Message>
+
+        <Message message_class="has-background-warning-90 has-text-dark" title="Warning"
+                 icon="fas fa-exclamation-triangle" v-if="hasPlaceholder">
+          <span class="icon has-text-warning"><i class="fas fa-exclamation-circle"></i></span>
+          <span>The command contains <code>[...]</code> which are considered a placeholder, So, please replace
+            <code>[...]</code> with the intended value if applicable.</span>
+        </Message>
+
       </div>
 
       <div class="column is-12">
         <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
                  @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
           <ul>
-            <li>
-              You don't need to write <code>console</code> or <code>docker exec -ti watchstate console</code> Using
-              this interface. Use the command followed by the options directly. For example, <code>db:list --output
-              yaml</code>.
+            <li>You don’t need to type <code>console</code> or run <code>docker exec -ti watchstate console</code> when
+              using this interface. Just enter the command and options directly. For example: <code>db:list --output
+                yaml</code>.
             </li>
-            <li>
-              Clicking close connection does not stop the command. It only stops the output from being displayed. The
-              command will continue to run until it finishes.
+            <li>Clicking <strong>Close Connection</strong> only stops the output from being shown—it does <em>not</em>
+              stop the command itself. The command will continue running until it finishes.
             </li>
-            <li>
-              The majority of the commands will not show any output unless error has occurred or important information
-              needs to be communicated. Use the <code>-v[v[v]]</code> option to increase verbosity. <code>-v</code>
-              should be enough for most people, If you are debugging, then use <code>-vv --context</code>.
+            <li>Most commands won’t display anything unless there’s an error or important message. Use <code>-v</code>
+              to see more details. If you’re debugging, try <code>-vv --context</code> for even more information.
             </li>
-            <li>
-              There is an environment variable <code>WS_CONSOLE_ENABLE_ALL</code> that can be set to <code>true</code>
-              to enable all commands to be run from the console. This is disabled by default.
+            <li>There’s an environment variable <code>WS_CONSOLE_ENABLE_ALL</code> that you can set to <code>true</code>
+              to allow all commands to run from the console. It’s turned off by default.
             </li>
-            <li>To clear the recent commands auto-suggestions, you can use the <code>clear_ac</code> command.</li>
+            <li>To clear the recent command suggestions, use the <code>clear_ac</code> command.</li>
+            <li>
+              The number inside the parentheses is the exit code of the last command. If it’s <code>0</code>, the
+              command ran successfully. Any other value usually means something went wrong.
+            </li>
           </ul>
         </Message>
       </div>
@@ -139,14 +140,15 @@ const response = ref([])
 const command = ref(fromCommand)
 const isLoading = ref(false)
 const outputConsole = ref()
-const command_input = ref()
+const commandInput = ref()
 const executedCommands = useStorage('executedCommands', [])
+const exitCode = ref(0)
 
 const bg_enable = useStorage('bg_enable', true)
 const bg_opacity = useStorage('bg_opacity', 0.95)
 
 const hasPrefix = computed(() => command.value.startsWith('console') || command.value.startsWith('docker'))
-const hasPlaceholder = computed(() => command.value && command.value.match(/\[.*\]/))
+const hasPlaceholder = computed(() => command.value && command.value.match(/\[.*]/))
 const show_page_tips = useStorage('show_page_tips', true)
 const allEnabled = ref(false)
 
@@ -155,12 +157,13 @@ const RunCommand = async () => {
   const api_url = useStorage('api_url', '')
   const api_token = useStorage('api_token', '')
 
+  /** @type {string} */
   let userCommand = command.value
 
   // -- check if the user command starts with console or docker exec -ti watchstate
   if (userCommand.startsWith('console') || userCommand.startsWith('docker')) {
-    notification('error', 'Warning', 'Please remove the [console] or [docker exec -ti watchstate console] from the command.')
-    return
+    notification('info', 'Warning', 'Removing leading prefix command from the input.', 2000)
+    userCommand = userCommand.replace(/^(console|docker exec -ti watchstate)/i, '')
   }
 
   // use regex to check if command contains [...]
@@ -189,7 +192,7 @@ const RunCommand = async () => {
   if (userCommand.startsWith('$')) {
     if (!allEnabled.value) {
       notification('error', 'Error', 'The option to execute all commands is disabled.')
-      command_input.value.focus()
+      commandInput.value.focus()
       return
     }
     userCommand = userCommand.slice(1)
@@ -223,11 +226,12 @@ const RunCommand = async () => {
   sse = new EventSource(`${api_url.value}${api_path.value}/system/command/${token}?apikey=${api_token.value}`)
 
   if ('' !== command.value) {
-    terminal.value.writeln(`~ ${userCommand}`)
+    terminal.value.writeln(`(${exitCode.value}) ~ ${userCommand}`)
   }
 
   sse.addEventListener('data', async e => terminal.value.write(JSON.parse(e.data).data))
   sse.addEventListener('close', async () => finished())
+  sse.addEventListener('exit_code', async e => exitCode.value = e.data)
   sse.onclose = async () => finished()
   sse.onerror = async () => finished()
 }
@@ -257,10 +261,12 @@ const finished = async () => {
     executedCommands.value.shift()
   }
 
+  terminal.value.writeln(`\n(${exitCode.value}) ~ `)
+
   command.value = ''
   await nextTick()
 
-  command_input.value.focus()
+  commandInput.value.focus()
 }
 
 const recentCommands = computed(() => executedCommands.value.reverse().slice(-10))
@@ -276,7 +282,7 @@ const clearOutput = async () => {
   if (terminal.value) {
     terminal.value ? terminal.value.clear() : ''
   }
-  command_input.value.focus()
+  commandInput.value.focus()
 }
 
 onUnmounted(() => {
@@ -296,7 +302,7 @@ onMounted(async () => {
   }
 
   window.addEventListener("resize", reSizeTerminal);
-  command_input.value.focus()
+  commandInput.value.focus()
 
   if (!terminal.value) {
     terminalFit.value = new FitAddon()
@@ -304,7 +310,6 @@ onMounted(async () => {
       fontSize: 16,
       fontFamily: "'JetBrains Mono', monospace",
       cursorBlink: false,
-      cursorStyle: 'none',
       cols: 108,
       rows: 10,
       disableStdin: true,
