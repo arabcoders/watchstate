@@ -1,7 +1,31 @@
 [
     {
-        "tag": "dev-20250409-e50bf86",
-        "date": "2025-04-09T20:26:04+00:00",
+        "tag": "dev-20250411-96f2357",
+        "date": "2025-04-11T16:10:16+00:00",
+        "commits": [
+            {
+                "sha": "9e9dfb4",
+                "message": "major update to sub-users creation",
+                "author": "arabcoders",
+                "date": "2025-04-11T16:09:01+00:00"
+            },
+            {
+                "sha": "869d481",
+                "message": "update gitignore",
+                "author": "arabcoders",
+                "date": "2025-04-10T13:17:04+00:00"
+            },
+            {
+                "sha": "85b2476",
+                "message": "sub users webui feature",
+                "author": "arabcoders",
+                "date": "2025-04-09T21:18:15+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250409-10b42b1",
+        "date": "2025-04-09T20:29:43+00:00",
         "commits": [
             {
                 "sha": "e50bf86",
