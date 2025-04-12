@@ -228,6 +228,10 @@ trait APITraits
 
         $item['content_title'] = $entity->getMeta(iState::COLUMN_EXTRA . '.' . iState::COLUMN_TITLE, null);
         $item['content_path'] = ag($entity->getMetadata($entity->via), iState::COLUMN_META_PATH);
+        $item['content_overview'] = ag(
+            $entity->getMetadata($entity->via),
+            iState::COLUMN_EXTRA . '.' . iState::COLUMN_META_DATA_EXTRA_OVERVIEW
+        );
 
         $item['rguids'] = [];
         $item['reported_by'] = [];

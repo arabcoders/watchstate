@@ -169,6 +169,14 @@ trait JellyfinActionTrait
             $metadataExtra[iState::COLUMN_META_DATA_EXTRA_DATE] = makeDate($PremieredAt)->format('Y-m-d');
         }
 
+        if (null !== ($IsFavorite = ag($item, 'UserData.IsFavorite'))) {
+            $metadataExtra[iState::COLUMN_META_DATA_EXTRA_FAVORITE] = (int)$IsFavorite;
+        }
+
+        if (null !== ($overView = ag($item, 'Overview'))) {
+            $metadataExtra[iState::COLUMN_META_DATA_EXTRA_OVERVIEW] = $overView;
+        }
+
         if (true === $isPlayed) {
             $metadata[iState::COLUMN_META_DATA_PLAYED_AT] = (string)makeDate($date)->getTimestamp();
             $metadata[iState::COLUMN_META_DATA_PROGRESS] = "0";

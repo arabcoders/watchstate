@@ -84,6 +84,11 @@ class JellyfinClient implements iClient
         'ProductionYear',
         'Path',
         'UserDataLastPlayedDate',
+        'AirTime',
+        'CustomRating',
+        'DateCreated',
+        'DateLastMediaAdded',
+        'Overview'
     ];
     /**
      * @var array<string> Map the Jellyfin types to our own types.

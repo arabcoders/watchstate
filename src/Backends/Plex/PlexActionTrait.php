@@ -179,6 +179,10 @@ trait PlexActionTrait
             $metadataExtra[iState::COLUMN_META_DATA_EXTRA_DATE] = makeDate($PremieredAt)->format('Y-m-d');
         }
 
+        if (null !== ($summary = ag($item, 'summary'))) {
+            $metadataExtra[iState::COLUMN_META_DATA_EXTRA_OVERVIEW] = (string)$summary;
+        }
+
         if (true === $isPlayed) {
             $metadata[iState::COLUMN_META_DATA_PLAYED_AT] = (string)$date;
             $metadata[iState::COLUMN_META_DATA_PROGRESS] = "0";
