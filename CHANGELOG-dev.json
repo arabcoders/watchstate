@@ -1,7 +1,19 @@
 [
     {
-        "tag": "dev-20250411-748c8bb",
-        "date": "2025-04-11T18:23:19+00:00",
+        "tag": "dev-20250412-7a2c5e0",
+        "date": "2025-04-12T19:49:56+00:00",
+        "commits": [
+            {
+                "sha": "7a2c5e0",
+                "message": "expand the imported data to include the content summary",
+                "author": "arabcoders",
+                "date": "2025-04-12T19:49:56+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250411-54c66ee",
+        "date": "2025-04-11T18:26:32+00:00",
         "commits": [
             {
                 "sha": "748c8bb",
