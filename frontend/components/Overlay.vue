@@ -34,6 +34,14 @@ const eventHandler = e => {
   closeOverLay()
 }
 
-onMounted(() => window.addEventListener('keydown', eventHandler))
-onUnmounted(() => window.removeEventListener('keydown', eventHandler))
+onMounted(() => {
+  disableOpacity()
+  window.addEventListener('keydown', eventHandler)
+})
+
+onUnmounted(() => {
+  enableOpacity()
+  window.removeEventListener('keydown', eventHandler)
+})
+
 </script>

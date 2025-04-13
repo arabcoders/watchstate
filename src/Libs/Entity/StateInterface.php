@@ -47,6 +47,7 @@ interface StateInterface extends LoggerAwareInterface
     public const string COLUMN_META_DATA_EXTRA_TITLE = 'title';
     public const string COLUMN_META_DATA_EXTRA_OVERVIEW = 'overview';
     public const string COLUMN_META_DATA_EXTRA_FAVORITE = 'favorite';
+    public const string COLUMN_META_DATA_EXTRA_GENRES = 'genres';
     public const string COLUMN_META_DATA_EXTRA_DATE = 'date';
     public const string COLUMN_EXTRA = 'extra';
     public const string COLUMN_EXTRA_EVENT = 'event';

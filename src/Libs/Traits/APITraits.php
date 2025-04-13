@@ -233,6 +233,11 @@ trait APITraits
             iState::COLUMN_EXTRA . '.' . iState::COLUMN_META_DATA_EXTRA_OVERVIEW
         );
 
+        $item['content_genres'] = ag(
+            $entity->getMetadata($entity->via),
+            iState::COLUMN_EXTRA . '.' . iState::COLUMN_META_DATA_EXTRA_GENRES
+        );
+
         $item['rguids'] = [];
         $item['reported_by'] = [];
 

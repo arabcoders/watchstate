@@ -199,10 +199,6 @@ html {
     cursor: help;
 }
 
-.is-pointer-click {
-    cursor: pointer;
-}
-
 .is-text-contents {
     display: contents;
 }
