@@ -194,6 +194,12 @@ return (function () {
             'level' => env('WS_LOGGER_SYSLOG_LEVEL', Level::Error),
             'name' => ag($config, 'name'),
         ],
+        'remote' => [
+            'type' => 'remote',
+            'enabled' => (bool)env('WS_LOGGER_REMOTE_ENABLE', false),
+            'level' => env('WS_LOGGER_REMOTE_LEVEL', Level::Error),
+            'url' => env('WS_LOGGER_REMOTE_URL', null),
+        ],
     ];
 
     $config['supported'] = [

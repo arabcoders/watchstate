@@ -11,6 +11,7 @@ use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Exceptions\HttpException;
 use App\Libs\Extends\ConsoleHandler;
 use App\Libs\Extends\ConsoleOutput;
+use App\Libs\Extends\RemoteHandler;
 use App\Libs\Extends\RouterStrategy;
 use Closure;
 use ErrorException;
@@ -29,6 +30,7 @@ use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface;
 use Symfony\Component\Console\CommandLoader\ContainerCommandLoader;
 use Symfony\Component\Yaml\Yaml;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 use Throwable;
 
 /**
@@ -542,6 +544,20 @@ final class Initializer
                             )
                         )
                     );
+                    break;
+                case 'remote':
+                    if (null !== ($remoteUrl = ag($context, 'url'))) {
+                        $logger->pushHandler(
+                            $wrap->withHandler(
+                                new RemoteHandler(
+                                    Container::get(iHttp::class),
+                                    $remoteUrl,
+                                    ag($context, 'level', Level::Warning),
+                                    (bool)ag($context, 'bubble', true),
+                                )
+                            )
+                        );
+                    }
                     break;
                 case 'console':
                     $logger->pushHandler($wrap->withHandler(new ConsoleHandler($this->cliOutput)));

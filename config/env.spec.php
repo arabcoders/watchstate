@@ -203,6 +203,32 @@ return (function () {
                 return $value;
             },
         ],
+        [
+            'key' => 'WS_LOGGER_REMOTE_ENABLE',
+            'description' => 'Enable logging to remote logger.',
+            'type' => 'bool',
+        ],
+        [
+            'key' => 'WS_LOGGER_REMOTE_LEVEL',
+            'description' => 'Set the log level for the remote logger. Default: ERROR.',
+            'type' => 'string',
+        ],
+        [
+            'key' => 'WS_LOGGER_REMOTE_URL',
+            'description' => 'The URL to the remote logger.',
+            'type' => 'string',
+            'validate' => function (mixed $value): string {
+                if (!is_numeric($value) && empty($value)) {
+                    throw new ValidationException('Invalid remote logger URL. Empty value.');
+                }
+
+                if (false === isValidURL($value)) {
+                    throw new ValidationException('Invalid remote logger URL. Must be a valid URL.');
+                }
+                return $value;
+            },
+            'mask' => true,
+        ],
     ];
 
     $validateCronExpression = function (string $value): string {
