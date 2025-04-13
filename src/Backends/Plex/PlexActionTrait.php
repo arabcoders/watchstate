@@ -135,6 +135,15 @@ trait PlexActionTrait
         $metadata = &$builder[iState::COLUMN_META_DATA][$context->backendName];
         $metadataExtra = &$metadata[iState::COLUMN_META_DATA_EXTRA];
 
+        $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = [];
+
+        if (count(ag($item, 'Genre', [])) > 0) {
+            $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = array_map(
+                fn ($item) => strtolower((string)ag($item, 'tag', '??')),
+                ag($item, 'Genre', [])
+            );
+        }
+
         if (null !== ($library = ag($item, 'librarySectionID', $opts[iState::COLUMN_META_LIBRARY] ?? null))) {
             $metadata[iState::COLUMN_META_LIBRARY] = (string)$library;
         }
@@ -158,7 +167,15 @@ trait PlexActionTrait
                     guid: $guid,
                     id: $parentId
                 );
+
                 $metadata[iState::COLUMN_PARENT] = $builder[iState::COLUMN_PARENT];
+
+                if (count($metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES]) < 1) {
+                    $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = array_map(
+                        fn ($i) => strtolower((string)ag($i, 'tag', '??')),
+                        ag($this->getItemDetails(context: $context, id: $parentId), 'MediaContainer.Metadata.0.Genre', [])
+                    );
+                }
             }
         }
 
@@ -177,6 +194,10 @@ trait PlexActionTrait
 
         if (null !== ($PremieredAt = ag($item, 'originallyAvailableAt'))) {
             $metadataExtra[iState::COLUMN_META_DATA_EXTRA_DATE] = makeDate($PremieredAt)->format('Y-m-d');
+        }
+
+        if (null !== ($summary = ag($item, 'summary'))) {
+            $metadataExtra[iState::COLUMN_META_DATA_EXTRA_OVERVIEW] = (string)$summary;
         }
 
         if (true === $isPlayed) {
@@ -362,9 +383,9 @@ trait PlexActionTrait
     protected function isSupportedType(string $type): bool
     {
         return true === in_array(
-                PlexClient::TYPE_MAPPER[$type] ?? PlexClient::TYPE_MAPPER[strtolower($type)] ?? $type,
-                iState::TYPES_LIST,
-                true
-            );
+            PlexClient::TYPE_MAPPER[$type] ?? PlexClient::TYPE_MAPPER[strtolower($type)] ?? $type,
+            iState::TYPES_LIST,
+            true
+        );
     }
 }

@@ -126,6 +126,8 @@ trait JellyfinActionTrait
         $metadata = &$builder[iState::COLUMN_META_DATA][$context->backendName];
         $metadataExtra = &$metadata[iState::COLUMN_META_DATA_EXTRA];
 
+        $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = array_map(fn ($v) => strtolower($v), ag($item, 'Genres', []));
+
         // -- jellyfin/emby API does not provide library ID.
         if (null !== ($library = $opts[iState::COLUMN_META_LIBRARY] ?? null)) {
             $metadata[iState::COLUMN_META_LIBRARY] = (string)$library;
@@ -152,7 +154,15 @@ trait JellyfinActionTrait
                     guid: $guid,
                     id: $parentId
                 );
+
                 $metadata[iState::COLUMN_PARENT] = $builder[iState::COLUMN_PARENT];
+
+                if (count($metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES]) < 1) {
+                    $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = array_map(
+                        fn ($v) => strtolower($v),
+                        ag($this->getItemDetails(context: $context, id: $parentId), 'Genres', [])
+                    );
+                }
             }
         }
 
@@ -167,6 +177,14 @@ trait JellyfinActionTrait
 
         if (null !== ($PremieredAt = ag($item, 'PremiereDate'))) {
             $metadataExtra[iState::COLUMN_META_DATA_EXTRA_DATE] = makeDate($PremieredAt)->format('Y-m-d');
+        }
+
+        if (null !== ($IsFavorite = ag($item, 'UserData.IsFavorite'))) {
+            $metadataExtra[iState::COLUMN_META_DATA_EXTRA_FAVORITE] = (int)$IsFavorite;
+        }
+
+        if (null !== ($overView = ag($item, 'Overview'))) {
+            $metadataExtra[iState::COLUMN_META_DATA_EXTRA_OVERVIEW] = $overView;
         }
 
         if (true === $isPlayed) {
@@ -259,18 +277,14 @@ trait JellyfinActionTrait
             return [];
         }
 
-        $context->cache->set(
-            $cacheKey,
-            Guid::fromArray(
-                payload: $guid->get(guids: $providersId, context: $logContext),
-                context: [
-                    'backend' => $context->backendName,
-                    ...$logContext,
-                ]
-            )->getAll()
-        );
+        $data = Guid::fromArray(
+            payload: $guid->get(guids: $providersId, context: $logContext),
+            context: ['backend' => $context->backendName, ...$logContext]
+        )->getAll();
 
-        return $context->cache->get($cacheKey);
+        $context->cache->set($cacheKey, $data);
+
+        return $data;
     }
 
     /**

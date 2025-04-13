@@ -21,6 +21,7 @@ use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Traits\APITraits;
 use JsonException;
+use PDO;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Log\LoggerInterface as iLogger;
@@ -29,6 +30,8 @@ use Throwable;
 
 final class Index
 {
+    use APITraits;
+
     /**
      * @var array The array containing the names of the columns that the list can be sorted by.
      */
@@ -45,8 +48,6 @@ final class Index
         iState::COLUMN_CREATED_AT,
         iState::COLUMN_UPDATED_AT,
     ];
-
-    use APITraits;
 
     public const string URL = '%{api.prefix}/history';
 
@@ -80,6 +81,7 @@ final class Index
         $start = (!$page) ? 0 : $start;
 
         $params = [];
+        $total = null;
 
         $sql = $where = $or = [];
 
@@ -278,6 +280,34 @@ final class Index
             ];
         }
 
+        if (null !== ($genre = $data->get(iState::COLUMN_META_DATA_EXTRA_GENRES))) {
+            $genreFilter = $data->get('exact') ? '= :genre' : "LIKE '%' || :genre || '%'";
+            $genre = strtolower($genre);
+
+            /** @noinspection SqlType */
+            $stmt = $db->prepare(
+                "SELECT COUNT(DISTINCT t.id) FROM state AS t, json_each(t.metadata) AS _b,
+                              json_each(json_extract(_b.value, '$.extra.genres')) AS _g WHERE _g.value {$genreFilter}"
+            );
+            $stmt->execute(['genre' => $genre]);
+            $total = $stmt->fetchColumn();
+
+            /** @noinspection SqlType */
+            $stmt = $db->prepare(
+                "SELECT DISTINCT t.id FROM state AS t, json_each(t.metadata) AS _b,
+                json_each(json_extract(_b.value, '$.extra.genres')) AS _g WHERE _g.value {$genreFilter}
+                LIMIT :start, :perpage"
+            );
+            $stmt->execute(['genre' => $genre, 'start' => $start, 'perpage' => $perpage]);
+            $genres_ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            $where[] = "id IN (" . implode(',', count($genres_ids) > 0 ? $genres_ids : [-1]) . ")";
+            $filters[iState::COLUMN_META_DATA_EXTRA_GENRES] = [
+                'key' => iState::COLUMN_META_DATA_EXTRA_GENRES,
+                'value' => $genre,
+                'exact' => $data->get('exact'),
+            ];
+        }
+
         if (count($or) >= 1) {
             $where[] = '( ' . implode(' OR ', $or) . ' )';
         }
@@ -286,9 +316,11 @@ final class Index
             $sql[] = 'WHERE ' . implode(' AND ', $where);
         }
 
-        $stmt = $db->prepare('SELECT COUNT(*) ' . implode(' ', array_map('trim', $sql)));
-        $stmt->execute($params);
-        $total = $stmt->fetchColumn();
+        if (null === $total) {
+            $stmt = $db->prepare('SELECT COUNT(*) ' . implode(' ', array_map('trim', $sql)));
+            $stmt->execute($params);
+            $total = $stmt->fetchColumn();
+        }
 
         if (0 === $total) {
             $message = 'No Results.';
@@ -328,9 +360,12 @@ final class Index
             $sorts[] = sprintf('%s DESC', $es(iState::COLUMN_UPDATED_AT));
         }
 
-        $params['_start'] = $start;
-        $params['_limit'] = $perpage <= 0 ? 20 : $perpage;
-        $sql[] = 'ORDER BY ' . implode(', ', $sorts) . ' LIMIT :_start,:_limit';
+        $sql[] = 'ORDER BY ' . implode(', ', $sorts);
+        if (null === $genre) {
+            $params['_start'] = $start;
+            $params['_limit'] = $perpage <= 0 ? 20 : $perpage;
+            $sql[] = 'LIMIT :_start,:_limit';
+        }
 
         $stmt = $db->prepare('SELECT * ' . implode(' ', array_map('trim', $sql)));
         $stmt->execute($params);
@@ -451,6 +486,12 @@ final class Index
                     'key' => 'subtitle',
                     'display' => 'Subtitle',
                     'description' => 'Search using subtitle. Searching this field will be slow.',
+                    'type' => 'string',
+                ],
+                [
+                    'key' => 'genres',
+                    'display' => 'Genre',
+                    'description' => 'Search using genres. Searching this field will be slow.',
                     'type' => 'string',
                 ],
             ],

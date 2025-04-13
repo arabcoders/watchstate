@@ -17,6 +17,7 @@ use App\Model\Events\EventsTable;
 use DateTimeInterface as iDate;
 use PDOException;
 use Psr\Log\LoggerInterface as iLogger;
+use Psr\Log\LogLevel;
 use Psr\SimpleCache\CacheInterface as iCache;
 use Throwable;
 
@@ -184,7 +185,7 @@ class DirectMapper implements ImportInterface
             $this->addPointers($entity, $pointer);
         }
 
-        $this->logger->info("{mapper}: Preloaded '{user}' '{pointers}' pointers into memory.", [
+        $this->logger->info("{mapper}: Preloaded '{user}: {pointers}' pointers into memory.", [
             'mapper' => afterLast(self::class, '\\'),
             'pointers' => number_format(count($this->pointers)),
             'user' => $this->userContext?->name ?? 'main',
@@ -258,7 +259,7 @@ class DirectMapper implements ImportInterface
                 }
             }
 
-            $this->logger->notice("{mapper}: [N] '{user}@{backend}' added '#{id}: {title}' as new item.", [
+            $this->logger->notice("{mapper}: [N] '{user}@{backend}' added '#{id}: {title}'.", [
                 'id' => $entity->id ?? 'New',
                 'user' => $this->userContext?->name ?? 'main',
                 'mapper' => afterLast(self::class, '\\'),
@@ -275,6 +276,16 @@ class DirectMapper implements ImportInterface
             }
 
             $this->changed[$entity->id] = $this->objects[$entity->id] = $entity->id;
+
+            if (true === $inDryRunMode && $entity->hasPlayProgress()) {
+                $itemId = r('{type}://{id}:{tainted}@{backend}', [
+                    'type' => $entity->type,
+                    'backend' => $entity->via,
+                    'tainted' => 'untainted',
+                    'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
+                ]);
+                $this->progressItems[$itemId] = $entity;
+            }
         } catch (PDOException|Throwable $e) {
             $this->actions[$entity->type]['failed']++;
             Message::increment("{$entity->via}.{$entity->type}.failed");
@@ -321,7 +332,7 @@ class DirectMapper implements ImportInterface
 
         $newPlayProgress = (int)ag($entity->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
         $oldPlayProgress = (int)ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
-        $playChanged = $newPlayProgress > ($oldPlayProgress + 10);
+        $playChanged = !$metadataOnly && $newPlayProgress > ($oldPlayProgress + 10);
 
         if ($playChanged || true === (clone $local)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
             try {
@@ -347,7 +358,8 @@ class DirectMapper implements ImportInterface
                         $_keys[] = iState::COLUMN_VIA;
                     }
                     $local = $local->apply($entity, fields: $_keys);
-                    $this->logger->notice(
+                    $this->logger->log(
+                        $progress ? LogLevel::NOTICE : LogLevel::INFO,
                         $progress ? "{mapper}: [T] '{user}@{backend}' updated '#{id}: {title}' due to play progress change." : "{mapper}: [T] '{user}@{backend}' updated '#{id}: {title}' metadata.",
                         [
                             'user' => $this->userContext?->name ?? 'main',
@@ -470,6 +482,7 @@ class DirectMapper implements ImportInterface
     private function handleOldEntity(iState $local, iState $entity, array $opts = []): self
     {
         $keys = [iState::COLUMN_META_DATA];
+        $metadataOnly = true === (bool)ag($opts, Options::IMPORT_METADATA_ONLY);
         $inDryRunMode = $this->inDryRunMode();
         $onStateUpdate = ag($opts, Options::STATE_UPDATE_EVENT, null);
 
@@ -539,7 +552,7 @@ class DirectMapper implements ImportInterface
 
         $newPlayProgress = (int)ag($entity->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
         $oldPlayProgress = (int)ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
-        $playChanged = $newPlayProgress > ($oldPlayProgress + 10);
+        $playChanged = !$metadataOnly && $newPlayProgress > ($oldPlayProgress + 10);
         $metaExists = count($cloned->getMetadata($entity->via)) >= 1;
 
         // -- this sometimes leads to never ending updates as data from backends conflicts.
@@ -568,7 +581,8 @@ class DirectMapper implements ImportInterface
                             $_keys[] = iState::COLUMN_VIA;
                         }
                         $local = $local->apply($entity, fields: $_keys);
-                        $this->logger->notice(
+                        $this->logger->log(
+                            $progress ? LogLevel::NOTICE : LogLevel::INFO,
                             $progress ? "{mapper}: [O] '{user}@{backend}' updated '#{id}: {title}' due to play progress change." : "{mapper}: [O] '{user}@{backend}' updated '#{id}: {title}' metadata.",
                             [
                                 'user' => $this->userContext?->name ?? 'main',
@@ -654,7 +668,7 @@ class DirectMapper implements ImportInterface
         }
 
         if ($this->inTraceMode()) {
-            $this->logger->debug("{mapper}: [O] Ignoring '{user}@{backend}' - '#{id}: {title}'. No changes detected.", [
+            $this->logger->info("{mapper}: [O] Ignoring '{user}@{backend}' - '#{id}: {title}'. No changes detected.", [
                 'user' => $this->userContext?->name ?? 'main',
                 'mapper' => afterLast(self::class, '\\'),
                 'id' => $cloned->id ?? 'New',
@@ -792,16 +806,17 @@ class DirectMapper implements ImportInterface
 
                 $message = "{mapper}: [A] '{user}@{backend}' Updated '#{id}: {title}'.";
 
-                if ($cloned->isWatched() !== $local->isWatched()) {
-                    $message = "{mapper}: [A] '{user}@{backend}' Updated and marked '#{id}: {title}' as '{state}'.";
+                $isPlayChanged = $cloned->isWatched() !== $local->isWatched();
 
+                if (true === $isPlayChanged) {
+                    $message = "{mapper}: [A] '{user}@{backend}' Updated and marked '#{id}: {title}' as '{state}'.";
                     if (null !== $onStateUpdate) {
                         $onStateUpdate($local);
                     }
                 }
 
                 if (count($changes) >= 1) {
-                    $this->logger->notice($message, [
+                    $this->logger->log(true === $isPlayChanged ? LogLevel::NOTICE : LogLevel::INFO, $message, [
                         'user' => $this->userContext?->name ?? 'main',
                         'mapper' => afterLast(self::class, '\\'),
                         'id' => $cloned->id ?? 'New',
@@ -869,10 +884,12 @@ class DirectMapper implements ImportInterface
             ];
         }
 
-        $this->logger->debug(
-            "{mapper}: [A] Ignoring '{user}@{backend}' - '#{id}: {title}'. Metadata & play state are identical.",
-            $context
-        );
+        if ($this->inTraceMode()) {
+            $this->logger->info(
+                "{mapper}: [A] Ignoring '{user}@{backend}' - '#{id}: {title}'. Metadata & play state are identical.",
+                $context
+            );
+        }
 
         Message::increment("{$entity->via}.{$entity->type}.ignored_no_change");
 
@@ -923,9 +940,7 @@ class DirectMapper implements ImportInterface
     {
         if (true === (bool)Config::get('sync.progress', false) && count($this->progressItems) >= 1) {
             try {
-                $opts = [
-                    'unique' => true,
-                ];
+                $opts = ['unique' => true];
 
                 if (null !== $this->userContext) {
                     $opts = ag_set($opts, Options::CONTEXT_USER, $this->userContext->name);

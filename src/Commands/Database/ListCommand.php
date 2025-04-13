@@ -79,6 +79,7 @@ final class ListCommand extends Command
             ->addOption('subtitle', null, InputOption::VALUE_REQUIRED, 'Limit results to this specified content title.')
             ->addOption('path', null, InputOption::VALUE_REQUIRED, 'Show results that contains this file path.')
             ->addOption('season', null, InputOption::VALUE_REQUIRED, 'Select season number.')
+            ->addOption('genre', null, InputOption::VALUE_REQUIRED, 'Filter on genre.')
             ->addOption('episode', null, InputOption::VALUE_REQUIRED, 'Select episode number.')
             ->addOption('year', null, InputOption::VALUE_REQUIRED, 'Select year.')
             ->addOption('id', null, InputOption::VALUE_REQUIRED, 'Select db record number.')
@@ -221,6 +222,10 @@ final class ListCommand extends Command
 
         if (null !== $input->getOption('season')) {
             $params['season'] = $input->getOption('season');
+        }
+
+        if (null !== $input->getOption('genre')) {
+            $params['genres'] = strtolower($input->getOption('genre'));
         }
 
         if (null !== $input->getOption('episode')) {

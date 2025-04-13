@@ -84,7 +84,14 @@ class JellyfinClient implements iClient
         'ProductionYear',
         'Path',
         'UserDataLastPlayedDate',
+        'AirTime',
+        'CustomRating',
+        'DateCreated',
+        'DateLastMediaAdded',
+        'Overview',
+        'Genres',
     ];
+
     /**
      * @var array<string> Map the Jellyfin types to our own types.
      */
@@ -240,7 +247,7 @@ class JellyfinClient implements iClient
 
         if (false === $response->isSuccessful()) {
             throw new HttpException(
-                ag($response->extra, 'message', fn() => $response->error->format()),
+                ag($response->extra, 'message', fn () => $response->error->format()),
                 ag($response->extra, 'http_code', 400),
             );
         }
@@ -781,7 +788,7 @@ class JellyfinClient implements iClient
     private function throwError(Response $response, string $className = RuntimeException::class, int $code = 0): void
     {
         throw new $className(
-            message: ag($response->extra, 'message', fn() => $response->error->format()),
+            message: ag($response->extra, 'message', fn () => $response->error->format()),
             code: $code,
             previous: $response->error->previous
         );
