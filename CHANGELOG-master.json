@@ -1,5 +1,29 @@
 [
     {
+        "tag": "master-20250413-3e69758",
+        "date": "2025-04-13T21:22:37+00:00",
+        "commits": [
+            {
+                "sha": "0b38e13",
+                "message": "Import content genres",
+                "author": "arabcoders",
+                "date": "2025-04-13T19:41:45+00:00"
+            },
+            {
+                "sha": "7951ad1",
+                "message": "Added a remote logging handler to allow user to forward logs to remote target.",
+                "author": "arabcoders",
+                "date": "2025-04-13T19:39:16+00:00"
+            },
+            {
+                "sha": "7a2c5e0",
+                "message": "expand the imported data to include the content summary",
+                "author": "arabcoders",
+                "date": "2025-04-12T19:49:56+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250411-54c66ee",
         "date": "2025-04-11T18:26:32+00:00",
         "commits": [
