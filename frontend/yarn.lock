@@ -1866,11 +1866,11 @@ array-union@^2.1.0:
   integrity sha512-HGyxoOTYUyCM6stUe6EJgnd4EoewAI7zMdfqO+kGjnlZmBDz/cR5pf8r/cR4Wq60sL/p0IkcjUEEPwS3GFrIyw==
 
 ast-kit@^1.0.1, ast-kit@^1.4.0:
-  version "1.4.2"
-  resolved "https://registry.yarnpkg.com/ast-kit/-/ast-kit-1.4.2.tgz#75d3706c12549573c7de9e7c38ed04fb7d0cc10f"
-  integrity sha512-lvGehj1XsrIoQrD5CfPduIzQbcpuX2EPjlk/vDMDQF9U9HLRB6WwMTdighj5n52hdhh8xg9VgPTU7Q25MuJ/rw==
+  version "1.4.3"
+  resolved "https://registry.yarnpkg.com/ast-kit/-/ast-kit-1.4.3.tgz#030f1bfb55bd72d426dc1d0ba82a8de5c75acd7c"
+  integrity sha512-MdJqjpodkS5J149zN0Po+HPshkTdUyrvF7CKTafUgv69vBSPtncrj+3IiUgqdd7ElIEkbeXCsEouBUwLrw9Ilg==
   dependencies:
-    "@babel/parser" "^7.26.9"
+    "@babel/parser" "^7.27.0"
     pathe "^2.0.3"
 
 ast-module-types@^5.0.0:
@@ -3896,10 +3896,10 @@ marked-base-url@^1.1.3:
   resolved "https://registry.yarnpkg.com/marked-base-url/-/marked-base-url-1.1.6.tgz#1bf31a7f8328dd45d36234a42c6c12c086330949"
   integrity sha512-STFGZN1kBZIWaw5RGwY63mSCwUXUmUDOAPRMAuPkg2Iou4ZWUsd7nFqvh0ifMYekqKuHHdmqJUqCl0HUakBbMQ==
 
-marked@^15.0.9:
-  version "15.0.9"
-  resolved "https://registry.yarnpkg.com/marked/-/marked-15.0.9.tgz#0ac0b42834a04f8c971a2fee36106694b29c0aad"
-  integrity sha512-9AW/bn9DxQeZVjR52l5jsc0W2pwuhP04QaQewPvylil12Cfr2GBfWmgp6mu8i9Jy8UlBjqDZ9uMTDuJ8QOGZJA==
+marked@^15.0.10:
+  version "15.0.10"
+  resolved "https://registry.yarnpkg.com/marked/-/marked-15.0.10.tgz#466f718a312ef83c7560ae05e4f8092b21e3c48b"
+  integrity sha512-BXzsfFiR2UqXFKRwpugWuCYi9mWd1aX/Yns/X52xWfvfen9lnGEDbJw9ZEjjvLZVqntqT2gX45eYvqb2dIokDw==
 
 math-intrinsics@^1.1.0:
   version "1.1.0"
