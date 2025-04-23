@@ -1,8 +1,20 @@
 [
     {
-        "tag": "dev-20250423-7013c0b",
-        "date": "2025-04-23T13:56:08+00:00",
+        "tag": "dev-20250424-f2e1597",
+        "date": "2025-04-23T21:27:43+00:00",
         "commits": [
+            {
+                "sha": "f2e1597",
+                "message": "Allow user to plex sub users PIN via the WebUI. Fixes #649",
+                "author": "arabcoders",
+                "date": "2025-04-23T21:27:43+00:00"
+            },
+            {
+                "sha": "6c99cf7",
+                "message": "update external packages",
+                "author": "arabcoders",
+                "date": "2025-04-23T21:27:06+00:00"
+            },
             {
                 "sha": "7013c0b",
                 "message": "updated external dependencies",
