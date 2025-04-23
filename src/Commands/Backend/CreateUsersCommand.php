@@ -265,6 +265,7 @@ class CreateUsersCommand extends Command
                     $backedName = ag($backend, 'name');
 
                     $user['real_name'] = ag($user, 'name');
+                    $user['protected'] = (bool)ag($user, 'protected', false);
 
                     // -- this was source of lots of bugs and confusion for users,
                     // -- we decided to normalize the user-names early in the process.
@@ -322,6 +323,15 @@ class CreateUsersCommand extends Command
                                 path: ['options.' . Options::ADMIN_TOKEN, 'token']
                             )
                         ]);
+
+                        if (null !== ($adminUserPIN = ag($user, 'options.' . Options::PLEX_USER_PIN))) {
+                            $info = ag_set($info, 'options.' . Options::ADMIN_PLEX_USER_PIN, $adminUserPIN);
+                        }
+
+                        if (null !== ($userPin = ag($user, 'options.' . Options::PLEX_USER_PIN))) {
+                            $info = ag_set($info, 'options.' . Options::PLEX_USER_PIN, $userPin);
+                        }
+
                         if (true === (bool)ag($user, 'guest', false)) {
                             $info = ag_set($info, 'options.' . Options::PLEX_EXTERNAL_USER, true);
                         }
@@ -476,11 +486,11 @@ class CreateUsersCommand extends Command
                             if (null !== ($val = ag($backend, 'client_data.options.use_old_progress_endpoint'))) {
                                 $update['options.use_old_progress_endpoint'] = $val;
                             }
-                            $adminToken = ag($backend, [
+
+                            $update['options.' . Options::ADMIN_TOKEN] = ag($backend, [
                                 'client_data.options.' . Options::ADMIN_TOKEN,
                                 'client_data.token'
                             ]);
-                            $update['options.' . Options::ADMIN_TOKEN] = $adminToken;
                         }
 
                         self::$logger?->info("SYSTEM: Updating user configuration for '{user}@{name}' backend.", [
@@ -493,7 +503,6 @@ class CreateUsersCommand extends Command
                         }
                     }
                 }
-
                 try {
                     if (true === $regenerateTokens || 'reuse_or_generate_token' === ag($clientData, 'token')) {
                         /** @var iClient $client */
@@ -504,6 +513,11 @@ class CreateUsersCommand extends Command
                             if (ag($clientData, 'options.' . Options::PLEX_EXTERNAL_USER, false)) {
                                 $requestOpts[Options::PLEX_EXTERNAL_USER] = true;
                             }
+
+                            if (null !== ($userPIN = ag($backend, 'options.' . Options::PLEX_USER_PIN))) {
+                                $requestOpts[Options::PLEX_USER_PIN] = $userPIN;
+                            }
+
                             $token = $client->getUserToken(
                                 userId: ag($clientData, 'options.' . Options::PLEX_USER_UUID),
                                 username: ag($clientData, 'options.' . Options::PLEX_USER_NAME),
@@ -909,6 +923,8 @@ class CreateUsersCommand extends Command
                     'id' => $userObj['id'],
                     'name' => $userObj['name'],
                     'backend' => $backend,
+                    'protected' => (bool)ag($userObj, 'protected', false),
+                    'client_data' => ag($userObj, 'client_data.type', null),
                     'real_name' => $userObj['real_name'] ?? null,
                 ];
             }
@@ -1003,6 +1019,13 @@ class CreateUsersCommand extends Command
                 'username' => $username
             ]);
             return;
+        }
+
+        if (null !== ($pin = ag($user_map, 'options.' . Options::PLEX_USER_PIN))) {
+            if (!isset($user['options'])) {
+                $user['options'] = [];
+            }
+            $user['options'][Options::PLEX_USER_PIN] = $pin;
         }
 
         if (null !== ($newUsername = ag($user_map, 'replace_with'))) {

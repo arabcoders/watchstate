@@ -247,7 +247,7 @@ if (!function_exists('APIRequest')) {
             get: $query,
             post: $json,
             body: $body
-        )->withAttribute('INTERNAL_REQUEST', true);
+        )->withAttribute(Options::INTERNAL_REQUEST, true);
 
         if (null !== ($callback = ag($opts, 'callback'))) {
             $callback($request);

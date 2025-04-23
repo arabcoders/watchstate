@@ -67,6 +67,9 @@ final class Mapper
                     'username' => ag($user, 'name', null),
                     'backend' => ag($user, 'backend', null),
                     'real_name' => ag($user, 'real_name', null),
+                    'type' => ag($user, 'client_data.type', null),
+                    'protected' => (bool)ag($user, 'protected', false),
+                    'options' => ag($user, 'options', (object)[]),
                 ];
             }
 
@@ -82,6 +85,9 @@ final class Mapper
                         'username' => ag($backendData, 'name', null),
                         'backend' => $backend,
                         'real_name' => ag($backendData, 'real_name', null),
+                        'type' => ag($backendData, 'client_data.type', null),
+                        'protected' => (bool)ag($backendData, 'protected', false),
+                        'options' => ag($backendData, 'options', (object)[]),
                     ];
                 }
 

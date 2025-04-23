@@ -55,7 +55,7 @@
               <li>
                 <NuxtLink :to="`/tools/plex_token`" v-text="'Validate plex token'"/>
               </li>
-              <li v-if="backends && backends.length>0">
+              <li v-if="backends && backends.length>0 && 'main' === api_user">
                 <NuxtLink :to="`/tools/sub_users`" v-text="'Create sub-users'"/>
               </li>
             </ul>

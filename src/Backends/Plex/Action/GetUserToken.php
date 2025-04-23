@@ -49,7 +49,7 @@ final class GetUserToken
         if (true === (bool)ag($opts, Options::PLEX_EXTERNAL_USER, false)) {
             $fn = fn() => $this->GetExternalUserToken($context, $userId, $username, $opts);
         } else {
-            $fn = fn() => $this->getUserToken($context, $userId, $username);
+            $fn = fn() => $this->getUserToken($context, $userId, $username, $opts);
         }
 
         return $this->tryResponse(context: $context, fn: $fn, action: $this->action);
@@ -61,15 +61,20 @@ final class GetUserToken
      * @param Context $context
      * @param int|string $userId
      * @param string $username
+     * @param array $opts optional options.
      *
      * @return Response
      */
-    private function getUserToken(Context $context, int|string $userId, string $username): Response
+    private function getUserToken(Context $context, int|string $userId, string $username, array $opts = []): Response
     {
         try {
             $url = Container::getNew(iUri::class)
                 ->withPort(443)->withScheme('https')->withHost('plex.tv')
                 ->withPath(r('/api/v2/home/users/{user_id}/switch', ['user_id' => $userId]));
+
+            if (null !== ($pin = ag($opts, Options::PLEX_USER_PIN, ag($context->options, Options::PLEX_USER_PIN)))) {
+                $url = $url->withQuery(http_build_query(['pin' => (string)$pin]));
+            }
 
             $this->logger->debug("Requesting temporary access token for '{user}@{backend}' user '{username}'.", [
                 'user' => $context->userContext->name,
@@ -83,7 +88,7 @@ final class GetUserToken
                 'headers' => [
                     'Accept' => 'application/json',
                 ],
-            ]);
+            ], $opts);
 
             if (true === ($response instanceof Response)) {
                 return $response;
@@ -303,11 +308,6 @@ final class GetUserToken
             }
         }
 
-        if (null !== ($pin = ag($context->options, Options::PLEX_USER_PIN))) {
-            parse_str($url->getQuery(), $query);
-            $url = $url->withQuery(http_build_query(['pin' => $pin, ...$query,]));
-        }
-
         $response = $this->http->request($method->value, (string)$url, [
             'headers' => array_replace_recursive([
                 'X-Plex-Token' => $context->backendToken,
@@ -320,15 +320,24 @@ final class GetUserToken
             return $response;
         }
 
+        $extra_msg = '';
+
+        try {
+            $extra_msg = ag($response->toArray(false), 'errors.0.message', '?');
+        } catch (Throwable) {
+        }
+
         return new Response(
             status: false,
             error: new Error(
-                message: "Request for '{user}@{backend}' users list returned with unexpected '{status_code}' status code. {tokenType}",
+                message: "Request to '{user}@{backend}' to grant access token returned with unexpected '{status_code}' status code. {tokenType}{extra_msg}",
                 context: [
                     'user' => $context->userContext->name,
                     'backend' => $context->backendName,
                     'status_code' => $response->getStatusCode(),
                     'body' => $response->getContent(false),
+                    'parsed' => $response->toArray(false),
+                    'extra_msg' => !$extra_msg ? '' : ". $extra_msg",
                     'tokenType' => ag_exists(
                         $context->options,
                         Options::ADMIN_TOKEN
