@@ -193,18 +193,21 @@ const loadRecentHistory = async () => {
   search.append('q', `${backend.value}.via://${backend.value}`)
   search.append('sort', `updated_at:desc`)
 
-  const response = await request(`/history/?${search.toString()}`)
-  const json = await response.json()
-  if (useRoute().name !== 'backend-backend') {
-    return
-  }
+  try {
+    const response = await request(`/history/?${search.toString()}`)
+    const json = await response.json()
+    if (useRoute().name !== 'backend-backend') {
+      return
+    }
 
-  if (200 !== response.status && 404 !== response.status) {
-    notification('error', 'Error loading data', `${json.error.code}: ${json.error.message}`);
-    return
-  }
+    if (200 !== response.status && 404 !== response.status) {
+      notification('error', 'Error loading data', `${json.error.code}: ${json.error.message}`);
+      return
+    }
 
-  bHistory.value = json.history
+    bHistory.value = json.history
+  } catch (e) {
+  }
 };
 
 const loadInfo = async () => {

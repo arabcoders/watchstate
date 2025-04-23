@@ -22,6 +22,7 @@ use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as iException;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 use Symfony\Contracts\HttpClient\ResponseInterface as iResponse;
+use Throwable;
 
 final class GetUsersList
 {
@@ -278,6 +279,7 @@ final class GetUsersList
                 'admin' => false,
                 'guest' => 1 !== (int)ag($user, 'home'),
                 'restricted' => 1 === (int)ag($user, 'restricted'),
+                'protected' => 1 === (int)ag($user, 'protected'),
                 'updatedAt' => 'external_user',
             ];
         }
@@ -410,6 +412,7 @@ final class GetUsersList
                 'admin' => (bool)ag($data, 'admin'),
                 'guest' => (bool)ag($data, 'guest'),
                 'restricted' => (bool)ag($data, 'restricted'),
+                'protected' => (bool)ag($data, 'protected'),
                 'updatedAt' => isset($data['updatedAt']) ? makeDate($data['updatedAt']) : 'Never',
             ];
 
@@ -484,14 +487,23 @@ final class GetUsersList
             return $response;
         }
 
+        $extra_msg = '';
+
+        try {
+            $extra_msg = ag($response->toArray(false), 'errors.0.message', '?');
+        } catch (Throwable) {
+        }
+
         throw new InvalidArgumentException(
             r(
-                "Request for '{user}@{backend}' users list returned with unexpected '{status_code}' status code. {tokenType}",
+                "Request for '{user}@{backend}' users list returned with unexpected '{status_code}' status code. {tokenType}{extra_msg}",
                 [
                     'user' => $context->userContext->name,
                     'backend' => $context->backendName,
                     'status_code' => $response->getStatusCode(),
                     'body' => $response->getContent(false),
+                    'parsed' => $response->toArray(false),
+                    'extra_msg' => !$extra_msg ? '' : ". $extra_msg",
                     'tokenType' => ag_exists(
                         $context->options,
                         Options::ADMIN_TOKEN

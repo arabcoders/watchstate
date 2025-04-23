@@ -174,7 +174,7 @@ final class LogsCommand extends Command
             'date' => $date
         ]);
 
-        if (false === file_exists($file) || filesize($file) < 1) {
+        if (false === file_exists($file)) {
             $output->writeln(
                 sprintf(
                     '<info>Log file [%s] does not exist or is empty. This means it has been pruned, the date is incorrect or nothing has written to that file yet.</info>',

@@ -9,7 +9,8 @@
         <div class="is-pulled-right">
           <div class="field is-grouped">
             <p class="control">
-              <button class="button is-purple" v-tooltip.bottom="'Export to mapper.yaml file.'" @click="generateFile">
+              <button class="button is-purple" v-tooltip.bottom="'Export to mapper.yaml file.'" @click="generateFile"
+                      :disabled="userWithNoPin.length > 0">
                 <span class="icon"><i class="fas fa-file-export"/></span>
               </button>
             </p>
@@ -19,7 +20,7 @@
               </button>
             </p>
             <p class="control">
-              <button class="button is-info" @click="loadContent" :disabled="isLoading"
+              <button class="button is-info" @click="loadContent(true)" :disabled="isLoading"
                       :class="{ 'is-loading': isLoading }">
                 <span class="icon"><i class="fas fa-sync"/></span>
               </button>
@@ -37,6 +38,22 @@
       <div class="column is-12" v-if="isLoading">
         <Message v-if="isLoading" message_class="is-background-info-90 has-text-dark" icon="fas fa-spinner fa-spin"
                  title="Loading" message="Loading data. Please wait..."/>
+      </div>
+
+      <div class="column is-12" v-if="!isLoading && userWithNoPin.length > 0">
+        <Message message_class="has-background-warning-80 has-text-dark" icon="fas fa-exclamation-triangle"
+                 title="User/s missing PIN">
+          <p>
+            <span>
+              The following users
+              <span v-for="(user, index) in userWithNoPin" :key="index" class="tag pr-1">
+                {{ user }}
+              </span>
+              are missing a PIN. Click on <span class="icon"><i class="fas fa-lock-open"/></span> to set the user PIN.
+              Otherwise you will not be able to proceed.
+            </span>
+          </p>
+        </Message>
       </div>
 
       <div class="column is-12" v-if="matched?.length < 1 && !isLoading">
@@ -61,7 +78,12 @@
             <draggable v-model="group.matched" :group="{ name: 'shared', pull: true, put: true }" animation="150"
                        :move="checkBackend" item-key="id">
               <template #item="{ element }">
-                <div class="draggable-item">
+                <div class="draggable-item" :class="setClass(element)">
+                  <span v-if="element?.protected" class="icon has-text-danger"
+                        v-tooltip.bottom="'Click to set/view user PIN'" @click="setUserPin(element)">
+                    <i class="fas"
+                       :class="{'fa-lock': element?.options?.PLEX_USER_PIN, 'fa-lock-open': !element?.options?.PLEX_USER_PIN}"/>
+                  </span>
                   <span>
                     {{ element.backend }}@{{ element.username }}
                     <span v-if="!isSameName(element.real_name, element.username)">
@@ -87,7 +109,12 @@
             <draggable v-model="unmatched" :group="{ name: 'shared', pull: true, put: true }" animation="150"
                        :move="checkBackend" item-key="id">
               <template #item="{ element }">
-                <div class="draggable-item">
+                <div class="draggable-item" :class="setClass(element)">
+                  <span v-if="element?.protected" class="icon has-text-danger"
+                        v-tooltip.bottom="'Click to set/view user PIN'">
+                    <i class="fas"
+                       :class="{'fa-lock': element?.options?.PLEX_USER_PIN, 'fa-lock-open': !element?.options?.PLEX_USER_PIN}"/>
+                  </span>
                   <span>
                     {{ element.backend }}@{{ element.username }}
                     <span v-if="!isSameName(element.real_name, element.username)">
@@ -155,14 +182,14 @@
           <div class="field is-fullwidth is-grouped">
 
             <div class="control is-expanded">
-              <button class="button is-fullwidth is-warning" @click="saveMap">
+              <button class="button is-fullwidth is-warning" @click="saveMap" :disabled="userWithNoPin.length > 0">
                 <span class="icon"><i class="fas fa-save"/></span>
                 <span>Save mapping</span>
               </button>
             </div>
 
             <div class="control is-expanded">
-              <button class="button is-fullwidth" @click="createUsers"
+              <button class="button is-fullwidth" @click="createUsers" :disabled="userWithNoPin.length > 0"
                       :class="{'is-primary': !dryRun && !recreate, 'is-info':dryRun, 'is-danger': !dryRun && recreate}">
                 <span class="icon"><i class="fas fa-users"/></span>
                 <span v-if="!dryRun">
@@ -227,6 +254,10 @@
               There is a 5-minute cache when retrieving users from the API, so the data you see might be slightly out of
               date. This is to prevent overwhelming external APIs with requests and to have better response times.
             </li>
+            <li>
+              Users backends with red border and icon of <i class="fas fa-lock-open"></i> are protected by PIN, and you
+              need to click on the icon to set the PIN. Otherwise, you will not be able to proceed.
+            </li>
           </ul>
         </Message>
       </div>
@@ -238,6 +269,7 @@
 import moment from 'moment'
 import {makeConsoleCommand, parse_api_response} from "~/utils/index.js";
 import {notification} from '~/utils/index'
+import {useStorage} from "@vueuse/core";
 
 const matched = ref([])
 const unmatched = ref([])
@@ -250,13 +282,14 @@ const dryRun = ref(false)
 const hasUsers = ref(false)
 const verbose = ref(false)
 const expires = ref()
+const api_user = useStorage('api_user', 'main')
 
 const addNewUser = () => {
   const newUserName = `User group #${matched.value.length + 1}`
   matched.value.push({user: newUserName, matched: []})
 }
 
-const loadContent = async () => {
+const loadContent = async (force) => {
   if (matched.value.length > 0) {
     if (!confirm('Reloading will remove all modifications. Are you sure?')) {
       return
@@ -268,7 +301,10 @@ const loadContent = async () => {
   isLoading.value = true
 
   try {
-    const response = await request('/backends/mapper')
+    const response = await request(`/backends/mapper${force ? '?force=1' : ''}`, {
+      method: 'GET',
+      headers: {'Accept': 'application/json'}
+    })
     const json = await response.json()
 
     if (useRoute().name !== 'tools-sub_users') {
@@ -403,8 +439,7 @@ const formatData = () => {
 
   matched.value.forEach((group, i) => {
     const users = {}
-
-    group.matched.forEach(user => users[user.backend] = {name: user.username})
+    group?.matched.forEach(u => users[u.backend] = {name: u.username, options: toRaw(u.options)})
 
     if (Object.keys(users).length < 2) {
       return
@@ -413,7 +448,7 @@ const formatData = () => {
     data.map.push(users)
   })
 
-  return data
+  return toRaw(data)
 }
 
 
@@ -442,11 +477,77 @@ const createUsers = async () => {
   await navigateTo(makeConsoleCommand(command.join(' '), true))
 }
 
-const isSameName = (name1, name2) => {
-  return name1.toLowerCase() === name2.toLowerCase()
+const isSameName = (name1, name2) => name1.toLowerCase() === name2.toLowerCase()
+
+const setUserPin = async user => {
+  const pin = prompt(`Enter user PIN for '${user.backend}@${user.username}':`, user?.options?.PLEX_USER_PIN || '')
+  if (null === pin) {
+    return null;
+  }
+
+  if ('' === pin) {
+    if (user?.options?.PLEX_USER_PIN) {
+      delete user.options.PLEX_USER_PIN
+    }
+    return
+  }
+
+  if (pin === user?.options?.PLEX_USER_PIN) {
+    console.log('PIN is the same, no changes made.')
+    return
+  }
+
+  if (4 !== pin.length) {
+    notification('error', 'Error', 'PIN must be at least 4 characters.')
+    return
+  }
+
+  if (!user?.options) {
+    user.options = {}
+  }
+
+  user.options.PLEX_USER_PIN = pin
 }
 
-onMounted(async () => await loadContent())
+const setClass = user => {
+  if (!user?.protected) {
+    return;
+  }
+
+  return user?.options?.PLEX_USER_PIN ? 'is-success' : 'is-danger'
+}
+
+const userWithNoPin = computed(() => {
+  // -- get all users with protected flag
+  const no_pin = []
+
+  if (!matched.value.length) {
+    return []
+  }
+
+  matched.value.forEach(group => group.matched.forEach(user => {
+    if (!user?.protected) {
+      return
+    }
+
+    console.log(user?.options?.PLEX_USER_PIN, user?.protected, user.username)
+
+    if (!user?.options?.PLEX_USER_PIN) {
+      no_pin.push(`${user.backend}@${user.username}`)
+    }
+  }))
+
+  return no_pin
+})
+onMounted(async () => {
+  if ('main' !== api_user.value) {
+    notification('error', 'Error', 'The sub users page is only available for the main user.')
+    await navigateTo({name: 'backends'})
+    return
+  }
+  await loadContent()
+})
+
 </script>
 
 <style scoped>
@@ -459,5 +560,13 @@ onMounted(async () => await loadContent())
   border: 1px solid #ddd;
   border-radius: 4px;
   margin: .25rem;
+}
+
+.draggable-item.is-danger {
+  border: var(--bulma-control-border-width) solid var(--bulma-danger);
+}
+
+.draggable-item.is-success {
+  border: var(--bulma-control-border-width) solid var(--bulma-success);
 }
 </style>
