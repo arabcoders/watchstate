@@ -33,19 +33,23 @@ final class Index
         $user = $this->getUserContext($request, $mapper, $logger);
 
         foreach ($this->getBackends(userContext: $user) as $backend) {
-            $item = array_filter(
-                $backend,
-                fn($key) => false === in_array($key, ['options', 'webhook'], true),
-                ARRAY_FILTER_USE_KEY
-            );
+            if (!$request->getAttribute(Options::INTERNAL_REQUEST)) {
+                $item = array_filter(
+                    $backend,
+                    fn ($key) => false === in_array($key, ['options', 'webhook'], true),
+                    ARRAY_FILTER_USE_KEY
+                );
 
-            $item = ag_set(
-                $item,
-                'options.' . Options::IMPORT_METADATA_ONLY,
-                (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY, false)
-            );
+                $item = ag_set(
+                    $item,
+                    'options.' . Options::IMPORT_METADATA_ONLY,
+                    (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY, false)
+                );
+                $list[] = $item;
+                continue;
+            }
 
-            $list[] = $item;
+            $list[] = $backend;
         }
 
         return api_response(Status::OK, $list);

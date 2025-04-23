@@ -30,6 +30,7 @@ final class EditCommand extends Command
     {
         $this->setName(self::ROUTE)
             ->setDescription('Edit backend settings inline.')
+            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select user.', 'main')
             ->addOption('key', 'k', InputOption::VALUE_REQUIRED, 'Key to update.')
             ->addOption('set', 'e', InputOption::VALUE_REQUIRED, 'Value to set.')
             ->addOption('delete', 'd', InputOption::VALUE_NONE, 'Delete value.')
@@ -64,7 +65,7 @@ final class EditCommand extends Command
                         'keyNames' => implode(
                             ', ',
                             array_map(
-                                fn($val) => '<value>' . $val . '</value>',
+                                fn ($val) => '<value>' . $val . '</value>',
                                 array_column(require __DIR__ . '/../../../config/servers.spec.php', 'key')
                             ),
                         )
@@ -109,8 +110,16 @@ final class EditCommand extends Command
         }
 
         $hasSet = null !== $input->getOption('set');
+        $opts = [];
+
+        if ($input->getOption('user')) {
+            $opts['headers'] = [
+                'X-User' => $input->getOption('user'),
+            ];
+        }
 
         $json = [];
+
         if ($input->getOption('delete')) {
             $method = 'DELETE';
         } elseif ($hasSet) {
@@ -120,7 +129,7 @@ final class EditCommand extends Command
             $method = 'GET';
         }
 
-        $response = apiRequest($method, "/backend/{$name}/option/{$key}", $json);
+        $response = apiRequest($method, "/backend/{$name}/option/{$key}", $json, $opts);
 
         if (Status::OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [

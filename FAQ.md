@@ -1264,6 +1264,9 @@ These commands sub users can via `[-u, --user]` option flag.
 * `state:import`.
 * `state:export`.
 * `state:backup`.
+* `config:list`.
+* `config:view`.
+* `config:edit`.
 * `db:list`.
 * `backend:restore`.
 * `backend:ignore:*`.

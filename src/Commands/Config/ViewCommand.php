@@ -8,6 +8,8 @@ use App\API\Backends\Index;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
+use App\Libs\Enums\Http\Method;
+use App\Libs\Enums\Http\Status;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Helper\Table;
@@ -35,6 +37,7 @@ final class ViewCommand extends Command
     {
         $this->setName(self::ROUTE)
             ->setDescription('View Backends settings.')
+            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select user.', 'main')
             ->addOption(
                 'select-backend',
                 's',
@@ -98,7 +101,27 @@ final class ViewCommand extends Command
         $isCustom = count($selected) > 0;
         $filter = $input->getArgument('filter');
 
-        foreach (Config::get('servers', []) as $backendName => $backend) {
+        $opts = [];
+        if ($input->getOption('user')) {
+            $opts['headers'] = [
+                'X-User' => $input->getOption('user'),
+            ];
+        }
+
+        $response = apiRequest(Method::GET, "/backends", opts: $opts);
+
+        if (Status::OK !== $response->status) {
+            $output->writeln(r("<error>API error. {status}: {message}</error>", [
+                'status' => $response->status->value,
+                'message' => ag($response->body, 'error.message', 'Unknown error.')
+            ]));
+            return self::FAILURE;
+        }
+
+
+        foreach ($response->body as $backend) {
+            $backendName = ag($backend, 'name', 'Unknown');
+
             if ($isCustom && $input->getOption('exclude') === in_array($backendName, $selected)) {
                 $output->writeln(r('Ignoring backend \'{backend}\' as requested by [-s, --select-backend].', [
                     'backend' => $backendName
@@ -120,6 +143,10 @@ final class ViewCommand extends Command
 
             if ($exportLastSync = ag($backend, 'export.lastSync')) {
                 $backend = ag_set($backend, 'export.lastSync', (string)makeDate($exportLastSync));
+            }
+
+            if (true === ag_exists($backend, 'urls')) {
+                unset($backend['urls']);
             }
 
             $list[$backendName] = ['name' => $backendName, ...$backend];
@@ -152,7 +179,8 @@ final class ViewCommand extends Command
 
         if ('table' === $mode) {
             new Table($output)->setStyle('box')
-                ->setHeaders(['Backend', 'Data (Filter: ' . (empty($filter) ? 'None' : $filter) . ')']
+                ->setHeaders(
+                    ['Backend', 'Data (Filter: ' . (empty($filter) ? 'None' : $filter) . ')']
                 )->setRows($rows)
                 ->render();
         } else {
@@ -203,7 +231,7 @@ final class ViewCommand extends Command
             return trim(Yaml::dump(ag($backend, $filter, 'Not configured, or invalid key.'), 8, 2));
         }
 
-        $filters = array_map(fn($val) => trim($val), explode(',', $filter));
+        $filters = array_map(fn ($val) => trim($val), explode(',', $filter));
         $list = [];
 
         foreach ($filters as $fil) {
