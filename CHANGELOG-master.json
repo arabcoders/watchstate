@@ -1,5 +1,41 @@
 [
     {
+        "tag": "master-20250423-5b7edd5",
+        "date": "2025-04-23T21:35:45+00:00",
+        "commits": [
+            {
+                "sha": "f2e1597",
+                "message": "Allow user to plex sub users PIN via the WebUI. Fixes #649",
+                "author": "arabcoders",
+                "date": "2025-04-23T21:27:43+00:00"
+            },
+            {
+                "sha": "6c99cf7",
+                "message": "update external packages",
+                "author": "arabcoders",
+                "date": "2025-04-23T21:27:06+00:00"
+            },
+            {
+                "sha": "7013c0b",
+                "message": "updated external dependencies",
+                "author": "arabcoders",
+                "date": "2025-04-23T13:56:08+00:00"
+            },
+            {
+                "sha": "0fd19de",
+                "message": "Include PIN when validating plex context.",
+                "author": "arabcoders",
+                "date": "2025-04-23T13:52:18+00:00"
+            },
+            {
+                "sha": "e3789a9",
+                "message": "Add support for multi-user with config:view/list/edit commands",
+                "author": "arabcoders",
+                "date": "2025-04-23T13:44:12+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250413-3e69758",
         "date": "2025-04-13T21:22:37+00:00",
         "commits": [
