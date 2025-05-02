@@ -1,7 +1,25 @@
 [
     {
-        "tag": "dev-20250424-f2e1597",
-        "date": "2025-04-23T21:27:43+00:00",
+        "tag": "dev-20250502-37f8d51",
+        "date": "2025-05-02T15:57:32+00:00",
+        "commits": [
+            {
+                "sha": "37f8d51",
+                "message": "update external packages",
+                "author": "arabcoders",
+                "date": "2025-05-02T15:57:32+00:00"
+            },
+            {
+                "sha": "e091e99",
+                "message": "made it possible to add interactive guide for users",
+                "author": "arabcoders",
+                "date": "2025-05-02T15:56:02+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250423-5b7edd5",
+        "date": "2025-04-23T21:35:45+00:00",
         "commits": [
             {
                 "sha": "f2e1597",
