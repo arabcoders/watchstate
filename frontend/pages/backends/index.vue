@@ -9,9 +9,9 @@
         <div class="is-pulled-right">
           <div class="field is-grouped">
             <p class="control">
-              <button class="button is-primary" v-tooltip.bottom="'Add New Backend'"
-                      @click="toggleForm = !toggleForm" :disabled="isLoading">
+              <button class="button is-primary" @click="toggleForm = !toggleForm" :disabled="isLoading">
                 <span class="icon"><i class="fas fa-add"/></span>
+                <span>Add Backend</span>
               </button>
             </p>
             <p class="control">
@@ -156,7 +156,7 @@
                 <div class="control is-fullwidth has-icons-left">
                   <div class="select is-fullwidth">
                     <select v-model="selectedCommand" @change="forwardCommand(backend)">
-                      <option value="" disabled>Frequently used commands</option>
+                      <option value="" disabled>Quick operations</option>
                       <option v-for="(command, index) in usefulCommands" :key="`qc-${index}`" :value="index"
                               :disabled="!check_state(backend, command)">
                         {{ command.id }}. {{ command.title }}
@@ -305,7 +305,7 @@ const handleEvents = async (event, backend) => {
   switch (event) {
     case 'backupData':
       try {
-        const backup_status = await queue_event('run_console', {
+        await queue_event('run_console', {
           command: 'state:backup',
           args: [
             '-v',
@@ -317,8 +317,6 @@ const handleEvents = async (event, backend) => {
             '{user}.{backend}.{date}.initial_backup.json',
           ]
         })
-        console.log(backup_status);
-
         notification('info', 'Info', `We are going to initiate a backup for '${backend.value.name}' in little bit.`, 5000)
       } catch (e) {
         notification('error', 'Error', `Failed to queue backup request. ${e.message}`)
@@ -326,22 +324,38 @@ const handleEvents = async (event, backend) => {
       break
     case 'forceExport':
       try {
-        const export_status = await queue_event('run_console', {
+        await queue_event('run_console', {
           command: 'state:export',
           args: [
             '-fi',
             '-v',
             '--user',
             api_user.value,
-            '--dry-run',
             '--select-backend',
             backend.value.name,
           ]
         }, 180)
 
-        console.log(export_status);
-
         notification('info', 'Info', `Soon we are going to force export the local data to '${backend.value.name}'.`, 5000)
+      } catch (e) {
+        notification('error', 'Error', `Failed to queue force export request. ${e.message}`)
+      }
+      break
+    case 'forceImport':
+      try {
+        await queue_event('run_console', {
+          command: 'state:import',
+          args: [
+            '-f',
+            '-v',
+            '--user',
+            api_user.value,
+            '--select-backend',
+            backend.value.name,
+          ]
+        }, 180)
+
+        notification('info', 'Info', `Soon we will import data from '${backend.value.name}'.`, 5000)
       } catch (e) {
         notification('error', 'Error', `Failed to queue force export request. ${e.message}`)
       }

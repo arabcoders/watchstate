@@ -152,11 +152,19 @@
           </div>
         </div>
         <div class="navbar-end pr-3">
-          <div class="navbar-item" v-if="hasAPISettings && !showConnection">
-            <button class="button is-dark" @click="showUserSelection = !showUserSelection" v-tooltip="'Change User'">
-              <span class="icon"><i class="fas fa-users"/></span>
-            </button>
-          </div>
+          <template v-if="hasAPISettings && !showConnection">
+            <div class="navbar-item">
+              <NuxtLink class="button is-dark" v-tooltip="'Guides'" to="/help">
+                <span class="icon"><i class="fas fa-circle-question"/></span>
+              </NuxtLink>
+            </div>
+
+            <div class="navbar-item" v-if="hasAPISettings && !showConnection">
+              <button class="button is-dark" @click="showUserSelection = !showUserSelection" v-tooltip="'Change User'">
+                <span class="icon"><i class="fas fa-users"/></span>
+              </button>
+            </div>
+          </template>
 
           <div class="navbar-item">
             <button class="button is-dark" @click="showConnection = !showConnection"
