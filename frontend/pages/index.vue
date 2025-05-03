@@ -105,22 +105,33 @@
       <div class="column is-12">
         <div class="content">
           <Message title="Welcome" message_class="has-background-info-90 has-text-dark" icon="fas fa-heart">
-            If you have question, or want clarification on something, or just want to chat with other users,
-            you are
-            welcome to join our <span class="icon-text is-underlined">
-            <span class="icon"><i class="fas fa-brands fa-discord"></i></span>
-            <span>
-              <NuxtLink to="https://discord.gg/haUXHJyj6Y" target="_blank"
-                        v-text="'Discord server'"/>
-            </span>
-          </span>. For bug reports, feature requests, or contributions, please visit the
-            <span class="icon-text is-underlined">
-              <span class="icon"><i class="fas fa-brands fa-github"></i></span>
+            <p>
+              If you have question, or want clarification on something, or just want to chat with other users,
+              you are
+              welcome to join our <span class="icon-text is-underlined">
+              <span class="icon"><i class="fas fa-brands fa-discord"></i></span>
               <span>
-                <NuxtLink to="https://github.com/arabcoders/watchstate/issues/new/choose"
-                          target="_blank" v-text="'GitHub repository'"/>
+                <NuxtLink to="https://discord.gg/haUXHJyj6Y" target="_blank"
+                          v-text="'Discord server'"/>
               </span>
-            </span>.
+            </span>. For bug reports, feature requests, or contributions, please visit the
+              <span class="icon-text is-underlined">
+                <span class="icon"><i class="fas fa-brands fa-github"></i></span>
+                <span>
+                  <NuxtLink to="https://github.com/arabcoders/watchstate/issues/new/choose"
+                            target="_blank" v-text="'GitHub repository'"/>
+                </span>
+              </span>.
+            </p>
+            <p>
+              We have recently added a guides page to help you get started with WatchState. You can find it
+              <span class="icon-text is-underlined">
+                <span class="icon"><i class="fas fa-question-circle"/></span>
+                <span>
+                  <NuxtLink to="/help" v-text="'here'"/>
+                </span>
+              </span>, it still very early version and only contains a few guides, but we are working on it.
+            </p>
           </Message>
         </div>
       </div>

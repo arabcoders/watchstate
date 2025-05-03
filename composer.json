@@ -12,7 +12,9 @@
     },
     "scripts": {
         "test": "vendor/bin/phpunit",
-        "tests": "vendor/bin/phpunit"
+        "tests": "vendor/bin/phpunit",
+        "update_ui": "yarn --cwd ./frontend upgrade --latest",
+        "generate": "yarn --cwd ./frontend run generate"
     },
     "require": {
         "php": "^8.4",

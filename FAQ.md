@@ -137,7 +137,7 @@ re-processed accordingly.
 To resolve this conflict and sync the backend with your local state:
 
 * Go to the `WebUI > Backends`.
-* Under the relevant backend, find the **Frequently used commands** list.
+* Under the relevant backend, find the **Quick operations** list.
 * Select **3. Force export local play state to this backend.**
 
 This operation will overwrite the backend's watch state with your current local state to bring them back in sync.
@@ -179,7 +179,7 @@ To synchronize both backends correctly:
 * Enable **Full Import** for that backend.
 * Go to `Tasks` page, and run the **Import** task via `Run via console` button.
 * Once the import is complete, **add the second backend** (the one with incorrect or outdated play state).
-* Under the newly added backend, locate the **Frequently used commands** section.
+* Under the newly added backend, locate the **Quick operations** section.
 * Select **3. Force export local play state to this backend.**
 
 This will push your local watch state to the backend and ensure both are in sync.
@@ -195,7 +195,7 @@ local one, the export may be skipped.
 To confirm if this is the issue, follow these steps:
 
 1. Go to the `WebUI > Backends`.
-2. Under the relevant backend, locate the **Frequently Used Commands** section.
+2. Under the relevant backend, locate the **Quick operations** section.
 3. Select **7. Run export and save debug log.**
 
 This will generate a log file at `/config/user@backend_name.export.txt` If the file is too large to view in a regular
@@ -218,7 +218,7 @@ If you see messages such as `Backend date is equal or newer than database date.`
 To override the date check and force an update do the following:
 
 * Go to the `WebUI > Backends`.
-* Under the relevant backend, find the **Frequently used commands** list.
+* Under the relevant backend, find the **Quick operations** list.
 * Select **3. Force export local play state to this backend.**
 
 This will sync your local database state to the backend, ignoring date comparisons.

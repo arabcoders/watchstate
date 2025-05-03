@@ -269,6 +269,7 @@
               </p>
             </div>
           </div>
+
           <div class="field">
             <hr>
             <label class="label has-text-danger" for="backup_data">
@@ -282,6 +283,22 @@
               </p>
             </div>
           </div>
+
+          <div class="field" v-if="backends.length < 1">
+            <hr>
+            <label class="label" for="force_import">
+              Force one time import from this backend?
+            </label>
+            <div class="control">
+              <input id="force_import" type="checkbox" class="switch is-success" v-model="force_import">
+              <label for="force_import">Yes</label>
+              <p class="help">
+                <span class="icon"><i class="fas fa-info-circle"></i></span>
+                Run a one time import from this backend after adding it.
+              </p>
+            </div>
+          </div>
+
           <div class="field" v-if="backends.length > 0">
             <hr>
             <label class="label has-text-danger" for="force_export">
@@ -296,6 +313,7 @@
               </p>
             </div>
           </div>
+
         </template>
       </div>
 
@@ -331,7 +349,7 @@ import request from '~/utils/request'
 import {awaitElement, explode, notification, ucFirst} from '~/utils/index'
 import {useStorage} from "@vueuse/core";
 
-const emit = defineEmits(['addBackend', 'backupData', 'forceExport'])
+const emit = defineEmits(['addBackend', 'backupData', 'forceExport', 'forceImport'])
 
 const props = defineProps({
   backends: {
@@ -375,6 +393,7 @@ const exposeToken = ref(false)
 const error = ref()
 const backup_data = ref(true)
 const force_export = ref(false)
+const force_import = ref(false)
 
 const isLimited = ref(false)
 const accessTokenResponse = ref({})
@@ -676,6 +695,10 @@ const addBackend = async () => {
 
   if (true === Boolean(force_export?.value ?? false)) {
     emit('forceExport', backend)
+  }
+
+  if (true === Boolean(force_import?.value ?? false)) {
+    emit('forceImport', backend)
   }
 
   emit('addBackend')

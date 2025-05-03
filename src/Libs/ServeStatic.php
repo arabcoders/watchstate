@@ -43,6 +43,7 @@ final class ServeStatic implements LoggerAwareInterface
 
     private const array MD_IMAGES = [
         '/screenshots' => __DIR__ . '/../../',
+        '/guides' => __DIR__ . '/../../',
     ];
 
     public function __construct(private string|null $staticPath = null)

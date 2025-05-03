@@ -44,11 +44,13 @@
                   <p class="control" v-if="!isLoading">
                     <button class="button is-primary" type="button" :disabled="hasPrefix" @click="RunCommand">
                       <span class="icon"><i class="fa fa-paper-plane"></i></span>
+                      <span>Execute</span>
                     </button>
                   </p>
                   <p class="control" v-if="isLoading">
                     <button class="button is-danger" type="button" @click="finished" v-tooltip="'Close connection.'">
                       <span class="icon"><i class="fa fa-power-off"></i></span>
+                      <span>Close</span>
                     </button>
                   </p>
                 </div>
