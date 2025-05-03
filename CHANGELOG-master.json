@@ -1,5 +1,29 @@
 [
     {
+        "tag": "master-20250503-d36edb5",
+        "date": "2025-05-03T18:52:06+00:00",
+        "commits": [
+            {
+                "sha": "6f5509f",
+                "message": "Added guides",
+                "author": "arabcoders",
+                "date": "2025-05-03T18:44:37+00:00"
+            },
+            {
+                "sha": "37f8d51",
+                "message": "update external packages",
+                "author": "arabcoders",
+                "date": "2025-05-02T15:57:32+00:00"
+            },
+            {
+                "sha": "e091e99",
+                "message": "made it possible to add interactive guide for users",
+                "author": "arabcoders",
+                "date": "2025-05-02T15:56:02+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250423-5b7edd5",
         "date": "2025-04-23T21:35:45+00:00",
         "commits": [
