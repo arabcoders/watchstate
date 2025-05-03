@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250502-37f8d51",
-        "date": "2025-05-02T15:57:32+00:00",
+        "tag": "dev-20250503-6f5509f",
+        "date": "2025-05-03T18:44:37+00:00",
         "commits": [
+            {
+                "sha": "6f5509f",
+                "message": "Added guides",
+                "author": "arabcoders",
+                "date": "2025-05-03T18:44:37+00:00"
+            },
             {
                 "sha": "37f8d51",
                 "message": "update external packages",
