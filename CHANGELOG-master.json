@@ -1,5 +1,23 @@
 [
     {
+        "tag": "master-20250504-dabf306",
+        "date": "2025-05-04T19:03:50+00:00",
+        "commits": [
+            {
+                "sha": "3171748",
+                "message": "improvements for guide navigation",
+                "author": "arabcoders",
+                "date": "2025-05-04T18:56:47+00:00"
+            },
+            {
+                "sha": "a168912",
+                "message": "Improve the documentations and guides",
+                "author": "arabcoders",
+                "date": "2025-05-04T16:48:20+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250503-d36edb5",
         "date": "2025-05-03T18:52:06+00:00",
         "commits": [
