@@ -1,24 +1,25 @@
 <template>
   <Message title="Important" message_class="has-background-warning-80 has-text-dark" icon="fas fa-info-circle">
     <ul>
-      <li v-if="api_user === 'main'">
-        Support for sub users is in early stages. For more information please visit
-        <NuxtLink target="_blank" v-text="'Visit this link'"
-                  to="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#is-there-support-for-multi-user-setup"/>
-        to learn more. <b>DO NOT</b> add sub users backends directly. Use the create sub-users button after setting up
-        the main user.
-      </li>
       <li>
         If you are adding new backend that is fresh and doesn't have your current watch state, you should turn off
-        import and enable only metadata import at the start to prevent overriding your current play state.
-        <NuxtLink target="_blank" v-text="'Visit this link'"
-                  to="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#my-new-backend-overriding-my-old-backend-state--my-watch-state-is-not-correct"/>
-        to learn more.
+        import and enable only metadata import at the start to prevent overriding your current play state. Visit the
+        following guide
+        <NuxtLink to="/help/one-way-sync">
+          <span class="icon"><i class="fas fa-circle-question" /></span> One-way sync
+        </NuxtLink> to learn more.
+      </li>
+      <li v-if="api_user === 'main'">
+        Do not add sub-users backends manually, after finishing the main user backends setup. Visit
+        <NuxtLink target="_blank" to="/tools/sub_users">
+          <span class="icon"><i class="fas fa-tools" /></span> Tools >
+          <span class="icon"><i class="fas fa-users" /></span> Sub-users
+        </NuxtLink> page to create their own user and backends automatically.
       </li>
     </ul>
   </Message>
 
-  <form id="backend_add_form" @submit.prevent="stage<4 ? changeStep() : addBackend()">
+  <form id="backend_add_form" @submit.prevent="stage < 4 ? changeStep() : addBackend()">
     <div class="card">
       <div class="card-header">
         <p class="card-header-title">Add backend to '<u class="has-text-danger">{{ api_user }}</u>' user config.</p>
@@ -27,28 +28,28 @@
       <div class="card-content">
         <div class="field" v-if="error">
           <Message title="Backend Error" id="backend_error" message_class="has-background-danger-80 has-text-dark"
-                   icon="fas fa-exclamation-triangle" useClose @close="error=null">
+            icon="fas fa-exclamation-triangle" useClose @close="error = null">
             <p>{{ error }}</p>
           </Message>
         </div>
-        <template v-if="stage>=0">
+        <template v-if="stage >= 0">
 
           <div class="field">
             <label class="label">Local User</label>
             <div class="control has-icons-left">
               <div class="select is-fullwidth">
                 <select class="is-capitalized" disabled>
-                  <option v-text="api_user"/>
+                  <option v-text="api_user" />
                 </select>
               </div>
               <div class="icon is-left">
                 <i class="fas fa-users"></i>
               </div>
-              <p class="help">
-                The local user which this backend will be associated with. You can change this user via the users icon
-                on top.
-              </p>
             </div>
+            <p class="help">
+              The local user which this backend will be associated with. You can change this user via the
+              <span class="icon"><i class="fas fa-users" /></span> users icon on top right of the page.
+            </p>
           </div>
 
           <div class="field">
@@ -56,7 +57,7 @@
             <div class="control has-icons-left">
               <div class="select is-fullwidth">
                 <select v-model="backend.type" class="is-capitalized" required :disabled="stage > 0">
-                  <option v-for="type in supported" :key="'type-'+type" :value="type">
+                  <option v-for="type in supported" :key="'type-' + type" :value="type">
                     {{ type }}
                   </option>
                 </select>
@@ -64,12 +65,8 @@
               <div class="icon is-left">
                 <i class="fas fa-server"></i>
               </div>
-              <p class="help">
-                The backend server type. The supported types are <code>{{
-                  supported.map(v => ucFirst(v)).join(', ')
-                }}</code>.
-              </p>
             </div>
+            <p class="help">The backend type.</p>
           </div>
 
           <div class="field">
@@ -96,25 +93,26 @@
                 <div class="field has-addons">
                   <div class="control is-expanded has-icons-left">
                     <input class="input" v-model="backend.token" required :disabled="stage > 1"
-                           :type="false === exposeToken ? 'password' : 'text'">
+                      :type="false === exposeToken ? 'password' : 'text'">
                     <div class="icon is-left">
                       <i class="fas fa-key"></i>
                     </div>
                   </div>
                   <div class="control">
                     <button type="button" class="button is-primary" @click="exposeToken = !exposeToken"
-                            v-tooltip="'Toggle token'">
+                      v-tooltip="'Toggle token'">
                       <span class="icon" v-if="!exposeToken"><i class="fas fa-eye"></i></span>
                       <span class="icon" v-else><i class="fas fa-eye-slash"></i></span>
                     </button>
                   </div>
                 </div>
                 <p class="help">
-                  <template v-if="'plex'===backend.type">
+                  <template v-if="'plex' === backend.type">
                     Enter the <code>X-Plex-Token</code>.
                     <NuxtLink target="_blank" to="https://support.plex.tv/articles/204059436"
-                              v-text="'Visit This link'"/>
-                    to learn how to get the token.
+                      v-text="'Visit This link'" /> to learn how to get the token. <span
+                      class="is-bold has-text-danger">If you plan to add sub-users, YOU MUST use admin level
+                      token.</span>
                   </template>
                   <template v-else>
                     Generate a new API Key from <code>Dashboard > Settings > API Keys</code>.<br>
@@ -122,6 +120,8 @@
                     You can use <code>username:password</code> as API key and we will automatically generate limited
                     token if you are unable to generate API Key. This should be used as last resort. and it's mostly
                     untested. and things might not work as expected.
+                    <span class="is-bold has-text-danger">If you plan to add sub-users, YOU MUST use API KEY and not
+                      username:password.</span>
                   </template>
                 </p>
               </div>
@@ -141,7 +141,7 @@
           </template>
         </template>
 
-        <template v-if="stage>=1">
+        <template v-if="stage >= 1">
           <div class="field" v-if="'plex' !== backend.type">
             <label class="label">URL</label>
             <div class="control has-icons-left">
@@ -157,10 +157,10 @@
             <label class="label">Plex Server URL</label>
             <div class="control has-icons-left">
               <div class="select is-fullwidth">
-                <select v-model="backend.url" class="is-capital" @change="stage=1; updateIdentifier()" required
-                        :disabled="stage > 1">
+                <select v-model="backend.url" class="is-capital" @change="stage = 1; updateIdentifier()" required
+                  :disabled="stage > 1">
                   <option value="" disabled>Select Server URL</option>
-                  <option v-for="server in servers" :key="'server-'+server.uuid" :value="server.uri">
+                  <option v-for="server in servers" :key="'server-' + server.uuid" :value="server.uri">
                     {{ server.name }} - {{ server.uri }}
                   </option>
                 </select>
@@ -171,14 +171,14 @@
               </div>
               <p class="help">
                 <NuxtLink @click="getServers" v-text="'Attempt to discover servers associated with the token.'"
-                          v-if="stage<2"/>
+                  v-if="stage < 2" />
                 Try to use non <code>.plex.direct</code> urls if possible, as they are often have problems working in
                 docker. If you use custom domain for your plex server and it's not showing in the list, you can add it
                 via Plex settings page. <code>Plex > Settings > Network > <strong>Custom server access
                 URLs:</strong></code>. For more information
                 <NuxtLink target="_blank"
-                          to="https://support.plex.tv/articles/200430283-network/#Custom-server-access-URLs"
-                          v-text="'Visit this link'"/>
+                  to="https://support.plex.tv/articles/200430283-network/#Custom-server-access-URLs"
+                  v-text="'Visit this link'" />
                 .
               </p>
             </div>
@@ -193,7 +193,7 @@
             <div class="select is-fullwidth">
               <select v-model="backend.user" class="is-capitalized" :disabled="stage > 3">
                 <option value="" disabled>Select User</option>
-                <option v-for="user in users" :key="'uid-'+user.id" :value="user.id">
+                <option v-for="user in users" :key="'uid-' + user.id" :value="user.id">
                   {{ user.name }}
                 </option>
               </select>
@@ -204,7 +204,7 @@
             </div>
             <p class="help">
               Which user we should associate this backend with?
-              <NuxtLink @click="getUsers" v-text="'Retrieve User ids from backend.'" v-if="stage < 4"/>
+              <NuxtLink @click="getUsers" v-text="'Retrieve User ids from backend.'" v-if="stage < 4" />
             </p>
           </div>
         </div>
@@ -225,7 +225,7 @@
             <label class="label" for="backend_import_metadata">Import metadata only from from this backend?</label>
             <div class="control">
               <input id="backend_import_metadata" type="checkbox" class="switch is-success"
-                     v-model="backend.options.IMPORT_METADATA_ONLY">
+                v-model="backend.options.IMPORT_METADATA_ONLY">
               <label for="backend_import_metadata">Enable</label>
               <p class="help has-text-danger">
                 To efficiently push changes to the backend we need relation map and this require
@@ -250,7 +250,7 @@
             <label class="label" for="webhook_match_user">Webhook match user</label>
             <div class="control">
               <input id="webhook_match_user" type="checkbox" class="switch is-success"
-                     v-model="backend.webhook.match.user">
+                v-model="backend.webhook.match.user">
               <label for="webhook_match_user">Enable</label>
               <p class="help">
                 Check webhook payload for user id match. if it does not match, the payload will be ignored.
@@ -262,7 +262,7 @@
             <label class="label" for="webhook_match_uuid">Webhook match backend id</label>
             <div class="control">
               <input id="webhook_match_uuid" type="checkbox" class="switch is-success"
-                     v-model="backend.webhook.match.uuid">
+                v-model="backend.webhook.match.uuid">
               <label for="webhook_match_uuid">Enable</label>
               <p class="help">
                 Check webhook payload for backend unique id. if it does not match, the payload will be ignored.
@@ -320,7 +320,7 @@
       <div class="card-footer">
 
         <div class="card-footer-item" v-if="stage >= 1">
-          <button class="button is-fullwidth is-warning" type="button" @click="stage = stage-1">
+          <button class="button is-fullwidth is-warning" type="button" @click="stage = stage - 1">
             <span class="icon"><i class="fas fa-arrow-left"></i></span>
             <span>Previous Step</span>
           </button>
@@ -346,8 +346,8 @@
 <script setup>
 import 'assets/css/bulma-switch.css'
 import request from '~/utils/request'
-import {awaitElement, explode, notification, ucFirst} from '~/utils/index'
-import {useStorage} from "@vueuse/core";
+import { awaitElement, explode, notification, ucFirst } from '~/utils/index'
+import { useStorage } from "@vueuse/core";
 
 const emit = defineEmits(['addBackend', 'backupData', 'forceExport', 'forceImport'])
 
@@ -767,5 +767,5 @@ const n_proxy = (type, title, message, e = null) => {
   return notification(type, title, message)
 }
 
-watch(error, v => v ? awaitElement('#backend_error', (_, e) => e.scrollIntoView({behavior: 'smooth'})) : null)
+watch(error, v => v ? awaitElement('#backend_error', (_, e) => e.scrollIntoView({ behavior: 'smooth' })) : null)
 </script>

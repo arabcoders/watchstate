@@ -66,7 +66,7 @@ onMounted(async () => {
         </span>`)
 
           text = text.replace(
-              /<!--\s*?i:([\w.-]+)\s*?-->/g,
+              /<!--\s*?i:([\w.-]+)\s*?-->/gi,
               (_, list) => `<span class="icon"><i class="fas ${list.split('.').map(n => n.trim()).join(' ')}"></i></span>`
           );
 
