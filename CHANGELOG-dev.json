@@ -1,7 +1,19 @@
 [
     {
-        "tag": "dev-20250503-6f5509f",
-        "date": "2025-05-03T18:44:37+00:00",
+        "tag": "dev-20250504-a168912",
+        "date": "2025-05-04T16:48:20+00:00",
+        "commits": [
+            {
+                "sha": "a168912",
+                "message": "Improve the documentations and guides",
+                "author": "arabcoders",
+                "date": "2025-05-04T16:48:20+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250503-d36edb5",
+        "date": "2025-05-03T18:52:06+00:00",
         "commits": [
             {
                 "sha": "6f5509f",
