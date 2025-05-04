@@ -191,11 +191,11 @@
         </div>
 
         <div class="column is-6 is-9-mobile has-text-left">
-          <NuxtLink @click="loadFile = '/README.md'" v-text="'README'"/>
+          <NuxtLink to="/help/readme" v-text="'README'"/>
           -
-          <NuxtLink @click="loadFile = '/FAQ.md'" v-text="'FAQ'"/>
+          <NuxtLink to="/help/faq" v-text="'FAQ'"/>
           -
-          <NuxtLink @click="loadFile = '/NEWS.md'" v-text="'News'"/>
+          <NuxtLink to="/help/news" v-text="'News'"/>
           -
           <NuxtLink :to="changelog_url" v-text="'CHANGELOG'"/>
         </div>

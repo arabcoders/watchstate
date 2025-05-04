@@ -63,5 +63,11 @@ const choices = [
     text: 'Guide on how to create and use sub-users.',
     url: null
   },
+  {
+    number: 5,
+    title: 'FAQ',
+    text: 'Frequently asked questions.',
+    url: '/help/faq',
+  },
 ]
 </script>
