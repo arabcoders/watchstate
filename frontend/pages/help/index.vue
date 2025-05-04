@@ -49,19 +49,25 @@ const choices = [
     number: 2,
     title: 'Two-way sync',
     text: 'This will allow all backends to sync with each other. I.e. plex to jellyfin, jellyfin to emby, emby to plex.',
-    url: null
+    url: '/help/two-way-sync',
   },
   {
     number: 3,
     title: 'Enable webhooks',
     text: 'How to enable webhooks for your backends and for sub-users.',
-    url: null
+    url: '/help/webhooks',
   },
   {
     number: 4,
-    title: 'Enable Sub-users',
-    text: 'Guide on how to enable sub-users.',
+    title: 'Creating Sub-users',
+    text: 'Guide on how to create and use sub-users.',
     url: null
+  },
+  {
+    number: 5,
+    title: 'FAQ',
+    text: 'Frequently asked questions.',
+    url: '/help/faq',
   },
 ]
 </script>

@@ -3975,6 +3975,11 @@ make-dir@^3.1.0:
   dependencies:
     semver "^6.0.0"
 
+marked-alert@^2.1.2:
+  version "2.1.2"
+  resolved "https://registry.yarnpkg.com/marked-alert/-/marked-alert-2.1.2.tgz#57a3ab3af28b93a70a80cf4682377219a66f1c7d"
+  integrity sha512-EFNRZ08d8L/iEIPLTlQMDjvwIsj03gxWCczYTht6DCiHJIZhMk4NK5gtPY9UqAYb09eV5VGT+jD4lp396E0I+w==
+
 marked-base-url@^1.1.3:
   version "1.1.6"
   resolved "https://registry.yarnpkg.com/marked-base-url/-/marked-base-url-1.1.6.tgz#1bf31a7f8328dd45d36234a42c6c12c086330949"
