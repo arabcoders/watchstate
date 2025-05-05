@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250505-45e9e27",
-        "date": "2025-05-05T19:04:47+00:00",
+        "tag": "dev-20250505-d690436",
+        "date": "2025-05-05T19:31:29+00:00",
         "commits": [
+            {
+                "sha": "d690436",
+                "message": "Re-enabled linking from task to env page",
+                "author": "arabcoders",
+                "date": "2025-05-05T19:31:29+00:00"
+            },
             {
                 "sha": "45e9e27",
                 "message": "Add the ability to send backends requests in sequential instead of the default parallel mode",
