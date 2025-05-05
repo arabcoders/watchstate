@@ -160,6 +160,13 @@ final class Update
             $userContext->config->set($key, $value);
         }
 
+        # -- sanity check.
+        if (true === (bool)$userContext->config->get("{$name}.import.enabled", false)) {
+            if ($userContext->config->has("{$name}.options." . Options::IMPORT_METADATA_ONLY)) {
+                $userContext->config->delete("{$name}.options." . Options::IMPORT_METADATA_ONLY);
+            }
+        }
+
         $userContext->config->persist();
 
         $backend = $this->getBackends(name: $name, userContext: $userContext);
