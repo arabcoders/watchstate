@@ -1,5 +1,41 @@
 [
     {
+        "tag": "master-20250505-7a47832",
+        "date": "2025-05-05T19:41:11+00:00",
+        "commits": [
+            {
+                "sha": "d690436",
+                "message": "Re-enabled linking from task to env page",
+                "author": "arabcoders",
+                "date": "2025-05-05T19:31:29+00:00"
+            },
+            {
+                "sha": "45e9e27",
+                "message": "Add the ability to send backends requests in sequential instead of the default parallel mode",
+                "author": "arabcoders",
+                "date": "2025-05-05T19:04:47+00:00"
+            },
+            {
+                "sha": "29dbf2f",
+                "message": "Add the ability to filtered on watched status and the ability to customize the history item entity view.",
+                "author": "arabcoders",
+                "date": "2025-05-05T14:07:21+00:00"
+            },
+            {
+                "sha": "bcbe71a",
+                "message": "Added sanity check for import.enabled in PATCH request",
+                "author": "arabcoders",
+                "date": "2025-05-05T13:56:54+00:00"
+            },
+            {
+                "sha": "75073c8",
+                "message": "Added retry logic for emby/jellyfin backend it was missing.",
+                "author": "arabcoders",
+                "date": "2025-05-05T13:20:59+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250504-dabf306",
         "date": "2025-05-04T19:03:50+00:00",
         "commits": [
