@@ -1,7 +1,25 @@
 [
     {
-        "tag": "dev-20250504-3171748",
-        "date": "2025-05-04T18:56:47+00:00",
+        "tag": "dev-20250505-bcbe71a",
+        "date": "2025-05-05T13:56:54+00:00",
+        "commits": [
+            {
+                "sha": "bcbe71a",
+                "message": "Added sanity check for import.enabled in PATCH request",
+                "author": "arabcoders",
+                "date": "2025-05-05T13:56:54+00:00"
+            },
+            {
+                "sha": "75073c8",
+                "message": "Added retry logic for emby/jellyfin backend it was missing.",
+                "author": "arabcoders",
+                "date": "2025-05-05T13:20:59+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250504-dabf306",
+        "date": "2025-05-04T19:03:50+00:00",
         "commits": [
             {
                 "sha": "3171748",
