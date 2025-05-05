@@ -10,6 +10,7 @@ use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Response;
 use App\Backends\Plex\PlexActionTrait;
 use App\Backends\Plex\PlexClient;
+use App\Libs\Config;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
@@ -44,7 +45,11 @@ class Import
 
     public function __construct(iHttp $http, protected iLogger $logger)
     {
-        $this->http = new RetryableHttpClient($http, maxRetries: 2, logger: $logger);
+        $this->http = new RetryableHttpClient(
+            $http,
+            maxRetries: (int)Config::get('http.default.maxRetries', 3),
+            logger: $logger
+        );
     }
 
     /**
@@ -65,12 +70,12 @@ class Import
     ): Response {
         return $this->tryResponse(
             context: $context,
-            fn: fn() => $this->getLibraries(
+            fn: fn () => $this->getLibraries(
                 context: $context,
-                handle: fn(array $logContext = []) => fn(iResponse $response) => $this->handle(
+                handle: fn (array $logContext = []) => fn (iResponse $response) => $this->handle(
                     context: $context,
                     response: $response,
-                    callback: fn(array $item, array $logContext = []) => $this->process(
+                    callback: fn (array $item, array $logContext = []) => $this->process(
                         context: $context,
                         guid: $guid,
                         mapper: $mapper,
@@ -80,7 +85,7 @@ class Import
                     ),
                     logContext: $logContext
                 ),
-                error: fn(array $logContext = []) => fn(Throwable $e) => $this->logger->error(
+                error: fn (array $logContext = []) => fn (Throwable $e) => $this->logger->error(
                     message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' library '{library.title}' request. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [
                         'action' => $this->action,
@@ -263,7 +268,7 @@ class Import
         }
 
         if (null !== ($ignoreIds = ag($context->options, 'ignore', null))) {
-            $ignoreIds = array_map(fn($v) => (int)trim($v), explode(',', (string)$ignoreIds));
+            $ignoreIds = array_map(fn ($v) => (int)trim($v), explode(',', (string)$ignoreIds));
         }
 
         $limitLibraryId = ag($opts, Options::ONLY_LIBRARY_ID, null);

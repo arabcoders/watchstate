@@ -10,9 +10,11 @@ use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Backends\Jellyfin\JellyfinClient as JFC;
+use App\Libs\Config;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Extends\RetryableHttpClient;
 use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Message;
@@ -50,14 +52,21 @@ class Import
      */
     protected string $action = 'jellyfin.import';
 
+    protected RetryableHttpClient $http;
+
     /**
      * Constructor method for the class.
      *
      * @param iHttp $http The HTTP client instance.
      * @param iLogger $logger The logger instance.
      */
-    public function __construct(protected iHttp $http, protected iLogger $logger)
+    public function __construct(iHttp $http, protected iLogger $logger)
     {
+        $this->http = new RetryableHttpClient(
+            $http,
+            maxRetries: (int)Config::get('http.default.maxRetries', 3),
+            logger: $logger
+        );
     }
 
     /**
@@ -80,12 +89,12 @@ class Import
     ): Response {
         return $this->tryResponse(
             context: $context,
-            fn: fn() => $this->getLibraries(
+            fn: fn () => $this->getLibraries(
                 context: $context,
-                handle: fn(array $logContext = []) => fn(iResponse $response) => $this->handle(
+                handle: fn (array $logContext = []) => fn (iResponse $response) => $this->handle(
                     context: $context,
                     response: $response,
-                    callback: fn(array $item, array $logContext = []) => $this->process(
+                    callback: fn (array $item, array $logContext = []) => $this->process(
                         context: $context,
                         guid: $guid,
                         mapper: $mapper,
@@ -95,7 +104,7 @@ class Import
                     ),
                     logContext: $logContext
                 ),
-                error: fn(array $logContext = []) => fn(Throwable $e) => $this->logger->error(
+                error: fn (array $logContext = []) => fn (Throwable $e) => $this->logger->error(
                     message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' library '{library.title}' request. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [
                         'action' => property_exists($this, 'action') ? $this->action : 'import',
@@ -279,7 +288,7 @@ class Import
         }
 
         if (null !== ($ignoreIds = ag($context->options, 'ignore', null))) {
-            $ignoreIds = array_map(fn($v) => trim($v), explode(',', (string)$ignoreIds));
+            $ignoreIds = array_map(fn ($v) => trim($v), explode(',', (string)$ignoreIds));
         }
 
         $limitLibraryId = ag($opts, Options::ONLY_LIBRARY_ID, null);
@@ -430,8 +439,8 @@ class Import
             } catch (iException $e) {
                 $this->logger->error(
                     ...lw(
-                    message: "{action}: Request for '{client}: {user}@{backend}' - '{library.title}' total items has failed. '{error.kind}' '{error.message}' at '{error.file}:{error.line}'.",
-                    context: [
+                        message: "{action}: Request for '{client}: {user}@{backend}' - '{library.title}' total items has failed. '{error.kind}' '{error.message}' at '{error.file}:{error.line}'.",
+                        context: [
                         'error' => [
                             'kind' => $e::class,
                             'line' => $e->getLine(),
@@ -447,8 +456,8 @@ class Import
                         ],
                         ...$logContext,
                     ],
-                    e: $e
-                ),
+                        e: $e
+                    ),
                 );
                 continue;
             } catch (Throwable $e) {
@@ -565,8 +574,8 @@ class Import
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                    message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' '{library.title}' series external ids request. '{error.message}' at '{error.file}:{error.line}'.",
-                    context: [
+                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' '{library.title}' series external ids request. '{error.message}' at '{error.file}:{error.line}'.",
+                        context: [
                         'error' => [
                             'kind' => $e::class,
                             'line' => $e->getLine(),
@@ -582,8 +591,8 @@ class Import
                         ],
                         ...$logContext,
                     ],
-                    e: $e
-                ),
+                        e: $e
+                    ),
                 );
                 continue;
             }
