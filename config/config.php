@@ -137,6 +137,8 @@ return (function () {
 
     $config['http'] = [
         'default' => [
+            'maxRetries' => (int)env('WS_HTTP_MAX_RETRIES', 3),
+            'sync_requests' => (bool)env('WS_HTTP_SYNC_REQUESTS', false),
             'options' => [
                 'headers' => [
                     'User-Agent' => ag($config, 'name') . '/' . getAppVersion(),

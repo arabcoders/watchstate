@@ -14,6 +14,7 @@ use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Extends\HttpClient;
 use App\Libs\Extends\LogMessageProcessor;
+use App\Libs\Extends\RetryableHttpClient;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\Import\MemoryMapper;
@@ -59,6 +60,20 @@ return (function (): array {
                 return $instance;
             },
             'args' => [
+                iLogger::class,
+            ],
+        ],
+        
+        RetryableHttpClient::class => [
+            'class' => function (HttpClientInterface $client, iLogger $logger): RetryableHttpClient {
+                return new RetryableHttpClient(
+                    client: $client,
+                    maxRetries: (int)Config::get('http.default.maxRetries', 3),
+                    logger: $logger,
+                );
+            },
+            'args' => [
+                HttpClientInterface::class,
                 iLogger::class,
             ],
         ],

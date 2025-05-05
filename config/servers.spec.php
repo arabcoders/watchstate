@@ -104,7 +104,7 @@ return [
         'key' => 'options.LIBRARY_SEGMENT',
         'type' => 'int',
         'visible' => true,
-        'description' => 'How many items to per request.',
+        'description' => 'How many items to get per request when syncing.',
         'validate' => function ($value) {
             $limit = 300;
             if ((int)$value < $limit) {

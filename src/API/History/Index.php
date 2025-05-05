@@ -76,6 +76,7 @@ final class Index
 
         $page = (int)$data->get('page', 1);
         $perpage = (int)$data->get('perpage', 12);
+        $customView = $data->get('view', null);
 
         $start = (($page <= 2) ? ((1 === $page) ? 0 : $perpage) : $perpage * ($page - 1));
         $start = (!$page) ? 0 : $start;
@@ -109,6 +110,12 @@ final class Index
             }
 
             $filters['rguid'] = $data->get('rguid');
+        }
+
+        if ($data->has(iState::COLUMN_WATCHED)) {
+            $where[] = $es(iState::COLUMN_WATCHED) . ' = :' . iState::COLUMN_WATCHED;
+            $params[iState::COLUMN_WATCHED] = (int)$data->get(iState::COLUMN_WATCHED);
+            $filters[iState::COLUMN_WATCHED] = $data->get(iState::COLUMN_WATCHED);
         }
 
         if ($data->get(iState::COLUMN_ID)) {
@@ -417,6 +424,11 @@ final class Index
                     'type' => 'int',
                 ],
                 [
+                    'key' => 'watched',
+                    'description' => 'Search using watched status.',
+                    'type' => ['0', '1'],
+                ],
+                [
                     'key' => 'via',
                     'display' => 'Backend',
                     'description' => 'Search using the backend name.',
@@ -497,8 +509,19 @@ final class Index
             ],
         ];
 
+
         while ($row = $stmt->fetch()) {
-            $response['history'][] = $this->formatEntity($row, userContext: $userContext);
+            $entity = $this->formatEntity($row, userContext: $userContext);
+
+            if (null !== $customView) {
+                $customEntity = [];
+                foreach (explode(',', $customView) as $k) {
+                    $customEntity = ag_set($customEntity, $k, ag($entity, $k, null));
+                }
+                $entity = $customEntity;
+            }
+
+            $response['history'][] = $entity;
         }
 
         return api_response(Status::OK, $response);

@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Commands\State;
 
+use App\Backends\Common\Request;
 use App\Command;
+use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
+use App\Libs\Extends\RetryableHttpClient;
 use App\Libs\Extends\StreamLogHandler;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
@@ -20,8 +23,7 @@ use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
-use Symfony\Contracts\HttpClient\ResponseInterface;
-use Throwable;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 /**
  * Class BackupCommand
@@ -44,7 +46,9 @@ class BackupCommand extends Command
     public function __construct(
         private DirectMapper $mapper,
         private iLogger $logger,
-        private LogSuppressor $suppressor
+        private LogSuppressor $suppressor,
+        #[Inject(RetryableHttpClient::class)]
+        private iHttp $http,
     ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
@@ -67,6 +71,18 @@ class BackupCommand extends Command
                 'If this flag is used, backups will not be removed by system:purge task.'
             )
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'No actions will be committed.')
+            ->addOption(
+                'sync-requests',
+                null,
+                InputOption::VALUE_NONE,
+                'Send one request at a time instead of all at once. note: Slower but more reliable.'
+            )
+            ->addOption(
+                'async-requests',
+                null,
+                InputOption::VALUE_NONE,
+                'Send all requests at once. note: Faster but less reliable. Default.'
+            )
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
             ->addOption(
                 'select-backend',
@@ -326,7 +342,7 @@ class BackupCommand extends Command
             ]);
         }
 
-        /** @var array<array-key,ResponseInterface> $queue */
+        /** @var array<array-key,Request> $queue */
         $queue = [];
 
         foreach ($list as $name => &$backend) {
@@ -399,30 +415,27 @@ class BackupCommand extends Command
 
         unset($backend);
 
+        if (false === ($syncRequests = $input->getOption('sync-requests'))) {
+            $syncRequests = (bool)Config::get('http.default.sync_requests', false);
+        }
+
+        if (true === $input->getOption('async-requests')) {
+            $syncRequests = false;
+        }
+
         $start = microtime(true);
-        $this->logger->notice("SYSTEM: Waiting on '{total}' requests for '{user}: {backends}' backends.", [
+        $this->logger->notice("SYSTEM: Waiting on '{total}' {sync}requests for '{user}: {backends}' backends.", [
             'user' => $userContext->name,
             'total' => number_format(count($queue)),
             'backends' => implode(', ', array_keys($list)),
+            'sync' => $syncRequests ? 'sync ' : '',
             'memory' => [
                 'now' => getMemoryUsage(),
                 'peak' => getPeakMemoryUsage(),
             ],
         ]);
 
-        foreach ($queue as $_key => $response) {
-            $requestData = $response->getInfo('user_data');
-
-            try {
-                $requestData['ok']($response);
-            } catch (Throwable $e) {
-                $requestData['error']($e);
-            }
-
-            $queue[$_key] = null;
-
-            gc_collect_cycles();
-        }
+        send_requests(requests: $queue, client: $this->http, sync: $syncRequests, logger: $this->logger);
 
         foreach ($list as $b => $backend) {
             if (null === ($backend['fp'] ?? null)) {

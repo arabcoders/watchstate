@@ -1361,3 +1361,31 @@ if (!function_exists('getUserContext')) {
     }
 }
 
+
+if (!function_exists('exception_log')) {
+    /**
+     * Add standard way to access exception in log context.
+     *
+     * @param Throwable $e The exception.
+     *
+     * @return array{error: array,excpetion: array} The exception formatted in standard way.
+     */
+    function exception_log(Throwable $e): array
+    {
+        return [
+            'error' => [
+                'kind' => $e::class,
+                'line' => $e->getLine(),
+                'message' => $e->getMessage(),
+                'file' => after($e->getFile(), ROOT_PATH),
+            ],
+            'exception' => [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'kind' => $e::class,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTrace(),
+            ],
+        ];
+    }
+}
