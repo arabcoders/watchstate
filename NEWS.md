@@ -1,4 +1,24 @@
-# Old Updates
+# NEWS
+
+This page contains old news about the project.
+
+### 2025-03-13
+
+We have recently added support for plex webhooks via tautulli which you can use if you don't have PlexPass. This should
+help close the gap with other media servers.
+
+### 2025-02-19
+
+We have introduced new experimental feature to allow syncing watch progress for played items. This feature is still in
+early stages, and might not work as expected. and there are probably still many bugs that we need to fix. Please report
+any issues you might face.
+
+The feature is disabled by default, to enable it you need to run add this environment variable `WS_PROGRESS_THRESHOLD`
+with seconds as value, the minimum value is `180` seconds. `0` seconds means it's disabled. We think reasonable value is
+`86400` or more this number is about 1day.
+
+We are still not keen on this feature, and it might be removed in future releases if we aren't able to deal with the
+issues we are facing.
 
 ### 2025-02-11
 

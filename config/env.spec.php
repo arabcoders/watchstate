@@ -229,6 +229,11 @@ return (function () {
             },
             'mask' => true,
         ],
+        [
+            'key' => 'WS_HTTP_SYNC_REQUESTS',
+            'description' => 'Whether to send backend requests in parallel or sequentially.',
+            'type' => 'bool',
+        ],
     ];
 
     $validateCronExpression = function (string $value): string {

@@ -71,7 +71,7 @@ final class Index
 
         $data = DataUtil::fromArray($request->getQueryParams());
 
-        $es = fn (string $val) => $db->escapeIdentifier($val, true);
+        $es = fn(string $val) => $db->escapeIdentifier($val, true);
         $filters = [];
 
         $page = (int)$data->get('page', 1);
@@ -347,9 +347,9 @@ final class Index
             }
 
             if (null === ($matches['field'] ?? null) || false === in_array(
-                $matches['field'],
-                self::COLUMNS_SORTABLE
-            )) {
+                    $matches['field'],
+                    self::COLUMNS_SORTABLE
+                )) {
                 continue;
             }
 
@@ -426,7 +426,7 @@ final class Index
                 [
                     'key' => 'watched',
                     'description' => 'Search using watched status.',
-                    'type' => [ '0', '1'],
+                    'type' => ['0', '1'],
                 ],
                 [
                     'key' => 'via',
@@ -579,7 +579,7 @@ final class Index
                     'ffprobe' => $data,
                     'subtitles' => array_filter(
                         findSideCarFiles(new SplFileInfo($file)),
-                        fn ($sideCar) => isset(Subtitle::FORMATS[getExtension($sideCar)])
+                        fn($sideCar) => isset(Subtitle::FORMATS[getExtension($sideCar)])
                     )
                 ];
             }

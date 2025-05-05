@@ -44,7 +44,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 return (function (): array {
     return [
         iLogger::class => [
-            'class' => fn () => new Logger(name: 'logger', processors: [new LogMessageProcessor()])
+            'class' => fn() => new Logger(name: 'logger', processors: [new LogMessageProcessor()])
         ],
 
         HttpClientInterface::class => [
@@ -63,6 +63,7 @@ return (function (): array {
                 iLogger::class,
             ],
         ],
+        
         RetryableHttpClient::class => [
             'class' => function (HttpClientInterface $client, iLogger $logger): RetryableHttpClient {
                 return new RetryableHttpClient(
@@ -76,6 +77,7 @@ return (function (): array {
                 iLogger::class,
             ],
         ],
+
         LogSuppressor::class => [
             'class' => function (): LogSuppressor {
                 $suppress = [];
@@ -90,11 +92,11 @@ return (function (): array {
         ],
 
         StateInterface::class => [
-            'class' => fn () => new StateEntity([])
+            'class' => fn() => new StateEntity([])
         ],
 
         QueueRequests::class => [
-            'class' => fn () => new QueueRequests()
+            'class' => fn() => new QueueRequests()
         ],
 
         Redis::class => [
@@ -189,16 +191,16 @@ return (function (): array {
         ],
 
         UriInterface::class => [
-            'class' => fn () => new Uri(''),
+            'class' => fn() => new Uri(''),
             'shared' => false,
         ],
 
         InputInterface::class => [
-            'class' => fn (): InputInterface => new ArgvInput()
+            'class' => fn(): InputInterface => new ArgvInput()
         ],
 
         OutputInterface::class => [
-            'class' => fn (): OutputInterface => new ConsoleOutput()
+            'class' => fn(): OutputInterface => new ConsoleOutput()
         ],
 
         PDO::class => [
@@ -226,7 +228,7 @@ return (function (): array {
         ],
 
         DBLayer::class => [
-            'class' => fn (PDO $pdo): DBLayer => new DBLayer($pdo),
+            'class' => fn(PDO $pdo): DBLayer => new DBLayer($pdo),
             'args' => [
                 PDO::class,
             ],
@@ -290,16 +292,16 @@ return (function (): array {
         ],
 
         iImport::class => [
-            'class' => fn (iImport $mapper): iImport => $mapper,
+            'class' => fn(iImport $mapper): iImport => $mapper,
             'args' => [MemoryMapper::class],
         ],
 
         EventDispatcherInterface::class => [
-            'class' => fn (): EventDispatcher => new EventDispatcher(),
+            'class' => fn(): EventDispatcher => new EventDispatcher(),
         ],
 
         UserContext::class => [
-            'class' => fn (iCache $cache, iImport $mapper, iDB $db): UserContext => new UserContext(
+            'class' => fn(iCache $cache, iImport $mapper, iDB $db): UserContext => new UserContext(
                 name: 'main',
                 config: new ConfigFile(
                     file: Config::get('backends_file'),

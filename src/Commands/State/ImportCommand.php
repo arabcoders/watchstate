@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Commands\State;
 
+use App\Backends\Common\Request;
 use App\Command;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
@@ -11,6 +12,7 @@ use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Extends\RetryableHttpClient;
 use App\Libs\Extends\StreamLogHandler;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
@@ -28,8 +30,7 @@ use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Contracts\HttpClient\ResponseInterface;
-use Throwable;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 /**
  * Class ImportCommand
@@ -55,7 +56,9 @@ class ImportCommand extends Command
         #[Inject(DirectMapper::class)]
         private iImport $mapper,
         private iLogger $logger,
-        private LogSuppressor $suppressor
+        private LogSuppressor $suppressor,
+        #[Inject(RetryableHttpClient::class)]
+        private iHttp $http,
     ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
@@ -72,6 +75,18 @@ class ImportCommand extends Command
             ->setDescription('Import play state and metadata from backends.')
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full import. Ignore last sync date.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
+            ->addOption(
+                'sync-requests',
+                null,
+                InputOption::VALUE_NONE,
+                'Send one request at a time instead of all at once. note: Slower but more reliable.'
+            )
+            ->addOption(
+                'async-requests',
+                null,
+                InputOption::VALUE_NONE,
+                'Send all requests at once. note: Faster but less reliable. Default.'
+            )
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
             ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select sub user. Default all users.')
             ->addOption(
@@ -166,6 +181,14 @@ class ImportCommand extends Command
 
         if ($input->getOption('always-update-metadata')) {
             $mapperOpts[Options::MAPPER_ALWAYS_UPDATE_META] = true;
+        }
+
+        if (false === ($syncRequests = $input->getOption('sync-requests'))) {
+            $syncRequests = (bool)Config::get('http.default.sync_requests', false);
+        }
+        
+        if (true === $input->getOption('async-requests')) {
+            $syncRequests = false;
         }
 
         $this->mapper->setOptions($mapperOpts);
@@ -272,7 +295,7 @@ class ImportCommand extends Command
                 continue;
             }
 
-            /** @var array<array-key,ResponseInterface> $queue */
+            /** @var array<array-key,Request> $queue */
             $queue = [];
 
             $this->logger->notice(
@@ -369,28 +392,17 @@ class ImportCommand extends Command
             unset($backend);
 
             $start = microtime(true);
-            $this->logger->notice("SYSTEM: Waiting on '{total}' requests for '{user}' backends.", [
+            $this->logger->notice("SYSTEM: Waiting on '{total}' {sync}requests for '{user}' backends.", [
                 'user' => $userContext->name,
                 'total' => number_format(count($queue)),
+                'sync' => $syncRequests ? 'sync ' : '',
                 'memory' => [
                     'now' => getMemoryUsage(),
                     'peak' => getPeakMemoryUsage(),
                 ],
             ]);
 
-            foreach ($queue as $_key => $response) {
-                $requestData = $response->getInfo('user_data');
-
-                try {
-                    $requestData['ok']($response);
-                } catch (Throwable $e) {
-                    $requestData['error']($e);
-                }
-
-                $queue[$_key] = null;
-
-                gc_collect_cycles();
-            }
+            send_requests(requests: $queue, client: $this->http, sync: $syncRequests, logger: $this->logger);
 
             $this->logger->notice(
                 "SYSTEM: Completed '{total}' requests in '{duration}'s for '{user}' backends. Parsed '{responses.size}' of data.",
@@ -408,7 +420,7 @@ class ImportCommand extends Command
                 ]
             );
 
-            $queue = $requestData = null;
+            $queue = null;
 
             $total = count($userContext->mapper);
 

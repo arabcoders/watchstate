@@ -1,4 +1,4 @@
-<style scoped>
+<style>
 .markdown-alert {
   padding: 0 1em;
   margin-bottom: 16px;

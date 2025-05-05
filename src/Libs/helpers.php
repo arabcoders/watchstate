@@ -7,6 +7,7 @@ declare(strict_types=1);
 use App\Backends\Common\Cache as BackendCache;
 use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Common\Context;
+use App\Backends\Common\Request;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\Attributes\Scanner\Attributes as AttributesScanner;
@@ -35,6 +36,7 @@ use Psr\SimpleCache\CacheInterface as iCache;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 
 if (!function_exists('env')) {
@@ -1380,5 +1382,83 @@ if (!function_exists('deepArrayMerge')) {
             }
         }
         return $result;
+    }
+}
+
+
+if (!function_exists('send_requests')) {
+    /**
+     * Send requests.
+     *
+     * @param array<Request> $requests The requests to send.
+     * @param iHttp $client The HTTP client to use.
+     * @param bool $sync Whether to send requests synchronously (optional).
+     * @param iLogger|null $logger The logger to use (optional).
+     * @param array $opts Additional options for the client.
+     */
+    function send_requests(
+        array $requests,
+        iHttp $client,
+        bool $sync = false,
+        iLogger|null $logger = null,
+        array $opts = []
+    ): void {
+        try {
+            if (true === $sync) {
+                $i = 0;
+                $total = count($requests);
+                foreach ($requests as $request) {
+                    try {
+                        $i++;
+                        $start = microtime(true);
+                        $response = ($request->extras[iHttp::class] ?? $client)->request(...$request->toRequest());
+                        ($request->success)($response);
+                    } catch (Throwable $e) {
+                        ($request->error)($e);
+                    } finally {
+                        $logger?->info("Request '{position}/{total}' completed in '{s}'s.", [
+                            'position' => $i,
+                            'total' => $total,
+                            's' => round(microtime(true) - $start, 3)
+                        ]);
+                    }
+                }
+
+                return;
+            }
+
+            $queue = [];
+
+            foreach ($requests as $request) {
+                $r = $request->toRequest();
+                $r['options'] = array_replace_recursive($r['options'], [
+                    'user_data' => ['ok' => $request->success, 'error' => $request->error]
+                ]);
+
+                $queue[] = ($request->extras[iHttp::class] ?? $client)->request(...$r);
+            }
+
+            $i = 0;
+            foreach ($queue as $_key => $response) {
+                $i++;
+
+                $requestData = $response->getInfo('user_data');
+
+                try {
+                    $requestData['ok']($response);
+                } catch (Throwable $e) {
+                    $requestData['error']($e);
+                }
+
+                $queue[$_key] = null;
+
+                if (0 === $i % 50) {
+                    $i = 0;
+                    gc_collect_cycles();
+                }
+            }
+        } finally {
+            gc_collect_cycles();
+        }
     }
 }

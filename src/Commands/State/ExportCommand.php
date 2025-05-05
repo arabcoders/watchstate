@@ -11,6 +11,7 @@ use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Extends\RetryableHttpClient;
 use App\Libs\Extends\StreamLogHandler;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
@@ -26,6 +27,7 @@ use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 use Throwable;
 
 /**
@@ -55,6 +57,8 @@ class ExportCommand extends Command
         private QueueRequests $queue,
         private iLogger $logger,
         private LogSuppressor $suppressor,
+        #[Inject(RetryableHttpClient::class)]
+        private iHttp $http,
     ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
@@ -71,6 +75,18 @@ class ExportCommand extends Command
             ->setDescription('Export play state to backends.')
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full export. Ignore last export date.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes to backends.')
+            ->addOption(
+                'sync-requests',
+                null,
+                InputOption::VALUE_NONE,
+                'Send one request at a time instead of all at once. note: Slower but more reliable.'
+            )
+            ->addOption(
+                'async-requests',
+                null,
+                InputOption::VALUE_NONE,
+                'Send all requests at once. note: Faster but less reliable. Default.'
+            )
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
             ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Export to this specific user. Default all users.')
             ->addOption(
@@ -145,6 +161,14 @@ class ExportCommand extends Command
                 $output->writeln(r("<error>User '{user}' not found.</error>", ['user' => $user]));
                 return self::FAILURE;
             }
+        }
+
+        if (false === ($syncRequests = $input->getOption('sync-requests'))) {
+            $syncRequests = (bool)Config::get('http.default.sync_requests', false);
+        }
+
+        if (true === $input->getOption('async-requests')) {
+            $syncRequests = false;
         }
 
         $selected = $input->getOption('select-backend');
@@ -433,7 +457,13 @@ class ExportCommand extends Command
                 }
 
                 if (count($export) >= 1) {
-                    $this->export($userContext, $export, $input->getOption('dry-run'), $input->getOption('force-full'));
+                    $this->export(
+                        $userContext,
+                        $export,
+                        $input->getOption('dry-run'),
+                        $input->getOption('force-full'),
+                        $syncRequests
+                    );
                 }
 
                 $total = count($this->queue->getQueue());
@@ -587,6 +617,7 @@ class ExportCommand extends Command
         array $backends,
         bool $inDryMode,
         bool $isFull,
+        bool $syncRequests = false
     ): void {
         $this->logger->notice("Export mode started for '{user}@{backends}'.", [
             'user' => $userContext->name,
@@ -663,19 +694,13 @@ class ExportCommand extends Command
         }
 
         $start = microtime(true);
-        $this->logger->notice("SYSTEM: Sending '{total}' play state comparison requests for '{user}'.", [
+        $this->logger->notice("SYSTEM: Sending '{total}' play state comparison {sync}requests for '{user}'.", [
             'total' => count($requests),
             'user' => $userContext->name,
+            'sync' => true === $syncRequests ? 'sync ' : '',
         ]);
 
-        foreach ($requests as $response) {
-            $requestData = $response->getInfo('user_data');
-            try {
-                $requestData['ok']($response);
-            } catch (Throwable $e) {
-                $requestData['error']($e);
-            }
-        }
+        send_requests(requests: $requests, client: $this->http, sync: $syncRequests, logger: $this->logger);
 
         $this->logger->notice("Export mode ended for '{user}: {backends}' in '{duration}'s.", [
             'user' => $userContext->name,
