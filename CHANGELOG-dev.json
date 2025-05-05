@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250505-29dbf2f",
-        "date": "2025-05-05T14:07:21+00:00",
+        "tag": "dev-20250505-45e9e27",
+        "date": "2025-05-05T19:04:47+00:00",
         "commits": [
+            {
+                "sha": "45e9e27",
+                "message": "Add the ability to send backends requests in sequential instead of the default parallel mode",
+                "author": "arabcoders",
+                "date": "2025-05-05T19:04:47+00:00"
+            },
             {
                 "sha": "29dbf2f",
                 "message": "Add the ability to filtered on watched status and the ability to customize the history item entity view.",
