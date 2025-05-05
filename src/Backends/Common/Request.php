@@ -10,7 +10,7 @@ use Closure;
 
 final readonly class Request
 {
-    public readonly string $id;
+    public string $id;
 
     /**
      * Wrap client requests into object.
@@ -18,8 +18,8 @@ final readonly class Request
      * @param Method $method The HTTP method to use.
      * @param Uri|string $url The URL to send the request to.
      * @param array $options The options to pass to the request.
-     * @param callable|null $success The callback to call on successful response.
-     * @param callable|null $error The callback to call on error response.
+     * @param Closure|null $success The callback to call on successful response.
+     * @param Closure|null $error The callback to call on error response.
      * @param array $extras An array that can contain anything. Should be rarely used.
      */
     public function __construct(
