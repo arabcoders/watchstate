@@ -10,19 +10,19 @@
           <div class="field is-grouped">
             <div class="control has-icons-left" v-if="toggleFilter || query">
               <input type="search" v-model.lazy="query" class="input" id="filter"
-                     placeholder="Filter displayed content">
-              <span class="icon is-left"><i class="fas fa-filter"/></span>
+                placeholder="Filter displayed content">
+              <span class="icon is-left"><i class="fas fa-filter" /></span>
             </div>
 
             <div class="control">
               <button class="button is-danger is-light" @click="toggleFilter = !toggleFilter">
-                <span class="icon"><i class="fas fa-filter"/></span>
+                <span class="icon"><i class="fas fa-filter" /></span>
               </button>
             </div>
 
             <p class="control">
               <button class="button is-primary" v-tooltip.bottom="'Add new variable'" @click="toggleForm = !toggleForm"
-                      :disabled="isLoading">
+                :disabled="isLoading">
                 <span class="icon">
                   <i class="fas fa-add"></i>
                 </span>
@@ -30,7 +30,7 @@
             </p>
             <p class="control">
               <button class="button is-info" @click="loadContent" :disabled="isLoading || toggleForm"
-                      :class="{'is-loading':isLoading}">
+                :class="{ 'is-loading': isLoading }">
                 <span class="icon"><i class="fas fa-sync"></i></span>
               </button>
             </p>
@@ -45,16 +45,15 @@
 
       <div class="column is-12" v-if="!toggleForm && filteredRows.length < 1">
         <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
-                 icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
+          icon="fas fa-spinner fa-spin" message="Loading data. Please wait..." />
         <Message v-else message_class="has-background-warning-90 has-text-dark"
-                 :title="query ? 'No results' : 'Information'"
-                 icon="fas fa-info-circle">
+          :title="query ? 'No results' : 'Information'" icon="fas fa-info-circle">
           <p v-if="query">
             No environment variables found matching <strong>{{ query }}</strong>. Please try a different filter.
           </p>
           <p v-else>
             No environment variables configured yet. Click on the
-            <i @click="toggleForm=true" class="is-clickable fa fa-add"></i> button to add a new variable.
+            <i @click="toggleForm = true" class="is-clickable fa fa-add"></i> button to add a new variable.
           </p>
         </Message>
       </div>
@@ -87,16 +86,16 @@
                 <label class="label is-unselectable" for="form_value">Environment value</label>
                 <div class="control has-icons-left">
                   <template v-if="'bool' === form_type">
-                    <input id="form_value" type="checkbox" class="switch is-success"
-                           :checked="fixBool(form_value)" @change="form_value = !fixBool(form_value)">
+                    <input id="form_value" type="checkbox" class="switch is-success" :checked="fixBool(form_value)"
+                      @change="form_value = !fixBool(form_value)">
                     <label for="form_value">
                       <template v-if="fixBool(form_value)">On (True)</template>
                       <template v-else>Off (False)</template>
                     </label>
                   </template>
-                  <template v-else-if=" 'int' === form_type ">
+                  <template v-else-if="'int' === form_type">
                     <input class="input" id="form_value" type="number" placeholder="Value" v-model="form_value"
-                           pattern="[0-9]*" inputmode="numeric">
+                      pattern="[0-9]*" inputmode="numeric">
                     <div class="icon is-small is-left">
                       <i class="fas fa-font"></i>
                     </div>
@@ -135,7 +134,7 @@
       <div v-else class="column is-12" v-if="filteredRows">
         <div class="columns is-multiline">
           <div class="column" v-for="item in filteredRows" :key="item.key"
-               :class="{'is-4':!item?.danger,'is-12':item.danger}">
+            :class="{ 'is-4': !item?.danger, 'is-12': item.danger }">
             <div class="card" :class="{ 'is-danger': item?.danger }">
               <header class="card-header">
                 <p class="card-header-title is-unselectable">
@@ -153,7 +152,7 @@
                   </template>
                 </p>
                 <span class="card-header-icon" v-if="item.mask" @click="item.mask = false"
-                      v-tooltip="'Unmask the value'">
+                  v-tooltip="'Unmask the value'">
                   <span class="icon"><i class="fas fa-unlock"></i></span>
                 </span>
               </header>
@@ -169,8 +168,8 @@
                     </span>
                   </p>
                   <p v-else class="is-text-overflow is-clickable is-unselectable"
-                     :class="{ 'is-masked': item.mask, 'is-unselectable': item.mask }"
-                     @click="(e) => e.target.classList.toggle('is-text-overflow')">
+                    :class="{ 'is-masked': item.mask, 'is-unselectable': item.mask }"
+                    @click="(e) => e.target.classList.toggle('is-text-overflow')">
                     {{ item.value }}</p>
 
                   <p v-if="item?.danger" class="title is-5 has-text-danger">
@@ -211,7 +210,7 @@
 
       <div class="column is-12">
         <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
-                 @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+          @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
           <ul>
             <li>Some variables values are masked, to unmask them click on icon <i class="fa fa-unlock"></i>.</li>
             <li>Some values are too large to fit into the view, clicking on the value will show the full value.</li>
@@ -232,13 +231,13 @@
 <script setup>
 import 'assets/css/bulma-switch.css'
 import request from '~/utils/request'
-import {awaitElement, copyText, notification} from '~/utils/index'
-import {useStorage} from '@vueuse/core'
+import { awaitElement, copyText, notification } from '~/utils/index'
+import { useStorage } from '@vueuse/core'
 import Message from '~/components/Message'
 
 const route = useRoute()
 
-useHead({title: 'Environment Variables'})
+useHead({ title: 'Environment Variables' })
 
 const items = ref([])
 const toggleForm = ref(false)
@@ -287,20 +286,26 @@ const deleteEnv = async (env) => {
   }
 
   try {
-    const response = await request(`/system/env/${env.key}`, {method: 'DELETE'})
+    const response = await request(`/system/env/${env.key}`, { method: 'DELETE' })
 
     if (200 !== response.status) {
       let json
       try {
         json = await response.json()
       } catch (e) {
-        json = {error: {code: response.status, message: response.statusText}}
+        json = { error: { code: response.status, message: response.statusText } }
       }
       notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
       return
     }
 
-    items.value = items.value.filter(i => i.key !== env.key)
+    items.value = items.value.filter(i => {
+      const state = i.key !== env.key
+      if (true === state) {
+        delete i.value
+      }
+      return state;
+    })
     notification('success', 'Success', `Environment variable '${env.key}' successfully deleted.`, 5000)
   } catch (e) {
     notification('error', 'Error', `Request error. ${e.message}`, 5000)
@@ -321,15 +326,10 @@ const addVariable = async () => {
     return
   }
 
-  const data = items.value.filter(i => i.key === key)
-  if (data.length > 0 && data[0].value === form_value.value) {
-    return cancelForm()
-  }
-
   try {
     const response = await request(`/system/env/${key}`, {
       method: 'POST',
-      body: JSON.stringify({value: form_value.value})
+      body: JSON.stringify({ value: form_value.value })
     })
 
     if (304 === response.status) {
@@ -358,10 +358,15 @@ const addVariable = async () => {
 const editEnv = env => {
   form_key.value = env.key
   form_value.value = env.value
+
+  if (typeof env.value === 'undefined' && 'bool' === env.type) {
+    form_value.value = false
+  }
+
   form_type.value = env.type
   toggleForm.value = true
   if (!useRoute().query.edit) {
-    useRouter().push({'path': '/env', query: {'edit': env.key}})
+    useRouter().push({ 'path': '/env', query: { 'edit': env.key } })
   }
 }
 
@@ -372,12 +377,12 @@ const cancelForm = async () => {
   form_type.value = null
   toggleForm.value = false
   if (route.query?.callback) {
-    await navigateTo({path: route.query.callback})
+    await navigateTo({ path: route.query.callback })
     return
   }
 
   if (route.query?.edit || route.query?.value) {
-    await useRouter().push({path: '/env'})
+    await useRouter().push({ path: '/env' })
   }
 }
 
@@ -385,7 +390,7 @@ watch(toggleForm, async value => {
   if (!value) {
     await cancelForm()
   } else {
-    awaitElement('#env_page_title', (_, el) => el.scrollIntoView({behavior: 'smooth'}))
+    awaitElement('#env_page_title', (_, el) => el.scrollIntoView({ behavior: 'smooth' }))
   }
 })
 
@@ -397,7 +402,12 @@ const keyChanged = () => {
   let data = items.value.filter(i => i.key === form_key.value)
   form_value.value = (data.length > 0) ? data[0].value : ''
   form_type.value = (data.length > 0) ? data[0].type : 'string'
-  useRouter().push({'path': '/env', query: {'edit': form_key.value}})
+  nextTick(() => {
+    if (typeof form_value.value === 'undefined' && 'bool' === form_type.value) {
+      form_value.value = false
+    }
+  });
+  useRouter().push({ 'path': '/env', query: { 'edit': form_key.value } })
 }
 
 const getHelp = key => {
