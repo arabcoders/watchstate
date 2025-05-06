@@ -258,7 +258,7 @@ class PlexClient implements iClient
             mapper: $mapper,
             after: $after,
             opts: [
-                Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
+                Options::ENABLE_EPISODE_GUID => (bool)Config::get('episodes.enable.guid'),
             ]
         );
 
@@ -284,7 +284,7 @@ class PlexClient implements iClient
             mapper: $mapper,
             opts: ag_sets($opts, [
                 'writer' => $writer,
-                Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid')
+                Options::ENABLE_EPISODE_GUID => (bool)Config::get('episodes.enable.guid')
             ])
         );
 
@@ -309,7 +309,7 @@ class PlexClient implements iClient
             guid: $this->guid,
             mapper: $mapper,
             after: $after,
-            opts: ['queue' => $queue, Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid')],
+            opts: ['queue' => $queue, Options::ENABLE_EPISODE_GUID => (bool)Config::get('episodes.enable.guid')],
         );
 
         if ($response->hasError()) {
@@ -468,8 +468,8 @@ class PlexClient implements iClient
             mapper: $mapper,
             after: null,
             opts: ag_sets($opts, [
-                Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
                 Options::ONLY_LIBRARY_ID => $libraryId,
+                Options::ENABLE_EPISODE_GUID => (bool)Config::get('episodes.enable.guid'),
             ]),
         );
 
@@ -789,7 +789,8 @@ class PlexClient implements iClient
                                 'payload' => $payload
                             ]),
                         ]
-                    ), $response->getStatusCode()
+                    ),
+                    $response->getStatusCode()
                 );
             }
         } catch (TransportExceptionInterface $e) {
@@ -802,7 +803,9 @@ class PlexClient implements iClient
                         'line' => $e->getLine(),
                         'file' => after($e->getFile(), ROOT_PATH),
                     ]
-                ), code: 500, previous: $e
+                ),
+                code: 500,
+                previous: $e
             );
         }
 
@@ -935,7 +938,9 @@ class PlexClient implements iClient
                         'line' => $e->getLine(),
                         'file' => after($e->getFile(), ROOT_PATH),
                     ]
-                ), code: 500, previous: $e
+                ),
+                code: 500,
+                previous: $e
             );
         }
     }
@@ -959,7 +964,7 @@ class PlexClient implements iClient
     private function throwError(Response $response, string $className = RuntimeException::class, int $code = 0): void
     {
         throw new $className(
-            message: ag($response->extra, 'message', fn() => $response->error->format()),
+            message: ag($response->extra, 'message', fn () => $response->error->format()),
             code: $code,
             previous: $response->error->previous
         );
