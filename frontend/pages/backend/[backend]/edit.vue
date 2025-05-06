@@ -4,9 +4,9 @@
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4">
           <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
-          <NuxtLink to="/backends" v-text="'Backends'"/>
+          <NuxtLink to="/backends" v-text="'Backends'" />
           -
-          <NuxtLink :to="'/backend/' + id" v-text="id"/>
+          <NuxtLink :to="'/backend/' + id" v-text="id" />
           : Edit
         </span>
 
@@ -21,7 +21,7 @@
 
       <div class="column is-12" v-if="isLimitedToken">
         <Message title="For your information" message_class="has-background-warning-90 has-text-dark"
-                 icon="fas fa-info-circle">
+          icon="fas fa-info-circle">
           <p>
             This backend is using accesstoken instead of API keys, And this method untested and may not work as
             expected.
@@ -37,8 +37,8 @@
       </div>
 
       <div class="column is-12" v-if="isLoading">
-        <Message message_class="is-background-info-90 has-text-dark" title="Loading"
-                 icon="fas fa-spinner fa-spin" message="Loading backend settings. Please wait..."/>
+        <Message message_class="is-background-info-90 has-text-dark" title="Loading" icon="fas fa-spinner fa-spin"
+          message="Loading backend settings. Please wait..." />
       </div>
 
       <div v-else class="column is-12">
@@ -55,7 +55,7 @@
                 <div class="control has-icons-left">
                   <div class="select is-fullwidth">
                     <select class="is-capitalized" disabled>
-                      <option v-text="api_user"/>
+                      <option v-text="api_user" />
                     </select>
                   </div>
                   <div class="icon is-left">
@@ -110,7 +110,7 @@
                     <i class="fas fa-link"></i>
                   </div>
                   <p class="help">
-                    <template v-if="servers.length<1">
+                    <template v-if="servers.length < 1">
                       Enter the URL of the backend. For example
                       <code v-if="'plex' === backend.type">http://192.168.8.11:32400</code>
                       <code v-else>http://192.168.8.100:8096</code>
@@ -133,25 +133,25 @@
                     <div class="field has-addons">
                       <div class="control is-expanded has-icons-left">
                         <input class="input" v-model="backend.token" required
-                               :type="false === exposeToken ? 'password' : 'text'">
+                          :type="false === exposeToken ? 'password' : 'text'">
                         <div class="icon is-left">
                           <i class="fas fa-key"></i>
                         </div>
                       </div>
                       <div class="control">
                         <button type="button" class="button is-primary" @click="exposeToken = !exposeToken"
-                                v-tooltip="'Toggle token'">
+                          v-tooltip="'Toggle token'">
                           <span class="icon" v-if="!exposeToken"><i class="fas fa-eye"></i></span>
                           <span class="icon" v-else><i class="fas fa-eye-slash"></i></span>
                         </button>
                       </div>
                     </div>
                     <p class="help">
-                      <template v-if="'plex'===backend.type">
+                      <template v-if="'plex' === backend.type">
                         Enter the <code>X-Plex-Token</code>.
                         <NuxtLink target="_blank"
-                                  to="https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/"
-                                  v-text="'Visit This article for more information.'"/>
+                          to="https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/"
+                          v-text="'Visit This article for more information.'" />
                       </template>
                       <template v-else>
                         You can generate a new API key from <code>Dashboard > Settings > API Keys</code>.
@@ -181,20 +181,20 @@
                       backend
                       uniquely. This is used for webhook matching and filtering.
                     </span>
-                    <NuxtLink @click="getUUid" v-if="!isLimitedToken" v-text="'Get from the backend.'"/>
+                    <NuxtLink @click="getUUid" v-if="!isLimitedToken" v-text="'Get from the backend.'" />
                   </p>
                 </div>
               </div>
 
               <div class="field">
                 <label class="label">
-                  <template v-if="users.length>0">Associated User</template>
+                  <template v-if="users.length > 0">Associated User</template>
                   <template v-else>User ID</template>
                 </label>
                 <div class="control has-icons-left">
-                  <div class="select is-fullwidth" v-if="users.length>0">
+                  <div class="select is-fullwidth" v-if="users.length > 0">
                     <select v-model="backend.user" class="is-capitalized" :disabled="isLimitedToken">
-                      <option v-for="user in users" :key="'uid-'+user.id" :value="user.id">
+                      <option v-for="user in users" :key="'uid-' + user.id" :value="user.id">
                         {{ user.name }}
                       </option>
                     </select>
@@ -236,7 +236,7 @@
                 <label class="label" for="backend_import_metadata">Import metadata only from this backend?</label>
                 <div class="control">
                   <input id="backend_import_metadata" type="checkbox" class="switch is-success"
-                         v-model="backend.options.IMPORT_METADATA_ONLY">
+                    v-model="backend.options.IMPORT_METADATA_ONLY">
                   <label for="backend_import_metadata">Enable</label>
                   <p class="help has-text-danger">
                     To efficiently push changes to the backend we need relation map and this require
@@ -261,7 +261,7 @@
                 <label class="label" for="webhook_match_user">Webhook match user</label>
                 <div class="control">
                   <input id="webhook_match_user" type="checkbox" class="switch is-success"
-                         v-model="backend.webhook.match.user">
+                    v-model="backend.webhook.match.user">
                   <label for="webhook_match_user">Enable</label>
                   <p class="help">
                     Check webhook payload for user id match. if it does not match, the payload will be ignored.
@@ -273,7 +273,7 @@
                 <label class="label" for="webhook_match_uuid">Webhook match backend id</label>
                 <div class="control">
                   <input id="webhook_match_uuid" type="checkbox" class="switch is-success"
-                         v-model="backend.webhook.match.uuid">
+                    v-model="backend.webhook.match.uuid">
                   <label for="webhook_match_uuid">Enable</label>
                   <p class="help">
                     Check webhook payload for backend unique id. if it does not match, the payload will be ignored.
@@ -293,24 +293,23 @@
                 </label>
                 <template v-if="showOptions">
                   <div class="columns is-multiline is-mobile">
-                    <template v-for="(val, key) in backend?.options" :key="'bo-'+key">
+                    <template v-for="_option in flatOptionPaths" :key="'bo-'+_option">
                       <div class="column is-5">
-                        <input type="text" class="input" :value="key" readonly disabled>
+                        <input type="text" class="input" :value="_option" readonly disabled>
                         <p class="help is-unselectable">
                           <span class="icon has-text-info">
-                            <i class="fas fa-info-circle" :class="{'fa-bounce': newOptions[key]}"></i>
+                            <i class="fas fa-info-circle" :class="{ 'fa-bounce': newOptions[_option] }"></i>
                           </span>
-                          {{ optionsList.find(v => v.key === key)?.description }}
+                          {{ option_describe(_option) }}
                         </p>
                       </div>
                       <div class="column is-6">
-                        <input type="text" class="input" v-model="backend.options[key]" required>
+                        <input type="text" class="input" :value="option_get(_option)"
+                          @input="e => option_set(_option, e.target.value)" required>
                       </div>
                       <div class="column is-1">
-                        <button class="button is-danger" @click.prevent="removeOption(key)">
-                          <span class="icon">
-                            <i class="fas fa-trash"></i>
-                          </span>
+                        <button class="button is-danger" @click.prevent="removeOption(_option)">
+                          <span class="icon"><i class="fas fa-trash" /></span>
                         </button>
                       </div>
                     </template>
@@ -326,8 +325,8 @@
                       <div class="select is-fullwidth">
                         <select v-model="selectedOption">
                           <option value="">Select Option</option>
-                          <option v-for="option in filteredOptions(optionsList)"
-                                  :key="'opt-'+option.key" :value="option.key">
+                          <option v-for="option in filteredOptions(optionsList)" :key="'opt-' + option.key"
+                            :value="option.key">
                             {{ option.key }}
                           </option>
                         </select>
@@ -366,9 +365,9 @@
 
 <script setup>
 import 'assets/css/bulma-switch.css'
-import {notification, ucFirst} from '~/utils/index'
+import { notification, ucFirst } from '~/utils/index'
 import Message from '~/components/Message'
-import {useStorage} from "@vueuse/core";
+import { useStorage } from "@vueuse/core";
 import request from "~/utils/request.js";
 
 const id = useRoute().params.backend
@@ -381,9 +380,9 @@ const backend = ref({
   token: '',
   uuid: '',
   user: '',
-  import: {enabled: false},
-  export: {enabled: false},
-  webhook: {match: {user: false, uuid: false}},
+  import: { enabled: false },
+  export: { enabled: false },
+  webhook: { match: { user: false, uuid: false } },
   options: {}
 })
 
@@ -407,7 +406,7 @@ const selectedOptionHelp = computed(() => {
   return option ? option.description : ''
 });
 
-useHead({title: 'Backends - Edit: ' + id})
+useHead({ title: 'Backends - Edit: ' + id })
 
 const loadContent = async () => {
   supported.value = await (await request('/system/supported')).json()
@@ -431,13 +430,20 @@ const loadContent = async () => {
 }
 
 const saveContent = async () => {
+  const json_text = toRaw(backend.value)
+
+  const flat = {}
+  flatOptionPaths.value.forEach(path => flat[path] = option_get(path))
+
+  if (Object.keys(flat).length > 0) {
+    json_text.options = flat
+  }
+
   try {
     const response = await request(`/backend/${id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(backend.value)
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(json_text)
     })
 
     const json = await response.json()
@@ -448,7 +454,7 @@ const saveContent = async () => {
 
     notification('success', 'Success', `Successfully updated '${id}' settings.`)
     const to = !redirect.startsWith('/') ? `/backend/${id}` : redirect
-    await navigateTo({path: to})
+    await navigateTo({ path: to })
   } catch (e) {
     notification('error', 'Error', `Request error. ${e.message}`)
   }
@@ -461,10 +467,11 @@ const removeOption = async (key) => {
     return
   }
 
-  if (!confirm(`Are you sure you want to remove this option [${key}]?`)) {
+  if (!confirm(`Are you sure you want to remove this option '${key}'?`)) {
     return
   }
-  const response = await request(`/backend/${id}/option/options.${key}`, {method: 'DELETE'})
+
+  const response = await request(`/backend/${id}/option/options.${key}`, { method: 'DELETE' })
 
   if (!response.ok) {
     const json = await response.json()
@@ -475,6 +482,7 @@ const removeOption = async (key) => {
   notification('success', 'Information', `Option [${key}] removed successfully.`)
   delete backend.value.options[key]
 }
+
 const addOption = async () => {
   if (!selectedOption.value) {
     notification('error', 'Error', 'Please select an option to add.')
@@ -482,16 +490,10 @@ const addOption = async () => {
   }
 
   backend.value.options = backend.value.options || {}
-  if (backend.value.options.length < 1) {
-    backend.value.options = {[selectedOption.value]: ''}
-  } else {
-    backend.value.options[selectedOption.value] = ''
-  }
-
+  option_set(selectedOption.value, '')
   newOptions.value[selectedOption.value] = true
   selectedOption.value = ''
 }
-
 
 const getUUid = async () => {
   const required_values = ['type', 'token', 'url'];
@@ -570,7 +572,7 @@ const getUsers = async (showAlert = true) => {
   users.value = json
 }
 
-watch(showOptions, async (value) => {
+watch(showOptions, async value => {
   if (!value) {
     return
   }
@@ -589,13 +591,12 @@ watch(showOptions, async (value) => {
   })
 });
 
-const filteredOptions = (options) => {
+const filteredOptions = options => {
   if (!options) {
     return []
   }
   return options.filter(v => !backend.value.options[v.key] && !newOptions.value[v.key])
 }
-
 
 const getServers = async () => {
   if ('plex' !== backend.value.type || servers.value.length > 0) {
@@ -673,6 +674,56 @@ watch(() => backend.value.user, async () => {
     backend.value.token = u.token
   })
 })
+
+const flattenOptions = (obj, prefix = '') => {
+  const out = []
+
+  for (const [key, val] of Object.entries(obj)) {
+    const path = prefix ? `${prefix}.${key}` : key
+
+    if (Array.isArray(val)) {
+      if (val.length === 0) {
+        continue
+      }
+      out.push(path)
+      continue
+    }
+
+    if (val !== null && typeof val === 'object') {
+      if (Object.keys(val).length === 0) {
+        continue
+      }
+      out.push(...flattenOptions(val, path))
+      continue
+    }
+
+    out.push(path)
+  }
+
+  return out
+}
+
+const flatOptionPaths = computed(() => flattenOptions(backend.value.options))
+
+const option_get = path => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), backend.value.options)
+const option_set = (path, value) => {
+  const keys = path.split('.')
+  const last = keys.pop()
+  let target = backend.value.options
+  for (const k of keys) {
+    if (target[k] == null || typeof target[k] !== 'object' || Array.isArray(target[k])) {
+      target[k] = {}
+    }
+    target = target[k]
+  }
+
+  target[last] = value
+}
+
+const option_describe = path => {
+  const item = optionsList.value.find((v) => v.key === path)
+  return item ? item.description : ''
+}
 
 onMounted(async () => await loadContent())
 
