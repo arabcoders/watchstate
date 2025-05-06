@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250506-7ecaafa",
-        "date": "2025-05-06T15:21:53+00:00",
+        "tag": "dev-20250506-0ff1278",
+        "date": "2025-05-06T15:30:35+00:00",
         "commits": [
+            {
+                "sha": "0ff1278",
+                "message": "Update readme.",
+                "author": "arabcoders",
+                "date": "2025-05-06T15:30:35+00:00"
+            },
             {
                 "sha": "7ecaafa",
                 "message": "fix env key update.",

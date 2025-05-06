@@ -1,5 +1,41 @@
 [
     {
+        "tag": "master-20250506-c6dd50e",
+        "date": "2025-05-06T15:42:01+00:00",
+        "commits": [
+            {
+                "sha": "0ff1278",
+                "message": "Update readme.",
+                "author": "arabcoders",
+                "date": "2025-05-06T15:30:35+00:00"
+            },
+            {
+                "sha": "7ecaafa",
+                "message": "fix env key update.",
+                "author": "arabcoders",
+                "date": "2025-05-06T15:21:53+00:00"
+            },
+            {
+                "sha": "86c9518",
+                "message": "Fixed Additional options in backend edit page.",
+                "author": "arabcoders",
+                "date": "2025-05-06T14:54:38+00:00"
+            },
+            {
+                "sha": "156e4aa",
+                "message": "Removed WS_EPISODES_DISABLE_GUID in favor of WS_EPISODES_ENABLE_GUID",
+                "author": "arabcoders",
+                "date": "2025-05-06T13:09:18+00:00"
+            },
+            {
+                "sha": "bd63aa1",
+                "message": "docblock update",
+                "author": "arabcoders",
+                "date": "2025-05-06T12:55:35+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250505-7a47832",
         "date": "2025-05-05T19:41:11+00:00",
         "commits": [
