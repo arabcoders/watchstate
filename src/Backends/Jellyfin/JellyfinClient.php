@@ -265,7 +265,7 @@ class JellyfinClient implements iClient
             guid: $this->guid,
             mapper: $mapper,
             after: $after,
-            opts: [Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid')]
+            opts: [Options::ENABLE_EPISODE_GUID => (bool)Config::get('episodes.enable.guid')]
         );
 
         if ($response->hasError()) {
@@ -290,7 +290,7 @@ class JellyfinClient implements iClient
             mapper: $mapper,
             opts: ag_sets($opts, [
                 'writer' => $writer,
-                Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid')
+                Options::ENABLE_EPISODE_GUID => (bool)Config::get('episodes.enable.guid')
             ])
         );
 
@@ -317,7 +317,7 @@ class JellyfinClient implements iClient
             after: $after,
             opts: [
                 'queue' => $queue,
-                Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
+                Options::ENABLE_EPISODE_GUID => (bool)Config::get('episodes.enable.guid'),
             ],
         );
 
@@ -499,8 +499,8 @@ class JellyfinClient implements iClient
             mapper: $mapper,
             after: null,
             opts: ag_sets($opts, [
-                Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
                 Options::ONLY_LIBRARY_ID => $libraryId,
+                Options::ENABLE_EPISODE_GUID => (bool)Config::get('episodes.enable.guid'),
             ])
         );
 

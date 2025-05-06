@@ -21,7 +21,6 @@ final class Options
     public const string MAPPER_DISABLE_AUTOCOMMIT = 'DISABLE_AUTOCOMMIT';
     public const string IMPORT_METADATA_ONLY = 'IMPORT_METADATA_ONLY';
     public const string MISMATCH_DEEP_SCAN = 'MISMATCH_DEEP_SCAN';
-    public const string DISABLE_GUID = 'DISABLE_GUID';
     public const string LIBRARY_SEGMENT = 'LIBRARY_SEGMENT';
     public const string STATE_UPDATE_EVENT = 'STATE_UPDATE_EVENT';
     public const string DUMP_PAYLOAD = 'DUMP_PAYLOAD';
@@ -51,6 +50,7 @@ final class Options
     public const string DELAY_BY = 'DELAY_BY';
     public const string RAW_RESPONSE_CALLBACK = 'RAW_RESPONSE_CALLBACK';
     public const string INTERNAL_REQUEST = 'INTERNAL_REQUEST';
+    public const string ENABLE_EPISODE_GUID = 'ENABLE_EPISODE_GUID';
 
     private function __construct()
     {

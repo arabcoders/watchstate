@@ -104,7 +104,7 @@ trait PlexActionTrait
             ],
         ];
 
-        if (iState::TYPE_EPISODE === $type && true === (bool)ag($opts, Options::DISABLE_GUID, false)) {
+        if (iState::TYPE_EPISODE === $type && false === (bool)ag($opts, Options::ENABLE_EPISODE_GUID, false)) {
             $guids = [];
         } else {
             $guids = $guid->get(guids: ag($item, 'Guid', []), context: $logContext);

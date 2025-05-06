@@ -119,10 +119,6 @@ final class Env
             return api_error(r("No value was provided for '{key}'.", ['key' => $key]), Status::BAD_REQUEST);
         }
 
-        if ($value === ag($spec, 'value')) {
-            return api_response(Status::NOT_MODIFIED);
-        }
-
         try {
             $value = $this->setType($spec, $value);
 

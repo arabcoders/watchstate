@@ -166,7 +166,7 @@ final class ParseWebhook
                 ],
             ];
 
-            $disableGuid = (bool)Config::get('episodes.disable.guid');
+            $enableGUID = (bool)Config::get('episodes.enable.guid');
 
             $providersId = [];
 
@@ -177,7 +177,7 @@ final class ParseWebhook
                 $providersId[after($key, 'provider_')] = $val;
             }
 
-            if (JFC::TYPE_EPISODE === $type && true === $disableGuid) {
+            if (JFC::TYPE_EPISODE === $type && false === $enableGUID) {
                 $guids = [];
             } else {
                 $guids = $guid->get(guids: $providersId, context: $logContext);
@@ -227,7 +227,7 @@ final class ParseWebhook
                 context: $context,
                 guid: $guid,
                 item: $obj,
-                opts: ['override' => $fields, Options::DISABLE_GUID => $disableGuid],
+                opts: ['override' => $fields, Options::ENABLE_EPISODE_GUID => $enableGUID],
             )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
 
             if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {

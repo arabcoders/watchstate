@@ -18,8 +18,9 @@ environment variable. This mode only applies to `import`, `export`, and `backup`
 
 Additionally, two command-line flags let you override the mode on the fly `--sync-requests` and `--async-requests`.
 
-We’ll be evaluating this feature for a trial period. If it proves effective (and the slowdown is acceptable), we may
-make **sequential** mode the default in a future release.
+We’ll be evaluating this feature, and if it proves effective (and the slowdown is acceptable), we may
+make **sequential** mode the default in a future release. So far from our testing, we’ve seen between 1.5x to 2.0x
+increase in import time when using the sequential mode.
 
 > [!NOTE]
 > Because we cache many HTTP requests, comparing timings between sequential and parallel runs of `import` can be
@@ -36,7 +37,7 @@ sub-users, and regenerate updated config files.
 
 We have also added new guard for the command, so if you already generated your sub-users, re-running the command will
 show you a warning message and exit without doing anything. to run the command again either you need to use
-`--re-create`or `--run` flag. The `--run` flag will run the command without deleting the current sub-users.
+`--re-create` or `--run` flag. The `--run` flag will run the command without deleting the current sub-users.
 
 --- 
 Refer to [NEWS](NEWS.md) for old updates.

@@ -95,10 +95,9 @@ return (function () {
             'type' => 'int',
         ],
         [
-            'key' => 'WS_EPISODES_DISABLE_GUID',
-            'description' => 'DO NOT parse episodes GUID.',
+            'key' => 'WS_EPISODES_ENABLE_GUID',
+            'description' => 'Enable Episodes GUID parsing.',
             'type' => 'bool',
-            'deprecated' => true,
         ],
         [
             'key' => 'WS_BACKENDS_FILE',
