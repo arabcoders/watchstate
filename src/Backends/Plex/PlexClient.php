@@ -40,6 +40,7 @@ use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Exceptions\HttpException;
+use App\Libs\Extends\HttpClient;
 use App\Libs\Mappers\Import\ReadOnlyMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
@@ -748,7 +749,7 @@ class PlexClient implements iClient
     /**
      * Retrieves a list of Plex servers using the Plex.tv API.
      *
-     * @param iHttp $http The HTTP client used to send the request.
+     * @param iHttp&HttpClient $http The HTTP client used to send the request.
      * @param string $token The Plex authentication token.
      * @param array $opts (Optional) options.
      *
@@ -870,7 +871,7 @@ class PlexClient implements iClient
     /**
      * Check if given plex token is valid.
      *
-     * @param iHttp $http The HTTP client used to send the request.
+     * @param iHttp&HttpClient $http The HTTP client used to send the request.
      * @param string $token The Plex authentication token.
      * @param array $opts (Optional) options.
      *
