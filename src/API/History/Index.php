@@ -12,6 +12,7 @@ use App\Libs\Attributes\Route\Get;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\Container;
 use App\Libs\DataUtil;
+use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
@@ -19,12 +20,15 @@ use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Guid;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
+use App\Libs\Options;
 use App\Libs\Traits\APITraits;
+use DateInterval;
 use JsonException;
 use PDO;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Log\LoggerInterface as iLogger;
+use Psr\SimpleCache\CacheInterface as iCache;
 use SplFileInfo;
 use Throwable;
 
@@ -685,6 +689,105 @@ final class Index
         $userContext->mapper->add($item)->commit();
 
         queuePush($item, userContext: $userContext);
+
+        return $this->read($request, $id);
+    }
+
+    #[Get(self::URL . '/{id:\d+}/validate[/]', name: 'history.validate')]
+    public function validate_item(iCache $cache, iRequest $request, string $id): iResponse
+    {
+        try {
+            $userContext = $this->getUserContext(request: $request, mapper: $this->mapper, logger: $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
+
+        $entity = Container::get(iState::class)::fromArray([iState::COLUMN_ID => $id]);
+
+        if (null === ($item = $userContext->db->get($entity))) {
+            return api_error('Item Not found', Status::NOT_FOUND);
+        }
+
+        $cacheKey = r('validate_item_{id}_{user}_{backends}', [
+            'id' => $item->id,
+            'user' => $userContext->name,
+            'backends' => md5(implode(',', array_keys($item->getMetadata()))),
+        ]);
+
+        try {
+            if (null !== ($cached = $cache->get($cacheKey))) {
+                return api_response(Status::OK, $cached, headers: ['X-Cache' => 'HIT']);
+            }
+        } catch (Throwable) {
+            // Ignore cache errors.
+        }
+
+        $validation = [];
+
+        foreach ($item->getMetadata() as $name => $metadata) {
+            $id = ag($metadata, StateEntity::COLUMN_ID, null);
+            $validation[$name] = [
+                'id' => $id,
+                'status' => false,
+                'message' => 'Item not found.',
+            ];
+
+            if (null === $userContext->config->get($name)) {
+                $validation[$name]['message'] = 'Backend not found.';
+                continue;
+            }
+
+            if (null === $id) {
+                $validation[$name]['message'] = 'Item ID is missing.';
+                continue;
+            }
+
+            try {
+                $client = $this->getClient(name: $name, userContext: $userContext);
+                $item = $client->getMetadata($id, [Options::NO_LOGGING => true]);
+                if (count($item) > 0) {
+                    $validation[$name]['status'] = true;
+                    $validation[$name]['message'] = 'Item found.';
+                } else {
+                    $validation[$name]['status'] = false;
+                    $validation[$name]['message'] = 'Item not found.';
+                }
+            } catch (Throwable $e) {
+                $validation[$name]['message'] = $e->getMessage();
+            }
+        }
+
+        try {
+            $cache->set($cacheKey, $validation, new DateInterval('PT10M'));
+        } catch (Throwable) {
+            // Ignore cache errors.
+        }
+
+        return api_response(Status::OK, $validation, headers: ['X-Cache' => 'MISS']);
+    }
+
+    #[Delete(self::URL . '/{id:\d+}/metadata/{backend}[/]', name: 'history.metadata.delete')]
+    public function delete_item_metadata(iCache $cache, iRequest $request, string $id, string $backend): iResponse
+    {
+        try {
+            $userContext = $this->getUserContext(request: $request, mapper: $this->mapper, logger: $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
+
+        $entity = Container::get(iState::class)::fromArray([iState::COLUMN_ID => $id]);
+
+        if (null === ($item = $userContext->db->get($entity))) {
+            return api_error('Item Not found', Status::NOT_FOUND);
+        }
+
+        if (null === ($item->getMetadata($backend) ?? null)) {
+            return api_error('Item metadata not found.', Status::NOT_FOUND);
+        }
+
+        $item->metadata = ag_delete($item->getMetadata(), $backend);
+
+        $userContext->db->update($item);
 
         return $this->read($request, $id);
     }

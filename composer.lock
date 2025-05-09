@@ -3588,12 +3588,12 @@
       "source": {
         "type": "git",
         "url": "https://github.com/Roave/SecurityAdvisories.git",
-        "reference": "45b01f4e60c350f72a8697056674e449e053935a"
+        "reference": "59be420c5cdc0c3c9cdae31804d32fefb515a918"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/45b01f4e60c350f72a8697056674e449e053935a",
-        "reference": "45b01f4e60c350f72a8697056674e449e053935a",
+        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/59be420c5cdc0c3c9cdae31804d32fefb515a918",
+        "reference": "59be420c5cdc0c3c9cdae31804d32fefb515a918",
         "shasum": ""
       },
       "conflict": {
@@ -3611,7 +3611,7 @@
         "airesvsg/acf-to-rest-api": "<=3.1",
         "akaunting/akaunting": "<2.1.13",
         "akeneo/pim-community-dev": "<5.0.119|>=6,<6.0.53",
-        "alextselegidis/easyappointments": "<=1.5",
+        "alextselegidis/easyappointments": "<=1.5.1",
         "alterphp/easyadmin-extension-bundle": ">=1.2,<1.2.11|>=1.3,<1.3.1",
         "amazing/media2click": ">=1,<1.3.3",
         "ameos/ameos_tarteaucitron": "<1.2.23",
@@ -3715,7 +3715,7 @@
         "contao/managed-edition": "<=1.5",
         "corveda/phpsandbox": "<1.3.5",
         "cosenary/instagram": "<=2.3",
-        "craftcms/cms": "<=4.14.14|>=5,<=5.6.16",
+        "craftcms/cms": "<4.15.3|>=5,<5.7.5",
         "croogo/croogo": "<4",
         "cuyz/valinor": "<0.12",
         "czim/file-handling": "<1.5|>=2,<2.3",
@@ -3948,6 +3948,7 @@
         "klaviyo/magento2-extension": ">=1,<3",
         "knplabs/knp-snappy": "<=1.4.2",
         "kohana/core": "<3.3.3",
+        "koillection/koillection": "<1.6.12",
         "krayin/laravel-crm": "<=1.3",
         "kreait/firebase-php": ">=3.2,<3.8.1",
         "kumbiaphp/kumbiapp": "<=1.1.1",
@@ -3966,7 +3967,7 @@
         "latte/latte": "<2.10.8",
         "lavalite/cms": "<=9|==10.1",
         "lcobucci/jwt": ">=3.4,<3.4.6|>=4,<4.0.4|>=4.1,<4.1.5",
-        "league/commonmark": "<2.6",
+        "league/commonmark": "<2.7",
         "league/flysystem": "<1.1.4|>=2,<2.1.1",
         "league/oauth2-server": ">=8.3.2,<8.4.2|>=8.5,<8.5.3",
         "leantime/leantime": "<3.3",
@@ -4066,9 +4067,9 @@
         "nzo/url-encryptor-bundle": ">=4,<4.3.2|>=5,<5.0.1",
         "october/backend": "<1.1.2",
         "october/cms": "<1.0.469|==1.0.469|==1.0.471|==1.1.1",
-        "october/october": "<=3.6.4",
+        "october/october": "<3.7.5",
         "october/rain": "<1.0.472|>=1.1,<1.1.2",
-        "october/system": "<1.0.476|>=1.1,<1.1.12|>=2,<2.2.34|>=3,<3.5.15",
+        "october/system": "<3.7.5",
         "oliverklee/phpunit": "<3.5.15",
         "omeka/omeka-s": "<4.0.3",
         "onelogin/php-saml": "<2.10.4",
@@ -4196,8 +4197,8 @@
         "serluck/phpwhois": "<=4.2.6",
         "sfroemken/url_redirect": "<=1.2.1",
         "sheng/yiicms": "<1.2.1",
-        "shopware/core": "<6.5.8.17-dev|>=6.6,<6.6.10.3-dev|>=6.7.0.0-RC1-dev,<6.7.0.0-RC2-dev",
-        "shopware/platform": "<6.5.8.17-dev|>=6.6,<6.6.10.3-dev|>=6.7.0.0-RC1-dev,<6.7.0.0-RC2-dev",
+        "shopware/core": "<6.6.10.3-dev|>=6.7.0.0-RC1-dev,<6.7.0.0-RC2-dev",
+        "shopware/platform": "<6.6.10.3-dev|>=6.7.0.0-RC1-dev,<6.7.0.0-RC2-dev",
         "shopware/production": "<=6.3.5.2",
         "shopware/shopware": "<=5.7.17",
         "shopware/storefront": "<=6.4.8.1|>=6.5.8,<6.5.8.7-dev",
@@ -4240,7 +4241,7 @@
         "slim/slim": "<2.6",
         "slub/slub-events": "<3.0.3",
         "smarty/smarty": "<4.5.3|>=5,<5.1.1",
-        "snipe/snipe-it": "<=7.0.13",
+        "snipe/snipe-it": "<8.1",
         "socalnick/scn-social-auth": "<1.15.2",
         "socialiteproviders/steam": "<1.1",
         "spatie/browsershot": "<5.0.5",
@@ -4510,7 +4511,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2025-05-01T20:05:59+00:00"
+      "time": "2025-05-08T20:06:04+00:00"
     },
     {
       "name": "sebastian/cli-parser",
