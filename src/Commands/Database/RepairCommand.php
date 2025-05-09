@@ -1,0 +1,120 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Commands\Database;
+
+use App\Command;
+use App\Libs\Attributes\Route\Cli;
+use Symfony\Component\Console\Input\InputInterface as iInput;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface as iOutput;
+use Symfony\Component\Process\Process;
+
+/**
+ * Class QueueCommand
+ *
+ * This command is used to show webhook queued events.
+ *
+ * @package YourPackageNamespace
+ */
+#[Cli(command: self::ROUTE)]
+class RepairCommand extends Command
+{
+    public const string ROUTE = 'db:repair';
+
+    public function __construct()
+    {
+        set_time_limit(0);
+        ini_set('memory_limit', '-1');
+
+        parent::__construct();
+    }
+
+    /**
+     * Configure the command.
+     */
+    protected function configure(): void
+    {
+        $this->setName(self::ROUTE)
+            ->setDescription('Attempt to repair broken database.')
+            ->addArgument('db', InputOption::VALUE_REQUIRED, 'Database to repair.');
+    }
+
+    /**
+     * Execute the command.
+     *
+     * @param iInput $input The input object.
+     * @param iOutput $output The output object.
+     *
+     * @return int The command's exit code.
+     */
+    protected function runCommand(iInput $input, iOutput $output): int
+    {
+        $db = $input->getArgument('db');
+        if (empty($db)) {
+            $output->writeln('<error>ERROR:</error> You need to provide path to the sqlite db.');
+            return self::FAILURE;
+        }
+
+        if (false === file_exists($db)) {
+            $output->writeln(r("<error>ERROR:</error> Database '{db}' not found.", ['db' => $db]));
+            return self::FAILURE;
+        }
+
+        $output->writeln(r("<info>INFO:</info> Attempting to repair database '{db}'.", ['db' => $db]));
+
+        // -- first copy db to prevent data loss.
+        $backup = $db . '.before.repair.db';
+        if (false === copy($db, $backup)) {
+            $output->writeln(r("<error>ERROR:</error> Failed to copy database '{db}' to '{backup}'.", [
+                'db' => $db,
+                'backup' => $backup,
+            ]));
+            return self::FAILURE;
+        }
+
+        $output->writeln(r("<info>INFO:</info> Copied database '{db}' to '{backup}' as backup.", [
+            'db' => $db,
+            'backup' => $backup,
+        ]));
+
+        $output->writeln(r("<info>INFO:</info> Attempting to repair database '{db}'.", ['db' => $db]));
+
+        $command = "sqlite3 '{file}' '.dump' | sqlite3 '{file}.new.db'";
+        $proc = Process::fromShellCommandline(r($command, ['file' => $db]));
+        $proc->setTimeout(null);
+        $proc->setIdleTimeout(null);
+        $proc->run(fn($type, $out) => $output->writeln((string)$out));
+        if ($proc->isSuccessful()) {
+            $output->writeln(r("<info>INFO:</info> Database '{db}' repaired successfully.", ['db' => $db]));
+        } else {
+            $output->writeln(r("<error>ERROR:</error> Failed to repair database '{db}'.", ['db' => $db]));
+            return self::FAILURE;
+        }
+
+        $command = "sqlite3 '{file}.new.db' 'PRAGMA integrity_check'";
+        $proc = Process::fromShellCommandline(r($command, ['file' => $db]));
+        $proc->setTimeout(null);
+        $proc->setIdleTimeout(null);
+        $output->writeln('<info>INFO:</info> Checking database integrity...');
+        $proc->run(fn($type, $out) => $output->writeln((string)$out));
+        if ($proc->isSuccessful()) {
+            $output->writeln(r("<info>INFO:</info> Database '{db}' is valid.", ['db' => $db]));
+        } else {
+            $output->writeln(r("<error>ERROR:</error> Database '{db}' is not valid.", ['db' => $db]));
+            return self::FAILURE;
+        }
+
+        if (!rename("{$db}.new.db", $db)) {
+            $output->writeln(r("<error>ERROR:</error> Failed to rename database '{db}.new.db' to '{db}'.", [
+                'db' => $db,
+            ]));
+            return self::FAILURE;
+        }
+
+        $output->writeln(r("<info>INFO:</info> Done!.", ['db' => $db]));
+
+        return self::SUCCESS;
+    }
+}
