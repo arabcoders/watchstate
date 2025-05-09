@@ -9,6 +9,7 @@ use App\Commands\Events\DispatchCommand;
 use App\Commands\State\BackupCommand;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
+use App\Commands\State\ValidateCommand;
 use App\Commands\System\IndexCommand;
 use App\Commands\System\PruneCommand;
 use App\Libs\Mappers\Import\MemoryMapper;
@@ -17,13 +18,13 @@ use Monolog\Level;
 
 return (function () {
     $inContainer = inContainer();
-    $progressTimeCheck = fn (int $v, int $d): int => 0 === $v || $v >= 180 ? $v : $d;
+    $progressTimeCheck = fn(int $v, int $d): int => 0 === $v || $v >= 180 ? $v : $d;
 
     $config = [
         'name' => 'WatchState',
         'version' => '$(version_via_ci)',
         'tz' => env('WS_TZ', env('TZ', 'UTC')),
-        'path' => fixPath(env('WS_DATA_PATH', fn () => $inContainer ? '/config' : __DIR__ . '/../var')),
+        'path' => fixPath(env('WS_DATA_PATH', fn() => $inContainer ? '/config' : __DIR__ . '/../var')),
         'logs' => [
             'context' => (bool)env('WS_LOGS_CONTEXT', false),
             'prune' => [
@@ -44,7 +45,7 @@ return (function () {
                 'encode' => JSON_INVALID_UTF8_IGNORE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
                 'headers' => [
                     'Content-Type' => 'application/json',
-                    'X-Application-Version' => fn () => getAppVersion(),
+                    'X-Application-Version' => fn() => getAppVersion(),
                     'Access-Control-Allow-Origin' => '*',
                 ],
             ],
@@ -68,7 +69,7 @@ return (function () {
         ],
         'episodes' => [
             'enable' => [
-               'guid' => (bool)env('WS_EPISODES_ENABLE_GUID', false),
+                'guid' => (bool)env('WS_EPISODES_ENABLE_GUID', false),
             ],
         ],
         'ignore' => [],
@@ -159,14 +160,14 @@ return (function () {
 
     $config['profiler'] = [
         'save' => (bool)env('WS_PROFILER_SAVE', true),
-        'path' => env('WS_PROFILER_PATH', fn () => ag($config, 'tmpDir') . '/profiler'),
+        'path' => env('WS_PROFILER_PATH', fn() => ag($config, 'tmpDir') . '/profiler'),
         'collector' => env('WS_PROFILER_COLLECTOR', null),
     ];
 
     $config['cache'] = [
         'prefix' => env('WS_CACHE_PREFIX', null),
         'url' => env('WS_CACHE_URL', 'redis://127.0.0.1:6379'),
-        'path' => env('WS_CACHE_PATH', fn () => ag($config, 'tmpDir') . '/cache'),
+        'path' => env('WS_CACHE_PATH', fn() => ag($config, 'tmpDir') . '/cache'),
     ];
 
     $config['logger'] = [
@@ -309,6 +310,14 @@ return (function () {
                 'enabled' => (bool)env('WS_CRON_INDEXES', true),
                 'timer' => $checkTaskTimer((string)env('WS_CRON_INDEXES_AT', '0 3 * * 3'), '0 3 * * 3'),
                 'args' => env('WS_CRON_INDEXES_ARGS', '-v'),
+            ],
+            ValidateCommand::TASK_NAME => [
+                'command' => ValidateCommand::ROUTE,
+                'name' => ValidateCommand::TASK_NAME,
+                'info' => 'Validate stored backends reference id against the backends.',
+                'enabled' => (bool)env('WS_CRON_VALIDATE', true),
+                'timer' => $checkTaskTimer((string)env('WS_CRON_VALIDATE_AT', '0 4 */14 * *'), '0 4 */14 * *'),
+                'args' => env('WS_CRON_VALIDATE_ARGS', '-v'),
             ],
             DispatchCommand::TASK_NAME => [
                 'command' => DispatchCommand::ROUTE,

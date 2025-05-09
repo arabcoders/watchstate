@@ -767,7 +767,7 @@ final class Index
     }
 
     #[Delete(self::URL . '/{id:\d+}/metadata/{backend}[/]', name: 'history.metadata.delete')]
-    public function delete_item_metadata(iCache $cache, iRequest $request, string $id, string $backend): iResponse
+    public function delete_item_metadata(iRequest $request, string $id, string $backend): iResponse
     {
         try {
             $userContext = $this->getUserContext(request: $request, mapper: $this->mapper, logger: $this->logger);
@@ -785,10 +785,16 @@ final class Index
             return api_error('Item metadata not found.', Status::NOT_FOUND);
         }
 
-        $item->metadata = ag_delete($item->getMetadata(), $backend);
+        if (count($item->removeMetadata($backend)) < 1) {
+            return api_error('Item metadata not found.', Status::NOT_FOUND);
+        }
 
+        if (count($item->getMetadata()) < 1) {
+            $userContext->db->remove($item);
+            return api_message('Record deleted.', Status::OK);
+        }
+        
         $userContext->db->update($item);
-
         return $this->read($request, $id);
     }
 

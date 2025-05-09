@@ -420,7 +420,7 @@ These environment variables relates to the tool itself, You should manage them v
 
 > [!IMPORTANT]
 > for environment variables that has `{TASK}` tag, you **MUST** replace it with one of `IMPORT`, `EXPORT`, `BACKUP`,
-`PRUNE`, `INDEXES`.
+`PRUNE`, `INDEXES` or `VALIDATE`.
 
 ## Add tool specific environment variables
 

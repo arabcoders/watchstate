@@ -330,8 +330,10 @@
             </div>
             <div class="card-header-icon">
               <div class="field is-grouped">
-                <div class="control" v-if="false === item?.validated">
-                  <NuxtLink @click="deleteMetadata(key)">
+                <div class="control"
+                     v-if="false === item?.validated">
+                  <NuxtLink
+                      @click="Object.keys(data.metadata).length > 1 ? deleteMetadata(data,key) : deleteItem(data)">
                     <span class="icon-text has-text-danger">
                       <span class="icon"><i class="fas fa-trash"/></span>
                       <span>Delete</span>
@@ -691,7 +693,7 @@ const deleteItem = async (item) => {
     return
   }
 
-  if (!confirm(`Are you sure you want to delete '${makeName(item)}'?`)) {
+  if (!confirm(`Delete '${makeName(item)}' local record?`)) {
     return
   }
 
@@ -763,8 +765,8 @@ const validateItem = async () => {
   } catch (e) {
   }
 }
-const deleteMetadata = async backend => {
-  if (!confirm(`Remove metadata from '${backend}'?`)) {
+const deleteMetadata = async (item, backend) => {
+  if (!confirm(`Remove '${backend}' metadata from '${makeName(item)}' data?`)) {
     return
   }
 
