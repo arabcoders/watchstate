@@ -462,6 +462,22 @@ final class StateEntity implements iState
     /**
      * @inheritdoc
      */
+    public function removeMetadata(string $backend): array
+    {
+        if (null === ($this->metadata[$backend] ?? null)) {
+            return [];
+        }
+
+        $metadata = $this->metadata[$backend];
+
+        unset($this->metadata[$backend]);
+
+        return $metadata;
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function setMetadata(array $metadata): StateInterface
     {
         if (empty($this->via)) {

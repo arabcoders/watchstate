@@ -296,6 +296,15 @@ interface StateInterface extends LoggerAwareInterface
     public function getMetadata(string|null $via = null): array;
 
     /**
+     * Get metadata.
+     *
+     * @param string $backend The backend name to remove metadata from.
+     *
+     * @return array Return the removed metadata. Or empty array if not found.
+     */
+    public function removeMetadata(string $backend): array;
+
+    /**
      * Set metadata related to {$this->via} backend.
      *
      * @param array $metadata Metadata
