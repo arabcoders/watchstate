@@ -326,24 +326,28 @@ General error: 11 database disk image is malformed
 To repair the database, follow these steps:
 
 ```bash
-$ docker exec -ti watchstate bash
-$ sqlite3 /config/db/watchstate_v01.db '.dump' | sqlite3 /config/db/watchstate_v01-repaired.db
+$ docker exec -ti watchstate console db:repair /config/db/watchstate_v01.db
 ```
 
-Once the dump and rebuild are complete, perform an integrity check:
+> [!NOTE]
+> change `/config/db/watchstate_v01.db` to the path of your database file.
 
-```bash
-$ sqlite3 /config/db/watchstate_v01-repaired.db 'PRAGMA integrity_check'
+You should get similar output to the following:
+
+```
+INFO: Attempting to repair database '{db_name}'.
+INFO: Copied database '{db_name}' to '{db_name}.before.repair.db' as backup.
+INFO: Attempting to repair database '{db_name}'.
+INFO: Database '{db_name}' repaired successfully.
+INFO: Checking database integrity...
+INFO: SQLite3: ok
+INFO: Database '{db_name}' is valid.
+INFO: Updating database version to 1723988129.
+INFO: Renaming database '{db_name}.new.db' to '{db_name}'.
+INFO: Repair completed successfully. Database '{db_name}' is now valid.
 ```
 
-If the output is simply `ok`, the repaired database is valid. You can then replace the corrupted database with the
-repaired one:
-
-```bash
-$ mv /config/db/watchstate_v01-repaired.db /config/db/watchstate_v01.db
-```
-
-Your system should now use the repaired database without errors.
+If there are no errors, the database has been repaired successfully. And you can resume using the tool.
 
 ---
 

@@ -6,6 +6,7 @@ namespace App\Commands\Database;
 
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
+use PDO;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
@@ -63,6 +64,8 @@ class RepairCommand extends Command
         }
 
         $output->writeln(r("<info>INFO:</info> Attempting to repair database '{db}'.", ['db' => $db]));
+        $old_db = new PDO("sqlite:{$db}");
+        $version = $old_db->query('PRAGMA user_version')->fetchColumn();
 
         // -- first copy db to prevent data loss.
         $backup = $db . '.before.repair.db';
@@ -81,11 +84,22 @@ class RepairCommand extends Command
 
         $output->writeln(r("<info>INFO:</info> Attempting to repair database '{db}'.", ['db' => $db]));
 
+
         $command = "sqlite3 '{file}' '.dump' | sqlite3 '{file}.new.db'";
         $proc = Process::fromShellCommandline(r($command, ['file' => $db]));
         $proc->setTimeout(null);
         $proc->setIdleTimeout(null);
-        $proc->run(fn($type, $out) => $output->writeln((string)$out));
+        $proc->run(function ($type, $out) use ($output) {
+            $text = trim((string)$out);
+            if (empty($text)) {
+                return;
+            }
+            if ($type == Process::ERR) {
+                $output->writeln(r("<error>ERROR:</error> SQLite3: {text}", ['text' => $text]));
+            } else {
+                $output->writeln(r("<info>INFO:</info> SQLite3: {text}", ['text' => $text]));
+            }
+        });
         if ($proc->isSuccessful()) {
             $output->writeln(r("<info>INFO:</info> Database '{db}' repaired successfully.", ['db' => $db]));
         } else {
@@ -98,13 +112,31 @@ class RepairCommand extends Command
         $proc->setTimeout(null);
         $proc->setIdleTimeout(null);
         $output->writeln('<info>INFO:</info> Checking database integrity...');
-        $proc->run(fn($type, $out) => $output->writeln((string)$out));
+        $proc->run(function ($type, $out) use ($output) {
+            $text = trim((string)$out);
+            if (empty($text)) {
+                return;
+            }
+            if ($type == Process::ERR) {
+                $output->writeln(r("<error>ERROR:</error> SQLite3: {text}", ['text' => $text]));
+            } else {
+                $output->writeln(r("<info>INFO:</info> SQLite3: {text}", ['text' => $text]));
+            }
+        });
         if ($proc->isSuccessful()) {
             $output->writeln(r("<info>INFO:</info> Database '{db}' is valid.", ['db' => $db]));
         } else {
             $output->writeln(r("<error>ERROR:</error> Database '{db}' is not valid.", ['db' => $db]));
             return self::FAILURE;
         }
+
+        $output->writeln(r("<info>INFO:</info> Updating database version to {version}.", [
+            'version' => $version,
+        ]));
+        $pdo = new PDO("sqlite:{$db}.new.db");
+        $pdo->exec(r('PRAGMA user_version = {version}', ['version' => $version]));
+
+        $output->writeln(r("<info>INFO:</info> Renaming database '{db}.new.db' to '{db}'.", ['db' => $db]));
 
         if (!rename("{$db}.new.db", $db)) {
             $output->writeln(r("<error>ERROR:</error> Failed to rename database '{db}.new.db' to '{db}'.", [
@@ -113,7 +145,9 @@ class RepairCommand extends Command
             return self::FAILURE;
         }
 
-        $output->writeln(r("<info>INFO:</info> Done!.", ['db' => $db]));
+        $output->writeln(
+            r("<info>INFO:</info> Repair completed successfully. Database '{db}' is now valid.", ['db' => $db])
+        );
 
         return self::SUCCESS;
     }
