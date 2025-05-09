@@ -10,10 +10,10 @@ use App\Libs\Attributes\Route\Cli;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
-use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Input\InputInterface as iInput;
-use Symfony\Component\Console\Output\OutputInterface as iOutput;
 use Psr\Log\LoggerInterface as iLogger;
+use Symfony\Component\Console\Input\InputInterface as iInput;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface as iOutput;
 
 /**
  * Class MigrationsCommand
@@ -28,7 +28,8 @@ final class MigrationsCommand extends Command
     /**
      * Class constructor.
      *
-     * @param iDB $db An instance of the iDB class.
+     * @param iImport $mapper
+     * @param iLogger $logger
      */
     public function __construct(
         #[Inject(DirectMapper::class)]
@@ -67,7 +68,7 @@ final class MigrationsCommand extends Command
      */
     protected function runCommand(iInput $input, iOutput $output): int
     {
-        return $this->single(fn (): int => $this->process($input, $output), $output);
+        return $this->single(fn(): int => $this->process($input, $output), $output);
     }
 
     /**
@@ -85,7 +86,7 @@ final class MigrationsCommand extends Command
             $opts['fresh'] = true;
         }
 
-        foreach (getUsersContext(mapper:$this->mapper, logger:$this->logger) as $userContext) {
+        foreach (getUsersContext(mapper: $this->mapper, logger: $this->logger) as $userContext) {
             $output->writeln(r("Running database migrations for '{user}' database.", [
                 'user' => $userContext->name
             ]), iOutput::VERBOSITY_VERBOSE);
