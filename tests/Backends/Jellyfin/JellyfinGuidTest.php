@@ -353,6 +353,12 @@ class JellyfinGuidTest extends TestCase
             'none' => '123456',
             'imdb' => ''
         ], $context), 'Assert that the GUID does not exist. for invalid GUIDs.');
+
+        $this->assertEquals(
+            [Guid::GUID_TVMAZE => '123456'],
+            $this->getClass()->parse(['tv maze' => '123456'], $context),
+            'Assert "tv maze" get converted to "tvmaze".'
+        );
     }
 
     public function test_get()
