@@ -29,6 +29,10 @@ html {
     white-space: nowrap;
 }
 
+.is-text-break {
+    word-break: break-word;
+}
+
 .is-masked,
 .is-full-mask,
 .is-full-mask :not(figure) {
