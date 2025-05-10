@@ -247,7 +247,7 @@ class JellyfinClient implements iClient
 
         if (false === $response->isSuccessful()) {
             throw new HttpException(
-                ag($response->extra, 'message', fn () => $response->error->format()),
+                ag($response->extra, 'message', fn() => $response->error->format()),
                 ag($response->extra, 'http_code', 400),
             );
         }
@@ -265,7 +265,6 @@ class JellyfinClient implements iClient
             guid: $this->guid,
             mapper: $mapper,
             after: $after,
-            opts: [Options::ENABLE_EPISODE_GUID => (bool)Config::get('episodes.enable.guid')]
         );
 
         if ($response->hasError()) {
@@ -288,10 +287,7 @@ class JellyfinClient implements iClient
             context: $this->context,
             guid: $this->guid,
             mapper: $mapper,
-            opts: ag_sets($opts, [
-                'writer' => $writer,
-                Options::ENABLE_EPISODE_GUID => (bool)Config::get('episodes.enable.guid')
-            ])
+            opts: ag_sets($opts, ['writer' => $writer])
         );
 
         if ($response->hasError()) {
@@ -315,10 +311,7 @@ class JellyfinClient implements iClient
             guid: $this->guid,
             mapper: $mapper,
             after: $after,
-            opts: [
-                'queue' => $queue,
-                Options::ENABLE_EPISODE_GUID => (bool)Config::get('episodes.enable.guid'),
-            ],
+            opts: ['queue' => $queue],
         );
 
         if ($response->hasError()) {
@@ -498,10 +491,7 @@ class JellyfinClient implements iClient
             guid: $this->guid,
             mapper: $mapper,
             after: null,
-            opts: ag_sets($opts, [
-                Options::ONLY_LIBRARY_ID => $libraryId,
-                Options::ENABLE_EPISODE_GUID => (bool)Config::get('episodes.enable.guid'),
-            ])
+            opts: ag_sets($opts, [Options::ONLY_LIBRARY_ID => $libraryId])
         );
 
         if ($response->hasError()) {
@@ -788,7 +778,7 @@ class JellyfinClient implements iClient
     private function throwError(Response $response, string $className = RuntimeException::class, int $code = 0): void
     {
         throw new $className(
-            message: ag($response->extra, 'message', fn () => $response->error->format()),
+            message: ag($response->extra, 'message', fn() => $response->error->format()),
             code: $code,
             previous: $response->error->previous
         );

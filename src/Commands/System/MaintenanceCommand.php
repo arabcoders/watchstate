@@ -7,15 +7,11 @@ namespace App\Commands\System;
 use App\Command;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
-use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
-use App\Libs\Options;
-use App\Libs\UserContext;
-use Symfony\Component\Console\Input\InputOption;
+use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
-use Psr\Log\LoggerInterface as iLogger;
 
 /**
  * Class MaintenanceCommand
@@ -31,7 +27,8 @@ final class MaintenanceCommand extends Command
     /**
      * Class constructor.
      *
-     * @param iDB $db An instance of the iDB class.
+     * @param iImport $mapper
+     * @param iLogger $logger
      */
     public function __construct(
         #[Inject(DirectMapper::class)]
@@ -71,8 +68,8 @@ final class MaintenanceCommand extends Command
      */
     protected function runCommand(iInput $input, iOutput $output): int
     {
-        foreach (getUsersContext(mapper:$this->mapper, logger: $this->logger) as $userContext) {
-            $output->writeln(r("Optmizing user '{user}' database.", [
+        foreach (getUsersContext(mapper: $this->mapper, logger: $this->logger) as $userContext) {
+            $output->writeln(r("Optimizing user '{user}' database.", [
                 'user' => $userContext->name
             ]), iOutput::VERBOSITY_VERBOSE);
 

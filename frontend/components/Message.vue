@@ -17,7 +17,7 @@
       </template>
       <template v-else>{{ title }}</template>
     </div>
-    <div class="notification-content content" v-if="false === useToggle || toggle">
+    <div class="notification-content content is-text-break" v-if="false === useToggle || toggle">
       <template v-if="message">{{ message }}</template>
       <slot/>
     </div>

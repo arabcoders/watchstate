@@ -257,9 +257,6 @@ class PlexClient implements iClient
             guid: $this->guid,
             mapper: $mapper,
             after: $after,
-            opts: [
-                Options::ENABLE_EPISODE_GUID => (bool)Config::get('episodes.enable.guid'),
-            ]
         );
 
         if ($response->hasError()) {
@@ -282,10 +279,7 @@ class PlexClient implements iClient
             context: $this->context,
             guid: $this->guid,
             mapper: $mapper,
-            opts: ag_sets($opts, [
-                'writer' => $writer,
-                Options::ENABLE_EPISODE_GUID => (bool)Config::get('episodes.enable.guid')
-            ])
+            opts: ag_sets($opts, ['writer' => $writer])
         );
 
         if ($response->hasError()) {
@@ -309,7 +303,7 @@ class PlexClient implements iClient
             guid: $this->guid,
             mapper: $mapper,
             after: $after,
-            opts: ['queue' => $queue, Options::ENABLE_EPISODE_GUID => (bool)Config::get('episodes.enable.guid')],
+            opts: ['queue' => $queue],
         );
 
         if ($response->hasError()) {
@@ -467,10 +461,7 @@ class PlexClient implements iClient
             guid: $this->guid,
             mapper: $mapper,
             after: null,
-            opts: ag_sets($opts, [
-                Options::ONLY_LIBRARY_ID => $libraryId,
-                Options::ENABLE_EPISODE_GUID => (bool)Config::get('episodes.enable.guid'),
-            ]),
+            opts: ag_sets($opts, [Options::ONLY_LIBRARY_ID => $libraryId]),
         );
 
         if ($response->hasError()) {
@@ -964,7 +955,7 @@ class PlexClient implements iClient
     private function throwError(Response $response, string $className = RuntimeException::class, int $code = 0): void
     {
         throw new $className(
-            message: ag($response->extra, 'message', fn () => $response->error->format()),
+            message: ag($response->extra, 'message', fn() => $response->error->format()),
             code: $code,
             previous: $response->error->previous
         );

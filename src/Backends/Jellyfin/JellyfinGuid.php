@@ -268,27 +268,19 @@ class JellyfinGuid implements iGuid
             } catch (Throwable $e) {
                 if (true === $log) {
                     $this->logger->error(
-                        message: "{class}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' parsing '{agent}' identifier. Error '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "{class}: Unhandled exception was thrown during '{client}: {user}@{backend}' {title}parsing '{agent}' identifier. '{error.message}' at '{error.file}:{error.line}'.",
                         context: [
                             'class' => afterLast(static::class, '\\'),
                             'backend' => $this->context->backendName,
                             'client' => $this->context->clientName,
                             'user' => $this->context->userContext->name,
-                            'error' => [
-                                'kind' => $e::class,
-                                'line' => $e->getLine(),
-                                'message' => $e->getMessage(),
-                                'file' => after($e->getFile(), ROOT_PATH),
-                            ],
                             'agent' => $value,
-                            'exception' => [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                                'message' => $e->getMessage(),
-                                'trace' => $e->getTrace(),
-                            ],
+                            'title' => ag_exists($context, 'item.title') ? r(
+                                    "'{item.id}: {item.title}'",
+                                    $context
+                                ) . ' ' : '',
                             ...$context,
+                            ...exception_log($e),
                         ]
                     );
                 }

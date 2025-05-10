@@ -104,19 +104,13 @@ trait PlexActionTrait
             ],
         ];
 
-        if (iState::TYPE_EPISODE === $type && false === (bool)ag($opts, Options::ENABLE_EPISODE_GUID, false)) {
-            $guids = [];
-        } else {
-            $guids = $guid->get(guids: ag($item, 'Guid', []), context: $logContext);
-        }
-
         $builder = [
             iState::COLUMN_TYPE => $type,
             iState::COLUMN_UPDATED => (int)$date,
             iState::COLUMN_WATCHED => (int)$isPlayed,
             iState::COLUMN_VIA => $context->backendName,
             iState::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
-            iState::COLUMN_GUIDS => $guids,
+            iState::COLUMN_GUIDS => $guid->get(guids: ag($item, 'Guid', []), context: $logContext),
             iState::COLUMN_META_DATA => [
                 $context->backendName => [
                     iState::COLUMN_ID => (string)ag($item, 'ratingKey'),
@@ -139,7 +133,7 @@ trait PlexActionTrait
 
         if (count(ag($item, 'Genre', [])) > 0) {
             $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = array_map(
-                fn ($item) => strtolower((string)ag($item, 'tag', '??')),
+                fn($item) => strtolower((string)ag($item, 'tag', '??')),
                 ag($item, 'Genre', [])
             );
         }
@@ -172,8 +166,12 @@ trait PlexActionTrait
 
                 if (count($metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES]) < 1) {
                     $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = array_map(
-                        fn ($i) => strtolower((string)ag($i, 'tag', '??')),
-                        ag($this->getItemDetails(context: $context, id: $parentId), 'MediaContainer.Metadata.0.Genre', [])
+                        fn($i) => strtolower((string)ag($i, 'tag', '??')),
+                        ag(
+                            $this->getItemDetails(context: $context, id: $parentId),
+                            'MediaContainer.Metadata.0.Genre',
+                            []
+                        )
                     );
                 }
             }
@@ -383,9 +381,9 @@ trait PlexActionTrait
     protected function isSupportedType(string $type): bool
     {
         return true === in_array(
-            PlexClient::TYPE_MAPPER[$type] ?? PlexClient::TYPE_MAPPER[strtolower($type)] ?? $type,
-            iState::TYPES_LIST,
-            true
-        );
+                PlexClient::TYPE_MAPPER[$type] ?? PlexClient::TYPE_MAPPER[strtolower($type)] ?? $type,
+                iState::TYPES_LIST,
+                true
+            );
     }
 }

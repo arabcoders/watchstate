@@ -7,6 +7,7 @@ namespace App\Libs\Database;
 use App\Libs\Entity\StateInterface;
 use Closure;
 use DateTimeInterface;
+use Generator;
 use PDOException;
 use Psr\Log\LoggerInterface as iLogger;
 
@@ -208,4 +209,22 @@ interface DatabaseInterface
      * @throws PDOException if transaction fails.
      */
     public function transactional(Closure $callback): mixed;
+
+    /**
+     * Fetch data from database.
+     *
+     * @param array $opts (Options to pass to the query)
+     *
+     * @return Generator<StateInterface> Yielding each row of data.
+     */
+    public function fetch(array $opts = []): Generator;
+
+    /**
+     * Get total number of items in database.
+     *
+     * @param array $opts (Options to pass to the query)
+     *
+     * @return int Total number of items.
+     */
+    public function getTotal(array $opts = []): int;
 }

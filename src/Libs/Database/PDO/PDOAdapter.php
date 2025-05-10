@@ -7,12 +7,12 @@ namespace App\Libs\Database\PDO;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Database\DBLayer;
-use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\DBAdapterException as DBException;
 use App\Libs\Options;
 use Closure;
 use DateTimeInterface;
+use Generator;
 use PDO;
 use PDOException;
 use PDOStatement;
@@ -179,6 +179,7 @@ final class PDOAdapter implements iDB
                             'message' => $e->getMessage(),
                             'file' => after($e->getFile(), ROOT_PATH),
                         ],
+                        'last' => $this->db->getLastStatement(),
                     ]
                 );
                 return $entity;
@@ -399,7 +400,8 @@ final class PDOAdapter implements iDB
                             'trace' => $e->getTrace(),
                             'message' => $e->getMessage(),
                             'file' => after($e->getFile(), ROOT_PATH),
-                        ]
+                        ],
+                        'last' => $this->db->getLastStatement(),
                     ]
                 );
                 return $entity;
@@ -627,6 +629,37 @@ final class PDOAdapter implements iDB
         } finally {
             $this->viaTransaction = false;
         }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function fetch(array $opts = []): Generator
+    {
+        $fromClass = $this->options['class'] ?? null;
+        if (null === ($fromClass ?? null) || false === ($fromClass instanceof iState)) {
+            $class = Container::get(iState::class);
+        } else {
+            $class = $fromClass;
+        }
+
+        $stmt = $this->db->query('SELECT * FROM state');
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            yield $class::fromArray($row);
+        }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getTotal($opts = []): int
+    {
+        $stmt = $this->db->query('SELECT COUNT(*) FROM state');
+        if (false === ($row = $stmt->fetch(PDO::FETCH_NUM))) {
+            return 0;
+        }
+
+        return (int)$row[0];
     }
 
     /**

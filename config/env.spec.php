@@ -95,11 +95,6 @@ return (function () {
             'type' => 'int',
         ],
         [
-            'key' => 'WS_EPISODES_ENABLE_GUID',
-            'description' => 'Enable Episodes GUID parsing.',
-            'type' => 'bool',
-        ],
-        [
             'key' => 'WS_BACKENDS_FILE',
             'description' => 'The full path to the backends file.',
             'type' => 'string',
@@ -258,7 +253,7 @@ return (function () {
     };
 
     // -- Do not forget to update the tasks list if you add a new task.
-    $tasks = ['import', 'export', 'backup', 'prune', 'indexes'];
+    $tasks = ['import', 'export', 'backup', 'prune', 'indexes', 'validate'];
     $task_env = [
         [
             'key' => 'WS_CRON_{TASK}',

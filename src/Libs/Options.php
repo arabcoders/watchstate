@@ -50,7 +50,6 @@ final class Options
     public const string DELAY_BY = 'DELAY_BY';
     public const string RAW_RESPONSE_CALLBACK = 'RAW_RESPONSE_CALLBACK';
     public const string INTERNAL_REQUEST = 'INTERNAL_REQUEST';
-    public const string ENABLE_EPISODE_GUID = 'ENABLE_EPISODE_GUID';
 
     private function __construct()
     {
