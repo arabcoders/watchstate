@@ -95,11 +95,6 @@ return (function () {
             'type' => 'int',
         ],
         [
-            'key' => 'WS_EPISODES_ENABLE_GUID',
-            'description' => 'Enable Episodes GUID parsing.',
-            'type' => 'bool',
-        ],
-        [
             'key' => 'WS_BACKENDS_FILE',
             'description' => 'The full path to the backends file.',
             'type' => 'string',

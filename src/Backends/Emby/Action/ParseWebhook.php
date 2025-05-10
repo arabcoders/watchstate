@@ -88,7 +88,7 @@ final class ParseWebhook
     {
         return $this->tryResponse(
             context: $context,
-            fn: fn () => $this->parse($context, $guid, $request),
+            fn: fn() => $this->parse($context, $guid, $request),
             action: $this->action,
         );
     }
@@ -153,7 +153,7 @@ final class ParseWebhook
         }
 
         try {
-            $resp = Container::get(GetMetaData::class)(context: $context, id: $id, opts:[
+            $resp = Container::get(GetMetaData::class)(context: $context, id: $id, opts: [
                 Options::LOG_CONTEXT => ['request' => $json],
             ]);
             if (!$resp->isSuccessful()) {
@@ -207,16 +207,8 @@ final class ParseWebhook
                 ],
             ];
 
-            $enableGUID = (bool)Config::get('episodes.enable.guid');
-
-            if (EmbyClient::TYPE_EPISODE === $type && false === $enableGUID) {
-                $guids = [];
-            } else {
-                $guids = $guid->get(guids: ag($json, 'Item.ProviderIds', []), context: $logContext);
-            }
-
             $fields = [
-                iState::COLUMN_GUIDS => $guids,
+                iState::COLUMN_GUIDS => $guid->get(guids: ag($json, 'Item.ProviderIds', []), context: $logContext),
                 iState::COLUMN_META_DATA => [
                     $context->backendName => [
                         iState::COLUMN_GUIDS => $guid->parse(
@@ -263,7 +255,7 @@ final class ParseWebhook
                 context: $context,
                 guid: $guid,
                 item: $obj,
-                opts: ['override' => $fields, Options::ENABLE_EPISODE_GUID => $enableGUID],
+                opts: ['override' => $fields],
             )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
 
             if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {

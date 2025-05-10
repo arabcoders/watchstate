@@ -419,25 +419,17 @@ final class PlexGuid implements iGuid
             } catch (Throwable $e) {
                 if (true === $log) {
                     $this->logger->error(
-                        message: "PlexGuid: Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' parsing '{agent}' identifier. Error '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "PlexGuid: Unhandled exception was thrown during '{client}: {backend}' {title}parsing '{agent}' identifier. '{error.message}' at '{error.file}:{error.line}'.",
                         context: [
                             'backend' => $this->context->backendName,
                             'client' => $this->context->clientName,
-                            'error' => [
-                                'kind' => $e::class,
-                                'line' => $e->getLine(),
-                                'message' => $e->getMessage(),
-                                'file' => after($e->getFile(), ROOT_PATH),
-                            ],
                             'agent' => $val,
-                            'exception' => [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                                'message' => $e->getMessage(),
-                                'trace' => $e->getTrace(),
-                            ],
+                            'title' => ag_exists($context, 'item.title') ? r(
+                                    "'{item.id}: {item.title}'",
+                                    $context
+                                ) . ' ' : '',
                             ...$context,
+                            ...exception_log($e),
                         ]
                     );
                 }

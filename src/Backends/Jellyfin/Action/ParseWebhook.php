@@ -73,7 +73,7 @@ final class ParseWebhook
      */
     public function __invoke(Context $context, iGuid $guid, iRequest $request): Response
     {
-        return $this->tryResponse(context: $context, fn: fn () => $this->parse($context, $guid, $request));
+        return $this->tryResponse(context: $context, fn: fn() => $this->parse($context, $guid, $request));
     }
 
     /**
@@ -166,8 +166,6 @@ final class ParseWebhook
                 ],
             ];
 
-            $enableGUID = (bool)Config::get('episodes.enable.guid');
-
             $providersId = [];
 
             foreach (array_change_key_case($json, CASE_LOWER) as $key => $val) {
@@ -177,15 +175,9 @@ final class ParseWebhook
                 $providersId[after($key, 'provider_')] = $val;
             }
 
-            if (JFC::TYPE_EPISODE === $type && false === $enableGUID) {
-                $guids = [];
-            } else {
-                $guids = $guid->get(guids: $providersId, context: $logContext);
-            }
-
             $fields = [
                 iState::COLUMN_WATCHED => (int)$isPlayed,
-                iState::COLUMN_GUIDS => $guids,
+                iState::COLUMN_GUIDS => $guid->get(guids: $providersId, context: $logContext),
                 iState::COLUMN_META_DATA => [
                     $context->backendName => [
                         iState::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
@@ -227,7 +219,7 @@ final class ParseWebhook
                 context: $context,
                 guid: $guid,
                 item: $obj,
-                opts: ['override' => $fields, Options::ENABLE_EPISODE_GUID => $enableGUID],
+                opts: ['override' => $fields],
             )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
 
             if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {

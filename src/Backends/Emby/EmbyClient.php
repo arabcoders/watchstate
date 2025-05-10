@@ -238,7 +238,6 @@ class EmbyClient implements iClient
             guid: $this->guid,
             mapper: $mapper,
             after: $after,
-            opts: [Options::ENABLE_EPISODE_GUID => (bool)Config::get('episodes.enable.guid')]
         );
 
         if ($response->hasError()) {
@@ -261,10 +260,7 @@ class EmbyClient implements iClient
             context: $this->context,
             guid: $this->guid,
             mapper: $mapper,
-            opts: ag_sets($opts, [
-                'writer' => $writer,
-                Options::ENABLE_EPISODE_GUID => (bool)Config::get('episodes.enable.guid'),
-            ])
+            opts: ag_sets($opts, ['writer' => $writer])
         );
 
         if ($response->hasError()) {
@@ -288,10 +284,7 @@ class EmbyClient implements iClient
             guid: $this->guid,
             mapper: $mapper,
             after: $after,
-            opts: [
-                'queue' => $queue,
-                Options::ENABLE_EPISODE_GUID => (bool)Config::get('episodes.enable.guid'),
-            ],
+            opts: ['queue' => $queue],
         );
 
         if ($response->hasError()) {
@@ -447,10 +440,7 @@ class EmbyClient implements iClient
             guid: $this->guid,
             mapper: $mapper,
             after: null,
-            opts: ag_sets($opts, [
-                Options::ENABLE_EPISODE_GUID => (bool)Config::get('episodes.enable.guid'),
-                Options::ONLY_LIBRARY_ID => $libraryId,
-            ])
+            opts: ag_sets($opts, [Options::ONLY_LIBRARY_ID => $libraryId])
         );
 
         if ($response->hasError()) {

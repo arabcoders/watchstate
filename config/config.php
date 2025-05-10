@@ -67,11 +67,6 @@ return (function () {
             // -- Extra margin for marking item not found for backend in export mode. Default 3 days.
             'not_found' => (int)env('WS_EXPORT_NOT_FOUND', 259_200),
         ],
-        'episodes' => [
-            'enable' => [
-                'guid' => (bool)env('WS_EPISODES_ENABLE_GUID', false),
-            ],
-        ],
         'ignore' => [],
         'trust' => [
             'proxy' => (bool)env('WS_TRUST_PROXY', false),

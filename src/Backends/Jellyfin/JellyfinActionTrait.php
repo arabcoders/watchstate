@@ -93,19 +93,13 @@ trait JellyfinActionTrait
             ],
         ];
 
-        if (iState::TYPE_EPISODE === $type && false === (bool)ag($opts, Options::ENABLE_EPISODE_GUID, false)) {
-            $guids = [];
-        } else {
-            $guids = $guid->get(guids: ag($item, 'ProviderIds', []), context: $logContext);
-        }
-
         $builder = [
             iState::COLUMN_TYPE => $type,
             iState::COLUMN_UPDATED => makeDate($date)->getTimestamp(),
             iState::COLUMN_WATCHED => (int)$isPlayed,
             iState::COLUMN_VIA => $context->backendName,
             iState::COLUMN_TITLE => ag($item, ['Name', 'OriginalTitle'], '??'),
-            iState::COLUMN_GUIDS => $guids,
+            iState::COLUMN_GUIDS => $guid->get(guids: ag($item, 'ProviderIds', []), context: $logContext),
             iState::COLUMN_META_DATA => [
                 $context->backendName => [
                     iState::COLUMN_ID => (string)ag($item, 'Id'),
@@ -126,7 +120,8 @@ trait JellyfinActionTrait
         $metadata = &$builder[iState::COLUMN_META_DATA][$context->backendName];
         $metadataExtra = &$metadata[iState::COLUMN_META_DATA_EXTRA];
 
-        $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = array_map(fn ($v) => strtolower($v), ag($item, 'Genres', []));
+        $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = array_map(fn($v) => strtolower($v),
+            ag($item, 'Genres', []));
 
         // -- jellyfin/emby API does not provide library ID.
         if (null !== ($library = $opts[iState::COLUMN_META_LIBRARY] ?? null)) {
@@ -159,7 +154,7 @@ trait JellyfinActionTrait
 
                 if (count($metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES]) < 1) {
                     $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = array_map(
-                        fn ($v) => strtolower($v),
+                        fn($v) => strtolower($v),
                         ag($this->getItemDetails(context: $context, id: $parentId), 'Genres', [])
                     );
                 }
