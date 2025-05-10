@@ -1,5 +1,17 @@
 [
     {
+        "tag": "master-20250510-bfb5d87",
+        "date": "2025-05-10T17:31:32+00:00",
+        "commits": [
+            {
+                "sha": "309fa1d",
+                "message": "Change GUID parsing from error level to info.",
+                "author": "arabcoders",
+                "date": "2025-05-10T17:26:25+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250510-093a8bb",
         "date": "2025-05-10T14:06:20+00:00",
         "commits": [
