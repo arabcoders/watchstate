@@ -1,7 +1,67 @@
 [
     {
-        "tag": "dev-20250506-0ff1278",
-        "date": "2025-05-06T15:30:35+00:00",
+        "tag": "dev-20250510-33fad10",
+        "date": "2025-05-10T13:56:18+00:00",
+        "commits": [
+            {
+                "sha": "33fad10",
+                "message": "Update Markdown link handling to redirect FAQ, README, and NEWS links to guides wrapper.",
+                "author": "arabcoders",
+                "date": "2025-05-10T13:56:18+00:00"
+            },
+            {
+                "sha": "e3d8fa2",
+                "message": "Add word-break utility class and apply it to notification content",
+                "author": "arabcoders",
+                "date": "2025-05-10T13:41:04+00:00"
+            },
+            {
+                "sha": "a342c85",
+                "message": "Enable episodes GUID parsing by default, and remove option to disable it.",
+                "author": "arabcoders",
+                "date": "2025-05-10T13:36:04+00:00"
+            },
+            {
+                "sha": "b47194b",
+                "message": "Add ValidateCommand for validating backend reference IDs",
+                "author": "arabcoders",
+                "date": "2025-05-09T21:06:48+00:00"
+            },
+            {
+                "sha": "1d8550f",
+                "message": "Added new getTotal& fetch as generator for PDOAdapter",
+                "author": "arabcoders",
+                "date": "2025-05-09T19:48:25+00:00"
+            },
+            {
+                "sha": "61d6584",
+                "message": "Add removeMetadata to StateInterface.",
+                "author": "arabcoders",
+                "date": "2025-05-09T19:47:52+00:00"
+            },
+            {
+                "sha": "3bc94cf",
+                "message": "Updated docs on how to use the new RepairCommand",
+                "author": "arabcoders",
+                "date": "2025-05-09T19:46:49+00:00"
+            },
+            {
+                "sha": "69e4fe9",
+                "message": "Add RepairCommand for database repair functionality",
+                "author": "arabcoders",
+                "date": "2025-05-09T18:46:17+00:00"
+            },
+            {
+                "sha": "689716e",
+                "message": "Added metadata status to item record view.",
+                "author": "arabcoders",
+                "date": "2025-05-09T15:56:02+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250506-c6dd50e",
+        "date": "2025-05-06T15:42:01+00:00",
         "commits": [
             {
                 "sha": "0ff1278",
