@@ -184,8 +184,19 @@ onMounted(async () => {
           return;
         }
 
-        if (false === token.href.startsWith('#') && false === token.href.includes('/guides/')) {
+        if (true === token.href.startsWith('#')) {
           return;
+        }
+        const urls = ['/FAQ.md', '/README.md', '/NEWS.md'];
+        const list = ['/guides/', ...urls];
+        if (false === list.some(l => token.href.includes(l))) {
+          return;
+        }
+
+        if (urls.some(l => token.href.includes(l))) {
+          const url = new URL(token.href);
+          url.pathname = `/guides${url.pathname}`;
+          token.href = url.pathname;
         }
 
         token.href = token.href.replace('/guides/', '/help/').replace('.md', '');
