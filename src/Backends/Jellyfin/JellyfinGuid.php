@@ -24,6 +24,7 @@ class JellyfinGuid implements iGuid
         'tmdb' => Guid::GUID_TMDB,
         'tvdb' => Guid::GUID_TVDB,
         'tvmaze' => Guid::GUID_TVMAZE,
+        'tv maze' => Guid::GUID_TVMAZE, //-- why emby?
         'tvrage' => Guid::GUID_TVRAGE,
         'anidb' => Guid::GUID_ANIDB,
         'ytinforeader' => Guid::GUID_YOUTUBE,
@@ -267,18 +268,13 @@ class JellyfinGuid implements iGuid
                 $guid[$this->guidMapper[$key]] = $value;
             } catch (Throwable $e) {
                 if (true === $log) {
-                    $this->logger->error(
-                        message: "{class}: Unhandled exception was thrown during '{client}: {user}@{backend}' {title}parsing '{agent}' identifier. '{error.message}' at '{error.file}:{error.line}'.",
+                    $this->logger->info(
+                        message: "{class}: Ignoring '{user}@{backend}' invalid GUID '{agent}' for {item.type} '{item.id}: {item.title}'.",
                         context: [
                             'class' => afterLast(static::class, '\\'),
-                            'backend' => $this->context->backendName,
-                            'client' => $this->context->clientName,
                             'user' => $this->context->userContext->name,
+                            'backend' => $this->context->backendName,
                             'agent' => $value,
-                            'title' => ag_exists($context, 'item.title') ? r(
-                                    "'{item.id}: {item.title}'",
-                                    $context
-                                ) . ' ' : '',
                             ...$context,
                             ...exception_log($e),
                         ]

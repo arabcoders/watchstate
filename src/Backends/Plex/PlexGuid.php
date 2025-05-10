@@ -418,16 +418,13 @@ final class PlexGuid implements iGuid
                 $guid[$this->guidMapper[$key]] = $value;
             } catch (Throwable $e) {
                 if (true === $log) {
-                    $this->logger->error(
-                        message: "PlexGuid: Unhandled exception was thrown during '{client}: {backend}' {title}parsing '{agent}' identifier. '{error.message}' at '{error.file}:{error.line}'.",
+                    $this->logger->info(
+                        message: "{class}: Ignoring '{user}@{backend}' invalid GUID '{agent}' for {item.type} '{item.id}: {item.title}'.",
                         context: [
+                            'class' => afterLast(self::class, '\\'),
+                            'user' => $this->context->userContext->name,
                             'backend' => $this->context->backendName,
-                            'client' => $this->context->clientName,
                             'agent' => $val,
-                            'title' => ag_exists($context, 'item.title') ? r(
-                                    "'{item.id}: {item.title}'",
-                                    $context
-                                ) . ' ' : '',
                             ...$context,
                             ...exception_log($e),
                         ]
