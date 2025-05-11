@@ -1,8 +1,20 @@
 [
     {
-        "tag": "dev-20250511-c70442e",
-        "date": "2025-05-11T19:28:29+00:00",
+        "tag": "dev-20250511-8ac5b41",
+        "date": "2025-05-11T20:28:16+00:00",
         "commits": [
+            {
+                "sha": "8ac5b41",
+                "message": "Fixed logic error in determining if we should mark entity for progress update.",
+                "author": "arabcoders",
+                "date": "2025-05-11T20:28:16+00:00"
+            },
+            {
+                "sha": "b4b493c",
+                "message": "Minor docs updates",
+                "author": "arabcoders",
+                "date": "2025-05-11T19:54:28+00:00"
+            },
             {
                 "sha": "c70442e",
                 "message": "Refactor DirectMapper to improve progress update handling and simplify metadata checks; update README with video installation guide.",
