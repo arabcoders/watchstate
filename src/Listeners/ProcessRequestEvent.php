@@ -79,10 +79,8 @@ final readonly class ProcessRequestEvent
         $writer(Level::Notice, $message);
 
         $mapper = $userContext->mapper;
-        if (null !== ag($e->getOptions(), Options::DEBUG_TRACE)) {
-            $mapper = $userContext->mapper->setOptions(
-                ag_set($userContext->mapper->getOptions(), Options::DEBUG_TRACE, true)
-            );
+        if (true === (bool)ag($e->getOptions(), Options::DEBUG_TRACE, false)) {
+            $mapper = $mapper->setOptions(ag_set($mapper->getOptions(), Options::DEBUG_TRACE, true));
         }
 
         $logger = clone $this->logger;
@@ -94,7 +92,7 @@ final readonly class ProcessRequestEvent
 
         $mapper->add($entity, [
             Options::IMPORT_METADATA_ONLY => (bool)ag($e->getOptions(), Options::IMPORT_METADATA_ONLY),
-            Options::STATE_UPDATE_EVENT => fn (iState $state) => queuePush(entity: $state, userContext: $userContext),
+            Options::STATE_UPDATE_EVENT => fn(iState $state) => queuePush(entity: $state, userContext: $userContext),
             'after' => $lastSync,
         ]);
 
