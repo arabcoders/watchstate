@@ -1178,7 +1178,10 @@ class DirectMapper implements ImportInterface
      */
     private function shouldProgressUpdate(iState $old, iState $new, array $opts = []): bool
     {
-        if (false === (bool)ag($opts, Options::IMPORT_METADATA_ONLY)) {
+        if (true === (bool)ag($opts, Options::IMPORT_METADATA_ONLY, false)) {
+            if (true === $this->inTraceMode()) {
+                $this->logger?->info('only metadata updates allowed.');
+            }
             return false;
         }
 
@@ -1189,12 +1192,25 @@ class DirectMapper implements ImportInterface
         $allowUpdate = (int)Config::get('progress.threshold', 0);
         $minThreshold = (int)Config::get('progress.minThreshold', 86_400);
 
-        $progress = $playChanged && $new->hasPlayProgress();
-
-        if ($new->isWatched() && $allowUpdate < $minThreshold) {
-            $progress = false;
+        if (true === $new->isWatched() && $allowUpdate < $minThreshold) {
+            if (true === $this->inTraceMode()) {
+                $this->logger?->info('play progress update not allowed. threshold is too low.');
+            }
+            return false;
         }
 
-        return $progress;
+        if (true === $this->inTraceMode()) {
+            $message = "{mapper}: '{user}@{backend}' - '#{id}: {title}' Is {not}marked for progress update.";
+            $this->logger->info($message, [
+                'mapper' => afterLast(self::class, '\\'),
+                'user' => $this->userContext?->name ?? 'main',
+                'backend' => $new->via,
+                'id' => $old->id ?? 'New',
+                'title' => $old->getName(),
+                'not' => $playChanged ? '' : 'not ',
+            ]);
+        }
+
+        return $playChanged;
     }
 }
