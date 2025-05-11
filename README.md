@@ -4,47 +4,17 @@
 ![MIT License](https://img.shields.io/github/license/arabcoders/WatchState.svg)
 ![Docker pull](https://img.shields.io/docker/pulls/arabcoders/watchstate.svg)
 
-This tool primary goal is to sync your backends play state without relying on third party services,
-out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
+This tool primary goal is to sync your backends **users** play state without relying on third party services, out of the
+box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 # Updates
 
-### 2025-05-05
-
-We’ve added a new feature that lets you send requests **sequentially** to the backends instead of using the default
-**parallel** mode. This can be especially helpful if you have very large libraries, slow disks, or simply want to avoid
-overloading the backends with too many concurrent requests. You can enable by enabling `WS_HTTP_SYNC_REQUESTS`
-environment variable. This mode only applies to `import`, `export`, and `backup` tasks at the moment.
-
-Additionally, two command-line flags let you override the mode on the fly `--sync-requests` and `--async-requests`.
-
-We’ll be evaluating this feature, and if it proves effective (and the slowdown is acceptable), we may
-make **sequential** mode the default in a future release. So far from our testing, we’ve seen between 1.5x to 2.0x
-increase in import time when using the sequential mode.
-
-> [!NOTE]
-> Because we cache many HTTP requests, comparing timings between sequential and parallel runs of `import` can be
-> misleading. To get an accurate benchmark of `--sync-requests`, either start with a fresh setup (new installation) or
-> purge your Redis instance before testing.
-
-### 2025-04-06
-
-We have recently re-worked how the `backend:create` command works, and we no longer generate random name for invalid
-backends names or usernames. We do a normalization step to make sure the name is valid. This should help with the
-confusion of having random names. This means if you re-run the `backend:create` you most likely will get a different
-name than before. So, we suggest to re-run the command with `--re-create` flag. This flag will delete the current
-sub-users, and regenerate updated config files.
-
-We have also added new guard for the command, so if you already generated your sub-users, re-running the command will
-show you a warning message and exit without doing anything. to run the command again either you need to use
-`--re-create` or `--run` flag. The `--run` flag will run the command without deleting the current sub-users.
-
---- 
-Refer to [NEWS](NEWS.md) for old updates.
+Please refer to [NEWS](/NEWS.md) for the latest updates and changes.
 
 # Features
 
 * Management via WebUI.
+* **Sub-users** support.
 * Sync backends play state (`Many-to-Many` or `One-Way`).
 * Backup your backends play state into `portable` format.
 * Receive webhook events from media backends.
@@ -63,7 +33,7 @@ If you prefer video format [AlienTech42 YouTube Channel](https://www.youtube.com
 installing WatchState using unraid [at this link](https://www.youtube.com/watch?v=XoztOwGHGxk). Much appreciated.
 
 PS: I don't know the channel owner, but I appreciate the effort. There is small mistake in the video regarding the
-webhook URL, please copy the URL directly from the backends page.
+webhook URL, please copy the URL directly from the backends page. And this tool does support multi-users.
 
 ----
 
