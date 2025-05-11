@@ -295,15 +295,10 @@ class DirectMapper implements ImportInterface
                     context: [
                         'user' => $this->userContext?->name ?? 'main',
                         'mapper' => afterLast(self::class, '\\'),
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
                         'backend' => $entity->via,
                         'title' => $entity->getName(),
-                        'state' => $entity->getAll()
+                        'state' => $entity->getAll(),
+                        ...exception_log($e),
                     ],
                     e: $e
                 )
@@ -401,12 +396,6 @@ class DirectMapper implements ImportInterface
                         context: [
                             'user' => $this->userContext?->name ?? 'main',
                             'mapper' => afterLast(self::class, '\\'),
-                            'error' => [
-                                'kind' => $e::class,
-                                'line' => $e->getLine(),
-                                'message' => $e->getMessage(),
-                                'file' => after($e->getFile(), ROOT_PATH),
-                            ],
                             'id' => $local->id ?? 'New',
                             'backend' => $entity->via,
                             'title' => $local->getName(),
@@ -414,6 +403,7 @@ class DirectMapper implements ImportInterface
                                 'database' => $local->getAll(),
                                 'backend' => $entity->getAll()
                             ],
+                            ...exception_log($e),
                         ],
                         e: $e
                     )
@@ -528,12 +518,6 @@ class DirectMapper implements ImportInterface
                         context: [
                             'user' => $this->userContext?->name ?? 'main',
                             'mapper' => afterLast(self::class, '\\'),
-                            'error' => [
-                                'kind' => $e::class,
-                                'line' => $e->getLine(),
-                                'message' => $e->getMessage(),
-                                'file' => after($e->getFile(), ROOT_PATH),
-                            ],
                             'id' => $cloned->id ?? 'New',
                             'backend' => $entity->via,
                             'title' => $cloned->getName(),
@@ -541,6 +525,7 @@ class DirectMapper implements ImportInterface
                                 'database' => $cloned->getAll(),
                                 'backend' => $entity->getAll()
                             ],
+                            ...exception_log($e),
                         ],
                         e: $e
                     )
@@ -624,12 +609,6 @@ class DirectMapper implements ImportInterface
                             context: [
                                 'user' => $this->userContext?->name ?? 'main',
                                 'mapper' => afterLast(self::class, '\\'),
-                                'error' => [
-                                    'kind' => $e::class,
-                                    'line' => $e->getLine(),
-                                    'message' => $e->getMessage(),
-                                    'file' => after($e->getFile(), ROOT_PATH),
-                                ],
                                 'id' => $cloned->id ?? 'New',
                                 'backend' => $entity->via,
                                 'title' => $cloned->getName(),
@@ -637,6 +616,7 @@ class DirectMapper implements ImportInterface
                                     'database' => $cloned->getAll(),
                                     'backend' => $entity->getAll()
                                 ],
+                                ...exception_log($e),
                             ],
                             e: $e
                         )
@@ -785,6 +765,10 @@ class DirectMapper implements ImportInterface
             }
         }
 
+        $newPlayProgress = (int)ag($entity->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
+        $oldPlayProgress = (int)ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
+        $playChanged = false === $metadataOnly && $newPlayProgress > ($oldPlayProgress + 10);
+
         $keys = $opts['diff_keys'] ?? array_flip(
             array_keys_diff(
                 base: array_flip(iState::ENTITY_KEYS),
@@ -793,20 +777,33 @@ class DirectMapper implements ImportInterface
             )
         );
 
-        if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
+        if ($playChanged || true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
             try {
-                $local = $local->apply(
-                    entity: $entity,
-                    fields: array_merge($keys, [iState::COLUMN_EXTRA])
-                );
+                $allowUpdate = (int)Config::get('progress.threshold', 0);
+                $minThreshold = (int)Config::get('progress.minThreshold', 86_400);
 
+                $progress = $playChanged && $entity->hasPlayProgress();
+                if ($entity->isWatched() && $allowUpdate < $minThreshold) {
+                    $progress = false;
+                }
+
+                $_keys = array_merge($keys, [iState::COLUMN_EXTRA]);
+                if ($playChanged && $progress) {
+                    $_keys[] = iState::COLUMN_VIA;
+                }
+
+                $local = $local->apply(entity: $entity, fields: $_keys);
                 $this->removePointers($cloned)->addPointers($local, $local->id);
 
-                $changes = $local->diff(fields: $keys);
+                $changes = $local->diff(fields: $_keys);
 
                 $message = "{mapper}: [A] '{user}@{backend}' Updated '#{id}: {title}'.";
 
                 $isPlayChanged = $cloned->isWatched() !== $local->isWatched();
+
+                if ($playChanged && $progress) {
+                    $message .= " Due to play progress change.";
+                }
 
                 if (true === $isPlayChanged) {
                     $message = "{mapper}: [A] '{user}@{backend}' Updated and marked '#{id}: {title}' as '{state}'.";
@@ -816,19 +813,29 @@ class DirectMapper implements ImportInterface
                 }
 
                 if (count($changes) >= 1) {
-                    $this->logger->log(true === $isPlayChanged ? LogLevel::NOTICE : LogLevel::INFO, $message, [
+                    $level = ($playChanged && $progress) || $isPlayChanged ? LogLevel::NOTICE : LogLevel::INFO;
+                    $this->logger->log($level, $message, [
                         'user' => $this->userContext?->name ?? 'main',
                         'mapper' => afterLast(self::class, '\\'),
                         'id' => $cloned->id ?? 'New',
                         'backend' => $entity->via,
                         'title' => $cloned->getName(),
                         'state' => $local->isWatched() ? 'played' : 'unplayed',
-                        'changes' => $local->diff(fields: $keys)
+                        'changes' => $local->diff(fields: $_keys)
                     ]);
                 }
 
                 if (false === $inDryRunMode) {
                     $this->db->update($local);
+                    if (true === $progress) {
+                        $itemId = r('{type}://{id}:{tainted}@{backend}', [
+                            'type' => $entity->type,
+                            'backend' => $entity->via,
+                            'tainted' => 'untainted',
+                            'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
+                        ]);
+                        $this->progressItems[$itemId] = $local;
+                    }
                 }
 
                 if (null === ($this->changed[$local->id] ?? null)) {
@@ -846,12 +853,6 @@ class DirectMapper implements ImportInterface
                         context: [
                             'user' => $this->userContext?->name ?? 'main',
                             'mapper' => afterLast(self::class, '\\'),
-                            'error' => [
-                                'kind' => $e::class,
-                                'line' => $e->getLine(),
-                                'message' => $e->getMessage(),
-                                'file' => after($e->getFile(), ROOT_PATH),
-                            ],
                             'id' => $cloned->id ?? 'New',
                             'backend' => $entity->via,
                             'title' => $cloned->getName(),
@@ -859,7 +860,7 @@ class DirectMapper implements ImportInterface
                                 'database' => $cloned->getAll(),
                                 'backend' => $entity->getAll()
                             ],
-                            'trace' => $e->getTrace(),
+                            ...exception_log($e),
                         ],
                         e: $e
                     )
@@ -938,16 +939,20 @@ class DirectMapper implements ImportInterface
      */
     public function commit(): array
     {
-        if (true === (bool)Config::get('sync.progress', false) && count($this->progressItems) >= 1) {
+        if (true === (bool)Config::get('sync.progress', false) && count($this->progressItems) >= 1 && false === $this->inDryRunMode()) {
             try {
+                $name = '{type}://{id}@{backend}';
+
                 $opts = ['unique' => true];
 
                 if (null !== $this->userContext) {
                     $opts = ag_set($opts, Options::CONTEXT_USER, $this->userContext->name);
+                    $name = $name . '/' . $this->userContext->name;
                 }
 
                 foreach ($this->progressItems as $entity) {
-                    $opts[EventsTable::COLUMN_REFERENCE] = r('{type}://{id}@{backend}', [
+
+                    $opts[EventsTable::COLUMN_REFERENCE] = r($name, [
                         'type' => $entity->type,
                         'backend' => $entity->via,
                         'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),

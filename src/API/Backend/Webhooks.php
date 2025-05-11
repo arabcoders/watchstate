@@ -137,6 +137,7 @@ final class Webhooks
             }
         }
 
+        $debugTrace = true === (bool)ag($backend, 'options.' . Options::DEBUG_TRACE);
         $metadataOnly = true === (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
 
         if (true !== $metadataOnly && true !== (bool)ag($backend, 'import.enabled')) {
@@ -208,6 +209,7 @@ final class Webhooks
                 'tainted' => $entity->isTainted(),
                 Options::IMPORT_METADATA_ONLY => $metadataOnly,
                 Options::REQUEST_ID => ag($request->getServerParams(), 'X_REQUEST_ID'),
+                Options::DEBUG_TRACE => $debugTrace,
             ],
             Options::CONTEXT_USER => $userContext->name,
         ]);
