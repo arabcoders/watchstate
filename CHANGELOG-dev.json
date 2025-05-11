@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250511-5ee7302",
-        "date": "2025-05-11T16:29:12+00:00",
+        "tag": "dev-20250511-c70442e",
+        "date": "2025-05-11T19:28:29+00:00",
         "commits": [
+            {
+                "sha": "c70442e",
+                "message": "Refactor DirectMapper to improve progress update handling and simplify metadata checks; update README with video installation guide.",
+                "author": "arabcoders",
+                "date": "2025-05-11T19:28:29+00:00"
+            },
             {
                 "sha": "5ee7302",
                 "message": "Attempt to fix #660",
