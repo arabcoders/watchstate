@@ -59,6 +59,14 @@ simple and to the point yt-dlp frontend to help download content from all suppor
 
 # Install
 
+If you prefer video format [AlienTech42 YouTube Channel](https://www.youtube.com/@AlienTech42) had a video about
+installing WatchState using unraid [at this link](https://www.youtube.com/watch?v=XoztOwGHGxk). Much appreciated.
+
+PS: I don't know the channel owner, but I appreciate the effort. There is small mistake in the video regarding the
+webhook URL, please copy the URL directly from the backends page.
+
+----
+
 First, start by creating a directory to store the data, to follow along with this setup, create directory called `data`
 at your working directory. Then proceed to use your preferred method to install the tool.
 
