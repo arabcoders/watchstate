@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250511-8ac5b41",
-        "date": "2025-05-11T20:28:16+00:00",
+        "tag": "dev-20250511-5ce3d9f",
+        "date": "2025-05-11T20:39:42+00:00",
         "commits": [
+            {
+                "sha": "5ce3d9f",
+                "message": "Disable process request debug trace by default.",
+                "author": "arabcoders",
+                "date": "2025-05-11T20:39:42+00:00"
+            },
             {
                 "sha": "8ac5b41",
                 "message": "Fixed logic error in determining if we should mark entity for progress update.",
