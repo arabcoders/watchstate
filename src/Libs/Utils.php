@@ -1275,7 +1275,7 @@ if (!function_exists('getUsersContext')) {
         $configs = [
             'main' => new UserContext(
                 name: 'main',
-                config: ConfigFile::open(Config::get('backends_file'), 'yaml'),
+                config: ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true),
                 mapper: $mapper,
                 cache: Container::get(iCache::class),
                 db: Container::get(iDB::class)->setOptions($dbOpts),

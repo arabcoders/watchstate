@@ -4,6 +4,7 @@
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4">
           <span class="icon"><i class="fas fa-server"/></span>
+          <span v-if="api_user">&nbsp;{{ ucFirst(api_user) }} @</span>
           Backends
         </span>
         <div class="is-pulled-right">
@@ -23,7 +24,7 @@
           </div>
         </div>
         <div class="is-hidden-mobile">
-          <span class="subtitle">This page contains all the backends that are currently configured.</span>
+          <span class="subtitle">Backends that are configured for the specific user.</span>
         </div>
       </div>
 
@@ -46,22 +47,6 @@
           </Message>
         </div>
 
-        <div class="column is-12">
-          <div class="content">
-            <h1 class="title is-4">
-              <span class="icon"><i class="fas fa-tools"/></span> Tools
-            </h1>
-            <ul>
-              <li>
-                <NuxtLink :to="`/tools/plex_token`" v-text="'Validate plex token'"/>
-              </li>
-              <li v-if="backends && backends.length>0 && 'main' === api_user">
-                <NuxtLink :to="`/tools/sub_users`" v-text="'Create sub-users'"/>
-              </li>
-            </ul>
-          </div>
-        </div>
-
         <div v-for="backend in backends" :key="backend.name" class="column is-6-tablet is-12-mobile">
           <div class="card">
             <header class="card-header">
@@ -76,11 +61,13 @@
                     <NuxtLink :to="`/backend/${backend.name}/edit?redirect=/backends`"
                               v-tooltip="'Edit backend settings'">
                       <span class="icon has-text-warning"><i class="fas fa-cog"/></span>
+                      <span class="is-hidden-mobile">Edit</span>
                     </NuxtLink>
                   </div>
                   <div class="control">
                     <NuxtLink :to="`/backend/${backend.name}/delete?redirect=/backends`" v-tooltip="'Delete backend'">
                       <span class="icon has-text-danger"><i class="fas fa-trash"/></span>
+                      <span class="is-hidden-mobile">Delete</span>
                     </NuxtLink>
                   </div>
                 </div>
@@ -131,7 +118,9 @@
                   <input :id="backend.name+'_export'" type="checkbox" class="switch is-success"
                          :checked="backend.export.enabled"
                          @change="updateValue(backend, 'export.enabled', !backend.export.enabled)">
-                  <label :for="backend.name+'_export'">Export</label>
+                  <label class="has-tooltip" :for="backend.name+'_export'"
+                         v-tooltip="'Send data from watchstate to this backend.'"
+                  >Export</label>
                 </div>
               </div>
               <div class="card-footer-item">
@@ -139,7 +128,9 @@
                   <input :id="backend.name+'_import'" type="checkbox" class="switch is-success"
                          :checked="backend.import.enabled"
                          @change="updateValue(backend, 'import.enabled',!backend.import.enabled)">
-                  <label :for="backend.name+'_import'">Import</label>
+                  <label class="has-tooltip" :for="backend.name+'_import'"
+                         v-tooltip="'Get data from this backend into watchstate.'">
+                    Import</label>
                 </div>
               </div>
               <div class="card-footer-item">
@@ -177,10 +168,15 @@
                    @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
             <ul>
               <li>
-                <strong>Import</strong> means pulling data from the backends into the local database.
+                Think of the WatchState as a <strong>Central Hub</strong> your backends aren't aware of each other.
+                <strong>WatchState</strong> is the facilitator of the data flow. If you think like that, then <strong>import</strong>
+                and <strong>export</strong> would make sense.
               </li>
               <li>
-                <strong>Export</strong> means pushing data from the local database to the backends.
+                <strong>Import</strong>: Means getting data from the backend into watchstate.
+              </li>
+              <li>
+                <strong>Export</strong>: Means sending data from watchstate to the backend.
               </li>
             </ul>
           </Message>
@@ -278,6 +274,7 @@ const loadContent = async () => {
       return
     }
     backends.value = json
+    useHead({title: `${ucFirst(api_user.value)} @ Backends`})
   } catch (e) {
     notification('error', 'Error', `Failed to load backends. ${e.message}`)
   } finally {
