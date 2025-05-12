@@ -151,36 +151,20 @@
           </span>
         </button>
       </div>
-      <p class="has-text-left">
-        <span class="icon has-text-danger"><i class="fas fa-info"/></span>
-        <span>These settings are stored locally in your browser. You need to re-add them if you access the
-          <code>WebUI</code> from different browser.
-        </span>
-      </p>
     </div>
 
     <div class="column is-12 mt-2">
       <Message title="Information" message_class="has-background-info-90 has-text-dark" icon="fas fa-info-circle">
-        <p>
-          It's possible to automatically setup the API connection for this client and <strong
-            class="has-text-danger">ALL VISITORS</strong> by setting the following environment variable
-          <code>WS_API_AUTO=true</code>
-          in <code>/config/.env</code> file. Understand that this option <strong class="has-text-danger">PUBLICLY
-          EXPOSES YOUR API TOKEN</strong> to <u>ALL VISITORS</u>. Anyone who is able to reach this page will be
-          granted access to your <code>WatchState API</code> which exposes your other media backends data including
-          their secrets. <strong>this option is great security risk and SHOULD NEVER be used if
-          <code>WatchState</code> is exposed to the internet.</strong>
-        </p>
-
-        <p>Please visit
-          <span class="icon">
-            <i class="fab fa-github"/>
-          </span>
-          <NuxtLink target="_blank" to="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#ws_api_auto">
-            This link
-          </NuxtLink>
-          . to learn more, this environment variable is important enough to have its own section entry in the FAQ.
-        </p>
+        <ul>
+          <li>
+            These settings are stored locally in your browser. You need to re-add them if you access the
+            <strong>WebUI</strong> from different browser.
+          </li>
+          <li>
+            The very first time you access the <strong>WebUI</strong>, it will auto configure the connection if
+            possible.
+          </li>
+        </ul>
       </Message>
     </div>
   </div>

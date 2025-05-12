@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Libs;
 
 use ArrayAccess;
+use Countable;
 use InvalidArgumentException;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
@@ -16,7 +17,7 @@ use Symfony\Component\Yaml\Yaml;
  *
  * The ConfigFile class represents a configuration file.
  */
-final class ConfigFile implements ArrayAccess, LoggerAwareInterface
+final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
 {
     private const array CONTENT_TYPES = ['yaml', 'json', 'yml'];
     private array $data = [];
@@ -367,5 +368,10 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
     private function getFileHash(): string
     {
         return hash_file('sha256', $this->file);
+    }
+
+    public function count(): int
+    {
+        return count($this->data);
     }
 }

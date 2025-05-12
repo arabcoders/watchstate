@@ -9,17 +9,31 @@ use App\Libs\Attributes\Route\Get;
 use App\Libs\Database\DBLayer;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Mappers\ImportInterface as iImport;
+use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
+use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Log\LoggerInterface as iLogger;
 use RuntimeException;
 
 final class Images
 {
+    use APITraits;
+
     public const string URL = '%{api.prefix}/system/images';
 
+    public function __construct(private readonly iImport $mapper, private readonly iLogger $logger)
+    {
+    }
+
     #[Get(self::URL . '/{type:poster|background}[/]', name: 'system.images')]
-    public function __invoke(DBLayer $db, string $type): iResponse
+    public function __invoke(iRequest $request, DBLayer $db, string $type): iResponse
     {
         try {
+            $uc = $this->getUserContext($request, $this->mapper, $this->logger);
+            if (count($uc->config) < 1) {
+                return api_response(Status::NO_CONTENT);
+            }
             $resp = $this->getImage($db, $type);
         } catch (RuntimeException) {
             return api_response(Status::NO_CONTENT);
