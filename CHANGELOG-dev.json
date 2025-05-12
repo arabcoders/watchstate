@@ -1,5 +1,17 @@
 [
     {
+        "tag": "dev-20250512-14f82c4",
+        "date": "2025-05-12T19:23:15+00:00",
+        "commits": [
+            {
+                "sha": "14f82c4",
+                "message": "Make the first time webui access more user-friendly.",
+                "author": "arabcoders",
+                "date": "2025-05-12T19:23:15+00:00"
+            }
+        ]
+    },
+    {
         "tag": "dev-20250512-efc5637",
         "date": "2025-05-12T13:36:57+00:00",
         "commits": [
