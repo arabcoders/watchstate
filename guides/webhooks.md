@@ -73,6 +73,8 @@ Click *Add Webhook / Save*.
 
 Click *Save*.
 
+Note: It is best to disable "Webhook match user" option for Jellyfin backend as some events might not have a user associated with them. See [limitations](#jellyfin) for more info.
+
 ### Plex (PlexPass Required)
 
 1. Go to your Plex Web UI and navigate to *Settings > Your Account > Webhooks*. Click *Add Webhook*.
@@ -204,6 +206,7 @@ Here are some known limitations and issues when using webhooks with different me
 - When items are marked as **unwatched**, Plex resets the date on the media object.
 - If you share your Plex server with other users (e.g., home/managed users), you must enable **Webhook match user** to prevent their play state from affecting yours.
 - If you use multiple Plex servers with the same PlexPass account, you must add each backend separately and enable both *Webhook Match User* and *Webhook Match Backend ID*. Plex webhooks are account-wide and not server or user specific.
+- If you have multiple "Plex Home" users then you will see miss match reported for user ids. This is because Plex uses the same account to send webhooks for all users in "Plex Home". If you want to capture webhooks for these users then you would need to add them as sub users and set them up with individual webhooks.
 
 ### Plex via Tautulli
 
