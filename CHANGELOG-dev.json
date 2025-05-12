@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250511-5ce3d9f",
-        "date": "2025-05-11T20:39:42+00:00",
+        "tag": "dev-20250512-efc5637",
+        "date": "2025-05-12T13:36:57+00:00",
         "commits": [
+            {
+                "sha": "da664d4",
+                "message": "minor documentation update",
+                "author": "Splinter7914",
+                "date": "2025-05-12T01:56:29+00:00"
+            },
             {
                 "sha": "5ce3d9f",
                 "message": "Disable process request debug trace by default.",
