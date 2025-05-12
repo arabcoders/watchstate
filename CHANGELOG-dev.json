@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250512-14f82c4",
-        "date": "2025-05-12T19:23:15+00:00",
+        "tag": "dev-20250512-4c6d446",
+        "date": "2025-05-12T19:30:22+00:00",
         "commits": [
+            {
+                "sha": "4c6d446",
+                "message": "Add notice about autoconfigure.",
+                "author": "arabcoders",
+                "date": "2025-05-12T19:30:22+00:00"
+            },
             {
                 "sha": "14f82c4",
                 "message": "Make the first time webui access more user-friendly.",

@@ -1,8 +1,20 @@
 [
     {
-        "tag": "master-20250512-efc5637",
-        "date": "2025-05-12T13:36:57+00:00",
+        "tag": "master-20250512-cafacdf",
+        "date": "2025-05-12T19:34:32+00:00",
         "commits": [
+            {
+                "sha": "4c6d446",
+                "message": "Add notice about autoconfigure.",
+                "author": "arabcoders",
+                "date": "2025-05-12T19:30:22+00:00"
+            },
+            {
+                "sha": "14f82c4",
+                "message": "Make the first time webui access more user-friendly.",
+                "author": "arabcoders",
+                "date": "2025-05-12T19:23:15+00:00"
+            },
             {
                 "sha": "da664d4",
                 "message": "minor documentation update",
