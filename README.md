@@ -47,11 +47,11 @@ Refer to [NEWS](NEWS.md) for old updates.
 * Management via WebUI.
 * Sync backends play state (`Many-to-Many` or `One-Way`).
 * Backup your backends play state into `portable` format.
-* Receive webhook events from media backends.
+* Receive [webhook](guides/webhooks.md) events from media backends.
 * Find `un-matched` or `mis-matched` items.
 * Search your backend metadata.
 * Check if your media servers reporting same data via the parity checks.
-* Sync your watch progress/play state via webhooks or scheduled tasks.
+* Sync your watch [progress/play](FAQ.md#sync-watch-progress) state via webhooks or scheduled tasks.
 * Check if your media backends have stale references to old files.
 
 If you like my work, you might also like my other project [YTPTube](https://github.com/arabcoders/ytptube), which is

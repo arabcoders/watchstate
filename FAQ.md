@@ -913,7 +913,7 @@ In order to sync the watch progress between media backends, you need to enable t
 $ docker exec -ti watchstate console system:env -k WS_SYNC_PROGRESS -e true
 ```
 
-For best experience, you should enable the `Webhooks` feature for the media backends you want to sync the watch
+For best experience, you should enable the [webhook](guides/webhooks.md) feature for the media backends you want to sync the watch
 progress,
 however, if you are unable to do so, the `Tasks > import` task will also generate progress watch events. However, it's
 not as reliable as the `Webhooks` or as fast. using `Webhooks` is the recommended way and offers the best experience.
@@ -921,6 +921,14 @@ not as reliable as the `Webhooks` or as fast. using `Webhooks` is the recommende
 To check if there is any watch progress events being registered, You can go to `(WebUI) > More > Events` and check
 `on_progress` events, if you are seeing those, this means the progress is being synced. Check the `Tasks logs` to see
 the event log.
+
+If this is setup and working you may be ok with changing the `WS_CRON_IMPORT_AT/WS_CRON_EXPORT_AT` schedule to something less frequenet as
+the sync progress working will update the progress near realtime. For example you could change these tasks to run daily instead of hourly.
+
+```
+WS_CRON_IMPORT_AT=0 11 * * *
+WS_CRON_EXPORT_AT=30 11 * * *
+```
 
 ---
 
