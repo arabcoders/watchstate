@@ -96,6 +96,10 @@ container, but it will be mapped to the user in which the command was run under.
 
 After starting the container, you can access the WebUI by visiting `http://localhost:8080` in your browser.
 
+> [!NOTE]
+> The very first time you access the WebUI, we will attempt to autoconfigure your API connection. Should this fail, you
+> can manually configure the API connection by following the instructions below.
+
 At the start you won't see anything as the `WebUI` is decoupled from the WatchState and need to be configured to be able
 to access the API. In the top right corner, you will see a cogwheel icon, click on it and then Configure the connection
 settings.
