@@ -227,9 +227,9 @@ This will sync your local database state to the backend, ignoring date compariso
 
 # Is there support for Multi-user setup?
 
-There is **basic** support for multi-user setups, but it's not fully developed yet. The tool is primarily designed for
-single-user use, and multi-user functionality is built on top of that. Because of this, you might encounter some issues
-when using it with multiple users.
+The tool is primarily designed for single-user use, The Multi-user/sub-users functionality is built on top of that.
+Because of that you *may* encounter some issues when using it with multi-users. However, from our testing, sub-users
+functionality works well right now and behave as expected in the majority of cases. Follow the guidelines below.
 
 ## Getting started with a multi-user setup
 

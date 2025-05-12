@@ -1,6 +1,34 @@
 # NEWS
 
-This page contains old news about the project.
+### 2025-05-05
+
+We’ve added a new feature that lets you send requests **sequentially** to the backends instead of using the default
+**parallel** mode. This can be especially helpful if you have very large libraries, slow disks, or simply want to avoid
+overloading the backends with too many concurrent requests. You can enable by enabling `WS_HTTP_SYNC_REQUESTS`
+environment variable. This mode only applies to `import`, `export`, and `backup` tasks at the moment.
+
+Additionally, two command-line flags let you override the mode on the fly `--sync-requests` and `--async-requests`.
+
+We’ll be evaluating this feature, and if it proves effective (and the slowdown is acceptable), we may
+make **sequential** mode the default in a future release. So far from our testing, we’ve seen between 1.5x to 2.0x
+increase in import time when using the sequential mode.
+
+> [!NOTE]
+> Because we cache many HTTP requests, comparing timings between sequential and parallel runs of `import` can be
+> misleading. To get an accurate benchmark of `--sync-requests`, either start with a fresh setup (new installation) or
+> purge your Redis instance before testing.
+
+### 2025-04-06
+
+We have recently re-worked how the `backend:create` command works, and we no longer generate random name for invalid
+backends names or usernames. We do a normalization step to make sure the name is valid. This should help with the
+confusion of having random names. This means if you re-run the `backend:create` you most likely will get a different
+name than before. So, we suggest to re-run the command with `--re-create` flag. This flag will delete the current
+sub-users, and regenerate updated config files.
+
+We have also added new guard for the command, so if you already generated your sub-users, re-running the command will
+show you a warning message and exit without doing anything. to run the command again either you need to use
+`--re-create` or `--run` flag. The `--run` flag will run the command without deleting the current sub-users.
 
 ### 2025-03-13
 
