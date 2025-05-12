@@ -1,5 +1,41 @@
 [
     {
+        "tag": "master-20250512-11767cd",
+        "date": "2025-05-12T13:14:48+00:00",
+        "commits": [
+            {
+                "sha": "5ce3d9f",
+                "message": "Disable process request debug trace by default.",
+                "author": "arabcoders",
+                "date": "2025-05-11T20:39:42+00:00"
+            },
+            {
+                "sha": "8ac5b41",
+                "message": "Fixed logic error in determining if we should mark entity for progress update.",
+                "author": "arabcoders",
+                "date": "2025-05-11T20:28:16+00:00"
+            },
+            {
+                "sha": "b4b493c",
+                "message": "Minor docs updates",
+                "author": "arabcoders",
+                "date": "2025-05-11T19:54:28+00:00"
+            },
+            {
+                "sha": "c70442e",
+                "message": "Refactor DirectMapper to improve progress update handling and simplify metadata checks; update README with video installation guide.",
+                "author": "arabcoders",
+                "date": "2025-05-11T19:28:29+00:00"
+            },
+            {
+                "sha": "5ee7302",
+                "message": "Attempt to fix #660",
+                "author": "arabcoders",
+                "date": "2025-05-11T16:29:12+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250510-bfb5d87",
         "date": "2025-05-10T17:31:32+00:00",
         "commits": [
