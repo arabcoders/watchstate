@@ -84,7 +84,26 @@
 
               <div class="field">
                 <label class="label is-unselectable" for="form_value">Environment value</label>
-                <div class="control has-icons-left">
+                <div class="field-body" v-if="form_mask && 'string' === form_type">
+                  <div class="field">
+                    <div class="field has-addons">
+                      <div class="control is-expanded">
+                        <input class="input" id="api_token" v-model="form_value" required placeholder="Masked value"
+                          :type="false === form_expose ? 'password' : 'text'">
+                      </div>
+                      <div class="control">
+                        <button type="button" class="button is-primary" @click="form_expose = !form_expose">
+                          <span class="icon" v-if="!form_expose"><i class="fas fa-eye" /></span>
+                          <span class="icon" v-else><i class="fas fa-eye-slash" /></span>
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <p class="help" v-html="getHelp(form_key)" />
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="control has-icons-left">
                   <template v-if="'bool' === form_type">
                     <input id="form_value" type="checkbox" class="switch is-success" :checked="fixBool(form_value)"
                       @change="form_value = !fixBool(form_value)">
@@ -244,6 +263,8 @@ const toggleForm = ref(false)
 const form_key = ref('')
 const form_value = ref()
 const form_type = ref()
+const form_mask = ref(false)
+const form_expose = ref(false)
 const show_page_tips = useStorage('show_page_tips', true)
 const isLoading = ref(true)
 const file = ref('.env')
@@ -280,7 +301,7 @@ const loadContent = async () => {
   }
 }
 
-const deleteEnv = async (env) => {
+const deleteEnv = async env => {
   if (!confirm(`Delete '${env.key}'?`)) {
     return
   }
@@ -289,23 +310,18 @@ const deleteEnv = async (env) => {
     const response = await request(`/system/env/${env.key}`, { method: 'DELETE' })
 
     if (200 !== response.status) {
-      let json
-      try {
-        json = await response.json()
-      } catch (e) {
-        json = { error: { code: response.status, message: response.statusText } }
-      }
+      json = await parse_api_response(response)
       notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
       return
     }
 
     items.value = items.value.filter(i => {
-      const state = i.key !== env.key
-      if (true === state) {
+      if (i.key === env.key) {
         delete i.value
       }
-      return state;
+      return true;
     })
+
     notification('success', 'Success', `Environment variable '${env.key}' successfully deleted.`, 5000)
   } catch (e) {
     notification('error', 'Error', `Request error. ${e.message}`, 5000)
@@ -364,6 +380,7 @@ const editEnv = env => {
   }
 
   form_type.value = env.type
+  form_mask.value = env.mask
   toggleForm.value = true
   if (!useRoute().query.edit) {
     useRouter().push({ 'path': '/env', query: { 'edit': env.key } })
@@ -375,6 +392,7 @@ const cancelForm = async () => {
   form_key.value = ''
   form_value.value = null
   form_type.value = null
+  form_mask.value = false
   toggleForm.value = false
   if (route.query?.callback) {
     await navigateTo({ path: route.query.callback })
@@ -402,6 +420,7 @@ const keyChanged = () => {
   let data = items.value.filter(i => i.key === form_key.value)
   form_value.value = (data.length > 0) ? data[0].value : ''
   form_type.value = (data.length > 0) ? data[0].type : 'string'
+  form_mask.value = (data.length > 0) ? data[0].mask : false
   nextTick(() => {
     if (typeof form_value.value === 'undefined' && 'bool' === form_type.value) {
       form_value.value = false
