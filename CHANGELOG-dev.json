@@ -1,7 +1,31 @@
 [
     {
-        "tag": "dev-20250512-4c6d446",
-        "date": "2025-05-12T19:30:22+00:00",
+        "tag": "dev-20250513-d38b3c7",
+        "date": "2025-05-13T16:41:35+00:00",
+        "commits": [
+            {
+                "sha": "d38b3c7",
+                "message": "Refactor lambda functions for consistent spacing and improve error handling in version retrieval",
+                "author": "arabcoders",
+                "date": "2025-05-13T16:41:35+00:00"
+            },
+            {
+                "sha": "b2cac31",
+                "message": "minor updates to env page.",
+                "author": "arabcoders",
+                "date": "2025-05-13T16:38:29+00:00"
+            },
+            {
+                "sha": "908bc40",
+                "message": "remove accesstoken from open endpoints",
+                "author": "arabcoders",
+                "date": "2025-05-13T13:49:21+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250512-cafacdf",
+        "date": "2025-05-12T19:34:32+00:00",
         "commits": [
             {
                 "sha": "4c6d446",
