@@ -1,5 +1,47 @@
 [
     {
+        "tag": "master-20250513-57580fb",
+        "date": "2025-05-13T19:24:30+00:00",
+        "commits": [
+            {
+                "sha": "1cbd558",
+                "message": "Update the Add backend flow to be more dynamic with the yes/no for options.",
+                "author": "arabcoders",
+                "date": "2025-05-13T19:18:35+00:00"
+            },
+            {
+                "sha": "f542b38",
+                "message": "Fix triggering force import from first backend.",
+                "author": "arabcoders",
+                "date": "2025-05-13T19:18:04+00:00"
+            },
+            {
+                "sha": "e902d83",
+                "message": "Update RestoreCommand to support both async/sync requests.",
+                "author": "arabcoders",
+                "date": "2025-05-13T19:17:39+00:00"
+            },
+            {
+                "sha": "d38b3c7",
+                "message": "Refactor lambda functions for consistent spacing and improve error handling in version retrieval",
+                "author": "arabcoders",
+                "date": "2025-05-13T16:41:35+00:00"
+            },
+            {
+                "sha": "b2cac31",
+                "message": "minor updates to env page.",
+                "author": "arabcoders",
+                "date": "2025-05-13T16:38:29+00:00"
+            },
+            {
+                "sha": "908bc40",
+                "message": "remove accesstoken from open endpoints",
+                "author": "arabcoders",
+                "date": "2025-05-13T13:49:21+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250512-cafacdf",
         "date": "2025-05-12T19:34:32+00:00",
         "commits": [

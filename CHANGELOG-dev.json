@@ -1,8 +1,26 @@
 [
     {
-        "tag": "dev-20250513-d38b3c7",
-        "date": "2025-05-13T16:41:35+00:00",
+        "tag": "dev-20250513-1cbd558",
+        "date": "2025-05-13T19:18:35+00:00",
         "commits": [
+            {
+                "sha": "1cbd558",
+                "message": "Update the Add backend flow to be more dynamic with the yes/no for options.",
+                "author": "arabcoders",
+                "date": "2025-05-13T19:18:35+00:00"
+            },
+            {
+                "sha": "f542b38",
+                "message": "Fix triggering force import from first backend.",
+                "author": "arabcoders",
+                "date": "2025-05-13T19:18:04+00:00"
+            },
+            {
+                "sha": "e902d83",
+                "message": "Update RestoreCommand to support both async/sync requests.",
+                "author": "arabcoders",
+                "date": "2025-05-13T19:17:39+00:00"
+            },
             {
                 "sha": "d38b3c7",
                 "message": "Refactor lambda functions for consistent spacing and improve error handling in version retrieval",
