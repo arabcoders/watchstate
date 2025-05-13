@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Commands\Backend;
 
 use App\Command;
+use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Extends\RetryableHttpClient;
 use App\Libs\Extends\StreamLogHandler;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\RestoreMapper;
@@ -28,6 +30,7 @@ use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 use Throwable;
 
 /**
@@ -51,7 +54,9 @@ class RestoreCommand extends Command
     public function __construct(
         private readonly QueueRequests $queue,
         private readonly iLogger $logger,
-        private LogSuppressor $suppressor
+        private LogSuppressor $suppressor,
+        #[Inject(RetryableHttpClient::class)]
+        private iHttp $http,
     ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
@@ -71,70 +76,26 @@ class RestoreCommand extends Command
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
             ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend.')
             ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select sub user.', 'main')
+            ->addOption(
+                'ignore',
+                'i',
+                InputOption::VALUE_NONE,
+                'Bypass backend export.enabled check. Use with caution.',
+            )
             ->addArgument('file', InputArgument::REQUIRED, 'Backup file to restore from')
-            ->addOption('logfile', null, InputOption::VALUE_REQUIRED, 'Save console output to file.')
-            ->setHelp(
-                r(
-                    <<<HELP
-
-                    This command allow you restore specific backend play state from backup file
-                    generated via [<cmd>state:backup</cmd>] command.
-
-                    This restore process only works on backends that has export enabled.
-
-                    The restore process is exactly the same as the [<cmd>state:export</cmd>] with [<flag>--ignore-date</flag>, <flag>--force-full</flag>]
-                    flags enabled, the difference is instead of reading state from database we are reading it from backup file.
-
-                    -------------------
-                    <notice>[ Risk Assessment ]</notice>
-                    -------------------
-
-                    If you are trying to restore a backend that has import play state enabled, the changes from restoring from backup file
-                    will propagate back to your other backends. If you don't intend for that to happen, then <fg=white;bg=red;options=bold,underscore>DISABLE</> import from the backend.
-
-                    --------------------------------
-                    <notice>[ Enable restore functionality ]</notice>
-                    --------------------------------
-
-                    If you understand the risks and what might happen if you do restore from a backup file,
-                    then you can enable the command by adding [<flag>--execute</flag>] to the command.
-
-                    For example,
-
-                    {cmd} <cmd>{route}</cmd> <flag>--execute</flag> <flag>-vv -s</flag> <value>backend_name</value> -- <value>{backupDir}/backup_file.json</value>
-
-                    -------
-                    <notice>[ FAQ ]</notice>
-                    -------
-
-                    <question># Restore operation is cancelled.</question>
-
-                    If you encounter this error, it means either you didn't answer with yes for risk assessment confirmation,
-                    or the interaction is disabled, if you can't enable interaction, then you can add another flag [<flag>--assume-yes</flag>]
-                    to bypass the check. This <notice>confirms</notice> that you understand the risks of restoring backend that has import enabled.
-
-                    <question># Ignoring [backend_name] [item_title]. [Movie|Episode] Is not imported yet.</question>
-
-                    This is normal, this is likely because the backup is already outdated and some items in remote does not exist in backup file,
-                    or you are using backup from another source which likely does not have matching data.
-
-                    <question># Where are the backups stored?</question>
-
-                    By default, it should be at [<value>{backupDir}</value>].
-
-                    <question># How to see what data will be changed?</question>
-
-                    if you do not add [<flag>--execute</flag>] to the comment, it will run in dry mode by default,
-                    To see what data will be changed run the command with [<info>-v</info>]</info> log level.
-
-                    HELP,
-                    [
-                        'cmd' => trim(commandContext()),
-                        'route' => self::ROUTE,
-                        'backupDir' => after(Config::get('path') . '/backup', ROOT_PATH),
-                    ]
-                )
-            );
+            ->addOption(
+                'sync-requests',
+                null,
+                InputOption::VALUE_NONE,
+                'Send one request at a time instead of all at once. note: Slower but more reliable.'
+            )
+            ->addOption(
+                'async-requests',
+                null,
+                InputOption::VALUE_NONE,
+                'Send all requests at once. note: Faster but less reliable. Default.'
+            )
+            ->addOption('logfile', null, InputOption::VALUE_REQUIRED, 'Save console output to file.');
     }
 
     /**
@@ -220,11 +181,21 @@ class RestoreCommand extends Command
         }
 
         if (false === (bool)ag($backend, 'export.enabled')) {
-            $output->writeln(r("<error>ERROR: Export to '{user}@{backend}' are disabled.</error>", [
-                'backend' => $name,
-                'user' => $userContext->name,
-            ]));
-            return self::FAILURE;
+            if (false === $input->getOption('ignore')) {
+                $output->writeln(r("<error>ERROR: Export to '{user}@{backend}' are disabled.</error>", [
+                    'backend' => $name,
+                    'user' => $userContext->name,
+                ]));
+                return self::FAILURE;
+            }
+
+            $this->logger->warning(
+                "Exporting to '{user}@{backend}' is disabled, However, the check was bypass due to [-i, --ignore] flag being used.",
+                [
+                    'backend' => $name,
+                    'user' => $userContext->name,
+                ]
+            );
         }
 
         if (true === (bool)ag($backend, 'import.enabled')) {
@@ -313,6 +284,14 @@ class RestoreCommand extends Command
             'user' => $userContext->name,
         ]);
 
+        if (false === ($syncRequests = $input->getOption('sync-requests'))) {
+            $syncRequests = (bool)Config::get('http.default.sync_requests', false);
+        }
+
+        if (true === $input->getOption('async-requests')) {
+            $syncRequests = false;
+        }
+
         $requests = $backend->export($mapper, $this->queue, null);
 
         $start = microtime(true);
@@ -322,14 +301,7 @@ class RestoreCommand extends Command
             'user' => $userContext->name,
         ]);
 
-        foreach ($requests as $response) {
-            $requestData = $response->getInfo('user_data');
-            try {
-                $requestData['ok']($response);
-            } catch (Throwable $e) {
-                $requestData['error']($e);
-            }
-        }
+        send_requests(requests: $requests, client: $this->http, sync: $syncRequests, logger: $this->logger);
 
         $this->logger->notice("SYSTEM: Completed '{total}' requests in '{duration}'s for '{user}@{backend}'.", [
             'backend' => $name,

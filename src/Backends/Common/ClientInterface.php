@@ -18,7 +18,6 @@ use Psr\Http\Message\StreamInterface as iStream;
 use Psr\Http\Message\UriInterface as iUri;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
-use Symfony\Contracts\HttpClient\ResponseInterface as iResponse;
 
 interface ClientInterface
 {
@@ -86,7 +85,7 @@ interface ClientInterface
      * @param iImport $mapper mapper to use.
      * @param iDate|null $after only import items after this date.
      *
-     * @return array<array-key,iResponse> responses.
+     * @return array<array-key,Request> responses.
      */
     public function pull(iImport $mapper, iDate|null $after = null): array;
 
@@ -97,7 +96,7 @@ interface ClientInterface
      * @param iStream|null $writer writer to use.
      * @param array $opts options for backup.
      *
-     * @return array<array-key,iResponse> responses.
+     * @return array<array-key,Request> responses.
      */
     public function backup(iImport $mapper, iStream|null $writer = null, array $opts = []): array;
 
@@ -108,7 +107,7 @@ interface ClientInterface
      * @param QueueRequests $queue queue to use.
      * @param iDate|null $after only export items after this date.
      *
-     * @return array<array-key,iResponse> responses.
+     * @return array<array-key,Request> responses.
      */
     public function export(iImport $mapper, QueueRequests $queue, iDate|null $after = null): array;
 

@@ -6,15 +6,17 @@
         import and enable only metadata import at the start to prevent overriding your current play state. Visit the
         following guide
         <NuxtLink to="/help/one-way-sync">
-          <span class="icon"><i class="fas fa-circle-question" /></span> One-way sync
-        </NuxtLink> to learn more.
+          <span class="icon"><i class="fas fa-circle-question"/></span> One-way sync
+        </NuxtLink>
+        to learn more.
       </li>
       <li v-if="api_user === 'main'">
         Do not add sub-users backends manually, after finishing the main user backends setup. Visit
         <NuxtLink target="_blank" to="/tools/sub_users">
-          <span class="icon"><i class="fas fa-tools" /></span> Tools >
-          <span class="icon"><i class="fas fa-users" /></span> Sub-users
-        </NuxtLink> page to create their own user and backends automatically.
+          <span class="icon"><i class="fas fa-tools"/></span> Tools >
+          <span class="icon"><i class="fas fa-users"/></span> Sub-users
+        </NuxtLink>
+        page to create their own user and backends automatically.
       </li>
     </ul>
   </Message>
@@ -28,7 +30,7 @@
       <div class="card-content">
         <div class="field" v-if="error">
           <Message title="Backend Error" id="backend_error" message_class="has-background-danger-80 has-text-dark"
-            icon="fas fa-exclamation-triangle" useClose @close="error = null">
+                   icon="fas fa-exclamation-triangle" useClose @close="error = null">
             <p>{{ error }}</p>
           </Message>
         </div>
@@ -39,7 +41,7 @@
             <div class="control has-icons-left">
               <div class="select is-fullwidth">
                 <select class="is-capitalized" disabled>
-                  <option v-text="api_user" />
+                  <option v-text="api_user"/>
                 </select>
               </div>
               <div class="icon is-left">
@@ -48,7 +50,7 @@
             </div>
             <p class="help">
               The local user which this backend will be associated with. You can change this user via the
-              <span class="icon"><i class="fas fa-users" /></span> users icon on top right of the page.
+              <span class="icon"><i class="fas fa-users"/></span> users icon on top right of the page.
             </p>
           </div>
 
@@ -93,14 +95,14 @@
                 <div class="field has-addons">
                   <div class="control is-expanded has-icons-left">
                     <input class="input" v-model="backend.token" required :disabled="stage > 1"
-                      :type="false === exposeToken ? 'password' : 'text'">
+                           :type="false === exposeToken ? 'password' : 'text'">
                     <div class="icon is-left">
                       <i class="fas fa-key"></i>
                     </div>
                   </div>
                   <div class="control">
                     <button type="button" class="button is-primary" @click="exposeToken = !exposeToken"
-                      v-tooltip="'Toggle token'">
+                            v-tooltip="'Toggle token'">
                       <span class="icon" v-if="!exposeToken"><i class="fas fa-eye"></i></span>
                       <span class="icon" v-else><i class="fas fa-eye-slash"></i></span>
                     </button>
@@ -110,9 +112,10 @@
                   <template v-if="'plex' === backend.type">
                     Enter the <code>X-Plex-Token</code>.
                     <NuxtLink target="_blank" to="https://support.plex.tv/articles/204059436"
-                      v-text="'Visit This link'" /> to learn how to get the token. <span
+                              v-text="'Visit This link'"/>
+                    to learn how to get the token. <span
                       class="is-bold has-text-danger">If you plan to add sub-users, YOU MUST use admin level
-                      token.</span>
+                    token.</span>
                   </template>
                   <template v-else>
                     Generate a new API Key from <code>Dashboard > Settings > API Keys</code>.<br>
@@ -158,7 +161,7 @@
             <div class="control has-icons-left">
               <div class="select is-fullwidth">
                 <select v-model="backend.url" class="is-capital" @change="stage = 1; updateIdentifier()" required
-                  :disabled="stage > 1">
+                        :disabled="stage > 1">
                   <option value="" disabled>Select Server URL</option>
                   <option v-for="server in servers" :key="'server-' + server.uuid" :value="server.uri">
                     {{ server.name }} - {{ server.uri }}
@@ -171,14 +174,14 @@
               </div>
               <p class="help">
                 <NuxtLink @click="getServers" v-text="'Attempt to discover servers associated with the token.'"
-                  v-if="stage < 2" />
+                          v-if="stage < 2"/>
                 Try to use non <code>.plex.direct</code> urls if possible, as they are often have problems working in
                 docker. If you use custom domain for your plex server and it's not showing in the list, you can add it
                 via Plex settings page. <code>Plex > Settings > Network > <strong>Custom server access
                 URLs:</strong></code>. For more information
                 <NuxtLink target="_blank"
-                  to="https://support.plex.tv/articles/200430283-network/#Custom-server-access-URLs"
-                  v-text="'Visit this link'" />
+                          to="https://support.plex.tv/articles/200430283-network/#Custom-server-access-URLs"
+                          v-text="'Visit this link'"/>
                 .
               </p>
             </div>
@@ -204,19 +207,19 @@
             </div>
             <p class="help">
               Which user we should associate this backend with?
-              <NuxtLink @click="getUsers" v-text="'Retrieve User ids from backend.'" v-if="stage < 4" />
+              <NuxtLink @click="getUsers" v-text="'Retrieve User ids from backend.'" v-if="stage < 4"/>
             </p>
           </div>
         </div>
 
         <template v-if="stage >= 4">
           <div class="field" v-if="backend.import">
-            <label class="label" for="backend_import">Import data from this backend</label>
+            <label class="label" for="backend_import">Import data from this backend?</label>
             <div class="control">
               <input id="backend_import" type="checkbox" class="switch is-success" v-model="backend.import.enabled">
-              <label for="backend_import">Enable</label>
-              <p class="help">
-                Import means to get the data from the backend and store it in the database.
+              <label for="backend_import" class="is-unselectable">{{ backend.import.enabled ? 'Yes' : 'No' }}</label>
+              <p class="help is-bold">
+                Import means to get the data from the backend and store it in WatchState.
               </p>
             </div>
           </div>
@@ -225,33 +228,36 @@
             <label class="label" for="backend_import_metadata">Import metadata only from from this backend?</label>
             <div class="control">
               <input id="backend_import_metadata" type="checkbox" class="switch is-success"
-                v-model="backend.options.IMPORT_METADATA_ONLY">
-              <label for="backend_import_metadata">Enable</label>
+                     v-model="backend.options.IMPORT_METADATA_ONLY">
+              <label for="backend_import_metadata" class="is-unselectable">
+                {{ backend.options?.IMPORT_METADATA_ONLY ? 'Yes' : 'No' }}
+              </label>
               <p class="help has-text-danger">
-                To efficiently push changes to the backend we need relation map and this require
-                us to get metadata from the backend. You have Importing disabled, as such this option
-                allow us to import this backend metadata without altering your play state.
+                For best performance, we need at least to import metadata from the backend. This will not alter your
+                play state.
               </p>
             </div>
           </div>
 
           <div class="field" v-if="backend.export">
-            <label class="label" for="backend_export">Export data to this backend</label>
+            <label class="label" for="backend_export">Export data to this backend?</label>
             <div class="control">
               <input id="backend_export" type="checkbox" class="switch is-success" v-model="backend.export.enabled">
-              <label for="backend_export">Enable</label>
-              <p class="help">
-                Export means to send the data from the database to this backend.
+              <label for="backend_export" class="is-unselectable">{{ backend.export.enabled ? 'Yes' : 'No' }}</label>
+              <p class="help is-bold">
+                Export mean sending data from WatchState to this backend.
               </p>
             </div>
           </div>
 
           <div class="field" v-if="backend.webhook">
-            <label class="label" for="webhook_match_user">Webhook match user</label>
+            <label class="label" for="webhook_match_user">Enable match user for webhook?</label>
             <div class="control">
               <input id="webhook_match_user" type="checkbox" class="switch is-success"
-                v-model="backend.webhook.match.user">
-              <label for="webhook_match_user">Enable</label>
+                     v-model="backend.webhook.match.user">
+              <label for="webhook_match_user" class="is-unselectable">
+                {{ backend.webhook.match.user ? 'Yes' : 'No' }}
+              </label>
               <p class="help">
                 Check webhook payload for user id match. if it does not match, the payload will be ignored.
               </p>
@@ -259,11 +265,13 @@
           </div>
 
           <div class="field" v-if="backend.webhook">
-            <label class="label" for="webhook_match_uuid">Webhook match backend id</label>
+            <label class="label" for="webhook_match_uuid">Enable match backend id for webhook?</label>
             <div class="control">
               <input id="webhook_match_uuid" type="checkbox" class="switch is-success"
-                v-model="backend.webhook.match.uuid">
-              <label for="webhook_match_uuid">Enable</label>
+                     v-model="backend.webhook.match.uuid">
+              <label for="webhook_match_uuid" class="is-unselectable">
+                {{ backend.webhook.match.uuid ? 'Yes' : 'No' }}
+              </label>
               <p class="help">
                 Check webhook payload for backend unique id. if it does not match, the payload will be ignored.
               </p>
@@ -277,7 +285,7 @@
             </label>
             <div class="control">
               <input id="backup_data" type="checkbox" class="switch is-success" v-model="backup_data">
-              <label for="backup_data">Yes</label>
+              <label for="backup_data" class="is-unselectable">{{ backup_data ? 'Yes' : 'No' }}</label>
               <p class="help">
                 This will run a one time backup for the backend data.
               </p>
@@ -291,7 +299,7 @@
             </label>
             <div class="control">
               <input id="force_import" type="checkbox" class="switch is-success" v-model="force_import">
-              <label for="force_import">Yes</label>
+              <label for="force_import" class="is-unselectable">{{ force_import ? 'Yes' : 'No' }}</label>
               <p class="help">
                 <span class="icon"><i class="fas fa-info-circle"></i></span>
                 Run a one time import from this backend after adding it.
@@ -306,7 +314,7 @@
             </label>
             <div class="control">
               <input id="force_export" type="checkbox" class="switch is-success" v-model="force_export">
-              <label for="force_export">Yes</label>
+              <label for="force_export" class="is-unselectable">{{ force_export ? 'Yes' : 'No' }}</label>
               <p class="help has-text-danger">
                 <span class="icon"><i class="fas fa-info-circle"></i></span>
                 THIS OPTION WILL OVERRIDE THE BACKEND DATA with locally stored data.
@@ -346,8 +354,8 @@
 <script setup>
 import 'assets/css/bulma-switch.css'
 import request from '~/utils/request'
-import { awaitElement, explode, notification, ucFirst } from '~/utils/index'
-import { useStorage } from "@vueuse/core";
+import {awaitElement, explode, notification} from '~/utils/index'
+import {useStorage} from "@vueuse/core";
 
 const emit = defineEmits(['addBackend', 'backupData', 'forceExport', 'forceImport'])
 
@@ -767,5 +775,5 @@ const n_proxy = (type, title, message, e = null) => {
   return notification(type, title, message)
 }
 
-watch(error, v => v ? awaitElement('#backend_error', (_, e) => e.scrollIntoView({ behavior: 'smooth' })) : null)
+watch(error, v => v ? awaitElement('#backend_error', (_, e) => e.scrollIntoView({behavior: 'smooth'})) : null)
 </script>

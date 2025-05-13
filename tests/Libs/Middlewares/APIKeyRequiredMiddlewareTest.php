@@ -47,7 +47,6 @@ class APIKeyRequiredMiddlewareTest extends TestCase
         $routes = [
             HealthCheck::URL,
             AutoConfig::URL,
-            AccessToken::URL,
         ];
 
         $routesSemiOpen = [

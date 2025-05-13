@@ -54,7 +54,7 @@ final class Env
         }
 
         if (true === (bool)$params->get('set', false)) {
-            $list = array_filter($list, fn($info) => $this->envFile->has($info['key']));
+            $list = array_filter($list, fn ($info) => $this->envFile->has($info['key']));
         }
 
         return api_response(Status::OK, [
@@ -82,9 +82,10 @@ final class Env
 
         return api_response(Status::OK, [
             'key' => $key,
-            'value' => $this->settype($spec, ag($spec, 'value', fn() => $this->envFile->get($key))),
+            'value' => $this->settype($spec, ag($spec, 'value', fn () => $this->envFile->get($key))),
             'description' => ag($spec, 'description'),
             'type' => ag($spec, 'type'),
+            'mask' => (bool)ag($spec, 'mask', false),
         ]);
     }
 
@@ -107,9 +108,10 @@ final class Env
 
             return api_response(Status::OK, [
                 'key' => $key,
-                'value' => $this->setType($spec, ag($spec, 'value', fn() => $this->envFile->get($key))),
+                'value' => $this->setType($spec, ag($spec, 'value', fn () => $this->envFile->get($key))),
                 'description' => ag($spec, 'description'),
                 'type' => ag($spec, 'type'),
+                'mask' => (bool)ag($spec, 'mask', false),
             ]);
         }
 
@@ -139,6 +141,7 @@ final class Env
             'value' => $value,
             'description' => ag($spec, 'description'),
             'type' => ag($spec, 'type'),
+            'mask' => (bool)ag($spec, 'mask', false),
         ]);
     }
 

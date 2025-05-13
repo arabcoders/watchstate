@@ -25,7 +25,6 @@ final class APIKeyRequiredMiddleware implements MiddlewareInterface
     private const array PUBLIC_ROUTES = [
         HealthCheck::URL,
         AutoConfig::URL,
-        AccessToken::URL,
     ];
 
     /**
@@ -66,7 +65,7 @@ final class APIKeyRequiredMiddleware implements MiddlewareInterface
             return api_error('API key is required to access the API.', Status::BAD_REQUEST);
         }
 
-        if (array_any($tokens, fn($token) => true === $this->validate($token))) {
+        if (array_any($tokens, fn ($token) => true === $this->validate($token))) {
             return $handler->handle($request);
         }
 
@@ -102,6 +101,6 @@ final class APIKeyRequiredMiddleware implements MiddlewareInterface
             }
         }
 
-        return array_map(fn($val) => rawurldecode($val), array_values(array_unique(array_filter($tokens))));
+        return array_map(fn ($val) => rawurldecode($val), array_values(array_unique(array_filter($tokens))));
     }
 }
