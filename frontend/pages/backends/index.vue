@@ -31,6 +31,7 @@
       <div class="column is-12" v-if="toggleForm">
         <BackendAdd @backupData="e => handleEvents('backupData', e)" :backends="backends"
                     @forceExport="e => handleEvents('forceExport', e)"
+                    @forceImport="e => handleEvents('forceImport', e)"
                     @addBackend="e => handleEvents('addBackend', e)"/>
       </div>
       <template v-else>
