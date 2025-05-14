@@ -106,7 +106,15 @@ Click *Save Changes*.
    - Watched
    - Recently Added
 
-6. **Data**:  
+6. **Conditions**:
+   If you have multiple users in Plex then use conditions to control which user this event will fire for.
+   - Parameter = User
+   - Operator = is
+   - Value = username associated with the user in Tautulli. See `Users` tab in Tautulli.
+
+   This will make sure only appropriate users events get fired.
+
+7. **Data**:
    - For each event, you will need to set the corresponding headers/data fields using the following format.
 
 > [!IMPORTANT]  
