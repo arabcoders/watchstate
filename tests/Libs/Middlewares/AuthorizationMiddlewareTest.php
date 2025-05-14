@@ -4,17 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Libs\Middlewares;
 
-use App\API\Backends\AccessToken;
 use App\API\System\AutoConfig;
 use App\API\System\HealthCheck;
 use App\Libs\Config;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
-use App\Libs\Middlewares\APIKeyRequiredMiddleware;
+use App\Libs\Middlewares\AuthorizationMiddleware;
 use App\Libs\TestCase;
 use Tests\Support\RequestResponseTrait;
 
-class APIKeyRequiredMiddlewareTest extends TestCase
+class AuthorizationMiddlewareTest extends TestCase
 {
     use RequestResponseTrait;
 
@@ -25,7 +24,7 @@ class APIKeyRequiredMiddlewareTest extends TestCase
 
     public function test_internal_request()
     {
-        $result = new APIKeyRequiredMiddleware()->process(
+        $result = new AuthorizationMiddleware()->process(
             request: $this->getRequest()->withAttribute('INTERNAL_REQUEST', true),
             handler: $this->getHandler()
         );
@@ -34,7 +33,7 @@ class APIKeyRequiredMiddlewareTest extends TestCase
 
     public function test_options_request()
     {
-        $result = new APIKeyRequiredMiddleware()->process(
+        $result = new AuthorizationMiddleware()->process(
             request: $this->getRequest(method: Method::OPTIONS),
             handler: $this->getHandler()
         );
@@ -56,7 +55,7 @@ class APIKeyRequiredMiddlewareTest extends TestCase
 
         foreach ($routes as $route) {
             $uri = parseConfigValue($route);
-            $result = new APIKeyRequiredMiddleware()->process(
+            $result = new AuthorizationMiddleware()->process(
                 request: $this->getRequest(uri: $uri),
                 handler: $this->getHandler()
             );
@@ -65,7 +64,7 @@ class APIKeyRequiredMiddlewareTest extends TestCase
 
         foreach ($routesSemiOpen as $route) {
             $uri = parseConfigValue($route);
-            $result = new APIKeyRequiredMiddleware()->process(
+            $result = new AuthorizationMiddleware()->process(
                 request: $this->getRequest(uri: $uri),
                 handler: $this->getHandler()
             );
@@ -76,7 +75,7 @@ class APIKeyRequiredMiddlewareTest extends TestCase
 
         foreach ($routesSemiOpen as $route) {
             $uri = parseConfigValue($route);
-            $result = new APIKeyRequiredMiddleware()->process(
+            $result = new AuthorizationMiddleware()->process(
                 request: $this->getRequest(uri: $uri)->withoutHeader('Authorization'),
                 handler: $this->getHandler()
             );
@@ -89,12 +88,12 @@ class APIKeyRequiredMiddlewareTest extends TestCase
 
         foreach ($routesSemiOpen as $route) {
             $uri = parseConfigValue($route);
-            $result = new APIKeyRequiredMiddleware()->process(
+            $result = new AuthorizationMiddleware()->process(
                 request: $this->getRequest(uri: $uri)->withHeader('Authorization', 'Bearer api'),
                 handler: $this->getHandler()
             );
             $this->assertSame(
-                Status::FORBIDDEN->value,
+                Status::UNAUTHORIZED->value,
                 $result->getStatusCode(),
                 "Route '{$route}' should fail without correct API key"
             );
@@ -103,7 +102,7 @@ class APIKeyRequiredMiddlewareTest extends TestCase
         Config::save('api.key', 'api_test_token');
         foreach ($routesSemiOpen as $route) {
             $uri = parseConfigValue($route);
-            $result = new APIKeyRequiredMiddleware()->process(
+            $result = new AuthorizationMiddleware()->process(
                 request: $this->getRequest(uri: $uri, query: ['apikey' => 'api_test_token'])->withHeader(
                     'X-apikey',
                     'api_test_token'

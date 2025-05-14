@@ -18,7 +18,7 @@ trait RequestResponseTrait
     {
         $response ??= new Response(Status::OK);
 
-        return new readonly class($response) implements iHandler {
+        return new class($response) implements iHandler {
             private mixed $response;
 
             public function __construct(iResponse|callable $response)
