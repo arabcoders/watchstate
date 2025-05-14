@@ -149,6 +149,37 @@
           </div>
         </div>
         <div class="navbar-end pr-3">
+          <template v-if="'mobile' === breakpoints.active().value">
+            <div class="navbar-item">
+              <NuxtLink class="button is-dark" to="/help">
+                <span class="icon"><i class="fas fa-circle-question"/></span>
+                <span>Guides</span>
+              </NuxtLink>
+            </div>
+
+            <div class="navbar-item">
+              <button class="button is-dark" @click="showUserSelection = !showUserSelection">
+                <span class="icon"><i class="fas fa-users"/></span>
+                <span>Change User</span>
+              </button>
+            </div>
+
+            <div class="navbar-item">
+              <button class="button is-dark" @click="showSettings = !showSettings">
+                <span class="icon"><i class="fas fa-cog"/></span>
+                <span>Settings</span>
+              </button>
+            </div>
+
+            <div class="navbar-item">
+              <button class="button is-dark" @click="logout">
+                <span class="icon"><i class="fas fa-sign-out"/></span>
+                <span>Logout</span>
+              </button>
+            </div>
+          </template>
+
+          <template v-if="'mobile' !== breakpoints.active().value">
             <div class="navbar-item">
               <NuxtLink class="button is-dark" v-tooltip="'Guides'" to="/help">
                 <span class="icon"><i class="fas fa-circle-question"/></span>
@@ -161,26 +192,27 @@
               </button>
             </div>
 
-          <div class="navbar-item">
-            <button class="button is-dark" @click="showConnection = !showConnection"
-                    v-tooltip="'Configure connection'">
-              <span class="icon"><i class="fas fa-cog"/></span>
-            </button>
-          </div>
+            <div class="navbar-item">
+              <button class="button is-dark" @click="showSettings = !showSettings"
+                      v-tooltip="'WebUI Settings'">
+                <span class="icon"><i class="fas fa-cog"/></span>
+              </button>
+            </div>
 
-          <div class="navbar-item">
-            <button class="button is-dark" @click="logout" v-tooltip="'Logout'">
-              <span class="icon"><i class="fas fa-sign-out"/></span>
-            </button>
-          </div>
+            <div class="navbar-item">
+              <button class="button is-dark" @click="logout" v-tooltip="'Logout'">
+                <span class="icon"><i class="fas fa-sign-out"/></span>
+              </button>
+            </div>
+          </template>
 
         </div>
       </div>
     </nav>
     <div>
       <div>
-        <Connection v-if="showConnection" @update="data => handleConnection(data)"/>
-        <NuxtPage v-if="!showConnection"/>
+        <Settings v-if="showSettings"/>
+        <NuxtPage/>
       </div>
 
       <div class="columns is-multiline is-mobile mt-3">
@@ -229,12 +261,12 @@ import {useBreakpoints, useStorage} from '@vueuse/core'
 import request from '~/utils/request'
 import Markdown from '~/components/Markdown'
 import UserSelection from '~/components/UserSelection'
-import Connection from '~/components/Connection'
-import { useAuthStore } from '~/store/auth'
+import {useAuthStore} from '~/store/auth'
+import Settings from "~/components/Settings.vue";
 
 const selectedTheme = useStorage('theme', 'auto')
 const showUserSelection = ref(false)
-const showConnection = ref(false)
+const showSettings = ref(false)
 
 const auth = useAuthStore()
 const bg_enable = useStorage('bg_enable', true)
@@ -351,11 +383,6 @@ const changeRoute = async (_, callback) => {
   if (callback) {
     callback()
   }
-}
-
-const handleConnection = data => {
-  api_version.value = data.version
-  showConnection.value = false
 }
 
 watch(bgImage, async v => {
