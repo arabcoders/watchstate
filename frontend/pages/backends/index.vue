@@ -135,12 +135,12 @@
                 </div>
               </div>
               <div class="card-footer-item">
-                <NuxtLink :to="api_url + backend.urls.webhook" class="is-info is-light"
-                          @click.prevent="copyUrl(backend)">
+                <a :href="backend.urls.webhook" class="is-info is-light"
+                   @click.prevent="copyUrl(backend)">
                   <span class="icon"><i class="fas fa-copy"/></span>
                   <span class="is-hidden-mobile">Copy Webhook URL</span>
                   <span class="is-hidden-tablet">Webhook</span>
-                </NuxtLink>
+                </a>
               </div>
             </div>
             <footer class="card-footer">
@@ -200,7 +200,6 @@ useHead({title: 'Backends'})
 
 const backends = ref([])
 const toggleForm = ref(false)
-const api_url = useStorage('api_url', '')
 const api_user = useStorage('api_user', 'main')
 const show_page_tips = useStorage('show_page_tips', true)
 const isLoading = ref(false)
@@ -285,7 +284,7 @@ const loadContent = async () => {
 
 onMounted(() => loadContent())
 
-const copyUrl = (backend) => copyText(api_url.value + backend.urls.webhook)
+const copyUrl = b => copyText(window.origin + b.urls.webhook)
 
 const updateValue = async (backend, key, newValue) => {
   const response = await request(`/backend/${backend.name}`, {

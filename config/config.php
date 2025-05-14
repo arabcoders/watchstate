@@ -35,7 +35,6 @@ return (function () {
             'prefix' => '/v1/api',
             'key' => env('WS_API_KEY', null),
             'secure' => (bool)env('WS_SECURE_API_ENDPOINTS', false),
-            'auto' => (bool)env('WS_API_AUTO', false),
             'pattern_match' => [
                 'backend' => '[a-zA-Z0-9_\-]+',
                 'ubackend' => '[a-zA-Z0-9_\-\@]+',
@@ -341,6 +340,17 @@ return (function () {
                 __DIR__ . '/../src/Listeners/',
             ]
         ],
+    ];
+
+    $config['password'] = [
+        'prefix' => 'ws_hash@:',
+        'algo' => PASSWORD_BCRYPT,
+        'options' => ['cost' => 10],
+    ];
+
+    $config['system'] = [
+        'user' => env('WS_SYSTEM_USER', null),
+        'password' => env('WS_SYSTEM_PASSWORD', null),
     ];
 
     return $config;

@@ -9,9 +9,13 @@ try {
         extraNitro = {
             devProxy: {
                 '/v1/api/': {
-                    target: API_URL,
+                    target: API_URL + '/v1/api/',
                     changeOrigin: true
-                }
+                },
+                '/guides/': {
+                    target: API_URL + '/guides/',
+                    changeOrigin: true
+                },
             }
         }
     }
@@ -26,7 +30,12 @@ export default defineNuxtConfig({
         port: 8081,
         host: "0.0.0.0",
     },
-
+    runtimeConfig: {
+        public: {
+            domain: '/',
+            version: '1.0.0',
+        }
+    },
     app: {
         head: {
             "meta": [
@@ -48,6 +57,7 @@ export default defineNuxtConfig({
     modules: [
         '@vueuse/nuxt',
         'floating-vue/nuxt',
+        '@pinia/nuxt',
     ],
 
     nitro: {

@@ -26,7 +26,7 @@
 <script setup>
 import Hls from 'hls.js'
 import 'plyr/dist/plyr.css'
-import {notification} from '~/utils/index'
+import {disableOpacity, enableOpacity, notification} from '~/utils/index'
 import request from '~/utils/request'
 import Plyr from 'plyr'
 
@@ -72,13 +72,17 @@ const destroyPlayer = () => {
 }
 
 onMounted(() => {
+  disableOpacity()
   if (/(iPhone|iPod|iPad).*AppleWebKit/i.test(navigator.userAgent)) {
     document.documentElement.style.setProperty('--webkit-text-track-display', 'block');
   }
   Promise.all([getPoster(), prepareVideoPlayer()])
 })
 onUpdated(() => prepareVideoPlayer())
-onUnmounted(() => destroyPlayer())
+onUnmounted(() => {
+  destroyPlayer()
+  enableOpacity()
+})
 
 const getPoster = async () => {
   if (props.poster) {

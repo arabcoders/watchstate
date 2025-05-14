@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\API\System;
 
 use App\Libs\Attributes\Route\Post;
-use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\DataUtil;
@@ -60,7 +59,6 @@ final readonly class Sign
 
         return api_response(Status::OK, [
             'token' => $key,
-            'secure' => (bool)Config::get('api.secure', false),
             'expires' => makeDate()->add($expires)->format(DateTimeInterface::ATOM),
         ]);
     }

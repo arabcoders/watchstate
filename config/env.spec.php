@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Last update: 2024-05-10
  *
@@ -7,6 +8,7 @@
  * Avoid using complex datatypes, the value should be a simple scalar value.
  */
 
+use App\Libs\Config;
 use App\Libs\Exceptions\ValidationException;
 use Cron\CronExpression;
 
@@ -145,12 +147,6 @@ return (function () {
             'type' => 'bool',
         ],
         [
-            'key' => 'WS_API_AUTO',
-            'description' => 'PUBLICLY EXPOSE the api token for automated WebUI configuration. This should NEVER be enabled if WatchState is exposed to the internet.',
-            'danger' => true,
-            'type' => 'bool',
-        ],
-        [
             'key' => 'WS_CONSOLE_ENABLE_ALL',
             'description' => 'All executing all commands in the console. They must be prefixed with $',
             'type' => 'bool',
@@ -227,6 +223,51 @@ return (function () {
             'key' => 'WS_HTTP_SYNC_REQUESTS',
             'description' => 'Whether to send backend requests in parallel or sequentially.',
             'type' => 'bool',
+        ],
+        [
+            'key' => 'WS_SYSTEM_USER',
+            'description' => 'The login user name',
+            'type' => 'string',
+            'validate' => function (mixed $value): string {
+                if (!is_numeric($value) && empty($value)) {
+                    throw new ValidationException('Invalid username. Empty value.');
+                }
+
+                if (false === isValidName($value)) {
+                    throw new ValidationException(
+                        'Invalid username. Username can only contains [lower case a-z, 0-9 and _].'
+                    );
+                }
+                return $value;
+            },
+            'mask' => true,
+            'hidden' => true,
+        ],
+        [
+            'key' => 'WS_SYSTEM_PASSWORD',
+            'description' => 'The login password. The given plaintext password will be converted to hash.',
+            'type' => 'string',
+            'validate' => function (mixed $value): string {
+                if (empty($value)) {
+                    throw new ValidationException('Invalid password. Empty value.');
+                }
+
+                $prefix = Config::get('password.prefix', 'ws_hash@:');
+
+                if (true === str_starts_with($value, $prefix)) {
+                    return $value;
+                }
+
+                $hash = password_hash($value, Config::get('password.algo'), Config::get('password.options', []));
+
+                if (false === $hash) {
+                    throw new ValidationException('Invalid password. Password hashing failed.');
+                }
+
+                return $prefix . $hash;
+            },
+            'mask' => true,
+            'hidden' => true,
         ],
     ];
 

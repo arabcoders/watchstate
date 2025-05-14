@@ -8,7 +8,7 @@
 
 <script setup>
 const route = useRoute()
-const slug = ref(`${route.params.slug?.length > 0 ? route.params.slug?.join('/') : ''}`)
+const slug = ref(`${route.params.slug?.length > 0 ? route.params.slug.join('/') : ''}`)
 const url = ref('')
 onMounted(async () => {
   const to_lower = String(slug.value).toLowerCase()
@@ -19,7 +19,7 @@ onMounted(async () => {
   const special = ['faq', 'readme', 'news']
 
   if (special.includes(to_lower)) {
-    url.value = '/' + to_lower.toUpperCase() + '.md'
+    url.value = '/guides/' + to_lower.toUpperCase() + '.md'
     return
   }
 

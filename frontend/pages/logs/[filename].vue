@@ -3,7 +3,7 @@
     <div class="columns is-multiline">
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4">
-          <span class="icon"><i class="fas fa-globe" :class="{'fa-spin': isLoading }"/>&nbsp;</span>
+          <span class="icon"><i class="fas fa-globe" :class="{ 'fa-spin': isLoading }"/>&nbsp;</span>
           <NuxtLink to="/logs">Logs</NuxtLink>
           : {{ filename }}
         </span>
@@ -74,7 +74,9 @@
               </span>
             </span>
             <span v-for="item in filterItems" :key="item.id" class="is-block">
-              <span v-if="item.date">[<span class="has-tooltip" :title="item.date">{{ formatDate(item.date) }}</span>]:&nbsp;</span>
+              <span v-if="item.date">[<span class="has-tooltip" :title="item.date">{{
+                  formatDate(item.date)
+                }}</span>]:&nbsp;</span>
               <span v-if="item?.item_id"><span class="is-clickable has-tooltip" @click="goto_history_item(item)"><span
                   class="icon"><i class="fas fa-history"/></span><span>View</span></span>&nbsp;</span>
               <span>{{ item.text }}</span>
@@ -146,6 +148,7 @@ import moment from 'moment'
 import {useStorage} from '@vueuse/core'
 import {disableOpacity, enableOpacity, goto_history_item, notification, parse_api_response} from '~/utils/index'
 import request from '~/utils/request'
+import {fetchEventSource} from '@microsoft/fetch-event-source'
 
 const router = useRouter()
 const filename = useRoute().params.filename
@@ -165,12 +168,7 @@ const reachedEnd = ref(false)
 const offset = ref(0)
 let scrollTimeout = null
 
-const bg_enable = useStorage('bg_enable', true)
-const bg_opacity = useStorage('bg_opacity', 0.95)
-
-const api_path = useStorage('api_path', '/v1/api')
-const api_url = useStorage('api_url', '')
-const api_token = useStorage('api_token', '')
+const token = useStorage('token', '')
 
 watch(toggleFilter, async () => {
   if (!toggleFilter.value) {
@@ -193,6 +191,8 @@ const logContainer = ref(null)
 
 /** @type {Ref<HTMLPreElement|null>} */
 const bottomMarker = ref(null)
+
+const ctrl = new AbortController();
 
 const loadContent = async () => {
   try {
@@ -298,32 +298,42 @@ const watchLog = () => {
   }
 
   // noinspection JSValidateTypes
-  stream.value = new EventSource(`${api_url.value}${api_path.value}/log/${filename}?stream=1&apikey=${api_token.value}`)
-  stream.value.addEventListener('data', async (e) => {
-    let lines = e.data.split(/\n/g);
-    for (let x = 0; x < lines.length; x++) {
-      try {
-        const line = String(lines[x])
-        if (!line.trim()) {
-          continue
-        }
-        data.value.push(JSON.parse(line))
-
-        await nextTick(() => {
-          if (autoScroll.value && bottomMarker.value) {
-            bottomMarker.value.scrollIntoView({behavior: 'smooth'})
-          }
-        })
-      } catch (error) {
-        console.error(error)
+  stream.value = fetchEventSource(`/v1/api/log/${filename}?stream=1`, {
+    onmessage: async evt => {
+      if ('data' !== evt.event) {
+        return
       }
-    }
-  });
+
+      let lines = evt.data.split(/\n/g);
+
+      for (let x = 0; x < lines.length; x++) {
+        try {
+          const line = String(lines[x])
+          if (!line.trim()) {
+            continue
+          }
+          data.value.push(JSON.parse(line))
+
+          await nextTick(() => {
+            if (autoScroll.value && bottomMarker.value) {
+              bottomMarker.value.scrollIntoView({behavior: 'smooth'})
+            }
+          })
+        } catch (error) {
+          console.error(error)
+        }
+      }
+    },
+    headers: {
+      Authorization: `Token ${token.value}`,
+    },
+    signal: ctrl.signal,
+  })
 }
 
 const closeStream = () => {
   if (stream.value) {
-    stream.value.close()
+    ctrl.abort()
     stream.value = null
   }
 }

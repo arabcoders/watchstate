@@ -19,7 +19,7 @@
       </div>
 
       <div class="navbar-menu" :class="{ 'is-active': showMenu }">
-        <div class="navbar-start" v-if="hasAPISettings && !showConnection">
+        <div class="navbar-start">
           <NuxtLink class="navbar-item" to="/backends" @click.native="(e) => changeRoute(e)">
             <span class="icon"><i class="fas fa-server"/></span>
             <span>Backends</span>
@@ -54,22 +54,19 @@
 
             <div class="navbar-dropdown">
 
-              <NuxtLink class="navbar-item" to="/tools/plex_token" @click.native="(e) => changeRoute(e)"
-                        v-if="hasAPISettings">
+              <NuxtLink class="navbar-item" to="/tools/plex_token" @click.native="(e) => changeRoute(e)">
                 <span class="icon"><i class="fas fa-key"/></span>
                 <span>Plex Token</span>
               </NuxtLink>
 
-              <NuxtLink class="navbar-item" to="/tools/sub_users" @click.native="(e) => changeRoute(e)"
-                        v-if="hasAPISettings">
+              <NuxtLink class="navbar-item" to="/tools/sub_users" @click.native="(e) => changeRoute(e)">
                 <span class="icon"><i class="fas fa-users"/></span>
                 <span>Sub Users</span>
               </NuxtLink>
 
               <hr class="navbar-divider">
 
-              <NuxtLink class="navbar-item" to="/processes" @click.native="(e) => changeRoute(e)"
-                        v-if="hasAPISettings">
+              <NuxtLink class="navbar-item" to="/processes" @click.native="(e) => changeRoute(e)">
                 <span class="icon"><i class="fas fa-microchip"/></span>
                 <span>Processes</span>
               </NuxtLink>
@@ -123,7 +120,7 @@
             </a>
             <div class="navbar-dropdown">
 
-              <NuxtLink class="navbar-item" to="/console" @click.native="(e) => changeRoute(e)" v-if="hasAPISettings">
+              <NuxtLink class="navbar-item" to="/console" @click.native="(e) => changeRoute(e)">
                 <span class="icon"><i class="fas fa-terminal"/></span>
                 <span>Console</span>
               </NuxtLink>
@@ -152,34 +149,70 @@
           </div>
         </div>
         <div class="navbar-end pr-3">
-          <template v-if="hasAPISettings && !showConnection">
+          <template v-if="'mobile' === breakpoints.active().value">
+            <div class="navbar-item">
+              <NuxtLink class="button is-dark" to="/help">
+                <span class="icon"><i class="fas fa-circle-question"/></span>
+                <span>Guides</span>
+              </NuxtLink>
+            </div>
+
+            <div class="navbar-item">
+              <button class="button is-dark" @click="showUserSelection = !showUserSelection">
+                <span class="icon"><i class="fas fa-users"/></span>
+                <span>Change User</span>
+              </button>
+            </div>
+
+            <div class="navbar-item">
+              <button class="button is-dark" @click="showSettings = !showSettings">
+                <span class="icon"><i class="fas fa-cog"/></span>
+                <span>Settings</span>
+              </button>
+            </div>
+
+            <div class="navbar-item">
+              <button class="button is-dark" @click="logout">
+                <span class="icon"><i class="fas fa-sign-out"/></span>
+                <span>Logout</span>
+              </button>
+            </div>
+          </template>
+
+          <template v-if="'mobile' !== breakpoints.active().value">
             <div class="navbar-item">
               <NuxtLink class="button is-dark" v-tooltip="'Guides'" to="/help">
                 <span class="icon"><i class="fas fa-circle-question"/></span>
               </NuxtLink>
             </div>
 
-            <div class="navbar-item" v-if="hasAPISettings && !showConnection">
+            <div class="navbar-item">
               <button class="button is-dark" @click="showUserSelection = !showUserSelection" v-tooltip="'Change User'">
                 <span class="icon"><i class="fas fa-users"/></span>
               </button>
             </div>
+
+            <div class="navbar-item">
+              <button class="button is-dark" @click="showSettings = !showSettings"
+                      v-tooltip="'WebUI Settings'">
+                <span class="icon"><i class="fas fa-cog"/></span>
+              </button>
+            </div>
+
+            <div class="navbar-item">
+              <button class="button is-dark" @click="logout" v-tooltip="'Logout'">
+                <span class="icon"><i class="fas fa-sign-out"/></span>
+              </button>
+            </div>
           </template>
 
-          <div class="navbar-item">
-            <button class="button is-dark" @click="showConnection = !showConnection"
-                    v-tooltip="'Configure connection'">
-              <span class="icon"><i class="fas fa-cog"/></span>
-            </button>
-          </div>
         </div>
       </div>
     </nav>
     <div>
       <div>
-        <no-api v-if="!hasAPISettings"/>
-        <Connection v-if="showConnection" @update="data => handleConnection(data)"/>
-        <NuxtPage v-if="!showConnection && hasAPISettings"/>
+        <Settings v-if="showSettings"/>
+        <NuxtPage/>
       </div>
 
       <div class="columns is-multiline is-mobile mt-3">
@@ -228,14 +261,14 @@ import {useBreakpoints, useStorage} from '@vueuse/core'
 import request from '~/utils/request'
 import Markdown from '~/components/Markdown'
 import UserSelection from '~/components/UserSelection'
-import Connection from '~/components/Connection'
+import {useAuthStore} from '~/store/auth'
+import Settings from "~/components/Settings.vue";
 
 const selectedTheme = useStorage('theme', 'auto')
 const showUserSelection = ref(false)
-const showConnection = ref(false)
+const showSettings = ref(false)
 
-const api_url = useStorage('api_user', 'main')
-const api_token = useStorage('api_token', '')
+const auth = useAuthStore()
 const bg_enable = useStorage('bg_enable', true)
 const bg_opacity = useStorage('bg_opacity', 0.95)
 const api_version = ref()
@@ -299,12 +332,6 @@ const applyPreferredColorScheme = scheme => {
 onMounted(async () => {
   try {
     applyPreferredColorScheme(selectedTheme.value)
-
-    if ('' === api_token.value || '' === api_url.value) {
-      showConnection.value = true
-      return
-    }
-
     await getVersion()
     await loadImage()
   } catch (e) {
@@ -336,8 +363,6 @@ const getVersion = async () => {
   }
 }
 
-const hasAPISettings = computed(() => '' !== api_token.value && '' !== api_url.value)
-
 const closeOverlay = () => loadFile.value = ''
 
 const openMenu = e => {
@@ -360,13 +385,8 @@ const changeRoute = async (_, callback) => {
   }
 }
 
-const handleConnection = data => {
-  api_version.value = data.version
-  showConnection.value = false
-}
-
 watch(bgImage, async v => {
-  if (false === hasAPISettings.value || false === bg_enable.value) {
+  if (false === bg_enable.value) {
     return
   }
 
@@ -392,12 +412,11 @@ watch(bgImage, async v => {
 }, {immediate: true})
 
 watch(bg_opacity, v => {
-  if (false === hasAPISettings.value || false === bg_enable.value) {
+  if (false === bg_enable.value) {
     return
   }
   document.querySelector('body').setAttribute("style", `opacity: ${v}`)
 })
-watch(hasAPISettings, async () => await loadImage())
 watch(breakpoints.active(), async () => await loadImage())
 watch(bg_enable, async v => {
   if (true === v) {
@@ -423,7 +442,7 @@ watch(bg_enable, async v => {
 })
 
 const loadImage = async () => {
-  if (!bg_enable.value || !hasAPISettings) {
+  if (!bg_enable.value) {
     return
   }
 
@@ -454,6 +473,17 @@ const loadImage = async () => {
   } catch (e) {
     bgImage.value = {src: 'failed', type: bg_type}
   }
+}
+
+const logout = async () => {
+
+  if (!confirm('Logout?')) {
+    return false
+  }
+
+  auth.logout()
+
+  await navigateTo('/auth')
 }
 
 </script>
