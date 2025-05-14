@@ -1,5 +1,5 @@
-import { defineStore } from 'pinia';
-import { useStorage } from '@vueuse/core'
+import {defineStore} from 'pinia';
+import {useStorage} from '@vueuse/core'
 
 export const useAuthStore = defineStore('auth', () => {
     const state = reactive({
@@ -7,6 +7,10 @@ export const useAuthStore = defineStore('auth', () => {
     });
 
     const actions = {
+        async has_user() {
+            const req = await request('/system/auth/has_user')
+            return 200 === req.status
+        },
         async signup(username, password) {
             if (!username || !password) {
                 throw new Error('Please provide a valid username and password');
@@ -14,7 +18,7 @@ export const useAuthStore = defineStore('auth', () => {
 
             const req = await request('/system/auth/signup', {
                 method: 'POST',
-                body: JSON.stringify({ username: username, password: password })
+                body: JSON.stringify({username: username, password: password})
             })
 
             if (201 === req.status) {
@@ -34,7 +38,7 @@ export const useAuthStore = defineStore('auth', () => {
             try {
                 const response = await request(`/system/auth/login`, {
                     method: 'POST',
-                    body: JSON.stringify({ username: username, password: password }),
+                    body: JSON.stringify({username: username, password: password}),
                 });
 
                 const json = await parse_api_response(response)
@@ -57,13 +61,13 @@ export const useAuthStore = defineStore('auth', () => {
                 this.loading = false;
             }
         }, async logout() {
-            const token = useStorage('api_token', null);
+            const token = useStorage('token', null);
             this.authenticated = false;
             token.value = null;
             return true
         }, async validate(token) {
             try {
-                const response = await request('/system/auth/me', {
+                const response = await request('/system/auth/user', {
                     method: 'GET',
                     headers: {
                         Authorization: 'Token ' + token,
@@ -87,5 +91,5 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
 
-    return { ...toRefs(state), ...actions };
+    return {...toRefs(state), ...actions};
 });

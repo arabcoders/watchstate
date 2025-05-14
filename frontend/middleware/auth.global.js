@@ -1,6 +1,6 @@
-import { storeToRefs } from 'pinia'
-import { useAuthStore } from '~/store/auth'
-import { useStorage } from '@vueuse/core'
+import {storeToRefs} from 'pinia'
+import {useAuthStore} from '~/store/auth'
+import {useStorage} from '@vueuse/core'
 
 let next_check = 0
 
@@ -9,13 +9,13 @@ export default defineNuxtRouteMiddleware(async to => {
         return
     }
 
-    const { authenticated } = storeToRefs(useAuthStore())
+    const {authenticated} = storeToRefs(useAuthStore())
     const token = useStorage('token', null)
 
     if (token.value) {
         if (Date.now() > next_check) {
             console.debug('Validating user token...')
-            const { validate } = useAuthStore()
+            const {validate} = useAuthStore()
             if (!await validate(token.value)) {
                 token.value = null
                 abortNavigation()

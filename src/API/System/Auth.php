@@ -10,6 +10,7 @@ use App\Libs\Config;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Middlewares\AuthorizationMiddleware;
 use App\Libs\TokenUtil;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
@@ -31,7 +32,7 @@ final class Auth
         return api_response(empty($user) || empty($password) ? Status::NO_CONTENT : Status::OK);
     }
 
-    #[Get(self::URL . '/me[/]', name: 'system.auth.me')]
+    #[Get(self::URL . '/user[/]', name: 'system.auth.user')]
     public function me(iRequest $request): iResponse
     {
         $user = Config::get('system.user');
@@ -41,22 +42,28 @@ final class Auth
             return api_error('System user or password is not configured.', Status::INTERNAL_SERVER_ERROR);
         }
 
+        $token = null;
         foreach ($request->getHeader('Authorization') as $auth) {
             [$type, $value] = explode(' ', $auth, 2);
             $type = strtolower(trim($type));
 
-            if (false === in_array($type, ['bearer', 'token'])) {
+            if ('token' !== $type) {
                 continue;
             }
 
-            $tokens[$type] = trim($value);
+            $token = trim($value);
+            break;
         }
 
-        if (empty($tokens['token'])) {
+        if (empty($token) && ag_exists($request->getQueryParams(), AuthorizationMiddleware::TOKEN_NAME)) {
+            $token = ag($request->getQueryParams(), AuthorizationMiddleware::TOKEN_NAME);
+        }
+
+        if (empty($token)) {
             return api_error('This endpoint only works with user tokens.', Status::UNAUTHORIZED);
         }
 
-        $token = rawurldecode($tokens['token']);
+        $token = rawurldecode($token);
 
         try {
             $decoded = TokenUtil::decode($token);
@@ -80,6 +87,13 @@ final class Auth
 
         try {
             $payload = json_decode($payload, true, flags: JSON_THROW_ON_ERROR);
+            $tokenUser = ag($payload, 'username', fn() => TokenUtil::generateSecret());
+            $systemUser = Config::get('system.user', fn() => TokenUtil::generateSecret());
+
+            if (false === hash_equals($systemUser, $tokenUser)) {
+                return api_error('Invalid token.', Status::UNAUTHORIZED);
+            }
+
             return api_response(Status::OK, [
                 'username' => ag($payload, 'username', '??'),
                 'created_at' => makeDate(ag($payload, 'iat', 0)),
@@ -169,9 +183,7 @@ final class Auth
             return api_error('Failed to encode token.', Status::INTERNAL_SERVER_ERROR);
         }
 
-        if (false === ($token = TokenUtil::encode(TokenUtil::sign($token) . '.' . $token))) {
-            return api_error('Failed to sign token.', Status::INTERNAL_SERVER_ERROR);
-        }
+        $token = TokenUtil::encode(TokenUtil::sign($token) . '.' . $token);
 
         return api_response(Status::OK, ['token' => $token]);
     }
