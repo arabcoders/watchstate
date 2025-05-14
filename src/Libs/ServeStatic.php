@@ -20,7 +20,7 @@ final class ServeStatic implements LoggerAwareInterface
     use LoggerAwareTrait;
 
     private finfo|null $mimeType = null;
-    
+
     private const array CONTENT_TYPE = [
         'css' => 'text/css; charset=utf-8',
         'js' => 'text/javascript; charset=utf-8',
@@ -39,6 +39,9 @@ final class ServeStatic implements LoggerAwareInterface
         '/NEWS.md' => __DIR__ . '/../../NEWS.md',
         '/FAQ.md' => __DIR__ . '/../../FAQ.md',
         '/CHANGELOG.md' => __DIR__ . '/../../CHANGELOG.md',
+        '/guides/README.md' => __DIR__ . '/../../README.md',
+        '/guides/NEWS.md' => __DIR__ . '/../../NEWS.md',
+        '/guides/FAQ.md' => __DIR__ . '/../../FAQ.md',
     ];
 
     private const array MD_IMAGES = [

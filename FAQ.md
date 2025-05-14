@@ -1,57 +1,5 @@
 # FAQ
 
-# How to find the API key?
-
-There are two ways to locate the API key:
-
-## Via `.env` file
-
-The API key is stored in the following file `/config/config/.env`, Open the file and look for the line starting with:
-
-```
-WS_API_KEY=random_string
-```
-
-The value after the equals sign is your API key.
-
-## Via command
-
-You can also retrieve the API key by running the following command on the docker host machine:
-
-```bash
-docker exec watchstate console system:apikey
-```
-
-This command will show the following lines:
-
-```
-Current API key:
-random_string
-```
-
-The `random_string` is your API key.
-
-----
-
-# What Is the API key used for?
-
-The API key is used to authenticate requests to the system and prevent unauthorized access.
-
-It is required for all API endpoints, **except** the following:
-
-```
-/v1/api/[user@backend_name]/webhook
-```
-
-This webhook endpoint is open by default, unless you have enabled the `WS_SECURE_API_ENDPOINTS` environment variable.  
-If enabled, the API key will also be required for webhook access.
-
-> [!IMPORTANT]
-> The WebUI operates in standalone mode and is decoupled from the backend, so it requires the API key to fetch and
-> display data.
-
-----
-
 # How to enable scheduled/automatic tasks?
 
 To turn on automatic import or export tasks:
@@ -351,7 +299,7 @@ If there are no errors, the database has been repaired successfully. And you can
 
 ---
 
-# Which external db ids `GUIDS` supported for Plex Media Server?
+# Which Providers id `GUIDs` supported for Plex Media Server?
 
 * tvdb://(id) `New plex agent`
 * imdb://(id) `New plex agent`
@@ -371,7 +319,7 @@ If there are no errors, the database has been repaired successfully. And you can
 
 ---
 
-# Which external db ids supported for Jellyfin and Emby?
+# Which Providers id supported for Jellyfin and Emby?
 
 * imdb://(id)
 * tvdb://(id)
@@ -390,15 +338,14 @@ If there are no errors, the database has been repaired successfully. And you can
 
 # Environment Variables
 
-The recommended approach is for keys that starts with `WS_` use the `WebUI > Env` page, or `system:env` command via CLI.
-For other keys that aren't directly related to the tool, you **MUST** load them via container environment or
-the `compose.yaml` file.
+The recommended approach is for keys that starts with `WS_` use the `WebUI > Env` page. For other keys that aren't
+directly related to the tool, you **MUST** load them via container environment or the `compose.yaml` file.
 
 to see list of loaded environment variables, click on `Env` page in the WebUI.
 
-## Tool specific environment variables.
+## WatchState specific environment variables.
 
-These environment variables relates to the tool itself, You should manage them via `WebUI > Env` page
+Should be added/managed via the `WebUI > Env` page.
 
 | Key                     | Type    | Description                                                             | Default                  |
 |-------------------------|---------|-------------------------------------------------------------------------|--------------------------|
@@ -418,13 +365,11 @@ These environment variables relates to the tool itself, You should manage them v
 | WS_CACHE_URL            | string  | Cache server URL.                                                       | `redis://127.0.0.1:6379` |
 | WS_SECURE_API_ENDPOINTS | bool    | Disregard the open route policy and require API key for all endpoints.  | `false`                  |
 
-> [!IMPORTANT]
+> [!NOTE]
 > for environment variables that has `{TASK}` tag, you **MUST** replace it with one of `IMPORT`, `EXPORT`, `BACKUP`,
 `PRUNE`, `INDEXES` or `VALIDATE`.
-
-## Add tool specific environment variables
-
-Go to the `Env` page, click `+` button, you will get list of all supported keys with description.
+>
+> Note, those are just sample of the environment variables, to see the entire, please visit the `Env` page in the WebUI.
 
 ## Container specific environment variables.
 
@@ -432,21 +377,17 @@ Go to the `Env` page, click `+` button, you will get list of all supported keys 
 > These environment variables relates to the container itself, and MUST be added via container environment or by
 > the `compose.yaml` file.
 
-| Key           | Type    | Description                          | Default  |
-|---------------|---------|--------------------------------------|----------|
-| WEBUI_ENABLED | bool    | Enable WebUI. Value casted to a bool | `true`   |
-| DISABLE_HTTP  | integer | Disable included `HTTP Server`.      | `0`      |
-| DISABLE_CRON  | integer | Disable included `Task Scheduler`.   | `0`      |
-| DISABLE_CACHE | integer | Disable included `Cache Server`.     | `0`      |
-| HTTP_PORT     | string  | Change the `HTTP` listen port.       | `"8080"` |
-| FPM_PORT      | string  | Change the `PHP-FPM` listen port.    | `"9000"` |
+| Key           | Type    | Description                        | Default  |
+|---------------|---------|------------------------------------|----------|
+| DISABLE_HTTP  | integer | Disable included `HTTP Server`.    | `0`      |
+| DISABLE_CRON  | integer | Disable included `Task Scheduler`. | `0`      |
+| DISABLE_CACHE | integer | Disable included `Cache Server`.   | `0`      |
+| HTTP_PORT     | string  | Change the `HTTP` listen port.     | `"8080"` |
+| FPM_PORT      | string  | Change the `PHP-FPM` listen port.  | `"9000"` |
 
 > [!NOTE]
 > You need to restart the container after changing these environment variables. those variables are not managed by the
 > WatchState tool, they are managed by the container itself.
-
----
-
 
 ---
 
@@ -620,107 +561,6 @@ jellyfin devs fixes the issue. Please take look at the webhooks section to enabl
 
 ---
 
-# Bare metal installation
-
-We officially only support the docker container, however for the brave souls who want to install the tool directly on
-their server, You can follow these steps.
-
-## Requirements
-
-* [PHP 8.4](http://https://www.php.net/downloads.php) with both the `CLI` and `fpm` mode.
-* PHP Extensions `pdo`, `pdo-sqlite`, `mbstring`, `json`, `ctype`, `curl`, `redis`, `sodium` and `simplexml`.
-* [Composer](https://getcomposer.org/download/) for dependency management.
-* [Redis-server](https://redis.io/) for caching or a compatible implementation that works
-  with [php-redis](https://github.com/phpredis/phpredis).
-* [Caddy](https://caddyserver.com/) for frontend handling. However, you can use whatever you like. As long as it has
-  support for fastcgi.
-* [Node.js v20+](https://nodejs.org/en/download/) for `WebUI` compilation.
-
-## Installation
-
-* Clone the repository.
-
-```bash
-$ git clone https://github.com/arabcoders/watchstate.git
-```
-
-* Install the dependencies.
-
-```bash
-$ cd watchstate
-$ composer install --no-dev 
-```
-
-* If you your redis server on external server, run the following command
-
-```bash
-$ ./bin/console system:env -k WS_CACHE_URL -e '"redis://127.0.0.1:6379?password=your_password"'
-```
-
-Change the connection string to match your redis server.
-
-* Compile the `WebUI`.
-
-First you need to install `yarn` as it's our package manager of choice.
-
-```bash
-$ npm -g install yarn
-```
-
-Once that is done you are ready to compile the `WebUI`.
-
-```bash
-$ cd frontend
-$ yarn install --production --prefer-offline --frozen-lockfile && yarn run generate
-```
-
-There should be a new directory called `exported`, you need to move that folder to the `public` directory.
-
-```bash
-$ mv exported ../public
-```
-
-If you do `ls ../public` you should see the following contents
-
-```bash
-ws:/opt/app/public$ ls
-exported   index.php
-```
-
-There must be exactly one `index.php` file and one `exported` directory. inside that directory, or if you prefer, you
-can add `WS_WEBUI_PATH` environment variable to point to the `exported` directory.
-
-* link the app to the frontend proxy. For caddy, you can use the following configuration.
-
-> [!NOTE]
-> frontend server is needed All the `API`, `WebUI` and `Webhooks` operations.
-
-```Caddyfile
-http://watchstate.example.org {
-    # Change "[user]" to your user name.
-    root * /home/[user]/watchstate/public
-        
-    # Change "unix//var/run/php/php8.3-fpm.sock" to your php-fpm socket.
-    php_fastcgi unix//var/run/php/php8.3-fpm.sock
-}
-```
-
-* To access the console you can run the following command.
-
-```bash
-$ ./bin/console help
-```
-
-* To make the tasks scheduler work you need to add the following to your crontab.
-
-```crontab
-* * * * * /home/[user]/watchstate/bin/console system:tasks --run --save-log
-```
-
-For more information, please refer to the [Dockerfile](/Dockerfile). On how we do things to get the tool running.
-
----
-
 # How does the file integrity feature works?
 
 The feature first scan your entire history for reported media file paths. Depending on the results we do the following:
@@ -875,58 +715,22 @@ database indexes with the new guids.
 # Sync watch progress.
 
 In order to sync the watch progress between media backends, you need to enable the following environment variable
-`WS_SYNC_PROGRESS` in `(WebUI) > Env` page or via the cli using the following command:
-
-```bash
-$ docker exec -ti watchstate console system:env -k WS_SYNC_PROGRESS -e true
-```
+`WS_SYNC_PROGRESS` in `WebUI > Env` page.
 
 For best experience, you should enable the [webhook](guides/webhooks.md) feature for the media backends you want to sync
-the watch
-progress,
-however, if you are unable to do so, the `Tasks > import` task will also generate progress watch events. However, it's
-not as reliable as the `Webhooks` or as fast. using `Webhooks` is the recommended way and offers the best experience.
+the watch progress, however, if you are unable to do so, the `Tasks > import` task will also generate progress watch
+events. However, it's not as reliable as the `Webhooks` or as fast. using `Webhooks` is the recommended way and offers
+the best experience.
 
-To check if there is any watch progress events being registered, You can go to `(WebUI) > More > Events` and check
+To check if there is any watch progress events being registered, You can go to `WebUI > More > Events` and check
 `on_progress` events, if you are seeing those, this means the progress is being synced. Check the `Tasks logs` to see
 the event log.
 
 If this is setup and working you may be ok with changing the `WS_CRON_IMPORT_AT/WS_CRON_EXPORT_AT` schedule to something
-less frequenet as
-the sync progress working will update the progress near realtime. For example you could change these tasks to run daily
-instead of hourly.
+less frequent as the sync progress working will update the progress near realtime. For example you could change these
+tasks to run daily instead of hourly.
 
 ```
 WS_CRON_IMPORT_AT=0 11 * * *
 WS_CRON_EXPORT_AT=30 11 * * *
 ```
-
----
-
-# Sub users support.
-
-### API/WebUI endpoints that supports sub users.
-
-These endpoints support sub-users via `?user=username` query parameter, or via `X-User` header. The recommended
-approach is to use the header.
-
-* `/v1/api/backend/*`.
-* `/v1/api/system/parity`.
-* `/v1/api/system/integrity`.
-* `/v1/api/ignore/*`.
-* `/v1/api/history/*`.
-
-### CLI commands that supports sub users.
-
-These commands sub users can via `[-u, --user]` option flag.
-
-* `state:import`.
-* `state:export`.
-* `state:backup`.
-* `config:list`.
-* `config:view`.
-* `config:edit`.
-* `db:list`.
-* `backend:restore`.
-* `backend:ignore:*`.
-

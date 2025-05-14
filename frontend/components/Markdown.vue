@@ -73,7 +73,6 @@
 </template>
 
 <script setup>
-import {useStorage} from '@vueuse/core'
 import {marked} from 'marked'
 import {baseUrl} from 'marked-base-url'
 import markedAlert from 'marked-alert'
@@ -88,7 +87,6 @@ const props = defineProps({
 });
 
 const content = ref('')
-const api_url = useStorage('api_url', '')
 const error = ref('')
 const isLoading = ref(true)
 
@@ -138,7 +136,7 @@ const removeListeners = () => {
 onMounted(async () => {
   try {
     isLoading.value = true
-    const response = await fetch(`${api_url.value}${props.file}?_=${Date.now()}`)
+    const response = await fetch(`${props.file}?_=${Date.now()}`)
     if (!response.ok) {
       const err = await parse_api_response(response)
       console.log(err)
@@ -148,36 +146,15 @@ onMounted(async () => {
 
     const text = await response.text()
 
-    marked.use(baseUrl(api_url.value))
+    marked.use(baseUrl(window.origin))
     marked.use(markedAlert());
     marked.use({
       gfm: true,
       hooks: {
-        postprocess: (text) => {
-          //   // -- replace GitHub [! with icon
-          //   text = text.replace(/\[!IMPORTANT]/g, `
-          // <span class="is-block title mb-2 is-5">
-          //     <span class="icon-text">
-          //         <span class="icon"><i class="fas fa-exclamation-triangle has-text-danger"></i></span>
-          //         <span>IMPORTANT</span>
-          //     </span>
-          // </span>`)
-          //
-          //   text = text.replace(/\[!NOTE]/g, `
-          // <span class="is-block title is-5">
-          //     <span class="icon-text">
-          //         <span class="icon"><i class="fas fa-info has-text-info-50"></i></span>
-          //         <span>NOTE</span>
-          //     </span>
-          // </span>`)
-
-          text = text.replace(
-              /<!--\s*?i:([\w.-]+)\s*?-->/gi,
-              (_, list) => `<span class="icon"><i class="fas ${list.split('.').map(n => n.trim()).join(' ')}"></i></span>`
-          );
-
-          return text
-        }
+        postprocess: (text) => text.replace(
+            /<!--\s*?i:([\w.-]+)\s*?-->/gi,
+            (_, list) => `<span class="icon"><i class="fas ${list.split('.').map(n => n.trim()).join(' ')}"></i></span>`
+        )
       },
       walkTokens: token => {
         if ('link' !== token.type) {
@@ -187,16 +164,19 @@ onMounted(async () => {
         if (true === token.href.startsWith('#')) {
           return;
         }
-        const urls = ['/FAQ.md', '/README.md', '/NEWS.md'];
-        const list = ['/guides/', ...urls];
+        const urls = ['FAQ.md', 'README.md', 'NEWS.md'];
+        const list = ['guides/', ...urls];
         if (false === list.some(l => token.href.includes(l))) {
           return;
         }
 
         if (urls.some(l => token.href.includes(l))) {
-          const url = new URL(token.href);
+          if (!token.href.startsWith('/')) {
+            token.href = '/' + token.href;
+          }
+          const url = new URL(window.origin + token.href);
           url.pathname = `/guides${url.pathname}`;
-          token.href = url.pathname;
+          token.href = url.toString();
         }
 
         token.href = token.href.replace('/guides/', '/help/').replace('.md', '');

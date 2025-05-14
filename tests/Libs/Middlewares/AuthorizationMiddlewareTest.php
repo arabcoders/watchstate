@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Libs\Middlewares;
 
-use App\API\System\AutoConfig;
+use App\API\System\Auth;
 use App\API\System\HealthCheck;
 use App\Libs\Config;
 use App\Libs\Enums\Http\Method;
@@ -38,19 +38,20 @@ class AuthorizationMiddlewareTest extends TestCase
             handler: $this->getHandler()
         );
 
-        $this->assertSame(Status::OK->value, $result->getStatusCode(), 'Options request failed');
+        $this->assertSame(Status::OK, Status::from($result->getStatusCode()), 'Options request failed');
     }
 
     public function test_open_routes()
     {
+        Config::save('api.prefix', '/v1/api');
+
         $routes = [
             HealthCheck::URL,
-            AutoConfig::URL,
+            Auth::URL . '/test'
         ];
 
         $routesSemiOpen = [
             '/webhook',
-            '%{api.prefix}/player/',
         ];
 
         foreach ($routes as $route) {
@@ -59,7 +60,7 @@ class AuthorizationMiddlewareTest extends TestCase
                 request: $this->getRequest(uri: $uri),
                 handler: $this->getHandler()
             );
-            $this->assertSame(Status::OK->value, $result->getStatusCode(), "Open route '{$route}' failed");
+            $this->assertSame(Status::OK, Status::from($result->getStatusCode()), "Open route '{$uri}' failed");
         }
 
         foreach ($routesSemiOpen as $route) {
@@ -68,7 +69,7 @@ class AuthorizationMiddlewareTest extends TestCase
                 request: $this->getRequest(uri: $uri),
                 handler: $this->getHandler()
             );
-            $this->assertSame(Status::OK->value, $result->getStatusCode(), "Open route '{$route}' failed");
+            $this->assertSame(Status::OK, Status::from($result->getStatusCode()), "Open route '{$uri}' failed");
         }
 
         Config::save('api.secure', true);
@@ -80,9 +81,9 @@ class AuthorizationMiddlewareTest extends TestCase
                 handler: $this->getHandler()
             );
             $this->assertSame(
-                Status::BAD_REQUEST->value,
-                $result->getStatusCode(),
-                "Route '{$route}' should fail without API key"
+                Status::BAD_REQUEST,
+                Status::from($result->getStatusCode()),
+                "Route '{$uri}' should fail without API key"
             );
         }
 
@@ -93,9 +94,9 @@ class AuthorizationMiddlewareTest extends TestCase
                 handler: $this->getHandler()
             );
             $this->assertSame(
-                Status::UNAUTHORIZED->value,
-                $result->getStatusCode(),
-                "Route '{$route}' should fail without correct API key"
+                Status::UNAUTHORIZED,
+                Status::from($result->getStatusCode()),
+                "Route '{$uri}' should fail without correct API key"
             );
         }
 
@@ -110,9 +111,9 @@ class AuthorizationMiddlewareTest extends TestCase
                 handler: $this->getHandler()
             );
             $this->assertSame(
-                Status::OK->value,
-                $result->getStatusCode(),
-                "Route '{$route}' should pass with correct API key"
+                Status::OK,
+                Status::from($result->getStatusCode()),
+                "Route '{$uri}' should pass with correct API key"
             );
         }
 

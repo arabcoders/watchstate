@@ -23,6 +23,12 @@ final class Auth
 
     public const string URL = '%{api.prefix}/system/auth';
 
+    #[Get(self::URL . '/test[/]', name: 'system.auth.test')]
+    public function test_open(): iResponse
+    {
+        return api_response(Status::OK);
+    }
+
     #[Get(self::URL . '/has_user[/]', name: 'system.auth.has_user')]
     public function has_user(): iResponse
     {
