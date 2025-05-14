@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250513-1cbd558",
-        "date": "2025-05-13T19:18:35+00:00",
+        "tag": "dev-20250514-7fabe35",
+        "date": "2025-05-14T17:53:01+00:00",
         "commits": [
+            {
+                "sha": "f396acc",
+                "message": "add conditions to Tautulli webhooks",
+                "author": "Splinter7914",
+                "date": "2025-05-14T16:05:40+00:00"
+            },
             {
                 "sha": "1cbd558",
                 "message": "Update the Add backend flow to be more dynamic with the yes/no for options.",
