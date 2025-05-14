@@ -128,7 +128,8 @@ import {FitAddon} from "@xterm/addon-fit"
 import {useStorage} from '@vueuse/core'
 import {disableOpacity, enableOpacity, notification} from '~/utils/index'
 import Message from '~/components/Message'
-import request from "~/utils/request.js";
+import request from "~/utils/request.js"
+import {fetchEventSource} from '@microsoft/fetch-event-source'
 
 useHead({title: `Console`})
 
@@ -150,11 +151,10 @@ const hasPrefix = computed(() => command.value.startsWith('console') || command.
 const hasPlaceholder = computed(() => command.value && command.value.match(/\[.*]/))
 const show_page_tips = useStorage('show_page_tips', true)
 const allEnabled = ref(false)
+const ctrl = new AbortController();
 
 const RunCommand = async () => {
-  const api_path = useStorage('api_path', '/v1/api')
-  const api_url = useStorage('api_url', '')
-  const api_token = useStorage('api_token', '')
+  const token = useStorage('token', '')
 
   /** @type {string} */
   let userCommand = command.value
@@ -200,7 +200,7 @@ const RunCommand = async () => {
   }
 
   isLoading.value = true
-  let token;
+  let commandToken;
 
   try {
     const response = await request('/system/command', {
@@ -215,29 +215,54 @@ const RunCommand = async () => {
       return;
     }
 
-    token = json.token
+    commandToken = json.token
   } catch (e) {
     await finished()
     notification('error', 'Error', e.message, 5000)
     return;
   }
 
-  sse = new EventSource(`${api_url.value}${api_path.value}/system/command/${token}?apikey=${api_token.value}`)
+  sse = fetchEventSource(`/v1/api/system/command/${commandToken}`, {
+    signal: ctrl.signal,
+    headers: {'Authorization': `Token ${token.value}`},
+    async onmessage(evt) {
+      switch (evt.event) {
+        case 'data':
+          terminal.value.write(JSON.parse(evt.data).data)
+          break
+        case 'close':
+          await finished()
+          break
+        case 'exit_code':
+          exitCode.value = parseInt(evt.data)
+          break
+        default:
+          break
+      }
+    },
+    async onopen(response) {
+      if (response.ok) {
+        return
+      }
+
+      const json = await parse_api_response(response)
+      const message = `${json.error.code}: ${json.error.message}`
+      notification('error', 'Error', message, 3000)
+      await finished()
+    },
+    async onerror() {
+      await finished()
+    },
+  })
 
   if ('' !== command.value) {
     terminal.value.writeln(`(${exitCode.value}) ~ ${userCommand}`)
   }
-
-  sse.addEventListener('data', async e => terminal.value.write(JSON.parse(e.data).data))
-  sse.addEventListener('close', async () => finished())
-  sse.addEventListener('exit_code', async e => exitCode.value = e.data)
-  sse.onclose = async () => finished()
-  sse.onerror = async () => finished()
 }
 
 const finished = async () => {
   if (sse) {
-    sse.close()
+    ctrl.abort();
   }
 
   isLoading.value = false
@@ -287,7 +312,7 @@ const clearOutput = async () => {
 onUnmounted(() => {
   window.removeEventListener("resize", reSizeTerminal)
   if (sse) {
-    sse.close()
+    ctrl.abort();
   }
   enableOpacity()
 })
