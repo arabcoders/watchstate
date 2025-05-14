@@ -1,5 +1,17 @@
 [
     {
+        "tag": "master-20250514-7fabe35",
+        "date": "2025-05-14T17:53:01+00:00",
+        "commits": [
+            {
+                "sha": "f396acc",
+                "message": "add conditions to Tautulli webhooks",
+                "author": "Splinter7914",
+                "date": "2025-05-14T16:05:40+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250513-57580fb",
         "date": "2025-05-13T19:24:30+00:00",
         "commits": [
