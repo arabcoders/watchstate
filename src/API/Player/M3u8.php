@@ -15,7 +15,7 @@ use Psr\SimpleCache\InvalidArgumentException;
 
 final readonly class M3u8
 {
-    public const string URL = '%{api.prefix}/player/m3u8';
+    public const string URL = Index::URL . '/m3u8';
 
     public function __construct(private iCache $cache)
     {

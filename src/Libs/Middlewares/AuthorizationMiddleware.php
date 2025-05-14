@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Libs\Middlewares;
 
+use App\API\Player\Index as PlayerIndex;
 use App\API\System\Auth;
-use App\API\System\AutoConfig;
 use App\API\System\HealthCheck;
 use App\Libs\Config;
 use App\Libs\Enums\Http\Method;
@@ -20,14 +20,15 @@ use Throwable;
 final class AuthorizationMiddleware implements MiddlewareInterface
 {
     public const string KEY_NAME = 'apikey';
+    public const string TOKEN_NAME = 'ws_token';
 
     /**
      * Public routes that are accessible without an API key. and must remain open.
      */
     private const array PUBLIC_ROUTES = [
         HealthCheck::URL,
-        AutoConfig::URL,
         Auth::URL,
+        PlayerIndex::URL,
     ];
 
     /**
@@ -35,7 +36,6 @@ final class AuthorizationMiddleware implements MiddlewareInterface
      */
     private const array OPEN_ROUTES = [
         '/webhook',
-        '%{api.prefix}/player/'
     ];
 
     public function process(iRequest $request, iHandler $handler): iResponse
@@ -68,7 +68,7 @@ final class AuthorizationMiddleware implements MiddlewareInterface
             return api_error('Authorization is required to access the API.', Status::BAD_REQUEST);
         }
 
-        if (array_any($tokens, fn ($token, $type) => true === $this->validate($type, $token))) {
+        if (array_any($tokens, fn($token, $type) => true === $this->validate($type, $token))) {
             return $handler->handle($request);
         }
 
@@ -81,7 +81,7 @@ final class AuthorizationMiddleware implements MiddlewareInterface
             return false;
         }
 
-        if ('token' === $type) {
+        if ('token' === $type || 'ws_token' === $type) {
             return $this->validateToken($token);
         }
 
@@ -128,7 +128,7 @@ final class AuthorizationMiddleware implements MiddlewareInterface
 
         try {
             $payload = json_decode($payload, true, flags: JSON_THROW_ON_ERROR);
-            $rand = fn () => TokenUtil::generateSecret();
+            $rand = fn() => TokenUtil::generateSecret();
             $systemUser = (string)Config::get('system.user', $rand);
             $payloadUser = (string)ag($payload, 'username', $rand);
 
@@ -160,6 +160,10 @@ final class AuthorizationMiddleware implements MiddlewareInterface
             $tokens['param'] = ag($request->getQueryParams(), self::KEY_NAME);
         }
 
+        if (true === ag_exists($request->getQueryParams(), self::TOKEN_NAME)) {
+            $tokens['ws_token'] = ag($request->getQueryParams(), self::TOKEN_NAME);
+        }
+
         foreach ($request->getHeader('Authorization') as $auth) {
             [$type, $value] = explode(' ', $auth, 2);
             $type = strtolower(trim($type));
@@ -171,6 +175,6 @@ final class AuthorizationMiddleware implements MiddlewareInterface
             $tokens[$type] = trim($value);
         }
 
-        return array_unique(array_map(fn ($val) => rawurldecode($val), $tokens));
+        return array_unique(array_map(fn($val) => rawurldecode($val), $tokens));
     }
 }

@@ -337,16 +337,7 @@ const generateToken = async () => {
       return;
     }
 
-    const api_path = useStorage('api_path', '/v1/api').value
-    const api_url = useStorage('api_url', '').value
-
-    let url = `${api_url}${api_path}/player/playlist/${json.token}/master.m3u8`
-
-    if (true === json?.secure) {
-      url = `${url}?apikey=${useStorage('api_token', '').value}`
-    }
-
-    playUrl.value = url
+    playUrl.value = `/v1/api/player/playlist/${json.token}/master.m3u8`
     isPlaying.value = true
 
     await useRouter().push({
