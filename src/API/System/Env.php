@@ -33,6 +33,10 @@ final class Env
                 continue;
             }
 
+            if (true === (bool)ag($info, 'hidden', false)) {
+                continue;
+            }
+
             $info['value'] = $this->setType($info, $this->envFile->get($info['key']));
         }
 
@@ -50,11 +54,14 @@ final class Env
             if (array_key_exists('validate', $info)) {
                 unset($info['validate']);
             }
+            if (true === (bool)ag($info, 'hidden', false)) {
+                continue;
+            }
             $list[] = $info;
         }
 
         if (true === (bool)$params->get('set', false)) {
-            $list = array_filter($list, fn ($info) => $this->envFile->has($info['key']));
+            $list = array_filter($list, fn($info) => $this->envFile->has($info['key']));
         }
 
         return api_response(Status::OK, [
@@ -82,7 +89,7 @@ final class Env
 
         return api_response(Status::OK, [
             'key' => $key,
-            'value' => $this->settype($spec, ag($spec, 'value', fn () => $this->envFile->get($key))),
+            'value' => $this->settype($spec, ag($spec, 'value', fn() => $this->envFile->get($key))),
             'description' => ag($spec, 'description'),
             'type' => ag($spec, 'type'),
             'mask' => (bool)ag($spec, 'mask', false),
@@ -103,12 +110,17 @@ final class Env
             return api_error(r("Invalid key '{key}' was given.", ['key' => $key]), Status::BAD_REQUEST);
         }
 
+        $isHidden = true === (bool)ag($spec, 'hidden', false);
+        if ($isHidden && false === $request->getAttribute('INTERNAL_REQUEST', false)) {
+            return api_error(r("Key '{key}' is not set.", ['key' => $key]), Status::NOT_FOUND);
+        }
+
         if ('DELETE' === $request->getMethod()) {
             $this->envFile->remove($key)->persist();
 
             return api_response(Status::OK, [
                 'key' => $key,
-                'value' => $this->setType($spec, ag($spec, 'value', fn () => $this->envFile->get($key))),
+                'value' => $this->setType($spec, ag($spec, 'value', fn() => $this->envFile->get($key))),
                 'description' => ag($spec, 'description'),
                 'type' => ag($spec, 'type'),
                 'mask' => (bool)ag($spec, 'mask', false),

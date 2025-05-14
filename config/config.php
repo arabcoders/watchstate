@@ -18,13 +18,13 @@ use Monolog\Level;
 
 return (function () {
     $inContainer = inContainer();
-    $progressTimeCheck = fn (int $v, int $d): int => 0 === $v || $v >= 180 ? $v : $d;
+    $progressTimeCheck = fn(int $v, int $d): int => 0 === $v || $v >= 180 ? $v : $d;
 
     $config = [
         'name' => 'WatchState',
         'version' => '$(version_via_ci)',
         'tz' => env('WS_TZ', env('TZ', 'UTC')),
-        'path' => fixPath(env('WS_DATA_PATH', fn () => $inContainer ? '/config' : __DIR__ . '/../var')),
+        'path' => fixPath(env('WS_DATA_PATH', fn() => $inContainer ? '/config' : __DIR__ . '/../var')),
         'logs' => [
             'context' => (bool)env('WS_LOGS_CONTEXT', false),
             'prune' => [
@@ -35,7 +35,6 @@ return (function () {
             'prefix' => '/v1/api',
             'key' => env('WS_API_KEY', null),
             'secure' => (bool)env('WS_SECURE_API_ENDPOINTS', false),
-            'auto' => (bool)env('WS_API_AUTO', false),
             'pattern_match' => [
                 'backend' => '[a-zA-Z0-9_\-]+',
                 'ubackend' => '[a-zA-Z0-9_\-\@]+',
@@ -45,7 +44,7 @@ return (function () {
                 'encode' => JSON_INVALID_UTF8_IGNORE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
                 'headers' => [
                     'Content-Type' => 'application/json',
-                    'X-Application-Version' => fn () => getAppVersion(),
+                    'X-Application-Version' => fn() => getAppVersion(),
                     'Access-Control-Allow-Origin' => '*',
                 ],
             ],
@@ -155,14 +154,14 @@ return (function () {
 
     $config['profiler'] = [
         'save' => (bool)env('WS_PROFILER_SAVE', true),
-        'path' => env('WS_PROFILER_PATH', fn () => ag($config, 'tmpDir') . '/profiler'),
+        'path' => env('WS_PROFILER_PATH', fn() => ag($config, 'tmpDir') . '/profiler'),
         'collector' => env('WS_PROFILER_COLLECTOR', null),
     ];
 
     $config['cache'] = [
         'prefix' => env('WS_CACHE_PREFIX', null),
         'url' => env('WS_CACHE_URL', 'redis://127.0.0.1:6379'),
-        'path' => env('WS_CACHE_PATH', fn () => ag($config, 'tmpDir') . '/cache'),
+        'path' => env('WS_CACHE_PATH', fn() => ag($config, 'tmpDir') . '/cache'),
     ];
 
     $config['logger'] = [

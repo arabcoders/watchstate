@@ -147,12 +147,6 @@ return (function () {
             'type' => 'bool',
         ],
         [
-            'key' => 'WS_API_AUTO',
-            'description' => 'PUBLICLY EXPOSE the api token for automated WebUI configuration. This should NEVER be enabled if WatchState is exposed to the internet.',
-            'danger' => true,
-            'type' => 'bool',
-        ],
-        [
             'key' => 'WS_CONSOLE_ENABLE_ALL',
             'description' => 'All executing all commands in the console. They must be prefixed with $',
             'type' => 'bool',
@@ -232,7 +226,7 @@ return (function () {
         ],
         [
             'key' => 'WS_SYSTEM_USER',
-            'description' => '(NOT IMPLEMENTED YET) The login user name',
+            'description' => 'The login user name',
             'type' => 'string',
             'validate' => function (mixed $value): string {
                 if (!is_numeric($value) && empty($value)) {
@@ -240,15 +234,18 @@ return (function () {
                 }
 
                 if (false === isValidName($value)) {
-                    throw new ValidationException('Invalid username. Username can only contains [lower case a-z, 0-9 and _].');
+                    throw new ValidationException(
+                        'Invalid username. Username can only contains [lower case a-z, 0-9 and _].'
+                    );
                 }
                 return $value;
             },
             'mask' => true,
+            'hidden' => true,
         ],
         [
             'key' => 'WS_SYSTEM_PASSWORD',
-            'description' => '(NOT IMPLEMENTED YET) The login password. The given plaintext password will be converted to hash.',
+            'description' => 'The login password. The given plaintext password will be converted to hash.',
             'type' => 'string',
             'validate' => function (mixed $value): string {
                 if (empty($value)) {
@@ -270,6 +267,7 @@ return (function () {
                 return $prefix . $hash;
             },
             'mask' => true,
+            'hidden' => true,
         ],
     ];
 

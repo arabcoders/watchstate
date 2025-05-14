@@ -487,38 +487,6 @@ https://watchstate.example.org {
 
 ---
 
-# WS_API_AUTO
-
-The `WS_API_AUTO` environment variable is designed to **automate the initial configuration process**, particularly
-useful for users who access the WebUI from multiple browsers or devices. Since the WebUI requires API settings to be
-configured before use, enabling this variable allows the system to auto-configure itself.
-
-To enable it, write `WS_API_AUTO=true` to `/config/.env` file, note the file may not exist, and you may need to create
-it.
-
-## Why You Might Use It
-
-You may consider using this if:
-
-- You're operating in a **secure, local environment**.
-- You want to **automate setup** across multiple devices or browsers without repeatedly entering API details.
-
-## Why You Should **NOT** Use It (Recommended)
-
-Enabling this poses a **serious security risk**:
-
-- It **exposes your API key** publicly through the endpoint `/v1/api/system/auto`.
-- Anyone (or any bot) that can access the WebUI can retrieve your API key and gain **access** to any and all data that
-  is exposed by the API including your media servers API keys.
-
-**If WatchState is exposed to the internet, do not enable this setting.**
-
-> [!IMPORTANT]  
-> The `WS_API_AUTO` variable is a **major security risk**. It should only be used in isolated or trusted environments.  
-> We strongly recommend keeping this option disabled.
-
----
-
 # How to disable the included cache server and use an external cache server?
 
 To disable the built-in cache server and connect to an external Redis instance, follow these steps:
@@ -913,7 +881,8 @@ In order to sync the watch progress between media backends, you need to enable t
 $ docker exec -ti watchstate console system:env -k WS_SYNC_PROGRESS -e true
 ```
 
-For best experience, you should enable the [webhook](guides/webhooks.md) feature for the media backends you want to sync the watch
+For best experience, you should enable the [webhook](guides/webhooks.md) feature for the media backends you want to sync
+the watch
 progress,
 however, if you are unable to do so, the `Tasks > import` task will also generate progress watch events. However, it's
 not as reliable as the `Webhooks` or as fast. using `Webhooks` is the recommended way and offers the best experience.
@@ -922,8 +891,10 @@ To check if there is any watch progress events being registered, You can go to `
 `on_progress` events, if you are seeing those, this means the progress is being synced. Check the `Tasks logs` to see
 the event log.
 
-If this is setup and working you may be ok with changing the `WS_CRON_IMPORT_AT/WS_CRON_EXPORT_AT` schedule to something less frequenet as
-the sync progress working will update the progress near realtime. For example you could change these tasks to run daily instead of hourly.
+If this is setup and working you may be ok with changing the `WS_CRON_IMPORT_AT/WS_CRON_EXPORT_AT` schedule to something
+less frequenet as
+the sync progress working will update the progress near realtime. For example you could change these tasks to run daily
+instead of hourly.
 
 ```
 WS_CRON_IMPORT_AT=0 11 * * *
