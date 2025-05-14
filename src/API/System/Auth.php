@@ -14,6 +14,7 @@ use App\Libs\TokenUtil;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Throwable;
 
 final class Auth
 {
@@ -28,6 +29,64 @@ final class Auth
         $password = Config::get('system.password');
 
         return api_response(empty($user) || empty($password) ? Status::NO_CONTENT : Status::OK);
+    }
+
+    #[Get(self::URL . '/me[/]', name: 'system.auth.me')]
+    public function me(iRequest $request): iResponse
+    {
+        $user = Config::get('system.user');
+        $pass = Config::get('system.password');
+
+        if (empty($user) || empty($pass)) {
+            return api_error('System user or password is not configured.', Status::INTERNAL_SERVER_ERROR);
+        }
+
+        foreach ($request->getHeader('Authorization') as $auth) {
+            [$type, $value] = explode(' ', $auth, 2);
+            $type = strtolower(trim($type));
+
+            if (false === in_array($type, ['bearer', 'token'])) {
+                continue;
+            }
+
+            $tokens[$type] = trim($value);
+        }
+
+        if (empty($tokens['token'])) {
+            return api_error('This endpoint only works with user tokens.', Status::UNAUTHORIZED);
+        }
+
+        $token = rawurldecode($tokens['token']);
+
+        try {
+            $decoded = TokenUtil::decode($token);
+            if (false === $decoded) {
+                throw new \RuntimeException('Failed to decode token.');
+            }
+        } catch (Throwable) {
+            return api_error('Failed to decode token.', Status::UNAUTHORIZED);
+        }
+
+        $parts = explode('.', $decoded, 2);
+        if (2 !== count($parts)) {
+            return api_error('Invalid token.', Status::UNAUTHORIZED);
+        }
+
+        [$signature, $payload] = $parts;
+
+        if (false === TokenUtil::verify($payload, $signature)) {
+            return api_error('Invalid token.', Status::UNAUTHORIZED);
+        }
+
+        try {
+            $payload = json_decode($payload, true, flags: JSON_THROW_ON_ERROR);
+            return api_response(Status::OK, [
+                'username' => ag($payload, 'username', '??'),
+                'created_at' => makeDate(ag($payload, 'iat', 0)),
+            ]);
+        } catch (Throwable) {
+            return api_error('Failed to decode payload.', Status::UNAUTHORIZED);
+        }
     }
 
     #[Post(self::URL . '/signup[/]', name: 'system.auth.signup')]

@@ -9,7 +9,7 @@ try {
         extraNitro = {
             devProxy: {
                 '/v1/api/': {
-                    target: API_URL,
+                    target: API_URL + '/v1/api/',
                     changeOrigin: true
                 }
             }
@@ -20,23 +20,28 @@ try {
 
 export default defineNuxtConfig({
     ssr: false,
-    devtools: {enabled: true},
+    devtools: { enabled: true },
 
     devServer: {
         port: 8081,
         host: "0.0.0.0",
     },
-
+    runtimeConfig: {
+        public: {
+            domain: '/',
+            version: '1.0.0',
+        }
+    },
     app: {
         head: {
             "meta": [
-                {"charset": "utf-8"},
-                {"name": "viewport", "content": "width=device-width, initial-scale=1.0, maximum-scale=1.0"},
-                {"name": "theme-color", "content": "#000000"}
+                { "charset": "utf-8" },
+                { "name": "viewport", "content": "width=device-width, initial-scale=1.0, maximum-scale=1.0" },
+                { "name": "theme-color", "content": "#000000" }
             ],
         },
         buildAssetsDir: "assets",
-        pageTransition: {name: 'page', mode: 'out-in'}
+        pageTransition: { name: 'page', mode: 'out-in' }
     },
 
     router: {
@@ -48,6 +53,7 @@ export default defineNuxtConfig({
     modules: [
         '@vueuse/nuxt',
         'floating-vue/nuxt',
+        '@pinia/nuxt',
     ],
 
     nitro: {

@@ -20,7 +20,7 @@ final class ServeStatic implements LoggerAwareInterface
     use LoggerAwareTrait;
 
     private finfo|null $mimeType = null;
-
+    
     private const array CONTENT_TYPE = [
         'css' => 'text/css; charset=utf-8',
         'js' => 'text/javascript; charset=utf-8',

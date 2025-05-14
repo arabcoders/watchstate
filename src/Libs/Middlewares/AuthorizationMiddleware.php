@@ -99,7 +99,7 @@ final class AuthorizationMiddleware implements MiddlewareInterface
      *
      * @return bool True if the tken is valid. False otherwise.
      */
-    private function validateToken(?string $token): bool
+    public static function validateToken(?string $token): bool
     {
         if (empty($token)) {
             return false;

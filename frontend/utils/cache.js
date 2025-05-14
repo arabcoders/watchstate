@@ -7,6 +7,7 @@
  */
 class Cache {
     supportedEngines = ['session', 'local']
+    namespace = ''
 
     constructor(engine = 'session', namespace = '') {
         if (!this.supportedEngines.includes(engine)) {
