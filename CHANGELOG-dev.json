@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250515-8893b9c",
-        "date": "2025-05-14T21:13:44+00:00",
+        "tag": "dev-20250515-b066335",
+        "date": "2025-05-15T15:20:37+00:00",
         "commits": [
+            {
+                "sha": "b066335",
+                "message": "Finalizing auth migration",
+                "author": "arabcoders",
+                "date": "2025-05-15T15:20:37+00:00"
+            },
             {
                 "sha": "77dea25",
                 "message": "finalizing the move to user/pass auth.",
