@@ -28,6 +28,17 @@ return (function () {
             'key' => 'WS_TZ',
             'description' => 'Set the Tool timezone.',
             'type' => 'string',
+            'validate' => function (mixed $value): string {
+                if (is_numeric($value) || empty($value)) {
+                    throw new ValidationException('Invalid timezone. Empty value.');
+                }
+
+                try {
+                    return new DateTimeZone($value)->getName();
+                } catch (Throwable) {
+                    throw new ValidationException("Invalid timezone '{$value}'.");
+                }
+            },
         ],
         [
             'key' => 'WS_LOGS_CONTEXT',
@@ -53,6 +64,12 @@ return (function () {
             'key' => 'WS_TRUST_PROXY',
             'description' => 'Trust the IP from the WS_TRUST_HEADER header.',
             'type' => 'bool',
+        ],
+        [
+            'key' => 'WS_TRUST_LOCAL',
+            'description' => 'Bypass the authentication layer for local IP Addresses for WebUI.',
+            'type' => 'bool',
+            'danger' => true,
         ],
         [
             'key' => 'WS_TRUST_HEADER',
@@ -85,6 +102,7 @@ return (function () {
             'description' => 'The API key to allow access to the API.',
             'type' => 'string',
             'mask' => true,
+            'protected' => true,
         ],
         [
             'key' => 'WS_LOGS_PRUNE_AFTER',
@@ -226,7 +244,7 @@ return (function () {
         ],
         [
             'key' => 'WS_SYSTEM_USER',
-            'description' => 'The login user name',
+            'description' => 'The login user name.',
             'type' => 'string',
             'validate' => function (mixed $value): string {
                 if (!is_numeric($value) && empty($value)) {
@@ -241,7 +259,7 @@ return (function () {
                 return $value;
             },
             'mask' => true,
-            'hidden' => true,
+            'protected' => true,
         ],
         [
             'key' => 'WS_SYSTEM_PASSWORD',
@@ -267,7 +285,29 @@ return (function () {
                 return $prefix . $hash;
             },
             'mask' => true,
-            'hidden' => true,
+            'protected' => true,
+        ],
+          [
+            'key' => 'WS_SYSTEM_SECRET',
+            'description' => 'The secret key which is used to sign sucessful auth requests.',
+            'type' => 'string',
+            'validate' => function (mixed $value): string {
+                if (empty($value)) {
+                    throw new ValidationException('Invalid secret. Empty value.');
+                }
+
+                if (false === is_string($value)) {
+                    throw new ValidationException('Invalid secret. Must be a string.');
+                }
+
+                if (strlen($value) < 32) {
+                    throw new ValidationException('Invalid secret. Must be at least 32 characters long.');
+                }
+
+                return $value;
+            },
+            'mask' => true,
+            'protected' => true,
         ],
     ];
 

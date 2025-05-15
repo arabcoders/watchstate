@@ -33,7 +33,7 @@ final class Env
                 continue;
             }
 
-            if (true === (bool)ag($info, 'hidden', false)) {
+            if (true === (bool)ag($info, 'protected', false)) {
                 continue;
             }
 
@@ -54,14 +54,14 @@ final class Env
             if (array_key_exists('validate', $info)) {
                 unset($info['validate']);
             }
-            if (true === (bool)ag($info, 'hidden', false)) {
+            if (true === (bool)ag($info, 'protected', false)) {
                 continue;
             }
             $list[] = $info;
         }
 
         if (true === (bool)$params->get('set', false)) {
-            $list = array_filter($list, fn($info) => $this->envFile->has($info['key']));
+            $list = array_filter($list, fn ($info) => $this->envFile->has($info['key']));
         }
 
         return api_response(Status::OK, [
@@ -71,7 +71,7 @@ final class Env
     }
 
     #[Get(self::URL . '/{key}[/]', name: 'system.env.view')]
-    public function envView(string $key): iResponse
+    public function envView(iRequest $request, string $key): iResponse
     {
         if (empty($key)) {
             return api_error('Invalid value for key path parameter.', Status::BAD_REQUEST);
@@ -81,6 +81,11 @@ final class Env
 
         if (empty($spec)) {
             return api_error(r("Invalid key '{key}' was given.", ['key' => $key]), Status::BAD_REQUEST);
+        }
+
+        $isProtected = true === (bool)ag($spec, 'protected', false);
+        if ($isProtected && false === $request->getAttribute('INTERNAL_REQUEST', false)) {
+            return api_error(r("Key '{key}' is not set.", ['key' => $key]), Status::NOT_FOUND);
         }
 
         if (false === $this->envFile->has($key)) {
@@ -89,20 +94,22 @@ final class Env
 
         return api_response(Status::OK, [
             'key' => $key,
-            'value' => $this->settype($spec, ag($spec, 'value', fn() => $this->envFile->get($key))),
+            'value' => $this->settype($spec, ag($spec, 'value', fn () => $this->envFile->get($key))),
             'description' => ag($spec, 'description'),
             'type' => ag($spec, 'type'),
             'mask' => (bool)ag($spec, 'mask', false),
+            'danger' => (bool)ag($spec, 'danger', false),
         ]);
     }
 
     #[Route(['POST', 'DELETE'], self::URL . '/{key}[/]', name: 'system.env.update')]
-    public function envUpdate(iRequest $request, array $args = []): iResponse
+    public function envUpdate(iRequest $request, string $key): iResponse
     {
-        $key = strtoupper((string)ag($args, 'key', ''));
         if (empty($key)) {
             return api_error('Invalid value for key path parameter.', Status::BAD_REQUEST);
         }
+
+        $key = strtoupper($key);
 
         $spec = $this->getSpec($key);
 
@@ -110,8 +117,8 @@ final class Env
             return api_error(r("Invalid key '{key}' was given.", ['key' => $key]), Status::BAD_REQUEST);
         }
 
-        $isHidden = true === (bool)ag($spec, 'hidden', false);
-        if ($isHidden && false === $request->getAttribute('INTERNAL_REQUEST', false)) {
+        $isProtected = true === (bool)ag($spec, 'protected', false);
+        if ($isProtected && false === $request->getAttribute('INTERNAL_REQUEST', false)) {
             return api_error(r("Key '{key}' is not set.", ['key' => $key]), Status::NOT_FOUND);
         }
 
@@ -120,10 +127,11 @@ final class Env
 
             return api_response(Status::OK, [
                 'key' => $key,
-                'value' => $this->setType($spec, ag($spec, 'value', fn() => $this->envFile->get($key))),
+                'value' => $this->setType($spec, ag($spec, 'value', fn () => $this->envFile->get($key))),
                 'description' => ag($spec, 'description'),
                 'type' => ag($spec, 'type'),
                 'mask' => (bool)ag($spec, 'mask', false),
+                'danger' => (bool)ag($spec, 'danger', false),
             ]);
         }
 
@@ -154,6 +162,7 @@ final class Env
             'description' => ag($spec, 'description'),
             'type' => ag($spec, 'type'),
             'mask' => (bool)ag($spec, 'mask', false),
+            'danger' => (bool)ag($spec, 'danger', false),
         ]);
     }
 

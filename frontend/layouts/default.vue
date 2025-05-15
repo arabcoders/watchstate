@@ -193,8 +193,7 @@
             </div>
 
             <div class="navbar-item">
-              <button class="button is-dark" @click="showSettings = !showSettings"
-                      v-tooltip="'WebUI Settings'">
+              <button class="button is-dark" @click="showSettings = !showSettings" v-tooltip="'Settings'">
                 <span class="icon"><i class="fas fa-cog"/></span>
               </button>
             </div>

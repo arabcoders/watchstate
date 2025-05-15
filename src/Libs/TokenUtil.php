@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs;
 
+use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\RuntimeException;
 
 final class TokenUtil
@@ -87,28 +88,21 @@ final class TokenUtil
      */
     private static function getSecret(): string
     {
-        static $_secretKey = null;
-
-        if (null !== $_secretKey) {
-            return $_secretKey;
+        if (null !== ($secret = Config::get('system.secret'))) {
+            return $secret;
         }
 
-        $secretFile = fixPath(Config::get('path') . '/config/.secret.key');
+        $secret = static::generateSecret();
+        Config::save('system.secret', $secret);
 
-        if (false === file_exists($secretFile) || filesize($secretFile) < 32) {
-            $_secretKey = static::generateSecret();
-            $stream = Stream::make($secretFile, 'w');
-            $stream->write($_secretKey);
-            $stream->close();
-            return $_secretKey;
+        $response = APIRequest('POST', '/system/env/WS_SYSTEM_SECRET', [
+            'value' => $secret,
+        ]);
+
+        if (Status::OK !== $response->status) {
+            throw new RuntimeException('Failed to set the new secret key.');
         }
 
-        $_secretKey = Stream::make($secretFile, 'r')->getContents();
-
-        if (empty($_secretKey)) {
-            throw new RuntimeException('Failed to read secret key from file.');
-        }
-
-        return $_secretKey;
+        return $secret;
     }
 }

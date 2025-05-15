@@ -9,7 +9,18 @@ export const useAuthStore = defineStore('auth', () => {
     const actions = {
         async has_user() {
             const req = await request('/system/auth/has_user')
-            return 200 === req.status
+            const status = 200 === req.status
+            if (req.ok && req) {
+                const json = await parse_api_response(req)
+                if (json?.token && json?.auto_login) {
+                    const token = useStorage('token', null);
+                    this.token = json.token
+                    token.value = json.token;
+                    this.authenticated = true
+                }
+            }
+
+            return status
         },
         async signup(username, password) {
             if (!username || !password) {
