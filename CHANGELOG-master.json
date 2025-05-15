@@ -1,13 +1,79 @@
 [
     {
-        "tag": "master-20250514-7fabe35",
-        "date": "2025-05-14T17:53:01+00:00",
+        "tag": "master-20250515-1dcde8c",
+        "date": "2025-05-15T16:04:18+00:00",
         "commits": [
+            {
+                "sha": "b066335",
+                "message": "Finalizing auth migration",
+                "author": "arabcoders",
+                "date": "2025-05-15T15:20:37+00:00"
+            },
+            {
+                "sha": "77dea25",
+                "message": "finalizing the move to user/pass auth.",
+                "author": "arabcoders",
+                "date": "2025-05-14T21:10:58+00:00"
+            },
+            {
+                "sha": "44da112",
+                "message": "Update the auth system.",
+                "author": "arabcoders",
+                "date": "2025-05-14T20:28:24+00:00"
+            },
+            {
+                "sha": "068cd27",
+                "message": "disable Opacity on player page.",
+                "author": "arabcoders",
+                "date": "2025-05-14T20:27:41+00:00"
+            },
+            {
+                "sha": "0bf33f8",
+                "message": "Remove the no api settings component",
+                "author": "arabcoders",
+                "date": "2025-05-14T20:25:08+00:00"
+            },
+            {
+                "sha": "bc3ece3",
+                "message": "Remove the need to enter api connection.",
+                "author": "arabcoders",
+                "date": "2025-05-14T20:24:52+00:00"
+            },
+            {
+                "sha": "b0683d5",
+                "message": "update console and logs stream to use fetchEventStream",
+                "author": "arabcoders",
+                "date": "2025-05-14T20:24:16+00:00"
+            },
+            {
+                "sha": "10901e5",
+                "message": "update play routes.",
+                "author": "arabcoders",
+                "date": "2025-05-14T20:22:55+00:00"
+            },
+            {
+                "sha": "870fc60",
+                "message": "Refactor how to we handle some sensitive env variables.",
+                "author": "arabcoders",
+                "date": "2025-05-14T19:54:58+00:00"
+            },
+            {
+                "sha": "4a4c9dd",
+                "message": "WIP: support user/pass as auth method instead of current apikey usage",
+                "author": "arabcoders",
+                "date": "2025-05-14T17:50:56+00:00"
+            },
             {
                 "sha": "f396acc",
                 "message": "add conditions to Tautulli webhooks",
                 "author": "Splinter7914",
                 "date": "2025-05-14T16:05:40+00:00"
+            },
+            {
+                "sha": "1af9464",
+                "message": "initial code to support login via username/password",
+                "author": "arabcoders",
+                "date": "2025-05-14T14:45:58+00:00"
             }
         ]
     },
