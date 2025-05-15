@@ -33,6 +33,10 @@ final class Env
                 continue;
             }
 
+            if (true === (bool)ag($info, 'protected', false)) {
+                continue;
+            }
+
             $info['value'] = $this->setType($info, $this->envFile->get($info['key']));
         }
 
@@ -50,6 +54,9 @@ final class Env
             if (array_key_exists('validate', $info)) {
                 unset($info['validate']);
             }
+            if (true === (bool)ag($info, 'protected', false)) {
+                continue;
+            }
             $list[] = $info;
         }
 
@@ -64,7 +71,7 @@ final class Env
     }
 
     #[Get(self::URL . '/{key}[/]', name: 'system.env.view')]
-    public function envView(string $key): iResponse
+    public function envView(iRequest $request, string $key): iResponse
     {
         if (empty($key)) {
             return api_error('Invalid value for key path parameter.', Status::BAD_REQUEST);
@@ -74,6 +81,11 @@ final class Env
 
         if (empty($spec)) {
             return api_error(r("Invalid key '{key}' was given.", ['key' => $key]), Status::BAD_REQUEST);
+        }
+
+        $isProtected = true === (bool)ag($spec, 'protected', false);
+        if ($isProtected && false === $request->getAttribute('INTERNAL_REQUEST', false)) {
+            return api_error(r("Key '{key}' is not set.", ['key' => $key]), Status::NOT_FOUND);
         }
 
         if (false === $this->envFile->has($key)) {
@@ -86,21 +98,28 @@ final class Env
             'description' => ag($spec, 'description'),
             'type' => ag($spec, 'type'),
             'mask' => (bool)ag($spec, 'mask', false),
+            'danger' => (bool)ag($spec, 'danger', false),
         ]);
     }
 
     #[Route(['POST', 'DELETE'], self::URL . '/{key}[/]', name: 'system.env.update')]
-    public function envUpdate(iRequest $request, array $args = []): iResponse
+    public function envUpdate(iRequest $request, string $key): iResponse
     {
-        $key = strtoupper((string)ag($args, 'key', ''));
         if (empty($key)) {
             return api_error('Invalid value for key path parameter.', Status::BAD_REQUEST);
         }
+
+        $key = strtoupper($key);
 
         $spec = $this->getSpec($key);
 
         if (empty($spec)) {
             return api_error(r("Invalid key '{key}' was given.", ['key' => $key]), Status::BAD_REQUEST);
+        }
+
+        $isProtected = true === (bool)ag($spec, 'protected', false);
+        if ($isProtected && false === $request->getAttribute('INTERNAL_REQUEST', false)) {
+            return api_error(r("Key '{key}' is not set.", ['key' => $key]), Status::NOT_FOUND);
         }
 
         if ('DELETE' === $request->getMethod()) {
@@ -112,6 +131,7 @@ final class Env
                 'description' => ag($spec, 'description'),
                 'type' => ag($spec, 'type'),
                 'mask' => (bool)ag($spec, 'mask', false),
+                'danger' => (bool)ag($spec, 'danger', false),
             ]);
         }
 
@@ -142,6 +162,7 @@ final class Env
             'description' => ag($spec, 'description'),
             'type' => ag($spec, 'type'),
             'mask' => (bool)ag($spec, 'mask', false),
+            'danger' => (bool)ag($spec, 'danger', false),
         ]);
     }
 

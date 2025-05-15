@@ -21,7 +21,7 @@ use Throwable;
 
 readonly class Segments
 {
-    public const string URL = '%{api.prefix}/player/segments';
+    public const string URL = Index::URL . '/segments';
 
     private const array OVERLAY = [
         'hdmv_pgs_subtitle',

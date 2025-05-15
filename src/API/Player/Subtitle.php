@@ -21,6 +21,7 @@ use Throwable;
 
 final readonly class Subtitle
 {
+    public const string URL = Index::URL . '/subtitle';
     public const array FORMATS = [
         'vtt' => 'text/vtt',
         'webvtt' => 'text/vtt',
@@ -34,7 +35,6 @@ final readonly class Subtitle
         'vtt'
     ];
 
-    public const string URL = '%{api.prefix}/player/subtitle';
     private const string EXTERNAL = 'x';
     private const string INTERNAL = 'i';
 

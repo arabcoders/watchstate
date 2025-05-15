@@ -9,7 +9,23 @@ box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 # Updates
 
+### 2025-05-14
+
+**Breaking change**, we have switched to using user/password form of authentication instead of API key for the WebUI,
+this will lead to better security and easier to use. The API key is still available for the API, but not for the WebUI.
+
+The first time you access the WebUI after the update, you will be asked to create a new system user/password. This is a
+one time operation. Sorry about that. if you somehow lost your password, you can reset it by running the following
+command from the host machine.
+
+```bash
+# change docker to podman if you are using podman
+$ docker exec watchstate console system:resetpassword
+```
+
 Please refer to [NEWS](/NEWS.md) for the latest updates and changes.
+
+------
 
 # Features
 
@@ -97,35 +113,14 @@ container, but it will be mapped to the user in which the command was run under.
 After starting the container, you can access the WebUI by visiting `http://localhost:8080` in your browser.
 
 > [!NOTE]
-> The very first time you access the WebUI, we will attempt to autoconfigure your API connection. Should this fail, you
-> can manually configure the API connection by following the instructions below.
-
-At the start you won't see anything as the `WebUI` is decoupled from the WatchState and need to be configured to be able
-to access the API. In the top right corner, you will see a cogwheel icon, click on it and then Configure the connection
-settings.
-
-![Connection settings](screenshots/api_settings.png)
-
-As shown in the screenshot, to get your `API Token`, you can do via two methods
-
-### Method 1
-
-view the contents of the `./data/config/.env` file, and copy the contents after `WS_API_KEY=` variable.
-
-### Method 2
-
-From the host machine, you can run the following command
-
-```bash
-# change docker to podman if you are using podman
-$ docker exec watchstate console system:apikey
-```
-
-Insert the `API key` into the `API Token` field and make sure to set the `API URL` or click the `current page URL` link.
-If everything is ok, the reset of the navbar will show up.
+> Note, For the first time, you will be prompted to create a new system user, this is a one time operation.
 
 To add your backends, please click on the help button in the top right corner, and choose which method you
 want [one-way](guides/one-way-sync.md) or [two-way](guides/two-way-sync.md) sync. and follow the instructions.
+
+Once you have setup your backends and imported your data you should see something like
+
+![WebUI](/screenshots/index.png)
 
 ### Supported import methods
 
@@ -141,14 +136,12 @@ Currently, the tool supports three methods to import data from backends.
 > [!NOTE]
 > Even if all your backends support webhooks, you should keep import task enabled. This help keep healthy relationship
 > and pick up any missed events. For more information please check the [webhook guide](/guides/webhooks.md) to
-> understand
-> webhooks limitations.
+> understand webhooks limitations.
 
 # FAQ
 
 Take look at this [frequently asked questions](FAQ.md) page, or the [guides](/guides/) for more in-depth guides on how
-to
-configure things.
+to configure things.
 
 # Social channels
 

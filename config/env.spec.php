@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Last update: 2024-05-10
  *
@@ -7,6 +8,7 @@
  * Avoid using complex datatypes, the value should be a simple scalar value.
  */
 
+use App\Libs\Config;
 use App\Libs\Exceptions\ValidationException;
 use Cron\CronExpression;
 
@@ -26,6 +28,17 @@ return (function () {
             'key' => 'WS_TZ',
             'description' => 'Set the Tool timezone.',
             'type' => 'string',
+            'validate' => function (mixed $value): string {
+                if (is_numeric($value) || empty($value)) {
+                    throw new ValidationException('Invalid timezone. Empty value.');
+                }
+
+                try {
+                    return new DateTimeZone($value)->getName();
+                } catch (Throwable) {
+                    throw new ValidationException("Invalid timezone '{$value}'.");
+                }
+            },
         ],
         [
             'key' => 'WS_LOGS_CONTEXT',
@@ -51,6 +64,12 @@ return (function () {
             'key' => 'WS_TRUST_PROXY',
             'description' => 'Trust the IP from the WS_TRUST_HEADER header.',
             'type' => 'bool',
+        ],
+        [
+            'key' => 'WS_TRUST_LOCAL',
+            'description' => 'Bypass the authentication layer for local IP Addresses for WebUI.',
+            'type' => 'bool',
+            'danger' => true,
         ],
         [
             'key' => 'WS_TRUST_HEADER',
@@ -83,6 +102,7 @@ return (function () {
             'description' => 'The API key to allow access to the API.',
             'type' => 'string',
             'mask' => true,
+            'protected' => true,
         ],
         [
             'key' => 'WS_LOGS_PRUNE_AFTER',
@@ -142,12 +162,6 @@ return (function () {
         [
             'key' => 'WS_DEBUG',
             'description' => 'Expose debug information in the API when an error occurs.',
-            'type' => 'bool',
-        ],
-        [
-            'key' => 'WS_API_AUTO',
-            'description' => 'PUBLICLY EXPOSE the api token for automated WebUI configuration. This should NEVER be enabled if WatchState is exposed to the internet.',
-            'danger' => true,
             'type' => 'bool',
         ],
         [
@@ -227,6 +241,73 @@ return (function () {
             'key' => 'WS_HTTP_SYNC_REQUESTS',
             'description' => 'Whether to send backend requests in parallel or sequentially.',
             'type' => 'bool',
+        ],
+        [
+            'key' => 'WS_SYSTEM_USER',
+            'description' => 'The login user name.',
+            'type' => 'string',
+            'validate' => function (mixed $value): string {
+                if (!is_numeric($value) && empty($value)) {
+                    throw new ValidationException('Invalid username. Empty value.');
+                }
+
+                if (false === isValidName($value)) {
+                    throw new ValidationException(
+                        'Invalid username. Username can only contains [lower case a-z, 0-9 and _].'
+                    );
+                }
+                return $value;
+            },
+            'mask' => true,
+            'protected' => true,
+        ],
+        [
+            'key' => 'WS_SYSTEM_PASSWORD',
+            'description' => 'The login password. The given plaintext password will be converted to hash.',
+            'type' => 'string',
+            'validate' => function (mixed $value): string {
+                if (empty($value)) {
+                    throw new ValidationException('Invalid password. Empty value.');
+                }
+
+                $prefix = Config::get('password.prefix', 'ws_hash@:');
+
+                if (true === str_starts_with($value, $prefix)) {
+                    return $value;
+                }
+
+                $hash = password_hash($value, Config::get('password.algo'), Config::get('password.options', []));
+
+                if (false === $hash) {
+                    throw new ValidationException('Invalid password. Password hashing failed.');
+                }
+
+                return $prefix . $hash;
+            },
+            'mask' => true,
+            'protected' => true,
+        ],
+          [
+            'key' => 'WS_SYSTEM_SECRET',
+            'description' => 'The secret key which is used to sign sucessful auth requests.',
+            'type' => 'string',
+            'validate' => function (mixed $value): string {
+                if (empty($value)) {
+                    throw new ValidationException('Invalid secret. Empty value.');
+                }
+
+                if (false === is_string($value)) {
+                    throw new ValidationException('Invalid secret. Must be a string.');
+                }
+
+                if (strlen($value) < 32) {
+                    throw new ValidationException('Invalid secret. Must be at least 32 characters long.');
+                }
+
+                return $value;
+            },
+            'mask' => true,
+            'protected' => true,
         ],
     ];
 

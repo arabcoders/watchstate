@@ -21,7 +21,7 @@ use Throwable;
 
 readonly class Playlist
 {
-    public const string URL = '%{api.prefix}/player/playlist';
+    public const string URL = Index::URL . '/playlist';
     public const float SEGMENT_DUR = 6.000;
 
     public function __construct(private iCache $cache, private iLogger $logger)

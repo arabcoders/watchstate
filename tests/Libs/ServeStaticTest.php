@@ -100,11 +100,11 @@ class ServeStaticTest extends TestCase
 
         // -- test screenshots serving, as screenshots path is not in public directory and not subject
         // -- to same path restrictions as other files.
-        $response = $this->server->serve($this->createRequest('GET', '/screenshots/add_backend.png'));
+        $response = $this->server->serve($this->createRequest('GET', '/screenshots/index.png'));
         $this->assertEquals(Status::OK->value, $response->getStatusCode());
         $this->assertEquals('image/png', $response->getHeaderLine('Content-Type'));
         $this->assertEquals(
-            file_get_contents(__DIR__ . '/../../screenshots/add_backend.png'),
+            file_get_contents(__DIR__ . '/../../screenshots/index.png'),
             (string)$response->getBody()
         );
 

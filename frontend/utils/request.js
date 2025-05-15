@@ -1,8 +1,6 @@
-import {useStorage} from "@vueuse/core";
+import { useStorage } from "@vueuse/core";
 
-const api_path = useStorage('api_path', '/v1/api')
-const api_url = useStorage('api_url', '')
-const api_token = useStorage('api_token', '')
+const token = useStorage('token', '')
 const api_user = useStorage('api_user', 'main')
 
 /**
@@ -15,18 +13,18 @@ const api_user = useStorage('api_user', 'main')
  * @returns {Promise<Response>}
  */
 export default async function request(url, options = {}) {
-    if (!api_token.value) {
-        throw new Error('API token is not set');
-    }
     options = options || {};
     options.method = options.method || 'GET';
     options.headers = options.headers || {};
-    if (options.headers['Authorization'] === undefined) {
-        options.headers['Authorization'] = 'Bearer ' + api_token.value;
+
+    if (options.headers['Authorization'] === undefined && token.value) {
+        options.headers['Authorization'] = 'Token ' + token.value;
     }
+
     if (options.headers['Content-Type'] === undefined) {
         options.headers['Content-Type'] = 'application/json';
     }
+
     if (options.headers['Accept'] === undefined) {
         options.headers['Accept'] = 'application/json';
     }
@@ -35,6 +33,6 @@ export default async function request(url, options = {}) {
         options.headers['X-User'] = api_user.value;
     }
 
-    return fetch(`${api_url.value}${api_path.value}${url}`, options);
+    return fetch(`/v1/api${url}`, options);
 }
 
