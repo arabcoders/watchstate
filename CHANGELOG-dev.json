@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250516-66405ca",
-        "date": "2025-05-16T06:24:31+00:00",
+        "tag": "dev-20250516-157bcd4",
+        "date": "2025-05-16T06:44:32+00:00",
         "commits": [
+            {
+                "sha": "157bcd4",
+                "message": "With multi-user support, it doesn't make sense to log spam webhooks with invalid user ID, so we use Debug level instead and option to increase the level via debug_trace additional option",
+                "author": "arabcoders",
+                "date": "2025-05-16T06:44:32+00:00"
+            },
             {
                 "sha": "66405ca",
                 "message": "Fix #670, tautulli will send lastViewedAt regardless if the item is marked as watched or not.",
