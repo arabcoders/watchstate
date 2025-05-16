@@ -1,7 +1,19 @@
 [
     {
-        "tag": "dev-20250516-9d9294b",
-        "date": "2025-05-16T16:31:27+00:00",
+        "tag": "dev-20250517-770f3b8",
+        "date": "2025-05-16T21:03:19+00:00",
+        "commits": [
+            {
+                "sha": "770f3b8",
+                "message": "Remove mapper is in metadata only mode as it's really meaningless and expected.",
+                "author": "arabcoders",
+                "date": "2025-05-16T21:03:19+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250516-2b8af69",
+        "date": "2025-05-16T16:36:48+00:00",
         "commits": [
             {
                 "sha": "9d9294b",
