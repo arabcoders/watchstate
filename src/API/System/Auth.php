@@ -12,10 +12,10 @@ use App\Libs\Config;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
+use App\Libs\IpUtils;
 use App\Libs\Middlewares\AuthorizationMiddleware;
 use App\Libs\TokenUtil;
 use App\Libs\Traits\APITraits;
-use App\Libs\IpUtils;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Throwable;
@@ -42,13 +42,14 @@ final class Auth
             return api_response(Status::NO_CONTENT);
         }
 
-        if (false === Config::get('trust.local', false)) {
+        $localNet = Config::get('trust.local_net', []);
+        if (true !== (bool)Config::get('trust.local', false) || count($localNet) < 1) {
             return api_response(Status::OK);
         }
 
         $localAddress = getClientIp($request);
 
-        if (false === IpUtils::checkIp($localAddress, Config::get('trust.localnet', []))) {
+        if (false === IpUtils::checkIp($localAddress, $localNet)) {
             return api_response(Status::OK);
         }
 
@@ -123,8 +124,8 @@ final class Auth
 
         try {
             $payload = json_decode($payload, true, flags: JSON_THROW_ON_ERROR);
-            $tokenUser = ag($payload, 'username', fn () => TokenUtil::generateSecret());
-            $systemUser = Config::get('system.user', fn () => TokenUtil::generateSecret());
+            $tokenUser = ag($payload, 'username', fn() => TokenUtil::generateSecret());
+            $systemUser = Config::get('system.user', fn() => TokenUtil::generateSecret());
 
             if (false === hash_equals($systemUser, $tokenUser)) {
                 return api_error('Invalid token.', Status::UNAUTHORIZED);
@@ -254,8 +255,8 @@ final class Auth
             return api_error('Invalid current password.', Status::UNAUTHORIZED);
         }
 
-        $repsonse = APIRequest(Method::POST, '/system/env/WS_SYSTEM_PASSWORD', ['value' => $new_password]);
-        if (Status::OK !== $repsonse->status) {
+        $response = APIRequest(Method::POST, '/system/env/WS_SYSTEM_PASSWORD', ['value' => $new_password]);
+        if (Status::OK !== $response->status) {
             return api_error('Failed to set new password.', Status::INTERNAL_SERVER_ERROR);
         }
 

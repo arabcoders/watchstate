@@ -67,7 +67,7 @@ return (function () {
         ],
         [
             'key' => 'WS_TRUST_LOCAL',
-            'description' => 'Bypass the authentication layer for local IP Addresses for WebUI.',
+            'description' => 'Bypass the WebUI authentication layer for local IP addresses.',
             'type' => 'bool',
             'danger' => true,
         ],
@@ -276,20 +276,22 @@ return (function () {
                     return $value;
                 }
 
-                $hash = password_hash($value, Config::get('password.algo'), Config::get('password.options', []));
-
-                if (false === $hash) {
-                    throw new ValidationException('Invalid password. Password hashing failed.');
+                try {
+                    return $prefix . password_hash(
+                            $value,
+                            Config::get('password.algo'),
+                            Config::get('password.options', [])
+                        );
+                } catch (ValueError $e) {
+                    throw new ValidationException('Invalid password. Password hashing failed.', $e);
                 }
-
-                return $prefix . $hash;
             },
             'mask' => true,
             'protected' => true,
         ],
-          [
+        [
             'key' => 'WS_SYSTEM_SECRET',
-            'description' => 'The secret key which is used to sign sucessful auth requests.',
+            'description' => 'The secret key which is used to sign successful auth requests.',
             'type' => 'string',
             'validate' => function (mixed $value): string {
                 if (empty($value)) {
