@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs\Middlewares;
 
+use App\API\Backends\PlexToken;
 use App\API\Player\Index as PlayerIndex;
 use App\API\System\Auth;
 use App\API\System\HealthCheck;
@@ -29,6 +30,7 @@ final class AuthorizationMiddleware implements MiddlewareInterface
         HealthCheck::URL,
         Auth::URL,
         PlayerIndex::URL,
+        PlexToken::URL,
     ];
 
     /**
@@ -97,7 +99,7 @@ final class AuthorizationMiddleware implements MiddlewareInterface
      *
      * @param string|null $token The token to validate.
      *
-     * @return bool True if the tken is valid. False otherwise.
+     * @return bool true if valid, false otherwise.
      */
     public static function validateToken(?string $token): bool
     {

@@ -162,7 +162,7 @@ class PlexClient implements iClient
                 'headers' => [
                     'Accept' => 'application/json',
                     'X-Plex-Token' => $context->backendToken,
-                    'X-Plex-Container-Size' => 0,
+                    ...self::getHeaders()
                 ],
             ], ag($context->options, 'client', [])),
             trace: true === ag($context->options, Options::DEBUG_TRACE),
@@ -178,6 +178,24 @@ class PlexClient implements iClient
         $cloned->guid = $cloned->guid->withContext($cloned->context);
 
         return $cloned;
+    }
+
+    /**
+     * Return the headers for the Plex request.
+     *
+     * @return array The headers to be used in the request.
+     */
+    public static function getHeaders(): array
+    {
+        return [
+            'X-Plex-Container-Size' => 0,
+            'X-Plex-Product' => Config::get('name'),
+            'X-Plex-Version' => getAppVersion(),
+            'X-Plex-Platform' => php_uname('s'),
+            'X-Plex-Platform-Version' => php_uname('r'),
+            'X-Plex-Device-Name' => Config::get('name'),
+            'X-Plex-Client-Identifier' => PlexClient::clientId(),
+        ];
     }
 
     /**
@@ -934,6 +952,11 @@ class PlexClient implements iClient
                 previous: $e
             );
         }
+    }
+
+    public static function clientId(): string
+    {
+        return md5(Config::get('name') . '/PlexClient');
     }
 
     /**

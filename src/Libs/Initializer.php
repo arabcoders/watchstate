@@ -64,7 +64,7 @@ final class Initializer
             }
 
             // -- This is the official place where users are supposed to store .env file.
-            $dataPath = env('WS_DATA_PATH', fn () => inContainer() ? '/config' : __DIR__ . '/../../var');
+            $dataPath = env('WS_DATA_PATH', fn() => inContainer() ? '/config' : __DIR__ . '/../../var');
             if (file_exists($dataPath . '/config/.env')) {
                 loadEnvFile(file: $dataPath . '/config/.env', usePutEnv: true, override: true);
             }
@@ -107,7 +107,7 @@ final class Initializer
             $path = Config::get('path') . '/config/config.yaml';
 
             if (file_exists($path)) {
-                Config::init(fn () => array_replace_recursive(Config::getAll(), Yaml::parseFile($path)));
+                Config::init(fn() => array_replace_recursive(Config::getAll(), Yaml::parseFile($path)));
             }
 
             $path = Config::get('path') . '/config/servers.yaml';

@@ -9,6 +9,7 @@ use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
+use App\Backends\Plex\PlexClient;
 use App\Libs\Container;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
@@ -463,7 +464,7 @@ final class GetUsersList
             $response = $this->http->request(ag($opts, 'method', 'GET'), (string)$url, [
                 'headers' => array_replace_recursive([
                     'X-Plex-Token' => $adminToken,
-                    'X-Plex-Client-Identifier' => $context->backendId,
+                    ...PlexClient::getHeaders()
                 ], ag($opts, 'headers', [])),
             ]);
             if (Status::OK === Status::from($response->getStatusCode())) {
@@ -479,7 +480,7 @@ final class GetUsersList
         $response = $this->http->request(ag($opts, 'method', 'GET'), (string)$url, [
             'headers' => array_replace_recursive([
                 'X-Plex-Token' => $context->backendToken,
-                'X-Plex-Client-Identifier' => $context->backendId,
+                ...PlexClient::getHeaders()
             ], ag($opts, 'headers', [])),
         ]);
 
