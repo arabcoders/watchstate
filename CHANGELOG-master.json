@@ -1,5 +1,41 @@
 [
     {
+        "tag": "master-20250516-2b8af69",
+        "date": "2025-05-16T16:36:48+00:00",
+        "commits": [
+            {
+                "sha": "9d9294b",
+                "message": "update to fix plex check pin request flow.",
+                "author": "arabcoders",
+                "date": "2025-05-16T16:31:27+00:00"
+            },
+            {
+                "sha": "f73675d",
+                "message": "Reverted changes to plex ValidateToken",
+                "author": "arabcoders",
+                "date": "2025-05-16T16:28:14+00:00"
+            },
+            {
+                "sha": "cd6bd63",
+                "message": "Finalize Plex OAuth flow in Backend add.",
+                "author": "arabcoders",
+                "date": "2025-05-16T16:24:17+00:00"
+            },
+            {
+                "sha": "7c20a23",
+                "message": "initial work to support plex oauth flow",
+                "author": "arabcoders",
+                "date": "2025-05-16T15:01:25+00:00"
+            },
+            {
+                "sha": "fc90385",
+                "message": "Refactor Plex headers handling",
+                "author": "arabcoders",
+                "date": "2025-05-16T15:01:10+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250516-b887554",
         "date": "2025-05-16T06:48:57+00:00",
         "commits": [
