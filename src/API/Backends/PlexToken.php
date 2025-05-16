@@ -63,7 +63,7 @@ final class PlexToken
             );
         }
 
-        return api_response(Status::OK, $req->toArray());
+        return api_response(Status::OK, [...PlexClient::getHeaders(), ...$req->toArray()]);
     }
 
     /**

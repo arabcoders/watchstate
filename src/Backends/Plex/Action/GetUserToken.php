@@ -9,7 +9,6 @@ use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
-use App\Backends\Plex\PlexClient;
 use App\Libs\Container;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
@@ -300,7 +299,7 @@ final class GetUserToken
             $response = $this->http->request($method->value, (string)$url, [
                 'headers' => array_replace_recursive([
                     'X-Plex-Token' => $adminToken,
-                    ...PlexClient::getHeaders()
+                    'X-Plex-Client-Identifier' => $context->backendId,
                 ], ag($opts, 'headers', [])),
                 ...ag($opts, 'options', []),
             ]);
@@ -312,7 +311,7 @@ final class GetUserToken
         $response = $this->http->request($method->value, (string)$url, [
             'headers' => array_replace_recursive([
                 'X-Plex-Token' => $context->backendToken,
-                ...PlexClient::getHeaders()
+                'X-Plex-Client-Identifier' => $context->backendId,
             ], ag($opts, 'headers', [])),
             ...ag($opts, 'options', []),
         ]);
