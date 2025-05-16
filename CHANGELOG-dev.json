@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250516-f73675d",
-        "date": "2025-05-16T16:28:14+00:00",
+        "tag": "dev-20250516-9d9294b",
+        "date": "2025-05-16T16:31:27+00:00",
         "commits": [
+            {
+                "sha": "9d9294b",
+                "message": "update to fix plex check pin request flow.",
+                "author": "arabcoders",
+                "date": "2025-05-16T16:31:27+00:00"
+            },
             {
                 "sha": "f73675d",
                 "message": "Reverted changes to plex ValidateToken",
