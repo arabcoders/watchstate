@@ -92,7 +92,7 @@ final class PlexToken
                 'accept' => 'application/json',
                 ...PlexClient::getHeaders(),
             ],
-            'json' => ['code' => $code],
+            'query' => ['code' => $code],
         ]);
 
         if (Status::OK !== Status::from($req->getStatusCode())) {
