@@ -97,6 +97,8 @@ final class Webhooks
         $request = $client->processRequest($request);
         $attr = $request->getAttributes();
 
+        $debugTrace = true === (bool)ag($backend, 'options.' . Options::DEBUG_TRACE);
+
         if (null !== ($userId = ag($backend, 'user', null)) && true === (bool)ag($backend, 'webhook.match.user')) {
             if (null === ($requestUser = ag($attr, 'user.id'))) {
                 $message = "Request payload didn't contain a user id. Backend requires a user check.";
@@ -109,7 +111,7 @@ final class Webhooks
                     'req_user' => $requestUser ?? 'NOT SET',
                     'config_user' => $userId,
                 ]);
-                $this->write($request, Level::Info, $message);
+                $this->write($request, $debugTrace ? Level::Notice : Level::Debug, $message);
                 return api_error($message, Status::BAD_REQUEST);
             }
         }
@@ -126,7 +128,7 @@ final class Webhooks
                     'req_uid' => $requestBackendId ?? 'NOT SET',
                     'config_uid' => $uuid,
                 ]);
-                $this->write($request, Level::Info, $message);
+                $this->write($request, $debugTrace ? Level::Notice : Level::Debug, $message);
                 return api_error($message, Status::BAD_REQUEST);
             }
         }
@@ -137,7 +139,6 @@ final class Webhooks
             }
         }
 
-        $debugTrace = true === (bool)ag($backend, 'options.' . Options::DEBUG_TRACE);
         $metadataOnly = true === (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
 
         if (true !== $metadataOnly && true !== (bool)ag($backend, 'import.enabled')) {
