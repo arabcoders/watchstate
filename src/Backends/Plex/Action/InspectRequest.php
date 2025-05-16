@@ -92,28 +92,26 @@ final class InspectRequest
             return $item;
         }
 
-        $item = ag_set($item, 'Account.id', (int)ag($item, 'Account.id', 0));
-        $item = ag_set($item, 'Player.local', (bool)ag($item, 'Player.local', false));
-        $item = ag_set($item, 'Metadata.index', (int)ag($item, 'Metadata.index', 0));
-        $item = ag_set($item, 'Metadata.parentIndex', (int)ag($item, 'Metadata.parentIndex', 0));
-        $item = ag_set($item, 'Metadata.audienceRating', (float)ag($item, 'Metadata.audienceRating', 0));
-        $item = ag_set($item, 'Metadata.viewOffset', (int)ag($item, 'Metadata.viewOffset', 0));
-        if ('' === ag($item, 'Metadata.lastViewedAt', '')) {
-            $item = ag_set($item, 'Metadata.lastViewedAt', null);
-            $item = ag_set($item, 'Metadata.viewCount', 0);
-        } else {
-            $item = ag_set(
-                $item,
-                'Metadata.lastViewedAt',
-                makeDate(ag($item, 'Metadata.lastViewedAt'))->getTimestamp()
-            );
-            $item = ag_set($item, 'Metadata.viewCount', 1);
+        $item = ag_sets($item, [
+            'Account.id' => (int)ag($item, 'Account.id', 0),
+            'Player.local' => (bool)ag($item, 'Player.local', false),
+            'Metadata.index' => (int)ag($item, 'Metadata.index', 0),
+            'Metadata.parentIndex' => (int)ag($item, 'Metadata.parentIndex', 0),
+            'Metadata.audienceRating' => (float)ag($item, 'Metadata.audienceRating', 0),
+            'Metadata.viewOffset' => (int)ag($item, 'Metadata.viewOffset', 0),
+            'Metadata.year' => (int)ag($item, 'Metadata.year', 0),
+            'Metadata.duration' => (int)ag($item, 'Metadata.duration', 0),
+            'Metadata.addedAt' => makeDate(ag($item, 'Metadata.addedAt'))->getTimestamp(),
+            'Metadata.updatedAt' => makeDate(ag($item, 'Metadata.updatedAt'))->getTimestamp(),
+            'Metadata.lastViewedAt' => null,
+            'Metadata.Guid' => [],
+            'Metadata.viewCount' => 0,
+        ]);
+
+        $lastViewedAt = ag($item, 'Metadata.lastViewedAt', '');
+        if (!empty($lastViewedAt)) {
+            $item = ag_set($item, 'Metadata.lastViewedAt', makeDate($lastViewedAt)->getTimestamp());
         }
-        $item = ag_set($item, 'Metadata.year', (int)ag($item, 'Metadata.year', 0));
-        $item = ag_set($item, 'Metadata.duration', (int)ag($item, 'Metadata.duration', 0));
-        $item = ag_set($item, 'Metadata.addedAt', makeDate(ag($item, 'Metadata.addedAt'))->getTimestamp());
-        $item = ag_set($item, 'Metadata.updatedAt', makeDate(ag($item, 'Metadata.updatedAt'))->getTimestamp());
-        $item = ag_set($item, 'Metadata.Guid', []);
 
         if (null !== ($guids = ag($item, 'Metadata.Guids', null))) {
             foreach ($guids as $key => $val) {
@@ -125,8 +123,7 @@ final class InspectRequest
         }
 
         if ('tautulli.watched' === $event) {
-            $item = ag_set($item, 'Metadata.viewCount', 1);
-            $item = ag_set($item, 'Metadata.lastViewedAt', time());
+            $item = ag_sets($item, ['Metadata.viewCount' => 1, 'Metadata.lastViewedAt' => time()]);
         }
 
         return $item;
