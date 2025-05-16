@@ -8,7 +8,6 @@ use App\Backends\Plex\PlexClient;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
-use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
@@ -33,15 +32,10 @@ final class ValidateToken
         }
 
         try {
-            $data = [];
-            $status = PlexClient::validate_token($http, $token, opts: [
-                Options::RAW_RESPONSE_CALLBACK => function ($stat) use (&$data) {
-                    $data = $stat;
-                },
-            ]);
+            $status = PlexClient::validate_token($http, $token);
 
             if (true === $status) {
-                return api_message('Token is valid.', Status::OK, $data);
+                return api_message('Token is valid.', Status::OK);
             }
 
             return api_error('non 200 OK request received.', Status::UNAUTHORIZED);
