@@ -215,7 +215,7 @@ final class ParseWebhook
             }
 
             $allowUpdate = (int)Config::get('progress.threshold', 0);
-            $progCheck = $allowUpdate || 0 === $isPlayed;
+            $progCheck = $allowUpdate || false === $isPlayed;
 
             if ($progCheck && null !== ($progress = ag($item, 'viewOffset', null))) {
                 // -- Plex reports play progress in milliseconds already no need to convert.
