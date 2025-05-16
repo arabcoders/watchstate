@@ -129,6 +129,44 @@
                 </p>
               </div>
             </div>
+
+            <div class="control" v-if="'plex' === backend.type && !backend.token">
+              <button type="button" class="button is-warning" v-if="Object.keys(plex_oauth).length < 1"
+                      :disabled="plex_oauth_loading" @click="generate_plex_auth_request">
+                <span class="icon-text">
+                  <template v-if="plex_oauth_loading">
+                    <span class="icon"><i class="fas fa-spinner fa-pulse"/></span>
+                    <span>Generating link</span>
+                  </template>
+                  <template v-else>
+                    <span class="icon"><i class="fas fa-external-link-alt"/></span>
+                    <span>Sign-in via Plex</span>
+                  </template>
+                </span>
+              </button>
+
+              <template v-if="plex_oauth_url">
+                <div class="field is-grouped">
+                  <div class="control">
+                    <NuxtLink @click="plex_get_token" type="button" :disabled="plex_oauth_loading">
+                      <span class="icon-text">
+                        <span class="icon"><i class="fas"
+                                              :class="{'fa-check-double': !plex_oauth_loading,'fa-spinner fa-pulse': plex_oauth_loading}"/></span>
+                        <span>Check auth request.</span>
+                      </span>
+                    </NuxtLink>
+                  </div>
+                  <div class="control">
+                    <NuxtLink :href="plex_oauth_url" target="_blank">
+                      <span class="icon-text">
+                        <span class="icon"><i class="fas fa-external-link-alt"/></span>
+                        <span>Open Plex Auth Link</span>
+                      </span>
+                    </NuxtLink>
+                  </div>
+                </div>
+              </template>
+            </div>
           </div>
 
           <template v-if="'plex' === backend.type">
@@ -405,6 +443,126 @@ const force_import = ref(false)
 
 const isLimited = ref(false)
 const accessTokenResponse = ref({})
+
+const plex_oauth = ref({})
+const plex_oauth_loading = ref(false)
+const plex_timeout = ref(null)
+const plex_window = ref(null)
+
+const generate_plex_auth_request = async () => {
+  if (plex_oauth_loading.value) {
+    return
+  }
+
+  plex_oauth_loading.value = true
+
+  try {
+    const response = await request('/backends/plex/generate', {method: 'POST'})
+    const json = await parse_api_response(response)
+    if (200 !== response.status) {
+      n_proxy('error', 'Error', `${json.error.code}: ${json.error.message}`)
+      return
+    }
+    plex_oauth.value = json
+
+    await nextTick();
+
+    try {
+      const width = 500;
+      const height = 600;
+
+      const features = [
+        `width=${width}`,
+        `height=${height}`,
+        `top=${(window.screen.height / 2) - (height / 2)}`,
+        `left=${(window.screen.width / 2) - (width / 2)}`,
+        'resizable=yes',
+        'scrollbars=yes',
+      ].join(',');
+
+      plex_window.value = window.open(plex_oauth_url.value, 'plex_auth', features);
+      plex_timeout.value = setTimeout(() => plex_get_token(false), 3000)
+      await nextTick();
+
+      if (!plex_window.value) {
+        n_proxy('error', 'Error', 'Popup blocked. Please allow popups for this site.')
+      }
+    } catch (e) {
+      console.error(e)
+      n_proxy('error', 'Error', `Failed to open popup. Please manually click the link.`)
+    }
+  } catch (e) {
+    n_proxy('error', 'Error', `Request error. ${e.message}`, e)
+  } finally {
+    plex_oauth_loading.value = false
+  }
+}
+
+const plex_oauth_url = computed(() => {
+  if (Object.keys(plex_oauth.value).length < 1) {
+    return
+  }
+  const url = new URL('https://app.plex.tv/auth')
+  const params = new URLSearchParams()
+  params.set('code', plex_oauth.value['code'])
+  params.set('clientID', plex_oauth.value['X-Plex-Client-Identifier'])
+  params.set('context[device][product]', plex_oauth.value['X-Plex-Product'])
+  url.hash = '?' + params.toString()
+  return url.toString()
+})
+
+const plex_get_token = async (notify = true) => {
+  if (plex_oauth_loading.value) {
+    return
+  }
+
+  plex_oauth_loading.value = true
+
+  try {
+    if (plex_timeout.value) {
+      clearTimeout(plex_timeout.value)
+      plex_timeout.value = null
+    }
+    const response = await request('/backends/plex/check', {
+      method: 'POST',
+      body: JSON.stringify({
+        id: plex_oauth.value.id,
+        code: plex_oauth.value.code
+      })
+    })
+
+    const json = await parse_api_response(response)
+
+    if (200 !== response.status) {
+      n_proxy('error', 'Error', `${json.error.code}: ${json.error.message}`)
+      return
+    }
+
+    if (json?.authToken) {
+      backend.value.token = json.authToken
+      await nextTick();
+      plex_oauth.value = {}
+      notification('success', 'Success', `Plex token generated inserted successfully.`)
+      if (plex_window.value) {
+        try {
+          plex_window.value.close()
+          plex_window.value = null
+        } catch (e) {
+        }
+      }
+    } else {
+      if (true === notify) {
+        notification('warning', 'Warning', `Not authenticated yet. Login via the given link to authorize WatchState.`)
+      }
+      await nextTick();
+      plex_timeout.value = setTimeout(() => plex_get_token(false), 3000)
+    }
+  } catch (e) {
+    n_proxy('error', 'Error', `Request error. ${e.message}`, e)
+  } finally {
+    plex_oauth_loading.value = false
+  }
+}
 
 const getUUid = async () => {
   const required_values = ['type', 'token', 'url'];
