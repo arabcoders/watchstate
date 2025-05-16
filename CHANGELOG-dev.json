@@ -1,7 +1,25 @@
 [
     {
-        "tag": "dev-20250515-b066335",
-        "date": "2025-05-15T15:20:37+00:00",
+        "tag": "dev-20250516-66405ca",
+        "date": "2025-05-16T06:24:31+00:00",
+        "commits": [
+            {
+                "sha": "66405ca",
+                "message": "Fix #670, tautulli will send lastViewedAt regardless if the item is marked as watched or not.",
+                "author": "arabcoders",
+                "date": "2025-05-16T06:24:31+00:00"
+            },
+            {
+                "sha": "1272d99",
+                "message": "minor typo fixes",
+                "author": "arabcoders",
+                "date": "2025-05-16T06:23:14+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250515-1dcde8c",
+        "date": "2025-05-15T16:04:18+00:00",
         "commits": [
             {
                 "sha": "b066335",
