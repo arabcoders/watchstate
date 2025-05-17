@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Libs;
 
-use App\API\Backend\Webhooks;
 use App\Cli;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\RuntimeException;
@@ -293,67 +292,14 @@ final class Initializer
      */
     private function defaultHttpServer(iRequest $request): iResponse
     {
-        $backend = [];
-
         $requestPath = $request->getUri()->getPath();
 
-        // -- health endpoint.
-        if (true === str_starts_with($requestPath, '/healthcheck')) {
-            return api_response(Status::OK);
-        }
-
-        // -- Forward requests to API server.
         if (true === str_starts_with($requestPath, Config::get('api.prefix', '????'))) {
             return $this->defaultAPIServer(clone $request);
         }
 
-        $apikey = ag($request->getQueryParams(), 'apikey', $request->getHeaderLine('x-apikey'));
-
-        if (empty($apikey)) {
-            if (false === (bool)Config::get('webui.enabled', false)) {
-                $response = api_response(Status::UNAUTHORIZED);
-                $this->write(
-                    $request,
-                    Level::Info,
-                    $this->formatLog($request, $response, 'No webhook token was found.')
-                );
-                return $response;
-            }
-
-            return new ServeStatic()->serve($request)->withHeader('Access-Control-Allow-Origin', '*')
-                ->withHeader('Access-Control-Allow-Credentials', 'true');
-        }
-
-        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
-
-        // -- Find Relevant backend.
-        foreach ($configFile->getAll() as $name => $info) {
-            if (null === ag($info, 'webhook.token')) {
-                continue;
-            }
-
-            if (true !== hash_equals((string)ag($info, 'webhook.token'), (string)$apikey)) {
-                continue;
-            }
-
-            $info['name'] = $name;
-            $backend = $info;
-            break;
-        }
-
-        if (empty($backend)) {
-            $response = api_response(Status::UNAUTHORIZED);
-            $this->write($request, Level::Info, $this->formatLog($request, $response, 'Invalid token was given.'));
-            return $response;
-        }
-
-        $uri = r('/v1/api/backends/{backend}/webhook', ['backend' => ag($backend, 'name')]);
-        return Container::get(Webhooks::class)(
-            request: $request->withUri($request->getUri()->withPath($uri)->withQuery(''))
-                ->withHeader('Authorization', 'Bearer ' . Config::get('api.key'))
-                ->withoutHeader('X-Apikey'),
-            name: $backend['name'],
-        );
+        return new ServeStatic()->serve($request)->withHeader('Access-Control-Allow-Origin', '*')
+            ->withHeader('Access-Control-Allow-Credentials', 'true');
     }
 
     /**

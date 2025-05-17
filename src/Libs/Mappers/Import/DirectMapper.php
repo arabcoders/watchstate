@@ -402,14 +402,15 @@ class DirectMapper implements ImportInterface
             return $this;
         }
 
+        if (true === $metadataOnly) {
+            return $this;
+        }
+
         if ($entity->isWatched() !== $local->isWatched()) {
             $reasons = [];
 
             if (true === $entity->isTainted()) {
                 $reasons[] = 'event marked as tainted';
-            }
-            if (true === $metadataOnly) {
-                $reasons[] = 'mapper is in metadata only mode';
             }
 
             if (count($reasons) < 1) {

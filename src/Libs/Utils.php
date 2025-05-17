@@ -211,6 +211,7 @@ if (!function_exists('APIRequest')) {
             'SERVER_NAME' => 'localhost',
             'SERVER_PORT' => 80,
             'HTTP_USER_AGENT' => Config::get('http.default.options.headers.User-Agent', 'APIRequest'),
+            'X_REQUEST_ID' => generateUUID('intr'),
             ...ag($opts, 'server', []),
         ];
 
