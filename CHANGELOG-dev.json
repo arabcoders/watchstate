@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250517-25ae310e",
-        "date": "2025-05-17T19:27:12+00:00",
+        "tag": "dev-20250517-31225e41",
+        "date": "2025-05-17T19:41:55+00:00",
         "commits": [
+            {
+                "sha": "31225e41",
+                "message": "correctly dispaly short hash in changelog page.",
+                "author": "arabcoders",
+                "date": "2025-05-17T19:41:55+00:00"
+            },
             {
                 "sha": "25ae310e",
                 "message": "Fix version display in containers.",
