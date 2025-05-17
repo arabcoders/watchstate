@@ -93,7 +93,7 @@ EXPOSE 8080
 
 # Health check.
 #
-HEALTHCHECK --interval=1m --timeout=3s CMD curl -f http://localhost:8080/v1/api/system/healthcheck || exit 1
+HEALTHCHECK --interval=10s --timeout=3s CMD curl -f http://localhost:8080/v1/api/system/healthcheck || exit 1
 
 # Run php-fpm
 #
