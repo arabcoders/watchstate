@@ -25,7 +25,7 @@ def format_tag(tag, branch_name):
     commit_date = datetime.fromtimestamp(
         tag.commit.committed_date, timezone.utc
     ).strftime("%Y%m%d")
-    commit_hash = tag.commit.hexsha[:7]  # Short commit hash
+    commit_hash = tag.commit.hexsha[:8]  # Short commit hash
     return f"{branch_name}-{commit_date}-{commit_hash}"
 
 
@@ -42,7 +42,7 @@ def generate_changelog(repo_path, changelog_path, branch_name):
         release_entry = {"tag": "Initial Release", "date": date_str, "commits": []}
         for commit in commits:
             commit_entry = {
-                "sha": commit.hexsha[:7],
+                "sha": commit.hexsha[:8],
                 "message": commit.message.strip(),
                 "author": commit.author.name,
                 "date": commit.committed_datetime.astimezone(timezone.utc).isoformat(),
@@ -64,7 +64,7 @@ def generate_changelog(repo_path, changelog_path, branch_name):
             release_entry = {"tag": formatted_tag, "date": date_str, "commits": []}
             for commit in commits:
                 commit_entry = {
-                    "sha": commit.hexsha[:7],
+                    "sha": commit.hexsha[:8],
                     "message": commit.message.strip(),
                     "author": commit.author.name,
                     "date": commit.committed_datetime.astimezone(timezone.utc).isoformat(),
@@ -81,11 +81,11 @@ def generate_changelog(repo_path, changelog_path, branch_name):
             if commits:
                 date_str = head_commit.committed_datetime.astimezone(timezone.utc).isoformat()
                 # Generate a tag for HEAD using its commit info.
-                formatted_tag = f"{branch_name}-{head_commit.committed_datetime.strftime('%Y%m%d')}-{head_commit.hexsha[:7]}"
+                formatted_tag = f"{branch_name}-{head_commit.committed_datetime.strftime('%Y%m%d')}-{head_commit.hexsha[:8]}"
                 release_entry = {"tag": formatted_tag, "date": date_str, "commits": []}
                 for commit in commits:
                     commit_entry = {
-                        "sha": commit.hexsha[:7],
+                        "sha": commit.hexsha[:8],
                         "message": commit.message.strip(),
                         "author": commit.author.name,
                         "date": commit.committed_datetime.astimezone(timezone.utc).isoformat(),
