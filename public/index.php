@@ -57,6 +57,9 @@ set_exception_handler(function (Throwable $e) {
 });
 
 $factory = new Psr17Factory();
+if (!isset($_SERVER['X_REQUEST_ID'])) {
+    $_SERVER['X_REQUEST_ID'] = generateUUID();
+}
 $request = new ServerRequestCreator($factory, $factory, $factory, $factory)->fromGlobals();
 $profiler = new Profiler(callback: function (array $data) {
     $filter = function (array $data): array {
@@ -159,7 +162,7 @@ $exitCode = $profiler->process(function () use ($request) {
     try {
         // -- In case the frontend proxy does not generate request unique id.
         if (!isset($_SERVER['X_REQUEST_ID'])) {
-            $_SERVER['X_REQUEST_ID'] = bin2hex(random_bytes(16));
+            $_SERVER['X_REQUEST_ID'] = generateUUID();
         }
 
         $app = new App\Libs\Initializer()->boot();
