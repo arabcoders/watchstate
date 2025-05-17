@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250517-31225e41",
-        "date": "2025-05-17T19:41:55+00:00",
+        "tag": "dev-20250518-48cca385",
+        "date": "2025-05-17T21:10:11+00:00",
         "commits": [
+            {
+                "sha": "48cca385",
+                "message": "Added back X_REQUEST_ID, frankenphp doesn't include it by default.",
+                "author": "arabcoders",
+                "date": "2025-05-17T21:10:11+00:00"
+            },
             {
                 "sha": "31225e41",
                 "message": "correctly dispaly short hash in changelog page.",
