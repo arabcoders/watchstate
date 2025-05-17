@@ -226,6 +226,10 @@ digits, we’ll automatically prefix it with `user_`.
 No, webhooks are **not required** for the tool to function. You can use the built-in **scheduled tasks** or manually run
 **import/export operations** on demand through the WebUI or console.
 
+> [!NOTE]
+> There are problems with jellyfin API, which are fixed by using webhooks, please check out
+> the [webhook guide](/guides/webhooks.md#media-backends-webhook-limitations) to learn more.
+
 ---
 
 # I'm Using Media Backends Hosted Behind HTTPS and See Errors Related to HTTP/2
@@ -299,7 +303,7 @@ If there are no errors, the database has been repaired successfully. And you can
 
 ---
 
-# Which Providers id `GUIDs` supported for Plex Media Server?
+# Which Providers id `GUIDs` supported by for PlexClient?
 
 * tvdb://(id) `New plex agent`
 * imdb://(id) `New plex agent`
@@ -319,7 +323,7 @@ If there are no errors, the database has been repaired successfully. And you can
 
 ---
 
-# Which Providers id supported for Jellyfin and Emby?
+# Which Providers id supported by Jellyfin/Emby Client?
 
 * imdb://(id)
 * tvdb://(id)
@@ -363,7 +367,7 @@ Should be added/managed via the `WebUI > Env` page.
 | WS_TRUST_HEADER         | string  | Which header contain user true IP.                                      | `X-Forwarded-For`        |
 | WS_LIBRARY_SEGMENT      | integer | Paginate backend library items request. Per request get total X number. | `1000`                   |
 | WS_CACHE_URL            | string  | Cache server URL.                                                       | `redis://127.0.0.1:6379` |
-| WS_SECURE_API_ENDPOINTS | bool    | Disregard the open route policy and require API key for all endpoints.  | `false`                  |
+| WS_SECURE_API_ENDPOINTS | bool    | Disable the open policy for webhook endpoint and require apikey.        | `false`                  |
 
 > [!NOTE]
 > for environment variables that has `{TASK}` tag, you **MUST** replace it with one of `IMPORT`, `EXPORT`, `BACKUP`,
@@ -377,54 +381,14 @@ Should be added/managed via the `WebUI > Env` page.
 > These environment variables relates to the container itself, and MUST be added via container environment or by
 > the `compose.yaml` file.
 
-| Key           | Type    | Description                        | Default  |
-|---------------|---------|------------------------------------|----------|
-| DISABLE_HTTP  | integer | Disable included `HTTP Server`.    | `0`      |
-| DISABLE_CRON  | integer | Disable included `Task Scheduler`. | `0`      |
-| DISABLE_CACHE | integer | Disable included `Cache Server`.   | `0`      |
-| HTTP_PORT     | string  | Change the `HTTP` listen port.     | `"8080"` |
-| FPM_PORT      | string  | Change the `PHP-FPM` listen port.  | `"9000"` |
+| Key           | Type    | Description                        | Default |
+|---------------|---------|------------------------------------|---------|
+| DISABLE_CRON  | integer | Disable included `Task Scheduler`. | `0`     |
+| DISABLE_CACHE | integer | Disable included `Cache Server`.   | `0`     |
 
 > [!NOTE]
 > You need to restart the container after changing these environment variables. those variables are not managed by the
 > WatchState tool, they are managed by the container itself.
-
----
-
-# How to disable the included HTTP server and use external server?
-
-To disable the built-in HTTP server, set the following environment variable and restart the container:
-
-```
-DISABLE_HTTP=1
-```
-
-Your external web server must forward requests using the correct **FastCGI** environment variables.
-
-## Example: Caddy Configuration
-
-```caddyfile
-https://watchstate.example.org {
-    # Replace "172.23.1.2" with the actual IP address of your WatchState container
-    reverse_proxy 172.23.1.2:9000 {
-        transport fastcgi {
-            root /opt/app/public
-            env DOCUMENT_ROOT /opt/app/public
-            env SCRIPT_FILENAME /opt/app/public/index.php
-            env X_REQUEST_ID "{http.request.uuid}"
-            split .php
-        }
-    }
-}
-```
-
-> [!NOTE]
-> If you change the FastCGI Process Manager port using the `FPM_PORT` environment variable, make sure to update the port
-> in the reverse proxy configuration as well.
-
-> [!IMPORTANT]
-> This configuration mode is **not officially supported** by WatchState. If issues arise, please verify your web server
-> setup. Support does not cover external web server configurations.
 
 ---
 
