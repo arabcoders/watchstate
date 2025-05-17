@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250517-56d1836",
-        "date": "2025-05-17T19:00:44+00:00",
+        "tag": "dev-20250517-25ae310",
+        "date": "2025-05-17T19:27:12+00:00",
         "commits": [
+            {
+                "sha": "25ae310",
+                "message": "Fix version display in containers.",
+                "author": "arabcoders",
+                "date": "2025-05-17T19:27:12+00:00"
+            },
             {
                 "sha": "56d1836",
                 "message": "don't show /v1/api/system/healthcheck/ in access log.",
