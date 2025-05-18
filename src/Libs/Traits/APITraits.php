@@ -98,6 +98,10 @@ trait APITraits
                 $backend['options'] = [];
             }
 
+            if (false === ag_exists($backend, 'webhook')) {
+                $backend['webhook'] = ['match' => ['user' => false, 'uuid' => false]];
+            }
+
             $backends[] = $backend;
         }
 
@@ -152,6 +156,10 @@ trait APITraits
 
         if (null !== $data->get('options.' . Options::IS_LIMITED_TOKEN)) {
             $options[Options::IS_LIMITED_TOKEN] = (bool)$data->get('options.' . Options::IS_LIMITED_TOKEN, false);
+        }
+
+        if (null !== $data->get('options.' . Options::PLEX_GUEST_USER)) {
+            $options[Options::PLEX_GUEST_USER] = (bool)$data->get('options.' . Options::PLEX_GUEST_USER, false);
         }
 
         $instance = Container::getNew($class);

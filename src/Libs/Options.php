@@ -28,6 +28,7 @@ final class Options
     public const string PLEX_USER_UUID = 'plex_user_uuid';
     public const string PLEX_USER_NAME = 'plex_user_name';
     public const string PLEX_EXTERNAL_USER = 'plex_external_user';
+    public const string PLEX_GUEST_USER = 'plex_guest_user';
     public const string NO_THROW = 'NO_THROW';
     public const string NO_LOGGING = 'NO_LOGGING';
     public const string MAX_EPISODE_RANGE = 'MAX_EPISODE_RANGE';

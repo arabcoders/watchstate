@@ -234,9 +234,7 @@ return (function () {
             'opcache.max_wasted_percentage' => 5,
             'expose_php' => 0,
             'date.timezone' => ag($config, 'tz', 'UTC'),
-//            'mbstring.http_input' => ag($config, 'charset', 'UTF-8'),
-//            'mbstring.http_output' => ag($config, 'charset', 'UTF-8'),
-//            'mbstring.internal_encoding' => ag($config, 'charset', 'UTF-8'),
+            'zend.assertions' => -1
         ],
         'fpm' => [
             'global' => [

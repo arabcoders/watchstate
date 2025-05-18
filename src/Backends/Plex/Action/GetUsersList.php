@@ -36,7 +36,6 @@ final class GetUsersList
 
     private array $rawRequests = [];
 
-
     public function __construct(iHttp $http, protected iLogger $logger)
     {
         $this->http = new RetryableHttpClient(client: $http, maxRetries: $this->maxRetry, logger: $this->logger);
@@ -156,6 +155,10 @@ final class GetUsersList
      */
     private function getExternalUsers(Context $context, array $opts = []): Response
     {
+        if (true === (bool)ag($context->options, Options::PLEX_GUEST_USER, false)) {
+            return new Response(status: true, response: []);
+        }
+
         $url = Container::getNew(iUri::class)->withPort(443)->withScheme('https')->withHost('plex.tv')
             ->withPath('/api/users/');
 
@@ -201,7 +204,7 @@ final class GetUsersList
             $url = $url->withQuery(http_build_query(['pin' => $pin]));
         }
 
-        $this->logger->debug("Requesting '{user}@{backend}' external users accesstokens.", [
+        $this->logger->debug("Requesting '{user}@{backend}' external users access-tokens.", [
             'user' => $context->userContext->name,
             'backend' => $context->backendName,
             'url' => (string)$url,
@@ -240,21 +243,27 @@ final class GetUsersList
      *
      * @return array Return processed response.
      * @throws iException if an error occurs during the request.
-     * @throws JsonException if an error occurs during the JSON parsing.
      */
     private function processExternalUsers(iResponse $response, Context $context, iUri $url): array
     {
-        $data = json_decode(
-            json: json_encode(simplexml_load_string($response->getContent(false))),
-            associative: true,
-            flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-        );
+        $content = simplexml_load_string($response->getContent(false));
+        $data = [];
+        foreach ($content->User ?? [] as $_user) {
+            $user = [];
+            // @INFO: This workaround is needed, for some reason array_map() doesn't work correctly on xml objects.
+            /** @noinspection PhpLoopCanBeConvertedToArrayMapInspection */
+            foreach ($_user->attributes() as $k => $v) {
+                $user[$k] = (string)$v;
+            }
+
+            $data[] = $user;
+        }
 
         if ($this->logRequests) {
             $this->rawRequests[] = [
                 'url' => (string)$url,
                 'headers' => $response->getHeaders(false),
-                'body' => $data,
+                'body' => json_decode(json_encode($content), true),
             ];
         }
 
@@ -267,15 +276,12 @@ final class GetUsersList
         }
 
         $list = [];
-
-        foreach (ag($data, 'User', []) as $data) {
-            $user = ag($data, '@attributes', []);
+        foreach ($data as $user) {
             $uuidStatus = preg_match('/\/users\/(?<uuid>.+?)\/avatar/', ag($user, 'thumb', ''), $matches);
-
             $list[] = [
                 'id' => ag($user, 'id'),
                 'uuid' => 1 === $uuidStatus ? ag($matches, 'uuid') : ag($user, 'invited_user'),
-                'name' => ag($user, ['username', 'title', 'email'], '??'),
+                'name' => ag($user, ['username', 'title', 'email', 'id'], '??'),
                 'admin' => false,
                 'guest' => 1 !== (int)ag($user, 'home'),
                 'restricted' => 1 === (int)ag($user, 'restricted'),
@@ -502,7 +508,6 @@ final class GetUsersList
                     'backend' => $context->backendName,
                     'status_code' => $response->getStatusCode(),
                     'body' => $response->getContent(false),
-                    'parsed' => $response->toArray(false),
                     'extra_msg' => !$extra_msg ? '' : ". $extra_msg",
                     'tokenType' => ag_exists(
                         $context->options,

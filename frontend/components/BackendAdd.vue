@@ -35,7 +35,6 @@
           </Message>
         </div>
         <template v-if="stage >= 0">
-
           <div class="field">
             <label class="label">Local User</label>
             <div class="control has-icons-left">
@@ -45,7 +44,7 @@
                 </select>
               </div>
               <div class="icon is-left">
-                <i class="fas fa-users"></i>
+                <i class="fas fa-users"/>
               </div>
             </div>
             <p class="help">
@@ -65,7 +64,7 @@
                 </select>
               </div>
               <div class="icon is-left">
-                <i class="fas fa-server"></i>
+                <i class="fas fa-server"/>
               </div>
             </div>
             <p class="help">The backend type.</p>
@@ -76,13 +75,13 @@
             <div class="control has-icons-left">
               <input class="input" type="text" v-model="backend.name" required :disabled="stage > 0">
               <div class="icon is-left">
-                <i class="fas fa-id-badge"></i>
+                <i class="fas fa-id-badge"/>
               </div>
-              <p class="help">
-                Choose a unique name for this backend. <b class="has-text-danger">You CANNOT change it later</b>.
-                Backend name must be in <code>lower case a-z, 0-9 and _</code> and cannot start with number.
-              </p>
             </div>
+            <p class="help">
+              Choose a unique name for this backend. <strong>You CANNOT change it later</strong>.
+              Backend name must be in <strong>lower case a-z, 0-9 and _</strong> and cannot start with number.
+            </p>
           </div>
 
           <div class="field">
@@ -97,30 +96,29 @@
                     <input class="input" v-model="backend.token" required :disabled="stage > 1"
                            :type="false === exposeToken ? 'password' : 'text'">
                     <div class="icon is-left">
-                      <i class="fas fa-key"></i>
+                      <i class="fas fa-key"/>
                     </div>
                   </div>
                   <div class="control">
                     <button type="button" class="button is-primary" @click="exposeToken = !exposeToken"
                             v-tooltip="'Toggle token'">
-                      <span class="icon" v-if="!exposeToken"><i class="fas fa-eye"></i></span>
-                      <span class="icon" v-else><i class="fas fa-eye-slash"></i></span>
+                      <span class="icon" v-if="!exposeToken"><i class="fas fa-eye"/></span>
+                      <span class="icon" v-else><i class="fas fa-eye-slash"/></span>
                     </button>
                   </div>
                 </div>
                 <p class="help">
                   <template v-if="'plex' === backend.type">
-                    Enter the <code>X-Plex-Token</code>.
+                    Enter the <strong>X-Plex-Token</strong>.
                     <NuxtLink target="_blank" to="https://support.plex.tv/articles/204059436"
                               v-text="'Visit This link'"/>
-                    to learn how to get the token. <span
-                      class="is-bold has-text-danger">If you plan to add sub-users, YOU MUST use admin level
-                    token.</span>
+                    to learn how to get the token. <span class="is-bold">If you plan to add sub-users, YOU MUST use
+                    admin level token.</span>
                   </template>
                   <template v-else>
-                    Generate a new API Key from <code>Dashboard > Settings > API Keys</code>.<br>
-                    <span class="icon has-text-warning"><i class="fas fa-info-circle"></i></span>
-                    You can use <code>username:password</code> as API key and we will automatically generate limited
+                    Generate a new API Key from <strong>Dashboard > Settings > API Keys</strong>.<br>
+                    <span class="icon has-text-warning"><i class="fas fa-info-circle"/></span>
+                    You can use <strong>username:password</strong> as API key and we will automatically generate limited
                     token if you are unable to generate API Key. This should be used as last resort. and it's mostly
                     untested. and things might not work as expected.
                     <span class="is-bold has-text-danger">If you plan to add sub-users, YOU MUST use API KEY and not
@@ -169,17 +167,17 @@
             </div>
           </div>
 
-          <template v-if="'plex' === backend.type">
+          <div class="field" v-if="'plex' === backend.type">
             <label class="label">User PIN</label>
             <div class="control has-icons-left">
               <input class="input" type="text" v-model="backend.options.PLEX_USER_PIN" :disabled="stage > 1">
-              <div class="icon is-left"><i class="fas fa-key"></i></div>
-              <p class="help">
-                If the user you are going to select has <code>PIN</code> enabled, you need to enter the pin here.
-                Otherwise it will fail to authenticate.
-              </p>
+              <div class="icon is-left"><i class="fas fa-key"/></div>
             </div>
-          </template>
+            <p class="help">
+              If the user you are going to select has <strong>PIN</strong> enabled, you need to enter the pin here.
+              Otherwise it will fail to authenticate.
+            </p>
+          </div>
         </template>
 
         <template v-if="stage >= 1">
@@ -187,105 +185,146 @@
             <label class="label">URL</label>
             <div class="control has-icons-left">
               <input class="input" type="text" v-model="backend.url" required :disabled="stage > 1">
-              <div class="icon is-left"><i class="fas fa-link"></i></div>
-              <p class="help">
-                Enter the URL of the backend. For example <code>http://192.168.8.200:8096</code>.
-              </p>
+              <div class="icon is-left"><i class="fas fa-link"/></div>
             </div>
+            <p class="help">
+              Enter the URL of the backend. For example <strong>http://192.168.8.200:8096</strong>.
+            </p>
           </div>
 
-          <div class="field" v-else>
-            <label class="label">Plex Server URL</label>
-            <div class="control has-icons-left">
-              <div class="select is-fullwidth">
-                <select v-model="backend.url" class="is-capital" @change="stage = 1; updateIdentifier()" required
-                        :disabled="stage > 1">
-                  <option value="" disabled>Select Server URL</option>
-                  <option v-for="server in servers" :key="'server-' + server.uuid" :value="server.uri">
-                    {{ server.name }} - {{ server.uri }}
-                  </option>
-                </select>
+          <template v-else>
+            <div class="field">
+              <label class="label">Plex Server URL</label>
+              <div class="field-body">
+                <div class="field">
+                  <div class="field has-addons">
+                    <div class="control is-expanded has-icons-left">
+                      <div class="select is-fullwidth">
+                        <select v-model="backend.url" class="is-capital" @change="stage = 1; updateIdentifier()"
+                                required
+                                :disabled="stage > 1">
+                          <option value="" disabled>Select Server URL</option>
+                          <option v-for="server in servers" :key="'server-' + server.uuid" :value="server.uri">
+                            {{ server.name }} - {{ server.uri }}
+                          </option>
+                        </select>
+                      </div>
+                      <div class="icon is-left">
+                        <i class="fas fa-link" v-if="!serversLoading"/>
+                        <i class="fas fa-spinner fa-pulse" v-else/>
+                      </div>
+                    </div>
+                    <div class="control">
+                      <button class="button is-primary" type="button" :disabled="serversLoading || stage > 2"
+                              @click="getServers">
+                        <span class="icon"><i class="fa"
+                                              :class="{'fa-spinner fa-spin': serversLoading,'fa-refresh' : !serversLoading }"/></span>
+                        <span class="is-hidden-mobile">Reload</span>
+                      </button>
+                    </div>
+                  </div>
+                  <p class="help">
+                    Try to use non <strong>.plex.direct</strong> urls if possible, as they are often have problems
+                    working in docker. If you use custom domain for your plex server and it's not showing in the list,
+                    you can add it via Plex settings page. <strong>Plex > Settings > Network > Custom server access
+                    URLs:</strong>. For more information
+                    <NuxtLink target="_blank"
+                              to="https://support.plex.tv/articles/200430283-network/#Custom-server-access-URLs"
+                              v-text="'Visit this link'"/>
+                    .
+                  </p>
+                </div>
               </div>
-              <div class="icon is-left">
-                <i class="fas fa-link" v-if="!serversLoading"></i>
-                <i class="fas fa-spinner fa-pulse" v-else></i>
+            </div>
+
+            <div class="field">
+              <label class="label" for="backend_ownership">Are you invited guest to this backend?</label>
+              <div class="control">
+                <input id="backend_ownership" type="checkbox" class="switch is-success"
+                       v-model="backend.options.plex_guest_user" :disabled="stage > 2">
+                <label for="backend_ownership" class="is-unselectable">
+                  {{ backend.options?.plex_guest_user ? 'Yes' : 'No' }}
+                </label>
               </div>
               <p class="help">
-                <NuxtLink @click="getServers" v-text="'Attempt to discover servers associated with the token.'"
-                          v-if="stage < 2"/>
-                Try to use non <code>.plex.direct</code> urls if possible, as they are often have problems working in
-                docker. If you use custom domain for your plex server and it's not showing in the list, you can add it
-                via Plex settings page. <code>Plex > Settings > Network > <strong>Custom server access
-                URLs:</strong></code>. For more information
-                <NuxtLink target="_blank"
-                          to="https://support.plex.tv/articles/200430283-network/#Custom-server-access-URLs"
-                          v-text="'Visit this link'"/>
-                .
+                This stops WatchState from attempting to generate access-tokens for different users.
               </p>
             </div>
-          </div>
+          </template>
         </template>
 
         <div class="field" v-if="stage >= 3">
-          <label class="label">
-            Associated User
-          </label>
-          <div class="control has-icons-left">
-            <div class="select is-fullwidth">
-              <select v-model="backend.user" class="is-capitalized" :disabled="stage > 3">
-                <option value="" disabled>Select User</option>
-                <option v-for="user in users" :key="'uid-' + user.id" :value="user.id">
-                  {{ user.name }}
-                </option>
-              </select>
+          <label class="label">User</label>
+          <div class="field-body">
+            <div class="field">
+              <div class="field has-addons">
+                <div class="control is-expanded has-icons-left">
+                  <div class="select is-fullwidth">
+                    <select v-model="backend.user" class="is-capitalized" :disabled="stage > 3">
+                      <option value="" disabled>Select User</option>
+                      <option v-for="user in users" :key="'uid-' + user.id" :value="user.id">
+                        {{ user.name }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="icon is-left">
+                    <i class="fas fa-user-tie" v-if="!usersLoading"/>
+                    <i class="fas fa-spinner fa-pulse" v-else/>
+                  </div>
+                </div>
+                <div class="control">
+                  <button class="button is-primary" type="button" :disabled="usersLoading || stage > 3"
+                          @click="getUsers">
+                    <span class="icon"><i class="fa"
+                                          :class="{'fa-spinner fa-spin': usersLoading,'fa-refresh' : !usersLoading }"/></span>
+                    <span class="is-hidden-mobile">Reload</span>
+                  </button>
+                </div>
+              </div>
+              <p class="help">Which user we should associate this backend with?</p>
             </div>
-            <div class="icon is-left">
-              <i class="fas fa-user-tie" v-if="!usersLoading"></i>
-              <i class="fas fa-spinner fa-pulse" v-else></i>
-            </div>
-            <p class="help">
-              Which user we should associate this backend with?
-              <NuxtLink @click="getUsers" v-text="'Retrieve User ids from backend.'" v-if="stage < 4"/>
-            </p>
           </div>
         </div>
 
         <template v-if="stage >= 4">
           <div class="field" v-if="backend.import">
-            <label class="label" for="backend_import">Import data from this backend?</label>
+            <label class="label" for="backend_import">Import play and progress updates from this backend?</label>
             <div class="control">
               <input id="backend_import" type="checkbox" class="switch is-success" v-model="backend.import.enabled">
               <label for="backend_import" class="is-unselectable">{{ backend.import.enabled ? 'Yes' : 'No' }}</label>
-              <p class="help is-bold">
-                Import means to get the data from the backend and store it in WatchState.
-              </p>
             </div>
+            <p class="help is-bold has-text-danger">
+              <span class="icon"><i class="fas fa-info-circle"/></span>
+              Get play state and progress from this backend.
+            </p>
           </div>
 
           <div class="field" v-if="backend.import && !backend.import.enabled">
-            <label class="label" for="backend_import_metadata">Import metadata only from from this backend?</label>
+            <label class="label" for="backend_import_metadata">Import metadata from this backend?</label>
             <div class="control">
               <input id="backend_import_metadata" type="checkbox" class="switch is-success"
                      v-model="backend.options.IMPORT_METADATA_ONLY">
               <label for="backend_import_metadata" class="is-unselectable">
                 {{ backend.options?.IMPORT_METADATA_ONLY ? 'Yes' : 'No' }}
               </label>
-              <p class="help has-text-danger">
-                For best performance, we need at least to import metadata from the backend. This will not alter your
-                play state.
-              </p>
             </div>
+            <p class="help has-text-danger is-bold">
+              <span class="icon"><i class="fas fa-info-circle"/></span>
+              As you have disabled the state import, you should enable this option for efficient and fast updates
+              to this backend.
+            </p>
           </div>
 
           <div class="field" v-if="backend.export">
-            <label class="label" for="backend_export">Export data to this backend?</label>
+            <label class="label" for="backend_export">Send play and progress updates to this backend?</label>
             <div class="control">
               <input id="backend_export" type="checkbox" class="switch is-success" v-model="backend.export.enabled">
               <label for="backend_export" class="is-unselectable">{{ backend.export.enabled ? 'Yes' : 'No' }}</label>
-              <p class="help is-bold">
-                Export mean sending data from WatchState to this backend.
-              </p>
             </div>
+            <p class="help is-bold has-text-danger">
+              <span class="icon"><i class="fas fa-info-circle"/></span>
+              The backend will not receive any data from WatchState if this is disabled.
+            </p>
           </div>
 
           <div class="field" v-if="backend.webhook">
@@ -296,10 +335,10 @@
               <label for="webhook_match_user" class="is-unselectable">
                 {{ backend.webhook.match.user ? 'Yes' : 'No' }}
               </label>
-              <p class="help">
-                Check webhook payload for user id match. if it does not match, the payload will be ignored.
-              </p>
             </div>
+            <p class="help">
+              Check webhook payload for user id match. if it does not match, the payload will be ignored.
+            </p>
           </div>
 
           <div class="field" v-if="backend.webhook">
@@ -310,56 +349,58 @@
               <label for="webhook_match_uuid" class="is-unselectable">
                 {{ backend.webhook.match.uuid ? 'Yes' : 'No' }}
               </label>
-              <p class="help">
-                Check webhook payload for backend unique id. if it does not match, the payload will be ignored.
-              </p>
             </div>
+            <p class="help">
+              Check webhook payload for backend unique id. if it does not match, the payload will be ignored.
+            </p>
+          </div>
+
+          <hr>
+
+          <div class="field">
+            <h1 class="title is-4">One Time Operations</h1>
           </div>
 
           <div class="field">
-            <hr>
             <label class="label has-text-danger" for="backup_data">
               Create backup for this backend data?
             </label>
             <div class="control">
               <input id="backup_data" type="checkbox" class="switch is-success" v-model="backup_data">
               <label for="backup_data" class="is-unselectable">{{ backup_data ? 'Yes' : 'No' }}</label>
-              <p class="help">
-                This will run a one time backup for the backend data.
-              </p>
             </div>
+            <p class="help">
+              This will run a one time backup for the backend data.
+            </p>
           </div>
 
           <div class="field" v-if="backends.length < 1">
-            <hr>
             <label class="label" for="force_import">
               Force one time import from this backend?
             </label>
             <div class="control">
               <input id="force_import" type="checkbox" class="switch is-success" v-model="force_import">
               <label for="force_import" class="is-unselectable">{{ force_import ? 'Yes' : 'No' }}</label>
-              <p class="help">
-                <span class="icon"><i class="fas fa-info-circle"></i></span>
-                Run a one time import from this backend after adding it.
-              </p>
             </div>
+            <p class="help">
+              <span class="icon"><i class="fas fa-info-circle"/></span>
+              Run a one time import from this backend after adding it.
+            </p>
           </div>
 
           <div class="field" v-if="backends.length > 0">
-            <hr>
             <label class="label has-text-danger" for="force_export">
               Force Export local data to this backend?
             </label>
             <div class="control">
               <input id="force_export" type="checkbox" class="switch is-success" v-model="force_export">
               <label for="force_export" class="is-unselectable">{{ force_export ? 'Yes' : 'No' }}</label>
-              <p class="help has-text-danger">
-                <span class="icon"><i class="fas fa-info-circle"></i></span>
-                THIS OPTION WILL OVERRIDE THE BACKEND DATA with locally stored data.
-              </p>
             </div>
+            <p class="help has-text-danger is-bold">
+              <span class="icon"><i class="fas fa-info-circle"/></span>
+              THIS OPTION WILL OVERRIDE THE BACKEND DATA with locally stored data.
+            </p>
           </div>
-
         </template>
       </div>
 
@@ -367,20 +408,20 @@
 
         <div class="card-footer-item" v-if="stage >= 1">
           <button class="button is-fullwidth is-warning" type="button" @click="stage = stage - 1">
-            <span class="icon"><i class="fas fa-arrow-left"></i></span>
+            <span class="icon"><i class="fas fa-arrow-left"/></span>
             <span>Previous Step</span>
           </button>
         </div>
 
         <div class="card-footer-item" v-if="stage < maxStages">
           <button class="button is-fullwidth is-info" type="button" @click="changeStep()">
-            <span class="icon"><i class="fas fa-arrow-right"></i></span>
+            <span class="icon"><i class="fas fa-arrow-right"/></span>
             <span>Next Step</span>
           </button>
         </div>
         <div class="card-footer-item" v-else>
           <button class="button is-fullwidth is-primary" type="submit">
-            <span class="icon"><i class="fas fa-plus"></i></span>
+            <span class="icon"><i class="fas fa-plus"/></span>
             <span>Add Backend</span>
           </button>
         </div>
@@ -685,19 +726,14 @@ const getUsers = async (showAlert = true) => {
       token: backend.value.token,
       url: backend.value.url,
       uuid: backend.value.uuid,
+      options: {},
     };
 
-    if (backend.value.options && backend.value.options.ADMIN_TOKEN) {
-      data.options = {
-        ADMIN_TOKEN: backend.value.options.ADMIN_TOKEN
+    ['ADMIN_TOKEN', 'plex_guest_user', 'PLEX_USER_PIN', 'is_limited_token'].forEach(v => {
+      if (backend.value.options && backend.value.options[v]) {
+        data.options[v] = backend.value.options[v]
       }
-    }
-
-    if (backend.value.options && backend.value.options.PLEX_USER_PIN) {
-      data.options = {
-        PLEX_USER_PIN: backend.value.options.PLEX_USER_PIN
-      }
-    }
+    })
 
     const response = await request(`/backends/users/${backend.value.type}?tokens=1`, {
       method: 'POST',
@@ -873,7 +909,7 @@ const addBackend = async () => {
 }
 
 const getServers = async () => {
-  if ('plex' !== backend.value.type || servers.value.length > 0) {
+  if ('plex' !== backend.value.type) {
     return
   }
 
@@ -881,6 +917,7 @@ const getServers = async () => {
     notification('error', 'Error', `Token is required to get list of servers.`)
     return
   }
+
   try {
     serversLoading.value = true
 
@@ -916,9 +953,9 @@ const getServers = async () => {
 
 const updateIdentifier = async () => {
   backend.value.uuid = servers.value.find(s => s.uri === backend.value.url).identifier
-  if (backend.value.uuid) {
-    await getUsers()
-  }
+  // if (backend.value.uuid) {
+  //   await getUsers()
+  // }
 }
 
 const n_proxy = (type, title, message, e = null) => {

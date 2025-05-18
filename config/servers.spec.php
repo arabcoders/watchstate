@@ -177,7 +177,13 @@ return [
         'key' => 'options.plex_external_user',
         'type' => 'bool',
         'visible' => false,
-        'description' => 'Mark the plex user as external user.',
+        'description' => 'Mark the plex user as home user.',
+    ],
+    [
+        'key' => 'options.plex_guest_user',
+        'type' => 'bool',
+        'visible' => true,
+        'description' => 'Mark the plex user as invited guest.',
     ],
     [
         'key' => 'options.ADMIN_PLEX_USER_PIN',

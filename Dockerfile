@@ -34,15 +34,15 @@ RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezo
     # Cache fonts.
     fc-cache -f && fc-list | sort
 
+# Copy frankenphp (caddy+php) to the container.
+#
+COPY --chown=app:app --from=ghcr.io/arabcoders/franken_builder:latest /usr/local/bin/frankenphp /opt/bin/
+
 # Copy source code to container.
 COPY ./ /opt/app
 
 # Copy frontend to public directory.
 COPY --chown=app:app --from=npm_builder /frontend/exported/ /opt/app/public/exported/
-
-# Copy frankenphp (caddy+php) to the container.
-#
-COPY --chown=app:app --from=ghcr.io/arabcoders/franken_builder:latest /usr/local/bin/frankenphp /opt/bin/
 
 # install composer & packages.
 #
