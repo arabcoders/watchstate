@@ -151,7 +151,7 @@ return (function () {
         ],
         [
             'key' => 'WS_SECURE_API_ENDPOINTS',
-            'description' => 'Close all open routes and enforce API key authentication on all endpoints.',
+            'description' => 'Disable the open policy for webhook endpoint and require apikey.',
             'type' => 'bool',
         ],
         [

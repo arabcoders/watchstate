@@ -54,15 +54,8 @@ else
   echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] INFO: No environment file present at [${ENV_FILE}]."
 fi
 
-DISABLE_HTTP=${DISABLE_HTTP:-0}
 DISABLE_CRON=${DISABLE_CRON:-0}
 DISABLE_CACHE=${DISABLE_CACHE:-0}
-FPM_PORT=${FPM_PORT:-9000}
-
-if [ 9000 != "${FPM_PORT}" ]; then
-  echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] INFO: Changing PHP-FPM port to [${FPM_PORT}]."
-  sed -i "s/listen = 0.0.0.0:9000/listen = 0.0.0.0:${FPM_PORT}/" /etc/*/php-fpm.d/www.conf
-fi
 
 set -u
 
@@ -73,16 +66,6 @@ WS_CACHE_NULL=1 /opt/bin/console -v >/dev/null
 if [ 0 = "${DISABLE_CACHE}" ]; then
   echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Starting Cache Server."
   redis-server "/opt/config/redis.conf"
-fi
-
-if [ 0 = "${DISABLE_HTTP}" ]; then
-  echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Starting HTTP Server."
-  _CADDY_UUID_FILE="${XDG_DATA_HOME}/caddy/instance.uuid"
-  if [ ! -f "${_CADDY_UUID_FILE}" ]; then
-    mkdir -p "${XDG_DATA_HOME}/caddy"
-    printf '%s' "$(cat /proc/sys/kernel/random/uuid)" > "${_CADDY_UUID_FILE}"
-  fi
-  caddy start --config /opt/config/Caddyfile
 fi
 
 echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Caching tool routes."
@@ -113,10 +96,5 @@ if [ 0 = "${DISABLE_CRON}" ]; then
 fi
 
 echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Running - $(/opt/bin/console --version)"
-
-# first arg is `-f` or `--some-option`
-if [ "${1#-}" != "$1" ]; then
-  set -- php-fpm "${@}"
-fi
 
 exec "${@}"

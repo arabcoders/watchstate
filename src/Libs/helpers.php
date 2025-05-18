@@ -703,7 +703,7 @@ if (!function_exists('makeBackend')) {
                 backendUrl: new Uri(ag($backend, 'url')),
                 cache: $cache,
                 userContext: $userContext ?? Container::get(UserContext::class),
-                logger: ag($options, iLogger::class, fn () => Container::get(iLogger::class)),
+                logger: ag($options, iLogger::class, fn() => Container::get(iLogger::class)),
                 backendId: ag($backend, 'uuid', null),
                 backendToken: ag($backend, 'token', null),
                 backendUser: ag($backend, 'user', null),
@@ -823,12 +823,6 @@ if (!function_exists('getAppVersion')) {
      */
     function getAppVersion(): string
     {
-        static $_version;
-
-        if (null !== $_version) {
-            return $_version;
-        }
-
         $version = Config::get('version', 'dev-master');
 
         if ('$(version_via_ci)' === $version) {
@@ -854,20 +848,15 @@ if (!function_exists('getAppVersion')) {
                 $procDate->run();
                 $commitDate = $procDate->isSuccessful() ? trim($procDate->getOutput()) : date('Ymd');
 
-                $_version = r('{branch}-{date}-{commit}', [
+                return r('{branch}-{date}-{commit}', [
                     'branch' => $branch,
                     'date' => $commitDate,
                     'commit' => $commit,
                 ]);
-
-                return $_version;
             } catch (Throwable) {
-                $_version = 'dev-master';
                 return 'dev-master';
             }
         }
-
-        $_version = $version;
 
         return $version;
     }
@@ -921,7 +910,7 @@ if (!function_exists('array_keys_diff')) {
      */
     function array_keys_diff(array $base, array $list, bool $has = true): array
     {
-        return array_filter($base, fn ($key) => $has === in_array($key, $list), ARRAY_FILTER_USE_KEY);
+        return array_filter($base, fn($key) => $has === in_array($key, $list), ARRAY_FILTER_USE_KEY);
     }
 }
 
@@ -1331,7 +1320,7 @@ if (!function_exists('parseConfigValue')) {
     function parseConfigValue(mixed $value, Closure|null $callback = null): mixed
     {
         if (is_string($value) && preg_match('#%{(.+?)}#s', $value)) {
-            $val = preg_replace_callback('#%{(.+?)}#s', fn ($match) => Config::get($match[1], $match[1]), $value);
+            $val = preg_replace_callback('#%{(.+?)}#s', fn($match) => Config::get($match[1], $match[1]), $value);
             return null !== $callback && null !== $val ? $callback($val) : $val;
         }
 

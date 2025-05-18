@@ -119,7 +119,7 @@ const formatTag = tag => {
   }
   const branch = parts[0];
   const date = parts[1];
-  const shortSha = parts[2].substring(0, 7);
+  const shortSha = parts[2].substring(0, 8);
   return `${ucFirst(branch)}: ${moment(date, 'YYYYMMDD').format('YYYY-MM-DD')} - ${shortSha}`;
 }
 

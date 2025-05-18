@@ -19,6 +19,6 @@ final class HealthCheck
         return api_response(Status::OK, [
             'status' => 'ok',
             'message' => 'System is healthy',
-        ]);
+        ], headers: ['X-No-AccessLog' => '1']);
     }
 }
