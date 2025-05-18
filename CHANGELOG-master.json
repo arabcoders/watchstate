@@ -1,5 +1,47 @@
 [
     {
+        "tag": "master-20250518-8cbb5012",
+        "date": "2025-05-18T14:41:51+00:00",
+        "commits": [
+            {
+                "sha": "48cca385",
+                "message": "Added back X_REQUEST_ID, frankenphp doesn't include it by default.",
+                "author": "arabcoders",
+                "date": "2025-05-17T21:10:11+00:00"
+            },
+            {
+                "sha": "31225e41",
+                "message": "correctly dispaly short hash in changelog page.",
+                "author": "arabcoders",
+                "date": "2025-05-17T19:41:55+00:00"
+            },
+            {
+                "sha": "25ae310e",
+                "message": "Fix version display in containers.",
+                "author": "arabcoders",
+                "date": "2025-05-17T19:27:12+00:00"
+            },
+            {
+                "sha": "56d1836f",
+                "message": "don't show /v1/api/system/healthcheck/ in access log.",
+                "author": "arabcoders",
+                "date": "2025-05-17T19:00:44+00:00"
+            },
+            {
+                "sha": "9e7f85d7",
+                "message": "Remove Caddy&php-fpm and use frankenphp as both http and php runner.",
+                "author": "arabcoders",
+                "date": "2025-05-17T18:51:05+00:00"
+            },
+            {
+                "sha": "770f3b83",
+                "message": "Remove mapper is in metadata only mode as it's really meaningless and expected.",
+                "author": "arabcoders",
+                "date": "2025-05-16T21:03:19+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250516-2b8af698",
         "date": "2025-05-16T16:36:48+00:00",
         "commits": [
