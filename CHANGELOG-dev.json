@@ -1,8 +1,20 @@
 [
     {
-        "tag": "dev-20250519-c9178897",
-        "date": "2025-05-18T21:43:12+00:00",
+        "tag": "dev-20250519-d00c4b3e",
+        "date": "2025-05-18T23:04:57+00:00",
         "commits": [
+            {
+                "sha": "d00c4b3e",
+                "message": "re-order frankenphp to be before copying the app.",
+                "author": "arabcoders",
+                "date": "2025-05-18T23:04:57+00:00"
+            },
+            {
+                "sha": "ef8e54ad",
+                "message": "remove unused mbstring configuration and disable  assertions in production",
+                "author": "arabcoders",
+                "date": "2025-05-18T23:00:32+00:00"
+            },
             {
                 "sha": "c9178897",
                 "message": "update backend add/edit page to be more re-activate, added new option for plex backends, to mark user as guest.",
