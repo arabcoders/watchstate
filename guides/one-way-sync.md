@@ -16,8 +16,10 @@ environment without modifying the original data.
 ### Adding your backend with has the most accurate data
 
 First, go to <!--i:fa-server--> **Backends** and click on the <!--i:fa-plus--> **Add Backend** button. Follow the
-interactive setup guide. When you reach the step asking *`Export data to this backend?`*, disable it, this applies to
-your main backend as you don’t want to alter its data. Keep *`Import data from this backend?`* enabled, which will allow
+interactive setup guide. When you reach the step asking *`Send play and progress updates to this backend?`*, disable it,
+this applies to
+your main backend as you don’t want to alter its data. Keep *`Import play and progress updates from this backend?`*
+enabled, which will allow
 you to import data from the backend.
 
 Enable the *`Force one time import from this backend?`* option to import your current data into WatchState. This will
@@ -62,16 +64,17 @@ For each backend, follow these steps:
 
 Do exactly as you did for the main backend, but make the following changes:
 
-- *`Import data from this backend?`*: No
-- *`Import metadata only from this backend?`*: Yes
-- *`Export data to this backend?`*: Yes
+- *`Import play and progress updates from this backend?`*: No
+- *`Import metadata from this backend?`*: Yes
+- *`Send play and progress updates to this backend?`*: Yes
 - *`Force Export local data to this backend?`*: This depends on your setup:
     - If you have only one extra backend and have already imported your main backend data, select *Yes* and skip Step 2.
     - If you have multiple backends, keep this option disabled and proceed to Step 2.
 
 > [!IMPORTANT]  
 > Selecting the correct options is crucial to avoid altering the data in the main backend. The
-> *`Import metadata only from this backend?`* option will only appear if you have *`Import data from this backend?`*
+> *`Import metadata from this backend?`* option will only appear if you have
+*`Import play and progress updates from this backend?`*
 > disabled.
 
 ### Step 2
