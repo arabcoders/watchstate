@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250519-fa4eda07",
-        "date": "2025-05-19T13:56:54+00:00",
+        "tag": "dev-20250519-9856ca78",
+        "date": "2025-05-19T20:42:11+00:00",
         "commits": [
+            {
+                "sha": "9856ca78",
+                "message": "Added URL Checker into tools menu.",
+                "author": "arabcoders",
+                "date": "2025-05-19T20:42:11+00:00"
+            },
             {
                 "sha": "fa4eda07",
                 "message": "Filter every line output in the basic report to strip known sensitive information like accesstokens or apikeys.",
