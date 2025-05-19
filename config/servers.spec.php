@@ -221,6 +221,4 @@ return [
         'visible' => false,
         'description' => 'Whether to use old progress endpoint for plex.',
     ],
-
 ];
-
