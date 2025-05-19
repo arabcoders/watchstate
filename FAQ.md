@@ -7,7 +7,7 @@ To turn on automatic import or export tasks:
 1. Go to the `Tasks` page in the WebUI.
 2. Enable the tasks you want to schedule for automatic execution.
 
-By default:
+By default, the tasks are scheduled:
 
 - **Import** task runs every **1 hour**
 - **Export** task runs every **1 hour and 30 minutes**
@@ -17,7 +17,9 @@ If you want to customize the schedule, you can do so by adding environment varia
 - **WS_CRON_IMPORT_AT**
 - **WS_CRON_EXPORT_AT**
 
-You can set these variables from the <code>Env</code> page.
+You can set these variables from the <!--i:fa-tasks--> **Tasks**, underneath the task click on the timer, and it will
+take you to the <!--i:fa-cogs--> **Env** page, where you can set the cron expression directly. Or you can go to
+<!--i:fa-cogs--> **Env** page and add the variables manually.
 
 > [!NOTE]
 > A great tool to validate your cron expression is [crontab.guru](https://crontab.guru/)
@@ -119,7 +121,7 @@ state is preserved.
 
 However, if the new backend's state is incorrect, it may unintentionally override your accurate local watch history.
 
-## How to Fix the the play state
+## How to Fix the play state
 
 To synchronize both backends correctly:
 
@@ -221,7 +223,7 @@ digits, we’ll automatically prefix it with `user_`.
 
 ----
 
-# Does WatchState requires Webhooks to work?
+# Does WatchState require Webhooks to work?
 
 No, webhooks are **not required** for the tool to function. You can use the built-in **scheduled tasks** or manually run
 **import/export operations** on demand through the WebUI or console.
@@ -421,7 +423,7 @@ After updating the environment variables, **restart the container** to apply the
 
 # How to get WatchState working with YouTube content/library?
 
-Due to the nature on how people name their youtube files i had to pick something specific for it to work cross supported
+Due to the nature on how people name their youtube files I had to pick something specific for it to work cross supported
 media agents. Please visit [this link](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin#usage) to know how to
 name your files. Please be aware these plugins and scanners `REQUIRE`
 that you have a `yt-dlp` `.info.json` files named exactly as your media file.
@@ -454,44 +456,22 @@ relevant data if they are not matching correctly, and we hopefully can resolve i
 
 # How to check if the container able to communicate with the media backends?
 
-If you having problem adding a backend to `WatchState`, it most likely network related problem, where the container
+If you're having problem adding a backend to `WatchState`, it most likely network related problem, where the container
 isn't able to communicate with the media backend. Thus, you will get errors. To make sure the container is able to
-communicate with the media backend, you can run the following command and check the output.
+communicate with the media backend, run the following tests via
+<!--i:fa-tools--> **Tools** > <!--i:fa-external-link--> **URL Checker**.
 
-If the command fails for any reason, then you most likely have network related problem or invalid apikey/token.
-
-## For Plex.
-
-```bash
-$ docker exec -ti watchstate bash
-$ curl -H "Accept: application/json" -H "X-Plex-Token: [PLEX_TOKEN]" http://[PLEX_URL]/
-```
+From the `Pre-defined` templates select the media server you want to test against and replace the following with your
+info
 
 * Replace `[PLEX_TOKEN]` with your plex token.
-* Replace `[PLEX_URL]` with your plex url. The one you selected when prompted by the command.
+* Replace `[API_KEY]` with your jellyfin/emby api key.
+* Replace `[IP:port]` with your media backend host or ip:port. it can be a host or ip:port i.e. `media.mydomain.ltd`
+  or `172.23.0.11:8096`.
 
-```
-{"MediaContainer":{"size":25,...}}
-```
-
-If everything is working correctly you should see something like this previous json output.
-
-## For Jellyfin & Emby.
-
-```bash
-$ docker exec -ti watchstate bash
-$ curl -v -H "Accept: application/json" -H "X-MediaBrowser-Token: [BACKEND_API_KEY]" http://[BACKEND_HOST]/System/Info
-```
-
-* Replace `[BACKEND_API_KEY]` with your jellyfin/emby api key.
-* Replace `[BACKEND_HOST]` with your jellyfin/emby host. it can be a host or ip:port i.e. `jf.mydomain.ltd`
-  or `172.23.0.11:8096`
-
-```
-{"OperatingSystemDisplayName":"Linux","HasPendingRestart":false,"IsShuttingDown":false,...}}
-```
-
-If everything is working correctly you should see something like this previous json output.
+If everything is working correctly you should see `200 Status code response.` with green text. this good indicator that
+the container is able to communicate with the media backend. If you see `403` or `404` or any other error code, please
+check your backend settings and make sure the token is correct and the ip:port is reachable from the container.
 
 ----
 
@@ -581,10 +561,10 @@ services:
 ```
 
 This setup should work for VAAPI encoding in `x86_64` containers, There are currently an issue with nvidia h264_nvenc
-encoding, the alpine build for`ffmpeg` doesn't include the codec. i am looking for a way include the codec without
+encoding, the alpine build for`ffmpeg` doesn't include the codec. I am looking for a way include the codec without
 ballooning the image size by 600MB+. If you have a solution please let me know.
 
-Please know that your `video`, `render` group id might be different then mine, you can run the follow command in docker
+Please know that your `video`, `render` group id might be different from mine, you can run the follow command in docker
 host server to get the group ids for both groups.
 
 ```bash
@@ -690,11 +670,7 @@ To check if there is any watch progress events being registered, You can go to `
 `on_progress` events, if you are seeing those, this means the progress is being synced. Check the `Tasks logs` to see
 the event log.
 
-If this is setup and working you may be ok with changing the `WS_CRON_IMPORT_AT/WS_CRON_EXPORT_AT` schedule to something
-less frequent as the sync progress working will update the progress near realtime. For example you could change these
-tasks to run daily instead of hourly.
-
-```
-WS_CRON_IMPORT_AT=0 11 * * *
-WS_CRON_EXPORT_AT=30 11 * * *
-```
+If this is set up and working you may be ok with changing the `WS_CRON_IMPORT_AT/WS_CRON_EXPORT_AT` schedule to
+something less frequent as the sync progress working will update the progress near realtime. For example, you could
+change these tasks to run daily to know how to do that please
+check [this FAQ entry](#how-to-enable-scheduledautomatic-tasks).

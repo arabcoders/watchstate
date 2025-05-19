@@ -232,13 +232,19 @@ return (function () {
             'pcre.jit' => 1,
             'opcache.enable' => 1,
             'opcache.memory_consumption' => 128,
-            'opcache.interned_strings_buffer' => 8,
+            'opcache.interned_strings_buffer' => 16,
             'opcache.max_accelerated_files' => 10000,
             'opcache.max_wasted_percentage' => 5,
             'opcache.validate_timestamps' => $inContainer ? 0 : 1,
             'expose_php' => 0,
             'date.timezone' => ag($config, 'tz', 'UTC'),
-            'zend.assertions' => -1
+            'zend.assertions' => -1,
+            'short_open_tag' => 0,
+            'opcache.jit' => 'disabled',
+            'opcache.jit_buffer_size' => 0,
+            // @TODO: keep jit disabled for now, as it is not stable yet,. and we haven't tested it with frankenphp
+            //'opcache.jit' => $inContainer ? 'tracing' : 'disabled',
+            //'opcache.jit_buffer_size' => $inContainer ? '128M' : 0,
         ],
         'fpm' => [
             'global' => [

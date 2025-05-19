@@ -163,7 +163,7 @@ html {
 }
 
 .has-text-purple {
-    color: #5f00d1;
+    color: #5f00d1 !important;
 }
 
 @media screen and (min-width: 769px), print {

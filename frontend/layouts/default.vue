@@ -72,6 +72,11 @@
                 <span>Processes</span>
               </NuxtLink>
 
+              <NuxtLink class="navbar-item" to="/url_check" @click.native="(e) => changeRoute(e)">
+                <span class="icon"><i class="fas fa-external-link"/></span>
+                <span>URL Checker</span>
+              </NuxtLink>
+
               <hr class="navbar-divider">
 
               <NuxtLink class="navbar-item" to="/parity" @click.native="(e) => changeRoute(e)">
