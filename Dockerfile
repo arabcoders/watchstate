@@ -51,6 +51,7 @@ RUN echo '' && \
     # create /usr/bin/php that points to /opt/bin/frankenphp php-cli "$@" \
     echo '#!/bin/sh' > /usr/bin/php && \
     echo 'exec /opt/bin/frankenphp php-cli "$@"' >> /usr/bin/php && chmod +x /usr/bin/php && \
+    ln -s /usr/bin/nano /usr/bin/pico && \
     # Create basic directories.
     bash -c 'umask 0000 && mkdir -p /temp_data/ /opt/{app,bin,config} /config/{backup,cache,config,db,debug,logs,webhooks,profiler}' && \
     # Link console.

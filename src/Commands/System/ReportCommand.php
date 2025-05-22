@@ -39,14 +39,27 @@ final class ReportCommand extends Command
     private const int DEFAULT_LIMIT = 10;
 
     /**
+     * @var array<string> $sensitive strip sensitive information from the report.
+     */
+    private array $sensitive = [];
+
+    /**
+     * @var iOutput|null $output The output instance.
+     */
+    private iOutput|null $output = null;
+
+    /**
      * Class Constructor.
      *
      * @param iDB $db An instance of the iDB class used for database operations.
      *
      * @return void
      */
-    public function __construct(private iDB $db, private iImport $mapper, private iLogger $logger)
-    {
+    public function __construct(
+        private readonly iDB $db,
+        private readonly iImport $mapper,
+        private readonly iLogger $logger
+    ) {
         parent::__construct();
     }
 
@@ -94,24 +107,24 @@ final class ReportCommand extends Command
     protected function runCommand(iInput $input, iOutput $output): int
     {
         assert($output instanceof ConsoleOutput, new RuntimeException('Expecting ConsoleOutput instance.'));
-        $output = $output->withNoSuppressor();
+        $this->output = $output->withNoSuppressor();
 
-        $output->writeln('<info>[ Basic Report ]</info>' . PHP_EOL);
-        $output->writeln(r('WatchState version: <flag>{answer}</flag>', ['answer' => getAppVersion()]));
-        $output->writeln(r('PHP version: <flag>{answer}</flag>', ['answer' => PHP_VERSION]));
-        $output->writeln(r('Timezone: <flag>{answer}</flag>', ['answer' => Config::get('tz', 'UTC')]));
-        $output->writeln(r('Data path: <flag>{answer}</flag>', ['answer' => Config::get('path')]));
-        $output->writeln(r('Temp path: <flag>{answer}</flag>', ['answer' => Config::get('tmpDir')]));
-        $output->writeln(
+        $this->filter('<info>[ Basic Report ]</info>' . PHP_EOL);
+        $this->filter(r('WatchState version: <flag>{answer}</flag>', ['answer' => getAppVersion()]));
+        $this->filter(r('PHP version: <flag>{answer}</flag>', ['answer' => PHP_SAPI . '/' . PHP_VERSION]));
+        $this->filter(r('Timezone: <flag>{answer}</flag>', ['answer' => Config::get('tz', 'UTC')]));
+        $this->filter(r('Data path: <flag>{answer}</flag>', ['answer' => Config::get('path')]));
+        $this->filter(r('Temp path: <flag>{answer}</flag>', ['answer' => Config::get('tmpDir')]));
+        $this->filter(
             r('Database migrated?: <flag>{answer}</flag>', ['answer' => $this->db->isMigrated() ? 'Yes' : 'No'])
         );
-        $output->writeln(
+        $this->filter(
             r("Does the '.env' file exists? <flag>{answer}</flag>", [
                 'answer' => file_exists(Config::get('path') . '/config/.env') ? 'Yes' : 'No',
             ])
         );
 
-        $output->writeln(
+        $this->filter(
             r('Is the tasks runner working? <flag>{answer}</flag>', [
                 'answer' => (function () {
                     $info = isTaskWorkerRunning(ignoreContainer: true);
@@ -123,21 +136,22 @@ final class ReportCommand extends Command
                 })(),
             ])
         );
-        $output->writeln(r('Running in container? <flag>{answer}</flag>', ['answer' => inContainer() ? 'Yes' : 'No']));
 
-        $output->writeln(r('Report generated at: <flag>{answer}</flag>', ['answer' => gmdate(Date::ATOM)]));
+        $this->filter(r('Running in container? <flag>{answer}</flag>', ['answer' => inContainer() ? 'Yes' : 'No']));
 
-        $output->writeln(PHP_EOL . '<info>[ Backends ]</info>' . PHP_EOL);
-        $this->getBackends($input, $output);
+        $this->filter(r('Report generated at: <flag>{answer}</flag>', ['answer' => gmdate(Date::ATOM)]));
 
-        $output->writeln(PHP_EOL . '<info>[ Log suppression ]</info>' . PHP_EOL);
-        $this->getSuppressor($output);
+        $this->filter(PHP_EOL . '<info>[ Backends ]</info>' . PHP_EOL);
+        $this->getBackends($input);
 
-        $output->writeln('<info>[ Tasks ]</info>' . PHP_EOL);
-        $this->getTasks($output);
-        $output->writeln('<info>[ Logs ]</info>' . PHP_EOL);
-        $this->getLogs($input, $output);
-        $this->printFooter($output);
+        $this->filter(PHP_EOL . '<info>[ Log suppression ]</info>' . PHP_EOL);
+        $this->getSuppressor();
+
+        $this->filter('<info>[ Tasks ]</info>' . PHP_EOL);
+        $this->getTasks();
+        $this->filter('<info>[ Logs ]</info>' . PHP_EOL);
+        $this->getLogs($input);
+        $this->printFooter();
 
         return self::SUCCESS;
     }
@@ -146,18 +160,18 @@ final class ReportCommand extends Command
      * Get backends and display information about each backend.
      *
      * @param iInput $input An instance of the iInput class used for input operations.
-     * @param iOutput $output An instance of the iOutput class used for output operations.
      *
      * @return void
      */
-    private function getBackends(iInput $input, iOutput $output): void
+    private function getBackends(iInput $input): void
     {
         $includeSample = (bool)$input->getOption('include-db-sample');
 
         $usersContext = getUsersContext($this->mapper, $this->logger);
+        $this->extractSensitive($usersContext);
 
         if (count($usersContext) > 1) {
-            $output->writeln(
+            $this->filter(
                 r('Users? {users}' . PHP_EOL, [
                     'users' => implode(', ', array_keys($usersContext)),
                 ])
@@ -180,7 +194,7 @@ final class ReportCommand extends Command
                     }
                 }
 
-                $output->writeln(
+                $this->filter(
                     r('[ <value>{type} ({version}) ==> {username}@{name}</value> ]' . PHP_EOL, [
                         'name' => $name,
                         'username' => $username,
@@ -189,32 +203,32 @@ final class ReportCommand extends Command
                     ])
                 );
 
-                $output->writeln(
+                $this->filter(
                     r('Is backend URL HTTPS? <flag>{answer}</flag>', [
                         'answer' => str_starts_with(ag($backend, 'url'), 'https:') ? 'Yes' : 'No',
                     ])
                 );
 
-                $output->writeln(
+                $this->filter(
                     r('Has Unique Identifier? <flag>{answer}</flag>', [
                         'answer' => null !== ag($backend, 'uuid') ? 'Yes' : 'No',
                     ])
                 );
 
-                $output->writeln(
+                $this->filter(
                     r('Has User? <flag>{answer}</flag>', [
                         'answer' => null !== ag($backend, 'user') ? 'Yes' : 'No',
                     ])
                 );
 
-                $output->writeln(
+                $this->filter(
                     r('Export Enabled? <flag>{answer}</flag>', [
                         'answer' => null !== ag($backend, 'export.enabled') ? 'Yes' : 'No',
                     ])
                 );
 
                 if (null !== ag($backend, 'export.enabled')) {
-                    $output->writeln(
+                    $this->filter(
                         r('Time since last export? <flag>{answer}</flag>', [
                             'answer' => null === ag($backend, 'export.lastSync') ? 'Never' : gmdate(
                                 Date::ATOM,
@@ -224,20 +238,20 @@ final class ReportCommand extends Command
                     );
                 }
 
-                $output->writeln(
+                $this->filter(
                     r('Play state import enabled? <flag>{answer}</flag>', [
                         'answer' => null !== ag($backend, 'import.enabled') ? 'Yes' : 'No',
                     ])
                 );
 
-                $output->writeln(
+                $this->filter(
                     r('Metadata only import enabled? <flag>{answer}</flag>', [
                         'answer' => null !== ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY) ? 'Yes' : 'No',
                     ])
                 );
 
                 if (null !== ag($backend, 'import.enabled')) {
-                    $output->writeln(
+                    $this->filter(
                         r('Time since last import? <flag>{answer}</flag>', [
                             'answer' => null === ag($backend, 'import.lastSync') ? 'Never' : gmdate(
                                 Date::ATOM,
@@ -247,20 +261,20 @@ final class ReportCommand extends Command
                     );
                 }
 
-                $output->writeln(
+                $this->filter(
                     r('Is webhook match user id enabled? <flag>{answer}</flag>', [
                         'answer' => true === (bool)ag($backend, 'webhook.match.user') ? 'Yes' : 'No',
                     ])
                 );
 
-                $output->writeln(
+                $this->filter(
                     r('Is webhook match backend unique id enabled? <flag>{answer}</flag>', [
                         'answer' => true === (bool)ag($backend, 'webhook.match.uuid') ? 'Yes' : 'No',
                     ])
                 );
 
                 $opts = ag($backend, 'options', []);
-                $output->writeln(
+                $this->filter(
                     r('Has custom options? <flag>{answer}</flag>' . PHP_EOL . '{opts}', [
                         'answer' => count($opts) >= 1 ? 'Yes' : 'No',
                         'opts' => count($opts) >= 1 ? json_encode(
@@ -283,7 +297,7 @@ final class ReportCommand extends Command
                         $entries[] = StateEntity::fromArray($row);
                     }
 
-                    $output->writeln(
+                    $this->filter(
                         r('Sample db entries related to backend.' . PHP_EOL . '{json}', [
                             'json' => count($entries) >= 1 ? json_encode(
                                 $entries,
@@ -293,7 +307,7 @@ final class ReportCommand extends Command
                     );
                 }
 
-                $output->writeln('');
+                $this->filter('');
             }
         }
     }
@@ -301,33 +315,32 @@ final class ReportCommand extends Command
     /**
      * Retrieves the tasks and displays information about each task.
      *
-     * @param iOutput $output An instance of the iOutput class used for displaying output.
      *
      * @return void
      */
-    private function getTasks(iOutput $output): void
+    private function getTasks(): void
     {
         foreach (Config::get('tasks.list', []) as $task) {
-            $output->writeln(
+            $this->filter(
                 r('[ <value>{name}</value> ]' . PHP_EOL, [
                     'name' => ucfirst(ag($task, 'name')),
                 ])
             );
             $enabled = true === (bool)ag($task, 'enabled');
-            $output->writeln(
+            $this->filter(
                 r('Is Task enabled? <flag>{answer}</flag>', [
                     'answer' => $enabled ? 'Yes' : 'No',
                 ])
             );
 
             if (true === $enabled) {
-                $output->writeln(
+                $this->filter(
                     r('Which flags are used to run the task? <flag>{answer}</flag>', [
                         'answer' => ag($task, 'args', 'None'),
                     ])
                 );
 
-                $output->writeln(
+                $this->filter(
                     r('When the task scheduled to run at? <flag>{answer}</flag>', [
                         'answer' => ag($task, 'timer', '???'),
                     ])
@@ -335,13 +348,13 @@ final class ReportCommand extends Command
 
                 try {
                     $timer = new CronExpression(ag($task, 'timer', '5 * * * *'));
-                    $output->writeln(
+                    $this->filter(
                         r('When is the next scheduled run? <flag>{answer}</flag>', [
                             'answer' => gmdate(Date::ATOM, $timer->getNextRunDate()->getTimestamp()),
                         ])
                     );
                 } catch (Throwable $e) {
-                    $output->writeln(
+                    $this->filter(
                         r('Next Run scheduled failed. <error>{answer}</error>', [
                             'answer' => $e->getMessage(),
                         ])
@@ -350,7 +363,7 @@ final class ReportCommand extends Command
             }
 
             /** @noinspection DisconnectedForeachInstructionInspection */
-            $output->writeln('');
+            $this->filter('');
         }
     }
 
@@ -358,9 +371,8 @@ final class ReportCommand extends Command
      * Get logs.
      *
      * @param iInput $input An instance of the iInput class used for input operations.
-     * @param iOutput $output An instance of the iOutput class used for output operations.
      */
-    private function getLogs(iInput $input, iOutput $output): void
+    private function getLogs(iInput $input): void
     {
         $todayAffix = makeDate()->format('Ymd');
         $yesterdayAffix = makeDate('yesterday')->format('Ymd');
@@ -371,8 +383,8 @@ final class ReportCommand extends Command
             if (self::DEFAULT_LIMIT === $limit) {
                 $linesLimit = $type === 'task' ? 75 : self::DEFAULT_LIMIT;
             }
-            $this->handleLog($output, $type, $todayAffix, $linesLimit);
-            $output->writeln('');
+            $this->handleLog($type, $todayAffix, $linesLimit);
+            $this->filter('');
         }
 
         foreach (LogsCommand::getTypes() as $type) {
@@ -380,42 +392,37 @@ final class ReportCommand extends Command
             if (self::DEFAULT_LIMIT === $limit) {
                 $linesLimit = $type === 'task' ? 75 : self::DEFAULT_LIMIT;
             }
-            $this->handleLog($output, $type, $yesterdayAffix, $linesLimit);
-            $output->writeln('');
+            $this->handleLog($type, $yesterdayAffix, $linesLimit);
+            $this->filter('');
         }
     }
 
     /**
      * Get last X lines from log file.
      *
-     * @param iOutput $output An instance of the iOutput class used for displaying output.
      * @param string $type The type of the log.
      * @param string|int $date The date of the log file.
      * @param int|string $limit The maximum number of lines to display.
      *
      * @return void
      */
-    private function handleLog(iOutput $output, string $type, string|int $date, int|string $limit): void
+    private function handleLog(string $type, string|int $date, int|string $limit): void
     {
-        $logFile = Config::get('tmpDir') . '/logs/' . r(
-                '{type}.{date}.log',
-                [
-                    'type' => $type,
-                    'date' => $date
-                ]
-            );
+        $logFile = Config::get('tmpDir') . '/logs/' . r('{type}.{date}.log', ['type' => $type, 'date' => $date]);
 
-        $output->writeln(r('[ <value>{logFile}</value> ]' . PHP_EOL, ['logFile' => $logFile]));
+        $this->filter(r('[ <value>{logFile}</value> ]' . PHP_EOL, [
+            'logFile' => after($logFile, Config::get('tmpDir'))
+        ]));
 
         if (!file_exists($logFile) || filesize($logFile) < 1) {
-            $output->writeln(r('{type} log file is empty or does not exists.', ['type' => $type]));
+            $this->filter(r('{type} log file is empty or does not exists.', ['type' => $type]));
             return;
         }
 
         $file = new SplFileObject($logFile, 'r');
 
         if ($file->getSize() < 1) {
-            $output->writeln(r('{type} log file is empty or does not exists.', ['type' => $type]));
+            $this->filter(r('{type} log file is empty or does not exists.', ['type' => $type]));
             $file = null;
             return;
         }
@@ -433,55 +440,93 @@ final class ReportCommand extends Command
                 continue;
             }
 
-            $output->writeln($line);
+            $this->filter($line);
         }
     }
 
-    private function printFooter(iOutput $output): void
+    private function printFooter(): void
     {
-        $output->writeln('<info><!-- Notice</info>');
-        $output->writeln(
+        $this->filter('<info><!-- Notice</info>');
+        $this->filter(
             <<<FOOTER
             <value>
-            Beware, while we try to make sure no sensitive information is leaked, it's possible
-            that some private information might be leaked via the logs section.
-            Please review the report before posting it.</value>
+            Beware, while we try to make sure no sensitive information is leaked,
+            it's your responsibility to check and review the report before posting it.
+            </value>
             -->
 
             FOOTER
         );
     }
 
-    private function getSuppressor(ConsoleOutput $output): void
+    private function getSuppressor(): void
     {
         $suppressFile = Config::get('path') . '/config/suppress.yaml';
 
-        $output->writeln(
+        $this->filter(
             r("Does the 'suppress.yaml' file exists? <flag>{answer}</flag>", [
                 'answer' => file_exists($suppressFile) ? 'Yes' : 'No',
             ])
         );
 
         if (filesize($suppressFile) > 10) {
-            $output->writeln('');
-            $output->writeln('User defined rules:');
-            $output->writeln('');
+            $this->filter('');
+            $this->filter('User defined rules:');
+            $this->filter('');
 
             try {
-                $output->writeln(
+                $this->filter(
                     json_encode(
                         Yaml::parseFile($suppressFile),
                         JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT
                     )
                 );
             } catch (Throwable $e) {
-                $output->writeln(r("Error during parsing of '{file}.' '{kind}' was thrown unhandled with '{message}'", [
+                $this->filter(r("Error during parsing of '{file}.' '{kind}' was thrown unhandled with '{message}'", [
                     'kind' => $e::class,
                     'message' => $e->getMessage(),
                 ]));
             }
         }
 
-        $output->writeln('');
+        $this->filter('');
+    }
+
+    private function filter(string $text): void
+    {
+        foreach ($this->sensitive as $sensitive) {
+            $text = str_ireplace($sensitive, '**HIDDEN**', $text);
+        }
+
+        $this->output?->writeln($text);
+    }
+
+    /**
+     * Extract tokens from user configs to strip them from final report.
+     *
+     * @param array<UserContext> $usersContext
+     */
+    private function extractSensitive(array $usersContext): void
+    {
+        $keys = [
+            'token',
+            'options.' . Options::ADMIN_TOKEN,
+            'options.' . Options::PLEX_USER_PIN,
+            'options.' . Options::ADMIN_PLEX_USER_PIN,
+        ];
+
+        foreach ($usersContext as $userContext) {
+            foreach ($userContext->config->getAll() as $backend) {
+                foreach ($keys as $key) {
+                    if (null === ($val = ag($backend, $key))) {
+                        continue;
+                    }
+                    if (true === in_array($val, $this->sensitive, true)) {
+                        continue;
+                    }
+                    $this->sensitive[] = $val;
+                }
+            }
+        }
     }
 }

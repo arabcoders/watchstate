@@ -59,7 +59,8 @@
                 <span>Plex Token</span>
               </NuxtLink>
 
-              <NuxtLink class="navbar-item" to="/tools/sub_users" @click.native="(e) => changeRoute(e)">
+              <NuxtLink class="navbar-item" to="/tools/sub_users" @click.native="(e) => changeRoute(e)"
+                        v-if="'main' === api_user">
                 <span class="icon"><i class="fas fa-users"/></span>
                 <span>Sub Users</span>
               </NuxtLink>
@@ -69,6 +70,11 @@
               <NuxtLink class="navbar-item" to="/processes" @click.native="(e) => changeRoute(e)">
                 <span class="icon"><i class="fas fa-microchip"/></span>
                 <span>Processes</span>
+              </NuxtLink>
+
+              <NuxtLink class="navbar-item" to="/url_check" @click.native="(e) => changeRoute(e)">
+                <span class="icon"><i class="fas fa-external-link"/></span>
+                <span>URL Checker</span>
               </NuxtLink>
 
               <hr class="navbar-divider">
@@ -270,6 +276,8 @@ const showSettings = ref(false)
 const auth = useAuthStore()
 const bg_enable = useStorage('bg_enable', true)
 const bg_opacity = useStorage('bg_opacity', 0.95)
+const api_user = useStorage('api_user', 'main')
+
 const api_version = ref()
 const bgImage = ref({src: '', type: ''})
 const loadedImages = ref({poster: '', background: ''})
