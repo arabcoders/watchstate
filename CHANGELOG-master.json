@@ -1,5 +1,35 @@
 [
     {
+        "tag": "master-20250522-6d494bc0",
+        "date": "2025-05-22T00:43:49+00:00",
+        "commits": [
+            {
+                "sha": "9856ca78",
+                "message": "Added URL Checker into tools menu.",
+                "author": "arabcoders",
+                "date": "2025-05-19T20:42:11+00:00"
+            },
+            {
+                "sha": "fa4eda07",
+                "message": "Filter every line output in the basic report to strip known sensitive information like accesstokens or apikeys.",
+                "author": "arabcoders",
+                "date": "2025-05-19T13:56:54+00:00"
+            },
+            {
+                "sha": "0102f56a",
+                "message": "Hide sub-users page when logged in as non-main user.",
+                "author": "arabcoders",
+                "date": "2025-05-19T13:55:06+00:00"
+            },
+            {
+                "sha": "689f6884",
+                "message": "Add more php ini configuration options to make frankenphp behave like standard php-fpm",
+                "author": "arabcoders",
+                "date": "2025-05-19T13:16:29+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250518-1458e597",
         "date": "2025-05-18T23:12:53+00:00",
         "commits": [
