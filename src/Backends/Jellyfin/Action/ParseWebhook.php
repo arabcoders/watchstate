@@ -255,6 +255,10 @@ final class ParseWebhook
 
             return new Response(status: true, response: $entity);
         } catch (Throwable $e) {
+            if (true === ag($opts, Options::IS_GENERIC, false)) {
+                return new Response(status: false, extra: ['http_code' => Status::OK->value]);
+            }
+
             return new Response(
                 status: false,
                 error: new Error(

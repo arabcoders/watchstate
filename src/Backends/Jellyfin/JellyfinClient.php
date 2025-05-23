@@ -246,10 +246,7 @@ class JellyfinClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new HttpException(
-                ag($response->extra, 'message', fn() => $response->error->format()),
-                ag($response->extra, 'http_code', 400),
-            );
+            $this->throwError($response, HttpException::class, ag($response->extra, 'http_code', 400));
         }
 
         return $response->response;

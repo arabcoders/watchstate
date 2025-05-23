@@ -10,6 +10,7 @@ use App\Libs\Attributes\Route\Route;
 use App\Libs\Config;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Exceptions\HttpException;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
@@ -269,7 +270,16 @@ final class Index
             return $response;
         }
 
-        $entity = $client->parseWebhook($request, [Options::IS_GENERIC => $isGeneric]);
+        try {
+            // -- Maybe the user doesn't have access to the item, so an http exception may be thrown.
+            // -- ignore it if the request is generic.
+            $entity = $client->parseWebhook($request, [Options::IS_GENERIC => $isGeneric]);
+        } catch (HttpException $e) {
+            if (true === $isGeneric) {
+                return api_response(Status::NOT_MODIFIED);
+            }
+            throw $e;
+        }
 
         if (true === (bool)ag($backend, 'options.' . Options::DUMP_PAYLOAD)) {
             saveWebhookPayload($entity, $request);
