@@ -51,6 +51,7 @@ final class Options
     public const string DELAY_BY = 'DELAY_BY';
     public const string RAW_RESPONSE_CALLBACK = 'RAW_RESPONSE_CALLBACK';
     public const string INTERNAL_REQUEST = 'INTERNAL_REQUEST';
+    public const string IS_GENERIC = 'IS_GENERIC';
 
     private function __construct()
     {

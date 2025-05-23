@@ -71,22 +71,33 @@ final class ParseWebhook
     /**
      * Parse Webhook payload.
      *
-     * @param Context $context
-     * @param iGuid $guid
-     * @param iRequest $request
+     * @param Context $context The context object.
+     * @param iGuid $guid The guid object.
+     * @param iRequest $request The request object.
+     * @param array $opts Optional options.
      *
-     * @return Response
+     * @return Response The response object.
      */
-    public function __invoke(Context $context, iGuid $guid, iRequest $request): Response
+    public function __invoke(Context $context, iGuid $guid, iRequest $request, array $opts = []): Response
     {
         return $this->tryResponse(
             context: $context,
-            fn: fn() => $this->parse($context, $guid, $request),
+            fn: fn() => $this->parse($context, $guid, $request, $opts),
             action: $this->action
         );
     }
 
-    private function parse(Context $context, iGuid $guid, iRequest $request): Response
+    /**
+     * Parse webhook payload.
+     *
+     * @param Context $context The context object.
+     * @param iGuid $guid The guid object.
+     * @param iRequest $request The request object.
+     * @param array $opts Optional options.
+     *
+     * @return Response The response object.
+     */
+    private function parse(Context $context, iGuid $guid, iRequest $request, array $opts = []): Response
     {
         $logContext = [
             'action' => $this->action,
@@ -151,6 +162,7 @@ final class ParseWebhook
         try {
             $obj = ag($this->getItemDetails(context: $context, id: $id, opts: [
                 Options::LOG_CONTEXT => ['request' => $json],
+                ...$opts
             ]), 'MediaContainer.Metadata.0', []);
 
             $isPlayed = (bool)ag($item, 'viewCount', false);

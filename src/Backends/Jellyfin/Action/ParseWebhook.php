@@ -73,12 +73,13 @@ final class ParseWebhook
      * @param Context $context Backend context.
      * @param iGuid $guid GUID parser.
      * @param iRequest $request Request object.
+     * @param array $opts Options to pass to the parser.
      *
      * @return Response The response.
      */
-    public function __invoke(Context $context, iGuid $guid, iRequest $request): Response
+    public function __invoke(Context $context, iGuid $guid, iRequest $request, array $opts = []): Response
     {
-        return $this->tryResponse(context: $context, fn: fn() => $this->parse($context, $guid, $request));
+        return $this->tryResponse(context: $context, fn: fn() => $this->parse($context, $guid, $request, $opts));
     }
 
     /**
@@ -87,10 +88,11 @@ final class ParseWebhook
      * @param Context $context Backend context.
      * @param iGuid $guid GUID parser.
      * @param iRequest $request Request object.
+     * @param array $opts Options to pass to the parser.
      *
      * @return Response The response.
      */
-    private function parse(Context $context, iGuid $guid, iRequest $request): Response
+    private function parse(Context $context, iGuid $guid, iRequest $request, array $opts = []): Response
     {
         $logContext = [
             'action' => $this->action,
@@ -143,6 +145,7 @@ final class ParseWebhook
         try {
             $obj = $this->getItemDetails(context: $context, id: $id, opts: [
                 Options::LOG_CONTEXT => ['request' => $json],
+                ...$opts,
             ]);
 
             $isPlayed = (bool)ag($json, 'Played');
