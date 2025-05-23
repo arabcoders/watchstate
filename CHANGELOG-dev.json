@@ -1,7 +1,19 @@
 [
     {
-        "tag": "dev-20250523-b5386111",
-        "date": "2025-05-23T20:22:34+00:00",
+        "tag": "dev-20250524-dd3833a7",
+        "date": "2025-05-23T22:46:54+00:00",
+        "commits": [
+            {
+                "sha": "dd3833a7",
+                "message": "When parsing webhook and requesting metadata from backend, before throwing error, check for IS_GENERIC and prevent expected error for generic events.",
+                "author": "arabcoders",
+                "date": "2025-05-23T22:46:54+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250523-42281eba",
+        "date": "2025-05-23T20:42:31+00:00",
         "commits": [
             {
                 "sha": "b5386111",
