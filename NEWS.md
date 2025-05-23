@@ -1,5 +1,19 @@
 # NEWS
 
+### 2025-05-14
+
+**Breaking change**, we have switched to using user/password form of authentication instead of API key for the WebUI,
+this will lead to better security and easier to use. The API key is still available for the API, but not for the WebUI.
+
+The first time you access the WebUI after the update, you will be asked to create a new system user/password. This is a
+one time operation. Sorry about that. if you somehow lost your password, you can reset it by running the following
+command from the host machine.
+
+```bash
+# change docker to podman if you are using podman
+$ docker exec watchstate console system:resetpassword
+```
+
 ### 2025-05-05
 
 We’ve added a new feature that lets you send requests **sequentially** to the backends instead of using the default
