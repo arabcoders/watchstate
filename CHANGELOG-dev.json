@@ -1,8 +1,32 @@
 [
     {
-        "tag": "dev-20250523-d45eacdf",
-        "date": "2025-05-23T16:04:14+00:00",
+        "tag": "dev-20250523-b5386111",
+        "date": "2025-05-23T20:22:34+00:00",
         "commits": [
+            {
+                "sha": "b5386111",
+                "message": "Add new generic webhook endpoint.",
+                "author": "arabcoders",
+                "date": "2025-05-23T20:22:34+00:00"
+            },
+            {
+                "sha": "82c1a8ef",
+                "message": "Update the guides pages.",
+                "author": "arabcoders",
+                "date": "2025-05-23T19:56:41+00:00"
+            },
+            {
+                "sha": "428e3eda",
+                "message": "Make it possible to cache metadata request cross users.",
+                "author": "arabcoders",
+                "date": "2025-05-23T18:42:57+00:00"
+            },
+            {
+                "sha": "c053fe84",
+                "message": "Make it possible to mark specific webhook events as generic that would trigger for all users who has the same backend setup.",
+                "author": "arabcoders",
+                "date": "2025-05-23T17:39:23+00:00"
+            },
             {
                 "sha": "d45eacdf",
                 "message": "Disable automatic release note generation and update package dependencies",
