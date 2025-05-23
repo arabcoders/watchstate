@@ -66,6 +66,7 @@ final class InspectRequest
                     ],
                     'webhook' => [
                         'event' => ag($json, 'event'),
+                        'generic' => in_array(ag($json, 'event'), ParseWebhook::WEBHOOK_GENERIC_EVENTS, true),
                     ],
                 ];
 

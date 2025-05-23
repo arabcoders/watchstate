@@ -9,19 +9,11 @@ box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 # Updates
 
-### 2025-05-14
+### 2025-05-23
 
-**Breaking change**, we have switched to using user/password form of authentication instead of API key for the WebUI,
-this will lead to better security and easier to use. The API key is still available for the API, but not for the WebUI.
-
-The first time you access the WebUI after the update, you will be asked to create a new system user/password. This is a
-one time operation. Sorry about that. if you somehow lost your password, you can reset it by running the following
-command from the host machine.
-
-```bash
-# change docker to podman if you are using podman
-$ docker exec watchstate console system:resetpassword
-```
+We have recently added new and improved webhook endpoint that can be used as generic endpoint for all users and
+backends, please head to [webhook-v2 guide](guides/webhooks-v2.md) for more information. Please note that the new
+webhook endpoint still in beta, and things might change/break in the future.
 
 Please refer to [NEWS](/NEWS.md) for the latest updates and changes.
 
@@ -33,7 +25,7 @@ Please refer to [NEWS](/NEWS.md) for the latest updates and changes.
 * **Sub-users** support.
 * Sync backends play state (`Many-to-Many` or `One-Way`).
 * Backup your backends play state into `portable` format.
-* Receive [webhook](guides/webhooks.md) events from media backends.
+* Receive [webhook](guides/webhooks-v2.md) events from media backends.
 * Find `un-matched` or `mis-matched` items.
 * Search your backend metadata.
 * Check if your media servers reporting same data via the parity checks.

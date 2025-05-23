@@ -38,7 +38,7 @@ final class ParseWebhook
     /**
      * @var array<string> Supported entity types.
      */
-    protected const array WEBHOOK_ALLOWED_TYPES = [
+    public const array WEBHOOK_ALLOWED_TYPES = [
         JFC::TYPE_MOVIE,
         JFC::TYPE_EPISODE,
     ];
@@ -46,7 +46,7 @@ final class ParseWebhook
     /**
      * @var array<string> Supported webhook events.
      */
-    protected const array WEBHOOK_ALLOWED_EVENTS = [
+    public const array WEBHOOK_ALLOWED_EVENTS = [
         'ItemAdded',
         'UserDataSaved',
         'PlaybackStart',
@@ -56,11 +56,16 @@ final class ParseWebhook
     /**
      * @var array<string> Events that should be marked as tainted.
      */
-    protected const array WEBHOOK_TAINTED_EVENTS = [
+    public const array WEBHOOK_TAINTED_EVENTS = [
         'PlaybackStart',
         'PlaybackStop',
         'ItemAdded',
     ];
+
+    /**
+     * @var array<string> Generic events that may not contain user id.
+     */
+    public const array WEBHOOK_GENERIC_EVENTS = ['ItemAdded'];
 
     /**
      * Wrap the parser in try response block.
@@ -68,12 +73,13 @@ final class ParseWebhook
      * @param Context $context Backend context.
      * @param iGuid $guid GUID parser.
      * @param iRequest $request Request object.
+     * @param array $opts Options to pass to the parser.
      *
      * @return Response The response.
      */
-    public function __invoke(Context $context, iGuid $guid, iRequest $request): Response
+    public function __invoke(Context $context, iGuid $guid, iRequest $request, array $opts = []): Response
     {
-        return $this->tryResponse(context: $context, fn: fn() => $this->parse($context, $guid, $request));
+        return $this->tryResponse(context: $context, fn: fn() => $this->parse($context, $guid, $request, $opts));
     }
 
     /**
@@ -82,10 +88,11 @@ final class ParseWebhook
      * @param Context $context Backend context.
      * @param iGuid $guid GUID parser.
      * @param iRequest $request Request object.
+     * @param array $opts Options to pass to the parser.
      *
      * @return Response The response.
      */
-    private function parse(Context $context, iGuid $guid, iRequest $request): Response
+    private function parse(Context $context, iGuid $guid, iRequest $request, array $opts = []): Response
     {
         $logContext = [
             'action' => $this->action,
@@ -138,6 +145,7 @@ final class ParseWebhook
         try {
             $obj = $this->getItemDetails(context: $context, id: $id, opts: [
                 Options::LOG_CONTEXT => ['request' => $json],
+                ...$opts,
             ]);
 
             $isPlayed = (bool)ag($json, 'Played');

@@ -69,6 +69,11 @@ final class InspectRequest
                     ],
                     'webhook' => [
                         'event' => ag($json, 'NotificationType'),
+                        'generic' => in_array(
+                            ag($json, 'NotificationType'),
+                            ParseWebhook::WEBHOOK_GENERIC_EVENTS,
+                            true
+                        ),
                     ],
                 ];
 

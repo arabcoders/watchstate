@@ -246,7 +246,7 @@ class PlexClient implements iClient
     /**
      * @inheritdoc
      */
-    public function parseWebhook(iRequest $request): iState
+    public function parseWebhook(iRequest $request, array $opts = []): iState
     {
         $response = Container::get(ParseWebhook::class)(
             context: $this->context,

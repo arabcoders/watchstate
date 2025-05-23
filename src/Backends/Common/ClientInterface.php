@@ -77,7 +77,7 @@ interface ClientInterface
      *
      * @return iState state object.
      */
-    public function parseWebhook(iRequest $request): iState;
+    public function parseWebhook(iRequest $request, array $opts = []): iState;
 
     /**
      * Import play state and metadata from backend.

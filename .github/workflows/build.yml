@@ -47,6 +47,8 @@ env:
   DOCKERHUB_SLUG: arabcoders/watchstate
   GHCR_SLUG: ghcr.io/arabcoders/watchstate
   PLATFORMS: linux/amd64,linux/arm64
+  PNPM_VERSION: 10
+  NODE_VERSION: 20
 
 jobs:
   unit-tests:
@@ -98,15 +100,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: bahmutov/npm-install@v1
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
         with:
-          working-directory: frontend
-          install-command: yarn --production --prefer-offline --frozen-lockfile
+          version: ${{ env.PNPM_VERSION }}
 
-      - uses: bahmutov/npm-install@v1
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
-          working-directory: frontend
-          install-command: yarn run generate
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: 'frontend/pnpm-lock.yaml'
+
+      - name: Install frontend dependencies & Build
+        working-directory: frontend
+        run: |
+          pnpm install --production --prefer-offline --frozen-lockfile
+          pnpm run generate
 
       - name: Update Version File
         uses: arabcoders/write-version-to-file@master
@@ -145,15 +155,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: bahmutov/npm-install@v1
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
         with:
-          working-directory: frontend
-          install-command: yarn --production --prefer-offline --frozen-lockfile
+          version: ${{ env.PNPM_VERSION }}
 
-      - uses: bahmutov/npm-install@v1
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
-          working-directory: frontend
-          install-command: yarn run generate
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: 'frontend/pnpm-lock.yaml'
+
+      - name: Install frontend dependencies & Build
+        working-directory: frontend
+        run: |
+          pnpm install --production --prefer-offline --frozen-lockfile
+          pnpm run generate
 
       - name: Update Version File
         uses: arabcoders/write-version-to-file@master

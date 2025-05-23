@@ -73,7 +73,7 @@ jobs:
           name: "${{ steps.new_tag.outputs.NEW_TAG }}"
           body: ${{ env.LOG }}
           append_body: false
-          generate_release_notes: true
+          generate_release_notes: false
           make_latest: true
           draft: false
           prerelease: false

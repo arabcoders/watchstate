@@ -76,15 +76,16 @@
 import {marked} from 'marked'
 import {baseUrl} from 'marked-base-url'
 import markedAlert from 'marked-alert'
+import {gfmHeadingId} from "marked-gfm-heading-id"
 
-import Message from "~/components/Message.vue";
+import Message from "~/components/Message.vue"
 
 const props = defineProps({
   file: {
     type: String,
     required: true,
   },
-});
+})
 
 const content = ref('')
 const error = ref('')
@@ -146,8 +147,9 @@ onMounted(async () => {
 
     const text = await response.text()
 
+    marked.use(gfmHeadingId())
     marked.use(baseUrl(window.origin))
-    marked.use(markedAlert());
+    marked.use(markedAlert())
     marked.use({
       gfm: true,
       hooks: {
@@ -158,30 +160,30 @@ onMounted(async () => {
       },
       walkTokens: token => {
         if ('link' !== token.type) {
-          return;
+          return
         }
 
         if (true === token.href.startsWith('#')) {
-          return;
+          return
         }
-        const urls = ['FAQ.md', 'README.md', 'NEWS.md'];
-        const list = ['guides/', ...urls];
+        const urls = ['FAQ.md', 'README.md', 'NEWS.md']
+        const list = ['guides/', ...urls]
         if (false === list.some(l => token.href.includes(l))) {
-          return;
+          return
         }
 
         if (urls.some(l => token.href.includes(l))) {
           if (!token.href.startsWith('/')) {
-            token.href = '/' + token.href;
+            token.href = '/' + token.href
           }
-          const url = new URL(window.origin + token.href);
-          url.pathname = `/guides${url.pathname}`;
-          token.href = url.toString();
+          const url = new URL(window.origin + token.href)
+          url.pathname = `/guides${url.pathname}`
+          token.href = url.toString()
         }
 
-        token.href = token.href.replace('/guides/', '/help/').replace('.md', '');
+        token.href = token.href.replace('/guides/', '/help/').replace('.md', '')
       },
-    });
+    })
 
     content.value = String(marked.parse(text))
   } catch (e) {
@@ -190,8 +192,8 @@ onMounted(async () => {
   } finally {
     isLoading.value = false
   }
-});
+})
 
-onUnmounted(() => removeListeners());
+onUnmounted(() => removeListeners())
 onUpdated(() => addListeners())
 </script>

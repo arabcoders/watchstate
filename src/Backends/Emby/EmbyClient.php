@@ -46,7 +46,7 @@ use App\Libs\QueueRequests;
 use App\Libs\Uri;
 use App\Libs\UserContext;
 use DateTimeInterface as iDate;
-use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Http\Message\StreamInterface as iStream;
 use Psr\Http\Message\UriInterface as iUri;
 use Psr\Log\LoggerInterface as iLogger;
@@ -195,7 +195,7 @@ class EmbyClient implements iClient
     /**
      * @inheritdoc
      */
-    public function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface
+    public function processRequest(iRequest $request, array $opts = []): iRequest
     {
         $response = Container::get(InspectRequest::class)(context: $this->context, request: $request);
 
@@ -209,7 +209,7 @@ class EmbyClient implements iClient
     /**
      * @inheritdoc
      */
-    public function parseWebhook(ServerRequestInterface $request): iState
+    public function parseWebhook(iRequest $request, array $opts = []): iState
     {
         $response = Container::get(ParseWebhook::class)(
             context: $this->context,
@@ -645,7 +645,7 @@ class EmbyClient implements iClient
     /**
      * @inheritdoc
      */
-    public function fromRequest(array $config, ServerRequestInterface $request): array
+    public function fromRequest(array $config, iRequest $request): array
     {
         return $config;
     }

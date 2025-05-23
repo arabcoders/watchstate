@@ -12,9 +12,7 @@ use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Backends\Emby\EmbyActionTrait;
 use App\Backends\Emby\EmbyClient;
-use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Libs\Config;
-use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
@@ -32,7 +30,6 @@ final class ParseWebhook
 {
     use CommonTrait;
     use EmbyActionTrait;
-    use JellyfinActionTrait;
 
     /**
      * @var string $action Action name
@@ -71,6 +68,11 @@ final class ParseWebhook
         'library.new'
     ];
 
+    /**
+     * @var array<string> Generic events that may not contain user id.
+     */
+    public const array WEBHOOK_GENERIC_EVENTS = ['library.new'];
+
     public function __construct(private iLogger $logger)
     {
     }
@@ -81,14 +83,15 @@ final class ParseWebhook
      * @param Context $context The context object.
      * @param iGuid $guid The guid object.
      * @param iRequest $request The request object.
+     * @param array $opts Optional options.
      *
      * @return Response The response object.
      */
-    public function __invoke(Context $context, iGuid $guid, iRequest $request): Response
+    public function __invoke(Context $context, iGuid $guid, iRequest $request, array $opts = []): Response
     {
         return $this->tryResponse(
             context: $context,
-            fn: fn() => $this->parse($context, $guid, $request),
+            fn: fn() => $this->parse($context, $guid, $request, $opts),
             action: $this->action,
         );
     }
@@ -99,10 +102,11 @@ final class ParseWebhook
      * @param Context $context The context object.
      * @param iGuid $guid The guid object.
      * @param iRequest $request The request object.
+     * @param array $opts Optional options.
      *
      * @return Response The response object.
      */
-    private function parse(Context $context, iGuid $guid, iRequest $request): Response
+    private function parse(Context $context, iGuid $guid, iRequest $request, array $opts = []): Response
     {
         $logContext = [
             'action' => $this->action,
@@ -153,14 +157,10 @@ final class ParseWebhook
         }
 
         try {
-            $resp = Container::get(GetMetaData::class)(context: $context, id: $id, opts: [
+            $obj = $this->getItemDetails(context: $context, id: $id, opts: [
                 Options::LOG_CONTEXT => ['request' => $json],
+                ...$opts,
             ]);
-            if (!$resp->isSuccessful()) {
-                return $resp;
-            } else {
-                $obj = $resp->response;
-            }
 
             if ('item.markplayed' === $event || 'playback.scrobble' === $event) {
                 $isPlayed = 1;

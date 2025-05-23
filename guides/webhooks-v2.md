@@ -1,27 +1,70 @@
-# Webhooks
+# Webhooks v2 _BETA_
 
-We recommend trying the new webhook implementation. please visit the [webhook-v2](/guides/webhooks-v2.md) guide to learn
-more.
-
-----
+## Getting started
 
 Webhooks are a powerful and fast way to sync your backends nearly instantly. They are triggered by user actions, such as
 play, pause, stop, etc., on a backend. When an action is performed, the backend sends a webhook to the WatchState API,
 which processes the data, updates the system, and triggers events to the other backends.
 
 Although webhooks are great for syncing data quickly, they should not be used as the sole method for synchronization.
-Webhooks are not 100% reliable—they may be missed or delayed. To ensure your data is always up-to-date, it’s recommended
-to use webhooks in combination with scheduled tasks.
+Webhooks are not 100% reliable, they may be missed or delayed. To ensure your data is always up-to-date, it’s
+recommended to use webhooks in combination with scheduled tasks with high scheduled time i.e. `every 12 hours`.
 
-## Getting started
+We have re-designed the webhook system to be generic rather than backend and user specific, so that means you only need
+to use single webhook for all users and backends. This is a big improvement over the previous system, which required you
+to create a separate webhook for each user and backend.
 
-Webhook URLs are **user and backend-specific**, think of them as **identification ID** for that user and backend. So,
-you need to obtain the webhook URL for each user and backend. Start first by adding your main user webhooks urls and
-repeat the process for each user that you want to enable webhooks for. By switching to that user via
-the <!--i:fa-users--> **users** icon in the top right corner of the page.
+Currently, the new webhook system is in **BETA** and may not work as expected. If you encounter any issues, please
+report them on the [GitHub issue tracker](https://github.com/arabcoders/watchstate/issues).
 
-To easily obtain the correct URL, go to the <!--i:fa-server--> *Backends* page and click **Copy Webhook URL** next to
-the relevant backend.
+## Improvements over the old system
+
+- **Generic**: The new webhook system is generic, meaning you can use a single webhook for all users and backends.
+- **Improved performance**: The new webhook system is faster and more efficient than the old system.
+- **Support generic events**: The new webhook system supports generic events which don't contain userdata, by triggering
+  the webhook event to all users that match the same backend ID, Previously it wasn't possible to do this.
+    - For example, jellyfin `ItemAdded` event doesn't contain user data, so the webhook event will be triggered to all
+      users that match the same backend ID.
+    - Events marked as generic are `jellyfin.ItemAdded`, `plex.library.new`, `tautulli.created`, and `emby.library.new`.
+
+## Restrictions
+
+- This endpoint enforces matching backend id regardless of the **Enable match backend id for webhook?** setting.
+- This endpoint enforces matching user id for non-generic events regardless of the **Enable match user for webhook?**
+  setting.
+
+Eventually, we will be removing the old webhook system alongside the related settings. The new system is designed to be
+more user friendly and enforces good practices and defaults, as we noticed many users don't really understand the old
+system and how to set it up correctly.
+
+## Downsides of the new system
+
+The only downside of the new system is that the generic events are triggered to all users that match the backend, and
+due to us caching the metadata call result, it will be added to the all users databases, even if they don't have access
+to the item.
+
+This is something we can improve in the future by switching out of the cache per backend id to per user again, but for
+now, we will be keeping it as is. The boost from caching the metadata call is worth the trade-off of having some items
+in the database that are not accessible to the user. which really shouldn't cause any issues.
+
+## The generic webhook URL
+
+The new webhook generic URL is `/v1/api/webhook`, of course, if you have enabled secure all endpoints you need to
+add `?apikey=your_ws_apikey` to the URL. which you can obtain by going to <!--i:fa-ellipsis-vertical-->
+*More* > <!--i:fa-terminal--> *Terminal* and then write `system:apikey` in the box. You should get the apikey which is
+hexadecimal string.
+
+If you don't have secure all endpoints enabled:
+
+```
+https://your_ws_url/v1/api/webhook
+```
+
+If you have enabled `WS_SECURE_API_ENDPOINTS` environment variable, then you need to add the apikey to the URL:
+
+```
+https://your_ws_url/v1/api/webhook?apikey=[api_key_you_got_from_terminal]
+```
 
 # Adding Webhooks to Your Backends
 
@@ -32,10 +75,10 @@ the relevant backend.
     - **New Emby Versions**: Go to *username Preferences > Notifications > + Add Notification > Webhooks*.
 
 2. **Name**:
-    - You can name it `user@backend` or something that reflects the user it belongs to.
+    - Whatever you want, we recommend **WatchState Global Webhook**.
 
 3. **Webhook/Notifications URL**:
-    - Copy the URL from the WatchState <!--i:fa-server--> *Backends* page and paste it here.
+    - see [The generic webhook URL](#the-generic-webhook-url) section.
 
 4. **Request Content Type (Emby v4.9+)**:
     - Select `application/json`.
@@ -51,7 +94,7 @@ the relevant backend.
     - User events
 
 6. **Limit User Events to**:
-    - Select your user.
+    - Select all users, otherwise events will not contain any user data.
 
 7. **Limit Library Events to**:
     - Select libraries you want to sync or leave it blank for all libraries.
@@ -65,10 +108,10 @@ Click *Add Webhook / Save*.
 2. After the restart, go back to *Plugins > Webhook* and add `Add Generic Destination`.
 
 3. **Webhook Name**:
-    - You can name it `user@backend` or something that reflects the user it belongs to.
+    - Whatever you want, we recommend **WatchState Global Webhook**.
 
 4. **Webhook URL**:
-    - Copy the URL from the WatchState <!--i:fa-server--> *Backends* page and paste it here.
+    - see [The generic webhook URL](#the-generic-webhook-url) section.
 
 5. **Notification Type**:
     - Item Added
@@ -77,25 +120,28 @@ Click *Add Webhook / Save*.
     - Playback Stop
 
 6. **User Filter**:
-    - Select your user.
+    - Select all users, otherwise events will not contain any user data.
 
 7. **Item Type**:
     - Select *Movies* and *Episodes*.
 
 8. **Send All Properties**:
-    - Toggle this checkbox to send all properties.
+    - Toggle this checkbox.
+
+9. **Trim leading and trailing whitespace from message body before sending*:
+    - Toggle this checkbox.
+
+10. **Do not send when message body is empty**:
+    - Toggle this checkbox.
 
 Click *Save*.
-
-Note: It is best to disable "Webhook match user" option for Jellyfin backend as some events might not have a user
-associated with them. See [limitations](#jellyfin) for more info.
 
 ### Plex (PlexPass Required)
 
 1. Go to your Plex Web UI and navigate to *Settings > Your Account > Webhooks*. Click *Add Webhook*.
 
 2. **Webhook URL**:
-    - Copy the URL from the WatchState <!--i:fa-server--> *Backends* page and paste it here.
+    - see [The generic webhook URL](#the-generic-webhook-url) section.
 
 Click *Save Changes*.
 
@@ -104,13 +150,13 @@ Click *Save Changes*.
 1. Go to *Options > Notification Agents* and click *Add a new notification agent > Webhook*.
 
 2. **Webhook URL**:
-    - Copy the URL from the WatchState <!--i:fa-server--> *Backends* page and paste it here.
+    - see [The generic webhook URL](#the-generic-webhook-url) section.
 
 3. **Webhook Method**:
     - Select `PUT`.
 
 4. **Description**:
-    - Use something like `Webhook for user XX for backend XX`.
+    - Whatever you want, we recommend **WatchState Global Webhook**.
 
 5. **Triggers**:  
    Select the following events:
@@ -121,16 +167,9 @@ Click *Save Changes*.
     - Watched
     - Recently Added
 
-6. **Conditions**:
-   If you have multiple users in Plex then use conditions to control which user this event will fire for.
-    - Parameter = User
-    - Operator = is
-    - Value = username associated with the user in Tautulli. See `Users` tab in Tautulli.
+6**Data**:
 
-   This will make sure only appropriate users events get fired.
-
-7. **Data**:
-    - For each event, you will need to set the corresponding headers/data fields using the following format.
+- For each event, you will need to set the corresponding headers/data fields using the following format.
 
 > [!IMPORTANT]  
 > It’s important that you copy the headers and data as they are, without modifying them if you're unsure.
@@ -227,36 +266,23 @@ Here are some known limitations and issues when using webhooks with different me
 - Plex doesn't send events for *marked as played/unplayed* actions.
 - Webhook events may be **skipped** when multiple items are added at once.
 - When items are marked as **unwatched**, Plex resets the date on the media object.
-- If you share your Plex server with other users (e.g., home/managed users), you must enable **Webhook match user** to
-  prevent their play state from affecting yours.
-- If you use multiple Plex servers with the same PlexPass account, you must add each backend separately and enable both
-  *Webhook Match User* and *Webhook Match Backend ID*. Plex webhooks are account-wide and not server or user specific.
-- If you have multiple "Plex Home" users then you will see miss match reported for user ids. This is because Plex uses
-  the same account to send webhooks for all users in "Plex Home". If you want to capture webhooks for these users then
-  you would need to add them as sub users and set them up with individual webhooks.
+- In old version of plex i.e. pre `1.41.6.9606` marking items as watched and if you didn't have progress on the show
+  will not show the item in continue watching, this is a limitation of the old plex version and not
+  watchstate. [reference](https://forums.plex.tv/t/continue-watching-is-buggy-unable-to-figure-out-why/869224/65)
 
 ### Plex via Tautulli
 
-- Tautulli **does not send user IDs** with `itemAdd` (`created`) events. If *Match Webhook User* is enabled, the request
-  will fail with: `Request user id '' does not match configured value`.
-    - A workaround is to manually hardcode the `Account.user_id` for that specific user.
 - **Marking items as unplayed** is not reliable, as Tautulli’s webhook payload lacks the data needed to detect this
   change.
 
 ### Emby
 
-- Emby **does not send webhook events** for newly added items.
-    - This feature was implemented in version `4.7.9`, but it still **does not include metadata**, which makes it
-      ineffective.
 - The **webhook test event** previously contained no data, but this issue appears to be fixed in version `4.9.0.37+`.
     - To verify if your Emby webhook setup works, try playing or marking an item as played/unplayed, and check if the
       changes appear in the database.
 
 ### Jellyfin
 
-- If no user ID is selected in the plugin, the `itemAdd` event will be sent **without user data**, causing failures if
-  `webhook.match.user` is enabled.
-- Occasionally, Jellyfin will fire `itemAdd` events **without matching**.
 - Even if a user ID is selected, Jellyfin may **still send events without user data**.
 - Items may be marked as **unplayed** if the setting *Libraries > Display > Date Added Behavior for New Content: Use
   Date Scanned into Library* is enabled.
@@ -264,10 +290,11 @@ Here are some known limitations and issues when using webhooks with different me
 
 # Sometimes Newly Added Content Does Not Show Up
 
-As mentioned in the webhook limitations section, some media backends do not reliably send webhook events for newly added
-content. To address this, it’s recommended to enable **import/export tasks** to complement webhook functionality.
+As previously mentioned, webhooks aren't 100% reliable, thus it's recommended to enable **import/export tasks** to
+complement webhook functionality.
 
-Simply go to the *Tasks* page and enable the *Import* and *Export* tasks.
+Simply go to the *Tasks* page and enable the *Import* and *Export* tasks. and set the schedule to `every 12 hours` or
+or `every 24 hours` depending on your needs.
 
 # Troubleshooting
 
