@@ -1,7 +1,19 @@
 [
     {
-        "tag": "dev-20250519-9856ca78",
-        "date": "2025-05-19T20:42:11+00:00",
+        "tag": "dev-20250523-d45eacdf",
+        "date": "2025-05-23T16:04:14+00:00",
+        "commits": [
+            {
+                "sha": "d45eacdf",
+                "message": "Disable automatic release note generation and update package dependencies",
+                "author": "arabcoders",
+                "date": "2025-05-23T16:04:14+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250522-6d494bc0",
+        "date": "2025-05-22T00:43:49+00:00",
         "commits": [
             {
                 "sha": "9856ca78",
