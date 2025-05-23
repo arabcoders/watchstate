@@ -25,12 +25,12 @@ final class ParseWebhook
     use CommonTrait;
     use PlexActionTrait;
 
-    protected const array WEBHOOK_ALLOWED_TYPES = [
+    public const array WEBHOOK_ALLOWED_TYPES = [
         PlexClient::TYPE_MOVIE,
         PlexClient::TYPE_EPISODE,
     ];
 
-    protected const array WEBHOOK_ALLOWED_EVENTS = [
+    public const array WEBHOOK_ALLOWED_EVENTS = [
         'library.new',
         'library.on.deck',
         'media.play',
@@ -48,7 +48,7 @@ final class ParseWebhook
         'tautulli.created',
     ];
 
-    protected const array WEBHOOK_TAINTED_EVENTS = [
+    public const array WEBHOOK_TAINTED_EVENTS = [
         'media.play',
         'media.stop',
         'media.resume',
@@ -59,6 +59,11 @@ final class ParseWebhook
         'tautulli.stop',
         'tautulli.pause',
         'tautulli.resume',
+    ];
+
+    public const array WEBHOOK_GENERIC_EVENTS = [
+        'library.new',
+        'tautulli.created',
     ];
 
     private string $action = 'plex.parseWebhook';

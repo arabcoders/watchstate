@@ -38,7 +38,7 @@ final class ParseWebhook
     /**
      * @var array<string> Supported entity types.
      */
-    protected const array WEBHOOK_ALLOWED_TYPES = [
+    public const array WEBHOOK_ALLOWED_TYPES = [
         JFC::TYPE_MOVIE,
         JFC::TYPE_EPISODE,
     ];
@@ -46,7 +46,7 @@ final class ParseWebhook
     /**
      * @var array<string> Supported webhook events.
      */
-    protected const array WEBHOOK_ALLOWED_EVENTS = [
+    public const array WEBHOOK_ALLOWED_EVENTS = [
         'ItemAdded',
         'UserDataSaved',
         'PlaybackStart',
@@ -56,11 +56,16 @@ final class ParseWebhook
     /**
      * @var array<string> Events that should be marked as tainted.
      */
-    protected const array WEBHOOK_TAINTED_EVENTS = [
+    public const array WEBHOOK_TAINTED_EVENTS = [
         'PlaybackStart',
         'PlaybackStop',
         'ItemAdded',
     ];
+
+    /**
+     * @var array<string> Generic events that may not contain user id.
+     */
+    public const array WEBHOOK_GENERIC_EVENTS = ['ItemAdded'];
 
     /**
      * Wrap the parser in try response block.

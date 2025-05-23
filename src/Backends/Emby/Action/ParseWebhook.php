@@ -71,6 +71,11 @@ final class ParseWebhook
         'library.new'
     ];
 
+    /**
+     * @var array<string> Generic events that may not contain user id.
+     */
+    public const array WEBHOOK_GENERIC_EVENTS = ['library.new'];
+
     public function __construct(private iLogger $logger)
     {
     }
