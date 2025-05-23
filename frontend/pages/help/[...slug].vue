@@ -24,5 +24,9 @@ onMounted(async () => {
   }
 
   url.value = '/guides/' + slug.value + '.md'
+
+  if (route.query.title) {
+    useHead({title: `Guide - ${route.query.title}`})
+  }
 })
 </script>
