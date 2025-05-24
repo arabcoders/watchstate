@@ -1,5 +1,23 @@
 [
     {
+        "tag": "master-20250524-bdb2e5c2",
+        "date": "2025-05-24T07:19:09+00:00",
+        "commits": [
+            {
+                "sha": "666c6de4",
+                "message": "Fix logged exception when a generic event trigger metadata httpException 404",
+                "author": "arabcoders",
+                "date": "2025-05-24T06:54:11+00:00"
+            },
+            {
+                "sha": "dd3833a7",
+                "message": "When parsing webhook and requesting metadata from backend, before throwing error, check for IS_GENERIC and prevent expected error for generic events.",
+                "author": "arabcoders",
+                "date": "2025-05-23T22:46:54+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250523-42281eba",
         "date": "2025-05-23T20:42:31+00:00",
         "commits": [
