@@ -34,18 +34,8 @@ report them on the [GitHub issue tracker](https://github.com/arabcoders/watchsta
   setting.
 
 Eventually, we will be removing the old webhook system alongside the related settings. The new system is designed to be
-more user friendly and enforces good practices and defaults, as we noticed many users don't really understand the old
+more user-friendly and enforces good practices and defaults, as we noticed many users don't really understand the old
 system and how to set it up correctly.
-
-## Downsides of the new system
-
-The only downside of the new system is that the generic events are triggered to all users that match the backend, and
-due to us caching the metadata call result, it will be added to the all users databases, even if they don't have access
-to the item.
-
-This is something we can improve in the future by switching out of the cache per backend id to per user again, but for
-now, we will be keeping it as is. The boost from caching the metadata call is worth the trade-off of having some items
-in the database that are not accessible to the user. which really shouldn't cause any issues.
 
 ## The generic webhook URL
 

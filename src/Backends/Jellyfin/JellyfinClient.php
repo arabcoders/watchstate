@@ -238,7 +238,8 @@ class JellyfinClient implements iClient
         $response = Container::get(ParseWebhook::class)(
             context: $this->context,
             guid: $this->guid,
-            request: $request
+            request: $request,
+            opts: $opts
         );
 
         if ($response->hasError()) {
