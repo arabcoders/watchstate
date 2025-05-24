@@ -144,8 +144,8 @@ final class ParseWebhook
 
         try {
             $obj = $this->getItemDetails(context: $context, id: $id, opts: [
-                Options::LOG_CONTEXT => ['request' => $json],
                 ...$opts,
+                Options::LOG_CONTEXT => ['request' => $json],
             ]);
 
             $isPlayed = (bool)ag($json, 'Played');
@@ -255,6 +255,10 @@ final class ParseWebhook
 
             return new Response(status: true, response: $entity);
         } catch (Throwable $e) {
+            if (true === (bool)ag($opts, Options::IS_GENERIC, false)) {
+                return new Response(status: false, extra: ['http_code' => Status::OK->value]);
+            }
+
             return new Response(
                 status: false,
                 error: new Error(

@@ -145,7 +145,7 @@ final readonly class ProcessProgressEvent
         }
 
         if (empty($list)) {
-            $writer(Level::Error, 'There are no backends to send the events to.');
+            $writer(Level::Warning, 'There are no backends to send the events to.');
             return $e;
         }
 

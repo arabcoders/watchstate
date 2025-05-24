@@ -10,6 +10,7 @@ use App\Libs\Attributes\Route\Route;
 use App\Libs\Config;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Exceptions\HttpException;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
@@ -136,18 +137,19 @@ final class Index
             return api_error($message, Status::BAD_REQUEST);
         }
 
+        $mainBackend = $backends[0];
         try {
             if (1 === count($backends)) {
                 return $this->create_item(
-                    userContext: $backends[0]['userContext'],
-                    backendName: $backends[0]['backendName'],
-                    client: $backends[0]['client'],
+                    userContext: $mainBackend['userContext'],
+                    backendName: $mainBackend['backendName'],
+                    client: $mainBackend['client'],
                     request: $request,
                     isGeneric: $isGeneric
                 );
             }
 
-            $client = $backends[0]['client'];
+            $client = $mainBackend['client'];
             assert($client instanceof iClient, 'ClientInterface is expected here');
             $entity = $client->parseWebhook($request, [Options::IS_GENERIC => $isGeneric]);
         } catch (Throwable $e) {
@@ -156,8 +158,8 @@ final class Index
                 level: Level::Error,
                 message: "Failed to process webhook for '{user}@{backend}'. {msg}.",
                 context: [
-                    'user' => $backends[0]['userContext']->name,
-                    'backend' => $backends[0]['backendName'],
+                    'user' => $mainBackend['userContext']->name,
+                    'backend' => $mainBackend['backendName'],
                     'msg' => $e->getMessage(),
                     ...exception_log($e),
                 ]
@@ -165,13 +167,13 @@ final class Index
             return api_response(Status::NOT_MODIFIED);
         }
 
-        if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
+        if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
             $this->write(
                 request: $request,
                 level: Level::Info,
                 message: "Ignoring '{user}@{backend}' {item.type} '{item.title}'. No valid/supported external ids.",
                 context: [
-                    'user' => $backends[0]['userContext']->name,
+                    'user' => $mainBackend['userContext']->name,
                     'backend' => $entity->via,
                     'item' => [
                         'title' => $entity->getName(),
@@ -182,13 +184,13 @@ final class Index
             return api_response(Status::NOT_MODIFIED);
         }
 
-        if ((0 === (int)$entity->episode || null === $entity->season) && $entity->isEpisode()) {
+        if ((0 === (int)$entity->episode || null === $entity->season) && true === $entity->isEpisode()) {
             $this->write(
                 request: $request,
                 level: Level::Notice,
                 message: "Ignoring '{user}@{backend}' {item.type} '{item.title}'. No episode/season number present.",
                 context: [
-                    'user' => $backends[0]['userContext']->name,
+                    'user' => $mainBackend['userContext']->name,
                     'backend' => $entity->via,
                     'item' => [
                         'title' => $entity->getName(),
@@ -203,18 +205,32 @@ final class Index
         }
 
         foreach ($backends as $target) {
+            $perUserRequest = $request->withAttribute(
+                'backend',
+                ag_sets(ag($request->getAttributes(), 'backend', []), [
+                    'id' => ag($target['userContext']->config->get($target['backendName']), 'uuid'),
+                    'name' => $target['backendName'],
+                ])
+            )->withAttribute(
+                'user',
+                ag_sets(ag($request->getAttributes(), 'backend', []), [
+                    'id' => ag($target['userContext']->config->get($target['backendName']), 'user'),
+                    'name' => $target['userContext']->name,
+                ])
+            );
+
             try {
                 $this->create_item(
                     userContext: $target['userContext'],
                     backendName: $target['backendName'],
                     client: $target['client'],
-                    request: $request,
+                    request: $perUserRequest,
                     isGeneric: $isGeneric
                 );
             } catch (Throwable $e) {
                 if (false === $isGeneric) {
                     $this->write(
-                        request: $request,
+                        request: $perUserRequest,
                         level: Level::Error,
                         message: "Failed to process '{user}@{backend}' {item.type} '{item.title}'. {msg}.",
                         context: [
@@ -269,7 +285,16 @@ final class Index
             return $response;
         }
 
-        $entity = $client->parseWebhook($request, [Options::IS_GENERIC => $isGeneric]);
+        try {
+            // -- Maybe the user doesn't have access to the item, so an http exception may be thrown.
+            // -- ignore it if the request is generic.
+            $entity = $client->parseWebhook($request, [Options::IS_GENERIC => $isGeneric]);
+        } catch (HttpException $e) {
+            if (true === $isGeneric) {
+                return api_response(Status::NOT_MODIFIED);
+            }
+            throw $e;
+        }
 
         if (true === (bool)ag($backend, 'options.' . Options::DUMP_PAYLOAD)) {
             saveWebhookPayload($entity, $request);
