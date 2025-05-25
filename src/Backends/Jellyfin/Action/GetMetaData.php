@@ -57,10 +57,14 @@ class GetMetaData
         return $this->tryResponse(
             context: $context,
             fn: function () use ($context, $id, $opts) {
-                if (true === (bool)ag($opts, Options::NO_CACHE, false)) {
-                    $cacheKey = null;
-                } else {
-                    $cacheKey = $context->clientName . '_' . $context->backendName . '_' . $id . '_metadata';
+                $cacheKey = null;
+                $isGeneric = true === (bool)ag($opts, Options::IS_GENERIC, false);
+                if (true !== (bool)ag($opts, Options::NO_CACHE, false)) {
+                    $cacheKey = r("{client}_{split}_{id}_metadata", [
+                        'id' => $id,
+                        'client' => $context->clientName,
+                        'split' => true === $isGeneric ? $context->backendId : $context->backendName,
+                    ]);
                 }
 
                 $url = $context->backendUrl->withPath(

@@ -43,6 +43,12 @@
               </button>
             </p>
             <p class="control">
+              <button class="button" @click="() => copyText(JSON.stringify(item,null,2))" :disabled="isLoading"
+                      v-tooltip.bottom="'Copy event.'">
+                <span class="icon"><i class="fas fa-copy"/></span>
+              </button>
+            </p>
+            <p class="control">
               <button class="button is-info" @click="loadContent()" :class="{ 'is-loading': isLoading }"
                       :disabled="isLoading" v-tooltip.bottom="'Reload event data.'">
                 <span class="icon"><i class="fas fa-sync"/></span>
@@ -65,7 +71,7 @@
       <div class="column is-12">
         <div class="notification">
           <p class="title is-5">
-            Event <span class="tag is-info">{{ item.event }}</span>
+            Event <span class="tag is-info is-clickable" @click="copyText(item.id)">{{ item.event }}</span>
             <template v-if="item.reference">
               with reference <span class="tag is-info is-light">{{ item.reference }}</span>
             </template>
