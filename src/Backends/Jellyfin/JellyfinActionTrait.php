@@ -16,6 +16,7 @@ use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Guid;
 use App\Libs\Options;
 use Psr\Http\Message\UriInterface as iUri;
+use Psr\SimpleCache\CacheInterface as iCache;
 
 /**
  * Trait JellyfinActionTrait
@@ -147,7 +148,8 @@ trait JellyfinActionTrait
                 $builder[iState::COLUMN_PARENT] = $this->getEpisodeParent(
                     context: $context,
                     guid: $guid,
-                    id: $parentId
+                    id: $parentId,
+                    opts: $opts,
                 );
 
                 $metadata[iState::COLUMN_PARENT] = $builder[iState::COLUMN_PARENT];
@@ -155,11 +157,12 @@ trait JellyfinActionTrait
                 if (count($metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES]) < 1) {
                     $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = array_map(
                         fn($v) => strtolower($v),
-                        ag($this->getItemDetails(context: $context, id: $parentId), 'Genres', [])
+                        ag($this->getItemDetails(context: $context, id: $parentId, opts: $opts), 'Genres', [])
                     );
                 }
             }
         }
+
 
         if (!empty($metadata) && null !== ($mediaYear = ag($item, 'ProductionYear'))) {
             $builder[iState::COLUMN_YEAR] = (int)$mediaYear;
@@ -236,16 +239,33 @@ trait JellyfinActionTrait
      * @param iGuid $guid The guid object.
      * @param int|string $id The id of the episode.
      * @param array $logContext Additional log context (optional).
+     * @param array $opts (optional) options, such as 'no_cache' to skip cache.
      *
      * @return array The parent of the episode as an array.
      * @throws RuntimeException When API call was not successful.
      */
-    protected function getEpisodeParent(Context $context, iGuid $guid, int|string $id, array $logContext = []): array
-    {
+    protected function getEpisodeParent(
+        Context $context,
+        iGuid $guid,
+        int|string $id,
+        array $logContext = [],
+        array $opts = []
+    ): array {
         $cacheKey = JellyfinClient::TYPE_SHOW . '.' . $id;
+        $globalCacheKey = null;
 
-        if (true === $context->cache->has($cacheKey)) {
-            return $context->cache->get($cacheKey);
+        if (true === ($isGeneric = ag($opts, Options::IS_GENERIC, false) && ag_exists($opts, iCache::class))) {
+            $globalCacheKey = $cacheKey . '.' . $context->backendId;
+            if (null !== ($cached = $opts[iCache::class]->get($globalCacheKey))) {
+                return $cached;
+            }
+        }
+
+        if (null !== ($cached = $context->cache->get($cacheKey))) {
+            if (true === $isGeneric) {
+                $opts[iCache::class]->set($globalCacheKey, $cached);
+            }
+            return $cached;
         }
 
         $json = ag($this->getItemDetails(context: $context, id: $id), []);
@@ -278,6 +298,9 @@ trait JellyfinActionTrait
         )->getAll();
 
         $context->cache->set($cacheKey, $data);
+        if (true === $isGeneric) {
+            $opts[iCache::class]->set($globalCacheKey, $data);
+        }
 
         return $data;
     }

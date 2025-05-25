@@ -393,6 +393,7 @@ class EmbyClient implements iClient
     public function getMetadata(string|int $id, array $opts = []): array
     {
         $response = Container::get(GetMetaData::class)(context: $this->context, id: $id, opts: $opts);
+
         if (false === $response->isSuccessful()) {
             $this->throwError($response);
         }
@@ -726,9 +727,13 @@ class EmbyClient implements iClient
     private function throwError(Response $response, string $className = RuntimeException::class, int $code = 0): void
     {
         throw new $className(
-            message: ag($response->extra, 'message', fn() => $response->error->format()),
+            message: ag(
+                $response->extra,
+                'message',
+                fn() => $response->error?->format() ?? 'An unexpected error occurred.'
+            ),
             code: $code,
-            previous: $response->error->previous
+            previous: $response->error?->previous
         );
     }
 }

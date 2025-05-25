@@ -18,6 +18,7 @@ use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Options;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\SimpleCache\CacheInterface as iCache;
 use Throwable;
 
 /**
@@ -66,6 +67,10 @@ final class ParseWebhook
      * @var array<string> Generic events that may not contain user id.
      */
     public const array WEBHOOK_GENERIC_EVENTS = ['ItemAdded'];
+
+    public function __construct(private readonly iCache $cache)
+    {
+    }
 
     /**
      * Wrap the parser in try response block.
@@ -223,11 +228,20 @@ final class ParseWebhook
                 ); // -- Convert to milliseconds.
             }
 
+            $ots = [
+                'override' => $fields
+            ];
+
+            if (true === (bool)ag($opts, Options::IS_GENERIC, false)) {
+                $ots[Options::IS_GENERIC] = true;
+                $ots[iCache::class] = $this->cache;
+            }
+
             $entity = $this->createEntity(
                 context: $context,
                 guid: $guid,
                 item: $obj,
-                opts: ['override' => $fields],
+                opts: $ots,
             )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
 
             if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
