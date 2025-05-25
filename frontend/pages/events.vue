@@ -140,7 +140,7 @@
           <ul>
             <li>Resetting event will return it to the queue to be dispatched again.</li>
             <li>Stopping event will prevent it from being dispatched.</li>
-            <li>Events with status of <span class="tag is-warning">Running</span> Cannot be cancelled or stopped.</li>
+            <li>Events with status of <span class="tag is-warning">Running</span> cannot be cancelled or stopped.</li>
             <li>The filter <i class="fa fa-filter"/> button on top can be used for both filtering the displayed
               results, and on submit it will search the backend for the given event name.
             </li>

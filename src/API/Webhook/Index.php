@@ -228,23 +228,22 @@ final class Index
                     isGeneric: $isGeneric
                 );
             } catch (Throwable $e) {
-                if (false === $isGeneric) {
-                    $this->write(
-                        request: $perUserRequest,
-                        level: Level::Error,
-                        message: "Failed to process '{user}@{backend}' {item.type} '{item.title}'. {msg}.",
-                        context: [
-                            'user' => $target['userContext']->name,
-                            'backend' => $target['backendName'],
-                            'item' => [
-                                'title' => $entity->getName(),
-                                'type' => $entity->type,
-                            ],
-                            'msg' => $e->getMessage(),
-                            ...exception_log($e),
-                        ]
-                    );
-                }
+                $this->write(
+                    request: $perUserRequest,
+                    level: Level::Error,
+                    message: "Failed to process '{user}@{backend}' {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'. {trace}",
+                    context: [
+                        'user' => $target['userContext']->name,
+                        'backend' => $target['backendName'],
+                        'trace' => json_encode($e->getTrace(), flags: JSON_UNESCAPED_SLASHES),
+                        'item' => [
+                            'title' => $entity->getName(),
+                            'type' => $entity->type,
+                        ],
+                        'msg' => $e->getMessage(),
+                        ...exception_log($e),
+                    ]
+                );
             }
         }
 
@@ -438,7 +437,7 @@ final class Index
             $context['attributes'] = $attributes;
         }
 
-        $message = "[GWH] {$message}";
+        $message = "[G] {$message}";
 
         if (true === (Config::get('logs.context') || $forceContext)) {
             $this->logfile->log($level, $message, $context);
