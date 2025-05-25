@@ -228,21 +228,15 @@ final class ParseWebhook
                 ); // -- Convert to milliseconds.
             }
 
-            $ots = [
-                'override' => $fields
-            ];
+            $entityOpts = ['override' => $fields];
 
             if (true === (bool)ag($opts, Options::IS_GENERIC, false)) {
-                $ots[Options::IS_GENERIC] = true;
-                $ots[iCache::class] = $this->cache;
+                $entityOpts[Options::IS_GENERIC] = true;
+                $entityOpts[iCache::class] = $this->cache;
             }
 
-            $entity = $this->createEntity(
-                context: $context,
-                guid: $guid,
-                item: $obj,
-                opts: $ots,
-            )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
+            $entity = $this->createEntity(context: $context, guid: $guid, item: $obj, opts: $entityOpts)
+                ->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
 
             if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
                 return new Response(

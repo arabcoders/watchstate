@@ -18,6 +18,7 @@ use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Guid;
 use App\Libs\Options;
 use Psr\Http\Message\UriInterface as iUri;
+use Psr\SimpleCache\CacheInterface as iCache;
 
 trait PlexActionTrait
 {
@@ -159,7 +160,8 @@ trait PlexActionTrait
                 $builder[iState::COLUMN_PARENT] = $this->getEpisodeParent(
                     context: $context,
                     guid: $guid,
-                    id: $parentId
+                    id: $parentId,
+                    opts: $opts,
                 );
 
                 $metadata[iState::COLUMN_PARENT] = $builder[iState::COLUMN_PARENT];
@@ -168,7 +170,7 @@ trait PlexActionTrait
                     $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = array_map(
                         fn($i) => strtolower((string)ag($i, 'tag', '??')),
                         ag(
-                            $this->getItemDetails(context: $context, id: $parentId),
+                            $this->getItemDetails(context: $context, id: $parentId, opts: $opts),
                             'MediaContainer.Metadata.0.Genre',
                             []
                         )
@@ -265,16 +267,33 @@ trait PlexActionTrait
      * @param iGuid $guid
      * @param int|string $id
      * @param array $logContext
+     * @param array $opts
      *
      * @return array
      * @throws RuntimeException
      */
-    protected function getEpisodeParent(Context $context, iGuid $guid, int|string $id, array $logContext = []): array
-    {
+    protected function getEpisodeParent(
+        Context $context,
+        iGuid $guid,
+        int|string $id,
+        array $logContext = [],
+        array $opts = []
+    ): array {
         $cacheKey = PlexClient::TYPE_SHOW . '.' . $id;
+        $globalCacheKey = null;
 
-        if (true === $context->cache->has($cacheKey)) {
-            return $context->cache->get($cacheKey);
+        if (true === ($isGeneric = ag($opts, Options::IS_GENERIC, false) && ag_exists($opts, iCache::class))) {
+            $globalCacheKey = $cacheKey . '.' . $context->backendId;
+            if (null !== ($cached = $opts[iCache::class]->get($globalCacheKey))) {
+                return $cached;
+            }
+        }
+
+        if (null !== ($cached = $context->cache->get($cacheKey))) {
+            if (true === $isGeneric) {
+                $opts[iCache::class]->set($globalCacheKey, $cached);
+            }
+            return $cached;
         }
 
         $json = ag($this->getItemDetails(context: $context, id: $id), 'MediaContainer.Metadata.0', []);
@@ -316,15 +335,18 @@ trait PlexActionTrait
             str_starts_with(ag($json, 'guid', ''), 'plex://') ? ag($json, 'guid') : 'none'
         );
 
-        $context->cache->set(
-            $cacheKey,
-            Guid::fromArray(
-                payload: $guid->get(guids: $json['Guid'], context: [...$gContext]),
-                context: ['backend' => $context->backendName, ...$logContext]
-            )->getAll()
-        );
+        $data = Guid::fromArray(
+            payload: $guid->get(guids: $json['Guid'], context: [...$gContext]),
+            context: ['backend' => $context->backendName, ...$logContext]
+        )->getAll();
 
-        return $context->cache->get($cacheKey);
+        $context->cache->set($cacheKey, $data);
+
+        if (true === $isGeneric) {
+            $opts[iCache::class]->set($globalCacheKey, $data);
+        }
+
+        return $data;
     }
 
     /**

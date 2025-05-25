@@ -18,6 +18,7 @@ use App\Libs\Enums\Http\Status;
 use App\Libs\Options;
 use InvalidArgumentException;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\SimpleCache\CacheInterface as iCache;
 use Throwable;
 
 final class ParseWebhook
@@ -67,6 +68,10 @@ final class ParseWebhook
     ];
 
     private string $action = 'plex.parseWebhook';
+
+    public function __construct(private readonly iCache $cache)
+    {
+    }
 
     /**
      * Parse Webhook payload.
@@ -239,12 +244,15 @@ final class ParseWebhook
                 $fields[iState::COLUMN_META_DATA][$context->backendName][iState::COLUMN_META_DATA_PROGRESS] = (string)$progress;
             }
 
-            $entity = $this->createEntity(
-                context: $context,
-                guid: $guid,
-                item: $obj,
-                opts: ['override' => $fields],
-            )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
+            $entityOpts = ['override' => $fields];
+
+            if (true === (bool)ag($opts, Options::IS_GENERIC, false)) {
+                $entityOpts[Options::IS_GENERIC] = true;
+                $entityOpts[iCache::class] = $this->cache;
+            }
+
+            $entity = $this->createEntity(context: $context, guid: $guid, item: $obj, opts: $entityOpts)
+                ->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
 
             if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
                 return new Response(
