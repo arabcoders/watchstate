@@ -1,5 +1,17 @@
 [
     {
+        "tag": "master-20250525-a40fde78",
+        "date": "2025-05-24T21:32:04+00:00",
+        "commits": [
+            {
+                "sha": "af688358",
+                "message": "Document downsides of the new generic webhook system and caching behavior.",
+                "author": "arabcoders",
+                "date": "2025-05-24T21:28:42+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250524-bdb2e5c2",
         "date": "2025-05-24T07:19:09+00:00",
         "commits": [

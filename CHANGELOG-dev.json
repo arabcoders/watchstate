@@ -1,8 +1,44 @@
 [
     {
-        "tag": "dev-20250524-666c6de4",
-        "date": "2025-05-24T06:54:11+00:00",
+        "tag": "dev-20250525-5d3d5644",
+        "date": "2025-05-25T16:16:24+00:00",
         "commits": [
+            {
+                "sha": "5d3d5644",
+                "message": "When processing generic event, re-validate the metadata to prevent items which user doesn't have access to make it into his db.",
+                "author": "arabcoders",
+                "date": "2025-05-25T16:16:24+00:00"
+            },
+            {
+                "sha": "23e19f62",
+                "message": "Support generic events more widely for plex client.",
+                "author": "arabcoders",
+                "date": "2025-05-25T16:15:01+00:00"
+            },
+            {
+                "sha": "3aef2ce9",
+                "message": "Support generic events more widely for jellyfin&emby clients.",
+                "author": "arabcoders",
+                "date": "2025-05-25T15:32:07+00:00"
+            },
+            {
+                "sha": "3c7d1e6e",
+                "message": "Add Logger proxy class.",
+                "author": "arabcoders",
+                "date": "2025-05-25T15:28:14+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250524-a40fde78",
+        "date": "2025-05-24T21:32:04+00:00",
+        "commits": [
+            {
+                "sha": "af688358",
+                "message": "Document downsides of the new generic webhook system and caching behavior.",
+                "author": "arabcoders",
+                "date": "2025-05-24T21:28:42+00:00"
+            },
             {
                 "sha": "666c6de4",
                 "message": "Fix logged exception when a generic event trigger metadata httpException 404",
