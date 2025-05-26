@@ -6,6 +6,7 @@ namespace App\Commands\System;
 
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
+use App\Libs\Stream;
 use Monolog\Level;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Input\InputInterface as iInput;
@@ -50,6 +51,10 @@ final class RunnerCommand extends Command
     {
         return $this->single(function () use ($output) {
             try {
+                $stream = Stream::make('/tmp/ws-job-runner.pid', 'w+');
+                $stream->write((string)getmypid());
+                $stream->close();
+
                 while (true) {
                     $output->writeln('Sleeping', iOutput::VERBOSITY_DEBUG);
                     sleep(60);
@@ -63,6 +68,10 @@ final class RunnerCommand extends Command
                 }
             } catch (Throwable $e) {
                 fwrite(STDERR, $e->getMessage());
+            } finally {
+                if (file_exists('/tmp/ws-job-runner.pid')) {
+                    unlink('/tmp/ws-job-runner.pid');
+                }
             }
 
             return self::SUCCESS;
