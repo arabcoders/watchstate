@@ -18,8 +18,8 @@
 
       <div class="column is-12" v-if="error">
         <Message message_class="is-background-warning-80 has-text-dark" title="Error" icon="fas fa-exclamation-circle"
-                 :use-close="true" @close="navigateTo('/backends')"
-                 :message="`${error.error.code}: ${error.error.message}`"/>
+                 :use-close="true" @close="error = null"
+                 :message="`${error?.error.code}: ${error?.error.message}`"/>
       </div>
 
       <template v-if="isResetting">
@@ -61,8 +61,6 @@
 </template>
 
 <script setup>
-import {useStorage} from '@vueuse/core'
-import 'assets/css/bulma-switch.css'
 import request from '~/utils/request'
 import Message from '~/components/Message'
 import {notification} from '~/utils/index'
@@ -71,7 +69,6 @@ import {useSessionCache} from '~/utils/cache'
 
 const error = ref()
 const isResetting = ref(false)
-const api_user = useStorage('api_user', 'main')
 
 const resetSystem = async () => {
   if (!confirm('Last chance! Are you sure you want to reset the system state?')) {
