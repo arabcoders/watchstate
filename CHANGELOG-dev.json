@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250527-689591ba",
-        "date": "2025-05-26T21:19:04+00:00",
+        "tag": "dev-20250527-5c2203d0",
+        "date": "2025-05-26T21:26:18+00:00",
         "commits": [
+            {
+                "sha": "5c2203d0",
+                "message": "Add back the pid file for runner.",
+                "author": "arabcoders",
+                "date": "2025-05-26T21:26:18+00:00"
+            },
             {
                 "sha": "689591ba",
                 "message": "Change output verbosity to debug level in RunnerCommand",
