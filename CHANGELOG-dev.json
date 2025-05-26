@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250527-d1a607ca",
-        "date": "2025-05-26T21:12:06+00:00",
+        "tag": "dev-20250527-689591ba",
+        "date": "2025-05-26T21:19:04+00:00",
         "commits": [
+            {
+                "sha": "689591ba",
+                "message": "Change output verbosity to debug level in RunnerCommand",
+                "author": "arabcoders",
+                "date": "2025-05-26T21:19:04+00:00"
+            },
             {
                 "sha": "d1a607ca",
                 "message": "switch to internal job runner.",
