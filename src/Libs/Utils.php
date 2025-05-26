@@ -532,7 +532,7 @@ if (!function_exists('restartTaskWorker')) {
             }
         }
 
-        $process = Process::fromShellCommandline('/opt/bin/job-runner 2>&1 &');
+        $process = Process::fromShellCommandline('/opt/bin/console system:runner 2>&1 &');
         $process->run();
 
         return [

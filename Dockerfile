@@ -59,7 +59,6 @@ RUN echo '' && \
     # Install dependencies.
     /opt/bin/composer --working-dir=/opt/app/ -no --no-progress --no-dev --no-cache --quiet -- install && \
     # Copy configuration files to the expected directories.
-    cp ${TOOL_PATH}/container/files/job-runner.sh /opt/bin/job-runner && \
     cp ${TOOL_PATH}/container/files/init-container.sh /opt/bin/init-container && \
     cp ${TOOL_PATH}/container/files/redis.conf /opt/config/redis.conf && \
     # Make sure /bin/* files are given executable flag.
