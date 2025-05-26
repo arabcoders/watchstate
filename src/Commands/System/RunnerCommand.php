@@ -58,7 +58,7 @@ final class RunnerCommand extends Command
                         'timeout' => 3600 * 4,
                     ]);
                     foreach ($out as $line) {
-                        $output->writeln($line);
+                        $output->writeln($line, iOutput::VERBOSITY_DEBUG);
                     }
                 }
             } catch (Throwable $e) {
