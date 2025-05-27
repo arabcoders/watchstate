@@ -156,10 +156,8 @@ Click *Save Changes*.
     - Playback Resume
     - Watched
     - Recently Added
-
-6**Data**:
-
-- For each event, you will need to set the corresponding headers/data fields using the following format.
+6. **Data**:
+    - For each event, you will need to set the corresponding headers/data fields using the following format.
 
 > [!IMPORTANT]  
 > It’s important that you copy the headers and data as they are, without modifying them if you're unsure.
