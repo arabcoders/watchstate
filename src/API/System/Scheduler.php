@@ -16,7 +16,9 @@ final class Scheduler
     #[Get(self::URL . '[/]', name: 'system.task_scheduler.status')]
     public function status(): iResponse
     {
-        return api_response(Status::OK, isSchedulerRunning(ignoreContainer: true));
+        return api_response(Status::OK, isSchedulerRunning(ignoreContainer: true), headers: [
+            'X-No-AccessLog' => '1',
+        ]);
     }
 
     #[Post(self::URL . '/restart[/]', name: 'system.task_scheduler.restart')]
