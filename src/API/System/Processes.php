@@ -17,8 +17,10 @@ final class Processes
     #[Get(self::URL . '[/]', name: 'system.processes')]
     public function __invoke(iRequest $request): iResponse
     {
-        $proc = Process::fromShellCommandline('ps aux');
+        $cmd = 'ps aux';
+        $proc = Process::fromShellCommandline($cmd);
         $proc->run();
+
         if (!$proc->isSuccessful()) {
             return api_error('Failed to get process list.', Status::INTERNAL_SERVER_ERROR, [
                 'error' => $proc->getErrorOutput()
@@ -47,7 +49,13 @@ final class Processes
                 continue;
             }
 
-            $processes[] = array_combine($headers, $parts);
+            $process = array_combine($headers, $parts);
+
+            if (str_ends_with($process['command'], $cmd)) {
+                continue;
+            }
+
+            $processes[] = $process;
         }
 
         return api_response(Status::OK, ['processes' => $processes]);

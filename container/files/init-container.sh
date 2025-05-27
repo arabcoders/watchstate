@@ -92,7 +92,7 @@ if [ 0 = "${DISABLE_CRON}" ]; then
   fi
 
   echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Starting tasks scheduler."
-  /opt/bin/job-runner &
+  /opt/bin/console system:scheduler &
 fi
 
 echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Running - $(/opt/bin/console --version)"

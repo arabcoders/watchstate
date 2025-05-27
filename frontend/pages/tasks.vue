@@ -9,12 +9,6 @@
         <div class="is-pulled-right">
           <div class="field is-grouped">
             <p class="control">
-              <button class="button" @click="showTaskRunner = !showTaskRunner" v-tooltip="'Task Runner Status'"
-                      :class="{ 'is-primary': taskRunner.status, 'is-danger': !taskRunner.status }">
-                <span class="icon"><i class="fas fa-microchip"/></span>
-              </button>
-            </p>
-            <p class="control">
               <button class="button is-info" @click="loadContent()" :disabled="isLoading"
                       :class="{ 'is-loading': isLoading }">
                 <span class="icon"><i class="fas fa-sync"></i></span>
@@ -27,10 +21,6 @@
             This page contains all the tasks that are currently configured.
           </span>
         </div>
-      </div>
-
-      <div class="column is-12" v-if="showTaskRunner || false === taskRunner?.status">
-        <TaskRunnerStatus :status="taskRunner" @taskrunner_update="e => taskRunner = e"/>
       </div>
 
       <div id="queued_tasks" class="column is-12" v-if="queued.length > 0">
@@ -173,7 +163,6 @@ import {awaitElement, makeConsoleCommand, notification, parse_api_response, TOOL
 import cronstrue from 'cronstrue'
 import Message from '~/components/Message'
 import {useStorage} from '@vueuse/core'
-import TaskRunnerStatus from '~/components/TaskRunnerStatus'
 
 useHead({title: 'Tasks'})
 
@@ -181,8 +170,6 @@ const tasks = ref([])
 const queued = ref([])
 const isLoading = ref(false)
 const show_page_tips = useStorage('show_page_tips', true)
-const taskRunner = ref({status: true, message: '', restartable: false})
-const showTaskRunner = ref(false)
 
 const loadContent = async () => {
   isLoading.value = true
@@ -195,7 +182,6 @@ const loadContent = async () => {
     }
     tasks.value = json.tasks
     queued.value = json.queued
-    taskRunner.value = json, status
   } catch (e) {
     notification('error', 'Error', `Request error. ${e.message}`)
   } finally {

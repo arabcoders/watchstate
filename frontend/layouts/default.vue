@@ -2,7 +2,7 @@
   <div class="container">
     <nav class="navbar is-dark mb-4 is-unselectable">
       <div class="navbar-brand pl-5">
-        <NuxtLink class="navbar-item" to="/" @click.native="(e) => changeRoute(e)">
+        <NuxtLink class="navbar-item" to="/" @click.native="e => changeRoute(e)">
           <span class="icon"><i class="fas fa-home"/></span>
           <span>Home</span>
         </NuxtLink>
@@ -20,7 +20,7 @@
 
       <div class="navbar-menu" :class="{ 'is-active': showMenu }">
         <div class="navbar-start">
-          <NuxtLink class="navbar-item" to="/backends" @click.native="(e) => changeRoute(e)">
+          <NuxtLink class="navbar-item" to="/backends" @click.native="e => changeRoute(e)">
             <span class="icon"><i class="fas fa-server"/></span>
             <span>Backends</span>
           </NuxtLink>
@@ -31,17 +31,17 @@
             <span>History</span>
           </NuxtLink>
 
-          <NuxtLink class="navbar-item" to="/tasks" @click.native="(e) => changeRoute(e)">
+          <NuxtLink class="navbar-item" to="/tasks" @click.native="e => changeRoute(e)">
             <span class="icon"><i class="fas fa-tasks"/></span>
             <span>Tasks</span>
           </NuxtLink>
 
-          <NuxtLink class="navbar-item" to="/env" @click.native="(e) => changeRoute(e)">
+          <NuxtLink class="navbar-item" to="/env" @click.native="e => changeRoute(e)">
             <span class="icon"><i class="fas fa-cogs"/></span>
             <span>Env</span>
           </NuxtLink>
 
-          <NuxtLink class="navbar-item" to="/logs" @click.native="(e) => changeRoute(e)">
+          <NuxtLink class="navbar-item" to="/logs" @click.native="e => changeRoute(e)">
             <span class="icon"><i class="fas fa-globe"/></span>
             <span>Logs</span>
           </NuxtLink>
@@ -54,12 +54,12 @@
 
             <div class="navbar-dropdown">
 
-              <NuxtLink class="navbar-item" to="/tools/plex_token" @click.native="(e) => changeRoute(e)">
+              <NuxtLink class="navbar-item" to="/tools/plex_token" @click.native="e => changeRoute(e)">
                 <span class="icon"><i class="fas fa-key"/></span>
                 <span>Plex Token</span>
               </NuxtLink>
 
-              <NuxtLink class="navbar-item" to="/tools/sub_users" @click.native="(e) => changeRoute(e)"
+              <NuxtLink class="navbar-item" to="/tools/sub_users" @click.native="e => changeRoute(e)"
                         v-if="'main' === api_user">
                 <span class="icon"><i class="fas fa-users"/></span>
                 <span>Sub Users</span>
@@ -67,53 +67,45 @@
 
               <hr class="navbar-divider">
 
-              <NuxtLink class="navbar-item" to="/processes" @click.native="(e) => changeRoute(e)">
+              <NuxtLink class="navbar-item" to="/processes" @click.native="e => changeRoute(e)">
                 <span class="icon"><i class="fas fa-microchip"/></span>
                 <span>Processes</span>
               </NuxtLink>
 
-              <NuxtLink class="navbar-item" to="/url_check" @click.native="(e) => changeRoute(e)">
+              <NuxtLink class="navbar-item" to="/url_check" @click.native="e => changeRoute(e)">
                 <span class="icon"><i class="fas fa-external-link"/></span>
                 <span>URL Checker</span>
               </NuxtLink>
 
               <hr class="navbar-divider">
 
-              <NuxtLink class="navbar-item" to="/parity" @click.native="(e) => changeRoute(e)">
+              <NuxtLink class="navbar-item" to="/parity" @click.native="e => changeRoute(e)">
                 <span class="icon"><i class="fas fa-database"/></span>
                 <span>Data Parity</span>
               </NuxtLink>
 
-              <NuxtLink class="navbar-item" to="/integrity" @click.native="(e) => changeRoute(e)">
+              <NuxtLink class="navbar-item" to="/integrity" @click.native="e => changeRoute(e)">
                 <span class="icon"><i class="fas fa-file"/></span>
                 <span>Files Integrity</span>
               </NuxtLink>
 
               <hr class="navbar-divider">
 
-              <NuxtLink class="navbar-item" to="/ignore" @click.native="(e) => changeRoute(e)">
+              <NuxtLink class="navbar-item" to="/ignore" @click.native="e => changeRoute(e)">
                 <span class="icon"><i class="fas fa-ban"/></span>
                 <span>Ignore List</span>
               </NuxtLink>
 
-              <NuxtLink class="navbar-item" to="/suppression" @click.native="(e) => changeRoute(e)">
+              <NuxtLink class="navbar-item" to="/suppression" @click.native="e => changeRoute(e)">
                 <span class="icon"><i class="fas fa-bug-slash"/></span>
                 <span>Log Suppression</span>
               </NuxtLink>
 
-
               <hr class="navbar-divider">
 
-              <NuxtLink class="navbar-item" to="/backup" @click.native="(e) => changeRoute(e)">
+              <NuxtLink class="navbar-item" to="/backup" @click.native="e => changeRoute(e)">
                 <span class="icon"><i class="fas fa-sd-card"/></span>
                 <span>Backups</span>
-              </NuxtLink>
-
-              <hr class="navbar-divider">
-
-              <NuxtLink class="navbar-item" to="/reset" @click.native="(e) => changeRoute(e)">
-                <span class="icon"><i class="fas fa-redo"/></span>
-                <span>System reset</span>
               </NuxtLink>
 
             </div>
@@ -126,29 +118,41 @@
             </a>
             <div class="navbar-dropdown">
 
-              <NuxtLink class="navbar-item" to="/console" @click.native="(e) => changeRoute(e)">
+              <NuxtLink class="navbar-item" to="/console" @click.native="e => changeRoute(e)">
                 <span class="icon"><i class="fas fa-terminal"/></span>
                 <span>Console</span>
               </NuxtLink>
               <hr class="navbar-divider">
 
-              <NuxtLink class="navbar-item" to="/events" @click.native="(e) => changeRoute(e)">
+              <NuxtLink class="navbar-item" to="/events" @click.native="e => changeRoute(e)">
                 <span class="icon"><i class="fas fa-calendar-alt"/></span>
                 <span>Events</span>
               </NuxtLink>
 
               <hr class="navbar-divider">
 
-              <NuxtLink class="navbar-item" to="/report" @click.native="(e) => changeRoute(e)">
+              <NuxtLink class="navbar-item" to="/report" @click.native="e => changeRoute(e)">
                 <span class="icon"><i class="fas fa-flag"/></span>
                 <span>Basic Report</span>
               </NuxtLink>
 
               <hr class="navbar-divider">
 
-              <NuxtLink class="navbar-item" to="/custom" @click.native="(e) => changeRoute(e)">
+              <NuxtLink class="navbar-item" to="/custom" @click.native="e => changeRoute(e)">
                 <span class="icon"><i class="fas fa-map"/></span>
                 <span>Custom GUIDs</span>
+              </NuxtLink>
+
+              <hr class="navbar-divider">
+
+              <NuxtLink class="navbar-item" to="/purge_cache" @click.native="e => changeRoute(e)">
+                <span class="icon"><i class="fas fa-trash"/></span>
+                <span>Purge Cache</span>
+              </NuxtLink>
+
+              <NuxtLink class="navbar-item" to="/reset" @click.native="e => changeRoute(e)">
+                <span class="icon"><i class="fas fa-redo"/></span>
+                <span>System reset</span>
               </NuxtLink>
 
             </div>
@@ -156,6 +160,12 @@
         </div>
         <div class="navbar-end pr-3">
           <template v-if="'mobile' === breakpoints.active().value">
+            <div class="navbar-item" v-if="in_container">
+              <button class="button is-dark" @click="showScheduler = !showScheduler">
+                <span class="icon"><i class="fas fa-microchip"/></span>
+                <span>Task Scheduler Status</span>
+              </button>
+            </div>
             <div class="navbar-item">
               <NuxtLink class="button is-dark" to="/help">
                 <span class="icon"><i class="fas fa-circle-question"/></span>
@@ -186,6 +196,16 @@
           </template>
 
           <template v-if="'mobile' !== breakpoints.active().value">
+            <div class="navbar-item" v-if="in_container">
+              <button class="button is-dark" @click="showScheduler = !showScheduler"
+                      v-tooltip="'Task Scheduler Status'">
+                <span class="icon"
+                      :class="{ 'has-text-primary': scheduler.status,
+                      'has-text-danger fa-fade': !scheduler.status }"
+                      :style="!scheduler.status ? '--fa-animation-iteration-count: 10;' : ''"
+                ><i class="fas fa-microchip"/></span>
+              </button>
+            </div>
             <div class="navbar-item">
               <NuxtLink class="button is-dark" v-tooltip="'Guides'" to="/help">
                 <span class="icon"><i class="fas fa-circle-question"/></span>
@@ -216,6 +236,7 @@
     </nav>
     <div>
       <div>
+        <TaskScheduler :forceShow="showScheduler" @update="e => scheduler = e" v-if="in_container"/>
         <Settings v-if="showSettings"/>
         <NuxtPage/>
       </div>
@@ -267,7 +288,8 @@ import request from '~/utils/request'
 import Markdown from '~/components/Markdown'
 import UserSelection from '~/components/UserSelection'
 import {useAuthStore} from '~/store/auth'
-import Settings from "~/components/Settings.vue";
+import Settings from "~/components/Settings.vue"
+import TaskScheduler from "~/components/TaskScheduler.vue"
 
 const selectedTheme = useStorage('theme', 'auto')
 const showUserSelection = ref(false)
@@ -290,6 +312,11 @@ watch(() => api_version.value, () => changelog_url.value = `/changelog?version=$
 const showMenu = ref(false)
 
 const loadFile = ref()
+
+const in_container = ref(false)
+
+const scheduler = ref({status: false, message: 'Loading...', restartable: false})
+const showScheduler = ref(false)
 
 const applyPreferredColorScheme = scheme => {
   if (!scheme || 'auto' === scheme) {
@@ -365,6 +392,7 @@ const getVersion = async () => {
     const response = await request('/system/version')
     const json = await response.json()
     api_version.value = json.version
+    in_container.value = Boolean(json.container)
   } catch (e) {
     return 'Unknown'
   }

@@ -20,7 +20,7 @@ final class Tasks
 {
     public const string URL = '%{api.prefix}/tasks';
 
-    public function __construct(private EventsRepository $eventsRepo)
+    public function __construct(private readonly EventsRepository $eventsRepo)
     {
     }
 
@@ -47,7 +47,6 @@ final class Tasks
         return api_response(Status::OK, [
             'tasks' => $tasks,
             'queued' => $queued,
-            'status' => isTaskWorkerRunning(),
         ]);
     }
 

@@ -13,7 +13,7 @@
           <div class="control">
             <input class="input" type="text" v-model="userSecret" placeholder="Enter the secret key."/>
           </div>
-          <p class="help" v-if="props.warning">
+          <p class="help is-bold" v-if="props.warning">
             <span class="icon" :class="props.warningIconClass">
               <i class="fas" :class="props.warningIcon"></i>
             </span>

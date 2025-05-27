@@ -125,9 +125,9 @@ final class ReportCommand extends Command
         );
 
         $this->filter(
-            r('Is the tasks runner working? <flag>{answer}</flag>', [
+            r('Is the tasks scheduler working? <flag>{answer}</flag>', [
                 'answer' => (function () {
-                    $info = isTaskWorkerRunning(ignoreContainer: true);
+                    $info = isSchedulerRunning(ignoreContainer: true);
                     return r("{status} '{container}' - {message}", [
                         'status' => $info['status'] ? 'Yes' : 'No',
                         'message' => $info['message'],
