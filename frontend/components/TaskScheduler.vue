@@ -41,7 +41,7 @@ const props = defineProps({
 let timer = null;
 const isLoading = ref(false);
 const isRestarting = ref(false);
-const status = ref({status: false, message: 'Loading...', restartable: false});
+const status = ref({status: true, message: 'Loading...', restartable: false});
 
 const loadContent = async () => {
   if (isLoading.value) {
