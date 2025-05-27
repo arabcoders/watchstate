@@ -412,22 +412,22 @@ if (!function_exists('loadEnvFile')) {
     }
 }
 
-if (!function_exists('isTaskWorkerRunning')) {
+if (!function_exists('isSchedulerRunning')) {
     /**
-     * Check if the task worker is running. This function is only available when running in a container.
+     * Check if the task scheduler is running. This function is only available when running in a container.
      *
      * @param string $pidFile (Optional) The PID file to check.
      * @param bool $ignoreContainer (Optional) Whether to ignore the container check.
      *
      * @return array{ status: bool, message: string }
      */
-    function isTaskWorkerRunning(string $pidFile = '/tmp/ws-job-runner.pid', bool $ignoreContainer = false): array
+    function isSchedulerRunning(string $pidFile = '/tmp/ws-job-runner.pid', bool $ignoreContainer = false): array
     {
         if (false === $ignoreContainer && !inContainer()) {
             return [
                 'status' => true,
                 'restartable' => false,
-                'message' => 'We can only track the task worker status when running in a container.'
+                'message' => 'We can only track the task scheduler status when running in a container.'
             ];
         }
 
@@ -435,7 +435,7 @@ if (!function_exists('isTaskWorkerRunning')) {
             return [
                 'status' => false,
                 'restartable' => false,
-                'message' => "Task runner is disabled via 'DISABLE_CRON' environment variable."
+                'message' => "Task scheduler is disabled via 'DISABLE_CRON' environment variable."
             ];
         }
 
@@ -443,57 +443,29 @@ if (!function_exists('isTaskWorkerRunning')) {
             return [
                 'status' => false,
                 'restartable' => true,
-                'message' => 'No PID file was found - Likely means task worker failed to run.'
+                'message' => 'No PID file was found - Likely means task scheduler failed to start.'
             ];
         }
 
         try {
-            $pid = trim((string)new Stream($pidFile));
+            $pid = trim((string)Stream::make($pidFile));
         } catch (Throwable $e) {
             return ['status' => false, 'message' => $e->getMessage()];
         }
 
-        switch (PHP_OS) {
-            case 'Linux':
-                {
-                    $status = file_exists(r('/proc/{pid}/status', ['pid' => $pid]));
-                }
-                break;
-            case 'WINNT':
-                {
-                    // -- Windows does not have a /proc directory so we need different way to get the status.
-                    @exec("tasklist /FI \"PID eq {$pid}\" 2>NUL", $output);
-                    // -- windows doesn't return 0 if the process is not found. we need to parse the output.
-                    $status = false;
-                    foreach ($output as $line) {
-                        if (false === str_contains($line, $pid)) {
-                            continue;
-                        }
-                        $status = true;
-                        break;
-                    }
-                }
-                break;
-            default:
-                $status = false;
-                break;
-        }
-
-        if (true === $status) {
-            return ['status' => true, 'restartable' => true, 'message' => 'Task worker is running.'];
+        if (true === file_exists(r('/proc/{pid}/status', ['pid' => $pid]))) {
+            return ['status' => true, 'restartable' => true, 'message' => 'Task scheduler is running.'];
         }
 
         return [
             'status' => false,
             'restartable' => true,
-            'message' => r("Found PID '{pid}' in file, but it seems the process is not active.", [
-                'pid' => $pid
-            ])
+            'message' => r("Found PID '{pid}' in file, but it seems the process is not active.", ['pid' => $pid])
         ];
     }
 }
 
-if (!function_exists('restartTaskWorker')) {
+if (!function_exists('restartScheduler')) {
     /**
      * Restart the task worker.
      *
@@ -502,7 +474,7 @@ if (!function_exists('restartTaskWorker')) {
      *
      * @return array{ status: bool, message: string }
      */
-    function restartTaskWorker(bool $ignoreContainer = false, bool $force = false): array
+    function restartScheduler(bool $ignoreContainer = false, bool $force = false): array
     {
         if (false === $ignoreContainer && !inContainer()) {
             return [
@@ -532,7 +504,7 @@ if (!function_exists('restartTaskWorker')) {
             }
         }
 
-        $process = Process::fromShellCommandline('/opt/bin/console system:runner 2>&1 &');
+        $process = Process::fromShellCommandline('/opt/bin/console system:scheduler 2>&1 &');
         $process->run();
 
         return [

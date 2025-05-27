@@ -16,6 +16,6 @@ final class Version
     #[Get(self::URL . '[/]', name: 'system.version')]
     public function __invoke(iRequest $request): iResponse
     {
-        return api_response(Status::OK, ['version' => getAppVersion()]);
+        return api_response(Status::OK, ['version' => getAppVersion(), 'container' => inContainer()]);
     }
 }

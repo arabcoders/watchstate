@@ -1336,22 +1336,22 @@ class HelpersTest extends TestCase
     public function test_isTaskWorkerRunning()
     {
         $_ENV['IN_CONTAINER'] = false;
-        $d = isTaskWorkerRunning();
+        $d = isSchedulerRunning();
         $this->assertTrue($d['status'], 'When not in container, and $ignoreContainer is false, it should return true.');
         unset($_ENV['IN_CONTAINER']);
 
         $_ENV['DISABLE_CRON'] = true;
-        $d = isTaskWorkerRunning(ignoreContainer: true);
+        $d = isSchedulerRunning(ignoreContainer: true);
         $this->assertFalse($d['status'], 'When DISABLE_CRON is set, it should return false.');
         unset($_ENV['DISABLE_CRON']);
 
-        $d = isTaskWorkerRunning(pidFile: __DIR__ . '/../Fixtures/worker.pid', ignoreContainer: true);
+        $d = isSchedulerRunning(pidFile: __DIR__ . '/../Fixtures/worker.pid', ignoreContainer: true);
         $this->assertFalse($d['status'], 'When pid file is not found, it should return false.');
 
         $tmpFile = tempnam(sys_get_temp_dir(), 'worker');
         try {
             file_put_contents($tmpFile, getmypid());
-            $d = isTaskWorkerRunning(pidFile: $tmpFile, ignoreContainer: true);
+            $d = isSchedulerRunning(pidFile: $tmpFile, ignoreContainer: true);
             $this->assertTrue($d['status'], 'When pid file is found, and process exists it should return true.');
         } finally {
             if (file_exists($tmpFile)) {
@@ -1363,7 +1363,7 @@ class HelpersTest extends TestCase
         try {
             /** @noinspection PhpUnhandledExceptionInspection */
             file_put_contents($tmpFile, random_int(1, 9999) . getmypid());
-            $d = isTaskWorkerRunning(pidFile: $tmpFile, ignoreContainer: true);
+            $d = isSchedulerRunning(pidFile: $tmpFile, ignoreContainer: true);
             $this->assertFalse(
                 $d['status'],
                 'When pid file is found, and process does not exists it should return false.'
@@ -1449,7 +1449,7 @@ class HelpersTest extends TestCase
         );
 
         $this->assertMatchesRegularExpression(
-            '/^test\-[0-9a-f]{8}-[0-9a-f]{4}-6[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/',
+            '/^test-[0-9a-f]{8}-[0-9a-f]{4}-6[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/',
             generateUUID('test'),
             'It should match valid UUID6 pattern.'
         );
@@ -1635,7 +1635,7 @@ class HelpersTest extends TestCase
 
     public function test_normalizeName()
     {
-        $isValid = ['foo','foo_bar','0user','user_123','user_123_foo','user_123_foo_bar'];
+        $isValid = ['foo', 'foo_bar', '0user', 'user_123', 'user_123_foo', 'user_123_foo_bar'];
         foreach ($isValid as $name) {
             $this->assertSame(
                 $name,

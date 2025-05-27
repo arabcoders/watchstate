@@ -100,7 +100,7 @@
                 <span class="icon"><i class="fas fa-bug-slash"/></span>
                 <span>Log Suppression</span>
               </NuxtLink>
-              
+
               <hr class="navbar-divider">
 
               <NuxtLink class="navbar-item" to="/backup" @click.native="e => changeRoute(e)">
@@ -160,6 +160,12 @@
         </div>
         <div class="navbar-end pr-3">
           <template v-if="'mobile' === breakpoints.active().value">
+            <div class="navbar-item" v-if="in_container">
+              <button class="button is-dark" @click="showScheduler = !showScheduler">
+                <span class="icon"><i class="fas fa-microchip"/></span>
+                <span>Task Scheduler Status</span>
+              </button>
+            </div>
             <div class="navbar-item">
               <NuxtLink class="button is-dark" to="/help">
                 <span class="icon"><i class="fas fa-circle-question"/></span>
@@ -190,6 +196,16 @@
           </template>
 
           <template v-if="'mobile' !== breakpoints.active().value">
+            <div class="navbar-item" v-if="in_container">
+              <button class="button is-dark" @click="showScheduler = !showScheduler"
+                      v-tooltip="'Task Scheduler Status'">
+                <span class="icon"
+                      :class="{ 'has-text-primary': scheduler.status,
+                      'has-text-danger fa-fade': !scheduler.status }"
+                      :style="!scheduler.status ? '--fa-animation-iteration-count: 10;' : ''"
+                ><i class="fas fa-microchip"/></span>
+              </button>
+            </div>
             <div class="navbar-item">
               <NuxtLink class="button is-dark" v-tooltip="'Guides'" to="/help">
                 <span class="icon"><i class="fas fa-circle-question"/></span>
@@ -220,6 +236,7 @@
     </nav>
     <div>
       <div>
+        <TaskScheduler :forceShow="showScheduler" @update="e => scheduler = e" v-if="in_container"/>
         <Settings v-if="showSettings"/>
         <NuxtPage/>
       </div>
@@ -271,7 +288,8 @@ import request from '~/utils/request'
 import Markdown from '~/components/Markdown'
 import UserSelection from '~/components/UserSelection'
 import {useAuthStore} from '~/store/auth'
-import Settings from "~/components/Settings.vue";
+import Settings from "~/components/Settings.vue"
+import TaskScheduler from "~/components/TaskScheduler.vue"
 
 const selectedTheme = useStorage('theme', 'auto')
 const showUserSelection = ref(false)
@@ -294,6 +312,11 @@ watch(() => api_version.value, () => changelog_url.value = `/changelog?version=$
 const showMenu = ref(false)
 
 const loadFile = ref()
+
+const in_container = ref(false)
+
+const scheduler = ref({status: false, message: 'Loading...', restartable: false})
+const showScheduler = ref(false)
 
 const applyPreferredColorScheme = scheme => {
   if (!scheme || 'auto' === scheme) {
@@ -369,6 +392,7 @@ const getVersion = async () => {
     const response = await request('/system/version')
     const json = await response.json()
     api_version.value = json.version
+    in_container.value = Boolean(json.container)
   } catch (e) {
     return 'Unknown'
   }
