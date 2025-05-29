@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\API\System;
 
+use App\Libs\Attributes\Route\Delete;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Enums\Http\Status;
 use Psr\Http\Message\ResponseInterface as iResponse;
-use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Symfony\Component\Process\Process;
 
 final class Processes
@@ -15,7 +15,7 @@ final class Processes
     public const string URL = '%{api.prefix}/system/processes';
 
     #[Get(self::URL . '[/]', name: 'system.processes')]
-    public function __invoke(iRequest $request): iResponse
+    public function list_processes(): iResponse
     {
         $cmd = 'ps aux';
         $proc = Process::fromShellCommandline($cmd);
@@ -59,5 +59,22 @@ final class Processes
         }
 
         return api_response(Status::OK, ['processes' => $processes]);
+    }
+
+    #[Delete(self::URL . '/{id:number}[/]', name: 'system.processes.kill')]
+    public function kill(string $id): iResponse
+    {
+        if (false === ctype_digit($id)) {
+            return api_error('Invalid process ID.', Status::BAD_REQUEST);
+        }
+
+        $id = (int)$id;
+
+        if (false === posix_kill($id, 1)) {
+            $err = posix_strerror(posix_get_last_error());
+            return api_error(r("Failed to kill process. '{err}'", ['err' => $err]), Status::INTERNAL_SERVER_ERROR);
+        }
+
+        return api_response(Status::OK);
     }
 }
