@@ -118,8 +118,11 @@ return (function () {
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         ],
         'exec' => [
-            'PRAGMA journal_mode=MEMORY',
-            'PRAGMA SYNCHRONOUS=OFF'
+            'PRAGMA journal_mode=WAL',
+            'PRAGMA busy_timeout=5000',
+            'PRAGMA SYNCHRONOUS=NORMAL',
+            //'PRAGMA SYNCHRONOUS=OFF'
+            //'PRAGMA journal_mode=MEMORY',
         ],
     ];
 

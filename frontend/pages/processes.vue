@@ -53,7 +53,7 @@
           <table class="table is-fullwidth is-hoverable is-striped is-bordered">
             <thead>
             <tr>
-              <th>PID</th>
+              <th colspan="2" class="has-text-centered">PID</th>
               <th>Memory</th>
               <th>CPU</th>
               <th>Time</th>
@@ -63,11 +63,16 @@
             <tbody>
             <template v-for="item in items" :key="item.pid">
               <tr v-if="filterItem(item)">
-                <td>{{ item.pid }}</td>
-                <td>{{ item.mem }}</td>
-                <td>{{ item.cpu }}</td>
-                <td>{{ item.time }}</td>
-                <td>{{ item.command }}</td>
+                <td class="is-vcentered">
+                  <button class="button is-danger is-small" @click="killProcess(item.pid)">
+                    <span class="icon"><i class="fas fa-trash"/></span>
+                  </button>
+                </td>
+                <td class="is-vcentered">{{ item.pid }}</td>
+                <td class="is-vcentered">{{ item.mem }}</td>
+                <td class="is-vcentered">{{ item.cpu }}</td>
+                <td class="is-vcentered">{{ item.time }}</td>
+                <td class="is-vcentered">{{ item.command }}</td>
               </tr>
             </template>
             </tbody>
@@ -141,6 +146,32 @@ const filterItem = item => {
   return Object.values(item).some(v => typeof v === 'string' ? v.toLowerCase().includes(String(filter.value).toLowerCase()) : false)
 }
 
-onMounted(() => loadContent())
+const killProcess = async pid => {
+  if (!pid) {
+    return
+  }
 
+  if (false === confirm(`Kill #${pid}, you may have to restart the container if you do that?`)) {
+    return
+  }
+
+  isLoading.value = true
+  try {
+    const response = await request(`/system/processes/${pid}`, {method: 'DELETE'})
+    const json = await response.json()
+
+    if (!response.ok) {
+      notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
+      return
+    }
+
+    notification('success', 'Success', `Successfully killed #${pid}.`)
+
+    items.value = items.value.filter(item => item.pid !== pid)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(() => loadContent())
 </script>

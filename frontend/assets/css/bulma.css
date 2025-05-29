@@ -5736,7 +5736,8 @@ button.tag:active,
 }
 
 .title .tag,
-.subtitle .tag {
+.subtitle .tag,
+.is-vcentered td {
     vertical-align: middle;
 }
 
