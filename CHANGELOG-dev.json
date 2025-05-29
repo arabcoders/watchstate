@@ -1,8 +1,32 @@
 [
     {
-        "tag": "dev-20250527-14204a51",
-        "date": "2025-05-27T16:08:58+00:00",
+        "tag": "dev-20250529-0c3eea52",
+        "date": "2025-05-29T15:59:57+00:00",
         "commits": [
+            {
+                "sha": "0c3eea52",
+                "message": "switch db to WAL mode, it's little slower, but more durable",
+                "author": "arabcoders",
+                "date": "2025-05-29T15:59:57+00:00"
+            },
+            {
+                "sha": "83e1af43",
+                "message": "add the ability to kill process via processes page.",
+                "author": "arabcoders",
+                "date": "2025-05-29T15:13:09+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250527-5c414fba",
+        "date": "2025-05-27T20:30:05+00:00",
+        "commits": [
+            {
+                "sha": "3f1c8eac",
+                "message": "Fixed unformatted point in setting up Tautulli webhook",
+                "author": "arabcoders",
+                "date": "2025-05-27T20:28:36+00:00"
+            },
             {
                 "sha": "14204a51",
                 "message": "Ignore task scheduler http log messages.",

@@ -1,5 +1,17 @@
 [
     {
+        "tag": "master-20250527-5c414fba",
+        "date": "2025-05-27T20:30:05+00:00",
+        "commits": [
+            {
+                "sha": "3f1c8eac",
+                "message": "Fixed unformatted point in setting up Tautulli webhook",
+                "author": "arabcoders",
+                "date": "2025-05-27T20:28:36+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250527-5df09c15",
         "date": "2025-05-27T16:44:31+00:00",
         "commits": [
