@@ -1,8 +1,20 @@
 [
     {
-        "tag": "master-20250527-5c414fba",
-        "date": "2025-05-27T20:30:05+00:00",
+        "tag": "master-20250529-289a0a91",
+        "date": "2025-05-29T20:24:09+00:00",
         "commits": [
+            {
+                "sha": "0c3eea52",
+                "message": "switch db to WAL mode, it's little slower, but more durable",
+                "author": "arabcoders",
+                "date": "2025-05-29T15:59:57+00:00"
+            },
+            {
+                "sha": "83e1af43",
+                "message": "add the ability to kill process via processes page.",
+                "author": "arabcoders",
+                "date": "2025-05-29T15:13:09+00:00"
+            },
             {
                 "sha": "3f1c8eac",
                 "message": "Fixed unformatted point in setting up Tautulli webhook",
