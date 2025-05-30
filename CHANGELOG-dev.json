@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250530-63003b91",
-        "date": "2025-05-30T15:15:48+00:00",
+        "tag": "dev-20250530-14a27cfb",
+        "date": "2025-05-30T15:39:56+00:00",
         "commits": [
+            {
+                "sha": "14a27cfb",
+                "message": "fix notification for killing a process.",
+                "author": "arabcoders",
+                "date": "2025-05-30T15:39:56+00:00"
+            },
             {
                 "sha": "63003b91",
                 "message": "center the kill process button.",
