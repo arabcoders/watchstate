@@ -1,7 +1,31 @@
 [
     {
-        "tag": "dev-20250529-0c3eea52",
-        "date": "2025-05-29T15:59:57+00:00",
+        "tag": "dev-20250530-0dcdcc4c",
+        "date": "2025-05-30T14:19:17+00:00",
+        "commits": [
+            {
+                "sha": "0dcdcc4c",
+                "message": "Added caching to webui backgrounds.",
+                "author": "arabcoders",
+                "date": "2025-05-30T14:19:17+00:00"
+            },
+            {
+                "sha": "54136826",
+                "message": "Add help links to the default view and improve FAQ customization instructions",
+                "author": "arabcoders",
+                "date": "2025-05-30T13:32:35+00:00"
+            },
+            {
+                "sha": "b0ba2e18",
+                "message": "Deprecate old webhook endpoint in favor of the generic endpoint.",
+                "author": "arabcoders",
+                "date": "2025-05-30T13:32:08+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250529-289a0a91",
+        "date": "2025-05-29T20:24:09+00:00",
         "commits": [
             {
                 "sha": "0c3eea52",
