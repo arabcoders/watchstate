@@ -1,4 +1,4 @@
-# Webhooks v2 _BETA_
+# Webhooks
 
 ## Getting started
 
