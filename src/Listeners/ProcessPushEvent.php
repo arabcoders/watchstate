@@ -66,6 +66,13 @@ final readonly class ProcessPushEvent
             return $e;
         }
 
+        $writer(Level::Notice, "Processing '{user}@{via}' - '#{id}: {title}' push event.", [
+            'user' => $user,
+            'id' => $item->id,
+            'via' => $item->via,
+            'title' => $item->getName(),
+        ]);
+        
         $options = $e->getOptions();
         $list = [];
         $supported = Config::get('supported', []);

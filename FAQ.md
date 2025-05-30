@@ -12,14 +12,8 @@ By default, the tasks are scheduled:
 - **Import** task runs every **1 hour**
 - **Export** task runs every **1 hour and 30 minutes**
 
-If you want to customize the schedule, you can do so by adding environment variables with valid cron expressions:
-
-- **WS_CRON_IMPORT_AT**
-- **WS_CRON_EXPORT_AT**
-
-You can set these variables from the <!--i:fa-tasks--> **Tasks**, underneath the task click on the timer, and it will
-take you to the <!--i:fa-cogs--> **Env** page, where you can set the cron expression directly. Or you can go to
-<!--i:fa-cogs--> **Env** page and add the variables manually.
+If you want to customize the schedule, go to <!--i:fa-tasks--> **Tasks** page underneath the task click on the timer,
+and it will take you to the <!--i:fa-cogs--> **Env** page, where you can set the cron expression directly.
 
 > [!NOTE]
 > A great tool to validate your cron expression is [crontab.guru](https://crontab.guru/)

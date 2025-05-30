@@ -250,6 +250,8 @@
         </div>
 
         <div class="column is-6 is-9-mobile has-text-left">
+          <NuxtLink to="/help" v-text="'Help'"/>
+          -
           <NuxtLink to="/help/readme" v-text="'README'"/>
           -
           <NuxtLink to="/help/faq" v-text="'FAQ'"/>
