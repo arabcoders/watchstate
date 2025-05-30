@@ -11,9 +11,12 @@ use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Traits\APITraits;
+use DateInterval;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Log\LoggerInterface as iLogger;
+use Psr\SimpleCache\CacheInterface as iCache;
+use Psr\SimpleCache\InvalidArgumentException;
 use RuntimeException;
 
 final class Images
@@ -22,8 +25,11 @@ final class Images
 
     public const string URL = '%{api.prefix}/system/images';
 
-    public function __construct(private readonly iImport $mapper, private readonly iLogger $logger)
-    {
+    public function __construct(
+        private readonly iImport $mapper,
+        private readonly iLogger $logger,
+        private readonly iCache $cache,
+    ) {
     }
 
     #[Get(self::URL . '/{type:poster|background}[/]', name: 'system.images')]
@@ -34,8 +40,8 @@ final class Images
             if (count($uc->config) < 1) {
                 return api_response(Status::NO_CONTENT);
             }
-            $resp = $this->getImage($db, $type);
-        } catch (RuntimeException) {
+            $resp = $this->getImage($db, $type, force: (bool)ag($request->getQueryParams(), 'force', false));
+        } catch (InvalidArgumentException|RuntimeException) {
             return api_response(Status::NO_CONTENT);
         }
 
@@ -52,13 +58,21 @@ final class Images
         return api_response($resp->status, $resp->stream, $headers);
     }
 
-    public function getImage(DBLayer $db, string $type, int|null $oldId = null): APIResponse
+    /**
+     * @throws InvalidArgumentException
+     */
+    public function getImage(DBLayer $db, string $type, int|null $oldId = null, bool $force = false): APIResponse
     {
-        $record = $db->query('SELECT id FROM "state" ORDER BY RANDOM() LIMIT 1');
-        $id = $record->fetchColumn();
+        $cacheKey = r('system.images.{type}', ['type' => $type]);
 
-        if (empty($id)) {
-            throw new RuntimeException('No records found');
+        if (null === $oldId && false === $force && $this->cache->has($cacheKey)) {
+            $id = (int)$this->cache->get($cacheKey);
+        } else {
+            $record = $db->query('SELECT id FROM "state" ORDER BY RANDOM() LIMIT 1');
+            $id = $record->fetchColumn();
+            if (empty($id)) {
+                throw new RuntimeException('No records found');
+            }
         }
 
         $id = (int)$id;
@@ -71,6 +85,8 @@ final class Images
             }
             return $this->getImage($db, $type, $id);
         }
+
+        $this->cache->set($cacheKey, $id, new DateInterval('PT1H'));
 
         return $resp;
     }

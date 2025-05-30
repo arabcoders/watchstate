@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\API\Backend;
 
+use App\API\Webhook\Index as WebhookURL;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\Config;
@@ -19,12 +20,15 @@ use App\Libs\Traits\APITraits;
 use App\Libs\Uri;
 use App\Listeners\ProcessRequestEvent;
 use App\Model\Events\EventsTable;
+use DateInterval;
 use Monolog\Handler\StreamHandler;
 use Monolog\Level;
 use Monolog\Logger;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Log\LoggerInterface as iLogger;
+use Psr\SimpleCache\CacheInterface as iCache;
+use Psr\SimpleCache\InvalidArgumentException;
 
 final class Webhooks
 {
@@ -37,6 +41,7 @@ final class Webhooks
         private readonly iImport $mapper,
         private readonly iLogger $logger,
         LogSuppressor $suppressor,
+        private readonly iCache $cache,
     ) {
         $this->logfile = new Logger(name: 'webhook', processors: [new LogMessageProcessor()]);
 
@@ -60,6 +65,7 @@ final class Webhooks
      * @param string $name backend name.
      *
      * @return iResponse The response object.
+     * @throws InvalidArgumentException
      */
     #[Route(['POST', 'PUT'], Index::URL . '/{name:ubackend}/webhook[/]', name: 'backend.webhook')]
     public function __invoke(iRequest $request, string $name): iResponse
@@ -88,6 +94,20 @@ final class Webhooks
             $client = $this->getClient(name: $ubackend, userContext: $userContext);
         } catch (RuntimeException $e) {
             return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
+
+        $oldAPIEndpointKey = r('ows_{user}_{backend}', ['user' => $userContext->name, 'backend' => $ubackend]);
+        if (false === $this->cache->has($oldAPIEndpointKey)) {
+            $this->logger->warning(
+                "Request from '{user}@{backend}' to the old webhook endpoint. switch to the new endpoint as this will be removed in the future.",
+                [
+                    'backend' => $ubackend,
+                    'user' => $userContext->name,
+                    'old_endpoint' => parseConfigValue(Index::URL) . "/{$name}/webhook",
+                    'new_endpoint' => parseConfigValue(WebhookURL::URL),
+                ]
+            );
+            $this->cache->set($oldAPIEndpointKey, true, new DateInterval('PT1H'));
         }
 
         if (true === Config::get('webhook.dumpRequest')) {

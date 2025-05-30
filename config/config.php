@@ -178,7 +178,7 @@ return (function () {
         'file' => [
             'type' => 'stream',
             'enabled' => (bool)env('WS_LOGGER_FILE_ENABLE', true),
-            'level' => env('WS_LOGGER_FILE_LEVEL', Level::Error),
+            'level' => env('WS_LOGGER_FILE_LEVEL', Level::Warning),
             'filename' => ag($config, 'tmpDir') . '/logs/app.' . $logDateFormat . '.log',
         ],
         'stderr' => [
