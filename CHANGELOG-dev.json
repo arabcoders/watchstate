@@ -1,7 +1,19 @@
 [
     {
-        "tag": "dev-20250530-d98abf22",
-        "date": "2025-05-30T14:45:44+00:00",
+        "tag": "dev-20250530-63003b91",
+        "date": "2025-05-30T15:15:48+00:00",
+        "commits": [
+            {
+                "sha": "63003b91",
+                "message": "center the kill process button.",
+                "author": "arabcoders",
+                "date": "2025-05-30T15:15:48+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250530-5cc1c70b",
+        "date": "2025-05-30T14:46:16+00:00",
         "commits": [
             {
                 "sha": "d98abf22",
