@@ -56,7 +56,7 @@ const choices = [
   },
   {
     number: 3,
-    title: 'Enable webhooks',
+    title: 'Webhooks',
     text: 'How to enable webhooks for your backends and for sub-users.',
     url: '/help/webhooks',
   },
@@ -74,9 +74,9 @@ const choices = [
   },
   {
     number: 6,
-    title: 'Enable Generic Webhooks - BETA',
-    text: 'How to use the new generic webhook endpoint for all users and backends.',
-    url: '/help/webhooks-v2',
+    title: 'Webhooks legacy',
+    text: 'The old and deprecated webhooks system.',
+    url: '/help/webhooks-legacy',
   },
 ]
 </script>

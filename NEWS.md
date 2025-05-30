@@ -1,5 +1,11 @@
 # NEWS
 
+### 2025-05-23
+
+We have recently added new and improved webhook endpoint that can be used as generic endpoint for all users and
+backends, please head to [webhook-v2 guide](guides/webhooks-v2.md) for more information. Please note that the new
+webhook endpoint still in beta, and things might change/break in the future.
+
 ### 2025-05-14
 
 **Breaking change**, we have switched to using user/password form of authentication instead of API key for the WebUI,

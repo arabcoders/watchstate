@@ -9,11 +9,11 @@ box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 # Updates
 
-### 2025-05-23
+### 2025-05-30
 
-We have recently added new and improved webhook endpoint that can be used as generic endpoint for all users and
-backends, please head to [webhook-v2 guide](guides/webhooks-v2.md) for more information. Please note that the new
-webhook endpoint still in beta, and things might change/break in the future.
+The new [webhooks](/guides/webhooks.md) system is now available, please start mirating your systems to use it as, we
+have deprecated the old webhook system, and it will be removed in the next release. The new system is more robust and
+user-friendly compared to the old one.
 
 Please refer to [NEWS](/NEWS.md) for the latest updates and changes.
 
@@ -25,7 +25,7 @@ Please refer to [NEWS](/NEWS.md) for the latest updates and changes.
 * **Sub-users** support.
 * Sync backends play state (`Many-to-Many` or `One-Way`).
 * Backup your backends play state into `portable` format.
-* Receive [webhook](guides/webhooks-v2.md) events from media backends.
+* Receive [webhook](guides/webhooks.md) events from media backends.
 * Find `un-matched` or `mis-matched` items.
 * Search your backend metadata.
 * Check if your media servers reporting same data via the parity checks.
