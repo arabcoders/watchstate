@@ -158,15 +158,14 @@ const killProcess = async pid => {
   isLoading.value = true
   try {
     const response = await request(`/system/processes/${pid}`, {method: 'DELETE'})
-    const json = await response.json()
 
     if (!response.ok) {
+      const json = await response.json()
       notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
       return
     }
 
     notification('success', 'Success', `Successfully killed #${pid}.`)
-
     items.value = items.value.filter(item => item.pid !== pid)
   } finally {
     isLoading.value = false
