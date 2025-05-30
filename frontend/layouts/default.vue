@@ -237,7 +237,7 @@
     <div>
       <div>
         <TaskScheduler :forceShow="showScheduler" @update="e => scheduler = e" v-if="in_container"/>
-        <Settings v-if="showSettings"/>
+        <Settings v-if="showSettings" @force_bg_reload="() => loadImage(true)"/>
         <NuxtPage/>
       </div>
 
@@ -478,23 +478,28 @@ watch(bg_enable, async v => {
   document.querySelector('body').setAttribute("style", "");
 })
 
-const loadImage = async () => {
+const loadImage = async (force = false) => {
   if (!bg_enable.value) {
     return
   }
 
   const bg_type = 'mobile' === breakpoints.active().value ? 'poster' : 'background'
 
-  if (bgImage.value && bgImage.value.type === bg_type) {
+  if (false === force && bgImage.value && bgImage.value.type === bg_type) {
     return
   }
 
-  if (loadedImages.value[bg_type]) {
+  if (false === force && loadedImages.value[bg_type]) {
     bgImage.value = {src: loadedImages.value[bg_type], type: bg_type}
     return
   }
 
-  const imgRequest = await request(`/system/images/${bg_type}`)
+  let url = `/system/images/${bg_type}`
+  if (force) {
+    url += `?force=1&t=${Date.now()}`
+  }
+
+  const imgRequest = await request(url)
   if (200 !== imgRequest.status) {
     bgImage.value = {src: 'failed', type: bg_type}
     return
