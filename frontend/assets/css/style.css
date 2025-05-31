@@ -244,3 +244,6 @@ html {
     color: #e3c981;
 }
 
+.is-full-height {
+    height: 100%;
+}
