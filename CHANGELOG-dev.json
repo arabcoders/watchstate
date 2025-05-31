@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250530-14a27cfb",
-        "date": "2025-05-30T15:39:56+00:00",
+        "tag": "dev-20250531-945d2634",
+        "date": "2025-05-31T18:47:34+00:00",
         "commits": [
+            {
+                "sha": "945d2634",
+                "message": "packages updates. and minor UI updates.",
+                "author": "arabcoders",
+                "date": "2025-05-31T18:47:34+00:00"
+            },
             {
                 "sha": "14a27cfb",
                 "message": "fix notification for killing a process.",
