@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250531-945d2634",
-        "date": "2025-05-31T18:47:34+00:00",
+        "tag": "dev-20250601-c5040951",
+        "date": "2025-06-01T18:05:33+00:00",
         "commits": [
+            {
+                "sha": "c5040951",
+                "message": "use SIGKILL for stopping the process.",
+                "author": "arabcoders",
+                "date": "2025-06-01T18:05:33+00:00"
+            },
             {
                 "sha": "945d2634",
                 "message": "packages updates. and minor UI updates.",
