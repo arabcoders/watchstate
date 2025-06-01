@@ -70,7 +70,7 @@ final class Processes
 
         $id = (int)$id;
 
-        if (false === posix_kill($id, 1)) {
+        if (false === posix_kill($id, 9)) {
             $err = posix_strerror(posix_get_last_error());
             return api_error(r("Failed to kill process. '{err}'", ['err' => $err]), Status::INTERNAL_SERVER_ERROR);
         }
