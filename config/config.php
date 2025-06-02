@@ -12,7 +12,7 @@ use App\Commands\State\ImportCommand;
 use App\Commands\State\ValidateCommand;
 use App\Commands\System\IndexCommand;
 use App\Commands\System\PruneCommand;
-use App\Libs\Mappers\Import\MemoryMapper;
+use App\Libs\Mappers\Import\DirectMapper;
 use Cron\CronExpression;
 use Monolog\Level;
 
@@ -135,7 +135,7 @@ return (function () {
 
     $config['mapper'] = [
         'import' => [
-            'type' => MemoryMapper::class,
+            'type' => DirectMapper::class,
             'opts' => [],
         ],
     ];

@@ -6,7 +6,7 @@ namespace App\Libs;
 
 use App\Libs\Database\DBLayer;
 use App\Libs\Database\PDO\PDOAdapter;
-use App\Libs\Mappers\Import\MemoryMapper;
+use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface;
 use Closure;
 use Monolog\Handler\NullHandler;
@@ -96,7 +96,7 @@ class TestCase extends \PHPUnit\Framework\TestCase
         $instances[$name] = new UserContext(
             name: $name,
             config: $configFile ?? new ConfigFile($filePath, 'yaml', false, false, false),
-            mapper: $mapper ?? new MemoryMapper(logger: $logger, db: $db, cache: $cache),
+            mapper: $mapper ?? new DirectMapper(logger: $logger, db: $db, cache: $cache),
             cache: $cache,
             db: $db,
             data: $data,

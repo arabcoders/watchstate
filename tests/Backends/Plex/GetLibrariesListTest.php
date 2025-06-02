@@ -13,7 +13,7 @@ use App\Libs\Database\DBLayer;
 use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\Extends\MockHttpClient;
-use App\Libs\Mappers\Import\MemoryMapper;
+use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Options;
 use App\Libs\Stream;
 use App\Libs\TestCase;
@@ -60,7 +60,7 @@ class GetLibrariesListTest extends TestCase
                     autoCreate: false,
                     autoBackup: false
                 ),
-                mapper: new MemoryMapper(
+                mapper: new DirectMapper(
                     logger: $this->logger,
                     db: $db,
                     cache: $cache->getInterface()

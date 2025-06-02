@@ -17,7 +17,6 @@ use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\Extends\RetryableHttpClient;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
-use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Mappers\Import\ReadOnlyMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\QueueRequests;
@@ -63,7 +62,7 @@ return (function (): array {
                 iLogger::class,
             ],
         ],
-        
+
         RetryableHttpClient::class => [
             'class' => function (HttpClientInterface $client, iLogger $logger): RetryableHttpClient {
                 return new RetryableHttpClient(
@@ -255,18 +254,6 @@ return (function (): array {
             ],
         ],
 
-        MemoryMapper::class => [
-            'class' => function (iLogger $logger, iDB $db, iCache $cache): iImport {
-                return new MemoryMapper(logger: $logger, db: $db, cache: $cache)
-                    ->setOptions(options: Config::get('mapper.import.opts', []));
-            },
-            'args' => [
-                iLogger::class,
-                iDB::class,
-                iCache::class
-            ],
-        ],
-
         ReadOnlyMapper::class => [
             'class' => function (iLogger $logger, iDB $db, iCache $cache): iImport {
                 return new ReadOnlyMapper(logger: $logger, db: $db, cache: $cache)
@@ -293,7 +280,7 @@ return (function (): array {
 
         iImport::class => [
             'class' => fn(iImport $mapper): iImport => $mapper,
-            'args' => [MemoryMapper::class],
+            'args' => [DirectMapper::class],
         ],
 
         EventDispatcherInterface::class => [
