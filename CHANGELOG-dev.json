@@ -1,8 +1,20 @@
 [
     {
-        "tag": "dev-20250601-c5040951",
-        "date": "2025-06-01T18:05:33+00:00",
+        "tag": "dev-20250602-fc3f41ae",
+        "date": "2025-06-02T16:13:45+00:00",
         "commits": [
+            {
+                "sha": "fc3f41ae",
+                "message": "Better control over the scheduler restart  process.",
+                "author": "arabcoders",
+                "date": "2025-06-02T16:13:45+00:00"
+            },
+            {
+                "sha": "1902ac82",
+                "message": "Remove references to MemoryMapper in preparation to remove it later from the system.",
+                "author": "arabcoders",
+                "date": "2025-06-02T15:38:19+00:00"
+            },
             {
                 "sha": "c5040951",
                 "message": "use SIGKILL for stopping the process.",
