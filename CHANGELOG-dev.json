@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250602-fc3f41ae",
-        "date": "2025-06-02T16:13:45+00:00",
+        "tag": "dev-20250602-cbc5d147",
+        "date": "2025-06-02T16:41:54+00:00",
         "commits": [
+            {
+                "sha": "cbc5d147",
+                "message": "Improve the kill process, by using SIGTERM first.",
+                "author": "arabcoders",
+                "date": "2025-06-02T16:41:54+00:00"
+            },
             {
                 "sha": "fc3f41ae",
                 "message": "Better control over the scheduler restart  process.",
