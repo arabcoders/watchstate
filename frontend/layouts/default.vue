@@ -162,7 +162,9 @@
           <template v-if="'mobile' === breakpoints.active().value">
             <div class="navbar-item" v-if="in_container">
               <button class="button is-dark" @click="showScheduler = !showScheduler">
-                <span class="icon"><i class="fas fa-microchip"/></span>
+                <span class="icon"
+                      :class="{ 'has-text-primary': scheduler.status,
+                      'has-text-danger fa-fade': !scheduler.status }"><i class="fas fa-microchip"/></span>
                 <span>Task Scheduler Status</span>
               </button>
             </div>
