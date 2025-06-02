@@ -64,7 +64,8 @@
             <template v-for="item in items" :key="item.pid">
               <tr v-if="filterItem(item)">
                 <td class="has-text-centered is-vcentered">
-                  <button class="button is-danger is-small" @click="killProcess(item.pid)">
+                  <button class="button is-danger is-small" @click="killProcess(item.pid)"
+                          :disabled="'Z' === item.stat">
                     <span class="icon"><i class="fas fa-trash"/></span>
                   </button>
                 </td>

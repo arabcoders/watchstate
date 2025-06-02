@@ -7,6 +7,7 @@ namespace App\API\System;
 use App\Libs\Attributes\Route\Delete;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Stream;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Symfony\Component\Process\Process;
 
@@ -68,11 +69,45 @@ final class Processes
             return api_error('Invalid process ID.', Status::BAD_REQUEST);
         }
 
-        $id = (int)$id;
+        $pid = (int)$id;
+        $proc = r('/proc/{pid}/status', ['pid' => $pid]);
 
-        if (false === posix_kill($id, 9)) {
+        if (false === file_exists($proc)) {
+            return api_error("Process does not exist.", Status::NOT_FOUND);
+        }
+
+        if (preg_match('/^State:\s+Z\s+\(zombie\)/m', (string)Stream::make($proc, 'r'))) {
+            return api_error("Process does not exist.", Status::NOT_FOUND);
+        }
+
+        if (false === posix_kill($pid, 15)) {
             $err = posix_strerror(posix_get_last_error());
-            return api_error(r("Failed to kill process. '{err}'", ['err' => $err]), Status::INTERNAL_SERVER_ERROR);
+            return api_error(r("Failed to send SIGTERM. '{err}'", ['err' => $err]), Status::INTERNAL_SERVER_ERROR);
+        }
+
+        clearstatcache(true, $proc);
+        if (false === file_exists($proc)) {
+            return api_response(Status::OK);
+        }
+
+        $waitSeconds = 5;
+        while ($waitSeconds > 0) {
+            clearstatcache(true, $proc);
+            if (false === file_exists($proc)) {
+                return api_response(Status::OK);
+            }
+
+            if (preg_match('/^State:\s+Z\s+\(zombie\)/m', (string)Stream::make($proc, 'r'))) {
+                return api_response(Status::OK);
+            }
+
+            sleep(1);
+            $waitSeconds--;
+        }
+
+        if (false === posix_kill($pid, 9)) {
+            $err = posix_strerror(posix_get_last_error());
+            return api_error(r("Failed to send SIGKILL. '{err}'", ['err' => $err]), Status::INTERNAL_SERVER_ERROR);
         }
 
         return api_response(Status::OK);
