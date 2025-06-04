@@ -1,5 +1,53 @@
 [
     {
+        "tag": "master-20250604-9407bc76",
+        "date": "2025-06-04T18:09:49+00:00",
+        "commits": [
+            {
+                "sha": "cbc5d147",
+                "message": "Improve the kill process, by using SIGTERM first.",
+                "author": "arabcoders",
+                "date": "2025-06-02T16:41:54+00:00"
+            },
+            {
+                "sha": "fc3f41ae",
+                "message": "Better control over the scheduler restart  process.",
+                "author": "arabcoders",
+                "date": "2025-06-02T16:13:45+00:00"
+            },
+            {
+                "sha": "1902ac82",
+                "message": "Remove references to MemoryMapper in preparation to remove it later from the system.",
+                "author": "arabcoders",
+                "date": "2025-06-02T15:38:19+00:00"
+            },
+            {
+                "sha": "c5040951",
+                "message": "use SIGKILL for stopping the process.",
+                "author": "arabcoders",
+                "date": "2025-06-01T18:05:33+00:00"
+            },
+            {
+                "sha": "945d2634",
+                "message": "packages updates. and minor UI updates.",
+                "author": "arabcoders",
+                "date": "2025-05-31T18:47:34+00:00"
+            },
+            {
+                "sha": "14a27cfb",
+                "message": "fix notification for killing a process.",
+                "author": "arabcoders",
+                "date": "2025-05-30T15:39:56+00:00"
+            },
+            {
+                "sha": "63003b91",
+                "message": "center the kill process button.",
+                "author": "arabcoders",
+                "date": "2025-05-30T15:15:48+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250530-5cc1c70b",
         "date": "2025-05-30T14:46:16+00:00",
         "commits": [
