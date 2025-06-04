@@ -671,7 +671,7 @@ class DirectMapper implements ImportInterface
         }
 
         if (true === $entity->isEpisode() && $entity->episode < 1) {
-            $this->logger->warning(
+            $this->logger->notice(
                 "{mapper}: [A] Ignoring '{user}@{backend}' '{id}: {title}'. Item was marked as episode but no episode number was provided.",
                 [
                     'user' => $this->userContext?->name ?? 'main',

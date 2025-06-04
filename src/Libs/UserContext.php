@@ -6,7 +6,7 @@ namespace App\Libs;
 
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Database\DatabaseInterface as iDB;
-use App\Libs\Mappers\Import\MemoryMapper;
+use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
 use Psr\SimpleCache\CacheInterface as iCache;
 
@@ -27,7 +27,7 @@ final class UserContext
     public function __construct(
         public readonly string $name,
         public readonly ConfigFile $config,
-        #[Inject(MemoryMapper::class)]
+        #[Inject(DirectMapper::class)]
         iImport $mapper,
         public readonly iCache $cache,
         public readonly iDB $db,

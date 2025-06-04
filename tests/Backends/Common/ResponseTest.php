@@ -10,7 +10,7 @@ use App\Libs\ConfigFile;
 use App\Libs\Database\DBLayer;
 use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Exceptions\Backends\RuntimeException;
-use App\Libs\Mappers\Import\MemoryMapper;
+use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\TestCase;
 use App\Libs\Uri;
 use App\Libs\UserContext;
@@ -84,7 +84,7 @@ class ResponseTest extends TestCase
                     autoCreate: false,
                     autoBackup: false
                 ),
-                mapper: new MemoryMapper(
+                mapper: new DirectMapper(
                     logger: $logger,
                     db: $db,
                     cache: $cache->getInterface()

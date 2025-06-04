@@ -155,7 +155,7 @@
         <div class="columns is-multiline">
           <div class="column" v-for="item in filteredRows" :key="item.key"
                :class="{ 'is-4': !item?.danger, 'is-12': item.danger }">
-            <div class="card" :class="{ 'is-danger': item?.danger }">
+            <div class="card is-flex is-full-height is-flex-direction-column" :class="{ 'is-danger': item?.danger }">
               <header class="card-header">
                 <p class="card-header-title is-unselectable">
                   <template v-if="item?.danger">
@@ -176,7 +176,7 @@
                   <span class="icon"><i class="fas fa-unlock"></i></span>
                 </span>
               </header>
-              <div class="card-content">
+              <div class="card-content is-flex-grow-1">
                 <div class="content">
                   <p v-if="'bool' === item.type">
                     <span class="icon-text">

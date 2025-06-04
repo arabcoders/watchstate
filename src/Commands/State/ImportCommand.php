@@ -9,14 +9,12 @@ use App\Command;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Extends\RetryableHttpClient;
 use App\Libs\Extends\StreamLogHandler;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
-use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Message;
 use App\Libs\Options;
@@ -54,11 +52,11 @@ class ImportCommand extends Command
      */
     public function __construct(
         #[Inject(DirectMapper::class)]
-        private iImport $mapper,
-        private iLogger $logger,
-        private LogSuppressor $suppressor,
+        private readonly iImport $mapper,
+        private readonly iLogger $logger,
+        private readonly LogSuppressor $suppressor,
         #[Inject(RetryableHttpClient::class)]
-        private iHttp $http,
+        private readonly iHttp $http,
     ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
@@ -100,13 +98,6 @@ class ImportCommand extends Command
                 'e',
                 InputOption::VALUE_NONE,
                 'Inverse --select-backend logic. Exclude selected backends.'
-            )
-            ->addOption('direct-mapper', null, InputOption::VALUE_NONE, "Memory efficient mapper.")
-            ->addOption(
-                'memory-mapper',
-                null,
-                InputOption::VALUE_NONE,
-                "The memory mapper is a memory hungry mapper. However, might be faster for your use case. *DEPRECATED*"
             )
             ->addOption(
                 'metadata-only',
@@ -156,17 +147,6 @@ class ImportCommand extends Command
             ]);
         }
 
-        if ($input->getOption('direct-mapper')) {
-            $this->logger->warning(
-                'Direct mapper is now the default mapper and the option --direct-mapper is deprecated.'
-            );
-        }
-
-        if ($input->getOption('memory-mapper')) {
-            $this->logger->warning('You are using a deprecated mapper. Please use --direct-mapper instead.');
-            $this->mapper = Container::get(MemoryMapper::class);
-        }
-
         $mapperOpts = $dbOpts = [];
 
         if ($input->getOption('dry-run')) {
@@ -186,7 +166,7 @@ class ImportCommand extends Command
         if (false === ($syncRequests = $input->getOption('sync-requests'))) {
             $syncRequests = (bool)Config::get('http.default.sync_requests', false);
         }
-        
+
         if (true === $input->getOption('async-requests')) {
             $syncRequests = false;
         }

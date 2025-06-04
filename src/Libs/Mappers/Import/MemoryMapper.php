@@ -25,6 +25,9 @@ use Psr\SimpleCache\CacheInterface as iCache;
  * This leads to faster processing and less database calls overall in exchange for higher memory usage.
  *
  * @implements ImportInterface
+ *
+ * @DEPRECATED Please use {@see DirectMapper}, This class now only exists to support {@see ReadOnlyMapper} for the
+ * time being. It will be merged into {@see ReadOnlyMapper} in the future.
  */
 class MemoryMapper implements ImportInterface
 {
@@ -481,7 +484,7 @@ class MemoryMapper implements ImportInterface
         }
 
         if (true === $entity->isEpisode() && $entity->episode < 1) {
-            $this->logger->warning(
+            $this->logger->notice(
                 "{mapper}: [N] Ignoring '{user}@{backend}' - '{id}: {title}'. Item was marked as episode but no episode number was provided.",
                 [
                     'user' => $this->userContext?->name ?? 'main',

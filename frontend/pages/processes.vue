@@ -63,8 +63,9 @@
             <tbody>
             <template v-for="item in items" :key="item.pid">
               <tr v-if="filterItem(item)">
-                <td class="is-vcentered">
-                  <button class="button is-danger is-small" @click="killProcess(item.pid)">
+                <td class="has-text-centered is-vcentered">
+                  <button class="button is-danger is-small" @click="killProcess(item.pid)"
+                          :disabled="'Z' === item.stat">
                     <span class="icon"><i class="fas fa-trash"/></span>
                   </button>
                 </td>
@@ -158,15 +159,14 @@ const killProcess = async pid => {
   isLoading.value = true
   try {
     const response = await request(`/system/processes/${pid}`, {method: 'DELETE'})
-    const json = await response.json()
 
     if (!response.ok) {
+      const json = await response.json()
       notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
       return
     }
 
     notification('success', 'Success', `Successfully killed #${pid}.`)
-
     items.value = items.value.filter(item => item.pid !== pid)
   } finally {
     isLoading.value = false

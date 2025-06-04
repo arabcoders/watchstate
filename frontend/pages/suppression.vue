@@ -140,14 +140,14 @@
       <div class="column is-12" v-if="items">
         <div class="columns is-multiline">
           <div class="column is-6" v-for="item in items" :key="item.key">
-            <div class="card">
+            <div class="card is-flex is-full-height is-flex-direction-column">
               <header class="card-header">
                 <p class="card-header-title is-justify-center is-unselectable">
                   <span class="icon"><i class="fa fa-microchip"></i></span>
                   <span class="is-capitalized">{{ item.type }}</span>
                 </p>
               </header>
-              <div class="card-content">
+              <div class="card-content is-flex-grow-1">
                 <div class="columns is-multiline">
                   <div class="column is-12">
                     <span class="icon">

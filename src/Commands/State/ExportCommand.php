@@ -53,12 +53,12 @@ class ExportCommand extends Command
      */
     public function __construct(
         #[Inject(DirectMapper::class)]
-        private iImport $mapper,
-        private QueueRequests $queue,
-        private iLogger $logger,
-        private LogSuppressor $suppressor,
+        private readonly iImport $mapper,
+        private readonly QueueRequests $queue,
+        private readonly iLogger $logger,
+        private readonly LogSuppressor $suppressor,
         #[Inject(RetryableHttpClient::class)]
-        private iHttp $http,
+        private readonly iHttp $http,
     ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');

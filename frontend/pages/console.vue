@@ -225,7 +225,7 @@ const RunCommand = async () => {
   sse = fetchEventSource(`/v1/api/system/command/${commandToken}`, {
     signal: ctrl.signal,
     headers: {'Authorization': `Token ${token.value}`},
-    async onmessage(evt) {
+    onmessage: async evt => {
       switch (evt.event) {
         case 'data':
           terminal.value.write(JSON.parse(evt.data).data)
@@ -240,19 +240,23 @@ const RunCommand = async () => {
           break
       }
     },
-    async onopen(response) {
+    onopen: async response => {
       if (response.ok) {
         return
       }
 
       const json = await parse_api_response(response)
+      
+      if (400 === json.error.code) {
+        ctrl.abort('finished')
+        return
+      }
+
       const message = `${json.error.code}: ${json.error.message}`
       notification('error', 'Error', message, 3000)
       await finished()
     },
-    async onerror() {
-      await finished()
-    },
+    onerror: async (e) => console.log(e),
   })
 
   if ('' !== command.value) {

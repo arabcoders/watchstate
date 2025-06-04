@@ -199,7 +199,7 @@
         <div class="columns is-multiline" v-if="items?.length>0">
           <template v-for="item in items" :key="item.id">
             <Lazy :unrender="true" :min-height="240" class="column is-6-tablet" v-if="filterItem(item)">
-              <div class="card" :class="{ 'is-success': item.watched }">
+              <div class="card is-flex is-full-height is-flex-direction-column" :class="{ 'is-success': item.watched }">
                 <header class="card-header">
                   <p class="card-header-title is-text-overflow pr-1">
                     <span class="icon is-unselectable">
@@ -215,7 +215,7 @@
                     </span>
                   </span>
                 </header>
-                <div class="card-content">
+                <div class="card-content is-flex-grow-1">
                   <div class="columns is-multiline is-mobile has-text-centered">
                     <div class="column is-12 has-text-left" v-if="item?.content_title">
                       <div class="field is-grouped">

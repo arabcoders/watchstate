@@ -453,24 +453,40 @@ if (!function_exists('isSchedulerRunning')) {
             return ['status' => false, 'message' => $e->getMessage()];
         }
 
-        if (true === file_exists(r('/proc/{pid}/status', ['pid' => $pid]))) {
-            return ['status' => true, 'restartable' => true, 'message' => 'Task scheduler is running.'];
+        $statusFile = r('/proc/{pid}/status', ['pid' => $pid]);
+        if (false === file_exists($statusFile)) {
+            return [
+                'status' => false,
+                'restartable' => true,
+                'message' => r("Found PID '{pid}' in file, but it seems the process is not active.", ['pid' => $pid])
+            ];
+        }
+
+        // Check for zombie status
+        $statusContent = Stream::make($statusFile, 'r')->getContents();
+        if (0 !== preg_match('/^State:\s+Z\s+\(zombie\)/m', $statusContent)) {
+            return [
+                'status' => false,
+                'restartable' => true,
+                'message' => r("Found PID '{pid}', but it is a zombie. Restart the process.", ['pid' => $pid])
+            ];
         }
 
         return [
-            'status' => false,
+            'pid' => $pid,
+            'status' => true,
             'restartable' => true,
-            'message' => r("Found PID '{pid}' in file, but it seems the process is not active.", ['pid' => $pid])
+            'message' => 'Task scheduler is running.'
         ];
     }
 }
 
 if (!function_exists('restartScheduler')) {
     /**
-     * Restart the task worker.
+     * Restart the task scheduler.
      *
      * @param bool $ignoreContainer (Optional) Whether to ignore the container check.
-     * @param bool $force (Optional) Whether to force kill the task worker.
+     * @param bool $force (Optional) Whether to force kill the task scheduler.
      *
      * @return array{ status: bool, message: string }
      */
@@ -480,7 +496,7 @@ if (!function_exists('restartScheduler')) {
             return [
                 'status' => true,
                 'restartable' => false,
-                'message' => 'We can only restart the task worker when running in a container.'
+                'message' => 'We can only restart the task scheduler when running in a container.'
             ];
         }
 
@@ -488,7 +504,7 @@ if (!function_exists('restartScheduler')) {
 
         if (true === file_exists($pidFile)) {
             try {
-                $pid = trim((string)new Stream($pidFile));
+                $pid = trim((string)Stream::make($pidFile));
             } catch (Throwable $e) {
                 return ['status' => false, 'restartable' => true, 'message' => $e->getMessage()];
             }
@@ -510,7 +526,7 @@ if (!function_exists('restartScheduler')) {
         return [
             'status' => $process->isSuccessful(),
             'restartable' => true,
-            'message' => $process->isSuccessful() ? 'Task worker restarted.' : $process->getErrorOutput(),
+            'message' => $process->isSuccessful() ? 'The task scheduler restarted.' : $process->getErrorOutput(),
         ];
     }
 }

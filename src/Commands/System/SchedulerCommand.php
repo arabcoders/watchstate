@@ -8,6 +8,7 @@ use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Stream;
 use Symfony\Component\Console\Input\InputInterface as iInput;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
 use Throwable;
 
@@ -36,6 +37,7 @@ final class SchedulerCommand extends Command
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
+            ->addOption('pid-file', 'p', InputOption::VALUE_REQUIRED, 'PID file.', $this->pidFile)
             ->setDescription('Daemon to run scheduled tasks.');
     }
 
@@ -49,16 +51,16 @@ final class SchedulerCommand extends Command
      */
     protected function runCommand(iInput $input, iOutput $output): int
     {
-        try {
-            if (true === file_exists($this->pidFile)) {
-                $pid = (int)file_get_contents($this->pidFile);
-                if (true === file_exists(r('/proc/{id}/status', ['id' => $pid]))) {
-                    $output->writeln('Scheduler is already running with PID: ' . $pid, iOutput::VERBOSITY_NORMAL);
-                    return self::SUCCESS;
-                }
-            }
+        $pidFile = $input->getOption('pid-file');
+        $info = isSchedulerRunning($pidFile);
 
-            $stream = Stream::make($this->pidFile, 'w+');
+        if (true === $info['status']) {
+            $output->writeln('Scheduler is already running with PID: ' . $info['pid'], iOutput::VERBOSITY_NORMAL);
+            return self::SUCCESS;
+        }
+
+        try {
+            $stream = Stream::make($pidFile, 'w+');
             $stream->write((string)getmypid());
             $stream->close();
 
@@ -78,8 +80,8 @@ final class SchedulerCommand extends Command
         } catch (Throwable $e) {
             fwrite(STDERR, $e->getMessage());
         } finally {
-            if (file_exists($this->pidFile)) {
-                unlink($this->pidFile);
+            if (file_exists($pidFile)) {
+                unlink($pidFile);
             }
         }
 

@@ -21,7 +21,7 @@ class ReadOnlyMapper extends MemoryMapper implements iImport
         $this->isContainer = true;
     }
 
-    public function add(iState $entity, array $opts = []): MemoryMapper
+    public function add(iState $entity, array $opts = []): self
     {
         if (false === $this->isContainer) {
             return parent::add($entity, $opts);
