@@ -1,7 +1,21 @@
 [
     {
-        "tag": "dev-20250602-cbc5d147",
-        "date": "2025-06-02T16:41:54+00:00",
+        "tag": "dev-20250606-10301c6b",
+        "date": "2025-06-05T22:53:49+00:00",
+        "commits": [
+            {
+                "sha": "10301c6b",
+                "message": "minor changelog page and packages updates.",
+                "author": "arabcoders",
+                "date": "2025-06-05T22:53:49+00:00",
+                "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
+            }
+        ],
+        "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
+    },
+    {
+        "tag": "dev-20250604-9407bc76",
+        "date": "2025-06-04T18:09:49+00:00",
         "commits": [
             {
                 "sha": "cbc5d147",
@@ -53,7 +67,7 @@
                 "full_sha": "63003b913d4f65c7080505ce06ab798ed3d78cd3"
             }
         ],
-        "full_sha": "cbc5d1474834b8f8e3f740647a4003a52620d13b"
+        "full_sha": "9407bc764f57a5f3c2fcccdff48ec58fe30620ef"
     },
     {
         "tag": "dev-20250530-5cc1c70b",
