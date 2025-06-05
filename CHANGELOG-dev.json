@@ -7,45 +7,53 @@
                 "sha": "cbc5d147",
                 "message": "Improve the kill process, by using SIGTERM first.",
                 "author": "arabcoders",
-                "date": "2025-06-02T16:41:54+00:00"
+                "date": "2025-06-02T16:41:54+00:00",
+                "full_sha": "cbc5d1474834b8f8e3f740647a4003a52620d13b"
             },
             {
                 "sha": "fc3f41ae",
                 "message": "Better control over the scheduler restart  process.",
                 "author": "arabcoders",
-                "date": "2025-06-02T16:13:45+00:00"
+                "date": "2025-06-02T16:13:45+00:00",
+                "full_sha": "fc3f41aef1fce5b3557be19597b5a6a485570efb"
             },
             {
                 "sha": "1902ac82",
                 "message": "Remove references to MemoryMapper in preparation to remove it later from the system.",
                 "author": "arabcoders",
-                "date": "2025-06-02T15:38:19+00:00"
+                "date": "2025-06-02T15:38:19+00:00",
+                "full_sha": "1902ac82acade863068d13054daf5429f2bcec3a"
             },
             {
                 "sha": "c5040951",
                 "message": "use SIGKILL for stopping the process.",
                 "author": "arabcoders",
-                "date": "2025-06-01T18:05:33+00:00"
+                "date": "2025-06-01T18:05:33+00:00",
+                "full_sha": "c5040951c6418b7bd8d020ccef269ac3be129c4f"
             },
             {
                 "sha": "945d2634",
                 "message": "packages updates. and minor UI updates.",
                 "author": "arabcoders",
-                "date": "2025-05-31T18:47:34+00:00"
+                "date": "2025-05-31T18:47:34+00:00",
+                "full_sha": "945d2634c79447051fb49049b60d905952e742c3"
             },
             {
                 "sha": "14a27cfb",
                 "message": "fix notification for killing a process.",
                 "author": "arabcoders",
-                "date": "2025-05-30T15:39:56+00:00"
+                "date": "2025-05-30T15:39:56+00:00",
+                "full_sha": "14a27cfb26e049e2ce223e53bffcbfdaa1c0c36d"
             },
             {
                 "sha": "63003b91",
                 "message": "center the kill process button.",
                 "author": "arabcoders",
-                "date": "2025-05-30T15:15:48+00:00"
+                "date": "2025-05-30T15:15:48+00:00",
+                "full_sha": "63003b913d4f65c7080505ce06ab798ed3d78cd3"
             }
-        ]
+        ],
+        "full_sha": "cbc5d1474834b8f8e3f740647a4003a52620d13b"
     },
     {
         "tag": "dev-20250530-5cc1c70b",
@@ -55,27 +63,32 @@
                 "sha": "d98abf22",
                 "message": "forgot to remove beta tag from guide.",
                 "author": "arabcoders",
-                "date": "2025-05-30T14:45:44+00:00"
+                "date": "2025-05-30T14:45:44+00:00",
+                "full_sha": "d98abf228665827f7dafaf195381a38c31098f86"
             },
             {
                 "sha": "0dcdcc4c",
                 "message": "Added caching to webui backgrounds.",
                 "author": "arabcoders",
-                "date": "2025-05-30T14:19:17+00:00"
+                "date": "2025-05-30T14:19:17+00:00",
+                "full_sha": "0dcdcc4cc9507dfff38b0bc667c0b40516112b37"
             },
             {
                 "sha": "54136826",
                 "message": "Add help links to the default view and improve FAQ customization instructions",
                 "author": "arabcoders",
-                "date": "2025-05-30T13:32:35+00:00"
+                "date": "2025-05-30T13:32:35+00:00",
+                "full_sha": "54136826e82c6ec99e052d98d80825d9b18d7a2a"
             },
             {
                 "sha": "b0ba2e18",
                 "message": "Deprecate old webhook endpoint in favor of the generic endpoint.",
                 "author": "arabcoders",
-                "date": "2025-05-30T13:32:08+00:00"
+                "date": "2025-05-30T13:32:08+00:00",
+                "full_sha": "b0ba2e185889e0c3da91e69bf9bea62f7de20e1f"
             }
-        ]
+        ],
+        "full_sha": "5cc1c70bd970a6692aea994d78d222d78dce2416"
     },
     {
         "tag": "dev-20250529-289a0a91",
@@ -85,15 +98,18 @@
                 "sha": "0c3eea52",
                 "message": "switch db to WAL mode, it's little slower, but more durable",
                 "author": "arabcoders",
-                "date": "2025-05-29T15:59:57+00:00"
+                "date": "2025-05-29T15:59:57+00:00",
+                "full_sha": "0c3eea52415021aab5e3184d0aac94fb5c89e45f"
             },
             {
                 "sha": "83e1af43",
                 "message": "add the ability to kill process via processes page.",
                 "author": "arabcoders",
-                "date": "2025-05-29T15:13:09+00:00"
+                "date": "2025-05-29T15:13:09+00:00",
+                "full_sha": "83e1af43544f40cb32f8257308957e8f943398bb"
             }
-        ]
+        ],
+        "full_sha": "289a0a91eb42e34a8df605ea4c63364ede445efa"
     },
     {
         "tag": "dev-20250527-5c414fba",
@@ -103,51 +119,60 @@
                 "sha": "3f1c8eac",
                 "message": "Fixed unformatted point in setting up Tautulli webhook",
                 "author": "arabcoders",
-                "date": "2025-05-27T20:28:36+00:00"
+                "date": "2025-05-27T20:28:36+00:00",
+                "full_sha": "3f1c8eacaa7e798f1d45211979a32ed29a9fe501"
             },
             {
                 "sha": "14204a51",
                 "message": "Ignore task scheduler http log messages.",
                 "author": "arabcoders",
-                "date": "2025-05-27T16:08:58+00:00"
+                "date": "2025-05-27T16:08:58+00:00",
+                "full_sha": "14204a51bacf45bc77de91479d93b47415e1415d"
             },
             {
                 "sha": "3274b36f",
                 "message": "Update TaskScheduler status to initialize true",
                 "author": "arabcoders",
-                "date": "2025-05-27T15:56:27+00:00"
+                "date": "2025-05-27T15:56:27+00:00",
+                "full_sha": "3274b36f88332ad416f15bd4ebf128d100540560"
             },
             {
                 "sha": "c854949e",
                 "message": "Refactor task runner to scheduler and update related components",
                 "author": "arabcoders",
-                "date": "2025-05-27T15:40:05+00:00"
+                "date": "2025-05-27T15:40:05+00:00",
+                "full_sha": "c854949e2533576cf5332871af043d0554ed4968"
             },
             {
                 "sha": "5c2203d0",
                 "message": "Add back the pid file for runner.",
                 "author": "arabcoders",
-                "date": "2025-05-26T21:26:18+00:00"
+                "date": "2025-05-26T21:26:18+00:00",
+                "full_sha": "5c2203d0229868049a6bc0ae22eb1e4ded436b3d"
             },
             {
                 "sha": "689591ba",
                 "message": "Change output verbosity to debug level in RunnerCommand",
                 "author": "arabcoders",
-                "date": "2025-05-26T21:19:04+00:00"
+                "date": "2025-05-26T21:19:04+00:00",
+                "full_sha": "689591bafa4a31297e7bb44701eaf2252d0294b4"
             },
             {
                 "sha": "d1a607ca",
                 "message": "switch to internal job runner.",
                 "author": "arabcoders",
-                "date": "2025-05-26T21:12:06+00:00"
+                "date": "2025-05-26T21:12:06+00:00",
+                "full_sha": "d1a607ca965568bc52e24e125e84b42e4ce889cb"
             },
             {
                 "sha": "b991479e",
                 "message": "Add cache purging functionality and update UI components",
                 "author": "arabcoders",
-                "date": "2025-05-26T13:52:16+00:00"
+                "date": "2025-05-26T13:52:16+00:00",
+                "full_sha": "b991479e701168f823bb7af67a283d45c154263c"
             }
-        ]
+        ],
+        "full_sha": "5c414fba62b69a90ab54375be67b23253bc16502"
     },
     {
         "tag": "dev-20250525-c934375c",
@@ -157,27 +182,32 @@
                 "sha": "5d3d5644",
                 "message": "When processing generic event, re-validate the metadata to prevent items which user doesn't have access to make it into his db.",
                 "author": "arabcoders",
-                "date": "2025-05-25T16:16:24+00:00"
+                "date": "2025-05-25T16:16:24+00:00",
+                "full_sha": "5d3d5644de832420f6cb3537ffb077dac05fcc06"
             },
             {
                 "sha": "23e19f62",
                 "message": "Support generic events more widely for plex client.",
                 "author": "arabcoders",
-                "date": "2025-05-25T16:15:01+00:00"
+                "date": "2025-05-25T16:15:01+00:00",
+                "full_sha": "23e19f625ed0dc399b6885b20babeb85e18f9e25"
             },
             {
                 "sha": "3aef2ce9",
                 "message": "Support generic events more widely for jellyfin&emby clients.",
                 "author": "arabcoders",
-                "date": "2025-05-25T15:32:07+00:00"
+                "date": "2025-05-25T15:32:07+00:00",
+                "full_sha": "3aef2ce95b2a3cfb746b6df1e0114a9921687ede"
             },
             {
                 "sha": "3c7d1e6e",
                 "message": "Add Logger proxy class.",
                 "author": "arabcoders",
-                "date": "2025-05-25T15:28:14+00:00"
+                "date": "2025-05-25T15:28:14+00:00",
+                "full_sha": "3c7d1e6e9485514bf69b88e3e040dfe794720479"
             }
-        ]
+        ],
+        "full_sha": "c934375c2ee7b89b6a34d5ea7c666c4e7b713ec9"
     },
     {
         "tag": "dev-20250524-a40fde78",
@@ -187,21 +217,25 @@
                 "sha": "af688358",
                 "message": "Document downsides of the new generic webhook system and caching behavior.",
                 "author": "arabcoders",
-                "date": "2025-05-24T21:28:42+00:00"
+                "date": "2025-05-24T21:28:42+00:00",
+                "full_sha": "af68835835cf22a683b5ed245a4076b4a2b5764b"
             },
             {
                 "sha": "666c6de4",
                 "message": "Fix logged exception when a generic event trigger metadata httpException 404",
                 "author": "arabcoders",
-                "date": "2025-05-24T06:54:11+00:00"
+                "date": "2025-05-24T06:54:11+00:00",
+                "full_sha": "666c6de42e083ca9cfb20e6956398c10e66b8f37"
             },
             {
                 "sha": "dd3833a7",
                 "message": "When parsing webhook and requesting metadata from backend, before throwing error, check for IS_GENERIC and prevent expected error for generic events.",
                 "author": "arabcoders",
-                "date": "2025-05-23T22:46:54+00:00"
+                "date": "2025-05-23T22:46:54+00:00",
+                "full_sha": "dd3833a717c47d4cc16c971cd66b5d186a46f123"
             }
-        ]
+        ],
+        "full_sha": "a40fde78de944622021dfc9774fd9e52a637612d"
     },
     {
         "tag": "dev-20250523-42281eba",
@@ -211,33 +245,39 @@
                 "sha": "b5386111",
                 "message": "Add new generic webhook endpoint.",
                 "author": "arabcoders",
-                "date": "2025-05-23T20:22:34+00:00"
+                "date": "2025-05-23T20:22:34+00:00",
+                "full_sha": "b538611180f50527f4a8aff3f85d92e4b9d83ccd"
             },
             {
                 "sha": "82c1a8ef",
                 "message": "Update the guides pages.",
                 "author": "arabcoders",
-                "date": "2025-05-23T19:56:41+00:00"
+                "date": "2025-05-23T19:56:41+00:00",
+                "full_sha": "82c1a8efe5db1320643fd46d2c9589073c9103e4"
             },
             {
                 "sha": "428e3eda",
                 "message": "Make it possible to cache metadata request cross users.",
                 "author": "arabcoders",
-                "date": "2025-05-23T18:42:57+00:00"
+                "date": "2025-05-23T18:42:57+00:00",
+                "full_sha": "428e3eda54c6b4c20a1d83ca26175395031ac441"
             },
             {
                 "sha": "c053fe84",
                 "message": "Make it possible to mark specific webhook events as generic that would trigger for all users who has the same backend setup.",
                 "author": "arabcoders",
-                "date": "2025-05-23T17:39:23+00:00"
+                "date": "2025-05-23T17:39:23+00:00",
+                "full_sha": "c053fe84fd2087a8cb3d0f5f78a961fe68922bde"
             },
             {
                 "sha": "d45eacdf",
                 "message": "Disable automatic release note generation and update package dependencies",
                 "author": "arabcoders",
-                "date": "2025-05-23T16:04:14+00:00"
+                "date": "2025-05-23T16:04:14+00:00",
+                "full_sha": "d45eacdfe1a2acf30c77c05fe3eac28e5b11fe2d"
             }
-        ]
+        ],
+        "full_sha": "42281eba2c0f8a82b2735458e558bfe2a16e5386"
     },
     {
         "tag": "dev-20250522-6d494bc0",
@@ -247,27 +287,32 @@
                 "sha": "9856ca78",
                 "message": "Added URL Checker into tools menu.",
                 "author": "arabcoders",
-                "date": "2025-05-19T20:42:11+00:00"
+                "date": "2025-05-19T20:42:11+00:00",
+                "full_sha": "9856ca78565e552b9761c68daf74cf695ab886db"
             },
             {
                 "sha": "fa4eda07",
                 "message": "Filter every line output in the basic report to strip known sensitive information like accesstokens or apikeys.",
                 "author": "arabcoders",
-                "date": "2025-05-19T13:56:54+00:00"
+                "date": "2025-05-19T13:56:54+00:00",
+                "full_sha": "fa4eda07f98c46547127eebef688433506282d24"
             },
             {
                 "sha": "0102f56a",
                 "message": "Hide sub-users page when logged in as non-main user.",
                 "author": "arabcoders",
-                "date": "2025-05-19T13:55:06+00:00"
+                "date": "2025-05-19T13:55:06+00:00",
+                "full_sha": "0102f56a36b523a316baadd1aa21fba9dba46dc5"
             },
             {
                 "sha": "689f6884",
                 "message": "Add more php ini configuration options to make frankenphp behave like standard php-fpm",
                 "author": "arabcoders",
-                "date": "2025-05-19T13:16:29+00:00"
+                "date": "2025-05-19T13:16:29+00:00",
+                "full_sha": "689f688405b3a62e0c303fbae68796ba568e5cf0"
             }
-        ]
+        ],
+        "full_sha": "6d494bc051b2e442388588c09a56ea96fd7a0f46"
     },
     {
         "tag": "dev-20250518-1458e597",
@@ -277,21 +322,25 @@
                 "sha": "d00c4b3e",
                 "message": "re-order frankenphp to be before copying the app.",
                 "author": "arabcoders",
-                "date": "2025-05-18T23:04:57+00:00"
+                "date": "2025-05-18T23:04:57+00:00",
+                "full_sha": "d00c4b3ebf2b9ec7adf1f920adff31f9ad5d8f00"
             },
             {
                 "sha": "ef8e54ad",
                 "message": "remove unused mbstring configuration and disable  assertions in production",
                 "author": "arabcoders",
-                "date": "2025-05-18T23:00:32+00:00"
+                "date": "2025-05-18T23:00:32+00:00",
+                "full_sha": "ef8e54ad6a270eb61917b27ef09d76633f8cc6b4"
             },
             {
                 "sha": "c9178897",
                 "message": "update backend add/edit page to be more re-activate, added new option for plex backends, to mark user as guest.",
                 "author": "arabcoders",
-                "date": "2025-05-18T21:43:12+00:00"
+                "date": "2025-05-18T21:43:12+00:00",
+                "full_sha": "c917889712ea6c0222b7ea461c1db34ebff2cc33"
             }
-        ]
+        ],
+        "full_sha": "1458e5970e5023cefcc846f843897b1069149703"
     },
     {
         "tag": "dev-20250518-8cbb5012",
@@ -301,39 +350,46 @@
                 "sha": "48cca385",
                 "message": "Added back X_REQUEST_ID, frankenphp doesn't include it by default.",
                 "author": "arabcoders",
-                "date": "2025-05-17T21:10:11+00:00"
+                "date": "2025-05-17T21:10:11+00:00",
+                "full_sha": "48cca385bbb5258896a0f7ac2168e9b214476810"
             },
             {
                 "sha": "31225e41",
                 "message": "correctly dispaly short hash in changelog page.",
                 "author": "arabcoders",
-                "date": "2025-05-17T19:41:55+00:00"
+                "date": "2025-05-17T19:41:55+00:00",
+                "full_sha": "31225e4148dfb9d3fbacaf81c023a3a8308cc5e0"
             },
             {
                 "sha": "25ae310e",
                 "message": "Fix version display in containers.",
                 "author": "arabcoders",
-                "date": "2025-05-17T19:27:12+00:00"
+                "date": "2025-05-17T19:27:12+00:00",
+                "full_sha": "25ae310e2d7273ef8afce5e2f421eb84ec32a147"
             },
             {
                 "sha": "56d1836f",
                 "message": "don't show /v1/api/system/healthcheck/ in access log.",
                 "author": "arabcoders",
-                "date": "2025-05-17T19:00:44+00:00"
+                "date": "2025-05-17T19:00:44+00:00",
+                "full_sha": "56d1836f8007bda7ba198caf16d4029d5a390bdf"
             },
             {
                 "sha": "9e7f85d7",
                 "message": "Remove Caddy&php-fpm and use frankenphp as both http and php runner.",
                 "author": "arabcoders",
-                "date": "2025-05-17T18:51:05+00:00"
+                "date": "2025-05-17T18:51:05+00:00",
+                "full_sha": "9e7f85d77bfce90c29cf1f37b091c6029cee46be"
             },
             {
                 "sha": "770f3b83",
                 "message": "Remove mapper is in metadata only mode as it's really meaningless and expected.",
                 "author": "arabcoders",
-                "date": "2025-05-16T21:03:19+00:00"
+                "date": "2025-05-16T21:03:19+00:00",
+                "full_sha": "770f3b8383da96cdec022026eec0029a69f4079a"
             }
-        ]
+        ],
+        "full_sha": "8cbb5012b03a119b615e2a8db01b666f2f18481e"
     },
     {
         "tag": "dev-20250516-2b8af698",
@@ -343,33 +399,39 @@
                 "sha": "9d9294b0",
                 "message": "update to fix plex check pin request flow.",
                 "author": "arabcoders",
-                "date": "2025-05-16T16:31:27+00:00"
+                "date": "2025-05-16T16:31:27+00:00",
+                "full_sha": "9d9294b08a5aa0d8a18692e8d3a78390566832ee"
             },
             {
                 "sha": "f73675de",
                 "message": "Reverted changes to plex ValidateToken",
                 "author": "arabcoders",
-                "date": "2025-05-16T16:28:14+00:00"
+                "date": "2025-05-16T16:28:14+00:00",
+                "full_sha": "f73675de340c1c07de63ba780eb5eddaa456ace3"
             },
             {
                 "sha": "cd6bd635",
                 "message": "Finalize Plex OAuth flow in Backend add.",
                 "author": "arabcoders",
-                "date": "2025-05-16T16:24:17+00:00"
+                "date": "2025-05-16T16:24:17+00:00",
+                "full_sha": "cd6bd6352fa0cf323b57eb63d08831a66fbf4992"
             },
             {
                 "sha": "7c20a238",
                 "message": "initial work to support plex oauth flow",
                 "author": "arabcoders",
-                "date": "2025-05-16T15:01:25+00:00"
+                "date": "2025-05-16T15:01:25+00:00",
+                "full_sha": "7c20a238c10e9dea760dc54a74c4e92a0f85eba2"
             },
             {
                 "sha": "fc903856",
                 "message": "Refactor Plex headers handling",
                 "author": "arabcoders",
-                "date": "2025-05-16T15:01:10+00:00"
+                "date": "2025-05-16T15:01:10+00:00",
+                "full_sha": "fc903856f34cb511905b812d6f1457f5262f070e"
             }
-        ]
+        ],
+        "full_sha": "2b8af698d18a5bbe78b614e0e51485658a413df6"
     },
     {
         "tag": "dev-20250516-b8875541",
@@ -379,21 +441,25 @@
                 "sha": "157bcd45",
                 "message": "With multi-user support, it doesn't make sense to log spam webhooks with invalid user ID, so we use Debug level instead and option to increase the level via debug_trace additional option",
                 "author": "arabcoders",
-                "date": "2025-05-16T06:44:32+00:00"
+                "date": "2025-05-16T06:44:32+00:00",
+                "full_sha": "157bcd45ad489f8e3f53ca54c24190aaeee8fc7f"
             },
             {
                 "sha": "66405cab",
                 "message": "Fix #670, tautulli will send lastViewedAt regardless if the item is marked as watched or not.",
                 "author": "arabcoders",
-                "date": "2025-05-16T06:24:31+00:00"
+                "date": "2025-05-16T06:24:31+00:00",
+                "full_sha": "66405caba8e8c6709790747ff493d5b493daf831"
             },
             {
                 "sha": "1272d996",
                 "message": "minor typo fixes",
                 "author": "arabcoders",
-                "date": "2025-05-16T06:23:14+00:00"
+                "date": "2025-05-16T06:23:14+00:00",
+                "full_sha": "1272d9969fa1e65a5459ac38bb9ad8f1db51ae64"
             }
-        ]
+        ],
+        "full_sha": "b887554112a32f5ad36f3b20f9975679c99d685f"
     },
     {
         "tag": "dev-20250515-1dcde8cf",
@@ -403,69 +469,81 @@
                 "sha": "b0663356",
                 "message": "Finalizing auth migration",
                 "author": "arabcoders",
-                "date": "2025-05-15T15:20:37+00:00"
+                "date": "2025-05-15T15:20:37+00:00",
+                "full_sha": "b0663356e2dea513b5f7c17694f1259d56842819"
             },
             {
                 "sha": "77dea258",
                 "message": "finalizing the move to user/pass auth.",
                 "author": "arabcoders",
-                "date": "2025-05-14T21:10:58+00:00"
+                "date": "2025-05-14T21:10:58+00:00",
+                "full_sha": "77dea258ce727980799149c8aaa208300d13297e"
             },
             {
                 "sha": "44da1121",
                 "message": "Update the auth system.",
                 "author": "arabcoders",
-                "date": "2025-05-14T20:28:24+00:00"
+                "date": "2025-05-14T20:28:24+00:00",
+                "full_sha": "44da11212ef2657188ab42e24d1e9fe078054f34"
             },
             {
                 "sha": "068cd270",
                 "message": "disable Opacity on player page.",
                 "author": "arabcoders",
-                "date": "2025-05-14T20:27:41+00:00"
+                "date": "2025-05-14T20:27:41+00:00",
+                "full_sha": "068cd270895c3559eb292e6aa7a256b45e682be3"
             },
             {
                 "sha": "0bf33f82",
                 "message": "Remove the no api settings component",
                 "author": "arabcoders",
-                "date": "2025-05-14T20:25:08+00:00"
+                "date": "2025-05-14T20:25:08+00:00",
+                "full_sha": "0bf33f822cb106f51acb6fcbe2a576c281bfd382"
             },
             {
                 "sha": "bc3ece35",
                 "message": "Remove the need to enter api connection.",
                 "author": "arabcoders",
-                "date": "2025-05-14T20:24:52+00:00"
+                "date": "2025-05-14T20:24:52+00:00",
+                "full_sha": "bc3ece35e22d2cc918dddbf18e7d95ce60fa9758"
             },
             {
                 "sha": "b0683d5d",
                 "message": "update console and logs stream to use fetchEventStream",
                 "author": "arabcoders",
-                "date": "2025-05-14T20:24:16+00:00"
+                "date": "2025-05-14T20:24:16+00:00",
+                "full_sha": "b0683d5dbc0fa771266259c86d3012116a4c9805"
             },
             {
                 "sha": "10901e52",
                 "message": "update play routes.",
                 "author": "arabcoders",
-                "date": "2025-05-14T20:22:55+00:00"
+                "date": "2025-05-14T20:22:55+00:00",
+                "full_sha": "10901e52d431ac3c72fc17fee75a2016b1013134"
             },
             {
                 "sha": "870fc607",
                 "message": "Refactor how to we handle some sensitive env variables.",
                 "author": "arabcoders",
-                "date": "2025-05-14T19:54:58+00:00"
+                "date": "2025-05-14T19:54:58+00:00",
+                "full_sha": "870fc607a95a65f66dc90cc68968827e1c26b5bb"
             },
             {
                 "sha": "4a4c9ddb",
                 "message": "WIP: support user/pass as auth method instead of current apikey usage",
                 "author": "arabcoders",
-                "date": "2025-05-14T17:50:56+00:00"
+                "date": "2025-05-14T17:50:56+00:00",
+                "full_sha": "4a4c9ddb549afe0543ba9ceef22bd9f212c2972d"
             },
             {
                 "sha": "1af94641",
                 "message": "initial code to support login via username/password",
                 "author": "arabcoders",
-                "date": "2025-05-14T14:45:58+00:00"
+                "date": "2025-05-14T14:45:58+00:00",
+                "full_sha": "1af94641c40d7644b1b8f09d41b453a4a975b14e"
             }
-        ]
+        ],
+        "full_sha": "1dcde8cf7043c2d527b25f23946e0f329167c941"
     },
     {
         "tag": "dev-20250514-7fabe357",
@@ -475,45 +553,53 @@
                 "sha": "f396acc7",
                 "message": "add conditions to Tautulli webhooks",
                 "author": "Splinter7914",
-                "date": "2025-05-14T16:05:40+00:00"
+                "date": "2025-05-14T16:05:40+00:00",
+                "full_sha": "f396acc7722dfdf8d02d39d9278455fa553cb44b"
             },
             {
                 "sha": "1cbd558b",
                 "message": "Update the Add backend flow to be more dynamic with the yes/no for options.",
                 "author": "arabcoders",
-                "date": "2025-05-13T19:18:35+00:00"
+                "date": "2025-05-13T19:18:35+00:00",
+                "full_sha": "1cbd558bd2db67cba9670e94b75c5dce29db2d7e"
             },
             {
                 "sha": "f542b38c",
                 "message": "Fix triggering force import from first backend.",
                 "author": "arabcoders",
-                "date": "2025-05-13T19:18:04+00:00"
+                "date": "2025-05-13T19:18:04+00:00",
+                "full_sha": "f542b38c20aeb087fdaf978530db342213d7ea46"
             },
             {
                 "sha": "e902d83c",
                 "message": "Update RestoreCommand to support both async/sync requests.",
                 "author": "arabcoders",
-                "date": "2025-05-13T19:17:39+00:00"
+                "date": "2025-05-13T19:17:39+00:00",
+                "full_sha": "e902d83c9519e83b32a19cebb4b086653024a453"
             },
             {
                 "sha": "d38b3c71",
                 "message": "Refactor lambda functions for consistent spacing and improve error handling in version retrieval",
                 "author": "arabcoders",
-                "date": "2025-05-13T16:41:35+00:00"
+                "date": "2025-05-13T16:41:35+00:00",
+                "full_sha": "d38b3c71f246fd5f20cb97a4516aa5532db4ecd7"
             },
             {
                 "sha": "b2cac318",
                 "message": "minor updates to env page.",
                 "author": "arabcoders",
-                "date": "2025-05-13T16:38:29+00:00"
+                "date": "2025-05-13T16:38:29+00:00",
+                "full_sha": "b2cac318049436e5d6bbaa00a8d760a0c0b6efef"
             },
             {
                 "sha": "908bc405",
                 "message": "remove accesstoken from open endpoints",
                 "author": "arabcoders",
-                "date": "2025-05-13T13:49:21+00:00"
+                "date": "2025-05-13T13:49:21+00:00",
+                "full_sha": "908bc40569ec4237de03f3166f5b292d116c2aa8"
             }
-        ]
+        ],
+        "full_sha": "7fabe3578c0cda6ad59c791ec0ebaa4de3dcf3f3"
     },
     {
         "tag": "dev-20250512-cafacdf3",
@@ -523,15 +609,18 @@
                 "sha": "4c6d4468",
                 "message": "Add notice about autoconfigure.",
                 "author": "arabcoders",
-                "date": "2025-05-12T19:30:22+00:00"
+                "date": "2025-05-12T19:30:22+00:00",
+                "full_sha": "4c6d446868dfeef5f7481391af502c9bda3d64ca"
             },
             {
                 "sha": "14f82c42",
                 "message": "Make the first time webui access more user-friendly.",
                 "author": "arabcoders",
-                "date": "2025-05-12T19:23:15+00:00"
+                "date": "2025-05-12T19:23:15+00:00",
+                "full_sha": "14f82c427515ac3950b1f10484232b8ced542f53"
             }
-        ]
+        ],
+        "full_sha": "cafacdf39365c5abc34655f71cc596960848d612"
     },
     {
         "tag": "dev-20250512-efc5637d",
@@ -541,39 +630,46 @@
                 "sha": "da664d46",
                 "message": "minor documentation update",
                 "author": "Splinter7914",
-                "date": "2025-05-12T01:56:29+00:00"
+                "date": "2025-05-12T01:56:29+00:00",
+                "full_sha": "da664d461a8777023601a204ce42276c12d56f32"
             },
             {
                 "sha": "5ce3d9fb",
                 "message": "Disable process request debug trace by default.",
                 "author": "arabcoders",
-                "date": "2025-05-11T20:39:42+00:00"
+                "date": "2025-05-11T20:39:42+00:00",
+                "full_sha": "5ce3d9fb6b7b300a12f118f5177830324a304f16"
             },
             {
                 "sha": "8ac5b411",
                 "message": "Fixed logic error in determining if we should mark entity for progress update.",
                 "author": "arabcoders",
-                "date": "2025-05-11T20:28:16+00:00"
+                "date": "2025-05-11T20:28:16+00:00",
+                "full_sha": "8ac5b411f3868de18a207871400153877b8370ac"
             },
             {
                 "sha": "b4b493c1",
                 "message": "Minor docs updates",
                 "author": "arabcoders",
-                "date": "2025-05-11T19:54:28+00:00"
+                "date": "2025-05-11T19:54:28+00:00",
+                "full_sha": "b4b493c1ed966bd1ff26f64c7306d504684bc6ca"
             },
             {
                 "sha": "c70442eb",
                 "message": "Refactor DirectMapper to improve progress update handling and simplify metadata checks; update README with video installation guide.",
                 "author": "arabcoders",
-                "date": "2025-05-11T19:28:29+00:00"
+                "date": "2025-05-11T19:28:29+00:00",
+                "full_sha": "c70442eb5aa8dbd6d961452ded331da276d54ac2"
             },
             {
                 "sha": "5ee73021",
                 "message": "Attempt to fix #660",
                 "author": "arabcoders",
-                "date": "2025-05-11T16:29:12+00:00"
+                "date": "2025-05-11T16:29:12+00:00",
+                "full_sha": "5ee7302186e060c3b8abd0f16f4e27d6619d555f"
             }
-        ]
+        ],
+        "full_sha": "efc5637d7ca05dd4eb87d9ad32ceecc42b08e173"
     },
     {
         "tag": "dev-20250510-bfb5d879",
@@ -583,9 +679,11 @@
                 "sha": "309fa1dc",
                 "message": "Change GUID parsing from error level to info.",
                 "author": "arabcoders",
-                "date": "2025-05-10T17:26:25+00:00"
+                "date": "2025-05-10T17:26:25+00:00",
+                "full_sha": "309fa1dc921e0e18e5af03ad7e1222503197eafb"
             }
-        ]
+        ],
+        "full_sha": "bfb5d87990d2bd4d36f2e35f25204b6e799de3c1"
     },
     {
         "tag": "dev-20250510-093a8bbe",
@@ -595,57 +693,67 @@
                 "sha": "33fad105",
                 "message": "Update Markdown link handling to redirect FAQ, README, and NEWS links to guides wrapper.",
                 "author": "arabcoders",
-                "date": "2025-05-10T13:56:18+00:00"
+                "date": "2025-05-10T13:56:18+00:00",
+                "full_sha": "33fad1051958888808e85df7eec54f0b172de58d"
             },
             {
                 "sha": "e3d8fa23",
                 "message": "Add word-break utility class and apply it to notification content",
                 "author": "arabcoders",
-                "date": "2025-05-10T13:41:04+00:00"
+                "date": "2025-05-10T13:41:04+00:00",
+                "full_sha": "e3d8fa230671c735e1d9a50d6a1d4580d526bc12"
             },
             {
                 "sha": "a342c858",
                 "message": "Enable episodes GUID parsing by default, and remove option to disable it.",
                 "author": "arabcoders",
-                "date": "2025-05-10T13:36:04+00:00"
+                "date": "2025-05-10T13:36:04+00:00",
+                "full_sha": "a342c8581641453ef88efa48d50d49ec96007e87"
             },
             {
                 "sha": "b47194ba",
                 "message": "Add ValidateCommand for validating backend reference IDs",
                 "author": "arabcoders",
-                "date": "2025-05-09T21:06:48+00:00"
+                "date": "2025-05-09T21:06:48+00:00",
+                "full_sha": "b47194bad47a90c06917ca7c2b36f0611dddfbcd"
             },
             {
                 "sha": "1d8550f3",
                 "message": "Added new getTotal& fetch as generator for PDOAdapter",
                 "author": "arabcoders",
-                "date": "2025-05-09T19:48:25+00:00"
+                "date": "2025-05-09T19:48:25+00:00",
+                "full_sha": "1d8550f30917f5a42f4ef43eac105d8fdc7e31f2"
             },
             {
                 "sha": "61d6584f",
                 "message": "Add removeMetadata to StateInterface.",
                 "author": "arabcoders",
-                "date": "2025-05-09T19:47:52+00:00"
+                "date": "2025-05-09T19:47:52+00:00",
+                "full_sha": "61d6584fd5a9fdf9e41de0058805cca1fddd3405"
             },
             {
                 "sha": "3bc94cff",
                 "message": "Updated docs on how to use the new RepairCommand",
                 "author": "arabcoders",
-                "date": "2025-05-09T19:46:49+00:00"
+                "date": "2025-05-09T19:46:49+00:00",
+                "full_sha": "3bc94cff9351d351720270ad015212bd3f215e90"
             },
             {
                 "sha": "69e4fe98",
                 "message": "Add RepairCommand for database repair functionality",
                 "author": "arabcoders",
-                "date": "2025-05-09T18:46:17+00:00"
+                "date": "2025-05-09T18:46:17+00:00",
+                "full_sha": "69e4fe98477312cefd93e901284f5a1a8ccebd98"
             },
             {
                 "sha": "689716e3",
                 "message": "Added metadata status to item record view.",
                 "author": "arabcoders",
-                "date": "2025-05-09T15:56:02+00:00"
+                "date": "2025-05-09T15:56:02+00:00",
+                "full_sha": "689716e366cb63d04e377999139269ce6dd26761"
             }
-        ]
+        ],
+        "full_sha": "093a8bbeebd1a274b072db5749cdf1c61acb4b8c"
     },
     {
         "tag": "dev-20250506-c6dd50ea",
@@ -655,33 +763,39 @@
                 "sha": "0ff12787",
                 "message": "Update readme.",
                 "author": "arabcoders",
-                "date": "2025-05-06T15:30:35+00:00"
+                "date": "2025-05-06T15:30:35+00:00",
+                "full_sha": "0ff127875fad050cf26a7a3701375f7db12360c1"
             },
             {
                 "sha": "7ecaafa0",
                 "message": "fix env key update.",
                 "author": "arabcoders",
-                "date": "2025-05-06T15:21:53+00:00"
+                "date": "2025-05-06T15:21:53+00:00",
+                "full_sha": "7ecaafa0918d31431a0a0907d07891be8cd87339"
             },
             {
                 "sha": "86c9518b",
                 "message": "Fixed Additional options in backend edit page.",
                 "author": "arabcoders",
-                "date": "2025-05-06T14:54:38+00:00"
+                "date": "2025-05-06T14:54:38+00:00",
+                "full_sha": "86c9518b83047932bd10a574261b93b4ac1ca439"
             },
             {
                 "sha": "156e4aaa",
                 "message": "Removed WS_EPISODES_DISABLE_GUID in favor of WS_EPISODES_ENABLE_GUID",
                 "author": "arabcoders",
-                "date": "2025-05-06T13:09:18+00:00"
+                "date": "2025-05-06T13:09:18+00:00",
+                "full_sha": "156e4aaa78b47e7d1672689394e04ae47f16b822"
             },
             {
                 "sha": "bd63aa1a",
                 "message": "docblock update",
                 "author": "arabcoders",
-                "date": "2025-05-06T12:55:35+00:00"
+                "date": "2025-05-06T12:55:35+00:00",
+                "full_sha": "bd63aa1a9a9620b850e4a609b6685c199b2d9dc6"
             }
-        ]
+        ],
+        "full_sha": "c6dd50eae30b634f875c33c162baf3af555f7828"
     },
     {
         "tag": "dev-20250505-7a478325",
@@ -691,33 +805,39 @@
                 "sha": "d6904361",
                 "message": "Re-enabled linking from task to env page",
                 "author": "arabcoders",
-                "date": "2025-05-05T19:31:29+00:00"
+                "date": "2025-05-05T19:31:29+00:00",
+                "full_sha": "d690436115d7bd96bf3588793be5de365008e6dc"
             },
             {
                 "sha": "45e9e27b",
                 "message": "Add the ability to send backends requests in sequential instead of the default parallel mode",
                 "author": "arabcoders",
-                "date": "2025-05-05T19:04:47+00:00"
+                "date": "2025-05-05T19:04:47+00:00",
+                "full_sha": "45e9e27b54fafde1fc95f8f783e1ebf441e714f3"
             },
             {
                 "sha": "29dbf2f0",
                 "message": "Add the ability to filtered on watched status and the ability to customize the history item entity view.",
                 "author": "arabcoders",
-                "date": "2025-05-05T14:07:21+00:00"
+                "date": "2025-05-05T14:07:21+00:00",
+                "full_sha": "29dbf2f06f95405e6485fc0ed58fc8b90793660d"
             },
             {
                 "sha": "bcbe71a1",
                 "message": "Added sanity check for import.enabled in PATCH request",
                 "author": "arabcoders",
-                "date": "2025-05-05T13:56:54+00:00"
+                "date": "2025-05-05T13:56:54+00:00",
+                "full_sha": "bcbe71a158391eeeacaa0ff41c6a3e95775d253e"
             },
             {
                 "sha": "75073c85",
                 "message": "Added retry logic for emby/jellyfin backend it was missing.",
                 "author": "arabcoders",
-                "date": "2025-05-05T13:20:59+00:00"
+                "date": "2025-05-05T13:20:59+00:00",
+                "full_sha": "75073c8597b9d1cb32bdc9b2a67c92c99371dbb2"
             }
-        ]
+        ],
+        "full_sha": "7a478325b94e82da6f69b1886e98c67515bdb77c"
     },
     {
         "tag": "dev-20250504-dabf3064",
@@ -727,15 +847,18 @@
                 "sha": "31717485",
                 "message": "improvements for guide navigation",
                 "author": "arabcoders",
-                "date": "2025-05-04T18:56:47+00:00"
+                "date": "2025-05-04T18:56:47+00:00",
+                "full_sha": "31717485b909e7e2fc4cd93b89640e458cc08f0a"
             },
             {
                 "sha": "a168912b",
                 "message": "Improve the documentations and guides",
                 "author": "arabcoders",
-                "date": "2025-05-04T16:48:20+00:00"
+                "date": "2025-05-04T16:48:20+00:00",
+                "full_sha": "a168912b71405d26bde63a874f4e21d746c88993"
             }
-        ]
+        ],
+        "full_sha": "dabf30647a54f136bf74277b3eb5c7f92887ef53"
     },
     {
         "tag": "dev-20250503-d36edb56",
@@ -745,21 +868,25 @@
                 "sha": "6f5509f8",
                 "message": "Added guides",
                 "author": "arabcoders",
-                "date": "2025-05-03T18:44:37+00:00"
+                "date": "2025-05-03T18:44:37+00:00",
+                "full_sha": "6f5509f827a2e5313855b1b33f673f21af193431"
             },
             {
                 "sha": "37f8d51a",
                 "message": "update external packages",
                 "author": "arabcoders",
-                "date": "2025-05-02T15:57:32+00:00"
+                "date": "2025-05-02T15:57:32+00:00",
+                "full_sha": "37f8d51ac1248494526dd98f05c2af242229cd7e"
             },
             {
                 "sha": "e091e997",
                 "message": "made it possible to add interactive guide for users",
                 "author": "arabcoders",
-                "date": "2025-05-02T15:56:02+00:00"
+                "date": "2025-05-02T15:56:02+00:00",
+                "full_sha": "e091e99705fe965437fe689f2e31f4aa93c7e7ac"
             }
-        ]
+        ],
+        "full_sha": "d36edb5622648731592fdfd6a450cbe8462c3f64"
     },
     {
         "tag": "dev-20250423-5b7edd54",
@@ -769,33 +896,39 @@
                 "sha": "f2e15979",
                 "message": "Allow user to plex sub users PIN via the WebUI. Fixes #649",
                 "author": "arabcoders",
-                "date": "2025-04-23T21:27:43+00:00"
+                "date": "2025-04-23T21:27:43+00:00",
+                "full_sha": "f2e159795263765a49c8518c87249454a23cb24d"
             },
             {
                 "sha": "6c99cf70",
                 "message": "update external packages",
                 "author": "arabcoders",
-                "date": "2025-04-23T21:27:06+00:00"
+                "date": "2025-04-23T21:27:06+00:00",
+                "full_sha": "6c99cf7039ca9df50b4fe90684ecd4edb08ce2fb"
             },
             {
                 "sha": "7013c0b9",
                 "message": "updated external dependencies",
                 "author": "arabcoders",
-                "date": "2025-04-23T13:56:08+00:00"
+                "date": "2025-04-23T13:56:08+00:00",
+                "full_sha": "7013c0b9275db09f6f9bc59be7d3e7932536def7"
             },
             {
                 "sha": "0fd19deb",
                 "message": "Include PIN when validating plex context.",
                 "author": "arabcoders",
-                "date": "2025-04-23T13:52:18+00:00"
+                "date": "2025-04-23T13:52:18+00:00",
+                "full_sha": "0fd19debe6f62aa81a54ab455f7aaaddf0155b28"
             },
             {
                 "sha": "e3789a9a",
                 "message": "Add support for multi-user with config:view/list/edit commands",
                 "author": "arabcoders",
-                "date": "2025-04-23T13:44:12+00:00"
+                "date": "2025-04-23T13:44:12+00:00",
+                "full_sha": "e3789a9a1efc71b0228eef62520ff77a5c5a06df"
             }
-        ]
+        ],
+        "full_sha": "5b7edd542a484c05c83982935326d4eef52ca74e"
     },
     {
         "tag": "dev-20250413-3e69758c",
@@ -805,21 +938,25 @@
                 "sha": "0b38e13b",
                 "message": "Import content genres",
                 "author": "arabcoders",
-                "date": "2025-04-13T19:41:45+00:00"
+                "date": "2025-04-13T19:41:45+00:00",
+                "full_sha": "0b38e13bed7228c2b5e0a31d575c91ead42cba02"
             },
             {
                 "sha": "7951ad16",
                 "message": "Added a remote logging handler to allow user to forward logs to remote target.",
                 "author": "arabcoders",
-                "date": "2025-04-13T19:39:16+00:00"
+                "date": "2025-04-13T19:39:16+00:00",
+                "full_sha": "7951ad1659acc00a612f14c60eb51467dc927d5e"
             },
             {
                 "sha": "7a2c5e01",
                 "message": "expand the imported data to include the content summary",
                 "author": "arabcoders",
-                "date": "2025-04-12T19:49:56+00:00"
+                "date": "2025-04-12T19:49:56+00:00",
+                "full_sha": "7a2c5e01d5161061af55e4733b5305c316b27693"
             }
-        ]
+        ],
+        "full_sha": "3e69758c5a6ce6f566c85aec6f495c1c04f3ba24"
     },
     {
         "tag": "dev-20250411-54c66ee2",
@@ -829,21 +966,25 @@
                 "sha": "748c8bb3",
                 "message": "Switch to DirectMapper as default mapper for import operations and deprecate MemoryMapper",
                 "author": "arabcoders",
-                "date": "2025-04-11T18:23:19+00:00"
+                "date": "2025-04-11T18:23:19+00:00",
+                "full_sha": "748c8bb38ec0055960e2e5907e4dd59208736bcb"
             },
             {
                 "sha": "9ff5255a",
                 "message": "Split utils from helpers as the file was getting big",
                 "author": "arabcoders",
-                "date": "2025-04-11T18:22:30+00:00"
+                "date": "2025-04-11T18:22:30+00:00",
+                "full_sha": "9ff5255adea50d0ed236830663bc59c0853b34a4"
             },
             {
                 "sha": "859b56ab",
                 "message": "move common logic to a helper functions for WebUI",
                 "author": "arabcoders",
-                "date": "2025-04-11T18:21:49+00:00"
+                "date": "2025-04-11T18:21:49+00:00",
+                "full_sha": "859b56ab86ce58e5b9c550a6e15bd6d98a9fb876"
             }
-        ]
+        ],
+        "full_sha": "54c66ee21050f7c03443b8bca33f74298285cc7f"
     },
     {
         "tag": "dev-20250411-fce8d099",
@@ -853,27 +994,32 @@
                 "sha": "3ed2c9b9",
                 "message": "update external dependancies",
                 "author": "arabcoders",
-                "date": "2025-04-11T16:17:35+00:00"
+                "date": "2025-04-11T16:17:35+00:00",
+                "full_sha": "3ed2c9b9d73e5bce486e56e1e9b89e51faf901a4"
             },
             {
                 "sha": "9e9dfb48",
                 "message": "major update to sub-users creation",
                 "author": "arabcoders",
-                "date": "2025-04-11T16:09:01+00:00"
+                "date": "2025-04-11T16:09:01+00:00",
+                "full_sha": "9e9dfb48689dcf4f99a53323e4eb914720baada3"
             },
             {
                 "sha": "869d4814",
                 "message": "update gitignore",
                 "author": "arabcoders",
-                "date": "2025-04-10T13:17:04+00:00"
+                "date": "2025-04-10T13:17:04+00:00",
+                "full_sha": "869d48141e33d6135d7d1180c25772b38dc53aac"
             },
             {
                 "sha": "85b2476c",
                 "message": "sub users webui feature",
                 "author": "arabcoders",
-                "date": "2025-04-09T21:18:15+00:00"
+                "date": "2025-04-09T21:18:15+00:00",
+                "full_sha": "85b2476ca59d8f24f5b27320a02a91299a070459"
             }
-        ]
+        ],
+        "full_sha": "fce8d0996e839ca7a31f3678a765f58b2b41c275"
     },
     {
         "tag": "dev-20250409-10b42b16",
@@ -883,9 +1029,11 @@
                 "sha": "e50bf866",
                 "message": "Fixed #644",
                 "author": "arabcoders",
-                "date": "2025-04-09T20:26:04+00:00"
+                "date": "2025-04-09T20:26:04+00:00",
+                "full_sha": "e50bf8665f0abe3dad5d01b787d95bd838f37fdc"
             }
-        ]
+        ],
+        "full_sha": "10b42b16fe0f4dad1fb68d14788a5ddba4df072c"
     },
     {
         "tag": "dev-20250408-7cd543dc",
@@ -895,21 +1043,25 @@
                 "sha": "c15050ef",
                 "message": "Added new API endpoint to validate plex token and a webpage to support it",
                 "author": "arabcoders",
-                "date": "2025-04-08T20:16:45+00:00"
+                "date": "2025-04-08T20:16:45+00:00",
+                "full_sha": "c15050efba3ad90994221e8cc03fa7a44ee48ea0"
             },
             {
                 "sha": "4f687295",
                 "message": "minor webui changes",
                 "author": "arabcoders",
-                "date": "2025-04-08T19:33:13+00:00"
+                "date": "2025-04-08T19:33:13+00:00",
+                "full_sha": "4f68729554c847d832992ad8d23a79c55ee1f04a"
             },
             {
                 "sha": "d5e4d297",
                 "message": "Make possible again to get raw response from plex api for getUsersList. Add new command to check validity of plex token",
                 "author": "arabcoders",
-                "date": "2025-04-08T19:16:00+00:00"
+                "date": "2025-04-08T19:16:00+00:00",
+                "full_sha": "d5e4d297c8a6721c1a64ca956fb70bf2b477369e"
             }
-        ]
+        ],
+        "full_sha": "7cd543dc8f6ad40c873a0edf2b1eaf584bf57757"
     },
     {
         "tag": "dev-20250408-1446ce7f",
@@ -919,33 +1071,39 @@
                 "sha": "0feba245",
                 "message": "Enhance name normalization and validation with logging and additional tests",
                 "author": "arabcoders",
-                "date": "2025-04-08T16:23:48+00:00"
+                "date": "2025-04-08T16:23:48+00:00",
+                "full_sha": "0feba245c101b61d549c646adcb7061f2d357578"
             },
             {
                 "sha": "0c58c283",
                 "message": "css style update",
                 "author": "arabcoders",
-                "date": "2025-04-07T18:51:45+00:00"
+                "date": "2025-04-07T18:51:45+00:00",
+                "full_sha": "0c58c2831cc7a52ba309e61229362154da2d6807"
             },
             {
                 "sha": "42c3c81f",
                 "message": "minor design update & fix markdown pages display",
                 "author": "arabcoders",
-                "date": "2025-04-07T18:50:40+00:00"
+                "date": "2025-04-07T18:50:40+00:00",
+                "full_sha": "42c3c81fd809fd2be3203eb39926239fc0d6eccd"
             },
             {
                 "sha": "dc822771",
                 "message": "make the log view console a bit more darker",
                 "author": "arabcoders",
-                "date": "2025-04-06T23:22:39+00:00"
+                "date": "2025-04-06T23:22:39+00:00",
+                "full_sha": "dc822771a4294c8b470b74a9fabd3f28fe282160"
             },
             {
                 "sha": "0563d1f7",
                 "message": "improve log view experience",
                 "author": "arabcoders",
-                "date": "2025-04-06T23:07:58+00:00"
+                "date": "2025-04-06T23:07:58+00:00",
+                "full_sha": "0563d1f7d73db93179470dedddb9f03e8a6ad417"
             }
-        ]
+        ],
+        "full_sha": "1446ce7f983a9fda4bfa3735eb61ca57748bc631"
     },
     {
         "tag": "dev-20250406-570f8169",
@@ -955,15 +1113,18 @@
                 "sha": "8213b992",
                 "message": "Fix Incorrectly nested style tag found. error",
                 "author": "arabcoders",
-                "date": "2025-04-06T19:28:39+00:00"
+                "date": "2025-04-06T19:28:39+00:00",
+                "full_sha": "8213b992ddd544ef130cc04751378b0b67ddec06"
             },
             {
                 "sha": "d0ea7c76",
                 "message": "Fix minor typo",
                 "author": "arabcoders",
-                "date": "2025-04-06T19:27:34+00:00"
+                "date": "2025-04-06T19:27:34+00:00",
+                "full_sha": "d0ea7c7678bc1c5535bb06c2d04f4178e1f509af"
             }
-        ]
+        ],
+        "full_sha": "570f8169c5c5e7f3f3955fa4169b8ffa17b545de"
     },
     {
         "tag": "dev-20250406-0e752611",
@@ -973,9 +1134,11 @@
                 "sha": "a2ad6170",
                 "message": "Completely re-worked how backend:create command works",
                 "author": "arabcoders",
-                "date": "2025-04-06T19:16:57+00:00"
+                "date": "2025-04-06T19:16:57+00:00",
+                "full_sha": "a2ad6170b5e4d18b13c2983b2e35964abc04c3fb"
             }
-        ]
+        ],
+        "full_sha": "0e7526119ce78b81866673a18b1cab7fd2f7d7a9"
     },
     {
         "tag": "dev-20250406-59c02f87",
@@ -985,9 +1148,11 @@
                 "sha": "7951ee63",
                 "message": "fixed bug that prevents run_task from actually running",
                 "author": "arabcoders",
-                "date": "2025-04-06T00:00:11+00:00"
+                "date": "2025-04-06T00:00:11+00:00",
+                "full_sha": "7951ee635c842591a4d8bec568beb8cb9118119f"
             }
-        ]
+        ],
+        "full_sha": "59c02f87d44326b04d2f154ecb0f5310b7859e1b"
     },
     {
         "tag": "dev-20250405-ef0c91a8",
@@ -997,39 +1162,46 @@
                 "sha": "608473f1",
                 "message": "backend:create when renaming user make sure to update it early to propgate for the rest of the code",
                 "author": "arabcoders",
-                "date": "2025-04-05T18:20:12+00:00"
+                "date": "2025-04-05T18:20:12+00:00",
+                "full_sha": "608473f10c8d49baa9a8d0f4d5da86759deb81b6"
             },
             {
                 "sha": "6d8dfd4b",
                 "message": "in backend:create, cast user names to string, sometimes we get intgers",
                 "author": "arabcoders",
-                "date": "2025-04-05T17:32:11+00:00"
+                "date": "2025-04-05T17:32:11+00:00",
+                "full_sha": "6d8dfd4b123d3ae416e8a1e67544060eedecd815"
             },
             {
                 "sha": "eece04ce",
                 "message": "minor fixes",
                 "author": "arabcoders",
-                "date": "2025-04-05T17:17:21+00:00"
+                "date": "2025-04-05T17:17:21+00:00",
+                "full_sha": "eece04ce22ef65592126e341d328839d4d362ca2"
             },
             {
                 "sha": "23f96575",
                 "message": "Fixed FAQ formatting",
                 "author": "arabcoders",
-                "date": "2025-04-05T16:23:09+00:00"
+                "date": "2025-04-05T16:23:09+00:00",
+                "full_sha": "23f965754e8dad928636c495c11d132ee1d0c7cd"
             },
             {
                 "sha": "45017b24",
                 "message": "update mapper.yaml spec",
                 "author": "arabcoders",
-                "date": "2025-04-05T16:03:18+00:00"
+                "date": "2025-04-05T16:03:18+00:00",
+                "full_sha": "45017b248eac7ec657fcf2431693d0d30cc29990"
             },
             {
                 "sha": "ad2f7b38",
                 "message": "Mostly WebUI changes to make easier to filter stuff",
                 "author": "arabcoders",
-                "date": "2025-04-03T22:10:10+00:00"
+                "date": "2025-04-03T22:10:10+00:00",
+                "full_sha": "ad2f7b389e8c9960810e9bbefae99d5e00f5baa0"
             }
-        ]
+        ],
+        "full_sha": "ef0c91a8ed166ad0cc841ae4c56a5e1d31efa064"
     },
     {
         "tag": "dev-20250402-01e1b3c7",
@@ -1039,75 +1211,88 @@
                 "sha": "c9214306",
                 "message": "Make config:list user aware",
                 "author": "arabcoders",
-                "date": "2025-04-02T22:18:04+00:00"
+                "date": "2025-04-02T22:18:04+00:00",
+                "full_sha": "c921430651bc32c5f6b19412afc9ba2796857446"
             },
             {
                 "sha": "32843de4",
                 "message": "updating dependencies",
                 "author": "arabcoders",
-                "date": "2025-04-02T21:45:16+00:00"
+                "date": "2025-04-02T21:45:16+00:00",
+                "full_sha": "32843de4f26105b9032fafedb6ad728576021c01"
             },
             {
                 "sha": "6c7cde4d",
                 "message": "Make system reset perform reset for all users.",
                 "author": "arabcoders",
-                "date": "2025-04-02T21:42:28+00:00"
+                "date": "2025-04-02T21:42:28+00:00",
+                "full_sha": "6c7cde4d2bb59beeda43aa6a46c2ba69406c302f"
             },
             {
                 "sha": "abd60715",
                 "message": "Support for doing both auto backup on backend creation and force export",
                 "author": "arabcoders",
-                "date": "2025-04-02T21:31:17+00:00"
+                "date": "2025-04-02T21:31:17+00:00",
+                "full_sha": "abd60715c2f56112b157238fccc78104edde0ac0"
             },
             {
                 "sha": "7b616602",
                 "message": "changing file format",
                 "author": "arabcoders",
-                "date": "2025-04-02T21:30:41+00:00"
+                "date": "2025-04-02T21:30:41+00:00",
+                "full_sha": "7b61660290383058203c8edb175d8a49868c190b"
             },
             {
                 "sha": "5c6f6f84",
                 "message": "Added delay support triggering events",
                 "author": "arabcoders",
-                "date": "2025-04-02T21:30:10+00:00"
+                "date": "2025-04-02T21:30:10+00:00",
+                "full_sha": "5c6f6f84506248e1637fd1233dc96c459cbffd32"
             },
             {
                 "sha": "9c980174",
                 "message": "Make sure dispatch events in received order.",
                 "author": "arabcoders",
-                "date": "2025-04-02T17:23:36+00:00"
+                "date": "2025-04-02T17:23:36+00:00",
+                "full_sha": "9c980174f266d7772bb77717251958829cc5fece"
             },
             {
                 "sha": "cbc94f61",
                 "message": "Make it possible to queue commands via events",
                 "author": "arabcoders",
-                "date": "2025-04-02T16:44:09+00:00"
+                "date": "2025-04-02T16:44:09+00:00",
+                "full_sha": "cbc94f617a68f595700dd8399a12c19ccc97c93f"
             },
             {
                 "sha": "74e91791",
                 "message": "Show all users and backends in the backups page.",
                 "author": "arabcoders",
-                "date": "2025-04-02T16:23:55+00:00"
+                "date": "2025-04-02T16:23:55+00:00",
+                "full_sha": "74e917915a7bf1b9a838f951bbd9f097b5e31b35"
             },
             {
                 "sha": "86c05613",
                 "message": "The restore mapper shouldn't assume the file name inside archive is exactly same as the archive name.",
                 "author": "arabcoders",
-                "date": "2025-04-02T16:22:04+00:00"
+                "date": "2025-04-02T16:22:04+00:00",
+                "full_sha": "86c056137aa0bf229db4151e799a56e52949fd2b"
             },
             {
                 "sha": "4551c16d",
                 "message": "update the system/users endpoint to include user backends names.",
                 "author": "arabcoders",
-                "date": "2025-04-02T15:54:43+00:00"
+                "date": "2025-04-02T15:54:43+00:00",
+                "full_sha": "4551c16d9788b9426ff64250fd6d8baeeddb5672"
             },
             {
                 "sha": "7b128830",
                 "message": "Update system:report to include sub-users",
                 "author": "arabcoders",
-                "date": "2025-04-02T14:34:09+00:00"
+                "date": "2025-04-02T14:34:09+00:00",
+                "full_sha": "7b1288300397411e8f384fdee7fe97b9d51eab9c"
             }
-        ]
+        ],
+        "full_sha": "01e1b3c732bf72c8778d531abfad1ca4b96ac6f5"
     },
     {
         "tag": "dev-20250323-8fb21d0d",
@@ -1117,15 +1302,18 @@
                 "sha": "23ab782c",
                 "message": "Minor WebUI design update to include random background",
                 "author": "ArabCoders",
-                "date": "2025-03-23T23:29:32+00:00"
+                "date": "2025-03-23T23:29:32+00:00",
+                "full_sha": "23ab782c2522284c86c4b5825c244527ea7ceb38"
             },
             {
                 "sha": "c4f79e12",
                 "message": "update README",
                 "author": "ArabCoders",
-                "date": "2025-03-20T18:44:21+00:00"
+                "date": "2025-03-20T18:44:21+00:00",
+                "full_sha": "c4f79e12d51d7a8672002d1f22d2ad2a831ad02b"
             }
-        ]
+        ],
+        "full_sha": "8fb21d0d2c7158f07c3ae7e4e08c639594702211"
     },
     {
         "tag": "dev-20250318-e80c0a6b",
@@ -1135,15 +1323,18 @@
                 "sha": "8ba321d2",
                 "message": "to support boxSets, add collapseBoxSetItems to get the item in response. Closes #625",
                 "author": "Abdulmohsen B. A. A.",
-                "date": "2025-03-18T22:10:04+00:00"
+                "date": "2025-03-18T22:10:04+00:00",
+                "full_sha": "8ba321d261123ec69f9905a1d997654cb7a670cf"
             },
             {
                 "sha": "c1c3a470",
                 "message": "Added webhook support for plex via tautulli",
                 "author": "ArabCoders",
-                "date": "2025-03-12T22:20:21+00:00"
+                "date": "2025-03-12T22:20:21+00:00",
+                "full_sha": "c1c3a470fee65c7403dd7e5852ad5b13d3e56fb5"
             }
-        ]
+        ],
+        "full_sha": "e80c0a6b7e3465ac102efa900d476ff7b19e7e93"
     },
     {
         "tag": "dev-20250307-b3928271",
@@ -1153,15 +1344,18 @@
                 "sha": "e70ea4ef",
                 "message": "semi self-plug for YTPTube project.",
                 "author": "Abdulmohsen B. A. A.",
-                "date": "2025-03-07T17:56:21+00:00"
+                "date": "2025-03-07T17:56:21+00:00",
+                "full_sha": "e70ea4efa099c1f9f76b0e1fcb43b4633545048e"
             },
             {
                 "sha": "ffbb0799",
                 "message": "update dependencies and include new logo",
                 "author": "Abdulmohsen B. A. A.",
-                "date": "2025-03-07T01:03:38+00:00"
+                "date": "2025-03-07T01:03:38+00:00",
+                "full_sha": "ffbb0799032f32737b85f19b4d1ea8c4b39fbf3b"
             }
-        ]
+        ],
+        "full_sha": "b392827136f8bd0c10907d719bbfa733ffee9936"
     },
     {
         "tag": "dev-20250226-60a4a264",
@@ -1171,9 +1365,11 @@
                 "sha": "8a998eb9",
                 "message": "re-enforce the backend/user name requirement of being a-z_0-9, due to recent refactor the check was not working as expected we added new tests to cover invalid names.",
                 "author": "ArabCoders",
-                "date": "2025-02-26T14:11:23+00:00"
+                "date": "2025-02-26T14:11:23+00:00",
+                "full_sha": "8a998eb96f96c2d7182d03efce24ad726e08a0f5"
             }
-        ]
+        ],
+        "full_sha": "60a4a26479990aedcf7ee839fd88680168ce8615"
     },
     {
         "tag": "dev-20250225-708e9a4d",
@@ -1183,69 +1379,81 @@
                 "sha": "1e73822c",
                 "message": "show 404 for non existing image",
                 "author": "ArabCoders",
-                "date": "2025-02-25T14:05:59+00:00"
+                "date": "2025-02-25T14:05:59+00:00",
+                "full_sha": "1e73822cb88ba52a4c5facc4c5d0b29a2b8eb985"
             },
             {
                 "sha": "cecb6049",
                 "message": "show poster image for mobile devices and fanart for desktop",
                 "author": "ArabCoders",
-                "date": "2025-02-25T14:05:45+00:00"
+                "date": "2025-02-25T14:05:45+00:00",
+                "full_sha": "cecb604900954a9b3925d9c3781c1a9ce18e4cd8"
             },
             {
                 "sha": "7c9c1edf",
                 "message": "Added background to item history page",
                 "author": "ArabCoders",
-                "date": "2025-02-24T17:37:07+00:00"
+                "date": "2025-02-24T17:37:07+00:00",
+                "full_sha": "7c9c1edfe2f7cfb1389bc7dc22fd967d7a5fdc68"
             },
             {
                 "sha": "f8a3b5cd",
                 "message": "Made it possible to request show/movie fanart/poster via API",
                 "author": "ArabCoders",
-                "date": "2025-02-24T16:38:04+00:00"
+                "date": "2025-02-24T16:38:04+00:00",
+                "full_sha": "f8a3b5cdc7d4a7d98fa2bb7fa9ba0b1b0c321b69"
             },
             {
                 "sha": "ff07c73f",
                 "message": "Added support to proxy requests to backends",
                 "author": "ArabCoders",
-                "date": "2025-02-24T16:36:54+00:00"
+                "date": "2025-02-24T16:36:54+00:00",
+                "full_sha": "ff07c73f2ef5efe313ab34820f4ea1fec2305b14"
             },
             {
                 "sha": "6a9db8fb",
                 "message": "added seconds to full log view",
                 "author": "ArabCoders",
-                "date": "2025-02-23T17:06:39+00:00"
+                "date": "2025-02-23T17:06:39+00:00",
+                "full_sha": "6a9db8fbcb4645a44caeaf634a7a6e2b512e26a1"
             },
             {
                 "sha": "0a7b98d5",
                 "message": "minor changes to some log message to make them more clear",
                 "author": "ArabCoders",
-                "date": "2025-02-23T16:54:19+00:00"
+                "date": "2025-02-23T16:54:19+00:00",
+                "full_sha": "0a7b98d59a872b88f684b1a5f3d02c0c9b9664b7"
             },
             {
                 "sha": "c4d3a7be",
                 "message": "dependencies update",
                 "author": "ArabCoders",
-                "date": "2025-02-23T16:54:04+00:00"
+                "date": "2025-02-23T16:54:04+00:00",
+                "full_sha": "c4d3a7bef0f4ebfdcb1ec42240091bb5bebf8626"
             },
             {
                 "sha": "7849e6f9",
                 "message": "log item data in parse webhook incase getMetData request failed.",
                 "author": "ArabCoders",
-                "date": "2025-02-23T13:50:54+00:00"
+                "date": "2025-02-23T13:50:54+00:00",
+                "full_sha": "7849e6f948e235dd2d6e258e1d99af8fee4571fa"
             },
             {
                 "sha": "5fabbf79",
                 "message": "Dont double log on getMetadata error",
                 "author": "ArabCoders",
-                "date": "2025-02-22T15:06:21+00:00"
+                "date": "2025-02-22T15:06:21+00:00",
+                "full_sha": "5fabbf79ced316676949222046b36a8eff0feb7c"
             },
             {
                 "sha": "1f495b35",
                 "message": "Fixed watch progress for jellyfin webhooks and enable watch progress for webhooks events",
                 "author": "ArabCoders",
-                "date": "2025-02-22T12:21:40+00:00"
+                "date": "2025-02-22T12:21:40+00:00",
+                "full_sha": "1f495b35b0e67adf639e97794333b39e8a7e28c3"
             }
-        ]
+        ],
+        "full_sha": "708e9a4d4ad05ef79f26c3378ec8410612cec5b5"
     },
     {
         "tag": "dev-20250221-4758e862",
@@ -1255,99 +1463,116 @@
                 "sha": "89c284ad",
                 "message": "minor change on how we display http erros for emby to only display it once",
                 "author": "ArabCoders",
-                "date": "2025-02-21T14:38:26+00:00"
+                "date": "2025-02-21T14:38:26+00:00",
+                "full_sha": "89c284ad146454c4dc542627fa66e0d297820046"
             },
             {
                 "sha": "03db2ffb",
                 "message": "minor updates to how we display data in events view page.",
                 "author": "ArabCoders",
-                "date": "2025-02-21T14:37:52+00:00"
+                "date": "2025-02-21T14:37:52+00:00",
+                "full_sha": "03db2ffbfbf40fb7e1276972a7d4cb157f0dc7cc"
             },
             {
                 "sha": "c1c7431e",
                 "message": "display event logs as actual logs instead of JSON array.",
                 "author": "ArabCoders",
-                "date": "2025-02-20T14:31:25+00:00"
+                "date": "2025-02-20T14:31:25+00:00",
+                "full_sha": "c1c7431e11c641f2ad456653e4618b5696d53ce3"
             },
             {
                 "sha": "a29a53bb",
                 "message": "made the short ID display for UUID more unique.",
                 "author": "ArabCoders",
-                "date": "2025-02-20T14:13:43+00:00"
+                "date": "2025-02-20T14:13:43+00:00",
+                "full_sha": "a29a53bbcefcffd2d911b2531167a6130266587b"
             },
             {
                 "sha": "25dfed2f",
                 "message": "better view of event logs",
                 "author": "ArabCoders",
-                "date": "2025-02-20T14:05:20+00:00"
+                "date": "2025-02-20T14:05:20+00:00",
+                "full_sha": "25dfed2f4dd4c076ef1b0ed6ce299917a96a0612"
             },
             {
                 "sha": "90ab9e21",
                 "message": "minor task changes",
                 "author": "ArabCoders",
-                "date": "2025-02-19T19:16:38+00:00"
+                "date": "2025-02-19T19:16:38+00:00",
+                "full_sha": "90ab9e210df28cbc919ff294567c47dc9b6ac645"
             },
             {
                 "sha": "6926a387",
                 "message": "reverted a fix for logs view, which didnt display whitespace correctly",
                 "author": "ArabCoders",
-                "date": "2025-02-19T18:31:28+00:00"
+                "date": "2025-02-19T18:31:28+00:00",
+                "full_sha": "6926a3876cd6612998e07fa9a8b1e90ef1f3a196"
             },
             {
                 "sha": "58451609",
                 "message": "standardize on 180secs as minimum to trigger watch progress sync for played items.",
                 "author": "ArabCoders",
-                "date": "2025-02-19T18:21:06+00:00"
+                "date": "2025-02-19T18:21:06+00:00",
+                "full_sha": "5845160906fdcd290bcba7aae042c5c9cfae0d59"
             },
             {
                 "sha": "ea4c1137",
                 "message": "Better log display and filtering",
                 "author": "ArabCoders",
-                "date": "2025-02-19T15:52:25+00:00"
+                "date": "2025-02-19T15:52:25+00:00",
+                "full_sha": "ea4c113730eab21695461b0229cab43d46062c63"
             },
             {
                 "sha": "48e5e4d9",
                 "message": "experimental support for syncing watch progress for played items. #617",
                 "author": "ArabCoders",
-                "date": "2025-02-19T10:06:36+00:00"
+                "date": "2025-02-19T10:06:36+00:00",
+                "full_sha": "48e5e4d98d22f0d1079ab80f8545878644079c01"
             },
             {
                 "sha": "2f287ae9",
                 "message": "Added the ability to remove all events that are not in pending state",
                 "author": "ArabCoders",
-                "date": "2025-02-19T10:05:37+00:00"
+                "date": "2025-02-19T10:05:37+00:00",
+                "full_sha": "2f287ae9fd99c13b3c0e90e1a1528d2afdf21bf0"
             },
             {
                 "sha": "cd8a2fda",
                 "message": "Update log formatter to account for different user@backend format",
                 "author": "ArabCoders",
-                "date": "2025-02-19T10:04:59+00:00"
+                "date": "2025-02-19T10:04:59+00:00",
+                "full_sha": "cd8a2fdaa1f4befe3b5067d8f9fd7fe80c38562e"
             },
             {
                 "sha": "fdd1cf1d",
                 "message": "updated testcase to include missing header.",
                 "author": "ArabCoders",
-                "date": "2025-02-18T16:16:53+00:00"
+                "date": "2025-02-18T16:16:53+00:00",
+                "full_sha": "fdd1cf1d975512b6e263c560455ba59f97c5c68e"
             },
             {
                 "sha": "50ebcb28",
                 "message": "Update database maintenance tasks to include sub-users dbs",
                 "author": "ArabCoders",
-                "date": "2025-02-18T16:08:04+00:00"
+                "date": "2025-02-18T16:08:04+00:00",
+                "full_sha": "50ebcb28741bb2b6dd7011da032cdb684533681f"
             },
             {
                 "sha": "90e73bc3",
                 "message": "use jsonl for logs to allow us better control on lines display.",
                 "author": "ArabCoders",
-                "date": "2025-02-18T14:13:03+00:00"
+                "date": "2025-02-18T14:13:03+00:00",
+                "full_sha": "90e73bc321ab7d24de19de93c1743eb4d524354d"
             },
             {
                 "sha": "e1a4e50a",
                 "message": "limit task event log to 200 lines",
                 "author": "ArabCoders",
-                "date": "2025-02-18T10:49:42+00:00"
+                "date": "2025-02-18T10:49:42+00:00",
+                "full_sha": "e1a4e50ada457e5483341b0a96ce0b6702c659b9"
             }
-        ]
+        ],
+        "full_sha": "4758e862cd9e56fe006c82c556ab0d69c93ef2b1"
     },
     {
         "tag": "dev-20250218-e8e2dbe6",
@@ -1357,33 +1582,39 @@
                 "sha": "8b044bb3",
                 "message": "Log an event when task is run",
                 "author": "ArabCoders",
-                "date": "2025-02-18T10:34:06+00:00"
+                "date": "2025-02-18T10:34:06+00:00",
+                "full_sha": "8b044bb39b9e0f14f0043d017d8ec335f88c619c"
             },
             {
                 "sha": "7b2d1b14",
                 "message": "Added task logs filter",
                 "author": "ArabCoders",
-                "date": "2025-02-18T10:33:53+00:00"
+                "date": "2025-02-18T10:33:53+00:00",
+                "full_sha": "7b2d1b144d8646e23b24bdd47045a8551894dd3b"
             },
             {
                 "sha": "0102b1c4",
                 "message": "parse some data from logs to make it easier to navigate to effected item",
                 "author": "ArabCoders",
-                "date": "2025-02-18T09:58:18+00:00"
+                "date": "2025-02-18T09:58:18+00:00",
+                "full_sha": "0102b1c4ae9b338110e7d24ca006581e6138c1a4"
             },
             {
                 "sha": "35e35aa6",
                 "message": "updated mappers to report record if when possible",
                 "author": "ArabCoders",
-                "date": "2025-02-17T17:01:57+00:00"
+                "date": "2025-02-17T17:01:57+00:00",
+                "full_sha": "35e35aa6dbbb5c49ee33270e02d86691e5ccee83"
             },
             {
                 "sha": "d4328e0e",
                 "message": "Made system/reset API  endpoint sub-user aware.",
                 "author": "ArabCoders",
-                "date": "2025-02-17T17:01:41+00:00"
+                "date": "2025-02-17T17:01:41+00:00",
+                "full_sha": "d4328e0e796d2f10cd8b0e281d6bbf619312a486"
             }
-        ]
+        ],
+        "full_sha": "e8e2dbe6c74253caf5fa23ca3ac2d57201a5a54e"
     },
     {
         "tag": "dev-20250215-638a3590",
@@ -1393,27 +1624,32 @@
                 "sha": "15bea974",
                 "message": "updated frontend packages",
                 "author": "ArabCoders",
-                "date": "2025-02-15T09:23:25+00:00"
+                "date": "2025-02-15T09:23:25+00:00",
+                "full_sha": "15bea974fdf2d8d292cbc8570853ed48a9690a30"
             },
             {
                 "sha": "bbdc512a",
                 "message": "Forgot to turn on the prune file deletion.",
                 "author": "ArabCoders",
-                "date": "2025-02-15T09:21:55+00:00"
+                "date": "2025-02-15T09:21:55+00:00",
+                "full_sha": "bbdc512a7560a0d87f1876acc6c1ba3139ada261"
             },
             {
                 "sha": "8c955dbf",
                 "message": "imporved the logging process for tasks run via events to give more realtime updates",
                 "author": "ArabCoders",
-                "date": "2025-02-15T09:21:27+00:00"
+                "date": "2025-02-15T09:21:27+00:00",
+                "full_sha": "8c955dbf76be4d28cd0e8ccae7f97ebee76bfb8f"
             },
             {
                 "sha": "1d294cb0",
                 "message": "added a way to clear event logs",
                 "author": "ArabCoders",
-                "date": "2025-02-15T09:21:05+00:00"
+                "date": "2025-02-15T09:21:05+00:00",
+                "full_sha": "1d294cb0a8d3ef6651a95c24ece5f20b935ef308"
             }
-        ]
+        ],
+        "full_sha": "638a3590659f108e1cc3ac7b8cbd169b8a8db9ae"
     },
     {
         "tag": "dev-20250214-d9187567",
@@ -1423,81 +1659,95 @@
                 "sha": "7f61ac96",
                 "message": "update task event log every 5secs",
                 "author": "ArabCoders",
-                "date": "2025-02-14T20:16:11+00:00"
+                "date": "2025-02-14T20:16:11+00:00",
+                "full_sha": "7f61ac96be8bc8998110cd2ec3f88dfd43003203"
             },
             {
                 "sha": "23781254",
                 "message": "minor changes to processes.vue display.",
                 "author": "ArabCoders",
-                "date": "2025-02-14T18:28:00+00:00"
+                "date": "2025-02-14T18:28:00+00:00",
+                "full_sha": "23781254fc4fbf688ed6cfd4e54b2f503c5e8843"
             },
             {
                 "sha": "321379b1",
                 "message": "Added new endpoint to show running processes.",
                 "author": "ArabCoders",
-                "date": "2025-02-14T18:15:00+00:00"
+                "date": "2025-02-14T18:15:00+00:00",
+                "full_sha": "321379b1a0c5299407593efc5af4259ad6467a7f"
             },
             {
                 "sha": "2445c1e1",
                 "message": "fixed failing tests",
                 "author": "ArabCoders",
-                "date": "2025-02-14T17:40:03+00:00"
+                "date": "2025-02-14T17:40:03+00:00",
+                "full_sha": "2445c1e18a36f9f989cc0bb8e5ca3fb70146b6fa"
             },
             {
                 "sha": "d116dea8",
                 "message": "log message if the task command is stuck",
                 "author": "ArabCoders",
-                "date": "2025-02-14T17:34:50+00:00"
+                "date": "2025-02-14T17:34:50+00:00",
+                "full_sha": "d116dea8a53b41eff9838c309956ce7aeb595689"
             },
             {
                 "sha": "4d4ff09b",
                 "message": "finish updating backends log messages to account for sub-users",
                 "author": "ArabCoders",
-                "date": "2025-02-14T17:34:33+00:00"
+                "date": "2025-02-14T17:34:33+00:00",
+                "full_sha": "4d4ff09b9449a0aa50869d4ad55c303777499c96"
             },
             {
                 "sha": "94fc8313",
                 "message": "mainly log messages cleanup",
                 "author": "ArabCoders",
-                "date": "2025-02-14T14:52:50+00:00"
+                "date": "2025-02-14T14:52:50+00:00",
+                "full_sha": "94fc831362ae009e6bcc3c2ae4b6eaf01a6d7e0e"
             },
             {
                 "sha": "5cdcf233",
                 "message": "use arrayToJson instead of arrayToString for log context.",
                 "author": "ArabCoders",
-                "date": "2025-02-14T14:51:56+00:00"
+                "date": "2025-02-14T14:51:56+00:00",
+                "full_sha": "5cdcf233e53e0ad2f1e170f8d337da66e1b9af59"
             },
             {
                 "sha": "52bb264a",
                 "message": "make latest tag more clear",
                 "author": "ArabCoders",
-                "date": "2025-02-13T22:09:51+00:00"
+                "date": "2025-02-13T22:09:51+00:00",
+                "full_sha": "52bb264aea118791f79e96b62139509239b77af9"
             },
             {
                 "sha": "5aa23729",
                 "message": "Make changelog.vue compare the tag only",
                 "author": "ArabCoders",
-                "date": "2025-02-13T22:05:20+00:00"
+                "date": "2025-02-13T22:05:20+00:00",
+                "full_sha": "5aa2372917deb5e651c520702f53231cdcf5ccea"
             },
             {
                 "sha": "510c54fb",
                 "message": "Cleaned up and updated jellyfin/emby log messages.",
                 "author": "ArabCoders",
-                "date": "2025-02-13T21:56:30+00:00"
+                "date": "2025-02-13T21:56:30+00:00",
+                "full_sha": "510c54fbd3065fa5aa53cfbff553dc3a8f894f81"
             },
             {
                 "sha": "bce50ef5",
                 "message": "updated external packages",
                 "author": "ArabCoders",
-                "date": "2025-02-13T21:56:11+00:00"
+                "date": "2025-02-13T21:56:11+00:00",
+                "full_sha": "bce50ef53b051ad91cdbbe133dd135f5f8349964"
             },
             {
                 "sha": "e6f5154a",
                 "message": "dont show merge commits in log",
                 "author": "ArabCoders",
-                "date": "2025-02-13T13:07:47+00:00"
+                "date": "2025-02-13T13:07:47+00:00",
+                "full_sha": "e6f5154ae34f277f49232dcca149227c10dbd4c7"
             }
-        ]
+        ],
+        "full_sha": "d918756734a0b69f52c4c9023fd5fa3c8d7dfe0f"
     },
     {
         "tag": "dev-20250212-7243e782",
@@ -1507,69 +1757,81 @@
                 "sha": "79843e72",
                 "message": "Added missing status_code for update play state fail.",
                 "author": "ArabCoders",
-                "date": "2025-02-12T19:43:13+00:00"
+                "date": "2025-02-12T19:43:13+00:00",
+                "full_sha": "79843e72d30f659526d73ff499c43f0574c7a369"
             },
             {
                 "sha": "61ad8582",
                 "message": "Mostly clean up commit to support plex external users more widely",
                 "author": "ArabCoders",
-                "date": "2025-02-12T19:40:13+00:00"
+                "date": "2025-02-12T19:40:13+00:00",
+                "full_sha": "61ad85823935707124784c586a53a3263c10017f"
             },
             {
                 "sha": "6e9e8e0f",
                 "message": "Made backend:create only update specfic keys when requested.",
                 "author": "ArabCoders",
-                "date": "2025-02-12T19:39:24+00:00"
+                "date": "2025-02-12T19:39:24+00:00",
+                "full_sha": "6e9e8e0f16770000f182f561c98733fe17fa2f0a"
             },
             {
                 "sha": "95be540d",
                 "message": "Made plex.GetUser rely on GetUsersList to support external users.",
                 "author": "ArabCoders",
-                "date": "2025-02-12T19:38:49+00:00"
+                "date": "2025-02-12T19:38:49+00:00",
+                "full_sha": "95be540df5bae858c0e2fc599ad534e3d738d6ff"
             },
             {
                 "sha": "3120b94b",
                 "message": "Remove debug statements from code.",
                 "author": "ArabCoders",
-                "date": "2025-02-12T19:37:39+00:00"
+                "date": "2025-02-12T19:37:39+00:00",
+                "full_sha": "3120b94b1da17baaf03dd91a402f5b7fb1d4a4e5"
             },
             {
                 "sha": "20cdf3cf",
                 "message": "updated servers.spec to include desc for new keys.",
                 "author": "ArabCoders",
-                "date": "2025-02-12T19:36:13+00:00"
+                "date": "2025-02-12T19:36:13+00:00",
+                "full_sha": "20cdf3cfd8c59be0a0a106b93c320a5270a83eb1"
             },
             {
                 "sha": "71dd9e82",
                 "message": "Added initial support to generate accesstokens for external plex users.",
                 "author": "ArabCoders",
-                "date": "2025-02-11T20:09:57+00:00"
+                "date": "2025-02-11T20:09:57+00:00",
+                "full_sha": "71dd9e823092e0702819799e3c2b3a6c3d5b3a50"
             },
             {
                 "sha": "e7adc3a0",
                 "message": "Made possible to be able to restore backend data using the backup page.",
                 "author": "ArabCoders",
-                "date": "2025-02-10T15:30:26+00:00"
+                "date": "2025-02-10T15:30:26+00:00",
+                "full_sha": "e7adc3a0c6a756630effc6b0328bc3d31976f771"
             },
             {
                 "sha": "fc7f4b82",
                 "message": "Added support for sub users in state:backup command.",
                 "author": "ArabCoders",
-                "date": "2025-02-10T14:21:30+00:00"
+                "date": "2025-02-10T14:21:30+00:00",
+                "full_sha": "fc7f4b8249731bbe5f0d5e326c2085d0bfba49cb"
             },
             {
                 "sha": "ab3b7883",
                 "message": "Added support for sub users in backend:ignore:* commands.",
                 "author": "ArabCoders",
-                "date": "2025-02-10T14:21:08+00:00"
+                "date": "2025-02-10T14:21:08+00:00",
+                "full_sha": "ab3b7883d55bd1b7c104ab5b3792e4b48dd0ff8d"
             },
             {
                 "sha": "0235936d",
                 "message": "Enabled sub-user support for backend:restore command",
                 "author": "ArabCoders",
-                "date": "2025-02-09T18:59:10+00:00"
+                "date": "2025-02-09T18:59:10+00:00",
+                "full_sha": "0235936df51ff80269cdf8ae0543bc71774abc86"
             }
-        ]
+        ],
+        "full_sha": "7243e7820520385a8a5f94af479d8aa705a7cf62"
     },
     {
         "tag": "dev-20250208-ff036da4",
@@ -1579,87 +1841,102 @@
                 "sha": "00c65e4a",
                 "message": "each user get their own ignore.yaml file now.",
                 "author": "ArabCoders",
-                "date": "2025-02-08T14:02:52+00:00"
+                "date": "2025-02-08T14:02:52+00:00",
+                "full_sha": "00c65e4aabcf5f072db24c6eba95261b1c8a1153"
             },
             {
                 "sha": "c2d4e6a6",
                 "message": "Merged ExtendedImportInterface into ImportInterface",
                 "author": "ArabCoders",
-                "date": "2025-02-07T14:11:53+00:00"
+                "date": "2025-02-07T14:11:53+00:00",
+                "full_sha": "c2d4e6a65bfd3bdfbe0eb36aded816d1e5ab5407"
             },
             {
                 "sha": "441343d4",
                 "message": "Made it possible to pass UserContext via Backend Context",
                 "author": "ArabCoders",
-                "date": "2025-02-07T13:38:47+00:00"
+                "date": "2025-02-07T13:38:47+00:00",
+                "full_sha": "441343d4b18f16da6eb0d0ab2ef4240dbbc6ff7d"
             },
             {
                 "sha": "40cae7fa",
                 "message": "Add sub users support for parity feature.",
                 "author": "ArabCoders",
-                "date": "2025-02-05T19:06:09+00:00"
+                "date": "2025-02-05T19:06:09+00:00",
+                "full_sha": "40cae7fa20bfd80244fb551c9e5f09632b7cc05f"
             },
             {
                 "sha": "59fbae4a",
                 "message": "Add sub users support for integrity feature.",
                 "author": "ArabCoders",
-                "date": "2025-02-05T19:05:58+00:00"
+                "date": "2025-02-05T19:05:58+00:00",
+                "full_sha": "59fbae4a31cac8fae453b7b8fb5b6a9bcd55b140"
             },
             {
                 "sha": "720e5d9d",
                 "message": "Allow client side cache to use namespace for keys.",
                 "author": "ArabCoders",
-                "date": "2025-02-05T19:05:33+00:00"
+                "date": "2025-02-05T19:05:33+00:00",
+                "full_sha": "720e5d9d0920af288e063892f70dd60dbfdc93ef"
             },
             {
                 "sha": "a0938789",
                 "message": "Move connection settings into standalone component.",
                 "author": "ArabCoders",
-                "date": "2025-02-05T19:04:53+00:00"
+                "date": "2025-02-05T19:04:53+00:00",
+                "full_sha": "a09387898b994491015e4368106c19b0079cff74"
             },
             {
                 "sha": "e555f179",
                 "message": "updated docs about webhook support for sub users.",
                 "author": "ArabCoders",
-                "date": "2025-02-05T14:00:12+00:00"
+                "date": "2025-02-05T14:00:12+00:00",
+                "full_sha": "e555f1792b5de22b4433027b77cdf944e084be01"
             },
             {
                 "sha": "87efadde",
                 "message": "minor design change.",
                 "author": "ArabCoders",
-                "date": "2025-02-05T13:55:37+00:00"
+                "date": "2025-02-05T13:55:37+00:00",
+                "full_sha": "87efadde7ec0fbac420ee1fea7aef9eb5531b2ab"
             },
             {
                 "sha": "79b4d741",
                 "message": "minor changes to history api",
                 "author": "ArabCoders",
-                "date": "2025-02-05T13:25:24+00:00"
+                "date": "2025-02-05T13:25:24+00:00",
+                "full_sha": "79b4d741ca4eb25ed9fe44ed9e37a18a168173eb"
             },
             {
                 "sha": "37b7cf5d",
                 "message": "wrap getUserContext in try catch",
                 "author": "ArabCoders",
-                "date": "2025-02-05T13:20:01+00:00"
+                "date": "2025-02-05T13:20:01+00:00",
+                "full_sha": "37b7cf5d78c69c9f416bb6427ddfad512119fa8c"
             },
             {
                 "sha": "c50a9a8b",
                 "message": "Updated most of backend API endpoints to support sub users.",
                 "author": "ArabCoders",
-                "date": "2025-02-05T11:02:05+00:00"
+                "date": "2025-02-05T11:02:05+00:00",
+                "full_sha": "c50a9a8b5e7b5bd2edca895a7686500aedb2fac9"
             },
             {
                 "sha": "a4aec9ef",
                 "message": "Added initial support for browing as selected user in WebUI",
                 "author": "ArabCoders",
-                "date": "2025-02-05T10:12:21+00:00"
+                "date": "2025-02-05T10:12:21+00:00",
+                "full_sha": "a4aec9ef99d74fba22cc203d2a8066ee2ffa8c8f"
             },
             {
                 "sha": "a246ca75",
                 "message": "Add initial support in webhooks for sub-users.",
                 "author": "ArabCoders",
-                "date": "2025-02-04T18:42:54+00:00"
+                "date": "2025-02-04T18:42:54+00:00",
+                "full_sha": "a246ca7579c59e03c8ad075661d6c03039154b45"
             }
-        ]
+        ],
+        "full_sha": "ff036da4d643aa152ceb77c64cfef9c01292e35e"
     },
     {
         "tag": "dev-20250204-5715b39a",
@@ -1669,21 +1946,25 @@
                 "sha": "1252e71e",
                 "message": "minor fixes for changelog and getAppVersion",
                 "author": "ArabCoders",
-                "date": "2025-02-04T15:11:21+00:00"
+                "date": "2025-02-04T15:11:21+00:00",
+                "full_sha": "1252e71e1130919fd2a1d78af4d708a6566452b3"
             },
             {
                 "sha": "9127a89a",
                 "message": "minor improvements on how we display changelog.",
                 "author": "ArabCoders",
-                "date": "2025-02-04T13:50:31+00:00"
+                "date": "2025-02-04T13:50:31+00:00",
+                "full_sha": "9127a89a137d6a5342fda896d4fb59330042a415"
             },
             {
                 "sha": "34906a37",
                 "message": "build the changelogs externally, it doesnt seems to want to work on github for some reason.",
                 "author": "ArabCoders",
-                "date": "2025-02-04T07:05:17+00:00"
+                "date": "2025-02-04T07:05:17+00:00",
+                "full_sha": "34906a37bdb38255febaacc5ba6a754e681b458d"
             }
-        ]
+        ],
+        "full_sha": "5715b39a5eaf411eb880065b7542dd6cd2571be4"
     },
     {
         "tag": "dev-20250204-fe1e3662",
@@ -1693,27 +1974,32 @@
                 "sha": "b602101b",
                 "message": "disable reflog for CHANGELOG generation",
                 "author": "ArabCoders",
-                "date": "2025-02-04T06:34:02+00:00"
+                "date": "2025-02-04T06:34:02+00:00",
+                "full_sha": "b602101b9236163dad83514dfb92ab6b6f293389"
             },
             {
                 "sha": "5865d377",
                 "message": "update build",
                 "author": "ArabCoders",
-                "date": "2025-02-04T06:22:32+00:00"
+                "date": "2025-02-04T06:22:32+00:00",
+                "full_sha": "5865d3770194eb9f5be3c98dce7d2a873cf47226"
             },
             {
                 "sha": "89ab1267",
                 "message": "fix python build",
                 "author": "ArabCoders",
-                "date": "2025-02-04T06:06:15+00:00"
+                "date": "2025-02-04T06:06:15+00:00",
+                "full_sha": "89ab126798f300e4959444ee47774131333fb84e"
             },
             {
                 "sha": "f8f19679",
                 "message": "updated external packages.",
                 "author": "ArabCoders",
-                "date": "2025-02-04T06:03:01+00:00"
+                "date": "2025-02-04T06:03:01+00:00",
+                "full_sha": "f8f196799220b9e0baaff791186aca8c532dbf66"
             }
-        ]
+        ],
+        "full_sha": "fe1e3662f8b85212292bacf7f45d19f09186c61b"
     },
     {
         "tag": "dev-20250204-2006bdbd",
@@ -1723,39 +2009,46 @@
                 "sha": "2d776e18",
                 "message": "dont run pr-build-test on .github changes",
                 "author": "ArabCoders",
-                "date": "2025-02-04T05:53:14+00:00"
+                "date": "2025-02-04T05:53:14+00:00",
+                "full_sha": "2d776e18d462e76b70e319e097d44ea5c4e339e1"
             },
             {
                 "sha": "35239da8",
                 "message": "more workflow changes",
                 "author": "ArabCoders",
-                "date": "2025-02-04T05:51:56+00:00"
+                "date": "2025-02-04T05:51:56+00:00",
+                "full_sha": "35239da8618822edf06329c98628e6863495bef2"
             },
             {
                 "sha": "4fbc7d7a",
                 "message": "fix changelog generator",
                 "author": "ArabCoders",
-                "date": "2025-02-03T20:28:44+00:00"
+                "date": "2025-02-03T20:28:44+00:00",
+                "full_sha": "4fbc7d7a893df6abd3d6de95f2ba74029c0c0c65"
             },
             {
                 "sha": "2763ac1f",
                 "message": "more github action changes.",
                 "author": "ArabCoders",
-                "date": "2025-02-03T20:25:25+00:00"
+                "date": "2025-02-03T20:25:25+00:00",
+                "full_sha": "2763ac1fceff6fcfff74b2b52bcfa2bb913d3ff4"
             },
             {
                 "sha": "8ea02be0",
                 "message": "no longer auto create release",
                 "author": "ArabCoders",
-                "date": "2025-02-03T20:15:15+00:00"
+                "date": "2025-02-03T20:15:15+00:00",
+                "full_sha": "8ea02be046082e0cb1a5f9baf972db34345783df"
             },
             {
                 "sha": "289c4ee8",
                 "message": "instead of relying on changelog being generated on commit, we rely on tag instead",
                 "author": "ArabCoders",
-                "date": "2025-02-03T20:05:19+00:00"
+                "date": "2025-02-03T20:05:19+00:00",
+                "full_sha": "289c4ee8c3f9a7108bc155ba117d00a494970776"
             }
-        ]
+        ],
+        "full_sha": "2006bdbd0b6e6a2916df03da61ec61879787b281"
     },
     {
         "tag": "dev-20250203-2ef40830",
@@ -1765,9 +2058,11 @@
                 "sha": "63af7318",
                 "message": "more changelog changes",
                 "author": "ArabCoders",
-                "date": "2025-02-03T19:27:38+00:00"
+                "date": "2025-02-03T19:27:38+00:00",
+                "full_sha": "63af731872318a5f31372cca5445ff2de27dc0b9"
             }
-        ]
+        ],
+        "full_sha": "2ef408301c37bd434c783b330b464878df54575c"
     },
     {
         "tag": "dev-20250203-5d9d3384",
@@ -1777,9 +2072,11 @@
                 "sha": "a5cf50c4",
                 "message": "generate changelog json files on tag",
                 "author": "ArabCoders",
-                "date": "2025-02-03T19:09:19+00:00"
+                "date": "2025-02-03T19:09:19+00:00",
+                "full_sha": "a5cf50c47b536260285d238f2ac97b76e6dc491a"
             }
-        ]
+        ],
+        "full_sha": "5d9d3384ba4c45be3675deeb1cc89b38638b7600"
     },
     {
         "tag": "dev-20250203-4982ef97",
@@ -1789,21 +2086,25 @@
                 "sha": "821e6110",
                 "message": "minor improvements to logs display in index to use more human readable dates.",
                 "author": "ArabCoders",
-                "date": "2025-02-03T16:42:53+00:00"
+                "date": "2025-02-03T16:42:53+00:00",
+                "full_sha": "821e61103ad74a3a39f18a006ab0c19c538cf7e5"
             },
             {
                 "sha": "030fe8b2",
                 "message": "fixed repo path",
                 "author": "ArabCoders",
-                "date": "2025-02-03T15:42:33+00:00"
+                "date": "2025-02-03T15:42:33+00:00",
+                "full_sha": "030fe8b2addb13515c08db103bae7d69fd592333"
             },
             {
                 "sha": "03fdef29",
                 "message": "Add CHANGELOG to container.",
                 "author": "ArabCoders",
-                "date": "2025-02-03T15:39:39+00:00"
+                "date": "2025-02-03T15:39:39+00:00",
+                "full_sha": "03fdef2906bd8f61ce2da3d67503c7d7741549aa"
             }
-        ]
+        ],
+        "full_sha": "4982ef97411941ae7896291a47fdfe980406e941"
     },
     {
         "tag": "dev-20250203-95f4154c",
@@ -1813,27 +2114,32 @@
                 "sha": "225ff0b7",
                 "message": "Removed WS_PUSH_ENABLED as its always on now, and turn WS_SYNC_PROGRESS on by default.",
                 "author": "ArabCoders",
-                "date": "2025-02-03T09:00:35+00:00"
+                "date": "2025-02-03T09:00:35+00:00",
+                "full_sha": "225ff0b768fe7002f5324966cc820bae9d43a3c3"
             },
             {
                 "sha": "2d5c63ea",
                 "message": "Merged SyncCommand functionality into state:import and state:export And removed SyncCommand.",
                 "author": "ArabCoders",
-                "date": "2025-02-02T19:43:28+00:00"
+                "date": "2025-02-02T19:43:28+00:00",
+                "full_sha": "2d5c63ea69100a578362d94acf94fb925353acc8"
             },
             {
                 "sha": "a3fd28b9",
                 "message": "followup fix for console",
                 "author": "ArabCoders",
-                "date": "2025-02-01T19:01:11+00:00"
+                "date": "2025-02-01T19:01:11+00:00",
+                "full_sha": "a3fd28b90f0402d935425cf34b963773ead0dc58"
             },
             {
                 "sha": "b53a93d8",
                 "message": "Fixed bug in trigger auto run for commands in console.vue",
                 "author": "ArabCoders",
-                "date": "2025-02-01T18:53:08+00:00"
+                "date": "2025-02-01T18:53:08+00:00",
+                "full_sha": "b53a93d8f30ee6cee9fda863053ccfa4f1f6b9ac"
             }
-        ]
+        ],
+        "full_sha": "95f4154c3cab9a20b746b291200b299501dc03eb"
     },
     {
         "tag": "dev-20250201-92e1f20d",
@@ -1843,27 +2149,32 @@
                 "sha": "b4783a83",
                 "message": "Standardize how we handle UserContext, added support for multi user in db:list command.",
                 "author": "ArabCoders",
-                "date": "2025-02-01T18:35:35+00:00"
+                "date": "2025-02-01T18:35:35+00:00",
+                "full_sha": "b4783a830101f902f457697c702b0e7aee836a0e"
             },
             {
                 "sha": "dd842512",
                 "message": "Redesigned redesigned how we create sub users config data",
                 "author": "ArabCoders",
-                "date": "2025-02-01T16:02:20+00:00"
+                "date": "2025-02-01T16:02:20+00:00",
+                "full_sha": "dd8425128f80a09f7ac95ee00393a4b9b0689618"
             },
             {
                 "sha": "54a85561",
                 "message": "fix the prev commit",
                 "author": "ArabCoders",
-                "date": "2025-01-31T19:17:41+00:00"
+                "date": "2025-01-31T19:17:41+00:00",
+                "full_sha": "54a8556149425a94710078fd7cb95b69b015f060"
             },
             {
                 "sha": "87ac7e77",
                 "message": "remove use backend id for X-Plex-Client-Identifier to not generate events for each version change",
                 "author": "ArabCoders",
-                "date": "2025-01-31T19:14:33+00:00"
+                "date": "2025-01-31T19:14:33+00:00",
+                "full_sha": "87ac7e77dda9196f03386409964ac6d2bfd22b9c"
             }
-        ]
+        ],
+        "full_sha": "92e1f20de785904199bde04a54b60ae0deee3f6f"
     },
     {
         "tag": "dev-20250131-3a2f0af0",
@@ -1873,15 +2184,18 @@
                 "sha": "d10a03c7",
                 "message": "support backing up mutli-user data.",
                 "author": "ArabCoders",
-                "date": "2025-01-31T19:08:30+00:00"
+                "date": "2025-01-31T19:08:30+00:00",
+                "full_sha": "d10a03c7815e08ffd403847699f774ca5be8133f"
             },
             {
                 "sha": "3e23a3bc",
                 "message": "Filter data before saving it into events table",
                 "author": "ArabCoders",
-                "date": "2025-01-31T16:58:46+00:00"
+                "date": "2025-01-31T16:58:46+00:00",
+                "full_sha": "3e23a3bca9885b331c2e96b4b936f95cab12224d"
             }
-        ]
+        ],
+        "full_sha": "3a2f0af0087b986c862ff36d50ce7e88d7347f0c"
     },
     {
         "tag": "dev-20250131-612ec4f9",
@@ -1891,51 +2205,60 @@
                 "sha": "b3e32fe9",
                 "message": "filter env.SERVER.QUERY_STRING data as well",
                 "author": "ArabCoders",
-                "date": "2025-01-31T16:18:30+00:00"
+                "date": "2025-01-31T16:18:30+00:00",
+                "full_sha": "b3e32fe943cdf31a9d3bca2c714596d214dbbf95"
             },
             {
                 "sha": "7c57c504",
                 "message": "re-designed how we profile the http API to include bigger scope",
                 "author": "ArabCoders",
-                "date": "2025-01-31T16:14:45+00:00"
+                "date": "2025-01-31T16:14:45+00:00",
+                "full_sha": "7c57c5045a0167d78f59bdd1c91e9b9e5f7716ee"
             },
             {
                 "sha": "44d3b32f",
                 "message": "Fixed performance regression in HTTP API",
                 "author": "ArabCoders",
-                "date": "2025-01-31T15:24:47+00:00"
+                "date": "2025-01-31T15:24:47+00:00",
+                "full_sha": "44d3b32f3c52f4876438de06bf55d731527f07e4"
             },
             {
                 "sha": "1d2a1da9",
                 "message": "updated composer packages.",
                 "author": "ArabCoders",
-                "date": "2025-01-31T14:16:58+00:00"
+                "date": "2025-01-31T14:16:58+00:00",
+                "full_sha": "1d2a1da9130908d50882f247434995ec73500ef1"
             },
             {
                 "sha": "b6aad345",
                 "message": "dont use ProfilingFlags directly.",
                 "author": "ArabCoders",
-                "date": "2025-01-31T14:08:44+00:00"
+                "date": "2025-01-31T14:08:44+00:00",
+                "full_sha": "b6aad3455789fe6691e8aa66b3af0f80c78c1a29"
             },
             {
                 "sha": "677ecc72",
                 "message": "imporved the profiling process.",
                 "author": "ArabCoders",
-                "date": "2025-01-31T14:00:51+00:00"
+                "date": "2025-01-31T14:00:51+00:00",
+                "full_sha": "677ecc729d17c728d58a244e8ecf50bec2129bba"
             },
             {
                 "sha": "80f341e0",
                 "message": "minor style changes",
                 "author": "ArabCoders",
-                "date": "2025-01-30T22:46:01+00:00"
+                "date": "2025-01-30T22:46:01+00:00",
+                "full_sha": "80f341e02de8bce59f938cadf62dbba8ca58750e"
             },
             {
                 "sha": "2987dea2",
                 "message": "Show zip files in api and remove the uncompressed file if compressing was done.",
                 "author": "ArabCoders",
-                "date": "2025-01-30T22:26:23+00:00"
+                "date": "2025-01-30T22:26:23+00:00",
+                "full_sha": "2987dea268754cda927909549e6cafd37c3b2341"
             }
-        ]
+        ],
+        "full_sha": "612ec4f9e89c20ff3f8badec37bbfd6947a03792"
     },
     {
         "tag": "dev-20250130-bdff9e21",
@@ -1945,9 +2268,11 @@
                 "sha": "7fe90aad",
                 "message": "Compress backup files by default and extends lifetime of backups to 90days",
                 "author": "ArabCoders",
-                "date": "2025-01-30T22:07:36+00:00"
+                "date": "2025-01-30T22:07:36+00:00",
+                "full_sha": "7fe90aad8769090d5918204fd3873dae98a1c0c0"
             }
-        ]
+        ],
+        "full_sha": "bdff9e21b8826e3b4a2a2eb57d83111bcf1f37e8"
     },
     {
         "tag": "dev-20250130-db10485b",
@@ -1957,9 +2282,11 @@
                 "sha": "826b0f95",
                 "message": "Added new command to diff two backup files and find the difference",
                 "author": "ArabCoders",
-                "date": "2025-01-30T15:27:43+00:00"
+                "date": "2025-01-30T15:27:43+00:00",
+                "full_sha": "826b0f95082a73a2bc2bf0c1531321acace251d3"
             }
-        ]
+        ],
+        "full_sha": "db10485be72842a6c4c6c2000144a22b12a17e55"
     },
     {
         "tag": "dev-20250123-8c212c5f",
@@ -1969,9 +2296,11 @@
                 "sha": "96ccd88c",
                 "message": "Fully implemented our vision for Multi-user sync via state:sync command",
                 "author": "ArabCoders",
-                "date": "2025-01-23T21:12:01+00:00"
+                "date": "2025-01-23T21:12:01+00:00",
+                "full_sha": "96ccd88cd0751d3d25f2a5b44b9e49c2e46987de"
             }
-        ]
+        ],
+        "full_sha": "8c212c5f6d1d1e738eda6d038ca1a75b811b5844"
     },
     {
         "tag": "dev-20250122-9fee1caf",
@@ -1981,27 +2310,32 @@
                 "sha": "a65f8db2",
                 "message": "updated dependencies",
                 "author": "ArabCoders",
-                "date": "2025-01-22T18:34:16+00:00"
+                "date": "2025-01-22T18:34:16+00:00",
+                "full_sha": "a65f8db2c0901d0adab91e11360de73bd2dbd9ce"
             },
             {
                 "sha": "8da381ca",
                 "message": "Removed NullMapper as it's no longer used, updated both DirectMapper & MemoryMapper to update entities metadata if no metadata exists even if the date is older.",
                 "author": "ArabCoders",
-                "date": "2025-01-22T18:29:10+00:00"
+                "date": "2025-01-22T18:29:10+00:00",
+                "full_sha": "8da381ca2cdebb36b411b80c90fcfcad7de2bd90"
             },
             {
                 "sha": "7d4feb2b",
                 "message": "Implements progress ync for alt users.",
                 "author": "ArabCoders",
-                "date": "2025-01-22T17:09:22+00:00"
+                "date": "2025-01-22T17:09:22+00:00",
+                "full_sha": "7d4feb2b860405a5886b28e281836a3626b93912"
             },
             {
                 "sha": "fc476d40",
                 "message": "remove use old_progress endpoint for plex",
                 "author": "ArabCoders",
-                "date": "2025-01-22T17:06:54+00:00"
+                "date": "2025-01-22T17:06:54+00:00",
+                "full_sha": "fc476d408bda19e11c997fbb7ca6920f588883eb"
             }
-        ]
+        ],
+        "full_sha": "9fee1caf8ce6eefed66b492faeec3611d863f8cc"
     },
     {
         "tag": "dev-20250122-b347cc84",
@@ -2011,15 +2345,18 @@
                 "sha": "266bf1a9",
                 "message": "Free memory after each user sync, and prevent syncing main user by default as it's covered by the regular import/export, and provide flag to enable it.",
                 "author": "ArabCoders",
-                "date": "2025-01-22T08:32:20+00:00"
+                "date": "2025-01-22T08:32:20+00:00",
+                "full_sha": "266bf1a913e5f92638aa4462d88bce8e28faa3bb"
             },
             {
                 "sha": "6369103b",
                 "message": "Update reflection container to support manual injecting",
                 "author": "ArabCoders",
-                "date": "2025-01-22T08:31:18+00:00"
+                "date": "2025-01-22T08:31:18+00:00",
+                "full_sha": "6369103b09702ee9a5eeb8d0e2ec35419a21d775"
             }
-        ]
+        ],
+        "full_sha": "b347cc84054f6eb5a6afc4978f1657a406045792"
     },
     {
         "tag": "dev-20250121-4144c65c",
@@ -2029,15 +2366,18 @@
                 "sha": "de379559",
                 "message": "Build images on PR",
                 "author": "ArabCoders",
-                "date": "2025-01-21T19:26:19+00:00"
+                "date": "2025-01-21T19:26:19+00:00",
+                "full_sha": "de379559bfc9a733d425aa1cca628a6de1c9a2fb"
             },
             {
                 "sha": "547f3382",
                 "message": "Implement per user servers.yaml, and support mark as unplayed for all users.",
                 "author": "ArabCoders",
-                "date": "2025-01-21T18:58:27+00:00"
+                "date": "2025-01-21T18:58:27+00:00",
+                "full_sha": "547f3382fd7672254ceeb03674223e748bf8866a"
             }
-        ]
+        ],
+        "full_sha": "4144c65c1626da71466ba1cab8505f5fb542f279"
     },
     {
         "tag": "dev-20250121-c50c9be4",
@@ -2047,20 +2387,24 @@
                 "sha": "624ebb13",
                 "message": "more changes to support multi-user sync",
                 "author": "ArabCoders",
-                "date": "2025-01-21T11:15:29+00:00"
+                "date": "2025-01-21T11:15:29+00:00",
+                "full_sha": "624ebb138fb4e341cca22282b1be4e60cee5f38f"
             },
             {
                 "sha": "3caa5dce",
                 "message": "Clarify the SyncCommand limitation",
                 "author": "ArabCoders",
-                "date": "2025-01-20T19:07:59+00:00"
+                "date": "2025-01-20T19:07:59+00:00",
+                "full_sha": "3caa5dce3964a4817951390e2225a938b26a5c14"
             },
             {
                 "sha": "2ab88cab",
                 "message": "Clarify the SyncCommand limitation",
                 "author": "ArabCoders",
-                "date": "2025-01-20T19:07:50+00:00"
+                "date": "2025-01-20T19:07:50+00:00",
+                "full_sha": "2ab88caba37364482389ff4362fb9ddfbb2d4ab6"
             }
-        ]
+        ],
+        "full_sha": "c50c9be4dcdc07ae623c513a6dbbea4b4568a66b"
     }
 ]
