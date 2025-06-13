@@ -43,7 +43,7 @@ class InspectRequest
                 // -- Due to the fact that Emby doesn't give us an actual user agent, we have to rely on the version
                 // -- number to determine if the request is from Emby.
                 $version = (string)ag($json, 'Server.Version', '0.0.0.0');
-                if (version_compare($version, '4.9.0.0', '<') || version_compare($version, '4.99.0.0', '>')) {
+                if (version_compare($version, '4.8.0.0', '<') || version_compare($version, '4.99.0.0', '>')) {
                     return new Response(status: false, response: $request);
                 }
 
