@@ -3430,16 +3430,16 @@
     },
     {
       "name": "phpunit/phpunit",
-      "version": "11.5.21",
+      "version": "11.5.23",
       "source": {
         "type": "git",
         "url": "https://github.com/sebastianbergmann/phpunit.git",
-        "reference": "d565e2cdc21a7db9dc6c399c1fc2083b8010f289"
+        "reference": "86ebcd8a3dbcd1857d88505109b2a2b376501cde"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/d565e2cdc21a7db9dc6c399c1fc2083b8010f289",
-        "reference": "d565e2cdc21a7db9dc6c399c1fc2083b8010f289",
+        "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/86ebcd8a3dbcd1857d88505109b2a2b376501cde",
+        "reference": "86ebcd8a3dbcd1857d88505109b2a2b376501cde",
         "shasum": ""
       },
       "require": {
@@ -3511,7 +3511,7 @@
       "support": {
         "issues": "https://github.com/sebastianbergmann/phpunit/issues",
         "security": "https://github.com/sebastianbergmann/phpunit/security/policy",
-        "source": "https://github.com/sebastianbergmann/phpunit/tree/11.5.21"
+        "source": "https://github.com/sebastianbergmann/phpunit/tree/11.5.23"
       },
       "funding": [
         {
@@ -3535,7 +3535,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2025-05-21T12:35:00+00:00"
+      "time": "2025-06-13T05:47:49+00:00"
     },
     {
       "name": "psalm/phar",
@@ -3578,12 +3578,12 @@
       "source": {
         "type": "git",
         "url": "https://github.com/Roave/SecurityAdvisories.git",
-        "reference": "6ca443cead7d0cd731610a12fd47028c7e28edb3"
+        "reference": "5a31a1cd05b9114408f90c6cb35f65e9db6ea79d"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/6ca443cead7d0cd731610a12fd47028c7e28edb3",
-        "reference": "6ca443cead7d0cd731610a12fd47028c7e28edb3",
+        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/5a31a1cd05b9114408f90c6cb35f65e9db6ea79d",
+        "reference": "5a31a1cd05b9114408f90c6cb35f65e9db6ea79d",
         "shasum": ""
       },
       "conflict": {
@@ -3643,7 +3643,7 @@
         "bagisto/bagisto": "<2.1",
         "barrelstrength/sprout-base-email": "<1.2.7",
         "barrelstrength/sprout-forms": "<3.9",
-        "barryvdh/laravel-translation-manager": "<0.6.2",
+        "barryvdh/laravel-translation-manager": "<0.6.8",
         "barzahlen/barzahlen-php": "<2.0.1",
         "baserproject/basercms": "<=5.1.1",
         "bassjobsen/bootstrap-3-typeahead": ">4.0.2",
@@ -3746,9 +3746,12 @@
         "dolibarr/dolibarr": "<19.0.2|==21.0.0.0-beta",
         "dompdf/dompdf": "<2.0.4",
         "doublethreedigital/guest-entries": "<3.1.2",
+        "drupal/admin_audit_trail": "<1.0.5",
         "drupal/ai": "<1.0.5",
         "drupal/alogin": "<2.0.6",
         "drupal/cache_utility": "<1.2.1",
+        "drupal/commerce_alphabank_redirect": "<1.0.3",
+        "drupal/commerce_eurobank_redirect": "<2.1.1",
         "drupal/config_split": "<1.10|>=2,<2.0.2",
         "drupal/core": ">=6,<6.38|>=7,<7.102|>=8,<10.3.14|>=10.4,<10.4.5|>=11,<11.0.13|>=11.1,<11.1.5",
         "drupal/core-recommended": ">=7,<7.102|>=8,<10.2.11|>=10.3,<10.3.9|>=11,<11.0.8",
@@ -3757,11 +3760,13 @@
         "drupal/gdpr": "<3.0.1|>=3.1,<3.1.2",
         "drupal/google_tag": "<1.8|>=2,<2.0.8",
         "drupal/ignition": "<1.0.4",
+        "drupal/lightgallery": "<1.6",
         "drupal/link_field_display_mode_formatter": "<1.6",
         "drupal/matomo": "<1.24",
         "drupal/oauth2_client": "<4.1.3",
         "drupal/oauth2_server": "<2.1",
         "drupal/obfuscate": "<2.0.1",
+        "drupal/quick_node_block": "<2",
         "drupal/rapidoc_elements_field_formatter": "<1.0.1",
         "drupal/spamspan": "<3.2.1",
         "drupal/tfa": "<1.10",
@@ -3774,6 +3779,7 @@
         "elefant/cms": "<2.0.7",
         "elgg/elgg": "<3.3.24|>=4,<4.0.5",
         "elijaa/phpmemcacheadmin": "<=1.3",
+        "elmsln/haxcms": "<11",
         "encore/laravel-admin": "<=1.8.19",
         "endroid/qr-code-bundle": "<3.4.2",
         "enhavo/enhavo-app": "<=0.13.1",
@@ -3788,8 +3794,8 @@
         "ezsystems/ezdemo-ls-extension": ">=5.4,<5.4.2.1-dev",
         "ezsystems/ezfind-ls": ">=5.3,<5.3.6.1-dev|>=5.4,<5.4.11.1-dev|>=2017.12,<2017.12.0.1-dev",
         "ezsystems/ezplatform": "<=1.13.6|>=2,<=2.5.24",
-        "ezsystems/ezplatform-admin-ui": ">=1.3,<1.3.5|>=1.4,<1.4.6|>=1.5,<1.5.29|>=2.3,<2.3.26|>=3.3,<3.3.39",
-        "ezsystems/ezplatform-admin-ui-assets": ">=4,<4.2.1|>=5,<5.0.1|>=5.1,<5.1.1",
+        "ezsystems/ezplatform-admin-ui": ">=1.3,<1.3.5|>=1.4,<1.4.6|>=1.5,<1.5.29|>=2.3,<2.3.38|>=3.3,<3.3.39",
+        "ezsystems/ezplatform-admin-ui-assets": ">=4,<4.2.1|>=5,<5.0.1|>=5.1,<5.1.1|>=5.3.0.0-beta1,<5.3.5",
         "ezsystems/ezplatform-graphql": ">=1.0.0.0-RC1-dev,<1.0.13|>=2.0.0.0-beta1,<2.3.12",
         "ezsystems/ezplatform-http-cache": "<2.3.16",
         "ezsystems/ezplatform-kernel": "<1.2.5.1-dev|>=1.3,<1.3.35",
@@ -3880,9 +3886,10 @@
         "hov/jobfair": "<1.0.13|>=2,<2.0.2",
         "httpsoft/http-message": "<1.0.12",
         "hyn/multi-tenant": ">=5.6,<5.7.2",
-        "ibexa/admin-ui": ">=4.2,<4.2.3|>=4.6,<4.6.14",
+        "ibexa/admin-ui": ">=4.2,<4.2.3|>=4.6,<4.6.21",
+        "ibexa/admin-ui-assets": ">=4.6.0.0-alpha1,<4.6.21",
         "ibexa/core": ">=4,<4.0.7|>=4.1,<4.1.4|>=4.2,<4.2.3|>=4.5,<4.5.6|>=4.6,<4.6.2",
-        "ibexa/fieldtype-richtext": ">=4.6,<4.6.19",
+        "ibexa/fieldtype-richtext": ">=4.6,<4.6.21",
         "ibexa/graphql": ">=2.5,<2.5.31|>=3.3,<3.3.28|>=4.2,<4.2.3",
         "ibexa/http-cache": ">=4.6,<4.6.14",
         "ibexa/post-install": "<1.0.16|>=4.6,<4.6.14",
@@ -4185,6 +4192,7 @@
         "rmccue/requests": ">=1.6,<1.8",
         "robrichards/xmlseclibs": ">=1,<3.0.4",
         "roots/soil": "<4.1",
+        "roundcube/roundcubemail": "<1.5.10|>=1.6,<1.6.11",
         "rudloff/alltube": "<3.0.3",
         "rudloff/rtmpdump-bin": "<=2.3.1",
         "s-cart/core": "<6.9",
@@ -4252,7 +4260,7 @@
         "spoonity/tcpdf": "<6.2.22",
         "squizlabs/php_codesniffer": ">=1,<2.8.1|>=3,<3.0.1",
         "ssddanbrown/bookstack": "<24.05.1",
-        "starcitizentools/citizen-skin": ">=2.6.3,<2.31",
+        "starcitizentools/citizen-skin": ">=2.4.2,<3.3.1",
         "starcitizentools/tabber-neue": ">=1.9.1,<2.7.2",
         "statamic/cms": "<=5.16",
         "stormpath/sdk": "<9.9.99",
@@ -4515,7 +4523,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2025-06-05T17:04:40+00:00"
+      "time": "2025-06-13T15:05:43+00:00"
     },
     {
       "name": "sebastian/cli-parser",

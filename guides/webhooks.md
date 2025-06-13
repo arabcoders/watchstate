@@ -41,7 +41,7 @@ add `?apikey=your_ws_apikey` to the URL. which you can obtain by going to <!--i:
 *More* > <!--i:fa-terminal--> *Terminal* and then write `system:apikey` in the box. You should get the apikey which is
 hexadecimal string.
 
-If you don't have secure all endpoints enabled:
+If you don't have `WS_SECURE_API_ENDPOINTS` enabled:
 
 ```
 https://your_ws_url/v1/api/webhook
@@ -120,6 +120,10 @@ Click *Add Webhook / Save*.
 
 10. **Do not send when message body is empty**:
     - Toggle this checkbox.
+
+11. **Click on Add Request Header** and add the following header:
+    - **Key**: `Content-Type`
+    - **Value**: `application/json`
 
 Click *Save*.
 
@@ -254,11 +258,15 @@ Here are some known limitations and issues when using webhooks with different me
 - In old version of plex i.e. pre `1.41.6.9606` marking items as watched and if you didn't have progress on the show
   will not show the item in continue watching, this is a limitation of the old plex version and not
   watchstate. [reference](https://forums.plex.tv/t/continue-watching-is-buggy-unable-to-figure-out-why/869224/65)
+- Plex doesn't send watch progress update events during playback, it only sends the progress update during `play`,
+  `pause`, `stop`, `resume` events. So the progress update from plex will not be reflected until one of those events
+  kicks in.
 
 ### Plex via Tautulli
 
 - **Marking items as unplayed** is not reliable, as Tautulli’s webhook payload lacks the data needed to detect this
   change.
+- Similarly to plex, Tautulli doesn't send watch progress update events during playback.
 
 ### Emby
 
@@ -279,7 +287,7 @@ As previously mentioned, webhooks aren't 100% reliable, thus it's recommended to
 complement webhook functionality.
 
 Simply go to the *Tasks* page and enable the *Import* and *Export* tasks. and set the schedule to `every 12 hours` or
-or `every 24 hours` depending on your needs.
+`every 24 hours` depending on your needs.
 
 # Troubleshooting
 
