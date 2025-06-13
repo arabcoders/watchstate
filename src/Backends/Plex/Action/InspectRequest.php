@@ -19,7 +19,7 @@ final class InspectRequest
     {
         return $this->tryResponse(
             context: $context,
-            fn: function () use ($request) {
+            fn: function () use ($request, $context) {
                 $userAgent = trim(ag($request->getServerParams(), 'HTTP_USER_AGENT', ''));
                 $isTautulli = false !== str_starts_with($userAgent, 'Tautulli/');
                 $isPlex = false !== str_starts_with($userAgent, 'PlexMediaServer/');
@@ -53,7 +53,7 @@ final class InspectRequest
                     'backend' => [
                         'id' => ag($json, 'Server.uuid', ''),
                         'name' => ag($json, 'Server.title'),
-                        'client' => before($userAgent, '/'),
+                        'client' => $context->clientName,
                         'version' => ag($json, 'Server.version', fn() => afterLast($userAgent, '/')),
                     ],
                     'user' => [

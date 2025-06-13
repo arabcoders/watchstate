@@ -75,20 +75,24 @@ final class Index
         $client = null;
         $usersContext = getUsersContext(mapper: $this->mapper, logger: $this->logger);
 
-        // -- Use main user backends to infer the payload content.
-        foreach ($usersContext['main']->config->getAll() as $bName => $bData) {
-            $_client = $this->getClient(name: $bName, userContext: $usersContext['main']);
-            $request = $_client->processRequest($request);
-            if (true !== ag_exists($request->getAttributes(), 'backend')) {
+        // -- Use main user backends to infer the payload content type.
+        foreach (array_keys($usersContext['main']->config->getAll()) as $backendName) {
+            $_client = $this->getClient(name: $backendName, userContext: $usersContext['main']);
+            $request2 = $_client->processRequest($request);
+            if (true !== ag_exists($request2->getAttributes(), 'backend')) {
                 continue;
             }
             $client = $_client;
+            $request = $request2;
             break;
         }
 
         if (null === $client) {
             $message = "No backend client were able to parse the the request.";
-            $this->write($request, Level::Info, $message);
+            $this->write($request, Level::Info, $message, context: [
+                'headers' => $request->getHeaders(),
+                'payload' => $request->getParsedBody(),
+            ], forceContext: true);
             return api_error($message, Status::BAD_REQUEST);
         }
 
@@ -112,28 +116,32 @@ final class Index
         $backends = [];
 
         // -- Now we need to match the request down to the user and backend.
-        foreach ($usersContext as $_userContext) {
-            foreach ($_userContext->config->getAll() as $_backendName => $_b) {
-                if ((string)$uuid !== (string)ag($_b, 'uuid')) {
+        foreach ($usersContext as $userContext) {
+            foreach ($userContext->config->getAll() as $backendName => $backendData) {
+                if ((string)$uuid !== (string)ag($backendData, 'uuid')) {
                     continue;
                 }
 
-                if (false === $isGeneric && (string)$userId !== (string)ag($_b, 'user')) {
+                if (false === $isGeneric && (string)$userId !== (string)ag($backendData, 'user')) {
                     continue;
                 }
 
                 $backends[] = [
-                    'backendName' => $_backendName,
-                    'backend' => $_b,
-                    'userContext' => $_userContext,
-                    'client' => $this->getClient(name: $_backendName, userContext: $_userContext),
+                    'backendName' => $backendName,
+                    'backend' => $backendData,
+                    'userContext' => $userContext,
+                    'client' => $this->getClient(name: $backendName, userContext: $userContext),
                 ];
             }
         }
 
         if (count($backends) < 1) {
-            $message = "Request payload didn't match any user/backend.";
-            $this->write($request, Level::Info, $message);
+            $message = "Request from '{client}' didn't match any user/backend.";
+            $this->write($request, Level::Info, $message, context: [
+                'client' => $client->getName(),
+                'headers' => $request->getHeaders(),
+                'payload' => $request->getParsedBody(),
+            ], forceContext: true);
             return api_error($message, Status::BAD_REQUEST);
         }
 
@@ -150,7 +158,7 @@ final class Index
             }
 
             $client = $mainBackend['client'];
-            assert($client instanceof iClient, 'ClientInterface is expected here');
+            assert($client instanceof iClient, 'Instance of iClient is expected here.');
             $entity = $client->parseWebhook($request, [Options::IS_GENERIC => $isGeneric]);
         } catch (Throwable $e) {
             $this->write(
@@ -205,16 +213,17 @@ final class Index
         }
 
         foreach ($backends as $target) {
+            $backend = $target['userContext']->config->get($target['backendName']);
             $perUserRequest = $request->withAttribute(
                 'backend',
                 ag_sets(ag($request->getAttributes(), 'backend', []), [
-                    'id' => ag($target['userContext']->config->get($target['backendName']), 'uuid'),
+                    'id' => ag($backend, 'uuid'),
                     'name' => $target['backendName'],
                 ])
             )->withAttribute(
                 'user',
                 ag_sets(ag($request->getAttributes(), 'backend', []), [
-                    'id' => ag($target['userContext']->config->get($target['backendName']), 'user'),
+                    'id' => ag($backend, 'user'),
                     'name' => $target['userContext']->name,
                 ])
             );
