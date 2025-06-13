@@ -40,6 +40,15 @@ class InspectRequest
                     return new Response(status: false, response: $request);
                 }
 
+                // -- backwards compatibility for emby 4.8.x
+                if (is_array($json) && false !== ag_exists($json, 'data')) {
+                    $payload = ag($request->getParsedBody(), 'data', null);
+                    if (empty($payload)) {
+                        return new Response(status: false, response: $request);
+                    }
+                    $request = $request->withParsedBody($payload);
+                }
+
                 // -- Due to the fact that Emby doesn't give us an actual user agent, we have to rely on the version
                 // -- number to determine if the request is from Emby.
                 $version = (string)ag($json, 'Server.Version', '0.0.0.0');
