@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250613-833d690b",
-        "date": "2025-06-13T17:47:58+00:00",
+        "tag": "dev-20250613-f16cd63c",
+        "date": "2025-06-13T18:27:15+00:00",
         "commits": [
+            {
+                "sha": "f16cd63c",
+                "message": "restored backwards compatibility for emby 4.8.x",
+                "author": "arabcoders",
+                "date": "2025-06-13T18:27:15+00:00",
+                "full_sha": "f16cd63c146daa6889fc4b24cf7cb9e0265b58b1"
+            },
             {
                 "sha": "833d690b",
                 "message": "relax emby version match to 4.8",
@@ -32,7 +39,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "833d690b1b404c8f348655a1956707242b71c70c"
+        "full_sha": "f16cd63c146daa6889fc4b24cf7cb9e0265b58b1"
     },
     {
         "tag": "dev-20250604-9407bc76",
