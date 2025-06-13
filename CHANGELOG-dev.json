@@ -1,8 +1,22 @@
 [
     {
-        "tag": "dev-20250606-10301c6b",
-        "date": "2025-06-05T22:53:49+00:00",
+        "tag": "dev-20250613-1c6fe050",
+        "date": "2025-06-13T16:44:39+00:00",
         "commits": [
+            {
+                "sha": "1c6fe050",
+                "message": "Log more data when webhook fails to be parsed or matched to a user. And identify emby clients by version.",
+                "author": "arabcoders",
+                "date": "2025-06-13T16:44:39+00:00",
+                "full_sha": "1c6fe050db47f99a9c3e12f0acc69e7778e8359c"
+            },
+            {
+                "sha": "f83b32f2",
+                "message": "updated packages and clarified some webhooks limitations.",
+                "author": "arabcoders",
+                "date": "2025-06-13T16:44:01+00:00",
+                "full_sha": "f83b32f20265fe85ec8947f3cae9cd5812072996"
+            },
             {
                 "sha": "10301c6b",
                 "message": "minor changelog page and packages updates.",
@@ -11,7 +25,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
+        "full_sha": "1c6fe050db47f99a9c3e12f0acc69e7778e8359c"
     },
     {
         "tag": "dev-20250604-9407bc76",
