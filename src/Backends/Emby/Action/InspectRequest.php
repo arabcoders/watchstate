@@ -7,9 +7,7 @@ namespace App\Backends\Emby\Action;
 use App\Backends\Common\CommonTrait;
 use App\Backends\Common\Context;
 use App\Backends\Common\Response;
-use JsonException;
 use Psr\Http\Message\ServerRequestInterface;
-use RuntimeException;
 
 /**
  * Class InspectRequest
@@ -37,41 +35,24 @@ class InspectRequest
     {
         return $this->tryResponse(
             context: $context,
-            fn: function () use ($request) {
-                $parsed = $request->getParsedBody();
+            fn: function () use ($request, $context) {
+                if (null === ($json = $request->getParsedBody()) || false === is_array($json)) {
+                    return new Response(status: false, response: $request);
+                }
 
                 // -- backwards compatibility for emby 4.8.x
-                if (is_array($parsed) && false !== ag_exists($parsed, 'data')) {
+                if (is_array($json) && false !== ag_exists($json, 'data')) {
                     $payload = ag($request->getParsedBody(), 'data', null);
                     if (empty($payload)) {
                         return new Response(status: false, response: $request);
                     }
-                } else {
-                    $payload = (string)$request->getBody();
+                    $request = $request->withParsedBody($payload);
                 }
 
-                if (empty($payload)) {
-                    return new Response(status: false, response: $request);
-                }
-
-                try {
-                    $json = json_decode(
-                        json: $payload,
-                        associative: true,
-                        flags: JSON_INVALID_UTF8_IGNORE | JSON_THROW_ON_ERROR
-                    );
-
-
-                    if (empty($json)) {
-                        throw new RuntimeException('invalid json content');
-                    }
-
-                    $request = $request->withParsedBody($json);
-                } catch (JsonException|RuntimeException) {
-                    return new Response(status: false, response: $request);
-                }
-
-                if (null === ($json = $request->getParsedBody())) {
+                // -- Due to the fact that Emby doesn't give us an actual user agent, we have to rely on the version
+                // -- number to determine if the request is from Emby.
+                $version = (string)ag($json, 'Server.Version', '0.0.0.0');
+                if (version_compare($version, '4.8.0.0', '<') || version_compare($version, '4.99.0.0', '>')) {
                     return new Response(status: false, response: $request);
                 }
 
@@ -79,7 +60,7 @@ class InspectRequest
                     'backend' => [
                         'id' => ag($json, 'Server.Id', ''),
                         'name' => ag($json, 'Server.Name'),
-                        'client' => 'Emby',
+                        'client' => $context->clientName,
                         'version' => ag($json, 'Server.Version', ''),
                     ],
                     'user' => [

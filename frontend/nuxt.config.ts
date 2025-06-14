@@ -62,7 +62,7 @@ export default defineNuxtConfig({
 
     nitro: {
         output: {
-            publicDir: path.join(__dirname, 'exported')
+            publicDir: path.join(__dirname, 'production' === process.env.NODE_ENV ? 'exported' : 'dist')
         },
         ...extraNitro,
     },
