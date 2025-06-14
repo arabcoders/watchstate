@@ -1,5 +1,47 @@
 [
     {
+        "tag": "master-20250614-e3307c58",
+        "date": "2025-06-14T18:34:38+00:00",
+        "commits": [
+            {
+                "sha": "f16cd63c",
+                "message": "restored backwards compatibility for emby 4.8.x",
+                "author": "arabcoders",
+                "date": "2025-06-13T18:27:15+00:00",
+                "full_sha": "f16cd63c146daa6889fc4b24cf7cb9e0265b58b1"
+            },
+            {
+                "sha": "833d690b",
+                "message": "relax emby version match to 4.8",
+                "author": "arabcoders",
+                "date": "2025-06-13T17:47:58+00:00",
+                "full_sha": "833d690b1b404c8f348655a1956707242b71c70c"
+            },
+            {
+                "sha": "1c6fe050",
+                "message": "Log more data when webhook fails to be parsed or matched to a user. And identify emby clients by version.",
+                "author": "arabcoders",
+                "date": "2025-06-13T16:44:39+00:00",
+                "full_sha": "1c6fe050db47f99a9c3e12f0acc69e7778e8359c"
+            },
+            {
+                "sha": "f83b32f2",
+                "message": "updated packages and clarified some webhooks limitations.",
+                "author": "arabcoders",
+                "date": "2025-06-13T16:44:01+00:00",
+                "full_sha": "f83b32f20265fe85ec8947f3cae9cd5812072996"
+            },
+            {
+                "sha": "10301c6b",
+                "message": "minor changelog page and packages updates.",
+                "author": "arabcoders",
+                "date": "2025-06-05T22:53:49+00:00",
+                "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
+            }
+        ],
+        "full_sha": "e3307c58fe5ce04ec5b509da06f4726fdc033e9a"
+    },
+    {
         "tag": "master-20250604-9407bc76",
         "date": "2025-06-04T18:09:49+00:00",
         "commits": [
