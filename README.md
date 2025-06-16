@@ -11,7 +11,7 @@ box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ### 2025-05-30
 
-The new [webhooks](/guides/webhooks.md) system is now available, please start mirating your systems to use it as, we
+The new [webhooks](/guides/webhooks.md) system is now available, please start migrating your systems to use it as, we
 have deprecated the old webhook system, and it will be removed in the next release. The new system is more robust and
 user-friendly compared to the old one.
 
