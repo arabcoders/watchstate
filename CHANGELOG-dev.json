@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250613-f16cd63c",
-        "date": "2025-06-13T18:27:15+00:00",
+        "tag": "dev-20250617-75725654",
+        "date": "2025-06-17T12:46:47+00:00",
         "commits": [
+            {
+                "sha": "ad19e859",
+                "message": "fix README typo",
+                "author": "Alessandro Spisso",
+                "date": "2025-06-16T20:49:33+00:00",
+                "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
+            },
             {
                 "sha": "f16cd63c",
                 "message": "restored backwards compatibility for emby 4.8.x",
@@ -39,7 +46,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "f16cd63c146daa6889fc4b24cf7cb9e0265b58b1"
+        "full_sha": "757256545df524dd55ecfd9797631ee96b59d144"
     },
     {
         "tag": "dev-20250604-9407bc76",

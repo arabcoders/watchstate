@@ -1,5 +1,19 @@
 [
     {
+        "tag": "master-20250617-75725654",
+        "date": "2025-06-17T12:46:47+00:00",
+        "commits": [
+            {
+                "sha": "ad19e859",
+                "message": "fix README typo",
+                "author": "Alessandro Spisso",
+                "date": "2025-06-16T20:49:33+00:00",
+                "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
+            }
+        ],
+        "full_sha": "757256545df524dd55ecfd9797631ee96b59d144"
+    },
+    {
         "tag": "master-20250614-e3307c58",
         "date": "2025-06-14T18:34:38+00:00",
         "commits": [
