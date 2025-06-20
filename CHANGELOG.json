@@ -1,9 +1,37 @@
 [
   {
-    "tag": "Unreleased (75725654)",
-    "full_sha": "757256545df524dd55ecfd9797631ee96b59d144",
-    "date": "2025-06-17T12:46:47+00:00",
+    "tag": "v0.1.1",
+    "full_sha": "4addaac3dec9eff1d2f75781ae2cd50f86d8b39b",
+    "date": "2025-06-20T16:47:12+00:00",
     "commits": [
+      {
+        "sha": "a1b78599",
+        "full_sha": "a1b7859918d851b242822ff872ae42b6408c400e",
+        "message": "Update external dependencies",
+        "author": "arabcoders",
+        "date": "2025-06-20T16:42:14+00:00"
+      },
+      {
+        "sha": "6991958b",
+        "full_sha": "6991958b5f6b0c247ba59f48d3ae1d0ab9794c62",
+        "message": "convert request.js to ts",
+        "author": "arabcoders",
+        "date": "2025-06-20T16:24:11+00:00"
+      },
+      {
+        "sha": "f74d7851",
+        "full_sha": "f74d78518e0996ae60fb509ca93ac2e8b68d0f83",
+        "message": "switch to semver.",
+        "author": "arabcoders",
+        "date": "2025-06-20T16:12:42+00:00"
+      },
+      {
+        "sha": "e3f48ebd",
+        "full_sha": "e3f48ebdea7adc22641ba8a395a79d867bc786e8",
+        "message": "Add the ability to serve static files from api endpoint.",
+        "author": "arabcoders",
+        "date": "2025-06-20T15:22:04+00:00"
+      },
       {
         "sha": "ad19e859",
         "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678",
