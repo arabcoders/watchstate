@@ -275,10 +275,10 @@
 </template>
 
 <script setup>
-import request from "~/utils/request.js";
-import {notification} from "~/utils/index.js";
-import Message from "~/components/Message.vue";
-import {useStorage} from "@vueuse/core";
+import request from "~/utils/request"
+import {notification} from "~/utils/index"
+import Message from "~/components/Message.vue"
+import {useStorage} from "@vueuse/core"
 
 useHead({title: 'URL Checker'})
 

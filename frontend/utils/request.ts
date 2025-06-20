@@ -1,4 +1,12 @@
-import { useStorage } from "@vueuse/core";
+import {useStorage} from "@vueuse/core"
+
+type PlainHeaders = Record<string, string>
+
+export interface RequestOptions extends Omit<RequestInit, 'headers'> {
+    /** skip the `/v1/api` prefix */
+    no_prefix?: boolean
+    headers?: PlainHeaders // constrain to a plain record
+}
 
 const token = useStorage('token', '')
 const api_user = useStorage('api_user', 'main')
@@ -8,14 +16,19 @@ const api_user = useStorage('api_user', 'main')
  * And prefix the URL with the API URL and path.
  *
  * @param url {string}
- * @param options {RequestInit}
+ * @param options {RequestOptions}
  *
  * @returns {Promise<Response>}
  */
-export default async function request(url, options = {}) {
+export default async function request(url: string, options: RequestOptions = {}): Promise<Response> {
     options = options || {};
     options.method = options.method || 'GET';
     options.headers = options.headers || {};
+
+    const no_prefix = options?.no_prefix || false;
+    if (options?.no_prefix) {
+        delete options.no_prefix;
+    }
 
     if (options.headers['Authorization'] === undefined && token.value) {
         options.headers['Authorization'] = 'Token ' + token.value;
@@ -33,6 +46,6 @@ export default async function request(url, options = {}) {
         options.headers['X-User'] = api_user.value;
     }
 
-    return fetch(`/v1/api${url}`, options);
+    return fetch(no_prefix ? url : `/v1/api${url}`, options);
 }
 
