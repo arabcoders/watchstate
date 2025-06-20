@@ -33,7 +33,6 @@ use Psr\Http\Message\StreamInterface as iStream;
 use Psr\Http\Message\UriInterface as iUri;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
-use Symfony\Component\Process\Process;
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
@@ -823,42 +822,7 @@ if (!function_exists('getAppVersion')) {
      */
     function getAppVersion(): string
     {
-        $version = Config::get('version', 'dev-master');
-
-        if ('$(version_via_ci)' === $version) {
-            try {
-                $gitDir = ROOT_PATH . DIRECTORY_SEPARATOR . '.git' . DIRECTORY_SEPARATOR;
-
-                if (false === is_dir($gitDir)) {
-                    throw new RuntimeException('Git directory not found.');
-                }
-
-                $cmdBranch = 'git -C {cwd} rev-parse --abbrev-ref HEAD';
-                $procBranch = Process::fromShellCommandline(r($cmdBranch, ['cwd' => escapeshellarg($gitDir)]));
-                $procBranch->run();
-                $branch = $procBranch->isSuccessful() ? trim($procBranch->getOutput()) : 'unknown';
-
-                $cmdCommit = 'git -C {cwd} rev-parse --short HEAD';
-                $procCommit = Process::fromShellCommandline(r($cmdCommit, ['cwd' => escapeshellarg($gitDir)]));
-                $procCommit->run();
-                $commit = $procCommit->isSuccessful() ? trim($procCommit->getOutput()) : 'unknown';
-
-                $cmdDate = 'git -C {cwd} show -s --format=%cd --date=format:%Y%m%d HEAD';
-                $procDate = Process::fromShellCommandline(r($cmdDate, ['cwd' => escapeshellarg($gitDir)]));
-                $procDate->run();
-                $commitDate = $procDate->isSuccessful() ? trim($procDate->getOutput()) : date('Ymd');
-
-                return r('{branch}-{date}-{commit}', [
-                    'branch' => $branch,
-                    'date' => $commitDate,
-                    'commit' => $commit,
-                ]);
-            } catch (Throwable) {
-                return 'dev-master';
-            }
-        }
-
-        return $version;
+        return (string)Config::get('version', 'dev-master');
     }
 }
 

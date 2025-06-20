@@ -1,3 +1,18 @@
+<style scoped>
+.logs-container {
+  padding: 1rem;
+  min-width: 100%;
+  max-height: 73vh;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+hr {
+  background-color: unset;
+  border-bottom: 1px solid var(--bulma-grey-light) !important
+}
+</style>
+
 <template>
   <main>
     <div class="mt-1 columns is-multiline">
@@ -27,7 +42,7 @@
             <div class="content p-0 m-0">
               <h1 class="is-4">
                 <span class="icon"><i class="fas fa-code-branch"/></span>
-                {{ formatTag(log) }} <span class="tag has-text-success" v-if="isInstalled(log)">Installed</span>
+                {{ log.tag }} <span class="tag has-text-success" v-if="isInstalled(log)">Installed</span>
               </h1>
               <hr>
               <ul>
@@ -51,42 +66,28 @@
   </main>
 </template>
 
-<script setup>
-import {disableOpacity, enableOpacity, notification} from '~/utils/index'
+<script setup lang="ts">
+import {disableOpacity, enableOpacity} from '~/utils'
 import moment from 'moment'
-import {NuxtLink} from '#components'
 import Message from "~/components/Message.vue"
+import type {changelogs, changeset} from "~/@types/changelogs"
+import type {version} from "~/@types/api/version"
 
 useHead({title: 'CHANGELOG'})
 
 const PROJECT = 'watchstate'
 const REPO = `https://github.com/arabcoders/${PROJECT}`
-const REPO_URL = `https://arabcoders.github.io/${PROJECT}/CHANGELOG-{branch}.json?version={version}`
+const REPO_URL = `https://arabcoders.github.io/${PROJECT}/CHANGELOG.json?version={version}`
 
-const logs = ref([])
-const hashLength = ref(7)
-const api_version = ref('master')
-const isLoading = ref(false)
+const logs = ref<changelogs>([])
+const api_version = ref<string>('dev-master')
+const api_version_sha = ref<string>('unknown')
+const api_version_build = ref<string>('unknown')
+const api_version_branch = ref<string>('unknown')
+const isLoading = ref<boolean>(false)
 
-const branch = computed(() => {
-  const branch = String(api_version.value).split('-')[0] ?? 'master'
-  return ['master', 'dev'].includes(branch) ? branch : 'master'
-})
-
-const formatTag = log => {
-  const parts = log.tag.split('-')
-  if (parts.length < 3) {
-    return log.tag
-  }
-
-  const branch = parts[0]
-  const date = parts[1]
-  const shortSha = log.full_sha.substring(0, hashLength.value)
-  return `${ucFirst(branch)}: ${moment(date, 'YYYYMMDD').format('YYYY-MM-DD')} - ${shortSha}`
-}
-
-const isInstalled = log => {
-  const installed = String(api_version.value).split('-').pop()
+const isInstalled: boolean = (log: changeset) => {
+  const installed = String(api_version_sha.value)
 
   if (log.full_sha.startsWith(installed)) {
     return true
@@ -104,31 +105,27 @@ const isInstalled = log => {
 const loadContent = async () => {
   isLoading.value = true
   try {
-    const q_version = useRoute().query?.version ?? null
-    if (null === q_version) {
-      try {
-        const response = await request('/system/version')
-        const json = await response.json()
-        api_version.value = json.version
-        hashLength.value = json.version.split('-').pop().length
-      } catch (e) {
-        console.error(e)
-        notification('error', 'Error', `Failed to fetch version. ${e.message}`)
-      }
-    } else {
-      console.log(`Using version from query: ${q_version}`)
-      api_version.value = q_version
-      hashLength.value = q_version.split('-').pop().length
-    }
+    const response = await request('/system/version')
+    const json = await response.json() as version
+    api_version.value = json.version
+    api_version_sha.value = json.sha
+    api_version_build.value = json.build
+    api_version_branch.value = json.branch
+
+    await nextTick()
 
     try {
-      await nextTick()
-      const changes = await fetch(REPO_URL.replace('{branch}', branch.value).replace('{version}', api_version.value))
-      logs.value = await changes.json()
+      const changes = await fetch(REPO_URL.replace('{branch}', api_version_branch.value).replace('{version}', api_version.value))
+      logs.value = await changes.json() as changelogs
     } catch (e) {
+      logs.value = await (await request('/system/static/CHANGELOG.json', {method: 'GET'})).json() as changelogs
       console.error(e)
-      notification('error', 'Error', `Failed to fetch changelog. ${e.message}`)
     }
+
+    await nextTick()
+
+    logs.value = logs.value.slice(0, 10)
+
   } finally {
     isLoading.value = false
   }
@@ -138,20 +135,6 @@ onMounted(async () => {
   disableOpacity()
   await loadContent()
 })
+
 onUnmounted(() => enableOpacity())
 </script>
-
-<style scoped>
-.logs-container {
-  padding: 1rem;
-  min-width: 100%;
-  max-height: 73vh;
-  overflow-y: auto;
-  overflow-x: auto;
-}
-
-hr {
-  background-color: unset;
-  border-bottom: 1px solid var(--bulma-grey-light) !important
-}
-</style>
