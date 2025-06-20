@@ -8,6 +8,7 @@ use App\API\Backends\PlexToken;
 use App\API\Player\Index as PlayerIndex;
 use App\API\System\Auth;
 use App\API\System\HealthCheck;
+use App\API\System\StaticFiles;
 use App\Libs\Config;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
@@ -31,6 +32,7 @@ final class AuthorizationMiddleware implements MiddlewareInterface
         Auth::URL,
         PlayerIndex::URL,
         PlexToken::URL,
+        StaticFiles::URL,
     ];
 
     /**

@@ -128,7 +128,7 @@ import {FitAddon} from "@xterm/addon-fit"
 import {useStorage} from '@vueuse/core'
 import {disableOpacity, enableOpacity, notification} from '~/utils/index'
 import Message from '~/components/Message'
-import request from "~/utils/request.js"
+import request from "~/utils/request.ts"
 import {fetchEventSource} from '@microsoft/fetch-event-source'
 
 useHead({title: `Console`})
@@ -246,7 +246,7 @@ const RunCommand = async () => {
       }
 
       const json = await parse_api_response(response)
-      
+
       if (400 === json.error.code) {
         ctrl.abort('finished')
         return

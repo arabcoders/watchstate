@@ -251,7 +251,7 @@ import Message from '~/components/Message'
 import {basename, makeName, notification} from '~/utils/index'
 import {useStorage} from '@vueuse/core'
 import Player from '~/components/Player'
-import request from "~/utils/request.js";
+import request from "~/utils/request"
 
 const route = useRoute()
 

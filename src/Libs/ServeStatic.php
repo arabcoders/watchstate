@@ -34,7 +34,8 @@ final class ServeStatic implements LoggerAwareInterface
     /**
      * @var array<string, string> These files are served from outside the public directory.
      */
-    private const array MD_FILES = [
+    private const array FILES = [
+        '/CHANGELOG.json' => __DIR__ . '/../../frontend/exported/CHANGELOG.json',
         '/README.md' => __DIR__ . '/../../README.md',
         '/NEWS.md' => __DIR__ . '/../../NEWS.md',
         '/FAQ.md' => __DIR__ . '/../../FAQ.md',
@@ -79,8 +80,8 @@ final class ServeStatic implements LoggerAwareInterface
         $staticPath = $this->staticPath;
         $requestPath = $request->getUri()->getPath();
 
-        if (array_key_exists($requestPath, self::MD_FILES)) {
-            return $this->serveFile($request, new SplFileInfo(self::MD_FILES[$requestPath]));
+        if (array_key_exists($requestPath, self::FILES)) {
+            return $this->serveFile($request, new SplFileInfo(self::FILES[$requestPath]));
         }
 
         // -- check if the request path is in the MD_IMAGES array

@@ -22,7 +22,12 @@ return (function () {
 
     $config = [
         'name' => 'WatchState',
-        'version' => '$(version_via_ci)',
+        // -- Handled by the build system.
+        'version' => 'dev-master',
+        'version_sha' => 'unknown',
+        'version_build' => 'unknown',
+        'version_branch' => 'unknown',
+        // -- End handled by the build system.
         'tz' => env('WS_TZ', env('TZ', 'UTC')),
         'path' => fixPath(env('WS_DATA_PATH', fn() => $inContainer ? '/config' : __DIR__ . '/../var')),
         'logs' => [

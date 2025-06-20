@@ -22,16 +22,13 @@ on:
         required: false
         default: false
         type: boolean
-      create_release:
-        description: "Create Release (requires build)"
-        required: false
-        default: false
-        type: boolean
 
   push:
     branches:
       - master
       - dev
+    tags:
+      - "v*"
     paths-ignore:
       - "**.md"
       - ".github/**"
@@ -154,6 +151,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -173,13 +172,33 @@ jobs:
           pnpm install --production --prefer-offline --frozen-lockfile
           pnpm run generate
 
-      - name: Update Version File
-        uses: arabcoders/write-version-to-file@master
-        with:
-          filename: "/config/config.php"
-          placeholder: "$(version_via_ci)"
-          with_date: "true"
-          with_branch: "true"
+      - name: Install GitPython
+        run: pip install gitpython
+
+      - name: Generate CHANGELOG.json
+        run: |
+          python3 .github/scripts/generate_changelog.py -p . -f ./frontend/exported/CHANGELOG.json
+
+      - name: Update config/config.php
+        run: |
+          VERSION="${GITHUB_REF##*/}"
+          SHA=$(git rev-parse HEAD)
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          DATE=$(date -u +"%Y%m%d")
+
+          echo "Current version: ${VERSION}, SHA: ${SHA}, Date: ${DATE}"
+
+          echo "APP_VERSION=${VERSION}"  >> "$GITHUB_ENV"
+          echo "APP_SHA=${SHA}"          >> "$GITHUB_ENV"
+          echo "APP_DATE=${DATE}"        >> "$GITHUB_ENV"
+            echo "APP_BRANCH=${BRANCH}"    >> "$GITHUB_ENV"
+
+          sed -i \
+          -e "s/'version' => 'dev-master'/'version' => '${VERSION}'/" \
+          -e "s/'version_sha' => 'unknown'/'version_sha' => '${SHA}'/" \
+          -e "s/'version_build' => 'unknown'/'version_build' => '${DATE}'/" \
+          -e "s/'version_branch' => 'unknown'/'version_branch' => '${BRANCH}'/" \
+          config/config.php
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -195,10 +214,9 @@ jobs:
             ${{ env.DOCKERHUB_SLUG }}
             ${{ env.GHCR_SLUG }}
           tags: |
-            type=raw,value=latest,enable=${{ endsWith(github.ref, github.event.repository.default_branch) }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
             type=ref,event=branch
             type=ref,event=tag
-            type=raw,value={{branch}}{{base_ref}}-{{date 'YYYYMMDD'}}-{{sha}}
           flavor: |
             latest=false
 
@@ -226,17 +244,55 @@ jobs:
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}
 
-      - name: Version tag
-        uses: arabcoders/action-python-autotagger@master
+      - name: Overwrite GitHub release notes
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/github-script@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          repo_name: arabcoders/watchstate
-          path: config/config.php
-          regex: "'version'\\s\\=\\>\\s\\'(.+?)\\'\\,"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+
+            const latestRelease = await github.rest.repos.listReleases({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+
+            const release = latestRelease.data.find(r => r.tag_name === tag);
+            if (!release) {
+              core.setFailed(`Release with tag ${tag} not found`);
+              return;
+            }
+
+            const { data: commits } = await github.rest.repos.compareCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              base: latestRelease.data[1]?.tag_name || '', // fallback to second latest tag
+              head: tag,
+            });
+
+            const changelog = commits.commits.map(
+              c => `- ${c.sha.substring(0, 7)} ${c.commit.message.split('\n')[0]} by ${c.commit.author.name}`
+            ).join('\n');
+
+            if (!changelog) {
+              core.setFailed('No commits found for the changelog');
+              return;
+            }
+
+            console.log(`Changelog for ${tag}:\n${changelog}`);
+
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: release.id,
+              body: changelog
+            });
 
   dockerhub-sync-readme:
     runs-on: ubuntu-latest
-    if: (github.event_name == 'push' && endsWith(github.ref, github.event.repository.default_branch)) || (github.event_name == 'workflow_dispatch' && github.event.inputs.update_readme == 'true')
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.update_readme == 'true')
+    permissions:
+      contents: read
     steps:
       - name: Sync README
         uses: docker://lsiodev/readme-sync:latest

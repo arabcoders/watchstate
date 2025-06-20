@@ -263,7 +263,11 @@
           <NuxtLink :to="changelog_url" v-text="'CHANGELOG'"/>
         </div>
         <div class="column is-6 is-4-mobile has-text-right">
-          {{ api_version }} - <a href="https://github.com/arabcoders/watchstate" target="_blank">WatchState</a>
+          <span v-tooltip="`Build Date: ${api_version_date}, Branch: ${api_version_branch}, commit: ${api_version_sha}`"
+                v-if="api_version" class="has-tooltip">
+            {{ api_version }}
+          </span>
+          - <a href="https://github.com/arabcoders/watchstate" target="_blank">WatchState</a>
         </div>
       </div>
 
@@ -305,6 +309,9 @@ const bg_opacity = useStorage('bg_opacity', 0.95)
 const api_user = useStorage('api_user', 'main')
 
 const api_version = ref()
+const api_version_sha = ref()
+const api_version_date = ref()
+const api_version_branch = ref()
 const bgImage = ref({src: '', type: ''})
 const loadedImages = ref({poster: '', background: ''})
 
@@ -396,6 +403,9 @@ const getVersion = async () => {
     const response = await request('/system/version')
     const json = await response.json()
     api_version.value = json.version
+    api_version_sha.value = json.sha
+    api_version_date.value = json.build
+    api_version_branch.value = json.branch
     in_container.value = Boolean(json.container)
   } catch (e) {
     return 'Unknown'

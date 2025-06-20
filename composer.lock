@@ -133,16 +133,16 @@
     },
     {
       "name": "halaxa/json-machine",
-      "version": "1.2.3",
+      "version": "1.2.4",
       "source": {
         "type": "git",
         "url": "https://github.com/halaxa/json-machine.git",
-        "reference": "58fb6e97c53c3341bb1f3685b8bdbeedf3f9616c"
+        "reference": "ca1e2fc61d3596655e5480e192ef30ad67478ad4"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/halaxa/json-machine/zipball/58fb6e97c53c3341bb1f3685b8bdbeedf3f9616c",
-        "reference": "58fb6e97c53c3341bb1f3685b8bdbeedf3f9616c",
+        "url": "https://api.github.com/repos/halaxa/json-machine/zipball/ca1e2fc61d3596655e5480e192ef30ad67478ad4",
+        "reference": "ca1e2fc61d3596655e5480e192ef30ad67478ad4",
         "shasum": ""
       },
       "require": {
@@ -183,7 +183,7 @@
       "description": "Efficient, easy-to-use and fast JSON pull parser",
       "support": {
         "issues": "https://github.com/halaxa/json-machine/issues",
-        "source": "https://github.com/halaxa/json-machine/tree/1.2.3"
+        "source": "https://github.com/halaxa/json-machine/tree/1.2.4"
       },
       "funding": [
         {
@@ -191,7 +191,7 @@
           "type": "other"
         }
       ],
-      "time": "2025-05-30T12:36:04+00:00"
+      "time": "2025-06-16T07:42:34+00:00"
     },
     {
       "name": "laravel/serializable-closure",
@@ -3107,16 +3107,16 @@
     },
     {
       "name": "phpunit/php-code-coverage",
-      "version": "11.0.9",
+      "version": "11.0.10",
       "source": {
         "type": "git",
         "url": "https://github.com/sebastianbergmann/php-code-coverage.git",
-        "reference": "14d63fbcca18457e49c6f8bebaa91a87e8e188d7"
+        "reference": "1a800a7446add2d79cc6b3c01c45381810367d76"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/14d63fbcca18457e49c6f8bebaa91a87e8e188d7",
-        "reference": "14d63fbcca18457e49c6f8bebaa91a87e8e188d7",
+        "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/1a800a7446add2d79cc6b3c01c45381810367d76",
+        "reference": "1a800a7446add2d79cc6b3c01c45381810367d76",
         "shasum": ""
       },
       "require": {
@@ -3173,15 +3173,27 @@
       "support": {
         "issues": "https://github.com/sebastianbergmann/php-code-coverage/issues",
         "security": "https://github.com/sebastianbergmann/php-code-coverage/security/policy",
-        "source": "https://github.com/sebastianbergmann/php-code-coverage/tree/11.0.9"
+        "source": "https://github.com/sebastianbergmann/php-code-coverage/tree/show"
       },
       "funding": [
         {
           "url": "https://github.com/sebastianbergmann",
           "type": "github"
+        },
+        {
+          "url": "https://liberapay.com/sebastianbergmann",
+          "type": "liberapay"
+        },
+        {
+          "url": "https://thanks.dev/u/gh/sebastianbergmann",
+          "type": "thanks_dev"
+        },
+        {
+          "url": "https://tidelift.com/funding/github/packagist/phpunit/php-code-coverage",
+          "type": "tidelift"
         }
       ],
-      "time": "2025-02-25T13:26:39+00:00"
+      "time": "2025-06-18T08:56:18+00:00"
     },
     {
       "name": "phpunit/php-file-iterator",
@@ -3430,16 +3442,16 @@
     },
     {
       "name": "phpunit/phpunit",
-      "version": "11.5.23",
+      "version": "11.5.24",
       "source": {
         "type": "git",
         "url": "https://github.com/sebastianbergmann/phpunit.git",
-        "reference": "86ebcd8a3dbcd1857d88505109b2a2b376501cde"
+        "reference": "6b07ab1047155cf38f82dd691787a277782271dd"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/86ebcd8a3dbcd1857d88505109b2a2b376501cde",
-        "reference": "86ebcd8a3dbcd1857d88505109b2a2b376501cde",
+        "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/6b07ab1047155cf38f82dd691787a277782271dd",
+        "reference": "6b07ab1047155cf38f82dd691787a277782271dd",
         "shasum": ""
       },
       "require": {
@@ -3453,7 +3465,7 @@
         "phar-io/manifest": "^2.0.4",
         "phar-io/version": "^3.2.1",
         "php": ">=8.2",
-        "phpunit/php-code-coverage": "^11.0.9",
+        "phpunit/php-code-coverage": "^11.0.10",
         "phpunit/php-file-iterator": "^5.1.0",
         "phpunit/php-invoker": "^5.0.1",
         "phpunit/php-text-template": "^4.0.1",
@@ -3511,7 +3523,7 @@
       "support": {
         "issues": "https://github.com/sebastianbergmann/phpunit/issues",
         "security": "https://github.com/sebastianbergmann/phpunit/security/policy",
-        "source": "https://github.com/sebastianbergmann/phpunit/tree/11.5.23"
+        "source": "https://github.com/sebastianbergmann/phpunit/tree/11.5.24"
       },
       "funding": [
         {
@@ -3535,7 +3547,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2025-06-13T05:47:49+00:00"
+      "time": "2025-06-20T11:31:02+00:00"
     },
     {
       "name": "psalm/phar",
@@ -3578,12 +3590,12 @@
       "source": {
         "type": "git",
         "url": "https://github.com/Roave/SecurityAdvisories.git",
-        "reference": "5a31a1cd05b9114408f90c6cb35f65e9db6ea79d"
+        "reference": "e3520a4c9a252831ae009f8bf79a8d2a32ba4936"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/5a31a1cd05b9114408f90c6cb35f65e9db6ea79d",
-        "reference": "5a31a1cd05b9114408f90c6cb35f65e9db6ea79d",
+        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/e3520a4c9a252831ae009f8bf79a8d2a32ba4936",
+        "reference": "e3520a4c9a252831ae009f8bf79a8d2a32ba4936",
         "shasum": ""
       },
       "conflict": {
@@ -3691,7 +3703,7 @@
         "co-stack/fal_sftp": "<0.2.6",
         "cockpit-hq/cockpit": "<2.7|==2.7",
         "codeception/codeception": "<3.1.3|>=4,<4.1.22",
-        "codeigniter/framework": "<3.1.9",
+        "codeigniter/framework": "<3.1.10",
         "codeigniter4/framework": "<4.5.8",
         "codeigniter4/shield": "<1.0.0.0-beta8",
         "codiad/codiad": "<=2.8.4",
@@ -3877,6 +3889,7 @@
         "guzzlehttp/oauth-subscriber": "<0.8.1",
         "guzzlehttp/psr7": "<1.9.1|>=2,<2.4.5",
         "haffner/jh_captcha": "<=2.1.3|>=3,<=3.0.2",
+        "handcraftedinthealps/goodby-csv": "<1.4.3",
         "harvesthq/chosen": "<1.8.7",
         "helloxz/imgurl": "<=2.31",
         "hhxsv5/laravel-s": "<3.7.36",
@@ -3939,7 +3952,7 @@
         "joyqi/hyper-down": "<=2.4.27",
         "jsdecena/laracom": "<2.0.9",
         "jsmitty12/phpwhois": "<5.1",
-        "juzaweb/cms": "<=3.4",
+        "juzaweb/cms": "<=3.4.2",
         "jweiland/events2": "<8.3.8|>=9,<9.0.6",
         "jweiland/kk-downloader": "<1.2.2",
         "kazist/phpwhois": "<=4.2.6",
@@ -4166,7 +4179,7 @@
         "processwire/processwire": "<=3.0.229",
         "propel/propel": ">=2.0.0.0-alpha1,<=2.0.0.0-alpha7",
         "propel/propel1": ">=1,<=1.7.1",
-        "pterodactyl/panel": "<1.11.8",
+        "pterodactyl/panel": "<=1.11.10",
         "ptheofan/yii2-statemachine": ">=2.0.0.0-RC1-dev,<=2",
         "ptrofimov/beanstalk_console": "<1.7.14",
         "pubnub/pubnub": "<6.1",
@@ -4523,7 +4536,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2025-06-13T15:05:43+00:00"
+      "time": "2025-06-19T20:06:27+00:00"
     },
     {
       "name": "sebastian/cli-parser",

@@ -1,125 +1,107 @@
 #!/usr/bin/env python3
 
-import git
 import argparse
 import json
-from datetime import datetime, timezone
+import sys
+from datetime import UTC, datetime
+
+try:
+    import git  # type: ignore
+except ImportError:
+    print("Please install GitPython: pip install GitPython", file=sys.stderr)  # noqa: T201
+    sys.exit(1)
 
 
-def get_tags(repo, branch_name):
-    """Returns sorted tags by date, filtered by branch name."""
-    tags = [tag for tag in repo.tags if tag.name.startswith(branch_name)]
-    # Sort tags in reverse chronological order based on the tag commit's date.
-    tags = sorted(tags, key=lambda t: t.commit.committed_datetime, reverse=True)
-    return tags
+def get_sorted_tags(repo):
+    """Returns all tags sorted by their commit date (newest first)."""
+    return sorted(repo.tags, key=lambda t: t.commit.committed_datetime, reverse=True)
 
 
-def get_commits_between(repo, start_commit, end_commit):
-    """Get commit objects between two commits (excluding merges)."""
-    commits = list(repo.iter_commits(f"{start_commit}..{end_commit}", no_merges=True))
-    return commits
+def get_commits_between(repo, start, end):
+    """Return commits between two refs (no merges)."""
+    return list(repo.iter_commits(f"{start}..{end}", no_merges=True))
 
 
-def format_tag(tag, branch_name):
-    """Formats the tag as 'branch-YYYYMMDD-shortsha'."""
-    commit_date = datetime.fromtimestamp(
-        tag.commit.committed_date, timezone.utc
-    ).strftime("%Y%m%d")
-    commit_hash = tag.commit.hexsha[:8]  # Short commit hash
-    return f"{branch_name}-{commit_date}-{commit_hash}"
-
-
-def generate_changelog(repo_path, changelog_path, branch_name):
+def generate_changelog(repo_path, changelog_path):
     repo = git.Repo(repo_path)
-    tags = get_tags(repo, branch_name)
-    changelog_data = []
+    tags = get_sorted_tags(repo)
+    changelog = []
 
     if not tags:
-        # No tags exist: output an "Initial Release" entry covering the entire history.
-        start_commit = repo.commit(repo.git.rev_list("--max-parents=0", "HEAD"))
-        commits = get_commits_between(repo, start_commit.hexsha, "HEAD")
-        date_str = datetime.now(timezone.utc).isoformat()
-        release_entry = {"tag": "Initial Release", "date": date_str, "commits": []}
-        for commit in commits:
-            commit_entry = {
-                "sha": commit.hexsha[:8],
-                "message": commit.message.strip(),
-                "author": commit.author.name,
-                "date": commit.committed_datetime.astimezone(timezone.utc).isoformat(),
+        start = repo.commit(repo.git.rev_list("--max-parents=0", "HEAD"))
+        commits = get_commits_between(repo, start.hexsha, "HEAD")
+        changelog.append(
+            {
+                "tag": "Initial Release",
+                "date": datetime.now(UTC).isoformat(),
+                "commits": [
+                    {
+                        "sha": c.hexsha[:8],
+                        "full_sha": c.hexsha,
+                        "message": c.message.strip(),
+                        "author": c.author.name,
+                        "date": c.committed_datetime.astimezone(UTC).isoformat(),
+                    }
+                    for c in commits
+                ],
             }
-            release_entry["commits"].append(commit_entry)
-        changelog_data.append(release_entry)
+        )
     else:
-        # Process each pair of tags (newer tag and the one immediately older).
         for i in range(len(tags) - 1):
-            newer_tag = tags[i]
-            older_tag = tags[i + 1]
-            commits = get_commits_between(
-                repo, older_tag.commit.hexsha, newer_tag.commit.hexsha
-            )
+            newer, older = tags[i], tags[i + 1]
+            commits = get_commits_between(repo, older.commit.hexsha, newer.commit.hexsha)
             if not commits:
                 continue
-            date_str = newer_tag.commit.committed_datetime.astimezone(timezone.utc).isoformat()
-            formatted_tag = format_tag(newer_tag, branch_name)
-            release_entry = {"tag": formatted_tag, "date": date_str, "commits": []}
-            for commit in commits:
-                commit_entry = {
-                    "sha": commit.hexsha[:8],
-                    "message": commit.message.strip(),
-                    "author": commit.author.name,
-                    "date": commit.committed_datetime.astimezone(timezone.utc).isoformat(),
+            changelog.append(
+                {
+                    "tag": newer.name,
+                    "full_sha": newer.commit.hexsha,
+                    "date": newer.commit.committed_datetime.astimezone(UTC).isoformat(),
+                    "commits": [
+                        {
+                            "sha": c.hexsha[:8],
+                            "full_sha": c.hexsha,
+                            "message": c.message.strip(),
+                            "author": c.author.name,
+                            "date": c.committed_datetime.astimezone(UTC).isoformat(),
+                        }
+                        for c in commits
+                    ],
                 }
-                release_entry["commits"].append(commit_entry)
-            changelog_data.append(release_entry)
-
-        # If HEAD is ahead of the most recent tag, add a changelog entry for commits from the latest tag to HEAD.
-        head_commit = repo.head.commit
-        if head_commit.hexsha != tags[0].commit.hexsha:
-            commits = get_commits_between(
-                repo, tags[0].commit.hexsha, head_commit.hexsha
             )
-            if commits:
-                date_str = head_commit.committed_datetime.astimezone(timezone.utc).isoformat()
-                # Generate a tag for HEAD using its commit info.
-                formatted_tag = f"{branch_name}-{head_commit.committed_datetime.strftime('%Y%m%d')}-{head_commit.hexsha[:8]}"
-                release_entry = {"tag": formatted_tag, "date": date_str, "commits": []}
-                for commit in commits:
-                    commit_entry = {
-                        "sha": commit.hexsha[:8],
-                        "message": commit.message.strip(),
-                        "author": commit.author.name,
-                        "date": commit.committed_datetime.astimezone(timezone.utc).isoformat(),
-                    }
-                    release_entry["commits"].append(commit_entry)
-                # Insert this entry at the beginning since it is the most recent.
-                changelog_data.insert(0, release_entry)
 
-    # Write the changelog data as a JSON file.
+        # Add HEAD -> latest tag if ahead
+        head = repo.head.commit
+        if head.hexsha != tags[0].commit.hexsha:
+            commits = get_commits_between(repo, tags[0].commit.hexsha, head.hexsha)
+            if commits:
+                changelog.insert(
+                    0,
+                    {
+                        "tag": f"Unreleased ({head.hexsha[:8]})",
+                        "full_sha": head.hexsha,
+                        "date": head.committed_datetime.astimezone(UTC).isoformat(),
+                        "commits": [
+                            {
+                                "sha": c.hexsha[:8],
+                                "full_sha": c.hexsha,
+                                "message": c.message.strip(),
+                                "author": c.author.name,
+                                "date": c.committed_datetime.astimezone(UTC).isoformat(),
+                            }
+                            for c in commits
+                        ],
+                    },
+                )
+
     with open(changelog_path, "w", encoding="utf-8") as f:
-        json.dump(changelog_data, f, indent=4)
+        json.dump(changelog, f, indent=2)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Generate a changelog from git history and output JSON."
-    )
-    parser.add_argument(
-        "--repo_path", "-p", type=str, help="Path to the git repository", default="."
-    )
-    parser.add_argument(
-        "--changelog_path",
-        "-f",
-        type=str,
-        default="./CHANGELOG.json",
-        help="Path to the output JSON file (default: ./CHANGELOG.json)",
-    )
-    parser.add_argument(
-        "--branch_name",
-        "-b",
-        type=str,
-        default="master",
-        help="Branch name to filter tags (default: master)",
-    )
+    parser = argparse.ArgumentParser(description="Generate CHANGELOG.json from Git tags.")
+    parser.add_argument("--repo_path", "-p", default=".", help="Path to git repo")
+    parser.add_argument("--changelog_path", "-f", default="CHANGELOG.json", help="Output file path")
     args = parser.parse_args()
 
-    generate_changelog(args.repo_path, args.changelog_path, args.branch_name)
+    generate_changelog(args.repo_path, args.changelog_path)
