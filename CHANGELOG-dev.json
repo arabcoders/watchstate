@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250620-a1b78599",
-        "date": "2025-06-20T16:42:14+00:00",
+        "tag": "dev-20250629-34e476aa",
+        "date": "2025-06-29T15:44:43+00:00",
         "commits": [
+            {
+                "sha": "34e476aa",
+                "message": "external packages update",
+                "author": "arabcoders",
+                "date": "2025-06-29T15:44:43+00:00",
+                "full_sha": "34e476aa4dba4c8ee078099ee84f4d7c1bb0b3ce"
+            },
             {
                 "sha": "a1b78599",
                 "message": "Update external dependencies",
@@ -74,7 +81,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "a1b7859918d851b242822ff872ae42b6408c400e"
+        "full_sha": "34e476aa4dba4c8ee078099ee84f4d7c1bb0b3ce"
     },
     {
         "tag": "dev-20250604-9407bc76",
