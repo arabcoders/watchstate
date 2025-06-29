@@ -47,7 +47,7 @@ final class GetUserToken
     public function __invoke(Context $context, int|string $userId, string $username, array $opts = []): Response
     {
         if (true === (bool)ag($opts, Options::PLEX_EXTERNAL_USER, false)) {
-            $fn = fn() => $this->GetExternalUserToken($context, $userId, $username, $opts);
+            $fn = fn() => $this->GetExternalUserToken($context, $userId, $username);
         } else {
             $fn = fn() => $this->getUserToken($context, $userId, $username, $opts);
         }
@@ -56,7 +56,7 @@ final class GetUserToken
     }
 
     /**
-     * Request accesstoken from plex.tv api.
+     * Request access-token from plex.tv api.
      *
      * @param Context $context
      * @param int|string $userId
@@ -84,11 +84,9 @@ final class GetUserToken
                 'url' => (string)$url,
             ]);
 
-            $response = $this->request(Method::POST, $url, Status::CREATED, $context, [
-                'headers' => [
-                    'Accept' => 'application/json',
-                ],
-            ], $opts);
+            $response = $this->request(Method::POST, $url, Status::CREATED, $context, array_replace_recursive([
+                'headers' => ['Accept' => 'application/json'],
+            ], $opts));
 
             if (true === ($response instanceof Response)) {
                 return $response;
@@ -228,7 +226,7 @@ final class GetUserToken
     }
 
     /**
-     * Get external user accesstoken.
+     * Get external user access-token.
      *
      * @param Context $context
      * @param int|string $userId
@@ -259,7 +257,7 @@ final class GetUserToken
         return new Response(
             status: false,
             error: new Error(
-                message: "Failed to generate '{user}@{backend}'. '{userId}:{username}' accesstoken.",
+                message: "Failed to generate '{user}@{backend}'. '{userId}:{username}' access-token.",
                 context: [
                     'user' => $context->userContext->name,
                     'backend' => $context->backendName,
