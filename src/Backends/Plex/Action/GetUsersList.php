@@ -73,7 +73,7 @@ final class GetUsersList
             $cls = fn() => $this->getExternalUsers($context, $opts);
             return true === (bool)ag($opts, Options::NO_CACHE) ? $cls() : $this->tryCache(
                 $context,
-                $context->backendName . '_external_users_' . md5(json_encode($opts)),
+                $context->backendName . '_' . $context->backendId . '_external_users_' . md5(json_encode($opts)),
                 $cls,
                 new DateInterval('PT5M'),
                 $this->logger
@@ -84,7 +84,7 @@ final class GetUsersList
 
         $data = true === (bool)ag($opts, Options::NO_CACHE) ? $cls() : $this->tryCache(
             $context,
-            $context->backendName . '_users_' . md5(json_encode($opts)),
+            $context->backendName . '_' . $context->backendId . '_users_' . md5(json_encode($opts)),
             $cls,
             new DateInterval('PT5M'),
             $this->logger
@@ -231,7 +231,7 @@ final class GetUsersList
             );
         }
 
-        return $this->processUsersTokens($users, $context, $url, $response);
+        return $this->externalUsersTokens($users, $context, $url, $response);
     }
 
     /**
@@ -305,7 +305,7 @@ final class GetUsersList
      * @throws iException if an error occurs during the request.
      * @throws JsonException if an error occurs during the JSON parsing.
      */
-    private function processUsersTokens(array $users, Context $context, iUri $url, iResponse $response): Response
+    private function externalUsersTokens(array $users, Context $context, iUri $url, iResponse $response): Response
     {
         if (count($users) < 1) {
             return new Response(status: true, response: $users);
@@ -438,6 +438,9 @@ final class GetUsersList
                 }
 
                 $data['token'] = $tokenRequest->isSuccessful() ? $tokenRequest->response : null;
+                if (true === $tokenRequest->hasError()) {
+                    $data['token_error'] = ag($tokenRequest->error->extra, 'error', $tokenRequest->error->format());
+                }
             }
 
             $list[] = $data;
@@ -479,7 +482,7 @@ final class GetUsersList
 
         if (null !== ($pin = ag($context->options, Options::PLEX_USER_PIN))) {
             parse_str($url->getQuery(), $query);
-            $url = $url->withQuery(http_build_query(['pin' => $pin, ...$query,]));
+            $url = $url->withQuery(http_build_query(['pin' => $pin, ...$query]));
         }
 
         $response = $this->http->request(ag($opts, 'method', 'GET'), (string)$url, [

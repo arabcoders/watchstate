@@ -84,6 +84,8 @@ final class GetUserToken
                 'url' => (string)$url,
             ]);
 
+            $opts['user_info'] = ['username' => $username];
+
             $response = $this->request(Method::POST, $url, Status::CREATED, $context, array_replace_recursive([
                 'headers' => ['Accept' => 'application/json'],
             ], $opts));
@@ -124,13 +126,13 @@ final class GetUserToken
                 'url' => (string)$url,
             ]);
 
-            $response = $this->request(Method::GET, $url, Status::OK, $context, [
+            $response = $this->request(Method::GET, $url, Status::OK, $context, array_replace_recursive([
                 'no_admin' => true,
                 'headers' => [
                     'Accept' => 'application/json',
                     'X-Plex-Token' => $tempToken,
                 ],
-            ]);
+            ], $opts));
 
             $json = json_decode(
                 json: $response->getContent(),
@@ -328,22 +330,27 @@ final class GetUserToken
         return new Response(
             status: false,
             error: new Error(
-                message: "Request to '{user}@{backend}' to grant access token returned with unexpected '{status_code}' status code. {tokenType}{extra_msg}",
+                message: "Request to '{user}@{backend}' to grant access token for '{user_id}' returned with unexpected '{status_code}' status code. {tokenType}{extra_msg}",
                 context: [
                     'user' => $context->userContext->name,
                     'backend' => $context->backendName,
+                    'user_id' => ag($opts, 'user_info.user_id', '??'),
                     'status_code' => $response->getStatusCode(),
                     'body' => $response->getContent(false),
                     'parsed' => $response->toArray(false),
                     'extra_msg' => !$extra_msg ? '' : ". $extra_msg",
+                    'url' => (string)$url,
                     'tokenType' => ag_exists(
                         $context->options,
                         Options::ADMIN_TOKEN
                     ) ? 'user & admin token' : 'user token',
                     'response' => $response,
                 ],
-                level: Levels::ERROR
-            )
+                level: Levels::ERROR,
+                extra: [
+                    'error' => "Failed to get token"
+                ],
+            ),
         );
     }
 }
