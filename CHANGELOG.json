@@ -1,5 +1,26 @@
 [
   {
+    "tag": "Unreleased (bbd4ad69)",
+    "full_sha": "bbd4ad69483ac267b7233ba51d9e430e3d7c219c",
+    "date": "2025-07-01T15:09:55+00:00",
+    "commits": [
+      {
+        "sha": "f007b8a0",
+        "full_sha": "f007b8a0cba674c02466897c5a0196ff4d786a24",
+        "message": "Possible fix for #694",
+        "author": "arabcoders",
+        "date": "2025-06-30T18:54:33+00:00"
+      },
+      {
+        "sha": "34e476aa",
+        "full_sha": "34e476aa4dba4c8ee078099ee84f4d7c1bb0b3ce",
+        "message": "external packages update",
+        "author": "arabcoders",
+        "date": "2025-06-29T15:44:43+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v0.1.1",
     "full_sha": "4addaac3dec9eff1d2f75781ae2cd50f86d8b39b",
     "date": "2025-06-20T16:47:12+00:00",
