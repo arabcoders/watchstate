@@ -264,6 +264,7 @@
                       <option value="" disabled>Select User</option>
                       <option v-for="user in users" :key="'uid-' + user.id" :value="user.id">
                         {{ user.name }}
+                        <template v-if="user?.token_error"> - {{ user.token_error }}</template>
                       </option>
                     </select>
                   </div>
@@ -761,6 +762,18 @@ onMounted(async () => {
   supported.value = await (await request('/system/supported')).json()
   backend.value.type = supported.value[0]
 })
+
+watch(stage, v => {
+  if (v < 3) {
+    users.value = []
+    backend.value.user = ''
+  }
+  if (v < 1) {
+    servers.value = []
+    backend.value.uuid = ''
+    backend.value.url = ''
+  }
+});
 
 const changeStep = async () => {
   let _

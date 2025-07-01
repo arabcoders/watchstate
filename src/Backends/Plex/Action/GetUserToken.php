@@ -47,7 +47,7 @@ final class GetUserToken
     public function __invoke(Context $context, int|string $userId, string $username, array $opts = []): Response
     {
         if (true === (bool)ag($opts, Options::PLEX_EXTERNAL_USER, false)) {
-            $fn = fn() => $this->GetExternalUserToken($context, $userId, $username, $opts);
+            $fn = fn() => $this->GetExternalUserToken($context, $userId, $username);
         } else {
             $fn = fn() => $this->getUserToken($context, $userId, $username, $opts);
         }
@@ -56,7 +56,7 @@ final class GetUserToken
     }
 
     /**
-     * Request accesstoken from plex.tv api.
+     * Request access-token from plex.tv api.
      *
      * @param Context $context
      * @param int|string $userId
@@ -84,11 +84,11 @@ final class GetUserToken
                 'url' => (string)$url,
             ]);
 
-            $response = $this->request(Method::POST, $url, Status::CREATED, $context, [
-                'headers' => [
-                    'Accept' => 'application/json',
-                ],
-            ], $opts);
+            $opts['user_info'] = ['username' => $username];
+
+            $response = $this->request(Method::POST, $url, Status::CREATED, $context, array_replace_recursive([
+                'headers' => ['Accept' => 'application/json'],
+            ], $opts));
 
             if (true === ($response instanceof Response)) {
                 return $response;
@@ -126,13 +126,13 @@ final class GetUserToken
                 'url' => (string)$url,
             ]);
 
-            $response = $this->request(Method::GET, $url, Status::OK, $context, [
+            $response = $this->request(Method::GET, $url, Status::OK, $context, array_replace_recursive([
                 'no_admin' => true,
                 'headers' => [
                     'Accept' => 'application/json',
                     'X-Plex-Token' => $tempToken,
                 ],
-            ]);
+            ], $opts));
 
             $json = json_decode(
                 json: $response->getContent(),
@@ -228,7 +228,7 @@ final class GetUserToken
     }
 
     /**
-     * Get external user accesstoken.
+     * Get external user access-token.
      *
      * @param Context $context
      * @param int|string $userId
@@ -259,7 +259,7 @@ final class GetUserToken
         return new Response(
             status: false,
             error: new Error(
-                message: "Failed to generate '{user}@{backend}'. '{userId}:{username}' accesstoken.",
+                message: "Failed to generate '{user}@{backend}'. '{userId}:{username}' access-token.",
                 context: [
                     'user' => $context->userContext->name,
                     'backend' => $context->backendName,
@@ -330,22 +330,27 @@ final class GetUserToken
         return new Response(
             status: false,
             error: new Error(
-                message: "Request to '{user}@{backend}' to grant access token returned with unexpected '{status_code}' status code. {tokenType}{extra_msg}",
+                message: "Request to '{user}@{backend}' to grant access token for '{user_id}' returned with unexpected '{status_code}' status code. {tokenType}{extra_msg}",
                 context: [
                     'user' => $context->userContext->name,
                     'backend' => $context->backendName,
+                    'user_id' => ag($opts, 'user_info.user_id', '??'),
                     'status_code' => $response->getStatusCode(),
                     'body' => $response->getContent(false),
                     'parsed' => $response->toArray(false),
                     'extra_msg' => !$extra_msg ? '' : ". $extra_msg",
+                    'url' => (string)$url,
                     'tokenType' => ag_exists(
                         $context->options,
                         Options::ADMIN_TOKEN
                     ) ? 'user & admin token' : 'user token',
                     'response' => $response,
                 ],
-                level: Levels::ERROR
-            )
+                level: Levels::ERROR,
+                extra: [
+                    'error' => "Failed to get token"
+                ],
+            ),
         );
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Backends\Common;
 
 use App\Libs\Container;
+use App\Libs\Options;
 use DateInterval;
 use Psr\Log\LoggerInterface as iLogger;
 use Throwable;
@@ -87,6 +88,9 @@ trait CommonTrait
         try {
             $cache = $context->cache->getInterface();
             $cacheKey = $context->backendName . '_' . $key;
+            if (true === ag_exists($context->options, Options::PLEX_USER_PIN)) {
+                $cacheKey = $cacheKey . '_with_pin';
+            }
 
             if (true === $cache->has($cacheKey)) {
                 $logger?->debug("{client} Cache hit for key '{backend}: {key}'.", [
@@ -97,7 +101,6 @@ trait CommonTrait
                 return $cache->get($cacheKey);
             }
         } catch (\Psr\SimpleCache\InvalidArgumentException) {
-            /** @noinspection PhpConditionAlreadyCheckedInspection */
             $logger?->error("{client} Failed to retrieve cached data for '{backend}: {key}'.", [
                 'client' => $context->clientName,
                 'backend' => $context->backendName,
