@@ -197,11 +197,11 @@ final readonly class Path
 
         //-- Windows: preserve drive letter or UNC prefix
         $prefix = '';
-        if (str_starts_with(PHP_OS, 'WIN')) {
-            if (1 === preg_match('/^[a-zA-Z]:\\/', $path, $m)) {
+        if (true === str_starts_with(PHP_OS, 'WIN')) {
+            if (1 === preg_match('/^[a-zA-Z]:\\\\/', $path, $m)) {
                 $prefix = $m[0];
                 $path = substr($path, strlen($prefix));
-            } elseif (1 === preg_match('/^\\\\[^\\]+\\[^\\]+/', $path, $m)) {
+            } elseif (1 === preg_match('/^\\\\\\\\[^\\\\]+\\\\[^\\\\]+/', $path, $m)) {
                 $prefix = $m[0];
                 $path = substr($path, strlen($prefix));
             }
