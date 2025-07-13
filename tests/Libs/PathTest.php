@@ -6,6 +6,7 @@ namespace Tests\Libs;
 
 use App\Libs\Path;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 class PathTest extends TestCase
 {
@@ -121,7 +122,7 @@ class PathTest extends TestCase
     {
         $sub_dir = Path::make($this->tmpDir)->joinPath('sub_dir');
         $sub_dir->mkdir();
-        $this->expectException(\RuntimeException::class, 'Should throw if mkdir on existing dir');
+        $this->expectException(RuntimeException::class);
         $sub_dir->mkdir();
     }
 
@@ -137,7 +138,7 @@ class PathTest extends TestCase
     public function test_UnlinkThrowsIfNotFile(): void
     {
         $dir = Path::make($this->tmpDir);
-        $this->expectException(\RuntimeException::class, 'Should throw if unlink on dir');
+        $this->expectException(RuntimeException::class);
         $dir->unlink();
     }
 
@@ -161,7 +162,7 @@ class PathTest extends TestCase
     public function test_ReadTextThrowsIfNotFile(): void
     {
         $dir = Path::make($this->tmpDir);
-        $this->expectException(\RuntimeException::class, 'Should throw if read on dir');
+        $this->expectException(RuntimeException::class);
         $dir->read();
     }
 
@@ -286,7 +287,7 @@ class PathTest extends TestCase
     {
         $file = Path::make($this->tmpDir)->joinPath('file.txt');
         $file->write('abc');
-        $this->expectException(\RuntimeException::class, 'Should throw if iterDir on file');
+        $this->expectException(RuntimeException::class);
         $file->iterDir();
     }
 
@@ -294,7 +295,7 @@ class PathTest extends TestCase
     {
         $file = Path::make($this->tmpDir)->joinPath('file.txt');
         $file->write('abc');
-        $this->expectException(\RuntimeException::class, 'Should throw if iterDir on file');
+        $this->expectException(RuntimeException::class);
         $file->iterDir();
     }
 
@@ -348,7 +349,7 @@ class PathTest extends TestCase
     public function testUnlinkThrowsOnDir(): void
     {
         $dir = Path::make($this->tmpDir);
-        $this->expectException(\RuntimeException::class, 'Should throw if unlink on dir');
+        $this->expectException(RuntimeException::class);
         $dir->unlink();
     }
 
@@ -356,14 +357,14 @@ class PathTest extends TestCase
     {
         $file = Path::make($this->tmpDir)->joinPath('file.txt');
         $file->write('abc');
-        $this->expectException(\RuntimeException::class, 'Should throw if rmdir on file');
+        $this->expectException(RuntimeException::class);
         $file->rmdir();
     }
 
     public function testChmodThrows(): void
     {
         $path = Path::make('/nonexistent/path');
-        $this->expectException(\RuntimeException::class, 'Should throw if chmod fails');
+        $this->expectException(RuntimeException::class);
         $path->chmod(0644);
     }
 
@@ -445,7 +446,7 @@ class PathTest extends TestCase
         $file->write('abc');
         $rel = $file->relativeTo($base);
         $this->assertSame('foo.txt', (string)$rel, 'relativeTo should return relative path');
-        $this->expectException(\RuntimeException::class, 'Should throw if relativeTo fails');
+        $this->expectException(RuntimeException::class);
         $file->relativeTo('/nonexistent');
     }
 
@@ -495,7 +496,7 @@ class PathTest extends TestCase
     public function test_virtual_property_exception(): void
     {
         $file = Path::make($this->tmpDir)->joinPath('foo.txt');
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         /** @noinspection PhpUndefinedFieldInspection */
         $file->unknown_property;
     }
