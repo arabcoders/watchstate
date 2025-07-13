@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Libs;
 
+use App\Libs\Config;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Extends\LogMessageProcessor;
@@ -793,7 +794,7 @@ class StateEntityTest extends TestCase
             'When metadata watched is false, shouldMarkAsUnplayed() returns false'
         );
 
-        // -- Condition 7: metadata added date not equal to updated.
+        // -- Condition 7: metadata added date not equal to the updated date.
         $data = $this->testMovie;
         $data[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_META_DATA_ADDED_AT] = 124;
         $this->assertFalse(
@@ -1057,6 +1058,102 @@ class StateEntityTest extends TestCase
         $this->assertSame([],
             $entity->getPointers(),
             'When array keys are json decode fails, getPointers() should returns empty array'
+        );
+    }
+
+    public function test_episode_guid_disabled(): void
+    {
+        $data = $this->testEpisode;
+        $entity = new StateEntity($data);
+
+        Config::save('guid.disable.episode', true);
+        $this->assertFalse($entity->hasGuids(), 'hasGuids() returns false when episode GUIDs are disabled');
+        $this->assertSame(
+            [],
+            $entity->getGuids(),
+            'getGuids() returns empty array when episode GUIDs are disabled.'
+        );
+        $this->assertSame(
+            [],
+            $entity->getPointers(),
+            'getPointers() returns empty array when episode GUIDs are disabled.'
+        );
+
+        Config::save('guid.disable.episode', false);
+        $this->assertTrue(
+            $entity->hasGuids(),
+            'hasGuids() returns true when episode GUIDs are enabled and entity has GUIDs'
+        );
+        $this->assertSame(
+            $data[iState::COLUMN_GUIDS],
+            $entity->getGuids(),
+            'getGuids() returns all GUIDs when episode GUIDs are enabled.',
+        );
+        $this->assertCount(
+            count($data[iState::COLUMN_GUIDS]),
+            $entity->getPointers(),
+            'getPointers() Should return the same number of GUIDs as pointers.',
+        );
+    }
+
+    public function test_removeMetadata()
+    {
+        $data = $this->testMovie;
+        $entity = new StateEntity($data);
+
+        $this->assertCount(
+            1,
+            $entity->getMetadata(),
+            'When entity is created, getMetadata() returns metadata for the via'
+        );
+        $this->assertSame(
+            $data[iState::COLUMN_META_DATA][$entity->via],
+            $entity->getMetadata($entity->via),
+            'getMetadata() returns metadata for the via'
+        );
+
+        $returned = $entity->removeMetadata('non_existing');
+        $this->assertSame(
+            [],
+            $returned,
+            'When removeMetadata() is called with non-existing via, it returns empty array'
+        );
+
+        $returned = $entity->removeMetadata($entity->via);
+        $this->assertCount(
+            0,
+            $entity->getMetadata(),
+            'When removeMetadata() is called, getMetadata() returns empty array'
+        );
+        $this->assertSame(
+            [],
+            $entity->getMetadata($entity->via),
+            'When removeMetadata() is called, getMetadata() for the via returns empty array'
+        );
+        $this->assertSame(
+            $data[iState::COLUMN_META_DATA][$entity->via],
+            $returned,
+            'When removeMetadata() is called, it returns the removed metadata for the via'
+        );
+    }
+
+    public function test_isSynced()
+    {
+        $entity = new StateEntity($this->testMovie);
+        $this->assertSame(
+            [
+                $entity->via => (bool)$entity->watched,
+            ],
+            $entity->isSynced([$entity->via]),
+            'When isSynced() is called with backend, it returns true if watched status matches the metadata'
+        );
+
+        $this->assertSame(
+            [
+                'non_existing' => null,
+            ],
+            $entity->isSynced(['non_existing']),
+            'When isSynced() is called with non-existing via, it returns null for that backend'
         );
     }
 }

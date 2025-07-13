@@ -154,6 +154,10 @@ class ImportCommand extends Command
             $mapperOpts[Options::DRY_RUN] = true;
         }
 
+        if (true === (bool)Config::get('guid.disable.episode', false)) {
+            $this->logger->notice("Mapper: Matching episodes via GUID is disabled.");
+        }
+
         if ($input->getOption('trace')) {
             $mapperOpts[Options::DEBUG_TRACE] = true;
             $dbOpts[Options::DEBUG_TRACE] = true;

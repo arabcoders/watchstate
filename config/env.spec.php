@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Last update: 2024-05-10
+ * Last update: 2025-07-13
  *
  * This file contains the environment variables that are supported by the application.
  * All keys MUST start with WS_ and be in UPPERCASE and use _ as a separator.
@@ -310,6 +310,11 @@ return (function () {
             },
             'mask' => true,
             'protected' => true,
+        ],
+        [
+            'key' => 'WS_GUID_DISABLE_EPISODE',
+            'description' => 'Enable this option to disable matching episodes by GUIDs and rely on relative GUIDs to match.',
+            'type' => 'bool',
         ],
     ];
 

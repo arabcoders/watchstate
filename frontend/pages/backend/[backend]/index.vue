@@ -174,7 +174,7 @@
 <script setup>
 import moment from 'moment'
 import Message from '~/components/Message'
-import {formatDuration, makeName, notification, TOOLTIP_DATE_FORMAT} from '~/utils/index'
+import {formatDuration, makeName, TOOLTIP_DATE_FORMAT} from '~/utils/index'
 
 const backend = ref(useRoute().params.backend)
 const bHistory = ref([])
@@ -200,12 +200,9 @@ const loadRecentHistory = async () => {
       return
     }
 
-    if (200 !== response.status && 404 !== response.status) {
-      notification('error', 'Error loading data', `${json.error.code}: ${json.error.message}`);
-      return
+    if (response.ok) {
+      bHistory.value = json.history
     }
-
-    bHistory.value = json.history
   } catch (e) {
   }
 };
