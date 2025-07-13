@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250713-45d61a1d",
-        "date": "2025-07-13T15:47:14+00:00",
+        "tag": "dev-20250714-aec20b86",
+        "date": "2025-07-13T23:08:43+00:00",
         "commits": [
+            {
+                "sha": "aec20b86",
+                "message": "Added Path to handle pathing logic.",
+                "author": "arabcoders",
+                "date": "2025-07-13T23:08:43+00:00",
+                "full_sha": "aec20b86468163a2725b50d3647bd754361cf78a"
+            },
             {
                 "sha": "45d61a1d",
                 "message": "Re-implemented a way to disable matching via episodes GUIDs.",
@@ -95,7 +102,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "45d61a1d9bbe64baafe3d976102d14220f54d16d"
+        "full_sha": "aec20b86468163a2725b50d3647bd754361cf78a"
     },
     {
         "tag": "dev-20250604-9407bc76",
