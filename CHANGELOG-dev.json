@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250714-aec20b86",
-        "date": "2025-07-13T23:08:43+00:00",
+        "tag": "dev-20250714-8cb2d9fa",
+        "date": "2025-07-13T23:11:51+00:00",
         "commits": [
+            {
+                "sha": "8cb2d9fa",
+                "message": "Fixes some expectations",
+                "author": "arabcoders",
+                "date": "2025-07-13T23:11:51+00:00",
+                "full_sha": "8cb2d9fac73891f1a74a125ce753f4368941e133"
+            },
             {
                 "sha": "aec20b86",
                 "message": "Added Path to handle pathing logic.",
@@ -102,7 +109,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "aec20b86468163a2725b50d3647bd754361cf78a"
+        "full_sha": "8cb2d9fac73891f1a74a125ce753f4368941e133"
     },
     {
         "tag": "dev-20250604-9407bc76",
