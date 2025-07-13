@@ -257,6 +257,10 @@ final class StateEntity implements iState
      */
     public function hasGuids(): bool
     {
+        if (iState::TYPE_EPISODE === $this->type && true === (bool)Config::get('guid.disable.episode', false)) {
+            return false;
+        }
+
         $list = array_intersect_key($this->guids, Guid::getSupported());
 
         return count($list) >= 1;
@@ -267,6 +271,10 @@ final class StateEntity implements iState
      */
     public function getGuids(): array
     {
+        if (iState::TYPE_EPISODE === $this->type && true === (bool)Config::get('guid.disable.episode', false)) {
+            return [];
+        }
+
         return $this->guids;
     }
 
@@ -275,6 +283,10 @@ final class StateEntity implements iState
      */
     public function getPointers(array|null $guids = null): array
     {
+        if (iState::TYPE_EPISODE === $this->type && true === (bool)Config::get('guid.disable.episode', false)) {
+            return [];
+        }
+
         return Guid::fromArray(payload: array_intersect_key($this->guids, Guid::getSupported()), context: [
             'backend' => $this->via,
             'backend_id' => ag($this->getMetadata($this->via), iState::COLUMN_ID),
@@ -721,7 +733,6 @@ final class StateEntity implements iState
     public function isSynced(array $backends): array
     {
         $match = [];
-
 
         foreach ($backends as $backend) {
             if (null === ag($this->metadata, $backend)) {

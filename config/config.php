@@ -97,6 +97,9 @@ return (function () {
     $config['guid'] = [
         'version' => '0.0',
         'file' => fixPath(env('WS_GUID_FILE', ag($config, 'path') . '/config/guid.yaml')),
+        'disable' => [
+            'episode' => (bool)env('WS_GUID_DISABLE_EPISODE', false),
+        ],
     ];
 
     $config['backends_file'] = fixPath(env('WS_BACKENDS_FILE', ag($config, 'path') . '/config/servers.yaml'));

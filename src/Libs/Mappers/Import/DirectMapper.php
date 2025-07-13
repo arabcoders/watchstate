@@ -1117,11 +1117,23 @@ class DirectMapper implements ImportInterface
     protected function getPointer(iState $entity): iState|int|string|bool
     {
         if (null !== $entity->id && null !== ($this->objects[$entity->id] ?? null)) {
+            if (true === $this->inTraceMode()) {
+                $this->logger->debug("Matched via Direct id for '{type}:{name}'.", [
+                    'name' => $entity->getName(),
+                    'type' => $entity->type
+                ]);
+            }
             return $entity->id;
         }
 
         foreach ($entity->getRelativePointers() as $key) {
             if (null !== ($this->pointers[$key] ?? null)) {
+                if (true === $this->inTraceMode()) {
+                    $this->logger->debug("Matched Via rGUID '{type}:{name}'.", [
+                        'name' => $entity->getName(),
+                        'type' => $entity->type
+                    ]);
+                }
                 return $this->pointers[$key];
             }
         }
@@ -1129,6 +1141,12 @@ class DirectMapper implements ImportInterface
         foreach ($entity->getPointers() as $key) {
             $lookup = $key . '/' . $entity->type;
             if (null !== ($this->pointers[$lookup] ?? null)) {
+                if (true === $this->inTraceMode()) {
+                    $this->logger->debug("Matched Via GUID '{type}: {name}'.", [
+                        'name' => $entity->getName(),
+                        'type' => $entity->type
+                    ]);
+                }
                 return $this->pointers[$lookup];
             }
         }
@@ -1180,9 +1198,6 @@ class DirectMapper implements ImportInterface
     private function shouldProgressUpdate(iState $old, iState $new, array $opts = []): bool
     {
         if (true === (bool)ag($opts, Options::IMPORT_METADATA_ONLY, false)) {
-            if (true === $this->inTraceMode()) {
-                $this->logger?->info('only metadata updates allowed.');
-            }
             return false;
         }
 
@@ -1195,21 +1210,9 @@ class DirectMapper implements ImportInterface
 
         if (true === $new->isWatched() && $allowUpdate < $minThreshold) {
             if (true === $this->inTraceMode()) {
-                $this->logger?->info('play progress update not allowed. threshold is too low.');
+                $this->logger->info('play progress update not allowed. threshold is too low.');
             }
             return false;
-        }
-
-        if (true === $this->inTraceMode()) {
-            $message = "{mapper}: '{user}@{backend}' - '#{id}: {title}' Is {not}marked for progress update.";
-            $this->logger->info($message, [
-                'mapper' => afterLast(self::class, '\\'),
-                'user' => $this->userContext?->name ?? 'main',
-                'backend' => $new->via,
-                'id' => $old->id ?? 'New',
-                'title' => $old->getName(),
-                'not' => $playChanged ? '' : 'not ',
-            ]);
         }
 
         return $playChanged;
