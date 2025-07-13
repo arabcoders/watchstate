@@ -1,8 +1,15 @@
 [
     {
-        "tag": "master-20250701-bbd4ad69",
-        "date": "2025-07-01T15:09:55+00:00",
+        "tag": "master-20250713-51305d76",
+        "date": "2025-07-13T15:53:42+00:00",
         "commits": [
+            {
+                "sha": "45d61a1d",
+                "message": "Re-implemented a way to disable matching via episodes GUIDs.",
+                "author": "arabcoders",
+                "date": "2025-07-13T15:47:14+00:00",
+                "full_sha": "45d61a1d9bbe64baafe3d976102d14220f54d16d"
+            },
             {
                 "sha": "f007b8a0",
                 "message": "Possible fix for #694",
@@ -53,7 +60,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "bbd4ad69483ac267b7233ba51d9e430e3d7c219c"
+        "full_sha": "51305d769f647c30fbfdfd4da005a3047d658f05"
     },
     {
         "tag": "master-20250614-e3307c58",
