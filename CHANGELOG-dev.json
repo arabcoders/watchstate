@@ -1,8 +1,22 @@
 [
     {
-        "tag": "dev-20250714-283f78bd",
-        "date": "2025-07-13T23:18:25+00:00",
+        "tag": "dev-20250721-f8256fc5",
+        "date": "2025-07-21T14:32:22+00:00",
         "commits": [
+            {
+                "sha": "f8256fc5",
+                "message": "Minor fixes for Path class",
+                "author": "arabcoders",
+                "date": "2025-07-21T14:32:22+00:00",
+                "full_sha": "f8256fc5d5463bee067ba51c218f0b371019c83c"
+            },
+            {
+                "sha": "945aaa88",
+                "message": "In rare cases, jellyfin doesn't reset the PlaybackPositionTicks",
+                "author": "arabcoders",
+                "date": "2025-07-21T14:32:07+00:00",
+                "full_sha": "945aaa88e2ee7ebe86cc6649ba07c035d4f6f98d"
+            },
             {
                 "sha": "283f78bd",
                 "message": "Fixed incorrect normalizing path in windows",
@@ -116,7 +130,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "283f78bd979378596cb47a42822bdeb8336bc264"
+        "full_sha": "f8256fc5d5463bee067ba51c218f0b371019c83c"
     },
     {
         "tag": "dev-20250604-9407bc76",
