@@ -332,6 +332,14 @@ class RestoreCommand extends Command
         }
 
         foreach ($this->queue->getQueue() as $response) {
+            if (true === (bool)ag($response->getInfo('user_data'), Options::NO_LOGGING, false)) {
+                try {
+                    $response->getStatusCode();
+                } catch (Throwable) {
+                }
+                continue;
+            }
+
             $context = ag($response->getInfo('user_data'), 'context', []);
             $context['backend'] = $name;
             $context['user'] = $userContext->name;

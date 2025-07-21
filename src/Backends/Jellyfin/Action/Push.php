@@ -264,12 +264,9 @@ class Push
                     ])
                 );
 
+                $lastPlayed = makeDate($entity->updated)->format(Date::ATOM);
                 if ($context->clientName === JFC::CLIENT_NAME) {
-                    $url = $url->withQuery(
-                        http_build_query([
-                            'DatePlayed' => makeDate($entity->updated)->format(Date::ATOM)
-                        ])
-                    );
+                    $url = $url->withQuery(http_build_query(['DatePlayed' => $lastPlayed]));
                 }
 
                 $logContext['remote']['url'] = (string)$url;
@@ -293,6 +290,31 @@ class Push
                             ])
                         )
                     );
+
+                    /**
+                     * A workaround for some API limitations,
+                     * Jellyfin: sometimes doesn't reset the `PlaybackPositionTicks`.
+                     * Emby: Doesn't support sending `LastPlayedDate` in the initial request.
+                     */
+                    if (true === $entity->isWatched()) {
+                        $queue->add(
+                            $this->http->request(
+                                method: Method::POST,
+                                url: (string)$context->backendUrl->withPath(r('/Users/{user}/Items/{id}/UserData', [
+                                    'user' => $context->backendUser,
+                                    'id' => ag($json, 'Id')
+                                ])),
+                                options: $context->backendHeaders + [
+                                    'json' => [
+                                        'Played' => true,
+                                        'PlaybackPositionTicks' => 0,
+                                        'LastPlayedDate' => $lastPlayed,
+                                    ],
+                                    'user_data' => [Options::NO_LOGGING => true]
+                                ]
+                            )
+                        );
+                    }
                 }
             } catch (Throwable $e) {
                 $this->logger->error(

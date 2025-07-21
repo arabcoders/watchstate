@@ -72,7 +72,7 @@ final readonly class ProcessPushEvent
             'via' => $item->via,
             'title' => $item->getName(),
         ]);
-        
+
         $options = $e->getOptions();
         $list = [];
         $supported = Config::get('supported', []);
@@ -186,6 +186,13 @@ final readonly class ProcessPushEvent
         ]);
 
         foreach ($this->queue->getQueue() as $response) {
+            if (true === (bool)ag($response->getInfo('user_data'), Options::NO_LOGGING, false)) {
+                try {
+                    $response->getStatusCode();
+                } catch (Throwable) {
+                }
+                continue;
+            }
             $context = ag($response->getInfo('user_data'), 'context', []);
             $context['user'] = $user;
 

@@ -11,6 +11,7 @@ use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Extends\RetryableHttpClient;
 use App\Libs\Extends\StreamLogHandler;
 use App\Libs\LogSuppressor;
@@ -475,11 +476,20 @@ class ExportCommand extends Command
                     ]);
 
                     foreach ($this->queue->getQueue() as $response) {
+                        if (true === (bool)ag($response->getInfo('user_data'), Options::NO_LOGGING, false)) {
+                            try {
+                                $response->getStatusCode();
+                            } catch (Throwable) {
+                            }
+                            continue;
+                        }
+
                         $context = ag($response->getInfo('user_data'), 'context', []);
                         $context['user'] = $userContext->name;
 
                         try {
-                            if (200 !== ($statusCode = $response->getStatusCode())) {
+                            $statusCode = $response->getStatusCode();
+                            if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
                                 $this->logger->error(
                                     "Request to change '{user}@{backend}' '{item.title}' play state returned with unexpected '{status_code}' status code.",
                                     [
