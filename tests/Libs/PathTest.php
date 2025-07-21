@@ -514,12 +514,49 @@ class PathTest extends TestCase
 
     public function test_normalizePath_public_windows(): void
     {
+        // Regular Windows path
         $winPath = Path::make('C:\foo\bar\..\baz\.\qux');
         $normalized = $winPath->normalize('C:\foo\bar\..\baz\.\qux', '\\');
         $this->assertSame(
             'C:\foo\baz\qux',
             (string)$normalized,
             'Public normalize should normalize Windows path correctly'
+        );
+
+        // UNC path with ..
+        $unc1 = Path::make('\\\\server\\share\\folder\\..\\file.txt');
+        $normalized1 = $unc1->normalize('\\\\server\\share\\folder\\..\\file.txt', '\\');
+        $this->assertSame(
+            '\\\\server\\share\\file.txt',
+            (string)$normalized1,
+            'Normalize should correctly handle UNC path with ..'
+        );
+
+        // UNC path with .
+        $unc2 = Path::make('\\\\server\\share\\.\\dir\\file.txt');
+        $normalized2 = $unc2->normalize('\\\\server\\share\\.\\dir\\file.txt', '\\');
+        $this->assertSame(
+            '\\\\server\\share\\dir\\file.txt',
+            (string)$normalized2,
+            'Normalize should correctly handle UNC path with .'
+        );
+
+        // UNC path with multiple .. going up
+        $unc3 = Path::make('\\\\server\\share\\dir1\\dir2\\..\\..\\file');
+        $normalized3 = $unc3->normalize('\\\\server\\share\\dir1\\dir2\\..\\..\\file', '\\');
+        $this->assertSame(
+            '\\\\server\\share\\file',
+            (string)$normalized3,
+            'Normalize should handle multiple .. correctly in UNC path'
+        );
+
+        // UNC path with redundant slashes
+        $unc4 = Path::make('\\\\server\\share\\\\nested\\\\\\dir\\\\');
+        $normalized4 = $unc4->normalize('\\\\server\\share\\\\nested\\\\\\dir\\\\', '\\');
+        $this->assertSame(
+            '\\\\server\\share\\nested\\dir',
+            (string)$normalized4,
+            'Normalize should collapse redundant slashes in UNC path'
         );
     }
 

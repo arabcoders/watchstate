@@ -182,47 +182,65 @@ final readonly class Path
      *
      * @return Path A new Path object with the normalized path.
      */
+    /**
+     * Normalizes the path to its absolute, canonical form.
+     *
+     * @param string|Path $path The path to normalize.
+     * @param string $separator The directory separator (default: DIRECTORY_SEPARATOR).
+     *
+     * @return Path A new Path object with the normalized path.
+     */
     public function normalize(string|Path $path, string $separator = DIRECTORY_SEPARATOR): Path
     {
         $path = (string)$path;
         $isAbsolute = str_starts_with($path, $separator);
 
-        //-- if exists, simply use PHP's realpath, it doesn't work for non-existing paths.
+        // Use realpath if the file exists
         if (false !== ($rp = realpath($path))) {
             return new self($rp);
         }
 
-        //-- Replace all / and \ with the system separator
+        // Normalize all separators to the current system's
         $path = str_replace(['/', '\\'], $separator, $path);
 
-        //-- Windows: preserve drive letter or UNC prefix
         $prefix = '';
-        if (true === str_starts_with(PHP_OS, 'WIN')) {
-            if (1 === preg_match('/^[a-zA-Z]:\\\\/', $path, $m)) {
-                $prefix = $m[0];
-                $path = substr($path, strlen($prefix));
-            } elseif (1 === preg_match('/^\\\\\\\\[^\\\\]+\\\\[^\\\\]+/', $path, $m)) {
-                $prefix = $m[0];
-                $path = substr($path, strlen($prefix));
-            }
+
+        // Detect drive letter (e.g., C:\...)
+        if (1 === preg_match('/^[a-zA-Z]:\\\\/', $path, $m)) {
+            $prefix = $m[0];
+            $path = substr($path, strlen($prefix));
+        } // Detect UNC path (e.g., \\server\share)
+        elseif (1 === preg_match('/^\\\\\\\\[^\\\\]+\\\\[^\\\\]+/', $path, $m)) {
+            $prefix = $m[0];
+            $path = substr($path, strlen($prefix));
         }
 
+        // Split and resolve segments
         $parts = array_filter(explode($separator, $path), fn($p) => $p !== '' && $p !== '.');
         $stack = [];
+
         foreach ($parts as $part) {
-            if ('..' === $part) {
+            if ($part === '..') {
                 array_pop($stack);
             } else {
                 $stack[] = $part;
             }
         }
 
+        // Ensure trailing separator on prefix if necessary
+        if ($prefix !== '' && !str_ends_with($prefix, $separator)) {
+            $prefix .= $separator;
+        }
+
         $normalized = $prefix . implode($separator, $stack);
 
-        if ($isAbsolute && false === str_starts_with($normalized, $separator)) {
+        // Add leading separator for absolute paths without prefix (e.g., \foo\bar)
+        if ($prefix === '' && $isAbsolute && !str_starts_with($normalized, $separator)) {
             $normalized = $separator . ltrim($normalized, $separator);
         }
-        return new self('' === $normalized ? ($prefix ?: $separator) : $normalized);
+
+        // Return fallback if normalization produced an empty string
+        return new self($normalized === '' ? ($prefix ?: $separator) : $normalized);
     }
 
     /**
