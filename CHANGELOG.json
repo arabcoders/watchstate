@@ -1,5 +1,47 @@
 [
   {
+    "tag": "Unreleased (1a8c5bb2)",
+    "full_sha": "1a8c5bb2642a89f1d45af96bf6cb9b3852db6b81",
+    "date": "2025-07-21T16:09:11+00:00",
+    "commits": [
+      {
+        "sha": "f8256fc5",
+        "full_sha": "f8256fc5d5463bee067ba51c218f0b371019c83c",
+        "message": "Minor fixes for Path class",
+        "author": "arabcoders",
+        "date": "2025-07-21T14:32:22+00:00"
+      },
+      {
+        "sha": "945aaa88",
+        "full_sha": "945aaa88e2ee7ebe86cc6649ba07c035d4f6f98d",
+        "message": "In rare cases, jellyfin doesn't reset the PlaybackPositionTicks",
+        "author": "arabcoders",
+        "date": "2025-07-21T14:32:07+00:00"
+      },
+      {
+        "sha": "283f78bd",
+        "full_sha": "283f78bd979378596cb47a42822bdeb8336bc264",
+        "message": "Fixed incorrect normalizing path in windows",
+        "author": "arabcoders",
+        "date": "2025-07-13T23:18:25+00:00"
+      },
+      {
+        "sha": "8cb2d9fa",
+        "full_sha": "8cb2d9fac73891f1a74a125ce753f4368941e133",
+        "message": "Fixes some expectations",
+        "author": "arabcoders",
+        "date": "2025-07-13T23:11:51+00:00"
+      },
+      {
+        "sha": "aec20b86",
+        "full_sha": "aec20b86468163a2725b50d3647bd754361cf78a",
+        "message": "Added Path to handle pathing logic.",
+        "author": "arabcoders",
+        "date": "2025-07-13T23:08:43+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v0.1.3",
     "full_sha": "51305d769f647c30fbfdfd4da005a3047d658f05",
     "date": "2025-07-13T15:53:42+00:00",
