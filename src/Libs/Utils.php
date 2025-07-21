@@ -453,23 +453,49 @@ if (!function_exists('isSchedulerRunning')) {
             return ['status' => false, 'message' => $e->getMessage()];
         }
 
-        $statusFile = r('/proc/{pid}/status', ['pid' => $pid]);
-        if (false === file_exists($statusFile)) {
-            return [
-                'status' => false,
-                'restartable' => true,
-                'message' => r("Found PID '{pid}' in file, but it seems the process is not active.", ['pid' => $pid])
-            ];
-        }
+        if (true === str_starts_with(PHP_OS, 'WIN')) {
+            // Use tasklist to check if the process is running
+            $output = [];
+            $iPid = (int)$pid;
+            exec("tasklist /FI \"PID eq {$iPid}\"", $output);
+            $found = false;
+            foreach ($output as $line) {
+                if (true === str_contains($line, $pid)) {
+                    $found = true;
+                    break;
+                }
+            }
 
-        // Check for zombie status
-        $statusContent = Stream::make($statusFile, 'r')->getContents();
-        if (0 !== preg_match('/^State:\s+Z\s+\(zombie\)/m', $statusContent)) {
-            return [
-                'status' => false,
-                'restartable' => true,
-                'message' => r("Found PID '{pid}', but it is a zombie. Restart the process.", ['pid' => $pid])
-            ];
+            if (false === $found) {
+                return [
+                    'status' => false,
+                    'restartable' => true,
+                    'message' => r(
+                        "Found PID '{pid}' in file, but it seems the process is not active.",
+                        ['pid' => $pid]
+                    )
+                ];
+            }
+        } else {
+            $statusFile = r('/proc/{pid}/status', ['pid' => $pid]);
+            if (false === file_exists($statusFile)) {
+                return [
+                    'status' => false,
+                    'restartable' => true,
+                    'message' => r("Found PID '{pid}' in file, but it seems the process is not active.", ['pid' => $pid]
+                    )
+                ];
+            }
+
+            // Check for zombie status
+            $statusContent = Stream::make($statusFile, 'r')->getContents();
+            if (0 !== preg_match('/^State:\s+Z\s+\(zombie\)/m', $statusContent)) {
+                return [
+                    'status' => false,
+                    'restartable' => true,
+                    'message' => r("Found PID '{pid}', but it is a zombie. Restart the process.", ['pid' => $pid])
+                ];
+            }
         }
 
         return [
