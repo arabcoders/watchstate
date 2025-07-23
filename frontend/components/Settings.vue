@@ -69,13 +69,21 @@
             <label class="label is-unselectable">Color scheme</label>
             <div class="control">
               <label for="auto" class="radio">
-                <input id="auto" type="radio" v-model="webui_theme" value="auto"> System Default
+                <input id="auto" type="radio" v-model="webui_theme" value="auto">
+                <span class="icon">
+                  <i class="fa-solid fa-circle-half-stroke"/>
+                </span>
+                Auto
               </label>
               <label for="light" class="radio">
-                <input id="light" type="radio" v-model="webui_theme" value="light"> Light
+                <input id="light" type="radio" v-model="webui_theme" value="light">
+                <span class="has-text-warning-80 icon"><i class="fa-solid fa-sun"/></span>
+                <span>Light</span>
               </label>
               <label for="dark" class="radio">
-                <input id="dark" type="radio" v-model="webui_theme" value="dark"> Dark
+                <input id="dark" type="radio" v-model="webui_theme" value="dark">
+                <span class="icon"><i class="fa-solid fa-moon"/></span>
+                Dark
               </label>
             </div>
             <p class="help is-unselectable ">
