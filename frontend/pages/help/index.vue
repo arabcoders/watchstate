@@ -37,11 +37,11 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 
 useHead({title: 'WatchState Guides'})
 
-const choices = [
+const choices: Array<{ number: number, title: string, text: string, url?: string }> = [
   {
     number: 1,
     title: 'One-way sync',
@@ -64,7 +64,7 @@ const choices = [
     number: 4,
     title: 'Creating Sub-users',
     text: 'Guide on how to create and use sub-users.',
-    url: null
+    url: '/help/sub-users',
   },
   {
     number: 5,
@@ -78,5 +78,5 @@ const choices = [
     text: 'The old and deprecated webhooks system.',
     url: '/help/webhooks-legacy',
   },
-]
+];
 </script>
