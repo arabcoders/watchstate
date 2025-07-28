@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250723-d32250d5",
-        "date": "2025-07-23T13:12:00+00:00",
+        "tag": "dev-20250728-a0409f74",
+        "date": "2025-07-28T08:37:42+00:00",
         "commits": [
+            {
+                "sha": "a0409f74",
+                "message": "Update the last played date during progress update.",
+                "author": "arabcoders",
+                "date": "2025-07-28T08:37:42+00:00",
+                "full_sha": "a0409f744bd9f007d61768bfe61220219bf2fb29"
+            },
             {
                 "sha": "d32250d5",
                 "message": "Added the missing sub-users guide page.",
@@ -137,7 +144,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "d32250d554ba7a940c1f0ecd0450018b486efc53"
+        "full_sha": "a0409f744bd9f007d61768bfe61220219bf2fb29"
     },
     {
         "tag": "dev-20250604-9407bc76",
