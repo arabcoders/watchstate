@@ -15,6 +15,7 @@ use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Exceptions\Backends\RuntimeException;
+use App\Libs\Extends\Date;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use DateTimeInterface;
@@ -258,6 +259,7 @@ class Progress
                                 ],
                                 'json' => [
                                     'PlaybackPositionTicks' => (string)floor($entity->getPlayProgress() * 1_00_00),
+                                    'LastPlayedDate' => makeDate($senderDate)->format(Date::ATOM),
                                 ],
                                 'user_data' => [
                                     'id' => $key,
