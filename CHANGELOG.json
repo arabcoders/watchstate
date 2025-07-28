@@ -1,9 +1,16 @@
 [
   {
-    "tag": "Unreleased (12f70934)",
-    "full_sha": "12f709340b00a64a204111ea64a502b0f2430c3e",
-    "date": "2025-07-24T08:10:33+00:00",
+    "tag": "Unreleased (8605026f)",
+    "full_sha": "8605026fe5fa7f7e03173ea1bf7d39d33b71f36d",
+    "date": "2025-07-28T17:57:08+00:00",
     "commits": [
+      {
+        "sha": "a0409f74",
+        "full_sha": "a0409f744bd9f007d61768bfe61220219bf2fb29",
+        "message": "Update the last played date during progress update.",
+        "author": "arabcoders",
+        "date": "2025-07-28T08:37:42+00:00"
+      },
       {
         "sha": "d32250d5",
         "full_sha": "d32250d554ba7a940c1f0ecd0450018b486efc53",
