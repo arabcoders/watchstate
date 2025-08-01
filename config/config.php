@@ -334,9 +334,9 @@ return (function () {
             ValidateCommand::TASK_NAME => [
                 'command' => ValidateCommand::ROUTE,
                 'name' => ValidateCommand::TASK_NAME,
-                'info' => 'Validate stored backends reference id against the backends.',
-                'enabled' => (bool)env('WS_CRON_VALIDATE', true),
-                'timer' => $checkTaskTimer((string)env('WS_CRON_VALIDATE_AT', '0 4 */14 * *'), '0 4 */14 * *'),
+                'info' => 'Validate stored backends reference id against the backends. This task is expensive and should only run on demand.',
+                'enabled' => (bool)env('WS_CRON_VALIDATE', false),
+                'timer' => $checkTaskTimer((string)env('WS_CRON_VALIDATE_AT', '0 4 */25 * *'), '0 4 */25 * *'),
                 'args' => env('WS_CRON_VALIDATE_ARGS', '-v'),
             ],
             DispatchCommand::TASK_NAME => [
