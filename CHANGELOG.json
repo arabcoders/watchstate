@@ -1,5 +1,26 @@
 [
   {
+    "tag": "v0.2.1",
+    "full_sha": "048619041c357d5bc5aa02a6fc64e1dbba1be1df",
+    "date": "2025-08-01T14:26:38+00:00",
+    "commits": [
+      {
+        "sha": "586fd49d",
+        "full_sha": "586fd49d2393dfc32d1ce5937d0989b238f7797b",
+        "message": "Disable validate task by default",
+        "author": "arabcoders",
+        "date": "2025-08-01T14:19:19+00:00"
+      },
+      {
+        "sha": "e84d3859",
+        "full_sha": "e84d3859493ef19c033aeb28bbbcb81ba597312c",
+        "message": "Updated external packages.",
+        "author": "arabcoders",
+        "date": "2025-08-01T14:19:00+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v0.2.0",
     "full_sha": "8605026fe5fa7f7e03173ea1bf7d39d33b71f36d",
     "date": "2025-07-28T17:57:08+00:00",

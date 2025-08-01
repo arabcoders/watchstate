@@ -1,8 +1,22 @@
 [
     {
-        "tag": "master-20250728-8605026f",
-        "date": "2025-07-28T17:57:08+00:00",
+        "tag": "master-20250801-04861904",
+        "date": "2025-08-01T14:26:38+00:00",
         "commits": [
+            {
+                "sha": "586fd49d",
+                "message": "Disable validate task by default",
+                "author": "arabcoders",
+                "date": "2025-08-01T14:19:19+00:00",
+                "full_sha": "586fd49d2393dfc32d1ce5937d0989b238f7797b"
+            },
+            {
+                "sha": "e84d3859",
+                "message": "Updated external packages.",
+                "author": "arabcoders",
+                "date": "2025-08-01T14:19:00+00:00",
+                "full_sha": "e84d3859493ef19c033aeb28bbbcb81ba597312c"
+            },
             {
                 "sha": "a0409f74",
                 "message": "Update the last played date during progress update.",
@@ -109,7 +123,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "8605026fe5fa7f7e03173ea1bf7d39d33b71f36d"
+        "full_sha": "048619041c357d5bc5aa02a6fc64e1dbba1be1df"
     },
     {
         "tag": "master-20250614-e3307c58",
