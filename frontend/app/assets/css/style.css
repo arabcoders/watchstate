@@ -248,30 +248,53 @@ html {
     height: 100%;
 }
 
-.card-left {
+.mc {
     display: flex;
     flex-direction: row;
-    height: 100%;
-    overflow: hidden;
-}
-
-.card-left .card-image {
-    flex: 0 0 15%; /* Take up 30% of card width */
-    height: auto;
-    display: flex;
     align-items: stretch;
-    overflow: hidden;
+    width: 100%;
+    box-shadow: var(--bulma-shadow);
+    min-height: 128px;
+    border-radius: 0.75rem;
 }
 
-.card-left .card-image img {
+.mc-image {
+    flex: 0 0 20%;
+    overflow: hidden;
+    display: flex;
+    border-radius: 0.75rem 0 0 0.75rem;
+}
+
+.mc-image img {
     height: 100%;
     width: auto;
-    object-fit: cover; /* or contain if you prefer full visibility */
+    object-fit: cover;
     display: block;
 }
 
-.card-left .card-content {
+.mc-content {
     flex: 1;
     display: flex;
     flex-direction: column;
+    width: calc(100% - 20%);
+}
+
+@media screen and (max-width: 768px) {
+    .mc {
+        display: block;
+    }
+
+    .mc-image {
+        display: none;
+    }
+
+    .mc-content {
+        width: 100%;
+    }
+}
+
+.mc-content > .card {
+    min-height: 128px;
+    border-radius: 0 0.75rem 0.75rem 0;
+    box-shadow: none;
 }

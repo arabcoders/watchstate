@@ -199,90 +199,102 @@
         <div class="columns is-multiline" v-if="items?.length>0">
           <template v-for="item in items" :key="item.id">
             <Lazy :unrender="true" :min-height="240" class="column is-6-tablet" v-if="filterItem(item)">
-              <div class="card is-flex is-full-height is-flex-direction-column" :class="{ 'is-success': item.watched }">
-                <header class="card-header">
-                  <p class="card-header-title is-text-overflow pr-1">
-                    <span class="icon is-unselectable">
-                      <label class="checkbox">
-                        <input type="checkbox" :value="item.id" v-model="selected_ids">
-                      </label>&nbsp;
-                    </span>
-                    <NuxtLink :to="'/history/'+item.id" v-text="item?.full_title ?? makeName(item)"/>
-                  </p>
-                  <span class="card-header-icon" @click="item.showRawData = !item?.showRawData">
-                    <span class="icon">
-                      <i class="fas" :class="{'fa-tv': 'episode' === item.type, 'fa-film': 'movie' === item.type}"></i>
-                    </span>
-                  </span>
-                </header>
-                <div class="card-content is-flex-grow-1">
-                  <div class="columns is-multiline is-mobile has-text-centered">
-                    <div class="column is-12 has-text-left" v-if="item?.content_title">
-                      <div class="field is-grouped">
-                        <div class="control is-clickable"
-                             :class="{'is-text-overflow': !item?.expand_title, 'is-text-contents': item?.expand_title}"
-                             @click="item.expand_title = !item?.expand_title">
-                          <span class="icon"><i class="fas fa-heading"></i>&nbsp;</span>
-                          <NuxtLink :to="makeSearchLink('subtitle',item.content_title)" v-text="item.content_title"/>
-                        </div>
-                        <div class="control">
-                          <span class="icon is-clickable" @click="copyText(item.content_title, false)">
-                            <i class="fas fa-copy"></i></span>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="column is-12  has-text-left" v-if="item?.content_path">
-                      <div class="field is-grouped">
-                        <div class="control is-clickable"
-                             :class="{'is-text-overflow': !item?.expand_path, 'is-text-contents': item?.expand_path}"
-                             @click="item.expand_path = !item?.expand_path">
-                          <span class="icon"><i class="fas fa-file"></i>&nbsp;</span>
-                          <NuxtLink :to="makeSearchLink('path',item.content_path)" v-text="item.content_path"/>
-                        </div>
-                        <div class="control">
-                          <span class="icon is-clickable" @click="copyText(item.content_path, false)">
-                            <i class="fas fa-copy"></i></span>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="column is-12 has-text-left" v-if="item?.progress">
-                      <span class="icon"><i class="fas fa-bars-progress"></i></span>
-                      <span>{{ formatDuration(item.progress) }}</span>
-                    </div>
-                  </div>
+              <div class="mc">
+                <div class="mc-image" v-if="poster_enable">
+                  <NuxtLink :to="`/history/${item.id}`">
+                    <CardImage :id="item.id" type="poster" :title="`Poster for ${makeName(item)}`"/>
+                  </NuxtLink>
                 </div>
-                <div class="card-content p-0 m-0" v-if="item?.showRawData">
+                <div class="mc-content">
+                  <div class="card is-flex is-full-height is-flex-direction-column"
+                       :class="{ 'is-success': item.watched }">
+                    <header class="card-header">
+                      <p class="card-header-title is-text-overflow pr-1">
+                        <span class="icon is-unselectable">
+                          <label class="checkbox">
+                            <input type="checkbox" :value="item.id" v-model="selected_ids">
+                          </label>&nbsp;
+                        </span>
+                        <NuxtLink :to="'/history/'+item.id" v-text="item?.full_title ?? makeName(item)"/>
+                      </p>
+                      <span class="card-header-icon" @click="item.showRawData = !item?.showRawData">
+                        <span class="icon">
+                          <i class="fas"
+                             :class="{'fa-tv': 'episode' === item.type, 'fa-film': 'movie' === item.type}"></i>
+                        </span>
+                      </span>
+                    </header>
+                    <div class="card-content is-flex-grow-1">
+                      <div class="columns is-multiline is-mobile has-text-centered">
+                        <div class="column is-12 has-text-left" v-if="item?.content_title">
+                          <div class="field is-grouped">
+                            <div class="control is-clickable"
+                                 :class="{'is-text-overflow': !item?.expand_title, 'is-text-contents': item?.expand_title}"
+                                 @click="item.expand_title = !item?.expand_title">
+                              <span class="icon"><i class="fas fa-heading"></i>&nbsp;</span>
+                              <NuxtLink :to="makeSearchLink('subtitle',item.content_title)"
+                                        v-text="item.content_title"/>
+                            </div>
+                            <div class="control">
+                              <span class="icon is-clickable" @click="copyText(item.content_title, false)">
+                                <i class="fas fa-copy"></i></span>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="column is-12  has-text-left" v-if="item?.content_path">
+                          <div class="field is-grouped">
+                            <div class="control is-clickable"
+                                 :class="{'is-text-overflow': !item?.expand_path, 'is-text-contents': item?.expand_path}"
+                                 @click="item.expand_path = !item?.expand_path">
+                              <span class="icon"><i class="fas fa-file"></i>&nbsp;</span>
+                              <NuxtLink :to="makeSearchLink('path',item.content_path)" v-text="item.content_path"/>
+                            </div>
+                            <div class="control">
+                              <span class="icon is-clickable" @click="copyText(item.content_path, false)">
+                                <i class="fas fa-copy"></i></span>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="column is-12 has-text-left" v-if="item?.progress">
+                          <span class="icon"><i class="fas fa-bars-progress"></i></span>
+                          <span>{{ formatDuration(item.progress) }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="card-content p-0 m-0" v-if="item?.showRawData">
                 <pre class="is-terminal" style="position: relative; max-height: 343px;"><code
                     v-text="JSON.stringify(item, null, 2)"/><button class="button m-4"
                                                                     @click="() => copyText(JSON.stringify(item, null, 2))"
                                                                     style="position: absolute; top:0; right:0;">
                     <span class="icon"><i class="fas fa-copy"/></span>
                   </button></pre>
-                </div>
-                <div class="card-footer has-text-centered">
-                  <div class="card-footer-item">
-                    <div class="is-text-overflow">
-                      <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
-                      <span class="has-tooltip"
-                            v-tooltip="`Record updated at: ${moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
-                        {{ moment.unix(item.updated_at).fromNow() }}
-                      </span>
                     </div>
-                  </div>
-                  <div class="card-footer-item">
-                    <div class="is-text-overflow">
-                      <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
-                      <NuxtLink :to="'/backend/'+item.via" v-text="item.via"/>
-                      <span v-if="item?.metadata && Object.keys(item?.metadata).length > 1"
-                            v-tooltip="`Also reported by: ${Object.keys(item.metadata).filter(i => i !== item.via).join(', ')}.`">
-                        (<span class="has-tooltip">+{{ Object.keys(item.metadata).length - 1 }}</span>)
-                      </span>
-                    </div>
-                  </div>
-                  <div class="card-footer-item">
-                    <div class="is-text-overflow">
-                      <span class="icon"><i class="fas fa-envelope"></i>&nbsp;</span>
-                      {{ item.event ?? '-' }}
+                    <div class="card-footer has-text-centered">
+                      <div class="card-footer-item">
+                        <div class="is-text-overflow">
+                          <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
+                          <span class="has-tooltip"
+                                v-tooltip="`Record updated at: ${moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
+                            {{ moment.unix(item.updated_at).fromNow() }}
+                          </span>
+                        </div>
+                      </div>
+                      <div class="card-footer-item">
+                        <div class="is-text-overflow">
+                          <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
+                          <NuxtLink :to="'/backend/'+item.via" v-text="item.via"/>
+                          <span v-if="item?.metadata && Object.keys(item?.metadata).length > 1"
+                                v-tooltip="`Also reported by: ${Object.keys(item.metadata).filter(i => i !== item.via).join(', ')}.`">
+                            (<span class="has-tooltip">+{{ Object.keys(item.metadata).length - 1 }}</span>)
+                          </span>
+                        </div>
+                      </div>
+                      <div class="card-footer-item">
+                        <div class="is-text-overflow">
+                          <span class="icon"><i class="fas fa-envelope"></i>&nbsp;</span>
+                          {{ item.event ?? '-' }}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -291,7 +303,6 @@
           </template>
         </div>
       </div>
-
     </div>
   </div>
 </template>
@@ -311,11 +322,16 @@ import {
   TOOLTIP_DATE_FORMAT
 } from '~/utils/index.js'
 import Lazy from '~/components/Lazy.vue'
+import CardImage from "~/components/CardImage.vue";
+import {NuxtLink} from "#components";
+import {useStorage} from "@vueuse/core";
 
 const route = useRoute()
 const router = useRouter()
 
 useHead({title: 'History'})
+
+const poster_enable = useStorage('poster_enable', true)
 
 const jsonFields = ref(['metadata', 'extra'])
 const items = ref([])

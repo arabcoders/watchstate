@@ -86,9 +86,25 @@
                 Dark
               </label>
             </div>
-            <p class="help is-unselectable ">
+            <p class="help is-unselectable">
               <span class="icon"><i class="fa-solid fa-info"/></span>
               <span>Select the color scheme for the WebUI.</span>
+            </p>
+          </div>
+
+          <div class="field">
+            <label class="is-unselectable label">
+              Show posters
+            </label>
+            <div class="control">
+              <input id="show_posters" type="checkbox" class="switch is-success" v-model="poster_enable">
+              <label for="show_posters">
+                {{ poster_enable ? 'Disable' : 'Enable' }}
+              </label>
+            </div>
+            <p class="help is-unselectable">
+              <span class="icon"><i class="fa-solid fa-info"/></span>
+              <span>Display posters for episodes and movies in the item history cards.</span>
             </p>
           </div>
 
@@ -105,22 +121,28 @@
             </label>
             <div class="control">
               <input id="random_bg" type="checkbox" class="switch is-success" v-model="bg_enable">
-              <label for="random_bg">Enable</label>
+              <label for="random_bg">
+                {{ bg_enable ? 'Disable' : 'Enable' }}
+              </label>
             </div>
-            <p class="help is-unselectable ">
-              Use random background image from your media backends. Images are cached for 1 hour.
+            <p class="help is-unselectable">
+              <span class="icon"><i class="fa-solid fa-info"/></span>
+              <span>Use random background image from your media backends. Images are cached for 1 hour.</span>
             </p>
           </div>
 
           <div class="field">
             <label class="label is-unselectable" for="random_bg_opacity">
-              Background Visibility: (<code>{{ bg_opacity }}</code>)
+              Background Visibility: (<code>{{ parseFloat(1.0 - bg_opacity).toFixed(2) }}</code>)
             </label>
             <div class="control">
               <input id="random_bg_opacity" style="width: 100%" type="range" v-model="bg_opacity" min="0.60" max="1.00"
                      step="0.05">
             </div>
-            <p class="help is-unselectable">How visible the background image should be.</p>
+            <p class="help is-unselectable">
+              <span class="icon"><i class="fa-solid fa-info"/></span>
+              <span>How visible the background image should be.</span>
+            </p>
           </div>
         </div>
       </div>
@@ -134,6 +156,7 @@ import {useStorage} from '@vueuse/core'
 const emit = defineEmits(['force_bg_reload'])
 const webui_theme = useStorage('theme', 'auto')
 const bg_enable = useStorage('bg_enable', true)
+const poster_enable = useStorage('poster_enable', true)
 const bg_opacity = useStorage('bg_opacity', 0.95)
 const user = ref({
   current_password: '',
