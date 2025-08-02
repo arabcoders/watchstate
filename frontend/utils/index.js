@@ -1,6 +1,8 @@
 import {useStorage} from '@vueuse/core'
+import request from "~/utils/request.js";
 
 const toast = useToast()
+const loadedImages = []
 
 const AG_SEPARATOR = '.'
 
@@ -546,6 +548,41 @@ const disableOpacity = () => {
     }
 }
 
+const makeAPIURL = (path, params = {}, opts = {}) => {
+    const token = useStorage('token', '')
+    const api_user = useStorage('api_user', 'main')
+
+    let no_prefix = false
+    let no_token = false
+
+    if (opts?.no_prefix) {
+        no_prefix = opts.no_prefix
+    }
+    if (opts?.no_token) {
+        no_token = opts.no_token
+    }
+
+    if (!path.startsWith('/')) {
+        path = `/${path}`
+    }
+
+    let req_params = new URLSearchParams(params || {})
+
+    if (false === no_token && token.value) {
+        req_params.append('ws_token', token.value)
+    }
+
+    if ('main' !== api_user.value) {
+        req_params.append('user', api_user.value)
+    }
+
+    let url = path;
+    if (req_params.toString()) {
+        url += `?${req_params.toString()}`
+    }
+    return no_prefix ? url : '/v1/api' + url
+}
+
 export {
     r,
     ag_set,
@@ -572,4 +609,5 @@ export {
     queue_event,
     enableOpacity,
     disableOpacity,
+    makeAPIURL,
 }

@@ -247,3 +247,31 @@ html {
 .is-full-height {
     height: 100%;
 }
+
+.card-left {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    overflow: hidden;
+}
+
+.card-left .card-image {
+    flex: 0 0 15%; /* Take up 30% of card width */
+    height: auto;
+    display: flex;
+    align-items: stretch;
+    overflow: hidden;
+}
+
+.card-left .card-image img {
+    height: 100%;
+    width: auto;
+    object-fit: cover; /* or contain if you prefer full visibility */
+    display: block;
+}
+
+.card-left .card-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
