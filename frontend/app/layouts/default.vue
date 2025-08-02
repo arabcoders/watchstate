@@ -1,5 +1,6 @@
 <template>
   <div class="container">
+    <NewVersion v-if="newVersionIsAvailable"/>
     <nav class="navbar is-dark mb-4 is-unselectable">
       <div class="navbar-brand pl-5">
         <NuxtLink class="navbar-item" to="/" @click.native="e => changeRoute(e)">
@@ -298,7 +299,21 @@ import UserSelection from '~/components/UserSelection.vue'
 import {useAuthStore} from '~/store/auth.js'
 import Settings from "~/components/Settings.vue"
 import TaskScheduler from "~/components/TaskScheduler.vue"
+import NewVersion from "~/components/NewVersion.vue";
 
+const useVersionUpdate = () => {
+  const newVersionIsAvailable = ref(false)
+  const nuxtApp = useNuxtApp()
+  nuxtApp.hooks.addHooks({
+    'app:manifest:update': () => newVersionIsAvailable.value = true
+  });
+
+  return {
+    newVersionIsAvailable: readonly(newVersionIsAvailable),
+  }
+}
+
+const {newVersionIsAvailable} = useVersionUpdate()
 const selectedTheme = useStorage('theme', 'auto')
 const showUserSelection = ref(false)
 const showSettings = ref(false)
@@ -535,8 +550,7 @@ const logout = async () => {
     return false
   }
 
-  auth.logout()
-
+  await auth.logout()
   await navigateTo('/auth')
 }
 
