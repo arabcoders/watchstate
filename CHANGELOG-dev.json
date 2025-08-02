@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250802-829451d0",
-        "date": "2025-08-02T17:05:53+00:00",
+        "tag": "dev-20250802-319e5fe3",
+        "date": "2025-08-02T17:28:53+00:00",
         "commits": [
+            {
+                "sha": "319e5fe3",
+                "message": "Added please reload message when the WebUI is updated.",
+                "author": "arabcoders",
+                "date": "2025-08-02T17:28:53+00:00",
+                "full_sha": "319e5fe3035e926d28a24ed05988aa6d6831ebb2"
+            },
             {
                 "sha": "829451d0",
                 "message": "Added option to show posters alongside items.",
@@ -179,7 +186,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "829451d032697424a3a53e5ef8ef1a762b9d3f4e"
+        "full_sha": "319e5fe3035e926d28a24ed05988aa6d6831ebb2"
     },
     {
         "tag": "dev-20250604-9407bc76",
