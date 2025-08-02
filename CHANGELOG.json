@@ -1,5 +1,40 @@
 [
   {
+    "tag": "Unreleased (c0116c03)",
+    "full_sha": "c0116c039f70ef1f33e3214485aa6822a36e9c3c",
+    "date": "2025-08-02T17:36:45+00:00",
+    "commits": [
+      {
+        "sha": "319e5fe3",
+        "full_sha": "319e5fe3035e926d28a24ed05988aa6d6831ebb2",
+        "message": "Added please reload message when the WebUI is updated.",
+        "author": "arabcoders",
+        "date": "2025-08-02T17:28:53+00:00"
+      },
+      {
+        "sha": "829451d0",
+        "full_sha": "829451d032697424a3a53e5ef8ef1a762b9d3f4e",
+        "message": "Added option to show posters alongside items.",
+        "author": "arabcoders",
+        "date": "2025-08-02T17:05:53+00:00"
+      },
+      {
+        "sha": "b2796b4b",
+        "full_sha": "b2796b4b4f242fd70553d203aca82e66faf603f6",
+        "message": "migrated frontend structure nuxt4",
+        "author": "arabcoders",
+        "date": "2025-08-02T15:45:19+00:00"
+      },
+      {
+        "sha": "fd0cb7fd",
+        "full_sha": "fd0cb7fd31705aec1082195007dfae097e990259",
+        "message": "Add posters to history items.",
+        "author": "arabcoders",
+        "date": "2025-08-02T15:26:49+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v0.2.1",
     "full_sha": "048619041c357d5bc5aa02a6fc64e1dbba1be1df",
     "date": "2025-08-01T14:26:38+00:00",
