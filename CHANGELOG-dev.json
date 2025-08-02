@@ -1,8 +1,29 @@
 [
     {
-        "tag": "dev-20250801-586fd49d",
-        "date": "2025-08-01T14:19:19+00:00",
+        "tag": "dev-20250802-829451d0",
+        "date": "2025-08-02T17:05:53+00:00",
         "commits": [
+            {
+                "sha": "829451d0",
+                "message": "Added option to show posters alongside items.",
+                "author": "arabcoders",
+                "date": "2025-08-02T17:05:53+00:00",
+                "full_sha": "829451d032697424a3a53e5ef8ef1a762b9d3f4e"
+            },
+            {
+                "sha": "b2796b4b",
+                "message": "migrated frontend structure nuxt4",
+                "author": "arabcoders",
+                "date": "2025-08-02T15:45:19+00:00",
+                "full_sha": "b2796b4b4f242fd70553d203aca82e66faf603f6"
+            },
+            {
+                "sha": "fd0cb7fd",
+                "message": "Add posters to history items.",
+                "author": "arabcoders",
+                "date": "2025-08-02T15:26:49+00:00",
+                "full_sha": "fd0cb7fd31705aec1082195007dfae097e990259"
+            },
             {
                 "sha": "586fd49d",
                 "message": "Disable validate task by default",
@@ -158,7 +179,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "586fd49d2393dfc32d1ce5937d0989b238f7797b"
+        "full_sha": "829451d032697424a3a53e5ef8ef1a762b9d3f4e"
     },
     {
         "tag": "dev-20250604-9407bc76",
