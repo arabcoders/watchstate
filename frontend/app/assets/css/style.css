@@ -279,7 +279,7 @@ html {
     width: calc(100% - 20%);
 }
 
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 1024px) {
     .mc {
         display: block;
     }
