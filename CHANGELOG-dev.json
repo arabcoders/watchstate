@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250803-ca54d6cd",
-        "date": "2025-08-03T15:38:45+00:00",
+        "tag": "dev-20250803-8441eeed",
+        "date": "2025-08-03T15:53:14+00:00",
         "commits": [
+            {
+                "sha": "8441eeed",
+                "message": "do not render posters on small screens",
+                "author": "arabcoders",
+                "date": "2025-08-03T15:53:14+00:00",
+                "full_sha": "8441eeed547d49a7fa9bb284b4ce98913aa71d62"
+            },
             {
                 "sha": "ca54d6cd",
                 "message": "added loading screen",
@@ -193,7 +200,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "ca54d6cdf2e82b10ac36dd4c9d83b8f3ca059201"
+        "full_sha": "8441eeed547d49a7fa9bb284b4ce98913aa71d62"
     },
     {
         "tag": "dev-20250604-9407bc76",
