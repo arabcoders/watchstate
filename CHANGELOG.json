@@ -1,5 +1,26 @@
 [
   {
+    "tag": "Unreleased (3d0ee9a0)",
+    "full_sha": "3d0ee9a08f90092ca77076d766bfcd31db9fb209",
+    "date": "2025-08-04T16:46:24+00:00",
+    "commits": [
+      {
+        "sha": "8441eeed",
+        "full_sha": "8441eeed547d49a7fa9bb284b4ce98913aa71d62",
+        "message": "do not render posters on small screens",
+        "author": "arabcoders",
+        "date": "2025-08-03T15:53:14+00:00"
+      },
+      {
+        "sha": "ca54d6cd",
+        "full_sha": "ca54d6cdf2e82b10ac36dd4c9d83b8f3ca059201",
+        "message": "added loading screen",
+        "author": "arabcoders",
+        "date": "2025-08-03T15:38:45+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v0.3.0",
     "full_sha": "c0116c039f70ef1f33e3214485aa6822a36e9c3c",
     "date": "2025-08-02T17:36:45+00:00",
