@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>WatchState Loading...</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #fff;
+            color: #111;
+            user-select: none;
+            overflow: hidden;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            html, body {
+                background-color: #121212;
+                color: #eee;
+            }
+        }
+
+        .loader-container {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        svg.watchstate-loading {
+            width: 520px;
+            height: 110px;
+            display: block;
+            user-select: none;
+        }
+
+        .watchstate-outline {
+            fill: none;
+            stroke: #06b6d4;
+            stroke-width: 5px;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-dasharray: 1200;
+            stroke-dashoffset: 1200;
+            font-family: 'Segoe UI', 'Arial', sans-serif;
+            font-size: 82px;
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            paint-order: stroke fill;
+            animation: stroke-move 6s ease-in-out infinite;
+            opacity: 1;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .watchstate-outline {
+                stroke: #38bdf8;
+            }
+        }
+
+        @keyframes stroke-move {
+            0% {
+                stroke-dashoffset: 1200;
+            }
+            25% {
+                stroke-dashoffset: 0;
+            }
+            /* Forward to fully drawn */
+            50% {
+                stroke-dashoffset: 0;
+            }
+            /* Hold briefly */
+            100% {
+                stroke-dashoffset: 1200;
+            }
+            /* Backward to start */
+        }
+
+        .spinner {
+            margin: 20px auto 0;
+            width: 64px;
+            height: 64px;
+            border: 8px solid transparent;
+            border-top-color: #06b6d4;
+            border-radius: 50%;
+            animation: spin 1.2s linear infinite;
+            filter: drop-shadow(0 0 6px #06b6d4cc);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .spinner {
+                border-top-color: #38bdf8;
+                filter: drop-shadow(0 0 8px #38bdf8);
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .subtitle {
+            margin-top: 14px;
+            font-size: 1rem;
+            color: inherit;
+            opacity: 0.8;
+            user-select: none;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+        }
+    </style>
+</head>
+<body>
+<div class="loader-container" role="img" aria-label="Loading WatchState">
+    <svg class="watchstate-loading" viewBox="0 0 540 110" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
+         focusable="false">
+        <text x="52%" y="62%" text-anchor="middle" dominant-baseline="middle" class="watchstate-outline">
+            WatchState
+        </text>
+    </svg>
+    <div class="spinner"></div>
+    <div class="subtitle">Loading, please wait...</div>
+</div>
+</body>
+</html>
