@@ -596,6 +596,7 @@ final class StateEntity implements iState
     public function hasPlayProgress(): bool
     {
         $allowUpdate = (int)Config::get('progress.threshold', 0);
+        $minimumProgress = (int)Config::get('progress.minimum', 60000);
 
         if ($this->isWatched() && $allowUpdate < 1) {
             return false;
@@ -605,7 +606,7 @@ final class StateEntity implements iState
             if (0 !== (int)ag($metadata, iState::COLUMN_WATCHED, 0) && $allowUpdate < 1) {
                 continue;
             }
-            if ((int)ag($metadata, iState::COLUMN_META_DATA_PROGRESS, 0) > 1000) {
+            if ((int)ag($metadata, iState::COLUMN_META_DATA_PROGRESS, 0) > $minimumProgress) {
                 return true;
             }
         }
@@ -624,12 +625,13 @@ final class StateEntity implements iState
         }
 
         $compare = [];
+        $minimumProgress = (int)Config::get('progress.minimum', 60000);
 
         foreach ($this->getMetadata() as $backend => $metadata) {
             if (0 !== (int)ag($metadata, iState::COLUMN_WATCHED, 0) && $allowUpdate < 1) {
                 continue;
             }
-            if ((int)ag($metadata, iState::COLUMN_META_DATA_PROGRESS, 0) < 1000) {
+            if ((int)ag($metadata, iState::COLUMN_META_DATA_PROGRESS, 0) < $minimumProgress) {
                 continue;
             }
 
@@ -650,7 +652,7 @@ final class StateEntity implements iState
                 continue;
             }
 
-            if ($progress < 1000 || $lastDate->getTimestamp() > makeDate($datetime)->getTimestamp()) {
+            if ($progress < $minimumProgress || $lastDate->getTimestamp() > makeDate($datetime)->getTimestamp()) {
                 continue;
             }
 

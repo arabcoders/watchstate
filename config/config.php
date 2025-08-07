@@ -19,6 +19,7 @@ use Monolog\Level;
 return (function () {
     $inContainer = inContainer();
     $progressTimeCheck = fn(int $v, int $d): int => 0 === $v || $v >= 180 ? $v : $d;
+    $progressToMS = fn(int $v): int => $v < 60 ? ($v * 1000) : 60000;
 
     $config = [
         'name' => 'WatchState',
@@ -91,6 +92,8 @@ return (function () {
             'threshold' => $progressTimeCheck((int)env('WS_PROGRESS_THRESHOLD', 0), 60 * 10),
             // -- Minimum time to consider item as progress sync-able.
             'minThreshold' => 180,
+            // -- Minimum time to consider item as progress sync-able in milliseconds.
+            'minimum' => $progressToMS((int)env('WS_PROGRESS_MINIMUM', 60)),
         ],
     ];
 
