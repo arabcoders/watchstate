@@ -864,7 +864,7 @@ class StateEntityTest extends TestCase
 
         $testData = ag_set($this->testMovie, 'watched', 0);
         $testData = ag_set($testData, 'metadata.test_plex.watched', 0);
-        $testData = ag_set($testData, 'metadata.test_plex.progress', 5000);
+        $testData = ag_set($testData, 'metadata.test_plex.progress', 65000);
         $entity = new StateEntity($testData);
 
         $this->assertTrue(
@@ -879,7 +879,7 @@ class StateEntityTest extends TestCase
         $testData = ag_set($testData, 'metadata.test_plex.watched', 0);
         $entity = new StateEntity($testData);
         $this->assertSame(
-            5000,
+            65000,
             $entity->getPlayProgress(),
             'When hasPlayProgress() when valid play progress is set, returns true'
         );
@@ -891,7 +891,7 @@ class StateEntityTest extends TestCase
 
         $entity = new StateEntity($testData);
         $this->assertSame(
-            5000,
+            65000,
             $entity->getPlayProgress(),
             'When hasPlayProgress() when valid play progress is set, returns true'
         );

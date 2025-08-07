@@ -316,6 +316,28 @@ return (function () {
             'description' => 'Enable this option to disable matching episodes by GUIDs and rely on relative GUIDs to match.',
             'type' => 'bool',
         ],
+        [
+            'key' => 'WS_PROGRESS_MINIMUM',
+            'description' => 'Time in seconds to consider progress update as valid.',
+            'type' => 'string',
+            'validate' => function (mixed $value): string {
+                if (!is_numeric($value) && empty($value)) {
+                    throw new ValidationException('Invalid minimum progress. Empty value.');
+                }
+
+                if (false === is_numeric($value)) {
+                    throw new ValidationException('Invalid minimum progress. Must be a number.');
+                }
+
+                $cmp = (int)$value;
+
+                if ($cmp < 60) {
+                    throw new ValidationException('Invalid minimum progress. Must be at least 60 seconds.');
+                }
+
+                return $value;
+            },
+        ],
     ];
 
     $validateCronExpression = function (string $value): string {

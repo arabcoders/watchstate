@@ -33,7 +33,7 @@ return [
             iState::COLUMN_META_DATA_EXTRA => [
                 iState::COLUMN_META_DATA_EXTRA_DATE => '2020-01-03',
             ],
-            iState::COLUMN_META_DATA_PROGRESS => 5000,
+            iState::COLUMN_META_DATA_PROGRESS => 65000,
             iState::COLUMN_META_DATA_ADDED_AT => 1,
             iState::COLUMN_META_DATA_PLAYED_AT => 2,
         ],
