@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250803-8441eeed",
-        "date": "2025-08-03T15:53:14+00:00",
+        "tag": "dev-20250807-42d040e3",
+        "date": "2025-08-07T14:07:04+00:00",
         "commits": [
+            {
+                "sha": "42d040e3",
+                "message": "Add minimum progress update threshold. Closes #706",
+                "author": "arabcoders",
+                "date": "2025-08-07T14:07:04+00:00",
+                "full_sha": "42d040e324f7271ae3e9e513cc7dd1ac47332373"
+            },
             {
                 "sha": "8441eeed",
                 "message": "do not render posters on small screens",
@@ -200,7 +207,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "8441eeed547d49a7fa9bb284b4ce98913aa71d62"
+        "full_sha": "42d040e324f7271ae3e9e513cc7dd1ac47332373"
     },
     {
         "tag": "dev-20250604-9407bc76",
