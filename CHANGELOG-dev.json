@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250807-42d040e3",
-        "date": "2025-08-07T14:07:04+00:00",
+        "tag": "dev-20250808-f6b8cb6f",
+        "date": "2025-08-08T17:06:29+00:00",
         "commits": [
+            {
+                "sha": "f6b8cb6f",
+                "message": "Enabled support for Mixed type library for Jellyfin & Emby.",
+                "author": "arabcoders",
+                "date": "2025-08-08T17:06:29+00:00",
+                "full_sha": "f6b8cb6f559e7ef582e1f260330294f2e675ee78"
+            },
             {
                 "sha": "42d040e3",
                 "message": "Add minimum progress update threshold. Closes #706",
@@ -207,7 +214,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "42d040e324f7271ae3e9e513cc7dd1ac47332373"
+        "full_sha": "f6b8cb6f559e7ef582e1f260330294f2e675ee78"
     },
     {
         "tag": "dev-20250604-9407bc76",
