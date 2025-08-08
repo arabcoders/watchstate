@@ -70,6 +70,7 @@ class JellyfinClient implements iClient
     public const string TYPE_EPISODE = 'Episode';
     public const string COLLECTION_TYPE_SHOWS = 'tvshows';
     public const string COLLECTION_TYPE_MOVIES = 'movies';
+    public const string COLLECTION_TYPE_MIXED = 'CollectionFolder';
 
     /**
      * @var array<string> This constant represents a list of extra fields to be included in the request.

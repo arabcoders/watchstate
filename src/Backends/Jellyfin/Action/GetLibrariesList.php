@@ -122,12 +122,27 @@ class GetLibrariesList
 
         foreach ($listDirs as $section) {
             $key = (string)ag($section, 'Id');
-            $type = ag($section, 'CollectionType', 'unknown');
+            $type = ag($section, ['CollectionType', 'Type'], 'unknown');
+
+            $contentType = match ($type) {
+                JFC::COLLECTION_TYPE_SHOWS => iState::TYPE_SHOW,
+                JFC::COLLECTION_TYPE_MOVIES => iState::TYPE_MOVIE,
+                JFC::COLLECTION_TYPE_MIXED => iState::TYPE_MIXED,
+                default => 'Unknown',
+            };
 
             if (JFC::CLIENT_NAME === $context->clientName) {
-                $fragment = '/tv.html?topParentId={id}&serverId={backend_id}';
+                if (iState::TYPE_MIXED === $contentType) {
+                    $fragment = '/list.html?topParentId={id}&serverId={backend_id}';
+                } elseif (iState::TYPE_MOVIE === $contentType) {
+                    $fragment = '/movies.html?topParentId={id}&serverId={backend_id}';
+                } else {
+                    $fragment = '/tv.html?topParentId={id}&serverId={backend_id}';
+                }
             } else {
-                $fragment = '!/tv?serverId={backend_id}&parentId={id}';
+                $fragment = r('!/{type}?serverId={backend_id}&parentId={id}', [
+                    'type' => iState::TYPE_SHOW === $contentType ? 'tv' : 'videos',
+                ]);
             }
 
             $webUrl = $context->backendUrl->withPath('/web/index.html')->withFragment(r($fragment, [
@@ -135,18 +150,12 @@ class GetLibrariesList
                 'id' => $key,
             ]));
 
-            $contentType = match ($type) {
-                JFC::COLLECTION_TYPE_SHOWS => iState::TYPE_SHOW,
-                JFC::COLLECTION_TYPE_MOVIES => iState::TYPE_MOVIE,
-                default => 'Unknown',
-            };
-
             $builder = [
                 'id' => $key,
                 'title' => ag($section, 'Name', '???'),
                 'type' => ucfirst($type),
                 'ignored' => null !== $ignoreIds && in_array($key, $ignoreIds),
-                'supported' => in_array($contentType, [iState::TYPE_SHOW, iState::TYPE_MOVIE]),
+                'supported' => in_array($contentType, [iState::TYPE_SHOW, iState::TYPE_MOVIE, iState::TYPE_MIXED]),
                 'contentType' => $contentType,
                 'webUrl' => (string)$webUrl,
             ];

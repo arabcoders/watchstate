@@ -113,12 +113,12 @@ class GetLibrary
             'user' => $context->userContext->name,
             'library' => [
                 'id' => $id,
-                'type' => ag($section, 'CollectionType', 'unknown'),
+                'type' => ag($section, ['CollectionType', 'Type'], 'unknown'),
                 'title' => ag($section, 'Name', '??'),
             ],
         ];
 
-        $types = [JFC::COLLECTION_TYPE_MOVIES, JFC::COLLECTION_TYPE_SHOWS];
+        $types = [JFC::COLLECTION_TYPE_MOVIES, JFC::COLLECTION_TYPE_SHOWS, JFC::COLLECTION_TYPE_MIXED];
 
         if (true !== in_array(ag($logContext, 'library.type'), $types)) {
             return new Response(
