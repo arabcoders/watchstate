@@ -141,6 +141,8 @@ class Import
             'user' => $context->userContext->name,
         ];
 
+        $types = [JFC::COLLECTION_TYPE_MOVIES, JFC::COLLECTION_TYPE_SHOWS, JFC::COLLECTION_TYPE_MIXED];
+
         try {
             $url = $context->backendUrl->withPath(r('/Users/{user_id}/items/', ['user_id' => $context->backendUser]));
             $rContext['url'] = (string)$url;
@@ -251,7 +253,7 @@ class Import
                 'library' => [
                     'id' => $libraryId,
                     'title' => ag($section, 'Name', '??'),
-                    'type' => ag($section, 'CollectionType', 'unknown'),
+                    'type' => ag($section, ['CollectionType', 'Type'], 'unknown'),
                 ],
             ];
 
@@ -263,7 +265,7 @@ class Import
                 continue;
             }
 
-            if (!in_array(ag($logContext, 'library.type'), [JFC::COLLECTION_TYPE_SHOWS, JFC::COLLECTION_TYPE_MOVIES])) {
+            if (!in_array(ag($logContext, 'library.type'), $types)) {
                 continue;
             }
 
@@ -382,7 +384,7 @@ class Import
                 'library' => [
                     'id' => (string)ag($section, 'Id'),
                     'title' => ag($section, 'Name', '??'),
-                    'type' => ag($section, 'CollectionType', 'unknown'),
+                    'type' => ag($section, ['CollectionType', 'Type'], 'unknown'),
                 ],
                 'segment' => [
                     'number' => 1,
@@ -390,11 +392,11 @@ class Import
                 ],
             ];
 
-            if (JFC::COLLECTION_TYPE_SHOWS !== ag($logContext, 'library.type')) {
+            if (true === in_array(ag($logContext, 'library.id'), $ignoreIds ?? [])) {
                 continue;
             }
 
-            if (true === in_array(ag($logContext, 'library.id'), $ignoreIds ?? [])) {
+            if (!in_array(ag($logContext, 'library.type'), [JFC::COLLECTION_TYPE_SHOWS, JFC::COLLECTION_TYPE_MIXED])) {
                 continue;
             }
 
@@ -450,7 +452,7 @@ class Import
                 'library' => [
                     'id' => (string)ag($section, 'Id'),
                     'title' => ag($section, 'Name', '??'),
-                    'type' => ag($section, 'CollectionType', 'unknown'),
+                    'type' => ag($section, ['CollectionType', 'Type'], 'unknown'),
                 ],
             ];
 
@@ -463,7 +465,7 @@ class Import
                 continue;
             }
 
-            if (!in_array(ag($logContext, 'library.type'), [JFC::COLLECTION_TYPE_SHOWS, JFC::COLLECTION_TYPE_MOVIES])) {
+            if (!in_array(ag($logContext, 'library.type'), $types)) {
                 $unsupported++;
                 $this->logger->info(
                     message: "{action}: Ignoring '{client}: {user}@{backend}' - '{library.title}'. Library type '{library.type}' is not supported.",

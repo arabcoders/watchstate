@@ -71,6 +71,7 @@ class EmbyClient implements iClient
 
     public const string COLLECTION_TYPE_SHOWS = JellyfinClient::COLLECTION_TYPE_SHOWS;
     public const string COLLECTION_TYPE_MOVIES = JellyfinClient::COLLECTION_TYPE_MOVIES;
+    public const string COLLECTION_TYPE_MIXED = JellyfinClient::COLLECTION_TYPE_MIXED;
 
     public const array EXTRA_FIELDS = JellyfinClient::EXTRA_FIELDS;
 

@@ -11,6 +11,7 @@ interface StateInterface extends LoggerAwareInterface
     public const string TYPE_MOVIE = 'movie';
     public const string TYPE_EPISODE = 'episode';
     public const string TYPE_SHOW = 'show';
+    public const string TYPE_MIXED = 'mixed';
 
     /**
      * @var array list of supported types.
