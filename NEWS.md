@@ -1,5 +1,11 @@
 # NEWS
 
+### 2025-05-30
+
+The new [webhooks](/guides/webhooks.md) system is now available, please start migrating your systems to use it as, we
+have deprecated the old webhook system, and it will be removed in the next release. The new system is more robust and
+user-friendly compared to the old one.
+
 ### 2025-05-23
 
 We have recently added new and improved webhook endpoint that can be used as generic endpoint for all users and

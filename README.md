@@ -9,11 +9,12 @@ box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 # Updates
 
-### 2025-05-30
+### 2025-08-14
 
-The new [webhooks](/guides/webhooks.md) system is now available, please start migrating your systems to use it as, we
-have deprecated the old webhook system, and it will be removed in the next release. The new system is more robust and
-user-friendly compared to the old one.
+We are planning on tagging `v1.0.0` in the 4th quarter of 2025, as such if you are relying on deprecated
+behavior or features please start migrating to the new alternatives that we have implemented. things that will be removed 
+before the `v1.0.0`. We will document all the deprecated features that are subject to removal in the
+coming weeks. Most notably the removal of the per user/backend webhook end point. 
 
 Please refer to [NEWS](/NEWS.md) for the latest updates and changes.
 
@@ -110,7 +111,7 @@ After starting the container, you can access the WebUI by visiting `http://local
 To add your backends, please click on the help button in the top right corner, and choose which method you
 want [one-way](guides/one-way-sync.md) or [two-way](guides/two-way-sync.md) sync. and follow the instructions.
 
-Once you have setup your backends and imported your data you should see something like
+Once you have added your backends and imported your data you should see something like
 
 ![WebUI](/screenshots/index.png)
 
