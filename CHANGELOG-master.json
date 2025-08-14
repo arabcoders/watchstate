@@ -1,8 +1,29 @@
 [
     {
-        "tag": "master-20250807-d4d55831",
-        "date": "2025-08-07T15:27:14+00:00",
+        "tag": "master-20250814-3b48036a",
+        "date": "2025-08-14T20:11:32+00:00",
         "commits": [
+            {
+                "sha": "179d6894",
+                "message": "update external packages.",
+                "author": "arabcoders",
+                "date": "2025-08-14T14:09:38+00:00",
+                "full_sha": "179d6894036d1e89c1b7fb45c125a5bd972a2298"
+            },
+            {
+                "sha": "ffc93fc7",
+                "message": "Add mitigation for frankenphp crashing the task scheduler. Closes #709",
+                "author": "arabcoders",
+                "date": "2025-08-14T13:55:27+00:00",
+                "full_sha": "ffc93fc7df33528216b246da5efbb47ab8008101"
+            },
+            {
+                "sha": "f6b8cb6f",
+                "message": "Enabled support for Mixed type library for Jellyfin & Emby.",
+                "author": "arabcoders",
+                "date": "2025-08-08T17:06:29+00:00",
+                "full_sha": "f6b8cb6f559e7ef582e1f260330294f2e675ee78"
+            },
             {
                 "sha": "42d040e3",
                 "message": "Add minimum progress update threshold. Closes #706",
@@ -172,7 +193,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "d4d558313a194165979734a1730ee88472192c78"
+        "full_sha": "3b48036adaa693d429076b15aa276e3d498a29cf"
     },
     {
         "tag": "master-20250614-e3307c58",
