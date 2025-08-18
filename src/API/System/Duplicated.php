@@ -51,18 +51,13 @@ final class Duplicated
                     SELECT s.id, json_extract(value, '$.path') AS file_path
                     FROM state s, json_each(s.metadata)
                     WHERE file_path IS NOT NULL AND file_path != ''
-                ),
-                dup_ids AS (
-                    SELECT DISTINCT fp.id
-                    FROM file_paths fp
-                    JOIN (
-                        SELECT file_path
-                        FROM file_paths
-                        GROUP BY file_path
-                        HAVING COUNT(DISTINCT id) > 1
-                    ) dup ON fp.file_path = dup.file_path
                 )
-                SELECT COUNT(*) FROM dup_ids";
+                SELECT COUNT(*) FROM (
+                    SELECT file_path
+                    FROM file_paths
+                    GROUP BY file_path
+                    HAVING COUNT(DISTINCT id) > 1
+                )";
         $stmt = $userContext->db->getDBLayer()->query($sql);
         $total = (int)$stmt->fetchColumn();
 
