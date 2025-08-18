@@ -1,8 +1,29 @@
 [
     {
-        "tag": "dev-20250814-179d6894",
-        "date": "2025-08-14T14:09:38+00:00",
+        "tag": "dev-20250818-35313d1a",
+        "date": "2025-08-18T01:09:45+00:00",
         "commits": [
+            {
+                "sha": "35313d1a",
+                "message": "Added initial duplicated file reference.",
+                "author": "arabcoders",
+                "date": "2025-08-18T01:09:45+00:00",
+                "full_sha": "35313d1adc3265ff0ea4b89848f4da3a5b41bcdd"
+            },
+            {
+                "sha": "c00c509f",
+                "message": "Added dialog component",
+                "author": "arabcoders",
+                "date": "2025-08-18T01:00:08+00:00",
+                "full_sha": "c00c509f97febefb1277c5e6cf5de5eee55a0f9a"
+            },
+            {
+                "sha": "dd8dd758",
+                "message": "Fixed browser caching issue for some pages.",
+                "author": "arabcoders",
+                "date": "2025-08-18T00:59:49+00:00",
+                "full_sha": "dd8dd758edf547bb367a84c0d864e013792b98c0"
+            },
             {
                 "sha": "179d6894",
                 "message": "update external packages.",
@@ -228,7 +249,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "179d6894036d1e89c1b7fb45c125a5bd972a2298"
+        "full_sha": "35313d1adc3265ff0ea4b89848f4da3a5b41bcdd"
     },
     {
         "tag": "dev-20250604-9407bc76",
