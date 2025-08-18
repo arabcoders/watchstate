@@ -3,8 +3,8 @@
     <div class="columns is-multiline">
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4 ">
-          <span class="icon"><i class="fas fa-database"></i></span>
-          Data Parity
+          <span class="icon"><i class="fas fa-copy"></i></span>
+          Duplicated File reference
         </span>
         <div class="is-pulled-right">
           <div class="field is-grouped">
@@ -22,32 +22,6 @@
               </button>
             </div>
 
-            <div class="control" v-if="min && max" v-tooltip.bottom="'Minimum number of backends'">
-              <div class="select">
-                <select v-model="min" :disabled="isDeleting || isLoading">
-                  <option v-for="i in numberRange(1,max+1)" :key="`min-${i}`" :value="i">
-                    {{ i }}
-                  </option>
-                </select>
-              </div>
-            </div>
-            <p class="control">
-              <button class="button is-danger" @click="deleteData" v-tooltip.bottom="'Delete The reported records'"
-                      :disabled="isDeleting || isLoading || items.length<1" :class="{'is-loading':isDeleting}">
-                <span class="icon"><i class="fas fa-trash"></i></span>
-              </button>
-            </p>
-
-            <div class="control">
-              <button class="button is-info is-light" @click="selectAll = !selectAll"
-                      data-tooltip="Toggle select all">
-                <span class="icon">
-                  <i class="fas fa-check-square"
-                     :class="{'fa-check-square': !selectAll,'fa-square':selectAll}"></i>
-                </span>
-              </button>
-            </div>
-
             <p class="control">
               <button class="button is-info" @click.prevent="loadContent(page, true, true)" :disabled="isLoading"
                       :class="{'is-loading':isLoading}">
@@ -57,8 +31,9 @@
           </div>
         </div>
         <div class="is-hidden-mobile">
-          <span class="subtitle">This page shows local database records not being reported by the specified number of
-            backends.</span>
+          <span class="subtitle">
+            This page shows records from backends that reported different metadata for same file reference.
+          </span>
         </div>
       </div>
 
@@ -100,30 +75,13 @@
         </div>
       </div>
 
-      <div class="column is-12" v-if="selected_ids.length > 0">
-        <div class="field is-grouped is-justify-content-center">
-          <div class="control">
-            <button class="button is-danger" @click="massDelete()" :disabled="massActionInProgress"
-                    :class="{'is-loading':massActionInProgress}">
-              <span class="icon"><i class="fas fa-trash"></i></span>
-              <span class="is-hidden-mobile">Delete '{{ selected_ids.length }}' selected item/s</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
       <div class="column is-12">
         <div class="columns is-multiline" v-if="filteredRows(items)?.length>0">
           <template v-for="item in items" :key="item.id">
-            <Lazy :unrender="true" :min-height="343" class="column is-6-tablet" v-if="filterItem(item)">
-              <div class="card is-flex is-full-height is-flex-direction-column" :class="{ 'is-success': item.watched }">
+            <Lazy :unrender="true" :min-height="250" class="column is-6-tablet" v-if="filterItem(item)">
+              <div class="card" :class="{ 'is-success': item.watched }">
                 <header class="card-header">
                   <p class="card-header-title is-text-overflow pr-1">
-                    <span class="icon">
-                      <label class="checkbox">
-                        <input type="checkbox" :value="item.id" v-model="selected_ids">
-                      </label>&nbsp;
-                    </span>
                     <NuxtLink :to="'/history/'+item.id" v-text="makeName(item)"/>
                   </p>
                   <span class="card-header-icon" @click="item.showRawData = !item?.showRawData">
@@ -133,7 +91,7 @@
                     </span>
                   </span>
                 </header>
-                <div class="card-content is-flex-grow-1">
+                <div class="card-content">
                   <div class="columns is-multiline is-mobile">
                     <div class="column is-12">
                       <div class="field is-grouped">
@@ -159,7 +117,7 @@
                       <div class="field is-grouped">
                         <div class="control is-clickable"
                              :class="{'is-text-overflow': !item?.expand_path, 'is-text-contents': item?.expand_path}"
-                             @click="item.expand_path = !item?.expand_path">
+                             @click="item.expand_path = !item?.expand_path" v-tooltip="item.content_path">
                           <span class="icon"><i class="fas fa-file"></i>&nbsp;</span>
                           <NuxtLink v-if="item?.content_path" :to="makeSearchLink('path', item.content_path)"
                                     v-text="item.content_path"/>
@@ -223,15 +181,12 @@
                    icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
           <template v-else>
             <Message message_class="has-background-warning-80 has-text-dark" v-if="filter && items.length > 1"
-                     title="Information"
-                     icon="fas fa-check">
+                     title="Information" icon="fas fa-check">
               The filter <code>{{ filter }}</code> did not match any records.
             </Message>
             <Message message_class="has-background-success-90 has-text-dark" v-if="!filter || items.length < 1"
-                     title="Success"
-                     icon="fas fa-check">
-              WatchState did not find any records matching the criteria. All records has at least <code>{{ min }}</code>
-              backends reporting it.
+                     title="Success" icon="fas fa-check">
+              WatchState did not find any records matching the criteria.
             </Message>
           </template>
         </div>
@@ -241,30 +196,19 @@
                    @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
             <ul>
               <li>
-                You can specify the minimum number of backends that need to report the record to be considered valid.
+                This checker will only works if your media servers are actually using same file paths.
               </li>
               <li>
-                By clicking the <span class="fa fa-trash"></span> icon you will delete the the reported items from the
-                local database. If the items are not fixed by the time <code>import</code> is run, they will re-appear.
+                Multi-episode records will also be reported as duplicate. We plan to fix that at some other time.
               </li>
               <li>
-                Deleting records works by deleting everything at or below the specified number of backends. For example,
-                if you set the minimum to <code>3</code>, all records that are reported by <code>3</code> or fewer
-                backends will be deleted.
-              </li>
-              <li>
-                Records showing here most likely means your backends, are not reporting same data. This could be due to
-                many reasons, including using different external databases i.e. <code>TheMovieDB</code> vs
-                <code>TheTVDB</code>.
-              </li>
-              <li>
-                The results are cached in your browser temporarily to provide faster response, as the operation to
-                generate the report is quite intensive. If you want to refresh the data, click the <span
-                  class="fa fa-sync"></span> icon.
+                This operation is quite slow and may take a while to complete, depending on the number of records in
+                your database.
               </li>
             </ul>
           </Message>
         </div>
+
       </div>
     </div>
   </div>
@@ -289,30 +233,21 @@ import {useSessionCache} from '~/utils/cache.js'
 
 const route = useRoute()
 
-useHead({title: 'Parity'})
+useHead({title: 'Duplicated Records'})
 
 const items = ref([])
 const page = ref(route.query.page ?? 1)
-const perpage = ref(route.query.perpage ?? 100)
+const perpage = ref(route.query.perpage ?? 50)
 const total = ref(0)
 const last_page = computed(() => Math.ceil(total.value / perpage.value))
 const isLoading = ref(false)
-const isDeleting = ref(false)
 const show_page_tips = useStorage('show_page_tips', true)
 const api_user = useStorage('api_user', 'main')
 const filter = ref(route.query.filter ?? '')
 const showFilter = ref(!!filter.value)
-const min = ref(route.query.min ?? null)
-const max = ref()
-const cacheKey = computed(() => `parity_v1-${min.value}-${page.value}-${perpage.value}`)
-
-const selectAll = ref(false)
-const selected_ids = ref([])
-const massActionInProgress = ref(false)
-watch(selectAll, v => selected_ids.value = v ? filteredRows(items.value).map(i => i.id) : [])
+const cacheKey = computed(() => `duplicated_v1-${page.value}-${perpage.value}`)
 
 const cache = useSessionCache(api_user.value)
-
 
 const toggleFilter = () => {
   showFilter.value = !showFilter.value
@@ -334,12 +269,7 @@ const loadContent = async (pageNumber, fromPopState = false, fromReload = false)
   search.set('perpage', perpage.value)
   search.set('page', pageNumber)
 
-  let pageTitle = `Parity: Page #${pageNumber}`
-
-  if (min.value) {
-    search.set('min', min.value)
-    pageTitle += ` - Min: ${min.value}`
-  }
+  let pageTitle = `Duplicated Records: Page #${pageNumber}`
 
   if (filter.value) {
     search.set('filter', filter.value)
@@ -364,11 +294,11 @@ const loadContent = async (pageNumber, fromPopState = false, fromReload = false)
     if (cache.has(cacheKey.value)) {
       json = cache.get(cacheKey.value)
     } else {
-      const response = await request(`/system/parity/?${search.toString()}`)
+      const response = await request(`/system/duplicated/?${search.toString()}`)
       json = await response.json()
       cache.set(cacheKey.value, json)
 
-      if (useRoute().name !== 'parity') {
+      if (useRoute().name !== 'duplicated') {
         return
       }
 
@@ -381,7 +311,7 @@ const loadContent = async (pageNumber, fromPopState = false, fromReload = false)
 
     if (!fromPopState && window.location.href !== newUrl) {
       await useRouter().push({
-        path: '/parity',
+        path: '/duplicated',
         title: pageTitle,
         query: Object.fromEntries(search)
       })
@@ -406,112 +336,13 @@ const loadContent = async (pageNumber, fromPopState = false, fromReload = false)
   }
 }
 
-const massDelete = async () => {
-  if (0 === selected_ids.value.length) {
-    return
-  }
-
-  if (!confirm(`Are you sure you want to delete '${selected_ids.value.length}' item/s?`)) {
-    return
-  }
-
-  try {
-    massActionInProgress.value = true
-    const urls = selected_ids.value.map(id => `/history/${id}`)
-
-    notification('success', 'Action in progress', `Deleting '${urls.length}' item/s. Please wait...`)
-
-    // -- check each request response after all requests are done
-    const requests = await Promise.all(urls.map(url => request(url, {method: 'DELETE'})))
-
-    if (!requests.every(response => 200 === response.status)) {
-      notification('error', 'Error', `Some requests failed. Please check the console for more details.`)
-    } else {
-      items.value = items.value.filter(i => !selected_ids.value.includes(i.id))
-      try {
-        cache.remove(cacheKey.value)
-      } catch (e) {
-      }
-    }
-
-    notification('success', 'Success', `Deleting '${urls.length}' item/s completed.`)
-  } catch (e) {
-    notification('error', 'Error', `Request error. ${e.message}`)
-  } finally {
-    massActionInProgress.value = false
-    selected_ids.value = []
-    selectAll.value = false
-  }
-}
-
-const deleteData = async () => {
-  if (isDeleting.value) {
-    return
-  }
-  if (!min.value) {
-    notification('error', 'Error', 'Minimum number of backends is not set.')
-    return
-  }
-
-  if (items.value.length < 1) {
-    notification('error', 'Error', 'There are no reported records to delete.')
-    return
-  }
-
-  if (!confirm(`Are you sure you want to delete the reported records?`)) {
-    return
-  }
-
-  isDeleting.value = true
-
-  try {
-    const response = await request(`/system/parity`, {
-      method: 'DELETE',
-      body: JSON.stringify({min: min.value})
-    })
-
-    const json = await response.json()
-
-    if (200 !== response.status) {
-      notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
-      return
-    }
-
-    notification('success', 'Success!', `Deleted '${json.deleted_records ?? 0}' records.`)
-
-    items.value = []
-    total.value = 0
-    filter.value = ''
-    page.value = 1
-
-    clearCache()
-  } catch (e) {
-    notification('error', 'Error', e.message)
-  } finally {
-    isDeleting.value = false
-  }
-}
-
 onMounted(async () => {
-  const response = await request(`/backends/`)
-  const json = await response.json()
-
   cache.setNameSpace(api_user.value)
-
-  max.value = json.length
-
-  if (min.value === null) {
-    min.value = json.length
-  } else {
-    await loadContent(page.value ?? 1)
-  }
-
+  await loadContent(page.value ?? 1)
   window.addEventListener('popstate', stateCallBack)
 })
 
-onUnmounted(() => window.removeEventListener('popstate', stateCallBack))
-
-const numberRange = (start, end) => new Array(end - start).fill().map((d, i) => i + start)
+onBeforeUnmount(() => window.removeEventListener('popstate', stateCallBack))
 
 const filteredRows = items => {
   if (!filter.value) {
@@ -529,7 +360,6 @@ const filterItem = item => {
   return Object.values(item).some(v => typeof v === 'string' ? v.toLowerCase().includes(filter.value.toLowerCase()) : false)
 }
 
-watch(min, async () => await loadContent(page.value ?? 1))
 watch(filter, val => {
   const route = useRoute()
   const router = useRouter()
@@ -539,7 +369,7 @@ watch(filter, val => {
     }
 
     router.push({
-      'path': '/parity',
+      'path': '/duplicated',
       'query': {
         ...route.query,
         'filter': undefined
@@ -553,7 +383,7 @@ watch(filter, val => {
   }
 
   router.push({
-    'path': '/parity',
+    'path': '/duplicated',
     'query': {
       ...route.query,
       'filter': val
@@ -561,7 +391,7 @@ watch(filter, val => {
   })
 })
 
-const clearCache = () => cache.clear(k => k.startsWith(`${api_user.value}:parity`))
+const clearCache = () => cache.clear(k => k.startsWith(`${api_user.value}:duplicated`))
 
 const stateCallBack = async e => {
   if (!e.state && !e.detail) {
