@@ -1664,4 +1664,99 @@ class HelpersTest extends TestCase
             );
         }
     }
+
+    public function test_parseEpisodeRange()
+    {
+        $cases = [
+            // Format: [filename, expected]
+            // S01E01-02-03
+            [
+                'ShowTitle - S01E01-02-03-05.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 5]
+            ],
+            [
+                'showTitle S01E01-02-03.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 3]
+            ],
+            [
+                'ShowTitle - S01E01-02-03 - random text.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 3]
+            ],
+
+            // S01E01.S01E02.S01E03
+            [
+                'ShowTitle - S01E01.S01E02.S01E03.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 3]
+            ],
+            [
+                'showTitle S01E01.S01E02.S01E03.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 3]
+            ],
+            [
+                'ShowTitle - S01E01.S01E02.S01E03 - random text.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 3]
+            ],
+
+            // S01E01E02E03
+            [
+                'ShowTitle - S01E01E02E03E04E05.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 5]
+            ],
+            [
+                'showTitle S01E01E02E03.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 3]
+            ],
+            [
+                'ShowTitle - S01E01E02E03 - random text.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 3]
+            ],
+
+            // S01E01-E02-E03
+            [
+                'ShowTitle - S01E01-E02-E03.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 3]
+            ],
+            [
+                'showTitle S01E01-E02-E03.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 3]
+            ],
+            [
+                'ShowTitle - S01E01-E02-E03 - random text.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 3]
+            ],
+
+            // S01E01-03
+            [
+                'ShowTitle - S01E01-06.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 6]
+            ],
+            [
+                'showTitle S01E01-03.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 3]
+            ],
+            [
+                'ShowTitle - S01E01-03 - random text.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 3]
+            ],
+
+            // S01E01-E03
+            [
+                'ShowTitle - S01E01-E05.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 5]
+            ],
+            [
+                'showTitle S01E01-E03.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 3]
+            ],
+            [
+                'ShowTitle - S01E01-E03 - random text.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 3]
+            ],
+        ];
+
+        foreach ($cases as [$filename, $expected]) {
+            $result = parseEpisodeRange($filename);
+            $this->assertSame($expected, $result, "Failed for filename: {$filename}");
+        }
+    }
 }
