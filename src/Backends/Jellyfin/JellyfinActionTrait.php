@@ -169,8 +169,13 @@ trait JellyfinActionTrait
             $metadata[iState::COLUMN_YEAR] = (string)$mediaYear;
         }
 
+        $metadata[iState::COLUMN_META_MULTI] = false;
         if (null !== ($mediaPath = ag($item, 'Path')) && !empty($mediaPath)) {
             $metadata[iState::COLUMN_META_PATH] = (string)$mediaPath;
+            if (iState::TYPE_EPISODE === $type &&
+                true === ag(parseEpisodeRange(basename((string)$mediaPath)), iState::COLUMN_META_MULTI, false)) {
+                $metadata[iState::COLUMN_META_MULTI] = true;
+            }
         }
 
         if (null !== ($PremieredAt = ag($item, 'PremiereDate'))) {
