@@ -1,9 +1,37 @@
 [
   {
-    "tag": "Unreleased (db258a3d)",
-    "full_sha": "db258a3dd7a373bc982267406a08d9ed0307c7ee",
-    "date": "2025-08-18T19:43:03+00:00",
+    "tag": "Unreleased (f44408c7)",
+    "full_sha": "f44408c70c79b1e02e2646c61c163aba27fd13f7",
+    "date": "2025-08-18T19:52:31+00:00",
     "commits": [
+      {
+        "sha": "d37f9d57",
+        "full_sha": "d37f9d573ed2ce1973ba19c5261ebc65858968b7",
+        "message": "Implemented Duplicate file reference DFR.",
+        "author": "arabcoders",
+        "date": "2025-08-18T19:41:15+00:00"
+      },
+      {
+        "sha": "b94d040d",
+        "full_sha": "b94d040d4ccea6d64ef39a0699da071c9940263e",
+        "message": "switch to floating image display instead of taking space from history cards.",
+        "author": "arabcoders",
+        "date": "2025-08-18T15:45:29+00:00"
+      },
+      {
+        "sha": "b4262de1",
+        "full_sha": "b4262de1a05c5480535af4b573072d16c3e8db66",
+        "message": "tag multi episode entries.",
+        "author": "arabcoders",
+        "date": "2025-08-18T14:55:05+00:00"
+      },
+      {
+        "sha": "014a08a0",
+        "full_sha": "014a08a0b6a5d99da26305a25588aedb6ac76620",
+        "message": "Added Episode range parser.",
+        "author": "arabcoders",
+        "date": "2025-08-18T14:29:35+00:00"
+      },
       {
         "sha": "1bc8f320",
         "full_sha": "1bc8f32073818a83ba1077890b1b4779b6d5c058",
