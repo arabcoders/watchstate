@@ -60,7 +60,7 @@ class Cache {
         try {
             const {value, ttl, time} = JSON.parse(item)
             if (null !== ttl && Date.now() - time > ttl) {
-                this.remove(this.namespace + key)
+                this.remove(key)
                 return null
             }
             return value
@@ -104,7 +104,7 @@ class Cache {
      * @returns {boolean}
      */
     has(key) {
-        return null !== this.get(this.namespace + key)
+        return null !== this.get(key)
     }
 }
 

@@ -561,7 +561,7 @@ watch(filter, val => {
   })
 })
 
-const clearCache = () => cache.clear(k => /^parity/.test(k))
+const clearCache = () => cache.clear(k => k.startsWith(`${api_user.value}:parity`))
 
 const stateCallBack = async e => {
   if (!e.state && !e.detail) {
