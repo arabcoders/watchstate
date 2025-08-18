@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250818-35313d1a",
-        "date": "2025-08-18T01:09:45+00:00",
+        "tag": "dev-20250818-1bc8f320",
+        "date": "2025-08-18T01:15:29+00:00",
         "commits": [
+            {
+                "sha": "1bc8f320",
+                "message": "Fix DFR total count",
+                "author": "arabcoders",
+                "date": "2025-08-18T01:15:29+00:00",
+                "full_sha": "1bc8f32073818a83ba1077890b1b4779b6d5c058"
+            },
             {
                 "sha": "35313d1a",
                 "message": "Added initial duplicated file reference.",
@@ -249,7 +256,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "35313d1adc3265ff0ea4b89848f4da3a5b41bcdd"
+        "full_sha": "1bc8f32073818a83ba1077890b1b4779b6d5c058"
     },
     {
         "tag": "dev-20250604-9407bc76",
