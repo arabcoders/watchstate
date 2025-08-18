@@ -1,8 +1,36 @@
 [
     {
-        "tag": "master-20250814-3b48036a",
-        "date": "2025-08-14T20:11:32+00:00",
+        "tag": "master-20250818-db258a3d",
+        "date": "2025-08-18T19:43:03+00:00",
         "commits": [
+            {
+                "sha": "1bc8f320",
+                "message": "Fix DFR total count",
+                "author": "arabcoders",
+                "date": "2025-08-18T01:15:29+00:00",
+                "full_sha": "1bc8f32073818a83ba1077890b1b4779b6d5c058"
+            },
+            {
+                "sha": "35313d1a",
+                "message": "Added initial duplicated file reference.",
+                "author": "arabcoders",
+                "date": "2025-08-18T01:09:45+00:00",
+                "full_sha": "35313d1adc3265ff0ea4b89848f4da3a5b41bcdd"
+            },
+            {
+                "sha": "c00c509f",
+                "message": "Added dialog component",
+                "author": "arabcoders",
+                "date": "2025-08-18T01:00:08+00:00",
+                "full_sha": "c00c509f97febefb1277c5e6cf5de5eee55a0f9a"
+            },
+            {
+                "sha": "dd8dd758",
+                "message": "Fixed browser caching issue for some pages.",
+                "author": "arabcoders",
+                "date": "2025-08-18T00:59:49+00:00",
+                "full_sha": "dd8dd758edf547bb367a84c0d864e013792b98c0"
+            },
             {
                 "sha": "179d6894",
                 "message": "update external packages.",
@@ -193,7 +221,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "3b48036adaa693d429076b15aa276e3d498a29cf"
+        "full_sha": "db258a3dd7a373bc982267406a08d9ed0307c7ee"
     },
     {
         "tag": "master-20250614-e3307c58",

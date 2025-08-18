@@ -1,5 +1,40 @@
 [
   {
+    "tag": "Unreleased (db258a3d)",
+    "full_sha": "db258a3dd7a373bc982267406a08d9ed0307c7ee",
+    "date": "2025-08-18T19:43:03+00:00",
+    "commits": [
+      {
+        "sha": "1bc8f320",
+        "full_sha": "1bc8f32073818a83ba1077890b1b4779b6d5c058",
+        "message": "Fix DFR total count",
+        "author": "arabcoders",
+        "date": "2025-08-18T01:15:29+00:00"
+      },
+      {
+        "sha": "35313d1a",
+        "full_sha": "35313d1adc3265ff0ea4b89848f4da3a5b41bcdd",
+        "message": "Added initial duplicated file reference.",
+        "author": "arabcoders",
+        "date": "2025-08-18T01:09:45+00:00"
+      },
+      {
+        "sha": "c00c509f",
+        "full_sha": "c00c509f97febefb1277c5e6cf5de5eee55a0f9a",
+        "message": "Added dialog component",
+        "author": "arabcoders",
+        "date": "2025-08-18T01:00:08+00:00"
+      },
+      {
+        "sha": "dd8dd758",
+        "full_sha": "dd8dd758edf547bb367a84c0d864e013792b98c0",
+        "message": "Fixed browser caching issue for some pages.",
+        "author": "arabcoders",
+        "date": "2025-08-18T00:59:49+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v0.3.2",
     "full_sha": "3b48036adaa693d429076b15aa276e3d498a29cf",
     "date": "2025-08-14T20:11:32+00:00",
