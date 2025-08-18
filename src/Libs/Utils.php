@@ -1404,3 +1404,58 @@ if (!function_exists('exception_log')) {
         ];
     }
 }
+
+if (!function_exists('parseEpisodeRange')) {
+    /**
+     * Parse episode range from a file name.
+     *
+     * @param string $file The file name to parse.
+     *
+     * @return array{status: bool, multi: bool, season: int, start: int, end: int} Returns an array with the parsing result.
+     */
+    function parseEpisodeRange(string $file): array
+    {
+        $file = trim($file);
+        if (empty($file)) {
+            return ['status' => false, 'multi' => false, 'season' => 0, 'start' => 0, 'end' => 0];
+        }
+
+        // Season (first Sxx found)
+        if (!preg_match('/S(\d{1,3})/i', $file, $season)) {
+            return ['status' => false, 'multi' => false, 'season' => 0, 'start' => 0, 'end' => 0];
+        }
+
+        $eps = [];
+
+        // 1) Explicit E-captures: E01, E02, ...
+        if (preg_match_all('/E(\d{1,3})/i', $file, $m1)) {
+            foreach ($m1[1] as $e) {
+                $eps[] = (int)$e;
+            }
+        }
+
+        // 2) Shorthand after delimiters: -03, .03, -E03, .E03
+        if (preg_match_all('/[.\-](?:E)?(\d{1,3})/i', $file, $m2)) {
+            foreach ($m2[1] as $e) {
+                $eps[] = (int)$e;
+            }
+        }
+
+        // If nothing captured yet (edge case), try a final fallback: SxxEyy only
+        if (!$eps && preg_match('/S\d{1,3}E(\d{1,3})/i', $file, $m3)) {
+            $eps[] = (int)$m3[1];
+        }
+
+        if (!$eps) {
+            return ['status' => false, 'multi' => false, 'season' => (int)$season[1], 'start' => 0, 'end' => 0];
+        }
+
+        return [
+            'status' => true,
+            'multi' => count($eps) > 1,
+            'season' => (int)$season[1],
+            'start' => min($eps),
+            'end' => max($eps)
+        ];
+    }
+}

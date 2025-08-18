@@ -184,8 +184,13 @@ trait PlexActionTrait
             $metadata[iState::COLUMN_YEAR] = (string)$year;
         }
 
+        $metadata[iState::COLUMN_META_MULTI] = false;
         if (null !== ($mediaPath = ag($item, 'Media.0.Part.0.file')) && !empty($mediaPath)) {
             $metadata[iState::COLUMN_META_PATH] = (string)$mediaPath;
+            if (iState::TYPE_EPISODE === $type &&
+                true === ag(parseEpisodeRange(basename((string)$mediaPath)), iState::COLUMN_META_MULTI, false)) {
+                $metadata[iState::COLUMN_META_MULTI] = true;
+            }
         }
 
         if (null === $mediaPath && null !== ($showPath = ag($item, 'Location.0.path')) && !empty($showPath)) {

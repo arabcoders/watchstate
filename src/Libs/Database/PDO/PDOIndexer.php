@@ -37,6 +37,7 @@ final class PDOIndexer
         iState::COLUMN_ID,
         iState::COLUMN_META_SHOW,
         iState::COLUMN_META_LIBRARY,
+        iState::COLUMN_META_MULTI,
     ];
 
     /**
@@ -143,7 +144,6 @@ final class PDOIndexer
         } else {
             $servers = Config::get('servers', []);
         }
-
 
         // -- Ensure backends metadata.id,metadata.show are indexed
         foreach (array_keys($servers) as $backend) {

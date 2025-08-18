@@ -9,12 +9,24 @@ box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 # Updates
 
+### 2025-08-18
+
+We have added the final feature before tagging `v1.0.0`, The new feature is a tool by which you can search your database
+for duplicate file references, this is useful if you have multiple backends that reference the same file, they are
+reporting different metadata for same file.
+
+To make it skip multi-episode items, go to backends page, and from quick operation list, select
+`Force metadata import from this backend.` this will recreate the metadata which we have included flag to mark
+multi-episode items.
+
+Subsequent updates will mostly focus on bug fixes and performance improvements, as well as documentation updates.
+
 ### 2025-08-14
 
 We are planning on tagging `v1.0.0` in the 4th quarter of 2025, as such if you are relying on deprecated
-behavior or features please start migrating to the new alternatives that we have implemented. things that will be removed 
-before the `v1.0.0`. We will document all the deprecated features that are subject to removal in the
-coming weeks. Most notably the removal of the per user/backend webhook end point. 
+behavior or features please start migrating to the new alternatives that we have implemented. things that will be
+removed before the `v1.0.0`. We will document all the deprecated features that are subject to removal in the
+coming weeks. Most notably the removal of the per user/backend webhook end point.
 
 Please refer to [NEWS](/NEWS.md) for the latest updates and changes.
 

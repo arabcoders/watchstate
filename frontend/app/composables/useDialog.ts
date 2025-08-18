@@ -15,6 +15,14 @@ type BaseOptions = {
      * Text for the confirm button
      */
     confirmText?: string
+    /**
+     * CSS class for the confirm button
+     */
+    confirmClass?: string
+    /**
+     * Icon for the confirm button
+     */
+    confirmIcon?: string
 }
 
 export type PromptOptions = BaseOptions & {

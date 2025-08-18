@@ -279,6 +279,15 @@ html {
     width: calc(100% - 20%);
 }
 
+.scaled-image {
+    width: 100%;
+    height: auto;
+    max-width: 180px;
+    max-height: 270px;
+    display: block;
+    margin: 0 auto;
+}
+
 @media screen and (max-width: 1024px) {
     .mc {
         display: block;
@@ -290,6 +299,11 @@ html {
 
     .mc-content {
         width: 100%;
+    }
+
+    .scaled-image {
+        max-width: 120px;
+        max-height: 180px;
     }
 }
 
