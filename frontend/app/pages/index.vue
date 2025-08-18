@@ -10,64 +10,59 @@
 
       <div class="column is-12">
         <div class="columns is-multiline" v-if="lastHistory.length > 1">
-          <div class="column is-6-tablet" v-for="history in lastHistory" :key="history.id">
-            <div class="mc">
-              <div class="mc-image" v-if="poster_enable">
-                <NuxtLink :to="`/history/${history.id}`">
-                  <CardImage :id="history.id" type="background" :title="`Poster for ${makeName(history)}`"/>
-                </NuxtLink>
-              </div>
-              <div class="mc-content">
-                <div class="card" :class="{ 'is-success': history.watched }">
-                  <header class="card-header">
-                    <p class="card-header-title is-text-overflow">
-                      <NuxtLink :to="`/history/${history.id}`" v-text="makeName(history)"/>
-                    </p>
-                    <span class="card-header-icon">
-                      <span class="icon" v-if="'episode' === history.type"><i
-                          class="fas fa-tv"></i></span>
-                      <span class="icon" v-else><i class="fas fa-film"></i></span>
-                    </span>
-                  </header>
-                  <div class="card-content">
-                    <div class="columns is-multiline is-mobile has-text-centered">
-                      <div class="column is-4-tablet is-6-mobile has-text-left-mobile">
-                        <div class="is-text-overflow" v-if="history?.updated_at">
-                          <span class="icon"><i class="fas fa-calendar"/>&nbsp;</span>
-                          <span class="has-tooltip"
-                                v-tooltip="`Record updated at: ${moment.unix(history.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
-                            {{ moment.unix(history.updated_at).fromNow() }}
-                          </span>
-                        </div>
-                      </div>
-                      <div class="column is-4-tablet is-6-mobile has-text-right-mobile">
-                        <div class="is-text-overflow">
-                          <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
-                          <NuxtLink :to="'/backend/' + history.via" v-text="history.via"/>
-                          <span v-if="history?.metadata && Object.keys(history?.metadata).length > 1"
-                                v-tooltip="`Also reported by: ${Object.keys(history.metadata).filter(i => i !== history.via).join(', ')}.`">
-                            (<span class="has-tooltip">+{{
-                              Object.keys(history.metadata).length - 1
-                            }}</span>)
-                          </span>
-                        </div>
-                      </div>
-                      <div class="column is-4-tablet is-12-mobile has-text-left-mobile">
-                        <div class="is-text-overflow">
-                          <span class="icon"><i class="fas fa-envelope"></i>&nbsp;</span>
-                          {{ history.event }}
-                        </div>
-                      </div>
+          <div class="column is-6-tablet" v-for="item in lastHistory" :key="item.id">
+            <div class="card" :class="{ 'is-success': item.watched }">
+              <header class="card-header">
+                <p class="card-header-title is-text-overflow">
+                  <FloatingImage :image="`/history/${item.id}/images/poster`" :item_class="'scaled-image'"
+                                 v-if="poster_enable">
+                    <NuxtLink :to="'/history/'+item.id" v-text="item?.full_title || makeName(item)"/>
+                  </FloatingImage>
+                  <NuxtLink :to="'/history/'+item.id" v-text="item?.full_title || makeName(item)" v-else/>
+                </p>
+                <span class="card-header-icon">
+                  <span class="icon" v-if="'episode' === item.type"><i
+                      class="fas fa-tv"></i></span>
+                  <span class="icon" v-else><i class="fas fa-film"></i></span>
+                </span>
+              </header>
+              <div class="card-content">
+                <div class="columns is-multiline is-mobile has-text-centered">
+                  <div class="column is-4-tablet is-6-mobile has-text-left-mobile">
+                    <div class="is-text-overflow" v-if="item?.updated_at">
+                      <span class="icon"><i class="fas fa-calendar"/>&nbsp;</span>
+                      <span class="has-tooltip"
+                            v-tooltip="`Record updated at: ${moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
+                        {{ moment.unix(item.updated_at).fromNow() }}
+                      </span>
                     </div>
                   </div>
-                  <div class="card-footer" v-if="history.progress">
-                    <div class="card-footer-item">
-                      <span class="has-text-success" v-if="history.watched">Played</span>
-                      <span class="has-text-danger" v-else>Unplayed</span>
+                  <div class="column is-4-tablet is-6-mobile has-text-right-mobile">
+                    <div class="is-text-overflow">
+                      <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
+                      <NuxtLink :to="'/backend/' + item.via" v-text="item.via"/>
+                      <span v-if="item?.metadata && Object.keys(item?.metadata).length > 1"
+                            v-tooltip="`Also reported by: ${Object.keys(item.metadata).filter(i => i !== item.via).join(', ')}.`">
+                        (<span class="has-tooltip">+{{
+                          Object.keys(item.metadata).length - 1
+                        }}</span>)
+                      </span>
                     </div>
-                    <div class="card-footer-item">{{ formatDuration(history.progress) }}</div>
+                  </div>
+                  <div class="column is-4-tablet is-12-mobile has-text-left-mobile">
+                    <div class="is-text-overflow">
+                      <span class="icon"><i class="fas fa-envelope"></i>&nbsp;</span>
+                      {{ item.event }}
+                    </div>
                   </div>
                 </div>
+              </div>
+              <div class="card-footer" v-if="item.progress">
+                <div class="card-footer-item">
+                  <span class="has-text-success" v-if="item.watched">Played</span>
+                  <span class="has-text-danger" v-else>Unplayed</span>
+                </div>
+                <div class="card-footer-item">{{ formatDuration(item.progress) }}</div>
               </div>
             </div>
           </div>
@@ -164,6 +159,7 @@ import {formatDuration, goto_history_item, makeName, TOOLTIP_DATE_FORMAT} from '
 import {NuxtLink} from '#components'
 import {useStorage} from '@vueuse/core'
 import CardImage from "~/components/CardImage.vue";
+import FloatingImage from "~/components/FloatingImage.vue";
 
 useHead({title: 'Index'})
 
