@@ -90,6 +90,11 @@
                 <span>Files Integrity</span>
               </NuxtLink>
 
+              <NuxtLink class="navbar-item" to="/duplicated" @click.native="e => changeRoute(e)">
+                <span class="icon"><i class="fas fa-copy"/></span>
+                <span>Duplicated Ref</span>
+              </NuxtLink>
+
               <hr class="navbar-divider">
 
               <NuxtLink class="navbar-item" to="/ignore" @click.native="e => changeRoute(e)">
@@ -242,6 +247,9 @@
         <TaskScheduler :forceShow="showScheduler" @update="e => scheduler = e" v-if="in_container"/>
         <Settings v-if="showSettings" @force_bg_reload="() => loadImage(true)"/>
         <NuxtPage/>
+        <ClientOnly>
+          <Dialog/>
+        </ClientOnly>
       </div>
 
       <div class="columns is-multiline is-mobile mt-3">
@@ -300,6 +308,7 @@ import {useAuthStore} from '~/store/auth.js'
 import Settings from "~/components/Settings.vue"
 import TaskScheduler from "~/components/TaskScheduler.vue"
 import NewVersion from "~/components/NewVersion.vue";
+import Dialog from "~/components/Dialog.vue";
 
 const useVersionUpdate = () => {
   const newVersionIsAvailable = ref(false)
