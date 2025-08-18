@@ -1,8 +1,36 @@
 [
     {
-        "tag": "dev-20250818-1bc8f320",
-        "date": "2025-08-18T01:15:29+00:00",
+        "tag": "dev-20250818-d37f9d57",
+        "date": "2025-08-18T19:41:15+00:00",
         "commits": [
+            {
+                "sha": "d37f9d57",
+                "message": "Implemented Duplicate file reference DFR.",
+                "author": "arabcoders",
+                "date": "2025-08-18T19:41:15+00:00",
+                "full_sha": "d37f9d573ed2ce1973ba19c5261ebc65858968b7"
+            },
+            {
+                "sha": "b94d040d",
+                "message": "switch to floating image display instead of taking space from history cards.",
+                "author": "arabcoders",
+                "date": "2025-08-18T15:45:29+00:00",
+                "full_sha": "b94d040d4ccea6d64ef39a0699da071c9940263e"
+            },
+            {
+                "sha": "b4262de1",
+                "message": "tag multi episode entries.",
+                "author": "arabcoders",
+                "date": "2025-08-18T14:55:05+00:00",
+                "full_sha": "b4262de1a05c5480535af4b573072d16c3e8db66"
+            },
+            {
+                "sha": "014a08a0",
+                "message": "Added Episode range parser.",
+                "author": "arabcoders",
+                "date": "2025-08-18T14:29:35+00:00",
+                "full_sha": "014a08a0b6a5d99da26305a25588aedb6ac76620"
+            },
             {
                 "sha": "1bc8f320",
                 "message": "Fix DFR total count",
@@ -256,7 +284,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "1bc8f32073818a83ba1077890b1b4779b6d5c058"
+        "full_sha": "d37f9d573ed2ce1973ba19c5261ebc65858968b7"
     },
     {
         "tag": "dev-20250604-9407bc76",
