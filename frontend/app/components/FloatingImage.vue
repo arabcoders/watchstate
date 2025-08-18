@@ -66,8 +66,7 @@ const defaultLoader = async () => {
       signal: cancelRequest.signal
     })
 
-    if (200 !== response.status) {
-      notification('error', 'Error', `ImageView Request error. ${response.status}: ${response.statusText}`)
+    if (!response.ok) {
       return;
     }
 

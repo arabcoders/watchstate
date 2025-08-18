@@ -158,7 +158,6 @@ import Message from '~/components/Message.vue'
 import {formatDuration, goto_history_item, makeName, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
 import {NuxtLink} from '#components'
 import {useStorage} from '@vueuse/core'
-import CardImage from "~/components/CardImage.vue";
 import FloatingImage from "~/components/FloatingImage.vue";
 
 useHead({title: 'Index'})

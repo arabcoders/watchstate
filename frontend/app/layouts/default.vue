@@ -90,9 +90,9 @@
                 <span>Files Integrity</span>
               </NuxtLink>
 
-              <NuxtLink class="navbar-item" to="/duplicated" @click.native="e => changeRoute(e)">
+              <NuxtLink class="navbar-item" to="/duplicate" @click.native="e => changeRoute(e)">
                 <span class="icon"><i class="fas fa-copy"/></span>
-                <span>Duplicated Ref</span>
+                <span>Duplicate File Ref</span>
               </NuxtLink>
 
               <hr class="navbar-divider">

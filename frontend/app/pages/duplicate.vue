@@ -3,8 +3,8 @@
     <div class="columns is-multiline">
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4 ">
-          <span class="icon"><i class="fas fa-copy"></i></span>
-          Duplicated File reference
+          <span class="icon"><i class="fas fa-copy"/></span>
+          Duplicate File Reference
         </span>
         <div class="is-pulled-right">
           <div class="field is-grouped">
@@ -12,27 +12,33 @@
               <input type="search" v-model.lazy="filter" class="input" id="filter"
                      placeholder="Filter displayed results.">
               <span class="icon is-left">
-                <i class="fas fa-filter"></i>
+                <i class="fas fa-filter"/>
               </span>
             </div>
 
             <div class="control">
               <button class="button is-danger is-light" @click="toggleFilter">
-                <span class="icon"><i class="fas fa-filter"></i></span>
+                <span class="icon"><i class="fas fa-filter"/></span>
+              </button>
+            </div>
+
+            <div class="control">
+              <button class="button is-danger" @click="deleteRecords">
+                <span class="icon"><i class="fas fa-trash"/></span>
               </button>
             </div>
 
             <p class="control">
               <button class="button is-info" @click.prevent="loadContent(page, true, true)" :disabled="isLoading"
                       :class="{'is-loading':isLoading}">
-                <span class="icon"><i class="fas fa-sync"></i></span>
+                <span class="icon"><i class="fas fa-sync"/></span>
               </button>
             </p>
           </div>
         </div>
         <div class="is-hidden-mobile">
           <span class="subtitle">
-            This page shows records from backends that reported different metadata for same file reference.
+            This tool is useful to discover if your backends are reporting different metadata for same files.
           </span>
         </div>
       </div>
@@ -78,16 +84,20 @@
       <div class="column is-12">
         <div class="columns is-multiline" v-if="filteredRows(items)?.length>0">
           <template v-for="item in items" :key="item.id">
-            <Lazy :unrender="true" :min-height="250" class="column is-6-tablet" v-if="filterItem(item)">
+            <Lazy :unrender="true" :min-height="270" class="column is-6-tablet" v-if="filterItem(item)">
               <div class="card" :class="{ 'is-success': item.watched }">
                 <header class="card-header">
                   <p class="card-header-title is-text-overflow pr-1">
-                    <NuxtLink :to="'/history/'+item.id" v-text="makeName(item)"/>
+                    <FloatingImage :image="`/history/${item.id}/images/poster`" :item_class="'scaled-image'"
+                                   v-if="poster_enable">
+                      <NuxtLink :to="'/history/'+item.id" v-text="item?.full_title || makeName(item)"/>
+                    </FloatingImage>
+                    <NuxtLink :to="'/history/'+item.id" v-text="item?.full_title || makeName(item)" v-else/>
                   </p>
                   <span class="card-header-icon" @click="item.showRawData = !item?.showRawData">
                     <span class="icon">
                       <i class="fas"
-                         :class="{ 'fa-tv': 'episode' === item.type.toLowerCase(), 'fa-film': 'movie' === item.type.toLowerCase()}"></i>
+                         :class="{ 'fa-tv': 'episode' === item.type.toLowerCase(), 'fa-film': 'movie' === item.type.toLowerCase()}"/>
                     </span>
                   </span>
                 </header>
@@ -98,9 +108,10 @@
                         <div class="control is-clickable"
                              :class="{'is-text-overflow': !item?.expand_title, 'is-text-contents': item?.expand_title}"
                              @click="item.expand_title = !item?.expand_title">
-                          <span class="icon"><i class="fas fa-heading"></i>&nbsp;</span>
+                          <span class="icon"><i class="fas fa-heading"/>&nbsp;</span>
                           <template v-if="item?.content_title">
-                            <NuxtLink :to="makeSearchLink('subtitle', item.content_title)" v-text="item.content_title"/>
+                            <NuxtLink :to="makeSearchLink('subtitle', item.content_title)"
+                                      v-text="item.content_title"/>
                           </template>
                           <template v-else>
                             <NuxtLink :to="makeSearchLink('subtitle', item.title)" v-text="item.title"/>
@@ -109,7 +120,7 @@
                         <div class="control">
                           <span class="icon is-clickable"
                                 @click="copyText(item?.content_title ?? item.title, false)">
-                            <i class="fas fa-copy"></i></span>
+                            <i class="fas fa-copy"/></span>
                         </div>
                       </div>
                     </div>
@@ -118,7 +129,7 @@
                         <div class="control is-clickable"
                              :class="{'is-text-overflow': !item?.expand_path, 'is-text-contents': item?.expand_path}"
                              @click="item.expand_path = !item?.expand_path" v-tooltip="item.content_path">
-                          <span class="icon"><i class="fas fa-file"></i>&nbsp;</span>
+                          <span class="icon"><i class="fas fa-file"/>&nbsp;</span>
                           <NuxtLink v-if="item?.content_path" :to="makeSearchLink('path', item.content_path)"
                                     v-text="item.content_path"/>
                           <span v-else>No path found.</span>
@@ -126,14 +137,14 @@
                         <div class="control">
                           <span class="icon is-clickable"
                                 @click="copyText(item?.content_path ?item.content_path : null, false)">
-                            <i class="fas fa-copy"></i></span>
+                            <i class="fas fa-copy"/></span>
                         </div>
                       </div>
                     </div>
                     <div class="column is-12">
                       <div class="field is-grouped">
                         <div class="control is-expanded is-unselectable">
-                          <span class="icon"><i class="fas fa-info"></i>&nbsp;</span>
+                          <span class="icon"><i class="fas fa-info"/>&nbsp;</span>
                           <span>Has metadata from</span>
                         </div>
                         <div class="control">
@@ -151,20 +162,20 @@
                      class="is-terminal"><code>{{ JSON.stringify(item, null, 2) }}</code>
                   <button class="button is-small m-4" @click="() => copyText(JSON.stringify(item, null, 2))"
                           style="position: absolute; top:0; right:0;">
-                    <span class="icon"><i class="fas fa-copy"></i></span>
+                    <span class="icon"><i class="fas fa-copy"/></span>
                   </button>
                 </pre>
                 </div>
                 <div class="card-footer">
                   <div class="card-footer-item">
                     <span class="icon">
-                      <i class="fas" :class="{'fa-eye':item.watched,'fa-eye-slash':!item.watched}"></i>&nbsp;
+                      <i class="fas" :class="{'fa-eye':item.watched,'fa-eye-slash':!item.watched}"/>&nbsp;
                     </span>
                     <span class="has-text-success" v-if="item.watched">Played</span>
                     <span class="has-text-danger" v-else>Unplayed</span>
                   </div>
                   <div class="card-footer-item">
-                    <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
+                    <span class="icon"><i class="fas fa-calendar"/>&nbsp;</span>
                     <span class="has-tooltip"
                           v-tooltip="`Record updated at: ${moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
                       {{ moment.unix(item.updated_at).fromNow() }}
@@ -182,11 +193,11 @@
           <template v-else>
             <Message message_class="has-background-warning-80 has-text-dark" v-if="filter && items.length > 1"
                      title="Information" icon="fas fa-check">
-              The filter <code>{{ filter }}</code> did not match any records.
+              The filter <code>{{ filter }}</code> did not match any thing.
             </Message>
             <Message message_class="has-background-success-90 has-text-dark" v-if="!filter || items.length < 1"
                      title="Success" icon="fas fa-check">
-              WatchState did not find any records matching the criteria.
+              There are no duplicate file references in the database.
             </Message>
           </template>
         </div>
@@ -195,20 +206,17 @@
           <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
                    @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
             <ul>
-              <li>
-                This checker will only works if your media servers are actually using same file paths.
+              <li>This checker will only works <b>if your media servers are actually using same file paths</b>.</li>
+              <li>If you see multi-episode records, that mean your metadata need to be forcibly updated. Go to backends
+                page and select the <code>9th</code> option to force metadata update for that backend.
               </li>
-              <li>
-                Multi-episode records will also be reported as duplicate. We plan to fix that at some other time.
-              </li>
-              <li>
-                This operation is quite slow and may take a while to complete, depending on the number of records in
-                your database.
+              <li>The initial request is quite slow as we traverse the entire database looking for duplicate file
+                references. Once the initial request is done, the subsequent requests will be much faster as we cache
+                the results. To force cache invalidation, you have to click on the reload button.
               </li>
             </ul>
           </Message>
         </div>
-
       </div>
     </div>
   </div>
@@ -229,11 +237,13 @@ import {
 import moment from 'moment'
 import {useStorage} from '@vueuse/core'
 import Lazy from '~/components/Lazy.vue'
-import {useSessionCache} from '~/utils/cache.js'
+import {NuxtLink} from "#components";
+import FloatingImage from "~/components/FloatingImage.vue";
+import {useDialog} from "~/composables/useDialog.js";
 
 const route = useRoute()
 
-useHead({title: 'Duplicated Records'})
+useHead({title: 'DFR'})
 
 const items = ref([])
 const page = ref(route.query.page ?? 1)
@@ -242,12 +252,9 @@ const total = ref(0)
 const last_page = computed(() => Math.ceil(total.value / perpage.value))
 const isLoading = ref(false)
 const show_page_tips = useStorage('show_page_tips', true)
-const api_user = useStorage('api_user', 'main')
 const filter = ref(route.query.filter ?? '')
 const showFilter = ref(!!filter.value)
-const cacheKey = computed(() => `duplicated_v1-${page.value}-${perpage.value}`)
-
-const cache = useSessionCache(api_user.value)
+const poster_enable = useStorage('poster_enable', true)
 
 const toggleFilter = () => {
   showFilter.value = !showFilter.value
@@ -269,7 +276,7 @@ const loadContent = async (pageNumber, fromPopState = false, fromReload = false)
   search.set('perpage', perpage.value)
   search.set('page', pageNumber)
 
-  let pageTitle = `Duplicated Records: Page #${pageNumber}`
+  let pageTitle = `DFR: Page #${pageNumber}`
 
   if (filter.value) {
     search.set('filter', filter.value)
@@ -288,30 +295,25 @@ const loadContent = async (pageNumber, fromPopState = false, fromReload = false)
     let json
 
     if (true === fromReload) {
-      clearCache()
+      search.set('no_cache', '1')
     }
 
-    if (cache.has(cacheKey.value)) {
-      json = cache.get(cacheKey.value)
-    } else {
-      const response = await request(`/system/duplicated/?${search.toString()}`)
-      json = await response.json()
-      cache.set(cacheKey.value, json)
+    const response = await request(`/system/duplicate/?${search.toString()}`)
+    json = await response.json()
 
-      if (useRoute().name !== 'duplicated') {
-        return
-      }
+    if (useRoute().name !== 'duplicate') {
+      return
+    }
 
-      if (200 !== response.status) {
-        notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`)
-        isLoading.value = false
-        return
-      }
+    if (200 !== response.status) {
+      notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`)
+      isLoading.value = false
+      return
     }
 
     if (!fromPopState && window.location.href !== newUrl) {
       await useRouter().push({
-        path: '/duplicated',
+        path: '/duplicate',
         title: pageTitle,
         query: Object.fromEntries(search)
       })
@@ -337,7 +339,6 @@ const loadContent = async (pageNumber, fromPopState = false, fromReload = false)
 }
 
 onMounted(async () => {
-  cache.setNameSpace(api_user.value)
   await loadContent(page.value ?? 1)
   window.addEventListener('popstate', stateCallBack)
 })
@@ -369,7 +370,7 @@ watch(filter, val => {
     }
 
     router.push({
-      'path': '/duplicated',
+      'path': '/duplicate',
       'query': {
         ...route.query,
         'filter': undefined
@@ -383,15 +384,13 @@ watch(filter, val => {
   }
 
   router.push({
-    'path': '/duplicated',
+    'path': '/duplicate',
     'query': {
       ...route.query,
       'filter': val
     }
   })
 })
-
-const clearCache = () => cache.clear(k => k.startsWith(`${api_user.value}:duplicated`))
 
 const stateCallBack = async e => {
   if (!e.state && !e.detail) {
@@ -406,5 +405,33 @@ const stateCallBack = async e => {
     showFilter.value = true
   }
   await loadContent(page.value, true)
+}
+
+const deleteRecords = async () => {
+  const {confirmDialog} = useDialog()
+  const {status} = await confirmDialog({
+    title: 'Delete items',
+    message: `Delete '${total.value}' items?`,
+    confirmText: 'Delete',
+    confirmClass: 'is-danger',
+    confirmIcon: 'fas fa-trash',
+  })
+
+  if (true !== status) {
+    return
+  }
+  try {
+    const response = await request('/system/duplicate', {method: 'DELETE'});
+    if (!response.ok) {
+      const json = await response.json();
+      notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`);
+      return;
+    }
+
+    notification('success', 'Success', `Successfully deleted '${total.value}' items.`);
+    await loadContent(page.value, true, true);
+  } catch (error) {
+    notification('error', 'Error', `Request error. ${error.message}`);
+  }
 }
 </script>

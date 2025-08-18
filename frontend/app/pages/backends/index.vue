@@ -246,6 +246,11 @@ const usefulCommands = {
     title: "Force import local play state from this backend.",
     command: "state:import -f -v -u {user} -s {name}",
   },
+  force_metadata: {
+    id: 9,
+    title: "Force metadata import from this backend.",
+    command: "state:import -f -v --metadata-only -u {user} -s {name}",
+  },
 }
 
 const forwardCommand = async backend => {

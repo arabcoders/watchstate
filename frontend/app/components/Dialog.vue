@@ -60,7 +60,7 @@
 
           <footer class="modal-card-foot p-4 is-justify-content-flex-end">
             <template v-if="state.current?.type === 'alert'">
-              <button class="button is-danger" @click="onEnter">
+              <button id="app-dialog-primary-btn" class="button is-danger" @click="onEnter">
                 <span class="icon-text">
                   <span class="icon"><i class="fas fa-check"/></span>
                   <span>{{ (state.current?.opts as any)?.confirmText ?? 'OK' }}</span>
@@ -71,9 +71,11 @@
             <template v-else-if="state.current?.type === 'confirm' || state.current?.type === 'prompt'">
               <div class="field is-grouped">
                 <div class="control">
-                  <button class="button is-primary" @click="onEnter">
+                  <button id="app-dialog-primary-btn" class="button" @click="onEnter"
+                          :class="(state.current?.opts as any)?.confirmClass ?? 'is-primary'">
                     <span class="icon-text">
-                      <span class="icon"><i class="fas fa-check"/></span>
+                      <span class="icon"><i class="fas"
+                                            :class="(state.current?.opts as any)?.confirmIcon ?? 'fa-check'"/></span>
                       <span>{{ (state.current?.opts as any)?.confirmText ?? 'OK' }}</span>
                     </span>
                   </button>
@@ -113,7 +115,7 @@ const focusPrimary = () => {
   if (!root) {
     return
   }
-  const btn = root.querySelector<HTMLButtonElement>('.modal-card-foot .button.is-primary')
+  const btn = root.querySelector<HTMLButtonElement>('#app-dialog-primary-btn')
   btn?.focus()
 }
 const focusInput = async () => {
