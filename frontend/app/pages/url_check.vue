@@ -46,8 +46,9 @@
                 <div class="select is-fullwidth">
                   <select v-model="use_template" :disabled="is_loading">
                     <option value="" v-text="'Select a template'" disabled/>
-                    <option v-for="template in templates" :key="template.key" :value="template.key"
-                            v-text="template.key"/>
+                    <option v-for="template in templates" :key="template.key" :value="template.key">
+                      {{ template.id }}. {{ template.key }}
+                    </option>
                   </select>
                 </div>
               </div>
@@ -267,6 +268,10 @@
             <li>You can add this special header <code>ws-timeout</code> to control the connection timeout for the http
               library.
             </li>
+            <li>To get the value of <code>machineIdentifier</code> for plex <code>X-Plex-Client-Identifier</code>
+              header. First run <code>Plex: Info</code>, you will find a field named <code>machineIdentifier</code> This
+              value should go in the identifier header.
+            </li>
           </ul>
         </Message>
       </div>
@@ -290,7 +295,32 @@ const toggle_body = ref(true)
 const use_template = ref("")
 const templates = ref([
   {
-    "key": "Plex Media Server",
+    "id": 1,
+    "key": "Jellyfin/Emby Server",
+    "override": {
+      "method": "GET",
+      "url": "http://[ip:port]/items",
+      "headers": [
+        {"key": "Accept", "value": "application/json"},
+        {"key": "X-MediaBrowser-Token", "value": "[API_KEY]"},
+      ]
+    },
+  },
+  {
+    "id": 2,
+    "key": "Plex: Info",
+    "override": {
+      "method": "GET",
+      "url": "http://[ip:port]/",
+      "headers": [
+        {"key": "Accept", "value": "application/json"},
+        {"key": "X-Plex-Token", "value": "[PLEX_TOKEN]"},
+      ]
+    },
+  },
+  {
+    "id": 3,
+    "key": "Plex: Libraries",
     "override": {
       "method": "GET",
       "url": "http://[ip:port]/library/sections",
@@ -301,13 +331,25 @@ const templates = ref([
     },
   },
   {
-    "key": "Jellyfin/Emby Server",
+    "id": 4,
+    "key": "Plex.tv: External Users",
     "override": {
       "method": "GET",
-      "url": "http://[ip:port]/items",
+      "url": "http://plex.tv/api/users",
       "headers": [
-        {"key": "Accept", "value": "application/json"},
-        {"key": "X-MediaBrowser-Token", "value": "[API_KEY]"},
+        {"key": "X-Plex-Token", "value": "[PLEX_TOKEN]"},
+      ]
+    },
+  },
+  {
+    "id": 5,
+    "key": "Plex.tv: Home Users",
+    "override": {
+      "method": "GET",
+      "url": "http://plex.tv/api/v2/home/users/",
+      "headers": [
+        {"key": "X-Plex-Token", "value": "[PLEX_TOKEN]"},
+        {"key": "X-Plex-Client-Identifier", "value": "[machineIdentifier]"},
       ]
     },
   },
@@ -333,9 +375,8 @@ watch(use_template, async newValue => {
     return
   }
 
-  item.value = template.override
+  item.value = JSON.parse(JSON.stringify(template.override))
   await nextTick()
-
   use_template.value = ""
 })
 
