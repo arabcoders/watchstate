@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250818-d37f9d57",
-        "date": "2025-08-18T19:41:15+00:00",
+        "tag": "dev-20250823-a8d707e3",
+        "date": "2025-08-23T19:03:34+00:00",
         "commits": [
+            {
+                "sha": "a8d707e3",
+                "message": "Increase add operation timeout",
+                "author": "arabcoders",
+                "date": "2025-08-23T19:03:34+00:00",
+                "full_sha": "a8d707e378013f56fc56163a8f572aa5ac2bb7a6"
+            },
             {
                 "sha": "d37f9d57",
                 "message": "Implemented Duplicate file reference DFR.",
@@ -284,7 +291,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "d37f9d573ed2ce1973ba19c5261ebc65858968b7"
+        "full_sha": "a8d707e378013f56fc56163a8f572aa5ac2bb7a6"
     },
     {
         "tag": "dev-20250604-9407bc76",
