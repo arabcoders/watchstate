@@ -584,7 +584,7 @@ const plex_get_token = async (notify = true) => {
       backend.value.token = json.authToken
       await nextTick();
       plex_oauth.value = {}
-      notification('success', 'Success', `Plex token generated inserted successfully.`)
+      notification('success', 'Success', `Successfully authenticated with plex.tv.`)
       if (plex_window.value) {
         try {
           plex_window.value.close()
