@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250823-8d651c6e",
-        "date": "2025-08-23T20:02:37+00:00",
+        "tag": "dev-20250823-78379b96",
+        "date": "2025-08-23T20:18:41+00:00",
         "commits": [
+            {
+                "sha": "78379b96",
+                "message": "Update URLCheck to add more templates.",
+                "author": "arabcoders",
+                "date": "2025-08-23T20:18:41+00:00",
+                "full_sha": "78379b96eb8642bef72f93dd75cf54563ff15ae4"
+            },
             {
                 "sha": "8d651c6e",
                 "message": "Increase URLCheck operation timeout",
@@ -298,7 +305,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "8d651c6eab9db827a81cf47f4ac63d14c911f31f"
+        "full_sha": "78379b96eb8642bef72f93dd75cf54563ff15ae4"
     },
     {
         "tag": "dev-20250604-9407bc76",
