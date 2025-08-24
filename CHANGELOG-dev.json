@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250823-78379b96",
-        "date": "2025-08-23T20:18:41+00:00",
+        "tag": "dev-20250824-9cecd116",
+        "date": "2025-08-24T14:01:50+00:00",
         "commits": [
+            {
+                "sha": "9cecd116",
+                "message": "Update README",
+                "author": "arabcoders",
+                "date": "2025-08-24T14:01:50+00:00",
+                "full_sha": "9cecd116ee8a2fe7ecaf3131a03addd552c772b4"
+            },
             {
                 "sha": "78379b96",
                 "message": "Update URLCheck to add more templates.",
@@ -305,7 +312,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "78379b96eb8642bef72f93dd75cf54563ff15ae4"
+        "full_sha": "9cecd116ee8a2fe7ecaf3131a03addd552c772b4"
     },
     {
         "tag": "dev-20250604-9407bc76",
