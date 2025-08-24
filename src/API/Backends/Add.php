@@ -101,6 +101,8 @@ final class Add
                 options: $config->get('options', []),
             );
 
+            set_time_limit(60 * 10);
+
             if (false === $instance->validateContext($context)) {
                 return api_error('Context information validation failed.', Status::BAD_REQUEST);
             }

@@ -3,6 +3,7 @@
 ![Build Status](https://github.com/arabcoders/WatchState/actions/workflows/build.yml/badge.svg)
 ![MIT License](https://img.shields.io/github/license/arabcoders/WatchState.svg)
 ![Docker pull](https://img.shields.io/docker/pulls/arabcoders/watchstate.svg)
+![ghcr pull](https://ghcr-badge.elias.eu.org/shield/arabcoders/watchstate/watchstate)
 
 This tool primary goal is to sync your backends **users** play state without relying on third party services, out of the
 box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.

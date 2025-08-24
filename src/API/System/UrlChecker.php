@@ -52,6 +52,8 @@ final class UrlChecker
         }
 
         try {
+            set_time_limit(60 * 10);
+
             $response = $client->request($method->value, $url, [
                 'timeout' => $timeout,
                 'headers' => $headers
