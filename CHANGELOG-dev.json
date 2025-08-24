@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250824-9cecd116",
-        "date": "2025-08-24T14:01:50+00:00",
+        "tag": "dev-20250824-e3485904",
+        "date": "2025-08-24T14:21:53+00:00",
         "commits": [
+            {
+                "sha": "e3485904",
+                "message": "approve esbuild for pnpm",
+                "author": "arabcoders",
+                "date": "2025-08-24T14:21:53+00:00",
+                "full_sha": "e3485904d42add14585fbdff6cb7c83ec2c9d04c"
+            },
             {
                 "sha": "9cecd116",
                 "message": "Update README",
@@ -312,7 +319,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "9cecd116ee8a2fe7ecaf3131a03addd552c772b4"
+        "full_sha": "e3485904d42add14585fbdff6cb7c83ec2c9d04c"
     },
     {
         "tag": "dev-20250604-9407bc76",
