@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\API\System;
 
 use App\Libs\Attributes\Route\Delete;
+use App\Libs\Attributes\Route\Post;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Mappers\ImportInterface as iImport;
 use Psr\Http\Message\ResponseInterface as iResponse;
@@ -18,7 +19,7 @@ final class Reset
     public const string URL = '%{api.prefix}/system/reset';
 
     #[Delete(self::URL . '[/]', name: 'system.reset')]
-    public function __invoke(iRequest $request, Redis $redis, iImport $mapper, iLogger $logger): iResponse
+    public function reset(iRequest $request, Redis $redis, iImport $mapper, iLogger $logger): iResponse
     {
         foreach (getUsersContext($mapper, $logger) as $userContext) {
             // -- reset database.
@@ -41,5 +42,13 @@ final class Reset
         }
 
         return api_response(Status::OK, ['message' => 'System reset is complete.']);
+    }
+
+    #[Post(self::URL . '/opcache[/]', name: 'system.reset.opcache')]
+    public function opcache(iRequest $request, Redis $redis, iImport $mapper, iLogger $logger): iResponse
+    {
+        return api_response(Status::OK, [
+            'message' => opcache_reset() ? 'OPCache reset is complete.' : 'OPCache reset failed.',
+        ]);
     }
 }
