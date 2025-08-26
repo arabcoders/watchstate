@@ -93,6 +93,13 @@ final readonly class Sign
 
     private static function key(array $config): string
     {
-        return 'play-' . substr(bin2hex(openssl_digest(json_encode($config), 'shake256', true)), 0, 12);
+        $json = json_encode($config);
+        try {
+            $hash = bin2hex(openssl_digest($json, 'shake256', true));
+        } catch (\Throwable) {
+            // -- for some reason, openssl_digest fails on frankenphp.
+            $hash = hash('sha256', $json);
+        }
+        return 'play-' . substr($hash, 0, 12);
     }
 }
