@@ -1,5 +1,19 @@
 [
   {
+    "tag": "Unreleased (760618c9)",
+    "full_sha": "760618c9f23c1e3e953cf347344a3fc8d205f195",
+    "date": "2025-08-26T23:24:02+00:00",
+    "commits": [
+      {
+        "sha": "e51fe5f0",
+        "full_sha": "e51fe5f0c61cefbfe6617523a062053ff775cd85",
+        "message": "workaround openssl_digest in frankenphp",
+        "author": "arabcoders",
+        "date": "2025-08-26T23:21:08+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v0.4.1",
     "full_sha": "fb1c6d733dff7889553f0bf4eb0e36b05eeaf027",
     "date": "2025-08-24T14:29:56+00:00",
