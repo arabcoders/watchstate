@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250824-e3485904",
-        "date": "2025-08-24T14:21:53+00:00",
+        "tag": "dev-20250827-c8ed4152",
+        "date": "2025-08-26T23:19:46+00:00",
         "commits": [
+            {
+                "sha": "c8ed4152",
+                "message": "workaround openssl_digest in frankenphp",
+                "author": "arabcoders",
+                "date": "2025-08-26T23:19:46+00:00",
+                "full_sha": "c8ed41521fd4dc5fbcc6ddfe9b00a7fdc466088c"
+            },
             {
                 "sha": "e3485904",
                 "message": "approve esbuild for pnpm",
@@ -319,7 +326,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "e3485904d42add14585fbdff6cb7c83ec2c9d04c"
+        "full_sha": "c8ed41521fd4dc5fbcc6ddfe9b00a7fdc466088c"
     },
     {
         "tag": "dev-20250604-9407bc76",
