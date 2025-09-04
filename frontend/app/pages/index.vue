@@ -155,7 +155,7 @@
 import request from '~/utils/request.js'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
-import {formatDuration, goto_history_item, makeName, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
+import {formatDuration, goto_history_item, makeName, TOOLTIP_DATE_FORMAT} from '~/utils/index'
 import {NuxtLink} from '#components'
 import {useStorage} from '@vueuse/core'
 import FloatingImage from "~/components/FloatingImage.vue";

@@ -23,43 +23,36 @@
   </video>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import {ref, onMounted, onUpdated, onBeforeUnmount} from 'vue'
+import {disableOpacity, enableOpacity, notification} from '~/utils'
+import request from '~/utils/request'
 import Hls from 'hls.js'
 import 'plyr/dist/plyr.css'
-import {disableOpacity, enableOpacity, notification} from '~/utils/index.js'
-import request from '~/utils/request.js'
 import Plyr from 'plyr'
 
-const props = defineProps({
-  link: {
-    type: String,
-    required: true,
-  },
-  title: {
-    type: String,
-    required: false,
-  },
-  poster: {
-    type: String,
-    required: false,
-  },
-  isControls: {
-    type: Boolean,
-    default: true
-  },
-  debug: {
-    type: Boolean,
-    default: false
-  },
-  reference: {},
+const props = withDefaults(defineProps<{
+  /** HLS stream URL */
+  link: string
+  /** Video title */
+  title?: string
+  /** Poster image URL */
+  poster?: string
+  /** Show controls */
+  isControls?: boolean
+  /** Enable debug mode */
+  debug?: boolean
+  /** Reference for parent access (optional, any type) */
+  reference?: unknown
+}>(), {
+  isControls: true,
+  debug: false
 })
 
-const video = ref(null)
-/** @type {Plyr} */
-let player;
-/** @type {Hls} */
-let hls;
-const poster = ref()
+const video = ref<HTMLVideoElement | null>(null)
+const poster = ref<string | undefined>(undefined)
+let player: Plyr | undefined
+let hls: Hls | undefined
 
 const destroyPlayer = () => {
   console.debug('Destroying video player');
@@ -70,19 +63,6 @@ const destroyPlayer = () => {
     hls.destroy()
   }
 }
-
-onMounted(() => {
-  disableOpacity()
-  if (/(iPhone|iPod|iPad).*AppleWebKit/i.test(navigator.userAgent)) {
-    document.documentElement.style.setProperty('--webkit-text-track-display', 'block');
-  }
-  Promise.all([getPoster(), prepareVideoPlayer()])
-})
-onUpdated(() => prepareVideoPlayer())
-onUnmounted(() => {
-  destroyPlayer()
-  enableOpacity()
-})
 
 const getPoster = async () => {
   if (props.poster) {
@@ -96,6 +76,10 @@ const getPoster = async () => {
 }
 
 const prepareVideoPlayer = async () => {
+  if (!video.value) {
+    console.warn('Video element not found');
+    return
+  }
   player = new Plyr(video.value, {
     debug: props.debug,
     clickToPlay: true,
@@ -139,4 +123,19 @@ const prepareVideoPlayer = async () => {
     hls.attachMedia(video.value)
   }
 }
+
+onMounted(() => {
+  disableOpacity()
+  if (/(iPhone|iPod|iPad).*AppleWebKit/i.test(navigator.userAgent)) {
+    document.documentElement.style.setProperty('--webkit-text-track-display', 'block');
+  }
+  Promise.all([getPoster(), prepareVideoPlayer()])
+})
+
+onUpdated(() => prepareVideoPlayer())
+
+onBeforeUnmount(() => {
+  destroyPlayer()
+  enableOpacity()
+})
 </script>

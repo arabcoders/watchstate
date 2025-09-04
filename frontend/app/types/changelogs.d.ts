@@ -1,10 +1,10 @@
-type changelogs = changeset[]
+type changelogs = Array<changeset>
 
 type changeset = {
     tag: string
     full_sha: string
     date: string
-    commits: Commit[]
+    commits: Array<Commit>
 }
 
 type Commit = {

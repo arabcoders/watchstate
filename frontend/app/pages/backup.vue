@@ -148,7 +148,7 @@
 <script setup>
 import request from '~/utils/request.js'
 import moment from 'moment'
-import {humanFileSize, makeConsoleCommand, notification, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
+import {humanFileSize, makeConsoleCommand, notification, TOOLTIP_DATE_FORMAT} from '~/utils/index'
 import Message from '~/components/Message.vue'
 import {useStorage} from '@vueuse/core'
 

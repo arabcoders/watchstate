@@ -60,18 +60,29 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import {ref} from 'vue'
+import {useRoute, navigateTo} from '#app'
 import request from '~/utils/request.js'
 import Message from '~/components/Message.vue'
-import {notification} from '~/utils/index.js'
+import {notification} from '~/utils'
 import Confirm from '~/components/Confirm.vue'
-import {useSessionCache} from '~/utils/cache.js'
+import {useSessionCache} from '~/utils/cache'
+import type {GenericError} from '~/types/responses'
+import {useDialog} from "~/composables/useDialog.ts";
 
-const error = ref()
-const isResetting = ref(false)
+const error = ref<GenericError | null>(null)
+const isResetting = ref<boolean>(false)
 
-const resetSystem = async () => {
-  if (!confirm('Last chance! Are you sure you want to reset the system state?')) {
+const resetSystem = async (): Promise<void> => {
+  const {status: confirmStatus} = await useDialog().confirmDialog({
+    title: 'Confirm system reset',
+    message: 'Last chance! Are you sure you want to reset the system state?',
+    confirmText: 'Yes, reset it',
+    confirmColor: 'is-danger'
+  })
+
+  if (true !== confirmStatus) {
     return
   }
 
@@ -79,8 +90,7 @@ const resetSystem = async () => {
 
   try {
     const response = await request(`/system/reset`, {method: 'DELETE'})
-
-    let json;
+    let json: GenericError
     try {
       json = await response.json()
     } catch (e) {
@@ -109,13 +119,8 @@ const resetSystem = async () => {
       useSessionCache().clear()
     } catch (e) {
     }
-  } catch (e) {
-    error.value = {
-      error: {
-        code: 500,
-        message: e.message
-      }
-    }
+  } catch (e: any) {
+    error.value = {error: {code: 500, message: e.message}}
   } finally {
     isResetting.value = false
   }

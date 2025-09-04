@@ -24,7 +24,7 @@
         </div>
         <div class="is-hidden-mobile">
           <span class="subtitle">
-            This page allow you to suppress some logs from being shown/recorded.
+            This page allow you to suppress some logs from being shown or recorded.
           </span>
         </div>
       </div>
@@ -48,7 +48,8 @@
                 <label class="label is-unselectable" for="form_type">Matching type</label>
                 <div class="control has-icons-left">
                   <div class="select is-fullwidth">
-                    <select v-model="formData.type" id="form_type" :disabled="formData?.id" class="is-capitalized">
+                    <select v-model="formData.type" id="form_type" :disabled="formData.id !== null"
+                            class="is-capitalized">
                       <option value="" disabled>Select Type</option>
                       <option v-for="type in types" :key="`form-${type}`" :value="type">
                         {{ type }}
@@ -139,7 +140,7 @@
 
       <div class="column is-12" v-if="items">
         <div class="columns is-multiline">
-          <div class="column is-6" v-for="item in items" :key="item.key">
+          <div class="column is-6" v-for="item in items" :key="item.id as string">
             <div class="card is-flex is-full-height is-flex-direction-column">
               <header class="card-header">
                 <p class="card-header-title is-justify-center is-unselectable">
@@ -189,28 +190,16 @@
         <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
                  @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fa fa-info-circle">
           <ul>
-            <li>The log suppressor work on almost everything that <code>WatchState</code> output. However, there are
-              some
-              exceptions. For example <code>system:suppress</code>, <code>system:report</code> command output will not
-              be
-              filtered. If you find a a place where the rule supposed to work but it's not please report it on
-              <span class="icon-text is-underlined">
-                <span class="icon"><i class="fas fa-brands fa-discord"></i></span>
-                <span>
-                  <NuxtLink to="https://discord.gg/haUXHJyj6Y" target="_blank" v-text="'Discord server'"/>
-                </span>
-              </span>, <strong>NOT</strong> on GitHub issues tracker.
+            <li>The log suppressor work on almost everything that <strong>WatchState</strong> output. However, there are
+              some exceptions.
             </li>
             <li>The use case for this feature, is that sometimes it's out of your hands to fix a problem, and the
-              constant
-              logging of the same error can be annoying. This feature allows you to suppress the error from being
-              shown/recorded.
+              constant logging of the same error can be annoying. This feature allows you to suppress the error from
+              being shown/recorded.
             </li>
-            <li>
-              Rule of thumb, it's less compute intensive to use <code>contains</code> type, than <code>regex</code>
-              type.
-              As each rule will be tested against every single outputted message. The less rules you have, the better.
-              Having many rules will lead to performance degradation.
+            <li>It is less compute intensive to use <strong>contains</strong> type, than <strong>regex</strong> type, as
+              each rule will be tested against every single output message. The less rules you have, the better. Having
+              many rules will lead to performance degradation.
             </li>
           </ul>
         </Message>
@@ -219,45 +208,51 @@
   </div>
 </template>
 
-<script setup>
-import '~/assets/css/bulma-switch.css'
-import request from '~/utils/request.js'
-import {notification} from '~/utils/index.js'
+<script setup lang="ts">
+import {ref, watch, onMounted} from 'vue'
+import {useHead, useRoute} from '#app'
 import {useStorage} from '@vueuse/core'
 import Message from '~/components/Message.vue'
+import request from '~/utils/request.js'
+import {notification} from '~/utils'
+import {useDialog} from "~/composables/useDialog.ts";
 
 useHead({title: 'Log Suppressor'})
 
-const form_data = {id: null, rule: '', example: '', type: 'contains'}
+type SuppressionRule = {
+  id: string | null
+  rule: string
+  example: string
+  type: 'contains' | 'regex'
+}
 
-const isLoading = ref(false)
-const items = ref([])
-const toggleForm = ref(false)
-const formData = ref(form_data)
+const form_data = (): SuppressionRule => ({id: null, rule: '', example: '', type: 'contains'})
+
+const isLoading = ref<boolean>(false)
+const items = ref<Array<SuppressionRule>>([])
+const toggleForm = ref<boolean>(false)
+const formData = ref<SuppressionRule>(form_data())
 const show_page_tips = useStorage('show_page_tips', true)
-const types = ref(['contains', 'regex'])
-const loadContent = async () => {
+const types = ref<Array<'contains' | 'regex'>>(['contains', 'regex'])
+
+const loadContent = async (): Promise<void> => {
   isLoading.value = true
   items.value = []
-
-  let response, json
-
+  let response: Response, json: any
   try {
     response = await request(`/system/suppressor`)
     json = await response.json()
     if (useRoute().name !== 'suppression') {
       return
     }
-
     if (!response.ok) {
       notification('error', 'Error', `${json.error.code ?? response.status}: ${json.error.message ?? response.statusText}`)
       return
     }
-
     items.value = json.items
     types.value = json.types
-  } catch (e) {
-    return notification('error', 'Error', e.message)
+  } catch (e: any) {
+    notification('error', 'Error', e.message)
   } finally {
     isLoading.value = false
   }
@@ -265,27 +260,32 @@ const loadContent = async () => {
 
 onMounted(() => loadContent())
 
-const deleteItem = async item => {
-  if (!confirm(`Are you sure you want to delete rule id '${item.id}'?`)) {
+const deleteItem = async (item: SuppressionRule): Promise<void> => {
+  const {status: confirmStatus} = await useDialog().confirmDialog({
+    title: 'Confirm Deletion',
+    message: `Delete rule id '${item.id}'?`,
+    confirmColor: 'is-danger',
+  })
+
+  if (true !== confirmStatus) {
     return
   }
 
   const response = await request(`/system/suppressor/${item.id}`, {method: 'DELETE'})
-
   if (response.ok) {
     items.value = items.value.filter(i => i.id !== item.id)
     notification('success', 'Success', `Suppression rule id '${item.id}' successfully deleted.`, 5000)
   }
 }
 
-const sendData = async () => {
-  const requiredFields = ['rule', 'example', 'type']
+const sendData = async (): Promise<void> => {
+  const requiredFields: Array<keyof SuppressionRule> = ['rule', 'example', 'type']
   for (const field of requiredFields) {
     if (!formData.value[field]) {
-      return notification('error', 'Error', `${field} field is required.`, 5000)
+      notification('error', 'Error', `${field} field is required.`, 5000)
+      return
     }
   }
-
   try {
     const response = await request(`/system/suppressor${formData.value.id ? `/${formData.value.id}` : ''}`, {
       method: formData.value.id ? 'PUT' : 'POST',
@@ -295,33 +295,32 @@ const sendData = async () => {
         type: formData.value.type,
       })
     })
-
     if (304 === response.status) {
-      return cancelForm()
+      cancelForm()
+      return
     }
-
     const json = await response.json()
-
     if (!response.ok) {
       notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
       return
     }
-
     if (!formData.value.id) {
       items.value.push(json)
     } else {
-      items.value[items.value.findIndex(i => i.id === formData.value.id)] = json
+      const idx = items.value.findIndex(i => i.id === formData.value.id)
+      if (idx !== -1) {
+        items.value[idx] = json
+      }
     }
-
     const action = formData.value.id ? 'updated' : 'added'
     notification('success', 'Success', `Suppression rule successfully ${action}.`, 5000)
-    return cancelForm()
-  } catch (e) {
-    return notification('error', 'Error', `Request error. ${e.message}`, 5000)
+    cancelForm()
+  } catch (e: any) {
+    notification('error', 'Error', `Request error. ${e.message}`, 5000)
   }
 }
 
-const editItem = item => {
+const editItem = (item: SuppressionRule): void => {
   formData.value = {
     id: item.id,
     rule: item.rule,
@@ -331,14 +330,14 @@ const editItem = item => {
   toggleForm.value = true
 }
 
-const cancelForm = () => {
-  formData.value = form_data
+const cancelForm = (): void => {
+  formData.value = form_data()
   toggleForm.value = false
 }
 
-watch(toggleForm, (value) => {
+watch(toggleForm, (value: boolean) => {
   if (!value) {
-    formData.value = form_data
+    formData.value = form_data()
   }
 })
 </script>

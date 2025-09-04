@@ -155,34 +155,60 @@
   </div>
 </template>
 
-<script setup>
-import '~/assets/css/bulma-switch.css'
+<script setup lang="ts">
+import {ref, onMounted} from 'vue'
+import {useHead, navigateTo, useRoute} from '#app'
+import {useStorage} from '@vueuse/core'
 import moment from 'moment'
-import request from '~/utils/request.js'
-import {awaitElement, makeConsoleCommand, notification, parse_api_response, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
 import cronstrue from 'cronstrue'
 import Message from '~/components/Message.vue'
-import {useStorage} from '@vueuse/core'
+import request from '~/utils/request'
+import {awaitElement, makeConsoleCommand, notification, parse_api_response, TOOLTIP_DATE_FORMAT} from '~/utils'
+import {useDialog} from '~/composables/useDialog'
+
+type Task = {
+  /** Unique task name (used as key) */
+  name: string
+  /** Task description */
+  description?: string
+  /** Cron timer string */
+  timer: string
+  /** Command to run */
+  command: string
+  /** Arguments for the command */
+  args?: string
+  /** Whether the task is enabled */
+  enabled: boolean
+  /** Whether the task can be disabled */
+  allow_disable: boolean
+  /** Last run time (ISO string or null) */
+  prev_run: string | null
+  /** Next run time (ISO string or null) */
+  next_run: string | null
+  /** Whether the task is currently queued */
+  queued?: boolean
+}
 
 useHead({title: 'Tasks'})
 
-const tasks = ref([])
-const queued = ref([])
-const isLoading = ref(false)
+const dialog = useDialog()
+const tasks = ref<Array<Task>>([])
+const queued = ref<Array<string>>([])
+const isLoading = ref<boolean>(false)
 const show_page_tips = useStorage('show_page_tips', true)
 
-const loadContent = async () => {
+const loadContent = async (): Promise<void> => {
   isLoading.value = true
   tasks.value = []
   try {
     const response = await request('/tasks')
-    const json = await response.json()
+    const json = await response.json() as { tasks: Array<Task>, queued: Array<string> }
     if (useRoute().name !== 'tasks') {
       return
     }
     tasks.value = json.tasks
     queued.value = json.queued
-  } catch (e) {
+  } catch (e: any) {
     notification('error', 'Error', `Request error. ${e.message}`)
   } finally {
     isLoading.value = false
@@ -191,35 +217,43 @@ const loadContent = async () => {
 
 onMounted(async () => await loadContent())
 
-const toggleTask = async task => {
+const toggleTask = async (task: Task): Promise<void> => {
   try {
     const keyName = `WS_CRON_${task.name.toUpperCase()}`
-
     const oldState = task.enabled
-
     const update = await request(`/system/env/${keyName}`, {
       method: 'POST',
-      body: JSON.stringify({"value": !task.enabled})
+      body: JSON.stringify({value: !task.enabled})
     })
-
     if (200 !== update.status) {
       const json = await parse_api_response(update)
       notification('error', 'Error', `Failed to toggle task '${task.name}' status. ${json.error.message}`)
-      tasks.value[tasks.value.findIndex(b => b.name === task.name)].enabled = oldState
+      const idx = tasks.value.findIndex(b => b.name === task.name)
+      if (-1 !== idx) {
+        tasks.value[idx]!.enabled = oldState
+      }
       return
     }
-
     const response = await request(`/tasks/${task.name}`)
-    tasks.value[tasks.value.findIndex(b => b.name === task.name)] = await response.json()
-  } catch (e) {
+    const updatedTask: Task = await response.json()
+    const idx = tasks.value.findIndex(b => b.name === task.name)
+    if (idx !== -1) {
+      tasks.value[idx] = updatedTask
+    }
+  } catch (e: any) {
     notification('error', 'Error', `Request error. ${e.message}`)
   }
 }
 
-const queueTask = async task => {
+const queueTask = async (task: Task): Promise<void> => {
   const is_queued = Boolean(task.queued)
-  const message = is_queued ? `Remove '${task.name}' from the queue?` : `Queue '${task.name}' to run in background?`
-  if (!confirm(message)) {
+
+  const {status: confirmStatus} = await dialog.confirmDialog({
+    title: is_queued ? 'Cancel Task' : 'Queue Task',
+    message: is_queued ? `Remove '${task.name}' from the queue?` : `Queue '${task.name}' to run in background?`,
+  })
+
+  if (true !== confirmStatus) {
     return
   }
 
@@ -233,8 +267,7 @@ const queueTask = async task => {
       } else {
         queued.value = queued.value.filter(t => t !== task.name)
       }
-
-      if (true === task.queued) {
+      if (task.queued === true) {
         awaitElement('#queued_tasks', (_, e) => e.scrollIntoView({
           behavior: 'smooth',
           block: 'start',
@@ -242,13 +275,13 @@ const queueTask = async task => {
         }))
       }
     }
-  } catch (e) {
+  } catch (e: any) {
     notification('error', 'Error', `Request error. ${e.message}`)
   }
 }
 
-const makeEnvLink = (key, val = null) => {
-  let search = new URLSearchParams()
+const makeEnvLink = (key: string, val: string | null = null): string => {
+  const search = new URLSearchParams()
   search.set('callback', '/tasks')
   search.set('edit', key)
   if (val) {
@@ -257,10 +290,16 @@ const makeEnvLink = (key, val = null) => {
   return `/env?${search.toString()}`
 }
 
-const confirmRun = async task => {
-  if (!confirm(`Run '${task.name}' via web console now?`)) {
+const confirmRun = async (task: Task): Promise<void> => {
+  const {status: confirmStatus} = await dialog.confirmDialog({
+    title: 'Run Task via Console',
+    message: `This will redirect you to the web console and run the command for '${task.name}' task. Do you want to continue?`,
+  })
+
+  if (true !== confirmStatus) {
     return
   }
+
   await navigateTo(makeConsoleCommand(`${task.command} ${task.args || ''}`, true))
 }
 </script>

@@ -1,17 +1,19 @@
 <template>
   <div class="columns is-multiline mb-2">
     <div class="column is-6 is-12-mobile">
-      <div class="card">
+      <form class="card">
         <header class="card-header">
           <p class="card-header-title">Password & Sessions</p>
           <span class="card-header-icon"><span class="icon"><i class="fas fa-cog"/></span></span>
         </header>
         <div class="card-content">
+          <input type="text" class="is-hidden" name="username" autocomplete="username" :value="username"/>
+
           <div class="field">
             <label class="label" for="current_password">Current password</label>
             <div class="control has-icons-left">
               <input id="current_password" type="password" class="input" v-model="user.current_password"
-                     :disabled="isLoading" placeholder="Current password" required>
+                     :disabled="isLoading" placeholder="Current password" autocomplete="current-password" required>
               <span class="icon is-left"><i class="fa fa-lock"/></span>
             </div>
           </div>
@@ -20,7 +22,7 @@
             <label class="label" for="new_password">New Password</label>
             <div class="control has-icons-left">
               <input id="new_password" type="password" class="input" v-model="user.new_password" :disabled="isLoading"
-                     placeholder="New password" required>
+                     placeholder="New password" autocomplete="new-password" required>
               <span class="icon is-left"><i class="fa fa-lock"/></span>
             </div>
           </div>
@@ -29,7 +31,7 @@
             <label class="label" for="new_password_confirm">Confirm New Password</label>
             <div class="control has-icons-left">
               <input id="new_password_confirm" type="password" class="input" v-model="user.new_password_confirm"
-                     :disabled="isLoading" placeholder="Confirm new password" required>
+                     :disabled="isLoading" autocomplete="new-password" placeholder="Confirm new password" required>
               <span class="icon is-left"><i class="fa fa-lock"/></span>
             </div>
           </div>
@@ -51,7 +53,7 @@
             </div>
           </div>
         </div>
-      </div>
+      </form>
     </div>
 
     <div class="column is-6 is-12-mobile">
@@ -133,7 +135,7 @@
 
           <div class="field">
             <label class="label is-unselectable" for="random_bg_opacity">
-              Background Visibility: (<code>{{ parseFloat(1.0 - bg_opacity).toFixed(2) }}</code>)
+              Background Visibility: (<code>{{ (1.0 - parseFloat(String(bg_opacity))).toFixed(2) }}</code>)
             </label>
             <div class="control">
               <input id="random_bg_opacity" style="width: 100%" type="range" v-model="bg_opacity" min="0.60" max="1.00"
@@ -150,22 +152,42 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import {ref} from 'vue'
 import {useStorage} from '@vueuse/core'
+import request from '~/utils/request'
+import {parse_api_response, notification} from '~/utils'
+import {navigateTo} from '#app'
+import {useDialog} from "~/composables/useDialog.ts";
+import {useAuthStore} from "~/store/auth.ts";
 
-const emit = defineEmits(['force_bg_reload'])
-const webui_theme = useStorage('theme', 'auto')
-const bg_enable = useStorage('bg_enable', true)
-const poster_enable = useStorage('poster_enable', true)
-const bg_opacity = useStorage('bg_opacity', 0.95)
-const user = ref({
+
+const emit = defineEmits<{
+  (e: 'force_bg_reload'): void
+}>()
+
+const {username} = useAuthStore()
+
+const webui_theme = useStorage<string>('theme', 'auto')
+const bg_enable = useStorage<boolean>('bg_enable', true)
+const poster_enable = useStorage<boolean>('poster_enable', true)
+const bg_opacity = useStorage<number>('bg_opacity', 0.95)
+
+const defaultValues = () => ({
   current_password: '',
   new_password: '',
   new_password_confirm: ''
 })
-const isLoading = ref(false)
 
-const change_password = async () => {
+const user = ref<{
+  current_password: string
+  new_password: string
+  new_password_confirm: string
+}>(defaultValues())
+
+const isLoading = ref<boolean>(false)
+
+const change_password = async (): Promise<void> => {
   if (!user.value.current_password || !user.value.new_password || !user.value.new_password_confirm) {
     notification('Error', 'Error', 'All fields are required.', 2000)
     return
@@ -193,21 +215,21 @@ const change_password = async () => {
       notification('Error', 'Error', json.error.message, 2000)
       return
     }
-
     notification('Success', 'Success', json.info.message)
-    user.value = {
-      current_password: '',
-      new_password: '',
-      new_password_confirm: ''
-    }
-
+    user.value = defaultValues()
   } finally {
     isLoading.value = false
   }
 }
 
-const invalidate_sessions = async () => {
-  if (!confirm('Are you sure you want to invalidate all sessions?')) {
+const invalidate_sessions = async (): Promise<void> => {
+  const {status} = await useDialog().confirmDialog({
+    title: 'Invalidate All Sessions',
+    message: 'This will log out all users including yourself. You will need to log in again. Do you want to continue?',
+    confirmColor: 'is-danger',
+  })
+
+  if (true !== status) {
     return
   }
 
@@ -215,19 +237,16 @@ const invalidate_sessions = async () => {
     isLoading.value = true
     const response = await request('/system/auth/sessions', {method: 'DELETE'})
     const json = await parse_api_response(response)
-
     if (200 !== response.status) {
       notification('Error', 'Error', json.error.message, 2000)
       return
     }
-
     notification('Success', 'Success', json.info.message)
-    const token = useStorage('token', null)
+    const token = useStorage<string | null>('token', null)
     token.value = null
     await navigateTo('/auth')
   } finally {
     isLoading.value = false
   }
 }
-
 </script>

@@ -94,7 +94,7 @@
 
 <script setup>
 import moment from 'moment'
-import {notification, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
+import {notification, TOOLTIP_DATE_FORMAT} from '~/utils/index'
 import {useStorage} from '@vueuse/core'
 import request from '~/utils/request.js'
 

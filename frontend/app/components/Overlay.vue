@@ -7,27 +7,30 @@
         <button class="delete" @click="closeOverLay"></button>
       </header>
       <div class="modal-card-body">
-        <slot />
+        <slot/>
       </div>
     </div>
   </div>
 </template>
 
-<script setup>
-const emit = defineEmits(['closeOverlay']);
+<script setup lang="ts">
+import {ref, onMounted, onBeforeUnmount} from 'vue'
 
-const props = defineProps({
-  title: {
-    type: String,
-    required: true,
-  },
-});
+const props = defineProps<{
+  /** Title for the overlay modal */
+  title: string
+}>()
 
-const model_title = ref(props.title.replace(/^\//g, ''));
+const emit = defineEmits<{
+  /** Emitted when the overlay should be closed */
+  (e: 'closeOverlay'): void
+}>()
 
-const closeOverLay = () => emit('closeOverlay');
+const model_title = ref<string>(props.title.replace(/^\//g, ''))
 
-const eventHandler = e => {
+const closeOverLay = (): void => emit('closeOverlay')
+
+const eventHandler = (e: KeyboardEvent): void => {
   if (e.key !== 'Escape') {
     return
   }
@@ -39,9 +42,8 @@ onMounted(() => {
   window.addEventListener('keydown', eventHandler)
 })
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
   enableOpacity()
   window.removeEventListener('keydown', eventHandler)
 })
-
 </script>

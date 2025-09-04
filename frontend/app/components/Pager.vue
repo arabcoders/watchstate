@@ -37,34 +37,33 @@
   </div>
 </template>
 
-<script setup>
-import {makePagination} from '~/utils/index.js'
+<script setup lang="ts">
+import {ref} from 'vue'
+import {makePagination} from '~/utils'
 
-const emitter = defineEmits(['navigate'])
+const emit = defineEmits<{
+  /** Emitted when the page changes */
+  (e: 'navigate', page: number): void
+}>()
 
-const props = defineProps({
-  page: {
-    type: Number,
-    required: true
-  },
-  last_page: {
-    type: Number,
-    required: true
-  },
-  isLoading: {
-    type: Boolean,
-    required: false,
-    default: false
-  },
+const props = withDefaults(defineProps<{
+  /** Current page number (1-based) */
+  page: number
+  /** Last page number */
+  last_page: number
+  /** If true, disables navigation and shows loading state */
+  isLoading?: boolean
+}>(), {
+  isLoading: false
 })
 
-const changePage = p => {
+const currentPage = ref<number>(props.page)
+
+const changePage = (p: number): void => {
   if (p < 1 || p > props.last_page) {
     return
   }
-  emitter('navigate', p)
+  emit('navigate', p)
   currentPage.value = p
 }
-
-const currentPage = ref(props.page)
 </script>

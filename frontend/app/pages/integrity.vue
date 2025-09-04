@@ -263,10 +263,10 @@
 <script setup>
 import request from '~/utils/request.js'
 import Message from '~/components/Message.vue'
-import {awaitElement, copyText, makeName, makeSearchLink, notification, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
+import {awaitElement, copyText, makeName, makeSearchLink, notification, TOOLTIP_DATE_FORMAT} from '~/utils/index'
 import moment from 'moment'
 import Lazy from '~/components/Lazy.vue'
-import {useSessionCache} from '~/utils/cache.js'
+import {useSessionCache} from '~/utils/cache'
 import {useStorage} from "@vueuse/core";
 
 useHead({title: 'File Integrity'})

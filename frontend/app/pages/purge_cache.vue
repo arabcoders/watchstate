@@ -30,7 +30,7 @@
         </div>
 
         <div class="column is-12">
-          <Confirm @confirmed="resetCache()" :title="`Perform purge cache reset for all users?`"
+          <Confirm @confirmed="resetCache()" :title="`Perform purge cache for all users?`"
                    title-icon="fa-trash"
                    warning="Depending on your hardware speed, the reset operation might take long time. do not interrupt the process, or close the browser tab."/>
         </div>
@@ -39,42 +39,45 @@
   </div>
 </template>
 
-<script setup>
-import request from '~/utils/request.js'
+<script setup lang="ts">
+import {ref} from 'vue'
+import {useRoute, navigateTo} from '#app'
 import Message from '~/components/Message.vue'
-import {notification} from '~/utils/index.js'
+import {notification, parse_api_response} from '~/utils'
 import Confirm from '~/components/Confirm.vue'
-import {useSessionCache} from '~/utils/cache.js'
+import {useSessionCache} from '~/utils/cache'
+import request from '~/utils/request'
 
-const error = ref()
-const isPurging = ref(false)
+interface PurgeCacheError {
+  error: {
+    code: number
+    message: string
+  }
+}
 
-const resetCache = async () => {
+const error = ref<PurgeCacheError | null>(null)
+const isPurging = ref<boolean>(false)
+
+const resetCache = async (): Promise<void> => {
   isPurging.value = true
-
   try {
     error.value = null
-    const response = await request(`/system/cache`, {method: 'DELETE'})
+    const response = await request('/system/cache', {method: 'DELETE'})
     const json = await parse_api_response(response)
-
     if (useRoute().name !== 'purge_cache') {
       return
     }
-
     if (200 !== response.status) {
       error.value = json
       return
     }
-
-    notification('success', 'Success', `System Cache has been purged.`)
+    notification('success', 'Success', 'System Cache has been purged.')
     await navigateTo('/')
-
-    // -- remove all session storage due to the reset.
     try {
       useSessionCache().clear()
     } catch (e) {
     }
-  } catch (e) {
+  } catch (e: any) {
     error.value = {error: {code: 500, message: e.message}}
   } finally {
     isPurging.value = false

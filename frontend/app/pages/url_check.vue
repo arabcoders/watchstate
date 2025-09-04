@@ -86,7 +86,7 @@
                 <NuxtLink @click="add_header()" v-text="'Add'"/>
               </label>
 
-              <div class="control mb-2" v-for="(header, index) in item.headers" :key="header.index">
+              <div class="control mb-2" v-for="(header, index) in item.headers" :key="index">
                 <div class="field is-grouped">
                   <div class="control is-expanded">
                     <input class="input" type="text" v-model="header.key" placeholder="Header Key" required
@@ -279,182 +279,190 @@
   </div>
 </template>
 
-<script setup>
-import request from "~/utils/request.js"
-import {notification} from "~/utils/index.js"
+<script setup lang="ts">
+import request from "~/utils/request"
+import {notification} from "~/utils"
 import Message from "~/components/Message.vue"
 import {useStorage} from "@vueuse/core"
+import {ref, computed, watch, nextTick, onMounted, onBeforeUnmount} from 'vue'
+import type {Item, Template, URLCheckResponse} from '~/types/url_check'
 
 useHead({title: 'URL Checker'})
 
-const show_page_tips = useStorage('show_page_tips', true)
-const toggle_form = ref(true)
-const toggle_request = ref(true)
-const toggle_response = ref(true)
-const toggle_body = ref(true)
-const use_template = ref("")
-const templates = ref([
+const show_page_tips = useStorage<boolean>('show_page_tips', true)
+
+const toggle_form = ref<boolean>(true)
+const toggle_request = ref<boolean>(true)
+const toggle_response = ref<boolean>(true)
+const toggle_body = ref<boolean>(true)
+const use_template = ref<string>("")
+const templates = ref<Template[]>([
   {
-    "id": 1,
-    "key": "Jellyfin/Emby Server",
-    "override": {
-      "method": "GET",
-      "url": "http://[ip:port]/items",
-      "headers": [
-        {"key": "Accept", "value": "application/json"},
-        {"key": "X-MediaBrowser-Token", "value": "[API_KEY]"},
+    id: 1,
+    key: "Jellyfin/Emby Server",
+    override: {
+      method: "GET",
+      url: "http://[ip:port]/items",
+      headers: [
+        {key: "Accept", value: "application/json"},
+        {key: "X-MediaBrowser-Token", value: "[API_KEY]"},
       ]
     },
   },
   {
-    "id": 2,
-    "key": "Plex: Info",
-    "override": {
-      "method": "GET",
-      "url": "http://[ip:port]/",
-      "headers": [
-        {"key": "Accept", "value": "application/json"},
-        {"key": "X-Plex-Token", "value": "[PLEX_TOKEN]"},
+    id: 2,
+    key: "Plex: Info",
+    override: {
+      method: "GET",
+      url: "http://[ip:port]/",
+      headers: [
+        {key: "Accept", value: "application/json"},
+        {key: "X-Plex-Token", value: "[PLEX_TOKEN]"},
       ]
     },
   },
   {
-    "id": 3,
-    "key": "Plex: Libraries",
-    "override": {
-      "method": "GET",
-      "url": "http://[ip:port]/library/sections",
-      "headers": [
-        {"key": "Accept", "value": "application/json"},
-        {"key": "X-Plex-Token", "value": "[PLEX_TOKEN]"},
+    id: 3,
+    key: "Plex: Libraries",
+    override: {
+      method: "GET",
+      url: "http://[ip:port]/library/sections",
+      headers: [
+        {key: "Accept", value: "application/json"},
+        {key: "X-Plex-Token", value: "[PLEX_TOKEN]"},
       ]
     },
   },
   {
-    "id": 4,
-    "key": "Plex.tv: External Users",
-    "override": {
-      "method": "GET",
-      "url": "http://plex.tv/api/users",
-      "headers": [
-        {"key": "X-Plex-Token", "value": "[PLEX_TOKEN]"},
+    id: 4,
+    key: "Plex.tv: External Users",
+    override: {
+      method: "GET",
+      url: "http://plex.tv/api/users",
+      headers: [
+        {key: "X-Plex-Token", value: "[PLEX_TOKEN]"},
       ]
     },
   },
   {
-    "id": 5,
-    "key": "Plex.tv: Home Users",
-    "override": {
-      "method": "GET",
-      "url": "http://plex.tv/api/v2/home/users/",
-      "headers": [
-        {"key": "X-Plex-Token", "value": "[PLEX_TOKEN]"},
-        {"key": "X-Plex-Client-Identifier", "value": "[machineIdentifier]"},
+    id: 5,
+    key: "Plex.tv: Home Users",
+    override: {
+      method: "GET",
+      url: "http://plex.tv/api/v2/home/users/",
+      headers: [
+        {key: "X-Plex-Token", value: "[PLEX_TOKEN]"},
+        {key: "X-Plex-Client-Identifier", value: "[machineIdentifier]"},
       ]
     },
   },
 ])
-const methods = ref(['GET', 'POST', 'PUT', 'PATCH', 'HEAD', 'DELETE'])
-const item = ref({"url": "", "method": "GET", "headers": []})
-const is_loading = ref(false)
+const methods = ref<string[]>(['GET', 'POST', 'PUT', 'PATCH', 'HEAD', 'DELETE'])
 
-const default_response = {
-  request: {url: "", method: "GET", headers: []},
-  response: {status: null, headers: [], body: ""}
+const defaultData = () => ({url: "", method: "GET", headers: []} as Item)
+
+const item = ref<Item>(defaultData())
+const is_loading = ref<boolean>(false)
+
+const default_response: URLCheckResponse = {
+  request: {url: "", method: "GET", headers: {}},
+  response: {status: null, headers: {}, body: ""}
 }
-const response = ref(default_response)
 
-watch(use_template, async newValue => {
+const response = ref<URLCheckResponse>({...default_response})
+
+watch(use_template, async (newValue: string) => {
   if ("" === newValue) {
     return
   }
-
   const template = templates.value.find(t => t.key === newValue)
   if (!template) {
     notification('error', 'Error', 'Template not found')
     return
   }
-
   item.value = JSON.parse(JSON.stringify(template.override))
   await nextTick()
   use_template.value = ""
 })
 
-const reset_form = async () => item.value = default_response.request
+const reset_form = async (): Promise<void> => {
+  item.value = defaultData()
+}
 
-const invalid_form = computed(() => {
+const invalid_form = computed<boolean>(() => {
   if (!item.value.url) {
     return true
   }
-
   if (!item.value.method) {
     return true
   }
-
   try {
     new URL(item.value.url)
   } catch (e) {
     return true
   }
+  return false
+})
 
-  return false;
-});
-
-const has_template_values = () => {
+const has_template_values = (): boolean => {
   if (/\[.+?]/.test(item.value.url)) {
     return true
   }
-
   for (const header of item.value.headers) {
     if (/\[.+?]/.test(header.key) || /\[.+?]/.test(header.value)) {
       return true
     }
   }
-
-  return false;
+  return false
 }
 
-const add_header = (k, v) => item.value.headers.push({key: k ?? "", value: v ?? ""})
+const add_header = (k?: string, v?: string): void => {
+  item.value.headers.push({key: k ?? "", value: v ?? ""})
+}
 
-const check_url = async () => {
+const check_url = async (): Promise<void> => {
   if (true === invalid_form.value) {
     notification('error', 'Error', 'Please fill in all required fields.')
     return
   }
 
-  if (has_template_values() && !confirm('The form contains template values. Do you want to continue?')) {
-    return
+  if (has_template_values()) {
+    const {status: confirmStatus} = await useDialog().confirmDialog({
+      title: 'Template values found',
+      message: 'The form contains template values. Do you want to continue?',
+      confirmColor: 'is-warning'
+    })
+    if (true !== confirmStatus) {
+      return
+    }
   }
-  try {
-    response.value = default_response
-    await nextTick()
 
+  try {
+    response.value = {...default_response}
+    await nextTick()
     is_loading.value = true
     const resp = await request('/system/url/check', {
       method: 'POST',
       body: JSON.stringify(item.value),
-    });
-
+    })
     const json = await parse_api_response(resp)
-
     if (200 !== resp.status) {
       notification('error', 'Error', `${json.error.code ?? resp.status}: ${json.error.message ?? 'Unknown error'}`)
-      return;
+      return
     }
-
-    response.value = json;
+    response.value = json
     toggle_form.value = false
     toggle_request.value = false
   } catch (e) {
-    notification('error', `failed to send request. ${e}`);
+    notification('error', 'Error', `failed to send request. ${e}`)
   } finally {
     is_loading.value = false
   }
 }
 
-const uc_words = str => str.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+const uc_words = (str: string): string => str.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())
 
-const tryParse = body => {
+const tryParse = (body: string): string => {
   try {
     return JSON.stringify(JSON.parse(body), null, 2)
   } catch (e) {
@@ -462,7 +470,8 @@ const tryParse = body => {
   }
 }
 
-const colorStatus = status => {
+const colorStatus = (status: number | null): string | undefined => {
+  if (status === null) return undefined
   if (status >= 200 && status < 300) {
     return 'has-text-success'
   } else if (status >= 300 && status < 400) {
@@ -474,15 +483,15 @@ const colorStatus = status => {
   }
 }
 
-const toggleForm = () => {
+const toggleForm = (): void => {
   if (!item.value.url) {
     toggle_form.value = true
     return
   }
-
   toggle_form.value = !toggle_form.value
 }
-const colorize = k => k.toLowerCase().startsWith('ws-') ? 'has-text-danger' : ''
+
+const colorize = (k: string): string => k.toLowerCase().startsWith('ws-') ? 'has-text-danger' : ''
 
 onMounted(() => disableOpacity())
 onBeforeUnmount(() => enableOpacity())

@@ -16,9 +16,7 @@
       </div>
       <p class="has-text-danger">
         <span class="icon"><i class="fas fa-exclamation"/></span>
-        Browse the WebUI as the selected user. This feature is new and not all endpoints supports it yet, over time we
-        plan to add support for this feature to all endpoints. If the endpoint doesn't support this feature, the main
-        user will be used instead.
+        Browse the WebUI as the selected user. Not all API endpoints support non-main user.
       </p>
     </div>
     <div class="control has-text-right">
@@ -30,39 +28,40 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import {ref, onMounted} from 'vue'
 import {useStorage} from '@vueuse/core'
-import request from '~/utils/request.js'
-import {notification} from "~/utils/index.js";
+import request from '~/utils/request'
+import {notification} from '~/utils'
 
-const api_user = useStorage('api_user', 'main')
-const users = ref(['main'])
-const isLoading = ref(true)
+const api_user = useStorage<string>('api_user', 'main')
+const users = ref<Array<string>>(['main'])
+const isLoading = ref<boolean>(true)
 
-
-onMounted(async () => {
+onMounted(async (): Promise<void> => {
   try {
     isLoading.value = true
-    const response = await request('/system/users');
+    const response = await request('/system/users')
     if (!response.ok) {
-      notification('error', 'Failed to fetch users.');
-      return;
+      notification('error', 'Error', 'Failed to fetch users.')
+      users.value = [api_user.value]
+      return
     }
-    const json = await response.json();
+    const json = await response.json()
     if ('users' in json) {
-      json.users.forEach(user => {
+      (json.users as Array<{ user: string }>).forEach(user => {
         const username = user.user
         if (!users.value.includes(username)) {
-          users.value.push(username);
+          users.value.push(username)
         }
-      });
+      })
     }
   } catch (e) {
-    notification('error', `Failed to fetch users. ${e}`);
+    notification('error', 'Error', `Failed to fetch users. ${e}`)
   } finally {
     isLoading.value = false
   }
 })
 
-const reloadPage = () => window.location.reload()
+const reloadPage = (): void => window.location.reload()
 </script>

@@ -14,69 +14,59 @@
   </vTooltip>
 </template>
 
-<script setup>
-import {notification} from '~/utils/index'
+<script setup lang="ts">
+import {ref} from 'vue'
+import {notification} from '~/utils'
 import awaiter from '~/utils/awaiter'
 import {useSessionCache} from '~/utils/cache'
 import request from '~/utils/request'
 
-const props = defineProps({
-  image: {
-    type: String,
-    required: false,
-  },
-  title: {
-    type: String,
-    required: false
-  },
-  loader: {
-    Type: Function,
-    required: false,
-  },
-  privacy: {
-    type: Boolean,
-    required: false,
-    default: true
-  },
-  item_class: {
-    type: String,
-    required: false,
-    default: '',
-  }
-});
+const props = defineProps<{
+  /** Image URL to display */
+  image?: string
+  /** Alt text for image */
+  title?: string
+  /** Custom loader function */
+  loader?: () => Promise<void>
+  /** If true, use anonymous CORS and no-referrer */
+  privacy?: boolean
+  /** CSS class for the image */
+  item_class?: string
+}>()
 
 const cache = useSessionCache()
 
-const url = ref()
-const error = ref(false)
-const isPreloading = ref(false)
+const url = ref<string | undefined>()
+const error = ref<boolean>(false)
+const isPreloading = ref<boolean>(false)
 
-let loadTimer = null;
-const cancelRequest = new AbortController();
+let loadTimer: ReturnType<typeof setTimeout> | null = null
+const cancelRequest = new AbortController()
 
-const defaultLoader = async () => {
+const defaultLoader = async (): Promise<void> => {
   try {
-    if (cache.has(props.image)) {
-      url.value = cache.get(props.image)
+    if (props.image && cache.has(props.image)) {
+      url.value = cache.get(props.image) as string
       return
     }
 
-    const cb = props.image.startsWith('/') ? request : fetch;
-    const response = await cb(props.image, {
-      signal: cancelRequest.signal
-    })
-
-    if (!response.ok) {
-      return;
+    if (!props.image) {
+      return
     }
 
-    const objUrl = URL.createObjectURL(await response.blob());
+    const cb = props.image.startsWith('/') ? request : fetch
+    const response = await cb(props.image, {signal: cancelRequest.signal})
 
+    if (!response.ok) {
+      return
+    }
+
+    const objUrl = URL.createObjectURL(await response.blob())
     cache.set(props.image, objUrl)
-
     url.value = objUrl
-  } catch (e) {
-    if ('not_needed' === e) {
+
+  } catch (e: any) {
+    if (e === 'not_needed') {
       return
     }
     console.error(e)
@@ -86,35 +76,38 @@ const defaultLoader = async () => {
   }
 }
 
-const stopTimer = async () => {
+const stopTimer = async (): Promise<void> => {
   if (error.value) {
     return
   }
 
   if (url.value) {
     isPreloading.value = false
-    url.value = null;
-    return;
+    url.value = undefined
+    return
   }
 
   await awaiter(() => isPreloading.value)
-  clearTimeout(loadTimer)
+  if (loadTimer) {
+    clearTimeout(loadTimer)
+  }
   isPreloading.value = false
-  url.value = null;
+  url.value = undefined
   cancelRequest.abort('not_needed')
 }
 
-const loadContent = async () => {
+const loadContent = async (): Promise<void> => {
   if (props.loader) {
     return props.loader()
   }
-
   return defaultLoader()
 }
 
-const clearCache = async () => {
-  cache.remove(props.image)
-  url.value = '';
+const clearCache = async (): Promise<void> => {
+  if (props.image) {
+    cache.remove(props.image)
+  }
+  url.value = undefined
   return loadContent()
 }
 </script>

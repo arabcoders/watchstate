@@ -82,7 +82,7 @@
 
 <script setup>
 import request from "~/utils/request.js"
-import {parse_api_response} from "~/utils/index.js"
+import {parse_api_response} from "~/utils/index"
 
 const isLoading = ref(false)
 const token = ref('')

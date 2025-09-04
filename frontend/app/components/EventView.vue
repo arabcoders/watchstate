@@ -157,7 +157,9 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import {ref, computed, watch, onMounted, onBeforeUnmount} from 'vue'
+import {useHead, createError} from '#app'
 import {
   copyText,
   disableOpacity,
@@ -165,40 +167,39 @@ import {
   notification,
   parse_api_response,
   TOOLTIP_DATE_FORMAT
-} from '~/utils/index.js'
-import request from '~/utils/request.js'
+} from '~/utils'
+import request from '~/utils/request'
 import moment from 'moment'
-import {getStatusClass, makeName} from '~/utils/events/helpers.js'
+import {getStatusClass, makeName} from '~/utils/events/helpers'
 import {useStorage} from '@vueuse/core'
+import type {EventViewProps, EventViewEmits, EventViewEvent} from '~/types/event_view'
+import {useDialog} from "~/composables/useDialog.ts";
 
-const emitter = defineEmits(['closeOverlay', 'deleted'])
-const props = defineProps({id: {type: Number, required: true}})
+const emit = defineEmits<EventViewEmits>()
+const props = defineProps<EventViewProps>()
 
-const query = ref()
-const item = ref({})
-const isLoading = ref(true)
-const toggleFilter = ref(false)
-const timer = ref()
-const toggleLogs = useStorage('events_toggle_logs', true)
-const toggleData = useStorage('events_toggle_data', true)
-const toggleOptions = useStorage('events_toggle_options', true)
-const wrapLines = useStorage('logs_wrap_lines', false)
-
-const bg_enable = useStorage('bg_enable', true)
-const bg_opacity = useStorage('bg_opacity', 0.95)
+const query = ref<string>('')
+const item = ref<EventViewEvent>({} as EventViewEvent)
+const isLoading = ref<boolean>(true)
+const toggleFilter = ref<boolean>(false)
+const timer = ref<ReturnType<typeof setInterval> | null>(null)
+const toggleLogs = useStorage<boolean>('events_toggle_logs', true)
+const toggleData = useStorage<boolean>('events_toggle_data', true)
+const toggleOptions = useStorage<boolean>('events_toggle_options', true)
+const wrapLines = useStorage<boolean>('logs_wrap_lines', false)
 
 watch(toggleFilter, () => {
   if (!toggleFilter.value) {
     query.value = ''
   }
-});
+})
 
-const filteredRows = computed(() => {
+const filteredRows = computed<Array<string>>(() => {
   if (!query.value) {
     return item.value.logs ?? []
   }
-  return item.value.logs.filter(m => m.toLowerCase().includes(query.value.toLowerCase()));
-});
+  return item.value.logs?.filter(m => m.toLowerCase().includes(query.value.toLowerCase())) ?? []
+})
 
 onMounted(async () => {
   disableOpacity()
@@ -211,12 +212,12 @@ onMounted(async () => {
   return await loadContent()
 })
 
-onUnmounted(async () => enableOpacity())
+onBeforeUnmount(async () => enableOpacity())
 
-const loadContent = async () => {
+const loadContent = async (): Promise<void> => {
   try {
     isLoading.value = true
-    const response = await request(`/system/events/${props.id}`,)
+    const response = await request(`/system/events/${props.id}`)
     const json = await parse_api_response(response)
 
     if (200 !== response.status) {
@@ -238,19 +239,24 @@ const loadContent = async () => {
     item.value = json
 
     useHead({title: `Event: ${json.id}`})
-  } catch (e) {
+  } catch (e: any) {
     console.error(e)
-    notification('crit', 'Error', `Errors viewItem Request failure. ${e.message}`
-    )
+    notification('crit', 'Error', `Errors viewItem Request failure. ${e.message}`)
   } finally {
     isLoading.value = false
   }
 }
 
-const deleteItem = async () => emitter('delete', item.value)
+const deleteItem = async (): Promise<void> => emit('delete', item.value)
 
-const resetEvent = async (status = 0) => {
-  if (!confirm(`Reset '${makeName(item.value.id)}'?`)) {
+const resetEvent = async (status: number = 0): Promise<void> => {
+  const {confirmStatus} = await useDialog().confirmDialog({
+    title: 'Reset Event',
+    message: `Reset '${makeName(item.value.id)}'?`,
+    opacityControl: false,
+  })
+
+  if (true !== confirmStatus) {
     return
   }
 
@@ -271,10 +277,9 @@ const resetEvent = async (status = 0) => {
     }
 
     item.value = json
-  } catch (e) {
+  } catch (e: any) {
     console.error(e)
-    notification('crit', 'Error', `Events view patch Request failure. ${e.message}`
-    )
+    notification('crit', 'Error', `Events view patch Request failure. ${e.message}`)
   }
 }
 </script>

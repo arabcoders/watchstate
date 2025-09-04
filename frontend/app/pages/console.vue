@@ -126,7 +126,7 @@ import "@xterm/xterm/css/xterm.css"
 import {Terminal} from "@xterm/xterm"
 import {FitAddon} from "@xterm/addon-fit"
 import {useStorage} from '@vueuse/core'
-import {disableOpacity, enableOpacity, notification} from '~/utils/index.js'
+import {disableOpacity, enableOpacity, notification} from '~/utils/index'
 import Message from '~/components/Message.vue'
 import request from "~/utils/request.ts"
 import {fetchEventSource} from '@microsoft/fetch-event-source'

@@ -102,7 +102,7 @@
 </template>
 
 <script setup>
-import {notification} from '~/utils/index.js'
+import {notification} from '~/utils/index'
 import {useStorage} from '@vueuse/core'
 import request from '~/utils/request.js'
 

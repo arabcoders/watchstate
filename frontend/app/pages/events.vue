@@ -157,58 +157,65 @@
   </div>
 </template>
 
-<script setup>
-import {copyText, notification, parse_api_response} from '~/utils/index.js'
-import request from '~/utils/request.js'
+<script setup lang="ts">
+import {ref, computed, watch, onMounted, onUnmounted} from 'vue'
+import {useRoute, useRouter, useHead} from '#app'
+import {copyText, notification, parse_api_response} from '~/utils'
+import request from '~/utils/request'
 import moment from 'moment'
 import Pager from '~/components/Pager.vue'
-import {getStatusClass, makeName} from '~/utils/events/helpers.js'
+import {getStatusClass, makeName} from '~/utils/events/helpers'
 import Message from '~/components/Message.vue'
+import EventView from '~/components/EventView.vue'
+import Overlay from '~/components/Overlay.vue'
 import {useStorage} from '@vueuse/core'
+import type {EventViewEvent, EventStatus, EventsApiResponse} from '~/types/event_view'
 
 const route = useRoute()
+const router = useRouter()
 
-const total = ref(0)
-const page = ref(parseInt(route.query.page ?? 1))
-const perpage = ref(parseInt(route.query.perpage ?? 26))
-const last_page = computed(() => Math.ceil(total.value / perpage.value))
+const total = ref<number>(0)
+const page = ref<number>(parseInt(route.query.page as string ?? '1'))
+const perpage = ref<number>(parseInt(route.query.perpage as string ?? '26'))
+const last_page = computed<number>(() => Math.ceil(total.value / perpage.value))
 
-const isLoading = ref(false)
-const toggleDispatcher = ref(false)
-const items = ref([])
-const statuses = ref([])
-const query = ref(route.query.filter ?? '')
-const toggleFilter = ref(false)
-const quick_view = ref()
-const show_page_tips = useStorage('show_page_tips', true)
+const isLoading = ref<boolean>(false)
+const toggleDispatcher = ref<boolean>(false)
+const items = ref<Array<EventViewEvent>>([])
+const statuses = ref<Array<EventStatus>>([])
+const query = ref<string>(route.query.filter as string ?? '')
+const toggleFilter = ref<boolean>(false)
+const quick_view = ref<string | null>(null)
+const show_page_tips = useStorage<boolean>('show_page_tips', true)
 
 watch(toggleFilter, () => {
   if (!toggleFilter.value) {
     query.value = ''
   }
-});
+})
 
-const filteredRows = computed(() => {
+const filteredRows = computed<Array<EventViewEvent>>(() => {
   if (!query.value) {
     return items.value
   }
 
-  const toTower = query.value.toLowerCase();
+  const toLower = query.value.toLowerCase()
 
   return items.value.filter(i => {
     return Object.keys(i).some(k => {
-      if (typeof i[k] === 'object' && null !== i[k]) {
-        return Object.values(i[k]).some(v => typeof v === 'string' ? v.toLowerCase().includes(toTower) : false)
+      const value = i[k as keyof EventViewEvent]
+      if (typeof value === 'object' && null !== value) {
+        return Object.values(value).some(v => typeof v === 'string' ? v.toLowerCase().includes(toLower) : false)
       }
-      return typeof i[k] === 'string' ? i[k].toLowerCase().includes(toTower) : false
+      return typeof value === 'string' ? value.toLowerCase().includes(toLower) : false
     })
   })
-});
+})
 
-const loadContent = async (pageNumber, updateHistory = true) => {
+const loadContent = async (pageNumber: number = 1, updateHistory: boolean = true): Promise<void> => {
   try {
-    pageNumber = parseInt(pageNumber)
-    let p_perpage = parseInt(perpage.value)
+    pageNumber = parseInt(pageNumber.toString())
+    let p_perpage = parseInt(perpage.value.toString())
 
     if (isNaN(pageNumber) || pageNumber < 1) {
       pageNumber = 1
@@ -218,9 +225,9 @@ const loadContent = async (pageNumber, updateHistory = true) => {
       p_perpage = 25
     }
 
-    let queryParams = new URLSearchParams()
-    queryParams.append('page', pageNumber)
-    queryParams.append('perpage', p_perpage)
+    const queryParams = new URLSearchParams()
+    queryParams.append('page', pageNumber.toString())
+    queryParams.append('perpage', p_perpage.toString())
     if (query.value) {
       queryParams.append('filter', query.value)
     }
@@ -230,19 +237,19 @@ const loadContent = async (pageNumber, updateHistory = true) => {
     items.value = []
 
     const response = await request(`/system/events?${queryParams.toString()}`)
-    const json = await parse_api_response(response)
+    const json: EventsApiResponse = await parse_api_response(response)
 
     if (200 !== response.status) {
       notification('error', 'Error', `Events request error. ${json.error.code}: ${json.error.message}`)
       return
     }
 
-    let title = `Events - Page #${pageNumber}`
+    const title = `Events - Page #${pageNumber}`
 
     useHead({title})
 
     if (true === Boolean(updateHistory)) {
-      let history_query = {
+      const history_query: Record<string, string | number> = {
         perpage: p_perpage,
         page: pageNumber,
       }
@@ -251,7 +258,7 @@ const loadContent = async (pageNumber, updateHistory = true) => {
         history_query.filter = query.value
       }
 
-      await useRouter().push({path: '/events', query: history_query})
+      await router.push({path: '/events', query: history_query})
     }
 
     if ('paging' in json) {
@@ -262,10 +269,9 @@ const loadContent = async (pageNumber, updateHistory = true) => {
 
     items.value = json?.items ?? []
     statuses.value = json?.statuses ?? []
-  } catch (e) {
+  } catch (e: any) {
     console.error(e)
-    notification('crit', 'Error', `Events Request failure. ${e.message}`
-    )
+    notification('crit', 'Error', `Events Request failure. ${e.message}`)
   } finally {
     isLoading.value = false
   }
@@ -278,21 +284,21 @@ onMounted(async () => {
 
 onUnmounted(() => window.removeEventListener('popstate', handlePopState))
 
-const handlePopState = async () => {
-  const route = useRoute()
+const handlePopState = async (): Promise<void> => {
+  const currentRoute = useRoute()
 
-  if (route.query?.perpage) {
-    perpage.value = route.query.perpage
+  if (currentRoute.query?.perpage) {
+    perpage.value = parseInt(currentRoute.query.perpage as string)
   }
 
-  if (route.query?.page) {
-    page.value = route.query.page
+  if (currentRoute.query?.page) {
+    page.value = parseInt(currentRoute.query.page as string)
   }
 
   await loadContent(page.value, false)
 }
 
-const deleteItem = async item => {
+const deleteItem = async (item: EventViewEvent): Promise<void> => {
   if (!confirm(`Delete '${item.id}'?`)) {
     return
   }
@@ -309,14 +315,13 @@ const deleteItem = async item => {
     deletedItem(item.id)
 
     notification('success', 'Success', `Event '${makeName(item.id)}' successfully deleted.`)
-  } catch (e) {
+  } catch (e: any) {
     console.error(e)
-    notification('crit', 'Error', `Events delete Request failure. ${e.message}`
-    )
+    notification('crit', 'Error', `Events delete Request failure. ${e.message}`)
   }
 }
 
-const resetEvent = async (item, status = 0) => {
+const resetEvent = async (item: EventViewEvent, status: number = 0): Promise<void> => {
   if (!confirm(`Reset '${item.id}'?`)) {
     return
   }
@@ -344,70 +349,67 @@ const resetEvent = async (item, status = 0) => {
     }
 
     items.value[index] = json
-  } catch (e) {
+  } catch (e: any) {
     console.error(e)
-    notification('crit', 'Error', `Events view patch Request failure. ${e.message}`
-    )
+    notification('crit', 'Error', `Events view patch Request failure. ${e.message}`)
   }
 }
 
-const deleteAll = async () => {
+const deleteAll = async (): Promise<void> => {
   if (!confirm('Delete all non pending events?')) {
     return
   }
 
   try {
-    const response = await request(`/system/events/`, {method: 'DELETE'})
+    const response = await request('/system/events/', {method: 'DELETE'})
     if (200 !== response.status) {
       const json = await parse_api_response(response)
       notification('error', 'Error', `Failed to delete events. ${json.error.code}: ${json.error.message}`)
       return
     }
 
-    window.location.reload(true)
-  } catch (e) {
+    window.location.reload()
+  } catch (e: any) {
     console.error(e)
-    notification('crit', 'Error', `Events view patch Request failure. ${e.message}`
-    )
+    notification('crit', 'Error', `Events view patch Request failure. ${e.message}`)
   }
 }
 
-const deletedItem = id => {
+const deletedItem = (id: number): void => {
   items.value = items.value.filter(i => i.id !== id)
   if (quick_view.value) {
     quick_view.value = null
   }
 }
 
-watch(query, val => {
-  const route = useRoute()
-  const router = useRouter()
+watch(query, (val: string) => {
+  const currentRoute = useRoute()
+  const currentRouter = useRouter()
   if (!val) {
-    if (!route?.query['filter']) {
-      return;
+    if (!currentRoute?.query['filter']) {
+      return
     }
 
-    router.push({
-      'path': '/events',
-      'query': {
-        ...route.query,
-        'filter': undefined
+    currentRouter.push({
+      path: '/events',
+      query: {
+        ...currentRoute.query,
+        filter: undefined
       }
     })
-    return;
+    return
   }
 
-  if (route?.query['filter'] === val) {
-    return;
+  if (currentRoute?.query['filter'] === val) {
+    return
   }
 
-  router.push({
-    'path': '/events',
-    'query': {
-      ...route.query,
-      'filter': val
+  currentRouter.push({
+    path: '/events',
+    query: {
+      ...currentRoute.query,
+      filter: val
     }
   })
 })
-
 </script>

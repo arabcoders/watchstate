@@ -583,7 +583,7 @@ import {
   notification,
   TOOLTIP_DATE_FORMAT,
   ucFirst
-} from '~/utils/index.js'
+} from '~/utils/index'
 import moment from 'moment'
 import {useBreakpoints, useStorage} from '@vueuse/core'
 import Message from '~/components/Message.vue'

@@ -142,10 +142,10 @@
 </template>
 
 <script setup>
-import {makeSearchLink, notification} from '~/utils/index.js'
+import {makeSearchLink, notification} from '~/utils/index'
 import {useStorage} from '@vueuse/core'
 import Message from '~/components/Message.vue'
-import {useSessionCache} from '~/utils/cache.js'
+import {useSessionCache} from '~/utils/cache'
 
 const backend = useRoute().params.backend
 const items = ref([])

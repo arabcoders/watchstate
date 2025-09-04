@@ -41,7 +41,16 @@
   </NuxtLayout>
 </template>
 
-<script setup>
-const props = defineProps({'error': Object})
+<script setup lang="ts">
+import {ref} from 'vue'
+
+const props = defineProps<{
+  error: {
+    statusCode?: number
+    statusMessage?: string
+    message?: string
+    stack?: string
+  }
+}>()
 const showStacks = ref(false)
 </script>

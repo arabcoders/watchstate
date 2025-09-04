@@ -1,6 +1,6 @@
-const makeName = id => id.replace(/-/g, '').slice(0, 12)
+const makeName = (id: string | number): string => String(id).replace(/-/g, '').slice(0, 12)
 
-const getStatusClass = status => {
+const getStatusClass = (status: number): string => {
     switch (status) {
         case 0:
             return 'is-light has-text-dark'

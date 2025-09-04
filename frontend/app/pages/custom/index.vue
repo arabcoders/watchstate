@@ -208,7 +208,7 @@
 <script setup>
 import '~/assets/css/bulma-switch.css'
 import request from '~/utils/request.js'
-import {makeConsoleCommand, notification, parse_api_response} from '~/utils/index.js'
+import {makeConsoleCommand, notification, parse_api_response} from '~/utils/index'
 import {useStorage} from '@vueuse/core'
 import Message from '~/components/Message.vue'
 

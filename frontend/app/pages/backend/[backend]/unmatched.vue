@@ -135,8 +135,8 @@
 </template>
 
 <script setup>
-import {makeSearchLink, notification} from '~/utils/index.js'
-import {useSessionCache} from '~/utils/cache.js'
+import {makeSearchLink, notification} from '~/utils/index'
+import {useSessionCache} from '~/utils/cache'
 
 const backend = useRoute().params.backend
 const items = ref([])

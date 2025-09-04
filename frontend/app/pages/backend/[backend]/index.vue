@@ -88,68 +88,63 @@
           <h1 class="title is-4">Recent History</h1>
         </div>
         <div class="column is-6-tablet" v-for="item in bHistory" :key="item.id">
-          <div class="mc">
-            <div class="mc-image" v-if="poster_enable">
-              <NuxtLink :to="`/history/${item.id}`">
-                <CardImage :id="item.id" type="background" :title="`Poster for ${makeName(item)}`"/>
-              </NuxtLink>
-            </div>
-            <div class="mc-content">
-              <div class="card" :class="{ 'is-success': item.watched }">
-                <div class="card-content p-0 m-0">
-                  <header class="card-header">
-                    <p class="card-header-title is-text-overflow pr-1">
-                      <NuxtLink :to="`/history/${item.id}`" v-text="makeName(item)"/>
-                    </p>
-                    <span class="card-header-icon" @click="item.showItem = !item.showItem">
-                      <span class="icon" v-if="'episode' === item.type"><i class="fas fa-tv"></i></span>
-                      <span class="icon" v-else><i class="fas fa-film"></i></span>
+          <div class="card" :class="{ 'is-success': item.watched }">
+            <div class="card-content p-0 m-0">
+              <header class="card-header">
+                <p class="card-header-title is-text-overflow pr-1">
+                  <FloatingImage :image="`/history/${item.id}/images/poster`" :item_class="'scaled-image'"
+                                 v-if="poster_enable">
+                    <NuxtLink :to="`/history/${item.id}`" v-text="item?.full_title || makeName(item)"/>
+                  </FloatingImage>
+                  <NuxtLink :to="`/history/${item.id}`" v-text="item?.full_title || makeName(item)" v-else/>
+                </p>
+                <span class="card-header-icon" @click="item.showItem = !item.showItem">
+                  <span class="icon" v-if="'episode' === item.type"><i class="fas fa-tv"></i></span>
+                  <span class="icon" v-else><i class="fas fa-film"></i></span>
+                </span>
+              </header>
+              <div class="card-content">
+                <div class="columns is-multiline is-mobile has-text-centered">
+                  <div class="column is-4-tablet is-6-mobile has-text-left-mobile">
+                    <span class="icon-text">
+                      <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
+                      <span class="has-tooltip"
+                            v-tooltip="`Updated at: ${moment.unix(item.updated_at ?? item.updated).format(TOOLTIP_DATE_FORMAT)}`">
+                        {{ moment.unix(item.updated_at ?? item.updated).fromNow() }}
+                      </span>
                     </span>
-                  </header>
-                  <div class="card-content">
-                    <div class="columns is-multiline is-mobile has-text-centered">
-                      <div class="column is-4-tablet is-6-mobile has-text-left-mobile">
-                        <span class="icon-text">
-                          <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
-                          <span class="has-tooltip"
-                                v-tooltip="`Updated at: ${moment.unix(item.updated_at ?? item.updated).format(TOOLTIP_DATE_FORMAT)}`">
-                            {{ moment.unix(item.updated_at ?? item.updated).fromNow() }}
-                          </span>
-                        </span>
-                      </div>
-                      <div class="column is-4-tablet is-6-mobile has-text-right-mobile">
-                        <span class="icon-text">
-                          <span class="icon"><i class="fas fa-server"></i></span>
-                          <span>
-                            <NuxtLink :to="'/backend/'+item.via" v-text="item.via"/>
-                          </span>
-                        </span>
-                      </div>
-                      <div class="column is-4-tablet is-12-mobile has-text-left-mobile">
-                        <span class="icon-text">
-                          <span class="icon"><i class="fas fa-envelope"></i></span>
-                          <span>{{ item.event }}</span>
-                        </span>
-                      </div>
-                    </div>
                   </div>
-                  <div class="card-content p-0 m-0" v-if="item?.showItem">
-                    <div class="mt-2" style="position: relative; max-height: 343px; overflow-y: auto;">
-                      <code class="is-terminal is-block is-pre-wrap" v-text="JSON.stringify(item, null, 2)"/>
-                      <button class="button m-4" v-tooltip="'Copy text'" style="position: absolute; top:0; right:0;"
-                              @click="() => copyText(JSON.stringify(item, null, 2))">
-                        <span class="icon"><i class="fas fa-copy"/></span>
-                      </button>
-                    </div>
+                  <div class="column is-4-tablet is-6-mobile has-text-right-mobile">
+                    <span class="icon-text">
+                      <span class="icon"><i class="fas fa-server"></i></span>
+                      <span>
+                        <NuxtLink :to="'/backend/'+item.via" v-text="item.via"/>
+                      </span>
+                    </span>
                   </div>
-                  <div class="card-footer" v-if="item.progress">
-                    <div class="card-footer-item">
-                      <span class="has-text-success" v-if="item.watched">Played</span>
-                      <span class="has-text-danger" v-else>Unplayed</span>
-                    </div>
-                    <div class="card-footer-item">{{ formatDuration(item.progress) }}</div>
+                  <div class="column is-4-tablet is-12-mobile has-text-left-mobile">
+                    <span class="icon-text">
+                      <span class="icon"><i class="fas fa-envelope"></i></span>
+                      <span>{{ item.event }}</span>
+                    </span>
                   </div>
                 </div>
+              </div>
+              <div class="card-content p-0 m-0" v-if="item?.showItem">
+                <div class="mt-2" style="position: relative; max-height: 343px; overflow-y: auto;">
+                  <code class="is-terminal is-block is-pre-wrap" v-text="JSON.stringify(item, null, 2)"/>
+                  <button class="button m-4" v-tooltip="'Copy text'" style="position: absolute; top:0; right:0;"
+                          @click="() => copyText(JSON.stringify(item, null, 2))">
+                    <span class="icon"><i class="fas fa-copy"/></span>
+                  </button>
+                </div>
+              </div>
+              <div class="card-footer" v-if="item.progress">
+                <div class="card-footer-item">
+                  <span class="has-text-success" v-if="item.watched">Played</span>
+                  <span class="has-text-danger" v-else>Unplayed</span>
+                </div>
+                <div class="card-footer-item">{{ formatDuration(item.progress) }}</div>
               </div>
             </div>
           </div>
@@ -185,10 +180,10 @@
 <script setup>
 import moment from 'moment'
 import Message from '~/components/Message.vue'
-import {formatDuration, makeName, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
-import CardImage from "~/components/CardImage.vue";
+import {formatDuration, makeName, TOOLTIP_DATE_FORMAT} from '~/utils/index'
 import {NuxtLink} from "#components";
 import {useStorage} from "@vueuse/core";
+import FloatingImage from '~/components/FloatingImage.vue'
 
 const poster_enable = useStorage('poster_enable', true)
 

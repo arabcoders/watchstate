@@ -284,7 +284,7 @@
 <script setup>
 import '~/assets/css/bulma-switch.css'
 import request from '~/utils/request.js'
-import {awaitElement, copyText, notification, stringToRegex, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
+import {awaitElement, copyText, notification, stringToRegex, TOOLTIP_DATE_FORMAT} from '~/utils/index'
 import {useStorage} from '@vueuse/core'
 import moment from 'moment'
 import Message from '~/components/Message.vue'

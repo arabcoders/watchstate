@@ -64,7 +64,7 @@
             <template v-for="item in items" :key="item.pid">
               <tr v-if="filterItem(item)">
                 <td class="has-text-centered is-vcentered">
-                  <button class="button is-danger is-small" @click="killProcess(item.pid)"
+                  <button class="button is-danger is-small" @click="killProcess(item)"
                           :disabled="'Z' === item.stat">
                     <span class="icon"><i class="fas fa-trash"/></span>
                   </button>
@@ -84,90 +84,106 @@
   </div>
 </template>
 
-<script setup>
-import '~/assets/css/bulma-switch.css'
-import request from '~/utils/request.js'
-import {awaitElement, notification} from '~/utils/index.js'
+<script setup lang="ts">
+import {ref, onMounted} from 'vue'
+import {useHead, useRoute} from '#app'
 import Message from '~/components/Message.vue'
+import {awaitElement, notification} from '~/utils'
+import request from '~/utils/request.js'
+import {useDialog} from "~/composables/useDialog.ts";
 
 useHead({title: 'Processes'})
-const items = ref([])
-const isLoading = ref(false)
-const filter = ref(String(useRoute().query.filter ?? ''))
-const showFilter = ref(!!filter.value)
 
-const loadContent = async () => {
+interface ProcessItem {
+  user: string
+  pid: number
+  cpu: string
+  mem: string
+  vsz: string
+  rss: string
+  tty: string
+  stat: string
+  start: string
+  time: string
+  command: string
+}
+
+const items = ref<Array<ProcessItem>>([])
+const isLoading = ref<boolean>(false)
+const filter = ref<string>(String(useRoute().query.filter ?? ''))
+const showFilter = ref<boolean>(!!filter.value)
+
+const loadContent = async (): Promise<void> => {
   if (isLoading.value) {
     return
   }
-
+  isLoading.value = true
   try {
     const response = await request('/system/processes')
     const json = await response.json()
-
     if (!response.ok) {
       notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
       return
     }
-
     if (!('processes' in json)) {
       notification('error', 'Error', 'Invalid response from the server.')
       return
     }
-
     items.value = json.processes
   } finally {
     isLoading.value = false
   }
 }
 
-const toggleFilter = () => {
+const toggleFilter = (): void => {
   showFilter.value = !showFilter.value
   if (!showFilter.value) {
     filter.value = ''
     return
   }
-
-  awaitElement('#filter', (_, elm) => elm.focus())
+  awaitElement('#filter', (_, elm) => (elm as HTMLInputElement).focus())
 }
 
-const filteredRows = items => {
+const filteredRows = (rows: Array<ProcessItem>): Array<ProcessItem> => {
   if (!filter.value) {
-    return items
+    return rows
   }
-
-  return items.filter(i => Object.values(i).some(v => typeof v === 'string' ? v.toLowerCase().includes(String(filter.value).toLowerCase()) : false))
+  return rows.filter(i => Object.values(i).some(v => typeof v === 'string' ? v.toLowerCase().includes(filter.value.toLowerCase()) : false))
 }
 
-const filterItem = item => {
+const filterItem = (item: ProcessItem): boolean => {
   if (!filter.value || !item) {
     return true
   }
-
-  return Object.values(item).some(v => typeof v === 'string' ? v.toLowerCase().includes(String(filter.value).toLowerCase()) : false)
+  return Object.values(item).some(v => typeof v === 'string' ? v.toLowerCase().includes(filter.value.toLowerCase()) : false)
 }
 
-const killProcess = async pid => {
-  if (!pid) {
+const killProcess = async (item: ProcessItem): Promise<void> => {
+  if (!item.pid) {
     return
   }
 
-  if (false === confirm(`Kill #${pid}, you may have to restart the container if you do that?`)) {
+  const {status: confirmStatus} = await useDialog().confirmDialog({
+    title: `Kill process`,
+    rawHTML: `Killing a process without knowing what it does can cause system instability. Are you sure you want to proceed?<br><br>PID: <code>${item.pid}: ${item.user}</code><br>Process: <code>${item.command}</code>`,
+    confirmColor: 'is-danger',
+  })
+
+  if (true !== confirmStatus) {
     return
   }
 
   isLoading.value = true
-  try {
-    const response = await request(`/system/processes/${pid}`, {method: 'DELETE'})
 
+  try {
+    const response = await request(`/system/processes/${item.pid}`, {method: 'DELETE'})
     if (!response.ok) {
       const json = await response.json()
       notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
       return
     }
-
-    notification('success', 'Success', `Successfully killed #${pid}.`)
-    items.value = items.value.filter(item => item.pid !== pid)
+    notification('success', 'Success', `Successfully killed #${item.pid}.`)
+    items.value = items.value.filter(item => item.pid !== item.pid)
   } finally {
     isLoading.value = false
   }

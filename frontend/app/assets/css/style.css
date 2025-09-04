@@ -312,3 +312,7 @@ html {
     border-radius: 0 0.75rem 0.75rem 0;
     box-shadow: none;
 }
+
+.fa-animate-10 {
+    --fa-animation-iteration-count: 10;
+}

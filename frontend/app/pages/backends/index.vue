@@ -31,8 +31,8 @@
       <div class="column is-12" v-if="toggleForm">
         <BackendAdd @backupData="e => handleEvents('backupData', e)" :backends="backends"
                     @forceExport="e => handleEvents('forceExport', e)"
-                    @forceImport="e => handleEvents('forceImport', e)"
-                    @addBackend="e => handleEvents('addBackend', e)"/>
+                    @addBackend="e => handleEvents('addBackend', e)"
+                    @forceImport="e => handleEvents('forceImport', e)"/>
       </div>
       <template v-else>
         <div class="column is-12" v-if="backends.length<1">
@@ -192,7 +192,7 @@ import '~/assets/css/bulma-switch.css'
 import moment from 'moment'
 import request from '~/utils/request.js'
 import BackendAdd from '~/components/BackendAdd.vue'
-import {ag, copyText, makeConsoleCommand, notification, queue_event, r, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
+import {ag, copyText, makeConsoleCommand, notification, queue_event, r, TOOLTIP_DATE_FORMAT} from '~/utils/index'
 import {useStorage} from '@vueuse/core'
 import Message from '~/components/Message.vue'
 
@@ -314,12 +314,12 @@ const handleEvents = async (event, backend) => {
             '--user',
             api_user.value,
             '--select-backend',
-            backend.value.name,
+            backend.name,
             '--file',
             '{user}.{backend}.{date}.initial_backup.json',
           ]
         })
-        notification('info', 'Info', `We are going to initiate a backup for '${backend.value.name}' in little bit.`, 5000)
+        notification('info', 'Info', `We are going to initiate a backup for '${backend.name}' in little bit.`, 5000)
       } catch (e) {
         notification('error', 'Error', `Failed to queue backup request. ${e.message}`)
       }
@@ -334,11 +334,11 @@ const handleEvents = async (event, backend) => {
             '--user',
             api_user.value,
             '--select-backend',
-            backend.value.name,
+            backend.name,
           ]
-        }, 180)
+        }, 300)
 
-        notification('info', 'Info', `Soon we are going to force export the local data to '${backend.value.name}'.`, 5000)
+        notification('info', 'Info', `Soon we are going to force export the local data to '${backend.name}'.`, 5000)
       } catch (e) {
         notification('error', 'Error', `Failed to queue force export request. ${e.message}`)
       }
@@ -353,11 +353,11 @@ const handleEvents = async (event, backend) => {
             '--user',
             api_user.value,
             '--select-backend',
-            backend.value.name,
+            backend.name,
           ]
-        }, 180)
+        }, 300)
 
-        notification('info', 'Info', `Soon we will import data from '${backend.value.name}'.`, 5000)
+        notification('info', 'Info', `Soon we will import data from '${backend.name}'.`, 5000)
       } catch (e) {
         notification('error', 'Error', `Failed to queue force export request. ${e.message}`)
       }

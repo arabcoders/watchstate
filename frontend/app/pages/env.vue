@@ -252,7 +252,7 @@
 <script setup>
 import '~/assets/css/bulma-switch.css'
 import request from '~/utils/request.js'
-import {awaitElement, copyText, notification} from '~/utils/index.js'
+import {awaitElement, copyText, notification} from '~/utils/index'
 import {useStorage} from '@vueuse/core'
 import Message from '~/components/Message.vue'
 

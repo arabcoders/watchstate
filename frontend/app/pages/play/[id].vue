@@ -248,7 +248,7 @@
 
 <script setup>
 import Message from '~/components/Message.vue'
-import {basename, makeName, notification} from '~/utils/index.js'
+import {basename, makeName, notification} from '~/utils/index'
 import {useStorage} from '@vueuse/core'
 import Player from '~/components/Player.vue'
 import request from "~/utils/request.js"

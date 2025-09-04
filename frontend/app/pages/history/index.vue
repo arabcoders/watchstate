@@ -314,7 +314,7 @@ import {
   makeSearchLink,
   notification,
   TOOLTIP_DATE_FORMAT
-} from '~/utils/index.js'
+} from '~/utils/index'
 import Lazy from '~/components/Lazy.vue'
 import {NuxtLink} from "#components";
 import {useStorage} from "@vueuse/core";

@@ -72,65 +72,62 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import {ref, onMounted, onBeforeUnmount, onUpdated} from 'vue'
+import {navigateTo} from '#app'
 import {marked} from 'marked'
 import {baseUrl} from 'marked-base-url'
 import markedAlert from 'marked-alert'
-import {gfmHeadingId} from "marked-gfm-heading-id"
+import {gfmHeadingId} from 'marked-gfm-heading-id'
+import Message from '~/components/Message.vue'
+import {parse_api_response} from '~/utils'
 
-import Message from "~/components/Message.vue"
+const props = defineProps<{
+  /** Path to the markdown file to load */
+  file: string
+}>()
 
-const props = defineProps({
-  file: {
-    type: String,
-    required: true,
-  },
-})
+const content = ref<string>('')
+const error = ref<string>('')
+const isLoading = ref<boolean>(true)
 
-const content = ref('')
-const error = ref('')
-const isLoading = ref(true)
-
-const handleClick = async e => {
-
-  const target = e.target.closest('a')
+const handleClick = (e: MouseEvent): void => {
+  const target = (e.target as HTMLElement)?.closest('a') as HTMLAnchorElement | null
   if (!target) {
     return
   }
-
   const href = target.getAttribute('href')
   if (!href) {
     return
   }
-
-  if (!href || false === href.includes('/help/')) {
+  if (!href.includes('/help/')) {
     return
   }
-
   e.preventDefault()
-  const url = new URL(href)
-  await navigateTo(url.pathname)
+  const url = new URL(href, window.location.origin)
+  navigateTo(url.pathname)
 }
 
-const addListeners = () => {
+const addListeners = (): void => {
   removeListeners()
-
-  document.querySelectorAll('.content a').forEach(l => {
+  document.querySelectorAll('.content a').forEach((l: Element): void => {
     const href = l.getAttribute('href')
-    if (!href || false === href.includes('/help/')) {
+    if (!href || !href.includes('/help/')) {
       return
     }
-    l.addEventListener('click', handleClick)
+
+    (l as HTMLElement).addEventListener('click', handleClick)
   })
 }
 
-const removeListeners = () => {
-  document.querySelectorAll('.content a').forEach(l => {
+const removeListeners = (): void => {
+  document.querySelectorAll('.content a').forEach((l: Element): void => {
     const href = l.getAttribute('href')
-    if (!href || false === href.includes('/help/')) {
+    if (!href || !href.includes('/help/')) {
       return
     }
-    l.removeEventListener('click', handleClick)
+
+    (l as HTMLElement).removeEventListener('click', handleClick)
   })
 }
 
@@ -144,34 +141,30 @@ onMounted(async () => {
       error.value = err.error.message
       return
     }
-
     const text = await response.text()
-
     marked.use(gfmHeadingId())
     marked.use(baseUrl(window.origin))
     marked.use(markedAlert())
     marked.use({
       gfm: true,
       hooks: {
-        postprocess: (text) => text.replace(
+        postprocess: (text: string) => text.replace(
             /<!--\s*?i:([\w.-]+)\s*?-->/gi,
-            (_, list) => `<span class="icon"><i class="fas ${list.split('.').map(n => n.trim()).join(' ')}"></i></span>`
+            (_, list) => `<span class=\"icon\"><i class=\"fas ${list.split('.').map((n: string) => n.trim()).join(' ')}\"></i></span>`
         )
       },
-      walkTokens: token => {
-        if ('link' !== token.type) {
+      walkTokens: (token: any) => {
+        if (token.type !== 'link') {
           return
         }
-
-        if (true === token.href.startsWith('#')) {
+        if (token.href.startsWith('#')) {
           return
         }
         const urls = ['FAQ.md', 'README.md', 'NEWS.md']
         const list = ['guides/', ...urls]
-        if (false === list.some(l => token.href.includes(l))) {
+        if (!list.some(l => token.href.includes(l))) {
           return
         }
-
         if (urls.some(l => token.href.includes(l))) {
           if (!token.href.startsWith('/')) {
             token.href = '/' + token.href
@@ -180,13 +173,11 @@ onMounted(async () => {
           url.pathname = `/guides${url.pathname}`
           token.href = url.toString()
         }
-
         token.href = token.href.replace('/guides/', '/help/').replace('.md', '')
       },
     })
-
     content.value = String(marked.parse(text))
-  } catch (e) {
+  } catch (e: any) {
     console.error(e)
     error.value = e.message
   } finally {
@@ -194,6 +185,6 @@ onMounted(async () => {
   }
 })
 
-onUnmounted(() => removeListeners())
 onUpdated(() => addListeners())
+onBeforeUnmount(() => removeListeners())
 </script>

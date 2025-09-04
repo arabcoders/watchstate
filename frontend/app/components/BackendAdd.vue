@@ -275,7 +275,7 @@
                 </div>
                 <div class="control">
                   <button class="button is-primary" type="button" :disabled="usersLoading || stage > 3"
-                          @click="getUsers">
+                          @click="() => getUsers()">
                     <span class="icon"><i class="fa"
                                           :class="{'fa-spinner fa-spin': usersLoading,'fa-refresh' : !usersLoading }"/></span>
                     <span class="is-hidden-mobile">Reload</span>
@@ -370,8 +370,9 @@
               <input id="backup_data" type="checkbox" class="switch is-success" v-model="backup_data">
               <label for="backup_data" class="is-unselectable">{{ backup_data ? 'Yes' : 'No' }}</label>
             </div>
-            <p class="help">
-              This will run a one time backup for the backend data.
+            <p class="help is-bold">
+              This will run a one time backup for the backend data. (Will run before the forced export if both are
+              enabled)
             </p>
           </div>
 
@@ -391,7 +392,8 @@
 
           <div class="field" v-if="backends.length > 0">
             <label class="label has-text-danger" for="force_export">
-              Force Export local data to this backend?
+              <span class="icon"><i class="fas fa-exclamation-triangle fa-fade"/></span>
+              <span>Force Export local data to this backend?</span>
             </label>
             <div class="control">
               <input id="force_export" type="checkbox" class="switch is-success" v-model="force_export">
@@ -399,7 +401,7 @@
             </div>
             <p class="help has-text-danger is-bold">
               <span class="icon"><i class="fas fa-info-circle"/></span>
-              THIS OPTION WILL OVERRIDE THE BACKEND DATA with locally stored data.
+              THIS WILL SEND CURRENT WATCHSTATE DATA TO THE BACKEND OVERRIDING ANY EXISTING DATA.
             </p>
           </div>
         </template>
@@ -431,22 +433,24 @@
   </form>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import '~/assets/css/bulma-switch.css'
-import request from '~/utils/request.js'
-import {awaitElement, explode, notification} from '~/utils/index.js'
-import {useStorage} from "@vueuse/core";
+import request from '~/utils/request'
+import {awaitElement, explode, notification, parse_api_response} from '~/utils'
+import {useStorage} from '@vueuse/core'
+import {ref, computed, nextTick, watch, onMounted} from 'vue'
+import type {Backend, BackendUser, BackendServer, BackendOptions} from '~/types/backends'
 
-const emit = defineEmits(['addBackend', 'backupData', 'forceExport', 'forceImport'])
+const emit = defineEmits<{
+  (e: 'addBackend', backend: Backend): void
+  (e: 'backupData', backend: Backend): void
+  (e: 'forceExport', backend: Backend): void
+  (e: 'forceImport', backend: Backend): void
+}>()
 
-const props = defineProps({
-  backends: {
-    type: Array,
-    required: true
-  }
-})
+const props = defineProps<{ backends: Array<Backend> }>()
 
-const backend = ref({
+const backend = ref<Backend>({
   name: '',
   type: 'plex',
   url: '',
@@ -465,33 +469,34 @@ const backend = ref({
       uuid: false
     }
   },
-  options: {}
+  options: {} as BackendOptions
 })
-const api_user = useStorage('api_user', 'main')
-const users = ref([])
-const supported = ref([])
-const servers = ref([])
+
+const api_user = useStorage<string>('api_user', 'main')
+const users = ref<Array<BackendUser>>([])
+const supported = ref<Array<string>>([])
+const servers = ref<Array<BackendServer>>([])
 
 const maxStages = 5
-const stage = ref(0)
-const usersLoading = ref(false)
-const uuidLoading = ref(false)
-const serversLoading = ref(false)
-const exposeToken = ref(false)
-const error = ref()
-const backup_data = ref(true)
-const force_export = ref(false)
-const force_import = ref(false)
+const stage = ref<number>(0)
+const usersLoading = ref<boolean>(false)
+const uuidLoading = ref<boolean>(false)
+const serversLoading = ref<boolean>(false)
+const exposeToken = ref<boolean>(false)
+const error = ref<string | null>(null)
+const backup_data = ref<boolean>(true)
+const force_export = ref<boolean>(false)
+const force_import = ref<boolean>(false)
 
-const isLimited = ref(false)
-const accessTokenResponse = ref({})
+const isLimited = ref<boolean>(false)
+const accessTokenResponse = ref<Record<string, any>>({})
 
-const plex_oauth = ref({})
-const plex_oauth_loading = ref(false)
-const plex_timeout = ref(null)
-const plex_window = ref(null)
+const plex_oauth = ref<Record<string, any>>({})
+const plex_oauth_loading = ref<boolean>(false)
+const plex_timeout = ref<ReturnType<typeof setTimeout> | null>(null)
+const plex_window = ref<Window | null>(null)
 
-const generate_plex_auth_request = async () => {
+const generate_plex_auth_request = async (): Promise<void> => {
   if (plex_oauth_loading.value) {
     return
   }
@@ -507,11 +512,11 @@ const generate_plex_auth_request = async () => {
     }
     plex_oauth.value = json
 
-    await nextTick();
+    await nextTick()
 
     try {
-      const width = 500;
-      const height = 600;
+      const width = 500
+      const height = 600
 
       const features = [
         `width=${width}`,
@@ -520,27 +525,27 @@ const generate_plex_auth_request = async () => {
         `left=${(window.screen.width / 2) - (width / 2)}`,
         'resizable=yes',
         'scrollbars=yes',
-      ].join(',');
+      ].join(',')
 
-      plex_window.value = window.open(plex_oauth_url.value, 'plex_auth', features);
+      plex_window.value = window.open(plex_oauth_url.value, 'plex_auth', features)
       plex_timeout.value = setTimeout(() => plex_get_token(false), 3000)
-      await nextTick();
+      await nextTick()
 
       if (!plex_window.value) {
         n_proxy('error', 'Error', 'Popup blocked. Please allow popups for this site.')
       }
     } catch (e) {
       console.error(e)
-      n_proxy('error', 'Error', `Failed to open popup. Please manually click the link.`)
+      n_proxy('error', 'Error', 'Failed to open popup. Please manually click the link.')
     }
-  } catch (e) {
+  } catch (e: any) {
     n_proxy('error', 'Error', `Request error. ${e.message}`, e)
   } finally {
     plex_oauth_loading.value = false
   }
 }
 
-const plex_oauth_url = computed(() => {
+const plex_oauth_url = computed<string | undefined>(() => {
   if (Object.keys(plex_oauth.value).length < 1) {
     return
   }
@@ -553,7 +558,7 @@ const plex_oauth_url = computed(() => {
   return url.toString()
 })
 
-const plex_get_token = async (notify = true) => {
+const plex_get_token = async (notify: boolean = true): Promise<void> => {
   if (plex_oauth_loading.value) {
     return
   }
@@ -582,38 +587,39 @@ const plex_get_token = async (notify = true) => {
 
     if (json?.authToken) {
       backend.value.token = json.authToken
-      await nextTick();
+      await nextTick()
       plex_oauth.value = {}
-      notification('success', 'Success', `Successfully authenticated with plex.tv.`)
+      notification('success', 'Success', 'Successfully authenticated with plex.tv.')
       if (plex_window.value) {
         try {
           plex_window.value.close()
           plex_window.value = null
         } catch (e) {
+          // ignore
         }
       }
     } else {
       if (true === notify) {
-        notification('warning', 'Warning', `Not authenticated yet. Login via the given link to authorize WatchState.`)
+        notification('warning', 'Warning', 'Not authenticated yet. Login via the given link to authorize WatchState.')
       }
-      await nextTick();
+      await nextTick()
       plex_timeout.value = setTimeout(() => plex_get_token(false), 3000)
     }
-  } catch (e) {
+  } catch (e: any) {
     n_proxy('error', 'Error', `Request error. ${e.message}`, e)
   } finally {
     plex_oauth_loading.value = false
   }
 }
 
-const getUUid = async () => {
-  const required_values = ['type', 'token', 'url'];
+const getUUid = async (): Promise<string | undefined> => {
+  const required_values = ['type', 'token', 'url']
 
-  if (true === isLimited.value || Object.keys(accessTokenResponse.value) > 0) {
+  if (true === isLimited.value || Object.keys(accessTokenResponse.value).length > 0) {
     return
   }
 
-  if (required_values.some(v => !backend.value[v])) {
+  if (required_values.some(v => !backend.value[v as keyof Backend])) {
     notification('error', 'Error', `Please fill all the required fields. ${required_values.join(', ')}.`)
     return
   }
@@ -621,7 +627,7 @@ const getUUid = async () => {
   try {
     error.value = null
     uuidLoading.value = true
-    let data = {
+    const data: any = {
       name: backend.value?.name,
       token: backend.value.token,
       url: backend.value.url
@@ -646,22 +652,22 @@ const getUUid = async () => {
     backend.value.uuid = json.identifier
 
     return backend.value.uuid
-  } catch (e) {
+  } catch (e: any) {
     n_proxy('error', 'Error', `Request error. ${e.message}`, e)
   } finally {
     uuidLoading.value = false
   }
 }
 
-const getAccessToken = async () => {
-  const required_values = ['type', 'token', 'url'];
+const getAccessToken = async (): Promise<boolean | undefined> => {
+  const required_values = ['type', 'token', 'url']
 
-  if (required_values.some(v => !backend.value[v])) {
+  if (required_values.some(v => !backend.value[v as keyof Backend])) {
     notification('error', 'Error', `Please fill all the required fields. ${required_values.join(', ')}.`)
     return
   }
 
-  if (Object.keys(accessTokenResponse.value) > 0) {
+  if (Object.keys(accessTokenResponse.value).length > 0) {
     return
   }
 
@@ -702,16 +708,16 @@ const getAccessToken = async () => {
 
     isLimited.value = true
     return true
-  } catch (e) {
+  } catch (e: any) {
     n_proxy('error', 'Error', `Request error. ${e.message}`, e)
     return false
   }
 }
 
-const getUsers = async (showAlert = true) => {
+const getUsers = async (showAlert: boolean = true): Promise<Array<BackendUser> | undefined> => {
   const required_values = ['type', 'token', 'url', 'uuid']
 
-  if (required_values.some(v => !backend.value[v])) {
+  if (required_values.some(v => !backend.value[v as keyof Backend])) {
     if (showAlert) {
       notification('error', 'Error', `Please fill all the required fields. ${required_values.join(', ')}.`)
     }
@@ -722,17 +728,18 @@ const getUsers = async (showAlert = true) => {
     error.value = null
     usersLoading.value = true
 
-    let data = {
+    const data: any = {
       name: backend.value?.name,
       token: backend.value.token,
       url: backend.value.url,
       uuid: backend.value.uuid,
       options: {},
-    };
+    }
 
-    ['ADMIN_TOKEN', 'plex_guest_user', 'PLEX_USER_PIN', 'is_limited_token'].forEach(v => {
-      if (backend.value.options && backend.value.options[v]) {
-        data.options[v] = backend.value.options[v]
+    const optionKeys: Array<keyof BackendOptions> = ['ADMIN_TOKEN', 'plex_guest_user', 'PLEX_USER_PIN', 'is_limited_token']
+    optionKeys.forEach(key => {
+      if (backend.value.options && backend.value.options[key] !== undefined) {
+        data.options[key] = backend.value.options[key]
       }
     })
 
@@ -751,7 +758,7 @@ const getUsers = async (showAlert = true) => {
     users.value = json
 
     return users.value
-  } catch (e) {
+  } catch (e: any) {
     n_proxy('error', 'Error', `Request error. ${e.message}`, e)
   } finally {
     usersLoading.value = false
@@ -760,7 +767,9 @@ const getUsers = async (showAlert = true) => {
 
 onMounted(async () => {
   supported.value = await (await request('/system/supported')).json()
-  backend.value.type = supported.value[0]
+  if (supported.value.length > 0 && supported.value[0]) {
+    backend.value.type = supported.value[0]
+  }
 })
 
 watch(stage, v => {
@@ -773,17 +782,15 @@ watch(stage, v => {
     backend.value.uuid = ''
     backend.value.url = ''
   }
-});
+})
 
-const changeStep = async () => {
-  let _
-
+const changeStep = async (): Promise<void> => {
   if (stage.value <= 0) {
     // -- basic validation.
     const required = ['name', 'type', 'token']
-    if (required.some(v => !backend.value[v])) {
+    if (required.some(v => !backend.value[v as keyof Backend])) {
       required.forEach(v => {
-        if (!backend.value[v]) {
+        if (!backend.value[v as keyof Backend]) {
           notification('error', 'Error', `Please fill the required field: ${v}.`)
         }
       })
@@ -791,7 +798,7 @@ const changeStep = async () => {
     }
 
     if (false === /^[a-z_0-9]+$/.test(backend.value.name)) {
-      notification('error', 'Error', `Backend name must be in lower case a-z, 0-9 and _ only.`)
+      notification('error', 'Error', 'Backend name must be in lower case a-z, 0-9 and _ only.')
       return
     }
 
@@ -805,7 +812,7 @@ const changeStep = async () => {
 
   if (stage.value <= 1) {
     if ('plex' === backend.value.type && servers.value.length < 1) {
-      _ = await getServers()
+      await getServers()
       if (servers.value.length < 1) {
         stage.value = 0
         return
@@ -817,7 +824,7 @@ const changeStep = async () => {
     }
 
     if (false === isLimited.value && backend.value.token.includes(':')) {
-      _ = await getAccessToken()
+      await getAccessToken()
       if (!accessTokenResponse.value) {
         stage.value = 0
         return
@@ -833,7 +840,7 @@ const changeStep = async () => {
 
   if (stage.value <= 2) {
     if (!backend.value.uuid) {
-      _ = await getUUid();
+      await getUUid()
       if (!backend.value.uuid) {
         stage.value = 1
         return
@@ -845,7 +852,7 @@ const changeStep = async () => {
 
   if (stage.value <= 3) {
     if (false === isLimited.value && users.value.length < 1) {
-      _ = await getUsers()
+      await getUsers()
       if (users.value.length < 1) {
         stage.value = 1
         return
@@ -864,22 +871,22 @@ const changeStep = async () => {
   }
 }
 
-const addBackend = async () => {
-  const required_values = ['name', 'type', 'token', 'url', 'uuid', 'user'];
+const addBackend = async (): Promise<boolean> => {
+  const required_values = ['name', 'type', 'token', 'url', 'uuid', 'user']
 
-  if (required_values.some(v => !backend.value[v])) {
+  if (required_values.some(v => !backend.value[v as keyof Backend])) {
     required_values.forEach(v => {
-      if (!backend.value[v]) {
+      if (!backend.value[v as keyof Backend]) {
         notification('error', 'Error', `Please fill the required field: ${v}.`)
       }
     })
-    return
+    return false
   }
 
   if ('plex' === backend.value.type) {
-    let token = users.value.find(u => u.id === backend.value.user).token
+    const token = users.value.find(u => u.id === backend.value.user)?.token
     if (token && token !== backend.value.token) {
-      backend.value.options.ADMIN_TOKEN = backend.value.token;
+      backend.value.options.ADMIN_TOKEN = backend.value.token
       backend.value.token = token
     }
   }
@@ -888,7 +895,7 @@ const addBackend = async () => {
     backend.value.options.is_limited_token = true
   }
 
-  const response = await request(`/backends/`, {
+  const response = await request('/backends/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -905,40 +912,40 @@ const addBackend = async () => {
   notification('success', 'Information', `Backend ${backend.value.name} added successfully.`)
 
   if (true === Boolean(backup_data?.value ?? false)) {
-    emit('backupData', backend)
+    emit('backupData', backend.value)
   }
 
   if (true === Boolean(force_export?.value ?? false)) {
-    emit('forceExport', backend)
+    emit('forceExport', backend.value)
   }
 
   if (true === Boolean(force_import?.value ?? false)) {
-    emit('forceImport', backend)
+    emit('forceImport', backend.value)
   }
 
-  emit('addBackend')
+  emit('addBackend', backend.value)
 
   return true
 }
 
-const getServers = async () => {
+const getServers = async (): Promise<Array<BackendServer> | undefined> => {
   if ('plex' !== backend.value.type) {
     return
   }
 
   if (!backend.value.token) {
-    notification('error', 'Error', `Token is required to get list of servers.`)
+    notification('error', 'Error', 'Token is required to get list of servers.')
     return
   }
 
   try {
     serversLoading.value = true
 
-    let data = {
+    const data = {
       name: backend.value?.name,
       token: backend.value.token,
       url: window.location.origin,
-    };
+    }
 
     const response = await request(`/backends/discover/${backend.value.type}`, {
       method: 'POST',
@@ -957,21 +964,21 @@ const getServers = async () => {
     servers.value = json
 
     return servers.value
-  } catch (e) {
+  } catch (e: any) {
     n_proxy('error', 'Error', `Request error. ${e.message}`, e)
   } finally {
     serversLoading.value = false
   }
 }
 
-const updateIdentifier = async () => {
-  backend.value.uuid = servers.value.find(s => s.uri === backend.value.url).identifier
-  // if (backend.value.uuid) {
-  //   await getUsers()
-  // }
+const updateIdentifier = async (): Promise<void> => {
+  const server = servers.value.find(s => s.uri === backend.value.url)
+  if (server) {
+    backend.value.uuid = server.identifier
+  }
 }
 
-const n_proxy = (type, title, message, e = null) => {
+const n_proxy = (type: string, title: string, message: string, e: any = null): void => {
   if ('error' === type) {
     error.value = message
   }
@@ -980,7 +987,7 @@ const n_proxy = (type, title, message, e = null) => {
     console.error(e)
   }
 
-  return notification(type, title, message)
+  notification(type as any, title, message)
 }
 
 watch(error, v => v ? awaitElement('#backend_error', (_, e) => e.scrollIntoView({behavior: 'smooth'})) : null)

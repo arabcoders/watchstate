@@ -384,7 +384,7 @@
 
 <script setup>
 import '~/assets/css/bulma-switch.css'
-import {notification} from '~/utils/index.js'
+import {notification} from '~/utils/index'
 import Message from '~/components/Message.vue'
 import {useStorage} from "@vueuse/core"
 import request from "~/utils/request.js"

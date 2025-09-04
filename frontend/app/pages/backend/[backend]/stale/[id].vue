@@ -170,7 +170,7 @@
 <script setup>
 import request from '~/utils/request.js'
 import Message from '~/components/Message.vue'
-import {copyText, makeName, makeSearchLink, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
+import {copyText, makeName, makeSearchLink, TOOLTIP_DATE_FORMAT} from '~/utils/index'
 import moment from 'moment'
 import {useStorage} from '@vueuse/core'
 import Lazy from '~/components/Lazy.vue'

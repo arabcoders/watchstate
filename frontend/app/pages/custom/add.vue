@@ -186,7 +186,7 @@
 <script setup>
 import '~/assets/css/bulma-switch.css'
 import request from '~/utils/request.js'
-import {notification, stringToRegex} from '~/utils/index.js'
+import {notification, stringToRegex} from '~/utils/index'
 import {useStorage} from '@vueuse/core'
 
 useHead({title: 'Add Custom GUID'})

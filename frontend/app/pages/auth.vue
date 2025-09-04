@@ -57,7 +57,8 @@
                       <div class="field has-addons">
                         <div class="control is-expanded has-icons-left">
                           <input class="input" id="user-password" v-model="user.password" required
-                                 placeholder="Password" :type="false === form_expose ? 'password' : 'text'">
+                                 placeholder="Password" :type="false === form_expose ? 'password' : 'text'"
+                                 autocomplete="current-password">
                           <span class="icon is-left"><i class="fa fa-lock"/></span>
                         </div>
                         <div class="control">
@@ -96,7 +97,7 @@
 
 <script setup>
 import {onMounted, ref} from 'vue'
-import {useAuthStore} from '~/store/auth.js'
+import {useAuthStore} from '~/store/auth.ts'
 
 definePageMeta({name: "auth", layout: 'guest'})
 useHead({title: 'WatchState: Auth'})
