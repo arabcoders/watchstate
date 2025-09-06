@@ -222,9 +222,17 @@
   </div>
 </template>
 
-<script setup>
-import request from '~/utils/request.js'
+<script setup lang="ts">
+import {ref, computed, watch, onMounted, onBeforeUnmount} from 'vue'
+import {useHead, useRoute, useRouter} from '#app'
+import {useStorage} from '@vueuse/core'
+import moment from 'moment'
+import request from '~/utils/request'
 import Message from '~/components/Message.vue'
+import Lazy from '~/components/Lazy.vue'
+import FloatingImage from '~/components/FloatingImage.vue'
+import {NuxtLink} from '#components'
+import {useDialog} from '~/composables/useDialog'
 import {
   awaitElement,
   copyText,
@@ -232,49 +240,87 @@ import {
   makePagination,
   makeSearchLink,
   notification,
-  TOOLTIP_DATE_FORMAT
-} from '~/utils/index'
-import moment from 'moment'
-import {useStorage} from '@vueuse/core'
-import Lazy from '~/components/Lazy.vue'
-import {NuxtLink} from "#components";
-import FloatingImage from "~/components/FloatingImage.vue";
-import {useDialog} from "~/composables/useDialog.js";
+  TOOLTIP_DATE_FORMAT,
+  parse_api_response,
+} from '~/utils'
+import type {GenericError} from "~/types/responses";
+
+type DuplicateItem = {
+  /** Unique identifier for the item */
+  id: number
+  /** Type of media (e.g., 'movie', 'episode') */
+  type: string
+  /** Main title of the item */
+  title: string
+  /** Alternative content title if available */
+  content_title?: string
+  /** File path of the content */
+  content_path?: string
+  /** Full display title combining multiple sources */
+  full_title?: string
+  /** Whether the item has been watched/played */
+  watched: boolean
+  /** Unix timestamp of when the record was last updated */
+  updated_at: number
+  /** Array of backend names that have reported this item */
+  reported_by: Array<string>
+  /** Array of backend names that have NOT reported this item */
+  not_reported_by: Array<string>
+  /** UI state: whether to show raw JSON data */
+  showRawData?: boolean
+  /** UI state: whether title is expanded for display */
+  expand_title?: boolean
+  /** UI state: whether path is expanded for display */
+  expand_path?: boolean
+  /** Additional properties that may come from the API */
+  [key: string]: unknown
+}
+
+type DuplicateApiResponse = {
+  items: Array<DuplicateItem>
+  paging: {
+    current_page: number
+    perpage: number
+    total: number
+  }
+}
 
 const route = useRoute()
+const router = useRouter()
 
 useHead({title: 'DFR'})
 
-const items = ref([])
-const page = ref(route.query.page ?? 1)
-const perpage = ref(route.query.perpage ?? 50)
-const total = ref(0)
-const last_page = computed(() => Math.ceil(total.value / perpage.value))
-const isLoading = ref(false)
+const items = ref<Array<DuplicateItem>>([])
+const page = ref<number>(Number(route.query.page) || 1)
+const perpage = ref<number>(Number(route.query.perpage) || 50)
+const total = ref<number>(0)
+const last_page = computed<number>(() => Math.ceil(total.value / perpage.value))
+const isLoading = ref<boolean>(false)
 const show_page_tips = useStorage('show_page_tips', true)
-const filter = ref(route.query.filter ?? '')
-const showFilter = ref(!!filter.value)
+const filter = ref<string>(String(route.query.filter || ''))
+const showFilter = ref<boolean>(!!filter.value)
 const poster_enable = useStorage('poster_enable', true)
 
-const toggleFilter = () => {
+const toggleFilter = (): void => {
   showFilter.value = !showFilter.value
   if (!showFilter.value) {
     filter.value = ''
     return
   }
 
-  awaitElement('#filter', (_, elm) => elm.focus())
+  awaitElement('#filter', (_, elm) => (elm as HTMLInputElement).focus())
 }
-const loadContent = async (pageNumber, fromPopState = false, fromReload = false) => {
-  pageNumber = parseInt(pageNumber)
 
-  if (isNaN(pageNumber) || pageNumber < 1) {
+const loadContent = async (pageNumber: number, fromPopState = false, fromReload = false): Promise<void> => {
+  pageNumber = parseInt(String(pageNumber))
+
+  if (isNaN(pageNumber) || 1 > pageNumber) {
     pageNumber = 1
   }
 
   const search = new URLSearchParams()
-  search.set('perpage', perpage.value)
-  search.set('page', pageNumber)
+  search.set('perpage', String(perpage.value))
+  search.set('page', String(pageNumber))
 
   let pageTitle = `DFR: Page #${pageNumber}`
 
@@ -285,41 +331,35 @@ const loadContent = async (pageNumber, fromPopState = false, fromReload = false)
 
   useHead({title: pageTitle})
 
-  let newUrl = window.location.pathname + '?' + search.toString()
+  const newUrl = window.location.pathname + '?' + search.toString()
   isLoading.value = true
   items.value = []
 
   page.value = pageNumber
 
   try {
-    let json
-
     if (true === fromReload) {
       search.set('no_cache', '1')
     }
 
     const response = await request(`/system/duplicate/?${search.toString()}`)
-    json = await response.json()
 
-    if (useRoute().name !== 'duplicate') {
+    const json = await parse_api_response<DuplicateApiResponse | GenericError>(response)
+
+    if ('duplicate' !== useRoute().name) {
       return
     }
 
-    if (200 !== response.status) {
+    if ('error' in json) {
       notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`)
-      isLoading.value = false
       return
     }
 
-    if (!fromPopState && window.location.href !== newUrl) {
-      await useRouter().push({
-        path: '/duplicate',
-        title: pageTitle,
-        query: Object.fromEntries(search)
-      })
+    if (!fromPopState && newUrl !== window.location.href) {
+      await router.push({path: '/duplicate', query: Object.fromEntries(search)})
     }
 
-    if ('paging' in json) {
+    if ('paging' in json && json.paging) {
       page.value = json.paging.current_page
       perpage.value = json.paging.perpage
       total.value = json.paging.total
@@ -332,106 +372,104 @@ const loadContent = async (pageNumber, fromPopState = false, fromReload = false)
       items.value = json.items
     }
 
+  } catch (e: unknown) {
+    const error = e as Error
+    notification('error', 'Error', `Request error. ${error.message}`)
+  } finally {
     isLoading.value = false
-  } catch (e) {
-    notification('error', 'Error', `Request error. ${e.message}`)
   }
 }
 
 onMounted(async () => {
-  await loadContent(page.value ?? 1)
+  await loadContent(page.value || 1)
   window.addEventListener('popstate', stateCallBack)
 })
 
 onBeforeUnmount(() => window.removeEventListener('popstate', stateCallBack))
 
-const filteredRows = items => {
+const filteredRows = (items: Array<DuplicateItem>): Array<DuplicateItem> => {
   if (!filter.value) {
     return items
   }
 
-  return items.filter(i => Object.values(i).some(v => typeof v === 'string' ? v.toLowerCase().includes(filter.value.toLowerCase()) : false))
+  return items.filter(i => Object.values(i).some(v => 'string' === typeof v ? v.toLowerCase().includes(filter.value.toLowerCase()) : false))
 }
 
-const filterItem = item => {
+const filterItem = (item: DuplicateItem): boolean => {
   if (!filter.value || !item) {
     return true
   }
 
-  return Object.values(item).some(v => typeof v === 'string' ? v.toLowerCase().includes(filter.value.toLowerCase()) : false)
+  return Object.values(item).some(v => 'string' === typeof v ? v.toLowerCase().includes(filter.value.toLowerCase()) : false)
 }
 
-watch(filter, val => {
-  const route = useRoute()
-  const router = useRouter()
+watch(filter, (val: string) => {
   if (!val) {
     if (!route?.query['filter']) {
       return
     }
 
     router.push({
-      'path': '/duplicate',
-      'query': {
+      path: '/duplicate',
+      query: {
         ...route.query,
-        'filter': undefined
+        filter: undefined
       }
     })
     return
   }
 
-  if (route?.query['filter'] === val) {
+  if (val === route?.query['filter']) {
     return
   }
 
   router.push({
-    'path': '/duplicate',
-    'query': {
+    path: '/duplicate',
+    query: {
       ...route.query,
-      'filter': val
+      filter: val
     }
   })
 })
 
-const stateCallBack = async e => {
-  if (!e.state && !e.detail) {
+const stateCallBack = async (e: PopStateEvent | CustomEvent): Promise<void> => {
+  if (!e.state && !(e as CustomEvent).detail) {
     return
   }
 
   const route = useRoute()
-  page.value = route.query.page ?? 1
-  perpage.page = route.query.perpage ?? 50
-  filter.value = route.query.filter ?? ''
+  page.value = Number(route.query.page) || 1
+  perpage.value = Number(route.query.perpage) || 50
+  filter.value = String(route.query.filter || '')
   if (filter.value) {
     showFilter.value = true
   }
   await loadContent(page.value, true)
 }
 
-const deleteRecords = async () => {
-  const {confirmDialog} = useDialog()
-  const {status} = await confirmDialog({
-    title: 'Delete items',
+const deleteRecords = async (): Promise<void> => {
+  const {status: confirmStatus} = await useDialog().confirmDialog({
     message: `Delete '${total.value}' items?`,
-    confirmText: 'Delete',
     confirmClass: 'is-danger',
-    confirmIcon: 'fas fa-trash',
   })
 
-  if (true !== status) {
+  if (true !== confirmStatus) {
     return
   }
+
   try {
-    const response = await request('/system/duplicate', {method: 'DELETE'});
+    const response = await request('/system/duplicate', {method: 'DELETE'})
     if (!response.ok) {
-      const json = await response.json();
-      notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`);
-      return;
+      const json: GenericError = await response.json()
+      notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`)
+      return
     }
 
-    notification('success', 'Success', `Successfully deleted '${total.value}' items.`);
-    await loadContent(page.value, true, true);
-  } catch (error) {
-    notification('error', 'Error', `Request error. ${error.message}`);
+    notification('success', 'Success', `Successfully deleted '${total.value}' items.`)
+    await loadContent(page.value, true, true)
+  } catch (error: unknown) {
+    const err = error as Error
+    notification('error', 'Error', `Request error. ${err.message}`)
   }
 }
 </script>

@@ -9,7 +9,7 @@
         <div class="is-pulled-right">
           <div class="field is-grouped">
             <div class="control has-icons-left" v-if="toggleFilter || query">
-              <form @submit.prevent="loadContent">
+              <form @submit.prevent="() => loadContent()">
                 <input type="search" v-model="query" class="input" id="filter" placeholder="Search & Filter">
                 <span class="icon is-left"><i class="fas fa-filter"/></span>
               </form>
@@ -72,11 +72,12 @@
               </span>
 
               <div class="is-pulled-right is-hidden-tablet">
-                <span class="tag" :class="getStatusClass(item.status)">{{ statuses[item.status].name }}</span>
+                <span class="tag" :class="getStatusClass(item.status)">{{ statuses[item.status]?.name }}</span>
               </div>
             </div>
             <div class="card-header-icon">
-              <span class="icon" @click="item._display = !item._display" v-if="Object.keys(item.event_data).length > 0">
+              <span class="icon" @click="item._display = !item._display"
+                    v-if="Object.keys(item.event_data || {}).length > 0">
                 <i class="fas" :class="{ 'fa-arrow-up': item?._display, 'fa-arrow-down': !item?._display }"/>
               </span>
             </div>
@@ -91,7 +92,7 @@
           </div>
           <div class="card-footer">
             <div class="card-footer-item is-hidden-mobile">
-              <span class="tag" :class="getStatusClass(item.status)">{{ statuses[item.status].name }}</span>
+              <span class="tag" :class="getStatusClass(item.status)">{{ statuses[item.status]?.name }}</span>
             </div>
             <span class="card-footer-item">
               <span class="icon"><i class="fas fa-calendar"></i></span>
@@ -169,7 +170,24 @@ import Message from '~/components/Message.vue'
 import EventView from '~/components/EventView.vue'
 import Overlay from '~/components/Overlay.vue'
 import {useStorage} from '@vueuse/core'
-import type {EventViewEvent, EventStatus, EventsApiResponse} from '~/types/event_view'
+import type {EventsItem} from '~/types/events'
+import type {GenericError} from '~/types/responses'
+import {useDialog} from "~/composables/useDialog.ts";
+
+type EventStatus = {
+  code: number
+  name: string
+}
+
+type EventsApiResponse = {
+  items: Array<EventsItem>
+  statuses: Array<EventStatus>
+  paging: {
+    page: number
+    perpage: number
+    total: number
+  }
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -181,7 +199,7 @@ const last_page = computed<number>(() => Math.ceil(total.value / perpage.value))
 
 const isLoading = ref<boolean>(false)
 const toggleDispatcher = ref<boolean>(false)
-const items = ref<Array<EventViewEvent>>([])
+const items = ref<Array<EventsItem>>([])
 const statuses = ref<Array<EventStatus>>([])
 const query = ref<string>(route.query.filter as string ?? '')
 const toggleFilter = ref<boolean>(false)
@@ -194,7 +212,7 @@ watch(toggleFilter, () => {
   }
 })
 
-const filteredRows = computed<Array<EventViewEvent>>(() => {
+const filteredRows = computed<Array<EventsItem>>(() => {
   if (!query.value) {
     return items.value
   }
@@ -203,7 +221,7 @@ const filteredRows = computed<Array<EventViewEvent>>(() => {
 
   return items.value.filter(i => {
     return Object.keys(i).some(k => {
-      const value = i[k as keyof EventViewEvent]
+      const value = i[k as keyof EventsItem] as any
       if (typeof value === 'object' && null !== value) {
         return Object.values(value).some(v => typeof v === 'string' ? v.toLowerCase().includes(toLower) : false)
       }
@@ -237,9 +255,9 @@ const loadContent = async (pageNumber: number = 1, updateHistory: boolean = true
     items.value = []
 
     const response = await request(`/system/events?${queryParams.toString()}`)
-    const json: EventsApiResponse = await parse_api_response(response)
+    const json: EventsApiResponse | GenericError = await parse_api_response(response)
 
-    if (200 !== response.status) {
+    if ('error' in json) {
       notification('error', 'Error', `Events request error. ${json.error.code}: ${json.error.message}`)
       return
     }
@@ -298,8 +316,13 @@ const handlePopState = async (): Promise<void> => {
   await loadContent(page.value, false)
 }
 
-const deleteItem = async (item: EventViewEvent): Promise<void> => {
-  if (!confirm(`Delete '${item.id}'?`)) {
+const deleteItem = async (item: EventsItem): Promise<void> => {
+  const {status: confirmStatus} = await useDialog().confirmDialog({
+    message: `Delete '${makeName(item.id)}'?`,
+    confirmColor: 'is-danger',
+  })
+
+  if (true !== confirmStatus) {
     return
   }
 
@@ -321,8 +344,13 @@ const deleteItem = async (item: EventViewEvent): Promise<void> => {
   }
 }
 
-const resetEvent = async (item: EventViewEvent, status: number = 0): Promise<void> => {
-  if (!confirm(`Reset '${item.id}'?`)) {
+const resetEvent = async (item: EventsItem, status: number = 0): Promise<void> => {
+  const {status: confirmStatus} = await useDialog().confirmDialog({
+    message: `Reset '${makeName(item.id)}'?`,
+    confirmColor: 'is-warning',
+  })
+
+  if (true !== confirmStatus) {
     return
   }
 
@@ -356,7 +384,12 @@ const resetEvent = async (item: EventViewEvent, status: number = 0): Promise<voi
 }
 
 const deleteAll = async (): Promise<void> => {
-  if (!confirm('Delete all non pending events?')) {
+  const {status: confirmStatus} = await useDialog().confirmDialog({
+    message: `Delete all non pending events?`,
+    confirmColor: 'is-danger',
+  })
+
+  if (true !== confirmStatus) {
     return
   }
 
@@ -375,7 +408,7 @@ const deleteAll = async (): Promise<void> => {
   }
 }
 
-const deletedItem = (id: number): void => {
+const deletedItem = (id: string): void => {
   items.value = items.value.filter(i => i.id !== id)
   if (quick_view.value) {
     quick_view.value = null
@@ -390,13 +423,7 @@ watch(query, (val: string) => {
       return
     }
 
-    currentRouter.push({
-      path: '/events',
-      query: {
-        ...currentRoute.query,
-        filter: undefined
-      }
-    })
+    currentRouter.push({path: '/events', query: {...currentRoute.query, filter: undefined}})
     return
   }
 
@@ -404,12 +431,6 @@ watch(query, (val: string) => {
     return
   }
 
-  currentRouter.push({
-    path: '/events',
-    query: {
-      ...currentRoute.query,
-      filter: val
-    }
-  })
+  currentRouter.push({path: '/events', query: {...currentRoute.query, filter: val}})
 })
 </script>

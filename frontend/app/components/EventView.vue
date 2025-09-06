@@ -160,26 +160,28 @@
 <script setup lang="ts">
 import {ref, computed, watch, onMounted, onBeforeUnmount} from 'vue'
 import {useHead, createError} from '#app'
-import {
-  copyText,
-  disableOpacity,
-  enableOpacity,
-  notification,
-  parse_api_response,
-  TOOLTIP_DATE_FORMAT
-} from '~/utils'
+import {copyText, disableOpacity, enableOpacity, notification, parse_api_response, TOOLTIP_DATE_FORMAT} from '~/utils'
 import request from '~/utils/request'
 import moment from 'moment'
 import {getStatusClass, makeName} from '~/utils/events/helpers'
 import {useStorage} from '@vueuse/core'
-import type {EventViewProps, EventViewEmits, EventViewEvent} from '~/types/event_view'
-import {useDialog} from "~/composables/useDialog.ts";
+import type {EventsItem} from '~/types/events'
+import {useDialog} from "~/composables/useDialog";
+import type {GenericError} from "~/types/responses";
 
-const emit = defineEmits<EventViewEmits>()
-const props = defineProps<EventViewProps>()
+const emit = defineEmits<{
+  (e: 'closeOverlay'): void
+  (e: 'delete', item: EventsItem): void
+  (e: 'deleted', item: EventsItem): void
+}>()
+
+const props = defineProps<{
+  /** Event ID to display */
+  id: string
+}>()
 
 const query = ref<string>('')
-const item = ref<EventViewEvent>({} as EventViewEvent)
+const item = ref<EventsItem>({} as EventsItem)
 const isLoading = ref<boolean>(true)
 const toggleFilter = ref<boolean>(false)
 const timer = ref<ReturnType<typeof setInterval> | null>(null)
@@ -250,10 +252,10 @@ const loadContent = async (): Promise<void> => {
 const deleteItem = async (): Promise<void> => emit('delete', item.value)
 
 const resetEvent = async (status: number = 0): Promise<void> => {
-  const {confirmStatus} = await useDialog().confirmDialog({
-    title: 'Reset Event',
+  const {status: confirmStatus} = await useDialog().confirmDialog({
     message: `Reset '${makeName(item.value.id)}'?`,
     opacityControl: false,
+    confirmColor: 'is-warning',
   })
 
   if (true !== confirmStatus) {
@@ -269,9 +271,9 @@ const resetEvent = async (status: number = 0): Promise<void> => {
       })
     })
 
-    const json = await parse_api_response(response)
+    const json = await parse_api_response<EventsItem | GenericError>(response)
 
-    if (200 !== response.status) {
+    if ('error' in json) {
       notification('error', 'Error', `Events view patch Request error. ${json.error.code}: ${json.error.message}`)
       return
     }

@@ -189,7 +189,7 @@
                   </p>
                   <p v-else class="is-text-overflow is-clickable is-unselectable"
                      :class="{ 'is-masked': item.mask, 'is-unselectable': item.mask }"
-                     @click="(e) => e.target.classList.toggle('is-text-overflow')">
+                     @click="(e: MouseEvent) => (e.target as HTMLElement)?.classList.toggle('is-text-overflow')">
                     {{ item.value }}
                   </p>
 
@@ -208,7 +208,7 @@
                   </button>
                 </div>
                 <div class="card-footer-item">
-                  <button class="button is-fullwidth is-warning" @click="copyText(item.value)">
+                  <button class="button is-fullwidth is-warning" @click="copyText(item.value as string)">
                     <span class="icon-text">
                       <span class="icon"><i class="fas fa-copy"></i></span>
                       <span>Copy</span>
@@ -249,66 +249,103 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import '~/assets/css/bulma-switch.css'
-import request from '~/utils/request.js'
-import {awaitElement, copyText, notification} from '~/utils/index'
+import {ref, computed, watch, onMounted, onUnmounted, nextTick} from 'vue'
+import {useRoute, useRouter, useHead, navigateTo} from '#app'
 import {useStorage} from '@vueuse/core'
 import Message from '~/components/Message.vue'
+import request from '~/utils/request.js'
+import {awaitElement, copyText, notification, parse_api_response} from '~/utils'
+import type {GenericError} from "~/types/responses";
+
+type EnvVar = {
+  /** Environment variable key (e.g., 'WS_CRON_IMPORT') */
+  key: string
+  /** Current value of the variable */
+  value?: string | number | boolean
+  /** Description of what this variable does */
+  description: string
+  /** Data type expected for this variable */
+  type: 'string' | 'int' | 'bool'
+  /** Whether the value should be masked in the UI */
+  mask: boolean
+  /** Whether this variable is considered dangerous to modify */
+  danger?: boolean
+  /** Whether this variable is deprecated */
+  deprecated?: boolean
+}
+
+type EnvironmentApiResponse = {
+  /** Array of environment variables */
+  data: Array<EnvVar>
+  /** Path to the environment file */
+  file?: string
+}
 
 const route = useRoute()
+const router = useRouter()
 
 useHead({title: 'Environment Variables'})
 
-const items = ref([])
-const toggleForm = ref(false)
-const form_key = ref('')
-const form_value = ref()
-const form_type = ref()
-const form_mask = ref(false)
-const form_expose = ref(false)
+const items = ref<Array<EnvVar>>([])
+const toggleForm = ref<boolean>(false)
+const form_key = ref<string>('')
+const form_value = ref<string | number | boolean | null>(null)
+const form_type = ref<'string' | 'int' | 'bool' | null>(null)
+const form_mask = ref<boolean>(false)
+const form_expose = ref<boolean>(false)
 const show_page_tips = useStorage('show_page_tips', true)
-const isLoading = ref(true)
-const file = ref('.env')
-const query = ref(route.query.filter ?? '')
-const toggleFilter = ref(false)
+const isLoading = ref<boolean>(true)
+const file = ref<string>('.env')
+const query = ref<string>(route.query.filter as string ?? '')
+const toggleFilter = ref<boolean>(false)
+
 watch(toggleFilter, () => {
   if (!toggleFilter.value) {
     query.value = ''
   }
-});
+})
 
-const loadContent = async () => {
-  const route = useRoute()
+const loadContent = async (): Promise<void> => {
+  const currentRoute = useRoute()
   try {
     isLoading.value = true
     items.value = []
     const response = await request('/system/env')
-    const json = await response.json()
+    const json = await parse_api_response<EnvironmentApiResponse | GenericError>(response)
+
+    if ('error' in json) {
+      notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
+      return
+    }
+
     items.value = json.data
+
     if (json.file) {
       file.value = json.file
     }
-    if (route.query.edit) {
-      let item = items.value.find(i => i.key === route.query.edit)
-      if (item && route.query?.value && !item?.value) {
-        item.value = route.query.value
+
+    if (currentRoute.query.edit) {
+      const item = items.value.find(i => i.key === currentRoute.query.edit)
+      if (item && currentRoute.query?.value && !item?.value) {
+        item.value = currentRoute.query.value as string
       }
       if (!item) {
-        notification('error', 'Error', `Invalid key '${route.query.edit}'.`, 2000)
+        notification('error', 'Error', `Invalid key '${currentRoute.query.edit}'.`, 2000)
         await cancelForm()
       } else {
-        editEnv(item);
+        editEnv(item)
       }
     }
-  } catch (e) {
+  } catch (e: any) {
     notification('error', 'Error', `Error. ${e.message}`, 5000)
   } finally {
     isLoading.value = false
   }
 }
 
-const deleteEnv = async env => {
+const deleteEnv = async (env: EnvVar): Promise<void> => {
   if (!confirm(`Delete '${env.key}'?`)) {
     return
   }
@@ -318,7 +355,9 @@ const deleteEnv = async env => {
 
     if (200 !== response.status) {
       const json = await parse_api_response(response)
-      notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
+      if ('error' in json) {
+        notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
+      }
       return
     }
 
@@ -326,20 +365,20 @@ const deleteEnv = async env => {
       if (i.key === env.key) {
         delete i.value
       }
-      return true;
+      return true
     })
 
     notification('success', 'Success', `Environment variable '${env.key}' successfully deleted.`, 5000)
-  } catch (e) {
+  } catch (e: any) {
     notification('error', 'Error', `Request error. ${e.message}`, 5000)
   }
 }
 
-const addVariable = async () => {
+const addVariable = async (): Promise<void> => {
   const key = form_key.value.toUpperCase()
 
   if (!key.startsWith('WS_')) {
-    notification('error', 'Error', 'Key must start with WS_',)
+    notification('error', 'Error', 'Key must start with WS_')
     return
   }
 
@@ -356,33 +395,38 @@ const addVariable = async () => {
     })
 
     if (304 === response.status) {
-      return cancelForm()
-    }
-
-    const json = await response.json()
-    if (useRoute().name !== 'env') {
+      await cancelForm()
       return
     }
 
-    if (200 !== response.status) {
+    const json = await parse_api_response<EnvVar>(response)
+
+    if ('env' !== useRoute().name) {
+      return
+    }
+
+    if ('error' in json) {
       notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
       return
     }
 
-    items.value[items.value.findIndex(i => i.key === key)] = json
+    const index = items.value.findIndex(i => i.key === key)
+    if (-1 !== index) {
+      items.value[index] = json
+    }
 
     notification('success', 'Success', `Environment variable '${key}' successfully updated.`, 5000)
-    return cancelForm()
-  } catch (e) {
+    await cancelForm()
+  } catch (e: any) {
     notification('error', 'Error', `Request error. ${e.message}`, 5000)
   }
 }
 
-const editEnv = env => {
+const editEnv = (env: EnvVar): void => {
   form_key.value = env.key
-  form_value.value = env.value
+  form_value.value = env.value ?? null
 
-  if (typeof env.value === 'undefined' && 'bool' === env.type) {
+  if ('undefined' === typeof env.value && 'bool' === env.type) {
     form_value.value = false
   }
 
@@ -390,101 +434,114 @@ const editEnv = env => {
   form_mask.value = env.mask
   toggleForm.value = true
   if (!useRoute().query.edit) {
-    useRouter().push({'path': '/env', query: {'edit': env.key}})
+    router.push({'path': '/env', query: {'edit': env.key}})
   }
 }
 
-const cancelForm = async () => {
-  const route = useRoute()
+const cancelForm = async (): Promise<void> => {
+  const currentRoute = useRoute()
   form_key.value = ''
   form_value.value = null
   form_type.value = null
   form_mask.value = false
   toggleForm.value = false
-  if (route.query?.callback) {
-    await navigateTo({path: route.query.callback})
+
+  if (currentRoute.query?.callback) {
+    await navigateTo({path: currentRoute.query.callback as string})
     return
   }
 
-  if (route.query?.edit || route.query?.value) {
-    await useRouter().push({path: '/env'})
+  if (currentRoute.query?.edit || currentRoute.query?.value) {
+    await router.push({path: '/env'})
   }
 }
 
-watch(toggleForm, async value => {
+watch(toggleForm, async (value: boolean) => {
   if (!value) {
     await cancelForm()
   } else {
-    awaitElement('#env_page_title', (_, el) => el.scrollIntoView({behavior: 'smooth'}))
+    awaitElement('#env_page_title', (_: string, el: Element) => el.scrollIntoView({behavior: 'smooth'}))
   }
 })
 
-const keyChanged = () => {
+const keyChanged = (): void => {
   if (!form_key.value) {
     return
   }
 
-  let data = items.value.filter(i => i.key === form_key.value)
-  form_value.value = (data.length > 0) ? data[0].value : ''
-  form_type.value = (data.length > 0) ? data[0].type : 'string'
-  form_mask.value = (data.length > 0) ? data[0].mask : false
+  const data = items.value.find(i => i.key === form_key.value) as EnvVar
+  if (!data) {
+    return
+  }
+
+  form_value.value = data.value || ''
+  form_type.value = data.type || 'string'
+  form_mask.value = data.mask || false
+
   nextTick(() => {
-    if (typeof form_value.value === 'undefined' && 'bool' === form_type.value) {
+    if ('undefined' === typeof form_value.value && 'bool' === form_type.value) {
       form_value.value = false
     }
-  });
-  useRouter().push({'path': '/env', query: {'edit': form_key.value}})
+  })
+
+  router.push({'path': '/env', query: {'edit': form_key.value}})
 }
 
-const getHelp = key => {
+const getHelp = (key: string): string => {
   if (!key) {
     return ''
   }
 
-  let data = items.value.filter(i => i.key === key)
-  if (0 === data.length) {
+  const data = items.value.find(i => i.key === key)
+  if (!data) {
     return ''
   }
 
-  let text = `${data[0].description}`
+  let text = `${data.description}`
 
-  if (data[0]?.danger) {
+  if (data.danger) {
     text = `<span class="has-text-danger title is-5"> <i class="has-text-warning fas fa-exclamation-triangle fa-bounce"></i> ${text}</span>`
   }
 
-  if (data[0]?.type) {
-    text += ` Expects: <code>${data[0].type}</code>`
+  if (data?.type) {
+    text += ` Expects: <code>${data.type}</code>`
   }
 
-  return data[0]?.deprecated ? `<strong><code class="is-strike-through"">Deprecated</code></strong> - ${text}` : text
+  return data?.deprecated ? `<strong><code class="is-strike-through"">Deprecated</code></strong> - ${text}` : text
 }
 
-const fixBool = v => [true, 'true', '1'].includes(v)
+const fixBool = (v: string | number | boolean | null | undefined): boolean =>
+    [true, 'true', '1'].includes(v as any)
 
-const filteredRows = computed(() => {
+const filteredRows = computed<Array<EnvVar>>(() => {
   if (!query.value) {
-    return items.value.filter(i => i.value !== undefined)
+    return items.value.filter(i => 'undefined' !== typeof i.value)
   }
 
-  return items.value.filter(i => i.key.toLowerCase().includes(query.value.toLowerCase())).filter(i => i.value !== undefined)
+  return items.value
+      .filter(i => i.key.toLowerCase().includes(query.value.toLowerCase()))
+      .filter(i => 'undefined' !== typeof i.value)
 })
 
-const stateCallBack = async e => {
-  if (!e.state && !e.detail) {
+const stateCallBack = async (e: PopStateEvent): Promise<void> => {
+  if (!e.state && !(e as any).detail) {
     return
   }
-  const route = useRoute()
-  if (!route.query?.edit) {
+
+  const currentRoute = useRoute()
+  if (!currentRoute.query?.edit) {
     await cancelForm()
     return
   }
 
-  let item = items.value.find(i => i.key === route.query.edit)
-  if (item && route.query?.value && !item?.value) {
-    item.value = route.query.value
+  const item = items.value.find(i => i.key === currentRoute.query.edit)
+  if (item && currentRoute.query?.value && !item?.value) {
+    item.value = currentRoute.query.value as string
   }
 
-  editEnv(item)
+  if (item) {
+    editEnv(item)
+  }
 }
 
 onMounted(async () => {

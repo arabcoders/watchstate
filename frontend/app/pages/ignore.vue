@@ -281,43 +281,90 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import '~/assets/css/bulma-switch.css'
-import request from '~/utils/request.js'
-import {awaitElement, copyText, notification, stringToRegex, TOOLTIP_DATE_FORMAT} from '~/utils/index'
+import {ref, computed, watch, onMounted} from 'vue'
+import {useHead, useRoute} from '#app'
 import {useStorage} from '@vueuse/core'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
+import request from '~/utils/request.js'
+import {awaitElement, copyText, notification, stringToRegex, TOOLTIP_DATE_FORMAT} from '~/utils'
+import {useDialog} from "~/composables/useDialog.ts";
+import type {GenericError} from "~/types/responses";
+
+type GuidProvider = {
+  /** Provider name (e.g., 'tvdb', 'imdb') */
+  guid: string
+  /** Optional validator for the GUID */
+  validator?: {
+    /** Regex pattern string */
+    pattern: string
+    /** Example value */
+    example?: string
+  }
+}
+
+type IgnoreRule = {
+  /** Unique rule identifier */
+  rule: string
+  /** Backend name */
+  backend: string
+  /** GUID provider */
+  db: string
+  /** GUID value */
+  id: string
+  /** Type of item (show, movie, episode) */
+  type: string
+  /** If true, rule is scoped */
+  scoped: boolean
+  /** If scoped, the id it is scoped to */
+  scoped_to?: string | null
+  /** Optional title for the rule */
+  title?: string | null
+  /** Creation date (ISO string) */
+  created: string
+}
+
+type IgnoreForm = {
+  id: string
+  type: string
+  backend: string
+  db: string
+  scoped: boolean
+  scoped_to: string | null
+}
+
 
 useHead({title: 'Ignored GUIDs'})
 
 const types = ['show', 'movie', 'episode']
-const empty_form = {id: '', type: '', backend: '', db: '', scoped: false, scoped_to: null}
-const items = ref([])
-const toggleForm = ref(false)
-const form = ref(JSON.parse(JSON.stringify(empty_form)))
+const empty_form: IgnoreForm = {id: '', type: '', backend: '', db: '', scoped: false, scoped_to: null}
+const items = ref<Array<IgnoreRule>>([])
+const toggleForm = ref<boolean>(false)
+const form = ref<IgnoreForm>(JSON.parse(JSON.stringify(empty_form)))
 const show_page_tips = useStorage('show_page_tips', true)
-const isLoading = ref(false)
-const guids = ref([])
-const backends = ref([])
+const isLoading = ref<boolean>(false)
+const guids = ref<Array<GuidProvider>>([])
+const backends = ref<Array<{ name: string, type?: string }>>([])
 
-const loadContent = async () => {
+const loadContent = async (): Promise<void> => {
   isLoading.value = true
   items.value = []
 
-  if (!guids.value.length) {
+  if (0 === guids.value.length) {
     const guid_request = await request('/system/guids')
     const guid_response = await guid_request.json()
-    if (useRoute().name !== 'ignore') {
+    if ('ignore' !== useRoute().name) {
       return
     }
     guids.value = guid_response
   }
 
-  if (!backends.value.length) {
+  if (0 === backends.value.length) {
     const backends_request = await request('/backends')
     const backends_response = await backends_request.json()
-    if (useRoute().name !== 'ignore') {
+    if ('ignore' !== useRoute().name) {
       return
     }
     backends.value = backends_response
@@ -327,17 +374,18 @@ const loadContent = async () => {
 
   try {
     response = await request(`/ignore`)
-  } catch (e) {
+  } catch (e: any) {
     isLoading.value = false
-    return notification('error', 'Error', e.message)
+    notification('error', 'Error', e.message)
+    return
   }
 
   try {
     json = await response.json()
-    if (useRoute().name !== 'ignore') {
+    if ('ignore' !== useRoute().name) {
       return
     }
-  } catch (e) {
+  } catch (e: any) {
     json = {
       error: {
         code: response.status,
@@ -358,8 +406,13 @@ const loadContent = async () => {
 
 onMounted(() => loadContent())
 
-const deleteIgnore = async (item) => {
-  if (!confirm(`Are you sure you want to delete the ignore rule?`)) {
+const deleteIgnore = async (item: IgnoreRule): Promise<void> => {
+  const {status: confirmStatus} = await useDialog().confirmDialog({
+    message: `Delete '${item.db}://${item.id}' rule?`,
+    confirmColor: 'is-danger'
+  })
+
+  if (true !== confirmStatus) {
     return
   }
 
@@ -375,12 +428,13 @@ const deleteIgnore = async (item) => {
     notification('success', 'Success', `Environment variable '${item.rule}' successfully deleted.`, 5000)
   }
 }
-const makeItemLink = (item) => {
+
+const makeItemLink = (item: IgnoreRule): string => {
   if (!item?.scoped_to) {
     return ''
   }
 
-  const type = item.type === 'Show' ? 'show' : 'id'
+  const type = 'Show' === item.type ? 'show' : 'id'
 
   const params = new URLSearchParams()
   params.append('perpage', '50')
@@ -390,7 +444,8 @@ const makeItemLink = (item) => {
 
   return `/history?${params.toString()}`
 }
-const addIgnoreRule = async () => {
+
+const addIgnoreRule = async (): Promise<void> => {
   const val = guids.value.find(g => g.guid === form.value.db)
   if (val && val?.validator && val.validator.pattern) {
     if (!stringToRegex(val.validator.pattern).test(form.value.id)) {
@@ -405,9 +460,9 @@ const addIgnoreRule = async () => {
       body: JSON.stringify(form.value)
     })
 
-    const json = await response.json()
+    const json: IgnoreRule | GenericError = await response.json()
 
-    if (!response.ok) {
+    if ('error' in json) {
       notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
       return
     }
@@ -415,33 +470,33 @@ const addIgnoreRule = async () => {
     items.value.push(json)
 
     notification('success', 'Success', 'Successfully added new ignore rule.', 5000)
-  } catch (e) {
+  } catch (e: any) {
     notification('error', 'Error', `Request error. ${e.message}`, 5000)
     return
   }
 
-  return cancelForm()
+  cancelForm()
 }
 
-const cancelForm = () => {
+const cancelForm = (): void => {
   form.value = JSON.parse(JSON.stringify(empty_form))
   toggleForm.value = false
 }
 
-watch(toggleForm, (value) => {
+watch(toggleForm, (value: boolean) => {
   if (!value) {
     cancelForm()
     return
   }
 
-  awaitElement('#page_form', (_, el) => el.scrollIntoView({
+  awaitElement('#page_form', (_, el) => (el as HTMLElement).scrollIntoView({
     behavior: 'smooth',
     block: 'start',
     inline: 'nearest'
   }))
 })
 
-const checkForm = computed(() => {
+const checkForm = computed<boolean>(() => {
   const {id, type, backend, db} = form.value
   return '' !== id && '' !== type && '' !== backend && '' !== db
 })

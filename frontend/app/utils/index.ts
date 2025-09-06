@@ -4,6 +4,7 @@ import {useToast} from 'vue-toastification'
 import {toRaw} from 'vue';
 import {navigateTo} from '#app'
 import {useDialog} from '~/composables/useDialog'
+import type {GenericError} from "~/types/responses";
 
 const toast = useToast();
 
@@ -179,7 +180,7 @@ const notification = (
             }
             break;
     }
-    (toast as any)[method](text, options);
+    (toast as any)[method](text || title, options);
 };
 
 /**
@@ -216,12 +217,7 @@ const r = (text: string, context: Record<string, any> = {}): string => {
 /**
  * Make GUID link
  */
-const makeGUIDLink = (
-    type: string,
-    source: string,
-    guid: string,
-    data: Record<string, any>
-): string => {
+const makeGUIDLink = (type: string, source: string, guid: string, data: Record<string, any> = {}): string => {
     if (source === 'youtube') {
         if (YT_CH.test(guid)) {
             source = 'youtube_channel';
@@ -448,11 +444,17 @@ const basename = (path: string, ext: string = ''): string => {
     return base;
 };
 
-const parse_api_response = async (r: Response): Promise<any> => {
+/**
+ * Parse API response with generic type support
+ * @template T The expected response type for successful requests
+ * @param r The Response object to parse
+ * @returns Promise resolving to either the typed response or an error object
+ */
+const parse_api_response = async <T = any>(r: Response): Promise<T | GenericError> => {
     try {
-        return await r.json();
+        return await r.json() as T;
     } catch (e) {
-        return {error: {code: r.status, message: r.statusText}};
+        return {error: {code: r.status, message: r.statusText}} as GenericError;
     }
 };
 

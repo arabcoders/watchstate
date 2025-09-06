@@ -62,7 +62,7 @@
                   <span class="has-text-success" v-if="item.watched">Played</span>
                   <span class="has-text-danger" v-else>Unplayed</span>
                 </div>
-                <div class="card-footer-item">{{ formatDuration(item.progress) }}</div>
+                <div class="card-footer-item">{{ formatDuration(item.progress as number) }}</div>
               </div>
             </div>
           </div>
@@ -151,42 +151,102 @@
 }
 </style>
 
-<script setup>
+<script setup lang="ts">
+import {ref, onMounted, onUpdated} from 'vue'
+import {useHead, useRoute} from '#app'
+import {useStorage} from '@vueuse/core'
+import {NuxtLink} from '#components'
 import request from '~/utils/request.js'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
-import {formatDuration, goto_history_item, makeName, TOOLTIP_DATE_FORMAT} from '~/utils/index'
-import {NuxtLink} from '#components'
-import {useStorage} from '@vueuse/core'
-import FloatingImage from "~/components/FloatingImage.vue";
+import FloatingImage from '~/components/FloatingImage.vue'
+import {formatDuration, goto_history_item, makeName, TOOLTIP_DATE_FORMAT} from '~/utils'
+
+type IndexHistoryItem = {
+  /** Unique record ID */
+  id: number
+  /** Type of item (e.g., 'movie', 'episode') */
+  type: string
+  /** Title of the content */
+  title: string
+  /** Full formatted title including show/episode info */
+  full_title?: string
+  /** True if the item has been watched */
+  watched: boolean
+  /** Unix timestamp of last update */
+  updated_at: number
+  /** Backend that reported this event */
+  via: string
+  /** Event type (e.g., 'play.start', 'play.stop') */
+  event: string
+  /** Playback progress in seconds */
+  progress?: number
+  /** Metadata from all backends that reported this item */
+  metadata?: Record<string, unknown>
+}
+
+type IndexLogFile = {
+  /** Type of log file (e.g., 'access', 'task', 'app', 'webhook') */
+  type: string
+  /** Filename of the log */
+  filename: string
+  /** Last modified date as a Unix timestamp */
+  date: number
+  /** Size of the log file in bytes */
+  size: number
+  /** Last modified date as a formatted string */
+  modified: string
+  /** Array of log lines */
+  lines: Array<{
+    /** Unique log entry ID */
+    id?: string,
+    /** Associated history item ID, if any */
+    item_id?: number
+    /** User associated with the log entry, if any */
+    user?: string
+    /** Backend associated with the log entry, if any */
+    backend?: string
+    /** Timestamp of the log entry */
+    date?: string
+    /** Log entry text */
+    text: string
+  }>
+}
 
 useHead({title: 'Index'})
 
-const lastHistory = ref([])
-const logs = ref([])
-const reloadingLogs = ref(false)
+const lastHistory = ref<Array<IndexHistoryItem>>([])
+const logs = ref<Array<IndexLogFile>>([])
+const reloadingLogs = ref<boolean>(false)
 const poster_enable = useStorage('poster_enable', true)
 
-const loadContent = async () => {
+const loadContent = async (): Promise<void> => {
   try {
     const response = await request(`/history?perpage=6`)
     if (response.ok) {
-      const historyResponse = await response.json()
-      if (useRoute().name !== 'index') {
+      const historyResponse = await response.json() as {
+        history: Array<IndexHistoryItem>
+        total?: number
+        page?: number
+        perpage?: number
+      }
+
+      if ('index' !== useRoute().name) {
         return
       }
 
       lastHistory.value = historyResponse.history
     }
-  } catch (e) {
+  } catch (e: unknown) {
+    // Silent error handling for dashboard
   }
 
-  await reloadLogs();
+  await reloadLogs()
 }
 
-const reloadLogs = async () => {
+const reloadLogs = async (): Promise<void> => {
   if (reloadingLogs.value) {
-    return;
+    return
   }
 
   try {
@@ -195,18 +255,24 @@ const reloadLogs = async () => {
     if (!response.ok) {
       return
     }
-    const logsResponse = await response.json()
+    const logsResponse: Array<IndexLogFile> = await response.json()
     if ('index' !== useRoute().name) {
       return
     }
 
     logs.value = logsResponse
-  } catch (e) {
+  } catch (e: unknown) {
+    // Silent error handling for logs
   } finally {
     reloadingLogs.value = false
   }
 }
 
-onMounted(async () => loadContent())
-onUpdated(() => document.querySelectorAll('.logs-container').forEach((el) => el.scrollTop = el.scrollHeight))
+onMounted(() => loadContent())
+
+onUpdated((): void => {
+  document.querySelectorAll('.logs-container').forEach((el) => {
+    el.scrollTop = el.scrollHeight
+  })
+})
 </script>

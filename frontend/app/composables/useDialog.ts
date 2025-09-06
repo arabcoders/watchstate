@@ -18,7 +18,7 @@ type BaseOptions = {
     /**
      * Color class for the confirm button (e.g., 'is-primary', 'is-danger')
      */
-    confirmColor?: string,
+    confirmColor?: 'is-danger' | 'is-primary' | 'is-link' | 'is-info' | 'is-success' | 'is-warning' | 'is-light' | 'is-dark' | 'is-white',
     /**
      * No opacity control.
      */

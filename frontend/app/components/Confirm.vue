@@ -1,5 +1,5 @@
 <template>
-  <form @submit.prevent="checkSecret">
+  <form @submit.prevent="checkForm">
     <div class="card">
       <header class="card-header">
         <p class="card-header-title">{{ props.title }}</p>
@@ -41,8 +41,8 @@
 </template>
 
 <script setup lang="ts">
-import {ref, onBeforeUnmount, onMounted} from 'vue'
-import {disableOpacity, enableOpacity} from '~/utils'
+import {ref, onBeforeUnmount, withDefaults, onMounted} from 'vue'
+import {disableOpacity, enableOpacity, notification} from '~/utils'
 
 const props = withDefaults(defineProps<{
   /** Warning message to display (optional) */
@@ -82,6 +82,15 @@ const emit = defineEmits<{
 }>()
 
 const user_confirmed = ref<boolean>(false)
+
+const checkForm = (): void => {
+  if (!user_confirmed.value) {
+    notification('error', 'Error', 'You must confirm the action by enabling the switch.')
+    return
+  }
+  user_confirmed.value = false
+  emit('confirmed')
+}
 
 onMounted(() => disableOpacity())
 onBeforeUnmount(() => enableOpacity())

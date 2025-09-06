@@ -124,7 +124,11 @@
                         <input type="checkbox" :value="item.id" v-model="selected_ids">
                       </label>&nbsp;
                     </span>
-                    <NuxtLink :to="'/history/'+item.id" v-text="makeName(item)"/>
+                    <FloatingImage :image="`/history/${item.id}/images/poster`" :item_class="'scaled-image'"
+                                   v-if="poster_enable">
+                      <NuxtLink :to="`/history/${item.id}`" v-text="makeName(item)"/>
+                    </FloatingImage>
+                    <NuxtLink :to="`/history/${item.id}`" v-text="makeName(item)" v-else/>
                   </p>
                   <span class="card-header-icon" @click="item.showRawData = !item?.showRawData">
                     <span class="icon">
@@ -167,7 +171,7 @@
                         </div>
                         <div class="control">
                           <span class="icon is-clickable"
-                                @click="copyText(item?.content_path ?item.content_path : null, false)">
+                                @click="copyText(item?.content_path || '', false)">
                             <i class="fas fa-copy"></i></span>
                         </div>
                       </div>
@@ -270,9 +274,14 @@
   </div>
 </template>
 
-<script setup>
-import request from '~/utils/request.js'
+<script setup lang="ts">
+import {ref, computed, watch, onMounted, onBeforeUnmount} from 'vue'
+import {useHead, useRoute, useRouter} from '#app'
+import {useStorage} from '@vueuse/core'
+import request from '~/utils/request'
 import Message from '~/components/Message.vue'
+import Lazy from '~/components/Lazy.vue'
+import {useSessionCache} from '~/utils/cache'
 import {
   awaitElement,
   copyText,
@@ -281,63 +290,103 @@ import {
   makeSearchLink,
   notification,
   TOOLTIP_DATE_FORMAT
-} from '~/utils/index'
+} from '~/utils'
 import moment from 'moment'
-import {useStorage} from '@vueuse/core'
-import Lazy from '~/components/Lazy.vue'
-import {useSessionCache} from '~/utils/cache'
+import type {GenericError} from '~/types/responses'
+import {NuxtLink} from "#components";
+import FloatingImage from "~/components/FloatingImage.vue";
+import {useDialog} from "~/composables/useDialog.ts";
+
+type ParityItem = {
+  /** Unique record ID */
+  id: string | number
+  /** Type of item (e.g., 'movie', 'episode') */
+  type: string
+  /** Title of the content */
+  title: string
+  /** Optional subtitle/content title */
+  content_title?: string
+  /** Path to the content (maybe missing) */
+  content_path?: string
+  /** List of backend names that reported this item */
+  reported_by: Array<string>
+  /** List of backend names that did NOT report this item */
+  not_reported_by: Array<string>
+  /** Whether the item is marked as watched */
+  watched: boolean
+  /** Unix timestamp (seconds) when last updated */
+  updated_at: number
+  /** UI: Whether to expand the title field */
+  expand_title?: boolean
+  /** UI: Whether to expand the path field */
+  expand_path?: boolean
+  /** UI: Whether to show raw data */
+  showRawData?: boolean
+}
+
+type APIResponse = {
+  items: Array<ParityItem>
+  paging: {
+    current_page: number
+    perpage: number
+    total: number
+  }
+}
 
 const route = useRoute()
+const router = useRouter()
 
 useHead({title: 'Parity'})
 
-const items = ref([])
-const page = ref(route.query.page ?? 1)
-const perpage = ref(route.query.perpage ?? 100)
-const total = ref(0)
-const last_page = computed(() => Math.ceil(total.value / perpage.value))
-const isLoading = ref(false)
-const isDeleting = ref(false)
 const show_page_tips = useStorage('show_page_tips', true)
 const api_user = useStorage('api_user', 'main')
-const filter = ref(route.query.filter ?? '')
-const showFilter = ref(!!filter.value)
-const min = ref(route.query.min ?? null)
-const max = ref()
-const cacheKey = computed(() => `parity_v1-${min.value}-${page.value}-${perpage.value}`)
+const poster_enable = useStorage('poster_enable', true)
 
-const selectAll = ref(false)
-const selected_ids = ref([])
-const massActionInProgress = ref(false)
-watch(selectAll, v => selected_ids.value = v ? filteredRows(items.value).map(i => i.id) : [])
+const items = ref<Array<ParityItem>>([])
+const page = ref<number>(Number(route.query.page ?? 1))
+const perpage = ref<number>(Number(route.query.perpage ?? 100))
+const total = ref<number>(0)
+const last_page = computed<number>(() => Math.ceil(total.value / perpage.value))
+const isLoading = ref<boolean>(false)
+const isDeleting = ref<boolean>(false)
+const filter = ref<string>(String(route.query.filter ?? ''))
+const showFilter = ref<boolean>(!!filter.value)
+const min = ref<number | null>(route.query.min ? Number(route.query.min) : null)
+const max = ref<number>()
+const cacheKey = computed<string>(() => `parity_v1-${min.value}-${page.value}-${perpage.value}`)
+
+const selectAll = ref<boolean>(false)
+const selected_ids = ref<Array<string | number>>([])
+const massActionInProgress = ref<boolean>(false)
+
+watch(selectAll, v => {
+  selected_ids.value = v ? filteredRows(items.value).map(i => i.id) : []
+})
 
 const cache = useSessionCache(api_user.value)
 
-
-const toggleFilter = () => {
+const toggleFilter = (): void => {
   showFilter.value = !showFilter.value
   if (!showFilter.value) {
     filter.value = ''
     return
   }
-
-  awaitElement('#filter', (_, elm) => elm.focus())
+  awaitElement('#filter', (_, elm) => (elm as HTMLInputElement).focus())
 }
-const loadContent = async (pageNumber, fromPopState = false, fromReload = false) => {
-  pageNumber = parseInt(pageNumber)
 
+const loadContent = async (pageNumber: number, fromPopState = false, fromReload = false): Promise<void> => {
+  pageNumber = Number(pageNumber)
   if (isNaN(pageNumber) || pageNumber < 1) {
     pageNumber = 1
   }
 
   const search = new URLSearchParams()
-  search.set('perpage', perpage.value)
-  search.set('page', pageNumber)
-
+  search.set('perpage', String(perpage.value))
+  search.set('page', String(pageNumber))
   let pageTitle = `Parity: Page #${pageNumber}`
 
   if (min.value) {
-    search.set('min', min.value)
+    search.set('min', String(min.value))
     pageTitle += ` - Min: ${min.value}`
   }
 
@@ -355,36 +404,41 @@ const loadContent = async (pageNumber, fromPopState = false, fromReload = false)
   page.value = pageNumber
 
   try {
-    let json
+    let json: APIResponse | GenericError
 
     if (true === fromReload) {
       clearCache()
     }
 
     if (cache.has(cacheKey.value)) {
-      json = cache.get(cacheKey.value)
+      json = cache.get(cacheKey.value) as APIResponse
     } else {
       const response = await request(`/system/parity/?${search.toString()}`)
       json = await response.json()
-      cache.set(cacheKey.value, json)
 
-      if (useRoute().name !== 'parity') {
+      if ('parity' !== useRoute().name) {
         return
       }
 
       if (200 !== response.status) {
-        notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`)
+        if ('error' in json) {
+          notification('error', 'Error', `API Error. ${json.error?.code ?? ''}: ${json.error?.message ?? ''}`)
+        }
         isLoading.value = false
         return
       }
+
+      if (!('items' in json) || !Array.isArray(json.items) || !('paging' in json)) {
+        notification('error', 'Error', 'API Error. Invalid response from the API.')
+        isLoading.value = false
+        return
+      }
+
+      cache.set(cacheKey.value, json)
     }
 
     if (!fromPopState && window.location.href !== newUrl) {
-      await useRouter().push({
-        path: '/parity',
-        title: pageTitle,
-        query: Object.fromEntries(search)
-      })
+      await router.push({path: '/parity', query: Object.fromEntries(search)})
     }
 
     if ('paging' in json) {
@@ -401,17 +455,24 @@ const loadContent = async (pageNumber, fromPopState = false, fromReload = false)
     }
 
     isLoading.value = false
-  } catch (e) {
+  } catch (e: any) {
     notification('error', 'Error', `Request error. ${e.message}`)
   }
 }
 
-const massDelete = async () => {
+const massDelete = async (): Promise<void> => {
   if (0 === selected_ids.value.length) {
     return
   }
 
-  if (!confirm(`Are you sure you want to delete '${selected_ids.value.length}' item/s?`)) {
+  const {status: confirmStatus} = await useDialog().confirmDialog({
+    title: 'Confirm Deletion',
+    message: `Delete '${selected_ids.value.length}' item/s?`,
+    confirmColor: 'is-danger',
+
+  })
+
+  if (true !== confirmStatus) {
     return
   }
 
@@ -421,10 +482,9 @@ const massDelete = async () => {
 
     notification('success', 'Action in progress', `Deleting '${urls.length}' item/s. Please wait...`)
 
-    // -- check each request response after all requests are done
     const requests = await Promise.all(urls.map(url => request(url, {method: 'DELETE'})))
 
-    if (!requests.every(response => 200 === response.status)) {
+    if (!requests.every((response: any) => 200 === response.status)) {
       notification('error', 'Error', `Some requests failed. Please check the console for more details.`)
     } else {
       items.value = items.value.filter(i => !selected_ids.value.includes(i.id))
@@ -435,7 +495,7 @@ const massDelete = async () => {
     }
 
     notification('success', 'Success', `Deleting '${urls.length}' item/s completed.`)
-  } catch (e) {
+  } catch (e: any) {
     notification('error', 'Error', `Request error. ${e.message}`)
   } finally {
     massActionInProgress.value = false
@@ -444,10 +504,11 @@ const massDelete = async () => {
   }
 }
 
-const deleteData = async () => {
+const deleteData = async (): Promise<void> => {
   if (isDeleting.value) {
     return
   }
+
   if (!min.value) {
     notification('error', 'Error', 'Minimum number of backends is not set.')
     return
@@ -458,7 +519,14 @@ const deleteData = async () => {
     return
   }
 
-  if (!confirm(`Are you sure you want to delete the reported records?`)) {
+  const {status: confirmStatus} = await useDialog().confirmDialog({
+    title: 'Confirm Deletion',
+    message: `Delete all reported records?`,
+    confirmColor: 'is-danger',
+
+  })
+
+  if (true !== confirmStatus) {
     return
   }
 
@@ -471,9 +539,8 @@ const deleteData = async () => {
     })
 
     const json = await response.json()
-
-    if (200 !== response.status) {
-      notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
+    if (response.status !== 200) {
+      notification('error', 'Error', `${json.error?.code ?? ''}: ${json.error?.message ?? ''}`)
       return
     }
 
@@ -485,7 +552,7 @@ const deleteData = async () => {
     page.value = 1
 
     clearCache()
-  } catch (e) {
+  } catch (e: any) {
     notification('error', 'Error', e.message)
   } finally {
     isDeleting.value = false
@@ -494,13 +561,12 @@ const deleteData = async () => {
 
 onMounted(async () => {
   const response = await request(`/backends/`)
-  const json = await response.json()
-
+  const json: Array<string> = await response.json()
   cache.setNameSpace(api_user.value)
 
   max.value = json.length
 
-  if (min.value === null) {
+  if (null === min.value) {
     min.value = json.length
   } else {
     await loadContent(page.value ?? 1)
@@ -509,11 +575,11 @@ onMounted(async () => {
   window.addEventListener('popstate', stateCallBack)
 })
 
-onUnmounted(() => window.removeEventListener('popstate', stateCallBack))
+onBeforeUnmount(() => window.removeEventListener('popstate', stateCallBack))
 
-const numberRange = (start, end) => new Array(end - start).fill().map((d, i) => i + start)
+const numberRange = (start: number, end: number): Array<number> => new Array(end - start).fill(0).map((_, i) => i + start)
 
-const filteredRows = items => {
+const filteredRows = (items: Array<ParityItem>): Array<ParityItem> => {
   if (!filter.value) {
     return items
   }
@@ -521,7 +587,7 @@ const filteredRows = items => {
   return items.filter(i => Object.values(i).some(v => typeof v === 'string' ? v.toLowerCase().includes(filter.value.toLowerCase()) : false))
 }
 
-const filterItem = item => {
+const filterItem = (item: ParityItem): boolean => {
   if (!filter.value || !item) {
     return true
   }
@@ -531,20 +597,12 @@ const filterItem = item => {
 
 watch(min, async () => await loadContent(page.value ?? 1))
 watch(filter, val => {
-  const route = useRoute()
-  const router = useRouter()
   if (!val) {
     if (!route?.query['filter']) {
       return
     }
 
-    router.push({
-      'path': '/parity',
-      'query': {
-        ...route.query,
-        'filter': undefined
-      }
-    })
+    router.push({path: '/parity', query: {...route.query, filter: undefined}})
     return
   }
 
@@ -552,26 +610,22 @@ watch(filter, val => {
     return
   }
 
-  router.push({
-    'path': '/parity',
-    'query': {
-      ...route.query,
-      'filter': val
-    }
-  })
+  router.push({path: '/parity', query: {...route.query, filter: val}})
 })
 
-const clearCache = () => cache.clear(k => k.startsWith(`${api_user.value}:parity`))
+const clearCache = (): void => {
+  cache.clear((k: string) => k.startsWith(`${api_user.value}:parity`))
+}
 
-const stateCallBack = async e => {
-  if (!e.state && !e.detail) {
+const stateCallBack = async (e: PopStateEvent): Promise<void> => {
+  if (!e.state && !(e as any).detail) {
     return
   }
 
   const route = useRoute()
-  page.value = route.query.page ?? 1
-  perpage.page = route.query.perpage ?? 50
-  filter.value = route.query.filter ?? ''
+  page.value = Number(route.query.page ?? 1)
+  perpage.value = Number(route.query.perpage ?? 50)
+  filter.value = String(route.query.filter ?? '')
   if (filter.value) {
     showFilter.value = true
   }
