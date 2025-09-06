@@ -2,36 +2,40 @@
   <div>
     <div class="columns is-multiline">
       <div class="column is-12 is-clearfix is-unselectable">
-        <span class="title is-4 ">
-          <span class="icon"><i class="fas fa-copy"/></span>
-          Duplicate File Reference
+        <span class="title is-4">
+          <span class="icon"><i class="fas fa-copy" /></span>
+          <span>
+            <template v-if="isMobile">DFR</template>
+            <template v-else>Duplicate File Reference</template>
+          </span>
         </span>
         <div class="is-pulled-right">
           <div class="field is-grouped">
             <div class="control has-icons-left" v-if="showFilter">
               <input type="search" v-model.lazy="filter" class="input" id="filter"
-                     placeholder="Filter displayed results.">
-              <span class="icon is-left">
-                <i class="fas fa-filter"/>
-              </span>
+                placeholder="Filter displayed results.">
+              <span class="icon is-left"><i class="fas fa-filter" /></span>
             </div>
 
             <div class="control">
               <button class="button is-danger is-light" @click="toggleFilter">
-                <span class="icon"><i class="fas fa-filter"/></span>
+                <span class="icon"><i class="fas fa-filter" /></span>
+                <span v-if="!isMobile">Filter</span>
               </button>
             </div>
 
             <div class="control">
               <button class="button is-danger" @click="deleteRecords">
-                <span class="icon"><i class="fas fa-trash"/></span>
+                <span class="icon"><i class="fas fa-trash" /></span>
+                <span v-if="!isMobile">Delete</span>
               </button>
             </div>
 
             <p class="control">
               <button class="button is-info" @click.prevent="loadContent(page, true, true)" :disabled="isLoading"
-                      :class="{'is-loading':isLoading}">
-                <span class="icon"><i class="fas fa-sync"/></span>
+                :class="{ 'is-loading': isLoading }">
+                <span class="icon"><i class="fas fa-sync" /></span>
+                <span v-if="!isMobile">Reload</span>
               </button>
             </p>
           </div>
@@ -47,14 +51,16 @@
         <div class="field is-grouped">
           <div class="control" v-if="page !== 1">
             <button rel="first" class="button" @click="loadContent(1)" :disabled="isLoading"
-                    :class="{'is-loading':isLoading}">
-              <span><<</span>
+              :class="{ 'is-loading': isLoading }">
+              <span>
+                << </span>
             </button>
           </div>
-          <div class="control" v-if="page > 1 && (page-1) !== 1">
-            <button rel="prev" class="button" @click="loadContent(page-1)" :disabled="isLoading"
-                    :class="{'is-loading':isLoading}">
-              <span><</span>
+          <div class="control" v-if="page > 1 && (page - 1) !== 1">
+            <button rel="prev" class="button" @click="loadContent(page - 1)" :disabled="isLoading"
+              :class="{ 'is-loading': isLoading }">
+              <span>
+                < </span>
             </button>
           </div>
           <div class="control">
@@ -66,38 +72,38 @@
               </select>
             </div>
           </div>
-          <div class="control" v-if="page !== last_page && (page+1) !== last_page">
-            <button rel="next" class="button" @click="loadContent(page+1)" :disabled="isLoading"
-                    :class="{'is-loading':isLoading}">
-              <span>></span>
+          <div class="control" v-if="page !== last_page && (page + 1) !== last_page">
+            <button rel="next" class="button" @click="loadContent(page + 1)" :disabled="isLoading"
+              :class="{ 'is-loading': isLoading }">
+              <span> > </span>
             </button>
           </div>
           <div class="control" v-if="page !== last_page">
             <button rel="last" class="button" @click="loadContent(last_page)" :disabled="isLoading"
-                    :class="{'is-loading':isLoading}">
-              <span>>></span>
+              :class="{ 'is-loading': isLoading }">
+              <span> >> </span>
             </button>
           </div>
         </div>
       </div>
 
       <div class="column is-12">
-        <div class="columns is-multiline" v-if="filteredRows(items)?.length>0">
+        <div class="columns is-multiline" v-if="filteredRows(items)?.length > 0">
           <template v-for="item in items" :key="item.id">
             <Lazy :unrender="true" :min-height="270" class="column is-6-tablet" v-if="filterItem(item)">
               <div class="card" :class="{ 'is-success': item.watched }">
                 <header class="card-header">
                   <p class="card-header-title is-text-overflow pr-1">
                     <FloatingImage :image="`/history/${item.id}/images/poster`" :item_class="'scaled-image'"
-                                   v-if="poster_enable">
-                      <NuxtLink :to="'/history/'+item.id" v-text="item?.full_title || makeName(item)"/>
+                      v-if="poster_enable">
+                      <NuxtLink :to="'/history/' + item.id" v-text="item?.full_title || makeName(item)" />
                     </FloatingImage>
-                    <NuxtLink :to="'/history/'+item.id" v-text="item?.full_title || makeName(item)" v-else/>
+                    <NuxtLink :to="'/history/' + item.id" v-text="item?.full_title || makeName(item)" v-else />
                   </p>
                   <span class="card-header-icon" @click="item.showRawData = !item?.showRawData">
                     <span class="icon">
                       <i class="fas"
-                         :class="{ 'fa-tv': 'episode' === item.type.toLowerCase(), 'fa-film': 'movie' === item.type.toLowerCase()}"/>
+                        :class="{ 'fa-tv': 'episode' === item.type.toLowerCase(), 'fa-film': 'movie' === item.type.toLowerCase() }" />
                     </span>
                   </span>
                 </header>
@@ -106,78 +112,76 @@
                     <div class="column is-12">
                       <div class="field is-grouped">
                         <div class="control is-clickable"
-                             :class="{'is-text-overflow': !item?.expand_title, 'is-text-contents': item?.expand_title}"
-                             @click="item.expand_title = !item?.expand_title">
-                          <span class="icon"><i class="fas fa-heading"/>&nbsp;</span>
+                          :class="{ 'is-text-overflow': !item?.expand_title, 'is-text-contents': item?.expand_title }"
+                          @click="item.expand_title = !item?.expand_title">
+                          <span class="icon"><i class="fas fa-heading" />&nbsp;</span>
                           <template v-if="item?.content_title">
                             <NuxtLink :to="makeSearchLink('subtitle', item.content_title)"
-                                      v-text="item.content_title"/>
+                              v-text="item.content_title" />
                           </template>
                           <template v-else>
-                            <NuxtLink :to="makeSearchLink('subtitle', item.title)" v-text="item.title"/>
+                            <NuxtLink :to="makeSearchLink('subtitle', item.title)" v-text="item.title" />
                           </template>
                         </div>
                         <div class="control">
-                          <span class="icon is-clickable"
-                                @click="copyText(item?.content_title ?? item.title, false)">
-                            <i class="fas fa-copy"/></span>
+                          <span class="icon is-clickable" @click="copyText(item?.content_title ?? item.title, false)">
+                            <i class="fas fa-copy" /></span>
                         </div>
                       </div>
                     </div>
                     <div class="column is-12">
                       <div class="field is-grouped">
                         <div class="control is-clickable"
-                             :class="{'is-text-overflow': !item?.expand_path, 'is-text-contents': item?.expand_path}"
-                             @click="item.expand_path = !item?.expand_path" v-tooltip="item.content_path">
-                          <span class="icon"><i class="fas fa-file"/>&nbsp;</span>
+                          :class="{ 'is-text-overflow': !item?.expand_path, 'is-text-contents': item?.expand_path }"
+                          @click="item.expand_path = !item?.expand_path" v-tooltip="item.content_path">
+                          <span class="icon"><i class="fas fa-file" />&nbsp;</span>
                           <NuxtLink v-if="item?.content_path" :to="makeSearchLink('path', item.content_path)"
-                                    v-text="item.content_path"/>
+                            v-text="item.content_path" />
                           <span v-else>No path found.</span>
                         </div>
                         <div class="control">
-                          <span class="icon is-clickable"
-                                @click="copyText(item?.content_path ?item.content_path : null, false)">
-                            <i class="fas fa-copy"/></span>
+                          <span class="icon is-clickable" @click="copyText(item?.content_path || '', false)">
+                            <i class="fas fa-copy" /></span>
                         </div>
                       </div>
                     </div>
                     <div class="column is-12">
                       <div class="field is-grouped">
                         <div class="control is-expanded is-unselectable">
-                          <span class="icon"><i class="fas fa-info"/>&nbsp;</span>
+                          <span class="icon"><i class="fas fa-info" />&nbsp;</span>
                           <span>Has metadata from</span>
                         </div>
                         <div class="control">
                           <NuxtLink v-for="backend in item.reported_by" :key="`${item.id}-rb-${backend}`"
-                                    :to="'/backend/'+backend" v-text="backend" class="tag is-primary ml-1"/>
+                            :to="'/backend/' + backend" v-text="backend" class="tag is-primary ml-1" />
                           <NuxtLink v-for="backend in item.not_reported_by" :key="`${item.id}-nrb-${backend}`"
-                                    :to="'/backend/'+backend" v-text="backend" class="tag is-danger ml-1"/>
+                            :to="'/backend/' + backend" v-text="backend" class="tag is-danger ml-1" />
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
                 <div class="card-content p-0 m-0" v-if="item?.showRawData">
-                <pre style="position: relative; max-height: 343px;"
-                     class="is-terminal"><code>{{ JSON.stringify(item, null, 2) }}</code>
-                  <button class="button is-small m-4" @click="() => copyText(JSON.stringify(item, null, 2))"
-                          style="position: absolute; top:0; right:0;">
-                    <span class="icon"><i class="fas fa-copy"/></span>
-                  </button>
-                </pre>
+                  <pre style="position: relative; max-height: 343px;" class="is-terminal"><code>{{ JSON.stringify(item, null, 2)
+                  }}</code>
+    <button class="button is-small m-4" @click="() => copyText(JSON.stringify(item, null, 2))"
+      style="position: absolute; top:0; right:0;">
+      <span class="icon"><i class="fas fa-copy" /></span>
+    </button>
+  </pre>
                 </div>
                 <div class="card-footer">
                   <div class="card-footer-item">
                     <span class="icon">
-                      <i class="fas" :class="{'fa-eye':item.watched,'fa-eye-slash':!item.watched}"/>&nbsp;
+                      <i class="fas" :class="{ 'fa-eye': item.watched, 'fa-eye-slash': !item.watched }" />&nbsp;
                     </span>
                     <span class="has-text-success" v-if="item.watched">Played</span>
                     <span class="has-text-danger" v-else>Unplayed</span>
                   </div>
                   <div class="card-footer-item">
-                    <span class="icon"><i class="fas fa-calendar"/>&nbsp;</span>
+                    <span class="icon"><i class="fas fa-calendar" />&nbsp;</span>
                     <span class="has-tooltip"
-                          v-tooltip="`Record updated at: ${moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
+                      v-tooltip="`Record updated at: ${moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
                       {{ moment.unix(item.updated_at).fromNow() }}
                     </span>
                   </div>
@@ -189,14 +193,14 @@
 
         <div class="column is-12" v-else>
           <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
-                   icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
+            icon="fas fa-spinner fa-spin" message="Loading data. Please wait..." />
           <template v-else>
             <Message message_class="has-background-warning-80 has-text-dark" v-if="filter && items.length > 1"
-                     title="Information" icon="fas fa-check">
+              title="Information" icon="fas fa-check">
               The filter <code>{{ filter }}</code> did not match any thing.
             </Message>
             <Message message_class="has-background-success-90 has-text-dark" v-if="!filter || items.length < 1"
-                     title="Success" icon="fas fa-check">
+              title="Success" icon="fas fa-check">
               There are no duplicate file references in the database.
             </Message>
           </template>
@@ -204,7 +208,7 @@
 
         <div class="column is-12">
           <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
-                   @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+            @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
             <ul>
               <li>This checker will only works <b>if your media servers are actually using same file paths</b>.</li>
               <li>If you see multi-episode records, that mean your metadata need to be forcibly updated. Go to backends
@@ -223,16 +227,16 @@
 </template>
 
 <script setup lang="ts">
-import {ref, computed, watch, onMounted, onBeforeUnmount} from 'vue'
-import {useHead, useRoute, useRouter} from '#app'
-import {useStorage} from '@vueuse/core'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { useHead, useRoute, useRouter } from '#app'
+import { useStorage } from '@vueuse/core'
 import moment from 'moment'
 import request from '~/utils/request'
 import Message from '~/components/Message.vue'
 import Lazy from '~/components/Lazy.vue'
 import FloatingImage from '~/components/FloatingImage.vue'
-import {NuxtLink} from '#components'
-import {useDialog} from '~/composables/useDialog'
+import { NuxtLink } from '#components'
+import { useDialog } from '~/composables/useDialog'
 import {
   awaitElement,
   copyText,
@@ -243,7 +247,7 @@ import {
   TOOLTIP_DATE_FORMAT,
   parse_api_response,
 } from '~/utils'
-import type {GenericError} from "~/types/responses";
+import type { GenericError } from "~/types/responses";
 
 type DuplicateItem = {
   /** Unique identifier for the item */
@@ -288,7 +292,11 @@ type DuplicateApiResponse = {
 const route = useRoute()
 const router = useRouter()
 
-useHead({title: 'DFR'})
+useHead({ title: 'DFR' })
+
+const show_page_tips = useStorage('show_page_tips', true)
+const poster_enable = useStorage('poster_enable', true)
+const isMobile = useMediaQuery({ maxWidth: 1024 })
 
 const items = ref<Array<DuplicateItem>>([])
 const page = ref<number>(Number(route.query.page) || 1)
@@ -296,10 +304,8 @@ const perpage = ref<number>(Number(route.query.perpage) || 50)
 const total = ref<number>(0)
 const last_page = computed<number>(() => Math.ceil(total.value / perpage.value))
 const isLoading = ref<boolean>(false)
-const show_page_tips = useStorage('show_page_tips', true)
 const filter = ref<string>(String(route.query.filter || ''))
 const showFilter = ref<boolean>(!!filter.value)
-const poster_enable = useStorage('poster_enable', true)
 
 const toggleFilter = (): void => {
   showFilter.value = !showFilter.value
@@ -329,7 +335,7 @@ const loadContent = async (pageNumber: number, fromPopState = false, fromReload 
     pageTitle += ` - Filter: ${filter.value}`
   }
 
-  useHead({title: pageTitle})
+  useHead({ title: pageTitle })
 
   const newUrl = window.location.pathname + '?' + search.toString()
   isLoading.value = true
@@ -356,7 +362,7 @@ const loadContent = async (pageNumber: number, fromPopState = false, fromReload 
     }
 
     if (!fromPopState && newUrl !== window.location.href) {
-      await router.push({path: '/duplicate', query: Object.fromEntries(search)})
+      await router.push({ path: '/duplicate', query: Object.fromEntries(search) })
     }
 
     if ('paging' in json && json.paging) {
@@ -432,8 +438,8 @@ watch(filter, (val: string) => {
   })
 })
 
-const stateCallBack = async (e: PopStateEvent | CustomEvent): Promise<void> => {
-  if (!e.state && !(e as CustomEvent).detail) {
+const stateCallBack = async (e: PopStateEvent): Promise<void> => {
+  if (!e.state) {
     return
   }
 
@@ -448,9 +454,9 @@ const stateCallBack = async (e: PopStateEvent | CustomEvent): Promise<void> => {
 }
 
 const deleteRecords = async (): Promise<void> => {
-  const {status: confirmStatus} = await useDialog().confirmDialog({
+  const { status: confirmStatus } = await useDialog().confirmDialog({
     message: `Delete '${total.value}' items?`,
-    confirmClass: 'is-danger',
+    confirmColor: 'is-danger',
   })
 
   if (true !== confirmStatus) {
@@ -458,7 +464,7 @@ const deleteRecords = async (): Promise<void> => {
   }
 
   try {
-    const response = await request('/system/duplicate', {method: 'DELETE'})
+    const response = await request('/system/duplicate', { method: 'DELETE' })
     if (!response.ok) {
       const json: GenericError = await response.json()
       notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`)

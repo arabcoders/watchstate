@@ -10,19 +10,19 @@
           <div class="field is-grouped">
             <div class="control has-icons-left" v-if="toggleFilter || query">
               <input type="search" v-model.lazy="query" class="input" id="filter"
-                     placeholder="Filter displayed content">
-              <span class="icon is-left"><i class="fas fa-filter"/></span>
+                placeholder="Filter displayed content">
+              <span class="icon is-left"><i class="fas fa-filter" /></span>
             </div>
 
             <div class="control">
               <button class="button is-danger is-light" @click="toggleFilter = !toggleFilter">
-                <span class="icon"><i class="fas fa-filter"/></span>
+                <span class="icon"><i class="fas fa-filter" /></span>
               </button>
             </div>
 
             <p class="control">
               <button class="button is-primary" v-tooltip.bottom="'Add new variable'" @click="toggleForm = !toggleForm"
-                      :disabled="isLoading">
+                :disabled="isLoading">
                 <span class="icon">
                   <i class="fas fa-add"></i>
                 </span>
@@ -30,7 +30,7 @@
             </p>
             <p class="control">
               <button class="button is-info" @click="loadContent" :disabled="isLoading || toggleForm"
-                      :class="{ 'is-loading': isLoading }">
+                :class="{ 'is-loading': isLoading }">
                 <span class="icon"><i class="fas fa-sync"></i></span>
               </button>
             </p>
@@ -45,9 +45,9 @@
 
       <div class="column is-12" v-if="!toggleForm && filteredRows.length < 1">
         <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
-                 icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
+          icon="fas fa-spinner fa-spin" message="Loading data. Please wait..." />
         <Message v-else message_class="has-background-warning-90 has-text-dark"
-                 :title="query ? 'No results' : 'Information'" icon="fas fa-info-circle">
+          :title="query ? 'No results' : 'Information'" icon="fas fa-info-circle">
           <p v-if="query">
             No environment variables found matching <strong>{{ query }}</strong>. Please try a different filter.
           </p>
@@ -89,24 +89,24 @@
                     <div class="field has-addons">
                       <div class="control is-expanded">
                         <input class="input" id="form_value" v-model="form_value" required placeholder="Masked value"
-                               :type="false === form_expose ? 'password' : 'text'">
+                          :type="false === form_expose ? 'password' : 'text'">
                       </div>
                       <div class="control">
                         <button type="button" class="button is-primary" @click="form_expose = !form_expose">
-                          <span class="icon" v-if="!form_expose"><i class="fas fa-eye"/></span>
-                          <span class="icon" v-else><i class="fas fa-eye-slash"/></span>
+                          <span class="icon" v-if="!form_expose"><i class="fas fa-eye" /></span>
+                          <span class="icon" v-else><i class="fas fa-eye-slash" /></span>
                         </button>
                       </div>
                     </div>
                     <div>
-                      <p class="help title is-6" v-html="getHelp(form_key)"/>
+                      <p class="help title is-6" v-html="getHelp(form_key)" />
                     </div>
                   </div>
                 </div>
                 <div v-else class="control has-icons-left">
                   <template v-if="'bool' === form_type">
                     <input id="form_value" type="checkbox" class="switch is-success" :checked="fixBool(form_value)"
-                           @change="form_value = !fixBool(form_value)">
+                      @change="form_value = !fixBool(form_value)">
                     <label for="form_value">
                       <template v-if="fixBool(form_value)">On (True)</template>
                       <template v-else>Off (False)</template>
@@ -114,7 +114,7 @@
                   </template>
                   <template v-else-if="'int' === form_type">
                     <input class="input" id="form_value" type="number" placeholder="Value" v-model="form_value"
-                           pattern="[0-9]*" inputmode="numeric">
+                      pattern="[0-9]*" inputmode="numeric">
                     <div class="icon is-small is-left">
                       <i class="fas fa-font"></i>
                     </div>
@@ -154,7 +154,7 @@
       <div v-else class="column is-12" v-if="filteredRows">
         <div class="columns is-multiline">
           <div class="column" v-for="item in filteredRows" :key="item.key"
-               :class="{ 'is-4': !item?.danger, 'is-12': item.danger }">
+            :class="{ 'is-4': !item?.danger, 'is-12': item.danger }">
             <div class="card is-flex is-full-height is-flex-direction-column" :class="{ 'is-danger': item?.danger }">
               <header class="card-header">
                 <p class="card-header-title is-unselectable">
@@ -172,7 +172,7 @@
                   </template>
                 </p>
                 <span class="card-header-icon" v-if="item.mask" @click="item.mask = false"
-                      v-tooltip="'Unmask the value'">
+                  v-tooltip="'Unmask the value'">
                   <span class="icon"><i class="fas fa-unlock"></i></span>
                 </span>
               </header>
@@ -188,8 +188,8 @@
                     </span>
                   </p>
                   <p v-else class="is-text-overflow is-clickable is-unselectable"
-                     :class="{ 'is-masked': item.mask, 'is-unselectable': item.mask }"
-                     @click="(e: MouseEvent) => (e.target as HTMLElement)?.classList.toggle('is-text-overflow')">
+                    :class="{ 'is-masked': item.mask, 'is-unselectable': item.mask }"
+                    @click="(e: MouseEvent) => (e.target as HTMLElement)?.classList.toggle('is-text-overflow')">
                     {{ item.value }}
                   </p>
 
@@ -231,7 +231,7 @@
 
       <div class="column is-12">
         <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
-                 @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+          @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
           <ul>
             <li>Some variables values are masked, to unmask them click on icon <i class="fa fa-unlock"></i>.</li>
             <li>Some values are too large to fit into the view, clicking on the value will show the full value.</li>
@@ -251,30 +251,14 @@
 
 <script setup lang="ts">
 import '~/assets/css/bulma-switch.css'
-import {ref, computed, watch, onMounted, onUnmounted, nextTick} from 'vue'
-import {useRoute, useRouter, useHead, navigateTo} from '#app'
-import {useStorage} from '@vueuse/core'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { useRoute, useRouter, useHead, navigateTo } from '#app'
+import { useStorage } from '@vueuse/core'
 import Message from '~/components/Message.vue'
 import request from '~/utils/request.js'
-import {awaitElement, copyText, notification, parse_api_response} from '~/utils'
-import type {GenericError} from "~/types/responses";
-
-type EnvVar = {
-  /** Environment variable key (e.g., 'WS_CRON_IMPORT') */
-  key: string
-  /** Current value of the variable */
-  value?: string | number | boolean
-  /** Description of what this variable does */
-  description: string
-  /** Data type expected for this variable */
-  type: 'string' | 'int' | 'bool'
-  /** Whether the value should be masked in the UI */
-  mask: boolean
-  /** Whether this variable is considered dangerous to modify */
-  danger?: boolean
-  /** Whether this variable is deprecated */
-  deprecated?: boolean
-}
+import { awaitElement, copyText, notification, parse_api_response } from '~/utils'
+import type { GenericError } from "~/types/responses"
+import type { EnvVar } from '~/types/env'
 
 type EnvironmentApiResponse = {
   /** Array of environment variables */
@@ -286,7 +270,7 @@ type EnvironmentApiResponse = {
 const route = useRoute()
 const router = useRouter()
 
-useHead({title: 'Environment Variables'})
+useHead({ title: 'Environment Variables' })
 
 const items = ref<Array<EnvVar>>([])
 const toggleForm = ref<boolean>(false)
@@ -351,7 +335,7 @@ const deleteEnv = async (env: EnvVar): Promise<void> => {
   }
 
   try {
-    const response = await request(`/system/env/${env.key}`, {method: 'DELETE'})
+    const response = await request(`/system/env/${env.key}`, { method: 'DELETE' })
 
     if (200 !== response.status) {
       const json = await parse_api_response(response)
@@ -391,7 +375,7 @@ const addVariable = async (): Promise<void> => {
   try {
     const response = await request(`/system/env/${key}`, {
       method: 'POST',
-      body: JSON.stringify({value: form_value.value})
+      body: JSON.stringify({ value: form_value.value })
     })
 
     if (304 === response.status) {
@@ -434,7 +418,7 @@ const editEnv = (env: EnvVar): void => {
   form_mask.value = env.mask
   toggleForm.value = true
   if (!useRoute().query.edit) {
-    router.push({'path': '/env', query: {'edit': env.key}})
+    router.push({ 'path': '/env', query: { 'edit': env.key } })
   }
 }
 
@@ -447,12 +431,12 @@ const cancelForm = async (): Promise<void> => {
   toggleForm.value = false
 
   if (currentRoute.query?.callback) {
-    await navigateTo({path: currentRoute.query.callback as string})
+    await navigateTo({ path: currentRoute.query.callback as string })
     return
   }
 
   if (currentRoute.query?.edit || currentRoute.query?.value) {
-    await router.push({path: '/env'})
+    await router.push({ path: '/env' })
   }
 }
 
@@ -460,7 +444,7 @@ watch(toggleForm, async (value: boolean) => {
   if (!value) {
     await cancelForm()
   } else {
-    awaitElement('#env_page_title', (_: string, el: Element) => el.scrollIntoView({behavior: 'smooth'}))
+    awaitElement('#env_page_title', (_: string, el: Element) => el.scrollIntoView({ behavior: 'smooth' }))
   }
 })
 
@@ -484,7 +468,7 @@ const keyChanged = (): void => {
     }
   })
 
-  router.push({'path': '/env', query: {'edit': form_key.value}})
+  router.push({ 'path': '/env', query: { 'edit': form_key.value } })
 }
 
 const getHelp = (key: string): string => {
@@ -511,7 +495,7 @@ const getHelp = (key: string): string => {
 }
 
 const fixBool = (v: string | number | boolean | null | undefined): boolean =>
-    [true, 'true', '1'].includes(v as any)
+  [true, 'true', '1'].includes(v as any)
 
 const filteredRows = computed<Array<EnvVar>>(() => {
   if (!query.value) {
@@ -519,8 +503,8 @@ const filteredRows = computed<Array<EnvVar>>(() => {
   }
 
   return items.value
-      .filter(i => i.key.toLowerCase().includes(query.value.toLowerCase()))
-      .filter(i => 'undefined' !== typeof i.value)
+    .filter(i => i.key.toLowerCase().includes(query.value.toLowerCase()))
+    .filter(i => 'undefined' !== typeof i.value)
 })
 
 const stateCallBack = async (e: PopStateEvent): Promise<void> => {

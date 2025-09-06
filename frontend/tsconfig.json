@@ -3,7 +3,7 @@
     "compilerOptions": {
         "allowImportingTsExtensions": true,
         "types": [
-            "./app/types/globals"
+            "./app/types/globals.d.ts"
         ]
     }
 }

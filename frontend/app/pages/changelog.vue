@@ -18,7 +18,7 @@ hr {
     <div class="mt-1 columns is-multiline">
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4">
-          <span class="icon"><i class="fas fa-cogs"/></span>
+          <span class="icon"><i class="fas fa-cogs" /></span>
           CHANGELOG
         </span>
 
@@ -31,7 +31,7 @@ hr {
     <div class="columns is-multiline" v-if="isLoading">
       <div class="column is-12">
         <Message message_class="has-background-info-90 has-text-dark" title="Loading" icon="fas fa-spinner fa-spin"
-                 message="Loading data. Please wait..."/>
+          message="Loading data. Please wait..." />
       </div>
     </div>
 
@@ -41,7 +41,7 @@ hr {
           <div class="column p-0 m-0 is-12" v-for="(log, index) in logs" :key="log.tag">
             <div class="content p-0 m-0">
               <h1 class="is-4">
-                <span class="icon"><i class="fas fa-code-branch"/></span>
+                <span class="icon"><i class="fas fa-code-branch" /></span>
                 {{ log.tag }} <span class="tag has-text-success" v-if="isInstalled(log)">Installed</span>
               </h1>
               <hr>
@@ -66,26 +66,42 @@ hr {
   </main>
 </template>
 
-<script setup lang="ts">import {disableOpacity, enableOpacity} from '~/utils'
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { useHead } from '#app'
+import { disableOpacity, enableOpacity, ucFirst } from '~/utils'
+import request from '~/utils/request'
 import moment from 'moment'
-import Message from "~/components/Message.vue"
-import type {changelogs, changeset} from "~/types/changelogs"
-import type {version} from "~/types/api/version"
+import Message from '~/components/Message.vue'
+import type { version } from '~/types/api/version'
 
-useHead({title: 'CHANGELOG'})
+type changeset = {
+  tag: string
+  full_sha: string
+  date: string
+  commits: Array<{
+    sha: string
+    full_sha: string
+    message: string
+    author: string
+    date: string
+  }>
+}
+
+useHead({ title: 'CHANGELOG' })
 
 const PROJECT = 'watchstate'
 const REPO = `https://github.com/arabcoders/${PROJECT}`
 const REPO_URL = `https://arabcoders.github.io/${PROJECT}/CHANGELOG.json?version={version}`
 
-const logs = ref<changelogs>([])
+const logs = ref<Array<changeset>>([])
 const api_version = ref<string>('dev-master')
 const api_version_sha = ref<string>('unknown')
 const api_version_build = ref<string>('unknown')
 const api_version_branch = ref<string>('unknown')
 const isLoading = ref<boolean>(false)
 
-const isInstalled: boolean = (log: changeset) => {
+const isInstalled = (log: changeset): boolean => {
   const installed = String(api_version_sha.value)
 
   if (log.full_sha.startsWith(installed)) {
@@ -101,7 +117,7 @@ const isInstalled: boolean = (log: changeset) => {
   return false
 }
 
-const loadContent = async () => {
+const loadContent = async (): Promise<void> => {
   isLoading.value = true
   try {
     const response = await request('/system/version')
@@ -115,9 +131,9 @@ const loadContent = async () => {
 
     try {
       const changes = await fetch(REPO_URL.replace('{branch}', api_version_branch.value).replace('{version}', api_version.value))
-      logs.value = await changes.json() as changelogs
-    } catch (e) {
-      logs.value = await (await request('/system/static/CHANGELOG.json', {method: 'GET'})).json() as changelogs
+      logs.value = await changes.json() as Array<changeset>
+    } catch (e: unknown) {
+      logs.value = await (await request('/system/static/CHANGELOG.json', { method: 'GET' })).json() as Array<changeset>
       console.error(e)
     }
 

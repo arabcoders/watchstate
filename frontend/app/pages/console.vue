@@ -28,7 +28,7 @@
             </p>
           </header>
           <section class="card-content p-0 m-0">
-            <div ref="outputConsole" style="min-height: 60vh; max-height:70vh;"/>
+            <div ref="outputConsole" style="min-height: 60vh; max-height:70vh;" />
           </section>
           <section class="card-content p-1 m-1">
             <div class="field">
@@ -36,10 +36,9 @@
                 <div class="field is-grouped-tablet">
                   <p class="control is-expanded has-icons-left">
                     <input type="text" class="input is-fullwidth" v-model="command"
-                           :placeholder="`system:view ${allEnabled ? 'or $ ls' : ''}`"
-                           list="recent_commands"
-                           autocomplete="off" ref="commandInput" @keydown.enter="RunCommand" :disabled="isLoading">
-                    <span class="icon is-left"><i class="fas fa-terminal" :class="{'fa-spin':isLoading}"></i></span>
+                      :placeholder="`system:view ${allEnabled ? 'or $ ls' : ''}`" list="recent_commands"
+                      autocomplete="off" ref="commandInput" @keydown.enter="RunCommand" :disabled="isLoading">
+                    <span class="icon is-left"><i class="fas fa-terminal" :class="{ 'fa-spin': isLoading }"></i></span>
                   </p>
                   <p class="control" v-if="!isLoading">
                     <button class="button is-primary" type="button" :disabled="hasPrefix" @click="RunCommand">
@@ -64,12 +63,12 @@
       <div class="column is-12" v-if="hasPrefix || hasPlaceholder">
 
         <Message message_class="has-background-warning-90 has-text-dark" title="Warning"
-                 icon="fas fa-exclamation-triangle" v-if="hasPrefix">
+          icon="fas fa-exclamation-triangle" v-if="hasPrefix">
           <p>Use the command directly, For example i.e. <code>db:list -o yaml</code></p>
         </Message>
 
         <Message message_class="has-background-warning-90 has-text-dark" title="Warning"
-                 icon="fas fa-exclamation-triangle" v-if="hasPlaceholder">
+          icon="fas fa-exclamation-triangle" v-if="hasPlaceholder">
           <span class="icon has-text-warning"><i class="fas fa-exclamation-circle"></i></span>
           <span>The command contains <code>[...]</code> which are considered a placeholder, So, please replace
             <code>[...]</code> with the intended value if applicable.</span>
@@ -79,11 +78,11 @@
 
       <div class="column is-12">
         <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
-                 @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+          @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
           <ul>
             <li>You don’t need to type <code>console</code> or run <code>docker exec -ti watchstate console</code> when
               using this interface. Just enter the command and options directly. For example: <code>db:list --output
-                yaml</code>.
+          yaml</code>.
             </li>
             <li>Clicking <strong>Close Connection</strong> only stops the output from being shown—it does <em>not</em>
               stop the command itself. The command will continue running until it finishes.
@@ -104,7 +103,7 @@
       </div>
 
       <datalist id="recent_commands">
-        <option v-for="item in recentCommands" :key="item" :value="item"/>
+        <option v-for="item in recentCommands" :key="item" :value="item" />
       </datalist>
     </div>
   </div>
@@ -121,43 +120,46 @@
 }
 </style>
 
-<script setup>
-import "@xterm/xterm/css/xterm.css"
-import {Terminal} from "@xterm/xterm"
-import {FitAddon} from "@xterm/addon-fit"
-import {useStorage} from '@vueuse/core'
-import {disableOpacity, enableOpacity, notification} from '~/utils/index'
+<script setup lang="ts">
+import '@xterm/xterm/css/xterm.css'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { useHead, useRoute, useRouter } from '#app'
+import { Terminal, type ITerminalOptions } from '@xterm/xterm'
+import { FitAddon } from '@xterm/addon-fit'
+import { useStorage } from '@vueuse/core'
+import { disableOpacity, enableOpacity, notification, parse_api_response } from '~/utils'
 import Message from '~/components/Message.vue'
-import request from "~/utils/request.ts"
-import {fetchEventSource} from '@microsoft/fetch-event-source'
+import request from '~/utils/request'
+import { fetchEventSource } from '@microsoft/fetch-event-source'
+import type { GenericError } from '~/types/responses'
+import type { EnvVar } from '~/types/env'
 
-useHead({title: `Console`})
+useHead({ title: 'Console' })
 
 const route = useRoute()
-const fromCommand = route.query.cmd || false ? atob(route.query.cmd) : ''
+const fromCommand: string = route.query.cmd && 'string' === typeof route.query.cmd ? atob(route.query.cmd) : ''
 
-let sse
-const terminal = ref()
-const terminalFit = ref()
-const response = ref([])
-const command = ref(fromCommand)
-const isLoading = ref(false)
-const outputConsole = ref()
-const commandInput = ref()
-const executedCommands = useStorage('executedCommands', [])
-const exitCode = ref(0)
+let sse: (() => void) | null = null
+const terminal = ref<Terminal | null>(null)
+const terminalFit = ref<FitAddon | null>(null)
+const response = ref<Array<unknown>>([])
+const command = ref<string>(fromCommand)
+const isLoading = ref<boolean>(false)
+const outputConsole = ref<HTMLElement | null>(null)
+const commandInput = ref<HTMLInputElement | null>(null)
+const executedCommands = useStorage<Array<string>>('executedCommands', [])
+const exitCode = ref<number>(0)
 
 const hasPrefix = computed(() => command.value.startsWith('console') || command.value.startsWith('docker'))
 const hasPlaceholder = computed(() => command.value && command.value.match(/\[.*]/))
-const show_page_tips = useStorage('show_page_tips', true)
-const allEnabled = ref(false)
-const ctrl = new AbortController();
+const show_page_tips = useStorage<boolean>('show_page_tips', true)
+const allEnabled = ref<boolean>(false)
+const ctrl = new AbortController()
 
-const RunCommand = async () => {
-  const token = useStorage('token', '')
+const RunCommand = async (): Promise<void> => {
+  const token = useStorage<string>('token', '')
 
-  /** @type {string} */
-  let userCommand = command.value
+  let userCommand: string = command.value
 
   // -- check if the user command starts with console or docker exec -ti watchstate
   if (userCommand.startsWith('console') || userCommand.startsWith('docker')) {
@@ -167,31 +169,35 @@ const RunCommand = async () => {
 
   // use regex to check if command contains [...]
   if (userCommand.match(/\[.*]/)) {
-    if (!confirm(`The command contains placeholders '[...]'. Are you sure you want to run as it is?`)) {
+    if (!confirm('The command contains placeholders \'[...]\'. Are you sure you want to run as it is?')) {
       return
     }
   }
 
   response.value = []
 
-  if (userCommand === 'clear') {
+  if ('clear' === userCommand) {
     command.value = ''
-    terminal.value.clear()
+    if (terminal.value) {
+      terminal.value.clear()
+    }
     return
   }
 
-  if (userCommand === 'clear_ac') {
+  if ('clear_ac' === userCommand) {
     executedCommands.value = []
     command.value = ''
     return
   }
 
-  const commandBody = JSON.parse(JSON.stringify({command: userCommand}))
+  const commandBody: { command: string } = JSON.parse(JSON.stringify({ command: userCommand }))
 
   if (userCommand.startsWith('$')) {
     if (!allEnabled.value) {
       notification('error', 'Error', 'The option to execute all commands is disabled.')
-      commandInput.value.focus()
+      if (commandInput.value) {
+        commandInput.value.focus()
+      }
       return
     }
     userCommand = userCommand.slice(1)
@@ -200,35 +206,45 @@ const RunCommand = async () => {
   }
 
   isLoading.value = true
-  let commandToken;
+  let commandToken: string
 
   try {
     const response = await request('/system/command', {
       method: 'POST',
       body: JSON.stringify(commandBody)
     })
-    const json = await response.json()
+    const json = await response.json() as { token: string } | GenericError
 
     if (201 !== response.status) {
       await finished()
-      notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
-      return;
+      if ('error' in json) {
+        notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
+      }
+      return
     }
 
-    commandToken = json.token
-  } catch (e) {
+    if ('token' in json) {
+      commandToken = json.token
+    } else {
+      throw new Error('Invalid response: missing token')
+    }
+  } catch (e: unknown) {
     await finished()
-    notification('error', 'Error', e.message, 5000)
-    return;
+    const errorMessage = e instanceof Error ? e.message : 'Unknown error occurred'
+    notification('error', 'Error', errorMessage, 5000)
+    return
   }
 
-  sse = fetchEventSource(`/v1/api/system/command/${commandToken}`, {
+  fetchEventSource(`/v1/api/system/command/${commandToken}`, {
     signal: ctrl.signal,
-    headers: {'Authorization': `Token ${token.value}`},
-    onmessage: async evt => {
+    headers: { 'Authorization': `Token ${token.value}` },
+    onmessage: async (evt: { event: string, data: string }): Promise<void> => {
       switch (evt.event) {
         case 'data':
-          terminal.value.write(JSON.parse(evt.data).data)
+          if (terminal.value) {
+            const eventData = JSON.parse(evt.data) as { data: string }
+            terminal.value.write(eventData.data)
+          }
           break
         case 'close':
           await finished()
@@ -240,33 +256,41 @@ const RunCommand = async () => {
           break
       }
     },
-    onopen: async response => {
+    onopen: async (response: Response): Promise<void> => {
       if (response.ok) {
         return
       }
 
-      const json = await parse_api_response(response)
+      const json = await parse_api_response<GenericError>(response)
 
-      if (400 === json.error.code) {
-        ctrl.abort('finished')
+      if ('error' in json && 400 === json.error.code) {
+        ctrl.abort()
         return
       }
 
-      const message = `${json.error.code}: ${json.error.message}`
-      notification('error', 'Error', message, 3000)
+      if ('error' in json) {
+        const message = `${json.error.code}: ${json.error.message}`
+        notification('error', 'Error', message, 3000)
+      }
       await finished()
     },
-    onerror: async (e) => console.log(e),
+    onerror: (e: unknown): void => {
+      console.log(e)
+    },
   })
 
-  if ('' !== command.value) {
+  // Store the abort function
+  sse = () => ctrl.abort()
+
+  if ('' !== command.value && terminal.value) {
     terminal.value.writeln(`(${exitCode.value}) ~ ${userCommand}`)
   }
 }
 
-const finished = async () => {
+const finished = async (): Promise<void> => {
   if (sse) {
-    ctrl.abort();
+    sse()
+    sse = null
   }
 
   isLoading.value = false
@@ -276,7 +300,7 @@ const finished = async () => {
   if (route.query?.cmd || route.query?.run) {
     route.query.cmd = ''
     route.query.run = ''
-    await useRouter().push({path: '/console'})
+    await useRouter().push({ path: '/console' })
   }
 
   if (executedCommands.value.includes(command.value)) {
@@ -285,38 +309,44 @@ const finished = async () => {
 
   executedCommands.value.push(command.value)
 
-  if (executedCommands.value.length > 30) {
+  if (30 < executedCommands.value.length) {
     executedCommands.value.shift()
   }
 
-  terminal.value.writeln(`\n(${exitCode.value}) ~ `)
+  if (terminal.value) {
+    terminal.value.writeln(`\n(${exitCode.value}) ~ `)
+  }
 
   command.value = ''
   await nextTick()
 
-  commandInput.value.focus()
+  if (commandInput.value) {
+    commandInput.value.focus()
+  }
 }
 
 const recentCommands = computed(() => executedCommands.value.reverse().slice(-10))
 
-const reSizeTerminal = () => {
-  if (!terminal.value) {
+const reSizeTerminal = (): void => {
+  if (!terminal.value || !terminalFit.value) {
     return
   }
   terminalFit.value.fit()
 }
 
-const clearOutput = async () => {
+const clearOutput = async (): Promise<void> => {
   if (terminal.value) {
-    terminal.value ? terminal.value.clear() : ''
+    terminal.value.clear()
   }
-  commandInput.value.focus()
+  if (commandInput.value) {
+    commandInput.value.focus()
+  }
 }
 
 onUnmounted(() => {
-  window.removeEventListener("resize", reSizeTerminal)
+  window.removeEventListener('resize', reSizeTerminal)
   if (sse) {
-    ctrl.abort();
+    sse()
   }
   enableOpacity()
 })
@@ -324,21 +354,21 @@ onUnmounted(() => {
 onMounted(async () => {
   disableOpacity()
 
-  window.addEventListener("resize", reSizeTerminal);
-  commandInput.value.focus()
+  window.addEventListener('resize', reSizeTerminal)
 
-  if (!terminal.value) {
+  if (commandInput.value) {
+    commandInput.value.focus()
+  }
+
+  if (!terminal.value && outputConsole.value) {
     terminalFit.value = new FitAddon()
     terminal.value = new Terminal({
       fontSize: 16,
       fontFamily: "'JetBrains Mono', monospace",
       cursorBlink: false,
-      cols: 108,
-      rows: 10,
       disableStdin: true,
       convertEol: true,
       altClickMovesCursor: false,
-
     })
     terminal.value.open(outputConsole.value)
     terminal.value.loadAddon(terminalFit.value)
@@ -347,13 +377,18 @@ onMounted(async () => {
 
   try {
     const response = await request('/system/env/WS_CONSOLE_ENABLE_ALL')
-    const json = await response.json()
-    allEnabled.value = 200 === response.status ? Boolean(json.value) : false
-  } catch (e) {
+    const json = await response.json() as EnvVar | GenericError
+
+    if (200 === response.status && 'value' in json) {
+      allEnabled.value = Boolean(json.value)
+    } else {
+      allEnabled.value = false
+    }
+  } catch (e: unknown) {
     allEnabled.value = false
   }
 
-  const run = route.query?.run ? Boolean(route.query.run) : false
+  const run: boolean = route.query?.run ? Boolean(route.query.run) : false
   if (true === run && command.value) {
     await RunCommand()
   }
