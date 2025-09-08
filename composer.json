@@ -13,8 +13,9 @@
     "scripts": {
         "test": "vendor/bin/phpunit",
         "tests": "vendor/bin/phpunit",
-        "update_ui": "yarn --cwd ./frontend upgrade --latest",
-        "generate": "yarn --cwd ./frontend run generate"
+        "ui_update": "pnpm up --dir ./frontend --latest",
+        "ui_gen": "pnpm run --dir ./frontend generate",
+        "ui_dev": "pnpm run --dir ./frontend dev"
     },
     "require": {
         "php": "^8.4",
