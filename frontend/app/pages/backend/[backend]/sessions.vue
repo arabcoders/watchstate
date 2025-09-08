@@ -65,7 +65,7 @@
 </template>
 
 <script setup>
-import {formatDuration, notification} from "~/utils/index";
+import {formatDuration, notification} from '~/utils'
 
 const backend = useRoute().params.backend
 const items = ref([])

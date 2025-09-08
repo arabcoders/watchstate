@@ -146,8 +146,7 @@ div.logbox pre {
 import Message from '~/components/Message.vue'
 import moment from 'moment'
 import {useStorage} from '@vueuse/core'
-import {disableOpacity, enableOpacity, goto_history_item, notification, parse_api_response} from '~/utils/index'
-import request from '~/utils/request.js'
+import {request, disableOpacity, enableOpacity, goto_history_item, notification, parse_api_response} from '~/utils'
 import {fetchEventSource} from '@microsoft/fetch-event-source'
 
 const router = useRouter()

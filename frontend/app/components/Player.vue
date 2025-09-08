@@ -25,8 +25,7 @@
 
 <script setup lang="ts">
 import {ref, onMounted, onUpdated, onBeforeUnmount} from 'vue'
-import {disableOpacity, enableOpacity, notification} from '~/utils'
-import request from '~/utils/request'
+import {request, disableOpacity, enableOpacity, notification} from '~/utils'
 import Hls from 'hls.js'
 import 'plyr/dist/plyr.css'
 import Plyr from 'plyr'

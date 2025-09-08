@@ -155,8 +155,7 @@
 <script setup lang="ts">
 import {ref} from 'vue'
 import {useStorage} from '@vueuse/core'
-import request from '~/utils/request'
-import {parse_api_response, notification} from '~/utils'
+import {request, parse_api_response, notification} from '~/utils'
 import {navigateTo} from '#app'
 import {useDialog} from "~/composables/useDialog.ts";
 import {useAuthStore} from "~/store/auth.ts";

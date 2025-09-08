@@ -213,25 +213,18 @@ import {ref, watch, onMounted} from 'vue'
 import {useHead, useRoute} from '#app'
 import {useStorage} from '@vueuse/core'
 import Message from '~/components/Message.vue'
-import request from '~/utils/request.js'
-import {notification} from '~/utils'
-import {useDialog} from "~/composables/useDialog.ts";
+import {request, notification} from '~/utils'
+import {useDialog} from '~/composables/useDialog'
+import type {SuppressionItem} from '~/types'
 
 useHead({title: 'Log Suppressor'})
 
-type SuppressionRule = {
-  id: string | null
-  rule: string
-  example: string
-  type: 'contains' | 'regex'
-}
-
-const form_data = (): SuppressionRule => ({id: null, rule: '', example: '', type: 'contains'})
+const defaultData = (): SuppressionItem => ({id: null, rule: '', example: '', type: 'contains'})
 
 const isLoading = ref<boolean>(false)
-const items = ref<Array<SuppressionRule>>([])
+const items = ref<Array<SuppressionItem>>([])
 const toggleForm = ref<boolean>(false)
-const formData = ref<SuppressionRule>(form_data())
+const formData = ref<SuppressionItem>(defaultData())
 const show_page_tips = useStorage('show_page_tips', true)
 const types = ref<Array<'contains' | 'regex'>>(['contains', 'regex'])
 
@@ -260,7 +253,7 @@ const loadContent = async (): Promise<void> => {
 
 onMounted(() => loadContent())
 
-const deleteItem = async (item: SuppressionRule): Promise<void> => {
+const deleteItem = async (item: SuppressionItem): Promise<void> => {
   const {status: confirmStatus} = await useDialog().confirmDialog({
     title: 'Confirm Deletion',
     message: `Delete rule id '${item.id}'?`,
@@ -279,7 +272,7 @@ const deleteItem = async (item: SuppressionRule): Promise<void> => {
 }
 
 const sendData = async (): Promise<void> => {
-  const requiredFields: Array<keyof SuppressionRule> = ['rule', 'example', 'type']
+  const requiredFields: Array<keyof SuppressionItem> = ['rule', 'example', 'type']
   for (const field of requiredFields) {
     if (!formData.value[field]) {
       notification('error', 'Error', `${field} field is required.`, 5000)
@@ -320,7 +313,7 @@ const sendData = async (): Promise<void> => {
   }
 }
 
-const editItem = (item: SuppressionRule): void => {
+const editItem = (item: SuppressionItem): void => {
   formData.value = {
     id: item.id,
     rule: item.rule,
@@ -331,13 +324,13 @@ const editItem = (item: SuppressionRule): void => {
 }
 
 const cancelForm = (): void => {
-  formData.value = form_data()
+  formData.value = defaultData()
   toggleForm.value = false
 }
 
 watch(toggleForm, (value: boolean) => {
   if (!value) {
-    formData.value = form_data()
+    formData.value = defaultData()
   }
 })
 </script>

@@ -156,11 +156,10 @@ import {ref, onMounted, onUpdated} from 'vue'
 import {useHead, useRoute} from '#app'
 import {useStorage} from '@vueuse/core'
 import {NuxtLink} from '#components'
-import request from '~/utils/request.js'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
 import FloatingImage from '~/components/FloatingImage.vue'
-import {formatDuration, goto_history_item, makeName, TOOLTIP_DATE_FORMAT} from '~/utils'
+import {request, formatDuration, goto_history_item, makeName, TOOLTIP_DATE_FORMAT} from '~/utils'
 
 type IndexHistoryItem = {
   /** Unique record ID */

@@ -4,7 +4,7 @@
 
 <script setup lang="ts">
 import {onBeforeUnmount, onMounted, ref} from 'vue'
-import request from '~/utils/request'
+import {request} from '~/utils'
 
 const props = defineProps<{
   /** Media item ID for fetching the image */

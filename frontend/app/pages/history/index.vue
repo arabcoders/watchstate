@@ -302,19 +302,9 @@
 </template>
 
 <script setup>
-import request from '~/utils/request.js'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
-import {
-  awaitElement,
-  copyText,
-  formatDuration,
-  makeName,
-  makePagination,
-  makeSearchLink,
-  notification,
-  TOOLTIP_DATE_FORMAT
-} from '~/utils/index'
+import { request, awaitElement, copyText, formatDuration, makeName, makePagination, makeSearchLink, notification, TOOLTIP_DATE_FORMAT } from '~/utils'
 import Lazy from '~/components/Lazy.vue'
 import {NuxtLink} from "#components";
 import {useStorage} from "@vueuse/core";

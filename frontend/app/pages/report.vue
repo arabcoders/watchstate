@@ -61,8 +61,7 @@
 </template>
 
 <script setup>
-import {copyText} from '~/utils/index'
-import request from '~/utils/request.js'
+import {request, copyText} from '~/utils'
 
 useHead({title: `System Report`})
 

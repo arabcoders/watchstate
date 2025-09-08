@@ -10,7 +10,7 @@
           <div class="field is-grouped">
             <p class="control">
               <button class="button is-primary" v-tooltip.bottom="'Add New Ignore rule'"
-                      @click="toggleForm = !toggleForm">
+                @click="toggleForm = !toggleForm">
                 <span class="icon">
                   <i class="fas fa-add"></i>
                 </span>
@@ -18,7 +18,7 @@
             </p>
             <p class="control">
               <button class="button is-info" @click="loadContent" :disabled="isLoading || toggleForm"
-                      :class="{'is-loading':isLoading}">
+                :class="{ 'is-loading': isLoading }">
                 <span class="icon">
                   <i class="fas fa-sync"></i>
                 </span>
@@ -35,10 +35,10 @@
 
       <div class="column is-12" v-if="!toggleForm && items.length < 1">
         <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
-                 icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
+          icon="fas fa-spinner fa-spin" message="Loading data. Please wait..." />
         <Message v-else message_class="has-background-success-90 has-text-dark" title="Information" icon="fas fa-check">
           There are no ignore rules configured. You can add new ignore rules by clicking on the
-          <i @click="toggleForm=true" class="is-clickable fas fa-add"></i> button.
+          <i @click="toggleForm = true" class="is-clickable fas fa-add"></i> button.
         </Message>
       </div>
 
@@ -196,7 +196,7 @@
                 </p>
                 <span class="card-header-icon">
                   <span class="icon">
-                    <i class="fas" :class="{'fa-tv':'Show'===item.type,'fa-film': 'Movie' === item.type}"></i>
+                    <i class="fas" :class="{ 'fa-tv': 'Show' === item.type, 'fa-film': 'Movie' === item.type }"></i>
                   </span>
                 </span>
               </header>
@@ -206,13 +206,13 @@
                     <span class="icon-text">
                       <span class="icon"><i class="fas fa-server"></i></span>
                       <span>
-                        <NuxtLink :to="`/backend/${item.backend}`" v-text="item.backend"/>
+                        <NuxtLink :to="`/backend/${item.backend}`" v-text="item.backend" />
                       </span>
                     </span>
                   </div>
                   <div class="column is-6 has-text-right">
                     <strong>Scope:&nbsp;</strong>
-                    <NuxtLink :to="makeItemLink(item)" v-text="item.scoped_to" v-if="item.scoped_to"/>
+                    <NuxtLink :to="makeItemLink(item)" v-text="item.scoped_to" v-if="item.scoped_to" />
                     <template v-else>Global</template>
                   </div>
 
@@ -221,7 +221,7 @@
                       <span class="icon"><i class="fas fa-database"></i></span>
                       <span>
                         <NuxtLink target="_blank" :to="makeGUIDLink(item.type, item.db, item.id)"
-                                  v-text="`${item.db}://${item.id}`"/>
+                          v-text="`${item.db}://${item.id}`" />
                       </span>
                     </span>
                   </div>
@@ -230,7 +230,7 @@
                     <span class="icon-text">
                       <span class="icon"><i class="fas fa-calendar"></i></span>
                       <span class="has-tooltip"
-                            v-tooltip="`Created at: ${moment(item.created).format(TOOLTIP_DATE_FORMAT)}`">
+                        v-tooltip="`Created at: ${moment(item.created).format(TOOLTIP_DATE_FORMAT)}`">
                         {{ moment(item.created).fromNow() }}</span>
                     </span>
                   </div>
@@ -262,7 +262,7 @@
 
       <div class="column is-12">
         <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
-                 @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+          @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
           <ul>
             <li>Ignoring specific GUID sometimes helps in preventing incorrect data being added to WatchState, due to
               incorrect metadata being provided by backends.
@@ -271,7 +271,7 @@
               <code>GUID</code> means in terms of WatchState is the unique identifier for a specific item in the
               external data source.
             </li>
-            <li>To add a new ignore rule click on the <i @click="toggleForm=true" class="is-clickable fa fa-add"></i>
+            <li>To add a new ignore rule click on the <i @click="toggleForm = true" class="is-clickable fa fa-add"></i>
               button.
             </li>
           </ul>
@@ -283,66 +283,22 @@
 
 <script setup lang="ts">
 import '~/assets/css/bulma-switch.css'
-import {ref, computed, watch, onMounted} from 'vue'
-import {useHead, useRoute} from '#app'
-import {useStorage} from '@vueuse/core'
+import { ref, computed, watch, onMounted } from 'vue'
+import { useHead, useRoute } from '#app'
+import { useStorage } from '@vueuse/core'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
-import request from '~/utils/request.js'
-import {awaitElement, copyText, notification, stringToRegex, TOOLTIP_DATE_FORMAT} from '~/utils'
-import {useDialog} from "~/composables/useDialog.ts";
-import type {GenericError} from "~/types/responses";
+import { request, awaitElement, copyText, notification, stringToRegex, TOOLTIP_DATE_FORMAT } from '~/utils'
+import { useDialog } from '~/composables/useDialog'
+import type { IgnoreItem, GuidProvider } from '~/types'
 
-type GuidProvider = {
-  /** Provider name (e.g., 'tvdb', 'imdb') */
-  guid: string
-  /** Optional validator for the GUID */
-  validator?: {
-    /** Regex pattern string */
-    pattern: string
-    /** Example value */
-    example?: string
-  }
-}
-
-type IgnoreRule = {
-  /** Unique rule identifier */
-  rule: string
-  /** Backend name */
-  backend: string
-  /** GUID provider */
-  db: string
-  /** GUID value */
-  id: string
-  /** Type of item (show, movie, episode) */
-  type: string
-  /** If true, rule is scoped */
-  scoped: boolean
-  /** If scoped, the id it is scoped to */
-  scoped_to?: string | null
-  /** Optional title for the rule */
-  title?: string | null
-  /** Creation date (ISO string) */
-  created: string
-}
-
-type IgnoreForm = {
-  id: string
-  type: string
-  backend: string
-  db: string
-  scoped: boolean
-  scoped_to: string | null
-}
-
-
-useHead({title: 'Ignored GUIDs'})
+useHead({ title: 'Ignored GUIDs' })
 
 const types = ['show', 'movie', 'episode']
-const empty_form: IgnoreForm = {id: '', type: '', backend: '', db: '', scoped: false, scoped_to: null}
-const items = ref<Array<IgnoreRule>>([])
+const empty_form = { id: '', type: '', backend: '', db: '', scoped: false, scoped_to: null }
+const items = ref<Array<IgnoreItem>>([])
 const toggleForm = ref<boolean>(false)
-const form = ref<IgnoreForm>(JSON.parse(JSON.stringify(empty_form)))
+const form = ref<{ id: string, type: string, backend: string, db: string, scoped: boolean, scoped_to: string | null }>(JSON.parse(JSON.stringify(empty_form)))
 const show_page_tips = useStorage('show_page_tips', true)
 const isLoading = ref<boolean>(false)
 const guids = ref<Array<GuidProvider>>([])
@@ -406,8 +362,8 @@ const loadContent = async (): Promise<void> => {
 
 onMounted(() => loadContent())
 
-const deleteIgnore = async (item: IgnoreRule): Promise<void> => {
-  const {status: confirmStatus} = await useDialog().confirmDialog({
+const deleteIgnore = async (item: IgnoreItem): Promise<void> => {
+  const { status: confirmStatus } = await useDialog().confirmDialog({
     message: `Delete '${item.db}://${item.id}' rule?`,
     confirmColor: 'is-danger'
   })
@@ -429,7 +385,7 @@ const deleteIgnore = async (item: IgnoreRule): Promise<void> => {
   }
 }
 
-const makeItemLink = (item: IgnoreRule): string => {
+const makeItemLink = (item: IgnoreItem): string => {
   if (!item?.scoped_to) {
     return ''
   }
@@ -460,7 +416,7 @@ const addIgnoreRule = async (): Promise<void> => {
       body: JSON.stringify(form.value)
     })
 
-    const json: IgnoreRule | GenericError = await response.json()
+    const json = await parse_api_response<IgnoreItem>(response)
 
     if ('error' in json) {
       notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
@@ -497,7 +453,7 @@ watch(toggleForm, (value: boolean) => {
 })
 
 const checkForm = computed<boolean>(() => {
-  const {id, type, backend, db} = form.value
+  const { id, type, backend, db } = form.value
   return '' !== id && '' !== type && '' !== backend && '' !== db
 })
 </script>

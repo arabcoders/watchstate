@@ -154,8 +154,7 @@
 
 <script setup>
 import '~/assets/css/bulma-switch.css'
-import request from '~/utils/request.js'
-import {notification, parse_api_response} from '~/utils/index'
+import {request, notification, parse_api_response} from '~/utils'
 import {useStorage} from '@vueuse/core'
 
 useHead({title: 'Add new client GUID link'})

@@ -30,8 +30,7 @@
 <script setup lang="ts">
 import {ref, onMounted, onBeforeUnmount} from 'vue'
 import Message from '~/components/Message.vue'
-import request from '~/utils/request'
-import {notification} from '~/utils'
+import {request, notification} from '~/utils'
 
 const emit = defineEmits<{
   (e: 'update', status: { status: boolean; message: string; restartable: boolean }): void

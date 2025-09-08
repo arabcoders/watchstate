@@ -301,7 +301,6 @@ import '~/assets/css/bulma.css'
 import '~/assets/css/style.css'
 import '~/assets/css/all.css'
 import {useBreakpoints, useStorage} from '@vueuse/core'
-import request from '~/utils/request'
 import Markdown from '~/components/Markdown.vue'
 import UserSelection from '~/components/UserSelection.vue'
 import {useAuthStore} from '~/store/auth'
@@ -310,8 +309,8 @@ import TaskScheduler from '~/components/TaskScheduler.vue'
 import NewVersion from '~/components/NewVersion.vue'
 import Dialog from '~/components/Dialog.vue'
 import {navigateTo} from '#app'
-import {useDialog} from "~/composables/useDialog.ts"
-import {dEvent} from '~/utils'
+import {useDialog} from '~/composables/useDialog.ts'
+import {request, dEvent} from '~/utils'
 
 const useVersionUpdate = () => {
   const newVersionIsAvailable = ref(false)

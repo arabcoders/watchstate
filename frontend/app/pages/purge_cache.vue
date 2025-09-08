@@ -43,19 +43,12 @@
 import {ref} from 'vue'
 import {useRoute, navigateTo} from '#app'
 import Message from '~/components/Message.vue'
-import {notification, parse_api_response} from '~/utils'
+import {request, notification, parse_api_response} from '~/utils'
 import Confirm from '~/components/Confirm.vue'
 import {useSessionCache} from '~/utils/cache'
-import request from '~/utils/request'
+import type { GenericError } from '~/types'
 
-interface PurgeCacheError {
-  error: {
-    code: number
-    message: string
-  }
-}
-
-const error = ref<PurgeCacheError | null>(null)
+const error = ref<GenericError | null>(null)
 const isPurging = ref<boolean>(false)
 
 const resetCache = async (): Promise<void> => {

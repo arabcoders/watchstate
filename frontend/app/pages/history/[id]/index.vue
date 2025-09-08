@@ -572,18 +572,7 @@
 </template>
 
 <script setup>
-import request from '~/utils/request.js'
-import {
-  ag,
-  copyText,
-  formatDuration,
-  makeGUIDLink,
-  makeName,
-  makeSearchLink,
-  notification,
-  TOOLTIP_DATE_FORMAT,
-  ucFirst
-} from '~/utils/index'
+import { request, ag, copyText, formatDuration, makeGUIDLink, makeName, makeSearchLink, notification, TOOLTIP_DATE_FORMAT, ucFirst } from '~/utils'
 import moment from 'moment'
 import {useBreakpoints, useStorage} from '@vueuse/core'
 import Message from '~/components/Message.vue'

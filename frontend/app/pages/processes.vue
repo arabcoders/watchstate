@@ -88,9 +88,8 @@
 import {ref, onMounted} from 'vue'
 import {useHead, useRoute} from '#app'
 import Message from '~/components/Message.vue'
-import {awaitElement, notification} from '~/utils'
-import request from '~/utils/request.js'
-import {useDialog} from "~/composables/useDialog.ts";
+import {request, awaitElement, notification} from '~/utils'
+import {useDialog} from '~/composables/useDialog'
 
 useHead({title: 'Processes'})
 

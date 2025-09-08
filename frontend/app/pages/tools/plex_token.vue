@@ -81,8 +81,7 @@
 </template>
 
 <script setup>
-import request from "~/utils/request.js"
-import {parse_api_response} from "~/utils/index"
+import {request, parse_api_response} from '~/utils'
 
 const isLoading = ref(false)
 const token = ref('')

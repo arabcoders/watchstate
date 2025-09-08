@@ -142,7 +142,7 @@
 </template>
 
 <script setup>
-import {makeSearchLink, notification} from '~/utils/index'
+import {makeSearchLink, notification} from '~/utils'
 import {useStorage} from '@vueuse/core'
 import Message from '~/components/Message.vue'
 import {useSessionCache} from '~/utils/cache'

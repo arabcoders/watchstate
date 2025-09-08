@@ -1,9 +1,14 @@
-import {defineStore} from 'pinia';
-import {useStorage} from '@vueuse/core'
-import {reactive, toRefs} from 'vue'
-import type {AuthState} from '~/types/auth'
-import request from '~/utils/request'
-import {parse_api_response} from '~/utils'
+import { defineStore } from 'pinia';
+import { useStorage } from '@vueuse/core'
+import { reactive, toRefs } from 'vue'
+import { request, parse_api_response } from '~/utils'
+
+type AuthState = {
+    token: string | null;
+    authenticated: boolean;
+    loading: boolean;
+    username: string | null;
+};
 
 export const useAuthStore = defineStore('auth', () => {
     const state = reactive<AuthState>({
@@ -34,7 +39,7 @@ export const useAuthStore = defineStore('auth', () => {
         }
         const req = await request('/system/auth/signup', {
             method: 'POST',
-            body: JSON.stringify({username, password}),
+            body: JSON.stringify({ username, password }),
         });
         if (req.status === 201) {
             return true;
@@ -56,7 +61,7 @@ export const useAuthStore = defineStore('auth', () => {
         try {
             const response = await request(`/system/auth/login`, {
                 method: 'POST',
-                body: JSON.stringify({username, password}),
+                body: JSON.stringify({ username, password }),
             });
             const json = await parse_api_response(response);
             if (response.status !== 200) {
@@ -114,5 +119,5 @@ export const useAuthStore = defineStore('auth', () => {
         }
     };
 
-    return {...toRefs(state), has_user, signup, login, logout, validate};
+    return { ...toRefs(state), has_user, signup, login, logout, validate };
 });

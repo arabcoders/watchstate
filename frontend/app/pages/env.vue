@@ -255,17 +255,8 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter, useHead, navigateTo } from '#app'
 import { useStorage } from '@vueuse/core'
 import Message from '~/components/Message.vue'
-import request from '~/utils/request.js'
-import { awaitElement, copyText, notification, parse_api_response } from '~/utils'
-import type { GenericError } from "~/types/responses"
-import type { EnvVar } from '~/types/env'
-
-type EnvironmentApiResponse = {
-  /** Array of environment variables */
-  data: Array<EnvVar>
-  /** Path to the environment file */
-  file?: string
-}
+import { request, awaitElement, copyText, notification, parse_api_response } from '~/utils'
+import type { EnvVar } from '~/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -297,7 +288,7 @@ const loadContent = async (): Promise<void> => {
     isLoading.value = true
     items.value = []
     const response = await request('/system/env')
-    const json = await parse_api_response<EnvironmentApiResponse | GenericError>(response)
+    const json = await parse_api_response<{ data: Array<EnvVar>, file?: string }>(response)
 
     if ('error' in json) {
       notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)

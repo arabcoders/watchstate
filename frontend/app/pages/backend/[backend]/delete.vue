@@ -69,9 +69,8 @@
 
 <script setup>
 import '~/assets/css/bulma-switch.css'
-import request from '~/utils/request.js'
 import Message from '~/components/Message.vue'
-import {notification} from '~/utils/index'
+import {request, notification} from '~/utils'
 import Confirm from '~/components/Confirm.vue'
 
 const id = useRoute().params.backend

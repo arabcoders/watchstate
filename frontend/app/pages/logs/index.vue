@@ -79,9 +79,8 @@
 </template>
 
 <script setup>
-import request from '~/utils/request.js'
 import moment from 'moment'
-import {humanFileSize, TOOLTIP_DATE_FORMAT} from '~/utils/index'
+import {request, humanFileSize, TOOLTIP_DATE_FORMAT} from '~/utils'
 import Message from '~/components/Message.vue'
 
 useHead({title: 'Logs'})

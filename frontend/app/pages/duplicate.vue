@@ -231,45 +231,15 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useHead, useRoute, useRouter } from '#app'
 import { useStorage } from '@vueuse/core'
 import moment from 'moment'
-import request from '~/utils/request'
 import Message from '~/components/Message.vue'
 import Lazy from '~/components/Lazy.vue'
 import FloatingImage from '~/components/FloatingImage.vue'
 import { NuxtLink } from '#components'
 import { useDialog } from '~/composables/useDialog'
-import {
-  awaitElement,
-  copyText,
-  makeName,
-  makePagination,
-  makeSearchLink,
-  notification,
-  TOOLTIP_DATE_FORMAT,
-  parse_api_response,
-} from '~/utils'
-import type { GenericError } from "~/types/responses";
+import { request, awaitElement, copyText, makeName, makePagination, makeSearchLink, notification, TOOLTIP_DATE_FORMAT, parse_api_response } from '~/utils'
+import type { DuplicateItem } from '~/types'
 
-type DuplicateItem = {
-  /** Unique identifier for the item */
-  id: number
-  /** Type of media (e.g., 'movie', 'episode') */
-  type: string
-  /** Main title of the item */
-  title: string
-  /** Alternative content title if available */
-  content_title?: string
-  /** File path of the content */
-  content_path?: string
-  /** Full display title combining multiple sources */
-  full_title?: string
-  /** Whether the item has been watched/played */
-  watched: boolean
-  /** Unix timestamp of when the record was last updated */
-  updated_at: number
-  /** Array of backend names that have reported this item */
-  reported_by: Array<string>
-  /** Array of backend names that have NOT reported this item */
-  not_reported_by: Array<string>
+type DuplicateItemWithUI = DuplicateItem & {
   /** UI state: whether to show raw JSON data */
   showRawData?: boolean
   /** UI state: whether title is expanded for display */
@@ -278,15 +248,6 @@ type DuplicateItem = {
   expand_path?: boolean
   /** Additional properties that may come from the API */
   [key: string]: unknown
-}
-
-type DuplicateApiResponse = {
-  items: Array<DuplicateItem>
-  paging: {
-    current_page: number
-    perpage: number
-    total: number
-  }
 }
 
 const route = useRoute()
@@ -298,7 +259,7 @@ const show_page_tips = useStorage('show_page_tips', true)
 const poster_enable = useStorage('poster_enable', true)
 const isMobile = useMediaQuery({ maxWidth: 1024 })
 
-const items = ref<Array<DuplicateItem>>([])
+const items = ref<Array<DuplicateItemWithUI>>([])
 const page = ref<number>(Number(route.query.page) || 1)
 const perpage = ref<number>(Number(route.query.perpage) || 50)
 const total = ref<number>(0)
@@ -350,7 +311,10 @@ const loadContent = async (pageNumber: number, fromPopState = false, fromReload 
 
     const response = await request(`/system/duplicate/?${search.toString()}`)
 
-    const json = await parse_api_response<DuplicateApiResponse | GenericError>(response)
+    const json = await parse_api_response<{
+      items: Array<DuplicateItemWithUI>
+      paging: { current_page: number, perpage: number, total: number }
+    }>(response)
 
     if ('duplicate' !== useRoute().name) {
       return
@@ -393,7 +357,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => window.removeEventListener('popstate', stateCallBack))
 
-const filteredRows = (items: Array<DuplicateItem>): Array<DuplicateItem> => {
+const filteredRows = (items: Array<DuplicateItemWithUI>): Array<DuplicateItemWithUI> => {
   if (!filter.value) {
     return items
   }
@@ -401,7 +365,7 @@ const filteredRows = (items: Array<DuplicateItem>): Array<DuplicateItem> => {
   return items.filter(i => Object.values(i).some(v => 'string' === typeof v ? v.toLowerCase().includes(filter.value.toLowerCase()) : false))
 }
 
-const filterItem = (item: DuplicateItem): boolean => {
+const filterItem = (item: DuplicateItemWithUI): boolean => {
   if (!filter.value || !item) {
     return true
   }
@@ -466,8 +430,10 @@ const deleteRecords = async (): Promise<void> => {
   try {
     const response = await request('/system/duplicate', { method: 'DELETE' })
     if (!response.ok) {
-      const json: GenericError = await response.json()
-      notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`)
+      const json = await parse_api_response<{}>(response)
+      if ('error' in json) {
+        notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`)
+      }
       return
     }
 

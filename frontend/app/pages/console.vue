@@ -127,12 +127,10 @@ import { useHead, useRoute, useRouter } from '#app'
 import { Terminal, type ITerminalOptions } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { useStorage } from '@vueuse/core'
-import { disableOpacity, enableOpacity, notification, parse_api_response } from '~/utils'
+import { request, disableOpacity, enableOpacity, notification, parse_api_response } from '~/utils'
 import Message from '~/components/Message.vue'
-import request from '~/utils/request'
 import { fetchEventSource } from '@microsoft/fetch-event-source'
-import type { GenericError } from '~/types/responses'
-import type { EnvVar } from '~/types/env'
+import type { EnvVar } from '~/types'
 
 useHead({ title: 'Console' })
 
@@ -213,21 +211,21 @@ const RunCommand = async (): Promise<void> => {
       method: 'POST',
       body: JSON.stringify(commandBody)
     })
-    const json = await response.json() as { token: string } | GenericError
 
-    if (201 !== response.status) {
+    const json = await parse_api_response<{ token: string }>(response)
+
+    if ('error' in json) {
       await finished()
-      if ('error' in json) {
-        notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
-      }
+      notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
       return
     }
 
-    if ('token' in json) {
-      commandToken = json.token
-    } else {
-      throw new Error('Invalid response: missing token')
+    if (201 !== response.status) {
+      await finished()
+      return
     }
+
+    commandToken = json.token
   } catch (e: unknown) {
     await finished()
     const errorMessage = e instanceof Error ? e.message : 'Unknown error occurred'
@@ -261,7 +259,7 @@ const RunCommand = async (): Promise<void> => {
         return
       }
 
-      const json = await parse_api_response<GenericError>(response)
+      const json = await parse_api_response(response)
 
       if ('error' in json && 400 === json.error.code) {
         ctrl.abort()
@@ -377,9 +375,9 @@ onMounted(async () => {
 
   try {
     const response = await request('/system/env/WS_CONSOLE_ENABLE_ALL')
-    const json = await response.json() as EnvVar | GenericError
+    const json = await parse_api_response<EnvVar>(response)
 
-    if (200 === response.status && 'value' in json) {
+    if (response.ok && 'value' in json) {
       allEnabled.value = Boolean(json.value)
     } else {
       allEnabled.value = false

@@ -102,9 +102,8 @@
 </template>
 
 <script setup>
-import {notification} from '~/utils/index'
+import {request, notification} from '~/utils'
 import {useStorage} from '@vueuse/core'
-import request from '~/utils/request.js'
 
 const backend = useRoute().params.backend
 const items = ref([])

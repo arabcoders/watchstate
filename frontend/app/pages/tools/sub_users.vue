@@ -267,7 +267,7 @@
 
 <script setup>
 import moment from 'moment'
-import {makeConsoleCommand, notification, parse_api_response} from "~/utils/index";
+import {makeConsoleCommand, notification, parse_api_response} from '~/utils'
 import {useStorage} from "@vueuse/core";
 
 const matched = ref([])

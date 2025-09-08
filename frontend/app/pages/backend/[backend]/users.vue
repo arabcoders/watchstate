@@ -94,9 +94,8 @@
 
 <script setup>
 import moment from 'moment'
-import {notification, TOOLTIP_DATE_FORMAT} from '~/utils/index'
+import {request, notification, TOOLTIP_DATE_FORMAT} from '~/utils'
 import {useStorage} from '@vueuse/core'
-import request from '~/utils/request.js'
 
 const backend = useRoute().params.backend
 const items = ref()

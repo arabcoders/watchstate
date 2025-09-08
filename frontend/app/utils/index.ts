@@ -1,10 +1,9 @@
-import {useStorage} from '@vueuse/core';
-import request from '~/utils/request';
-import {useToast} from 'vue-toastification'
-import {toRaw} from 'vue';
-import {navigateTo} from '#app'
-import {useDialog} from '~/composables/useDialog'
-import type {GenericError} from "~/types/responses";
+import { useStorage } from '@vueuse/core';
+import { useToast } from 'vue-toastification'
+import { toRaw } from 'vue';
+import { navigateTo } from '#app'
+import { useDialog } from '~/composables/useDialog'
+import type { GenericError, RequestOptions } from "~/types"
 
 const toast = useToast();
 
@@ -12,13 +11,7 @@ const AG_SEPARATOR = '.';
 
 const TOOLTIP_DATE_FORMAT = 'YYYY-MM-DD h:mm:ss A';
 
-interface GuidLinks {
-    [type: string]: {
-        [source: string]: string;
-    };
-}
-
-const guid_links: GuidLinks = {
+const guid_links = {
     'episode': {
         'imdb': 'https://www.imdb.com/title/{_guid}',
         'tmdb': 'https://www.themoviedb.org/tv/{parent.guid_tmdb}/season/{season}/episode/{episode}',
@@ -96,6 +89,47 @@ const ag_set = (obj: Record<string, any>, path: string, value: any): Record<stri
 };
 
 /**
+ * Request content from the API. This function will automatically add the API token to the request headers.
+ * And prefix the URL with the API URL and path.
+ *
+ * @param {string} url
+ * @param {RequestOptions} options
+ *
+ * @returns {Promise<Response>}
+ */
+const request = async (url: string, options: RequestOptions = {}): Promise<Response> => {
+    const token = useStorage('token', '')
+    const api_user = useStorage('api_user', 'main')
+
+    options = options || {};
+    options.method = options.method || 'GET';
+    options.headers = options.headers || {};
+
+    const no_prefix = options?.no_prefix || false;
+    if (options?.no_prefix) {
+        delete options.no_prefix;
+    }
+
+    if (options.headers['Authorization'] === undefined && token.value) {
+        options.headers['Authorization'] = 'Token ' + token.value;
+    }
+
+    if (options.headers['Content-Type'] === undefined) {
+        options.headers['Content-Type'] = 'application/json';
+    }
+
+    if (options.headers['Accept'] === undefined) {
+        options.headers['Accept'] = 'application/json';
+    }
+
+    if (options.headers['X-User'] === undefined) {
+        options.headers['X-User'] = api_user.value;
+    }
+
+    return fetch(no_prefix ? url : `/v1/api${url}`, options);
+}
+
+/**
  * Convert bytes to human-readable file size
  */
 const humanFileSize = (
@@ -159,7 +193,7 @@ const notification = (
     };
 
     if (opts) {
-        options = {...options, ...opts};
+        options = { ...options, ...opts };
     }
 
     switch (type.toLowerCase()) {
@@ -236,7 +270,7 @@ const makeGUIDLink = (type: string, source: string, guid: string, data: Record<s
 
     const link = ag(guid_links, `${type}.${source}`, null);
 
-    return link == null ? '' : r(link, {_guid: guid, ...toRaw(data)});
+    return link == null ? '' : r(link, { _guid: guid, ...toRaw(data) });
 };
 
 /**
@@ -317,7 +351,7 @@ const makeSearchLink = (type: string, query: string): string => {
  * Dispatch event.
  */
 const dEvent = (eventName: string, detail: Record<string, any> = {}): boolean =>
-    window.dispatchEvent(new CustomEvent(eventName, {detail}));
+    window.dispatchEvent(new CustomEvent(eventName, { detail }));
 
 /**
  * Make name
@@ -331,7 +365,7 @@ const makeName = (item: Record<string, any>, asMovie: boolean = false): string |
     const type = ag(item, 'type', 'movie');
 
     if (['show', 'movie'].includes(type) || asMovie) {
-        return r('{title} ({year})', {title, year});
+        return r('{title} ({year})', { title, year });
     }
 
     return r('{title} ({year}) - {season}x{episode}', {
@@ -454,7 +488,7 @@ const parse_api_response = async <T = any>(r: Response): Promise<T | GenericErro
     try {
         return await r.json() as T;
     } catch (e) {
-        return {error: {code: r.status, message: r.statusText}} as GenericError;
+        return { error: { code: r.status, message: r.statusText } } as GenericError;
     }
 };
 
@@ -469,7 +503,7 @@ const goto_history_item = async (item: Record<string, any>): Promise<void> => {
 
     if (log_user !== api_user.value) {
         const dialog = useDialog();
-        const {status} = await dialog.confirmDialog({
+        const { status } = await dialog.confirmDialog({
             title: 'Switch User',
             message: `This item is related to '${item.user}' user. And you are currently using '${api_user.value}' Do you want to switch to view the item?`,
         })
@@ -493,26 +527,22 @@ const queue_event = async (
     delay: number = 0,
     opts: Record<string, any> = {}
 ): Promise<number> => {
-    let reqData: Record<string, any> = {event};
+    let reqData: Record<string, any> = { event };
     if (event_data) {
         reqData.event_data = event_data;
     }
 
     delay = parseInt(delay.toString());
 
-    if (delay !== 0) {
+    if (0 !== delay) {
         reqData.DELAY_BY = delay;
     }
 
     if (opts) {
-        reqData = {...reqData, ...opts};
+        reqData = { ...reqData, ...opts };
     }
 
-    const resp = await request(`/system/events`, {
-        method: 'POST', body: JSON.stringify(reqData)
-    });
-
-    return resp.status;
+    return (await request(`/system/events`, { method: 'POST', body: JSON.stringify(reqData) })).status;
 };
 
 const enableOpacity = (): void => {
@@ -569,10 +599,61 @@ const makeAPIURL = (
     return no_prefix ? url : '/v1/api' + url;
 };
 
+/**
+ * Waits for the test function to return a truthy value.
+ *
+ * @param test - The function to test
+ * @param timeout_ms - The maximum time to wait in milliseconds.
+ * @param frequency - The frequency to check the test function in milliseconds.
+ *
+ * @returns The result of the test function.
+ */
+const awaiter = async (test: Function, timeout_ms: number = 20 * 1000, frequency: number = 200) => {
+    if (typeof (test) != "function") {
+        throw new Error("test should be a function in awaiter(test, [timeout_ms], [frequency])")
+    }
+
+    const isNotTruthy = (val: any) => val === undefined || val === false || val === null || val.length === 0;
+    const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    const endTime: number = Date.now() + timeout_ms;
+
+    let result = test();
+
+    while (isNotTruthy(result)) {
+        if (Date.now() > endTime) {
+            return false;
+        }
+        await sleep(frequency);
+        result = test();
+    }
+
+    return result;
+}
+
+const makeEventName = (id: string | number): string => String(id).replace(/-/g, '').slice(0, 12)
+
+const getEventStatusClass = (status: number): string => {
+    switch (status) {
+        case 0:
+            return 'is-light has-text-dark'
+        case 1:
+            return 'is-warning'
+        case 2:
+            return 'is-success'
+        case 3:
+            return 'is-danger'
+        case 4:
+            return 'is-danger is-light'
+        default:
+            return 'is-light has-text-dark'
+    }
+}
+
 export {
     r,
     ag_set,
     ag,
+    request,
     humanFileSize,
     awaitElement,
     ucFirst,
@@ -596,4 +677,7 @@ export {
     enableOpacity,
     disableOpacity,
     makeAPIURL,
+    awaiter,
+    makeEventName,
+    getEventStatusClass,
 };

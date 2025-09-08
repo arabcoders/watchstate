@@ -207,9 +207,8 @@
 </template>
 
 <script setup>
-import request from '~/utils/request.js'
 import moment from 'moment'
-import {makeName, makeSearchLink, notification, TOOLTIP_DATE_FORMAT} from '~/utils/index'
+import {request, makeName, makeSearchLink, notification, TOOLTIP_DATE_FORMAT} from '~/utils'
 import Message from '~/components/Message.vue'
 import {useStorage} from '@vueuse/core'
 

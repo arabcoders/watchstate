@@ -1,9 +1,6 @@
 {
     "extends": "./.nuxt/tsconfig.json",
     "compilerOptions": {
-        "allowImportingTsExtensions": true,
-        "types": [
-            "./app/types/globals.d.ts"
-        ]
+        "allowImportingTsExtensions": true
     }
 }

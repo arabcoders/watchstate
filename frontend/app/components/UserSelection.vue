@@ -31,8 +31,7 @@
 <script setup lang="ts">
 import {ref, onMounted} from 'vue'
 import {useStorage} from '@vueuse/core'
-import request from '~/utils/request'
-import {notification} from '~/utils'
+import {request, notification} from '~/utils'
 
 const api_user = useStorage<string>('api_user', 'main')
 const users = ref<Array<string>>(['main'])

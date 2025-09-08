@@ -180,7 +180,7 @@
 <script setup>
 import moment from 'moment'
 import Message from '~/components/Message.vue'
-import {formatDuration, makeName, TOOLTIP_DATE_FORMAT} from '~/utils/index'
+import {formatDuration, makeName, TOOLTIP_DATE_FORMAT} from '~/utils'
 import {NuxtLink} from "#components";
 import {useStorage} from "@vueuse/core";
 import FloatingImage from '~/components/FloatingImage.vue'

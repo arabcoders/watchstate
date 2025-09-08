@@ -135,7 +135,7 @@
 </template>
 
 <script setup>
-import {makeSearchLink, notification} from '~/utils/index'
+import {makeSearchLink, notification} from '~/utils'
 import {useSessionCache} from '~/utils/cache'
 
 const backend = useRoute().params.backend

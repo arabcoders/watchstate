@@ -248,10 +248,9 @@
 
 <script setup>
 import Message from '~/components/Message.vue'
-import {basename, makeName, notification} from '~/utils/index'
+import {request, basename, makeName, notification} from '~/utils'
 import {useStorage} from '@vueuse/core'
 import Player from '~/components/Player.vue'
-import request from "~/utils/request.js"
 
 const route = useRoute()
 

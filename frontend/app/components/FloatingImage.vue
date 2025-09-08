@@ -1,25 +1,21 @@
 <template>
   <vTooltip @show="loadContent" @hide="stopTimer">
-    <slot/>
+    <slot />
     <template #popper>
       <span class="icon" v-if="!url"><i class="fas fa-circle-notch fa-spin"></i></span>
       <template v-else>
-        <img :src="url" class="card-image" :class="item_class"
-             :alt="props.title"
-             @error="clearCache"
-             :crossorigin="props.privacy ? 'anonymous': 'use-credentials'"
-             :referrerpolicy="props.privacy ? 'no-referrer': 'origin'"/>
+        <img :src="url" class="card-image" :class="item_class" :alt="props.title" @error="clearCache"
+          :crossorigin="props.privacy ? 'anonymous' : 'use-credentials'"
+          :referrerpolicy="props.privacy ? 'no-referrer' : 'origin'" />
       </template>
     </template>
   </vTooltip>
 </template>
 
 <script setup lang="ts">
-import {ref} from 'vue'
-import {notification} from '~/utils'
-import awaiter from '~/utils/awaiter'
-import {useSessionCache} from '~/utils/cache'
-import request from '~/utils/request'
+import { ref } from 'vue'
+import { request, notification, awaiter } from '~/utils'
+import { useSessionCache } from '~/utils/cache'
 
 const props = defineProps<{
   /** Image URL to display */
@@ -55,7 +51,7 @@ const defaultLoader = async (): Promise<void> => {
     }
 
     const cb = props.image.startsWith('/') ? request : fetch
-    const response = await cb(props.image, {signal: cancelRequest.signal})
+    const response = await cb(props.image, { signal: cancelRequest.signal })
 
     if (!response.ok) {
       return

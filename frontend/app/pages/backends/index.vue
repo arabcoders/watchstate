@@ -190,9 +190,8 @@
 <script setup>
 import '~/assets/css/bulma-switch.css'
 import moment from 'moment'
-import request from '~/utils/request.js'
 import BackendAdd from '~/components/BackendAdd.vue'
-import {ag, copyText, makeConsoleCommand, notification, queue_event, r, TOOLTIP_DATE_FORMAT} from '~/utils/index'
+import {request, ag, copyText, makeConsoleCommand, notification, queue_event, r, TOOLTIP_DATE_FORMAT} from '~/utils'
 import {useStorage} from '@vueuse/core'
 import Message from '~/components/Message.vue'
 

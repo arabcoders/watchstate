@@ -69,24 +69,10 @@ hr {
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useHead } from '#app'
-import { disableOpacity, enableOpacity, ucFirst } from '~/utils'
-import request from '~/utils/request'
+import { request, disableOpacity, enableOpacity, ucFirst } from '~/utils'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
-import type { version } from '~/types/api/version'
-
-type changeset = {
-  tag: string
-  full_sha: string
-  date: string
-  commits: Array<{
-    sha: string
-    full_sha: string
-    message: string
-    author: string
-    date: string
-  }>
-}
+import type { ChangeSet, VersionResponse } from '~/types'
 
 useHead({ title: 'CHANGELOG' })
 
@@ -94,14 +80,14 @@ const PROJECT = 'watchstate'
 const REPO = `https://github.com/arabcoders/${PROJECT}`
 const REPO_URL = `https://arabcoders.github.io/${PROJECT}/CHANGELOG.json?version={version}`
 
-const logs = ref<Array<changeset>>([])
+const logs = ref<Array<ChangeSet>>([])
 const api_version = ref<string>('dev-master')
 const api_version_sha = ref<string>('unknown')
 const api_version_build = ref<string>('unknown')
 const api_version_branch = ref<string>('unknown')
 const isLoading = ref<boolean>(false)
 
-const isInstalled = (log: changeset): boolean => {
+const isInstalled = (log: ChangeSet): boolean => {
   const installed = String(api_version_sha.value)
 
   if (log.full_sha.startsWith(installed)) {
@@ -121,7 +107,12 @@ const loadContent = async (): Promise<void> => {
   isLoading.value = true
   try {
     const response = await request('/system/version')
-    const json = await response.json() as version
+    const json = await parse_api_response<VersionResponse>(response)
+
+    if ('error' in json) {
+      throw new Error(json.error.message || 'Failed to fetch version information')
+    }
+
     api_version.value = json.version
     api_version_sha.value = json.sha
     api_version_build.value = json.build
@@ -131,9 +122,13 @@ const loadContent = async (): Promise<void> => {
 
     try {
       const changes = await fetch(REPO_URL.replace('{branch}', api_version_branch.value).replace('{version}', api_version.value))
-      logs.value = await changes.json() as Array<changeset>
+      const json = await parse_api_response<Array<ChangeSet>>(changes)
+      if ('error' in json) {
+        throw new Error(json.error.message || 'Failed to fetch changelog information')
+      }
+      logs.value = json
     } catch (e: unknown) {
-      logs.value = await (await request('/system/static/CHANGELOG.json', { method: 'GET' })).json() as Array<changeset>
+      logs.value = await (await request('/system/static/CHANGELOG.json', { method: 'GET' })).json() as Array<ChangeSet>
       console.error(e)
     }
 

@@ -384,10 +384,9 @@
 
 <script setup>
 import '~/assets/css/bulma-switch.css'
-import {notification} from '~/utils/index'
+import {request, notification} from '~/utils'
 import Message from '~/components/Message.vue'
 import {useStorage} from "@vueuse/core"
-import request from "~/utils/request.js"
 
 const id = useRoute().params.backend
 const redirect = useRoute().query?.redirect ?? `/backend/${id}`
