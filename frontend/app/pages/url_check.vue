@@ -391,7 +391,7 @@ const templates = ref<Array<{ id: number, key: string, override: Item }>>([
     },
   },
 ])
-const methods = ref<string[]>(['GET', 'POST', 'PUT', 'PATCH', 'HEAD', 'DELETE'])
+const methods = ref<Array<string>>(['GET', 'POST', 'PUT', 'PATCH', 'HEAD', 'DELETE'])
 
 const defaultData = () => ({ url: "", method: "GET", headers: [] } as Item)
 
@@ -509,7 +509,9 @@ const tryParse = (body: string): string => {
 }
 
 const colorStatus = (status: number | null): string | undefined => {
-  if (status === null) return undefined
+  if (status === null) {
+    return undefined
+  }
   if (status >= 200 && status < 300) {
     return 'has-text-success'
   } else if (status >= 300 && status < 400) {

@@ -379,7 +379,7 @@ const makeName = (item: Record<string, any>, asMovie: boolean = false): string |
 /**
  * Make pagination
  */
-interface PaginationItem {
+type PaginationItem = {
     page: number;
     text: string;
     selected: boolean;

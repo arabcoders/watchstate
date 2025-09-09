@@ -15,6 +15,7 @@
 
 <script setup lang="ts">
 import {ref, onMounted, onBeforeUnmount} from 'vue'
+import {disableOpacity, enableOpacity} from '~/utils'
 
 const props = defineProps<{
   /** Title for the overlay modal */

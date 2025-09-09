@@ -24,7 +24,9 @@ let observer: IntersectionObserver | null = null
 const loadImage = async (): Promise<void> => {
   try {
     const response = await request(`/history/${props.id}/images/${props.type}`)
-    if (!response.ok) return
+    if (!response.ok) {
+      return
+    }
 
     const blob = await response.blob()
     objectUrl = URL.createObjectURL(blob)

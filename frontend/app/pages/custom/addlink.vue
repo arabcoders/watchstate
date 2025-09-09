@@ -128,9 +128,8 @@
 
           <div class="field is-grouped">
             <div class="control is-expanded">
-              <button class="button is-fullwidth is-primary" type="submit"
-                      :disabled="false === validForm || isSaving"
-                      :class="{'is-loading':isSaving}">
+              <button class="button is-fullwidth is-primary" type="submit" :disabled="false === validForm || isSaving"
+                :class="{ 'is-loading': isSaving }">
                 <span class="icon-text">
                   <span class="icon"><i class="fas fa-save"></i></span>
                   <span>Save</span>
@@ -152,69 +151,107 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { useHead, navigateTo } from '#app'
+import { request, notification, parse_api_response, ucFirst } from '~/utils'
+import type { GuidProvider, CustomGUID, CustomLink } from '~/types'
 import '~/assets/css/bulma-switch.css'
-import {request, notification, parse_api_response} from '~/utils'
-import {useStorage} from '@vueuse/core'
 
-useHead({title: 'Add new client GUID link'})
 
-const empty_form = {
-  type: '',
+type CustomLinkForm = {
+  /** Client type */
+  type: string
+  /** Client-specific options */
   options: {
-    legacy: true,
-  },
+    /** Whether this is a Plex legacy agent */
+    legacy: boolean
+    [key: string]: any
+  }
+  /** GUID mapping */
   map: {
-    from: '',
-    to: ''
-  },
+    /** Source client GUID */
+    from: string
+    /** Target WatchState/custom GUID */
+    to: string
+  }
+  /** Text replacement (for Plex legacy agents) */
   replace: {
-    from: '',
-    to: ''
-  },
+    /** Text to search for */
+    from: string
+    /** Text to replace with */
+    to: string
+  }
 }
-const show_page_tips = useStorage('show_page_tips', true)
-const form = ref(JSON.parse(JSON.stringify(empty_form)))
-const guids = ref([])
-const supported = ref([])
-const isSaving = ref(false)
-const links = ref([])
-const toggleReplace = ref(false)
+
+useHead({ title: 'Add new client GUID link' })
+
+const defaultData = (): CustomLinkForm => ({
+  type: '',
+  options: { legacy: true, },
+  map: { from: '', to: '' },
+  replace: { from: '', to: '' },
+})
+
+const form = ref<CustomLinkForm>(defaultData())
+const guids = ref<Array<GuidProvider>>([])
+const supported = ref<Array<string>>([])
+const isSaving = ref<boolean>(false)
+const links = ref<Array<CustomLink>>([])
+const toggleReplace = ref<boolean>(false)
 
 onMounted(async () => {
   try {
-
-    /** @type {Array<Promise<Response>>} */
     const responses = await Promise.all([
       request('/system/guids'),
       request('/system/supported'),
       request('/system/guids/custom'),
     ])
 
-    guids.value = await parse_api_response(responses[0]) ?? []
-    supported.value = await parse_api_response(responses[1]) ?? []
-    links.value = (await parse_api_response(responses[2])).links ?? []
+    const guidData = await parse_api_response<Array<GuidProvider>>(responses[0])
+    const supportedData = await parse_api_response<Array<string>>(responses[1])
+    const customData = await parse_api_response<{
+      guids: Record<string, CustomGUID>,
+      links: Record<string, CustomLink>
+    }>(responses[2])
 
-  } catch (e) {
+    if ('error' in guidData) {
+      notification('error', 'Error', guidData.error.message)
+      return
+    }
+    if ('error' in supportedData) {
+      notification('error', 'Error', supportedData.error.message)
+      return
+    }
+    if ('error' in customData) {
+      notification('error', 'Error', customData.error.message)
+      return
+    }
+
+    guids.value = guidData
+    supported.value = supportedData
+    links.value = Object.values(customData.links)
+
+  } catch (e: any) {
     notification('error', 'Error', `Request error. ${e.message}`, 5000)
   }
 })
 
-const addNewLink = async () => {
+const addNewLink = async (): Promise<void> => {
   if (!validForm.value) {
     notification('error', 'Error', 'Invalid form data.', 5000)
     return
   }
 
-  let data = form.value
+  const data = form.value
 
   if (!supported.value.includes(data.type)) {
-    notification('error', 'Error', `Invalid client type.`, 5000)
+    notification('error', 'Error', 'Invalid client type.', 5000)
     return
   }
 
   if (!data.map.from) {
-    notification('error', 'Error', `map.from must not be empty.`, 5000)
+    notification('error', 'Error', 'map.from must not be empty.', 5000)
     return
   }
 
@@ -224,13 +261,14 @@ const addNewLink = async () => {
   }
 
   for (let i = 0; i < links.value.length; i++) {
-    if (links.value[i].type === data.type && links.value[i].map.from === data.map.from) {
+    const link = links.value[i]
+    if (link && link.type === data.type && link.map.from === data.map.from) {
       notification('error', 'Error', `Link with map.from '${data.map.from}' already exists.`, 5000)
       return
     }
   }
 
-  let formData = {
+  const formData: Partial<CustomLinkForm> = {
     type: data.type,
     map: {
       from: data.map.from,
@@ -261,7 +299,7 @@ const addNewLink = async () => {
 
     const json = await parse_api_response(response)
 
-    if (!response.ok) {
+    if ('error' in json) {
       notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
       return
     }
@@ -269,11 +307,12 @@ const addNewLink = async () => {
     notification('success', 'Success', 'Successfully added new client link.', 5000)
     await navigateTo('/custom')
   } catch (e) {
-    notification('error', 'Error', `Request error. ${e.message}`, 5000)
+    const error = e as Error
+    notification('error', 'Error', `Request error. ${error.message}`, 5000)
   } finally {
     isSaving.value = false
   }
 }
 
-const validForm = computed(() => !(!form.value.map.to || !form.value.map.from || !form.value.type))
+const validForm = computed((): boolean => !(!form.value.map.to || !form.value.map.from || !form.value.type))
 </script>

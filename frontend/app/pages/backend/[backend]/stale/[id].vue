@@ -3,7 +3,7 @@
     <div class="columns is-multiline">
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4 ">
-          <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
+          <span class="icon"><i class="fas fa-server"/>&nbsp;</span>
           <NuxtLink to="/backends" v-text="'Backends'"/>
           -
           <NuxtLink :to="`/backend/${backend}`" v-text="backend"/>
@@ -14,7 +14,7 @@
             <p class="control">
               <button class="button is-info" @click.prevent="loadContent()" :disabled="isLoading"
                       :class="{'is-loading':isLoading}">
-                <span class="icon"><i class="fas fa-sync"></i></span>
+                <span class="icon"><i class="fas fa-sync"/></span>
               </button>
             </p>
           </div>
@@ -27,7 +27,7 @@
       </div>
 
       <div class="column is-12">
-        <div class="columns is-multiline" v-if="items.length>0">
+        <div class="columns is-multiline" v-if="0 < items.length">
           <div class="column is-12">
             <Message message_class="has-background-warning-80 has-text-dark" title="Warning"
                      icon="fas fa-exclamation-triangle">
@@ -46,7 +46,7 @@
                   <span class="card-header-icon" @click="item.showRawData = !item?.showRawData">
                     <span class="icon">
                       <i class="fas"
-                         :class="{ 'fa-tv': 'episode' === item.type.toLowerCase(), 'fa-film': 'movie' === item.type.toLowerCase()}"></i>
+                         :class="{ 'fa-tv': 'episode' === item.type.toLowerCase(), 'fa-film': 'movie' === item.type.toLowerCase()}"/>
                     </span>
                   </span>
                 </header>
@@ -57,7 +57,7 @@
                         <div class="control is-clickable"
                              :class="{'is-text-overflow': !item?.expand_title, 'is-text-contents': item?.expand_title}"
                              @click="item.expand_title = !item?.expand_title">
-                          <span class="icon"><i class="fas fa-heading"></i>&nbsp;</span>
+                          <span class="icon"><i class="fas fa-heading"/>&nbsp;</span>
                           <template v-if="item?.content_title">
                             <NuxtLink :to="makeSearchLink('subtitle', item.content_title)" v-text="item.content_title"/>
                           </template>
@@ -68,7 +68,7 @@
                         <div class="control">
                           <span class="icon is-clickable"
                                 @click="copyText(item?.content_title ?? item.title, false)">
-                            <i class="fas fa-copy"></i></span>
+                            <i class="fas fa-copy"/></span>
                         </div>
                       </div>
                     </div>
@@ -77,22 +77,22 @@
                         <div class="control is-clickable"
                              :class="{'is-text-overflow': !item?.expand_path, 'is-text-contents': item?.expand_path}"
                              @click="item.expand_path = !item?.expand_path">
-                          <span class="icon"><i class="fas fa-file"></i>&nbsp;</span>
+                          <span class="icon"><i class="fas fa-file"/>&nbsp;</span>
                           <NuxtLink v-if="item?.content_path" :to="makeSearchLink('path', item.content_path)"
                                     v-text="item.content_path"/>
                           <span v-else>No path found.</span>
                         </div>
                         <div class="control">
                           <span class="icon is-clickable"
-                                @click="copyText(item?.content_path ?item.content_path : null, false)">
-                            <i class="fas fa-copy"></i></span>
+                                @click="copyText(item?.content_path ?? 'No path found', false)">
+                            <i class="fas fa-copy"/></span>
                         </div>
                       </div>
                     </div>
                     <div class="column is-12">
                       <div class="field is-grouped">
                         <div class="control is-expanded is-unselectable">
-                          <span class="icon"><i class="fas fa-info"></i>&nbsp;</span>
+                          <span class="icon"><i class="fas fa-info"/>&nbsp;</span>
                           <span>Has metadata from</span>
                         </div>
                         <div class="control">
@@ -109,20 +109,20 @@
                 <pre style="position: relative; max-height: 343px;"><code>{{ JSON.stringify(item, null, 2) }}</code>
                   <button class="button is-small m-4" @click="() => copyText(JSON.stringify(item, null, 2))"
                           style="position: absolute; top:0; right:0;">
-                    <span class="icon"><i class="fas fa-copy"></i></span>
+                    <span class="icon"><i class="fas fa-copy"/></span>
                   </button>
                 </pre>
                 </div>
                 <div class="card-footer">
                   <div class="card-footer-item">
                     <span class="icon">
-                      <i class="fas" :class="{'fa-eye':item.watched,'fa-eye-slash':!item.watched}"></i>&nbsp;
+                      <i class="fas" :class="{'fa-eye':item.watched,'fa-eye-slash':!item.watched}"/>&nbsp;
                     </span>
                     <span class="has-text-success" v-if="item.watched">Played</span>
                     <span class="has-text-danger" v-else>Unplayed</span>
                   </div>
                   <div class="card-footer-item">
-                    <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
+                    <span class="icon"><i class="fas fa-calendar"/>&nbsp;</span>
                     <span class="has-tooltip"
                           v-tooltip="`Record updated at: ${moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
                       {{ moment.unix(item.updated_at).fromNow() }}
@@ -138,7 +138,7 @@
           <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
                    icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
           <template v-else>
-            <Message message_class="has-background-success-90 has-text-dark" v-if="items.length < 1"
+            <Message message_class="has-background-success-90 has-text-dark" v-if="1 > items.length"
                      title="Success" icon="fas fa-check">
               Great, WatchState checked '<u>{{ counts.local }}</u>' items against
               <b>{{ remote.name }}</b> library <b>{{ remote.library?.title }}</b>
@@ -167,39 +167,57 @@
   </div>
 </template>
 
-<script setup>
-import Message from '~/components/Message.vue'
-import {request, copyText, makeName, makeSearchLink, TOOLTIP_DATE_FORMAT} from '~/utils'
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useRoute, useHead } from '#app'
+import { useStorage } from '@vueuse/core'
 import moment from 'moment'
-import {useStorage} from '@vueuse/core'
+import Message from '~/components/Message.vue'
 import Lazy from '~/components/Lazy.vue'
+import { request, copyText, makeName, makeSearchLink, TOOLTIP_DATE_FORMAT, parse_api_response } from '~/utils'
+import type { StaleItem, StaleResponse, StaleCounts, StaleBackendInfo, ExpandableUIState, GenericError } from '~/types'
 
 const route = useRoute()
 
+const id = route.params.id as string
+const backend = route.params.backend as string
 
-const id = route.params.id
-const backend = route.params.backend
+// UI state extension for StaleItem with expandable properties
+type StaleItemWithUI = StaleItem & ExpandableUIState
 
-const items = ref([])
-const remote = ref([])
-const counts = ref({remote: 0, local: 0, stale: 0})
-const isLoading = ref(false)
+// Reactive state with types
+const items = ref<Array<StaleItemWithUI>>([])
+const remote = ref<StaleBackendInfo>({} as StaleBackendInfo)
+const counts = ref<StaleCounts>({ remote: 0, local: 0, stale: 0 })
+const isLoading = ref<boolean>(false)
 const show_page_tips = useStorage('show_page_tips', true)
 
-const loadContent = async () => {
-  useHead({title: `Backends - ${backend}: ${route.query.name ?? ''} Staleness`})
-  isLoading.value = true
+const loadContent = async (): Promise<void> => {
+    useHead({ title: `Backends - ${backend}: ${route.query.name ?? ''} Staleness` })
+    isLoading.value = true
 
-  try {
-    const response = await request(`/backend/${backend}/stale/${id}`)
-    const json = await response.json()
-    items.value = json.items
-    remote.value = json.backend
-    counts.value = json.counts
-  } finally {
-    isLoading.value = false
-  }
+    try {
+        const response = await request(`/backend/${backend}/stale/${id}`)
+        const data = await parse_api_response<StaleResponse>(response)
+
+        if ('error' in data) {
+            console.error('Failed to load stale data:', data.error)
+            return
+        }
+
+        // Apply Yoda style comparisons
+        if (0 < data.items.length) {
+            items.value = data.items
+        } else {
+            items.value = []
+        }
+
+        remote.value = data.backend
+        counts.value = data.counts
+    } finally {
+        isLoading.value = false
+    }
 }
 
-onMounted(async () => loadContent())
+onMounted(async (): Promise<void> => await loadContent())
 </script>

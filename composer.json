@@ -15,7 +15,8 @@
         "tests": "vendor/bin/phpunit",
         "ui_update": "pnpm up --dir ./frontend --latest",
         "ui_gen": "pnpm run --dir ./frontend generate",
-        "ui_dev": "pnpm run --dir ./frontend dev"
+        "ui_dev": "pnpm run --dir ./frontend dev",
+        "ui_tc": "pnpm run --dir ./frontend typecheck"
     },
     "require": {
         "php": "^8.4",

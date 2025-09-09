@@ -151,9 +151,9 @@ import { useStorage } from '@vueuse/core'
 import moment from 'moment'
 import { request, humanFileSize, makeConsoleCommand, notification, TOOLTIP_DATE_FORMAT } from '~/utils'
 import Message from '~/components/Message.vue'
-import type { BackupItem, UserBackends } from '~/types'
+import type { BackupItem, UserBackends, UILoadingState } from '~/types'
 
-type BackItemWithUI = BackupItem & {
+type BackItemWithUI = BackupItem & UILoadingState & {
   /** Currently selected restore target in format 'user@backend' */
   selected: string
   /** Whether the file is currently being downloaded */

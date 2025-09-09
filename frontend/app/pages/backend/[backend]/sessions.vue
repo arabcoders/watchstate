@@ -3,9 +3,9 @@
     <div class="columns is-multiline">
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4">
-          <NuxtLink to="/backends" v-text="'Backends'"/>
+          <NuxtLink to="/backends" v-text="'Backends'" />
           -
-          <NuxtLink :to="'/backend/' + backend" v-text="backend"/>
+          <NuxtLink :to="'/backend/' + backend" v-text="backend" />
           : Sessions
         </span>
 
@@ -13,7 +13,7 @@
           <div class="field is-grouped">
             <p class="control">
               <button class="button is-info" @click="loadContent" :disabled="isLoading"
-                      :class="{'is-loading':isLoading}">
+                :class="{ 'is-loading': isLoading }">
                 <span class="icon"><i class="fas fa-sync"></i></span>
               </button>
             </p>
@@ -25,11 +25,11 @@
         </div>
       </div>
 
-      <div class="column is-12" v-if="items.length < 1">
+      <div class="column is-12" v-if="1 > items.length">
         <Message message_class="is-background-info-90 has-text-dark" title="Loading" icon="fas fa-spinner fa-spin"
-                 v-if="isLoading" message="Requesting active play sessions. Please wait..."/>
+          v-if="isLoading" message="Requesting active play sessions. Please wait..." />
         <Message v-else message_class="has-background-success-90 has-text-dark" title="Information"
-                 icon="fa fa-info-circle" message="There are no active play sessions currently running."/>
+          icon="fa fa-info-circle" message="There are no active play sessions currently running." />
       </div>
       <template v-else>
         <div class="column is-12">
@@ -40,22 +40,22 @@
         <div class="column is-12">
           <table class="table is-fullwidth is-hoverable is-striped">
             <thead>
-            <tr>
-              <th>User</th>
-              <th>Title</th>
-              <th>State</th>
-              <th>Progress at</th>
-            </tr>
+              <tr>
+                <th>User</th>
+                <th>Title</th>
+                <th>State</th>
+                <th>Progress at</th>
+              </tr>
             </thead>
             <tbody>
-            <tr v-for="item in items" :key="item.id">
-              <td>{{ item.user_name }}</td>
-              <td>
-                <NuxtLink :to="makeItemLink(item)" v-text="item.item_title"/>
-              </td>
-              <td>{{ item.session_state }}</td>
-              <td>{{ formatDuration(item.item_offset_at) }}</td>
-            </tr>
+              <tr v-for="item in items" :key="item.id">
+                <td>{{ item.user_name }}</td>
+                <td>
+                  <NuxtLink :to="makeItemLink(item)" v-text="item.item_title" />
+                </td>
+                <td>{{ item.session_state }}</td>
+                <td>{{ formatDuration(item.item_offset_at) }}</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -64,50 +64,40 @@
   </div>
 </template>
 
-<script setup>
-import {formatDuration, notification} from '~/utils'
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useRoute } from '#app'
+import { formatDuration, notification, request, parse_api_response } from '~/utils'
+import Message from '~/components/Message.vue'
+import type { SessionItem } from '~/types'
 
-const backend = useRoute().params.backend
-const items = ref([])
-const isLoading = ref(false)
+const backend = useRoute().params.backend as string
+const items = ref<Array<SessionItem>>([])
+const isLoading = ref<boolean>(false)
 
-const loadContent = async () => {
-  isLoading.value = true
-  items.value = []
-
-  let response, json;
-
+const loadContent = async (): Promise<void> => {
   try {
-    response = await request(`/backend/${backend}/sessions`)
-  } catch (e) {
-    isLoading.value = false
-    return notification('error', 'Error', e.message)
-  }
+    isLoading.value = true
+    items.value = []
 
-  try {
-    json = await response.json()
-  } catch (e) {
-    json = {
-      error: {
-        code: response.status,
-        message: response.statusText
-      }
+    const response = await request(`/backend/${backend}/sessions`)
+    const data = await parse_api_response<Array<SessionItem>>(response)
+
+    if ('error' in data) {
+      notification('error', 'Error', `${data.error.code}: ${data.error.message}`)
+      return
     }
+
+    items.value = data
+  } catch (e) {
+    return notification('error', 'Error', e instanceof Error ? e.message : 'Unknown error occurred')
+  } finally {
+    isLoading.value = false
   }
-
-  isLoading.value = false
-
-  if (!response.ok) {
-    notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
-    return
-  }
-
-  items.value = json
 }
 
-const makeItemLink = (item) => {
-
-  const params = new URLSearchParams();
+const makeItemLink = (item: SessionItem): string => {
+  const params = new URLSearchParams()
   params.append('perpage', '50')
   params.append('page', '1')
   params.append('q', `${backend}.id://${item.item_id}`)
@@ -115,5 +105,6 @@ const makeItemLink = (item) => {
 
   return `/history?${params.toString()}`
 }
-onMounted(async () => loadContent())
+
+onMounted(async () => await loadContent())
 </script>

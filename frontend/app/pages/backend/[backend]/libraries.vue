@@ -4,9 +4,9 @@
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4">
           <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
-          <NuxtLink to="/backends" v-text="'Backends'"/>
+          <NuxtLink to="/backends" v-text="'Backends'" />
           -
-          <NuxtLink :to="'/backend/' + backend" v-text="backend"/>
+          <NuxtLink :to="`/backend/${backend}`" v-text="backend" />
           : Libraries
         </span>
 
@@ -14,7 +14,7 @@
           <div class="field is-grouped">
             <p class="control">
               <button class="button is-info" @click="loadContent" :disabled="isLoading"
-                      :class="{'is-loading':isLoading}">
+                :class="{ 'is-loading': isLoading }">
                 <span class="icon"><i class="fas fa-sync"></i></span>
               </button>
             </p>
@@ -28,22 +28,22 @@
 
       <div class="column is-12" v-if="items.length < 1">
         <Message message_class="has-background-info-90 has-text-dark" title="Loading" icon="fas fa-spinner fa-spin"
-                 message="Loading libraries list. Please wait..." v-if="isLoading"/>
+          message="Loading libraries list. Please wait..." v-if="isLoading" />
         <Message v-else message_class="has-background-warning-80 has-text-dark" title="Warning"
-                 icon="fas fa-exclamation-circle"
-                 message="WatchState was unable to get any libraries from the backend."/>
+          icon="fas fa-exclamation-circle" message="WatchState was unable to get any libraries from the backend." />
       </div>
 
       <div class="column is-6" v-for="item in items" :key="`library-${item.id}`">
         <div class="card">
           <header class="card-header">
             <p class="card-header-title is-text-overflow">
-              <NuxtLink target="_blank" :to="item.webUrl" v-text="item.title" v-if="item?.webUrl"/>
-              <span v-else v-text="item.title"/>
+              <NuxtLink target="_blank" :to="item.webUrl" v-text="item.title" v-if="item?.webUrl" />
+              <span v-else v-text="item.title" />
             </p>
             <div class="card-header-icon">
               <span class="icon">
-                <i class="fas fa-film" :class="{'fa-film': 'Movie' === item.type, 'fa-tv': 'Movie' !== item.type}"></i>
+                <i class="fas fa-film"
+                  :class="{ 'fa-film': 'Movie' === item.type, 'fa-tv': 'Movie' !== item.type }"></i>
               </span>
             </div>
           </header>
@@ -70,7 +70,7 @@
           <div class="card-footer">
             <div class="card-footer-item is-justify-content-start">
               <input :id="`ignore-${item.id}`" type="checkbox" class="switch is-success" :checked="item.ignored"
-                     @change="toggleIgnore(item)">
+                @change="toggleIgnore(item)">
               <label :for="`ignore-${item.id}`"></label>
               <span>Ignore content from this library.</span>
             </div>
@@ -88,7 +88,7 @@
 
       <div class="column is-12">
         <Message message_class="has-background-info-90 has-text-dark" title="Tips" icon="fas fa-info-circle"
-                 :toggle="show_page_tips" @toggle="show_page_tips = !show_page_tips" :use-toggle="true">
+          :toggle="show_page_tips" @toggle="show_page_tips = !show_page_tips" :use-toggle="true">
           <ul>
             <li>Ignoring library will prevent any content from being added to the local database from the library
               during import process, and webhook events handling.
@@ -101,76 +101,67 @@
   </div>
 </template>
 
-<script setup>
-import {request, notification} from '~/utils'
-import {useStorage} from '@vueuse/core'
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useRoute, useHead } from '#app'
+import { useStorage } from '@vueuse/core'
+import { request, notification, parse_api_response } from '~/utils'
+import Message from '~/components/Message.vue'
+import type { LibraryItem } from '~/types'
 
-const backend = useRoute().params.backend
-const items = ref([])
-const isLoading = ref(false)
+const route = useRoute()
+const backend = route.params.backend as string
+const items = ref<Array<LibraryItem>>([])
+const isLoading = ref<boolean>(false)
 const show_page_tips = useStorage('show_page_tips', true)
 
-const loadContent = async () => {
+useHead({ title: `Backends: ${backend} - Libraries` })
+
+const loadContent = async (): Promise<void> => {
   try {
     isLoading.value = true
     items.value = []
 
     const response = await request(`/backend/${backend}/library`)
-    let json
+    const data = await parse_api_response<Array<LibraryItem>>(response)
 
-    try {
-      json = await response.json()
-    } catch (e) {
-      json = {
-        error: {
-          code: response.status,
-          message: response.statusText
-        }
-      }
-    }
-
-    if (200 !== response.status) {
-      notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
+    if ('error' in data) {
+      notification('error', 'Error', `${data.error.code}: ${data.error.message}`)
       return
     }
 
-    items.value = json
+    items.value = data
   } catch (e) {
-    return notification('error', 'Error', `Request error. ${e.message}`)
+    const errorMessage = e instanceof Error ? e.message : 'Unknown error occurred'
+    return notification('error', 'Error', `Request error. ${errorMessage}`)
   } finally {
     isLoading.value = false
   }
 }
 
-const toggleIgnore = async (library) => {
+const toggleIgnore = async (library: LibraryItem): Promise<void> => {
   try {
     const newState = !library.ignored
     const response = await request(`/backend/${backend}/library/${library.id}`, {
       method: newState ? 'POST' : 'DELETE',
-    });
-    let json;
-    try {
-      json = await response.json()
-    } catch (e) {
-      json = {
-        error: {
-          code: response.status,
-          message: response.statusText
-        }
-      }
-    }
+    })
+    const data = await parse_api_response<any>(response)
 
-    if (200 !== response.status) {
-      notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
+    if ('error' in data) {
+      notification('error', 'Error', `${data.error.code}: ${data.error.message}`)
       return
     }
 
     notification('success', 'Success', `Library '${library.title}' has been ${newState ? 'ignored' : 'un-ignored'}.`)
-    items.value[items.value.findIndex(b => b.id === library.id)].ignored = !library.ignored
+    const libraryIndex = items.value.findIndex(b => b.id === library.id)
+    if (-1 !== libraryIndex && items.value[libraryIndex]) {
+      items.value[libraryIndex].ignored = !library.ignored
+    }
   } catch (e) {
-    return notification('error', 'Error', `Request error. ${e.message}`)
+    const errorMessage = e instanceof Error ? e.message : 'Unknown error occurred'
+    return notification('error', 'Error', `Request error. ${errorMessage}`)
   }
 }
 
-onMounted(async () => loadContent())
+onMounted(() => loadContent())
 </script>

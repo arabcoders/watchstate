@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import Message from "~/components/Message.vue";
+import Message from '~/components/Message.vue'
 
-const reloadPage = () => window.location.reload();
+const reloadPage = () => window.location.reload()
 </script>

@@ -3,17 +3,16 @@
     <div class="columns is-multiline">
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4">
-          <NuxtLink to="/backends" v-text="'Backends'"/>
+          <NuxtLink to="/backends" v-text="'Backends'" />
           -
-          <NuxtLink :to="'/backend/' + backend" v-text="backend"/>
+          <NuxtLink :to="'/backend/' + backend" v-text="backend" />
           : Search
         </span>
         <div class="is-pulled-right">
           <div class="field is-grouped">
             <p class="control">
               <button class="button is-info" @click="searchContent(true)"
-                      :disabled="isLoading || !searchField || !query"
-                      :class="{'is-loading':isLoading}">
+                :disabled="isLoading || !searchField || !query" :class="{ 'is-loading': isLoading }">
                 <span class="icon"><i class="fas fa-sync"></i></span>
               </button>
             </p>
@@ -58,7 +57,7 @@
 
                 <div class="control is-expanded has-icons-left">
                   <input class="input" type="search" placeholder="Search..." v-model="query"
-                         :disabled="'' === searchField || isLoading">
+                    :disabled="'' === searchField || isLoading">
                   <div class="icon is-left">
                     <i class="fas fa-search"></i>
                   </div>
@@ -66,7 +65,7 @@
 
                 <div class="control">
                   <button class="button is-primary" type="submit" :disabled="!query || '' === searchField || isLoading"
-                          :class="{'is-loading':isLoading}">
+                    :class="{ 'is-loading': isLoading }">
                     <span class="icon-text">
                       <span class="icon"><i class="fas fa-search"></i></span>
                       <span>Search</span>
@@ -89,11 +88,11 @@
         </form>
       </div>
 
-      <div class="column is-12" v-if="items?.length<1 && hasSearched">
+      <div class="column is-12" v-if="items?.length < 1 && hasSearched">
         <Message v-if="isLoading" message_class="is-background-info-90 has-text-dark" icon="fas fa-spinner fa-spin"
-                 title="Loading" message="Loading data please wait..."/>
+          title="Loading" message="Loading data please wait..." />
         <Message v-else class="has-background-warning-80 has-text-dark" title="Warning"
-                 icon="fas fa-exclamation-triangle" :use-close="true" @close="clearSearch">
+          icon="fas fa-exclamation-triangle" :use-close="true" @close="clearSearch">
           <span v-if="error?.message" v-text="error.message"></span>
           <template v-else>
             <span>No items found.</span>
@@ -105,17 +104,17 @@
       </div>
 
       <div class="column is-12">
-        <div class="columns is-multiline" v-if="items?.length>0">
+        <div class="columns is-multiline" v-if="items?.length > 0">
           <div class="column is-6-tablet" v-for="item in items" :key="item.id">
             <div class="card" :class="{ 'is-success': item.watched }">
               <header class="card-header">
                 <p class="card-header-title is-text-overflow">
-                  <NuxtLink :to="item.webUrl" v-text="makeName(item)" target="_blank"/>
+                  <NuxtLink :to="item.webUrl" v-text="makeName(item)" target="_blank" />
                 </p>
                 <span class="card-header-icon" @click="item.showItem = !item.showItem">
                   <span class="icon">
                     <i class="fas"
-                       :class="{'fa-folder': 'show' === item.type, 'fa-tv': 'episode' === item.type, 'fa-film': 'movie' === item.type}"></i>
+                      :class="{ 'fa-folder': 'show' === item.type, 'fa-tv': 'episode' === item.type, 'fa-film': 'movie' === item.type }"></i>
                   </span>
                 </span>
               </header>
@@ -123,43 +122,42 @@
                 <div class="columns is-multiline is-mobile has-text-centered">
                   <div class="column is-12 has-text-left" v-if="item?.title">
                     <div class="is-text-overflow is-clickable"
-                         @click="(e) => e.target.classList.toggle('is-text-overflow')">
+                      @click="(e: Event) => (e.target as HTMLElement)?.classList?.toggle('is-text-overflow')">
                       <div class="is-text-overflow">
                         <span class="icon"><i class="fas fa-heading"></i>&nbsp;</span>
-                        <NuxtLink :to="makeSearchLink('title',item.title)" v-text="item.title"/>
+                        <NuxtLink :to="makeSearchLink('title', item.title)" v-text="item.title" />
                       </div>
                     </div>
                   </div>
                   <div class="column is-12 is-clickable has-text-left" v-if="item?.content_path"
-                       @click="(e) => e.target.firstChild?.classList?.toggle('is-text-overflow')">
+                    @click="(e: Event) => (e.target as HTMLElement)?.firstElementChild?.classList?.toggle('is-text-overflow')">
                     <div class="is-text-overflow">
                       <span class="icon"><i class="fas fa-file"></i></span>
-                      <NuxtLink :to="makeSearchLink('path',item.content_path)" v-text="item.content_path"/>
+                      <NuxtLink :to="makeSearchLink('path', item.content_path)" v-text="item.content_path" />
                     </div>
                   </div>
                 </div>
               </div>
               <div class="card-content p-0 m-0" v-if="item?.showItem">
                 <div class="mt-2" style="position: relative; max-height: 343px; overflow-y: auto;">
-                  <code class="is-terminal is-block is-pre-wrap" v-text="JSON.stringify(item, null, 2)"/>
+                  <code class="is-terminal is-block is-pre-wrap" v-text="JSON.stringify(item, null, 2)" />
                   <button class="button m-4" v-tooltip="'Copy text'" style="position: absolute; top:0; right:0;"
-                          @click="() => copyText(JSON.stringify(item, null, 2))">
-                    <span class="icon"><i class="fas fa-copy"/></span>
+                    @click="() => copyText(JSON.stringify(item, null, 2))">
+                    <span class="icon"><i class="fas fa-copy" /></span>
                   </button>
                 </div>
               </div>
               <div class="card-footer">
                 <div class="card-footer-item">
                   <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
-                  <span class="has-tooltip"
-                        v-tooltip="moment.unix(item.updated_at ?? item.updated).format(TOOLTIP_DATE_FORMAT)">
-                    {{ moment.unix(item.updated_at ?? item.updated).fromNow() }}
+                  <span class="has-tooltip" v-tooltip="moment.unix(getItemTimestamp(item)).format(TOOLTIP_DATE_FORMAT)">
+                    {{ moment.unix(getItemTimestamp(item)).fromNow() }}
                   </span>
                 </div>
                 <div class="card-footer-item">
                   <span class="icon">
                     <i class="fas"
-                       :class="{'fa-folder': 'show' === item.type, 'fa-tv': 'episode' === item.type, 'fa-film': 'movie' === item.type}"></i>
+                      :class="{ 'fa-folder': 'show' === item.type, 'fa-tv': 'episode' === item.type, 'fa-film': 'movie' === item.type }"></i>
                     &nbsp;
                   </span>
                   <span class="is-capitalized">{{ item.type }}</span>
@@ -168,8 +166,8 @@
                   <span class="icon"><i class="fas fa-database"></i>&nbsp;</span>
                   <span>
                     <NuxtLink
-                        :to="makeSearchLink(`metadata`,`${item.via}.show://${ag(item,`metadata.${item.via}.id`)}`)"
-                        v-if="'show' === item.type">
+                      :to="makeSearchLink(`metadata`, `${item.via}.show://${ag(item, `metadata.${item.via}.id`)}`)"
+                      v-if="'show' === item.type">
                       View linked items
                     </NuxtLink>
                     <NuxtLink :to="`/history/${item.id}`" v-else-if="item.id">
@@ -188,7 +186,7 @@
 
       <div class="column is-12">
         <Message message_class="has-background-info-90 has-text-dark" title="Tips" icon="fas fa-info-circle"
-                 :toggle="show_page_tips" @toggle="show_page_tips = !show_page_tips" :use-toggle="true">
+          :toggle="show_page_tips" @toggle="show_page_tips = !show_page_tips" :use-toggle="true">
           <ul>
             <li>
               items with <code>Not imported</code> text are items not yet imported to local database.
@@ -206,31 +204,42 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { useRoute, useRouter, useHead } from '#app'
+import { useStorage } from '@vueuse/core'
 import moment from 'moment'
-import {request, makeName, makeSearchLink, notification, TOOLTIP_DATE_FORMAT} from '~/utils'
+import { request, makeName, makeSearchLink, notification, TOOLTIP_DATE_FORMAT, ag, copyText, parse_api_response } from '~/utils'
 import Message from '~/components/Message.vue'
-import {useStorage} from '@vueuse/core'
+import type { SearchItem } from '~/types'
+
+type SearchItemWithUI = SearchItem & {
+  /** UI state: Whether to show full item details */
+  showItem?: boolean
+}
 
 const route = useRoute()
 const router = useRouter()
 
-const items = ref([])
-const limits = ref([25, 50, 100, 250, 500])
-const limit = ref(parseInt(route.query.limit ?? 25))
-const searchable = ref(['id', 'title'])
-const backend = route.params.backend
-const query = ref(route.query.q ?? '')
-const searchField = ref(route.query.key ?? 'title')
-const isLoading = ref(false)
-const hasSearched = ref(false)
-const error = ref({});
+const items = ref<Array<SearchItemWithUI>>([])
+const limits = ref<Array<number>>([25, 50, 100, 250, 500])
+const limit = ref<number>(parseInt(route.query.limit as string ?? '25'))
+const searchable = ref<Array<string>>(['id', 'title'])
+const backend = route.params.backend as string
+const query = ref<string>(route.query.q as string ?? '')
+const searchField = ref<string>(route.query.key as string ?? 'title')
+const isLoading = ref<boolean>(false)
+const hasSearched = ref<boolean>(false)
+const error = ref<{ message?: string, code?: number }>({})
 const show_page_tips = useStorage('show_page_tips', true)
 
-useHead({title: `Backends: ${backend} - Search`})
+useHead({ title: `Backends: ${backend} - Search` })
 
-const searchContent = async (fromPopState = false) => {
-  let search = new URLSearchParams()
+// Helper function to get the timestamp for an item
+const getItemTimestamp = (item: SearchItemWithUI): number => item.updated_at ?? item.updated ?? 0
+
+const searchContent = async (fromPopState: boolean = false): Promise<void> => {
+  const search = new URLSearchParams()
 
   if (!query.value || '' === searchField.value) {
     notification('error', 'Error', 'Search field and query are required.')
@@ -241,36 +250,34 @@ const searchContent = async (fromPopState = false) => {
   isLoading.value = true
   items.value = []
 
-  search.set('limit', limit.value)
+  search.set('limit', limit.value.toString())
   search.set('id' === searchField.value ? 'id' : 'q', query.value)
 
-  const title = `Backends: ${backend} - (Search - ${searchField.value}: ${query.value})`;
-  useHead({title})
+  const title = `Backends: ${backend} - (Search - ${searchField.value}: ${query.value})`
+  useHead({ title })
 
   try {
     const response = await request(`/backend/${backend}/search?${search.toString()}`)
-    const json = await response.json()
+    const data = await parse_api_response<Array<SearchItemWithUI>>(response)
     const currentUrl = window.location.pathname + '?' + (new URLSearchParams(window.location.search)).toString()
     const newUrl = window.location.pathname + '?' + search.toString()
 
     if (false === fromPopState && currentUrl !== newUrl) {
       await router.push({
-        path: `/backend/${backend}/search`, title: title, query: {
-          limit: limit.value,
-          key: searchField.value,
-          q: query.value
-        }
+        path: `/backend/${backend}/search`,
+        query: { limit: limit.value.toString(), key: searchField.value, q: query.value }
       })
     }
 
-    if (200 !== response.status) {
-      error.value = json.error
+    if ('error' in data) {
+      error.value = { message: data.error.message, code: data.error.code }
       return
     }
 
-    items.value = json
+    items.value = data
   } catch (e) {
-    notification('error', 'Error', `Request error. ${e.message}`)
+    const errorMessage = e instanceof Error ? e.message : 'Unknown error occurred'
+    notification('error', 'Error', `Request error. ${errorMessage}`)
   } finally {
     isLoading.value = false
   }
@@ -283,31 +290,31 @@ onMounted(() => {
   window.addEventListener('popstate', stateCallBack)
 })
 
-onUnmounted(() => window.removeEventListener('popstate', stateCallBack))
+onBeforeUnmount(() => window.removeEventListener('popstate', stateCallBack))
 
-const clearSearch = async () => {
+const clearSearch = async (): Promise<void> => {
   query.value = ''
   items.value = []
   hasSearched.value = false
   error.value = {}
-  const title = `Backends: ${backend} - Search`;
-  useHead({title})
-  await router.push({path: `/backend/${backend}/search`, title: title, query: {}})
+  const title = `Backends: ${backend} - Search`
+  useHead({ title })
+  await router.push({ path: `/backend/${backend}/search`, query: {} })
 }
 
-const stateCallBack = async () => {
+const stateCallBack = async (): Promise<void> => {
   const route = useRoute()
 
   if (route.query.key) {
-    searchField.value = route.query.key
+    searchField.value = route.query.key as string
   }
 
   if (route.query.limit) {
-    limit.value = parseInt(route.query.limit)
+    limit.value = parseInt(route.query.limit as string)
   }
 
   if (route.query.q) {
-    query.value = route.query.q
+    query.value = route.query.q as string
     await searchContent(true)
   }
 }

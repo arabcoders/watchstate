@@ -157,8 +157,8 @@ import {ref} from 'vue'
 import {useStorage} from '@vueuse/core'
 import {request, parse_api_response, notification} from '~/utils'
 import {navigateTo} from '#app'
-import {useDialog} from "~/composables/useDialog.ts";
-import {useAuthStore} from "~/store/auth.ts";
+import {useDialog} from '~/composables/useDialog'
+import {useAuthStore} from '~/store/auth'
 
 
 const emit = defineEmits<{

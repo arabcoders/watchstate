@@ -278,28 +278,14 @@ import Lazy from '~/components/Lazy.vue'
 import { useSessionCache } from '~/utils/cache'
 import { request, awaitElement, copyText, makeName, makePagination, makeSearchLink, notification, TOOLTIP_DATE_FORMAT } from '~/utils'
 import moment from 'moment'
-import { NuxtLink } from "#components";
+import { NuxtLink } from '#components'
 import FloatingImage from '~/components/FloatingImage.vue'
 import { useDialog } from '~/composables/useDialog'
-import type { ParityItem } from '~/types'
+import type { ParityItem, PaginatedResponse, ExpandableUIState } from '~/types'
 
-type ParityItemWithUI = ParityItem & {
-  /** UI: Whether to expand the title field */
-  expand_title?: boolean
-  /** UI: Whether to expand the path field */
-  expand_path?: boolean
-  /** UI: Whether to show raw data */
-  showRawData?: boolean
-}
+type ParityItemWithUI = ParityItem & ExpandableUIState
 
-type APIResponse = {
-  items: Array<ParityItemWithUI>
-  paging: {
-    current_page: number
-    perpage: number
-    total: number
-  }
-}
+type APIResponse = PaginatedResponse<ParityItemWithUI>
 
 const route = useRoute()
 const router = useRouter()

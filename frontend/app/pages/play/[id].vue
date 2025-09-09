@@ -17,10 +17,10 @@
             </div>
             <p class="control">
               <button class="button" @click="toggleWatched"
-                      :class="{ 'is-success': !item.watched, 'is-danger': item.watched }"
-                      v-tooltip.bottom="'Toggle watch state'">
+                :class="{ 'is-success': !item.watched, 'is-danger': item.watched }"
+                v-tooltip.bottom="'Toggle watch state'">
                 <span class="icon">
-                  <i class="fas" :class="{'fa-eye-slash':item.watched,'fa-eye':!item.watched}"></i>
+                  <i class="fas" :class="{ 'fa-eye-slash': item.watched, 'fa-eye': !item.watched }"></i>
                 </span>
               </button>
             </p>
@@ -35,11 +35,10 @@
 
       <div class="column is-12" v-if="!isPlaying">
         <Message v-if="isLoading" message_class="is-background-info-90 has-text-dark" icon="fas fa-spinner fa-spin"
-                 title="Loading" message="Loading data. Please wait..."/>
+          title="Loading" message="Loading data. Please wait..." />
 
-        <Message v-if="!isLoading && item?.files?.length < 1" title="Warning"
-                 message_class="is-background-warning-80 has-text-dark"
-                 icon="fas fa-exclamation-triangle">
+        <Message v-if="!isLoading && (item?.files?.length ?? 0) < 1" title="Warning"
+          message_class="is-background-warning-80 has-text-dark" icon="fas fa-exclamation-triangle">
           No video URLs were found.
         </Message>
       </div>
@@ -48,7 +47,7 @@
     <div class="columns is-multiline">
 
       <div class="column is-12" v-if="isPlaying">
-        <Player :link="playUrl"/>
+        <Player :link="playUrl" />
       </div>
 
       <div class="column is-12" v-if="!isPlaying">
@@ -67,7 +66,7 @@
                     <option value="">Select...</option>
                     <template v-for="item in item?.files" :key="item.path">
                       <optgroup :label="`In: ${item.source.join(', ')}`">
-                        <option :value="item.path" v-text="basename(item.path)"/>
+                        <option :value="item.path" v-text="basename(item.path)" />
                       </optgroup>
                     </template>
                   </select>
@@ -87,11 +86,11 @@
                     <template v-for="item in filterStreams('audio')" :key="`audio-${item.index}`">
                       <option :value="item.index">
                         {{ item.index }} - {{ String(item.codec_name).toUpperCase() }}
-                        <template v-if="ag(item.tags, 'title')">
-                          - {{ ucFirst(String(ag(item.tags, 'title'))) }}
+                        <template v-if="ag(item.tags || {}, 'title')">
+                          - {{ ucFirst(String(ag(item.tags || {}, 'title'))) }}
                         </template>
-                        <template v-if="ag(item.tags, 'language')">
-                          - ({{ String(ag(item.tags, 'language')).toUpperCase() }})
+                        <template v-if="ag(item.tags || {}, 'language')">
+                          - ({{ String(ag(item.tags || {}, 'language')).toUpperCase() }})
                         </template>
                       </option>
                     </template>
@@ -112,13 +111,13 @@
                     <template v-if="filterStreams('subtitle').length > 0">
                       <optgroup label="Internal Subtitles">
                         <option v-for="item in filterStreams('subtitle')" :key="`subtitle-${item.index}`"
-                                :value="item.index">
+                          :value="item.index">
                           {{ item.index }} - {{ String(item.codec_name).toUpperCase() }}
-                          <template v-if="ag(item.tags, 'title')">
-                            - {{ ucFirst(String(ag(item.tags, 'title'))) }}
+                          <template v-if="ag(item.tags || {}, 'title')">
+                            - {{ ucFirst(String(ag(item.tags || {}, 'title'))) }}
                           </template>
-                          <template v-if="ag(item.tags, 'language')">
-                            - ({{ String(ag(item.tags, 'language')).toUpperCase() }})
+                          <template v-if="ag(item.tags || {}, 'language')">
+                            - ({{ String(ag(item.tags || {}, 'language')).toUpperCase() }})
                           </template>
                         </option>
                       </optgroup>
@@ -149,10 +148,10 @@
                 <label class="label">Video transcoding codec.</label>
                 <div class="control has-icons-left">
                   <div class="select is-fullwidth">
-                    <select v-model="video_codec" @change="e => updateHwAccel(e.target.value)">
+                    <select v-model="video_codec" @change="e => updateHwAccel((e.target as HTMLSelectElement)?.value)">
                       <option value="" disabled>Select codec...</option>
-                      <option v-for="item in item.hardware?.codecs" :key="`codec-${item.codec}`"
-                              :value="item.codec" v-text="item.name"/>
+                      <option v-for="item in item.hardware?.codecs" :key="`codec-${item.codec}`" :value="item.codec"
+                        v-text="item.name" />
                     </select>
                   </div>
                   <div class="icon is-left">
@@ -173,7 +172,7 @@
                     <select v-model="vaapi_device">
                       <option value="" disabled>Select device...</option>
                       <option v-for="item in item.hardware?.devices" :key="`codec-${item}`" :value="item"
-                              v-text="basename(item)"/>
+                        v-text="basename(item)" />
                     </select>
                   </div>
                   <div class="icon is-left">
@@ -202,7 +201,7 @@
 
             <div class="is-justify-content-end field is-grouped" v-if="config?.path">
               <div class="control">
-                <button class="button is-warning" @click="showAdvanced=!showAdvanced">
+                <button class="button is-warning" @click="showAdvanced = !showAdvanced">
                   <span class="icon"><i class="fas fa-cog"></i></span>
                   <span>Advanced settings</span>
                 </button>
@@ -210,7 +209,7 @@
 
               <div class="control">
                 <button class="button has-text-white has-background-danger-50" @click="generateToken"
-                        :disabled="isGenerating">
+                  :disabled="isGenerating">
                   <span class="icon"><i class="fas fa-play"></i></span>
                   <span>Play</span>
                 </button>
@@ -222,7 +221,7 @@
 
       <div class="column is-12" v-if="!isPlaying">
         <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
-                 @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+          @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
           <ul>
             <li>Selecting subtitle for burn in will force the video stream to be converted. We attempt to direct play
               compatible streams when possible. Text based subtitles can be converted on the fly in the player. and
@@ -246,43 +245,61 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter, navigateTo } from '#app'
+import { useStorage } from '@vueuse/core'
 import Message from '~/components/Message.vue'
-import {request, basename, makeName, notification} from '~/utils'
-import {useStorage} from '@vueuse/core'
 import Player from '~/components/Player.vue'
+import { request, basename, makeName, notification, ag, ucFirst } from '~/utils'
+import type { PlayableItem, FFProbeStream, MediaFile } from '~/types'
 
 const route = useRoute()
 
-const id = route.params.id
-const item = ref({})
-const isLoading = ref(false)
-const isPlaying = ref(false)
-const isGenerating = ref(false)
-const playUrl = ref('')
+const id = route.params.id as string
+const item = ref<PlayableItem>({} as PlayableItem)
+const isLoading = ref<boolean>(false)
+const isPlaying = ref<boolean>(false)
+const isGenerating = ref<boolean>(false)
+const playUrl = ref<string>('')
 const showAdvanced = useStorage('play_showAdvanced', false)
 const show_page_tips = useStorage('show_page_tips', true)
 const video_codec = useStorage('play_vcodec', 'libx264')
 const vaapi_device = useStorage('play_vaapi_device', '')
 const session_debug = useStorage('play_debug', false)
 
-const config = ref({
+const config = ref<{
+  /** Selected file path */
+  path: string
+  /** Selected audio stream index */
+  audio: string | number
+  /** Selected subtitle stream index or external subtitle path */
+  subtitle: string | number
+  /** Video codec to use */
+  video_codec: string
+  /** VAAPI device path */
+  vaapi_device: string
+  /** Whether to use hardware acceleration */
+  hwaccel: boolean
+  /** Whether to include debug information */
+  debug: boolean
+}>({
   path: '',
   audio: '',
   subtitle: '',
-  video_codec: video_codec,
-  vaapi_device: vaapi_device,
+  video_codec: video_codec.value,
+  vaapi_device: vaapi_device.value,
   hwaccel: false,
-  debug: session_debug,
+  debug: session_debug.value,
 })
 
-const selectedItem = ref({})
+const selectedItem = ref<MediaFile>({} as MediaFile)
 
-const loadContent = async () => {
+const loadContent = async (): Promise<void> => {
   isLoading.value = true
   try {
     const response = await request(`/history/${id}?files=true`)
-    item.value = await response.json()
+    item.value = await response.json() as PlayableItem
   } catch (error) {
     console.error(error)
     notification('error', 'Error', 'Failed to load item.')
@@ -291,17 +308,30 @@ const loadContent = async () => {
   }
 
   if (1 === item.value.files?.length) {
-    config.value.path = item.value.files[0].path
-    selectedItem.value = item.value.files[0]
-    await changeStream(null, item.value.files[0].path)
+    const firstFile = item.value.files[0]
+    if (firstFile) {
+      config.value.path = firstFile.path
+      selectedItem.value = firstFile
+      await changeStream(null, firstFile.path)
+    }
   }
 }
 
-const generateToken = async () => {
+const generateToken = async (): Promise<void> => {
   isGenerating.value = true
   try {
-
-    let userConfig = {
+    const userConfig: {
+      path: string
+      config: {
+        audio: string | number
+        video_codec: string
+        hwaccel: boolean
+        debug: boolean
+        vaapi_device?: string
+        subtitle?: string | number
+        external?: string | number
+      }
+    } = {
       path: config.value.path,
       config: {
         audio: config.value.audio,
@@ -309,7 +339,7 @@ const generateToken = async () => {
         hwaccel: config.value.hwaccel,
         debug: Boolean(config.value.debug),
       }
-    };
+    }
 
     if (config.value.vaapi_device && 'h264_vaapi' === config.value.video_codec) {
       userConfig.config.vaapi_device = config.value.vaapi_device
@@ -318,9 +348,9 @@ const generateToken = async () => {
     if (config.value.subtitle) {
       // -- check if the value is number it's internal subtitle
       if (String(config.value.subtitle).match(/^\d+$/)) {
-        userConfig.config.subtitle = config.value.subtitle;
+        userConfig.config.subtitle = config.value.subtitle
       } else {
-        userConfig.config.external = config.value.subtitle;
+        userConfig.config.external = config.value.subtitle
       }
     }
 
@@ -329,19 +359,19 @@ const generateToken = async () => {
       body: JSON.stringify(userConfig),
     })
 
-    const json = await response.json()
+    const json = await parse_api_response<{ token: string }>(response)
 
-    if (200 !== response.status) {
+    if ('error' in json) {
       notification('error', 'Token generation', 'Failed to generate token.')
-      return;
+      return
     }
 
     playUrl.value = `/v1/api/player/playlist/${json.token}/master.m3u8`
     isPlaying.value = true
 
-    await useRouter().push({
+    await navigateTo({
       path: `/play/${id}`,
-      query: {token: json.token}
+      query: { token: json.token }
     })
   } catch (error) {
     console.error(error)
@@ -351,16 +381,17 @@ const generateToken = async () => {
   }
 }
 
-const changeStream = async (e, path = null) => {
+const changeStream = async (e: Event | null, path: string | null = null): Promise<void> => {
   if (!path) {
-    path = e.target.value
+    const target = e?.target as HTMLSelectElement
+    path = target?.value
   }
   if (!path) {
-    selectedItem.value = {}
+    selectedItem.value = {} as MediaFile
     return
   }
 
-  selectedItem.value = item.value.files.find(item => item.path === path);
+  selectedItem.value = item.value.files?.find(item => item.path === path) || {} as MediaFile
   filterStreams(['subtitle', 'audio']).forEach(s => {
     if (1 === parseInt(ag(s, 'disposition.default', 0))) {
       config.value['audio' === s.codec_type ? 'audio' : 'subtitle'] = s.index
@@ -368,7 +399,7 @@ const changeStream = async (e, path = null) => {
   })
 }
 
-const filterStreams = type => {
+const filterStreams = (type?: string | Array<string>): Array<FFProbeStream> => {
   if (!selectedItem?.value || !selectedItem.value?.ffprobe?.streams) {
     return []
   }
@@ -377,20 +408,20 @@ const filterStreams = type => {
     return selectedItem.value?.ffprobe?.streams
   }
 
-  if (typeof type === 'string') {
+  if ('string' === typeof type) {
     type = [type]
   }
 
   return selectedItem.value?.ffprobe?.streams.filter(s => type.includes(s.codec_type))
 }
 
-const closeStream = async () => {
+const closeStream = async (): Promise<void> => {
   isPlaying.value = false
   playUrl.value = ''
-  await useRouter().push({path: `/history/${id}`})
+  await navigateTo({ path: `/history/${id}` })
 }
 
-const toggleWatched = async () => {
+const toggleWatched = async (): Promise<void> => {
   if (!item.value) {
     return
   }
@@ -416,7 +447,7 @@ const toggleWatched = async () => {
   }
 }
 
-const onPopState = () => {
+const onPopState = (): void => {
   if (route.query?.token) {
     playUrl.value = `${useStorage('api_url', '').value}${useStorage('api_path', '/v1/api').value}/player/playlist/${route.query.token}/master.m3u8`
     isPlaying.value = true
@@ -424,6 +455,15 @@ const onPopState = () => {
     isPlaying.value = false
     playUrl.value = ''
   }
+}
+
+const updateHwAccel = (codec: string): void => {
+  const codecInfo = item.value.hardware?.codecs?.filter(c => c.codec === codec)
+  if (!codecInfo || codecInfo.length < 1) {
+    config.value.hwaccel = false
+    return
+  }
+  config.value.hwaccel = Boolean(codecInfo[0]?.hwaccel)
 }
 
 onMounted(async () => {
@@ -435,15 +475,6 @@ onMounted(async () => {
   }
   updateHwAccel(video_codec.value)
 })
-
-const updateHwAccel = codec => {
-  const codecInfo = item.value.hardware.codecs.filter(c => c.codec === codec);
-  if (codecInfo.length < 1) {
-    config.value.hwaccel = false
-    return;
-  }
-  config.value.hwaccel = Boolean(codecInfo[0].hwaccel)
-}
 
 onUnmounted(() => window.removeEventListener('popstate', onPopState))
 </script>
