@@ -61,7 +61,7 @@ set -u
 
 # Generate Config structure.
 #
-WS_CACHE_NULL=1 /opt/bin/console -v >/dev/null
+WS_CACHE_NULL=1 /opt/bin/console -q
 
 if [ 0 = "${DISABLE_CACHE}" ]; then
   echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Starting Cache Server."
