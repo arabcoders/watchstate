@@ -630,6 +630,53 @@ const getUsers = async (showAlert = true, forceReload = false) => {
   users.value = json
 }
 
+// -- if users updated we need to reset the token in-case the plex auth changed
+watch(() => users.value, (newUsers, oldUsers) => {
+  if ('plex' !== backend.value.type) {
+    return
+  }
+
+  if (!newUsers || 0 === newUsers.length) {
+    return
+  }
+
+  if (!backend.value.user) {
+    return
+  }
+
+  // Find the currently selected user in the updated users list
+  const selectedUser = newUsers.find(user => user.id === backend.value.user)
+
+  if (!selectedUser) {
+    notification('warning', 'Warning', 'Selected user not found in updated user list')
+    return
+  }
+
+  // Check if the user has a token
+  if (!selectedUser.token) {
+    notification('error', 'Error', 'Selected user does not have a valid token')
+    return
+  }
+
+  // Only update if the token has actually changed
+  if (selectedUser.token !== backend.value.token) {
+    backend.value.token = selectedUser.token
+    notification('info', 'Information', `Token updated for user: ${selectedUser.name}`)
+  }
+
+  // Update user-specific options
+  if (selectedUser.guest) {
+    backend.value.options.plex_external_user = true
+  } else {
+    if (backend.value.options?.plex_external_user) {
+      delete backend.value.options.plex_external_user
+    }
+  }
+
+  backend.value.options.plex_user_name = selectedUser.name
+  backend.value.options.plex_user_uuid = selectedUser.uuid
+}, { deep: true })
+
 watch(showOptions, async value => {
   if (!value) {
     return
@@ -702,35 +749,38 @@ const updateIdentifier = async () => {
 }
 
 watch(() => backend.value.user, async () => {
-  if (users.value.length < 1 || 'plex' !== backend.value.type) {
+  if (0 === users.value.length || 'plex' !== backend.value.type) {
     return
   }
 
-  // -- get token for the user
-  users.value.forEach(u => {
-    if (u.id !== backend.value.user) {
-      return
+  const selectedUser = users.value.find(u => u.id === backend.value.user)
+
+  if (!selectedUser) {
+    notification('warning', 'Warning', 'Selected user not found')
+    return
+  }
+
+  // Update user-specific options
+  if (selectedUser.guest) {
+    backend.value.options.plex_external_user = true
+  } else {
+    if (backend.value.options?.plex_external_user) {
+      delete backend.value.options.plex_external_user
     }
+  }
 
-    if (u?.guest) {
-      backend.value.options.plex_external_user = true
-    } else {
-      if (backend.value.options?.plex_external_user) {
-        delete backend.value.options.plex_external_user
-      }
-    }
+  backend.value.options.plex_user_name = selectedUser.name
+  backend.value.options.plex_user_uuid = selectedUser.uuid
 
-    backend.value.options.plex_user_name = u.name
-    backend.value.options.plex_user_uuid = u.uuid
+  if (!selectedUser.token) {
+    notification('error', 'Error', 'User token not found')
+    return
+  }
 
-
-    if (!u?.token) {
-      notification('error', 'Error', `User token not found`)
-      return
-    }
-
-    backend.value.token = u.token
-  })
+  if (selectedUser.token !== backend.value.token) {
+    backend.value.token = selectedUser.token
+    notification('info', 'Information', `Token updated for user: ${selectedUser.name}`)
+  }
 })
 
 const flattenOptions = (obj, prefix = '') => {
@@ -878,6 +928,7 @@ const plex_get_token = async (notify = true) => {
 
     if (json?.authToken) {
       backend.value.token = json.authToken
+      backend.value.options.ADMIN_TOKEN = json.authToken
       await nextTick()
       plex_oauth.value = {}
       notification('success', 'Success', 'Successfully re-authenticated with plex.tv.')
