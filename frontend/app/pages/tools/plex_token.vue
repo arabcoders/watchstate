@@ -3,7 +3,7 @@
     <div class="columns is-multiline">
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4">
-          <span class="icon"><i class="fas fa-server"/></span>
+          <span class="icon"><i class="fas fa-server" /></span>
           Validate Plex Token
         </span>
         <div class="is-pulled-right"></div>
@@ -21,17 +21,16 @@
 
             <div class="card-content">
               <Message v-if="success" message_class="has-background-success-90 has-text-dark" title="Success!"
-                       icon="fas fa-check-circle" :useClose="true" @close="() => success = ''">
+                icon="fas fa-check-circle" :useClose="true" @close="() => success = ''">
                 <p>
-                  <span class="icon"><i class="fas fa-check"/></span>
+                  <span class="icon"><i class="fas fa-check" /></span>
                   <span>{{ success }}</span>
                 </p>
               </Message>
-              <Message v-if="error" message_class="has-background-danger-90 has-text-dark"
-                       title="Error" icon="fas fa-exclamation-triangle" :useClose="true"
-                       @close="() => error = ''">
+              <Message v-if="error" message_class="has-background-danger-90 has-text-dark" title="Error"
+                icon="fas fa-exclamation-triangle" :useClose="true" @close="() => error = ''">
                 <p>
-                  <span class="icon"><i class="fas fa-exclamation"/></span>
+                  <span class="icon"><i class="fas fa-exclamation" /></span>
                   <span>{{ error }}</span>
                 </p>
               </Message>
@@ -40,21 +39,21 @@
                 <div class="field has-addons">
                   <div class="control is-expanded has-icons-left">
                     <input class="input" v-model="token" required placeholder="X-Plex-Token"
-                           :type="false === exposeToken ? 'password' : 'text'">
-                    <span class="icon is-left"><i class="fas fa-key"/></span>
+                      :type="false === exposeToken ? 'password' : 'text'">
+                    <span class="icon is-left"><i class="fas fa-key" /></span>
                   </div>
                   <div class="control">
                     <button type="button" class="button is-primary" @click="exposeToken = !exposeToken"
-                            v-tooltip="'Show/Hide token'">
-                      <span class="icon" v-if="!exposeToken"><i class="fas fa-eye"/></span>
-                      <span class="icon" v-else><i class="fas fa-eye-slash"/></span>
+                      v-tooltip="'Show/Hide token'">
+                      <span class="icon" v-if="!exposeToken"><i class="fas fa-eye" /></span>
+                      <span class="icon" v-else><i class="fas fa-eye-slash" /></span>
                     </button>
                   </div>
                 </div>
                 <p>
                   Enter the <code>X-Plex-Token</code>.
                   <NuxtLink target="_blank" to="https://support.plex.tv/articles/204059436"
-                            v-text="'Visit This link'"/>
+                    v-text="'Visit This link'" />
                   to learn how to get the token.
                 </p>
               </div>
@@ -80,16 +79,18 @@
   </div>
 </template>
 
-<script setup>
-import {request, parse_api_response} from '~/utils'
+<script setup lang="ts">
+import { ref } from 'vue'
+import { request, parse_api_response } from '~/utils'
+import type { GenericResponse } from '~/types'
 
-const isLoading = ref(false)
-const token = ref('')
-const error = ref('')
-const success = ref('')
-const exposeToken = ref(false)
+const isLoading = ref<boolean>(false)
+const token = ref<string>('')
+const error = ref<string>('')
+const success = ref<string>('')
+const exposeToken = ref<boolean>(false)
 
-const validateToken = async () => {
+const validateToken = async (): Promise<void> => {
   error.value = ''
   success.value = ''
 
@@ -99,27 +100,25 @@ const validateToken = async () => {
   }
 
   try {
-
     isLoading.value = true
 
     const response = await request(`/backends/validate/token/plex`, {
       method: 'POST',
-      body: JSON.stringify({token: token.value})
+      body: JSON.stringify({ token: token.value })
     })
 
-    const resp = await parse_api_response(response)
+    const resp = await parse_api_response<GenericResponse>(response)
 
-    if (200 !== response.status) {
+    if ("error" in resp) {
       error.value = resp.error.message
       return
     }
 
     success.value = resp.info.message
-  } catch (e) {
+  } catch (e: any) {
     error.value = `An error occurred while validating the token. ${e.message}`
   } finally {
     isLoading.value = false
   }
 }
-
 </script>

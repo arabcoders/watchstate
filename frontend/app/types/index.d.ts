@@ -410,3 +410,25 @@ export interface SuppressionItem {
     example: string
     type: 'contains' | 'regex'
 }
+
+/**
+ * Represents a sub-user in the user mapping system.
+ */
+export interface SubUser {
+    /** Unique identifier for the user */
+    id: string
+    /** Backend name this user belongs to */
+    backend: string
+    /** Normalized username */
+    username: string
+    /** Real/display name of the user */
+    real_name: string
+    /** Whether this user requires PIN authentication */
+    protected?: boolean
+    /** User-specific options (mainly for Plex PIN) */
+    options?: {
+        /** Plex user PIN (4 digits) */
+        PLEX_USER_PIN?: string
+        [key: string]: any
+    }
+}
