@@ -320,11 +320,12 @@ final class GetUserToken
             return $response;
         }
 
-        $extra_msg = '';
+        $extra_msg = null;
 
         try {
-            $extra_msg = ag($response->toArray(false), 'errors.0.message', '?');
+            $extra_msg = ag($response->toArray(false), 'errors.0.message', null);
         } catch (Throwable) {
+            // Ignore
         }
 
         return new Response(
@@ -338,7 +339,7 @@ final class GetUserToken
                     'status_code' => $response->getStatusCode(),
                     'body' => $response->getContent(false),
                     'parsed' => $response->toArray(false),
-                    'extra_msg' => !$extra_msg ? '' : ". $extra_msg",
+                    'extra_msg' => $extra_msg,
                     'url' => (string)$url,
                     'tokenType' => ag_exists(
                         $context->options,
@@ -348,7 +349,7 @@ final class GetUserToken
                 ],
                 level: Levels::ERROR,
                 extra: [
-                    'error' => "Failed to get token"
+                    'error' => $extra_msg ?? "Failed to get token"
                 ],
             ),
         );

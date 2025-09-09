@@ -274,7 +274,7 @@
                 </div>
                 <div class="control">
                   <button class="button is-primary" type="button" :disabled="usersLoading || stage > 3"
-                    @click="() => getUsers()">
+                    @click="() => getUsers(true, true)">
                     <span class="icon"><i class="fa"
                         :class="{ 'fa-spinner fa-spin': usersLoading, 'fa-refresh': !usersLoading }" /></span>
                     <span class="is-hidden-mobile">Reload</span>
@@ -712,7 +712,7 @@ const getAccessToken = async (): Promise<boolean | undefined> => {
   }
 }
 
-const getUsers = async (showAlert: boolean = true): Promise<Array<BackendUser> | undefined> => {
+const getUsers = async (showAlert: boolean = true, forceReload: boolean = false): Promise<Array<BackendUser> | undefined> => {
   const required_values = ['type', 'token', 'url', 'uuid']
 
   if (required_values.some(v => !backend.value[v as keyof Backend])) {
@@ -741,7 +741,13 @@ const getUsers = async (showAlert: boolean = true): Promise<Array<BackendUser> |
       }
     })
 
-    const response = await request(`/backends/users/${backend.value.type}?tokens=1`, {
+    const query = new URLSearchParams()
+    query.append('tokens', '1')
+    if (forceReload) {
+      query.append('no_cache', '1')
+    }
+
+    const response = await request(`/backends/users/${backend.value.type}?${query.toString()}`, {
       method: 'POST',
       body: JSON.stringify(data)
     })
