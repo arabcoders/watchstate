@@ -1,14 +1,84 @@
 [
     {
-        "tag": "dev-20250827-c8ed4152",
-        "date": "2025-08-26T23:19:46+00:00",
+        "tag": "dev-20250910-a1d4623e",
+        "date": "2025-09-10T16:26:05+00:00",
         "commits": [
             {
-                "sha": "c8ed4152",
+                "sha": "a1d4623e",
+                "message": "TS Migration: WIP",
+                "author": "arabcoders",
+                "date": "2025-09-10T16:26:05+00:00",
+                "full_sha": "a1d4623e2121b93860c685ba56fc5c0317db0c24"
+            },
+            {
+                "sha": "3dac119e",
+                "message": "fix token update for plex",
+                "author": "arabcoders",
+                "date": "2025-09-09T15:51:40+00:00",
+                "full_sha": "3dac119ec50137212b1534946439902dfa43d1a3"
+            },
+            {
+                "sha": "a3dca989",
+                "message": "TS Migration: WIP",
+                "author": "arabcoders",
+                "date": "2025-09-09T14:37:13+00:00",
+                "full_sha": "a3dca98904d681dba9b6b2da9ae5a88120d6f5c1"
+            },
+            {
+                "sha": "e9bdb570",
+                "message": "prevent silent errors in container start up",
+                "author": "arabcoders",
+                "date": "2025-09-09T13:55:31+00:00",
+                "full_sha": "e9bdb570dfaf95183d4dbf1c3c8313b6214931c2"
+            },
+            {
+                "sha": "38a77953",
+                "message": "Add re-authenticate support for plex in edit.",
+                "author": "arabcoders",
+                "date": "2025-09-09T13:52:41+00:00",
+                "full_sha": "38a779537a4ff805b754f04505e5099049bc2733"
+            },
+            {
+                "sha": "d71a0116",
+                "message": "updated external packages",
+                "author": "arabcoders",
+                "date": "2025-09-08T20:40:55+00:00",
+                "full_sha": "d71a01169931ba3cb7632a328d488f5c85081f16"
+            },
+            {
+                "sha": "748f6246",
+                "message": "TS Migration: WIP",
+                "author": "arabcoders",
+                "date": "2025-09-08T20:32:06+00:00",
+                "full_sha": "748f6246c38efa268b53fe41de131c9526cc7818"
+            },
+            {
+                "sha": "90318842",
+                "message": "TS Migration: WIP",
+                "author": "arabcoders",
+                "date": "2025-09-06T19:13:47+00:00",
+                "full_sha": "9031884238cd41f6b7bd86381f440d1077353881"
+            },
+            {
+                "sha": "d635d133",
+                "message": "TS Migration: WIP",
+                "author": "arabcoders",
+                "date": "2025-09-06T17:09:00+00:00",
+                "full_sha": "d635d133efca1870687cdf37eba4fbf4f3ce202d"
+            },
+            {
+                "sha": "5c479986",
+                "message": "TS Migration: WIP",
+                "author": "arabcoders",
+                "date": "2025-09-05T17:47:44+00:00",
+                "full_sha": "5c4799868152ef2d75bc8c56118ffbb9b04e38d7"
+            },
+            {
+                "sha": "e51fe5f0",
                 "message": "workaround openssl_digest in frankenphp",
                 "author": "arabcoders",
-                "date": "2025-08-26T23:19:46+00:00",
-                "full_sha": "c8ed41521fd4dc5fbcc6ddfe9b00a7fdc466088c"
+                "date": "2025-08-26T23:21:08+00:00",
+                "full_sha": "e51fe5f0c61cefbfe6617523a062053ff775cd85"
             },
             {
                 "sha": "e3485904",
@@ -326,7 +396,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "c8ed41521fd4dc5fbcc6ddfe9b00a7fdc466088c"
+        "full_sha": "a1d4623e2121b93860c685ba56fc5c0317db0c24"
     },
     {
         "tag": "dev-20250604-9407bc76",
