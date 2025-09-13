@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250910-a1d4623e",
-        "date": "2025-09-10T16:26:05+00:00",
+        "tag": "dev-20250914-a3e5f96d",
+        "date": "2025-09-13T22:49:45+00:00",
         "commits": [
+            {
+                "sha": "a3e5f96d",
+                "message": "replace alpine ffmpeg with jellyfin-ffmpeg",
+                "author": "arabcoders",
+                "date": "2025-09-13T22:49:45+00:00",
+                "full_sha": "a3e5f96d55912c85d5e84a9a41be0c6529c2cb30"
+            },
             {
                 "sha": "a1d4623e",
                 "message": "TS Migration: WIP",
@@ -396,7 +403,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "a1d4623e2121b93860c685ba56fc5c0317db0c24"
+        "full_sha": "a3e5f96d55912c85d5e84a9a41be0c6529c2cb30"
     },
     {
         "tag": "dev-20250604-9407bc76",
