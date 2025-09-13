@@ -24,14 +24,14 @@ ENV PACKAGES=""
 #
 RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone && \
     ARCH=`uname -m` && if [ "${ARCH}" == "x86_64" ]; then PACKAGES="${PACKAGES} intel-media-driver"; fi && \
-    apk add --no-cache bash icu-data-full nano curl procps net-tools iproute2 ffmpeg \
+    apk add --no-cache bash icu-data-full nano curl procps net-tools iproute2 \
     shadow sqlite redis tzdata gettext ca-certificates nss mailcap libcap fontconfig ttf-freefont font-noto \
     terminus-font font-dejavu libva-utils ${PACKAGES} && \
     # Delete unused users change users group gid to allow unRaid users to use gid 100 \
     deluser redis && groupmod -g 1588787 users && \
     # Create our own user. \
     useradd -u ${USER_ID:-1000} -U -d /config -s /bin/bash user && \
-    # Cache fonts.
+    # Cache fonts. \
     fc-cache -f && fc-list | sort
 
 # Copy frankenphp (caddy+php) to the container.
@@ -43,6 +43,8 @@ COPY ./ /opt/app
 
 # Copy frontend to public directory.
 COPY --chown=app:app --from=npm_builder /frontend/exported/ /opt/app/public/exported/
+COPY --from=ghcr.io/arabcoders/jellyfin-ffmpeg /usr/bin/ffmpeg /usr/bin/ffmpeg
+COPY --from=ghcr.io/arabcoders/jellyfin-ffmpeg /usr/bin/ffprobe /usr/bin/ffprobe
 
 # install composer & packages.
 #
@@ -58,11 +60,11 @@ RUN echo '' && \
     ln -s ${TOOL_PATH}/bin/console /opt/bin/console && \
     # Install dependencies. \
     /opt/bin/composer --working-dir=/opt/app/ -no --no-progress --no-dev --no-cache --quiet -- install && \
-    # Copy configuration files to the expected directories.
+    # Copy configuration files to the expected directories/ \
     cp ${TOOL_PATH}/container/files/init-container.sh /opt/bin/init-container && \
     cp ${TOOL_PATH}/container/files/runner.sh /opt/bin/ws-runner && \
     cp ${TOOL_PATH}/container/files/redis.conf /opt/config/redis.conf && \
-    # Make sure /bin/* files are given executable flag.
+    # Make sure /bin/* files are given executable flag. \
     chmod +x /opt/bin/* && \
     # Update php.ini & php fpm \
     mkdir -p /etc/frankenphp/php.d && \
