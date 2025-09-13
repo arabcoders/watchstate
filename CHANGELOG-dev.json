@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250914-a3e5f96d",
-        "date": "2025-09-13T22:49:45+00:00",
+        "tag": "dev-20250914-d4b5993f",
+        "date": "2025-09-13T22:59:33+00:00",
         "commits": [
+            {
+                "sha": "d4b5993f",
+                "message": "Revert \"replace alpine ffmpeg with jellyfin-ffmpeg\"\n\nThis reverts commit a3e5f96d55912c85d5e84a9a41be0c6529c2cb30.",
+                "author": "arabcoders",
+                "date": "2025-09-13T22:59:33+00:00",
+                "full_sha": "d4b5993fccf1205951e21b93a8376de46ef80caa"
+            },
             {
                 "sha": "a3e5f96d",
                 "message": "replace alpine ffmpeg with jellyfin-ffmpeg",
@@ -403,7 +410,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "a3e5f96d55912c85d5e84a9a41be0c6529c2cb30"
+        "full_sha": "d4b5993fccf1205951e21b93a8376de46ef80caa"
     },
     {
         "tag": "dev-20250604-9407bc76",
