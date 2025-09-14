@@ -4,7 +4,7 @@ WORKDIR /frontend
 COPY ./frontend ./
 RUN if [ ! -d /frontend/exported ]; then yarn install --production --prefer-offline --frozen-lockfile && yarn run generate; fi
 
-FROM alpine:edge
+FROM debian:13
 
 COPY --from=composer/composer:2-bin /composer /opt/bin/composer
 
@@ -23,10 +23,10 @@ ENV PACKAGES=""
 # Setup the required environment.
 #
 RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone && \
-    ARCH=`uname -m` && if [ "${ARCH}" == "x86_64" ]; then PACKAGES="${PACKAGES} intel-media-driver"; fi && \
-    apk add --no-cache bash icu-data-full nano curl procps net-tools iproute2 ffmpeg \
-    shadow sqlite redis tzdata gettext ca-certificates nss mailcap libcap fontconfig ttf-freefont font-noto \
-    terminus-font font-dejavu libva-utils ${PACKAGES} && \
+    ARCH="$(dpkg --print-architecture)" && \
+    if [ "$ARCH" = "amd64" ]; then PACKAGES="${PACKAGES} intel-media-va-driver i965-va-driver libmfx-gen1.2"; fi && \
+    apt update && apt install -y --no-install-recommends nano curl procps net-tools iproute2 tzdata sqlite3 \
+    redis gettext ca-certificates fontconfig fonts-freefont-ttf fonts-noto fonts-terminus fonts-dejavu vainfo ${PACKAGES} && \
     # Delete unused users change users group gid to allow unRaid users to use gid 100 \
     deluser redis && groupmod -g 1588787 users && \
     # Create our own user. \
@@ -37,6 +37,8 @@ RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezo
 # Copy frankenphp (caddy+php) to the container.
 #
 COPY --chown=app:app --from=ghcr.io/arabcoders/franken_builder:latest /usr/local/bin/frankenphp /opt/bin/
+COPY --chown=app:app --from=ghcr.io/arabcoders/jellyfin-ffmpeg /usr/bin/ffmpeg /usr/bin/ffmpeg
+COPY --chown=app:app --from=ghcr.io/arabcoders/jellyfin-ffmpeg /usr/bin/ffprobe /usr/bin/ffprobe
 
 # Copy source code to container.
 COPY ./ /opt/app
@@ -51,7 +53,6 @@ RUN echo '' && \
     # create /usr/bin/php that points to /opt/bin/frankenphp php-cli "$@" \
     echo '#!/bin/sh' > /usr/bin/php && \
     echo 'exec /opt/bin/frankenphp php-cli "$@"' >> /usr/bin/php && chmod +x /usr/bin/php && \
-    ln -s /usr/bin/nano /usr/bin/pico && \
     # Create basic directories \
     bash -c 'umask 0000 && mkdir -p /temp_data/ /opt/{app,bin,config} /config/{backup,cache,config,db,debug,logs,webhooks,profiler}' && \
     # Link console. \
