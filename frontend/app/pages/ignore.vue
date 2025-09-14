@@ -10,7 +10,7 @@
           <div class="field is-grouped">
             <p class="control">
               <button class="button is-primary" v-tooltip.bottom="'Add New Ignore rule'"
-                @click="toggleForm = !toggleForm">
+                      @click="toggleForm = !toggleForm">
                 <span class="icon">
                   <i class="fas fa-add"></i>
                 </span>
@@ -18,7 +18,7 @@
             </p>
             <p class="control">
               <button class="button is-info" @click="loadContent" :disabled="isLoading || toggleForm"
-                :class="{ 'is-loading': isLoading }">
+                      :class="{ 'is-loading': isLoading }">
                 <span class="icon">
                   <i class="fas fa-sync"></i>
                 </span>
@@ -35,7 +35,7 @@
 
       <div class="column is-12" v-if="!toggleForm && items.length < 1">
         <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
-          icon="fas fa-spinner fa-spin" message="Loading data. Please wait..." />
+                 icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
         <Message v-else message_class="has-background-success-90 has-text-dark" title="Information" icon="fas fa-check">
           There are no ignore rules configured. You can add new ignore rules by clicking on the
           <i @click="toggleForm = true" class="is-clickable fas fa-add"></i> button.
@@ -206,13 +206,13 @@
                     <span class="icon-text">
                       <span class="icon"><i class="fas fa-server"></i></span>
                       <span>
-                        <NuxtLink :to="`/backend/${item.backend}`" v-text="item.backend" />
+                        <NuxtLink :to="`/backend/${item.backend}`" v-text="item.backend"/>
                       </span>
                     </span>
                   </div>
                   <div class="column is-6 has-text-right">
                     <strong>Scope:&nbsp;</strong>
-                    <NuxtLink :to="makeItemLink(item)" v-text="item.scoped_to" v-if="item.scoped_to" />
+                    <NuxtLink :to="makeItemLink(item)" v-text="item.scoped_to" v-if="item.scoped_to"/>
                     <template v-else>Global</template>
                   </div>
 
@@ -221,7 +221,7 @@
                       <span class="icon"><i class="fas fa-database"></i></span>
                       <span>
                         <NuxtLink target="_blank" :to="makeGUIDLink(item.type, item.db, item.id)"
-                          v-text="`${item.db}://${item.id}`" />
+                                  v-text="`${item.db}://${item.id}`"/>
                       </span>
                     </span>
                   </div>
@@ -230,7 +230,7 @@
                     <span class="icon-text">
                       <span class="icon"><i class="fas fa-calendar"></i></span>
                       <span class="has-tooltip"
-                        v-tooltip="`Created at: ${moment(item.created).format(TOOLTIP_DATE_FORMAT)}`">
+                            v-tooltip="`Created at: ${moment(item.created).format(TOOLTIP_DATE_FORMAT)}`">
                         {{ moment(item.created).fromNow() }}</span>
                     </span>
                   </div>
@@ -262,7 +262,7 @@
 
       <div class="column is-12">
         <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
-          @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+                 @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
           <ul>
             <li>Ignoring specific GUID sometimes helps in preventing incorrect data being added to WatchState, due to
               incorrect metadata being provided by backends.
@@ -283,22 +283,29 @@
 
 <script setup lang="ts">
 import '~/assets/css/bulma-switch.css'
-import { ref, computed, watch, onMounted } from 'vue'
-import { useHead, useRoute } from '#app'
-import { useStorage } from '@vueuse/core'
+import {ref, computed, watch, onMounted} from 'vue'
+import {useHead, useRoute} from '#app'
+import {useStorage} from '@vueuse/core'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
-import { request, awaitElement, copyText, notification, stringToRegex, TOOLTIP_DATE_FORMAT } from '~/utils'
-import { useDialog } from '~/composables/useDialog'
-import type { IgnoreItem, GuidProvider } from '~/types'
+import {request, awaitElement, copyText, notification, stringToRegex, TOOLTIP_DATE_FORMAT} from '~/utils'
+import {useDialog} from '~/composables/useDialog'
+import type {IgnoreItem, GuidProvider} from '~/types'
 
-useHead({ title: 'Ignored GUIDs' })
+useHead({title: 'Ignored GUIDs'})
 
 const types = ['show', 'movie', 'episode']
-const empty_form = { id: '', type: '', backend: '', db: '', scoped: false, scoped_to: null }
+const empty_form = {id: '', type: '', backend: '', db: '', scoped: false, scoped_to: null}
 const items = ref<Array<IgnoreItem>>([])
 const toggleForm = ref<boolean>(false)
-const form = ref<{ id: string, type: string, backend: string, db: string, scoped: boolean, scoped_to: string | null }>(JSON.parse(JSON.stringify(empty_form)))
+const form = ref<{
+  id: string,
+  type: string,
+  backend: string,
+  db: string,
+  scoped: boolean,
+  scoped_to: string | null
+}>(JSON.parse(JSON.stringify(empty_form)))
 const show_page_tips = useStorage('show_page_tips', true)
 const isLoading = ref<boolean>(false)
 const guids = ref<Array<GuidProvider>>([])
@@ -363,7 +370,7 @@ const loadContent = async (): Promise<void> => {
 onMounted(() => loadContent())
 
 const deleteIgnore = async (item: IgnoreItem): Promise<void> => {
-  const { status: confirmStatus } = await useDialog().confirmDialog({
+  const {status: confirmStatus} = await useDialog().confirmDialog({
     message: `Delete '${item.db}://${item.id}' rule?`,
     confirmColor: 'is-danger'
   })
@@ -453,7 +460,7 @@ watch(toggleForm, (value: boolean) => {
 })
 
 const checkForm = computed<boolean>(() => {
-  const { id, type, backend, db } = form.value
+  const {id, type, backend, db} = form.value
   return '' !== id && '' !== type && '' !== backend && '' !== db
 })
 </script>

@@ -51,10 +51,9 @@
                   </div>
                 </div>
                 <p>
-                  Enter the <code>X-Plex-Token</code>.
-                  <NuxtLink target="_blank" to="https://support.plex.tv/articles/204059436"
-                    v-text="'Visit This link'" />
-                  to learn how to get the token.
+                  Enter the <code>X-Plex-Token</code>. <NuxtLink target="_blank"
+                    to="https://support.plex.tv/articles/204059436">Visit This link</NuxtLink> to learn how to get the
+                  token.
                 </p>
               </div>
             </div>

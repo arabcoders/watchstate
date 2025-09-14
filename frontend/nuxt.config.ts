@@ -58,6 +58,7 @@ export default defineNuxtConfig({
         '@vueuse/nuxt',
         'floating-vue/nuxt',
         '@pinia/nuxt',
+        process.env.NODE_ENV === 'development' ? '@nuxt/eslint' : '',
     ],
 
     nitro: {
