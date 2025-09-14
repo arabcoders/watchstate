@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250914-136107fc",
-        "date": "2025-09-14T13:59:02+00:00",
+        "tag": "dev-20250914-af314891",
+        "date": "2025-09-14T14:09:37+00:00",
         "commits": [
+            {
+                "sha": "af314891",
+                "message": "fixes",
+                "author": "arabcoders",
+                "date": "2025-09-14T14:09:37+00:00",
+                "full_sha": "af31489129742b0370a5781b1f9597222eff07dd"
+            },
             {
                 "sha": "136107fc",
                 "message": "Rebase on debian, ref #721",
@@ -424,7 +431,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "136107fcf845a7d30a836ae4367caeab5a5d09da"
+        "full_sha": "af31489129742b0370a5781b1f9597222eff07dd"
     },
     {
         "tag": "dev-20250604-9407bc76",
