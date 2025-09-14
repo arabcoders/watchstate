@@ -1,8 +1,22 @@
 [
     {
-        "tag": "dev-20250914-d4b5993f",
-        "date": "2025-09-13T22:59:33+00:00",
+        "tag": "dev-20250914-136107fc",
+        "date": "2025-09-14T13:59:02+00:00",
         "commits": [
+            {
+                "sha": "136107fc",
+                "message": "Rebase on debian, ref #721",
+                "author": "arabcoders",
+                "date": "2025-09-14T13:59:02+00:00",
+                "full_sha": "136107fcf845a7d30a836ae4367caeab5a5d09da"
+            },
+            {
+                "sha": "cbc914ce",
+                "message": "added linting to frontend",
+                "author": "arabcoders",
+                "date": "2025-09-14T13:06:48+00:00",
+                "full_sha": "cbc914cef326d2c23ed1d915c48f7cb0cc16c080"
+            },
             {
                 "sha": "d4b5993f",
                 "message": "Revert \"replace alpine ffmpeg with jellyfin-ffmpeg\"\n\nThis reverts commit a3e5f96d55912c85d5e84a9a41be0c6529c2cb30.",
@@ -410,7 +424,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "d4b5993fccf1205951e21b93a8376de46ef80caa"
+        "full_sha": "136107fcf845a7d30a836ae4367caeab5a5d09da"
     },
     {
         "tag": "dev-20250604-9407bc76",
