@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250914-af314891",
-        "date": "2025-09-14T14:09:37+00:00",
+        "tag": "dev-20250917-16a69da2",
+        "date": "2025-09-16T21:22:11+00:00",
         "commits": [
+            {
+                "sha": "16a69da2",
+                "message": "Some episodes were getting marked as multi wrongly due to bad parsing, you may need to force meta update to correct the problem",
+                "author": "arabcoders",
+                "date": "2025-09-16T21:22:11+00:00",
+                "full_sha": "16a69da2c722adc6118ca0751a84567e41f25ac6"
+            },
             {
                 "sha": "af314891",
                 "message": "fixes",
@@ -431,7 +438,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "af31489129742b0370a5781b1f9597222eff07dd"
+        "full_sha": "16a69da2c722adc6118ca0751a84567e41f25ac6"
     },
     {
         "tag": "dev-20250604-9407bc76",
