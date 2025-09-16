@@ -41,6 +41,25 @@ return (function () {
             },
         ],
         [
+            'key' => 'WS_DB_MODE',
+            'description' => 'DB journal mode. (MEMORY or WAL) Default: WAL. Memory mode can give a huge performance boost at the cost of potential data loss on crashes.',
+            'type' => 'string',
+            'validate' => function (mixed $value): string {
+                if (is_numeric($value) || empty($value)) {
+                    throw new ValidationException('Invalid db mode. Empty value.');
+                }
+
+                $val = strtoupper($value);
+                $modes = ['MEMORY', 'WAL'];
+
+                if (!in_array($val, $modes, true)) {
+                    throw new ValidationException('Invalid db mode. Must be one of: ' . implode(', ', $modes));
+                }
+
+                return $val;
+            },
+        ],
+        [
             'key' => 'WS_LOGS_CONTEXT',
             'description' => 'Enable extra context information in logs and output.',
             'type' => 'bool',

@@ -117,6 +117,18 @@ return (function () {
 
     $config['api']['logfile'] = ag($config, 'tmpDir') . '/logs/access.' . $logDateFormat . '.log';
 
+    if ('MEMORY' === env('WS_DB_MODE', 'WAL')) {
+        $pragma = [
+            'PRAGMA journal_mode=MEMORY',
+            'PRAGMA synchronous=OFF',
+        ];
+    } else {
+        $pragma = [
+            'PRAGMA journal_mode=WAL',
+            'PRAGMA synchronous=NORMAL',
+        ];
+    }
+
     $config['database'] += [
         'file' => $dbFile,
         'dsn' => 'sqlite:' . $dbFile,
@@ -129,11 +141,8 @@ return (function () {
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         ],
         'exec' => [
-            'PRAGMA journal_mode=WAL',
             'PRAGMA busy_timeout=5000',
-            'PRAGMA SYNCHRONOUS=NORMAL',
-            //'PRAGMA SYNCHRONOUS=OFF'
-            //'PRAGMA journal_mode=MEMORY',
+            ...$pragma,
         ],
     ];
 
