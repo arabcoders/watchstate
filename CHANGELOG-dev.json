@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250917-16a69da2",
-        "date": "2025-09-16T21:22:11+00:00",
+        "tag": "dev-20250917-53020787",
+        "date": "2025-09-16T21:47:45+00:00",
         "commits": [
+            {
+                "sha": "53020787",
+                "message": "Made db journal configurable",
+                "author": "arabcoders",
+                "date": "2025-09-16T21:47:45+00:00",
+                "full_sha": "53020787245189187c7a03cf10b56767bf09f58c"
+            },
             {
                 "sha": "16a69da2",
                 "message": "Some episodes were getting marked as multi wrongly due to bad parsing, you may need to force meta update to correct the problem",
@@ -438,7 +445,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "16a69da2c722adc6118ca0751a84567e41f25ac6"
+        "full_sha": "53020787245189187c7a03cf10b56767bf09f58c"
     },
     {
         "tag": "dev-20250604-9407bc76",
