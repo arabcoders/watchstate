@@ -24,7 +24,7 @@ export default withNuxt(
             'vue/no-undef-properties': 'off',
             'vue/script-setup-uses-vars': 'off',
 
-
+            'vue/html-quotes': ['warn', 'double'],
             'vue/mustache-interpolation-spacing': ['warn', 'always'],
             'vue/v-bind-style': ['warn', 'shorthand'],
             'vue/v-on-style': ['warn', 'shorthand'],
@@ -36,17 +36,15 @@ export default withNuxt(
             'vue/block-order': 'off',
             'vue/prop-name-casing': 'off',
             'vue/no-v-html': 'off',
-            'vue/html-quotes': 'off',
 
-            'no-empty': ['error', { allowEmptyCatch: true }],
+            'no-empty': ['error', {allowEmptyCatch: true}],
             'no-console': 'off',
             'no-debugger': 'warn',
             'no-alert': 'warn',
 
             'no-undef': 'off',
             'no-unused-vars': 'off',
-            'vue/no-unused-vars': 'off',
-            "@typescript-eslint/no-explicit-any": 'off',
+            'vue/no-unused-vars': 'off'
         }
     },
     {

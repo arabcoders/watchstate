@@ -1434,10 +1434,34 @@ if (!function_exists('parseEpisodeRange')) {
             }
         }
 
-        // 2) Shorthand after delimiters: -03, .03, -E03, .E03
-        if (preg_match_all('/[.\-](?:E)?(\d{1,3})/i', $file, $m2)) {
-            foreach ($m2[1] as $e) {
-                $eps[] = (int)$e;
+        // 2) Shorthand after delimiters: -03, .03, -E03 .E03
+        // Avoid matching resolution fragments like 108 from 1080p by ensuring the following
+        // character is not another digit.
+        if (preg_match_all('/[.\-](?:E)?(\d{1,3})(?!\d)/i', $file, $m2, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
+            foreach ($m2 as $match) {
+                [$_, $fullOffset] = $match[0];
+                [$value, $offset] = $match[1];
+                $nextIndex = (int)($offset) + strlen($value);
+                $nextChar = $file[$nextIndex] ?? '';
+
+                if ('' !== $nextChar && ctype_alpha($nextChar)) {
+                    continue;
+                }
+
+                $prefix = substr($file, 0, (int)$fullOffset);
+                $lastEpisodeIndex = strripos($prefix, 'E');
+                if (false === $lastEpisodeIndex) {
+                    continue;
+                }
+
+                $context = substr($file, $lastEpisodeIndex, $fullOffset - $lastEpisodeIndex);
+                $context = preg_replace('/\s+/', '', $context);
+
+                if (!preg_match('/^E\d{1,3}(?:[.\-]\d{1,3})*$/i', $context)) {
+                    continue;
+                }
+
+                $eps[] = (int)$value;
             }
         }
 
