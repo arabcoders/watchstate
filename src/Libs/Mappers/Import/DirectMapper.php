@@ -15,6 +15,7 @@ use App\Libs\UserContext;
 use App\Listeners\ProcessProgressEvent;
 use App\Model\Events\EventsTable;
 use DateTimeInterface as iDate;
+use Monolog\Level;
 use PDOException;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\Log\LogLevel;
@@ -323,6 +324,7 @@ class DirectMapper implements ImportInterface
     {
         $metadataOnly = true === (bool)ag($opts, Options::IMPORT_METADATA_ONLY);
         $inDryRunMode = $this->inDryRunMode();
+        $writer = ag($opts, Options::LOG_TO_WRITER, null);
         $keys = [iState::COLUMN_META_DATA];
 
         $progressChange = $this->shouldProgressUpdate($local, $entity, $opts);
@@ -409,7 +411,19 @@ class DirectMapper implements ImportInterface
             return $this;
         }
 
+        $msg = "{mapper}: [T] Ignoring '{user}@{backend}' - '#{id}: {title}'. No metadata changes detected.";
+        $context = [
+            'user' => $this->userContext?->name ?? 'main',
+            'mapper' => afterLast(self::class, '\\'),
+            'id' => $local->id ?? 'New',
+            'backend' => $entity->via,
+            'title' => $local->getName(),
+        ];
+
         if (true === $metadataOnly) {
+            if (null !== $writer) {
+                $writer(Level::Info, $msg, $context);
+            }
             return $this;
         }
 
@@ -441,17 +455,10 @@ class DirectMapper implements ImportInterface
             return $this;
         }
 
-        if ($this->inTraceMode()) {
-            $this->logger->info(
-                "{mapper}: [T] Ignoring '{user}@{backend}' - '#{id}: {title}'. No metadata changes detected.",
-                [
-                    'user' => $this->userContext?->name ?? 'main',
-                    'mapper' => afterLast(self::class, '\\'),
-                    'id' => $local->id ?? 'New',
-                    'backend' => $entity->via,
-                    'title' => $local->getName(),
-                ]
-            );
+        if (true === $this->inTraceMode()) {
+            $this->logger->info($msg, $context);
+        } elseif (null !== $writer) {
+            $writer(Level::Info, $msg, $context);
         }
 
         return $this;
@@ -470,6 +477,7 @@ class DirectMapper implements ImportInterface
     {
         $keys = [iState::COLUMN_META_DATA];
         $inDryRunMode = $this->inDryRunMode();
+        $writer = ag($opts, Options::LOG_TO_WRITER, null);
 
         $cloned = clone $local;
 
@@ -647,14 +655,19 @@ class DirectMapper implements ImportInterface
             return $this->add($entity, $opts);
         }
 
-        if ($this->inTraceMode()) {
-            $this->logger->info("{mapper}: [O] Ignoring '{user}@{backend}' - '#{id}: {title}'. No changes detected.", [
-                'user' => $this->userContext?->name ?? 'main',
-                'mapper' => afterLast(self::class, '\\'),
-                'id' => $cloned->id ?? 'New',
-                'backend' => $entity->via,
-                'title' => $cloned->getName(),
-            ]);
+        $msg = "{mapper}: [O] Ignoring '{user}@{backend}' - '#{id}: {title}'. No changes detected.";
+        $context = [
+            'user' => $this->userContext?->name ?? 'main',
+            'mapper' => afterLast(self::class, '\\'),
+            'id' => $cloned->id ?? 'New',
+            'backend' => $entity->via,
+            'title' => $cloned->getName(),
+        ];
+
+        if (true === $this->inTraceMode()) {
+            $this->logger->info($msg);
+        } elseif (null !== $writer) {
+            $writer(Level::Info, $msg, $context);
         }
 
         return $this;
@@ -772,6 +785,7 @@ class DirectMapper implements ImportInterface
     public function handleUntaintedEntity(iState $local, iState $entity, array $opts = []): self
     {
         $inDryRunMode = $this->inDryRunMode();
+        $writer = ag($opts, Options::LOG_TO_WRITER, null);
 
         $cloned = clone $local;
 
@@ -871,6 +885,8 @@ class DirectMapper implements ImportInterface
             return $this;
         }
 
+        $msg = "{mapper}: [U] Ignoring '{user}@{backend}' - '#{id}: {title}'. Metadata & play state are identical.";
+
         $context = [
             'mapper' => afterLast(self::class, '\\'),
             'id' => $cloned->id ?? 'New',
@@ -887,10 +903,9 @@ class DirectMapper implements ImportInterface
         }
 
         if ($this->inTraceMode()) {
-            $this->logger->info(
-                "{mapper}: [U] Ignoring '{user}@{backend}' - '#{id}: {title}'. Metadata & play state are identical.",
-                $context
-            );
+            $this->logger->info($msg, $context);
+        } elseif (null !== $writer) {
+            $writer(Level::Info, $msg, $context);
         }
 
         Message::increment("{$entity->via}.{$entity->type}.ignored_no_change");

@@ -24,6 +24,7 @@ final class Options
     public const string LIBRARY_SEGMENT = 'LIBRARY_SEGMENT';
     public const string STATE_UPDATE_EVENT = 'STATE_UPDATE_EVENT';
     public const string STATE_PROGRESS_EVENT = 'STATE_PROGRESS_EVENT';
+    public const string LOG_TO_WRITER = 'LOG_TO_WRITER';
     public const string DUMP_PAYLOAD = 'DUMP_PAYLOAD';
     public const string ADMIN_TOKEN = 'ADMIN_TOKEN';
     public const string PLEX_USER_UUID = 'plex_user_uuid';

@@ -62,7 +62,7 @@
 
           <footer class="modal-card-foot p-4 is-justify-content-flex-end">
             <template v-if="state.current?.type === 'alert'">
-              <button class="button is-danger" @click="onEnter">
+              <button id="primaryButton" class="button is-danger" @click="onEnter">
                 <span class="icon-text">
                   <span class="icon"><i class="fas fa-check"/></span>
                   <span>{{ (state.current?.opts as any)?.confirmText ?? 'OK' }}</span>
@@ -73,7 +73,8 @@
             <template v-else-if="state.current?.type === 'confirm' || state.current?.type === 'prompt'">
               <div class="field is-grouped">
                 <div class="control">
-                  <button class="button" @click="onEnter" :class="state.current?.opts.confirmColor ?? 'is-primary'"
+                  <button id="primaryButton" class="button" @click="onEnter"
+                          :class="state.current?.opts.confirmColor ?? 'is-primary'"
                           :disabled="localInput === (state.current?.opts as PromptOptions)?.initial">
                     <span class="icon-text">
                       <span class="icon"><i class="fas fa-check"/></span>
@@ -100,35 +101,29 @@
 
 <script setup lang="ts">
 import {ref, watch, nextTick, computed} from 'vue'
-import {useDialog, type QueueItem, type ConfirmOptions, type PromptOptions} from '~/composables/useDialog'
-import {disableOpacity, enableOpacity} from '~/utils'
+import {useDialog, type ConfirmOptions, type PromptOptions} from '~/composables/useDialog'
 
 const {state, confirm, cancel} = useDialog()
 
 const localInput = ref('')
-const shouldControlOpacity = ref(true)
-const inputEl = ref<HTMLInputElement>()
 
-watch(() => state.current, (cur, prev) => {
-  if (cur) {
-    shouldControlOpacity.value = cur.opts?.opacityControl !== false
-    if (shouldControlOpacity.value) {
-      disableOpacity()
-    }
-  } else if (prev) {
-    if (shouldControlOpacity.value) {
-      enableOpacity()
-    }
+watch(() => state.current, (cur) => {
+  if (state.current) {
+    disableOpacity()
+  } else {
+    enableOpacity()
   }
-  localInput.value = cur && cur.type === 'prompt' ? ((cur.opts as PromptOptions)?.initial ?? '') : ''
+
+  localInput.value = cur?.type === 'prompt' ? (cur.opts as any).initial ?? '' : ''
 }, {immediate: true})
 
+const inputEl = ref<HTMLInputElement>()
 const focusPrimary = () => {
   const root = document.getElementById('app-dialog-host')
   if (!root) {
     return
   }
-  const btn = root.querySelector<HTMLButtonElement>('.modal-card-foot .button.is-primary')
+  const btn = root.querySelector<HTMLButtonElement>('#primaryButton')
   btn?.focus()
 }
 const focusInput = async () => {
@@ -154,6 +149,8 @@ const defaultTitle = computed(() => {
       return 'Confirm'
     case 'prompt':
       return 'Input required'
+    default:
+      return 'Dialog'
   }
 })
 </script>
