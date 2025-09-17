@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250917-0a3fb518",
-        "date": "2025-09-17T19:38:45+00:00",
+        "tag": "dev-20250917-fd9ba044",
+        "date": "2025-09-17T20:02:26+00:00",
         "commits": [
+            {
+                "sha": "fd9ba044",
+                "message": "Log on progress event triggers.",
+                "author": "arabcoders",
+                "date": "2025-09-17T20:02:26+00:00",
+                "full_sha": "fd9ba044d2c153ba2ec3d8f940e46e165fbd6a4e"
+            },
             {
                 "sha": "0a3fb518",
                 "message": "remove `WS_SYNC_PROGRESS` as it's controlled by backend.export.enabled anyway.",
@@ -452,7 +459,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "0a3fb51872cd929b37adcea1a8fff9a3504987a4"
+        "full_sha": "fd9ba044d2c153ba2ec3d8f940e46e165fbd6a4e"
     },
     {
         "tag": "dev-20250604-9407bc76",
