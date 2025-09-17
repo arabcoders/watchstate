@@ -41,10 +41,11 @@ export default withNuxt(
             'no-console': 'off',
             'no-debugger': 'warn',
             'no-alert': 'warn',
-
             'no-undef': 'off',
             'no-unused-vars': 'off',
-            'vue/no-unused-vars': 'off'
+            'vue/no-unused-vars': 'off',
+
+            '@typescript-eslint/no-explicit-any': 'off',
         }
     },
     {

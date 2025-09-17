@@ -412,7 +412,7 @@ export interface BaseMediaItem {
     title: string
     /** Optional subtitle/content title */
     content_title?: string
-    /** Path to the content file (may be missing) */
+    /** Path to the content file (maybe missing) */
     content_path?: string
     /** Whether the item has been watched */
     watched: boolean
@@ -480,8 +480,7 @@ export interface IgnoreItem {
 /**
  * /system/parity API response item.
  */
-export interface ParityItem extends MediaItemWithBackends {
-}
+export type ParityItem = MediaItemWithBackends & {}
 
 /**
  * /changelog API response item.
@@ -565,6 +564,7 @@ export interface FFProbeStream {
         default?: number
         [key: string]: any
     }
+
     [key: string]: any
 }
 
@@ -688,9 +688,9 @@ export interface HistoryItem {
     /** Additional data */
     extra: Record<string, any>
     /** Created timestamp */
-    created_at: string
+    created_at: number
     /** Updated timestamp */
-    updated_at: string
+    updated_at: number
     /** Full title computed by frontend */
     full_title?: string
     /** Content title (episode title, etc.) */
@@ -912,8 +912,7 @@ export interface SessionItem {
  * Represents a stale item from the backend stale endpoint.
  * These are items that exist in the local database but no longer exist in the remote backend library.
  */
-export interface StaleItem extends MediaItemWithBackends {
-}
+export type StaleItem = MediaItemWithBackends & {}
 
 /**
  * UI state extension for expandable/collapsible content items.
@@ -968,7 +967,7 @@ export interface FormState<T> {
 }
 
 /**
- * Counts information for stale items comparison.
+ * Counts information for stale item's comparison.
  */
 export interface StaleCounts {
     /** Number of items in remote backend library */
@@ -980,7 +979,7 @@ export interface StaleCounts {
 }
 
 /**
- * Backend information for stale items response.
+ * Backend information for stale item's response.
  */
 export interface StaleBackendInfo {
     /** Backend name */

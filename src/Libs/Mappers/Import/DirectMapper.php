@@ -19,6 +19,7 @@ use PDOException;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\Log\LogLevel;
 use Psr\SimpleCache\CacheInterface as iCache;
+use Psr\SimpleCache\InvalidArgumentException as CacheInvalidArgumentException;
 use Throwable;
 
 /**
@@ -923,13 +924,10 @@ class DirectMapper implements ImportInterface
 
     /**
      * @inheritdoc
-     * @noinspection PhpRedundantCatchClauseInspection
      */
     public function commit(): array
     {
-        if (true === (bool)Config::get('sync.progress', false) && count(
-                $this->progressItems
-            ) >= 1 && false === $this->inDryRunMode()) {
+        if (false === $this->inDryRunMode() && count($this->progressItems) >= 1) {
             try {
                 $name = '{type}://{id}@{backend}';
 
@@ -948,7 +946,17 @@ class DirectMapper implements ImportInterface
                     ]);
                     queueEvent(ProcessProgressEvent::NAME, [iState::COLUMN_ID => $entity->id], $opts);
                 }
-            } catch (\Psr\SimpleCache\InvalidArgumentException) {
+            } catch (CacheInvalidArgumentException $e) {
+                $this->logger->error(
+                    ...lw(
+                        message: "{mapper}: Exception '{error.kind}' was thrown unhandled during progress queueing. {error.message} at '{error.file}:{error.line}'.",
+                        context: [
+                            'mapper' => afterLast(self::class, '\\'),
+                            ...exception_log($e),
+                        ],
+                        e: $e
+                    )
+                );
             }
         }
 

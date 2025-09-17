@@ -84,9 +84,6 @@ return (function () {
                 '172.16.0.0/12' // RFC-1918 B-block.
             ],
         ],
-        'sync' => [
-            'progress' => (bool)env('WS_SYNC_PROGRESS', true),
-        ],
         'progress' => [
             // -- Allows to sync watch progress for played items.
             'threshold' => $progressTimeCheck((int)env('WS_PROGRESS_THRESHOLD', 0), 60 * 10),

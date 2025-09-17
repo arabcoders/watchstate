@@ -3,7 +3,7 @@
     <div class="columns is-multiline">
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4">
-          <span class="icon"><i class="fas fa-history"></i></span>
+          <span class="icon"><i class="fas fa-history"/></span>
           History
         </span>
         <div class="is-pulled-right">
@@ -11,15 +11,15 @@
 
             <div class="control has-icons-left" v-if="showFilter">
               <input type="search" v-model.lazy="filter" class="input" id="filter"
-                placeholder="Filter displayed results.">
+                     placeholder="Filter displayed results.">
               <span class="icon is-left">
-                <i class="fas fa-filter"></i>
+                <i class="fas fa-filter"/>
               </span>
             </div>
 
             <div class="control">
               <button class="button is-danger is-light" @click="toggleFilter">
-                <span class="icon"><i class="fas fa-filter"></i></span>
+                <span class="icon"><i class="fas fa-filter"/></span>
               </button>
             </div>
 
@@ -37,7 +37,7 @@
             <p class="control">
               <button class="button is-primary" @click="searchForm = !searchForm">
                 <span class="icon">
-                  <i class="fas fa-search"></i>
+                  <i class="fas fa-search"/>
                 </span>
               </button>
             </p>
@@ -45,7 +45,7 @@
             <div class="control">
               <button class="button is-info is-light" @click="selectAll = !selectAll" data-tooltip="Toggle select all">
                 <span class="icon">
-                  <i class="fas fa-check-square" :class="{ 'fa-check-square': !selectAll, 'fa-square': selectAll }"></i>
+                  <i class="fas fa-check-square" :class="{ 'fa-check-square': !selectAll, 'fa-square': selectAll }"/>
                 </span>
               </button>
             </div>
@@ -53,7 +53,7 @@
             <p class="control">
               <button class="button is-info" @click="loadContent(page, true)">
                 <span class="icon">
-                  <i class="fas fa-sync"></i>
+                  <i class="fas fa-sync"/>
                 </span>
               </button>
             </p>
@@ -68,13 +68,13 @@
         <div class="field is-grouped">
           <div class="control" v-if="page !== 1">
             <button rel="first" class="button" @click="loadContent(1)" :disabled="isLoading"
-              :class="{ 'is-loading': isLoading }">
+                    :class="{ 'is-loading': isLoading }">
               <span>&lt;&lt;</span>
             </button>
           </div>
           <div class="control" v-if="page > 1 && (page - 1) !== 1">
             <button rel="prev" class="button" @click="loadContent(page - 1)" :disabled="isLoading"
-              :class="{ 'is-loading': isLoading }">
+                    :class="{ 'is-loading': isLoading }">
               <span>&lt;</span>
             </button>
           </div>
@@ -82,7 +82,7 @@
             <div class="select">
               <select v-model="page" @change="loadContent(page)" :disabled="isLoading">
                 <option v-for="(item, index) in makePagination(page, last_page)" :key="index" :value="item.page"
-                  :disabled="item.page === 0">
+                        :disabled="item.page === 0">
                   {{ item.text }}
                 </option>
               </select>
@@ -90,13 +90,13 @@
           </div>
           <div class="control" v-if="page !== last_page && (page + 1) !== last_page">
             <button rel="next" class="button" @click="loadContent(page + 1)" :disabled="isLoading"
-              :class="{ 'is-loading': isLoading }">
+                    :class="{ 'is-loading': isLoading }">
               <span>&gt;</span>
             </button>
           </div>
           <div class="control" v-if="page !== last_page">
             <button rel="last" class="button" @click="loadContent(last_page)" :disabled="isLoading"
-              :class="{ 'is-loading': isLoading }">
+                    :class="{ 'is-loading': isLoading }">
               <span>&gt;&gt;</span>
             </button>
           </div>
@@ -118,23 +118,23 @@
                     </select>
                   </div>
                   <div class="icon is-left">
-                    <i class="fas fa-folder-tree"></i>
+                    <i class="fas fa-folder-tree"/>
                   </div>
                 </div>
 
                 <div class="control is-expanded has-icons-left">
                   <input class="input" type="search" placeholder="Search..." v-model="query"
-                    :disabled="'' === searchField || isLoading">
+                         :disabled="'' === searchField || isLoading">
                   <div class="icon is-left">
-                    <i class="fas fa-search"></i>
+                    <i class="fas fa-search"/>
                   </div>
                 </div>
 
                 <div class="control">
                   <button class="button is-primary" type="submit" :disabled="!query || '' === searchField || isLoading"
-                    :class="{ 'is-loading': isLoading }">
+                          :class="{ 'is-loading': isLoading }">
                     <span class="icon-text">
-                      <span class="icon"><i class="fas fa-search"></i></span>
+                      <span class="icon"><i class="fas fa-search"/></span>
                       <span>Search</span>
                     </span>
                   </button>
@@ -143,7 +143,7 @@
                 <div class="control">
                   <button class="button is-warning" type="button" @click="clearSearch" :disabled="isLoading">
                     <span class="icon-text">
-                      <span class="icon"><i class="fas fa-cancel"></i></span>
+                      <span class="icon"><i class="fas fa-cancel"/></span>
                       <span>Reset</span>
                     </span>
                   </button>
@@ -160,19 +160,19 @@
         <div class="field is-grouped is-justify-content-center">
           <div class="control">
             <button class="button is-danger" @click="massAction('delete')" :disabled="massActionInProgress">
-              <span class="icon"><i class="fas fa-trash"></i></span>
+              <span class="icon"><i class="fas fa-trash"/></span>
               <span class="is-hidden-mobile">Delete '{{ selected_ids.length }}' item/s</span>
             </button>
           </div>
           <div class="control">
             <button class="button is-primary" @click="massAction('mark_played')" :disabled="massActionInProgress">
-              <span class="icon"><i class="fas fa-eye"></i></span>
+              <span class="icon"><i class="fas fa-eye"/></span>
               <span class="is-hidden-mobile">Mark '{{ selected_ids.length }}' item/s as played</span>
             </button>
           </div>
           <div class="control">
             <button class="button is-warning" @click="massAction('mark_unplayed')" :disabled="massActionInProgress">
-              <span class="icon"><i class="fas fa-eye-slash"></i></span>
+              <span class="icon"><i class="fas fa-eye-slash"/></span>
               <span class="is-hidden-mobile">Mark '{{ selected_ids.length }}' item/s as unplayed</span>
             </button>
           </div>
@@ -181,9 +181,9 @@
 
       <div class="column is-12" v-if="items?.length < 1 || filteredRows(items).length < 1">
         <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
-          icon="fas fa-spinner fa-spin" message="Loading data. Please wait..." />
+                 icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
         <Message v-else class="has-background-warning-80 has-text-dark" title="Warning"
-          icon="fas fa-exclamation-triangle" :use-close="true" @close="clearSearch">
+                 icon="fas fa-exclamation-triangle" :use-close="true" @close="clearSearch">
           <div class="icon-text">
             No items found.
             <span v-if="query">For <code><strong>{{ searchField }}</strong> : <strong>{{ query }}</strong></code></span>
@@ -206,15 +206,19 @@
                       </label>&nbsp;
                     </span>
                     <FloatingImage :image="`/history/${item.id}/images/poster`" :item_class="'scaled-image'"
-                      v-if="poster_enable">
-                      <NuxtLink :to="'/history/' + item.id" v-text="item?.full_title || makeName(item)" />
+                                   v-if="poster_enable">
+                      <NuxtLink :to="'/history/' + item.id">
+                        {{ item?.full_title || makeName(item) }}
+                      </NuxtLink>
                     </FloatingImage>
-                    <NuxtLink :to="'/history/' + item.id" v-text="item?.full_title || makeName(item)" v-else />
+                    <NuxtLink :to="'/history/' + item.id" v-else>
+                      {{ item?.full_title || makeName(item) }}
+                    </NuxtLink>
                   </p>
                   <span class="card-header-icon" @click="item.showRawData = !item?.showRawData">
                     <span class="icon">
                       <i class="fas"
-                        :class="{ 'fa-tv': 'episode' === item.type, 'fa-film': 'movie' === item.type }"></i>
+                         :class="{ 'fa-tv': 'episode' === item.type, 'fa-film': 'movie' === item.type }"/>
                     </span>
                   </span>
                 </header>
@@ -223,68 +227,72 @@
                     <div class="column is-12 has-text-left" v-if="item?.content_title">
                       <div class="field is-grouped">
                         <div class="control is-clickable"
-                          :class="{ 'is-text-overflow': !item?.expand_title, 'is-text-contents': item?.expand_title }"
-                          @click="item.expand_title = !item?.expand_title">
-                          <span class="icon"><i class="fas fa-heading"></i>&nbsp;</span>
-                          <NuxtLink :to="makeSearchLink('subtitle', item.content_title)" v-text="item.content_title" />
+                             :class="{ 'is-text-overflow': !item?.expand_title, 'is-text-contents': item?.expand_title }"
+                             @click="item.expand_title = !item?.expand_title">
+                          <span class="icon"><i class="fas fa-heading"/>&nbsp;</span>
+                          <NuxtLink :to="makeSearchLink('subtitle', item.content_title)">
+                            {{ item.content_title }}
+                          </NuxtLink>
                         </div>
                         <div class="control">
                           <span class="icon is-clickable" @click="copyText(item.content_title, false)">
-                            <i class="fas fa-copy"></i></span>
+                            <i class="fas fa-copy"/></span>
                         </div>
                       </div>
                     </div>
                     <div class="column is-12  has-text-left" v-if="item?.content_path">
                       <div class="field is-grouped">
                         <div class="control is-clickable"
-                          :class="{ 'is-text-overflow': !item?.expand_path, 'is-text-contents': item?.expand_path }"
-                          @click="item.expand_path = !item?.expand_path">
-                          <span class="icon"><i class="fas fa-file"></i>&nbsp;</span>
-                          <NuxtLink :to="makeSearchLink('path', item.content_path)" v-text="item.content_path" />
+                             :class="{ 'is-text-overflow': !item?.expand_path, 'is-text-contents': item?.expand_path }"
+                             @click="item.expand_path = !item?.expand_path">
+                          <span class="icon"><i class="fas fa-file"/>&nbsp;</span>
+                          <NuxtLink :to="makeSearchLink('path', item.content_path)">
+                            {{ item.content_path }}
+                          </NuxtLink>
                         </div>
                         <div class="control">
                           <span class="icon is-clickable" @click="copyText(item.content_path, false)">
-                            <i class="fas fa-copy"></i></span>
+                            <i class="fas fa-copy"/></span>
                         </div>
                       </div>
                     </div>
                     <div class="column is-12 has-text-left" v-if="item?.progress">
-                      <span class="icon"><i class="fas fa-bars-progress"></i></span>
+                      <span class="icon"><i class="fas fa-bars-progress"/></span>
                       <span>{{ formatDuration(item.progress as number) }}</span>
                     </div>
                   </div>
                 </div>
                 <div class="card-content p-0 m-0" v-if="item?.showRawData">
                   <pre class="is-terminal" style="position: relative; max-height: 343px;"><code
-                    v-text="JSON.stringify(item, null, 2)"/><button class="button m-4"
-                                                                    @click="() => copyText(JSON.stringify(item, null, 2))"
-                                                                    style="position: absolute; top:0; right:0;">
+                      v-text="JSON.stringify(item, null, 2)"/><button class="button m-4"
+                                                                      @click="() => copyText(JSON.stringify(item, null, 2))"
+                                                                      style="position: absolute; top:0; right:0;">
                     <span class="icon"><i class="fas fa-copy"/></span>
                   </button></pre>
                 </div>
                 <div class="card-footer has-text-centered">
                   <div class="card-footer-item">
                     <div class="is-text-overflow">
-                      <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
+                      <span class="icon"><i class="fas fa-calendar"/>&nbsp;</span>
                       <span class="has-tooltip"
-                        v-tooltip="`Record updated at: ${moment(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
-                        {{ moment(item.updated_at).fromNow() }}
+                            v-tooltip="`Record updated at: ${moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
+                        {{ moment.unix(item.updated_at).fromNow() }}
                       </span>
                     </div>
                   </div>
                   <div class="card-footer-item">
                     <div class="is-text-overflow">
-                      <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
-                      <NuxtLink :to="'/backend/' + item.via" v-text="item.via" />
+                      <span class="icon"><i class="fas fa-server"/>&nbsp;</span>
+                      <NuxtLink :to="`/backend/${item.via}`">{{ item.via }}</NuxtLink>
                       <span v-if="item?.metadata && Object.keys(item?.metadata).length > 1"
-                        v-tooltip="`Also reported by: ${Object.keys(item.metadata).filter(i => i !== item.via).join(', ')}.`">
+                            v-tooltip="`Also reported by: ${Object.keys(item.metadata).filter(i => i !== item.via).join(', ')}.`">
                         (<span class="has-tooltip">+{{ Object.keys(item.metadata).length - 1 }}</span>)
                       </span>
                     </div>
                   </div>
                   <div class="card-footer-item">
                     <div class="is-text-overflow">
-                      <span class="icon"><i class="fas fa-envelope"></i>&nbsp;</span>
+                      <span class="icon"><i class="fas fa-envelope"/>&nbsp;</span>
                       {{ item.event ?? '-' }}
                     </div>
                   </div>
@@ -299,13 +307,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { useRoute, useRouter, useHead } from '#app'
-import { useStorage } from '@vueuse/core'
+import {ref, computed, watch, onMounted, onUnmounted} from 'vue'
+import {useRoute, useRouter, useHead} from '#app'
+import {useStorage} from '@vueuse/core'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
 import Lazy from '~/components/Lazy.vue'
-import { NuxtLink } from '#components'
+import {NuxtLink} from '#components'
 import FloatingImage from '~/components/FloatingImage.vue'
 import {
   request,
@@ -319,7 +327,8 @@ import {
   TOOLTIP_DATE_FORMAT,
   parse_api_response
 } from '~/utils'
-import type { HistoryItem, RequestOptions, PaginationInfo } from '~/types'
+import type {HistoryItem, RequestOptions, PaginationInfo} from '~/types'
+import {useDialog} from "~/composables/useDialog.ts";
 
 /**
  * Pagination information from history API.
@@ -343,7 +352,7 @@ type HistorySearchableField = {
 const route = useRoute()
 const router = useRouter()
 
-useHead({ title: 'History' })
+useHead({title: 'History'})
 
 const poster_enable = useStorage('poster_enable', true)
 
@@ -360,15 +369,15 @@ type HistoryItemWithUIState = HistoryItem & {
 const jsonFields = ref<Array<string>>(['metadata', 'extra'])
 const items = ref<Array<HistoryItemWithUIState>>([])
 const searchable = ref<Array<HistorySearchableField>>([
-  { key: 'id' },
-  { key: 'via' },
-  { key: 'year' },
-  { key: 'type' },
-  { key: 'title' },
-  { key: 'season' },
-  { key: 'episode' },
-  { key: 'parent' },
-  { key: 'guid' }
+  {key: 'id'},
+  {key: 'via'},
+  {key: 'year'},
+  {key: 'type'},
+  {key: 'title'},
+  {key: 'season'},
+  {key: 'episode'},
+  {key: 'parent'},
+  {key: 'guid'}
 ])
 const error = ref<string>('')
 
@@ -414,7 +423,7 @@ const loadContent = async (pageNumber: number, fromPopState: boolean = false): P
     title += `. (Filter: ${filter.value})`
   }
 
-  useHead({ title })
+  useHead({title})
 
   const newUrl = window.location.pathname + '?' + search.toString()
 
@@ -477,7 +486,7 @@ const loadContent = async (pageNumber: number, fromPopState: boolean = false): P
         history_query.filter = filter.value
       }
 
-      await router.push({ path: '/history', query: history_query })
+      await router.push({path: '/history', query: history_query})
     }
 
     if ('paging' in json) {
@@ -546,7 +555,7 @@ const getHelp = (key: string): string => {
     text += ` Expected value: <code>${typeof field.type === 'object' ? field.type.join(' or ') : field.type}</code>`
   }
 
-  return `<span class="icon-text"><span class="icon"><i class="fas fa-info"></i></span><span>${text}</span></span>`
+  return `<span class="icon-text"><span class="icon"><i class="fas fa-info"/></span><span>${text}</span></span>`
 }
 
 const toggleFilter = (): void => {
@@ -570,7 +579,13 @@ const massAction = async (action: 'delete' | 'mark_played' | 'mark_unplayed'): P
     mark_unplayed: 'Mark as unplayed'
   }[action]
 
-  if (!confirm(`Are you sure you want to '${title}' ${selected_ids.value.length} item/s?`)) {
+  const {status: confirmStatus} = await useDialog().confirmDialog({
+    message: `Are you sure you want to '${title}' ${selected_ids.value.length} item/s?`,
+    opacityControl: false,
+    confirmColor: 'delete' === action ? 'is-danger' : 'is-primary',
+  })
+
+  if (true !== confirmStatus) {
     return
   }
 
@@ -581,7 +596,7 @@ const massAction = async (action: 'delete' | 'mark_played' | 'mark_unplayed'): P
   massActionInProgress.value = true
 
   if ('delete' === action) {
-    opts = { method: 'DELETE' }
+    opts = {method: 'DELETE'}
     urls = selected_ids.value.map(id => `/history/${id}`)
     callback = () => {
       items.value = items.value.filter(i => !selected_ids.value.includes(i.id))
@@ -589,12 +604,12 @@ const massAction = async (action: 'delete' | 'mark_played' | 'mark_unplayed'): P
   }
 
   if ('mark_played' === action || 'mark_unplayed' === action) {
-    opts = { method: 'mark_played' === action ? 'POST' : 'DELETE' }
+    opts = {method: 'mark_played' === action ? 'POST' : 'DELETE'}
     const ids = selected_ids.value
-      .map(id => items.value.find(i => i.id === id))
-      .filter((i): i is HistoryItemWithUIState => i !== undefined)
-      .filter(i => 'mark_played' === action ? !i.watched : i.watched)
-      .map(i => i.id)
+        .map(id => items.value.find(i => i.id === id))
+        .filter((i): i is HistoryItemWithUIState => i !== undefined)
+        .filter(i => 'mark_played' === action ? !i.watched : i.watched)
+        .map(i => i.id)
     urls = ids.map(i => `/history/${i}/watch`)
     callback = () => {
       items.value.forEach(i => {
@@ -668,7 +683,7 @@ const filteredRows = (items: Array<HistoryItemWithUIState>): Array<HistoryItemWi
   }
 
   return items.filter(i => Object.values(i).some(v =>
-    typeof v === 'string' ? v.toLowerCase().includes(filter.value.toLowerCase()) : false
+      typeof v === 'string' ? v.toLowerCase().includes(filter.value.toLowerCase()) : false
   ))
 }
 
@@ -678,7 +693,7 @@ const filterItem = (item: HistoryItemWithUIState): boolean => {
   }
 
   return Object.values(item).some(v =>
-    typeof v === 'string' ? v.toLowerCase().includes(filter.value.toLowerCase()) : false
+      typeof v === 'string' ? v.toLowerCase().includes(filter.value.toLowerCase()) : false
   )
 }
 

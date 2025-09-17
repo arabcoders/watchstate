@@ -189,11 +189,6 @@ return (function () {
             'type' => 'bool',
         ],
         [
-            'key' => 'WS_SYNC_PROGRESS',
-            'description' => 'Enable watch progress sync.',
-            'type' => 'bool',
-        ],
-        [
             'key' => 'WS_PROFILER_COLLECTOR',
             'description' => 'The XHProf data collector URL to send the profiler data to.',
             'type' => 'string',

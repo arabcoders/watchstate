@@ -666,7 +666,6 @@ class MemoryMapper implements ImportInterface
 
     /**
      * @inheritdoc
-     * @noinspection PhpRedundantCatchClauseInspection
      */
     public function commit(): mixed
     {
@@ -735,27 +734,36 @@ class MemoryMapper implements ImportInterface
             return $list;
         });
 
-        if (true !== $this->inDryRunMode()) {
-            if (true === (bool)Config::get('sync.progress', false) && count($this->progressItems) >= 1) {
-                try {
-                    $opts = [
-                        'unique' => true,
-                    ];
+        if (true !== $this->inDryRunMode() && count($this->progressItems) >= 1) {
+            try {
+                $name = '{type}://{id}@{backend}';
 
-                    if (null !== $this->userContext) {
-                        $opts = ag_set($opts, Options::CONTEXT_USER, $this->userContext->name);
-                    }
+                $opts = ['unique' => true];
 
-                    foreach ($this->progressItems as $entity) {
-                        $opts[EventsTable::COLUMN_REFERENCE] = r('{type}://{id}@{backend}', [
-                            'type' => $entity->type,
-                            'backend' => $entity->via,
-                            'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
-                        ]);
-                        queueEvent(ProcessProgressEvent::NAME, [iState::COLUMN_ID => $entity->id], $opts);
-                    }
-                } catch (\Psr\SimpleCache\InvalidArgumentException) {
+                if (null !== $this->userContext) {
+                    $opts = ag_set($opts, Options::CONTEXT_USER, $this->userContext->name);
+                    $name = $name . '/' . $this->userContext->name;
                 }
+
+                foreach ($this->progressItems as $entity) {
+                    $opts[EventsTable::COLUMN_REFERENCE] = r($name, [
+                        'type' => $entity->type,
+                        'backend' => $entity->via,
+                        'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
+                    ]);
+                    queueEvent(ProcessProgressEvent::NAME, [iState::COLUMN_ID => $entity->id], $opts);
+                }
+            } catch (\Psr\SimpleCache\InvalidArgumentException $e) {
+                $this->logger->error(
+                    ...lw(
+                        message: "{mapper}: Exception '{error.kind}' was thrown unhandled during progress queueing. {error.message} at '{error.file}:{error.line}'.",
+                        context: [
+                            'mapper' => afterLast(self::class, '\\'),
+                            ...exception_log($e),
+                        ],
+                        e: $e
+                    )
+                );
             }
         }
 

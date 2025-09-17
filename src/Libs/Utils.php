@@ -789,6 +789,7 @@ if (!function_exists('queueEvent')) {
      * @param array $opts Options.
      *
      * @return EventInfo
+     * @throws \Psr\SimpleCache\InvalidArgumentException May throw this exception if saving to db fails and fallback also fail.
      */
     function queueEvent(string $event, array $data = [], array $opts = []): EventInfo
     {
