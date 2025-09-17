@@ -421,6 +421,9 @@ class MemoryMapper implements ImportInterface
                         ]);
 
                         $this->progressItems[$itemId] = $this->objects[$pointer];
+                        if (null !== ($onProgressUpdate = ag($opts, Options::STATE_PROGRESS_EVENT, null))) {
+                            $onProgressUpdate($this->objects[$pointer]);
+                        }
                     }
                 }
 

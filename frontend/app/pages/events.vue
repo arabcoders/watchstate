@@ -21,7 +21,7 @@
               </button>
             </div>
 
-            <div class="control">
+            <div class="control" v-if="items.length > 0">
               <button class="button is-danger" @click="deleteAll" v-tooltip.bottom="'Remove All non pending events.'">
                 <span class="icon"><i class="fas fa-trash" /></span>
               </button>
@@ -64,7 +64,9 @@
         <div class="card">
           <header class="card-header is-align-self-flex-end">
             <div class="card-header-title is-block">
-              <NuxtLink @click="quick_view = item.id" v-text="makeEventName(item.id)" />
+              <NuxtLink @click="quick_view = item.id">
+                {{ makeEventName(item.id) }}
+              </NuxtLink>
               <span v-if="item?.delay_by" class="tag is-warning is-pulled-right is-hidden-mobile has-tooltip"
                 v-tooltip="'The event dispatching was delayed by this many seconds.'">
                 <span class="icon"><i class="fas fa-clock" /></span>

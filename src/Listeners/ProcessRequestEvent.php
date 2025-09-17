@@ -112,6 +112,7 @@ final readonly class ProcessRequestEvent
         $mapper->add($entity, [
             Options::IMPORT_METADATA_ONLY => (bool)ag($e->getOptions(), Options::IMPORT_METADATA_ONLY),
             Options::STATE_UPDATE_EVENT => fn(iState $state) => queuePush(entity: $state, userContext: $userContext),
+            Options::STATE_PROGRESS_EVENT => fn(iState $state) => $e->addLog("Event triggered a progress update."),
             'after' => $lastSync,
         ]);
 

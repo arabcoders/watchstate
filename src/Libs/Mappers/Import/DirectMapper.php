@@ -284,6 +284,9 @@ class DirectMapper implements ImportInterface
                     'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                 ]);
                 $this->progressItems[$itemId] = $entity;
+                if (null !== ($onProgressUpdate = ag($opts, Options::STATE_PROGRESS_EVENT, null))) {
+                    $onProgressUpdate($entity);
+                }
             }
         } catch (PDOException|Throwable $e) {
             $this->actions[$entity->type]['failed']++;
@@ -368,6 +371,9 @@ class DirectMapper implements ImportInterface
                             'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                         ]);
                         $this->progressItems[$itemId] = $local;
+                        if (null !== ($onProgressUpdate = ag($opts, Options::STATE_PROGRESS_EVENT, null))) {
+                            $onProgressUpdate($local);
+                        }
                     }
                 }
 
@@ -573,6 +579,9 @@ class DirectMapper implements ImportInterface
                                 'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                             ]);
                             $this->progressItems[$itemId] = $local;
+                            if (null !== ($onProgressUpdate = ag($opts, Options::STATE_PROGRESS_EVENT, null))) {
+                                $onProgressUpdate($local);
+                            }
                         }
                     }
 
@@ -824,6 +833,9 @@ class DirectMapper implements ImportInterface
                             'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                         ]);
                         $this->progressItems[$itemId] = $local;
+                        if (null !== ($onProgressUpdate = ag($opts, Options::STATE_PROGRESS_EVENT, null))) {
+                            $onProgressUpdate($local);
+                        }
                     }
                 }
 
