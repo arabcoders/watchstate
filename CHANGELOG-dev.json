@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250919-aec78466",
-        "date": "2025-09-18T22:15:23+00:00",
+        "tag": "dev-20250919-c67202d7",
+        "date": "2025-09-18T22:34:48+00:00",
         "commits": [
+            {
+                "sha": "c67202d7",
+                "message": "Add how many times path is referenced",
+                "author": "arabcoders",
+                "date": "2025-09-18T22:34:48+00:00",
+                "full_sha": "c67202d7b0d4bd1143ff3103bd8925b435c305a9"
+            },
             {
                 "sha": "aec78466",
                 "message": "Added better popover to see the difference between file paths",
@@ -501,7 +508,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "aec78466f2d697feb3c5624f02bbd81c22171b2c"
+        "full_sha": "c67202d7b0d4bd1143ff3103bd8925b435c305a9"
     },
     {
         "tag": "dev-20250604-9407bc76",
