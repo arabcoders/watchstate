@@ -1,8 +1,29 @@
 [
     {
-        "tag": "dev-20250918-438e353e",
-        "date": "2025-09-18T14:01:18+00:00",
+        "tag": "dev-20250919-aec78466",
+        "date": "2025-09-18T22:15:23+00:00",
         "commits": [
+            {
+                "sha": "aec78466",
+                "message": "Added better popover to see the difference between file paths",
+                "author": "arabcoders",
+                "date": "2025-09-18T22:15:23+00:00",
+                "full_sha": "aec78466f2d697feb3c5624f02bbd81c22171b2c"
+            },
+            {
+                "sha": "9c3a0511",
+                "message": "fixed text issue in search item desc",
+                "author": "arabcoders",
+                "date": "2025-09-18T22:12:08+00:00",
+                "full_sha": "9c3a0511b5f50ed528209463217363552b2f4b9f"
+            },
+            {
+                "sha": "5a9aa183",
+                "message": "added popover component",
+                "author": "arabcoders",
+                "date": "2025-09-18T22:11:38+00:00",
+                "full_sha": "5a9aa1839bd9609c1a1728a2263b60f37f06c66a"
+            },
             {
                 "sha": "438e353e",
                 "message": "Fix minor issue in buttons while editing backend",
@@ -480,7 +501,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "438e353eb6f36d37edb31eca37628c94596742a3"
+        "full_sha": "aec78466f2d697feb3c5624f02bbd81c22171b2c"
     },
     {
         "tag": "dev-20250604-9407bc76",
