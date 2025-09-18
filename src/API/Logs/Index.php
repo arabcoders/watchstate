@@ -33,17 +33,30 @@ final class Index
 
     private int $counter = 1;
     private array $users = [];
+    private array $logsDir = [];
 
     public function __construct(iImport $mapper, iLogger $logger)
     {
         $this->users = array_keys(getUsersContext(mapper: $mapper, logger: $logger));
+        $this->logsDir = [
+            [
+                'path' => fixPath(Config::get('tmpDir') . '/logs'),
+                'type' => '*.*.log',
+            ],
+            [
+                'path' => fixPath(Config::get('tmpDir') . '/webhooks'),
+                'type' => '*.json',
+            ],
+            [
+                'path' => fixPath(Config::get('tmpDir') . '/debug'),
+                'type' => '*.json',
+            ],
+        ];
     }
 
     #[Get(self::URL . '[/]', name: 'logs')]
     public function logsList(iRequest $request): iResponse
     {
-        $path = fixPath(Config::get('tmpDir') . '/logs');
-
         $list = [];
 
         $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('');
@@ -51,18 +64,26 @@ final class Index
         $query['stream'] = 1;
         $query = http_build_query($query);
 
-        foreach (glob($path . '/*.*.log') as $file) {
-            preg_match('/(\w+)\.(\w+)\.log/i', basename($file), $matches);
+        foreach ($this->logsDir as $pathInfo) {
+            $path = ag($pathInfo, 'path');
+            $type = ag($pathInfo, 'type', '*.*.log');
+            foreach (glob($path . '/' . $type) as $file) {
+                preg_match('/(\w+)\.(.+?)\.(log|json)/i', basename($file), $matches);
+                $date = $matches[2] ?? null;
+                if (null !== $date && !is_numeric($date)) {
+                    $date = null;
+                }
 
-            $builder = [
-                'filename' => basename($file),
-                'type' => $matches[1] ?? '??',
-                'date' => $matches[2] ?? '??',
-                'size' => filesize($file),
-                'modified' => makeDate(filemtime($file)),
-            ];
+                $builder = [
+                    'filename' => basename($file),
+                    'type' => $matches[1] ?? '??',
+                    'date' => $date,
+                    'size' => filesize($file),
+                    'modified' => makeDate(filemtime($file)),
+                ];
 
-            $list[] = $builder;
+                $list[] = $builder;
+            }
         }
 
         return api_response(Status::OK, $list);
@@ -74,7 +95,11 @@ final class Index
     #[Get(Index::URL . '/recent[/]', name: 'logs.recent')]
     public function recent(iRequest $request): iResponse
     {
-        $path = fixPath(Config::get('tmpDir') . '/logs');
+        $path = $this->logsDir[0]['path'] ?? null;
+        $type = $this->logsDir[0]['type'] ?? null;
+        if (null === $path || null === $type) {
+            return api_error('Log path not configured.', Status::INTERNAL_SERVER_ERROR);
+        }
 
         $list = [];
 
@@ -84,7 +109,7 @@ final class Index
         $limit = (int)$params->get('limit', 50);
         $limit = $limit < 1 ? 50 : $limit;
 
-        foreach (glob($path . '/*.*.log') as $file) {
+        foreach (glob($path . '/' . $type) as $file) {
             preg_match('/(\w+)\.(\w+)\.log/i', basename($file), $matches);
 
             $logDate = $matches[2] ?? null;
@@ -136,16 +161,8 @@ final class Index
             return api_error('Invalid value for filename path parameter.', Status::BAD_REQUEST);
         }
 
-        $path = realpath(fixPath(Config::get('tmpDir') . '/logs'));
-
-        $filePath = realpath($path . '/' . $filename);
-
-        if (false === $filePath) {
+        if (null === ($filePath = $this->getFile($filename))) {
             return api_error('File not found.', Status::NOT_FOUND);
-        }
-
-        if (false === str_starts_with($filePath, $path)) {
-            return api_error('Invalid file path.', Status::BAD_REQUEST);
         }
 
         if ('DELETE' === $request->getMethod()) {
@@ -178,8 +195,10 @@ final class Index
             ]);
         }
 
+        $contentType = pathinfo($filePath, PATHINFO_EXTENSION);
+
         $file->seek(PHP_INT_MAX);
-        $lastLine = $file->key();
+        $lastLine = 'json' === $contentType ? 0 : $file->key();
 
         if ($offset === self::MAX_LIMIT && self::MAX_LIMIT >= $lastLine) {
             $offset = $lastLine;
@@ -191,11 +210,12 @@ final class Index
             'next' => null,
             'max' => $lastLine,
             'lines' => [],
+            'type' => $contentType,
         ];
 
         if ($offset <= $lastLine) {
             $start = max(0, $lastLine - $offset);
-            $it = new LimitIterator($file, $start, self::MAX_LIMIT);
+            $it = new LimitIterator($file, $start, 'json' === $contentType ? PHP_INT_MAX : self::MAX_LIMIT);
 
             foreach ($it as $line) {
                 $data['lines'][] = self::formatLog(trim((string)$line), $this->users);
@@ -295,6 +315,25 @@ final class Index
             'Connection' => 'keep-alive',
             'X-Accel-Buffering' => 'no',
         ]);
+    }
+
+    private function getFile(string $file): ?string
+    {
+        foreach ($this->logsDir as $pathInfo) {
+            $path = realpath(ag($pathInfo, 'path'));
+
+            $filePath = realpath($path . '/' . $file);
+
+            if (false === $filePath) {
+                continue;
+            }
+
+            if (false === str_starts_with($filePath, $path)) {
+                continue;
+            }
+            return $filePath;
+        }
+        return null;
     }
 
     /**
