@@ -3,10 +3,10 @@
     <div class="columns is-multiline">
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4">
-          <span class="icon"><i class="fas fa-server" />&nbsp;</span>
-          <NuxtLink to="/backends" v-text="'Backends'" />
+          <span class="icon"><i class="fas fa-server"/>&nbsp;</span>
+          <NuxtLink to="/backends">Backends</NuxtLink>
           -
-          <NuxtLink :to="'/backend/' + id" v-text="id" />
+          <NuxtLink :to="`/backend/${id}`">{{ id }}</NuxtLink>
           : Edit
         </span>
 
@@ -21,7 +21,7 @@
 
       <div class="column is-12" v-if="isLimitedToken">
         <Message title="For your information" message_class="has-background-warning-90 has-text-dark"
-          icon="fas fa-info-circle">
+                 icon="fas fa-info-circle">
           <p>
             This backend is using accesstoken instead of API keys, And this method untested and may not work as
             expected. Please make sure you know what you are doing. Simple operations like <strong>Import</strong>,
@@ -36,7 +36,7 @@
 
       <div class="column is-12" v-if="isLoading">
         <Message message_class="is-background-info-90 has-text-dark" title="Loading" icon="fas fa-spinner fa-spin"
-          message="Loading backend settings. Please wait..." />
+                 message="Loading backend settings. Please wait..."/>
       </div>
 
       <div v-else class="column is-12">
@@ -52,7 +52,7 @@
                 <label class="label">Local User</label>
                 <div class="control has-icons-left">
                   <input type="text" class="input is-capitalized" :value="api_user" required readonly disabled>
-                  <div class="icon is-left"><i class="fas fa-user" /></div>
+                  <div class="icon is-left"><i class="fas fa-user"/></div>
                 </div>
                 <p class="help is-unselectable">The local user which this backend is associated with.</p>
               </div>
@@ -61,7 +61,7 @@
                 <label class="label">Name</label>
                 <div class="control has-icons-left">
                   <input class="input" type="text" v-model="backend.name" required readonly disabled>
-                  <div class="icon is-left"><i class="fas fa-id-badge" /></div>
+                  <div class="icon is-left"><i class="fas fa-id-badge"/></div>
                 </div>
                 <p class="help is-unselectable">The backend name in WatchState.</p>
               </div>
@@ -71,7 +71,7 @@
                 <div class="control has-icons-left">
                   <input class="input" type="text" v-model="backend.type" readonly disabled>
                   <div class="icon is-left">
-                    <i class="fas fa-server" />
+                    <i class="fas fa-server"/>
                   </div>
                 </div>
                 <p class="help is-unselectable">Backend Type.</p>
@@ -92,12 +92,12 @@
                           </select>
                         </div>
                         <input class="input" type="text" v-model="backend.url" v-else required>
-                        <div class="icon is-left"><i class="fas fa-link" /></div>
+                        <div class="icon is-left"><i class="fas fa-link"/></div>
                       </div>
                       <div class="control" v-if="servers.length > 0">
                         <button class="button is-primary" type="button" :disabled="serversLoading" @click="getServers">
                           <span class="icon"><i class="fa"
-                              :class="{ 'fa-spinner fa-spin': serversLoading, 'fa-refresh': !serversLoading }" /></span>
+                                                :class="{ 'fa-spinner fa-spin': serversLoading, 'fa-refresh': !serversLoading }"/></span>
                           <span class="is-hidden-mobile">Reload</span>
                         </button>
                       </div>
@@ -123,13 +123,13 @@
                     <div class="field has-addons">
                       <div class="control is-expanded has-icons-left">
                         <input class="input" v-model="backend.token" required
-                          :type="false === exposeToken ? 'password' : 'text'">
-                        <div class="icon is-left"><i class="fas fa-key" /></div>
+                               :type="false === exposeToken ? 'password' : 'text'">
+                        <div class="icon is-left"><i class="fas fa-key"/></div>
                       </div>
                       <div class="control">
                         <button type="button" class="button is-primary" @click="exposeToken = !exposeToken"
-                          v-tooltip="'Toggle token'">
-                          <span class="icon"><i class="fas" :class="exposeToken ? 'fa-eye-slash' : 'fa-eye'" /></span>
+                                v-tooltip="'Toggle token'">
+                          <span class="icon"><i class="fas" :class="exposeToken ? 'fa-eye-slash' : 'fa-eye'"/></span>
                         </button>
                       </div>
                     </div>
@@ -137,8 +137,9 @@
                       <template v-if="'plex' === backend.type">
                         Enter the <strong>X-Plex-Token</strong>.
                         <NuxtLink target="_blank"
-                          to="https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/"
-                          v-text="'Visit This article'" /> for more information.
+                                  to="https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/"
+                                  v-text="'Visit This article'"/>
+                        for more information.
                       </template>
                       <template v-else>
                         You can generate a new API key from <strong>Dashboard > Settings > API Keys</strong>.
@@ -149,14 +150,14 @@
 
                 <div class="control" v-if="'plex' === backend.type">
                   <button type="button" class="button is-warning" v-if="Object.keys(plex_oauth).length < 1"
-                    :disabled="plex_oauth_loading" @click="generate_plex_auth_request">
+                          :disabled="plex_oauth_loading" @click="generate_plex_auth_request">
                     <span class="icon-text">
                       <template v-if="plex_oauth_loading">
-                        <span class="icon"><i class="fas fa-spinner fa-pulse" /></span>
+                        <span class="icon"><i class="fas fa-spinner fa-pulse"/></span>
                         <span>Generating link</span>
                       </template>
                       <template v-else>
-                        <span class="icon"><i class="fas fa-external-link-alt" /></span>
+                        <span class="icon"><i class="fas fa-external-link-alt"/></span>
                         <span>Re-authenticate with plex.tv</span>
                       </template>
                     </span>
@@ -168,7 +169,7 @@
                         <NuxtLink @click="plex_get_token" type="button" :disabled="plex_oauth_loading">
                           <span class="icon-text">
                             <span class="icon"><i class="fas"
-                                :class="{ 'fa-check-double': !plex_oauth_loading, 'fa-spinner fa-pulse': plex_oauth_loading }" /></span>
+                                                  :class="{ 'fa-check-double': !plex_oauth_loading, 'fa-spinner fa-pulse': plex_oauth_loading }"/></span>
                             <span>Check auth request.</span>
                           </span>
                         </NuxtLink>
@@ -176,7 +177,7 @@
                       <div class="control">
                         <NuxtLink :href="plex_oauth_url" target="_blank">
                           <span class="icon-text">
-                            <span class="icon"><i class="fas fa-external-link-alt" /></span>
+                            <span class="icon"><i class="fas fa-external-link-alt"/></span>
                             <span>Open Plex Auth Link</span>
                           </span>
                         </NuxtLink>
@@ -193,16 +194,16 @@
                   <div class="field has-addons">
                     <div class="control is-expanded has-icons-left">
                       <input type="text" class="input is-fullwidth" v-model="backend.uuid" required
-                        :disabled="isLimitedToken">
+                             :disabled="isLimitedToken">
                       <div class="icon is-left">
-                        <i class="fas fa-cloud" v-if="!uuidLoading" />
-                        <i class="fas fa-spinner fa-pulse" v-else />
+                        <i class="fas fa-cloud" v-if="!uuidLoading"/>
+                        <i class="fas fa-spinner fa-pulse" v-else/>
                       </div>
                     </div>
                     <div class="control" v-if="!isLimitedToken">
                       <button class="button is-primary" type="button" :disabled="uuidLoading" @click="getUUid">
                         <span class="icon"><i class="fa"
-                            :class="{ 'fa-spinner fa-spin': uuidLoading, 'fa-refresh': !uuidLoading }" /></span>
+                                              :class="{ 'fa-spinner fa-spin': uuidLoading, 'fa-refresh': !uuidLoading }"/></span>
                         <span class="is-hidden-mobile">Reload</span>
                       </button>
                     </div>
@@ -236,15 +237,15 @@
                       </div>
                       <input class="input is-fullwidth" type="text" v-model="backend.user" v-else>
                       <div class="icon is-left">
-                        <i class="fas fa-user-tie" v-if="!usersLoading" />
-                        <i class="fas fa-spinner fa-pulse" v-else />
+                        <i class="fas fa-user-tie" v-if="!usersLoading"/>
+                        <i class="fas fa-spinner fa-pulse" v-else/>
                       </div>
                     </div>
                     <div class="control" v-if="!isLimitedToken">
                       <button class="button is-primary" type="button" :disabled="usersLoading"
-                        @click="() => getUsers(false, true)">
+                              @click="() => getUsers(false, true)">
                         <span class="icon"><i class="fa"
-                            :class="{ 'fa-spinner fa-spin': usersLoading, 'fa-refresh': !usersLoading }" /></span>
+                                              :class="{ 'fa-spinner fa-spin': usersLoading, 'fa-refresh': !usersLoading }"/></span>
                         <span class="is-hidden-mobile">Reload</span>
                       </button>
                     </div>
@@ -272,7 +273,7 @@
                   </label>
                 </div>
                 <p class="help is-bold has-text-danger">
-                  <span class="icon"><i class="fas fa-info-circle" /></span>
+                  <span class="icon"><i class="fas fa-info-circle"/></span>
                   Get play state and progress from this backend.
                 </p>
               </div>
@@ -281,13 +282,13 @@
                 <label class="label" for="backend_import_metadata">Import metadata from this backend?</label>
                 <div class="control">
                   <input id="backend_import_metadata" type="checkbox" class="switch is-success"
-                    v-model="backend.options.IMPORT_METADATA_ONLY">
+                         v-model="backend.options.IMPORT_METADATA_ONLY">
                   <label for="backend_import_metadata" class="is-unselectable">
                     {{ backend.options.IMPORT_METADATA_ONLY ? 'Yes' : 'No' }}
                   </label>
                 </div>
                 <p class="help has-text-danger is-bold">
-                  <span class="icon"><i class="fas fa-info-circle" /></span>
+                  <span class="icon"><i class="fas fa-info-circle"/></span>
                   As you have disabled the state import, you should enable this option for efficient and fast updates
                   to this backend.
                 </p>
@@ -302,7 +303,7 @@
                   </label>
                 </div>
                 <p class="help is-bold has-text-danger">
-                  <span class="icon"><i class="fas fa-info-circle" /></span>
+                  <span class="icon"><i class="fas fa-info-circle"/></span>
                   The backend will not receive any data from WatchState if this is disabled.
                 </p>
               </div>
@@ -311,7 +312,7 @@
                 <label class="label" for="webhook_match_user">Enable match user for webhook?</label>
                 <div class="control">
                   <input id="webhook_match_user" type="checkbox" class="switch is-success"
-                    v-model="backend.webhook.match.user">
+                         v-model="backend.webhook.match.user">
                   <label for="webhook_match_user" class="is-unselectable">
                     {{ backend.webhook.match.user ? 'Yes' : 'No' }}
                   </label>
@@ -325,7 +326,7 @@
                 <label class="label" for="webhook_match_uuid">Enable match backend id for webhook?</label>
                 <div class="control">
                   <input id="webhook_match_uuid" type="checkbox" class="switch is-success"
-                    v-model="backend.webhook.match.uuid">
+                         v-model="backend.webhook.match.uuid">
                   <label for="webhook_match_uuid">
                     {{ backend.webhook.match.uuid ? 'Yes' : 'No' }}
                   </label>
@@ -341,8 +342,8 @@
                 <label class="label is-clickable is-unselectable" @click="showOptions = !showOptions">
                   <span class="icon-text">
                     <span class="icon">
-                      <i v-if="showOptions" class="fas fa-arrow-up" />
-                      <i v-else class="fas fa-arrow-down" />
+                      <i v-if="showOptions" class="fas fa-arrow-up"/>
+                      <i v-else class="fas fa-arrow-down"/>
                     </span>
                     <span>Additional options...</span>
                   </span>
@@ -357,19 +358,19 @@
                         <input type="text" class="input" :value="_option" readonly disabled>
                         <p class="help is-unselectable">
                           <span class="icon has-text-info">
-                            <i class="fas fa-info-circle" :class="{ 'fa-bounce': newOptions[_option] }" />
+                            <i class="fas fa-info-circle" :class="{ 'fa-bounce': newOptions[_option] }"/>
                           </span>
                           {{ option_describe(_option) }}
                         </p>
                       </div>
                       <div class="column is-6">
                         <input type="text" class="input" :value="option_get(_option)"
-                          @input="(e: Event) => option_set(_option, (e.target as HTMLInputElement)?.value || '')"
-                          required>
+                               @input="(e: Event) => option_set(_option, (e.target as HTMLInputElement)?.value || '')"
+                               required>
                       </div>
                       <div class="column is-1">
-                        <button class="button is-danger" @click.prevent="removeOption(_option)">
-                          <span class="icon"><i class="fas fa-trash" /></span>
+                        <button type="button" class="button is-danger" @click.prevent="removeOption(_option)">
+                          <span class="icon"><i class="fas fa-trash"/></span>
                         </button>
                       </div>
                     </template>
@@ -377,7 +378,7 @@
                   <div class="columns is-multiline is-mobile">
                     <div class="column is-12">
                       <span class="icon-text">
-                        <span class="icon"><i class="fas fa-plus" /></span>
+                        <span class="icon"><i class="fas fa-plus"/></span>
                         <span>Add new option</span>
                       </span>
                     </div>
@@ -386,7 +387,7 @@
                         <select v-model="selectedOption">
                           <option value="">Select Option</option>
                           <option v-for="option in filteredOptions(optionsList)" :key="'opt-' + option.key"
-                            :value="option.key">
+                                  :value="option.key">
                             {{ option.key }}
                           </option>
                         </select>
@@ -396,10 +397,8 @@
                       {{ selectedOptionHelp }}
                     </div>
                     <div class="column is-1">
-                      <button class="button is-primary" @click.prevent="addOption">
-                        <span class="icon">
-                          <i class="fas fa-add" />
-                        </span>
+                      <button type="button" class="button is-primary" @click.prevent="addOption">
+                        <span class="icon"><i class="fas fa-add"/></span>
                       </button>
                     </div>
                   </div>
@@ -408,11 +407,11 @@
             </div>
             <div class="card-footer">
               <button class="button card-footer-item is-fullwidth is-primary" type="submit">
-                <span class="icon"><i class="fas fa-save" /></span>
+                <span class="icon"><i class="fas fa-save"/></span>
                 <span>Save Settings</span>
               </button>
               <NuxtLink class="card-footer-item button is-fullwidth is-danger" :to="`/backend/${id}`">
-                <span class="icon"><i class="fas fa-cancel" /></span>
+                <span class="icon"><i class="fas fa-cancel"/></span>
                 <span>Cancel changes</span>
               </NuxtLink>
             </div>
@@ -425,19 +424,19 @@
 
 <script setup lang="ts">
 import '~/assets/css/bulma-switch.css'
-import { ref, computed, watch, onMounted, nextTick, toRaw } from 'vue'
-import { useRoute, useHead, navigateTo } from '#app'
-import { useStorage } from '@vueuse/core'
-import { request, notification, parse_api_response } from '~/utils'
+import {computed, nextTick, onMounted, ref, toRaw, watch} from 'vue'
+import {navigateTo, useHead, useRoute} from '#app'
+import {useStorage} from '@vueuse/core'
+import {notification, parse_api_response, request} from '~/utils'
 import Message from '~/components/Message.vue'
 import type {
   Backend,
   BackendEditUser,
   BackendServer,
   BackendSpecOption,
+  GenericError,
   PlexOAuthData,
-  PlexOAuthTokenResponse,
-  GenericError
+  PlexOAuthTokenResponse
 } from '~/types'
 
 const id = ref<string>(useRoute().params.backend as string)
@@ -450,9 +449,9 @@ const backend = ref<Backend>({
   token: '',
   uuid: '',
   user: '',
-  import: { enabled: false },
-  export: { enabled: false },
-  webhook: { match: { user: false, uuid: false } },
+  import: {enabled: false},
+  export: {enabled: false},
+  webhook: {match: {user: false, uuid: false}},
   options: {}
 })
 
@@ -476,7 +475,7 @@ const selectedOptionHelp = computed((): string => {
   return option ? option.description : ''
 })
 
-useHead({ title: 'Backends - Edit: ' + id.value })
+useHead({title: 'Backends - Edit: ' + id.value})
 
 const loadContent = async (): Promise<void> => {
   const supportedResponse = await request('/system/supported')
@@ -525,7 +524,7 @@ const saveContent = async (): Promise<void> => {
   try {
     const response = await request(`/backend/${id.value}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(json_text)
     })
 
@@ -541,7 +540,7 @@ const saveContent = async (): Promise<void> => {
 
     notification('success', 'Success', `Successfully updated '${id.value}' settings.`)
     const to = !redirect.value.startsWith('/') ? `/backend/${id.value}` : redirect.value
-    await navigateTo({ path: to })
+    await navigateTo({path: to})
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : String(e)
     notification('error', 'Error', `Request error. ${errorMessage}`)
@@ -556,7 +555,7 @@ const removeOption = async (key: string): Promise<void> => {
     return
   }
 
-  const { status: confirmStatus } = await useDialog().confirmDialog({
+  const {status: confirmStatus} = await useDialog().confirmDialog({
     title: 'Option removal',
     message: `Delete the option '${key}'? This action cannot be undone.`,
     confirmColor: 'is-danger',
@@ -566,7 +565,7 @@ const removeOption = async (key: string): Promise<void> => {
     return
   }
 
-  const response = await request(`/backend/${id.value}/option/options.${key}`, { method: 'DELETE' })
+  const response = await request(`/backend/${id.value}/option/options.${key}`, {method: 'DELETE'})
 
   if (!response.ok) {
     const json = await parse_api_response<GenericError>(response)
@@ -689,7 +688,7 @@ const getUsers = async (showAlert: boolean = true, forceReload: boolean = false)
 }
 
 // -- if users updated we need to reset the token in-case the plex auth changed
-watch(() => users.value, (newUsers, oldUsers) => {
+watch(() => users.value, newUsers => {
   if ('plex' !== backend.value.type) {
     return
   }
@@ -733,7 +732,7 @@ watch(() => users.value, (newUsers, oldUsers) => {
 
   backend.value.options.plex_user_name = selectedUser.name
   backend.value.options.plex_user_uuid = selectedUser.uuid
-}, { deep: true })
+}, {deep: true})
 
 watch(showOptions, async (value: boolean) => {
   if (!value) {
@@ -930,7 +929,7 @@ const generate_plex_auth_request = async (): Promise<void> => {
   plex_oauth_loading.value = true
 
   try {
-    const response = await request('/backends/plex/generate', { method: 'POST' })
+    const response = await request('/backends/plex/generate', {method: 'POST'})
     const json = await parse_api_response<PlexOAuthData>(response)
     if (200 !== response.status) {
       if ('error' in json) {
@@ -1009,7 +1008,7 @@ const plex_get_token = async (notify: boolean = true): Promise<void> => {
     }
     const response = await request('/backends/plex/check', {
       method: 'POST',
-      body: JSON.stringify({ id: plex_oauth.value.id, code: plex_oauth.value.code })
+      body: JSON.stringify({id: plex_oauth.value.id, code: plex_oauth.value.code})
     })
 
     const json = await parse_api_response<PlexOAuthTokenResponse>(response)
