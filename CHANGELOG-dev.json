@@ -1,8 +1,22 @@
 [
     {
-        "tag": "dev-20250918-9cfe4c0c",
-        "date": "2025-09-17T21:11:31+00:00",
+        "tag": "dev-20250918-438e353e",
+        "date": "2025-09-18T14:01:18+00:00",
         "commits": [
+            {
+                "sha": "438e353e",
+                "message": "Fix minor issue in buttons while editing backend",
+                "author": "arabcoders",
+                "date": "2025-09-18T14:01:18+00:00",
+                "full_sha": "438e353eb6f36d37edb31eca37628c94596742a3"
+            },
+            {
+                "sha": "b4395755",
+                "message": "Show webhook/debug payloads in logs page if enabled.",
+                "author": "arabcoders",
+                "date": "2025-09-18T13:59:17+00:00",
+                "full_sha": "b4395755c4a18e418e79794cf2e8e8d7120a9c5b"
+            },
             {
                 "sha": "9cfe4c0c",
                 "message": "Extend logs for process request.",
@@ -466,7 +480,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "9cfe4c0cf0669116642c497ca286bc9ed553dedc"
+        "full_sha": "438e353eb6f36d37edb31eca37628c94596742a3"
     },
     {
         "tag": "dev-20250604-9407bc76",
