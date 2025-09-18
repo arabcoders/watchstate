@@ -555,7 +555,7 @@ const getHelp = (key: string): string => {
     text += ` Expected value: <code>${typeof field.type === 'object' ? field.type.join(' or ') : field.type}</code>`
   }
 
-  return `<span class="icon-text"><span class="icon"><i class="fas fa-info"/></span><span>${text}</span></span>`
+  return `<span class="icon-text"><span class="icon"><i class="fas fa-info"></i></span><span class="is-bold">${text}</span></span>`
 }
 
 const toggleFilter = (): void => {
