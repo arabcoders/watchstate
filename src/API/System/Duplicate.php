@@ -49,7 +49,15 @@ final class Duplicate
 
         $records = $userContext->cache->get('user_dfr', null);
 
-        if ($params->get('no_cache') || null === $records) {
+        $shouldRebuildCache = false;
+        if (true === is_array($records) && false === empty($records)) {
+            $firstRecord = $records[array_key_first($records)];
+            if (false === is_array($firstRecord) || false === array_key_exists('reference_count', $firstRecord)) {
+                $shouldRebuildCache = true;
+            }
+        }
+
+        if ($params->get('no_cache') || null === $records || true === $shouldRebuildCache) {
             $sql = <<<SQL
                 WITH file_paths AS (
                     SELECT s.id, s.updated,
@@ -59,9 +67,17 @@ final class Duplicate
                     WHERE
                         file_path IS NOT NULL AND file_path != '' AND COALESCE(json_extract(value, '$.multi'), 0) = 0
                 ),
-                dup_paths AS ( SELECT file_path FROM file_paths GROUP BY file_path HAVING COUNT(DISTINCT id) > 1)
+                dup_paths AS (
+                    SELECT file_path, COUNT(DISTINCT id) AS reference_count
+                    FROM file_paths
+                    GROUP BY file_path
+                    HAVING reference_count > 1
+                )
                 SELECT
-                    fp.id, fp.file_path, fp.updated
+                    fp.id,
+                    fp.file_path,
+                    fp.updated,
+                    dp.reference_count
                 FROM
                     file_paths fp
                 JOIN
@@ -77,6 +93,7 @@ final class Duplicate
                     'id' => (int)$row['id'],
                     'file_path' => $row['file_path'],
                     'updated' => (int)$row['updated'],
+                    'reference_count' => (int)$row['reference_count'],
                 ];
             }
             $userContext->cache->set('user_dfr', $records, new \DateInterval('PT30M'));
@@ -97,9 +114,12 @@ final class Duplicate
         $pagedPaths = array_slice($filePaths, $start, $perpage);
 
         $ids = [];
+        $idReferenceCounts = [];
         foreach ($pagedPaths as $path) {
             foreach ($grouped[$path] as $r) {
-                $ids[] = $r['id'];
+                $recordId = (int)$r['id'];
+                $ids[] = $recordId;
+                $idReferenceCounts[$recordId] = (int)$r['reference_count'];
             }
         }
 
@@ -127,7 +147,12 @@ final class Duplicate
         usort($rows, fn($a, $b) => $rank[(int)$a['id']] <=> $rank[(int)$b['id']]);
 
         foreach ($rows as $row) {
-            $response['items'][] = $this->formatEntity($row, userContext: $userContext);
+            $item = $this->formatEntity($row, userContext: $userContext);
+            $recordId = (int)$row['id'];
+            if (isset($idReferenceCounts[$recordId])) {
+                $item['duplicate_reference_count'] = (int)$idReferenceCounts[$recordId];
+            }
+            $response['items'][] = $item;
         }
 
         $response['paging'] = [

@@ -3,7 +3,7 @@
     <div class="columns is-multiline">
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4">
-          <span class="icon"><i class="fas fa-copy"/></span>
+          <span class="icon"><i class="fas fa-copy" /></span>
           <span>
             <template v-if="isMobile">DFR</template>
             <template v-else>Duplicate File Reference</template>
@@ -13,28 +13,28 @@
           <div class="field is-grouped">
             <div class="control has-icons-left" v-if="showFilter">
               <input type="search" v-model.lazy="filter" class="input" id="filter"
-                     placeholder="Filter displayed results.">
-              <span class="icon is-left"><i class="fas fa-filter"/></span>
+                placeholder="Filter displayed results.">
+              <span class="icon is-left"><i class="fas fa-filter" /></span>
             </div>
 
             <div class="control">
               <button class="button is-danger is-light" @click="toggleFilter">
-                <span class="icon"><i class="fas fa-filter"/></span>
+                <span class="icon"><i class="fas fa-filter" /></span>
                 <span v-if="!isMobile">Filter</span>
               </button>
             </div>
 
             <div class="control">
               <button class="button is-danger" @click="deleteRecords">
-                <span class="icon"><i class="fas fa-trash"/></span>
+                <span class="icon"><i class="fas fa-trash" /></span>
                 <span v-if="!isMobile">Delete</span>
               </button>
             </div>
 
             <p class="control">
               <button class="button is-info" @click.prevent="loadContent(page, true, true)" :disabled="isLoading"
-                      :class="{ 'is-loading': isLoading }">
-                <span class="icon"><i class="fas fa-sync"/></span>
+                :class="{ 'is-loading': isLoading }">
+                <span class="icon"><i class="fas fa-sync" /></span>
                 <span v-if="!isMobile">Reload</span>
               </button>
             </p>
@@ -51,13 +51,13 @@
         <div class="field is-grouped">
           <div class="control" v-if="page !== 1">
             <button rel="first" class="button" @click="loadContent(1)" :disabled="isLoading"
-                    :class="{ 'is-loading': isLoading }">
+              :class="{ 'is-loading': isLoading }">
               <span>&lt;&lt;</span>
             </button>
           </div>
           <div class="control" v-if="page > 1 && (page - 1) !== 1">
             <button rel="prev" class="button" @click="loadContent(page - 1)" :disabled="isLoading"
-                    :class="{ 'is-loading': isLoading }">
+              :class="{ 'is-loading': isLoading }">
               <span>&lt;</span>
             </button>
           </div>
@@ -72,13 +72,13 @@
           </div>
           <div class="control" v-if="page !== last_page && (page + 1) !== last_page">
             <button rel="next" class="button" @click="loadContent(page + 1)" :disabled="isLoading"
-                    :class="{ 'is-loading': isLoading }">
+              :class="{ 'is-loading': isLoading }">
               <span>&gt;</span>
             </button>
           </div>
           <div class="control" v-if="page !== last_page">
             <button rel="last" class="button" @click="loadContent(last_page)" :disabled="isLoading"
-                    :class="{ 'is-loading': isLoading }">
+              :class="{ 'is-loading': isLoading }">
               <span>&gt;&gt;</span>
             </button>
           </div>
@@ -93,7 +93,7 @@
                 <header class="card-header">
                   <p class="card-header-title is-text-overflow pr-1">
                     <FloatingImage :image="`/history/${item.id}/images/poster`" :item_class="'scaled-image'"
-                                   v-if="poster_enable">
+                      v-if="poster_enable">
                       <NuxtLink :to="'/history/' + item.id">
                         {{ item?.full_title || makeName(item) }}
                       </NuxtLink>
@@ -104,7 +104,7 @@
                   </p>
                   <span class="card-header-icon">
                     <span class="icon">
-                      <i class="fas" :class="'episode' === item.type.toLowerCase() ? 'fa-tv' :'fa-film'"/>
+                      <i class="fas" :class="'episode' === item.type.toLowerCase() ? 'fa-tv' : 'fa-film'" />
                     </span>
                   </span>
                 </header>
@@ -113,10 +113,10 @@
                     <div class="column is-12">
                       <div class="field is-grouped">
                         <div class="control" @click="item.expand_title = !item?.expand_title">
-                          <span class="icon"><i class="fas fa-heading"/></span>
+                          <span class="icon"><i class="fas fa-heading" /></span>
                         </div>
                         <div class="control is-expanded is-clickable"
-                             :class="{ 'is-text-overflow': !item?.expand_title, 'is-text-contents': item?.expand_title }">
+                          :class="{ 'is-text-overflow': !item?.expand_title, 'is-text-contents': item?.expand_title }">
                           <template v-if="item?.content_title">
                             <NuxtLink :to="makeSearchLink('subtitle', item.content_title)">
                               {{ item.content_title }}
@@ -130,30 +130,25 @@
                         </div>
                         <div class="control">
                           <span class="icon is-clickable" @click="copyText(item?.content_title ?? item.title, false)">
-                            <i class="fas fa-copy"/></span>
+                            <i class="fas fa-copy" /></span>
                         </div>
                       </div>
                     </div>
                     <div class="column is-12">
                       <div class="field is-grouped">
                         <div class="control" @click="item.expand_path = !item?.expand_path">
-                          <span class="icon"><i class="fas fa-file"/></span>
+                          <span class="icon"><i class="fas fa-file" /></span>
                         </div>
                         <div class="control is-expanded is-clickable"
-                             :class="{ 'is-text-overflow': !item?.expand_path, 'is-text-contents': item?.expand_path }">
+                          :class="{ 'is-text-overflow': !item?.expand_path, 'is-text-contents': item?.expand_path }">
                           <div class="is-flex is-align-items-center">
                             <!-- Popover wrapping the NuxtLink directly (only if differences exist) -->
-                            <Popover v-if="item?.content_path && hasFileDifferences(item)"
-                                     placement="bottom-start"
-                                     trigger="hover"
-                                     :show-delay="200"
-                                     :hide-delay="200"
-                                     :offset="8"
-                                     content-class="p-0">
+                            <Popover v-if="item?.content_path && hasFileDifferences(item)" placement="bottom-start"
+                              trigger="hover" :show-delay="200" :hide-delay="200" :offset="8" content-class="p-0">
                               <template #trigger>
                                 <NuxtLink :to="makeSearchLink('path', item.content_path)"
-                                          :class="{ 'is-text-overflow': !item?.expand_path, 'is-text-contents': item?.expand_path }"
-                                          style="display: block; width: 100%;">
+                                  :class="{ 'is-text-overflow': !item?.expand_path, 'is-text-contents': item?.expand_path }"
+                                  style="display: block; width: 100%;">
                                   {{ item.content_path }}
                                 </NuxtLink>
                               </template>
@@ -161,18 +156,16 @@
                                 <div class="file-diff-popover" style="min-width: 300px; max-width: 500px;">
                                   <div class="has-background-warning px-4 py-3 has-text-dark">
                                     <div class="is-size-6 has-text-weight-semibold">
-                                      <span class="icon is-small"><i class="fas fa-exclamation-circle"/></span>
+                                      <span class="icon is-small"><i class="fas fa-exclamation-circle" /></span>
                                       Path Differences Found
                                     </div>
                                   </div>
                                   <div class="p-3">
-                                    <FileDiff :items="getFileDiffData(item)" :compact="true"/>
+                                    <FileDiff :items="getFileDiffData(item)" :compact="true" />
                                   </div>
-                                  <div class="has-background-light px-4 py-2 has-text-right is-size-7">
-                                    <button class="button is-small is-light" @click="hide">
-                                      <span class="icon is-small">
-                                        <i class="fas fa-times"/>
-                                      </span>
+                                  <div class="px-4 py-2 has-text-right is-size-7">
+                                    <button class="button is-small" @click="hide">
+                                      <span class="icon"><i class="fas fa-times" /></span>
                                       <span>Close</span>
                                     </button>
                                   </div>
@@ -182,8 +175,8 @@
 
                             <!-- Regular NuxtLink for paths without differences -->
                             <NuxtLink v-else-if="item?.content_path" :to="makeSearchLink('path', item.content_path)"
-                                      :class="{ 'is-text-overflow': !item?.expand_path, 'is-text-contents': item?.expand_path }"
-                                      style="display: block; width: 100%;">
+                              :class="{ 'is-text-overflow': !item?.expand_path, 'is-text-contents': item?.expand_path }"
+                              style="display: block; width: 100%;">
                               {{ item.content_path }}
                             </NuxtLink>
 
@@ -192,24 +185,36 @@
                         </div>
                         <div class="control">
                           <span class="icon is-clickable" @click="copyText(item?.content_path || '', false)">
-                            <i class="fas fa-copy"/></span>
+                            <i class="fas fa-copy" /></span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="column is-12" v-if="item?.content_path && item?.duplicate_reference_count">
+                      <div class="field is-grouped">
+                        <div class="control is-unselectable">
+                          <span class="icon"><i class="fas fa-database" />&nbsp;</span>
+                        </div>
+                        <div class="control is-expanded">
+                          Found <span class="is-bold is-small has-text-danger">{{ item.duplicate_reference_count
+                          }}</span> records
+                          referencing this path.
                         </div>
                       </div>
                     </div>
                     <div class="column is-12">
                       <div class="field is-grouped">
                         <div class="control is-expanded is-unselectable">
-                          <span class="icon"><i class="fas fa-info"/>&nbsp;</span>
+                          <span class="icon"><i class="fas fa-info" />&nbsp;</span>
                           <span>Has metadata from</span>
                         </div>
                         <div class="control">
                           <NuxtLink v-for="backend in item.reported_by" :key="`${item.id}-rb-${backend}`"
-                                    :to="`/backend/${backend}`" class="tag ml-1"
-                                    :class="hasUniqueFilePath(item, backend) ? 'is-warning' : 'is-primary'">
+                            :to="`/backend/${backend}`" class="tag ml-1"
+                            :class="hasUniqueFilePath(item, backend) ? 'is-warning' : 'is-primary'">
                             {{ backend }}
                           </NuxtLink>
                           <NuxtLink v-for="backend in item.not_reported_by" :key="`${item.id}-nrb-${backend}`"
-                                    :to="`/backend/${backend}`" class="tag is-danger ml-1">
+                            :to="`/backend/${backend}`" class="tag is-danger ml-1">
                             {{ backend }}
                           </NuxtLink>
                         </div>
@@ -220,15 +225,15 @@
                 <div class="card-footer">
                   <div class="card-footer-item">
                     <span class="icon">
-                      <i class="fas" :class="{ 'fa-eye': item.watched, 'fa-eye-slash': !item.watched }"/>&nbsp;
+                      <i class="fas" :class="{ 'fa-eye': item.watched, 'fa-eye-slash': !item.watched }" />&nbsp;
                     </span>
                     <span class="has-text-success" v-if="item.watched">Played</span>
                     <span class="has-text-danger" v-else>Unplayed</span>
                   </div>
                   <div class="card-footer-item">
-                    <span class="icon"><i class="fas fa-calendar"/>&nbsp;</span>
+                    <span class="icon"><i class="fas fa-calendar" />&nbsp;</span>
                     <span class="has-tooltip"
-                          v-tooltip="`Record updated at: ${moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
+                      v-tooltip="`Record updated at: ${moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
                       {{ moment.unix(item.updated_at).fromNow() }}
                     </span>
                   </div>
@@ -240,14 +245,14 @@
 
         <div class="column is-12" v-else>
           <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
-                   icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
+            icon="fas fa-spinner fa-spin" message="Loading data. Please wait..." />
           <template v-else>
             <Message message_class="has-background-warning-80 has-text-dark" v-if="filter && items.length > 1"
-                     title="Information" icon="fas fa-check">
+              title="Information" icon="fas fa-check">
               The filter <code>{{ filter }}</code> did not match any thing.
             </Message>
             <Message message_class="has-background-success-90 has-text-dark" v-if="!filter || items.length < 1"
-                     title="Success" icon="fas fa-check">
+              title="Success" icon="fas fa-check">
               There are no duplicate file references in the database.
             </Message>
           </template>
@@ -255,7 +260,7 @@
 
         <div class="column is-12">
           <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
-                   @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+            @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
             <ul>
               <li>This checker will only works <b>if your media servers are actually using same file paths</b>.</li>
               <li>If you see multi-episode records, that mean your metadata need to be forcibly updated. Go to backends
@@ -274,17 +279,17 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onBeforeUnmount, onMounted, ref, watch} from 'vue'
-import {useHead, useRoute, useRouter} from '#app'
-import {useMediaQuery, useStorage} from '@vueuse/core'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useHead, useRoute, useRouter } from '#app'
+import { useMediaQuery, useStorage } from '@vueuse/core'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
 import Lazy from '~/components/Lazy.vue'
 import FloatingImage from '~/components/FloatingImage.vue'
 import FileDiff from '~/components/FileDiff.vue'
 import Popover from '~/components/Popover.vue'
-import {NuxtLink} from '#components'
-import {useDialog} from '~/composables/useDialog'
+import { NuxtLink } from '#components'
+import { useDialog } from '~/composables/useDialog'
 import {
   awaitElement,
   copyText,
@@ -296,21 +301,21 @@ import {
   request,
   TOOLTIP_DATE_FORMAT
 } from '~/utils'
-import type {FileDiffInput, HistoryItem} from '~/types'
+import type { FileDiffInput, HistoryItem } from '~/types'
 
 type DuplicateItemWithUI = HistoryItem & {
   /** UI state: whether title is expanded for display */
   expand_title?: boolean
   /** UI state: whether path is expanded for display */
   expand_path?: boolean
-  /** Additional properties that may come from the API */
-  [key: string]: unknown
+  /** Number of records referencing the same content path */
+  duplicate_reference_count?: number
 }
 
 const route = useRoute()
 const router = useRouter()
 
-useHead({title: 'DFR'})
+useHead({ title: 'DFR' })
 
 const show_page_tips = useStorage('show_page_tips', true)
 const poster_enable = useStorage('poster_enable', true)
@@ -415,16 +420,17 @@ const getFileDiffData = (item: DuplicateItemWithUI): Array<FileDiffInput> => {
   return diffItems
 }
 
-/**
- * Determines if a backend has a different file path compared to others
- * Returns true if this backend's file path is unique among all backends
- */
 const hasUniqueFilePath = (item: DuplicateItemWithUI, targetBackend: string): boolean => {
   if (!item?.metadata) {
     return false
   }
 
-  // Get the file path for the target backend
+  const reportedBackends = Object.keys(item.metadata).filter(bName => item.metadata[bName as keyof typeof item.metadata])
+  if (reportedBackends.length <= 1) {
+    return false
+  }
+
+
   const targetMetadata = item.metadata[targetBackend as keyof typeof item.metadata]
   const targetFile = targetMetadata?.path || ''
 
@@ -432,7 +438,6 @@ const hasUniqueFilePath = (item: DuplicateItemWithUI, targetBackend: string): bo
     return false
   }
 
-  // Count how many backends have this same file path
   let backendsWithSameFile = 0
   for (const bName of Object.keys(item.metadata)) {
     const bNameTyped = bName as keyof typeof item.metadata
@@ -446,7 +451,6 @@ const hasUniqueFilePath = (item: DuplicateItemWithUI, targetBackend: string): bo
     }
   }
 
-  // If only one backend has this file path, it's unique (different from others)
   return 1 === backendsWithSameFile
 }
 
@@ -468,7 +472,7 @@ const loadContent = async (pageNumber: number, fromPopState = false, fromReload 
     pageTitle += ` - Filter: ${filter.value}`
   }
 
-  useHead({title: pageTitle})
+  useHead({ title: pageTitle })
 
   const newUrl = window.location.pathname + '?' + search.toString()
   isLoading.value = true
@@ -498,7 +502,7 @@ const loadContent = async (pageNumber: number, fromPopState = false, fromReload 
     }
 
     if (!fromPopState && newUrl !== window.location.href) {
-      await router.push({path: '/duplicate', query: Object.fromEntries(search)})
+      await router.push({ path: '/duplicate', query: Object.fromEntries(search) })
     }
 
     if ('paging' in json && json.paging) {
@@ -590,7 +594,7 @@ const stateCallBack = async (e: PopStateEvent): Promise<void> => {
 }
 
 const deleteRecords = async (): Promise<void> => {
-  const {status: confirmStatus} = await useDialog().confirmDialog({
+  const { status: confirmStatus } = await useDialog().confirmDialog({
     message: `Delete '${total.value}' items?`,
     confirmColor: 'is-danger',
   })
@@ -600,7 +604,7 @@ const deleteRecords = async (): Promise<void> => {
   }
 
   try {
-    const response = await request('/system/duplicate', {method: 'DELETE'})
+    const response = await request('/system/duplicate', { method: 'DELETE' })
     if (!response.ok) {
       const json = await parse_api_response(response)
       if ('error' in json) {
