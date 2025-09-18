@@ -369,14 +369,6 @@ export interface TaskItem {
 }
 
 /**
- * Represents a duplicate item from the /system/duplicate API.
- */
-export interface DuplicateItem extends MediaItemWithBackends {
-    /** Full display title combining multiple sources */
-    full_title?: string
-}
-
-/**
  * Represents a backup file with metadata and download/restore functionality.
  */
 export interface BackupItem {
@@ -684,7 +676,35 @@ export interface HistoryItem {
     /** Global unique identifiers */
     guids: Record<string, string>
     /** Metadata from different backends */
-    metadata: Record<string, any>
+    metadata: {
+        [backend: string]: {
+            id: string
+            type: "episode" | "movie" | "show"
+            watched: "1" | "0"
+            via: string
+            title: string
+            guids: Record<string, string>
+            added_at: number
+            extra: {
+                genres: Array<string>
+                title: string
+                date: string
+                favorite: number
+                overview: string
+            },
+            "library": "22717"
+            "show": "259409"
+            "season": "4"
+            "episode": "10"
+            "parent": Record<string, string>
+            "year": number
+            "multi": boolean
+            "path": string
+            "played_at": number
+            "progress": number
+            "webUrl": string
+        }
+    }
     /** Additional data */
     extra: Record<string, any>
     /** Created timestamp */
@@ -1034,4 +1054,82 @@ export interface PlexOAuthData {
 export interface PlexOAuthTokenResponse {
     /** The authentication token received from Plex */
     authToken?: string
+}
+
+/**
+ * Input item for file diff visualization component.
+ * Represents a backend and its associated file path.
+ */
+export interface FileDiffInput {
+    /** Backend name (e.g., 'plex', 'jellyfin') */
+    backend: string
+    /** File path for this backend */
+    file: string
+}
+
+/**
+ * Represents a path segment with highlighting information.
+ */
+export interface FileDiffPathSegment {
+    /** The path segment text */
+    segment: string
+    /** Whether this segment is different from the reference */
+    isDifferent: boolean
+}
+
+/**
+ * Represents a line in the GitHub-style diff view.
+ */
+export interface FileDiffLine {
+    /** Line number in the reference file (if applicable) */
+    lineNumber?: number
+    /** Type of diff line */
+    type: 'context' | 'reference' | 'addition' | 'deletion' | 'modification'
+    /** The text content of this line */
+    content: string
+    /** Backend name for this line (for additions/deletions/modifications) */
+    backend?: string
+    /** Additional CSS classes for styling */
+    cssClass?: string
+    /** Path segments with difference highlighting (for path diff lines) */
+    pathSegments?: Array<FileDiffPathSegment>
+}
+
+/**
+ * Represents a chunk/hunk of differences in GitHub-style diff.
+ */
+export interface FileDiffChunk {
+    /** Reference file line number where this chunk starts */
+    referenceStart: number
+    /** Number of lines in reference for this chunk */
+    referenceLines: number
+    /** Array of diff lines in this chunk */
+    lines: Array<FileDiffLine>
+    /** Header text for this chunk (e.g., "@@ -1,3 +1,4 @@") */
+    header: string
+}
+
+/**
+ * Result of GitHub-style file diff computation.
+ */
+export interface FileDiffResult {
+    /** The reference file path chosen as baseline */
+    referencePath: string
+    /** Backend name that provides the reference */
+    referenceBackend: string
+    /** Array of diff chunks showing changes */
+    chunks: Array<FileDiffChunk>
+    /** Whether any differences were found */
+    hasDifferences: boolean
+    /** Summary statistics */
+    stats: {
+        /** Total lines added */
+        additions: number
+        /** Total lines deleted */
+        deletions: number
+        /** Total lines modified */
+        modifications: number
+    }
+    /** Reference path segments showing common vs different parts */
+    referenceSegments: Array<FileDiffPathSegment>
 }
