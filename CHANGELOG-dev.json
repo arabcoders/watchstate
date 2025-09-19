@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250919-98ec0873",
-        "date": "2025-09-19T18:08:12+00:00",
+        "tag": "dev-20250919-ef042620",
+        "date": "2025-09-19T18:10:37+00:00",
         "commits": [
+            {
+                "sha": "ef042620",
+                "message": "update external packages",
+                "author": "arabcoders",
+                "date": "2025-09-19T18:10:37+00:00",
+                "full_sha": "ef04262025638829fdc7821c1c025ee576439f4b"
+            },
             {
                 "sha": "98ec0873",
                 "message": "Updated DB tests",
@@ -536,7 +543,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "98ec087313b5187cd389ec8d8fee53ac18e570ea"
+        "full_sha": "ef04262025638829fdc7821c1c025ee576439f4b"
     },
     {
         "tag": "dev-20250604-9407bc76",
