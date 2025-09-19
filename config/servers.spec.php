@@ -211,7 +211,7 @@ return [
     ],
     [
         'key' => 'options.plex_user_name',
-        'type' => 'int',
+        'type' => 'string',
         'visible' => false,
         'description' => 'The plex user name.',
     ],

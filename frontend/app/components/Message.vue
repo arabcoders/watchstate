@@ -8,7 +8,7 @@
       <span>{{ toggle ? 'Close' : 'Open' }}</span>
     </div>
     <div class="notification-title is-unselectable" :class="{'is-clickable':useToggle}" v-if="title || icon"
-         @click="useToggle ? $emit('toggle', toggle):null">
+         @click="true === useToggle ? $emit('toggle', toggle): null">
       <template v-if="icon">
         <span class="icon-text">
           <span class="icon"><i :class="icon"></i></span>
@@ -24,44 +24,38 @@
   </div>
 </template>
 
-<script setup>
-defineProps({
-  title: {
-    type: String,
-    default: null,
-    required: false
-  },
-  icon: {
-    type: String,
-    default: null,
-    required: false
-  },
-  message: {
-    type: String,
-    default: null,
-    required: false
-  },
-  message_class: {
-    type: String,
-    default: 'is-info',
-    required: false
-  },
-  useToggle: {
-    type: Boolean,
-    default: false,
-    required: false
-  },
-  toggle: {
-    type: Boolean,
-    default: false,
-    required: false
-  },
-  useClose: {
-    type: Boolean,
-    default: false,
-    required: false
-  }
+<script setup lang="ts">
+import {defineProps, defineEmits} from 'vue'
+
+withDefaults(defineProps<{
+  /** Title text for the notification */
+  title?: string | null
+  /** Icon class for the notification */
+  icon?: string | null
+  /** Main message content */
+  message?: string | null
+  /** CSS class for the notification */
+  message_class?: string
+  /** If true, show toggle button */
+  useToggle?: boolean
+  /** Current toggle state */
+  toggle?: boolean
+  /** If true, show close button */
+  useClose?: boolean
+}>(), {
+  title: null,
+  icon: null,
+  message: null,
+  message_class: 'is-info',
+  useToggle: false,
+  toggle: false,
+  useClose: false,
 })
 
-defineEmits(['toggle', 'close'])
+defineEmits<{
+  /** Emitted when the toggle button is clicked */
+  (e: 'toggle', value?: boolean): void
+  /** Emitted when the close button is clicked */
+  (e: 'close'): void
+}>()
 </script>

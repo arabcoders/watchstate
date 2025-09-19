@@ -652,10 +652,7 @@ database indexes with the new guids.
 
 # Sync watch progress.
 
-In order to sync the watch progress between media backends, you need to enable the following environment variable
-`WS_SYNC_PROGRESS` in `WebUI > Env` page.
-
-For best experience, you should enable the [webhook](guides/webhooks.md) feature for the media backends you want to sync
+For best experience, you SHOULD enable the [webhook](guides/webhooks.md) feature for the media backends you want to sync
 the watch progress, however, if you are unable to do so, the `Tasks > import` task will also generate progress watch
 events. However, it's not as reliable as the `Webhooks` or as fast. using `Webhooks` is the recommended way and offers
 the best experience.

@@ -51,9 +51,9 @@
                  title="Loading" icon="fas fa-spinner fa-spin" message="Generating the report. Please wait..."/>
         <template v-if="!show_report_warning && data.length > 0">
           <pre style="min-height: 60vh;max-height:70vh; overflow-y: scroll" class="is-terminal"
-               ref="data-content"><code><div ref="topMarker"></div><span v-for="(item, index) in data" :key="index"
-                                                                         class="is-block">{{ item }}</span></code><div
-              ref="bottomMarker"></div></pre>
+               ref="data-content"><code><span ref="topMarker"></span><span v-for="(item, index) in data" :key="index"
+                                                                           class="is-block">{{ item }}</span><span
+              ref="bottomMarker"></span></code></pre>
         </template>
       </div>
     </div>
@@ -61,8 +61,7 @@
 </template>
 
 <script setup>
-import {copyText} from '~/utils/index.js'
-import request from '~/utils/request.js'
+import {request, copyText} from '~/utils'
 
 useHead({title: `System Report`})
 

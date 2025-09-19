@@ -59,8 +59,7 @@ final class Index
         #[Inject(DirectMapper::class)]
         private iImport $mapper,
         private iLogger $logger
-    ) {
-    }
+    ) {}
 
     #[Get(self::URL . '[/]', name: 'history.list')]
     public function list(iRequest $request): iResponse
@@ -351,9 +350,9 @@ final class Index
             }
 
             if (null === ($matches['field'] ?? null) || false === in_array(
-                    $matches['field'],
-                    self::COLUMNS_SORTABLE
-                )) {
+                $matches['field'],
+                self::COLUMNS_SORTABLE
+            )) {
                 continue;
             }
 
@@ -513,9 +512,9 @@ final class Index
             ],
         ];
 
-
         while ($row = $stmt->fetch()) {
             $entity = $this->formatEntity($row, userContext: $userContext);
+            $entity['duplicate_reference_ids'] = [];
 
             if (null !== $customView) {
                 $customEntity = [];
@@ -523,6 +522,15 @@ final class Index
                     $customEntity = ag_set($customEntity, $k, ag($entity, $k, null));
                 }
                 $entity = $customEntity;
+            } elseif ($data->get('with_duplicates')) {
+                try {
+                    $entity['duplicate_reference_ids'] = array_reduce(array_values(array_map(
+                        fn(iState $i) => $i->id,
+                        $userContext->db->duplicates(StateEntity::fromArray($entity), $userContext->cache)
+                    )), fn(array $r, $i) => $i !== $entity['id'] ? [...$r, $i] : $r, []);
+                } catch (Throwable $e) {
+                    $this->logger->error($e->getMessage());
+                }
             }
 
             $response['history'][] = $entity;
@@ -573,7 +581,7 @@ final class Index
 
                 try {
                     $data = ffprobe_file($file, $userContext->cache);
-                } catch (RuntimeException|JsonException) {
+                } catch (RuntimeException | JsonException) {
                     continue;
                 }
 
@@ -629,7 +637,52 @@ final class Index
             }
         }
 
+        $entity['duplicate_reference_ids'] = [];
+
+        if ($params->get('with_duplicates')) {
+            try {
+                $entity['duplicate_reference_ids'] = array_reduce(array_values(array_map(
+                    fn(iState $i) => $i->id,
+                    $userContext->db->duplicates($item, $userContext->cache)
+                )), fn(array $r, $i) => $i !== $item->id ? [...$r, $i] : $r, []);
+            } catch (Throwable $e) {
+                $this->logger->error($e->getMessage());
+            }
+        }
+
         return api_response(Status::OK, $entity);
+    }
+
+    #[Get(self::URL . '/{id:\d+}/duplicates[/]', name: 'history.duplicates')]
+    public function duplicates(iRequest $request, string $id): iResponse
+    {
+        try {
+            $userContext = $this->getUserContext(request: $request, mapper: $this->mapper, logger: $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
+
+        $entity = Container::get(iState::class)::fromArray([iState::COLUMN_ID => $id]);
+
+        if (null === ($item = $userContext->db->get($entity))) {
+            return api_error('Not found', Status::NOT_FOUND);
+        }
+
+        $data = [
+            'duplicate_reference_ids' => [],
+        ];
+
+        try {
+            $data['duplicate_reference_ids'] = array_reduce(array_values(array_map(
+                fn(iState $i) => $i->id,
+                $userContext->db->duplicates($item, $userContext->cache)
+            )), fn(array $r, $i) => $i !== $item->id ? [...$r, $i] : $r, []);
+        } catch (Throwable $e) {
+            $this->logger->error($e->getMessage());
+            return api_error('Failed to get duplicates', Status::INTERNAL_SERVER_ERROR);
+        }
+
+        return api_response(Status::OK, $data);
     }
 
     #[Delete(self::URL . '/{id:\d+}[/]', name: 'history.delete')]
@@ -725,7 +778,7 @@ final class Index
         $validation = [];
 
         foreach ($item->getMetadata() as $name => $metadata) {
-            $id = ag($metadata, StateEntity::COLUMN_ID, null);
+            $id = ag($metadata, iState::COLUMN_ID, null);
             $validation[$name] = [
                 'id' => $id,
                 'status' => false,
@@ -793,7 +846,7 @@ final class Index
             $userContext->db->remove($item);
             return api_message('Record deleted.', Status::OK);
         }
-        
+
         $userContext->db->update($item);
         return $this->read($request, $id);
     }

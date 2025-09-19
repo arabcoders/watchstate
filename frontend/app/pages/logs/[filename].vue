@@ -17,12 +17,12 @@
               </button>
             </div>
 
-            <div class="control has-icons-left" v-if="toggleFilter">
+            <div class="control has-icons-left" v-if="toggleFilter && 'json' !== contentType">
               <input type="search" v-model.lazy="query" class="input" id="filter" placeholder="Filter">
               <span class="icon is-left"><i class="fas fa-filter"/></span>
             </div>
 
-            <div class="control">
+            <div class="control" v-if="'json' !== contentType">
               <button class="button is-danger is-light" v-tooltip.bottom="'Filter log lines.'"
                       @click="toggleFilter = !toggleFilter">
                 <span class="icon"><i class="fas fa-filter"/></span>
@@ -36,7 +36,7 @@
             </p>
 
             <p class="control">
-              <button class="button is-purple is-light" v-tooltip.bottom="'Download the entire logfile.'"
+              <button class="button is-purple is-light" v-tooltip.bottom="'Download file.'"
                       @click="downloadFile" :class="{ 'is-loading': isDownloading }">
                 <span class="icon"><i class="fas fa-download"/></span>
               </button>
@@ -49,8 +49,7 @@
             </p>
 
             <p class="control">
-              <button class="button" v-tooltip.bottom="'Copy showing logs'"
-                      @click="() => copyText(filterItems.map(i => i.text).join('\n'))">
+              <button class="button" v-tooltip.bottom="'Copy text'" @click="() => copyData()">
                 <span class="icon"><i class="fas fa-copy"/></span>
               </button>
             </p>
@@ -58,14 +57,23 @@
         </div>
         <div class="is-hidden-mobile">
           <span class="subtitle">
-            <template v-if="isTodayLog">The logs are being streamed in real-time.</template>
-            Scroll-up to load older logs.
+            <template v-if="'json' === contentType">Viewing JSON file.</template>
+            <template v-else>
+              <template v-if="isTodayLog">The logs are being streamed in real-time.</template>
+              Scroll-up to load older logs.
+            </template>
           </span>
         </div>
       </div>
 
       <div class="column is-12">
-        <div class="logbox is-grid" ref="logContainer" v-if="!error" @scroll.passive="handleScroll">
+        <div class="logbox is-grid" ref="logContainer" v-if="!error && 'json' === contentType">
+          <code id="logView" class="p-1 logline is-block" :class="{ 'is-pre-wrap': wrapLines, 'is-pre': !wrapLines }">
+            {{ renderJson(data) }}
+          </code>
+        </div>
+        <div class="logbox is-grid" ref="logContainer" v-if="!error && 'log'===contentType"
+             @scroll.passive="handleScroll">
           <code id="logView" class="p-1 logline is-block" :class="{ 'is-pre-wrap': wrapLines, 'is-pre': !wrapLines }">
             <span class="is-block m-0 notification is-info is-dark has-text-centered" v-if="reachedEnd && !query">
               <span class="notification-title">
@@ -142,92 +150,110 @@ div.logbox pre {
 }
 </style>
 
-<script setup>
-import Message from '~/components/Message.vue'
-import moment from 'moment'
+<script setup lang="ts">
+import {computed, nextTick, onBeforeUnmount, onMounted, onUnmounted, ref, watch} from 'vue'
+import {useHead, useRoute, useRouter} from '#app'
 import {useStorage} from '@vueuse/core'
-import {disableOpacity, enableOpacity, goto_history_item, notification, parse_api_response} from '~/utils/index.js'
-import request from '~/utils/request.js'
+import moment from 'moment'
 import {fetchEventSource} from '@microsoft/fetch-event-source'
+import {
+  copyText,
+  disableOpacity,
+  enableOpacity,
+  goto_history_item,
+  notification,
+  parse_api_response,
+  request
+} from '~/utils'
+import type {LogEntry} from '~/types'
+import Message from '~/components/Message.vue'
 
 const router = useRouter()
-const filename = useRoute().params.filename
+const filename = useRoute().params.filename as string
 
 useHead({title: `Logs : ${filename}`})
 
-const query = ref()
-const data = ref([])
-const error = ref('')
+const query = ref<string>('')
+const data = ref<Array<LogEntry>>([])
+const error = ref<string>('')
 const wrapLines = useStorage('logs_wrap_lines', false)
-const isDownloading = ref(false)
-const isLoading = ref(false)
-const toggleFilter = ref(false)
-const autoScroll = ref(true)
-const isTodayLog = computed(() => filename.includes(moment().format('YYYYMMDD')))
-const reachedEnd = ref(false)
-const offset = ref(0)
-let scrollTimeout = null
+const isDownloading = ref<boolean>(false)
+const isLoading = ref<boolean>(false)
+const toggleFilter = ref<boolean>(false)
+const autoScroll = ref<boolean>(true)
+const isTodayLog = computed((): boolean => filename.includes(moment().format('YYYYMMDD')))
+const reachedEnd = ref<boolean>(false)
+const offset = ref<number>(0)
+const contentType = ref<'log' | 'json'>('log')
+let scrollTimeout: NodeJS.Timeout | null = null
 
 const token = useStorage('token', '')
 
-watch(toggleFilter, async () => {
+watch(toggleFilter, async (): Promise<void> => {
   if (!toggleFilter.value) {
     query.value = ''
   }
-});
+})
 
-const filterItems = computed(() => {
+const filterItems = computed((): Array<LogEntry> => {
   if (!query.value) {
     return data.value ?? []
   }
-  return data.value.filter(m => m.text.toLowerCase().includes(query.value.toLowerCase()));
-});
+  return data.value.filter(m => m.text.toLowerCase().includes(query.value.toLowerCase()))
+})
 
-/** @type {Ref<EventSource|null>} */
-const stream = ref(null)
+const stream = ref<any>(null)
+const logContainer = ref<HTMLElement | null>(null)
+const bottomMarker = ref<HTMLElement | null>(null)
 
-/** @type {Ref<HTMLPreElement|null>} */
-const logContainer = ref(null)
+const ctrl = new AbortController()
 
-/** @type {Ref<HTMLPreElement|null>} */
-const bottomMarker = ref(null)
-
-const ctrl = new AbortController();
-
-const loadContent = async () => {
+const loadContent = async (): Promise<void> => {
   try {
     isLoading.value = true
     const response = await request(`/log/${filename}?offset=${offset.value}`)
-    const json = await parse_api_response(response)
+    const json = await parse_api_response<{
+      /** The log file name */
+      filename: string
+      /** Current offset position */
+      offset: number
+      /** Next offset for pagination, null if no more data */
+      next: number | null
+      /** Maximum number of lines in the file */
+      max: number
+      /** Content type of the log file */
+      type: 'log' | 'json'
+      /** Array of log entries */
+      lines: Array<LogEntry>
+    }>(response)
 
     if (200 !== response.status) {
+      if ('error' in json) {
+        error.value = `${json.error.code}: ${json.error.message}`
+      }
+      return
+    }
+
+    if ('logs-filename' !== useRoute().name) {
+      return
+    }
+
+    // Handle successful response
+    if ('error' in json) {
       error.value = `${json.error.code}: ${json.error.message}`
       return
     }
 
-    if (useRoute().name !== 'logs-filename') {
-      return
-    }
+    contentType.value = json.type ?? 'log'
 
-    const lines = []
-
-    json?.lines.forEach(i => {
-      try {
-        const line = String(i).trim()
-        lines.push(line);
-      } catch (error) {
-        console.error(error)
-      }
-    })
-
-    if (json?.lines?.length > 0) {
+    if (json.lines.length > 0) {
       data.value.unshift(...json.lines)
     }
 
-    if ("next" in json) {
-      offset.value = json.next ?? offset.value;
+    if ('next' in json) {
+      offset.value = json.next ?? offset.value
       if (null === json.next) {
-        reachedEnd.value = true;
+        reachedEnd.value = true
       }
     }
 
@@ -240,14 +266,14 @@ const loadContent = async () => {
 
     watchLog()
 
-  } catch (e) {
+  } catch (e: any) {
     error.value = e
   } finally {
     isLoading.value = false
   }
 }
 
-const handleScroll = () => {
+const handleScroll = (): void => {
   if (!logContainer.value || query.value) {
     return
   }
@@ -270,7 +296,7 @@ const handleScroll = () => {
   }
 }
 
-const scrollToBottom = () => {
+const scrollToBottom = (): void => {
   autoScroll.value = true
   nextTick(() => {
     if (bottomMarker.value) {
@@ -282,29 +308,29 @@ const scrollToBottom = () => {
 onMounted(async () => {
   await loadContent()
   await nextTick(() => disableOpacity())
-});
+})
 
-onBeforeUnmount(() => closeStream());
+onBeforeUnmount(() => closeStream())
 
 onUnmounted(async () => {
   closeStream()
   await nextTick(() => enableOpacity())
-});
+})
 
-const watchLog = () => {
+const watchLog = (): void => {
   if (!isTodayLog.value || null !== stream.value) {
-    closeStream();
-    return;
+    closeStream()
+    return
   }
 
-  // noinspection JSValidateTypes
-  stream.value = fetchEventSource(`/v1/api/log/${filename}?stream=1`, {
+  // fetchEventSource returns a Promise<void>, not EventSource
+  fetchEventSource(`/v1/api/log/${filename}?stream=1`, {
     onmessage: async evt => {
       if ('data' !== evt.event) {
         return
       }
 
-      let lines = evt.data.split(/\n/g);
+      let lines = evt.data.split(/\n/g)
 
       for (let x = 0; x < lines.length; x++) {
         try {
@@ -312,7 +338,7 @@ const watchLog = () => {
           if (!line.trim()) {
             continue
           }
-          data.value.push(JSON.parse(line))
+          data.value.push(JSON.parse(line) as LogEntry)
 
           await nextTick(() => {
             if (autoScroll.value && bottomMarker.value) {
@@ -329,48 +355,51 @@ const watchLog = () => {
     },
     signal: ctrl.signal,
   })
+
+  // Mark stream as active
+  stream.value = true
 }
 
-const closeStream = () => {
+const closeStream = (): void => {
   if (stream.value) {
     ctrl.abort()
     stream.value = null
   }
 }
 
-const downloadFile = () => {
-  isDownloading.value = true;
+const downloadFile = (): void => {
+  isDownloading.value = true
 
   const response = request(`/log/${filename}?download=1`)
 
   if ('showSaveFilePicker' in window) {
     response.then(async res => {
-      isDownloading.value = false;
+      isDownloading.value = false
 
-      return res.body.pipeTo(await (await window.showSaveFilePicker({
+      return res.body?.pipeTo(await (await (window as any).showSaveFilePicker({
         suggestedName: `${filename}`
       })).createWritable())
 
     })
   } else {
     response.then(res => res.blob()).then(blob => {
-      isDownloading.value = false;
+      isDownloading.value = false
       const fileURL = URL.createObjectURL(blob)
       const fileLink = document.createElement('a')
       fileLink.href = fileURL
       fileLink.download = `${filename}`
       fileLink.click()
-    });
+    })
   }
 }
 
-const deleteFile = async () => {
+const deleteFile = async (): Promise<void> => {
   if (!confirm(`Are you sure you want to delete '${filename}'? this cannot be undone.`)) {
-    return;
+    return
   }
 
   try {
-    closeStream();
+    closeStream()
 
     const response = await request(`/log/${filename}`, {method: 'DELETE'})
 
@@ -378,10 +407,10 @@ const deleteFile = async () => {
       notification('success', 'Information', `Logfile '${filename}' has been deleted.`)
       const router = useRouter()
       await router.push('/logs')
-      return;
+      return
     }
 
-    let json;
+    let json: any
 
     try {
       json = await response.json()
@@ -392,10 +421,19 @@ const deleteFile = async () => {
     }
 
     notification('error', 'Error', `Request to delete logfile failed. (${json.error.code}: ${json.error.message}).`)
-  } catch (e) {
+  } catch (e: any) {
     notification('error', 'Error', `Failed to request to delete a logfile. ${e}.`)
   }
 }
 
-const formatDate = dt => moment(dt).format('DD/MM HH:mm:ss')
+const formatDate = (dt: string): string => moment(dt).format('DD/MM HH:mm:ss')
+
+const renderJson = (lines: Array<LogEntry>): string => JSON.stringify(JSON.parse(lines.map(e => e.text).join('')), null, 4)
+const copyData = () => {
+  if ('json' === contentType.value) {
+    copyText(renderJson(data.value))
+    return
+  }
+  copyText(filterItems.value.map(i => i.text).join('\n'))
+}
 </script>

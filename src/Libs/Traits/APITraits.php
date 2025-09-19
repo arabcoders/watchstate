@@ -13,6 +13,7 @@ use App\Libs\Config;
 use App\Libs\ConfigFile;
 use App\Libs\Container;
 use App\Libs\DataUtil;
+use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
@@ -212,13 +213,15 @@ trait APITraits
      * @param iState|array $entity The entity to format.
      * @param bool $includeContext (Optional) Include the contextual data.
      * @param UserContext|null $userContext (Optional) The user context.
+     * @param array $opts (Optional) Additional options.
      *
      * @return array The formatted entity.
      */
     protected function formatEntity(
         iState|array $entity,
         bool $includeContext = false,
-        UserContext|null $userContext = null
+        UserContext|null $userContext = null,
+        array $opts = [],
     ): array {
         if (true === is_array($entity)) {
             $entity = Container::get(iState::class)::fromArray($entity);
@@ -227,6 +230,8 @@ trait APITraits
         if (empty($this->_backendsNames)) {
             $this->_backendsNames = array_column($this->getBackends(userContext: $userContext), 'name');
         }
+
+        assert($entity instanceof StateEntity);
 
         $item = $entity->getAll();
 

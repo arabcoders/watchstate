@@ -33,7 +33,7 @@ use TypeError;
 
 class HelpersTest extends TestCase
 {
-    protected CacheInterface|null $cache = null;
+    protected $cache = null;
 
     protected function setUp(): void
     {
@@ -1738,7 +1738,6 @@ class HelpersTest extends TestCase
                 'ShowTitle - S01E01-03 - random text.mkv',
                 ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 3]
             ],
-
             // S01E01-E03
             [
                 'ShowTitle - S01E01-E05.mkv',
@@ -1751,6 +1750,22 @@ class HelpersTest extends TestCase
             [
                 'ShowTitle - S01E01-E03 - random text.mkv',
                 ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 3]
+            ],
+            [
+                '[SubGroup] ShowTitle (2022) - S02E11 - [035] TBA [HDTV-1080p] [JA] [x264 AAC 8bit].mkv',
+                ['status' => true, 'multi' => false, 'season' => 2, 'start' => 11, 'end' => 11]
+            ],
+            [
+                'ShowTitle - S01E05 - HDTV-720p.mkv',
+                ['status' => true, 'multi' => false, 'season' => 1, 'start' => 5, 'end' => 5]
+            ],
+            [
+                'ShowTitle - S01E12 - WEBRip-480p - sample text.mkv',
+                ['status' => true, 'multi' => false, 'season' => 1, 'start' => 12, 'end' => 12]
+            ],
+            [
+                'ShowTitle - S03E02 - REMUX-2160p [HEVC x265] [DTS-5.1].mkv',
+                ['status' => true, 'multi' => false, 'season' => 3, 'start' => 2, 'end' => 2]
             ],
         ];
 

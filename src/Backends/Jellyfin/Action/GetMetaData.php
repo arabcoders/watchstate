@@ -130,7 +130,7 @@ class GetMetaData
                         $this->cache->set(
                             key: $cacheKey,
                             value: $item,
-                            ttl: $opts[Options::CACHE_TTL] ?? new DateInterval('PT5M')
+                            ttl: $opts[Options::CACHE_TTL] ?? new DateInterval('PT2M')
                         );
                     }
 

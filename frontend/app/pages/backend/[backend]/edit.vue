@@ -4,9 +4,9 @@
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4">
           <span class="icon"><i class="fas fa-server"/>&nbsp;</span>
-          <NuxtLink to="/backends" v-text="'Backends'"/>
+          <NuxtLink to="/backends">Backends</NuxtLink>
           -
-          <NuxtLink :to="'/backend/' + id" v-text="id"/>
+          <NuxtLink :to="`/backend/${id}`">{{ id }}</NuxtLink>
           : Edit
         </span>
 
@@ -97,7 +97,7 @@
                       <div class="control" v-if="servers.length > 0">
                         <button class="button is-primary" type="button" :disabled="serversLoading" @click="getServers">
                           <span class="icon"><i class="fa"
-                                                :class="{'fa-spinner fa-spin': serversLoading,'fa-refresh' : !serversLoading }"/></span>
+                                                :class="{ 'fa-spinner fa-spin': serversLoading, 'fa-refresh': !serversLoading }"/></span>
                           <span class="is-hidden-mobile">Reload</span>
                         </button>
                       </div>
@@ -138,7 +138,8 @@
                         Enter the <strong>X-Plex-Token</strong>.
                         <NuxtLink target="_blank"
                                   to="https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/"
-                                  v-text="'Visit This article for more information.'"/>
+                                  v-text="'Visit This article'"/>
+                        for more information.
                       </template>
                       <template v-else>
                         You can generate a new API key from <strong>Dashboard > Settings > API Keys</strong>.
@@ -146,6 +147,45 @@
                     </p>
                   </div>
                 </div>
+
+                <div class="control" v-if="'plex' === backend.type">
+                  <button type="button" class="button is-warning" v-if="Object.keys(plex_oauth).length < 1"
+                          :disabled="plex_oauth_loading" @click="generate_plex_auth_request">
+                    <span class="icon-text">
+                      <template v-if="plex_oauth_loading">
+                        <span class="icon"><i class="fas fa-spinner fa-pulse"/></span>
+                        <span>Generating link</span>
+                      </template>
+                      <template v-else>
+                        <span class="icon"><i class="fas fa-external-link-alt"/></span>
+                        <span>Re-authenticate with plex.tv</span>
+                      </template>
+                    </span>
+                  </button>
+
+                  <template v-if="plex_oauth_url">
+                    <div class="field is-grouped">
+                      <div class="control">
+                        <NuxtLink @click="plex_get_token" type="button" :disabled="plex_oauth_loading">
+                          <span class="icon-text">
+                            <span class="icon"><i class="fas"
+                                                  :class="{ 'fa-check-double': !plex_oauth_loading, 'fa-spinner fa-pulse': plex_oauth_loading }"/></span>
+                            <span>Check auth request.</span>
+                          </span>
+                        </NuxtLink>
+                      </div>
+                      <div class="control">
+                        <NuxtLink :href="plex_oauth_url" target="_blank">
+                          <span class="icon-text">
+                            <span class="icon"><i class="fas fa-external-link-alt"/></span>
+                            <span>Open Plex Auth Link</span>
+                          </span>
+                        </NuxtLink>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+
               </div>
 
               <div class="field">
@@ -163,7 +203,7 @@
                     <div class="control" v-if="!isLimitedToken">
                       <button class="button is-primary" type="button" :disabled="uuidLoading" @click="getUUid">
                         <span class="icon"><i class="fa"
-                                              :class="{'fa-spinner fa-spin': uuidLoading,'fa-refresh' : !uuidLoading }"/></span>
+                                              :class="{ 'fa-spinner fa-spin': uuidLoading, 'fa-refresh': !uuidLoading }"/></span>
                         <span class="is-hidden-mobile">Reload</span>
                       </button>
                     </div>
@@ -202,9 +242,10 @@
                       </div>
                     </div>
                     <div class="control" v-if="!isLimitedToken">
-                      <button class="button is-primary" type="button" :disabled="usersLoading" @click="getUsers">
+                      <button class="button is-primary" type="button" :disabled="usersLoading"
+                              @click="() => getUsers(false, true)">
                         <span class="icon"><i class="fa"
-                                              :class="{'fa-spinner fa-spin': usersLoading,'fa-refresh' : !usersLoading }"/></span>
+                                              :class="{ 'fa-spinner fa-spin': usersLoading, 'fa-refresh': !usersLoading }"/></span>
                         <span class="is-hidden-mobile">Reload</span>
                       </button>
                     </div>
@@ -324,10 +365,11 @@
                       </div>
                       <div class="column is-6">
                         <input type="text" class="input" :value="option_get(_option)"
-                               @input="e => option_set(_option, e.target.value)" required>
+                               @input="(e: Event) => option_set(_option, (e.target as HTMLInputElement)?.value || '')"
+                               required>
                       </div>
                       <div class="column is-1">
-                        <button class="button is-danger" @click.prevent="removeOption(_option)">
+                        <button type="button" class="button is-danger" @click.prevent="removeOption(_option)">
                           <span class="icon"><i class="fas fa-trash"/></span>
                         </button>
                       </div>
@@ -355,10 +397,8 @@
                       {{ selectedOptionHelp }}
                     </div>
                     <div class="column is-1">
-                      <button class="button is-primary" @click.prevent="addOption">
-                        <span class="icon">
-                          <i class="fas fa-add"/>
-                        </span>
+                      <button type="button" class="button is-primary" @click.prevent="addOption">
+                        <span class="icon"><i class="fas fa-add"/></span>
                       </button>
                     </div>
                   </div>
@@ -382,17 +422,27 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import '~/assets/css/bulma-switch.css'
-import {notification} from '~/utils/index.js'
+import {computed, nextTick, onMounted, ref, toRaw, watch} from 'vue'
+import {navigateTo, useHead, useRoute} from '#app'
+import {useStorage} from '@vueuse/core'
+import {notification, parse_api_response, request} from '~/utils'
 import Message from '~/components/Message.vue'
-import {useStorage} from "@vueuse/core"
-import request from "~/utils/request.js"
+import type {
+  Backend,
+  BackendEditUser,
+  BackendServer,
+  BackendSpecOption,
+  GenericError,
+  PlexOAuthData,
+  PlexOAuthTokenResponse
+} from '~/types'
 
-const id = useRoute().params.backend
-const redirect = useRoute().query?.redirect ?? `/backend/${id}`
+const id = ref<string>(useRoute().params.backend as string)
+const redirect = ref<string>((useRoute().query?.redirect as string) ?? `/backend/${id.value}`)
 
-const backend = ref({
+const backend = ref<Backend>({
   name: '',
   type: '',
   url: '',
@@ -405,39 +455,52 @@ const backend = ref({
   options: {}
 })
 
-const showOptions = ref(false)
-const isLoading = ref(true)
-const users = ref([])
-const supported = ref([])
-const usersLoading = ref(false)
-const uuidLoading = ref(false)
-const optionsList = ref([])
-const selectedOption = ref('')
-const newOptions = ref({})
-const exposeToken = ref(false)
-const servers = ref([])
-const serversLoading = ref(false)
+const showOptions = ref<boolean>(false)
+const isLoading = ref<boolean>(true)
+const users = ref<Array<BackendEditUser>>([])
+const supported = ref<Array<string>>([])
+const usersLoading = ref<boolean>(false)
+const uuidLoading = ref<boolean>(false)
+const optionsList = ref<Array<BackendSpecOption>>([])
+const selectedOption = ref<string>('')
+const newOptions = ref<Record<string, boolean>>({})
+const exposeToken = ref<boolean>(false)
+const servers = ref<Array<BackendServer>>([])
+const serversLoading = ref<boolean>(false)
 const isLimitedToken = computed(() => Boolean(backend.value.options?.is_limited_token))
 const api_user = useStorage('api_user', 'main')
 
-const selectedOptionHelp = computed(() => {
-  const option = optionsList.value.find(v => v.key === selectedOption.value)
+const selectedOptionHelp = computed((): string => {
+  const option = optionsList.value.find(v => selectedOption.value === v.key)
   return option ? option.description : ''
-});
+})
 
-useHead({title: 'Backends - Edit: ' + id})
+useHead({title: 'Backends - Edit: ' + id.value})
 
-const loadContent = async () => {
-  supported.value = await (await request('/system/supported')).json()
+const loadContent = async (): Promise<void> => {
+  const supportedResponse = await request('/system/supported')
+  const supportedData = await parse_api_response<Array<string>>(supportedResponse)
 
-  const content = await request(`/backend/${id}`)
-  let json = await content.json()
+  if ('error' in supportedData) {
+    notification('error', 'Error', `Failed to load supported backends: ${supportedData.error.message}`)
+    return
+  }
+
+  supported.value = supportedData
+
+  const contentResponse = await request(`/backend/${id.value}`)
+  let json = await parse_api_response<Backend>(contentResponse)
+
+  if ('error' in json) {
+    notification('error', 'Error', `Failed to load backend: ${json.error.message}`)
+    return
+  }
 
   if (!json?.options || typeof json.options !== 'object') {
     json.options = {}
   }
 
-  backend.value = json;
+  backend.value = json
 
   if ('plex' === backend.value.type) {
     await getServers()
@@ -448,61 +511,78 @@ const loadContent = async () => {
   isLoading.value = false
 }
 
-const saveContent = async () => {
+const saveContent = async (): Promise<void> => {
   const json_text = toRaw(backend.value)
 
-  const flat = {}
-  flatOptionPaths.value.forEach(path => flat[path] = option_get(path))
+  const flat: Record<string, any> = {}
+  flatOptionPaths.value.forEach((path: string) => flat[path] = option_get(path))
 
-  if (Object.keys(flat).length > 0) {
+  if (0 < Object.keys(flat).length) {
     json_text.options = flat
   }
 
   try {
-    const response = await request(`/backend/${id}`, {
+    const response = await request(`/backend/${id.value}`, {
       method: 'PUT',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(json_text)
     })
 
-    const json = await response.json()
+    const json = await parse_api_response<GenericError>(response)
     if (200 !== response.status) {
-      notification('error', 'Error', `Failed to save backend settings. (${json.error.code}: ${json.error.message}).`)
+      if ('error' in json) {
+        notification('error', 'Error', `Failed to save backend settings. (${json.error.code}: ${json.error.message}).`)
+      } else {
+        notification('error', 'Error', 'Failed to save backend settings.')
+      }
       return
     }
 
-    notification('success', 'Success', `Successfully updated '${id}' settings.`)
-    const to = !redirect.startsWith('/') ? `/backend/${id}` : redirect
+    notification('success', 'Success', `Successfully updated '${id.value}' settings.`)
+    const to = !redirect.value.startsWith('/') ? `/backend/${id.value}` : redirect.value
     await navigateTo({path: to})
   } catch (e) {
-    notification('error', 'Error', `Request error. ${e.message}`)
+    const errorMessage = e instanceof Error ? e.message : String(e)
+    notification('error', 'Error', `Request error. ${errorMessage}`)
   }
 }
 
-const removeOption = async (key) => {
+const removeOption = async (key: string): Promise<void> => {
   if (newOptions.value[key]) {
     delete newOptions.value[key]
-    delete backend.value.options[key]
+    // Safe delete using type assertion for dynamic options
+    delete (backend.value.options as Record<string, any>)[key]
     return
   }
 
-  if (!confirm(`Are you sure you want to remove this option '${key}'?`)) {
+  const {status: confirmStatus} = await useDialog().confirmDialog({
+    title: 'Option removal',
+    message: `Delete the option '${key}'? This action cannot be undone.`,
+    confirmColor: 'is-danger',
+  })
+
+  if (true !== confirmStatus) {
     return
   }
 
-  const response = await request(`/backend/${id}/option/options.${key}`, {method: 'DELETE'})
+  const response = await request(`/backend/${id.value}/option/options.${key}`, {method: 'DELETE'})
 
   if (!response.ok) {
-    const json = await response.json()
-    notification('error', 'Error', `Failed to remove the option. (${json.error.code}: ${json.error.message}).`)
+    const json = await parse_api_response<GenericError>(response)
+    if ('error' in json) {
+      notification('error', 'Error', `Failed to remove the option. (${json.error.code}: ${json.error.message}).`)
+    } else {
+      notification('error', 'Error', 'Failed to remove the option.')
+    }
     return
   }
 
   notification('success', 'Information', `Option [${key}] removed successfully.`)
-  delete backend.value.options[key]
+  // Safe delete using type assertion for dynamic options
+  delete (backend.value.options as Record<string, any>)[key]
 }
 
-const addOption = async () => {
+const addOption = async (): Promise<void> => {
   if (!selectedOption.value) {
     notification('error', 'Error', 'Please select an option to add.')
     return
@@ -514,8 +594,8 @@ const addOption = async () => {
   selectedOption.value = ''
 }
 
-const getUUid = async () => {
-  const required_values = ['type', 'token', 'url'];
+const getUUid = async (): Promise<void> => {
+  const required_values: Array<keyof Backend> = ['type', 'token', 'url']
 
   if (required_values.some(v => !backend.value[v])) {
     notification('error', 'Error', `Please fill all the required fields. ${required_values.join(', ')}.`)
@@ -532,7 +612,7 @@ const getUUid = async () => {
     })
   })
 
-  const json = await response.json()
+  const json = await parse_api_response<{ identifier: string }>(response)
   uuidLoading.value = false
 
   if (!response.ok) {
@@ -540,11 +620,16 @@ const getUUid = async () => {
     return
   }
 
+  if ('error' in json) {
+    notification('error', 'Error', `Failed to get UUID: ${json.error.message}`)
+    return
+  }
+
   backend.value.uuid = json.identifier
 }
 
-const getUsers = async (showAlert = true) => {
-  const required_values = ['type', 'token', 'url', 'uuid'];
+const getUsers = async (showAlert: boolean = true, forceReload: boolean = false): Promise<void> => {
+  const required_values: Array<keyof Backend> = ['type', 'token', 'url', 'uuid']
 
   if (required_values.some(v => !backend.value[v])) {
     if (showAlert) {
@@ -555,79 +640,149 @@ const getUsers = async (showAlert = true) => {
 
   usersLoading.value = true
 
-  let data = {
+  let data: Record<string, any> = {
     token: backend.value.token,
     url: backend.value.url,
     uuid: backend.value.uuid,
     user: backend.value.user,
     options: {},
-  };
+  }
 
-  ['ADMIN_TOKEN', 'plex_guest_user', 'PLEX_USER_PIN', 'is_limited_token'].forEach(v => {
-    if (backend.value.options && backend.value.options[v]) {
-      data.options[v] = backend.value.options[v]
+  const requiredOptions = ['ADMIN_TOKEN', 'plex_guest_user', 'PLEX_USER_PIN', 'is_limited_token']
+  requiredOptions.forEach(v => {
+    const optionsRecord = backend.value.options as Record<string, any>
+    if (backend.value.options && optionsRecord[v]) {
+      data.options[v] = optionsRecord[v]
     }
   })
 
-  const response = await request(`/backends/users/${backend.value.type}?tokens=1`, {
+  const query = new URLSearchParams()
+  query.append('tokens', '1')
+  if (forceReload) {
+    query.append('no_cache', '1')
+  }
+  const response = await request(`/backends/users/${backend.value.type}?${query.toString()}`, {
     method: 'POST',
     body: JSON.stringify(data)
   })
 
-  const json = await response.json()
+  const json = await parse_api_response<Array<BackendEditUser>>(response)
 
   usersLoading.value = false
 
   if (200 !== response.status) {
-    notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
+    if ('error' in json) {
+      notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
+    } else {
+      notification('error', 'Error', 'Failed to load users')
+    }
+    return
+  }
+
+  if ('error' in json) {
+    notification('error', 'Error', `Failed to load users: ${json.error.message}`)
     return
   }
 
   users.value = json
 }
 
-watch(showOptions, async value => {
-  if (!value) {
-    return
-  }
-  if (optionsList.value.length > 0) {
+// -- if users updated we need to reset the token in-case the plex auth changed
+watch(() => users.value, newUsers => {
+  if ('plex' !== backend.value.type) {
     return
   }
 
-  const response = await request(`/backends/spec`)
-  const json = await response.json()
-  json.forEach(v => {
+  if (!newUsers || 0 === newUsers.length) {
+    return
+  }
+
+  if (!backend.value.user) {
+    return
+  }
+
+  // Find the currently selected user in the updated users list
+  const selectedUser = newUsers.find(user => user.id === backend.value.user)
+
+  if (!selectedUser) {
+    notification('warning', 'Warning', 'Selected user not found in updated user list')
+    return
+  }
+
+  // Check if the user has a token
+  if (!selectedUser.token) {
+    notification('error', 'Error', 'Selected user does not have a valid token')
+    return
+  }
+
+  // Only update if the token has actually changed
+  if (selectedUser.token !== backend.value.token) {
+    backend.value.token = selectedUser.token
+    notification('info', 'Information', `Token updated for user: ${selectedUser.name}`)
+  }
+
+  // Update user-specific options
+  if (selectedUser.guest) {
+    backend.value.options.plex_external_user = true
+  } else {
+    if (backend.value.options?.plex_external_user) {
+      delete backend.value.options.plex_external_user
+    }
+  }
+
+  backend.value.options.plex_user_name = selectedUser.name
+  backend.value.options.plex_user_uuid = selectedUser.uuid
+}, {deep: true})
+
+watch(showOptions, async (value: boolean) => {
+  if (!value) {
+    return
+  }
+  if (0 < optionsList.value.length) {
+    return
+  }
+
+  const response = await request('/backends/spec')
+  const json = await parse_api_response<Array<BackendSpecOption>>(response)
+
+  if ('error' in json) {
+    notification('error', 'Error', `Failed to load options: ${json.error.message}`)
+    return
+  }
+
+  json.forEach((v: any) => {
     if (false === v.key.startsWith('options.')) {
       return
     }
     v['key'] = v.key.replace('options.', '')
     optionsList.value.push(v)
   })
-});
+})
 
-const filteredOptions = options => {
+const filteredOptions = (options: Array<BackendSpecOption> | null): Array<BackendSpecOption> => {
   if (!options) {
     return []
   }
-  return options.filter(v => !backend.value.options[v.key] && !newOptions.value[v.key])
+  const optionsRecord = backend.value.options as Record<string, any>
+  return options.filter((v: BackendSpecOption) => !optionsRecord[v.key] && !newOptions.value[v.key])
 }
 
-const getServers = async () => {
+const getServers = async (): Promise<void> => {
   if ('plex' !== backend.value.type) {
     return
   }
 
   if (!backend.value.token) {
-    notification('error', 'Error', `Token is required to get list of servers.`)
+    notification('error', 'Error', 'Token is required to get list of servers.')
     return
   }
 
   serversLoading.value = true
 
-  let data = {
+  let data: Record<string, any> = {
     token: backend.value.token,
     url: window.location.origin,
-  };
+  }
 
   if (backend.value?.options && backend.value.options?.ADMIN_TOKEN) {
     data.options = {
@@ -642,61 +797,76 @@ const getServers = async () => {
 
   serversLoading.value = false
 
-  const json = await response.json()
+  const json = await parse_api_response<Array<BackendServer>>(response)
 
   if (200 !== response.status) {
-    notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
+    if ('error' in json) {
+      notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
+    } else {
+      notification('error', 'Error', 'Failed to load servers')
+    }
+    return
+  }
+
+  if ('error' in json) {
+    notification('error', 'Error', `Failed to load servers: ${json.error.message}`)
     return
   }
 
   servers.value = json
 }
 
-const updateIdentifier = async () => {
-  backend.value.uuid = servers.value.find(s => s.uri === backend.value.url).identifier
-  await getUsers()
+const updateIdentifier = async (): Promise<void> => {
+  const server = servers.value.find(s => backend.value.url === s.uri)
+  if (server) {
+    backend.value.uuid = server.identifier
+    await getUsers()
+  }
 }
 
 watch(() => backend.value.user, async () => {
-  if (users.value.length < 1 || 'plex' !== backend.value.type) {
+  if (0 === users.value.length || 'plex' !== backend.value.type) {
     return
   }
 
-  // -- get token for the user
-  users.value.forEach(u => {
-    if (u.id !== backend.value.user) {
-      return
+  const selectedUser = users.value.find(u => u.id === backend.value.user)
+
+  if (!selectedUser) {
+    notification('warning', 'Warning', 'Selected user not found')
+    return
+  }
+
+  // Update user-specific options
+  if (selectedUser.guest) {
+    backend.value.options.plex_external_user = true
+  } else {
+    if (backend.value.options?.plex_external_user) {
+      delete backend.value.options.plex_external_user
     }
+  }
 
-    if (u?.guest) {
-      backend.value.options.plex_external_user = true
-    } else {
-      if (backend.value.options?.plex_external_user) {
-        delete backend.value.options.plex_external_user
-      }
-    }
+  backend.value.options.plex_user_name = selectedUser.name
+  backend.value.options.plex_user_uuid = selectedUser.uuid
 
-    backend.value.options.plex_user_name = u.name
-    backend.value.options.plex_user_uuid = u.uuid
+  if (!selectedUser.token) {
+    notification('error', 'Error', 'User token not found')
+    return
+  }
 
-
-    if (!u?.token) {
-      notification('error', 'Error', `User token not found`)
-      return
-    }
-
-    backend.value.token = u.token
-  })
+  if (selectedUser.token !== backend.value.token) {
+    backend.value.token = selectedUser.token
+    notification('info', 'Information', `Token updated for user: ${selectedUser.name}`)
+  }
 })
 
-const flattenOptions = (obj, prefix = '') => {
-  const out = []
+const flattenOptions = (obj: Record<string, any>, prefix: string = ''): Array<string> => {
+  const out: Array<string> = []
 
   for (const [key, val] of Object.entries(obj)) {
     const path = prefix ? `${prefix}.${key}` : key
 
     if (Array.isArray(val)) {
-      if (val.length === 0) {
+      if (0 === val.length) {
         continue
       }
       out.push(path)
@@ -704,7 +874,7 @@ const flattenOptions = (obj, prefix = '') => {
     }
 
     if (val !== null && typeof val === 'object') {
-      if (Object.keys(val).length === 0) {
+      if (0 === Object.keys(val).length) {
         continue
       }
       out.push(...flattenOptions(val, path))
@@ -719,26 +889,171 @@ const flattenOptions = (obj, prefix = '') => {
 
 const flatOptionPaths = computed(() => flattenOptions(backend.value.options))
 
-const option_get = path => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), backend.value.options)
-const option_set = (path, value) => {
+const option_get = (path: string): unknown => {
+  return path.split('.').reduce((o: any, k: string) => (o == null ? undefined : o[k]), backend.value.options as Record<string, any>)
+}
+
+const option_set = (path: string, value: unknown): void => {
   const keys = path.split('.')
   const last = keys.pop()
-  let target = backend.value.options
+  let target: Record<string, unknown> = backend.value.options as Record<string, unknown>
   for (const k of keys) {
     if (target[k] == null || typeof target[k] !== 'object' || Array.isArray(target[k])) {
       target[k] = {}
     }
-    target = target[k]
+    target = target[k] as Record<string, unknown>
   }
 
-  target[last] = value
+  if (last) {
+    target[last] = value
+  }
 }
 
-const option_describe = path => {
-  const item = optionsList.value.find((v) => v.key === path)
+const option_describe = (path: string): string => {
+  const item = optionsList.value.find((v) => path === v.key)
   return item ? item.description : ''
 }
 
 onMounted(async () => await loadContent())
 
+const plex_oauth = ref<PlexOAuthData>({} as PlexOAuthData)
+const plex_oauth_loading = ref<boolean>(false)
+const plex_timeout = ref<NodeJS.Timeout | null>(null)
+const plex_window = ref<Window | null>(null)
+
+const generate_plex_auth_request = async (): Promise<void> => {
+  if (plex_oauth_loading.value) {
+    return
+  }
+
+  plex_oauth_loading.value = true
+
+  try {
+    const response = await request('/backends/plex/generate', {method: 'POST'})
+    const json = await parse_api_response<PlexOAuthData>(response)
+    if (200 !== response.status) {
+      if ('error' in json) {
+        notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
+      } else {
+        notification('error', 'Error', 'Failed to generate Plex auth request')
+      }
+      return
+    }
+
+    if ('error' in json) {
+      notification('error', 'Error', `Failed to generate auth: ${json.error.message}`)
+      return
+    }
+
+    plex_oauth.value = json
+
+    await nextTick()
+
+    try {
+      const width = 500
+      const height = 600
+
+      const features = [
+        `width=${width}`,
+        `height=${height}`,
+        `top=${(window.screen.height / 2) - (height / 2)}`,
+        `left=${(window.screen.width / 2) - (width / 2)}`,
+        'resizable=yes',
+        'scrollbars=yes',
+      ].join(',')
+
+      plex_window.value = window.open(plex_oauth_url.value, 'plex_auth', features)
+      plex_timeout.value = setTimeout(() => plex_get_token(false), 3000)
+      await nextTick()
+
+      if (!plex_window.value) {
+        notification('error', 'Error', 'Popup blocked. Please allow popups for this site.')
+      }
+    } catch (e) {
+      console.error(e)
+      notification('error', 'Error', 'Failed to open popup. Please manually click the link.')
+    }
+  } catch (e) {
+    const errorMessage = e instanceof Error ? e.message : String(e)
+    notification('error', 'Error', `Request error. ${errorMessage}`)
+  } finally {
+    plex_oauth_loading.value = false
+  }
+}
+
+const plex_oauth_url = computed((): string | undefined => {
+  if (0 === Object.keys(plex_oauth.value).length) {
+    return
+  }
+  const url = new URL('https://app.plex.tv/auth')
+  const params = new URLSearchParams()
+  params.set('code', plex_oauth.value.code)
+  params.set('clientID', plex_oauth.value['X-Plex-Client-Identifier'])
+  params.set('context[device][product]', plex_oauth.value['X-Plex-Product'])
+  url.hash = '?' + params.toString()
+  return url.toString()
+})
+
+const plex_get_token = async (notify: boolean = true): Promise<void> => {
+  if (plex_oauth_loading.value) {
+    return
+  }
+
+  plex_oauth_loading.value = true
+
+  try {
+    if (plex_timeout.value) {
+      clearTimeout(plex_timeout.value)
+      plex_timeout.value = null
+    }
+    const response = await request('/backends/plex/check', {
+      method: 'POST',
+      body: JSON.stringify({id: plex_oauth.value.id, code: plex_oauth.value.code})
+    })
+
+    const json = await parse_api_response<PlexOAuthTokenResponse>(response)
+
+    if (200 !== response.status) {
+      if ('error' in json) {
+        notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
+      } else {
+        notification('error', 'Error', 'Failed to check auth status')
+      }
+      return
+    }
+
+    if ('error' in json) {
+      notification('error', 'Error', `Auth check failed: ${json.error.message}`)
+      return
+    }
+
+    if (json?.authToken) {
+      backend.value.token = json.authToken
+      backend.value.options.ADMIN_TOKEN = json.authToken
+      await nextTick()
+      plex_oauth.value = {} as PlexOAuthData
+      notification('success', 'Success', 'Successfully re-authenticated with plex.tv.')
+      if (plex_window.value) {
+        try {
+          plex_window.value.close()
+          plex_window.value = null
+        } catch (e) {
+          // ignore
+        }
+      }
+      await getUsers(true, true)
+    } else {
+      if (true === notify) {
+        notification('warning', 'Warning', 'Not authenticated yet. Login via the given link to authorize WatchState.')
+      }
+      await nextTick()
+      plex_timeout.value = setTimeout(() => plex_get_token(false), 3000)
+    }
+  } catch (e) {
+    const errorMessage = e instanceof Error ? e.message : String(e)
+    notification('error', 'Error', `Request error. ${errorMessage}`)
+  } finally {
+    plex_oauth_loading.value = false
+  }
+}
 </script>

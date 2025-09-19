@@ -10,7 +10,7 @@
           <div class="field is-grouped">
             <div class="control has-icons-left" v-if="showFilter">
               <input type="search" v-model.lazy="filter" class="input" id="filter"
-                     placeholder="Filter displayed results.">
+                placeholder="Filter displayed results.">
               <span class="icon is-left">
                 <i class="fas fa-filter"></i>
               </span>
@@ -25,7 +25,7 @@
             <div class="control" v-if="min && max" v-tooltip.bottom="'Minimum number of backends'">
               <div class="select">
                 <select v-model="min" :disabled="isDeleting || isLoading">
-                  <option v-for="i in numberRange(1,max+1)" :key="`min-${i}`" :value="i">
+                  <option v-for="i in numberRange(1, max + 1)" :key="`min-${i}`" :value="i">
                     {{ i }}
                   </option>
                 </select>
@@ -33,24 +33,22 @@
             </div>
             <p class="control">
               <button class="button is-danger" @click="deleteData" v-tooltip.bottom="'Delete The reported records'"
-                      :disabled="isDeleting || isLoading || items.length<1" :class="{'is-loading':isDeleting}">
+                :disabled="isDeleting || isLoading || items.length < 1" :class="{ 'is-loading': isDeleting }">
                 <span class="icon"><i class="fas fa-trash"></i></span>
               </button>
             </p>
 
             <div class="control">
-              <button class="button is-info is-light" @click="selectAll = !selectAll"
-                      data-tooltip="Toggle select all">
+              <button class="button is-info is-light" @click="selectAll = !selectAll" data-tooltip="Toggle select all">
                 <span class="icon">
-                  <i class="fas fa-check-square"
-                     :class="{'fa-check-square': !selectAll,'fa-square':selectAll}"></i>
+                  <i class="fas fa-check-square" :class="{ 'fa-check-square': !selectAll, 'fa-square': selectAll }"></i>
                 </span>
               </button>
             </div>
 
             <p class="control">
               <button class="button is-info" @click.prevent="loadContent(page, true, true)" :disabled="isLoading"
-                      :class="{'is-loading':isLoading}">
+                :class="{ 'is-loading': isLoading }">
                 <span class="icon"><i class="fas fa-sync"></i></span>
               </button>
             </p>
@@ -66,14 +64,14 @@
         <div class="field is-grouped">
           <div class="control" v-if="page !== 1">
             <button rel="first" class="button" @click="loadContent(1)" :disabled="isLoading"
-                    :class="{'is-loading':isLoading}">
-              <span><<</span>
+              :class="{ 'is-loading': isLoading }">
+              <span>&lt;&lt;</span>
             </button>
           </div>
-          <div class="control" v-if="page > 1 && (page-1) !== 1">
-            <button rel="prev" class="button" @click="loadContent(page-1)" :disabled="isLoading"
-                    :class="{'is-loading':isLoading}">
-              <span><</span>
+          <div class="control" v-if="page > 1 && (page - 1) !== 1">
+            <button rel="prev" class="button" @click="loadContent(page - 1)" :disabled="isLoading"
+              :class="{ 'is-loading': isLoading }">
+              <span>&lt;</span>
             </button>
           </div>
           <div class="control">
@@ -85,16 +83,16 @@
               </select>
             </div>
           </div>
-          <div class="control" v-if="page !== last_page && (page+1) !== last_page">
-            <button rel="next" class="button" @click="loadContent(page+1)" :disabled="isLoading"
-                    :class="{'is-loading':isLoading}">
-              <span>></span>
+          <div class="control" v-if="page !== last_page && (page + 1) !== last_page">
+            <button rel="next" class="button" @click="loadContent(page + 1)" :disabled="isLoading"
+              :class="{ 'is-loading': isLoading }">
+              <span>&gt;</span>
             </button>
           </div>
           <div class="control" v-if="page !== last_page">
             <button rel="last" class="button" @click="loadContent(last_page)" :disabled="isLoading"
-                    :class="{'is-loading':isLoading}">
-              <span>>></span>
+              :class="{ 'is-loading': isLoading }">
+              <span>&gt;&gt;</span>
             </button>
           </div>
         </div>
@@ -104,7 +102,7 @@
         <div class="field is-grouped is-justify-content-center">
           <div class="control">
             <button class="button is-danger" @click="massDelete()" :disabled="massActionInProgress"
-                    :class="{'is-loading':massActionInProgress}">
+              :class="{ 'is-loading': massActionInProgress }">
               <span class="icon"><i class="fas fa-trash"></i></span>
               <span class="is-hidden-mobile">Delete '{{ selected_ids.length }}' selected item/s</span>
             </button>
@@ -113,7 +111,7 @@
       </div>
 
       <div class="column is-12">
-        <div class="columns is-multiline" v-if="filteredRows(items)?.length>0">
+        <div class="columns is-multiline" v-if="filteredRows(items)?.length > 0">
           <template v-for="item in items" :key="item.id">
             <Lazy :unrender="true" :min-height="343" class="column is-6-tablet" v-if="filterItem(item)">
               <div class="card is-flex is-full-height is-flex-direction-column" :class="{ 'is-success': item.watched }">
@@ -124,12 +122,16 @@
                         <input type="checkbox" :value="item.id" v-model="selected_ids">
                       </label>&nbsp;
                     </span>
-                    <NuxtLink :to="'/history/'+item.id" v-text="makeName(item)"/>
+                    <FloatingImage :image="`/history/${item.id}/images/poster`" :item_class="'scaled-image'"
+                      v-if="poster_enable">
+                      <NuxtLink :to="`/history/${item.id}`" v-text="makeName(item)" />
+                    </FloatingImage>
+                    <NuxtLink :to="`/history/${item.id}`" v-text="makeName(item)" v-else />
                   </p>
                   <span class="card-header-icon" @click="item.showRawData = !item?.showRawData">
                     <span class="icon">
                       <i class="fas"
-                         :class="{ 'fa-tv': 'episode' === item.type.toLowerCase(), 'fa-film': 'movie' === item.type.toLowerCase()}"></i>
+                        :class="{ 'fa-tv': 'episode' === item.type.toLowerCase(), 'fa-film': 'movie' === item.type.toLowerCase() }"></i>
                     </span>
                   </span>
                 </header>
@@ -138,19 +140,19 @@
                     <div class="column is-12">
                       <div class="field is-grouped">
                         <div class="control is-clickable"
-                             :class="{'is-text-overflow': !item?.expand_title, 'is-text-contents': item?.expand_title}"
-                             @click="item.expand_title = !item?.expand_title">
+                          :class="{ 'is-text-overflow': !item?.expand_title, 'is-text-contents': item?.expand_title }"
+                          @click="item.expand_title = !item?.expand_title">
                           <span class="icon"><i class="fas fa-heading"></i>&nbsp;</span>
                           <template v-if="item?.content_title">
-                            <NuxtLink :to="makeSearchLink('subtitle', item.content_title)" v-text="item.content_title"/>
+                            <NuxtLink :to="makeSearchLink('subtitle', item.content_title)"
+                              v-text="item.content_title" />
                           </template>
                           <template v-else>
-                            <NuxtLink :to="makeSearchLink('subtitle', item.title)" v-text="item.title"/>
+                            <NuxtLink :to="makeSearchLink('subtitle', item.title)" v-text="item.title" />
                           </template>
                         </div>
                         <div class="control">
-                          <span class="icon is-clickable"
-                                @click="copyText(item?.content_title ?? item.title, false)">
+                          <span class="icon is-clickable" @click="copyText(item?.content_title ?? item.title, false)">
                             <i class="fas fa-copy"></i></span>
                         </div>
                       </div>
@@ -158,16 +160,15 @@
                     <div class="column is-12">
                       <div class="field is-grouped">
                         <div class="control is-clickable"
-                             :class="{'is-text-overflow': !item?.expand_path, 'is-text-contents': item?.expand_path}"
-                             @click="item.expand_path = !item?.expand_path">
+                          :class="{ 'is-text-overflow': !item?.expand_path, 'is-text-contents': item?.expand_path }"
+                          @click="item.expand_path = !item?.expand_path">
                           <span class="icon"><i class="fas fa-file"></i>&nbsp;</span>
                           <NuxtLink v-if="item?.content_path" :to="makeSearchLink('path', item.content_path)"
-                                    v-text="item.content_path"/>
+                            v-text="item.content_path" />
                           <span v-else>No path found.</span>
                         </div>
                         <div class="control">
-                          <span class="icon is-clickable"
-                                @click="copyText(item?.content_path ?item.content_path : null, false)">
+                          <span class="icon is-clickable" @click="copyText(item?.content_path || '', false)">
                             <i class="fas fa-copy"></i></span>
                         </div>
                       </div>
@@ -180,27 +181,27 @@
                         </div>
                         <div class="control">
                           <NuxtLink v-for="backend in item.reported_by" :key="`${item.id}-rb-${backend}`"
-                                    :to="'/backend/'+backend" v-text="backend" class="tag is-primary ml-1"/>
+                            :to="'/backend/' + backend" v-text="backend" class="tag is-primary ml-1" />
                           <NuxtLink v-for="backend in item.not_reported_by" :key="`${item.id}-nrb-${backend}`"
-                                    :to="'/backend/'+backend" v-text="backend" class="tag is-danger ml-1"/>
+                            :to="'/backend/' + backend" v-text="backend" class="tag is-danger ml-1" />
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
                 <div class="card-content p-0 m-0" v-if="item?.showRawData">
-                <pre style="position: relative; max-height: 343px;"
-                     class="is-terminal"><code>{{ JSON.stringify(item, null, 2) }}</code>
-                  <button class="button is-small m-4" @click="() => copyText(JSON.stringify(item, null, 2))"
-                          style="position: absolute; top:0; right:0;">
-                    <span class="icon"><i class="fas fa-copy"></i></span>
-                  </button>
-                </pre>
+                  <pre style="position: relative; max-height: 343px;" class="is-terminal"><code>{{ JSON.stringify(item, null, 2)
+                  }}</code>
+    <button class="button is-small m-4" @click="() => copyText(JSON.stringify(item, null, 2))"
+      style="position: absolute; top:0; right:0;">
+      <span class="icon"><i class="fas fa-copy"></i></span>
+    </button>
+  </pre>
                 </div>
                 <div class="card-footer">
                   <div class="card-footer-item">
                     <span class="icon">
-                      <i class="fas" :class="{'fa-eye':item.watched,'fa-eye-slash':!item.watched}"></i>&nbsp;
+                      <i class="fas" :class="{ 'fa-eye': item.watched, 'fa-eye-slash': !item.watched }"></i>&nbsp;
                     </span>
                     <span class="has-text-success" v-if="item.watched">Played</span>
                     <span class="has-text-danger" v-else>Unplayed</span>
@@ -208,7 +209,7 @@
                   <div class="card-footer-item">
                     <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
                     <span class="has-tooltip"
-                          v-tooltip="`Record updated at: ${moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
+                      v-tooltip="`Record updated at: ${moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
                       {{ moment.unix(item.updated_at).fromNow() }}
                     </span>
                   </div>
@@ -220,16 +221,14 @@
 
         <div class="column is-12" v-else>
           <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
-                   icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
+            icon="fas fa-spinner fa-spin" message="Loading data. Please wait..." />
           <template v-else>
             <Message message_class="has-background-warning-80 has-text-dark" v-if="filter && items.length > 1"
-                     title="Information"
-                     icon="fas fa-check">
+              title="Information" icon="fas fa-check">
               The filter <code>{{ filter }}</code> did not match any records.
             </Message>
             <Message message_class="has-background-success-90 has-text-dark" v-if="!filter || items.length < 1"
-                     title="Success"
-                     icon="fas fa-check">
+              title="Success" icon="fas fa-check">
               WatchState did not find any records matching the criteria. All records has at least <code>{{ min }}</code>
               backends reporting it.
             </Message>
@@ -238,7 +237,7 @@
 
         <div class="column is-12">
           <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
-                   @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+            @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
             <ul>
               <li>
                 You can specify the minimum number of backends that need to report the record to be considered valid.
@@ -270,74 +269,78 @@
   </div>
 </template>
 
-<script setup>
-import request from '~/utils/request.js'
+<script setup lang="ts">
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { useHead, useRoute, useRouter } from '#app'
+import { useStorage } from '@vueuse/core'
 import Message from '~/components/Message.vue'
-import {
-  awaitElement,
-  copyText,
-  makeName,
-  makePagination,
-  makeSearchLink,
-  notification,
-  TOOLTIP_DATE_FORMAT
-} from '~/utils/index.js'
-import moment from 'moment'
-import {useStorage} from '@vueuse/core'
 import Lazy from '~/components/Lazy.vue'
-import {useSessionCache} from '~/utils/cache.js'
+import { useSessionCache } from '~/utils/cache'
+import { request, awaitElement, copyText, makeName, makePagination, makeSearchLink, notification, TOOLTIP_DATE_FORMAT } from '~/utils'
+import moment from 'moment'
+import { NuxtLink } from '#components'
+import FloatingImage from '~/components/FloatingImage.vue'
+import { useDialog } from '~/composables/useDialog'
+import type { ParityItem, PaginatedResponse, ExpandableUIState } from '~/types'
+
+type ParityItemWithUI = ParityItem & ExpandableUIState
+
+type APIResponse = PaginatedResponse<ParityItemWithUI>
 
 const route = useRoute()
+const router = useRouter()
 
-useHead({title: 'Parity'})
+useHead({ title: 'Parity' })
 
-const items = ref([])
-const page = ref(route.query.page ?? 1)
-const perpage = ref(route.query.perpage ?? 100)
-const total = ref(0)
-const last_page = computed(() => Math.ceil(total.value / perpage.value))
-const isLoading = ref(false)
-const isDeleting = ref(false)
 const show_page_tips = useStorage('show_page_tips', true)
 const api_user = useStorage('api_user', 'main')
-const filter = ref(route.query.filter ?? '')
-const showFilter = ref(!!filter.value)
-const min = ref(route.query.min ?? null)
-const max = ref()
-const cacheKey = computed(() => `parity_v1-${min.value}-${page.value}-${perpage.value}`)
+const poster_enable = useStorage('poster_enable', true)
 
-const selectAll = ref(false)
-const selected_ids = ref([])
-const massActionInProgress = ref(false)
-watch(selectAll, v => selected_ids.value = v ? filteredRows(items.value).map(i => i.id) : [])
+const items = ref<Array<ParityItemWithUI>>([])
+const page = ref<number>(Number(route.query.page ?? 1))
+const perpage = ref<number>(Number(route.query.perpage ?? 100))
+const total = ref<number>(0)
+const last_page = computed<number>(() => Math.ceil(total.value / perpage.value))
+const isLoading = ref<boolean>(false)
+const isDeleting = ref<boolean>(false)
+const filter = ref<string>(String(route.query.filter ?? ''))
+const showFilter = ref<boolean>(!!filter.value)
+const min = ref<number | null>(route.query.min ? Number(route.query.min) : null)
+const max = ref<number>()
+const cacheKey = computed<string>(() => `parity_v1-${min.value}-${page.value}-${perpage.value}`)
+
+const selectAll = ref<boolean>(false)
+const selected_ids = ref<Array<string | number>>([])
+const massActionInProgress = ref<boolean>(false)
+
+watch(selectAll, v => {
+  selected_ids.value = v ? filteredRows(items.value).map(i => i.id) : []
+})
 
 const cache = useSessionCache(api_user.value)
 
-
-const toggleFilter = () => {
+const toggleFilter = (): void => {
   showFilter.value = !showFilter.value
   if (!showFilter.value) {
     filter.value = ''
     return
   }
-
-  awaitElement('#filter', (_, elm) => elm.focus())
+  awaitElement('#filter', (_, elm) => (elm as HTMLInputElement).focus())
 }
-const loadContent = async (pageNumber, fromPopState = false, fromReload = false) => {
-  pageNumber = parseInt(pageNumber)
 
+const loadContent = async (pageNumber: number, fromPopState = false, fromReload = false): Promise<void> => {
+  pageNumber = Number(pageNumber)
   if (isNaN(pageNumber) || pageNumber < 1) {
     pageNumber = 1
   }
 
   const search = new URLSearchParams()
-  search.set('perpage', perpage.value)
-  search.set('page', pageNumber)
-
+  search.set('perpage', String(perpage.value))
+  search.set('page', String(pageNumber))
   let pageTitle = `Parity: Page #${pageNumber}`
 
   if (min.value) {
-    search.set('min', min.value)
+    search.set('min', String(min.value))
     pageTitle += ` - Min: ${min.value}`
   }
 
@@ -346,7 +349,7 @@ const loadContent = async (pageNumber, fromPopState = false, fromReload = false)
     pageTitle += ` - Filter: ${filter.value}`
   }
 
-  useHead({title: pageTitle})
+  useHead({ title: pageTitle })
 
   let newUrl = window.location.pathname + '?' + search.toString()
   isLoading.value = true
@@ -355,36 +358,32 @@ const loadContent = async (pageNumber, fromPopState = false, fromReload = false)
   page.value = pageNumber
 
   try {
-    let json
+    let json;
 
     if (true === fromReload) {
       clearCache()
     }
 
     if (cache.has(cacheKey.value)) {
-      json = cache.get(cacheKey.value)
+      json = cache.get(cacheKey.value) as APIResponse
     } else {
       const response = await request(`/system/parity/?${search.toString()}`)
-      json = await response.json()
+      json = await parse_api_response<APIResponse>(response)
+
+      if ('parity' !== useRoute().name) {
+        return
+      }
+
+      if ('error' in json) {
+        notification('error', 'Error', `API Error. ${json.error?.code ?? ''}: ${json.error?.message ?? ''}`)
+        return
+      }
+
       cache.set(cacheKey.value, json)
-
-      if (useRoute().name !== 'parity') {
-        return
-      }
-
-      if (200 !== response.status) {
-        notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`)
-        isLoading.value = false
-        return
-      }
     }
 
     if (!fromPopState && window.location.href !== newUrl) {
-      await useRouter().push({
-        path: '/parity',
-        title: pageTitle,
-        query: Object.fromEntries(search)
-      })
+      await router.push({ path: '/parity', query: Object.fromEntries(search) })
     }
 
     if ('paging' in json) {
@@ -400,18 +399,28 @@ const loadContent = async (pageNumber, fromPopState = false, fromReload = false)
       items.value = json.items
     }
 
-    isLoading.value = false
-  } catch (e) {
+  } catch (e: any) {
     notification('error', 'Error', `Request error. ${e.message}`)
+  } finally {
+    isLoading.value = false
+    selectAll.value = false
+    selected_ids.value = []
   }
 }
 
-const massDelete = async () => {
+const massDelete = async (): Promise<void> => {
   if (0 === selected_ids.value.length) {
     return
   }
 
-  if (!confirm(`Are you sure you want to delete '${selected_ids.value.length}' item/s?`)) {
+  const { status: confirmStatus } = await useDialog().confirmDialog({
+    title: 'Confirm Deletion',
+    message: `Delete '${selected_ids.value.length}' item/s?`,
+    confirmColor: 'is-danger',
+
+  })
+
+  if (true !== confirmStatus) {
     return
   }
 
@@ -421,10 +430,9 @@ const massDelete = async () => {
 
     notification('success', 'Action in progress', `Deleting '${urls.length}' item/s. Please wait...`)
 
-    // -- check each request response after all requests are done
-    const requests = await Promise.all(urls.map(url => request(url, {method: 'DELETE'})))
+    const requests = await Promise.all(urls.map(url => request(url, { method: 'DELETE' })))
 
-    if (!requests.every(response => 200 === response.status)) {
+    if (!requests.every((response: any) => 200 === response.status)) {
       notification('error', 'Error', `Some requests failed. Please check the console for more details.`)
     } else {
       items.value = items.value.filter(i => !selected_ids.value.includes(i.id))
@@ -435,7 +443,7 @@ const massDelete = async () => {
     }
 
     notification('success', 'Success', `Deleting '${urls.length}' item/s completed.`)
-  } catch (e) {
+  } catch (e: any) {
     notification('error', 'Error', `Request error. ${e.message}`)
   } finally {
     massActionInProgress.value = false
@@ -444,10 +452,11 @@ const massDelete = async () => {
   }
 }
 
-const deleteData = async () => {
+const deleteData = async (): Promise<void> => {
   if (isDeleting.value) {
     return
   }
+
   if (!min.value) {
     notification('error', 'Error', 'Minimum number of backends is not set.')
     return
@@ -458,7 +467,14 @@ const deleteData = async () => {
     return
   }
 
-  if (!confirm(`Are you sure you want to delete the reported records?`)) {
+  const { status: confirmStatus } = await useDialog().confirmDialog({
+    title: 'Confirm Deletion',
+    message: `Delete all reported records?`,
+    confirmColor: 'is-danger',
+
+  })
+
+  if (true !== confirmStatus) {
     return
   }
 
@@ -467,13 +483,12 @@ const deleteData = async () => {
   try {
     const response = await request(`/system/parity`, {
       method: 'DELETE',
-      body: JSON.stringify({min: min.value})
+      body: JSON.stringify({ min: min.value })
     })
 
     const json = await response.json()
-
-    if (200 !== response.status) {
-      notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
+    if (response.status !== 200) {
+      notification('error', 'Error', `${json.error?.code ?? ''}: ${json.error?.message ?? ''}`)
       return
     }
 
@@ -485,7 +500,7 @@ const deleteData = async () => {
     page.value = 1
 
     clearCache()
-  } catch (e) {
+  } catch (e: any) {
     notification('error', 'Error', e.message)
   } finally {
     isDeleting.value = false
@@ -494,13 +509,12 @@ const deleteData = async () => {
 
 onMounted(async () => {
   const response = await request(`/backends/`)
-  const json = await response.json()
-
+  const json: Array<string> = await response.json()
   cache.setNameSpace(api_user.value)
 
   max.value = json.length
 
-  if (min.value === null) {
+  if (null === min.value) {
     min.value = json.length
   } else {
     await loadContent(page.value ?? 1)
@@ -509,11 +523,11 @@ onMounted(async () => {
   window.addEventListener('popstate', stateCallBack)
 })
 
-onUnmounted(() => window.removeEventListener('popstate', stateCallBack))
+onBeforeUnmount(() => window.removeEventListener('popstate', stateCallBack))
 
-const numberRange = (start, end) => new Array(end - start).fill().map((d, i) => i + start)
+const numberRange = (start: number, end: number): Array<number> => new Array(end - start).fill(0).map((_, i) => i + start)
 
-const filteredRows = items => {
+const filteredRows = (items: Array<ParityItemWithUI>): Array<ParityItemWithUI> => {
   if (!filter.value) {
     return items
   }
@@ -521,7 +535,7 @@ const filteredRows = items => {
   return items.filter(i => Object.values(i).some(v => typeof v === 'string' ? v.toLowerCase().includes(filter.value.toLowerCase()) : false))
 }
 
-const filterItem = item => {
+const filterItem = (item: ParityItemWithUI): boolean => {
   if (!filter.value || !item) {
     return true
   }
@@ -531,20 +545,12 @@ const filterItem = item => {
 
 watch(min, async () => await loadContent(page.value ?? 1))
 watch(filter, val => {
-  const route = useRoute()
-  const router = useRouter()
   if (!val) {
     if (!route?.query['filter']) {
       return
     }
 
-    router.push({
-      'path': '/parity',
-      'query': {
-        ...route.query,
-        'filter': undefined
-      }
-    })
+    router.push({ path: '/parity', query: { ...route.query, filter: undefined } })
     return
   }
 
@@ -552,26 +558,22 @@ watch(filter, val => {
     return
   }
 
-  router.push({
-    'path': '/parity',
-    'query': {
-      ...route.query,
-      'filter': val
-    }
-  })
+  router.push({ path: '/parity', query: { ...route.query, filter: val } })
 })
 
-const clearCache = () => cache.clear(k => k.startsWith(`${api_user.value}:parity`))
+const clearCache = (): void => {
+  cache.clear((k: string) => k.startsWith(`${api_user.value}:parity`))
+}
 
-const stateCallBack = async e => {
-  if (!e.state && !e.detail) {
+const stateCallBack = async (e: PopStateEvent): Promise<void> => {
+  if (!e.state && !(e as any).detail) {
     return
   }
 
   const route = useRoute()
-  page.value = route.query.page ?? 1
-  perpage.page = route.query.perpage ?? 50
-  filter.value = route.query.filter ?? ''
+  page.value = Number(route.query.page ?? 1)
+  perpage.value = Number(route.query.perpage ?? 50)
+  filter.value = String(route.query.filter ?? '')
   if (filter.value) {
     showFilter.value = true
   }

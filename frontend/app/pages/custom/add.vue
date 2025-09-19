@@ -35,7 +35,7 @@
             <label class="label is-unselectable" for="form_description">Description</label>
             <div class="control has-icons-left">
               <input class="input" id="form_description" type="text" v-model="form.description"
-                     placeholder="This GUID is based on ... db reference">
+                placeholder="This GUID is based on ... db reference">
               <div class="icon is-small is-left"><i class="fas fa-envelope-open-text"></i></div>
             </div>
             <p class="help">
@@ -67,7 +67,7 @@
             <label class="label is-unselectable" for="form_validation_pattern">Regex validation pattern</label>
             <div class="control has-icons-left">
               <input class="input" id="form_validation_pattern" type="text" v-model="form.validator.pattern"
-                     placeholder="/^[0-9\\/]+$/i">
+                placeholder="/^[0-9\\/]+$/i">
               <div class="icon is-small is-left"><i class="fas fa-check"></i></div>
             </div>
             <p class="help">
@@ -75,7 +75,7 @@
               <span>
                 A Valid regular expression to check the value GUID value. To test your patterns, you can use this
                 website
-                <NuxtLink target="_blank" to="https://regex101.com/#php73" v-text="'regex101.com'"/>
+                <NuxtLink target="_blank" to="https://regex101.com/#php73" v-text="'regex101.com'" />
                 .
               </span>
             </p>
@@ -84,7 +84,7 @@
             <label class="label is-unselectable" for="form_validation_example">Value example</label>
             <div class="control has-icons-left">
               <input class="input" id="form_validation_example" type="text" v-model="form.validator.example"
-                     placeholder="(number)">
+                placeholder="(number)">
               <div class="icon is-small is-left"><i class="fas fa-ear-deaf"></i></div>
             </div>
             <p class="help">
@@ -97,21 +97,19 @@
           <div class="field">
             <label class="label is-unselectable">
               Correct values.
-              <NuxtLink class="has-text-primary" @click="form.validator.tests.valid.push('')" v-text="'Add'"/>
+              <NuxtLink class="has-text-primary" @click="form.validator.tests.valid.push('')" v-text="'Add'" />
             </label>
             <div class="columns is-multiline">
               <template v-for="(_, index) in form.validator.tests.valid" :key="`valid-${index}`">
                 <div class="column is-11">
                   <div class="control has-icons-left">
-                    <input class="input" type="text" :id="`valid-${index}`"
-                           v-model="form.validator.tests.valid[index]">
+                    <input class="input" type="text" :id="`valid-${index}`" v-model="form.validator.tests.valid[index]">
                     <div class="icon is-small is-left"><i class="fas fa-check"></i></div>
                   </div>
                 </div>
                 <div class="column">
-                  <button class="button is-danger" type="button"
-                          @click="form.validator.tests.valid.splice(index, 1)"
-                          :disabled="index < 1 || form.validator.tests.valid < 1">
+                  <button class="button is-danger" type="button" @click="form.validator.tests.valid.splice(index, 1)"
+                    :disabled="index < 1 || form.validator.tests.valid.length < 1">
                     <span class="icon"><i class="fas fa-trash"></i></span>
                   </button>
                 </div>
@@ -131,21 +129,20 @@
           <div class="field">
             <label class="label is-unselectable">
               Incorrect values.
-              <NuxtLink class="has-text-danger" @click="form.validator.tests.invalid.push('')" v-text="'Add'"/>
+              <NuxtLink class="has-text-danger" @click="form.validator.tests.invalid.push('')" v-text="'Add'" />
             </label>
             <div class="columns is-multiline">
               <template v-for="(_, index) in form.validator.tests.invalid" :key="`valid-${index}`">
                 <div class="column is-11">
                   <div class="control has-icons-left">
                     <input class="input" type="text" :id="`invalid-${index}`"
-                           v-model="form.validator.tests.invalid[index]">
+                      v-model="form.validator.tests.invalid[index]">
                     <div class="icon is-small is-left"><i class="fas fa-check"></i></div>
                   </div>
                 </div>
                 <div class="column">
-                  <button class="button is-danger" type="button"
-                          @click="form.validator.tests.invalid.splice(index, 1)"
-                          :disabled="index < 1 || form.validator.tests.invalid < 1">
+                  <button class="button is-danger" type="button" @click="form.validator.tests.invalid.splice(index, 1)"
+                    :disabled="index < 1 || form.validator.tests.invalid.length < 1">
                     <span class="icon"><i class="fas fa-trash"></i></span>
                   </button>
                 </div>
@@ -161,7 +158,7 @@
           <div class="field is-grouped">
             <div class="control is-expanded">
               <button class="button is-fullwidth is-primary" type="submit" :disabled="false === validForm || isSaving"
-                      :class="{'is-loading':isSaving}">
+                :class="{ 'is-loading': isSaving }">
                 <span class="icon-text">
                   <span class="icon"><i class="fas fa-save"></i></span>
                   <span>Save</span>
@@ -183,15 +180,16 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { useHead, navigateTo } from '#app'
+import { request, notification, stringToRegex, parse_api_response } from '~/utils'
+import type { GuidProvider } from '~/types'
 import '~/assets/css/bulma-switch.css'
-import request from '~/utils/request.js'
-import {notification, stringToRegex} from '~/utils/index.js'
-import {useStorage} from '@vueuse/core'
 
-useHead({title: 'Add Custom GUID'})
+useHead({ title: 'Add Custom GUID' })
 
-const empty_form = {
+const defaultData = () => ({
   name: '',
   type: 'string',
   description: '',
@@ -203,50 +201,78 @@ const empty_form = {
       invalid: ['1234567a', 'a1234567']
     }
   }
+}) as {
+  /** GUID name */
+  name: string
+  /** GUID type */
+  type: string
+  /** GUID description */
+  description: string
+  /** Validation configuration */
+  validator: {
+    /** Regex pattern */
+    pattern: string
+    /** Example value */
+    example: string
+    /** Test cases */
+    tests: {
+      /** Valid test values */
+      valid: Array<string>
+      /** Invalid test values */
+      invalid: Array<string>
+    }
+  }
 }
 
-const show_page_tips = useStorage('show_page_tips', true)
-const form = ref(JSON.parse(JSON.stringify(empty_form)))
-const guids = ref([])
-const isSaving = ref(false)
+const form = ref(defaultData())
+const guids = ref<Array<GuidProvider>>([])
+const isSaving = ref<boolean>(false)
 
-onMounted(async () => {
+onMounted(async (): Promise<void> => {
   try {
     const response = await request('/system/guids')
-    guids.value = await response.json()
+    const data = await parse_api_response<Array<GuidProvider>>(response)
+
+    if ('error' in data) {
+      notification('error', 'Error', data.error.message)
+      return
+    }
+
+    guids.value = data
   } catch (e) {
-    notification('error', 'Error', `Request error. ${e.message}`, 5000)
+    const error = e as Error
+    notification('error', 'Error', `Request error. ${error.message}`, 5000)
   }
 })
 
-const addNewGuid = async () => {
+const addNewGuid = async (): Promise<void> => {
   if (!validForm.value) {
     notification('error', 'Error', 'Invalid form data.', 5000)
     return
   }
 
-  let data = form.value
+  const data = form.value
 
-  data.name = data.name.trim();
+  data.name = data.name.trim()
 
   if (data.name.toLowerCase() !== data.name) {
-    notification('error', 'Error', `GUID name must be lowercase.`, 5000)
+    notification('error', 'Error', 'GUID name must be lowercase.', 5000)
     return
   }
 
   if (false === stringToRegex('/^[a-z0-9_]+$/').test(data.name)) {
-    notification('error', 'Error', `GUID name must be in ASCII, rules are [lower case, a-z, 0-9, no space] starts with guid_`, 5000)
+    notification('error', 'Error', 'GUID name must be in ASCII, rules are [lower case, a-z, 0-9, no space] starts with guid_', 5000)
     return
   }
 
   if (data.name.includes(' ')) {
-    notification('error', 'Error', `GUID name must not contain spaces.`, 5000)
+    notification('error', 'Error', 'GUID name must not contain spaces.', 5000)
     return
   }
 
-  data.type = data.type.trim().toLowerCase();
+  data.type = data.type.trim().toLowerCase()
   if (!['string'].includes(data.type)) {
-    notification('error', 'Error', `Invalid GUID type.`, 5000)
+    notification('error', 'Error', 'Invalid GUID type.', 5000)
     return
   }
 
@@ -254,39 +280,44 @@ const addNewGuid = async () => {
     for (const g of guids.value) {
       if (g.guid === data.name) {
         notification('error', 'Error', `GUID with name '${data.name}' already exists.`, 5000)
-        return false
+        return
       }
     }
   } catch (e) {
-    notification('error', 'Error', `${e}`, 5000)
-    return false
+    const error = e as Error
+    notification('error', 'Error', `${error}`, 5000)
+    return
   }
 
   try {
-    const validator = stringToRegex(data.validator.pattern);
+    const validator = stringToRegex(data.validator.pattern)
 
     for (let i = 0; i < data.validator.tests.valid.length; i++) {
-      if (!validator.test(data.validator.tests.valid[i])) {
-        notification('error', 'Error', `Correct value '${i}' '${data.validator.tests.valid[i]}' did not match '${data.validator.pattern}'.`, 5000)
-        return false
+      const validValue = data.validator.tests.valid[i]
+      if (!validValue || !validator.test(validValue)) {
+        notification('error', 'Error', `Correct value '${i}' '${validValue}' did not match '${data.validator.pattern}'.`, 5000)
+        return
       }
-      if (!validator.test(data.validator.tests.valid[i] + '/1')) {
-        notification('error', 'Error', `Correct value '${i}' with relative info '${data.validator.tests.valid[i] + '/1'}' did not match '${data.validator.pattern}'.`, 5000)
-        return false
+      if (!validator.test(validValue + '/1')) {
+        notification('error', 'Error', `Correct value '${i}' with relative info '${validValue + '/1'}' did not match '${data.validator.pattern}'.`, 5000)
+        return
       }
     }
 
     for (let i = 0; i < data.validator.tests.invalid.length; i++) {
-      const invalid = data.validator.tests.invalid[i]
-      if (validator.test(data.validator.tests.invalid[i])) {
-        notification('error', 'Error', `Incorrect value '${i}' '${invalid}' matched '${data.validator.pattern}'.`, 5000)
-        return false
+      const invalidValue = data.validator.tests.invalid[i]
+      if (!invalidValue) {
+        continue
+      }
+      if (validator.test(invalidValue)) {
+        notification('error', 'Error', `Incorrect value '${i}' '${invalidValue}' matched '${data.validator.pattern}'.`, 5000)
+        return
       }
     }
 
   } catch (e) {
-    notification('error', 'Error', `Invalid regex pattern.`, 5000)
-    return false
+    notification('error', 'Error', 'Invalid regex pattern.', 5000)
+    return
   }
 
   isSaving.value = true
@@ -300,20 +331,23 @@ const addNewGuid = async () => {
     const json = await parse_api_response(response)
 
     if (!response.ok) {
-      notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
+      if ('error' in json) {
+        notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
+      }
       return
     }
 
     notification('success', 'Success', 'Successfully added new GUID.', 5000)
     await navigateTo('/custom')
   } catch (e) {
-    notification('error', 'Error', `Request error. ${e.message}`, 5000)
+    const error = e as Error
+    notification('error', 'Error', `Request error. ${error.message}`, 5000)
   } finally {
     isSaving.value = false
   }
 }
 
-const validForm = computed(() => {
+const validForm = computed((): boolean => {
   const data = form.value
 
   if (!data.name || !data.type || !data.description) {
@@ -328,6 +362,6 @@ const validForm = computed(() => {
     return false
   }
 
-  return !(!data.validator.tests.valid[0] || !data.validator.tests.invalid[0]);
+  return !(!data.validator.tests.valid[0] || !data.validator.tests.invalid[0])
 })
 </script>

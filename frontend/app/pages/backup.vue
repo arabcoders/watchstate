@@ -10,7 +10,7 @@
           <div class="field is-grouped">
             <p class="control">
               <button class="button is-primary" @click="queueTask" :disabled="isLoading"
-                      :class="{ 'is-loading': isLoading, 'is-primary': !queued, 'is-danger': queued }">
+                :class="{ 'is-loading': isLoading, 'is-primary': !queued, 'is-danger': queued }">
                 <span class="icon"><i class="fas fa-sd-card"></i></span>
                 <span>{{ !queued ? 'Queue backup' : 'Remove from queue' }}</span>
               </button>
@@ -18,19 +18,19 @@
 
             <div class="control has-icons-left" v-if="toggleFilter || query">
               <input type="search" v-model.lazy="query" class="input" id="filter"
-                     placeholder="Filter displayed content">
-              <span class="icon is-left"><i class="fas fa-filter"/></span>
+                placeholder="Filter displayed content">
+              <span class="icon is-left"><i class="fas fa-filter" /></span>
             </div>
 
             <div class="control">
               <button class="button is-danger is-light" @click="toggleFilter = !toggleFilter">
-                <span class="icon"><i class="fas fa-filter"/></span>
+                <span class="icon"><i class="fas fa-filter" /></span>
               </button>
             </div>
 
             <p class="control">
               <button class="button is-info" @click="loadContent" :disabled="isLoading"
-                      :class="{ 'is-loading': isLoading }">
+                :class="{ 'is-loading': isLoading }">
                 <span class="icon"><i class="fas fa-sync"></i></span>
               </button>
             </p>
@@ -45,10 +45,9 @@
 
       <div class="column is-12" v-if="filteredItems.length < 1 || isLoading">
         <Message v-if="isLoading" message_class="is-background-info-90 has-text-dark" icon="fas fa-spinner fa-spin"
-                 title="Loading" message="Loading data. Please wait..."/>
-        <Message v-else
-                 :title="query ? 'Search results' : 'Warning'"
-                 message_class="is-background-warning-80 has-text-dark" icon="fas fa-exclamation-triangle">
+          title="Loading" message="Loading data. Please wait..." />
+        <Message v-else :title="query ? 'Search results' : 'Warning'"
+          message_class="is-background-warning-80 has-text-dark" icon="fas fa-exclamation-triangle">
           <span v-if="query">No results found for <strong>{{ query }}</strong></span>
           <span v-else>No backups found.</span>
         </Message>
@@ -58,9 +57,9 @@
         <div class="card">
           <header class="card-header">
             <p class="card-header-title is-text-overflow pr-1">
-              <span class="icon"><i class="fas fa-download" :class="{ 'fa-spin': item?.isDownloading }"/>&nbsp;</span>
+              <span class="icon"><i class="fas fa-download" :class="{ 'fa-spin': item?.isDownloading }" />&nbsp;</span>
               <span>
-                <NuxtLink @click="downloadFile(item)" v-text="item.filename"/>
+                <NuxtLink @click="downloadFile(item)" v-text="item.filename" />
               </span>
             </p>
             <span class="card-header-icon">
@@ -78,7 +77,7 @@
                     <template v-for="user in users" :key="user.user">
                       <optgroup :label="`User: ${user.user}`">
                         <option v-for="backend in user.backends" :key="`${user.user}@${backend}`"
-                                :value="`${user.user}@${backend}`" v-text="backend"/>
+                          :value="`${user.user}@${backend}`" v-text="backend" />
                       </optgroup>
                     </template>
                   </select>
@@ -112,7 +111,7 @@
 
       <div class="column is-12">
         <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
-                 @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+          @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
           <ul>
             <li>
               Backups that are tagged <code>Automatic</code> are subject to auto deletion after <code>90</code> days
@@ -128,14 +127,14 @@
               <NuxtLink to="/backends"><span class="icon"><i class="fas fa-server"></i></span> Backends</NuxtLink>
               page and from the drop down menu select the 4th option <code>Backup this backend play state</code>, or via
               cli using <code>state:backup</code> command from the console. or by <span class="icon"><i
-                class="fas fa-terminal"/></span>
+                  class="fas fa-terminal" /></span>
               <NuxtLink :to="makeConsoleCommand('state:backup -s [backend] --file /config/backup/[file]')"
-                        v-text="'Web Console'"/>
+                v-text="'Web Console'" />
               page.
             </li>
             <li>
-              The restore process will take you to <span class="icon"><i class="fas fa-terminal"/></span>
-              <NuxtLink to="/console" v-text="'Web Console'"/>
+              The restore process will take you to <span class="icon"><i class="fas fa-terminal" /></span>
+              <NuxtLink to="/console" v-text="'Web Console'" />
               and pre-fill the command for you to run.
             </li>
           </ul>
@@ -145,83 +144,96 @@
   </div>
 </template>
 
-<script setup>
-import request from '~/utils/request.js'
+<script setup lang="ts">
+import { ref, computed, watch, onMounted } from 'vue'
+import { useRoute, useHead, navigateTo } from '#app'
+import { useStorage } from '@vueuse/core'
 import moment from 'moment'
-import {humanFileSize, makeConsoleCommand, notification, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
+import { request, humanFileSize, makeConsoleCommand, notification, TOOLTIP_DATE_FORMAT } from '~/utils'
 import Message from '~/components/Message.vue'
-import {useStorage} from '@vueuse/core'
+import type { BackupItem, UserBackends, UILoadingState } from '~/types'
+
+type BackItemWithUI = BackupItem & UILoadingState & {
+  /** Currently selected restore target in format 'user@backend' */
+  selected: string
+  /** Whether the file is currently being downloaded */
+  isDownloading?: boolean
+}
 
 const route = useRoute()
 
-useHead({title: 'Backups'})
+useHead({ title: 'Backups' })
 
-const items = ref([])
-const isLoading = ref(false)
-const queued = ref(true)
+const items = ref<Array<BackItemWithUI>>([])
+const isLoading = ref<boolean>(false)
+const queued = ref<boolean>(true)
 const show_page_tips = useStorage('show_page_tips', true)
-const users = ref([])
-const query = ref(route.query.filter ?? '')
-const toggleFilter = ref(false)
-watch(toggleFilter, () => {
+const users = ref<Array<UserBackends>>([])
+const query = ref<string>(route.query.filter as string ?? '')
+const toggleFilter = ref<boolean>(false)
+
+watch(toggleFilter, (): void => {
   if (!toggleFilter.value) {
     query.value = ''
   }
-});
+})
 
-const filteredItems = computed(() => {
+const filteredItems = computed((): Array<BackItemWithUI> => {
   if (!query.value) {
     return items.value
   }
-  return items.value.filter(item => item.filename.toLowerCase().includes(query.value.toLowerCase()))
+  return items.value.filter((item: BackItemWithUI): boolean =>
+    item.filename.toLowerCase().includes(query.value.toLowerCase())
+  )
 })
 
-const loadContent = async () => {
+const loadContent = async (): Promise<void> => {
   items.value = []
   isLoading.value = true
 
   try {
     const response = await request('/system/backup')
-    const json = await response.json()
+    const json = await parse_api_response<Array<BackItemWithUI>>(response)
+    if ("error" in json) {
+      notification('error', 'Error', `API error. ${json.error.code}: ${json.error.message}`)
+      return
+    }
 
-    json.forEach(element => {
-      element['selected'] = ''
-      items.value.push(element)
-    });
+    json.forEach(element => items.value.push({ ...element, selected: '', isDownloading: false }))
 
-    if (useRoute().name !== 'backup') {
+    if ('backup' !== useRoute().name) {
       return
     }
 
     queued.value = await isQueued()
   } catch (e) {
-    notification('error', 'Error', e.message)
+    notification('error', 'Error', (e as Error).message)
   } finally {
     isLoading.value = false
   }
 }
 
-const downloadFile = async item => {
+const downloadFile = async (item: BackItemWithUI): Promise<void> => {
   if (true === item?.isDownloading) {
     return
   }
-  const filename = item.filename
+  const filename: string = item.filename
   item.isDownloading = true
 
   const response = request(`/system/backup/${filename}`)
 
   if ('showSaveFilePicker' in window) {
-    response.then(async res => {
+    response.then(async (res): Promise<void> => {
       item.isDownloading = false
 
-      return res.body.pipeTo(await (await showSaveFilePicker({
+      return res.body?.pipeTo(await (await (window as any).showSaveFilePicker({
         suggestedName: `${filename}`
       })).createWritable())
     })
   } else {
-    response.then(res => res.blob()).then(blob => {
-      const fileURL = URL.createObjectURL(blob)
-      const fileLink = document.createElement('a')
+    response.then((res): Promise<Blob> => res.blob()).then((blob): void => {
+      const fileURL: string = URL.createObjectURL(blob)
+      const fileLink: HTMLAnchorElement = document.createElement('a')
       fileLink.href = fileURL
       fileLink.download = `${filename}`
       fileLink.click()
@@ -230,79 +242,76 @@ const downloadFile = async item => {
   }
 }
 
-const queueTask = async () => {
-  const is_queued = await isQueued()
-  const message = is_queued ? 'Remove backup task from queue?' : 'Queue backup task to run in background?'
+const queueTask = async (): Promise<void> => {
+  const is_queued: boolean = await isQueued()
+  const message: string = is_queued ? 'Remove backup task from queue?' : 'Queue backup task to run in background?'
 
   if (!confirm(message)) {
     return
   }
 
   try {
-    const response = await request(`/tasks/backup/queue`, {method: is_queued ? 'DELETE' : 'POST'})
+    const response = await request(`/tasks/backup/queue`, { method: is_queued ? 'DELETE' : 'POST' })
     if (response.ok) {
       notification('success', 'Success', `Task backup has been ${is_queued ? 'removed from the queue' : 'queued'}.`)
       queued.value = !is_queued
     }
   } catch (e) {
-    notification('error', 'Error', `Request error. ${e.message}`)
+    notification('error', 'Error', `Request error. ${(e as Error).message}`)
   }
 }
 
-const deleteFile = async (item) => {
+const deleteFile = async (item: BackupItem): Promise<void> => {
   if (!confirm(`Delete backup file '${item.filename}'?`)) {
     return
   }
 
   try {
-    const response = await request(`/system/backup/${item.filename}`, {method: 'DELETE'})
+    const response = await request(`/system/backup/${item.filename}`, { method: 'DELETE' })
 
     if (200 === response.status) {
       notification('success', 'Success', `Backup file '${item.filename}' has been deleted.`)
-      items.value = items.value.filter(i => i.filename !== item.filename)
+      items.value = items.value.filter((i: BackupItem): boolean => i.filename !== item.filename)
       return
     }
 
-    let json
+    let json: any
 
     try {
       json = await response.json()
     } catch (e) {
-      json = {error: {code: response.status, message: response.statusText}}
+      json = { error: { code: response.status, message: response.statusText } }
     }
 
     notification('error', 'Error', `API error. ${json.error.code}: ${json.error.message}`)
   } catch (e) {
-    notification('error', 'Error', `Request error. ${e.message}`)
+    notification('error', 'Error', `Request error. ${(e as Error).message}`)
   }
 }
 
-const isQueued = async () => {
+const isQueued = async (): Promise<boolean> => {
   const response = await request('/tasks/backup')
-  const json = await response.json()
+  const json: { queued: boolean } = await response.json()
   return Boolean(json.queued)
 }
 
-onMounted(async () => {
-  const response = await (await request('/system/users')).json()
-  users.value = response.users
+onMounted(async (): Promise<void> => {
+  const response = await request('/system/users')
+  const usersData: { users: Array<UserBackends> } = await response.json()
+  users.value = usersData.users
   await loadContent()
 })
 
-const generateCommand = async item => {
-  const selected = item.selected.split('@')
-  const user = selected[0]
-  const backend = selected[1]
-  const file = item.filename
+const generateCommand = async (item: BackItemWithUI): Promise<void> => {
+  const selected: Array<string> = item.selected.split('@')
+  const user: string = selected[0] || ''
+  const backend: string = selected[1] || ''
+  const file: string = item.filename
 
   if (false === confirm(`Are you sure you want to restore '${user}@${backend}' using '${file}'?`)) {
-    return;
+    return
   }
 
-  await navigateTo(makeConsoleCommand(r("backend:restore --assume-yes --execute -v --user '{user}' --select-backend '{backend}' -- '{file}'", {
-    user,
-    backend,
-    file,
-  })));
+  await navigateTo(makeConsoleCommand(`backend:restore --assume-yes --execute -v --user '${user}' --select-backend '${backend}' -- '${file}'`))
 }
 </script>

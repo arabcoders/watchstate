@@ -57,6 +57,7 @@
               <span class="icon" v-if="'task' === item.type"><i class="fas fa-tasks"/></span>
               <span class="icon" v-if="'app' === item.type"><i class="fas fa-bugs"/></span>
               <span class="icon" v-if="'webhook' === item.type"><i class="fas fa-book"/></span>
+              <span class="icon" v-if="'request' === item.type"><i class="fas fa-globe"/></span>
               <span class="is-capitalized">{{ item.type }}</span>
             </span>
           </header>
@@ -78,48 +79,57 @@
   </div>
 </template>
 
-<script setup>
-import request from '~/utils/request.js'
+<script setup lang="ts">
+import {computed, onMounted, ref, watch} from 'vue'
+import {useHead, useRoute} from '#app'
 import moment from 'moment'
-import {humanFileSize, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
+import {humanFileSize, notification, parse_api_response, request, TOOLTIP_DATE_FORMAT} from '~/utils'
+import type {LogItem} from '~/types'
 import Message from '~/components/Message.vue'
 
 useHead({title: 'Logs'})
 
-const query = ref()
-const logs = ref([])
-const isLoading = ref(false)
-const toggleFilter = ref(false)
+const query = ref<string>('')
+const logs = ref<Array<LogItem>>([])
+const isLoading = ref<boolean>(false)
+const toggleFilter = ref<boolean>(false)
 
 watch(toggleFilter, () => {
   if (!toggleFilter.value) {
     query.value = ''
   }
-});
+})
 
-const filterItems = computed(() => {
+const filterItems = computed((): Array<LogItem> => {
   if (!query.value) {
     return logs.value ?? []
   }
-  return logs.value.filter(i => i.filename.toLowerCase().includes(query.value.toLowerCase()));
-});
+  return logs.value.filter(i => i.filename.toLowerCase().includes(query.value.toLowerCase()))
+})
 
-const loadContent = async () => {
+const loadContent = async (): Promise<void> => {
   logs.value = []
   isLoading.value = true
 
   try {
     const response = await request('/logs')
-    let data = await response.json();
+    const data = await parse_api_response<Array<LogItem>>(response)
 
-    if (useRoute().name !== 'logs') {
+    if ('logs' !== useRoute().name) {
       return
     }
 
-    data.sort((a, b) => new Date(b.modified) - new Date(a.modified));
+    // Handle both success and error cases
+    if ('error' in data) {
+      notification('error', 'Error', data.error.message)
+      return
+    }
 
-    logs.value = data;
-  } catch (e) {
+    // TypeScript knows data is Array<LogItem> here
+    data.sort((a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime())
+
+    logs.value = data
+  } catch (e: any) {
     notification('error', 'Error', e.message)
   } finally {
     isLoading.value = false

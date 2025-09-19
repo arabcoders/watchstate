@@ -16,13 +16,13 @@ type BaseOptions = {
      */
     confirmText?: string
     /**
-     * CSS class for the confirm button
+     * Color class for the confirm button (e.g., 'is-primary', 'is-danger')
      */
-    confirmClass?: string
+    confirmColor?: 'is-danger' | 'is-primary' | 'is-link' | 'is-info' | 'is-success' | 'is-warning' | 'is-light' | 'is-dark' | 'is-white',
     /**
-     * Icon for the confirm button
+     * No opacity control.
      */
-    confirmIcon?: string
+    opacityControl?: boolean,
 }
 
 export type PromptOptions = BaseOptions & {
@@ -50,11 +50,15 @@ export type ConfirmOptions = BaseOptions & {
      * Text for the confirm button
      */
     cancelText?: string
+    /**
+     * Raw HTML content to include in the dialog message.
+     */
+    rawHTML?: string
 }
 
 export type AlertOptions = BaseOptions & {}
 
-type QueueItem = {
+export type QueueItem = {
     type: 'prompt' | 'confirm' | 'alert'
     opts: PromptOptions | ConfirmOptions | AlertOptions
     resolve: (r: DialogResult<any>) => void

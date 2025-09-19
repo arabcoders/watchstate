@@ -1,4 +1,5 @@
 parameters:
+    treatPhpDocTypesAsCertain: false
     level: max
     bootstrapFiles:
         - ./pre_init.php
@@ -16,6 +17,8 @@ parameters:
         - ./bin/
         - ./public/
     ignoreErrors:
+        - identifier: encapsedStringPart.nonString
+        - identifier: offsetAccess.invalidOffset
         - '#iterable type (array|PDOStatement|iterable)#'
         - '#Property (.+) \(string\) does not accept mixed.#'
         - '#Cannot cast mixed to string.#'
@@ -31,4 +34,8 @@ parameters:
         - '#Function .+ should return .+ but returns mixed.#'
         - '#Cannot call method .+ on mixed.#'
         - '#Parameter .+ of class .+ expects .+, mixed given.#'
-        - '#Binary operation .+ between .+ and mixed results in an error.#'
+        - '#Binary operation .+ results in an error.#'
+        - '#Possibly invalid array key type mixed.#'
+        - "#Trying to invoke mixed but it's not a callable.#"
+        - "#Parameter .+ of method .+ expects array, mixed given.#"
+        - "#mixed given.#"

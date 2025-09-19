@@ -9,28 +9,28 @@
         <div class="is-pulled-right">
           <div class="field is-grouped">
             <div class="control has-icons-left" v-if="toggleFilter || query">
-              <form @submit.prevent="loadContent">
+              <form @submit.prevent="() => loadContent()">
                 <input type="search" v-model="query" class="input" id="filter" placeholder="Search & Filter">
-                <span class="icon is-left"><i class="fas fa-filter"/></span>
+                <span class="icon is-left"><i class="fas fa-filter" /></span>
               </form>
             </div>
 
             <div class="control">
               <button class="button is-danger is-light" @click="toggleFilter = !toggleFilter">
-                <span class="icon"><i class="fas fa-filter"/></span>
+                <span class="icon"><i class="fas fa-filter" /></span>
               </button>
             </div>
 
-            <div class="control">
+            <div class="control" v-if="items.length > 0">
               <button class="button is-danger" @click="deleteAll" v-tooltip.bottom="'Remove All non pending events.'">
-                <span class="icon"><i class="fas fa-trash"/></span>
+                <span class="icon"><i class="fas fa-trash" /></span>
               </button>
             </div>
 
             <p class="control">
               <button class="button is-info" @click="loadContent(page, false)" :class="{ 'is-loading': isLoading }"
-                      :disabled="isLoading">
-                <span class="icon"><i class="fas fa-sync"/></span>
+                :disabled="isLoading">
+                <span class="icon"><i class="fas fa-sync" /></span>
               </button>
             </p>
           </div>
@@ -43,16 +43,16 @@
       </div>
 
       <div class="column is-12" v-if="total && last_page > 1">
-        <Pager @navigate="ePage => loadContent(ePage)" :last_page="last_page" :page="page" :is-loading="isLoading"/>
+        <Pager @navigate="ePage => loadContent(ePage)" :last_page="last_page" :page="page" :is-loading="isLoading" />
       </div>
     </div>
 
     <div class="columns is-multiline" v-if="filteredRows.length < 1">
       <div class="column is-12">
         <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
-                 icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
+          icon="fas fa-spinner fa-spin" message="Loading data. Please wait..." />
         <Message v-else class="has-background-warning-80 has-text-dark" title="Warning"
-                 icon="fas fa-exclamation-triangle">
+          icon="fas fa-exclamation-triangle">
           <p>No items found.</p>
           <p v-if="query">Search for <strong>{{ query }}</strong> returned no results.</p>
         </Message>
@@ -64,34 +64,37 @@
         <div class="card">
           <header class="card-header is-align-self-flex-end">
             <div class="card-header-title is-block">
-              <NuxtLink @click="quick_view = item.id" v-text="makeName(item.id)"/>
+              <NuxtLink @click="quick_view = item.id">
+                {{ makeEventName(item.id) }}
+              </NuxtLink>
               <span v-if="item?.delay_by" class="tag is-warning is-pulled-right is-hidden-mobile has-tooltip"
-                    v-tooltip="'The event dispatching was delayed by this many seconds.'">
-                <span class="icon"><i class="fas fa-clock"/></span>
+                v-tooltip="'The event dispatching was delayed by this many seconds.'">
+                <span class="icon"><i class="fas fa-clock" /></span>
                 <span>{{ item.delay_by }}s</span>
               </span>
 
               <div class="is-pulled-right is-hidden-tablet">
-                <span class="tag" :class="getStatusClass(item.status)">{{ statuses[item.status].name }}</span>
+                <span class="tag" :class="getEventStatusClass(item.status)">{{ statuses[item.status]?.name }}</span>
               </div>
             </div>
             <div class="card-header-icon">
-              <span class="icon" @click="item._display = !item._display" v-if="Object.keys(item.event_data).length > 0">
-                <i class="fas" :class="{ 'fa-arrow-up': item?._display, 'fa-arrow-down': !item?._display }"/>
+              <span class="icon" @click="item._display = !item._display"
+                v-if="Object.keys(item.event_data || {}).length > 0">
+                <i class="fas" :class="{ 'fa-arrow-up': item?._display, 'fa-arrow-down': !item?._display }" />
               </span>
             </div>
           </header>
           <div class="card-content p-0 m-0" v-if="item._display">
             <pre class="p-0 is-pre" style="position: relative; max-height:30vh; overflow-y:scroll;"><code>{{
-                JSON.stringify(item.event_data, null, 2)
-              }}</code><button class="button is-small m-4"
+              JSON.stringify(item.event_data, null, 2)
+            }}</code><button class="button is-small m-4"
                                @click="() => copyText(JSON.stringify(item.event_data), false)"
                                style="position: absolute; top:0; right:0;">
                 <span class="icon"><i class="fas fa-copy"></i></span></button></pre>
           </div>
           <div class="card-footer">
             <div class="card-footer-item is-hidden-mobile">
-              <span class="tag" :class="getStatusClass(item.status)">{{ statuses[item.status].name }}</span>
+              <span class="tag" :class="getEventStatusClass(item.status)">{{ statuses[item.status]?.name }}</span>
             </div>
             <span class="card-footer-item">
               <span class="icon"><i class="fas fa-calendar"></i></span>
@@ -115,7 +118,7 @@
             </span>
           </div>
           <footer class="card-footer">
-            <div class="card-footer-item" v-text="item.event"/>
+            <div class="card-footer-item" v-text="item.event" />
             <div class="card-footer-item">
               <button class="button is-warning is-fullwidth" @click="resetEvent(item, 0 === item.status ? 4 : 0)">
                 <span class="icon"><i class="fas fa-trash-arrow-up"></i></span>
@@ -136,12 +139,12 @@
     <div class="columns is-multiline">
       <div class="column is-12">
         <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
-                 @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+          @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
           <ul>
             <li>Resetting event will return it to the queue to be dispatched again.</li>
             <li>Stopping event will prevent it from being dispatched.</li>
             <li>Events with status of <span class="tag is-warning">Running</span> cannot be cancelled or stopped.</li>
-            <li>The filter <i class="fa fa-filter"/> button on top can be used for both filtering the displayed
+            <li>The filter <i class="fa fa-filter" /> button on top can be used for both filtering the displayed
               results, and on submit it will search the backend for the given event name.
             </li>
           </ul>
@@ -150,65 +153,71 @@
     </div>
 
     <template v-if="quick_view">
-      <Overlay @closeOverlay="quick_view = null" :title="`#${makeName(quick_view)}`">
-        <EventView :id="quick_view" @delete="item => deleteItem(item)"/>
+      <Overlay @closeOverlay="quick_view = null" :title="`#${makeEventName(quick_view)}`">
+        <EventView :id="quick_view" @delete="item => deleteItem(item)" />
       </Overlay>
     </template>
   </div>
 </template>
 
-<script setup>
-import {copyText, notification, parse_api_response} from '~/utils/index.js'
-import request from '~/utils/request.js'
+<script setup lang="ts">
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter, useHead } from '#app'
+import { copyText, notification, parse_api_response, makeEventName, getEventStatusClass, request } from '~/utils'
 import moment from 'moment'
 import Pager from '~/components/Pager.vue'
-import {getStatusClass, makeName} from '~/utils/events/helpers.js'
 import Message from '~/components/Message.vue'
-import {useStorage} from '@vueuse/core'
+import EventView from '~/components/EventView.vue'
+import Overlay from '~/components/Overlay.vue'
+import { useStorage } from '@vueuse/core'
+import type { EventsItem } from '~/types'
+import { useDialog } from '~/composables/useDialog'
 
 const route = useRoute()
+const router = useRouter()
 
-const total = ref(0)
-const page = ref(parseInt(route.query.page ?? 1))
-const perpage = ref(parseInt(route.query.perpage ?? 26))
-const last_page = computed(() => Math.ceil(total.value / perpage.value))
+const total = ref<number>(0)
+const page = ref<number>(parseInt(route.query.page as string ?? '1'))
+const perpage = ref<number>(parseInt(route.query.perpage as string ?? '26'))
+const last_page = computed<number>(() => Math.ceil(total.value / perpage.value))
 
-const isLoading = ref(false)
-const toggleDispatcher = ref(false)
-const items = ref([])
-const statuses = ref([])
-const query = ref(route.query.filter ?? '')
-const toggleFilter = ref(false)
-const quick_view = ref()
-const show_page_tips = useStorage('show_page_tips', true)
+const isLoading = ref<boolean>(false)
+const toggleDispatcher = ref<boolean>(false)
+const items = ref<Array<EventsItem>>([])
+const statuses = ref<Array<{ code: number, name: string, }>>([])
+const query = ref<string>(route.query.filter as string ?? '')
+const toggleFilter = ref<boolean>(false)
+const quick_view = ref<string | null>(null)
+const show_page_tips = useStorage<boolean>('show_page_tips', true)
 
 watch(toggleFilter, () => {
   if (!toggleFilter.value) {
     query.value = ''
   }
-});
+})
 
-const filteredRows = computed(() => {
+const filteredRows = computed<Array<EventsItem>>(() => {
   if (!query.value) {
     return items.value
   }
 
-  const toTower = query.value.toLowerCase();
+  const toLower = query.value.toLowerCase()
 
   return items.value.filter(i => {
     return Object.keys(i).some(k => {
-      if (typeof i[k] === 'object' && null !== i[k]) {
-        return Object.values(i[k]).some(v => typeof v === 'string' ? v.toLowerCase().includes(toTower) : false)
+      const value = i[k as keyof EventsItem] as any
+      if (typeof value === 'object' && null !== value) {
+        return Object.values(value).some(v => typeof v === 'string' ? v.toLowerCase().includes(toLower) : false)
       }
-      return typeof i[k] === 'string' ? i[k].toLowerCase().includes(toTower) : false
+      return typeof value === 'string' ? value.toLowerCase().includes(toLower) : false
     })
   })
-});
+})
 
-const loadContent = async (pageNumber, updateHistory = true) => {
+const loadContent = async (pageNumber: number = 1, updateHistory: boolean = true): Promise<void> => {
   try {
-    pageNumber = parseInt(pageNumber)
-    let p_perpage = parseInt(perpage.value)
+    pageNumber = parseInt(pageNumber.toString())
+    let p_perpage = parseInt(perpage.value.toString())
 
     if (isNaN(pageNumber) || pageNumber < 1) {
       pageNumber = 1
@@ -218,9 +227,9 @@ const loadContent = async (pageNumber, updateHistory = true) => {
       p_perpage = 25
     }
 
-    let queryParams = new URLSearchParams()
-    queryParams.append('page', pageNumber)
-    queryParams.append('perpage', p_perpage)
+    const queryParams = new URLSearchParams()
+    queryParams.append('page', pageNumber.toString())
+    queryParams.append('perpage', p_perpage.toString())
     if (query.value) {
       queryParams.append('filter', query.value)
     }
@@ -230,19 +239,23 @@ const loadContent = async (pageNumber, updateHistory = true) => {
     items.value = []
 
     const response = await request(`/system/events?${queryParams.toString()}`)
-    const json = await parse_api_response(response)
+    const json = await parse_api_response<{
+      items: Array<EventsItem>,
+      statuses: Array<{ code: number, name: string, }>,
+      paging: { page: number, perpage: number, total: number }
+    }>(response)
 
-    if (200 !== response.status) {
+    if ('error' in json) {
       notification('error', 'Error', `Events request error. ${json.error.code}: ${json.error.message}`)
       return
     }
 
-    let title = `Events - Page #${pageNumber}`
+    const title = `Events - Page #${pageNumber}`
 
-    useHead({title})
+    useHead({ title })
 
     if (true === Boolean(updateHistory)) {
-      let history_query = {
+      const history_query: Record<string, string | number> = {
         perpage: p_perpage,
         page: pageNumber,
       }
@@ -251,7 +264,7 @@ const loadContent = async (pageNumber, updateHistory = true) => {
         history_query.filter = query.value
       }
 
-      await useRouter().push({path: '/events', query: history_query})
+      await router.push({ path: '/events', query: history_query })
     }
 
     if ('paging' in json) {
@@ -262,10 +275,9 @@ const loadContent = async (pageNumber, updateHistory = true) => {
 
     items.value = json?.items ?? []
     statuses.value = json?.statuses ?? []
-  } catch (e) {
+  } catch (e: any) {
     console.error(e)
-    notification('crit', 'Error', `Events Request failure. ${e.message}`
-    )
+    notification('crit', 'Error', `Events Request failure. ${e.message}`)
   } finally {
     isLoading.value = false
   }
@@ -278,27 +290,32 @@ onMounted(async () => {
 
 onUnmounted(() => window.removeEventListener('popstate', handlePopState))
 
-const handlePopState = async () => {
-  const route = useRoute()
+const handlePopState = async (): Promise<void> => {
+  const currentRoute = useRoute()
 
-  if (route.query?.perpage) {
-    perpage.value = route.query.perpage
+  if (currentRoute.query?.perpage) {
+    perpage.value = parseInt(currentRoute.query.perpage as string)
   }
 
-  if (route.query?.page) {
-    page.value = route.query.page
+  if (currentRoute.query?.page) {
+    page.value = parseInt(currentRoute.query.page as string)
   }
 
   await loadContent(page.value, false)
 }
 
-const deleteItem = async item => {
-  if (!confirm(`Delete '${item.id}'?`)) {
+const deleteItem = async (item: EventsItem): Promise<void> => {
+  const { status: confirmStatus } = await useDialog().confirmDialog({
+    message: `Delete '${makeEventName(item.id)}'?`,
+    confirmColor: 'is-danger',
+  })
+
+  if (true !== confirmStatus) {
     return
   }
 
   try {
-    const response = await request(`/system/events/${item.id}`, {method: 'DELETE'})
+    const response = await request(`/system/events/${item.id}`, { method: 'DELETE' })
 
     if (200 !== response.status) {
       const json = await parse_api_response(response)
@@ -308,16 +325,20 @@ const deleteItem = async item => {
 
     deletedItem(item.id)
 
-    notification('success', 'Success', `Event '${makeName(item.id)}' successfully deleted.`)
-  } catch (e) {
+    notification('success', 'Success', `Event '${makeEventName(item.id)}' successfully deleted.`)
+  } catch (e: any) {
     console.error(e)
-    notification('crit', 'Error', `Events delete Request failure. ${e.message}`
-    )
+    notification('crit', 'Error', `Events delete Request failure. ${e.message}`)
   }
 }
 
-const resetEvent = async (item, status = 0) => {
-  if (!confirm(`Reset '${item.id}'?`)) {
+const resetEvent = async (item: EventsItem, status: number = 0): Promise<void> => {
+  const { status: confirmStatus } = await useDialog().confirmDialog({
+    message: `Reset '${makeEventName(item.id)}'?`,
+    confirmColor: 'is-warning',
+  })
+
+  if (true !== confirmStatus) {
     return
   }
 
@@ -344,70 +365,60 @@ const resetEvent = async (item, status = 0) => {
     }
 
     items.value[index] = json
-  } catch (e) {
+  } catch (e: any) {
     console.error(e)
-    notification('crit', 'Error', `Events view patch Request failure. ${e.message}`
-    )
+    notification('crit', 'Error', `Events view patch Request failure. ${e.message}`)
   }
 }
 
-const deleteAll = async () => {
-  if (!confirm('Delete all non pending events?')) {
+const deleteAll = async (): Promise<void> => {
+  const { status: confirmStatus } = await useDialog().confirmDialog({
+    message: `Delete all non pending events?`,
+    confirmColor: 'is-danger',
+  })
+
+  if (true !== confirmStatus) {
     return
   }
 
   try {
-    const response = await request(`/system/events/`, {method: 'DELETE'})
+    const response = await request('/system/events/', { method: 'DELETE' })
     if (200 !== response.status) {
       const json = await parse_api_response(response)
       notification('error', 'Error', `Failed to delete events. ${json.error.code}: ${json.error.message}`)
       return
     }
 
-    window.location.reload(true)
-  } catch (e) {
+    window.location.reload()
+  } catch (e: any) {
     console.error(e)
-    notification('crit', 'Error', `Events view patch Request failure. ${e.message}`
-    )
+    notification('crit', 'Error', `Events view patch Request failure. ${e.message}`)
   }
 }
 
-const deletedItem = id => {
+const deletedItem = (id: string): void => {
   items.value = items.value.filter(i => i.id !== id)
   if (quick_view.value) {
     quick_view.value = null
   }
 }
 
-watch(query, val => {
-  const route = useRoute()
-  const router = useRouter()
+watch(query, (val: string) => {
+  const currentRoute = useRoute()
+  const currentRouter = useRouter()
   if (!val) {
-    if (!route?.query['filter']) {
-      return;
+    if (!currentRoute?.query['filter']) {
+      return
     }
 
-    router.push({
-      'path': '/events',
-      'query': {
-        ...route.query,
-        'filter': undefined
-      }
-    })
-    return;
+    currentRouter.push({ path: '/events', query: { ...currentRoute.query, filter: undefined } })
+    return
   }
 
-  if (route?.query['filter'] === val) {
-    return;
+  if (currentRoute?.query['filter'] === val) {
+    return
   }
 
-  router.push({
-    'path': '/events',
-    'query': {
-      ...route.query,
-      'filter': val
-    }
-  })
+  currentRouter.push({ path: '/events', query: { ...currentRoute.query, filter: val } })
 })
-
 </script>

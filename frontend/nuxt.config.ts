@@ -19,15 +19,14 @@ try {
             }
         }
     }
-} catch (e) {
-}
+} catch { }
 
 export default defineNuxtConfig({
     ssr: false,
-    devtools: {enabled: true},
+    devtools: { enabled: true },
 
     devServer: {
-        port: 8081,
+        port: 8082,
         host: "0.0.0.0",
     },
     runtimeConfig: {
@@ -39,13 +38,13 @@ export default defineNuxtConfig({
     app: {
         head: {
             "meta": [
-                {"charset": "utf-8"},
-                {"name": "viewport", "content": "width=device-width, initial-scale=1.0, maximum-scale=1.0"},
-                {"name": "theme-color", "content": "#000000"}
+                { "charset": "utf-8" },
+                { "name": "viewport", "content": "width=device-width, initial-scale=1.0, maximum-scale=1.0" },
+                { "name": "theme-color", "content": "#000000" }
             ],
         },
         buildAssetsDir: "assets",
-        pageTransition: {name: 'page', mode: 'out-in'}
+        pageTransition: { name: 'page', mode: 'out-in' }
     },
 
     router: {
@@ -58,6 +57,7 @@ export default defineNuxtConfig({
         '@vueuse/nuxt',
         'floating-vue/nuxt',
         '@pinia/nuxt',
+        process.env.NODE_ENV === 'development' ? '@nuxt/eslint' : '',
     ],
 
     nitro: {
@@ -78,6 +78,6 @@ export default defineNuxtConfig({
     telemetry: false,
     compatibilityDate: "2025-08-02",
     experimental: {
-        checkOutdatedBuildInterval: 1000 * 60 * 60,
+        checkOutdatedBuildInterval: 1000 * 60 * 10,
     }
 })

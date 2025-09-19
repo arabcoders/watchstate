@@ -1,16 +1,17 @@
 import {storeToRefs} from 'pinia'
-import {useAuthStore} from '~/store/auth.js'
+import {useAuthStore} from '~/store/auth'
 import {useStorage} from '@vueuse/core'
+import type {RouteLocationNormalized} from 'vue-router'
 
 let next_check = 0
 
-export default defineNuxtRouteMiddleware(async to => {
+export default defineNuxtRouteMiddleware(async (to: RouteLocationNormalized) => {
     if (to.fullPath.startsWith('/auth') || to.fullPath.startsWith('/v1/api')) {
         return
     }
 
     const {authenticated} = storeToRefs(useAuthStore())
-    const token = useStorage('token', null)
+    const token = useStorage<string | null>('token', null)
 
     if (token.value) {
         if (Date.now() > next_check) {
@@ -25,7 +26,6 @@ export default defineNuxtRouteMiddleware(async to => {
             console.debug('Token is valid.')
             next_check = Date.now() + 1000 * 60 * 5
         }
-
         authenticated.value = true
     }
 

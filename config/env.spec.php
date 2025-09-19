@@ -41,6 +41,25 @@ return (function () {
             },
         ],
         [
+            'key' => 'WS_DB_MODE',
+            'description' => 'DB journal mode. (MEMORY or WAL) Default: WAL. Memory mode can give a huge performance boost at the cost of potential data loss on crashes.',
+            'type' => 'string',
+            'validate' => function (mixed $value): string {
+                if (is_numeric($value) || empty($value)) {
+                    throw new ValidationException('Invalid db mode. Empty value.');
+                }
+
+                $val = strtoupper($value);
+                $modes = ['MEMORY', 'WAL'];
+
+                if (!in_array($val, $modes, true)) {
+                    throw new ValidationException('Invalid db mode. Must be one of: ' . implode(', ', $modes));
+                }
+
+                return $val;
+            },
+        ],
+        [
             'key' => 'WS_LOGS_CONTEXT',
             'description' => 'Enable extra context information in logs and output.',
             'type' => 'bool',
@@ -170,11 +189,6 @@ return (function () {
             'type' => 'bool',
         ],
         [
-            'key' => 'WS_SYNC_PROGRESS',
-            'description' => 'Enable watch progress sync.',
-            'type' => 'bool',
-        ],
-        [
             'key' => 'WS_PROFILER_COLLECTOR',
             'description' => 'The XHProf data collector URL to send the profiler data to.',
             'type' => 'string',
@@ -208,7 +222,7 @@ return (function () {
                     throw new ValidationException('Invalid progress threshold. Must be at least 180 seconds.');
                 }
 
-                return $value;
+                return (string)$value;
             },
         ],
         [
@@ -233,7 +247,7 @@ return (function () {
                 if (false === isValidURL($value)) {
                     throw new ValidationException('Invalid remote logger URL. Must be a valid URL.');
                 }
-                return $value;
+                return (string)$value;
             },
             'mask' => true,
         ],
@@ -256,7 +270,7 @@ return (function () {
                         'Invalid username. Username can only contains [lower case a-z, 0-9 and _].'
                     );
                 }
-                return $value;
+                return (string)$value;
             },
             'mask' => true,
             'protected' => true,
@@ -273,7 +287,7 @@ return (function () {
                 $prefix = Config::get('password.prefix', 'ws_hash@:');
 
                 if (true === str_starts_with($value, $prefix)) {
-                    return $value;
+                    return (string)$value;
                 }
 
                 try {
@@ -283,7 +297,7 @@ return (function () {
                             Config::get('password.options', [])
                         );
                 } catch (ValueError $e) {
-                    throw new ValidationException('Invalid password. Password hashing failed.', $e);
+                    throw new ValidationException('Invalid password. Password hashing failed.', $e->getCode(), $e);
                 }
             },
             'mask' => true,
@@ -335,7 +349,7 @@ return (function () {
                     throw new ValidationException('Invalid minimum progress. Must be at least 60 seconds.');
                 }
 
-                return $value;
+                return (string)$value;
             },
         ],
     ];

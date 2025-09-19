@@ -27,76 +27,91 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import {ref, onMounted, onBeforeUnmount} from 'vue'
 import Message from '~/components/Message.vue'
-import request from '~/utils/request.js'
-import {notification} from '~/utils/index.js'
+import {request, notification} from '~/utils'
 
-const emitter = defineEmits(['update']);
+const emit = defineEmits<{
+  (e: 'update', status: { status: boolean; message: string; restartable: boolean }): void
+}>()
 
-const props = defineProps({
-  forceShow: {type: Boolean, default: false}
-});
+withDefaults(defineProps<{
+  /** Force show the scheduler status */
+  forceShow?: boolean
+}>(), {
+  forceShow: false
+})
 
-let timer = null;
-const isLoading = ref(false);
-const isRestarting = ref(false);
-const status = ref({status: true, message: 'Loading...', restartable: false});
+let timer: ReturnType<typeof setTimeout> | null = null
+const isLoading = ref<boolean>(false)
+const isRestarting = ref<boolean>(false)
+const status = ref<{ status: boolean; message: string; restartable: boolean }>({
+  status: true,
+  message: 'Loading...',
+  restartable: false
+})
 
-const loadContent = async () => {
+const loadContent = async (): Promise<void> => {
   if (isLoading.value) {
-    return;
+    return
   }
   try {
     if (timer) {
-      clearTimeout(timer);
-      timer = null;
+      clearTimeout(timer)
+      timer = null
     }
-
-    isLoading.value = true;
+    isLoading.value = true
     const response = await request('/system/scheduler')
     const json = await response.json()
-
-    status.value = json;
-    emitter('update', json);
-    timer = setTimeout(loadContent, 60000);
+    status.value = json
+    emit('update', json)
+    timer = setTimeout(loadContent, 60000)
   } catch (e) {
-    console.error(e);
+    console.error(e)
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
 }
 
-const restart = async () => {
-  if (isRestarting.value || false === confirm('Restart the task scheduler?')) {
-    return;
+const restart = async (): Promise<void> => {
+  if (isRestarting.value) {
+    return
+  }
+
+  const {status: confirmStatus} = await useDialog().confirmDialog({
+    message: 'Restart the task scheduler?',
+    confirmText: 'Restart',
+    confirmColor: 'is-warning'
+  })
+
+  if (true !== confirmStatus) {
+    return
   }
 
   try {
-    isRestarting.value = true;
+    isRestarting.value = true
     const response = await request('/system/scheduler/restart', {method: 'POST'})
     const json = await response.json()
-    notification(200 === response.status ? 'success' : 'error', '', json.message ?? json.error.message ?? '??')
-
+    notification(200 === response.status ? 'success' : 'error', '', json.message ?? json.error?.message ?? '??')
     if (200 !== response.status) {
-      return;
+      return
     }
-
-    status.value = json;
-    emitter('update', json);
+    status.value = json
+    emit('update', json)
   } catch (e) {
-    console.error(e);
+    console.error(e)
   } finally {
-    isRestarting.value = false;
+    isRestarting.value = false
   }
 }
 
-onMounted(async () => await loadContent());
-onUnmounted(async () => {
-  if (!timer) {
-    return
+onMounted(() => loadContent())
+
+onBeforeUnmount(() => {
+  if (timer) {
+    clearTimeout(timer)
+    timer = null
   }
-  clearTimeout(timer);
-  timer = null;
-});
+})
 </script>

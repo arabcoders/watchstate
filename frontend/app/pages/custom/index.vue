@@ -17,7 +17,7 @@
             </p>
             <p class="control">
               <button class="button is-info" @click="loadContent" :disabled="isLoading"
-                      :class="{'is-loading':isLoading}">
+                :class="{ 'is-loading': isLoading }">
                 <span class="icon">
                   <i class="fas fa-sync"></i>
                 </span>
@@ -31,12 +31,12 @@
       </div>
 
       <div class="column is-12" v-if="isLoading">
-        <Message message_class="has-background-info-90 has-text-dark" title="Loading"
-                 icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
+        <Message message_class="has-background-info-90 has-text-dark" title="Loading" icon="fas fa-spinner fa-spin"
+          message="Loading data. Please wait..." />
       </div>
 
       <div class="column is-12" v-if="!isLoading && guids">
-        <div class="columns is-multiline" v-if="guids?.length >0">
+        <div class="columns is-multiline" v-if="guids?.length > 0">
           <div class="column is-3-tablet" v-for="(guid, index) in guids" :key="guid.name">
             <div class="card">
               <header class="card-header">
@@ -57,7 +57,7 @@
         </div>
         <div v-else>
           <Message message_class="has-background-warning-90 has-text-dark" title="Information"
-                   icon="fas fa-exclamation">
+            icon="fas fa-exclamation">
             There are no custom GUIDs configured. You can add new GUIDs by clicking on the <i class="fa fa-add"></i>
             button.
           </Message>
@@ -92,11 +92,9 @@
                 <header class="card-header">
                   <template v-if="link.replace?.from">
                     <p class="card-header-title is-text-overflow pr-1 is-unselectable is-clickable"
-                       @click="link.show = !link.show">
-                      <span class="icon"><i
-                          class="fas"
-                          :class="{ 'fa-arrow-down': false === (link.show ?? false), 'fa-arrow-up': true === (link.show ?? false) }"
-                      ></i>&nbsp;</span>
+                      @click="link.show = !link.show">
+                      <span class="icon"><i class="fas"
+                          :class="{ 'fa-arrow-down': false === (link.show ?? false), 'fa-arrow-up': true === (link.show ?? false) }"></i>&nbsp;</span>
                       {{ ucFirst(link.type) }} client link
                     </p>
                   </template>
@@ -152,7 +150,7 @@
         </div>
         <div v-else>
           <Message message_class="has-background-warning-90 has-text-dark" title="Information"
-                   icon="fas fa-exclamation">
+            icon="fas fa-exclamation">
             There are no client GUID links configured. You can add new links by clicking on the <i
               class="fa fa-add"></i>
             button.
@@ -161,7 +159,7 @@
       </div>
       <div class="column is-12">
         <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
-                 @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+          @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
           <ul>
             <li>Using this feature allows you to extend <code>WatchState</code> to support more less known or regional
               specific metadata databases. We cannot add support directly to all databases, so this feature instead
@@ -173,14 +171,14 @@
             </li>
             <li>The guid names are unique. Therefore, you cannot reuse existing ones.</li>
             <li>You cannot add link from the same client GUID twice. For example you cannot add <code>jellyfin:foobar ->
-              WatchState:guid_foobar</code> and another for <code>jellyfin:foobar -> guid_imdb</code>.
+          WatchState:guid_foobar</code> and another for <code>jellyfin:foobar -> guid_imdb</code>.
             </li>
             <li>Editing the <code>guid.yaml</code> file directly is unsupported and might lead to unexpected behavior.
               Please use the WebUI to manage the GUIDs. as we expose the entire functionality via the WebUI. with
               safeguards to prevent you from doing something that might break the system.
             </li>
             <li>If you added or removed Custom GUID, you should run
-              <NuxtLink :to="makeConsoleCommand('system:index --force-reindex',false)">
+              <NuxtLink :to="makeConsoleCommand('system:index --force-reindex', false)">
                 <span class="icon"><i class="fas fa-terminal"></i>&nbsp;</span>
                 <span>system:index --force-reindex</span>
               </NuxtLink>
@@ -193,7 +191,7 @@
             </li>
             <li>For more information please read the content in the <code>FAQ.md</code> page, or directly via
               <NuxtLink target="_blank"
-                        to="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#advanced-how-to-extend-the-guid-parser-to-support-more-guids-or-custom-ones">
+                to="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#advanced-how-to-extend-the-guid-parser-to-support-more-guids-or-custom-ones">
                 <span class="icon"><i class="fas fa-external-link-alt"></i>&nbsp;</span>
                 <span>this link</span>
               </NuxtLink>
@@ -205,50 +203,68 @@
   </div>
 </template>
 
-<script setup>
-import '~/assets/css/bulma-switch.css'
-import request from '~/utils/request.js'
-import {makeConsoleCommand, notification, parse_api_response} from '~/utils/index.js'
-import {useStorage} from '@vueuse/core'
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useHead, navigateTo } from '#app'
+import { useStorage } from '@vueuse/core'
+import { request, makeConsoleCommand, notification, parse_api_response, ucFirst } from '~/utils'
 import Message from '~/components/Message.vue'
+import type { CustomGUID, CustomLink } from '~/types'
+import '~/assets/css/bulma-switch.css'
 
-useHead({title: 'Custom Guids'})
+type CustomLinkWithUI = CustomLink & { show?: boolean }
+useHead({ title: 'Custom Guids' })
 
-const guids = ref([])
-const links = ref([])
+const guids = ref<Array<CustomGUID>>([])
+const links = ref<Array<CustomLinkWithUI>>([])
 const show_page_tips = useStorage('show_page_tips', true)
-const isLoading = ref(false)
+const isLoading = ref<boolean>(false)
 
-const loadContent = async () => {
+const loadContent = async (): Promise<void> => {
   isLoading.value = true
   try {
-    const response = await parse_api_response(await request(`/system/guids/custom`))
-    for (const i of Object.keys(response.guids)) {
-      guids.value.push(response.guids[i])
+    const response = await request('/system/guids/custom')
+    const data = await parse_api_response<{
+      guids: Record<string, CustomGUID>,
+      links: Record<string, CustomLink>
+    }>(response)
+
+    if ('error' in data) {
+      notification('error', 'Error', data.error.message)
+      return
     }
-    for (const i of Object.keys(response.links)) {
-      links.value.push(response.links[i])
-    }
+
+    // Clear existing data
+    guids.value = []
+    links.value = []
+
+    // Convert object values to arrays
+    guids.value = Object.values(data.guids)
+    links.value = Object.values(data.links)
   } catch (e) {
-    isLoading.value = false
-    return notification('error', 'Error', e.message)
+    const error = e as Error
+    notification('error', 'Error', error.message)
   } finally {
     isLoading.value = false
   }
 }
 
-onMounted(async () => await loadContent())
+onMounted(async (): Promise<void> => {
+  await loadContent()
+})
 
-const deleteGUID = async (index, guid) => {
+const deleteGUID = async (index: number, guid: CustomGUID): Promise<void> => {
   if (!confirm(`Delete '${guid.name}'? links using this GUID will be deleted as well.`)) {
     return
   }
 
   try {
-    const response = await request(`/system/guids/custom/${guid.id}`, {method: 'DELETE'})
+    const response = await request(`/system/guids/custom/${guid.id}`, { method: 'DELETE' })
     if (!response.ok) {
       const result = await parse_api_response(response)
-      notification('error', 'Error', result.error.message)
+      if ('error' in result) {
+        notification('error', 'Error', result.error.message)
+      }
       return
     }
 
@@ -257,28 +273,31 @@ const deleteGUID = async (index, guid) => {
 
     notification('success', 'Success', `The GUID '${guid.name}' has been deleted.`)
   } catch (e) {
-    return notification('error', 'Error', e.message)
+    const error = e as Error
+    notification('error', 'Error', error.message)
   }
 }
 
-const deleteLink = async (index, link) => {
+const deleteLink = async (index: number, link: CustomLinkWithUI): Promise<void> => {
   if (!confirm(`Are you sure you want to delete the '${link.type}' - '${link.id}'?`)) {
     return
   }
 
   try {
-    const response = await request(`/system/guids/custom/${link.type}/${link.id}`, {method: 'DELETE'})
+    const response = await request(`/system/guids/custom/${link.type}/${link.id}`, { method: 'DELETE' })
     if (!response.ok) {
       const result = await parse_api_response(response)
-      notification('error', 'Error', result.error.message)
+      if ('error' in result) {
+        notification('error', 'Error', result.error.message)
+      }
       return
     }
 
     links.value.splice(index, 1)
     notification('success', 'Success', `The link '${link.type}' - '${link.id}' has been deleted.`)
   } catch (e) {
-    return notification('error', 'Error', e.message)
+    const error = e as Error
+    notification('error', 'Error', error.message)
   }
 }
-
 </script>

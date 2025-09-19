@@ -291,7 +291,7 @@ return (function (): array {
             'class' => fn(iCache $cache, iImport $mapper, iDB $db): UserContext => new UserContext(
                 name: 'main',
                 config: new ConfigFile(
-                    file: Config::get('backends_file'),
+                    file: (string)Config::get('backends_file'),
                     type: 'yaml',
                     autoSave: false,
                     autoCreate: true

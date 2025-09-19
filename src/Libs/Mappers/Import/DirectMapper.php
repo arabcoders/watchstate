@@ -15,10 +15,12 @@ use App\Libs\UserContext;
 use App\Listeners\ProcessProgressEvent;
 use App\Model\Events\EventsTable;
 use DateTimeInterface as iDate;
+use Monolog\Level;
 use PDOException;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\Log\LogLevel;
 use Psr\SimpleCache\CacheInterface as iCache;
+use Psr\SimpleCache\InvalidArgumentException as CacheInvalidArgumentException;
 use Throwable;
 
 /**
@@ -283,6 +285,9 @@ class DirectMapper implements ImportInterface
                     'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                 ]);
                 $this->progressItems[$itemId] = $entity;
+                if (null !== ($onProgressUpdate = ag($opts, Options::STATE_PROGRESS_EVENT, null))) {
+                    $onProgressUpdate($entity);
+                }
             }
         } catch (PDOException|Throwable $e) {
             $this->actions[$entity->type]['failed']++;
@@ -319,6 +324,7 @@ class DirectMapper implements ImportInterface
     {
         $metadataOnly = true === (bool)ag($opts, Options::IMPORT_METADATA_ONLY);
         $inDryRunMode = $this->inDryRunMode();
+        $writer = ag($opts, Options::LOG_TO_WRITER, null);
         $keys = [iState::COLUMN_META_DATA];
 
         $progressChange = $this->shouldProgressUpdate($local, $entity, $opts);
@@ -367,6 +373,9 @@ class DirectMapper implements ImportInterface
                             'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                         ]);
                         $this->progressItems[$itemId] = $local;
+                        if (null !== ($onProgressUpdate = ag($opts, Options::STATE_PROGRESS_EVENT, null))) {
+                            $onProgressUpdate($local);
+                        }
                     }
                 }
 
@@ -402,7 +411,19 @@ class DirectMapper implements ImportInterface
             return $this;
         }
 
+        $msg = "{mapper}: [T] Ignoring '{user}@{backend}' - '#{id}: {title}'. No metadata changes detected.";
+        $context = [
+            'user' => $this->userContext?->name ?? 'main',
+            'mapper' => afterLast(self::class, '\\'),
+            'id' => $local->id ?? 'New',
+            'backend' => $entity->via,
+            'title' => $local->getName(),
+        ];
+
         if (true === $metadataOnly) {
+            if (null !== $writer) {
+                $writer(Level::Info, $msg, $context);
+            }
             return $this;
         }
 
@@ -434,17 +455,10 @@ class DirectMapper implements ImportInterface
             return $this;
         }
 
-        if ($this->inTraceMode()) {
-            $this->logger->info(
-                "{mapper}: [T] Ignoring '{user}@{backend}' - '#{id}: {title}'. No metadata changes detected.",
-                [
-                    'user' => $this->userContext?->name ?? 'main',
-                    'mapper' => afterLast(self::class, '\\'),
-                    'id' => $local->id ?? 'New',
-                    'backend' => $entity->via,
-                    'title' => $local->getName(),
-                ]
-            );
+        if (true === $this->inTraceMode()) {
+            $this->logger->info($msg, $context);
+        } elseif (null !== $writer) {
+            $writer(Level::Info, $msg, $context);
         }
 
         return $this;
@@ -463,6 +477,7 @@ class DirectMapper implements ImportInterface
     {
         $keys = [iState::COLUMN_META_DATA];
         $inDryRunMode = $this->inDryRunMode();
+        $writer = ag($opts, Options::LOG_TO_WRITER, null);
 
         $cloned = clone $local;
 
@@ -572,6 +587,9 @@ class DirectMapper implements ImportInterface
                                 'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                             ]);
                             $this->progressItems[$itemId] = $local;
+                            if (null !== ($onProgressUpdate = ag($opts, Options::STATE_PROGRESS_EVENT, null))) {
+                                $onProgressUpdate($local);
+                            }
                         }
                     }
 
@@ -637,14 +655,19 @@ class DirectMapper implements ImportInterface
             return $this->add($entity, $opts);
         }
 
-        if ($this->inTraceMode()) {
-            $this->logger->info("{mapper}: [O] Ignoring '{user}@{backend}' - '#{id}: {title}'. No changes detected.", [
-                'user' => $this->userContext?->name ?? 'main',
-                'mapper' => afterLast(self::class, '\\'),
-                'id' => $cloned->id ?? 'New',
-                'backend' => $entity->via,
-                'title' => $cloned->getName(),
-            ]);
+        $msg = "{mapper}: [O] Ignoring '{user}@{backend}' - '#{id}: {title}'. No changes detected.";
+        $context = [
+            'user' => $this->userContext?->name ?? 'main',
+            'mapper' => afterLast(self::class, '\\'),
+            'id' => $cloned->id ?? 'New',
+            'backend' => $entity->via,
+            'title' => $cloned->getName(),
+        ];
+
+        if (true === $this->inTraceMode()) {
+            $this->logger->info($msg);
+        } elseif (null !== $writer) {
+            $writer(Level::Info, $msg, $context);
         }
 
         return $this;
@@ -762,6 +785,7 @@ class DirectMapper implements ImportInterface
     public function handleUntaintedEntity(iState $local, iState $entity, array $opts = []): self
     {
         $inDryRunMode = $this->inDryRunMode();
+        $writer = ag($opts, Options::LOG_TO_WRITER, null);
 
         $cloned = clone $local;
 
@@ -823,6 +847,9 @@ class DirectMapper implements ImportInterface
                             'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                         ]);
                         $this->progressItems[$itemId] = $local;
+                        if (null !== ($onProgressUpdate = ag($opts, Options::STATE_PROGRESS_EVENT, null))) {
+                            $onProgressUpdate($local);
+                        }
                     }
                 }
 
@@ -858,6 +885,8 @@ class DirectMapper implements ImportInterface
             return $this;
         }
 
+        $msg = "{mapper}: [U] Ignoring '{user}@{backend}' - '#{id}: {title}'. Metadata & play state are identical.";
+
         $context = [
             'mapper' => afterLast(self::class, '\\'),
             'id' => $cloned->id ?? 'New',
@@ -874,10 +903,9 @@ class DirectMapper implements ImportInterface
         }
 
         if ($this->inTraceMode()) {
-            $this->logger->info(
-                "{mapper}: [U] Ignoring '{user}@{backend}' - '#{id}: {title}'. Metadata & play state are identical.",
-                $context
-            );
+            $this->logger->info($msg, $context);
+        } elseif (null !== $writer) {
+            $writer(Level::Info, $msg, $context);
         }
 
         Message::increment("{$entity->via}.{$entity->type}.ignored_no_change");
@@ -923,13 +951,10 @@ class DirectMapper implements ImportInterface
 
     /**
      * @inheritdoc
-     * @noinspection PhpRedundantCatchClauseInspection
      */
     public function commit(): array
     {
-        if (true === (bool)Config::get('sync.progress', false) && count(
-                $this->progressItems
-            ) >= 1 && false === $this->inDryRunMode()) {
+        if (false === $this->inDryRunMode() && count($this->progressItems) >= 1) {
             try {
                 $name = '{type}://{id}@{backend}';
 
@@ -948,7 +973,17 @@ class DirectMapper implements ImportInterface
                     ]);
                     queueEvent(ProcessProgressEvent::NAME, [iState::COLUMN_ID => $entity->id], $opts);
                 }
-            } catch (\Psr\SimpleCache\InvalidArgumentException) {
+            } catch (CacheInvalidArgumentException $e) {
+                $this->logger->error(
+                    ...lw(
+                        message: "{mapper}: Exception '{error.kind}' was thrown unhandled during progress queueing. {error.message} at '{error.file}:{error.line}'.",
+                        context: [
+                            'mapper' => afterLast(self::class, '\\'),
+                            ...exception_log($e),
+                        ],
+                        e: $e
+                    )
+                );
             }
         }
 
