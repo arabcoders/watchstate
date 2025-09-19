@@ -15,11 +15,13 @@ use App\Libs\Exceptions\DBAdapterException as DBException;
 use App\Libs\Guid;
 use App\Libs\Options;
 use App\Libs\TestCase;
+use DateInterval;
 use DateTimeImmutable;
 use Error;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use PDO;
+use Psr\SimpleCache\CacheInterface;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\NullOutput;
@@ -55,6 +57,100 @@ class PDOAdapterTest extends TestCase
         ]);
         $this->db->setLogger($logger);
         $this->db->migrations('up');
+    }
+
+    private function makeCacheStub(): CacheInterface
+    {
+        return new class implements CacheInterface {
+            public array $store = [];
+            public int $getCalls = 0;
+            public int $setCalls = 0;
+
+            public function get(string $key, mixed $default = null): mixed
+            {
+                $this->getCalls++;
+                return $this->store[$key] ?? $default;
+            }
+
+            public function set(string $key, mixed $value, DateInterval|int|null $ttl = null): bool
+            {
+                $this->setCalls++;
+                $this->store[$key] = $value;
+                return true;
+            }
+
+            public function delete(string $key): bool
+            {
+                unset($this->store[$key]);
+                return true;
+            }
+
+            public function clear(): bool
+            {
+                $this->store = [];
+                return true;
+            }
+
+            public function getMultiple(iterable $keys, mixed $default = null): iterable
+            {
+                foreach ($keys as $key) {
+                    yield $key => $this->get((string)$key, $default);
+                }
+            }
+
+            public function setMultiple(iterable $values, DateInterval|int|null $ttl = null): bool
+            {
+                foreach ($values as $key => $value) {
+                    $this->set((string)$key, $value, $ttl);
+                }
+
+                return true;
+            }
+
+            public function deleteMultiple(iterable $keys): bool
+            {
+                foreach ($keys as $key) {
+                    $this->delete((string)$key);
+                }
+
+                return true;
+            }
+
+            public function has(string $key): bool
+            {
+                return array_key_exists($key, $this->store);
+            }
+        };
+    }
+
+    /**
+     * @return array<int, iState>
+     */
+    private function seedEntities(): array
+    {
+        $episode = $this->db->insert(new StateEntity($this->testEpisode));
+
+        $movie = $this->db->insert(new StateEntity($this->testMovie));
+
+        $altEpisode = $this->testEpisode;
+        $altEpisode[iState::COLUMN_EPISODE] = 3;
+        $altEpisode[iState::COLUMN_TITLE] = 'Different Episode';
+        $altEpisode[iState::COLUMN_GUIDS][Guid::GUID_IMDB] = 'tt6101';
+        $altEpisode[iState::COLUMN_GUIDS][Guid::GUID_TVDB] = '6201';
+        $altEpisode[iState::COLUMN_GUIDS][Guid::GUID_TMDB] = '6301';
+        $altEpisode[iState::COLUMN_GUIDS][Guid::GUID_TVMAZE] = '6401';
+        $altEpisode[iState::COLUMN_GUIDS][Guid::GUID_TVRAGE] = '6501';
+        $altEpisode[iState::COLUMN_GUIDS][Guid::GUID_ANIDB] = '6601';
+        foreach ($altEpisode[iState::COLUMN_META_DATA] as $backend => $metadata) {
+            $altEpisode[iState::COLUMN_META_DATA][$backend][iState::COLUMN_META_DATA_EXTRA][iState::COLUMN_META_DATA_EXTRA_TITLE] =
+                'Different Episode Title';
+            $altEpisode[iState::COLUMN_META_DATA][$backend][iState::COLUMN_ID] =
+                ($metadata[iState::COLUMN_ID] ?? 0) + 100;
+        }
+
+        $altEpisodeEntity = $this->db->insert(new StateEntity($altEpisode));
+
+        return [$episode, $movie, $altEpisodeEntity];
     }
 
     public function test_insert_throw_exception_if_has_id(): void
@@ -168,7 +264,8 @@ class PDOAdapterTest extends TestCase
     {
         $item = new StateEntity($this->testEpisode);
 
-        $this->assertSame([],
+        $this->assertSame(
+            [],
             $this->db->getAll(opts: ['class' => $item]),
             'When db is empty, getAll returns empty array.'
         );
@@ -247,6 +344,79 @@ class PDOAdapterTest extends TestCase
             ag($item->getMetadata($item->via), iState::COLUMN_META_DATA_PLAYED_AT),
             'When watched flag is set to 0, played_at metadata should be null.'
         );
+    }
+
+    public function test_duplicates_uses_cache(): void
+    {
+        $cache = $this->makeCacheStub();
+
+        $path = '/library/series/season1/episode02.mkv';
+
+        $episode = $this->testEpisode;
+        foreach ($episode[iState::COLUMN_META_DATA] as $backend => $metadata) {
+            $episode[iState::COLUMN_META_DATA][$backend][iState::COLUMN_META_PATH] = $path;
+        }
+
+        $movie = $this->testMovie;
+        foreach ($movie[iState::COLUMN_META_DATA] as $backend => $metadata) {
+            $movie[iState::COLUMN_META_DATA][$backend][iState::COLUMN_META_PATH] = $path;
+        }
+
+        $episodeEntity = $this->db->insert(new StateEntity($episode));
+        $movieEntity = $this->db->insert(new StateEntity($movie));
+
+        $this->assertSame(0, $cache->setCalls, 'Cache should not be written before duplicates run.');
+
+        $first = $this->db->duplicates($episodeEntity, $cache);
+
+        $this->assertCount(2, $first, 'Duplicates should return all entities that share the same media path.');
+        $this->assertSame(1, $cache->getCalls, 'Cache should be checked once per duplicates call.');
+        $this->assertSame(1, $cache->setCalls, 'First duplicates run should populate the cache.');
+
+        $second = $this->db->duplicates($episodeEntity, $cache);
+
+        $this->assertCount(2, $second, 'Cached duplicates result should include the same entities.');
+        $this->assertSame(2, $cache->getCalls, 'Second duplicates call should hit the cache again.');
+        $this->assertSame(1, $cache->setCalls, 'Cached result should prevent additional writes.');
+        $this->assertArrayHasKey(
+            $episodeEntity->id,
+            $second,
+            'Episode record should remain present in cached duplicates result.'
+        );
+        $this->assertArrayHasKey(
+            $movieEntity->id,
+            $second,
+            'Related movie record should remain present in cached duplicates result.'
+        );
+    }
+
+    public function test_fetch_returns_all_entities(): void
+    {
+        $entities = $this->seedEntities();
+
+        $items = iterator_to_array($this->db->fetch(), false);
+
+        $this->assertCount(3, $items, 'Fetch should yield each inserted entity.');
+        $this->assertContainsOnlyInstancesOf(iState::class, $items, 'Fetch should yield instances of StateInterface.');
+
+        $expectedIds = array_map(fn(iState $entity) => $entity->id, $entities);
+        $fetchedIds = array_map(fn(iState $entity) => $entity->id, $items);
+
+        sort($expectedIds);
+        sort($fetchedIds);
+
+        $this->assertSame(
+            $expectedIds,
+            $fetchedIds,
+            'Fetch should yield the same set of IDs that were inserted.'
+        );
+    }
+
+    public function test_getTotal_returns_record_count(): void
+    {
+        $this->seedEntities();
+
+        $this->assertSame(3, $this->db->getTotal(), 'getTotal should return number of rows in state table.');
     }
 
     public function test_remove_conditions(): void
@@ -337,6 +507,7 @@ class PDOAdapterTest extends TestCase
         }, auto: false);
 
         $this->assertTrue($this->db->getDBLayer()->inTransaction(), 'Transaction should be still open.');
+        assert($this->db instanceof PDOAdapter);
         $this->db->__destruct();
         $this->assertFalse($this->db->getDBLayer()->inTransaction(), 'Transaction should be closed.');
 
