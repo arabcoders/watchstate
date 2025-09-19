@@ -27,7 +27,7 @@
         "cronstrue": "^3.3.0",
         "floating-vue": "^5.2.2",
         "hls.js": "^1.6.12",
-        "marked": "^16.2.1",
+        "marked": "^16.3.0",
         "marked-alert": "^2.1.2",
         "marked-base-url": "^1.1.7",
         "marked-gfm-heading-id": "^4.1.2",
@@ -49,7 +49,7 @@
     "devDependencies": {
         "@nuxt/eslint": "^1.9.0",
         "@nuxt/eslint-config": "^1.9.0",
-        "@typescript-eslint/parser": "^8.43.0",
+        "@typescript-eslint/parser": "^8.44.0",
         "eslint": "^9.35.0",
         "typescript": "^5.9.2",
         "vitest": "^3.2.4",

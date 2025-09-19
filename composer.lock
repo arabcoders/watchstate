@@ -3087,16 +3087,16 @@
     },
     {
       "name": "phpstan/phpstan",
-      "version": "2.1.25",
+      "version": "2.1.28",
       "source": {
         "type": "git",
         "url": "https://github.com/phpstan/phpstan.git",
-        "reference": "4087d28bd252895874e174d65e26b2c202ed893a"
+        "reference": "578fa296a166605d97b94091f724f1257185d278"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/phpstan/phpstan/zipball/4087d28bd252895874e174d65e26b2c202ed893a",
-        "reference": "4087d28bd252895874e174d65e26b2c202ed893a",
+        "url": "https://api.github.com/repos/phpstan/phpstan/zipball/578fa296a166605d97b94091f724f1257185d278",
+        "reference": "578fa296a166605d97b94091f724f1257185d278",
         "shasum": ""
       },
       "require": {
@@ -3141,7 +3141,7 @@
           "type": "github"
         }
       ],
-      "time": "2025-09-12T14:26:42+00:00"
+      "time": "2025-09-19T08:58:49+00:00"
     },
     {
       "name": "phpunit/php-code-coverage",
@@ -3628,12 +3628,12 @@
       "source": {
         "type": "git",
         "url": "https://github.com/Roave/SecurityAdvisories.git",
-        "reference": "9e809d3a8829a5b870ae1c2f57706f46bb181093"
+        "reference": "f48b3e601515b060334744b4b495f0d6b3cc2e6b"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/9e809d3a8829a5b870ae1c2f57706f46bb181093",
-        "reference": "9e809d3a8829a5b870ae1c2f57706f46bb181093",
+        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/f48b3e601515b060334744b4b495f0d6b3cc2e6b",
+        "reference": "f48b3e601515b060334744b4b495f0d6b3cc2e6b",
         "shasum": ""
       },
       "conflict": {
@@ -4022,6 +4022,7 @@
         "laravel/socialite": ">=1,<2.0.10",
         "latte/latte": "<2.10.8",
         "lavalite/cms": "<=9|==10.1",
+        "lavitto/typo3-form-to-database": "<2.2.5|>=3,<3.2.2|>=4,<4.2.3|>=5,<5.0.2",
         "lcobucci/jwt": ">=3.4,<3.4.6|>=4,<4.0.4|>=4.1,<4.1.5",
         "league/commonmark": "<2.7",
         "league/flysystem": "<1.1.4|>=2,<2.1.1",
@@ -4308,7 +4309,7 @@
         "slim/slim": "<2.6",
         "slub/slub-events": "<3.0.3",
         "smarty/smarty": "<4.5.3|>=5,<5.1.1",
-        "snipe/snipe-it": "<8.1",
+        "snipe/snipe-it": "<8.1.18",
         "socalnick/scn-social-auth": "<1.15.2",
         "socialiteproviders/steam": "<1.1",
         "solspace/craft-freeform": ">=5,<5.10.16",
@@ -4590,7 +4591,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2025-09-11T17:05:04+00:00"
+      "time": "2025-09-19T18:07:33+00:00"
     },
     {
       "name": "sebastian/cli-parser",
