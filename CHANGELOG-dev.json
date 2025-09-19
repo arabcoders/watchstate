@@ -1,8 +1,22 @@
 [
     {
-        "tag": "dev-20250919-c67202d7",
-        "date": "2025-09-18T22:34:48+00:00",
+        "tag": "dev-20250919-9d3361e0",
+        "date": "2025-09-19T15:45:33+00:00",
         "commits": [
+            {
+                "sha": "9d3361e0",
+                "message": "Make frontend cache accept seconds instead milsec",
+                "author": "arabcoders",
+                "date": "2025-09-19T15:45:33+00:00",
+                "full_sha": "9d3361e033555fe0c3087fa69325201c59df238e"
+            },
+            {
+                "sha": "2aec2aff",
+                "message": "Improve DFR page rendering to show more information",
+                "author": "arabcoders",
+                "date": "2025-09-19T15:40:42+00:00",
+                "full_sha": "2aec2afffa21ad911e1c1bf5150af2fdc382c6ce"
+            },
             {
                 "sha": "c67202d7",
                 "message": "Add how many times path is referenced",
@@ -508,7 +522,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "c67202d7b0d4bd1143ff3103bd8925b435c305a9"
+        "full_sha": "9d3361e033555fe0c3087fa69325201c59df238e"
     },
     {
         "tag": "dev-20250604-9407bc76",
