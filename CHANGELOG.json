@@ -1,9 +1,226 @@
 [
   {
-    "tag": "Unreleased (760618c9)",
-    "full_sha": "760618c9f23c1e3e953cf347344a3fc8d205f195",
-    "date": "2025-08-26T23:24:02+00:00",
+    "tag": "Unreleased (bfbdd9aa)",
+    "full_sha": "bfbdd9aa35cb79d67a0eaa57ce376a712907bc14",
+    "date": "2025-09-19T18:24:22+00:00",
     "commits": [
+      {
+        "sha": "ef042620",
+        "full_sha": "ef04262025638829fdc7821c1c025ee576439f4b",
+        "message": "update external packages",
+        "author": "arabcoders",
+        "date": "2025-09-19T18:10:37+00:00"
+      },
+      {
+        "sha": "98ec0873",
+        "full_sha": "98ec087313b5187cd389ec8d8fee53ac18e570ea",
+        "message": "Updated DB tests",
+        "author": "arabcoders",
+        "date": "2025-09-19T18:08:12+00:00"
+      },
+      {
+        "sha": "a12af511",
+        "full_sha": "a12af51130017b69e85da398ea7a6d386a2303c6",
+        "message": "Added dfr to index and history item page",
+        "author": "arabcoders",
+        "date": "2025-09-19T17:53:14+00:00"
+      },
+      {
+        "sha": "9d3361e0",
+        "full_sha": "9d3361e033555fe0c3087fa69325201c59df238e",
+        "message": "Make frontend cache accept seconds instead milsec",
+        "author": "arabcoders",
+        "date": "2025-09-19T15:45:33+00:00"
+      },
+      {
+        "sha": "2aec2aff",
+        "full_sha": "2aec2afffa21ad911e1c1bf5150af2fdc382c6ce",
+        "message": "Improve DFR page rendering to show more information",
+        "author": "arabcoders",
+        "date": "2025-09-19T15:40:42+00:00"
+      },
+      {
+        "sha": "c67202d7",
+        "full_sha": "c67202d7b0d4bd1143ff3103bd8925b435c305a9",
+        "message": "Add how many times path is referenced",
+        "author": "arabcoders",
+        "date": "2025-09-18T22:34:48+00:00"
+      },
+      {
+        "sha": "aec78466",
+        "full_sha": "aec78466f2d697feb3c5624f02bbd81c22171b2c",
+        "message": "Added better popover to see the difference between file paths",
+        "author": "arabcoders",
+        "date": "2025-09-18T22:15:23+00:00"
+      },
+      {
+        "sha": "9c3a0511",
+        "full_sha": "9c3a0511b5f50ed528209463217363552b2f4b9f",
+        "message": "fixed text issue in search item desc",
+        "author": "arabcoders",
+        "date": "2025-09-18T22:12:08+00:00"
+      },
+      {
+        "sha": "5a9aa183",
+        "full_sha": "5a9aa1839bd9609c1a1728a2263b60f37f06c66a",
+        "message": "added popover component",
+        "author": "arabcoders",
+        "date": "2025-09-18T22:11:38+00:00"
+      },
+      {
+        "sha": "438e353e",
+        "full_sha": "438e353eb6f36d37edb31eca37628c94596742a3",
+        "message": "Fix minor issue in buttons while editing backend",
+        "author": "arabcoders",
+        "date": "2025-09-18T14:01:18+00:00"
+      },
+      {
+        "sha": "b4395755",
+        "full_sha": "b4395755c4a18e418e79794cf2e8e8d7120a9c5b",
+        "message": "Show webhook/debug payloads in logs page if enabled.",
+        "author": "arabcoders",
+        "date": "2025-09-18T13:59:17+00:00"
+      },
+      {
+        "sha": "9cfe4c0c",
+        "full_sha": "9cfe4c0cf0669116642c497ca286bc9ed553dedc",
+        "message": "Extend logs for process request.",
+        "author": "arabcoders",
+        "date": "2025-09-17T21:11:31+00:00"
+      },
+      {
+        "sha": "fd9ba044",
+        "full_sha": "fd9ba044d2c153ba2ec3d8f940e46e165fbd6a4e",
+        "message": "Log on progress event triggers.",
+        "author": "arabcoders",
+        "date": "2025-09-17T20:02:26+00:00"
+      },
+      {
+        "sha": "0a3fb518",
+        "full_sha": "0a3fb51872cd929b37adcea1a8fff9a3504987a4",
+        "message": "remove `WS_SYNC_PROGRESS` as it's controlled by backend.export.enabled anyway.",
+        "author": "arabcoders",
+        "date": "2025-09-17T19:38:45+00:00"
+      },
+      {
+        "sha": "53020787",
+        "full_sha": "53020787245189187c7a03cf10b56767bf09f58c",
+        "message": "Made db journal configurable",
+        "author": "arabcoders",
+        "date": "2025-09-16T21:47:45+00:00"
+      },
+      {
+        "sha": "16a69da2",
+        "full_sha": "16a69da2c722adc6118ca0751a84567e41f25ac6",
+        "message": "Some episodes were getting marked as multi wrongly due to bad parsing, you may need to force meta update to correct the problem",
+        "author": "arabcoders",
+        "date": "2025-09-16T21:22:11+00:00"
+      },
+      {
+        "sha": "af314891",
+        "full_sha": "af31489129742b0370a5781b1f9597222eff07dd",
+        "message": "fixes",
+        "author": "arabcoders",
+        "date": "2025-09-14T14:09:37+00:00"
+      },
+      {
+        "sha": "136107fc",
+        "full_sha": "136107fcf845a7d30a836ae4367caeab5a5d09da",
+        "message": "Rebase on debian, ref #721",
+        "author": "arabcoders",
+        "date": "2025-09-14T13:59:02+00:00"
+      },
+      {
+        "sha": "cbc914ce",
+        "full_sha": "cbc914cef326d2c23ed1d915c48f7cb0cc16c080",
+        "message": "added linting to frontend",
+        "author": "arabcoders",
+        "date": "2025-09-14T13:06:48+00:00"
+      },
+      {
+        "sha": "d4b5993f",
+        "full_sha": "d4b5993fccf1205951e21b93a8376de46ef80caa",
+        "message": "Revert \"replace alpine ffmpeg with jellyfin-ffmpeg\"\n\nThis reverts commit a3e5f96d55912c85d5e84a9a41be0c6529c2cb30.",
+        "author": "arabcoders",
+        "date": "2025-09-13T22:59:33+00:00"
+      },
+      {
+        "sha": "a3e5f96d",
+        "full_sha": "a3e5f96d55912c85d5e84a9a41be0c6529c2cb30",
+        "message": "replace alpine ffmpeg with jellyfin-ffmpeg",
+        "author": "arabcoders",
+        "date": "2025-09-13T22:49:45+00:00"
+      },
+      {
+        "sha": "a1d4623e",
+        "full_sha": "a1d4623e2121b93860c685ba56fc5c0317db0c24",
+        "message": "TS Migration: WIP",
+        "author": "arabcoders",
+        "date": "2025-09-10T16:26:05+00:00"
+      },
+      {
+        "sha": "3dac119e",
+        "full_sha": "3dac119ec50137212b1534946439902dfa43d1a3",
+        "message": "fix token update for plex",
+        "author": "arabcoders",
+        "date": "2025-09-09T15:51:40+00:00"
+      },
+      {
+        "sha": "a3dca989",
+        "full_sha": "a3dca98904d681dba9b6b2da9ae5a88120d6f5c1",
+        "message": "TS Migration: WIP",
+        "author": "arabcoders",
+        "date": "2025-09-09T14:37:13+00:00"
+      },
+      {
+        "sha": "e9bdb570",
+        "full_sha": "e9bdb570dfaf95183d4dbf1c3c8313b6214931c2",
+        "message": "prevent silent errors in container start up",
+        "author": "arabcoders",
+        "date": "2025-09-09T13:55:31+00:00"
+      },
+      {
+        "sha": "38a77953",
+        "full_sha": "38a779537a4ff805b754f04505e5099049bc2733",
+        "message": "Add re-authenticate support for plex in edit.",
+        "author": "arabcoders",
+        "date": "2025-09-09T13:52:41+00:00"
+      },
+      {
+        "sha": "d71a0116",
+        "full_sha": "d71a01169931ba3cb7632a328d488f5c85081f16",
+        "message": "updated external packages",
+        "author": "arabcoders",
+        "date": "2025-09-08T20:40:55+00:00"
+      },
+      {
+        "sha": "748f6246",
+        "full_sha": "748f6246c38efa268b53fe41de131c9526cc7818",
+        "message": "TS Migration: WIP",
+        "author": "arabcoders",
+        "date": "2025-09-08T20:32:06+00:00"
+      },
+      {
+        "sha": "90318842",
+        "full_sha": "9031884238cd41f6b7bd86381f440d1077353881",
+        "message": "TS Migration: WIP",
+        "author": "arabcoders",
+        "date": "2025-09-06T19:13:47+00:00"
+      },
+      {
+        "sha": "d635d133",
+        "full_sha": "d635d133efca1870687cdf37eba4fbf4f3ce202d",
+        "message": "TS Migration: WIP",
+        "author": "arabcoders",
+        "date": "2025-09-06T17:09:00+00:00"
+      },
+      {
+        "sha": "5c479986",
+        "full_sha": "5c4799868152ef2d75bc8c56118ffbb9b04e38d7",
+        "message": "TS Migration: WIP",
+        "author": "arabcoders",
+        "date": "2025-09-05T17:47:44+00:00"
+      },
       {
         "sha": "e51fe5f0",
         "full_sha": "e51fe5f0c61cefbfe6617523a062053ff775cd85",
