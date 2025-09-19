@@ -1,8 +1,22 @@
 [
     {
-        "tag": "dev-20250919-9d3361e0",
-        "date": "2025-09-19T15:45:33+00:00",
+        "tag": "dev-20250919-98ec0873",
+        "date": "2025-09-19T18:08:12+00:00",
         "commits": [
+            {
+                "sha": "98ec0873",
+                "message": "Updated DB tests",
+                "author": "arabcoders",
+                "date": "2025-09-19T18:08:12+00:00",
+                "full_sha": "98ec087313b5187cd389ec8d8fee53ac18e570ea"
+            },
+            {
+                "sha": "a12af511",
+                "message": "Added dfr to index and history item page",
+                "author": "arabcoders",
+                "date": "2025-09-19T17:53:14+00:00",
+                "full_sha": "a12af51130017b69e85da398ea7a6d386a2303c6"
+            },
             {
                 "sha": "9d3361e0",
                 "message": "Make frontend cache accept seconds instead milsec",
@@ -522,7 +536,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "9d3361e033555fe0c3087fa69325201c59df238e"
+        "full_sha": "98ec087313b5187cd389ec8d8fee53ac18e570ea"
     },
     {
         "tag": "dev-20250604-9407bc76",
