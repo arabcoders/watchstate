@@ -104,7 +104,7 @@ onMounted(async () => {
       if ('error' in record) {
         throw new Error(record.error.message || `Unable to load record ${id}`)
       }
-      cache?.set(`history_${id}`, record, 300_000)
+      cache?.set(`history_${id}`, record, 300)
       items.push(record)
     }))
 

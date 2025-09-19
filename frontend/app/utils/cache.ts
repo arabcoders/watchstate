@@ -42,11 +42,14 @@ class Cache {
      *
      * @param key {string}
      * @param value {*}
-     * @param ttl {number|null} - Time to live in milliseconds. If null, the value will not expire.
+     * @param ttl {number|null} - Time to live in seconds. If null, the value will not expire.
      */
     set<T = any>(key: string, value: T, ttl: number | null = null): void {
-        const item: CacheItem<T> = { value, ttl, time: Date.now() };
-        this.storage.setItem(this.namespace + key, JSON.stringify(item));
+        this.storage.setItem(this.namespace + key, JSON.stringify({
+            value: value,
+            ttl: (ttl === null || ttl === undefined) ? null : Math.max(0, ttl) * 1000,
+            time: Date.now()
+        } as CacheItem<T>));
     }
 
     /**
