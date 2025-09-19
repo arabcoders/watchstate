@@ -22,9 +22,7 @@ final class Duplicate
 
     public const string URL = '%{api.prefix}/system/duplicate';
 
-    public function __construct(private readonly iImport $mapper, private readonly iLogger $logger)
-    {
-    }
+    public function __construct(private readonly iImport $mapper, private readonly iLogger $logger) {}
 
     /**
      * @throws InvalidArgumentException
@@ -101,6 +99,10 @@ final class Duplicate
 
         $grouped = [];
         foreach ($records as $r) {
+            if (!isset($grouped[$r['file_path']])) {
+                $grouped[$r['file_path']] = [];
+            }
+
             $grouped[$r['file_path']][] = $r;
         }
 
@@ -114,12 +116,22 @@ final class Duplicate
         $pagedPaths = array_slice($filePaths, $start, $perpage);
 
         $ids = [];
-        $idReferenceCounts = [];
+        $idDuplicateIds = [];
         foreach ($pagedPaths as $path) {
-            foreach ($grouped[$path] as $r) {
+            $pathRecords = $grouped[$path];
+            $pathRecordIds = array_values(array_map(static fn($r) => (int)$r['id'], $pathRecords));
+            $uniquePathIds = array_values(array_unique($pathRecordIds, SORT_NUMERIC));
+
+            foreach ($pathRecords as $r) {
                 $recordId = (int)$r['id'];
-                $ids[] = $recordId;
-                $idReferenceCounts[$recordId] = (int)$r['reference_count'];
+                if (false === in_array($recordId, $ids, true)) {
+                    $ids[] = $recordId;
+                }
+
+                $idDuplicateIds[$recordId] = array_values(array_filter(
+                    $uniquePathIds,
+                    static fn($candidateId) => $candidateId !== $recordId
+                ));
             }
         }
 
@@ -149,8 +161,8 @@ final class Duplicate
         foreach ($rows as $row) {
             $item = $this->formatEntity($row, userContext: $userContext);
             $recordId = (int)$row['id'];
-            if (isset($idReferenceCounts[$recordId])) {
-                $item['duplicate_reference_count'] = (int)$idReferenceCounts[$recordId];
+            if (isset($idDuplicateIds[$recordId]) && false === empty($idDuplicateIds[$recordId])) {
+                $item['duplicate_reference_ids'] = $idDuplicateIds[$recordId];
             }
             $response['items'][] = $item;
         }

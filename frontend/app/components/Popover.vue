@@ -1,16 +1,18 @@
 <template>
   <div class="popover-trigger" ref="triggerRef">
-    <slot name="trigger" :toggle="toggle" :show="show" :hide="hide"/>
+    <slot name="trigger" :toggle="toggle" :show="show" :hide="hide" />
   </div>
 
   <Teleport to="body">
-    <div v-if="isVisible" ref="popoverRef" class="popover-container" :class="popoverClasses" :style="popoverStyle"
-         @click.stop>
-      <div class="popover-content" :class="contentClasses">
-        <slot name="content" :hide="hide"/>
+    <Transition name="popover-fade">
+      <div v-if="isVisible" ref="popoverRef" class="popover-container" :class="popoverClasses" :style="popoverStyle"
+        @click.stop>
+        <div class="popover-content" :class="contentClasses">
+          <slot name="content" :hide="hide" />
+        </div>
+        <div v-if="showArrow" class="popover-arrow" :style="arrowStyle" />
       </div>
-      <div v-if="showArrow" class="popover-arrow" :style="arrowStyle"/>
-    </div>
+    </Transition>
   </Teleport>
 
   <Teleport to="body">
@@ -19,8 +21,8 @@
 </template>
 
 <script setup lang="ts">
-import {ref, computed, onMounted, onUnmounted, nextTick, watch} from 'vue'
-import {usePopoverManager} from '~/composables/usePopoverManager'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { usePopoverManager } from '~/composables/usePopoverManager'
 
 export interface PopoverProps {
   /** Placement of the popover relative to trigger */
@@ -47,7 +49,7 @@ export interface PopoverProps {
 
 const props = withDefaults(defineProps<PopoverProps>(), {
   placement: 'bottom',
-  trigger: 'hover', // Restored default to hover
+  trigger: 'hover',
   showDelay: 0,
   hideDelay: 200,
   offset: 8,
@@ -58,27 +60,28 @@ const props = withDefaults(defineProps<PopoverProps>(), {
   disabled: false
 })
 
-const emit = defineEmits<{
-  show: []
-  hide: []
-}>()
+const emit = defineEmits<{ (e: 'show' | 'hide'): void }>()
 
 const triggerRef = ref<HTMLElement>()
 const popoverRef = ref<HTMLElement>()
 const isVisible = ref(false)
-const position = ref({x: 0, y: 0})
-const arrowPosition = ref({x: 0, y: 0})
+const position = ref({ x: 0, y: 0 })
+const arrowPosition = ref({ x: 0, y: 0 })
 
-// Generate unique ID for this popover instance
 const popoverId = ref(`popover-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`)
 const { register, unregister, closeAll, isActive } = usePopoverManager()
 
 let showTimer: ReturnType<typeof setTimeout> | null = null
 let hideTimer: ReturnType<typeof setTimeout> | null = null
+let resizeObserver: ResizeObserver | null = null
+
+type PopoverPlacement = 'top' | 'bottom' | 'left' | 'right' | 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end'
+
+const currentPlacement = ref<PopoverPlacement>(props.placement)
 
 const popoverClasses = computed(() => [
   'popover',
-  `popover--${props.placement}`,
+  `popover--${currentPlacement.value}`,
   props.popoverClass
 ])
 
@@ -102,23 +105,28 @@ const arrowStyle = computed(() => ({
   top: `${arrowPosition.value.y}px`
 }))
 
-const calculatePosition = () => {
-  if (!triggerRef.value || !popoverRef.value) return
+const fallbackPlacements: Record<PopoverPlacement, PopoverPlacement> = {
+  top: 'bottom',
+  'top-start': 'bottom-start',
+  'top-end': 'bottom-end',
+  bottom: 'top',
+  'bottom-start': 'top-start',
+  'bottom-end': 'top-end',
+  left: 'right',
+  right: 'left'
+}
 
-  const triggerRect = triggerRef.value.getBoundingClientRect()
-  const popoverRect = popoverRef.value.getBoundingClientRect()
-  const viewport = {
-    width: window.innerWidth,
-    height: window.innerHeight
-  }
-
+const computePositionFor = (
+  placement: PopoverPlacement,
+  triggerRect: DOMRect,
+  popoverRect: DOMRect
+): { x: number, y: number, arrowX: number, arrowY: number } => {
   let x = 0
   let y = 0
   let arrowX = 0
   let arrowY = 0
 
-  // Calculate base position based on placement
-  switch (props.placement) {
+  switch (placement) {
     case 'top':
       x = triggerRect.left + triggerRect.width / 2 - popoverRect.width / 2
       y = triggerRect.top - popoverRect.height - props.offset
@@ -169,22 +177,122 @@ const calculatePosition = () => {
       break
   }
 
-  // Prevent popover from going outside viewport
-  if (x < 8) x = 8
+  return { x, y, arrowX, arrowY }
+}
+
+const fitsViewport = (
+  placement: PopoverPlacement,
+  coords: { x: number, y: number },
+  popoverRect: DOMRect,
+  viewport: { width: number, height: number }
+): boolean => {
+  switch (placement) {
+    case 'top':
+    case 'top-start':
+    case 'top-end':
+      return coords.y >= 8
+    case 'bottom':
+    case 'bottom-start':
+    case 'bottom-end':
+      return coords.y + popoverRect.height <= viewport.height - 8
+    case 'left':
+      return coords.x >= 8
+    case 'right':
+      return coords.x + popoverRect.width <= viewport.width - 8
+  }
+}
+
+const calculatePosition = () => {
+  if (!triggerRef.value || !popoverRef.value) {
+    return
+  }
+
+  const triggerRect = triggerRef.value.getBoundingClientRect()
+  const popoverRect = popoverRef.value.getBoundingClientRect()
+  const viewport = {
+    width: window.innerWidth,
+    height: window.innerHeight
+  }
+
+  let placementToUse: PopoverPlacement = props.placement
+  let coords = computePositionFor(placementToUse, triggerRect, popoverRect)
+
+  if (!fitsViewport(placementToUse, coords, popoverRect, viewport)) {
+    const fallback = fallbackPlacements[placementToUse]
+    if (fallback) {
+      const fallbackCoords = computePositionFor(fallback, triggerRect, popoverRect)
+      if (fitsViewport(fallback, fallbackCoords, popoverRect, viewport)) {
+        placementToUse = fallback
+        coords = fallbackCoords
+      }
+    }
+  }
+
+  let { x, y, arrowX, arrowY } = coords
+
+  if (x < 8) {
+    arrowX += x - 8
+    x = 8
+  }
   if (x + popoverRect.width > viewport.width - 8) {
+    const delta = (x + popoverRect.width) - (viewport.width - 8)
+    arrowX -= delta
     x = viewport.width - popoverRect.width - 8
   }
-  if (y < 8) y = 8
+  if (y < 8) {
+    arrowY += y - 8
+    y = 8
+  }
   if (y + popoverRect.height > viewport.height - 8) {
+    const delta = (y + popoverRect.height) - (viewport.height - 8)
+    arrowY -= delta
     y = viewport.height - popoverRect.height - 8
   }
 
-  position.value = {x, y}
-  arrowPosition.value = {x: arrowX, y: arrowY}
+  const clamp = (value: number, min: number, max: number): number => {
+    if (value < min) {
+      return min
+    }
+    if (value > max) {
+      return max
+    }
+    return value
+  }
+
+  if (['top', 'top-start', 'top-end', 'bottom', 'bottom-start', 'bottom-end'].includes(placementToUse)) {
+    arrowX = clamp(arrowX, 12, popoverRect.width - 12)
+  } else {
+    arrowY = clamp(arrowY, 12, popoverRect.height - 12)
+  }
+
+  currentPlacement.value = placementToUse
+  position.value = { x, y }
+  arrowPosition.value = { x: arrowX, y: arrowY }
+}
+
+const cleanupResizeObserver = () => {
+  if (resizeObserver !== null) {
+    resizeObserver.disconnect()
+    resizeObserver = null
+  }
+}
+
+const setupResizeObserver = () => {
+  cleanupResizeObserver()
+  if (!popoverRef.value || typeof ResizeObserver === 'undefined') {
+    return
+  }
+
+  resizeObserver = new ResizeObserver(() => {
+    calculatePosition()
+  })
+  resizeObserver.observe(popoverRef.value)
 }
 
 const show = async () => {
   if (props.disabled) return
+
+  currentPlacement.value = props.placement
 
   // Close any other active popovers first
   if (!register(popoverId.value)) {
@@ -241,6 +349,14 @@ const hide = () => {
   }
 
   hideTimer = setTimeout(() => {
+    const isTriggerHovered = triggerRef.value?.matches(':hover') ?? false
+    const isPopoverHovered = popoverRef.value?.matches(':hover') ?? false
+
+    if (isTriggerHovered || isPopoverHovered) {
+      hideTimer = null
+      return
+    }
+
     isVisible.value = false
     unregister(popoverId.value)
     emit('hide')
@@ -265,6 +381,7 @@ const immediateHide = () => {
     hideTimer = null
   }
   unregister(popoverId.value)
+  cleanupResizeObserver()
   isVisible.value = false
   emit('hide')
 }
@@ -332,18 +449,29 @@ watch(() => props.trigger, () => {
   setupTriggerEvents()
 })
 
+watch(() => props.placement, (newPlacement) => {
+  currentPlacement.value = newPlacement
+  if (isVisible.value) {
+    nextTick(() => {
+      calculatePosition()
+    })
+  }
+})
+
 watch(() => isVisible.value, (visible) => {
   if (visible) {
     nextTick(() => {
       setupPopoverEvents()
+      setupResizeObserver()
+      calculatePosition()
     })
   } else {
     cleanupPopoverEvents()
+    cleanupResizeObserver()
     unregister(popoverId.value)
   }
 })
 
-// Watch for global popover changes
 watch(() => isActive(popoverId.value), (active) => {
   if (!active && isVisible.value) {
     immediateHide()
@@ -360,6 +488,7 @@ onMounted(() => {
 onUnmounted(() => {
   cleanupTriggerEvents()
   unregister(popoverId.value)
+  cleanupResizeObserver()
   if (showTimer !== null) {
     clearTimeout(showTimer)
     showTimer = null
@@ -446,7 +575,6 @@ defineExpose({ show, hide, toggle })
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   overflow: hidden;
-  animation: popover-fade-in 0.15s ease-out;
 }
 
 .popover-content-inner {
@@ -491,18 +619,18 @@ defineExpose({ show, hide, toggle })
   border-top: none;
 }
 
-@keyframes popover-fade-in {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+
+.popover-fade-enter-active,
+.popover-fade-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
-/* Dark mode support */
+.popover-fade-enter-from,
+.popover-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
 @media (prefers-color-scheme: dark) {
   .popover-content {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);

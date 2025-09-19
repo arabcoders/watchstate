@@ -45,7 +45,7 @@ class Cache {
      * @param ttl {number|null} - Time to live in milliseconds. If null, the value will not expire.
      */
     set<T = any>(key: string, value: T, ttl: number | null = null): void {
-        const item: CacheItem<T> = {value, ttl, time: Date.now()};
+        const item: CacheItem<T> = { value, ttl, time: Date.now() };
         this.storage.setItem(this.namespace + key, JSON.stringify(item));
     }
 
@@ -57,18 +57,19 @@ class Cache {
      */
     get<T = any>(key: string): T | null {
         const item = this.storage.getItem(this.namespace + key);
-        if (item === null) {
+        if (null === item) {
             return null;
         }
 
         try {
-            const {value, ttl, time} = JSON.parse(item) as CacheItem<T>;
+            const { value, ttl, time } = JSON.parse(item) as CacheItem<T>;
             if (ttl !== null && Date.now() - time > ttl) {
                 this.remove(key);
                 return null;
             }
             return value;
-        } catch (e) {
+        } catch (e: any) {
+            console.error('Cache: Failed to parse item', e);
             return item as unknown as T;
         }
     }
@@ -115,4 +116,4 @@ class Cache {
 const useSessionCache = (namespace: string = ''): Cache => new Cache('session', namespace);
 const useLocalCache = (namespace: string = ''): Cache => new Cache('local', namespace);
 
-export {useSessionCache, useLocalCache, Cache};
+export { useSessionCache, useLocalCache, Cache };

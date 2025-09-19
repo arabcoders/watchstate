@@ -222,7 +222,7 @@ return (function () {
                     throw new ValidationException('Invalid progress threshold. Must be at least 180 seconds.');
                 }
 
-                return $value;
+                return (string)$value;
             },
         ],
         [
@@ -247,7 +247,7 @@ return (function () {
                 if (false === isValidURL($value)) {
                     throw new ValidationException('Invalid remote logger URL. Must be a valid URL.');
                 }
-                return $value;
+                return (string)$value;
             },
             'mask' => true,
         ],
@@ -270,7 +270,7 @@ return (function () {
                         'Invalid username. Username can only contains [lower case a-z, 0-9 and _].'
                     );
                 }
-                return $value;
+                return (string)$value;
             },
             'mask' => true,
             'protected' => true,
@@ -287,7 +287,7 @@ return (function () {
                 $prefix = Config::get('password.prefix', 'ws_hash@:');
 
                 if (true === str_starts_with($value, $prefix)) {
-                    return $value;
+                    return (string)$value;
                 }
 
                 try {
@@ -297,7 +297,7 @@ return (function () {
                             Config::get('password.options', [])
                         );
                 } catch (ValueError $e) {
-                    throw new ValidationException('Invalid password. Password hashing failed.', $e);
+                    throw new ValidationException('Invalid password. Password hashing failed.', $e->getCode(), $e);
                 }
             },
             'mask' => true,
@@ -349,7 +349,7 @@ return (function () {
                     throw new ValidationException('Invalid minimum progress. Must be at least 60 seconds.');
                 }
 
-                return $value;
+                return (string)$value;
             },
         ],
     ];
