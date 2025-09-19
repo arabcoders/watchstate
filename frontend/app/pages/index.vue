@@ -15,14 +15,30 @@
               <header class="card-header">
                 <p class="card-header-title is-text-overflow">
                   <FloatingImage :image="`/history/${item.id}/images/poster`" :item_class="'scaled-image'"
-                                 v-if="poster_enable">
-                    <NuxtLink :to="'/history/'+item.id" v-text="item?.full_title || makeName(item)"/>
+                    v-if="poster_enable">
+                    <NuxtLink :to="'/history/' + item.id">
+                      {{ item?.full_title || makeName(item) }}
+                    </NuxtLink>
                   </FloatingImage>
-                  <NuxtLink :to="'/history/'+item.id" v-text="item?.full_title || makeName(item)" v-else/>
+                  <NuxtLink :to="'/history/' + item.id" v-else>
+                    {{ item?.full_title || makeName(item) }}
+                  </NuxtLink>
                 </p>
                 <span class="card-header-icon">
-                  <span class="icon" v-if="'episode' === item.type"><i
-                      class="fas fa-tv"></i></span>
+                  <Popover v-if="(item?.duplicate_reference_ids?.length || 0) > 0" placement="top" trigger="hover"
+                    :show-delay="200" :hide-delay="200" :offset="8" content-class="p-0">
+                    <template #trigger>
+                      <span class="tag is-warning is-bold is-clickable is-size-7">
+                        <span class="icon is-small mr-1"><i class="fas fa-layer-group" /></span>
+                        <span>{{ item.duplicate_reference_ids?.length }}</span>
+                      </span>
+                    </template>
+                    <template #content>
+                      <DuplicateRecordList :ids="item.duplicate_reference_ids ?? []" />
+                    </template>
+                  </Popover>
+
+                  <span class="icon" v-if="'episode' === item.type"><i class="fas fa-tv"></i></span>
                   <span class="icon" v-else><i class="fas fa-film"></i></span>
                 </span>
               </header>
@@ -30,9 +46,9 @@
                 <div class="columns is-multiline is-mobile has-text-centered">
                   <div class="column is-4-tablet is-6-mobile has-text-left-mobile">
                     <div class="is-text-overflow" v-if="item?.updated_at">
-                      <span class="icon"><i class="fas fa-calendar"/>&nbsp;</span>
+                      <span class="icon"><i class="fas fa-calendar" />&nbsp;</span>
                       <span class="has-tooltip"
-                            v-tooltip="`Record updated at: ${moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
+                        v-tooltip="`Record updated at: ${moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
                         {{ moment.unix(item.updated_at).fromNow() }}
                       </span>
                     </div>
@@ -40,12 +56,12 @@
                   <div class="column is-4-tablet is-6-mobile has-text-right-mobile">
                     <div class="is-text-overflow">
                       <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
-                      <NuxtLink :to="'/backend/' + item.via" v-text="item.via"/>
+                      <NuxtLink :to="'/backend/' + item.via"> {{ item.via }} </NuxtLink>
                       <span v-if="item?.metadata && Object.keys(item?.metadata).length > 1"
-                            v-tooltip="`Also reported by: ${Object.keys(item.metadata).filter(i => i !== item.via).join(', ')}.`">
+                        v-tooltip="`Also reported by: ${Object.keys(item.metadata).filter(i => i !== item.via).join(', ')}.`">
                         (<span class="has-tooltip">+{{
                           Object.keys(item.metadata).length - 1
-                        }}</span>)
+                          }}</span>)
                       </span>
                     </div>
                   </div>
@@ -68,9 +84,10 @@
           </div>
         </div>
         <div class="column is-12" v-else>
+          <Message v-if="historyLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
+            icon="fas fa-spinner fa-spin" message="Loading history. Please wait..." />
           <Message title="Warning" message_class="has-background-warning-90 has-text-dark"
-                   icon="fas fa-exclamation-triangle"
-                   message="No items were found. There are probably no items in the local database yet.">
+            icon="fas fa-exclamation-triangle" message="DB has no history records.">
           </Message>
         </div>
       </div>
@@ -86,24 +103,24 @@
           </NuxtLink>
           <span> -
             <NuxtLink @click="reloadLogs()" v-tooltip="'Fetch latest log entries.'">
-              <span class="icon"><span class="fas fa-sync" :class="{ 'fa-spin': reloadingLogs }"/></span>
+              <span class="icon"><span class="fas fa-sync" :class="{ 'fa-spin': reloadingLogs }" /></span>
             </NuxtLink>
           </span>
         </h1>
         <code class="box logs-container is-terminal" style="border-radius: 0 !important;">
-          <span class="is-block" v-for="(item, index) in log.lines" :key="log.filename + '-' + index">
-            <template v-if="item?.date">[<span class="has-tooltip"
+    <span class="is-block" v-for="(item, index) in log.lines" :key="log.filename + '-' + index">
+      <template v-if="item?.date">[<span class="has-tooltip"
                                                v-tooltip="`${moment(item.date).format(TOOLTIP_DATE_FORMAT)}`">
               {{ moment(item.date).format('HH:mm:ss') }}</span>]
             </template>
-            <template v-if="item?.item_id">
+      <template v-if="item?.item_id">
               <span @click="goto_history_item(item)" class="is-clickable has-tooltip">
                 <span class="icon"><i class="fas fa-history"/></span>
                 <span>View</span>
               </span>&nbsp;
             </template>
-            <span>{{ item.text }}</span>
-          </span></code>
+      <span>{{ item.text }}</span>
+    </span></code>
       </div>
 
       <div class="column is-12">
@@ -113,26 +130,28 @@
               If you have question, or want clarification on something, or just want to chat with other users,
               you are
               welcome to join our <span class="icon-text is-underlined">
-              <span class="icon"><i class="fas fa-brands fa-discord"></i></span>
-              <span>
-                <NuxtLink to="https://discord.gg/haUXHJyj6Y" target="_blank"
-                          v-text="'Discord server'"/>
-              </span>
-            </span>. For bug reports, feature requests, or contributions, please visit the
+                <span class="icon"><i class="fas fa-brands fa-discord"></i></span>
+                <span>
+                  <NuxtLink to="https://discord.gg/haUXHJyj6Y" target="_blank">
+                    Discord server
+                  </NuxtLink>
+                </span>
+              </span>. For bug reports, feature requests, or contributions, please visit the
               <span class="icon-text is-underlined">
                 <span class="icon"><i class="fas fa-brands fa-github"></i></span>
                 <span>
-                  <NuxtLink to="https://github.com/arabcoders/watchstate/issues/new/choose"
-                            target="_blank" v-text="'GitHub repository'"/>
+                  <NuxtLink to="https://github.com/arabcoders/watchstate/issues/new/choose" target="_blank">
+                    GitHub repository
+                  </NuxtLink>
                 </span>
               </span>.
             </p>
             <p>
               We have recently added a guides page to help you get started with WatchState. You can find it
               <span class="icon-text is-underlined">
-                <span class="icon"><i class="fas fa-question-circle"/></span>
+                <span class="icon"><i class="fas fa-question-circle" /></span>
                 <span>
-                  <NuxtLink to="/help" v-text="'here'"/>
+                  <NuxtLink to="/help">here</NuxtLink>
                 </span>
               </span>, it still very early version and only contains a few guides, but we are working on it.
             </p>
@@ -152,37 +171,18 @@
 </style>
 
 <script setup lang="ts">
-import {ref, onMounted, onUpdated} from 'vue'
-import {useHead, useRoute} from '#app'
-import {useStorage} from '@vueuse/core'
-import {NuxtLink} from '#components'
+import { ref, onMounted, onUpdated } from 'vue'
+import { useHead, useRoute } from '#app'
+import { useStorage } from '@vueuse/core'
+import { NuxtLink } from '#components'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
 import FloatingImage from '~/components/FloatingImage.vue'
-import {request, formatDuration, goto_history_item, makeName, TOOLTIP_DATE_FORMAT} from '~/utils'
+import { request, formatDuration, goto_history_item, makeName, TOOLTIP_DATE_FORMAT } from '~/utils'
+import type { HistoryItem } from '~/types'
+import Popover from '~/components/Popover.vue'
+import DuplicateRecordList from '~/components/DuplicateRecordList.vue'
 
-type IndexHistoryItem = {
-  /** Unique record ID */
-  id: number
-  /** Type of item (e.g., 'movie', 'episode') */
-  type: string
-  /** Title of the content */
-  title: string
-  /** Full formatted title including show/episode info */
-  full_title?: string
-  /** True if the item has been watched */
-  watched: boolean
-  /** Unix timestamp of last update */
-  updated_at: number
-  /** Backend that reported this event */
-  via: string
-  /** Event type (e.g., 'play.start', 'play.stop') */
-  event: string
-  /** Playback progress in seconds */
-  progress?: number
-  /** Metadata from all backends that reported this item */
-  metadata?: Record<string, unknown>
-}
 
 type IndexLogFile = {
   /** Type of log file (e.g., 'access', 'task', 'app', 'webhook') */
@@ -212,35 +212,57 @@ type IndexLogFile = {
   }>
 }
 
-useHead({title: 'Index'})
+useHead({ title: 'Index' })
 
-const lastHistory = ref<Array<IndexHistoryItem>>([])
+const lastHistory = ref<Array<HistoryItem>>([])
 const logs = ref<Array<IndexLogFile>>([])
 const reloadingLogs = ref<boolean>(false)
 const poster_enable = useStorage('poster_enable', true)
+const historyLoading = ref<boolean>(true)
 
 const loadContent = async (): Promise<void> => {
   try {
     const response = await request(`/history?perpage=6`)
     if (response.ok) {
-      const historyResponse = await response.json() as {
-        history: Array<IndexHistoryItem>
-        total?: number
-        page?: number
-        perpage?: number
-      }
+      const historyResponse = await parse_api_response<{
+        history: Array<HistoryItem>,
+        total: number,
+        page: number,
+        perpage: number,
+      }>(response)
 
-      if ('index' !== useRoute().name) {
+      if ('error' in historyResponse || 'index' !== useRoute().name) {
         return
       }
 
       lastHistory.value = historyResponse.history
     }
-  } catch (e: unknown) {
-    // Silent error handling for dashboard
+  } catch { }
+  finally {
+    historyLoading.value = false
   }
 
-  await reloadLogs()
+  // -- look for duplicates
+  if (lastHistory.value.length > 0) {
+    lastHistory.value.forEach(async (item: HistoryItem) => {
+      if (item.duplicate_reference_ids && item.duplicate_reference_ids.length > 0) {
+        return
+      }
+
+      try {
+        const response = await request(`/history/${item.id}/duplicates`)
+        if (response.ok) {
+          const historyResponse = await parse_api_response<{ duplicate_reference_ids: Array<number> }>(response)
+
+          if ('error' in historyResponse || 'index' !== useRoute().name) {
+            return
+          }
+
+          item.duplicate_reference_ids = historyResponse.duplicate_reference_ids
+        }
+      } catch { }
+    })
+  }
 }
 
 const reloadLogs = async (): Promise<void> => {
@@ -260,18 +282,17 @@ const reloadLogs = async (): Promise<void> => {
     }
 
     logs.value = logsResponse
-  } catch (e: unknown) {
+  } catch {
     // Silent error handling for logs
   } finally {
     reloadingLogs.value = false
   }
 }
 
-onMounted(() => loadContent())
-
-onUpdated((): void => {
-  document.querySelectorAll('.logs-container').forEach((el) => {
-    el.scrollTop = el.scrollHeight
-  })
+onMounted(async () => {
+  const tasks = [loadContent(), reloadLogs()]
+  await Promise.all(tasks)
 })
+
+onUpdated((): void => document.querySelectorAll('.logs-container').forEach(el => { el.scrollTop = el.scrollHeight }))
 </script>

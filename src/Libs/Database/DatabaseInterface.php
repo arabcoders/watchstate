@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Libs\Database;
 
-use App\Libs\Entity\StateInterface;
+use App\Libs\Entity\StateInterface as iState;
 use Closure;
-use DateTimeInterface;
+use DateTimeInterface as iDate;
 use Generator;
 use PDOException;
 use Psr\Log\LoggerInterface as iLogger;
+use Psr\SimpleCache\CacheInterface as iCache;
 
 interface DatabaseInterface
 {
@@ -48,39 +49,49 @@ interface DatabaseInterface
     /**
      * Insert entity immediately.
      *
-     * @param StateInterface $entity Entity to insert
+     * @param iState $entity Entity to insert
      *
-     * @return StateInterface Return given entity with valid primary key.
+     * @return iState Return given entity with valid primary key.
      */
-    public function insert(StateInterface $entity): StateInterface;
+    public function insert(iState $entity): iState;
+
+    /**
+     * Find duplicate entities.
+     *
+     * @param iState $entity Entity to find duplicates for.
+     * @param iCache $cache Cache to use for lookups.
+     *
+     * @return array<iState> Return array of duplicate entities.
+     */
+    public function duplicates(iState $entity, iCache $cache): array;
 
     /**
      * Get entity.
      *
-     * @param StateInterface $entity Item encoded in entity class to get.
+     * @param iState $entity Item encoded in entity class to get.
      *
-     * @return StateInterface|null Return null if not found.
+     * @return iState|null Return null if not found.
      */
-    public function get(StateInterface $entity): StateInterface|null;
+    public function get(iState $entity): iState|null;
 
     /**
      * Load entities from database.
      *
-     * @param DateTimeInterface|null $date Get Entities That has changed since given time, if null get all.
+     * @param iDate|null $date Get Entities That has changed since given time, if null get all.
      * @param array $opts (Optional) options.
      *
-     * @return array<StateInterface>
+     * @return array<iState>
      */
-    public function getAll(DateTimeInterface|null $date = null, array $opts = []): array;
+    public function getAll(iDate|null $date = null, array $opts = []): array;
 
     /**
      * Return database records for given items.
      *
-     * @param array<StateInterface> $items Items to find.
+     * @param array<iState> $items Items to find.
      *
-     * @return array<StateInterface>
+     * @return array<iState>
      */
-    public function find(StateInterface ...$items): array;
+    public function find(iState ...$items): array;
 
     /**
      * Find database item using backend name and id.
@@ -89,32 +100,32 @@ interface DatabaseInterface
      * @param int|string $id Backend id.
      * @param string|null $type (Optional) Type of item will speed up lookups.
      *
-     * @return StateInterface|null Return null if not found.
+     * @return iState|null Return null if not found.
      */
-    public function findByBackendId(string $backend, int|string $id, string|null $type = null): StateInterface|null;
+    public function findByBackendId(string $backend, int|string $id, string|null $type = null): iState|null;
 
     /**
      * Update entity immediately.
      *
-     * @param StateInterface $entity Entity to update.
+     * @param iState $entity Entity to update.
      *
-     * @return StateInterface Return the updated entity.
+     * @return iState Return the updated entity.
      */
-    public function update(StateInterface $entity): StateInterface;
+    public function update(iState $entity): iState;
 
     /**
      * Remove entity.
      *
-     * @param StateInterface $entity Entity to remove.
+     * @param iState $entity Entity to remove.
      *
      * @return bool Return true if removed, false if not found.
      */
-    public function remove(StateInterface $entity): bool;
+    public function remove(iState $entity): bool;
 
     /**
      * Insert or update entities.
      *
-     * @param array<StateInterface> $entities Entities to commit.
+     * @param array<iState> $entities Entities to commit.
      * @param array $opts (Optional) options.
      *
      * @return array{added: int, updated: int, failed: int} Return array with count for each operation.
@@ -215,7 +226,7 @@ interface DatabaseInterface
      *
      * @param array $opts (Options to pass to the query)
      *
-     * @return Generator<StateInterface> Yielding each row of data.
+     * @return Generator<iState> Yielding each row of data.
      */
     public function fetch(array $opts = []): Generator;
 

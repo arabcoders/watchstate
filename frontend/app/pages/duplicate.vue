@@ -321,8 +321,6 @@ type DuplicateItemWithUI = HistoryItem & {
     expand_title?: boolean
     /** UI state: whether path is expanded for display */
     expand_path?: boolean
-    /** IDs of records referencing the same content path */
-    duplicate_reference_ids?: Array<number>
 }
 
 const route = useRoute()

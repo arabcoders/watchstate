@@ -11,12 +11,14 @@ use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\DBAdapterException as DBException;
 use App\Libs\Options;
 use Closure;
+use DateInterval;
 use DateTimeInterface;
 use Generator;
 use PDO;
 use PDOException;
 use PDOStatement;
 use Psr\Log\LoggerInterface as iLogger;
+use Psr\SimpleCache\CacheInterface as iCache;
 use Throwable;
 
 /**
@@ -45,9 +47,7 @@ final class PDOAdapter implements iDB
      * @param iLogger $logger The logger object used for logging.
      * @param DBLayer $db The PDO object used for database connections.
      */
-    public function __construct(private iLogger $logger, private readonly DBLayer $db, private array $options = [])
-    {
-    }
+    public function __construct(private iLogger $logger, private readonly DBLayer $db, private array $options = []) {}
 
     public function with(iLogger|null $logger = null, DBLayer|null $db = null, array|null $options = null): self
     {
@@ -75,6 +75,56 @@ final class PDOAdapter implements iDB
     /**
      * @inheritdoc
      */
+    public function duplicates(iState $entity, iCache $cache): array
+    {
+        if (null === ($path = $entity->getMeta(iState::COLUMN_META_PATH, null))) {
+            return [];
+        }
+
+        $cacheKey = 'dic_' . md5($path);
+
+        if (null !== ($item = $cache->get($cacheKey, null))) {
+            return $item;
+        }
+
+        $sql = <<<SQL
+                SELECT
+                    s.id, json_extract(value, '$.path') AS file_path
+                FROM
+                    "state" s, json_each(s.metadata)
+                WHERE
+                    json_extract(value, '$.path') = :file_path
+                AND
+                    COALESCE(json_extract(value, '$.multi'), 0) = 0
+                ORDER BY
+                    s.updated
+                DESC;
+        SQL;
+
+        $stmt = $this->db->query($sql, ['file_path' => $path]);
+
+        $items = [];
+
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            if (true === array_key_exists((int)$row['id'], $items)) {
+                continue;
+            }
+
+            if (null === ($item = $this->get($entity::fromArray([iState::COLUMN_ID => $row['id']])))) {
+                continue;
+            }
+
+            $items[$item->id] = $item;
+        }
+
+        $cache->set($cacheKey, $items, new DateInterval('PT5M'));
+
+        return $items;
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function insert(iState $entity): iState
     {
         try {
@@ -82,7 +132,8 @@ final class PDOAdapter implements iDB
                 throw new DBException(
                     r("PDOAdapter: Unable to insert item that has primary key already defined. '#{id}'.", [
                         'id' => $entity->id
-                    ]), 21
+                    ]),
+                    21
                 );
             }
 
@@ -109,7 +160,8 @@ final class PDOAdapter implements iDB
                             'id' => $entity->via,
                             'title' => $entity->getName(),
                         ]
-                    ), 22
+                    ),
+                    22
                 );
             }
 
@@ -295,8 +347,7 @@ final class PDOAdapter implements iDB
     public function findByBackendId(string $backend, int|string $id, string|null $type = null): iState|null
     {
         $key = $backend . '.' . iState::COLUMN_ID;
-        $cond = [
-        ];
+        $cond = [];
 
         $type_sql = '';
         if (null !== $type) {

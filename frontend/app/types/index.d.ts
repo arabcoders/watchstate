@@ -739,6 +739,8 @@ export interface HistoryItem {
     progress?: number | string
     /** Available media files */
     files?: Array<MediaFile>
+    /** IDs of records referencing the same content path */
+    duplicate_reference_ids?: Array<number>
 }
 
 /**
