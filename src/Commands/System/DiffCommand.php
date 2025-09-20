@@ -301,7 +301,9 @@ final class DiffCommand extends Command
 
                 $dirPath = realpath($dirPath);
             }
-
+            if (false === $dirPath) {
+                return;
+            }
             $suggest = [];
 
             foreach (new DirectoryIterator($dirPath) as $name) {
