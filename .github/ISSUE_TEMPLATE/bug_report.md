@@ -29,16 +29,14 @@ Attach screenshots if it helps explain your bug report.
 
 **Basic report**
 <!-- 
-# Please use the following command to generate basic report to help us diagnose the issue
-# Make sure review the logs sections as it might have some private information.
-
-docker exec -ti watchstate console system:report
+You can generate a report from More > Basic report
 
 Please put the output in a code block like this
+
 -->
 
 ```
-Paste the system:report output here
+Paste the report here
 ```
 
 **Additional context**

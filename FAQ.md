@@ -80,9 +80,9 @@ re-processed accordingly.
 
 To resolve this conflict and sync the backend with your local state:
 
-* Go to the `WebUI > Backends`.
-* Under the relevant backend, find the **Quick operations** list.
-* Select **3. Force export local play state to this backend.**
+- Go to the `WebUI > Backends`.
+- Under the relevant backend, find the **Quick operations** list.
+- Select **3. Force export local play state to this backend.**
 
 This operation will overwrite the backend's watch state with your current local state to bring them back in sync.
 
@@ -119,12 +119,12 @@ However, if the new backend's state is incorrect, it may unintentionally overrid
 
 To synchronize both backends correctly:
 
-* **Add the backend** that contains the correct watch state first.
-* Enable **Full Import** for that backend.
-* Go to `Tasks` page, and run the **Import** task via `Run via console` button.
-* Once the import is complete, **add the second backend** (the one with incorrect or outdated play state).
-* Under the newly added backend, locate the **Quick operations** section.
-* Select **3. Force export local play state to this backend.**
+- **Add the backend** that contains the correct watch state first.
+- Enable **Full Import** for that backend.
+- Go to `Tasks` page, and run the **Import** task via `Run via console` button.
+- Once the import is complete, **add the second backend** (the one with incorrect or outdated play state).
+- Under the newly added backend, locate the **Quick operations** section.
+- Select **3. Force export local play state to this backend.**
 
 This will push your local watch state to the backend and ensure both are in sync.
 
@@ -452,8 +452,9 @@ relevant data if they are not matching correctly, and we hopefully can resolve i
 
 If you're having problem adding a backend to `WatchState`, it most likely network related problem, where the container
 isn't able to communicate with the media backend. Thus, you will get errors. To make sure the container is able to
-communicate with the media backend, run the following tests via
-<!--i:fa-tools--> **Tools** > <!--i:fa-external-link--> **URL Checker**.
+communicate with the media backend,
+
+Run the following tests via: <!--i:fa-tools--> **Tools** <!--i:fa-external-link--> **URL Checker**.
 
 From the `Pre-defined` templates select the media server you want to test against and replace the following with your
 info
@@ -473,20 +474,11 @@ check your backend settings and make sure the token is correct and the ip:port i
 
 ## INFO: Ignoring [xxx] Episode range, and treating it as single episode. Backend says it covers [00-00]?
 
-We recently added guard clause to prevent backends from sending possibly invalid episode ranges, as such if you see
-this,
-this likely means your backend mis-identified episodes range. By default, we allow an episode to cover up to `3`
-episodes.
-
-If this is not enough for your library content. fear not we have you covered you can increase the limit by running the
-following command:
-
-```bash 
-$ docker exec -ti watchstate console config:edit --key options.MAX_EPISODE_RANGE --set 10 -s backend_name 
-```
-
-where `10` is the new limit. You can set it to any number you want. However, Please do inspect the reported records as
-it most likely you have incorrect metadata in your library.
+To increase the limit per backend, go to <!--i:fa-server--> **Backends** > <!--i:fa-cog--> **Edit** > Expand
+**Additional options...** section > Under **Add new option** select
+`MAX_EPISODE_RANGE` from the dropdown list > Click the green **<!--i:fa-plus--> add** button > Once the
+option appears, set its value to the number of episodes you want to allow per episode range then,
+Click **<!--i:fa-save--> Save Settings**.
 
 ## I Keep receiving 'jellyfin' item 'id: name' is marked as 'played' vs local state 'unplayed', However due to the remote item date 'date' being older than the last backend sync date 'date'. it was not considered as valid state.
 
@@ -494,8 +486,8 @@ Sadly, this is due to bug in jellyfin, where it marks the item as played without
 such, watchstate doesn't really know the item has changed since last sync. Unfortunately, there is no way to fix this
 issue from our side for the `state:import` task as it working as intended.
 
-However, we managed to somewhat implement a workaround for this issue using the webhooks feature as temporary fix. Until
-jellyfin devs fixes the issue. Please take look at the webhooks section to enable it.
+However, we managed implemented a workaround for this issue using the webhooks as workaround, until jellyfin devs fixes
+the issue. Please enable webhooks for your jellyfin backend to avoid this issue.
 
 ---
 

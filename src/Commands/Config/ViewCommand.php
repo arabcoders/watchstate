@@ -7,7 +7,6 @@ namespace App\Commands\Config;
 use App\API\Backends\Index;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
-use App\Libs\Config;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use Symfony\Component\Console\Completion\CompletionInput;
@@ -231,7 +230,7 @@ final class ViewCommand extends Command
             return trim(Yaml::dump(ag($backend, $filter, 'Not configured, or invalid key.'), 8, 2));
         }
 
-        $filters = array_map(fn ($val) => trim($val), explode(',', $filter));
+        $filters = array_map(fn($val) => trim($val), explode(',', $filter));
         $list = [];
 
         foreach ($filters as $fil) {

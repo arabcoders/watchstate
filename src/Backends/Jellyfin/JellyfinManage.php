@@ -15,6 +15,9 @@ use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Question\Question;
 use Throwable;
 
+/**
+ * @deprecated Will be removed in v1.0
+ */
 class JellyfinManage implements ManageInterface
 {
     private QuestionHelper $questionHelper;

@@ -22,6 +22,7 @@ use Throwable;
  * This class is responsible for creating and managing Plex backends configuration.
  *
  * @implements ManageInterface.
+ * @deprecated Will be removed in v1.0
  */
 class PlexManage implements ManageInterface
 {

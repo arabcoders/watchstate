@@ -175,10 +175,12 @@ class Progress
             $datetime = ag($entity->getExtra($context->backendName), iState::COLUMN_EXTRA_DATE, null);
             if (false === $ignoreDate && null !== $datetime && makeDate($datetime)->getTimestamp() > $senderDate) {
                 $this->logger->warning(
-                    message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. Event date is older than backend local item date.",
+                    message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. Event date '{event_date}' is older than backend local db item date '{local_date}'.",
                     context: [
                         ...$logContext,
-                        'compare' => ['remote' => makeDate($datetime), 'sender' => makeDate($senderDate),],
+                        'event_date' => makeDate($senderDate),
+                        'local_date' => makeDate($datetime),
+                        'compare' => ['remote' => makeDate($datetime), 'sender' => makeDate($senderDate)],
                     ]
                 );
                 continue;
@@ -201,9 +203,11 @@ class Progress
 
                 if (false === $ignoreDate && makeDate($remoteItem->updated)->getTimestamp() > $senderDate) {
                     $this->logger->info(
-                        message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. Event date is older than backend remote item date.",
+                        message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. Event date '{event_date}' is older than backend remote item date '{remote_date}'.",
                         context: [
                             ...$logContext,
+                            'event_date' => makeDate($senderDate),
+                            'remote_date' => makeDate($remoteItem->updated),
                             'compare' => [
                                 'remote' => makeDate($remoteItem->updated),
                                 'sender' => makeDate($senderDate)

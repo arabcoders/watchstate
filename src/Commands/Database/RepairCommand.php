@@ -12,13 +12,6 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
 use Symfony\Component\Process\Process;
 
-/**
- * Class QueueCommand
- *
- * This command is used to show webhook queued events.
- *
- * @package YourPackageNamespace
- */
 #[Cli(command: self::ROUTE)]
 class RepairCommand extends Command
 {
@@ -32,9 +25,6 @@ class RepairCommand extends Command
         parent::__construct();
     }
 
-    /**
-     * Configure the command.
-     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -42,14 +32,6 @@ class RepairCommand extends Command
             ->addArgument('db', InputOption::VALUE_REQUIRED, 'Database to repair.');
     }
 
-    /**
-     * Execute the command.
-     *
-     * @param iInput $input The input object.
-     * @param iOutput $output The output object.
-     *
-     * @return int The command's exit code.
-     */
     protected function runCommand(iInput $input, iOutput $output): int
     {
         $db = $input->getArgument('db');
@@ -83,7 +65,6 @@ class RepairCommand extends Command
         ]));
 
         $output->writeln(r("<info>INFO:</info> Attempting to repair database '{db}'.", ['db' => $db]));
-
 
         $command = "sqlite3 '{file}' '.dump' | sqlite3 '{file}.new.db'";
         $proc = Process::fromShellCommandline(r($command, ['file' => $db]));
