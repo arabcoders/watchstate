@@ -49,7 +49,6 @@
         "nyholm/psr7-server": "^1.1.0",
         "dragonmantank/cron-expression": "^3.4.0",
         "halaxa/json-machine": "^1.2.0",
-        "psy/psysh": "^0.12.7",
         "ramsey/uuid": "^4.7.6",
         "perftools/php-profiler": "^1.1.2"
     },

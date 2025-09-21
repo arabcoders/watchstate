@@ -148,7 +148,7 @@ onMounted(async () => {
     marked.use({
       gfm: true,
       hooks: {
-        postprocess: (text: string) => text.replace(
+        preprocess: (text: string) => text.replace(
             /<!--\s*?i:([\w.-]+)\s*?-->/gi,
             (_, list) => `<span class=\"icon\"><i class=\"fas ${list.split('.').map((n: string) => n.trim()).join(' ')}\"></i></span>`
         )
