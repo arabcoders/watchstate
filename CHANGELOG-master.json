@@ -1,8 +1,22 @@
 [
     {
-        "tag": "master-20250919-bfbdd9aa",
-        "date": "2025-09-19T18:24:22+00:00",
+        "tag": "master-20250921-ae79a457",
+        "date": "2025-09-21T20:45:24+00:00",
         "commits": [
+            {
+                "sha": "6d8d7f4f",
+                "message": "Remove the majority of console commands as they no longer works with the multi-user setup we have.",
+                "author": "arabcoders",
+                "date": "2025-09-20T14:39:51+00:00",
+                "full_sha": "6d8d7f4f5375ed1757a5c868201dd0945561a0a0"
+            },
+            {
+                "sha": "f2c93661",
+                "message": "extend some log message to be more clear.",
+                "author": "arabcoders",
+                "date": "2025-09-20T13:14:54+00:00",
+                "full_sha": "f2c93661899b7a2f3ba19bcbfba1f0d13b522730"
+            },
             {
                 "sha": "ef042620",
                 "message": "update external packages",
@@ -508,7 +522,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "bfbdd9aa35cb79d67a0eaa57ce376a712907bc14"
+        "full_sha": "ae79a4571d9c73947808bb2dd1f8650aa2ae8ef7"
     },
     {
         "tag": "master-20250614-e3307c58",
