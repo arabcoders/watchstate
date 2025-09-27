@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250920-6d8d7f4f",
-        "date": "2025-09-20T14:39:51+00:00",
+        "tag": "dev-20250927-7346ed95",
+        "date": "2025-09-27T17:54:41+00:00",
         "commits": [
+            {
+                "sha": "7346ed95",
+                "message": "add support for select options in env variables and update dependencies",
+                "author": "arabcoders",
+                "date": "2025-09-27T17:54:41+00:00",
+                "full_sha": "7346ed95b3254d3ef5ba7fbfaf965154e8335a4f"
+            },
             {
                 "sha": "6d8d7f4f",
                 "message": "Remove the majority of console commands as they no longer works with the multi-user setup we have.",
@@ -557,7 +564,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "6d8d7f4f5375ed1757a5c868201dd0945561a0a0"
+        "full_sha": "7346ed95b3254d3ef5ba7fbfaf965154e8335a4f"
     },
     {
         "tag": "dev-20250604-9407bc76",
