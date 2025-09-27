@@ -310,6 +310,8 @@ export interface EnvVar {
     danger?: boolean
     /** Whether this variable is deprecated */
     deprecated?: boolean
+    /** If this option is present, a select option should show */
+    choice?: Array<string> | null,
 }
 
 /**

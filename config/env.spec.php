@@ -42,8 +42,9 @@ return (function () {
         ],
         [
             'key' => 'WS_DB_MODE',
-            'description' => 'DB journal mode. (MEMORY or WAL) Default: WAL. Memory mode can give a huge performance boost at the cost of potential data loss on crashes.',
+            'description' => 'DB journal mode. Memory mode can give a big performance boost at the cost of potential data loss on crashes.',
             'type' => 'string',
+            'choice' => ['MEMORY', 'WAL'],
             'validate' => function (mixed $value): string {
                 if (is_numeric($value) || empty($value)) {
                     throw new ValidationException('Invalid db mode. Empty value.');
