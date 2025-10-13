@@ -142,13 +142,6 @@ final class Add
                 'enabled' => (bool)$data->get('import.enabled', false),
                 'lastSync' => (int)$data->get('import.lastSync', null),
             ],
-            'webhook' => [
-                'token' => $data->get('webhook.token'),
-                'match' => [
-                    'user' => (bool)$data->get('webhook.match.user', false),
-                    'uuid' => (bool)$data->get('webhook.match.uuid', false),
-                ],
-            ],
             'options' => [],
         ];
 

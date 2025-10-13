@@ -98,10 +98,6 @@ trait APITraits
                 $backend['options'] = [];
             }
 
-            if (false === ag_exists($backend, 'webhook')) {
-                $backend['webhook'] = ['match' => ['user' => false, 'uuid' => false]];
-            }
-
             $backends[] = $backend;
         }
 

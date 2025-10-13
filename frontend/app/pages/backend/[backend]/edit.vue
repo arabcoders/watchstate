@@ -213,8 +213,8 @@
                   <span v-if="'plex' === backend.type">
                     The backend unique ID is random string generated on server setup, In Plex case it used to inquiry
                     about the users associated with the server to generate limited <strong>X-Plex-Token</strong> for
-                    them.
-                    It used by webhooks as a filter to match the backend. in-case you are member of multiple servers.
+                    them. It used by webhooks as a filter to match the backend. in-case you are member of multiple
+                    servers.
                   </span>
                   <span v-else>
                     The backend unique ID is a random string generated on server setup. It is used to identify the
@@ -305,34 +305,6 @@
                 <p class="help is-bold has-text-danger">
                   <span class="icon"><i class="fas fa-info-circle"/></span>
                   The backend will not receive any data from WatchState if this is disabled.
-                </p>
-              </div>
-
-              <div class="field" v-if="backend.webhook">
-                <label class="label" for="webhook_match_user">Enable match user for webhook?</label>
-                <div class="control">
-                  <input id="webhook_match_user" type="checkbox" class="switch is-success"
-                         v-model="backend.webhook.match.user">
-                  <label for="webhook_match_user" class="is-unselectable">
-                    {{ backend.webhook.match.user ? 'Yes' : 'No' }}
-                  </label>
-                </div>
-                <p class="help">
-                  Check webhook payload for user id match. if it does not match, the payload will be ignored.
-                </p>
-              </div>
-
-              <div class="field" v-if="backend.webhook">
-                <label class="label" for="webhook_match_uuid">Enable match backend id for webhook?</label>
-                <div class="control">
-                  <input id="webhook_match_uuid" type="checkbox" class="switch is-success"
-                         v-model="backend.webhook.match.uuid">
-                  <label for="webhook_match_uuid">
-                    {{ backend.webhook.match.uuid ? 'Yes' : 'No' }}
-                  </label>
-                </div>
-                <p class="help">
-                  Check webhook payload for backend unique id. if it does not match, the payload will be ignored.
                 </p>
               </div>
 
@@ -451,7 +423,6 @@ const backend = ref<Backend>({
   user: '',
   import: {enabled: false},
   export: {enabled: false},
-  webhook: {match: {user: false, uuid: false}},
   options: {}
 })
 

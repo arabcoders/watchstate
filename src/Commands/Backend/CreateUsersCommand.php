@@ -383,6 +383,8 @@ class CreateUsersCommand extends Command
         $generateBackups = (bool)$input->getOption('generate-backup');
         $isReCreate = (bool)$input->getOption('re-create');
 
+        $removedKeys = ag(include __DIR__ . '/../../../config/removed.keys.php', 'backend', []);
+
         foreach ($users as $user) {
             // -- User subdirectory name.
             $userName = normalizeName(ag($user, 'name', 'unknown'), self::$logger);
@@ -455,7 +457,7 @@ class CreateUsersCommand extends Command
                 if (false === $perUser->has($name)) {
                     $data = $clientData;
                     $data = ag_sets($data, ['import.lastSync' => null, 'export.lastSync' => null]);
-                    $data = ag_delete($data, ['webhook', 'name', 'backendName', 'displayName']);
+                    $data = ag_delete($data, [...$removedKeys, 'name', 'backendName', 'displayName']);
                     $perUser->set($name, $data);
                 } else {
                     $clientData = ag_delete($clientData, ['token', 'import.lastSync', 'export.lastSync']);
@@ -573,7 +575,20 @@ class CreateUsersCommand extends Command
                     perUserDb($userName);
                 }
 
-                $perUser->persist();
+                $perUser->addFilter('removed.keys', function (array $data) use ($removedKeys): array {
+                    foreach ($removedKeys as $key) {
+                        foreach ($data as &$v) {
+                            if (false === is_array($v)) {
+                                continue;
+                            }
+                            if (false === ag_exists($v, $key)) {
+                                continue;
+                            }
+                            $v = ag_delete($v, $key);
+                        }
+                    }
+                    return $data;
+                })->persist();
             }
 
             if (true === $generateBackups && false === $isReCreate) {

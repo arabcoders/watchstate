@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Libs;
 
 use ArrayAccess;
+use Closure;
 use Countable;
 use InvalidArgumentException;
 use Psr\Log\LoggerAwareInterface;
@@ -24,6 +25,10 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
     private array $operations = [];
     private string $file_hash = '';
     private LoggerInterface|null $logger = null;
+    /**
+     * @var array<string, Closure> $filters List of filters to apply to the data before saving.
+     */
+    private array $filters = [];
 
     /**
      * ConfigFile constructor.
@@ -204,6 +209,10 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
             }
         }
 
+        foreach ($this->filters as $filter) {
+            $this->data = $filter($this->data);
+        }
+
         $stream = Stream::make($this->file, 'w');
         $stream->write(
             match ($this->type) {
@@ -254,6 +263,35 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
         if (true === $this->autoSave) {
             $this->persist();
         }
+    }
+
+    /**
+     * Add a filter to be applied to the data before saving.
+     *
+     * @param string $name The name of the filter.
+     * @param Closure(array):array $filter The filter closure. It should accept an array and return an array.
+     * @return $this
+     */
+    public function addFilter(string $name, Closure $filter): self
+    {
+        $this->filters[$name] = $filter;
+        return $this;
+    }
+
+    /**
+     * Remove a filter.
+     *
+     * @param string $name The name of the filter to remove.
+     * @return $this
+     */
+    public function removeFilter(string $name): self
+    {
+        if (!isset($this->filters[$name])) {
+            return $this;
+        }
+
+        unset($this->filters[$name]);
+        return $this;
     }
 
     /**

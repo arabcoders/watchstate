@@ -10,10 +10,6 @@ test_plex:
   import:
     enabled: true
     lastSync: 1724173445
-  webhook:
-    match:
-      user: true
-      uuid: true
   options:
     ignore: '22,1,2,3'
     LIBRARY_SEGMENT: 1000
@@ -32,10 +28,6 @@ test_jellyfin:
   import:
     enabled: true
     lastSync: 1724173445
-  webhook:
-    match:
-      user: false
-      uuid: true
   options:
     ignore: 'i000000000000000000000000000000j,i100000000000000000000000000000j'
     MAX_EPISODE_RANGE: 6
@@ -52,8 +44,4 @@ test_emby:
   export:
     enabled: true
     lastSync: null
-  webhook:
-    match:
-      user: false
-      uuid: true
   options: { }

@@ -238,13 +238,6 @@ export interface Backend {
         /** Last successful export timestamp (ISO string) */
         lastSync?: string
     }
-    /** Webhook options */
-    webhook: {
-        match: {
-            user: boolean
-            uuid: boolean
-        }
-    }
     /** Backend URLs for webhooks and other operations */
     urls?: {
         /** Webhook URL for this backend */

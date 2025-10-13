@@ -261,18 +261,6 @@ final class ReportCommand extends Command
                     );
                 }
 
-                $this->filter(
-                    r('Is webhook match user id enabled? <flag>{answer}</flag>', [
-                        'answer' => true === (bool)ag($backend, 'webhook.match.user') ? 'Yes' : 'No',
-                    ])
-                );
-
-                $this->filter(
-                    r('Is webhook match backend unique id enabled? <flag>{answer}</flag>', [
-                        'answer' => true === (bool)ag($backend, 'webhook.match.uuid') ? 'Yes' : 'No',
-                    ])
-                );
-
                 $opts = ag($backend, 'options', []);
                 $this->filter(
                     r('Has custom options? <flag>{answer}</flag>' . PHP_EOL . '{opts}', [

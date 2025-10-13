@@ -270,7 +270,6 @@ class ConfigFileTest extends TestCase
             $this->assertTrue($class->has('test_plex'), 'Must return true if key exists.');
             $this->assertFalse($class->has('test_not_set'), 'Must return false if key does not exist.');
 
-
             $this->assertArrayHasKey('token', $class['test_plex'], 'Failed to get arrayAccess key correctly.');
             $this->assertTrue(isset($class['test_plex']), 'Must return true if arrayAccess key exists.');
             $this->assertNull($class['test_not_set'], 'Must return null if arrayAccess key does not exist.');
@@ -278,6 +277,173 @@ class ConfigFileTest extends TestCase
         } finally {
             if (file_exists($params['file'])) {
                 unlink($params['file']);
+            }
+        }
+    }
+
+    public function test_addFilter()
+    {
+        $tmpFile = tempnam(sys_get_temp_dir(), 'test');
+        copy(__DIR__ . '/../Fixtures/test_servers.yaml', $tmpFile);
+        $params = $this->params;
+        $params['file'] = $tmpFile;
+
+        try {
+            $class = ConfigFile::open(...$params);
+
+            // Add a filter that uppercases all string values
+            $class->addFilter('uppercase', function (array $data): array {
+                return array_map(function ($value) {
+                    if (is_string($value)) {
+                        return strtoupper($value);
+                    }
+                    if (is_array($value)) {
+                        return array_map(fn($v) => is_string($v) ? strtoupper($v) : $v, $value);
+                    }
+                    return $value;
+                }, $data);
+            });
+
+            $class->set('test_filter', 'lowercase_value');
+            $class->persist();
+
+            // Reload and check that filter was applied
+            $reloaded = ConfigFile::open(...$params);
+            $this->assertEquals(
+                'LOWERCASE_VALUE',
+                $reloaded->get('test_filter'),
+                'Filter should have uppercased the value during persist'
+            );
+
+            // Test multiple filters can be added
+            $class2 = ConfigFile::open(...$params);
+            $class2->addFilter('prefix', function (array $data): array {
+                return array_map(function ($value) {
+                    if (is_string($value)) {
+                        return 'PREFIX_' . $value;
+                    }
+                    return $value;
+                }, $data);
+            });
+
+            $class2->set('another_key', 'value');
+            $class2->persist();
+
+            $reloaded2 = ConfigFile::open(...$params);
+            $this->assertEquals(
+                'PREFIX_LOWERCASE_VALUE',
+                $reloaded2->get('test_filter'),
+                'Both filters should have been applied'
+            );
+            $this->assertEquals(
+                'PREFIX_value',
+                $reloaded2->get('another_key'),
+                'Filter should apply to new keys'
+            );
+
+            // Test that filter receives array and returns array
+            $class3 = ConfigFile::open(...$params);
+            $filterCalled = false;
+            $class3->addFilter('validator', function (array $data) use (&$filterCalled): array {
+                $filterCalled = true;
+                $this->assertIsArray($data, 'Filter must receive array');
+                return $data;
+            });
+            $class3->set('test', 'value');
+            $class3->persist();
+            $this->assertTrue($filterCalled, 'Filter should have been called during persist');
+        } catch (Throwable $e) {
+            $this->fail('addFilter test should not throw exception: ' . $e->getMessage());
+        } finally {
+            if (file_exists($tmpFile)) {
+                unlink($tmpFile);
+            }
+            if (file_exists($tmpFile . '.bak')) {
+                unlink($tmpFile . '.bak');
+            }
+        }
+    }
+
+    public function test_removeFilter()
+    {
+        $tmpFile = tempnam(sys_get_temp_dir(), 'test');
+        copy(__DIR__ . '/../Fixtures/test_servers.yaml', $tmpFile);
+        $params = $this->params;
+        $params['file'] = $tmpFile;
+
+        try {
+            $class = ConfigFile::open(...$params);
+
+            // Add a filter
+            $class->addFilter('uppercase', function (array $data): array {
+                return array_map(function ($value) {
+                    if (is_string($value)) {
+                        return strtoupper($value);
+                    }
+                    return $value;
+                }, $data);
+            });
+
+            // Remove the filter before persisting
+            $class->removeFilter('uppercase');
+            $class->set('test_value', 'should_stay_lowercase');
+            $class->persist();
+
+            // Reload and check that filter was NOT applied
+            $reloaded = ConfigFile::open(...$params);
+            $this->assertEquals(
+                'should_stay_lowercase',
+                $reloaded->get('test_value'),
+                'Filter should not have been applied after removal'
+            );
+
+            // Test removing non-existent filter doesn't cause error
+            $class2 = ConfigFile::open(...$params);
+            try {
+                $class2->removeFilter('nonexistent_filter');
+                $this->assertTrue(true, 'Removing non-existent filter should not throw exception');
+            } catch (Throwable $e) {
+                $this->fail('removeFilter should not throw exception for non-existent filter: ' . $e->getMessage());
+            }
+
+            // Test removing one filter but keeping another
+            $class3 = ConfigFile::open(...$params);
+            $class3->addFilter('uppercase', function (array $data): array {
+                return array_map(function ($value) {
+                    if (is_string($value)) {
+                        return strtoupper($value);
+                    }
+                    return $value;
+                }, $data);
+            });
+            $class3->addFilter('prefix', function (array $data): array {
+                return array_map(function ($value) {
+                    if (is_string($value)) {
+                        return 'PREFIX_' . $value;
+                    }
+                    return $value;
+                }, $data);
+            });
+
+            // Remove only the uppercase filter
+            $class3->removeFilter('uppercase');
+            $class3->set('test_partial', 'value');
+            $class3->persist();
+
+            $reloaded3 = ConfigFile::open(...$params);
+            $this->assertEquals(
+                'PREFIX_value',
+                $reloaded3->get('test_partial'),
+                'Only prefix filter should be applied, not uppercase'
+            );
+        } catch (Throwable $e) {
+            $this->fail('removeFilter test should not throw exception: ' . $e->getMessage());
+        } finally {
+            if (file_exists($tmpFile)) {
+                unlink($tmpFile);
+            }
+            if (file_exists($tmpFile . '.bak')) {
+                unlink($tmpFile . '.bak');
             }
         }
     }
