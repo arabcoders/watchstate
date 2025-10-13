@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20250927-7346ed95",
-        "date": "2025-09-27T17:54:41+00:00",
+        "tag": "dev-20251013-831eb8a0",
+        "date": "2025-10-13T15:01:37+00:00",
         "commits": [
+            {
+                "sha": "831eb8a0",
+                "message": "removed legacy webhooks in prep for v1.0 release",
+                "author": "arabcoders",
+                "date": "2025-10-13T15:01:37+00:00",
+                "full_sha": "831eb8a0ee9cf4b187030ff44ca8a48c4c8ca84c"
+            },
             {
                 "sha": "7346ed95",
                 "message": "add support for select options in env variables and update dependencies",
@@ -564,7 +571,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "7346ed95b3254d3ef5ba7fbfaf965154e8335a4f"
+        "full_sha": "831eb8a0ee9cf4b187030ff44ca8a48c4c8ca84c"
     },
     {
         "tag": "dev-20250604-9407bc76",
