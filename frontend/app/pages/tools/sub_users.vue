@@ -3,26 +3,26 @@
     <div class="columns is-multiline is-mobile">
       <div class="column is-12 is-clearfix is-unselectable">
         <span id="env_page_title" class="title is-4">
-          <span class="icon"><i class="fas fa-users" /></span>
+          <span class="icon"><i class="fas fa-users"/></span>
           Sub Users
         </span>
         <div class="is-pulled-right">
           <div class="field is-grouped">
             <p class="control">
               <button class="button is-purple" v-tooltip.bottom="'Export to mapper.yaml file.'" @click="generateFile"
-                :disabled="userWithNoPin.length > 0">
-                <span class="icon"><i class="fas fa-file-export" /></span>
+                      :disabled="userWithNoPin.length > 0">
+                <span class="icon"><i class="fas fa-file-export"/></span>
               </button>
             </p>
             <p class="control">
               <button class="button is-primary" v-tooltip.bottom="'Create new user association.'" @click="addNewUser">
-                <span class="icon"><i class="fas fa-plus" /></span>
+                <span class="icon"><i class="fas fa-plus"/></span>
               </button>
             </p>
             <p class="control">
               <button class="button is-info" @click="loadContent(true)" :disabled="isLoading"
-                :class="{ 'is-loading': isLoading }">
-                <span class="icon"><i class="fas fa-sync" /></span>
+                      :class="{ 'is-loading': isLoading }">
+                <span class="icon"><i class="fas fa-sync"/></span>
               </button>
             </p>
           </div>
@@ -37,30 +37,30 @@
 
       <div class="column is-12" v-if="isLoading">
         <Message v-if="isLoading" message_class="is-background-info-90 has-text-dark" icon="fas fa-spinner fa-spin"
-          title="Loading" message="Loading data. Please wait..." />
+                 title="Loading" message="Loading data. Please wait..."/>
       </div>
 
       <div class="column is-12" v-if="!isLoading && userWithNoPin.length > 0">
         <Message message_class="has-background-warning-80 has-text-dark" icon="fas fa-exclamation-triangle"
-          title="User/s missing PIN">
+                 title="User/s missing PIN">
           <p>
             <span>
               The following users
               <span v-for="(user, index) in userWithNoPin" :key="index" class="tag pr-1">
                 {{ user }}
               </span>
-              are missing a PIN. Click on <span class="icon"><i class="fas fa-lock-open" /></span> to set the user PIN.
+              are missing a PIN. Click on <span class="icon"><i class="fas fa-lock-open"/></span> to set the user PIN.
               Otherwise you will not be able to proceed.
             </span>
           </p>
         </Message>
       </div>
 
-      <div class="column is-12" v-if="matched?.length < 1 && !isLoading">
+      <div class="column is-12" v-if="matched?.length < 1 && !isLoading && !allowSingleBackendUsers">
         <Message message_class="has-background-danger-90 has-text-dark" icon="fas fa-exclamation-triangle"
-          title="No matched users.">
+                 title="No matched users.">
           <p>
-            <span class="icon"><i class="fas fa-exclamation-triangle" /></span>
+            <span class="icon"><i class="fas fa-exclamation-triangle"/></span>
             <span>Click on the add button to user group</span>
           </p>
         </Message>
@@ -71,18 +71,18 @@
           <header class="card-header">
             <p class="card-header-title is-centered is-text-overflow">{{ group.user }}</p>
             <span class="card-header-icon">
-              <span class="icon" @click="deleteGroup(index)"><i class="fas fa-trash-can" /></span>
+              <span class="icon" @click="deleteGroup(index)"><i class="fas fa-trash-can"/></span>
             </span>
           </header>
           <div class="card-content">
             <draggable v-model="group.matched" :group="{ name: 'shared', pull: true, put: true }" animation="150"
-              :move="checkBackend" item-key="id">
+                       :move="checkBackend" item-key="id">
               <template #item="{ element }">
                 <div class="draggable-item" :class="setClass(element)">
                   <span v-if="element?.protected" class="icon has-text-danger"
-                    v-tooltip.bottom="'Click to set/view user PIN'" @click="setUserPin(element)">
+                        v-tooltip.bottom="'Click to set/view user PIN'" @click="setUserPin(element)">
                     <i class="fas"
-                      :class="{ 'fa-lock': element?.options?.PLEX_USER_PIN, 'fa-lock-open': !element?.options?.PLEX_USER_PIN }" />
+                       :class="{ 'fa-lock': element?.options?.PLEX_USER_PIN, 'fa-lock-open': !element?.options?.PLEX_USER_PIN }"/>
                   </span>
                   <span>
                     {{ element.backend }}@{{ element.username }}
@@ -98,22 +98,30 @@
       </div>
 
       <div class="column is-12" v-if="!isLoading">
-        <div class="card is-danger">
+        <div class="card" :class="{'is-danger' : !allowSingleBackendUsers, 'is-info': allowSingleBackendUsers }">
           <header class="card-header is-block">
-            <p class="card-header-title is-centered is-text-overflow has-text-danger">
-              <span class="icon"><i class="fas fa-exclamation-triangle" /></span>
+            <p class="card-header-title is-centered is-text-overflow has-text-danger" v-if="!allowSingleBackendUsers">
+              <span class="icon"><i class="fas fa-exclamation-triangle"/></span>
               Unmatched Users
+            </p>
+            <p class="card-header-title is-centered is-text-overflow" v-else>
+              <span class="icon"><i class="fas fa-info-circle"/></span>
+              Single Backend Mode Enabled
             </p>
           </header>
           <div class="card-content">
             <draggable v-model="unmatched" :group="{ name: 'shared', pull: true, put: true }" animation="150"
-              :move="checkBackend" item-key="id">
+                       :move="checkBackend" item-key="id">
               <template #item="{ element }">
                 <div class="draggable-item" :class="setClass(element)">
-                  <span v-if="element?.protected" class="icon has-text-danger"
-                    v-tooltip.bottom="'Click to set/view user PIN'">
+                  <span v-if="element?.protected && !allowSingleBackendUsers" class="icon has-text-danger">
                     <i class="fas"
-                      :class="{ 'fa-lock': element?.options?.PLEX_USER_PIN, 'fa-lock-open': !element?.options?.PLEX_USER_PIN }" />
+                       :class="{ 'fa-lock': element?.options?.PLEX_USER_PIN, 'fa-lock-open': !element?.options?.PLEX_USER_PIN }"/>
+                  </span>
+                  <span v-if="element?.protected && allowSingleBackendUsers" class="icon has-text-danger"
+                        v-tooltip.bottom="'Click to set/view user PIN'" @click="setUserPin(element)">
+                    <i class="fas"
+                       :class="{ 'fa-lock': element?.options?.PLEX_USER_PIN, 'fa-lock-open': !element?.options?.PLEX_USER_PIN }"/>
                   </span>
                   <span>
                     {{ element.backend }}@{{ element.username }}
@@ -128,7 +136,7 @@
           <div v-if="unmatched?.length < 1">
             <Message message_class="has-background-success-90 has-text-dark" icon="fas fa-check-circle">
               <p>
-                <span class="icon"><i class="fas fa-check" /></span>
+                <span class="icon"><i class="fas fa-check"/></span>
                 <span>All users are associated.</span>
               </p>
             </Message>
@@ -179,20 +187,43 @@
             </div>
           </div>
 
+          <div class="field" v-if="1 === backendCount">
+            <div class="control">
+              <input id="allow_single_backend_users" type="checkbox" class="switch is-success"
+                     v-model="allowSingleBackendUsers">
+              <label for="allow_single_backend_users"
+                     v-tooltip.bottom="'Create sub-users from the single configured backend without requiring user mapping.'">
+                Allow single backend users
+              </label>
+            </div>
+          </div>
+
+          <div class="column is-12" v-if="allowSingleBackendUsers && 1 === backendCount">
+            <Message message_class="has-background-success-90 has-text-dark" icon="fas fa-info-circle"
+                     title="Single Backend Mode">
+              <p>
+                <span>
+                  You are in <strong>single backend mode</strong>. The system will create individual sub-users from your
+                  single configured backend without requiring user mapping. Each user will be set up independently.
+                </span>
+              </p>
+            </Message>
+          </div>
+
           <div class="field is-fullwidth is-grouped">
 
             <div class="control is-expanded">
               <button class="button is-fullwidth is-warning" @click="() => saveMap()"
-                :disabled="userWithNoPin.length > 0">
-                <span class="icon"><i class="fas fa-save" /></span>
+                      :disabled="userWithNoPin.length > 0">
+                <span class="icon"><i class="fas fa-save"/></span>
                 <span>Save mapping</span>
               </button>
             </div>
 
             <div class="control is-expanded">
               <button class="button is-fullwidth" @click="createUsers" :disabled="userWithNoPin.length > 0"
-                :class="{ 'is-primary': !dryRun && !recreate, 'is-info': dryRun, 'is-danger': !dryRun && recreate }">
-                <span class="icon"><i class="fas fa-users" /></span>
+                      :class="{ 'is-primary': !dryRun && !recreate, 'is-info': dryRun, 'is-danger': !dryRun && recreate }">
+                <span class="icon"><i class="fas fa-users"/></span>
                 <span v-if="!dryRun">
                   <span v-if="recreate || !hasUsers">
                     {{ recreate ? 'Re-create' : 'Create' }} sub-users
@@ -217,7 +248,7 @@
             <li>This page lets you guide the system in matching sub-users across different backends.</li>
             <li>
               When you click <code>Create sub-users</code>, your mapping will be uploaded—unless you’ve selected <code>Do
-          not save mapper</code>. Based on your choice, the system will either delete and recreate the local
+              not save mapper</code>. Based on your choice, the system will either delete and recreate the local
               sub-users, or try to update the existing ones.
             </li>
             <li class="has-text-danger is-bold">
@@ -268,14 +299,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, toRaw } from 'vue'
-import { useStorage } from '@vueuse/core'
-import { useRoute, navigateTo } from '#app'
+import {computed, nextTick, onMounted, ref, toRaw} from 'vue'
+import {useStorage} from '@vueuse/core'
+import {navigateTo, useRoute} from '#app'
 import moment from 'moment'
 import draggable from 'vuedraggable'
-import { request, makeConsoleCommand, notification, parse_api_response } from '~/utils'
+import {makeConsoleCommand, notification, parse_api_response, request} from '~/utils'
 import Message from '~/components/Message.vue'
-import type { SubUser } from '~/types'
+import type {SubUser} from '~/types'
 
 type SubUserMappingData = {
   /** Version identifier for the mapping format */
@@ -306,12 +337,14 @@ const noSave = ref<boolean>(false)
 const dryRun = ref<boolean>(false)
 const hasUsers = ref<boolean>(false)
 const verbose = ref<boolean>(false)
+const allowSingleBackendUsers = ref<boolean>(false)
+const backendCount = ref<number>(0)
 const expires = ref<string | undefined>()
 const api_user = useStorage('api_user', 'main')
 
 const addNewUser = (): void => {
   const newUserName = `User group #${matched.value.length + 1}`
-  matched.value.push({ user: newUserName, matched: [] })
+  matched.value.push({user: newUserName, matched: []})
 }
 
 const loadContent = async (force?: boolean): Promise<void> => {
@@ -328,13 +361,14 @@ const loadContent = async (force?: boolean): Promise<void> => {
   try {
     const response = await request(`/backends/mapper${force ? '?force=1' : ''}`, {
       method: 'GET',
-      headers: { 'Accept': 'application/json' }
+      headers: {'Accept': 'application/json'}
     })
     const json = await parse_api_response<{
       matched: Array<SubUserGroup>,
       unmatched: Array<SubUser>,
       has_users: boolean,
       expires?: string,
+      backends?: Array<string>,
     }>(response)
 
     if ('tools-sub_users' !== useRoute().name) {
@@ -342,7 +376,8 @@ const loadContent = async (force?: boolean): Promise<void> => {
     }
 
     if ("error" in json) {
-      throw new Error(json.error.message || 'Unknown error')
+      notification('error', 'Error', json.error.message || 'Unknown error')
+      return
     }
 
     matched.value = json.matched
@@ -350,6 +385,7 @@ const loadContent = async (force?: boolean): Promise<void> => {
     recreate.value = json.has_users
     backup.value = !json.has_users
     hasUsers.value = json.has_users
+    backendCount.value = json.backends?.length || 0
     expires.value = json?.expires
   } catch (e: any) {
     notification('error', 'Error', e.message)
@@ -369,7 +405,7 @@ const generateFile = async (): Promise<void> => {
 
   const response = request(`/system/yaml/${filename}`, {
     method: 'POST',
-    headers: { 'Accept': 'text/yaml' },
+    headers: {'Accept': 'text/yaml'},
     body: JSON.stringify(data)
   })
 
@@ -406,7 +442,7 @@ const checkBackend = (e: DragEvent): boolean => {
   }
 
   const isMatchedContainer = matched.value.some(
-    group => group.matched === e.relatedContext.list
+      group => group.matched === e.relatedContext.list
   )
 
   if (false === isMatchedContainer) {
@@ -461,8 +497,10 @@ const saveMap = async (no_toast: boolean = false): Promise<boolean> => {
     })
 
     const response = await parse_api_response(req)
-    if (req.status >= 200 && req.status < 300 && !no_toast) {
-      notification('success', 'Success', response.info.message)
+    if (req.status >= 200 && req.status < 300) {
+      if (!no_toast) {
+        notification('success', 'Success', response.info.message)
+      }
       return true
     }
 
@@ -479,11 +517,11 @@ const saveMap = async (no_toast: boolean = false): Promise<boolean> => {
 }
 
 const formatData = (): SubUserMappingData => {
-  const data: SubUserMappingData = { version: '1.5', map: [] }
+  const data: SubUserMappingData = {version: '1.6', map: []}
 
-  matched.value.forEach((group, i) => {
+  matched.value.forEach((group) => {
     const users: Record<string, { name: string; options: Record<string, any> }> = {}
-    group?.matched.forEach(u => users[u.backend] = { name: u.username, options: toRaw(u.options || {}) })
+    group?.matched.forEach(u => users[u.backend] = {name: u.username, options: toRaw(u.options || {})})
 
     if (Object.keys(users).length < 2) {
       return
@@ -492,12 +530,18 @@ const formatData = (): SubUserMappingData => {
     data.map.push(users)
   })
 
+  if (allowSingleBackendUsers.value) {
+    unmatched.value.forEach(u => data.map.push({
+      [u.backend]: {name: u.username, options: toRaw(u.options || {})}
+    }))
+  }
+
   return toRaw(data)
 }
 
 const createUsers = async (): Promise<void> => {
   if (!noSave.value) {
-    const state = await saveMap()
+    const state = await saveMap(true)
     if (false === state) {
       return
     }
@@ -507,7 +551,19 @@ const createUsers = async (): Promise<void> => {
 
   command.push(verbose.value ? '-vvv' : '-vv')
 
-  command.push(recreate.value ? '--re-create' : '--run --update')
+  if (allowSingleBackendUsers.value) {
+    command.push('--allow-single-backend-users')
+    // -- In single backend mode, always use --run (no need for --update as there's only 1 backend)
+    if (!recreate.value && hasUsers.value) {
+      command.push('--run --update')
+    } else if (recreate.value) {
+      command.push('--re-create')
+    } else {
+      command.push('--run')
+    }
+  } else {
+    command.push(recreate.value ? '--re-create' : '--run --update')
+  }
 
   if (backup.value) {
     command.push('--generate-backup')
@@ -564,21 +620,29 @@ const userWithNoPin = computed<Array<string>>(() => {
   // -- get all users with protected flag
   const no_pin: Array<string> = []
 
-  if (!matched.value.length) {
-    return []
-  }
-
   matched.value.forEach(group => group.matched.forEach(user => {
     if (!user?.protected) {
       return
     }
 
-    console.log(user?.options?.PLEX_USER_PIN, user?.protected, user.username)
-
     if (!user?.options?.PLEX_USER_PIN) {
       no_pin.push(`${user.backend}@${user.username}`)
     }
   }))
+
+  if (!allowSingleBackendUsers.value) {
+    return no_pin
+  }
+
+  unmatched.value.forEach(user => {
+    if (!user?.protected) {
+      return
+    }
+
+    if (!user?.options?.PLEX_USER_PIN) {
+      no_pin.push(`${user.backend}@${user.username}`)
+    }
+  })
 
   return no_pin
 })
@@ -586,7 +650,7 @@ const userWithNoPin = computed<Array<string>>(() => {
 onMounted(async (): Promise<void> => {
   if ('main' !== api_user.value) {
     notification('error', 'Error', 'The sub users page is only available for the main user.')
-    await navigateTo({ name: 'backends' })
+    await navigateTo({name: 'backends'})
     return
   }
   await loadContent()

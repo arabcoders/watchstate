@@ -60,14 +60,16 @@ final class Mapper
             $data = [
                 'matched' => [],
                 'unmatched' => [],
+                'backends' => array_keys($backends),
             ];
 
             foreach ($unmatched as $user) {
                 $data['unmatched'][] = [
+                    'id' => ag($user, 'id', null),
                     'username' => ag($user, 'name', null),
                     'backend' => ag($user, 'backend', null),
                     'real_name' => ag($user, 'real_name', null),
-                    'type' => ag($user, 'client_data.type', null),
+                    'type' => ag($user, 'client_data', null),
                     'protected' => (bool)ag($user, 'protected', false),
                     'options' => ag($user, 'options', (object)[]),
                 ];

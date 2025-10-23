@@ -14,6 +14,7 @@ use App\Libs\Config;
 use App\Libs\ConfigFile;
 use App\Libs\Options;
 use Psr\Log\LoggerInterface as iLogger;
+use Psr\SimpleCache\InvalidArgumentException;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
@@ -69,6 +70,12 @@ class CreateUsersCommand extends Command
                 InputOption::VALUE_NONE,
                 'Override sub users configuration based on main user configuration.'
             )
+            ->addOption(
+                'allow-single-backend-users',
+                null,
+                InputOption::VALUE_NONE,
+                'Create sub-users from a single backend (only works when exactly 1 backend is configured).'
+            )
             ->setDescription('Generate per user configuration, based on the main user data.')
             ->setHelp(
                 r(
@@ -93,7 +100,7 @@ class CreateUsersCommand extends Command
                     Mapping is done automatically based on the username, however, if your users have different usernames
                     on each backend, you can create <value>{path}/config/mapper.yaml</value> file with the following format:
 
-                    version: "1.5"
+                    version: "1.6"
                     map:
                         # first user
                         -
@@ -236,6 +243,35 @@ class CreateUsersCommand extends Command
     }
 
     /**
+     * Generate users list for single backend mode.
+     *
+     * In single backend mode, each user from that backend becomes their own "group".
+     * No mapping is required or used.
+     *
+     * @param array $users The list of users from all backends.
+     * @return array{matched: array, unmatched: array} The list of matched users (as single-user groups).
+     */
+    public static function generate_single_backend_users(array $users): array
+    {
+        $results = [];
+        $unmatched = [];
+
+        foreach ($users as $user) {
+            $backend = $user['backend'];
+            if (ag($user, 'id') === ag($user, 'client_data.options.' . Options::ALT_ID)) {
+                self::$logger?->debug('Skipping main user "{name}".', ['name' => $user['name']]);
+                continue;
+            }
+            $results[] = [
+                'name' => strtolower($user['name']),
+                'backends' => [$backend => $user],
+            ];
+        }
+
+        return ['matched' => $results, 'unmatched' => $unmatched];
+    }
+
+    /**
      * Get backends users.
      *
      * @param array $backends The list of backends.
@@ -374,6 +410,7 @@ class CreateUsersCommand extends Command
      * @param array $users The list of users to create.
      *
      * @return void
+     * @throws InvalidArgumentException
      */
     public static function create_user(iInput $input, array $users): void
     {
@@ -613,12 +650,15 @@ class CreateUsersCommand extends Command
      * @param iOutput $output The output interface.
      *
      * @return int The exit code. 0 for success, 1 for failure.
+     * @throws InvalidArgumentException
      */
     protected function runCommand(iInput $input, iOutput $output): int
     {
         if (true === ($dryRun = $input->getOption('dry-run'))) {
             self::$logger?->notice('SYSTEM: Running in dry-run mode. No changes will be made.');
         }
+
+        $allowSingleBackendUsers = (bool)$input->getOption('allow-single-backend-users');
 
         if (self::hasUsers() && (false === $input->getOption('run') && false === $input->getOption('re-create'))) {
             $output->writeln(
@@ -655,7 +695,44 @@ class CreateUsersCommand extends Command
             return self::FAILURE;
         }
 
+        // -- mappings.
         $mapping = self::loadMappings();
+
+        // -- Handle single backend mode
+        if (true === $allowSingleBackendUsers) {
+            $countBackends = count($backends);
+            if (1 !== $countBackends) {
+                self::$logger?->error('SYSTEM: Single backend mode requires 1 backend configured. Found {count}.', [
+                    'count' => $countBackends
+                ]);
+                return self::FAILURE;
+            }
+
+            self::$logger?->notice('SYSTEM: Running in single backend mode.');
+
+            $backendsUser = self::get_backends_users($backends, $mapping, false);
+
+            if (count($backendsUser) < 1) {
+                self::$logger?->error('SYSTEM: No Backend users were found.');
+                return self::FAILURE;
+            }
+
+            $obj = self::generate_single_backend_users($backendsUser);
+            $users = ag($obj, 'matched', []);
+
+            if (count($users) < 1) {
+                self::$logger?->warning("No sub-users were found in the single backend.");
+                return self::FAILURE;
+            }
+
+            self::$logger?->notice("SYSTEM: Matched '{results}' from single backend.", [
+                'results' => arrayToString(self::usersList($users)),
+            ]);
+
+            self::create_user(input: $input, users: $users);
+
+            return self::SUCCESS;
+        }
 
         self::$logger?->notice("SYSTEM: Getting users list from '{backends}'.", [
             'backends' => join(', ', array_keys($backends))
@@ -941,6 +1018,7 @@ class CreateUsersCommand extends Command
                     'protected' => (bool)ag($userObj, 'protected', false),
                     'client_data' => ag($userObj, 'client_data.type', null),
                     'real_name' => $userObj['real_name'] ?? null,
+                    'options' => ag($userObj, 'options', []),
                 ];
             }
         }

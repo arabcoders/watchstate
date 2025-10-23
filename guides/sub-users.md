@@ -13,6 +13,42 @@ or users on a shared server. Sub-users inherit the base setup from the primary u
 
 ---
 
+## Single Backend Mode vs. Multi-Backend Mode
+
+WatchState supports two modes for sub-user creation:
+
+### Multi-Backend Mode (Default)
+
+This is the standard mode used when you have **2 or more backends** configured. The system will:
+
+* Attempt to match users across different backends based on usernames.
+* Require user grouping/mapping to associate the same person across multiple services.
+* Create unified configurations that sync play states between all matched backends.
+
+### Single Backend Mode
+
+This mode is available when you have **exactly 1 backend** configured. In this mode:
+
+* **No user matching required** - Each user from the backend gets their own configuration.
+* **Simplified setup** - No need to create user groups or mappings.
+* **Perfect for dedicated servers** - Ideal if you only use one media server (e.g., only Plex, only Jellyfin).
+* **Ideal for backing up user play states** - The use case for this is to backup user play state and watch progress,
+  allowing you to restore individual user data without affecting others.
+* **PIN support** - You can still set PINs for protected users via the mapper.
+
+To enable single backend mode:
+
+1. Navigate to **<!--i:fa-tools--> Tools > <!--i:fa-users--> Sub Users**.
+2. If you have exactly 1 backend configured, you'll see an **"Allow single backend users"** checkbox.
+3. Check this option to enable single backend mode.
+4. All users from that backend (except the main user) will be created as individual sub-users.
+
+> [!NOTE]
+> Single backend mode still respects PIN settings for protected Plex users. You can set PINs by clicking the lock icon
+> next to each user.
+
+---
+
 ## Step-by-Step Guide to Multi-User Setup
 
 ### 1. Add Your Backends
@@ -56,20 +92,40 @@ If you're using Jellyfin or Emby:
 After verifying all backends are properly configured:
 
 1. Navigate to **<!--i:fa-tools--> Tools > <!--i:fa-users--> Sub Users**.
-2. The system will attempt to **automatically group users** based on matching names across the backends.
-3. **Manual adjustment may be necessary**:
-
-    * Use drag-and-drop functionality to reassign or organize users into the appropriate groups.
-    * This is helpful when naming conventions differ across services.
+2. **If you have multiple backends:**
+    * The system will attempt to **automatically group users** based on matching names across the backends.
+    * **Manual adjustment may be necessary**:
+        * Use drag-and-drop functionality to reassign or organize users into the appropriate groups.
+        * This is helpful when naming conventions differ across services.
+3. **If you have a single backend:**
+    * Enable the **"Allow single backend users"** checkbox.
+    * All users will be listed in the unmatched section and will be created individually.
+    * No grouping or matching is required.
 
 ---
 
-### 5. Create Sub-Users
+### 5. Handle Protected Users (If Applicable)
 
-Once users are properly grouped:
+If you have Plex users with managed user accounts (protected users):
+
+* **These users require a PIN** to be set before sub-user creation can proceed.
+* Click the **lock icon** (<!--i:fa-lock-open-->) next to each protected user to set their 4-digit PIN.
+* The PIN will be stored in the mapper and used when generating access tokens.
+* In **single backend mode**, you can set PINs for unmatched users directly in the unmatched users section.
+
+> [!IMPORTANT]
+> You cannot proceed with sub-user creation if any protected users are missing PINs. The system will display a warning
+> message and disable the creation buttons until all PINs are set.
+
+---
+
+### 6. Create Sub-Users
+
+Once users are properly grouped (in multi-backend mode) or configured (in single backend mode):
 
 * Click the `Create Sub-users` button.
 * The system will generate configurations for each sub-user, based on the main user's settings.
+* In **single backend mode**, each user gets their own independent configuration.
 
 ---
 
