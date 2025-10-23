@@ -28,15 +28,7 @@ final class Update
 {
     use APITraits;
 
-    private const array IMMUTABLE_KEYS = [
-        'name',
-        'type',
-        'options',
-        'webhook',
-        'webhook.match',
-        'import',
-        'export',
-    ];
+    private const array IMMUTABLE_KEYS = ['name', 'type', 'options', 'import', 'export'];
 
     public function __construct(private readonly iImport $mapper, private readonly iLogger $logger)
     {
@@ -76,8 +68,22 @@ final class Update
             if (false === $client->validateContext($context)) {
                 return api_error('Context information validation failed.', Status::BAD_REQUEST);
             }
-
-            $userContext->config->set($name, $config->getAll());
+            $userContext->config->set($name, $config->getAll())
+                ->addFilter('removed.keys', function (array $data): array {
+                    $removed = include __DIR__ . '/../../../config/removed.keys.php';
+                    foreach (ag($removed, 'backend', []) as $key) {
+                        foreach ($data as &$v) {
+                            if (false === is_array($v)) {
+                                continue;
+                            }
+                            if (false === ag_exists($v, $key)) {
+                                continue;
+                            }
+                            $v = ag_delete($v, $key);
+                        }
+                    }
+                    return $data;
+                })->persist();
 
             // -- sanity check.
             if (true === (bool)$userContext->config->get("{$name}.import.enabled", false)) {
@@ -122,6 +128,7 @@ final class Update
         }
 
         $updates = [];
+        $removedKeys = ag(include __DIR__ . '/../../../config/removed.keys.php', 'backend', []);
 
         foreach ($data as $update) {
             $value = ag($update, 'value');
@@ -149,7 +156,7 @@ final class Update
                 }
             }
 
-            if (in_array($key, self::IMMUTABLE_KEYS, true)) {
+            if (in_array($key, [...$removedKeys, ...self::IMMUTABLE_KEYS], true)) {
                 return api_error(r('Key {key} is immutable.', ['key' => $key]), Status::BAD_REQUEST);
             }
 
@@ -196,12 +203,6 @@ final class Update
             ],
             'import' => [
                 'enabled' => (bool)$data->get('import.enabled', false),
-            ],
-            'webhook' => [
-                'match' => [
-                    'user' => (bool)$data->get('webhook.match.user'),
-                    'uuid' => (bool)$data->get('webhook.match.uuid'),
-                ],
             ],
         ];
 

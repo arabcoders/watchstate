@@ -48,7 +48,7 @@ final class ViewCommand extends Command
             ->addArgument(
                 'filter',
                 InputArgument::OPTIONAL,
-                'Can be any key from servers.yaml, use dot notion to access sub keys, for example [webhook.token]'
+                'Can be any key from servers.yaml, use dot notion to access sub keys, for example [token]'
             )
             ->setHelp(
                 r(

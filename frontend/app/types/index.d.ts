@@ -238,13 +238,6 @@ export interface Backend {
         /** Last successful export timestamp (ISO string) */
         lastSync?: string
     }
-    /** Webhook options */
-    webhook: {
-        match: {
-            user: boolean
-            uuid: boolean
-        }
-    }
     /** Backend URLs for webhooks and other operations */
     urls?: {
         /** Webhook URL for this backend */
@@ -310,6 +303,8 @@ export interface EnvVar {
     danger?: boolean
     /** Whether this variable is deprecated */
     deprecated?: boolean
+    /** If this option is present, a select option should show */
+    choice?: Array<string> | null,
 }
 
 /**

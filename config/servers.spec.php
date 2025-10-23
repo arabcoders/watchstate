@@ -98,7 +98,7 @@ return [
         'key' => 'options.ignore',
         'type' => 'string',
         'visible' => true,
-        'description' => 'The list of libraries ids to ignore when syncing.',
+        'description' => 'Comma separated list of library names to ignore when syncing.',
     ],
     [
         'key' => 'options.LIBRARY_SEGMENT',

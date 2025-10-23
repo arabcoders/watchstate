@@ -1,4 +1,6 @@
 {
+    "name": "arabcoders/watchstate",
+    "description": "Self-hosted service to sync your plex, jellyfin and emby play state. without relying on 3rd-party external services.",
     "type": "project",
     "license": "MIT",
     "minimum-stability": "stable",

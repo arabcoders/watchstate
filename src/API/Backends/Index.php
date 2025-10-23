@@ -21,7 +21,6 @@ final class Index
 
     public const array BLACK_LIST = [
         'token',
-        'webhook.token',
         'options.' . Options::ADMIN_TOKEN,
         'options.' . Options::PLEX_USER_PIN,
     ];
@@ -31,12 +30,13 @@ final class Index
     {
         $list = [];
         $user = $this->getUserContext($request, $mapper, $logger);
+        $removedKeys = ag(include __DIR__ . '/../../../config/removed.keys.php', 'backend', []);
 
         foreach ($this->getBackends(userContext: $user) as $backend) {
             if (!$request->getAttribute(Options::INTERNAL_REQUEST)) {
                 $item = array_filter(
                     $backend,
-                    fn ($key) => false === in_array($key, ['options', 'webhook'], true),
+                    fn($key) => false === in_array($key, ['options', ...$removedKeys], true),
                     ARRAY_FILTER_USE_KEY
                 );
 
