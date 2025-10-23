@@ -1,8 +1,22 @@
 [
     {
-        "tag": "dev-20251013-831eb8a0",
-        "date": "2025-10-13T15:01:37+00:00",
+        "tag": "dev-20251023-e7255558",
+        "date": "2025-10-23T15:04:23+00:00",
         "commits": [
+            {
+                "sha": "e7255558",
+                "message": "[FEAT] Allow single backend sub-users creation",
+                "author": "arabcoders",
+                "date": "2025-10-23T15:04:23+00:00",
+                "full_sha": "e725555830e56aefba54db7c75bc093bd2b36c82"
+            },
+            {
+                "sha": "dcd43a59",
+                "message": "update external packages",
+                "author": "arabcoders",
+                "date": "2025-10-23T14:54:38+00:00",
+                "full_sha": "dcd43a59a590dec4a2f3505a6a3501e6ad656e59"
+            },
             {
                 "sha": "831eb8a0",
                 "message": "removed legacy webhooks in prep for v1.0 release",
@@ -571,7 +585,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "831eb8a0ee9cf4b187030ff44ca8a48c4c8ca84c"
+        "full_sha": "e725555830e56aefba54db7c75bc093bd2b36c82"
     },
     {
         "tag": "dev-20250604-9407bc76",
