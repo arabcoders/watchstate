@@ -1,9 +1,37 @@
 [
   {
-    "tag": "Unreleased (ae79a457)",
-    "full_sha": "ae79a4571d9c73947808bb2dd1f8650aa2ae8ef7",
-    "date": "2025-09-21T20:45:24+00:00",
+    "tag": "Unreleased (bc94cea0)",
+    "full_sha": "bc94cea0719266e09d2f38d15880388129ce1323",
+    "date": "2025-10-23T15:24:45+00:00",
     "commits": [
+      {
+        "sha": "e7255558",
+        "full_sha": "e725555830e56aefba54db7c75bc093bd2b36c82",
+        "message": "[FEAT] Allow single backend sub-users creation",
+        "author": "arabcoders",
+        "date": "2025-10-23T15:04:23+00:00"
+      },
+      {
+        "sha": "dcd43a59",
+        "full_sha": "dcd43a59a590dec4a2f3505a6a3501e6ad656e59",
+        "message": "update external packages",
+        "author": "arabcoders",
+        "date": "2025-10-23T14:54:38+00:00"
+      },
+      {
+        "sha": "831eb8a0",
+        "full_sha": "831eb8a0ee9cf4b187030ff44ca8a48c4c8ca84c",
+        "message": "removed legacy webhooks in prep for v1.0 release",
+        "author": "arabcoders",
+        "date": "2025-10-13T15:01:37+00:00"
+      },
+      {
+        "sha": "7346ed95",
+        "full_sha": "7346ed95b3254d3ef5ba7fbfaf965154e8335a4f",
+        "message": "add support for select options in env variables and update dependencies",
+        "author": "arabcoders",
+        "date": "2025-09-27T17:54:41+00:00"
+      },
       {
         "sha": "6d8d7f4f",
         "full_sha": "6d8d7f4f5375ed1757a5c868201dd0945561a0a0",
