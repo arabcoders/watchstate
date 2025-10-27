@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20251023-e7255558",
-        "date": "2025-10-23T15:04:23+00:00",
+        "tag": "dev-20251027-afab14d4",
+        "date": "2025-10-27T16:47:15+00:00",
         "commits": [
+            {
+                "sha": "afab14d4",
+                "message": "[FIX] incorrect date was shown in backend page for items",
+                "author": "arabcoders",
+                "date": "2025-10-27T16:47:15+00:00",
+                "full_sha": "afab14d4692c784da5b4792e670e4f25fb64307b"
+            },
             {
                 "sha": "e7255558",
                 "message": "[FEAT] Allow single backend sub-users creation",
@@ -585,7 +592,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "e725555830e56aefba54db7c75bc093bd2b36c82"
+        "full_sha": "afab14d4692c784da5b4792e670e4f25fb64307b"
     },
     {
         "tag": "dev-20250604-9407bc76",
