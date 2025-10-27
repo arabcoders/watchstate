@@ -1,5 +1,19 @@
 [
   {
+    "tag": "Unreleased (9dfaa788)",
+    "full_sha": "9dfaa7882d98733ba0c3d76d572b567db967f7b3",
+    "date": "2025-10-27T20:10:13+00:00",
+    "commits": [
+      {
+        "sha": "afab14d4",
+        "full_sha": "afab14d4692c784da5b4792e670e4f25fb64307b",
+        "message": "[FIX] incorrect date was shown in backend page for items",
+        "author": "arabcoders",
+        "date": "2025-10-27T16:47:15+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v0.4.3",
     "full_sha": "bc94cea0719266e09d2f38d15880388129ce1323",
     "date": "2025-10-23T15:24:45+00:00",
