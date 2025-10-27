@@ -3,10 +3,10 @@
     <div class="columns is-multiline" v-if="isLoading || isError">
       <div class="column is-12">
         <Message message_class="is-background-info-90 has-text-dark" title="Loading" v-if="isLoading"
-          icon="fas fa-spinner fa-spin" message="Loading backend settings. Please wait..." />
+                 icon="fas fa-spinner fa-spin" message="Loading backend settings. Please wait..."/>
 
         <Message message_class="has-background-warning-80 has-text-dark" icon="fas fa-exclamation-triangle"
-          title="Warning" v-if="!isLoading && isError">
+                 title="Warning" v-if="!isLoading && isError">
           <p>
             <span class="icon"><i class="fas fa-exclamation"></i></span>
             There was error loading your backend data. Please try again later.
@@ -23,14 +23,14 @@
         <div class="column is-12 is-clearfix is-unselectable">
           <span class="title is-4">
             <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
-            <NuxtLink to="/backends" v-text="'Backends'" />
+            <NuxtLink to="/backends" v-text="'Backends'"/>
             : {{ backend }}
           </span>
           <div class="is-pulled-right">
             <div class="field is-grouped">
               <p class="control">
                 <NuxtLink class="button is-danger" v-tooltip.bottom="'Delete Backend'"
-                  :to="`/backend/${backend}/delete`">
+                          :to="`/backend/${backend}/delete`">
                   <span class="icon"><i class="fas fa-trash"></i></span>
                 </NuxtLink>
               </p>
@@ -53,22 +53,22 @@
             <h1 class="title is-4">Useful Tools</h1>
             <ul>
               <li>
-                <NuxtLink :to="`/backend/${backend}/mismatched`" v-text="'Find possible mis-identified content.'" />
+                <NuxtLink :to="`/backend/${backend}/mismatched`" v-text="'Find possible mis-identified content.'"/>
               </li>
               <li>
-                <NuxtLink :to="`/backend/${backend}/unmatched`" v-text="'Find unmatched content.'" />
+                <NuxtLink :to="`/backend/${backend}/unmatched`" v-text="'Find unmatched content.'"/>
               </li>
               <li>
-                <NuxtLink :to="`/backend/${backend}/libraries`" v-text="'View backend libraries.'" />
+                <NuxtLink :to="`/backend/${backend}/libraries`" v-text="'View backend libraries.'"/>
               </li>
               <li>
-                <NuxtLink :to="`/backend/${backend}/users`" v-text="'View backend users.'" />
+                <NuxtLink :to="`/backend/${backend}/users`" v-text="'View backend users.'"/>
               </li>
               <li>
-                <NuxtLink :to="`/backend/${backend}/sessions`" v-text="'View active sessions.'" />
+                <NuxtLink :to="`/backend/${backend}/sessions`" v-text="'View active sessions.'"/>
               </li>
               <li>
-                <NuxtLink :to="`/backend/${backend}/search`" v-text="'Search backend content.'" />
+                <NuxtLink :to="`/backend/${backend}/search`" v-text="'Search backend content.'"/>
               </li>
             </ul>
           </div>
@@ -78,8 +78,8 @@
       <div class="columns" v-if="bHistory.length < 1">
         <div class="column is-12">
           <Message message_class="is-background-warning-80 has-text-dark" title="Warning"
-            icon="fas fa-exclamation-circle"
-            message="No items were found. There are probably no items in the local database yet or the backend data not imported yet." />
+                   icon="fas fa-exclamation-circle"
+                   message="No items were found. There are probably no items in the local database yet or the backend data not imported yet."/>
         </div>
       </div>
 
@@ -93,10 +93,10 @@
               <header class="card-header">
                 <p class="card-header-title is-text-overflow pr-1">
                   <FloatingImage :image="`/history/${item.id}/images/poster`" :item_class="'scaled-image'"
-                    v-if="poster_enable">
-                    <NuxtLink :to="`/history/${item.id}`" v-text="item?.full_title || makeName(item)" />
+                                 v-if="poster_enable">
+                    <NuxtLink :to="`/history/${item.id}`" v-text="item?.full_title || makeName(item)"/>
                   </FloatingImage>
-                  <NuxtLink :to="`/history/${item.id}`" v-text="item?.full_title || makeName(item)" v-else />
+                  <NuxtLink :to="`/history/${item.id}`" v-text="item?.full_title || makeName(item)" v-else/>
                 </p>
                 <span class="card-header-icon">
                   <span class="icon" v-if="'episode' === item.type"><i class="fas fa-tv"></i></span>
@@ -109,8 +109,8 @@
                     <span class="icon-text">
                       <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
                       <span class="has-tooltip"
-                        v-tooltip="`Updated at: ${item.updated_at ? moment(item.updated_at).format(TOOLTIP_DATE_FORMAT) : moment.unix(item.updated).format(TOOLTIP_DATE_FORMAT)}`">
-                        {{ item.updated_at ? moment(item.updated_at).fromNow() : moment.unix(item.updated).fromNow() }}
+                            v-tooltip="`Updated at: ${moment.unix( item.updated || item.updated_at ).format(TOOLTIP_DATE_FORMAT)}`">
+                        {{ moment.unix(item.updated || item.updated_at).fromNow() }}
                       </span>
                     </span>
                   </div>
@@ -118,7 +118,7 @@
                     <span class="icon-text">
                       <span class="icon"><i class="fas fa-server"></i></span>
                       <span>
-                        <NuxtLink :to="'/backend/' + item.via" v-text="item.via" />
+                        <NuxtLink :to="'/backend/' + item.via" v-text="item.via"/>
                       </span>
                     </span>
                   </div>
@@ -135,8 +135,11 @@
                   <span class="has-text-success" v-if="item.watched">Played</span>
                   <span class="has-text-danger" v-else>Unplayed</span>
                 </div>
-                <div class="card-footer-item">{{ formatDuration(typeof item.progress === 'number' ? item.progress :
-                  parseInt(String(item.progress), 10) || 0) }}</div>
+                <div class="card-footer-item">{{
+                    formatDuration(typeof item.progress === 'number' ? item.progress :
+                        parseInt(String(item.progress), 10) || 0)
+                  }}
+                </div>
               </div>
             </div>
           </div>
@@ -157,10 +160,10 @@
         </div>
         <div class="column is-12">
           <div class="mt-2" style="position: relative;">
-            <code class="is-terminal is-block is-pre-wrap" v-text="info" />
+            <code class="is-terminal is-block is-pre-wrap" v-text="info"/>
             <button class="button m-4" v-tooltip="'Copy text'" style="position: absolute; top:0; right:0;"
-              @click="() => copyText(JSON.stringify(info, null, 2))">
-              <span class="icon"><i class="fas fa-copy" /></span>
+                    @click="() => copyText(JSON.stringify(info, null, 2))">
+              <span class="icon"><i class="fas fa-copy"/></span>
             </button>
           </div>
         </div>
@@ -171,14 +174,14 @@
 
 <script setup lang="ts">
 import moment from 'moment'
-import { ref, onMounted } from 'vue'
-import { useRoute, useHead } from '#app'
-import { useStorage } from '@vueuse/core'
+import {onMounted, ref} from 'vue'
+import {useHead, useRoute} from '#app'
+import {useStorage} from '@vueuse/core'
 import Message from '~/components/Message.vue'
-import { NuxtLink } from '#components'
+import {NuxtLink} from '#components'
 import FloatingImage from '~/components/FloatingImage.vue'
-import { formatDuration, makeName, TOOLTIP_DATE_FORMAT, copyText, request, parse_api_response } from '~/utils'
-import type { HistoryItem } from '~/types'
+import {copyText, formatDuration, makeName, parse_api_response, request, TOOLTIP_DATE_FORMAT} from '~/utils'
+import type {HistoryItem} from '~/types'
 
 const poster_enable = useStorage('poster_enable', true)
 
@@ -246,7 +249,7 @@ const loadInfo = async (): Promise<void> => {
       return
     }
     await loadRecentHistory()
-    useHead({ title: `Backends: ${backend.value}` })
+    useHead({title: `Backends: ${backend.value}`})
   } catch (e) {
     error.value = e instanceof Error ? e : new Error(String(e))
     isError.value = true
