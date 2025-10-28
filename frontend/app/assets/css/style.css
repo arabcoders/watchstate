@@ -33,6 +33,10 @@ html {
     word-break: break-word;
 }
 
+.is-text-width {
+    width: calc(100% - 5px);
+}
+
 .is-masked,
 .is-full-mask,
 .is-full-mask :not(figure) {

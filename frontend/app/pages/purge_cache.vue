@@ -30,8 +30,7 @@
         </div>
 
         <div class="column is-12">
-          <Confirm @confirmed="resetCache()" :title="`Perform purge cache for all users?`"
-                   title-icon="fa-trash"
+          <Confirm @confirmed="resetCache()" :title="`Perform purge cache for all users?`" title-icon="fa-trash"
                    warning="Depending on your hardware speed, the reset operation might take long time. do not interrupt the process, or close the browser tab."/>
         </div>
       </template>
@@ -41,12 +40,12 @@
 
 <script setup lang="ts">
 import {ref} from 'vue'
-import {useRoute, navigateTo} from '#app'
+import {navigateTo, useRoute} from '#app'
 import Message from '~/components/Message.vue'
-import {request, notification, parse_api_response} from '~/utils'
+import {notification, parse_api_response, request} from '~/utils'
 import Confirm from '~/components/Confirm.vue'
 import {useSessionCache} from '~/utils/cache'
-import type { GenericError } from '~/types'
+import type {GenericError} from '~/types'
 
 const error = ref<GenericError | null>(null)
 const isPurging = ref<boolean>(false)

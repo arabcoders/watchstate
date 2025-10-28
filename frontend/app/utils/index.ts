@@ -1,9 +1,9 @@
-import { useStorage } from '@vueuse/core';
-import { useToast } from 'vue-toastification'
-import { toRaw } from 'vue';
-import { navigateTo } from '#app'
-import { useDialog } from '~/composables/useDialog'
-import type { GenericError, RequestOptions } from "~/types"
+import {useStorage} from '@vueuse/core';
+import {useToast} from 'vue-toastification'
+import {toRaw} from 'vue';
+import {navigateTo} from '#app'
+import {useDialog} from '~/composables/useDialog'
+import type {GenericError, PaginationItem, RequestOptions} from "~/types"
 
 const toast = useToast();
 
@@ -60,32 +60,6 @@ const ag = (obj: Record<string, any>, path: string, defaultValue: any = null): a
     }
 
     return getValue(at === null ? defaultValue : at);
-};
-
-/**
- * Set value in object by path
- */
-const ag_set = (obj: Record<string, any>, path: string, value: any): Record<string, any> => {
-    const keys = path.split(AG_SEPARATOR);
-    let at = obj;
-
-    while (keys.length > 0) {
-        if (keys.length === 1) {
-            if (typeof at === 'object' && at !== null) {
-                at[keys.shift() as string] = value;
-            } else {
-                throw new Error(`Cannot set value at this path (${path}) because it's not an object.`);
-            }
-        } else {
-            const key = keys.shift() as string;
-            if (!at[key]) {
-                at[key] = {};
-            }
-            at = at[key];
-        }
-    }
-
-    return obj;
 };
 
 /**
@@ -193,7 +167,7 @@ const notification = (
     };
 
     if (opts) {
-        options = { ...options, ...opts };
+        options = {...options, ...opts};
     }
 
     switch (type.toLowerCase()) {
@@ -270,7 +244,7 @@ const makeGUIDLink = (type: string, source: string, guid: string, data: Record<s
 
     const link = ag(guid_links, `${type}.${source}`, null);
 
-    return link == null ? '' : r(link, { _guid: guid, ...toRaw(data) });
+    return link == null ? '' : r(link, {_guid: guid, ...toRaw(data)});
 };
 
 /**
@@ -308,7 +282,6 @@ const copyText = (str: string | number, showNotification: boolean = true): void 
     el.value = String(str);
     document.body.appendChild(el);
     el.select();
-    // noinspection JSDeprecatedSymbols
     document.execCommand('copy');
     document.body.removeChild(el);
     if (!showNotification) {
@@ -350,8 +323,12 @@ const makeSearchLink = (type: string, query: string): string => {
 /**
  * Dispatch event.
  */
-const dEvent = (eventName: string, detail: Record<string, any> = {}): boolean =>
-    window.dispatchEvent(new CustomEvent(eventName, { detail }));
+const dEvent = (eventName: string, detail: Record<string, any> = {}): boolean => {
+    if (!window) {
+        return false;
+    }
+    return window.dispatchEvent(new CustomEvent(eventName, {detail}));
+}
 
 /**
  * Make name
@@ -365,7 +342,7 @@ const makeName = (item: Record<string, any>, asMovie: boolean = false): string |
     const type = ag(item, 'type', 'movie');
 
     if (['show', 'movie'].includes(type) || asMovie) {
-        return r('{title} ({year})', { title, year });
+        return r('{title} ({year})', {title, year});
     }
 
     return r('{title} ({year}) - {season}x{episode}', {
@@ -376,20 +353,7 @@ const makeName = (item: Record<string, any>, asMovie: boolean = false): string |
     });
 };
 
-/**
- * Make pagination
- */
-type PaginationItem = {
-    page: number;
-    text: string;
-    selected: boolean;
-}
-
-const makePagination = (
-    current: number,
-    last: number,
-    delta: number = 5
-): PaginationItem[] => {
+const makePagination = (current: number, last: number, delta: number = 5): PaginationItem[] => {
     const pagination: PaginationItem[] = [];
 
     if (last < 2) {
@@ -423,46 +387,6 @@ const makePagination = (
     return pagination;
 };
 
-const makeSecret = (len: number = 8): string => {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-    let counter = 0;
-    while (counter < len) {
-        result += characters.charAt(Math.floor(Math.random() * characters.length));
-        counter += 1;
-    }
-    return result;
-};
-
-/**
- * Explode string by delimiter.
- */
-const explode = (
-    delimiter: string,
-    string: string,
-    limit: number | undefined = undefined
-): string[] => {
-    if (delimiter === '') {
-        return [string];
-    }
-
-    const parts = string.split(delimiter);
-
-    if (limit === undefined || limit === 0) {
-        return parts;
-    }
-
-    if (limit > 0) {
-        return parts.slice(0, limit - 1).concat(parts.slice(limit - 1).join(delimiter));
-    }
-
-    if (limit < 0) {
-        return parts.slice(0, limit);
-    }
-
-    return parts;
-};
-
 const basename = (path: string, ext: string = ''): string => {
     if (!path) {
         return '';
@@ -488,7 +412,7 @@ const parse_api_response = async <T = any>(r: Response): Promise<T | GenericErro
     try {
         return await r.json() as T;
     } catch (e) {
-        return { error: { code: r.status, message: r.statusText } } as GenericError;
+        return {error: {code: r.status, message: r.statusText}} as GenericError;
     }
 };
 
@@ -503,7 +427,7 @@ const goto_history_item = async (item: Record<string, any>): Promise<void> => {
 
     if (log_user !== api_user.value) {
         const dialog = useDialog();
-        const { status } = await dialog.confirmDialog({
+        const {status} = await dialog.confirmDialog({
             title: 'Switch User',
             message: `This item is related to '${item.user}' user. And you are currently using '${api_user.value}' Do you want to switch to view the item?`,
         })
@@ -527,7 +451,7 @@ const queue_event = async (
     delay: number = 0,
     opts: Record<string, any> = {}
 ): Promise<number> => {
-    let reqData: Record<string, any> = { event };
+    let reqData: Record<string, any> = {event};
     if (event_data) {
         reqData.event_data = event_data;
     }
@@ -539,10 +463,10 @@ const queue_event = async (
     }
 
     if (opts) {
-        reqData = { ...reqData, ...opts };
+        reqData = {...reqData, ...opts};
     }
 
-    return (await request(`/system/events`, { method: 'POST', body: JSON.stringify(reqData) })).status;
+    return (await request(`/system/events`, {method: 'POST', body: JSON.stringify(reqData)})).status;
 };
 
 const enableOpacity = (): void => {
@@ -558,45 +482,6 @@ const disableOpacity = (): void => {
     if (bg_enable.value) {
         document.querySelector('body')?.setAttribute("style", "opacity: 1");
     }
-};
-
-const makeAPIURL = (
-    path: string,
-    params: Record<string, any> = {},
-    opts: { no_prefix?: boolean, no_token?: boolean } = {}
-): string => {
-    const token = useStorage('token', '');
-    const api_user = useStorage('api_user', 'main');
-
-    let no_prefix = false;
-    let no_token = false;
-
-    if (opts?.no_prefix) {
-        no_prefix = opts.no_prefix;
-    }
-    if (opts?.no_token) {
-        no_token = opts.no_token;
-    }
-
-    if (!path.startsWith('/')) {
-        path = `/${path}`;
-    }
-
-    const req_params = new URLSearchParams(params || {});
-
-    if (!no_token && token.value) {
-        req_params.append('ws_token', token.value);
-    }
-
-    if (api_user.value !== 'main') {
-        req_params.append('user', api_user.value);
-    }
-
-    let url = path;
-    if (req_params.toString()) {
-        url += `?${req_params.toString()}`;
-    }
-    return no_prefix ? url : '/v1/api' + url;
 };
 
 /**
@@ -651,7 +536,6 @@ const getEventStatusClass = (status: number): string => {
 
 export {
     r,
-    ag_set,
     ag,
     request,
     humanFileSize,
@@ -669,14 +553,12 @@ export {
     makePagination,
     TOOLTIP_DATE_FORMAT,
     makeSecret,
-    explode,
     basename,
     parse_api_response,
     goto_history_item,
     queue_event,
     enableOpacity,
     disableOpacity,
-    makeAPIURL,
     awaiter,
     makeEventName,
     getEventStatusClass,
