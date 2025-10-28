@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20251027-afab14d4",
-        "date": "2025-10-27T16:47:15+00:00",
+        "tag": "dev-20251028-5003a2e4",
+        "date": "2025-10-28T15:16:52+00:00",
         "commits": [
+            {
+                "sha": "5003a2e4",
+                "message": "minor design fixes and doc updates",
+                "author": "arabcoders",
+                "date": "2025-10-28T15:16:52+00:00",
+                "full_sha": "5003a2e4977d2e3f877d63b1796125f8672ee492"
+            },
             {
                 "sha": "afab14d4",
                 "message": "[FIX] incorrect date was shown in backend page for items",
@@ -592,7 +599,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "afab14d4692c784da5b4792e670e4f25fb64307b"
+        "full_sha": "5003a2e4977d2e3f877d63b1796125f8672ee492"
     },
     {
         "tag": "dev-20250604-9407bc76",
