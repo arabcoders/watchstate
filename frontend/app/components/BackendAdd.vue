@@ -146,7 +146,7 @@
               <template v-if="plex_oauth_url">
                 <div class="field is-grouped">
                   <div class="control">
-                    <NuxtLink @click="plex_get_token" type="button" :disabled="plex_oauth_loading">
+                    <NuxtLink @click="() => plex_get_token()" type="button" :disabled="plex_oauth_loading">
                       <span class="icon-text">
                         <span class="icon"><i class="fas"
                                               :class="{ 'fa-check-double': !plex_oauth_loading, 'fa-spinner fa-pulse': plex_oauth_loading }"/></span>
@@ -406,7 +406,7 @@
 
 <script setup lang="ts">
 import '~/assets/css/bulma-switch.css'
-import {awaitElement, explode, notification, parse_api_response, request} from '~/utils'
+import {awaitElement, notification, parse_api_response, request} from '~/utils'
 import {useStorage} from '@vueuse/core'
 import {computed, nextTick, onMounted, ref, watch} from 'vue'
 import type {Backend, BackendOptions, BackendServer, BackendUser} from '~/types'
@@ -959,6 +959,28 @@ const n_proxy = (type: string, title: string, message: string, e: any = null): v
 
   notification(type as any, title, message)
 }
+
+const explode = (delimiter: string, string: string, limit: number | undefined = undefined): string[] => {
+  if ('' === delimiter) {
+    return [string];
+  }
+
+  const parts = string.split(delimiter);
+
+  if (undefined === limit || 0 === limit) {
+    return parts;
+  }
+
+  if (limit > 0) {
+    return parts.slice(0, limit - 1).concat(parts.slice(limit - 1).join(delimiter));
+  }
+
+  if (limit < 0) {
+    return parts.slice(0, limit);
+  }
+
+  return parts;
+};
 
 watch(error, v => v ? awaitElement('#backend_error', (_, e) => e.scrollIntoView({behavior: 'smooth'})) : null)
 </script>

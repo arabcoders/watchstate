@@ -657,3 +657,43 @@ If this is set up and working you may be ok with changing the `WS_CRON_IMPORT_AT
 something less frequent as the sync progress working will update the progress near realtime. For example, you could
 change these tasks to run daily to know how to do that please
 check [this FAQ entry](#how-to-enable-scheduledautomatic-tasks).
+
+---
+
+# WatchState is hammering my media backend with requests?
+
+By default, we do async requests to the media backends to speed up the sync process. However, in some cases this may
+lead to overloading the media backend with requests, especially if you have a large library. To mitigate this, you can
+instead switch the tasks to use synchronous requests. This will slow down the sync process but will reduce the load on
+your media backend. You have to manually edit the tasks `args` to include `--sync-requests` flag.
+
+For example, to change the `Import` task to use synchronous requests:
+
+1. Go to the `WebUI > Tasks`.
+2. Find the `Import` task and click on the `Args: -v` button.
+3. This will redirect you to the `Env` page to edit the relevant environment variable.
+4. In the `WS_CRON_IMPORT_ARGS` field, change the value from `-v` to `-v --sync-requests`.
+5. Click `Save Settings`.
+
+Repeat for all sync related tasks you want to change.
+
+---
+
+# Speed up the sync operations?
+
+If you have a large library, the initial sync operations can take a long time. To speed up the process, you can
+switch the db operation mode to use MEMORY mode. This will load the entire database into memory during the sync
+operations.
+
+> [!WARNING]
+> Using MEMORY mode can consume a lot of RAM, especially for large databases. Make sure your system has enough memory
+> to handle the database size. If the system runs out of memory, it may lead to crashes or data loss.
+
+To enable MEMORY mode, follow these steps:
+
+1. Go to the `WebUI > Env` page.
+2. Add a new environment variable.
+3. Select `WS_DB_MODE` from the dropdown list.
+4. select the `MEMORY` option.
+5. Click `Save`.
+

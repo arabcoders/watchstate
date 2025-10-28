@@ -193,6 +193,9 @@ class ImportCommand extends Command
         $isCustom = !empty($selected) && count($selected) > 0;
         $supported = Config::get('supported', []);
 
+        $totalStartTime = microtime(true);
+        $this->logger->notice("SYSTEM: Starting import process for '{total}' users", ['total' => count($users)]);
+
         foreach ($users as $userContext) {
             $list = [];
             $userStart = microtime(true);
@@ -469,6 +472,10 @@ class ImportCommand extends Command
                 );
             }
         }
+
+        $this->logger->notice("SYSTEM: Import process completed in '{duration}'s for all users.", [
+            'duration' => round(microtime(true) - $totalStartTime, 4),
+        ]);
 
         return self::SUCCESS;
     }

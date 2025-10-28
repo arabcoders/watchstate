@@ -23,6 +23,15 @@ export interface GenericResponse {
 }
 
 /**
+ * Make pagination
+ */
+export interface PaginationItem {
+    page: number;
+    text: string;
+    selected: boolean;
+}
+
+/**
  * Generic pagination structure used across multiple API endpoints.
  */
 export interface PaginationInfo {

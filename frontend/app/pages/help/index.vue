@@ -74,5 +74,11 @@ const choices: Array<{ number: number, title: string, text: string, url: string 
     text: 'Frequently asked questions.',
     url: '/help/faq',
   },
+  {
+    number: 6,
+    title: 'Using WatchState as backup solution',
+    text: 'Guide on how to setup watchstate for single backend with multiple users for backups.',
+    url: '/help/using-ws-as-backup-solution',
+  },
 ]
 </script>
