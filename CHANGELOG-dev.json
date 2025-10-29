@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20251028-5003a2e4",
-        "date": "2025-10-28T15:16:52+00:00",
+        "tag": "dev-20251029-647688cb",
+        "date": "2025-10-29T13:27:18+00:00",
         "commits": [
+            {
+                "sha": "647688cb",
+                "message": "finalize v1.0",
+                "author": "arabcoders",
+                "date": "2025-10-29T13:27:18+00:00",
+                "full_sha": "647688cb9c0abbe3ed067ed0d318001b463ebfc8"
+            },
             {
                 "sha": "5003a2e4",
                 "message": "minor design fixes and doc updates",
@@ -599,7 +606,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "5003a2e4977d2e3f877d63b1796125f8672ee492"
+        "full_sha": "647688cb9c0abbe3ed067ed0d318001b463ebfc8"
     },
     {
         "tag": "dev-20250604-9407bc76",
