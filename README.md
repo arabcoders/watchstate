@@ -10,24 +10,17 @@ box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 # Updates
 
-### 2025-08-18
+### 2025-10-29
 
-We have added the final feature before tagging `v1.0.0`, The new feature is a tool by which you can search your database
-for duplicate file references, this is useful if you have multiple backends that reference the same file, they are
-reporting different metadata for same file.
+After more than **3.5 years**, **2.2k+ commits**, **900+ stars**, and **1 million+ downloads**, we’re happy to announce
+the first stable release of **WatchState v1.0.0**.
 
-To make it skip multi-episode items, go to backends page, and from quick operation list, select
-`Force metadata import from this backend.` this will recreate the metadata which we have included flag to mark
-multi-episode items.
+This milestone marks the project’s maturity and reliability for production use. We extend our thanks to everyone who
+provided feedback, reported bugs, and helped refine the tool your input has been invaluable.
 
-Subsequent updates will mostly focus on bug fixes and performance improvements, as well as documentation updates.
-
-### 2025-08-14
-
-We are planning on tagging `v1.0.0` in the 4th quarter of 2025, as such if you are relying on deprecated
-behavior or features please start migrating to the new alternatives that we have implemented. things that will be
-removed before the `v1.0.0`. We will document all the deprecated features that are subject to removal in the
-coming weeks. Most notably the removal of the per user/backend webhook end point.
+The current feature set and stability meet our goals, so future work will focus on **maintenance and bug fixes**.
+Feedback and suggestions remain welcome, but **major new features** may be limited as we prioritize **stability and
+long-term reliability**.
 
 Please refer to [NEWS](/NEWS.md) for the latest updates and changes.
 
@@ -36,8 +29,8 @@ Please refer to [NEWS](/NEWS.md) for the latest updates and changes.
 # Features
 
 * Management via WebUI.
-* **Sub-users** support.
-* Sync backends play state (`Many-to-Many` or `One-Way`).
+* **Sub-users** support. `Multi-users`.
+* Sync backends play state (`Many-to-many` or `One-way`).
 * Backup your backends play state into `portable` format.
 * Receive [webhook](guides/webhooks.md) events from media backends.
 * Find `un-matched` or `mis-matched` items.
@@ -151,11 +144,12 @@ to configure things.
 
 # Social channels
 
-If you have short or quick questions, or just want to chat with other users, feel free to join
-this [discord server](https://discord.gg/haUXHJyj6Y), keep in mind it's solo project, as such it might take me a bit of
-time to reply to questions, I operate in `UTC+3` timezone.
+If you have quick questions or would like to chat with other users, you can join
+the [Discord server](https://discord.gg/haUXHJyj6Y). Please note that this is a solo project, so replies may take some
+time. I’m based in the `UTC+3` timezone.
 
 # Donate
 
-If you feel like donating and appreciate my work, you can do so by donating to children charity. For
-example the [International Make-A-Wish foundation](https://worldwish.org).
+If you’d like to show appreciation for my work, please note that I don’t accept donations. Instead, I encourage you to
+donate to a children’s charity of your choice. For
+example, [The International Make-A-Wish foundation](https://worldwish.org).
