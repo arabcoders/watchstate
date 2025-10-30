@@ -88,12 +88,16 @@ final readonly class PlexValidateContext
                 $url = $url->withQuery(http_build_query(['pin' => (string)$pin]));
             }
 
-            $request = $this->http->request('GET', (string)$url, [
-                'headers' => [
-                    'Accept' => 'application/json',
-                    'X-Plex-Token' => $context->backendToken,
-                ],
-            ]);
+            $request = $this->http->request(
+                method: 'GET',
+                url: (string)$url,
+                options: array_replace_recursive($context->backendHeaders, [
+                    'headers' => [
+                        'Accept' => 'application/json',
+                        'X-Plex-Token' => $context->backendToken,
+                    ],
+                ])
+            );
 
             if (Status::UNAUTHORIZED === Status::tryFrom($request->getStatusCode())) {
                 throw new InvalidContextException('Backend responded with 401. Most likely means token is invalid.');

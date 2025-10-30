@@ -868,6 +868,10 @@ class PlexClient implements iClient
                         'proto' => 'http',
                         'uri' => r('http://{ip}:{port}', ['ip' => ag($arr, 'address'), 'port' => ag($arr, 'port')]),
                     ]);
+                    $list['list'][] = array_replace_recursive($arr, [
+                        'proto' => 'https',
+                        'uri' => r('https://{ip}:{port}', ['ip' => ag($arr, 'address'), 'port' => ag($arr, 'port')]),
+                    ]);
                 }
 
                 $list['list'][] = $arr;

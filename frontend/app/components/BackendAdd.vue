@@ -192,7 +192,7 @@
             </p>
           </div>
 
-          <template v-else>
+          <template v-if="'plex' === backend.type">
             <div class="field">
               <label class="label">Plex Server URL</label>
               <div class="field-body">
@@ -249,7 +249,23 @@
                 This stops WatchState from attempting to generate access-tokens for different users.
               </p>
             </div>
+
           </template>
+
+          <div class="field" v-if="backend?.options?.client">
+            <label class="label" for="backend_ownership">Validate SSL Certificate</label>
+            <div class="control">
+              <input id="backend_ssl_verify" type="checkbox" class="switch is-success"
+                     v-model="backend.options.client.verify_host" :disabled="stage > 1">
+              <label for="backend_ssl_verify" class="is-unselectable">
+                {{ backend.options?.client?.verify_host ? 'Yes' : 'No' }}
+              </label>
+            </div>
+            <p class="help">
+              Whether to validate SSL certificate of the backend server. Disable this if you are using self-signed
+              certificates.
+            </p>
+          </div>
         </template>
 
         <div class="field" v-if="stage >= 3">
@@ -433,7 +449,11 @@ const backend = ref<Backend>({
   export: {
     enabled: false
   },
-  options: {} as BackendOptions
+  options: {
+    client: {
+      verify_host: true,
+    }
+  } as BackendOptions
 })
 
 const api_user = useStorage<string>('api_user', 'main')
@@ -601,6 +621,10 @@ const getUUid = async (): Promise<string | undefined> => {
       data.user = backend.value.user
     }
 
+    if (false === (backend.value.options?.client?.verify_host ?? true)) {
+      data.options = {client: {verify_host: false}}
+    }
+
     const response = await request(`/backends/uuid/${backend.value.type}`, {
       method: 'POST',
       body: JSON.stringify(data)
@@ -644,14 +668,20 @@ const getAccessToken = async (): Promise<boolean | undefined> => {
   try {
     error.value = null
 
+    const data: any = {
+      name: backend.value?.name,
+      url: backend.value.url,
+      username: username,
+      password: password,
+    }
+
+    if (false === (backend.value.options?.client?.verify_host ?? true)) {
+      data.options = {client: {verify_host: false}}
+    }
+
     const response = await request(`/backends/accesstoken/${backend.value.type}`, {
       method: 'POST',
-      body: JSON.stringify({
-        name: backend.value?.name,
-        url: backend.value.url,
-        username: username,
-        password: password,
-      })
+      body: JSON.stringify(data)
     })
 
     const json = await response.json()
@@ -706,6 +736,10 @@ const getUsers = async (showAlert: boolean = true, forceReload: boolean = false)
         data.options[key] = backend.value.options[key]
       }
     })
+
+    if (false === (backend.value.options?.client?.verify_host ?? true)) {
+      data.options = {client: {verify_host: false}}
+    }
 
     const query = new URLSearchParams()
     query.append('tokens', '1')
@@ -863,6 +897,11 @@ const addBackend = async (): Promise<boolean> => {
 
   if (isLimited.value) {
     backend.value.options.is_limited_token = true
+  }
+
+  // -- remove it as it's the default behavior.
+  if (backend.value.options?.client?.verify_host) {
+    delete backend.value.options.client.verify_host
   }
 
   const response = await request('/backends/', {

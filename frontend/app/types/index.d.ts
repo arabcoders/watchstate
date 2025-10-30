@@ -194,6 +194,8 @@ export interface BackendOptions {
         timeout?: number
         /** The http version to use when making requests to the backend */
         http_version?: number
+        /** Whether to verify the backend host SSL certificate */
+        verify_host?: boolean
     }
     /** Whether the token has limited access */
     is_limited_token?: boolean

@@ -1484,3 +1484,32 @@ if (!function_exists('parseEpisodeRange')) {
         ];
     }
 }
+
+if (!function_exists('flatArray')) {
+    /**
+     * Flatten an array.
+     *
+     * @param array $obj The array to flatten.
+     * @param string $prefix (Optional) The prefix for the keys.
+     * @param string $separator (Optional) The separator to use between keys.
+     *
+     * @return array The flattened array.
+     */
+    function flatArray(array $obj, string $prefix = '', string $separator = '.'): array
+    {
+        $out = [];
+
+        foreach ($obj as $key => $val) {
+            $path = $prefix ? "{$prefix}{$separator}{$key}" : $key;
+
+            if ((is_array($val) || is_object($val)) && count((array)$val) > 0) {
+                $out = array_merge($out, flatArray((array)$val, $path, $separator));
+                continue;
+            }
+            // Add scalar, empty array, or empty object
+            $out[$path] = $val;
+        }
+
+        return $out;
+    }
+}
