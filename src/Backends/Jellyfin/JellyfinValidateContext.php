@@ -79,12 +79,16 @@ class JellyfinValidateContext
     {
         try {
             $url = $context->backendUrl->withPath('/system/Info');
-            $request = $this->http->request(Method::GET, (string)$url, [
-                'headers' => [
-                    'Accept' => 'application/json',
-                    'X-MediaBrowser-Token' => $context->backendToken,
-                ],
-            ]);
+            $request = $this->http->request(
+                method: Method::GET,
+                url: (string)$url,
+                options: array_replace_recursive($context->backendHeaders, [
+                    'headers' => [
+                        'Accept' => 'application/json',
+                        'X-MediaBrowser-Token' => $context->backendToken,
+                    ],
+                ])
+            );
 
             if (Status::UNAUTHORIZED === Status::tryFrom($request->getStatusCode())) {
                 throw new InvalidContextException('Backend responded with 401. Most likely means token is invalid.');
