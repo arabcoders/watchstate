@@ -145,7 +145,7 @@ final class Add
             'options' => [],
         ];
 
-        foreach ($data->get('options', []) as $key => $value) {
+        foreach (flatArray($data->get('options', [])) as $key => $value) {
             $key = "options.{$key}";
             $spec = getServerColumnSpec($key);
 
@@ -155,7 +155,6 @@ final class Add
 
             $config = ag_set($config, $key, $value);
         }
-
         return $client->fromRequest($config, $request);
     }
 }

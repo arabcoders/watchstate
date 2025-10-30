@@ -162,6 +162,12 @@ return [
         'description' => 'The http version to use when making requests to the backend.',
     ],
     [
+        'key' => 'options.client.verify_host',
+        'type' => 'bool',
+        'visible' => false,
+        'description' => 'Whether to verify the SSL host when making requests to the backend. Default is true.',
+    ],
+    [
         'key' => 'options.is_limited_token',
         'type' => 'bool',
         'visible' => false,
