@@ -111,6 +111,7 @@ class GenerateAccessToken
                     'version' => getAppVersion(),
                 ]),
             ],
+            ...ag($context->backendHeaders, 'client', []),
         ]);
 
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
