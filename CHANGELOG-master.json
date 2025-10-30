@@ -1,8 +1,29 @@
 [
     {
-        "tag": "master-20251029-f872d628",
-        "date": "2025-10-29T13:28:24+00:00",
+        "tag": "master-20251031-b77ad3b8",
+        "date": "2025-10-30T21:52:16+00:00",
         "commits": [
+            {
+                "sha": "1d24805b",
+                "message": "for jellyfin/emby allow disabling ssl checks when generating access tokens",
+                "author": "arabcoders",
+                "date": "2025-10-30T15:17:18+00:00",
+                "full_sha": "1d24805b12d25cbbd42c709f8c0c535833d549ce"
+            },
+            {
+                "sha": "04b3cd19",
+                "message": "Allow user to disable SSL check for emby/jellyfin as well. Followup #739",
+                "author": "arabcoders",
+                "date": "2025-10-30T15:14:40+00:00",
+                "full_sha": "04b3cd19f51df4e587689e3e58fd5917319f761c"
+            },
+            {
+                "sha": "29220043",
+                "message": "[FEAT] allow user to disable ssl checks for backend. Closes #739",
+                "author": "arabcoders",
+                "date": "2025-10-30T14:46:31+00:00",
+                "full_sha": "292200434377de8b25d4145e2eebbd025d90cec9"
+            },
             {
                 "sha": "647688cb",
                 "message": "finalize v1.0",
@@ -571,7 +592,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "f872d628102c4fc18c2a4f43986e775f53c113e7"
+        "full_sha": "b77ad3b814f113cb1693f74b89531e09486f1c17"
     },
     {
         "tag": "master-20250614-e3307c58",
