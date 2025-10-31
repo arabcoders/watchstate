@@ -88,10 +88,6 @@
                 Dark
               </label>
             </div>
-            <p class="help is-unselectable">
-              <span class="icon"><i class="fa-solid fa-info"/></span>
-              <span>Select the color scheme for the WebUI.</span>
-            </p>
           </div>
 
           <div class="field">
@@ -104,15 +100,11 @@
                 {{ poster_enable ? 'Disable' : 'Enable' }}
               </label>
             </div>
-            <p class="help is-unselectable">
-              <span class="icon"><i class="fa-solid fa-info"/></span>
-              <span>Display posters for episodes and movies in the item history cards.</span>
-            </p>
           </div>
 
           <div class="field">
             <label class="is-unselectable label">
-              Backgrounds
+              Backgrounds from backends
               <span v-if="bg_enable">
                 -
                 <NuxtLink @click="emit('force_bg_reload')">
@@ -127,10 +119,6 @@
                 {{ bg_enable ? 'Disable' : 'Enable' }}
               </label>
             </div>
-            <p class="help is-unselectable">
-              <span class="icon"><i class="fa-solid fa-info"/></span>
-              <span>Use random background image from your media backends. Images are cached for 1 hour.</span>
-            </p>
           </div>
 
           <div class="field">
@@ -141,10 +129,6 @@
               <input id="random_bg_opacity" style="width: 100%" type="range" v-model="bg_opacity" min="0.60" max="1.00"
                      step="0.05">
             </div>
-            <p class="help is-unselectable">
-              <span class="icon"><i class="fa-solid fa-info"/></span>
-              <span>How visible the background image should be.</span>
-            </p>
           </div>
         </div>
       </div>

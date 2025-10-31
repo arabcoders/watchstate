@@ -245,7 +245,6 @@
     <div>
       <div>
         <TaskScheduler :forceShow="showScheduler" @update="e => scheduler = e" v-if="in_container"/>
-        <Settings v-if="showSettings" @force_bg_reload="() => loadImage(true)"/>
         <NuxtPage/>
         <ClientOnly>
           <Dialog/>
@@ -291,6 +290,12 @@
           <UserSelection/>
         </Overlay>
       </template>
+      <template v-if="showSettings">
+        <Overlay @closeOverlay="() => showSettings = false" title="WebUI Settings">
+          <Settings @force_bg_reload="() => loadImage(true)"/>
+        </Overlay>
+      </template>
+
     </div>
   </div>
 </template>
