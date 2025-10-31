@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20251030-1d24805b",
-        "date": "2025-10-30T15:17:18+00:00",
+        "tag": "dev-20251031-f1137047",
+        "date": "2025-10-31T17:10:10+00:00",
         "commits": [
+            {
+                "sha": "f1137047",
+                "message": "Render the WebUI settings into a modal",
+                "author": "arabcoders",
+                "date": "2025-10-31T17:10:10+00:00",
+                "full_sha": "f11370478c839165991dc5b2b4aad88f1637aa0b"
+            },
             {
                 "sha": "1d24805b",
                 "message": "for jellyfin/emby allow disabling ssl checks when generating access tokens",
@@ -627,7 +634,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "1d24805b12d25cbbd42c709f8c0c535833d549ce"
+        "full_sha": "f11370478c839165991dc5b2b4aad88f1637aa0b"
     },
     {
         "tag": "dev-20250604-9407bc76",
