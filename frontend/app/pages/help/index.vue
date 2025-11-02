@@ -80,5 +80,11 @@ const choices: Array<{ number: number, title: string, text: string, url: string 
     text: 'Guide on how to setup watchstate for single backend with multiple users for backups.',
     url: '/help/using-ws-as-backup-solution',
   },
+  {
+    number: 7,
+    title: 'Syncing a family account',
+    text: 'Guide on how to sync a family account with multiple users.',
+    url: '/help/three-way-sync',
+  },
 ]
 </script>
