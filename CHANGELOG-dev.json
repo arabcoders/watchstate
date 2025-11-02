@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20251102-d2fef90d",
-        "date": "2025-11-02T13:30:57+00:00",
+        "tag": "dev-20251102-b5c7bfdf",
+        "date": "2025-11-02T14:36:23+00:00",
         "commits": [
+            {
+                "sha": "b5c7bfdf",
+                "message": "[FIX] SSL disable via WebUI",
+                "author": "arabcoders",
+                "date": "2025-11-02T14:36:23+00:00",
+                "full_sha": "b5c7bfdfc00b74229bd9698959efb932ac947f96"
+            },
             {
                 "sha": "d2fef90d",
                 "message": "added a guide to sync family account",
@@ -641,7 +648,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "d2fef90d551dddd82729ce93338e983898cbce0c"
+        "full_sha": "b5c7bfdfc00b74229bd9698959efb932ac947f96"
     },
     {
         "tag": "dev-20250604-9407bc76",
