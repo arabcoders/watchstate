@@ -14,7 +14,7 @@ conflicting with each other.
 
 # How to Set Up Three-Way Sync
 
-## Step 1: Set Up the Shared Account
+## Step 1: Set Up the Individual Accounts.
 
 Follow the [one-way sync guide](./one-way-sync.md) Once the setup is complete you need to remove the shared user's data
 folder to prevent conflicts:
