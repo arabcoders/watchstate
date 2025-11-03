@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20251103-e668e2cd",
-        "date": "2025-11-03T14:05:34+00:00",
+        "tag": "dev-20251103-f8fd50ff",
+        "date": "2025-11-03T15:28:36+00:00",
         "commits": [
+            {
+                "sha": "f8fd50ff",
+                "message": "[FEAT] Make it possible to disallow backend from marking items as unplayed.",
+                "author": "arabcoders",
+                "date": "2025-11-03T15:28:36+00:00",
+                "full_sha": "f8fd50ff1736dd6b5893eea8ec5f2e1245e8458c"
+            },
             {
                 "sha": "e668e2cd",
                 "message": "Ignore media browser Folder items",
@@ -655,7 +662,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "e668e2cd5d60f43e839cb0758e47b105d9521903"
+        "full_sha": "f8fd50ff1736dd6b5893eea8ec5f2e1245e8458c"
     },
     {
         "tag": "dev-20250604-9407bc76",
