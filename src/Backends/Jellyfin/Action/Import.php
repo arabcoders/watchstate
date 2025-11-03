@@ -412,6 +412,7 @@ class Import
                     'recursive' => 'false',
                     'enableUserData' => 'false',
                     'enableImages' => 'false',
+                    'filters' => "IsNotFolder",
                     'fields' => implode(',', JFC::EXTRA_FIELDS),
                     'excludeLocationTypes' => 'Virtual',
                 ])
@@ -810,8 +811,9 @@ class Import
                             'episode' => str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
                         ]),
                         default => throw new InvalidArgumentException(
-                            r('Unexpected Content type [{type}] was received.', [
-                                'type' => $type
+                            r("Unexpected Content type '{type}: {title}' was received.", [
+                                'type' => $type,
+                                'title' => ag($item, ['Name', 'OriginalTitle', 'SeriesName'], '??'),
                             ])
                         ),
                     },
