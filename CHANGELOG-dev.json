@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20251103-f8fd50ff",
-        "date": "2025-11-03T15:28:36+00:00",
+        "tag": "dev-20251103-f3b7b097",
+        "date": "2025-11-03T15:35:17+00:00",
         "commits": [
+            {
+                "sha": "f3b7b097",
+                "message": "updated removed keys",
+                "author": "arabcoders",
+                "date": "2025-11-03T15:35:17+00:00",
+                "full_sha": "f3b7b0975d2d432e31c9b351595ef10b956d642d"
+            },
             {
                 "sha": "f8fd50ff",
                 "message": "[FEAT] Make it possible to disallow backend from marking items as unplayed.",
@@ -662,7 +669,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "f8fd50ff1736dd6b5893eea8ec5f2e1245e8458c"
+        "full_sha": "f3b7b0975d2d432e31c9b351595ef10b956d642d"
     },
     {
         "tag": "dev-20250604-9407bc76",
