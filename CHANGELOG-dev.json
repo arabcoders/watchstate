@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20251102-b5c7bfdf",
-        "date": "2025-11-02T14:36:23+00:00",
+        "tag": "dev-20251103-e668e2cd",
+        "date": "2025-11-03T14:05:34+00:00",
         "commits": [
+            {
+                "sha": "e668e2cd",
+                "message": "Ignore media browser Folder items",
+                "author": "arabcoders",
+                "date": "2025-11-03T14:05:34+00:00",
+                "full_sha": "e668e2cd5d60f43e839cb0758e47b105d9521903"
+            },
             {
                 "sha": "b5c7bfdf",
                 "message": "[FIX] SSL disable via WebUI",
@@ -648,7 +655,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "b5c7bfdfc00b74229bd9698959efb932ac947f96"
+        "full_sha": "e668e2cd5d60f43e839cb0758e47b105d9521903"
     },
     {
         "tag": "dev-20250604-9407bc76",
