@@ -1,8 +1,43 @@
 [
     {
-        "tag": "master-20251031-05aa3b64",
-        "date": "2025-10-31T19:29:29+00:00",
+        "tag": "master-20251103-ad2daf74",
+        "date": "2025-11-03T15:54:01+00:00",
         "commits": [
+            {
+                "sha": "f3b7b097",
+                "message": "updated removed keys",
+                "author": "arabcoders",
+                "date": "2025-11-03T15:35:17+00:00",
+                "full_sha": "f3b7b0975d2d432e31c9b351595ef10b956d642d"
+            },
+            {
+                "sha": "f8fd50ff",
+                "message": "[FEAT] Make it possible to disallow backend from marking items as unplayed.",
+                "author": "arabcoders",
+                "date": "2025-11-03T15:28:36+00:00",
+                "full_sha": "f8fd50ff1736dd6b5893eea8ec5f2e1245e8458c"
+            },
+            {
+                "sha": "e668e2cd",
+                "message": "Ignore media browser Folder items",
+                "author": "arabcoders",
+                "date": "2025-11-03T14:05:34+00:00",
+                "full_sha": "e668e2cd5d60f43e839cb0758e47b105d9521903"
+            },
+            {
+                "sha": "b5c7bfdf",
+                "message": "[FIX] SSL disable via WebUI",
+                "author": "arabcoders",
+                "date": "2025-11-02T14:36:23+00:00",
+                "full_sha": "b5c7bfdfc00b74229bd9698959efb932ac947f96"
+            },
+            {
+                "sha": "d2fef90d",
+                "message": "added a guide to sync family account",
+                "author": "arabcoders",
+                "date": "2025-11-02T13:30:57+00:00",
+                "full_sha": "d2fef90d551dddd82729ce93338e983898cbce0c"
+            },
             {
                 "sha": "f1137047",
                 "message": "Render the WebUI settings into a modal",
@@ -599,7 +634,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "05aa3b64fa7351042f620718b4978a44d9dc1633"
+        "full_sha": "ad2daf741b8f3df30248b91410540381b388bfa6"
     },
     {
         "tag": "master-20250614-e3307c58",
