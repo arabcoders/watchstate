@@ -215,8 +215,8 @@ export interface BackendOptions {
     ALT_ID?: number
     /** The plex username */
     plex_user_name?: string
-    /** Whether to use old progress endpoint for plex */
-    use_old_progress_endpoint?: boolean
+    /** Prevent backend from marking items as unplayed */
+    DISABLE_MARK_UNPLAYED?: boolean
 }
 
 /**

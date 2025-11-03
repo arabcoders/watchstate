@@ -111,6 +111,7 @@ final readonly class ProcessRequestEvent
 
         $mapper->add($entity, [
             Options::IMPORT_METADATA_ONLY => (bool)ag($e->getOptions(), Options::IMPORT_METADATA_ONLY),
+            Options::DISABLE_MARK_UNPLAYED => (bool)ag($e->getOptions(), Options::DISABLE_MARK_UNPLAYED),
             Options::STATE_UPDATE_EVENT => fn(iState $state) => queuePush(entity: $state, userContext: $userContext),
             Options::LOG_TO_WRITER => $writer,
             'after' => $lastSync,

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs\Entity;
 
+use App\Libs\UserContext;
 use Psr\Log\LoggerAwareInterface;
 
 interface StateInterface extends LoggerAwareInterface
@@ -354,16 +355,18 @@ interface StateInterface extends LoggerAwareInterface
      * * [5] **db.item.metadata.backend.watched** field **MUST** be set as **1** (played).
      * * [6] **entity.metadata.backend.id** field **MUST** match **db.item.metadata.backend.id**.
      * * [7] **entity.updated** field **MUST** match **db.item.metadata.backend.added_at**.
+     * * [8] **userContext.options.DISABLE_MARK_UNPLAYED** flag **MUST NOT** be set to true.
      *
      * ----------------
      *
      * Ref: **db.item.[]** refers to local db data. **entity.[]** refers to the data being received from backend.
      *
      * @param StateInterface $backend Backend object.
+     * @param UserContext|null $userContext User context object.
      *
      * @return bool Return true if all conditions are met.
      */
-    public function shouldMarkAsUnplayed(StateInterface $backend): bool;
+    public function shouldMarkAsUnplayed(StateInterface $backend, UserContext|null $userContext = null): bool;
 
     /**
      * Mark item as unplayed.<br><br>

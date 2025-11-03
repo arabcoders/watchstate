@@ -522,10 +522,6 @@ class CreateUsersCommand extends Command
                                 $update['options.' . Options::PLEX_EXTERNAL_USER] = (bool)$val;
                             }
 
-                            if (null !== ($val = ag($backend, 'client_data.options.use_old_progress_endpoint'))) {
-                                $update['options.use_old_progress_endpoint'] = $val;
-                            }
-
                             $update['options.' . Options::ADMIN_TOKEN] = ag($backend, [
                                 'client_data.options.' . Options::ADMIN_TOKEN,
                                 'client_data.token'

@@ -337,7 +337,7 @@ class MemoryMapper implements ImportInterface
         $keys = [iState::COLUMN_META_DATA];
 
         // -- Handle mark as unplayed logic.
-        if (false === $entity->isWatched() && true === $cloned->shouldMarkAsUnplayed(backend: $entity)) {
+        if (false === $entity->isWatched() && true === $cloned->shouldMarkAsUnplayed($entity, $this->userContext)) {
             $this->changed[$pointer] = $pointer;
             Message::increment("{$entity->via}.{$entity->type}.updated");
 

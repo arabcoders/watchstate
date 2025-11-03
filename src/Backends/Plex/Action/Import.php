@@ -935,6 +935,7 @@ class Import
             $mapper->add(entity: $entity, opts: [
                 'after' => ag($opts, 'after', null),
                 Options::IMPORT_METADATA_ONLY => true === (bool)ag($context->options, Options::IMPORT_METADATA_ONLY),
+                Options::DISABLE_MARK_UNPLAYED => true === (bool)ag($context->options, Options::DISABLE_MARK_UNPLAYED),
             ]);
         } catch (Throwable $e) {
             $this->logger->error(

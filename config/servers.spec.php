@@ -222,9 +222,9 @@ return [
         'description' => 'The plex user name.',
     ],
     [
-        'key' => 'options.use_old_progress_endpoint',
+        'key' => 'options.DISABLE_MARK_UNPLAYED',
         'type' => 'bool',
         'visible' => false,
-        'description' => 'Whether to use old progress endpoint for plex.',
+        'description' => 'Prevent the backend from marking items as unplayed.',
     ],
 ];
