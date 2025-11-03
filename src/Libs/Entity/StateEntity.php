@@ -7,6 +7,8 @@ namespace App\Libs\Entity;
 use App\Libs\Config;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
+use App\Libs\Options;
+use App\Libs\UserContext;
 use Psr\Log\LoggerAwareTrait;
 use RuntimeException;
 
@@ -536,7 +538,7 @@ final class StateEntity implements iState
     /**
      * @inheritdoc
      */
-    public function shouldMarkAsUnplayed(iState $backend): bool
+    public function shouldMarkAsUnplayed(iState $backend, UserContext|null $userContext = null): bool
     {
         // -- Condition: 1 & 2
         if (false !== $backend->isWatched() && true === $this->isWatched()) {
@@ -572,6 +574,12 @@ final class StateEntity implements iState
 
         // -- Condition: 7
         if ((int)$addedAt !== $backend->updated) {
+            return false;
+        }
+
+        // -- Condition: 8
+        $key = "{$backend->via}.options." . Options::DISABLE_MARK_UNPLAYED;
+        if ($userContext && true === $userContext->get($key, false)) {
             return false;
         }
 

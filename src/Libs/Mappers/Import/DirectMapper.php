@@ -482,7 +482,7 @@ class DirectMapper implements ImportInterface
         $cloned = clone $local;
 
         // -- Handle mark as unplayed logic.
-        if (false === $entity->isWatched() && true === $cloned->shouldMarkAsUnplayed(backend: $entity)) {
+        if (false === $entity->isWatched() && true === $cloned->shouldMarkAsUnplayed($entity, $this->userContext)) {
             try {
                 $local = $local->apply(
                     entity: $entity,

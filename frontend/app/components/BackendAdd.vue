@@ -621,7 +621,8 @@ const getUUid = async (): Promise<string | undefined> => {
       data.user = backend.value.user
     }
 
-    if (false === (backend.value.options?.client?.verify_host ?? true)) {
+    const verifyHost = ag(toRaw(backend.value), 'options.client.verify_host', true)
+    if (false === verifyHost) {
       data.options = {client: {verify_host: false}}
     }
 
@@ -675,7 +676,8 @@ const getAccessToken = async (): Promise<boolean | undefined> => {
       password: password,
     }
 
-    if (false === (backend.value.options?.client?.verify_host ?? true)) {
+    const verifyHost = ag(toRaw(backend.value), 'options.client.verify_host', true)
+    if (false === verifyHost) {
       data.options = {client: {verify_host: false}}
     }
 
@@ -737,7 +739,8 @@ const getUsers = async (showAlert: boolean = true, forceReload: boolean = false)
       }
     })
 
-    if (false === (backend.value.options?.client?.verify_host ?? true)) {
+    const verifyHost = ag(toRaw(backend.value), 'options.client.verify_host', true)
+    if (false === verifyHost) {
       data.options = {client: {verify_host: false}}
     }
 
@@ -899,8 +902,8 @@ const addBackend = async (): Promise<boolean> => {
     backend.value.options.is_limited_token = true
   }
 
-  // -- remove it as it's the default behavior.
-  if (backend.value.options?.client?.verify_host) {
+  const verifyHost = ag(toRaw(backend.value), 'options.client.verify_host', true)
+  if (true === verifyHost && backend.value.options?.client) {
     delete backend.value.options.client.verify_host
   }
 

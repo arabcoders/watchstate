@@ -54,6 +54,7 @@ final class Options
     public const string RAW_RESPONSE_CALLBACK = 'RAW_RESPONSE_CALLBACK';
     public const string INTERNAL_REQUEST = 'INTERNAL_REQUEST';
     public const string IS_GENERIC = 'IS_GENERIC';
+    public const string DISABLE_MARK_UNPLAYED = 'DISABLE_MARK_UNPLAYED';
 
     private function __construct()
     {

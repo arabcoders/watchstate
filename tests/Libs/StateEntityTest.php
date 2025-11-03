@@ -9,6 +9,7 @@ use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\Guid;
+use App\Libs\Options;
 use App\Libs\TestCase;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
@@ -806,6 +807,57 @@ class StateEntityTest extends TestCase
         $this->assertTrue(
             StateEntity::fromArray($this->testMovie)->shouldMarkAsUnplayed($updater),
             'When all 7 conditions are met shouldMarkAsUnplayed() returns true'
+        );
+    }
+
+    public function test_shouldMarkAsUnplayed_with_disable_flag(): void
+    {
+        // -- Setup: Create updater entity that is unwatched
+        $updater = new StateEntity($this->testMovie);
+        $updater->watched = 0;
+
+        // -- Condition 8: DISABLE_MARK_UNPLAYED flag is set to true in UserContext
+        // Note: The key format is "{backend.via}.options.DISABLE_MARK_UNPLAYED"
+        $userContext = $this->createUserContext(
+            name: 'test_backend',
+            data: [
+                'test_plex.options.' . Options::DISABLE_MARK_UNPLAYED => true
+            ]
+        );
+
+        $this->assertFalse(
+            StateEntity::fromArray($this->testMovie)->shouldMarkAsUnplayed($updater, $userContext),
+            'When DISABLE_MARK_UNPLAYED flag is set to true, shouldMarkAsUnplayed() returns false'
+        );
+
+        // -- Test with flag set to false (should behave normally)
+        $userContextFalse = $this->createUserContext(
+            name: 'test_backend_false',
+            data: [
+                'test_plex.options.' . Options::DISABLE_MARK_UNPLAYED => false
+            ]
+        );
+
+        $this->assertTrue(
+            StateEntity::fromArray($this->testMovie)->shouldMarkAsUnplayed($updater, $userContextFalse),
+            'When DISABLE_MARK_UNPLAYED flag is set to false, shouldMarkAsUnplayed() returns true (normal behavior)'
+        );
+
+        // -- Test with null UserContext (should behave normally)
+        $this->assertTrue(
+            StateEntity::fromArray($this->testMovie)->shouldMarkAsUnplayed($updater, null),
+            'When UserContext is null, shouldMarkAsUnplayed() returns true (normal behavior)'
+        );
+
+        // -- Test with UserContext but without the flag set (should behave normally)
+        $userContextNoFlag = $this->createUserContext(
+            name: 'test_backend_no_flag',
+            data: []
+        );
+
+        $this->assertTrue(
+            StateEntity::fromArray($this->testMovie)->shouldMarkAsUnplayed($updater, $userContextNoFlag),
+            'When DISABLE_MARK_UNPLAYED flag is not set, shouldMarkAsUnplayed() returns true (normal behavior)'
         );
     }
 
