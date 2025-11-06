@@ -215,7 +215,7 @@ final class Export extends Import
                 $this->http->request(
                     method: Method::GET,
                     url: (string)$url,
-                    options: array_replace_recursive($context->backendHeaders, [
+                    options: array_replace_recursive($context->getHttpOptions(), [
                         'user_data' => [
                             'context' => $logContext + ['play_state' => $entity->isWatched() ? 'Played' : 'Unplayed'],
                         ]

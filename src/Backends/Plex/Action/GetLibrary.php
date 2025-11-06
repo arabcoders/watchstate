@@ -138,7 +138,7 @@ final class GetLibrary
         $response = $this->http->request(
             method: Method::GET,
             url: (string)$url,
-            options: array_replace_recursive($context->backendHeaders, $extraHeaders)
+            options: array_replace_recursive($context->getHttpOptions(), $extraHeaders)
         );
 
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
@@ -201,7 +201,7 @@ final class GetLibrary
                     url: (string)$context->backendUrl->withPath(
                         r('/library/metadata/{item_id}', ['item_id' => ag($logContext, 'item.id')])
                     ),
-                    options: $context->backendHeaders + ['user_data' => ['context' => $logContext]]
+                    options: $context->getHttpOptions() + ['user_data' => ['context' => $logContext]]
                 );
             }
         }

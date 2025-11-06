@@ -158,13 +158,11 @@ class PlexClient implements iClient
             backendId: $context->backendId,
             backendToken: $context->backendToken,
             backendUser: $context->backendUser,
-            backendHeaders: array_replace_recursive([
-                'headers' => [
-                    'Accept' => 'application/json',
-                    'X-Plex-Token' => $context->backendToken,
-                    ...self::getHeaders()
-                ],
-            ], ag($context->options, 'client', [])),
+            backendHeaders: [
+                'Accept' => 'application/json',
+                'X-Plex-Token' => $context->backendToken,
+                ...self::getHeaders()
+            ],
             trace: true === ag($context->options, Options::DEBUG_TRACE),
             options: array_replace_recursive($context->options, [
                 Options::LIBRARY_SEGMENT => (int)ag(
@@ -746,14 +744,6 @@ class PlexClient implements iClient
     public function generateAccessToken(string|int $identifier, string $password, array $opts = []): array
     {
         return [];
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public static function manage(array $backend, array $opts = []): array
-    {
-        return Container::get(PlexManage::class)->manage(backend: $backend, opts: $opts);
     }
 
     /**

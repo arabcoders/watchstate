@@ -62,7 +62,7 @@ class Proxy
                     context: $logContext
                 );
 
-                $requestOpts = $context->backendHeaders;
+                $requestOpts = $context->getHttpOptions();
 
                 if (isset($opts['headers'])) {
                     $requestOpts['headers'] = array_replace_recursive($requestOpts['headers'], $opts['headers']);

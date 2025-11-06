@@ -155,22 +155,20 @@ class JellyfinClient implements iClient
             backendId: $context->backendId,
             backendToken: $context->backendToken,
             backendUser: $context->backendUser,
-            backendHeaders: array_replace_recursive([
-                'headers' => [
-                    'Accept' => 'application/json',
-                    'Authorization' => r(
-                        'MediaBrowser Token="{token}", Client="{app}", Device="{os}", DeviceId="{id}", Version="{version}", UserId="{user}"',
-                        [
-                            'token' => $context->backendToken,
-                            'app' => Config::get('name') . '/' . static::CLIENT_NAME,
-                            'os' => PHP_OS,
-                            'id' => md5(Config::get('name') . '/' . static::CLIENT_NAME),
-                            'version' => getAppVersion(),
-                            'user' => $context->backendUser,
-                        ]
-                    ),
-                ],
-            ], ag($context->options, 'client', [])),
+            backendHeaders: [
+                'Accept' => 'application/json',
+                'Authorization' => r(
+                    'MediaBrowser Token="{token}", Client="{app}", Device="{os}", DeviceId="{id}", Version="{version}", UserId="{user}"',
+                    [
+                        'token' => $context->backendToken,
+                        'app' => Config::get('name') . '/' . static::CLIENT_NAME,
+                        'os' => PHP_OS,
+                        'id' => md5(Config::get('name') . '/' . static::CLIENT_NAME),
+                        'version' => getAppVersion(),
+                        'user' => $context->backendUser,
+                    ]
+                ),
+            ],
             trace: true === ag($context->options, Options::DEBUG_TRACE),
             options: array_replace_recursive($context->options, [
                 Options::LIBRARY_SEGMENT => (int)ag(
@@ -755,14 +753,6 @@ class JellyfinClient implements iClient
     public function getGuid(): iGuid
     {
         return $this->guid;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public static function manage(array $backend, array $opts = []): array
-    {
-        return Container::get(JellyfinManage::class)->manage(backend: $backend, opts: $opts);
     }
 
     /**

@@ -145,9 +145,15 @@ final class Add
             'options' => [],
         ];
 
+
         foreach (flatArray($data->get('options', [])) as $key => $value) {
             $key = "options.{$key}";
+
             $spec = getServerColumnSpec($key);
+
+            if ('options.client.verify_host' === $key && false !== (bool)$value) {
+                continue;
+            }
 
             if (empty($spec) || null === $value) {
                 continue;

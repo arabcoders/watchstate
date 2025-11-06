@@ -53,7 +53,7 @@ final class GetMetaData
                         'split' => true === $isGeneric ? $context->backendId : $context->backendName,
                     ]);
                 }
-                
+
                 $url = $context->backendUrl->withPath('/library/metadata/' . $id)
                     ->withQuery(http_build_query(array_merge_recursive(['includeGuids' => 1], $opts['query'] ?? [])));
 
@@ -80,7 +80,10 @@ final class GetMetaData
                     $response = $this->http->request(
                         method: Method::GET,
                         url: (string)$url,
-                        options: array_replace_recursive($context->backendHeaders, $opts['headers'] ?? [])
+                        options: array_replace_recursive(
+                            $context->getHttpOptions(),
+                            true === ag_exists($opts, 'headers') ? ['headers' => $opts['headers']] : [],
+                        )
                     );
 
                     if (Status::OK !== Status::from($response->getStatusCode())) {

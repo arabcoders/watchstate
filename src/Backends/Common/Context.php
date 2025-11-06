@@ -45,6 +45,22 @@ final readonly class Context
     }
 
     /**
+     * Get HTTP client options for backend requests.
+     *
+     * @return array HTTP client options.
+     */
+    public function getHttpOptions(): array
+    {
+        $opts = ['headers' => $this->backendHeaders];
+
+        if (true === ag_exists($this->options, 'client')) {
+            $opts = [...$opts, ...ag($this->options, 'client', [])];
+        }
+
+        return $opts;
+    }
+
+    /**
      * Check if the used token is limited access token.
      *
      * @param bool $withUser Include user check.

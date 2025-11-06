@@ -90,7 +90,7 @@ class GetUsersList
 
         $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' users list.", $logContext);
 
-        $headers = $context->backendHeaders;
+        $headers = $context->getHttpOptions();
 
         if (empty($headers)) {
             $headers = [

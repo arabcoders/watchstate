@@ -97,7 +97,7 @@ class UpdateState
                         $this->http->request(
                             method: $entity->isWatched() ? Method::POST : Method::DELETE,
                             url: (string)$url,
-                            options: array_replace_recursive($context->backendHeaders, [
+                            options: array_replace_recursive($context->getHttpOptions(), [
                                 'user_data' => [
                                     'context' => [
                                         ...$rContext,

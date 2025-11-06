@@ -104,7 +104,10 @@ class GetMetaData
                     $response = $this->http->request(
                         method: Method::GET,
                         url: (string)$url,
-                        options: array_replace_recursive($context->backendHeaders, $opts['headers'] ?? [])
+                        options: array_replace_recursive(
+                            $context->getHttpOptions(),
+                            true === ag_exists($opts, 'headers') ? ['headers' => $opts['headers']] : [],
+                        )
                     );
 
                     if (Status::OK !== Status::from($response->getStatusCode())) {

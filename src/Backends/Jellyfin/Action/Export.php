@@ -236,7 +236,7 @@ class Export extends Import
                 $this->http->request(
                     method: $entity->isWatched() ? Method::POST : Method::DELETE,
                     url: (string)$url,
-                    options: $context->backendHeaders + [
+                    options: $context->getHttpOptions() + [
                         'user_data' => [
                             'context' => $logContext + [
                                     'backend' => $context->backendName,
@@ -260,7 +260,7 @@ class Export extends Import
                             'user' => $context->backendUser,
                             'id' => ag($item, 'Id')
                         ])),
-                        options: $context->backendHeaders + [
+                        options: $context->getHttpOptions() + [
                             'json' => [
                                 'Played' => true,
                                 'PlaybackPositionTicks' => 0,
