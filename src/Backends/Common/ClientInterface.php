@@ -265,16 +265,6 @@ interface ClientInterface
     public function validateContext(Context $context): bool;
 
     /**
-     * Add/Edit Backend.
-     *
-     * @param array $backend backend data.
-     * @param array $opts options.
-     *
-     * @return array Returns backend with appended backend specific data.
-     */
-    public static function manage(array $backend, array $opts = []): array;
-
-    /**
      * Return list of active sessions.
      *
      * @param array $opts (Optional) options.

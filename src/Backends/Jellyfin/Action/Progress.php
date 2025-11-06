@@ -279,7 +279,7 @@ class Progress
                         $this->http->request(
                             method: Method::POST,
                             url: (string)$url,
-                            options: array_replace_recursive($context->backendHeaders, [
+                            options: array_replace_recursive($context->getHttpOptions(), [
                                 'headers' => [
                                     'Content-Type' => 'application/json',
                                 ],

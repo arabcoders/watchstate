@@ -91,7 +91,7 @@ class GetUser
 
         $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' user '{userId}' info.", $logContext);
 
-        $headers = $context->backendHeaders;
+        $headers = $context->getHttpOptions();
 
         if (empty($headers)) {
             $headers = [

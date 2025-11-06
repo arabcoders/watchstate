@@ -120,7 +120,7 @@ class Import
 
             $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' libraries.", $rContext);
 
-            $response = $this->http->request(Method::GET, (string)$url, $context->backendHeaders);
+            $response = $this->http->request(Method::GET, (string)$url, $context->getHttpOptions());
 
             $payload = $response->getContent(false);
 
@@ -283,7 +283,7 @@ class Import
                 $requests[] = $this->http->request(
                     method: Method::GET,
                     url: (string)$url,
-                    options: array_replace_recursive($context->backendHeaders, [
+                    options: array_replace_recursive($context->getHttpOptions(), [
                         'headers' => [
                             'X-Plex-Container-Start' => 0,
                             'X-Plex-Container-Size' => 0,
@@ -312,7 +312,7 @@ class Import
                     $requests[] = $this->http->request(
                         method: Method::GET,
                         url: (string)$logContextSub['library']['url'],
-                        options: array_replace_recursive($context->backendHeaders, [
+                        options: array_replace_recursive($context->getHttpOptions(), [
                             'headers' => [
                                 'X-Plex-Container-Start' => 0,
                                 'X-Plex-Container-Size' => 0,
@@ -473,7 +473,7 @@ class Import
                     $requests[] = new Request(
                         method: Method::GET,
                         url: $url,
-                        options: array_replace_recursive($context->backendHeaders, [
+                        options: array_replace_recursive($context->getHttpOptions(), [
                             'headers' => [
                                 'X-Plex-Container-Size' => $segmentSize,
                                 'X-Plex-Container-Start' => $i < 1 ? 0 : ($segmentSize * $i),
@@ -577,7 +577,7 @@ class Import
                     $requests[] = new Request(
                         method: Method::GET,
                         url: $url,
-                        options: array_replace_recursive($context->backendHeaders, [
+                        options: array_replace_recursive($context->getHttpOptions(), [
                             'headers' => [
                                 'X-Plex-Container-Size' => $segmentSize,
                                 'X-Plex-Container-Start' => $i < 1 ? 0 : ($segmentSize * $i),

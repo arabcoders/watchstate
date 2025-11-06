@@ -149,7 +149,7 @@ class Import
 
             $this->logger->debug("Requesting '{client}: {user}@{backend}' libraries.", $rContext);
 
-            $response = $this->http->request(Method::GET, (string)$url, $context->backendHeaders);
+            $response = $this->http->request(Method::GET, (string)$url, $context->getHttpOptions());
 
             $payload = $response->getContent(false);
 
@@ -296,7 +296,7 @@ class Import
                 $requests[] = $this->http->request(
                     method: Method::GET,
                     url: (string)$url,
-                    options: array_replace_recursive($context->backendHeaders, ['user_data' => $logContext])
+                    options: array_replace_recursive($context->getHttpOptions(), ['user_data' => $logContext])
                 );
             } catch (iException $e) {
                 $this->logger->error(
@@ -429,7 +429,7 @@ class Import
                 $requests[] = new Request(
                     method: Method::GET,
                     url: $url,
-                    options: $context->backendHeaders,
+                    options: $context->getHttpOptions(),
                     success: $handle($logContext),
                     error: $error($logContext),
                     extras: ['logContext' => $logContext, iHttp::class => $this->http],
@@ -527,7 +527,7 @@ class Import
                     $requests[] = new Request(
                         method: Method::GET,
                         url: $url,
-                        options: $context->backendHeaders,
+                        options: $context->getHttpOptions(),
                         success: $handle($logContext),
                         error: $error($logContext),
                         extras: ['logContext' => $logContext, iHttp::class => $this->http],

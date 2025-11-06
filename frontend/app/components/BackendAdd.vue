@@ -902,11 +902,6 @@ const addBackend = async (): Promise<boolean> => {
     backend.value.options.is_limited_token = true
   }
 
-  const verifyHost = ag(toRaw(backend.value), 'options.client.verify_host', true)
-  if (true === verifyHost && backend.value.options?.client) {
-    delete backend.value.options.client.verify_host
-  }
-
   const response = await request('/backends/', {
     method: 'POST',
     headers: {

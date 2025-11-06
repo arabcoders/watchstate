@@ -87,7 +87,7 @@ final class UpdateState
                         $this->http->request(
                             method: Method::GET,
                             url: (string)$url,
-                            options: array_replace_recursive($context->backendHeaders, [
+                            options: array_replace_recursive($context->getHttpOptions(), [
                                 'user_data' => [
                                     'context' => [
                                         ...$rContext,

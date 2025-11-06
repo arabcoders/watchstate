@@ -56,7 +56,7 @@ final class GetInfo
                 $response = $this->http->request(
                     method: Method::GET,
                     url: (string)$url,
-                    options: array_replace_recursive($context->backendHeaders, $opts['headers'] ?? [])
+                    options: array_replace_recursive($context->getHttpOptions(), $opts['headers'] ?? [])
                 );
 
                 $content = $response->getContent(false);

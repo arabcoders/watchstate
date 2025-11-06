@@ -91,7 +91,7 @@ final readonly class PlexValidateContext
             $request = $this->http->request(
                 method: 'GET',
                 url: (string)$url,
-                options: array_replace_recursive($context->backendHeaders, [
+                options: array_replace_recursive($context->getHttpOptions(), [
                     'headers' => [
                         'Accept' => 'application/json',
                         'X-Plex-Token' => $context->backendToken,

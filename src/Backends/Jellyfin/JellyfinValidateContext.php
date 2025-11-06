@@ -82,7 +82,7 @@ class JellyfinValidateContext
             $request = $this->http->request(
                 method: Method::GET,
                 url: (string)$url,
-                options: array_replace_recursive($context->backendHeaders, [
+                options: array_replace_recursive($context->getHttpOptions(), [
                     'headers' => [
                         'Accept' => 'application/json',
                         'X-MediaBrowser-Token' => $context->backendToken,

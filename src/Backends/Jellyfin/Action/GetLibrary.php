@@ -154,7 +154,7 @@ class GetLibrary
 
         $this->logger->debug("Requesting '{client}: {user}@{backend}' library '{library.title}' content.", $logContext);
 
-        $response = $this->http->request(Method::GET, (string)$url, $context->backendHeaders);
+        $response = $this->http->request(Method::GET, (string)$url, $context->getHttpOptions());
 
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             return new Response(

@@ -167,7 +167,7 @@ final class GetLibrariesList
 
         $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' libraries list.", $logContext);
 
-        $response = $this->http->request(Method::GET, (string)$url, $context->backendHeaders);
+        $response = $this->http->request(Method::GET, (string)$url, $context->getHttpOptions());
 
         $payload = $response->getContent(false);
 
