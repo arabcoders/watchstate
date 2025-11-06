@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20251107-84efa5eb",
-        "date": "2025-11-06T21:12:41+00:00",
+        "tag": "dev-20251107-ddbd8a33",
+        "date": "2025-11-06T21:21:42+00:00",
         "commits": [
+            {
+                "sha": "ddbd8a33",
+                "message": "[FIX] Getinfo was missing header key",
+                "author": "arabcoders",
+                "date": "2025-11-06T21:21:42+00:00",
+                "full_sha": "ddbd8a33cbdf0793b47cee8174a38801b1e3195a"
+            },
             {
                 "sha": "84efa5eb",
                 "message": "[FEAT] Improve how we handle passing http client options for all backends interactions",
@@ -683,7 +690,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "84efa5eb58511cecd6de7bc0b27df0971ed9adc0"
+        "full_sha": "ddbd8a33cbdf0793b47cee8174a38801b1e3195a"
     },
     {
         "tag": "dev-20250604-9407bc76",

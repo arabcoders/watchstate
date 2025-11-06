@@ -1,8 +1,29 @@
 [
     {
-        "tag": "master-20251103-ad2daf74",
-        "date": "2025-11-03T15:54:01+00:00",
+        "tag": "master-20251107-a54e0b0c",
+        "date": "2025-11-06T21:24:38+00:00",
         "commits": [
+            {
+                "sha": "ddbd8a33",
+                "message": "[FIX] Getinfo was missing header key",
+                "author": "arabcoders",
+                "date": "2025-11-06T21:21:42+00:00",
+                "full_sha": "ddbd8a33cbdf0793b47cee8174a38801b1e3195a"
+            },
+            {
+                "sha": "84efa5eb",
+                "message": "[FEAT] Improve how we handle passing http client options for all backends interactions",
+                "author": "arabcoders",
+                "date": "2025-11-06T21:12:41+00:00",
+                "full_sha": "84efa5eb58511cecd6de7bc0b27df0971ed9adc0"
+            },
+            {
+                "sha": "a9161e28",
+                "message": "Removed dead code",
+                "author": "arabcoders",
+                "date": "2025-11-06T21:12:15+00:00",
+                "full_sha": "a9161e28049218831e2180347ae0785f1dbee38e"
+            },
             {
                 "sha": "f3b7b097",
                 "message": "updated removed keys",
@@ -634,7 +655,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "ad2daf741b8f3df30248b91410540381b388bfa6"
+        "full_sha": "a54e0b0c46cf5309b0ac68bf6fb4c56159f59bbf"
     },
     {
         "tag": "master-20250614-e3307c58",
