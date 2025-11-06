@@ -1,8 +1,22 @@
 [
     {
-        "tag": "dev-20251103-f3b7b097",
-        "date": "2025-11-03T15:35:17+00:00",
+        "tag": "dev-20251107-84efa5eb",
+        "date": "2025-11-06T21:12:41+00:00",
         "commits": [
+            {
+                "sha": "84efa5eb",
+                "message": "[FEAT] Improve how we handle passing http client options for all backends interactions",
+                "author": "arabcoders",
+                "date": "2025-11-06T21:12:41+00:00",
+                "full_sha": "84efa5eb58511cecd6de7bc0b27df0971ed9adc0"
+            },
+            {
+                "sha": "a9161e28",
+                "message": "Removed dead code",
+                "author": "arabcoders",
+                "date": "2025-11-06T21:12:15+00:00",
+                "full_sha": "a9161e28049218831e2180347ae0785f1dbee38e"
+            },
             {
                 "sha": "f3b7b097",
                 "message": "updated removed keys",
@@ -669,7 +683,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "f3b7b0975d2d432e31c9b351595ef10b956d642d"
+        "full_sha": "84efa5eb58511cecd6de7bc0b27df0971ed9adc0"
     },
     {
         "tag": "dev-20250604-9407bc76",
