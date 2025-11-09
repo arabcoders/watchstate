@@ -75,9 +75,10 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, ref} from 'vue'
-import {navigateTo, useRoute} from '#app'
 import '~/assets/css/bulma-switch.css'
+import {onMounted, nextTick, ref} from 'vue'
+import {navigateTo, useRoute} from '#app'
+import {useStorage} from '@vueuse/core';
 import Message from '~/components/Message.vue'
 import Confirm from '~/components/Confirm.vue'
 import {notification, parse_api_response, request} from '~/utils'
@@ -142,6 +143,13 @@ const deleteUser = async (): Promise<void> => {
     }
 
     notification('success', 'Success', `User '${id}' has been deleted successfully`)
+
+    const api_user = useStorage('api_user', 'main')
+    if (api_user.value === id) {
+      api_user.value = 'main'
+      await nextTick()
+    }
+
     await navigateTo('/users')
   } catch (e) {
     error.value = {
