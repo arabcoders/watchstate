@@ -1,8 +1,43 @@
 [
     {
-        "tag": "dev-20251109-b24fc089",
-        "date": "2025-11-09T13:51:25+00:00",
+        "tag": "dev-20251109-fb8f446f",
+        "date": "2025-11-09T19:24:27+00:00",
         "commits": [
+            {
+                "sha": "fb8f446f",
+                "message": "[FEAT] Add users management API and controls",
+                "author": "arabcoders",
+                "date": "2025-11-09T19:24:27+00:00",
+                "full_sha": "fb8f446f5a850fdaf9b10ac95744db34a7afb374"
+            },
+            {
+                "sha": "e478ee1b",
+                "message": "[FEAT] Show active user",
+                "author": "arabcoders",
+                "date": "2025-11-09T19:23:57+00:00",
+                "full_sha": "e478ee1ba5fbb037ef709d151c56f29a8190f445"
+            },
+            {
+                "sha": "a2c1a694",
+                "message": "[FEAT] add new Message style",
+                "author": "arabcoders",
+                "date": "2025-11-09T19:23:20+00:00",
+                "full_sha": "a2c1a69462eae721552740d9462e9215f0854c58"
+            },
+            {
+                "sha": "9867906c",
+                "message": "[FEAT] add new method to replace the entire array.",
+                "author": "arabcoders",
+                "date": "2025-11-09T19:22:43+00:00",
+                "full_sha": "9867906ca80cda92326a19a6d28c97099ec0e680"
+            },
+            {
+                "sha": "65204773",
+                "message": "[CHORE] rename choice to choices",
+                "author": "arabcoders",
+                "date": "2025-11-09T19:21:51+00:00",
+                "full_sha": "65204773a094c2314bebcfadd21875bd00ab6948"
+            },
             {
                 "sha": "b24fc089",
                 "message": "[FIX] Support negative timestamps. Closes #746",
@@ -704,7 +739,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "b24fc08995f7d397fe27b7061460a5a770022455"
+        "full_sha": "fb8f446f5a850fdaf9b10ac95744db34a7afb374"
     },
     {
         "tag": "dev-20250604-9407bc76",
