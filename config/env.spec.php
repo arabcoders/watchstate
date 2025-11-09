@@ -28,7 +28,7 @@ return (function () {
             'key' => 'WS_TZ',
             'description' => 'Set the Tool timezone.',
             'type' => 'string',
-            'validate' => function (mixed $value): string {
+            'validate' => function (mixed $value, array $spec = []): string {
                 if (is_numeric($value) || empty($value)) {
                     throw new ValidationException('Invalid timezone. Empty value.');
                 }
@@ -44,17 +44,16 @@ return (function () {
             'key' => 'WS_DB_MODE',
             'description' => 'DB journal mode. Memory mode can give a big performance boost at the cost of potential data loss on crashes.',
             'type' => 'string',
-            'choice' => ['MEMORY', 'WAL'],
-            'validate' => function (mixed $value): string {
+            'choices' => ['MEMORY', 'WAL'],
+            'validate' => function (mixed $value, array $spec = []): string {
                 if (is_numeric($value) || empty($value)) {
                     throw new ValidationException('Invalid db mode. Empty value.');
                 }
 
                 $val = strtoupper($value);
-                $modes = ['MEMORY', 'WAL'];
 
-                if (!in_array($val, $modes, true)) {
-                    throw new ValidationException('Invalid db mode. Must be one of: ' . implode(', ', $modes));
+                if (!in_array($val, $spec['choices'], true)) {
+                    throw new ValidationException('Invalid db mode. Must be: ' . implode(', ', $spec['choices']));
                 }
 
                 return $val;
@@ -208,7 +207,7 @@ return (function () {
             'key' => 'WS_PROGRESS_THRESHOLD',
             'description' => 'Allow watch progress sync for played items. Expects seconds. Minimum 180. 0 to disable.',
             'type' => 'string',
-            'validate' => function (mixed $value): string {
+            'validate' => function (mixed $value, array $spec = []): string {
                 if (!is_numeric($value) && empty($value)) {
                     throw new ValidationException('Invalid progress threshold. Empty value.');
                 }
@@ -240,7 +239,7 @@ return (function () {
             'key' => 'WS_LOGGER_REMOTE_URL',
             'description' => 'The URL to the remote logger.',
             'type' => 'string',
-            'validate' => function (mixed $value): string {
+            'validate' => function (mixed $value, array $spec = []): string {
                 if (!is_numeric($value) && empty($value)) {
                     throw new ValidationException('Invalid remote logger URL. Empty value.');
                 }
@@ -261,7 +260,7 @@ return (function () {
             'key' => 'WS_SYSTEM_USER',
             'description' => 'The login user name.',
             'type' => 'string',
-            'validate' => function (mixed $value): string {
+            'validate' => function (mixed $value, array $spec = []): string {
                 if (!is_numeric($value) && empty($value)) {
                     throw new ValidationException('Invalid username. Empty value.');
                 }
@@ -280,7 +279,7 @@ return (function () {
             'key' => 'WS_SYSTEM_PASSWORD',
             'description' => 'The login password. The given plaintext password will be converted to hash.',
             'type' => 'string',
-            'validate' => function (mixed $value): string {
+            'validate' => function (mixed $value, array $spec = []): string {
                 if (empty($value)) {
                     throw new ValidationException('Invalid password. Empty value.');
                 }
@@ -308,7 +307,7 @@ return (function () {
             'key' => 'WS_SYSTEM_SECRET',
             'description' => 'The secret key which is used to sign successful auth requests.',
             'type' => 'string',
-            'validate' => function (mixed $value): string {
+            'validate' => function (mixed $value, array $spec = []): string {
                 if (empty($value)) {
                     throw new ValidationException('Invalid secret. Empty value.');
                 }
@@ -335,7 +334,7 @@ return (function () {
             'key' => 'WS_PROGRESS_MINIMUM',
             'description' => 'Time in seconds to consider progress update as valid.',
             'type' => 'string',
-            'validate' => function (mixed $value): string {
+            'validate' => function (mixed $value, array $spec = []): string {
                 if (!is_numeric($value) && empty($value)) {
                     throw new ValidationException('Invalid minimum progress. Empty value.');
                 }
@@ -355,7 +354,7 @@ return (function () {
         ],
     ];
 
-    $validateCronExpression = function (string $value): string {
+    $validateCronExpression = function (string $value, array $spec = []): string {
         if (empty($value)) {
             throw new ValidationException('Invalid cron expression. Empty value.');
         }
