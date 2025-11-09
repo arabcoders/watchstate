@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20251109-bf9cc012",
-        "date": "2025-11-09T13:31:04+00:00",
+        "tag": "dev-20251109-b24fc089",
+        "date": "2025-11-09T13:51:25+00:00",
         "commits": [
+            {
+                "sha": "b24fc089",
+                "message": "[FIX] Support negative timestamps. Closes #746",
+                "author": "arabcoders",
+                "date": "2025-11-09T13:51:25+00:00",
+                "full_sha": "b24fc08995f7d397fe27b7061460a5a770022455"
+            },
             {
                 "sha": "bf9cc012",
                 "message": "[FIX] regression in add jellyfin/emby backend. Closes #747",
@@ -697,7 +704,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "bf9cc01227bb06a47e0521388d0f01b6e634792c"
+        "full_sha": "b24fc08995f7d397fe27b7061460a5a770022455"
     },
     {
         "tag": "dev-20250604-9407bc76",
