@@ -19,7 +19,7 @@ final class Date extends DateTimeImmutable implements Stringable, JsonSerializab
     {
         $ori = $time;
 
-        if (ctype_digit($time)) {
+        if (true === is_int($time) || (true === is_string($time) && true === is_numeric($time))) {
             $time = '@' . $time;
         }
 

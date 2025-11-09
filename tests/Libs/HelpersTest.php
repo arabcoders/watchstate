@@ -175,6 +175,55 @@ class HelpersTest extends TestCase
             )->format('Y-m-d H:i:s'),
             'When datetime DateTimeInterface is passed, it used as it is.'
         );
+
+        // Test Unix epoch (timestamp 0)
+        $this->assertSame(
+            '1970-01-01 00:00:00',
+            makeDate(0)->format('Y-m-d H:i:s'),
+            'Unix epoch (timestamp 0) should work correctly'
+        );
+
+        // Test negative timestamp (before Unix epoch)
+        $this->assertSame(
+            '1969-12-31',
+            makeDate(-86400)->format('Y-m-d'),
+            'Negative timestamp (1 day before Unix epoch) should work correctly'
+        );
+
+        // Test earlier negative timestamp
+        $this->assertSame(
+            '1960-01-01',
+            makeDate(-315619200)->format('Y-m-d'),
+            'Negative timestamp for year 1960 should work correctly'
+        );
+
+        // Test negative timestamp as string
+        $this->assertSame(
+            '1969-12-31',
+            makeDate('-86400')->format('Y-m-d'),
+            'Negative timestamp as string should work correctly'
+        );
+
+        // Test large positive timestamp
+        $this->assertSame(
+            '2038-01-19',
+            makeDate(2147483647)->format('Y-m-d'),
+            'Large positive timestamp (near 32-bit limit) should work correctly'
+        );
+
+        // Test numeric string (positive)
+        $this->assertSame(
+            '2020-01-01',
+            makeDate('1577836800')->format('Y-m-d'),
+            'Positive numeric string timestamp should work correctly'
+        );
+
+        // Test zero as string
+        $this->assertSame(
+            '1970-01-01 00:00:00',
+            makeDate('0')->format('Y-m-d H:i:s'),
+            'Zero as string should work as Unix epoch'
+        );
     }
 
     public function test_ag(): void
