@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20251109-fb8f446f",
-        "date": "2025-11-09T19:24:27+00:00",
+        "tag": "dev-20251109-3bb85ea4",
+        "date": "2025-11-09T19:32:19+00:00",
         "commits": [
+            {
+                "sha": "3bb85ea4",
+                "message": "[CHORE] update external packages",
+                "author": "arabcoders",
+                "date": "2025-11-09T19:32:19+00:00",
+                "full_sha": "3bb85ea4326a6bd0f24e45b42204d32c217d1a7d"
+            },
             {
                 "sha": "fb8f446f",
                 "message": "[FEAT] Add users management API and controls",
@@ -739,7 +746,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "fb8f446f5a850fdaf9b10ac95744db34a7afb374"
+        "full_sha": "3bb85ea4326a6bd0f24e45b42204d32c217d1a7d"
     },
     {
         "tag": "dev-20250604-9407bc76",
