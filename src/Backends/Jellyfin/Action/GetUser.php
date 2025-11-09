@@ -91,17 +91,13 @@ class GetUser
 
         $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' user '{userId}' info.", $logContext);
 
-        $headers = $context->getHttpOptions();
+        $options = $context->getHttpOptions();
 
-        if (empty($headers)) {
-            $headers = [
-                'headers' => [
-                    'X-MediaBrowser-Token' => $context->backendToken,
-                ],
-            ];
+        if (count($options['headers']) < 1) {
+            $options['headers']['X-MediaBrowser-Token'] = $context->backendToken;
         }
 
-        $response = $this->http->request(Method::GET, (string)$url, $headers);
+        $response = $this->http->request(Method::GET, (string)$url, $options);
 
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             return new Response(
