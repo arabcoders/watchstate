@@ -1,13 +1,15 @@
 <template>
-  <div class="notification" :class="message_class">
-    <button class="delete" @click="$emit('close')" v-if="!useToggle && useClose"></button>
+  <div :class="[newStyle ? 'message' : 'notification', message_class]">
+    <button class="delete" @click="$emit('close')" v-if="!useToggle && useClose && !newStyle"></button>
     <div @click="$emit('toggle')" class="is-clickable is-pulled-right is-unselectable" v-if="useToggle">
       <span class="icon">
         <i class="fas" :class="{'fa-arrow-up':toggle,'fa-arrow-down':!toggle}"></i>
       </span>
       <span>{{ toggle ? 'Close' : 'Open' }}</span>
     </div>
-    <div class="notification-title is-unselectable" :class="{'is-clickable':useToggle}" v-if="title || icon"
+    <div class="is-unselectable"
+         :class="{'is-clickable':useToggle, 'notification-title': !newStyle, 'message-header': newStyle}"
+         v-if="title || icon"
          @click="true === useToggle ? $emit('toggle', toggle): null">
       <template v-if="icon">
         <span class="icon-text">
@@ -16,8 +18,10 @@
         </span>
       </template>
       <template v-else>{{ title }}</template>
+      <button class="delete" @click="$emit('close')" v-if="!useToggle && useClose && newStyle"/>
     </div>
-    <div class="notification-content content is-text-break" v-if="false === useToggle || toggle">
+    <div class="content is-text-break" v-if="false === useToggle || toggle"
+         :class="{'notification-body': !newStyle, 'message-body': newStyle}">
       <template v-if="message">{{ message }}</template>
       <slot/>
     </div>
@@ -25,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import {defineProps, defineEmits} from 'vue'
+import {defineEmits, defineProps} from 'vue'
 
 withDefaults(defineProps<{
   /** Title text for the notification */
@@ -41,7 +45,8 @@ withDefaults(defineProps<{
   /** Current toggle state */
   toggle?: boolean
   /** If true, show close button */
-  useClose?: boolean
+  useClose?: boolean,
+  newStyle?: boolean
 }>(), {
   title: null,
   icon: null,
@@ -50,6 +55,7 @@ withDefaults(defineProps<{
   useToggle: false,
   toggle: false,
   useClose: false,
+  newStyle: false
 })
 
 defineEmits<{
