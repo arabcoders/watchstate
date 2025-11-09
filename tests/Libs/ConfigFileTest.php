@@ -447,4 +447,198 @@ class ConfigFileTest extends TestCase
             }
         }
     }
+
+    public function test_replaceAll()
+    {
+        $tmpFile = tempnam(sys_get_temp_dir(), 'test');
+        copy(__DIR__ . '/../Fixtures/test_servers.yaml', $tmpFile);
+        $params = $this->params;
+        $params['file'] = $tmpFile;
+
+        try {
+            $class = ConfigFile::open(...$params);
+
+            // Get original data
+            $originalData = $class->getAll();
+            $this->assertNotEmpty($originalData, 'Original data should not be empty');
+
+            // Replace all data with new data
+            $newData = ['new_key' => 'new_value', 'another_key' => ['nested' => 'data']];
+            $class->replaceAll($newData);
+
+            // Check that data was replaced
+            $this->assertEquals($newData, $class->getAll(), '->replaceAll: Failed to replace all data');
+            $this->assertArrayNotHasKey('test_plex', $class->getAll(), 'Old keys should not exist after replaceAll');
+            $this->assertArrayHasKey('new_key', $class->getAll(), 'New keys should exist after replaceAll');
+
+            // Persist and reload to confirm changes were saved
+            $class->persist();
+            $reloaded = ConfigFile::open(...$params);
+            $this->assertEquals($newData, $reloaded->getAll(), 'Persisted data should match replaced data');
+
+            // Test chaining
+            $class2 = ConfigFile::open(...$params);
+            $result = $class2->replaceAll(['chained' => 'test']);
+            $this->assertInstanceOf(ConfigFile::class, $result, '->replaceAll should return $this for chaining');
+            $this->assertArrayHasKey('chained', $class2->getAll(), 'Chained replaceAll should work');
+
+            // Test replace with empty array
+            $class3 = ConfigFile::open(...$params);
+            $class3->replaceAll([]);
+            $this->assertEmpty($class3->getAll(), '->replaceAll with empty array should clear all data');
+            $class3->persist();
+            $reloaded3 = ConfigFile::open(...$params);
+            $this->assertEmpty($reloaded3->getAll(), 'Persisted empty data should remain empty');
+        } catch (Throwable $e) {
+            $this->fail('replaceAll test should not throw exception: ' . $e->getMessage());
+        } finally {
+            if (file_exists($tmpFile)) {
+                unlink($tmpFile);
+            }
+            if (file_exists($tmpFile . '.bak')) {
+                unlink($tmpFile . '.bak');
+            }
+        }
+    }
+
+    public function test_replaceAll_with_operations_tracking()
+    {
+        $tmpFile = tempnam(sys_get_temp_dir(), 'test');
+        copy(__DIR__ . '/../Fixtures/test_servers.yaml', $tmpFile);
+        $params = $this->params;
+        $params['file'] = $tmpFile;
+
+        try {
+            $class = ConfigFile::open(...$params);
+
+            // Make some changes before replaceAll
+            $class->set('before_key', 'before_value');
+            $class->delete('test_plex');
+
+            // Now replace all data
+            $newData = ['replaced' => 'data', 'test' => ['nested' => 'value']];
+            $class->replaceAll($newData);
+
+            // The data should be completely replaced
+            $this->assertEquals(
+                $newData,
+                $class->getAll(),
+                'Data should be fully replaced regardless of previous operations'
+            );
+            $this->assertArrayNotHasKey('before_key', $class->getAll(), 'Previous set operation should be overridden');
+
+            // Test operations are reapplied after external file change
+            $class->set('after_replace', 'value');
+
+            // Trigger external change
+            $external = ConfigFile::open(...$params);
+            $external->replaceAll(['external' => 'change'])->persist();
+
+            // Now persist our class - operations should be reapplied
+            $class->setLogger($this->logger);
+            $class->persist();
+
+            // Check that operations were reapplied on top of external change
+            $reloaded = ConfigFile::open(...$params);
+            $data = $reloaded->getAll();
+
+            // The replaceAll operation should have replaced external change
+            $this->assertEquals($newData, array_intersect_key($data, $newData), 'replaceAll should be reapplied');
+            $this->assertArrayHasKey('after_replace', $data, 'Operations after replaceAll should be preserved');
+        } catch (Throwable $e) {
+            $this->fail('replaceAll operations tracking test should not throw exception: ' . $e->getMessage());
+        } finally {
+            if (file_exists($tmpFile)) {
+                unlink($tmpFile);
+            }
+            if (file_exists($tmpFile . '.bak')) {
+                unlink($tmpFile . '.bak');
+            }
+        }
+    }
+
+    public function test_replaceAll_with_filters()
+    {
+        $tmpFile = tempnam(sys_get_temp_dir(), 'test');
+        copy(__DIR__ . '/../Fixtures/test_servers.yaml', $tmpFile);
+        $params = $this->params;
+        $params['file'] = $tmpFile;
+
+        try {
+            $class = ConfigFile::open(...$params);
+
+            // Add a filter
+            $class->addFilter('uppercase', function (array $data): array {
+                return array_map(function ($value) {
+                    if (is_string($value)) {
+                        return strtoupper($value);
+                    }
+                    return $value;
+                }, $data);
+            });
+
+            // Replace all data
+            $newData = ['key1' => 'lowercase', 'key2' => 'value'];
+            $class->replaceAll($newData);
+            $class->persist();
+
+            // Check that filter was applied during persist
+            $reloaded = ConfigFile::open(...$params);
+            $this->assertEquals(
+                'LOWERCASE',
+                $reloaded->get('key1'),
+                'Filter should be applied during persist after replaceAll'
+            );
+            $this->assertEquals('VALUE', $reloaded->get('key2'), 'All values should be filtered');
+        } catch (Throwable $e) {
+            $this->fail('replaceAll with filters test should not throw exception: ' . $e->getMessage());
+        } finally {
+            if (file_exists($tmpFile)) {
+                unlink($tmpFile);
+            }
+            if (file_exists($tmpFile . '.bak')) {
+                unlink($tmpFile . '.bak');
+            }
+        }
+    }
+
+    public function test_replaceAll_json_format()
+    {
+        $tmpFile = tempnam(sys_get_temp_dir(), 'test') . '.json';
+        file_put_contents($tmpFile, json_encode(['original' => 'data'], JSON_PRETTY_PRINT));
+        $params = [
+            'file' => $tmpFile,
+            'type' => 'json',
+            'autoSave' => false,
+            'autoCreate' => false,
+            'autoBackup' => false,
+        ];
+
+        try {
+            $class = ConfigFile::open(...$params);
+
+            // Replace with new data
+            $newData = ['json_key' => 'json_value', 'nested' => ['data' => 'here']];
+            $class->replaceAll($newData);
+            $class->persist();
+
+            // Reload and verify
+            $reloaded = ConfigFile::open(...$params);
+            $this->assertEquals($newData, $reloaded->getAll(), 'replaceAll should work with JSON format');
+
+            // Verify JSON file is valid
+            $fileContent = file_get_contents($tmpFile);
+            $decoded = json_decode($fileContent, true);
+            $this->assertEquals($newData, $decoded, 'JSON file should contain valid replaced data');
+        } catch (Throwable $e) {
+            $this->fail('replaceAll JSON format test should not throw exception: ' . $e->getMessage());
+        } finally {
+            if (file_exists($tmpFile)) {
+                unlink($tmpFile);
+            }
+            if (file_exists($tmpFile . '.bak')) {
+                unlink($tmpFile . '.bak');
+            }
+        }
+    }
 }
