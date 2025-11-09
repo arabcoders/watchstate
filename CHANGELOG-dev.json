@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20251107-ddbd8a33",
-        "date": "2025-11-06T21:21:42+00:00",
+        "tag": "dev-20251109-bf9cc012",
+        "date": "2025-11-09T13:31:04+00:00",
         "commits": [
+            {
+                "sha": "bf9cc012",
+                "message": "[FIX] regression in add jellyfin/emby backend. Closes #747",
+                "author": "arabcoders",
+                "date": "2025-11-09T13:31:04+00:00",
+                "full_sha": "bf9cc01227bb06a47e0521388d0f01b6e634792c"
+            },
             {
                 "sha": "ddbd8a33",
                 "message": "[FIX] Getinfo was missing header key",
@@ -690,7 +697,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "ddbd8a33cbdf0793b47cee8174a38801b1e3195a"
+        "full_sha": "bf9cc01227bb06a47e0521388d0f01b6e634792c"
     },
     {
         "tag": "dev-20250604-9407bc76",
