@@ -147,7 +147,7 @@ final class Update
 
             if (true === ag_exists($spec, 'validate')) {
                 try {
-                    $value = $spec['validate']($value);
+                    $value = $spec['validate']($value, $spec);
                 } catch (ValidationException $e) {
                     return api_error(r("Value validation for '{key}' failed. {error}", [
                         'key' => $key,
@@ -218,7 +218,7 @@ final class Update
 
             if (true === ag_exists($spec, 'validate')) {
                 try {
-                    $value = $spec['validate']($value);
+                    $value = $spec['validate']($value, $spec);
                 } catch (ValidationException $e) {
                     throw new ValidationException(r("Value validation for '{key}' failed. {error}", [
                         'key' => $key,

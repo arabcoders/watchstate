@@ -23,6 +23,16 @@ export interface GenericResponse {
 }
 
 /**
+ * User list item from /api/users endpoint.
+ */
+export interface UserListItem {
+    /** Username */
+    user: string
+    /** List of backend names for this user */
+    backends: Array<string>
+}
+
+/**
  * Make pagination
  */
 export interface PaginationItem {

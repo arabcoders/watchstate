@@ -145,6 +145,28 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
         return $this;
     }
 
+    /**
+     * Replace all data with new data.
+     *
+     * This method will replace the entire data array with the provided data.
+     * All existing data will be lost and replaced with the new data.
+     *
+     * @param array $data The new data to replace the existing data with.
+     *
+     * @return $this
+     */
+    public function replaceAll(array $data): self
+    {
+        $this->operations[] = [
+            'type' => 'replaceAll',
+            'value' => $data
+        ];
+
+        $this->_replaceAll($data);
+
+        return $this;
+    }
+
     public function has(string|int $key): bool
     {
         return ag_exists($this->data, $key);
@@ -162,6 +184,11 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
     private function _delete(string|int $key): void
     {
         $this->data = ag_delete($this->data, $key);
+    }
+
+    private function _replaceAll(array $data): void
+    {
+        $this->data = $data;
     }
 
     /**
@@ -339,6 +366,9 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
                     break;
                 case 'delete':
                     $this->_delete($operation['key']);
+                    break;
+                case 'replaceAll':
+                    $this->_replaceAll($operation['value']);
                     break;
                 default:
                     throw new RuntimeException(r("Invalid operation type '{type}'.", [

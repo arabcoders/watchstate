@@ -26,6 +26,20 @@ return [
         'description' => 'The type of the backend.',
         'choices' => ['plex', 'emby', 'jellyfin'],
         'immutable' => true,
+        'validate' => function (mixed $value, array $spec = []): string {
+            if (is_numeric($value) || empty($value)) {
+                throw new ValidationException('Invalid backend type. Empty value.');
+            }
+
+            $val = strtolower($value);
+            $types = ['plex', 'emby', 'jellyfin'];
+
+            if (true !== in_array($val, $types, true)) {
+                throw new ValidationException('Invalid Backend type. Must be one of: ' . implode(', ', $types));
+            }
+
+            return $val;
+        },
     ],
     [
         'key' => 'url',
@@ -61,6 +75,7 @@ return [
         'key' => 'export.lastSync',
         'type' => 'int',
         'visible' => true,
+        'nullable' => true,
         'description' => 'The last time data was exported to the backend.',
     ],
     [
@@ -73,26 +88,8 @@ return [
         'key' => 'import.lastSync',
         'type' => 'int',
         'visible' => true,
+        'nullable' => true,
         'description' => 'The last time data was imported from the backend.',
-    ],
-    [
-        'key' => 'webhook.token',
-        'type' => 'string',
-        'visible' => true,
-        'description' => 'Webhook token for the backend.',
-        'deprecated' => true,
-    ],
-    [
-        'key' => 'webhook.match.user',
-        'type' => 'bool',
-        'visible' => true,
-        'description' => 'Whether to strictly match the user ID of the backend When receiving webhook events.',
-    ],
-    [
-        'key' => 'webhook.match.uuid',
-        'type' => 'bool',
-        'visible' => true,
-        'description' => 'Whether to strictly match the unique identifier of the backend When receiving webhook events.',
     ],
     [
         'key' => 'options.ignore',
@@ -105,7 +102,7 @@ return [
         'type' => 'int',
         'visible' => true,
         'description' => 'How many items to get per request when syncing.',
-        'validate' => function ($value) {
+        'validate' => function ($value, array $spec = []) {
             $limit = 300;
             if ((int)$value < $limit) {
                 throw new ValidationException(r('The value must be greater than {limit} items.', ['limit' => $limit]));
@@ -154,6 +151,12 @@ return [
         'type' => 'int',
         'visible' => false,
         'description' => 'The http timeout per request to the backend.',
+    ],
+    [
+        'key' => 'options.client',
+        'type' => 'array',
+        'visible' => false,
+        'description' => 'Additional http client options to use when making requests to the backend.',
     ],
     [
         'key' => 'options.client.http_version',
@@ -211,7 +214,7 @@ return [
     ],
     [
         'key' => 'options.ALT_ID',
-        'type' => 'int',
+        'type' => 'string',
         'visible' => false,
         'description' => 'The original user ID of which this user is sub user of.',
     ],

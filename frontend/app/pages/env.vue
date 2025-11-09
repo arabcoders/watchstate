@@ -420,7 +420,7 @@ const editEnv = (env: EnvVar): void => {
 
   form_type.value = env.type
   form_mask.value = env.mask
-  form_choice.value = env.choice || []
+  form_choice.value = env.choices || []
 
   toggleForm.value = true
   if (!useRoute().query.edit) {
@@ -465,7 +465,7 @@ const keyChanged = (): void => {
     return
   }
 
-  form_choice.value = data.choice || []
+  form_choice.value = data.choices || []
   form_value.value = data.value || ''
   form_type.value = data.type || 'string'
   form_mask.value = data.mask || false
