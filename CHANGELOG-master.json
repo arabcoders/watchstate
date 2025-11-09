@@ -1,8 +1,64 @@
 [
     {
-        "tag": "master-20251107-a54e0b0c",
-        "date": "2025-11-06T21:24:38+00:00",
+        "tag": "master-20251109-03d2c0cf",
+        "date": "2025-11-09T19:39:53+00:00",
         "commits": [
+            {
+                "sha": "3bb85ea4",
+                "message": "[CHORE] update external packages",
+                "author": "arabcoders",
+                "date": "2025-11-09T19:32:19+00:00",
+                "full_sha": "3bb85ea4326a6bd0f24e45b42204d32c217d1a7d"
+            },
+            {
+                "sha": "fb8f446f",
+                "message": "[FEAT] Add users management API and controls",
+                "author": "arabcoders",
+                "date": "2025-11-09T19:24:27+00:00",
+                "full_sha": "fb8f446f5a850fdaf9b10ac95744db34a7afb374"
+            },
+            {
+                "sha": "e478ee1b",
+                "message": "[FEAT] Show active user",
+                "author": "arabcoders",
+                "date": "2025-11-09T19:23:57+00:00",
+                "full_sha": "e478ee1ba5fbb037ef709d151c56f29a8190f445"
+            },
+            {
+                "sha": "a2c1a694",
+                "message": "[FEAT] add new Message style",
+                "author": "arabcoders",
+                "date": "2025-11-09T19:23:20+00:00",
+                "full_sha": "a2c1a69462eae721552740d9462e9215f0854c58"
+            },
+            {
+                "sha": "9867906c",
+                "message": "[FEAT] add new method to replace the entire array.",
+                "author": "arabcoders",
+                "date": "2025-11-09T19:22:43+00:00",
+                "full_sha": "9867906ca80cda92326a19a6d28c97099ec0e680"
+            },
+            {
+                "sha": "65204773",
+                "message": "[CHORE] rename choice to choices",
+                "author": "arabcoders",
+                "date": "2025-11-09T19:21:51+00:00",
+                "full_sha": "65204773a094c2314bebcfadd21875bd00ab6948"
+            },
+            {
+                "sha": "b24fc089",
+                "message": "[FIX] Support negative timestamps. Closes #746",
+                "author": "arabcoders",
+                "date": "2025-11-09T13:51:25+00:00",
+                "full_sha": "b24fc08995f7d397fe27b7061460a5a770022455"
+            },
+            {
+                "sha": "bf9cc012",
+                "message": "[FIX] regression in add jellyfin/emby backend. Closes #747",
+                "author": "arabcoders",
+                "date": "2025-11-09T13:31:04+00:00",
+                "full_sha": "bf9cc01227bb06a47e0521388d0f01b6e634792c"
+            },
             {
                 "sha": "ddbd8a33",
                 "message": "[FIX] Getinfo was missing header key",
@@ -655,7 +711,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "a54e0b0c46cf5309b0ac68bf6fb4c56159f59bbf"
+        "full_sha": "03d2c0cfe5a3ea0cbee7bc2f35e98f8db14eb86a"
     },
     {
         "tag": "master-20250614-e3307c58",
