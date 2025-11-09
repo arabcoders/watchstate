@@ -184,7 +184,7 @@
             <div class="navbar-item">
               <button class="button is-dark" @click="showUserSelection = !showUserSelection">
                 <span class="icon"><i class="fas fa-users"/></span>
-                <span>Change User</span>
+                <span>Change User ({{ api_user }})</span>
               </button>
             </div>
 
@@ -222,7 +222,8 @@
 
             <div class="navbar-item">
               <button class="button is-dark" @click="showUserSelection = !showUserSelection" v-tooltip="'Change User'">
-                <span class="icon"><i class="fas fa-users"/></span>
+                <span class="icon"><i class="fas fa-user"/></span>
+                <span>{{ api_user }}</span>
               </button>
             </div>
 
@@ -244,6 +245,7 @@
     </nav>
     <div>
       <div>
+        <NuxtLoadingIndicator/>
         <TaskScheduler :forceShow="showScheduler" @update="e => scheduler = e" v-if="in_container"/>
         <NuxtPage/>
         <ClientOnly>
@@ -287,7 +289,7 @@
 
       <template v-if="showUserSelection">
         <Overlay @closeOverlay="() => showUserSelection = false" title="Change User">
-          <UserSelection/>
+          <UserSelection @close="() => showUserSelection = false"/>
         </Overlay>
       </template>
       <template v-if="showSettings">
