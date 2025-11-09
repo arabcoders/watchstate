@@ -865,6 +865,185 @@ if (!function_exists('queueEvent')) {
     }
 }
 
+if (!function_exists('validateServersData')) {
+    /**
+     * Validates servers data against the servers.spec.php specification.
+     *
+     * @param array $data The servers data to validate. Expected format: ['backend_name' => [...], ...]
+     * @param array $options Validation options.
+     *
+     * @return array Returns ['valid' => true] on success, or ['valid' => false, 'errors' => [...]] on failure.
+     */
+    function validateServersData(array $data, array $options = []): array
+    {
+        $errors = [];
+        $validateImmutable = (bool)ag($options, 'validate_immutable', false);
+
+        // -- Load removed keys from config
+        $removedKeys = ag(include __DIR__ . '/../../config/removed.keys.php', 'backend', []);
+
+        foreach ($data as $backendName => $backendData) {
+            if (false === is_array($backendData)) {
+                $errors[] = r("Backend '{backend}' data must be an array.", ['backend' => $backendName]);
+                continue;
+            }
+
+            // -- Validate backend name format
+            if (false === isValidName($backendName)) {
+                $errors[] = r("Backend name '{backend}' is invalid. Must only contain [lowercase a-z, 0-9, _].", [
+                    'backend' => $backendName
+                ]);
+                continue;
+            }
+
+            // -- Flatten the backend data to match spec keys (e.g., 'options.client.timeout')
+            $flattenedData = [];
+            foreach ($backendData as $key => $value) {
+                if (is_array($value)) {
+                    foreach (flatArray([$key => $value]) as $subKey => $subValue) {
+                        $flattenedData[$subKey] = $subValue;
+                    }
+                } else {
+                    $flattenedData[$key] = $value;
+                }
+            }
+
+            // -- Validate each field against the spec
+            foreach ($flattenedData as $key => $value) {
+                // -- Check if field is in removed keys list
+                if (true === in_array($key, $removedKeys, true)) {
+                    $errors[] = r("{backend}: Field '{key}' is no longer supported. Remove it", [
+                        'backend' => $backendName,
+                        'key' => $key
+                    ]);
+                    continue;
+                }
+
+                $spec = getServerColumnSpec($key);
+
+                if (empty($spec)) {
+                    $errors[] = r("{backend}: Unknown field '{key}'.", [
+                        'backend' => $backendName,
+                        'key' => $key
+                    ]);
+                    continue;
+                }
+
+                // -- Check if field is immutable (only if validate_immutable is enabled)
+                if (true === $validateImmutable && true === ag($spec, 'immutable', false)) {
+                    $errors[] = r("{backend}: Field '{key}' is immutable and cannot be modified.", [
+                        'backend' => $backendName,
+                        'key' => $key
+                    ]);
+                    continue;
+                }
+
+                // -- Check if field is nullable and value is null
+                $isNullable = true === ag($spec, 'nullable', false);
+                if (true === $isNullable && null === $value) {
+                    // Skip validation for nullable fields with null value
+                    continue;
+                }
+
+                // -- Validate type
+                $expectedType = ag($spec, 'type', 'string');
+                $actualType = gettype($value);
+
+                // -- Type coercion/validation
+                try {
+                    $coercedValue = $value;
+                    settype($coercedValue, $expectedType);
+
+                    // -- Check if type coercion was successful
+                    if ('bool' === $expectedType || 'boolean' === $expectedType) {
+                        if (false === is_bool($value) && false === in_array(
+                                $value,
+                                [0, 1, '0', '1', 'true', 'false'],
+                                true
+                            )) {
+                            $errors[] = r("{backend}: Field '{key}' must be a boolean, got {type}.", [
+                                'backend' => $backendName,
+                                'key' => $key,
+                                'type' => $actualType
+                            ]);
+                            continue;
+                        }
+                    } elseif ('int' === $expectedType || 'integer' === $expectedType) {
+                        if (false === is_numeric($value)) {
+                            $errors[] = r("{backend}: Field '{key}' must be an integer, got {type}.", [
+                                'backend' => $backendName,
+                                'key' => $key,
+                                'type' => $actualType
+                            ]);
+                            continue;
+                        }
+                    } elseif ('string' === $expectedType && false === is_string($value) && false === is_numeric(
+                            $value
+                        )) {
+                        $errors[] = r("{backend}: Field '{key}' must be a string, got {type}.", [
+                            'backend' => $backendName,
+                            'key' => $key,
+                            'type' => $actualType
+                        ]);
+                        continue;
+                    }
+
+                    // -- Run custom validation if present
+                    $hasErrors = false;
+                    if (true === ag_exists($spec, 'validate') && is_callable($spec['validate'])) {
+                        try {
+                            $coercedValue = $spec['validate']($coercedValue, $spec);
+                        } catch (Throwable $e) {
+                            $hasErrors = true;
+                            $errors[] = r("{backend}: Validation failed for '{key}': {error}", [
+                                'backend' => $backendName,
+                                'key' => $key,
+                                'error' => $e->getMessage()
+                            ]);
+                        }
+                    }
+
+                    // -- Validate choices if present (check regardless of custom validator result)
+                    if (true === ag_exists($spec, 'choices') && is_array($spec['choices'])) {
+                        if (false === in_array($value, $spec['choices'], true)) {
+                            $hasErrors = true;
+                            $errors[] = r(
+                                "{backend}: Field '{key}' must be one of [{choices}], got '{value}'.",
+                                [
+                                    'backend' => $backendName,
+                                    'key' => $key,
+                                    'choices' => implode(', ', $spec['choices']),
+                                    'value' => $value
+                                ]
+                            );
+                        }
+                    }
+
+                    // -- If any validation failed, skip to next field
+                    if (true === $hasErrors) {
+                        continue;
+                    }
+                } catch (Throwable $e) {
+                    $errors[] = r("{backend}: Type conversion failed for '{key}': {error}", [
+                        'backend' => $backendName,
+                        'key' => $key,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+        }
+
+        if (false === empty($errors)) {
+            return [
+                'valid' => false,
+                'errors' => $errors
+            ];
+        }
+
+        return ['valid' => true];
+    }
+}
+
 if (!function_exists('getPagination')) {
     function getPagination(iRequest $request, int $page = 1, int $perpage = 0, array $options = []): array
     {
@@ -999,10 +1178,7 @@ if (!function_exists('deletePath')) {
         }
 
         $iterator = new RecursiveIteratorIterator(
-            iterator: new RecursiveDirectoryIterator(
-                directory: $path,
-                flags: RecursiveDirectoryIterator::SKIP_DOTS
-            ),
+            iterator: new RecursiveDirectoryIterator(directory: $path, flags: FilesystemIterator::SKIP_DOTS),
             mode: RecursiveIteratorIterator::CHILD_FIRST
         );
 
@@ -1273,6 +1449,42 @@ if (!function_exists('perUserCacheAdapter')) {
     }
 }
 
+if (!function_exists('deleteUserConfig')) {
+    /**
+     * Return user backends config.
+     *
+     * @param string $user The username.
+     * @param iCache|null $cache (Optional) The cache instance.
+     *
+     * @return bool Whether the operation was successful.
+     */
+    function deleteUserConfig(string $user, iCache|null $cache = null): bool
+    {
+        $path = fixPath(r("{path}/users/{user}", ['path' => Config::get('path'), 'user' => $user]));
+        if (false === file_exists($path)) {
+            throw new RuntimeException(r("User '{user}' does not exist.", ['user' => $user]));
+        }
+
+        if (null !== $cache) {
+            foreach (perUserConfig($user)->getAll() as $backendName => $conf) {
+                $cache_key = r('{client}_{backend}', [
+                    'backend' => $backendName,
+                    'client' => ucfirst(ag($conf, 'type', 'unknown')),
+                ]);
+                if ($cache->has($cache_key)) {
+                    $cache->delete($cache_key);
+                }
+            }
+        }
+
+        $status = deletePath($path);
+
+        rmdir($path);
+
+        return $status;
+    }
+}
+
 if (!function_exists('getUsersContext')) {
     /**
      * Retrieves users configuration and related classes.
@@ -1321,6 +1533,12 @@ if (!function_exists('getUsersContext')) {
         foreach (new DirectoryIterator(Config::get('path') . '/users') as $path) {
             if ($path->isDot() || false === $path->isDir()) {
                 continue;
+            }
+
+            if (true === array_key_exists($path->getBasename(), $configs)) {
+                throw new RuntimeException(r("Duplicate user name '{user}' found.", [
+                    'user' => $path->getBasename()
+                ]));
             }
 
             $config = perUserConfig($path->getBasename());
@@ -1376,7 +1594,6 @@ if (!function_exists('getUserContext')) {
         return ag($users, $user);
     }
 }
-
 
 if (!function_exists('exception_log')) {
     /**

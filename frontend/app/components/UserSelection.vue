@@ -20,10 +20,20 @@
       </p>
     </div>
     <div class="control has-text-right">
-      <button type="submit" class="button is-primary" :disabled="!api_user || isLoading" @click="reloadPage">
-        <span class="icon"><i class="fas fa-sync"/></span>
-        <span>Reload</span>
-      </button>
+      <div class="field is-grouped is-grouped-right">
+        <div class="control">
+          <button type="submit" class="button is-primary" :disabled="!api_user || isLoading" @click="reloadPage">
+            <span class="icon"><i class="fas fa-sync"/></span>
+            <span>Reload</span>
+          </button>
+        </div>
+        <div class="control">
+          <button type="button" class="button is-info" @click="gotoUsers">
+            <span class="icon"><i class="fas fa-users"/></span>
+            <span>Users management</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -37,9 +47,12 @@ const api_user = useStorage<string>('api_user', 'main')
 const users = ref<Array<string>>(['main'])
 const isLoading = ref<boolean>(true)
 
+const emitter = defineEmits<{
+  (e: 'close'): void
+}>()
+
 onMounted(async (): Promise<void> => {
   try {
-    isLoading.value = true
     const response = await request('/system/users')
     if (!response.ok) {
       notification('error', 'Error', 'Failed to fetch users.')
@@ -62,5 +75,16 @@ onMounted(async (): Promise<void> => {
   }
 })
 
-const reloadPage = (): void => window.location.reload()
+const reloadPage = async () => {
+  await emitter('close')
+  if ('/' === useRoute().path) {
+    window.location.reload()
+    return
+  }
+  await navigateTo('/')
+}
+const gotoUsers = async () => {
+  await emitter('close')
+  await navigateTo('/users')
+}
 </script>
