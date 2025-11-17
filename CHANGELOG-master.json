@@ -1,8 +1,22 @@
 [
     {
-        "tag": "master-20251109-03d2c0cf",
-        "date": "2025-11-09T19:39:53+00:00",
+        "tag": "master-20251117-a8ac5638",
+        "date": "2025-11-17T12:56:04+00:00",
         "commits": [
+            {
+                "sha": "e176f168",
+                "message": "Refactor: Log when add backend validation fails.",
+                "author": "arabcoders",
+                "date": "2025-11-16T16:35:47+00:00",
+                "full_sha": "e176f1687a25c8b22ac14eb4a1707f14250be8ba"
+            },
+            {
+                "sha": "7dc810d3",
+                "message": "Chore: Update external packages and add FAQ entry",
+                "author": "arabcoders",
+                "date": "2025-11-14T13:46:57+00:00",
+                "full_sha": "7dc810d396acd63811b866c421f427799231c4a1"
+            },
             {
                 "sha": "3bb85ea4",
                 "message": "[CHORE] update external packages",
@@ -711,7 +725,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "03d2c0cfe5a3ea0cbee7bc2f35e98f8db14eb86a"
+        "full_sha": "a8ac56382f03be1ce18c38cd94154c30e7266829"
     },
     {
         "tag": "master-20250614-e3307c58",
