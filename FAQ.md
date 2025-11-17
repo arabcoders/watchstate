@@ -697,3 +697,30 @@ To enable MEMORY mode, follow these steps:
 4. select the `MEMORY` option.
 5. Click `Save`.
 
+---
+
+# I have external auth layer how to disable internal auth?
+
+If you have an external authentication layer (like a reverse proxy with auth) and want to disable the internal auth of
+WatchState, you can do so by setting the following environment variable to true.
+
+- `WS_TRUST_PROXY`
+    - Tells WatchState to trust the `X-Forwarded-For` header (or the one you set in `WS_TRUST_HEADER`) as the user IP.
+- `WS_TRUST_LOCAL`
+    - Tells WatchState to trust all requests coming from local network addresses bypassing authentication.
+
+You still have to create the initial admin user, however, once these settings are applied, anyone accessing WatchState
+from the trusted sources will be granted access without further authentication.
+
+## The supported local net addresses
+
+- 10.0.0.0/8
+- 127.0.0.1/32
+- 172.16.0.0/12
+- 192.168.0.0/16
+- ::1/128'
+
+> [!IMPORTANT]
+> Setting both `WS_TRUST_PROXY` and `WS_TRUST_LOCAL` to true will disable all internal authentication mechanisms.
+> Ensure that your external auth layer is secure and properly configured to prevent unauthorized access. Your entire
+> WatchState instance will be open to anyone who access it via local network.
