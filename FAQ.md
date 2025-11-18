@@ -738,3 +738,17 @@ creation failing to load. To fix the issue it's recommended to change the backen
 * For Plex: `Library/Application Support/Plex Media Server/Preferences.xml` key: `ProcessedMachineIdentifier`.
 
 Those values need to be unique per instance.
+
+--- 
+
+# Failing due to duplicate UUID
+
+If you clone your media backend instance, your UUID might be duplicated as well. Unfortunately we cannot add a check
+against that as it would break `3-way sync`. Duplicate UUID may lead to unforeseen issues such as automatic sub users
+creation failing to load. To fix the issue it's recommended to change the backend UUID to do so,
+
+* For jellyfin: `config/data/device.txt`
+* For Emby: `data/device.txt`
+* For Plex: `Library/Application Support/Plex Media Server/Preferences.xml` key: `ProcessedMachineIdentifier`.
+
+Those values need to be unique per instance.
