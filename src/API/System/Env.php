@@ -13,6 +13,7 @@ use App\Libs\EnvFile;
 use App\Libs\Exceptions\ValidationException;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Random\RandomException;
 
 final class Env
 {
@@ -22,13 +23,20 @@ final class Env
 
     private array $envSpec;
 
+    /**
+     * @throws RandomException
+     */
     public function __construct()
     {
         $this->envFile = (new EnvFile(file: Config::get('path') . '/config/.env', create: true));
 
         $spec = require __DIR__ . '/../../../config/env.spec.php';
 
+        $random = bin2hex(random_bytes(16));
+
         foreach ($spec as &$info) {
+            $info['config_value'] = Config::get(ag($info, 'config', $random), null);
+
             if (!$this->envFile->has($info['key'])) {
                 continue;
             }
@@ -61,7 +69,7 @@ final class Env
         }
 
         if (true === (bool)$params->get('set', false)) {
-            $list = array_filter($list, fn ($info) => $this->envFile->has($info['key']));
+            $list = array_filter($list, fn($info) => $this->envFile->has($info['key']));
         }
 
         return api_response(Status::OK, [
@@ -94,11 +102,13 @@ final class Env
 
         return api_response(Status::OK, [
             'key' => $key,
-            'value' => $this->settype($spec, ag($spec, 'value', fn () => $this->envFile->get($key))),
+            'value' => $this->settype($spec, ag($spec, 'value', fn() => $this->envFile->get($key))),
             'description' => ag($spec, 'description'),
             'type' => ag($spec, 'type'),
             'mask' => (bool)ag($spec, 'mask', false),
             'danger' => (bool)ag($spec, 'danger', false),
+            'config_value' => ag($spec, 'config_value', null),
+            'config' => ag($spec, 'config', null),
         ]);
     }
 
@@ -127,11 +137,13 @@ final class Env
 
             return api_response(Status::OK, [
                 'key' => $key,
-                'value' => $this->setType($spec, ag($spec, 'value', fn () => $this->envFile->get($key))),
+                'value' => $this->setType($spec, ag($spec, 'value', fn() => $this->envFile->get($key))),
                 'description' => ag($spec, 'description'),
                 'type' => ag($spec, 'type'),
                 'mask' => (bool)ag($spec, 'mask', false),
                 'danger' => (bool)ag($spec, 'danger', false),
+                'config_value' => ag($spec, 'config_value', null),
+                'config' => ag($spec, 'config', null),
             ]);
         }
 
@@ -163,6 +175,8 @@ final class Env
             'type' => ag($spec, 'type'),
             'mask' => (bool)ag($spec, 'mask', false),
             'danger' => (bool)ag($spec, 'danger', false),
+            'config_value' => ag($spec, 'config_value', null),
+            'config' => ag($spec, 'config', null),
         ]);
     }
 

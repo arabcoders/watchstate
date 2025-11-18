@@ -724,3 +724,31 @@ from the trusted sources will be granted access without further authentication.
 > Setting both `WS_TRUST_PROXY` and `WS_TRUST_LOCAL` to true will disable all internal authentication mechanisms.
 > Ensure that your external auth layer is secure and properly configured to prevent unauthorized access. Your entire
 > WatchState instance will be open to anyone who access it via local network.
+
+--- 
+
+# Failing due to duplicate UUID
+
+If you clone your media backend instance, your UUID might be duplicated as well. Unfortunately we cannot add a check
+against that as it would break `3-way sync`. Duplicate UUID may lead to unforeseen issues such as automatic sub users
+creation failing to load. To fix the issue it's recommended to change the backend UUID to do so,
+
+* For jellyfin: `config/data/device.txt`
+* For Emby: `data/device.txt`
+* For Plex: `Library/Application Support/Plex Media Server/Preferences.xml` key: `ProcessedMachineIdentifier`.
+
+Those values need to be unique per instance.
+
+--- 
+
+# Failing due to duplicate UUID
+
+If you clone your media backend instance, your UUID might be duplicated as well. Unfortunately we cannot add a check
+against that as it would break `3-way sync`. Duplicate UUID may lead to unforeseen issues such as automatic sub users
+creation failing to load. To fix the issue it's recommended to change the backend UUID to do so,
+
+* For jellyfin: `config/data/device.txt`
+* For Emby: `data/device.txt`
+* For Plex: `Library/Application Support/Plex Media Server/Preferences.xml` key: `ProcessedMachineIdentifier`.
+
+Those values need to be unique per instance.

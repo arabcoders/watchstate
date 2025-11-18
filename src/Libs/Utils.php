@@ -1730,3 +1730,71 @@ if (!function_exists('flatArray')) {
         return $out;
     }
 }
+
+if (!function_exists('urlsafe_b64encode')) {
+    /**
+     * Encode a string to URL-safe base64.
+     *
+     * @param string $input The string to encode.
+     *
+     * @return string The URL-safe base64 encoded string.
+     */
+    function urlsafe_b64encode(string $input): string
+    {
+        return \rtrim(\strtr(\base64_encode($input), '+/', '-_'), '=');
+    }
+}
+
+if (!function_exists('urlsafe_b64decode')) {
+    /**
+     * Decode a URL-safe base64 encoded string.
+     *
+     * @param string $input The URL-safe base64 encoded string to decode.
+     *
+     * @return string The decoded string.
+     */
+    function urlsafe_b64decode(string $input): string
+    {
+        $remainder = \strlen($input) % 4;
+        if ($remainder) {
+            $pad_length = 4 - $remainder;
+            $input .= \str_repeat('=', $pad_length);
+        }
+
+        return \base64_decode(\strtr($input, '-_', '+/'));
+    }
+}
+
+if (!function_exists('urlsafe_b64encode')) {
+    /**
+     * Encode a string to URL-safe base64.
+     *
+     * @param string $input The string to encode.
+     *
+     * @return string The URL-safe base64 encoded string.
+     */
+    function urlsafe_b64encode(string $input): string
+    {
+        return \rtrim(\strtr(\base64_encode($input), '+/', '-_'), '=');
+    }
+}
+
+if (!function_exists('urlsafe_b64decode')) {
+    /**
+     * Decode a URL-safe base64 encoded string.
+     *
+     * @param string $input The URL-safe base64 encoded string to decode.
+     *
+     * @return string The decoded string.
+     */
+    function urlsafe_b64decode(string $input): string
+    {
+        $remainder = \strlen($input) % 4;
+        if ($remainder) {
+            $pad_length = 4 - $remainder;
+            $input .= \str_repeat('=', $pad_length);
+        }
+
+        return \base64_decode(\strtr($input, '-_', '+/'));
+    }
+}

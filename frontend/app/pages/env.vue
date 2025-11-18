@@ -82,8 +82,29 @@
                 </div>
               </div>
 
+              <div class="field" v-if="form_config && !value_set(form_key)">
+                <Message :newStyle="true" message_class="is-info is-size-7">
+                  <p class="is-size-7 has-text-grey-dark">
+                    <span class="icon-text">
+                      <span class="icon"><i class="fas fa-info-circle"></i></span>
+                      <span>This environment variable overrides the shown configuration key.</span>
+                    </span>
+                  </p>
+                  <code>{{ form_config }}</code> :
+                  <strong v-if="!form_mask">{{ form_config_value }}</strong>
+                  <strong v-else>
+                    <span :title="form_config_value" class="is-masked is-unselectable">{{ form_config_value }}</span>
+                  </strong>
+                </Message>
+              </div>
+
               <div class="field">
-                <label class="label is-unselectable" for="form_value">Environment value</label>
+                <label class="label is-unselectable" for="form_value">
+                  Environment value
+                  <span class="tag is-info" v-if="!value_set(form_key)">
+                    not set
+                  </span>
+                </label>
                 <div class="field-body" v-if="form_mask && 'string' === form_type">
                   <div class="field">
                     <div class="field has-addons">
@@ -262,11 +283,11 @@
 
 <script setup lang="ts">
 import '~/assets/css/bulma-switch.css'
-import {ref, computed, watch, onMounted, onUnmounted, nextTick} from 'vue'
-import {useRoute, useRouter, useHead, navigateTo} from '#app'
+import {computed, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
+import {navigateTo, useHead, useRoute, useRouter} from '#app'
 import {useStorage} from '@vueuse/core'
 import Message from '~/components/Message.vue'
-import {request, awaitElement, copyText, notification, parse_api_response} from '~/utils'
+import {awaitElement, copyText, notification, parse_api_response, request, ucFirst} from '~/utils'
 import type {EnvVar} from '~/types'
 
 const route = useRoute()
@@ -282,6 +303,8 @@ const form_type = ref<'string' | 'int' | 'bool' | null>(null)
 const form_mask = ref<boolean>(false)
 const form_expose = ref<boolean>(false)
 const form_choice = ref<Array<string>>([])
+const form_config = ref<string | undefined>(undefined)
+const form_config_value = ref<any>(undefined)
 
 const show_page_tips = useStorage('show_page_tips', true)
 const isLoading = ref<boolean>(true)
@@ -421,6 +444,8 @@ const editEnv = (env: EnvVar): void => {
   form_type.value = env.type
   form_mask.value = env.mask
   form_choice.value = env.choices || []
+  form_config.value = env.config
+  form_config_value.value = env.config_value
 
   toggleForm.value = true
   if (!useRoute().query.edit) {
@@ -435,6 +460,8 @@ const cancelForm = async (): Promise<void> => {
   form_type.value = null
   form_mask.value = false
   form_choice.value = []
+  form_config.value = undefined
+  form_config_value.value = undefined
   toggleForm.value = false
 
   if (currentRoute.query?.callback) {
@@ -469,6 +496,8 @@ const keyChanged = (): void => {
   form_value.value = data.value || ''
   form_type.value = data.type || 'string'
   form_mask.value = data.mask || false
+  form_config.value = data.config
+  form_config_value.value = data.config_value
 
   nextTick(() => {
     if ('undefined' === typeof form_value.value && 'bool' === form_type.value) {
@@ -542,4 +571,12 @@ onMounted(async () => {
 })
 
 onUnmounted(() => window.removeEventListener('popstate', stateCallBack))
+
+const value_set = (key: string): boolean => {
+  const item = items.value.find(i => i.key === key)
+  if (!item) {
+    return false
+  }
+  return 'undefined' !== typeof item.value
+}
 </script>

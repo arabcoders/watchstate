@@ -324,8 +324,12 @@ export interface EnvVar {
     danger?: boolean
     /** Whether this variable is deprecated */
     deprecated?: boolean
-    /** If this option is present, a select option should show */
-    choice?: Array<string> | null,
+    /** If this option is present, a select option should be shown */
+    choices?: Array<string> | null,
+    /** The linked config variable */
+    config?: string,
+    /** The linked config value */
+    config_value?: any,
 }
 
 /**

@@ -52,7 +52,8 @@
         "dragonmantank/cron-expression": "^3.4.0",
         "halaxa/json-machine": "^1.2.0",
         "ramsey/uuid": "^4.7.6",
-        "perftools/php-profiler": "^1.1.2"
+        "perftools/php-profiler": "^1.1.2",
+        "firebase/php-jwt": "^6.11"
     },
     "suggest": {
         "ext-sockets": "For UDP communications."
