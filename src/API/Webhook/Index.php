@@ -27,6 +27,7 @@ use Monolog\Logger;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Log\LoggerInterface as iLogger;
+use Psr\SimpleCache\InvalidArgumentException;
 use Throwable;
 
 final class Index
@@ -45,9 +46,11 @@ final class Index
     ) {
         $this->logfile = new Logger(name: 'webhook', processors: [new LogMessageProcessor()]);
 
-        $level = Config::get('webhook.debug') ? Level::Debug : Level::Info;
+        $logfile = Config::get('webhook.log.file');
+        $enabled = (bool)Config::get('webhook.log.enabled', true);
+        $level = Config::get('webhook.debug') ? Level::Debug : Config::get('webhook.log.level', Level::Info);
 
-        if (null !== ($logfile = Config::get('webhook.logfile'))) {
+        if (true === $enabled && null !== $logfile) {
             $this->logfile->pushHandler(
                 $suppressor->withHandler(new StreamHandler($logfile, $level, true))
             );
@@ -259,6 +262,9 @@ final class Index
         return api_response(Status::OK);
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     private function create_item(
         UserContext $userContext,
         string $backendName,

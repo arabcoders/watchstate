@@ -1372,6 +1372,7 @@ class HelpersTest extends TestCase
         $this->assertSame(
             [
                 'key' => 'WS_DATA_PATH',
+                'config' => 'path',
                 'description' => 'Where to store main data. (config, db).',
                 'type' => 'string',
             ],

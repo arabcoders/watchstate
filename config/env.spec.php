@@ -16,16 +16,19 @@ return (function () {
     $env = [
         [
             'key' => 'WS_DATA_PATH',
+            'config' => 'path',
             'description' => 'Where to store main data. (config, db).',
             'type' => 'string',
         ],
         [
             'key' => 'WS_TMP_DIR',
+            'config' => 'tmpDir',
             'description' => 'Where to store temp data. (logs, cache).',
             'type' => 'string',
         ],
         [
             'key' => 'WS_TZ',
+            'config' => 'tz',
             'description' => 'Set the Tool timezone.',
             'type' => 'string',
             'validate' => function (mixed $value, array $spec = []): string {
@@ -42,6 +45,7 @@ return (function () {
         ],
         [
             'key' => 'WS_DB_MODE',
+            'config' => null,
             'description' => 'DB journal mode. Memory mode can give a big performance boost at the cost of potential data loss on crashes.',
             'type' => 'string',
             'choices' => ['MEMORY', 'WAL'],
@@ -61,47 +65,68 @@ return (function () {
         ],
         [
             'key' => 'WS_LOGS_CONTEXT',
+            'config' => 'logs.context',
             'description' => 'Enable extra context information in logs and output.',
             'type' => 'bool',
         ],
         [
             'key' => 'WS_LOGGER_FILE_ENABLE',
+            'config' => 'logger.file.enabled',
             'description' => 'Enable logging to app.(YYYYMMDD).log file.',
             'type' => 'bool',
         ],
         [
             'key' => 'WS_LOGGER_FILE_LEVEL',
+            'config' => 'logger.file.level',
             'description' => 'Set the log level for the file logger. Default: ERROR.',
             'type' => 'string',
         ],
         [
+            'key' => 'WS_WEBHOOK_LOG_ENABLED',
+            'config' => 'webhook.log.enabled',
+            'description' => 'Enable Webhook logging to file. Default: true.',
+            'type' => 'bool',
+        ],
+        [
+            'key' => 'WS_WEBHOOK_LOG_LEVEL',
+            'config' => 'webhook.log.level',
+            'description' => 'Set the log level for the webhook logger. Default: INFO.',
+            'type' => 'string',
+        ],
+        [
             'key' => 'WS_WEBHOOK_DUMP_REQUEST',
+            'config' => 'webhook.dumpRequest',
             'description' => 'Dump all requests to webhook endpoint to a json file.',
             'type' => 'bool',
         ],
         [
             'key' => 'WS_TRUST_PROXY',
+            'config' => 'trust.proxy',
             'description' => 'Trust the IP from the WS_TRUST_HEADER header.',
             'type' => 'bool',
         ],
         [
             'key' => 'WS_TRUST_LOCAL',
+            'config' => 'trust.local',
             'description' => 'Bypass the WebUI authentication layer for local IP addresses.',
             'type' => 'bool',
             'danger' => true,
         ],
         [
             'key' => 'WS_TRUST_HEADER',
+            'config' => 'trust.header',
             'description' => 'The header which contains the true user IP.',
             'type' => 'string',
         ],
         [
             'key' => 'WS_LIBRARY_SEGMENT',
+            'config' => 'library.segment',
             'description' => 'How many items to request per a request to backends.',
             'type' => 'int',
         ],
         [
             'key' => 'WS_CACHE_URL',
+            'config' => 'cache.url',
             'description' => 'The URL to the cache server.',
             'type' => 'string',
             'mask' => true,
@@ -113,11 +138,13 @@ return (function () {
         ],
         [
             'key' => 'WS_WEBUI_PATH',
+            'config' => 'webui.path',
             'description' => 'The path to where the WebUI is compiled.',
             'type' => 'string',
         ],
         [
             'key' => 'WS_API_KEY',
+            'config' => 'api.key',
             'description' => 'The API key to allow access to the API.',
             'type' => 'string',
             'mask' => true,
@@ -125,86 +152,103 @@ return (function () {
         ],
         [
             'key' => 'WS_LOGS_PRUNE_AFTER',
+            'config' => 'logs.prune.after',
             'description' => 'Prune logs after this many days.',
             'type' => 'int',
         ],
         [
             'key' => 'WS_EXPORT_THRESHOLD',
+            'config' => 'export.threshold',
             'description' => 'Trigger full export mode if changes exceed this number.',
             'type' => 'int',
         ],
         [
             'key' => 'WS_BACKENDS_FILE',
+            'config' => 'backends_file',
             'description' => 'The full path to the backends file.',
             'type' => 'string',
         ],
         [
             'key' => 'WS_WEBHOOK_LOG_FILE_FORMAT',
+            'config' => 'webhook.log.file_format',
             'description' => 'The name format for the webhook log file. Anything inside {} will be replaced with data from the webhook payload.',
             'type' => 'string',
         ],
         [
             'key' => 'WS_CACHE_PREFIX',
+            'config' => 'cache.prefix',
             'description' => 'The prefix for the cache keys. Default \'\'.',
             'type' => 'string',
         ],
         [
             'key' => 'WS_CACHE_PATH',
+            'config' => 'cache.path',
             'description' => 'Where to store cache data. This is usually used if the cache server is not available and/or experiencing issues.',
             'type' => 'string',
         ],
         [
             'key' => 'WS_LOGGER_SYSLOG_FACILITY',
+            'config' => 'logger.syslog.facility',
             'description' => 'The syslog facility to use.',
             'type' => 'string',
         ],
         [
             'key' => 'WS_LOGGER_SYSLOG_ENABLED',
+            'config' => 'logger.syslog.enabled',
             'description' => 'Enable logging to syslog.',
             'type' => 'bool',
         ],
         [
             'key' => 'WS_LOGGER_SYSLOG_LEVEL',
+            'config' => 'logger.syslog.level',
             'description' => 'Set the log level for the syslog logger. Default: ERROR',
             'type' => 'string',
         ],
         [
             'key' => 'WS_SECURE_API_ENDPOINTS',
+            'config' => 'api.secure',
             'description' => 'Disable the open policy for webhook endpoint and require apikey.',
             'type' => 'bool',
         ],
         [
             'key' => 'WS_API_LOG_INTERNAL',
+            'config' => 'api.logInternal',
             'description' => 'Log internal requests to the API.',
             'type' => 'bool',
         ],
         [
             'key' => 'WS_DEBUG',
+            'config' => 'debug.enabled',
             'description' => 'Expose debug information in the API when an error occurs.',
             'type' => 'bool',
         ],
         [
             'key' => 'WS_CONSOLE_ENABLE_ALL',
+            'config' => 'console.enable.all',
             'description' => 'All executing all commands in the console. They must be prefixed with $',
             'type' => 'bool',
         ],
         [
             'key' => 'WS_PROFILER_COLLECTOR',
+            'config' => 'profiler.collector',
             'description' => 'The XHProf data collector URL to send the profiler data to.',
             'type' => 'string',
         ],
         [
             'key' => 'WS_PROFILER_SAVE',
+            'config' => 'profiler.save',
             'description' => 'Save the profiler data to disk.',
             'type' => 'bool',
         ],
         [
             'key' => 'WS_PROFILER_PATH',
+            'config' => 'profiler.path',
             'description' => 'The path to save the profiler data.',
             'type' => 'string',
         ],
         [
             'key' => 'WS_PROGRESS_THRESHOLD',
+            'config' => 'progress.threshold',
             'description' => 'Allow watch progress sync for played items. Expects seconds. Minimum 180. 0 to disable.',
             'type' => 'string',
             'validate' => function (mixed $value, array $spec = []): string {
@@ -227,16 +271,19 @@ return (function () {
         ],
         [
             'key' => 'WS_LOGGER_REMOTE_ENABLE',
+            'config' => 'logger.remote.enabled',
             'description' => 'Enable logging to remote logger.',
             'type' => 'bool',
         ],
         [
             'key' => 'WS_LOGGER_REMOTE_LEVEL',
+            'config' => 'logger.remote.level',
             'description' => 'Set the log level for the remote logger. Default: ERROR.',
             'type' => 'string',
         ],
         [
             'key' => 'WS_LOGGER_REMOTE_URL',
+            'config' => 'logger.remote.url',
             'description' => 'The URL to the remote logger.',
             'type' => 'string',
             'validate' => function (mixed $value, array $spec = []): string {
@@ -253,11 +300,13 @@ return (function () {
         ],
         [
             'key' => 'WS_HTTP_SYNC_REQUESTS',
+            'config' => 'http.default.sync_requests',
             'description' => 'Whether to send backend requests in parallel or sequentially.',
             'type' => 'bool',
         ],
         [
             'key' => 'WS_SYSTEM_USER',
+            'config' => 'system.user',
             'description' => 'The login user name.',
             'type' => 'string',
             'validate' => function (mixed $value, array $spec = []): string {
@@ -277,6 +326,7 @@ return (function () {
         ],
         [
             'key' => 'WS_SYSTEM_PASSWORD',
+            'config' => 'system.password',
             'description' => 'The login password. The given plaintext password will be converted to hash.',
             'type' => 'string',
             'validate' => function (mixed $value, array $spec = []): string {
@@ -305,6 +355,7 @@ return (function () {
         ],
         [
             'key' => 'WS_SYSTEM_SECRET',
+            'config' => 'system.secret',
             'description' => 'The secret key which is used to sign successful auth requests.',
             'type' => 'string',
             'validate' => function (mixed $value, array $spec = []): string {
@@ -327,11 +378,13 @@ return (function () {
         ],
         [
             'key' => 'WS_GUID_DISABLE_EPISODE',
+            'config' => 'guid.disable.episode',
             'description' => 'Enable this option to disable matching episodes by GUIDs and rely on relative GUIDs to match.',
             'type' => 'bool',
         ],
         [
             'key' => 'WS_PROGRESS_MINIMUM',
+            'config' => 'progress.minimum',
             'description' => 'Time in seconds to consider progress update as valid.',
             'type' => 'string',
             'validate' => function (mixed $value, array $spec = []): string {
@@ -381,17 +434,20 @@ return (function () {
     $task_env = [
         [
             'key' => 'WS_CRON_{TASK}',
+            'config' => 'tasks.list.{task}.enabled',
             'description' => 'Enable the {TASK} task.',
             'type' => 'bool',
         ],
         [
             'key' => 'WS_CRON_{TASK}_AT',
+            'config' => 'tasks.list.{task}.timer',
             'description' => 'The time to run the {TASK} task.',
             'type' => 'string',
             'validate' => $validateCronExpression(...),
         ],
         [
             'key' => 'WS_CRON_{TASK}_ARGS',
+            'config' => 'tasks.list.{task}.args',
             'description' => 'The arguments to pass to the {TASK} task.',
             'type' => 'string',
         ],
@@ -401,6 +457,7 @@ return (function () {
         foreach ($task_env as $info) {
             $info['key'] = r($info['key'], ['TASK' => strtoupper($task)]);
             $info['description'] = r($info['description'], ['TASK' => $task]);
+            $info['config'] = r($info['config'], ['task' => $task]);
             $env[] = $info;
         }
     }
