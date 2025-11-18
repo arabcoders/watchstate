@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20251118-e94dd24d",
-        "date": "2025-11-18T14:38:36+00:00",
+        "tag": "dev-20251118-4c0fc762",
+        "date": "2025-11-18T15:03:51+00:00",
         "commits": [
+            {
+                "sha": "4c0fc762",
+                "message": "Fix: remove duplicate code due to local merge issue",
+                "author": "arabcoders",
+                "date": "2025-11-18T15:03:51+00:00",
+                "full_sha": "4c0fc762a72ba994954921418cc9e042a1a84013"
+            },
             {
                 "sha": "e94dd24d",
                 "message": "Fix: failed to commit some files.",
@@ -781,7 +788,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "e94dd24d261167c16c2492766b3123b2e473c2c7"
+        "full_sha": "4c0fc762a72ba994954921418cc9e042a1a84013"
     },
     {
         "tag": "dev-20250604-9407bc76",
