@@ -82,7 +82,7 @@ $ docker compose up -d
 ### Via docker command.
 
 ```bash
-$ docker run -d --rm --user "${UID:-1000}:${GID:-1000}" --name watchstate --restart unless-stopped -p 8080:8080 -v ./data:/config:rw ghcr.io/arabcoders/watchstate:latest
+$ docker run -d --user "${UID:-1000}:${GID:-${UID:-1000}}" --name watchstate --restart unless-stopped -p 8080:8080 -v ./data:/config:rw ghcr.io/arabcoders/watchstate:latest
 ```
 
 > [!IMPORTANT]

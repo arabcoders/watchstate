@@ -1,4 +1,5 @@
 <?php
+/** @noinspection PhpUnhandledExceptionInspection */
 
 declare(strict_types=1);
 
@@ -1069,6 +1070,248 @@ class UtilsTest extends TestCase
         $result = validateServersData($data);
 
         $this->assertTrue($result['valid'], 'Mix of nullable and non-nullable fields should work correctly');
+    }
+
+    public function test_urlsafe_b64encode_with_simple_string(): void
+    {
+        $input = 'Hello World';
+        $result = urlsafe_b64encode($input);
+
+        // Standard base64 would be: SGVsbG8gV29ybGQ=
+        // URL-safe removes padding and replaces +/ with -_
+        $expected = 'SGVsbG8gV29ybGQ';
+
+        $this->assertSame($expected, $result, 'Simple string should be encoded without padding');
+    }
+
+    public function test_urlsafe_b64encode_removes_padding(): void
+    {
+        // Test strings that would have different padding lengths
+        $tests = [
+            'a' => 'YQ',      // Would be 'YQ==' in standard base64
+            'ab' => 'YWI',    // Would be 'YWI=' in standard base64
+            'abc' => 'YWJj',  // Would be 'YWJj' in standard base64 (no padding)
+        ];
+
+        foreach ($tests as $input => $expected) {
+            $result = urlsafe_b64encode($input);
+            $this->assertSame($expected, $result, "Input '$input' should have padding removed");
+            $this->assertStringNotContainsString('=', $result, 'Result should not contain padding characters');
+        }
+    }
+
+    public function test_urlsafe_b64encode_replaces_special_characters(): void
+    {
+        // Create input that will produce + and / in standard base64
+        // Using binary data that specifically generates these characters
+        $input = "\xff\xef"; // This creates '+' in base64
+        $result = urlsafe_b64encode($input);
+
+        $this->assertStringNotContainsString('+', $result, 'Result should not contain + character');
+        $this->assertStringNotContainsString('/', $result, 'Result should not contain / character');
+        $this->assertStringContainsString('-', $result, 'Result should contain - instead of +');
+    }
+
+    public function test_urlsafe_b64encode_with_binary_data(): void
+    {
+        // Test with actual binary data (like encryption keys)
+        $input = random_bytes(32);
+        $result = urlsafe_b64encode($input);
+
+        $this->assertIsString($result, 'Should return a string');
+        $this->assertStringNotContainsString('=', $result, 'Should not contain padding');
+        $this->assertStringNotContainsString('+', $result, 'Should not contain +');
+        $this->assertStringNotContainsString('/', $result, 'Should not contain /');
+        $this->assertMatchesRegularExpression('/^[A-Za-z0-9_-]+$/', $result, 'Should only contain URL-safe characters');
+    }
+
+    public function test_urlsafe_b64encode_with_empty_string(): void
+    {
+        $result = urlsafe_b64encode('');
+        $this->assertSame('', $result, 'Empty string should return empty string');
+    }
+
+    public function test_urlsafe_b64encode_with_special_characters(): void
+    {
+        $input = '{"user":"admin","token":"xyz123"}';
+        $result = urlsafe_b64encode($input);
+
+        $this->assertIsString($result, 'Should encode JSON string');
+        $this->assertMatchesRegularExpression('/^[A-Za-z0-9_-]+$/', $result, 'Should be URL-safe');
+    }
+
+    public function test_urlsafe_b64decode_with_simple_string(): void
+    {
+        $encoded = 'SGVsbG8gV29ybGQ';
+        $result = urlsafe_b64decode($encoded);
+
+        $this->assertSame('Hello World', $result, 'Should decode back to original string');
+    }
+
+    public function test_urlsafe_b64decode_adds_padding_correctly(): void
+    {
+        // Test strings with different padding requirements
+        $tests = [
+            'YQ' => 'a',      // Needs 2 padding chars (==)
+            'YWI' => 'ab',    // Needs 1 padding char (=)
+            'YWJj' => 'abc',  // Needs 0 padding chars
+        ];
+
+        foreach ($tests as $encoded => $expected) {
+            $result = urlsafe_b64decode($encoded);
+            $this->assertSame($expected, $result, "Encoded '$encoded' should decode to '$expected'");
+        }
+    }
+
+    public function test_urlsafe_b64decode_handles_url_safe_characters(): void
+    {
+        // Encode with standard base64 then convert to URL-safe manually
+        $original = "\xff\xef\xfe";
+        $encoded = urlsafe_b64encode($original);
+        $decoded = urlsafe_b64decode($encoded);
+
+        $this->assertSame($original, $decoded, 'Should correctly decode URL-safe characters');
+    }
+
+    public function test_urlsafe_b64decode_with_binary_data(): void
+    {
+        $original = random_bytes(64);
+        $encoded = urlsafe_b64encode($original);
+        $decoded = urlsafe_b64decode($encoded);
+
+        $this->assertSame($original, $decoded, 'Should correctly encode and decode binary data');
+    }
+
+    public function test_urlsafe_b64decode_with_empty_string(): void
+    {
+        $result = urlsafe_b64decode('');
+        $this->assertSame('', $result, 'Empty string should return empty string');
+    }
+
+    public function test_urlsafe_b64_roundtrip_with_various_lengths(): void
+    {
+        // Test with different string lengths to ensure padding works correctly
+        for ($length = 1; $length <= 100; $length++) {
+            $original = random_bytes($length);
+            $encoded = urlsafe_b64encode($original);
+            $decoded = urlsafe_b64decode($encoded);
+
+            $this->assertSame(
+                $original,
+                $decoded,
+                "Roundtrip should work for $length byte input"
+            );
+        }
+    }
+
+    public function test_urlsafe_b64_roundtrip_with_utf8_strings(): void
+    {
+        $tests = [
+            'Hello World',
+            'UTF-8: こんにちは',
+            'Emoji: 🚀🎉💻',
+            'Mixed: Hello 世界 🌍',
+            'Special chars: @#$%^&*()',
+        ];
+
+        foreach ($tests as $original) {
+            $encoded = urlsafe_b64encode($original);
+            $decoded = urlsafe_b64decode($encoded);
+
+            $this->assertSame($original, $decoded, "Roundtrip should work for: $original");
+        }
+    }
+
+    public function test_urlsafe_b64encode_output_is_url_safe(): void
+    {
+        // Generate various inputs and ensure output is always URL-safe
+        for ($i = 0; $i < 100; $i++) {
+            $input = random_bytes(rand(1, 100));
+            $encoded = urlsafe_b64encode($input);
+
+            // Check that it only contains URL-safe characters
+            $this->assertMatchesRegularExpression(
+                '/^[A-Za-z0-9_-]*$/',
+                $encoded,
+                'Encoded output must only contain URL-safe characters'
+            );
+
+            // Verify no padding
+            $this->assertStringNotContainsString('=', $encoded, 'Should not contain padding');
+
+            // Verify no standard base64 special chars
+            $this->assertStringNotContainsString('+', $encoded, 'Should not contain +');
+            $this->assertStringNotContainsString('/', $encoded, 'Should not contain /');
+        }
+    }
+
+    public function test_urlsafe_b64_compatibility_with_jwt_standard(): void
+    {
+        // JWT uses URL-safe base64 without padding
+        // Test that our implementation matches JWT requirements
+        $payload = '{"sub":"1234567890","name":"John Doe","iat":1516239022}';
+        $encoded = urlsafe_b64encode($payload);
+
+        // Verify it's URL-safe
+        $this->assertMatchesRegularExpression('/^[A-Za-z0-9_-]+$/', $encoded);
+
+        // Verify no padding
+        $this->assertStringNotContainsString('=', $encoded);
+
+        // Verify roundtrip
+        $decoded = urlsafe_b64decode($encoded);
+        $this->assertSame($payload, $decoded);
+    }
+
+    public function test_urlsafe_b64_with_plex_jwt_keys(): void
+    {
+        // Test with Ed25519 key sizes (as used in PlexJWT)
+        $privateKey = random_bytes(32); // 32-byte seed
+        $publicKey = random_bytes(32);  // 32-byte public key
+
+        // Encode public key (as PlexJWT does for JWK)
+        $encodedPublic = urlsafe_b64encode($publicKey);
+
+        // Should be URL-safe
+        $this->assertMatchesRegularExpression('/^[A-Za-z0-9_-]+$/', $encodedPublic);
+
+        // Should decode correctly
+        $decodedPublic = urlsafe_b64decode($encodedPublic);
+        $this->assertSame($publicKey, $decodedPublic);
+        $this->assertEquals(32, strlen($decodedPublic), 'Decoded key should be 32 bytes');
+    }
+
+    public function test_urlsafe_b64decode_handles_standard_padding(): void
+    {
+        // Test that decoder can handle input with padding (in case someone passes it)
+        $original = 'test';
+        $standardBase64 = base64_encode($original);  // Will have padding
+        $urlSafe = strtr($standardBase64, '+/', '-_'); // Convert to URL-safe chars but keep padding
+
+        // Our decoder should handle this gracefully
+        $decoded = urlsafe_b64decode($urlSafe);
+        $this->assertSame($original, $decoded, 'Should handle input with padding');
+    }
+
+    public function test_urlsafe_b64_performance_with_large_data(): void
+    {
+        // Test with larger data (1MB)
+        $largeData = random_bytes(1024 * 1024);
+
+        $startEncode = microtime(true);
+        $encoded = urlsafe_b64encode($largeData);
+        $encodeTime = microtime(true) - $startEncode;
+
+        $startDecode = microtime(true);
+        $decoded = urlsafe_b64decode($encoded);
+        $decodeTime = microtime(true) - $startDecode;
+
+        // Verify correctness
+        $this->assertSame($largeData, $decoded, 'Should handle large data correctly');
+
+        // Verify reasonable performance (should complete in under 1 second each)
+        $this->assertLessThan(1.0, $encodeTime, 'Encoding 1MB should take less than 1 second');
+        $this->assertLessThan(1.0, $decodeTime, 'Decoding 1MB should take less than 1 second');
     }
 }
 
