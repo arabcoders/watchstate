@@ -1,8 +1,29 @@
 [
     {
-        "tag": "dev-20251116-e176f168",
-        "date": "2025-11-16T16:35:47+00:00",
+        "tag": "dev-20251118-e94dd24d",
+        "date": "2025-11-18T14:38:36+00:00",
         "commits": [
+            {
+                "sha": "e94dd24d",
+                "message": "Fix: failed to commit some files.",
+                "author": "arabcoders",
+                "date": "2025-11-18T14:38:36+00:00",
+                "full_sha": "e94dd24d261167c16c2492766b3123b2e473c2c7"
+            },
+            {
+                "sha": "729f5d9d",
+                "message": "Feat: Ability to disable or change the level of webhook logs. Ref #755",
+                "author": "arabcoders",
+                "date": "2025-11-18T14:35:51+00:00",
+                "full_sha": "729f5d9d74fd441991c22d8ba89d4084bcd8c4dc"
+            },
+            {
+                "sha": "146270a1",
+                "message": "Refactor: fix example command for docker. Closes #752",
+                "author": "arabcoders",
+                "date": "2025-11-18T12:51:10+00:00",
+                "full_sha": "146270a1f2c2d96f11ae803a09b2cd4be021ed23"
+            },
             {
                 "sha": "e176f168",
                 "message": "Refactor: Log when add backend validation fails.",
@@ -760,7 +781,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "e176f1687a25c8b22ac14eb4a1707f14250be8ba"
+        "full_sha": "e94dd24d261167c16c2492766b3123b2e473c2c7"
     },
     {
         "tag": "dev-20250604-9407bc76",
