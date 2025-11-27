@@ -1,5 +1,19 @@
 [
   {
+    "tag": "Unreleased (869052e4)",
+    "full_sha": "869052e416fafd45639860b7bf54942af994f26d",
+    "date": "2025-11-27T13:05:23+00:00",
+    "commits": [
+      {
+        "sha": "4c0fc762",
+        "full_sha": "4c0fc762a72ba994954921418cc9e042a1a84013",
+        "message": "Fix: remove duplicate code due to local merge issue",
+        "author": "arabcoders",
+        "date": "2025-11-18T15:03:51+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v1.0.2",
     "full_sha": "4446809a075e5dcc922bc00dbcc0f6a0851fe926",
     "date": "2025-11-18T14:53:58+00:00",
