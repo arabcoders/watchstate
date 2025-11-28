@@ -1,9 +1,16 @@
 [
   {
-    "tag": "Unreleased (869052e4)",
-    "full_sha": "869052e416fafd45639860b7bf54942af994f26d",
-    "date": "2025-11-27T13:05:23+00:00",
+    "tag": "Unreleased (9063155a)",
+    "full_sha": "9063155a26744b962182ef360653db1fb4841a96",
+    "date": "2025-11-28T15:38:47+00:00",
     "commits": [
+      {
+        "sha": "8d5495ee",
+        "full_sha": "8d5495ee32cb334cc6022ef95a503fa76ea6789f",
+        "message": "Doc: update README/FAQ",
+        "author": "arabcoders",
+        "date": "2025-11-28T15:31:50+00:00"
+      },
       {
         "sha": "4c0fc762",
         "full_sha": "4c0fc762a72ba994954921418cc9e042a1a84013",

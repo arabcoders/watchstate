@@ -1,8 +1,15 @@
 [
     {
-        "tag": "master-20251127-869052e4",
-        "date": "2025-11-27T13:05:23+00:00",
+        "tag": "master-20251128-9063155a",
+        "date": "2025-11-28T15:38:47+00:00",
         "commits": [
+            {
+                "sha": "8d5495ee",
+                "message": "Doc: update README/FAQ",
+                "author": "arabcoders",
+                "date": "2025-11-28T15:31:50+00:00",
+                "full_sha": "8d5495ee32cb334cc6022ef95a503fa76ea6789f"
+            },
             {
                 "sha": "4c0fc762",
                 "message": "Fix: remove duplicate code due to local merge issue",
@@ -753,7 +760,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "869052e416fafd45639860b7bf54942af994f26d"
+        "full_sha": "9063155a26744b962182ef360653db1fb4841a96"
     },
     {
         "tag": "master-20250614-e3307c58",
