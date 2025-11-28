@@ -28,9 +28,8 @@ Please refer to [NEWS](/NEWS.md) for the latest updates and changes.
 
 # Features
 
-* Management via WebUI.
 * **Sub-users** support. `Multi-users`.
-* Sync backends play state (`Many-to-many` or `One-way`).
+* Sync backends play state (`many-to-many` or `one-way`).
 * Backup your backends play state into `portable` format.
 * Receive [webhook](guides/webhooks.md) events from media backends.
 * Find `un-matched` or `mis-matched` items.
@@ -64,25 +63,29 @@ services:
     watchstate:
         image: ghcr.io/arabcoders/watchstate:latest
         # To change the user/group id associated with the tool change the following line.
-        user: "${UID:-1000}:${GID:-1000}"
+        user: "${UID:-1000}:${UID:-1000}"
         container_name: watchstate
         restart: unless-stopped
         ports:
-            - "8080:8080" # The port which the webui will be available on.
+            - "8080:8080" # The port which the watchstate will listen on.
         volumes:
-            - ./data:/config:rw # mount current directory to container /config directory.
+            - ./data:/config:rw # mount ./data in current directory to container /config directory.
 ```
 
 Next, to run the container, use the following command
 
 ```bash
-$ docker compose up -d
+mkdir -p ./data && docker compose up -d
 ```
 
 ### Via docker command.
 
 ```bash
-$ docker run -d --user "${UID:-1000}:${GID:-${UID:-1000}}" --name watchstate --restart unless-stopped -p 8080:8080 -v ./data:/config:rw ghcr.io/arabcoders/watchstate:latest
+mkdir -p ./data && docker run -itd --name watchstate \
+          --user "${UID:-1000}:${GID:-${UID:-1000}}"  \
+          --restart unless-stopped -p 8080:8080 \
+          -v ./data:/config:rw \
+          ghcr.io/arabcoders/watchstate:latest
 ```
 
 > [!IMPORTANT]
