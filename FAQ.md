@@ -4,7 +4,7 @@
 
 To turn on automatic import or export tasks:
 
-1. Go to the `Tasks` page in the WebUI.
+1. Go to the `Tasks` page.
 2. Enable the tasks you want to schedule for automatic execution.
 
 By default, the tasks are scheduled:
@@ -25,14 +25,15 @@ After making changes, visit the `Tasks` page again to see the updated schedule n
 # Container is crashing on start-up?
 
 This usually happens due to a misconfigured `user:` in your `compose.yaml` file or an incorrect `--user` argument. The
-container runs in **rootless mode**, so it will crash if it doesn’t have permission to access the data directory.
+container is rootless and cannot change the permissions of data directory by itself, so it will crash if it doesn’t have
+permission to access the data directory.
 
 ## Check permissions
 
 Run the following command to inspect ownership of your data directory:
 
 ```bash
-$ stat data/config/ | grep 'Uid:'
+stat data/config/ | grep 'Uid:'
 ```
 
 The path `data/config/` refers to where you have mounted your data directory. Adjust it if necessary.
@@ -74,13 +75,9 @@ movie or episode. Specifically, it means:
   as unplayed.
 
 In this case, the system prioritizes preserving your local play state. The item is marked as **tainted** and will be
-re-processed accordingly.
+re-processed accordingly. To resolve this conflict and sync the backend with your local state:
 
-## How to resolve the conflict?
-
-To resolve this conflict and sync the backend with your local state:
-
-- Go to the `WebUI > Backends`.
+- Go to the `Backends`.
 - Under the relevant backend, find the **Quick operations** list.
 - Select **3. Force export local play state to this backend.**
 
@@ -138,7 +135,7 @@ local one, the export may be skipped.
 
 To confirm if this is the issue, follow these steps:
 
-1. Go to the `WebUI > Backends`.
+1. Go to the `Backends`.
 2. Under the relevant backend, locate the **Quick operations** section.
 3. Select **7. Run export and save debug log.**
 
@@ -161,7 +158,7 @@ If you see messages such as `Backend date is equal or newer than database date.`
 
 To override the date check and force an update do the following:
 
-* Go to the `WebUI > Backends`.
+* Go to the `Backends`.
 * Under the relevant backend, find the **Quick operations** list.
 * Select **3. Force export local play state to this backend.**
 
@@ -172,55 +169,15 @@ This will sync your local database state to the backend, ignoring date compariso
 # Is there support for Multi-user setup?
 
 The tool is primarily designed for single-user use, The Multi-user/sub-users functionality is built on top of that.
-Because of that you *may* encounter some issues when using it with multi-users. However, from our testing, sub-users
-functionality works well right now and behave as expected in the majority of cases. Follow the guidelines below.
-
-## Getting started with a multi-user setup
-
-1. **Add your backends** as you normally would. Make sure to include the backends for your main user.
-2. For the `Plex` backend, you must use an **Admin-level `X-Plex-Token`**. Without it, we won’t be able to retrieve the
-   list of users.  
-   You can check your token by going to `Tools > Plex Token`.
-    - If you see a success message, you’re good to go.
-    - If you see an error message, it likely means your token has limited permissions and can’t be used to access the
-      user list.
-3. For `Jellyfin` and `Emby` backends, use an **API key**, which can be generated from your server settings:
-    - Go to `Dashboard > Advanced > API Keys` and create a new key.
-4. After setting up your backends and verifying they work, go to `Tools > Sub Users`.  
-   The system will attempt to automatically group users based on their names. However, because naming can vary between
-   setups, not all users may be matched correctly. You can manually organize the groups by dragging and dropping
-   users.
-5. Once you're satisfied with the setup, click the `Create Sub-users` button to generate the configuration.
-
-> [!NOTE]  
-> The sub-user configurations are based on your current main user settings. If you change the main configuration (e.g.,
-> backend URL), you must either:
-> * Manually update the sub-user backends, or
-> * Click `Update Sub-users`, which will try to update them automatically. This action can also **create new sub-users**
-    if they don’t already exist—so use it carefully.
-
-Once your sub-user setup is ready, you can start using the multi-user features.
-
-## Important
-
-We enforce a strict naming convention for both backend names and usernames:
-
-**Format:** `^[a-z_0-9]+$`
-
-Which means
-
-* Allowed: lowercase letters, numbers, and underscores (`_`)
-* Not allowed: spaces, uppercase letters, or special characters
-
-If any username doesn’t follow this convention, we’ll **automatically normalize** it, if the name is made entirely of
-digits, we’ll automatically prefix it with `user_`.
+From our testing, sub-users functionality works well right now and behave as expected in the majority of cases. Please
+refer to [sub users](/guides/sub-users.md) guide for more information on how to set it up correctly.
 
 ----
 
 # Does WatchState require Webhooks to work?
 
 No, webhooks are **not required** for the tool to function. You can use the built-in **scheduled tasks** or manually run
-**import/export operations** on demand through the WebUI or console.
+**import/export operations** on demand.
 
 > [!NOTE]
 > There are problems with jellyfin API, which are fixed by using webhooks, please check out
@@ -228,12 +185,12 @@ No, webhooks are **not required** for the tool to function. You can use the buil
 
 ---
 
-# I'm Using Media Backends Hosted Behind HTTPS and See Errors Related to HTTP/2
+# I'm Using Media Backends Hosted Behind HTTPS and See Errors Related to HTTP/2-3
 
-In some cases, issues may arise due to HTTP/2 compatibility problems with our internal http client. Before submitting a
-bug report, please try the following workaround:
+In some cases, issues may arise due to HTTP/2-2 compatibility problems with our internal http client. Before submitting
+a bug report, please try the following workaround:
 
-* Go to the `WebUI > Backends`.
+* Go to the `Backends`.
 * Find the backend where the issue occurs and click the **Edit** button.
 * Expand the **Additional options...** section.
 * Under **Add new option**, select `client.http_version` from the dropdown list.
@@ -251,7 +208,7 @@ this change, please open a bug report so it can be investigated further.
 If you're encountering request timeouts during sync operations, you can increase the timeout for a specific backend by
 following these steps:
 
-* Go to the `WebUI > Backends`.
+* Go to the `Backends`.
 * Find the backend where the issue occurs and click the **Edit** button.
 * Expand the **Additional options...** section.
 * Under **Add new option**, select `client.timeout` from the dropdown list.
@@ -274,7 +231,7 @@ General error: 11 database disk image is malformed
 To repair the database, follow these steps:
 
 ```bash
-$ docker exec -ti watchstate console db:repair /config/db/watchstate_v01.db
+docker exec -ti watchstate console db:repair /config/db/watchstate_v01.db
 ```
 
 > [!NOTE]
@@ -338,38 +295,12 @@ If there are no errors, the database has been repaired successfully. And you can
 
 # Environment Variables
 
-The recommended approach is for keys that starts with `WS_` use the `WebUI > Env` page. For other keys that aren't
-directly related to the tool, you **MUST** load them via container environment or the `compose.yaml` file.
-
-to see list of loaded environment variables, click on `Env` page in the WebUI.
+You can configure WatchState extensively using environment variables. The recommended approach is for keys that starts
+with `WS_` is to use the `Env` page. It will do some validation for you and ensure the values are correct.
 
 ## WatchState specific environment variables.
 
-Should be added/managed via the `WebUI > Env` page.
-
-| Key                     | Type    | Description                                                             | Default                  |
-|-------------------------|---------|-------------------------------------------------------------------------|--------------------------|
-| WS_DATA_PATH            | string  | Where to store main data. (config, db).                                 | `${BASE_PATH}/var`       |
-| WS_TMP_DIR              | string  | Where to store temp data. (logs, cache)                                 | `${WS_DATA_PATH}`        |
-| WS_TZ                   | string  | Set timezone. Fallback to to `TZ` variable if `WS_TZ` not set.          | `UTC`                    |
-| WS_CRON_{TASK}          | bool    | Enable {task} task. Value casted to bool.                               | `false`                  |
-| WS_CRON_{TASK}_AT       | string  | When to run {task} task. Valid Cron Expression Expected.                | `*/1 * * * *`            |
-| WS_CRON_{TASK}_ARGS     | string  | Flags to pass to the {task} command.                                    | `-v`                     |
-| WS_LOGS_CONTEXT         | bool    | Add context to console output messages.                                 | `false`                  |
-| WS_LOGGER_FILE_ENABLE   | bool    | Save logs to file.                                                      | `true`                   |
-| WS_LOGGER_FILE_LEVEL    | string  | File Logger Level.                                                      | `ERROR`                  |
-| WS_WEBHOOK_DUMP_REQUEST | bool    | If enabled, will dump all received requests.                            | `false`                  |
-| WS_TRUST_PROXY          | bool    | Trust `WS_TRUST_HEADER` ip. Value casted to bool.                       | `false`                  |
-| WS_TRUST_HEADER         | string  | Which header contain user true IP.                                      | `X-Forwarded-For`        |
-| WS_LIBRARY_SEGMENT      | integer | Paginate backend library items request. Per request get total X number. | `1000`                   |
-| WS_CACHE_URL            | string  | Cache server URL.                                                       | `redis://127.0.0.1:6379` |
-| WS_SECURE_API_ENDPOINTS | bool    | Disable the open policy for webhook endpoint and require apikey.        | `false`                  |
-
-> [!NOTE]
-> for environment variables that has `{TASK}` tag, you **MUST** replace it with one of `IMPORT`, `EXPORT`, `BACKUP`,
-`PRUNE`, `INDEXES` or `VALIDATE`.
->
-> Note, those are just sample of the environment variables, to see the entire, please visit the `Env` page in the WebUI.
+to see list of loaded environment variables, click on `Env` page.
 
 ## Container specific environment variables.
 
@@ -480,7 +411,7 @@ To increase the limit per backend, go to <!--i:fa-server--> **Backends** > <!--i
 option appears, set its value to the number of episodes you want to allow per episode range then,
 Click **<!--i:fa-save--> Save Settings**.
 
-## I Keep receiving 'jellyfin' item 'id: name' is marked as 'played' vs local state 'unplayed', However due to the remote item date 'date' being older than the last backend sync date 'date'. it was not considered as valid state.
+## I Keep receiving 'jellyfin' item 'id: name' is marked as 'played' vs local state 'unplayed'
 
 Sadly, this is due to bug in jellyfin, where it marks the item as played without updating the LastPlayedDate, and as
 such, watchstate doesn't really know the item has changed since last sync. Unfortunately, there is no way to fix this
@@ -520,7 +451,7 @@ the stat check once. Assuming all your media backends are using same path for th
 
 ---
 
-# How to use hardware acceleration for video transcoding in the WebUI?
+# How to use hardware acceleration for video playback?
 
 As the container is rootless, we cannot do the necessary changes to the container to enable hardware acceleration.
 However, We do have the drivers and ffmpeg already installed and the CPU transcoding should work regardless. To enable
@@ -532,13 +463,13 @@ services:
     watchstate:
         container_name: watchstate
         image: ghcr.io/arabcoders/watchstate:latest   # The image to use. you can use the latest or dev tag.
-        user: "${UID:-1000}:${GID:-1000}"             # user and group id to run the container under. 
+        user: "${UID:-1000}:${UID:-1000}"             # user and group id to run the container under. 
         group_add:
             - "44"                                    # Add video group to the container.
             - "105"                                   # Add render group to the container.
         restart: unless-stopped
         ports:
-            - "8080:8080"                             # The port which will serve WebUI + API + Webhooks
+            - "8080:8080"                             # The port which the watchstate will listen on. 
         devices:
             - /dev/dri:/dev/dri                       # mount the dri devices to the container.
         volumes:
@@ -554,7 +485,7 @@ Please know that your `video`, `render` group id might be different from mine, y
 host server to get the group ids for both groups.
 
 ```bash
-$ cat /etc/group | grep -E 'render|video'
+cat /etc/group | grep -E 'render|video'
 
 video:x:44:your_docker_username
 render:x:105:your_docker_username
@@ -569,89 +500,21 @@ Note: the tip about adding the group_add came from the user `binarypancakes` in 
 
 # Advanced: How to extend the GUID parser to support more GUIDs or custom ones?
 
-By going to `More > Custom GUIDs` in the WebUI, you can add custom GUIDs to the parser. We know not all people,
-like using GUI, as such You can extend the parser by creating new file at `/config/config/guid.yaml` with the following
-content.
-
-```yaml
-# (Optional) The version of the guid file. If omitted, it will default to the latest version.
-version: 1.0
-
-# The key must be in lower case. and it's an array.
-guids:
-    -   id: universally-unique-identifier       # the guid id. Example, 1ef83f5d-1686-60f0-96d6-3eb5c18f2aed
-        type: string                            # must be exactly string do not change it.
-        name: guid_mydb                         # the name must start with guid_ with no spaces and lower case.
-        description: "My custom database guid"  # description of the guid. For informational purposes only.
-        # Validator object. to validate the guid.
-        validator:
-            pattern: "/^[0-9\/]+$/i"  # regex pattern to match the guid. The pattern must also support / being in the guid. as we use the same object to generate relative guid.
-            example: "(number)"     # example of the guid. For informational purposes only.
-            tests:
-                valid:
-                    - "1234567"     # valid guid examples.
-                invalid:
-                    - "1234567a"    # invalid guid examples.
-                    - "a111234567"  # invalid guid examples.
-
-links:
-    # mapping the com.plexapp.agents.foo guid from plex backends into the guid_mydb in WatchState.
-    # plex legacy guids starts with com.plexapp.agents., you must set options.legacy to true.
-    -   id: universally-unique-identifier # the link id. example, 1ef83f5d-1686-60f0-96d6-3eb5c18f2aed
-        type: plex    # the client to link the guid to. plex, jellyfin, emby.
-        options: # options used by the client.
-            legacy: true  # Tag the mapper as legacy GUID for mapping.
-            # (Optional) Replace helper. Sometimes you need to replace the guid identifier to another.
-            # The replacement happens before the mapping, so if you replace the guid identifier, you should also
-            # update the map.from to match the new identifier.
-            # This "replace" object only works with plex legacy guids.
-            replace:
-                from: com.plexapp.agents.foobar://  # Replace from this string
-                to: com.plexapp.agents.foo://       # Into this string.
-        # Required map object. to map the new guid to WatchState guid.
-        map:
-            from: com.plexapp.agents.foo # map.from this string.
-            to: guid_mydb                # map.to this guid.
-
-    # mapping the foo guid from jellyfin backends into the guid_mydb in WatchState.
-    -   id: universally-unique-identifier # the link id. example, 1ef83f5d-1686-60f0-96d6-3eb5c18f2aed
-        type: jellyfin # the client to link the guid to. plex, jellyfin, emby.
-        map:
-            from: foo     # map.from this string.
-            to: guid_mydb # map.to this guid.
-
-    # mapping the foo guid from emby backends into the guid_mydb in WatchState.
-    -   id: universally-unique-identifier # the link id. example, 1ef83f5d-1686-60f0-96d6-3eb5c18f2aed
-        type: emby    # the client to link the guid to. plex, jellyfin, emby.
-        map:
-            from: foo     # map.from this string.
-            to: guid_mydb # map.to this guid.
-```
-
-As you can see from the config, it's roughly how we expected it to be. The `guids` array is where you define your new
-custom GUIDs. the `links` array is where you map from client/backends GUIDs to the custom GUID in `WatchState`.
-
-Everything in this file should be in lower case. If error occurs, the tool will log a warning and ignore the guid,
-By default, we only show `ERROR` levels in log file, You can lower it by setting `WS_LOGGER_FILE_LEVEL` environment
-variable
-to `WARNING`.
+Visit `More > Custom GUIDs` page, you can add custom GUIDs to the parser using the add form.
 
 If you added or removed a guid from the `guid.yaml` file, you should run `system:index --force-reindex` command to
-update the
-database indexes with the new guids.
+update the database indexes with the new guids.
 
 ---
 
 # Sync watch progress.
 
-For best experience, you SHOULD enable the [webhook](guides/webhooks.md) feature for the media backends you want to sync
-the watch progress, however, if you are unable to do so, the `Tasks > import` task will also generate progress watch
-events. However, it's not as reliable as the `Webhooks` or as fast. using `Webhooks` is the recommended way and offers
-the best experience.
+For best experience, first Enable the [webhook](/guides/webhooks.md) feature for the media backends you want to sync the
+watch progress, however, if you are unable to do so, the `Tasks > import` task will also generate progress watch events.
+However, it's not as reliable as the `Webhooks` or as fast it will only sync the progress when the import task is run.
 
-To check if there is any watch progress events being registered, You can go to `WebUI > More > Events` and check
-`on_progress` events, if you are seeing those, this means the progress is being synced. Check the `Tasks logs` to see
-the event log.
+To check if there is any watch progress events being registered, You can go to `More > Events` and check `on_progress`
+events, if you are seeing those, this means the progress is being synced. Check the `Tasks logs` to see the event log.
 
 If this is set up and working you may be ok with changing the `WS_CRON_IMPORT_AT/WS_CRON_EXPORT_AT` schedule to
 something less frequent as the sync progress working will update the progress near realtime. For example, you could
@@ -664,15 +527,15 @@ check [this FAQ entry](#how-to-enable-scheduledautomatic-tasks).
 
 By default, we do async requests to the media backends to speed up the sync process. However, in some cases this may
 lead to overloading the media backend with requests, especially if you have a large library. To mitigate this, you can
-instead switch the tasks to use synchronous requests. This will slow down the sync process but will reduce the load on
-your media backend. You have to manually edit the tasks `args` to include `--sync-requests` flag.
+instead switch the tasks to use synchronous requests. This will slow down the sync process by a lot, but will reduce the
+load on your media backend. You have to manually edit the tasks `args` to include `--sync-requests` flag.
 
 For example, to change the `Import` task to use synchronous requests:
 
-1. Go to the `WebUI > Tasks`.
+1. Go to the `Tasks`.
 2. Find the `Import` task and click on the `Args: -v` button.
 3. This will redirect you to the `Env` page to edit the relevant environment variable.
-4. In the `WS_CRON_IMPORT_ARGS` field, change the value from `-v` to `-v --sync-requests`.
+4. In the `WS_CRON_IMPORT_ARGS` value field, change the value from `-v` to `-v --sync-requests`.
 5. Click `Save Settings`.
 
 Repeat for all sync related tasks you want to change.
@@ -691,7 +554,7 @@ operations.
 
 To enable MEMORY mode, follow these steps:
 
-1. Go to the `WebUI > Env` page.
+1. Go to the `Env` page.
 2. Add a new environment variable.
 3. Select `WS_DB_MODE` from the dropdown list.
 4. select the `MEMORY` option.
