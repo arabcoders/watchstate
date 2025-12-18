@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20251218-0735f04f",
-        "date": "2025-12-18T16:58:11+00:00",
+        "tag": "dev-20251218-53a4038e",
+        "date": "2025-12-18T17:02:21+00:00",
         "commits": [
+            {
+                "sha": "53a4038e",
+                "message": "Chore: update external packages",
+                "author": "arabcoders",
+                "date": "2025-12-18T17:02:21+00:00",
+                "full_sha": "53a4038ee11e21a8de6438d96e149b14ec86971f"
+            },
             {
                 "sha": "0735f04f",
                 "message": "Feat: minor UI additions",
@@ -802,7 +809,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "0735f04f938b8251826b4186bee64c333c5a7c71"
+        "full_sha": "53a4038ee11e21a8de6438d96e149b14ec86971f"
     },
     {
         "tag": "dev-20250604-9407bc76",
