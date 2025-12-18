@@ -29,8 +29,6 @@
 </template>
 
 <script setup lang="ts">
-import {defineEmits, defineProps} from 'vue'
-
 withDefaults(defineProps<{
   /** Title text for the notification */
   title?: string | null

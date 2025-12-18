@@ -26,6 +26,22 @@
         <form id="user_edit_form" @submit.prevent="saveContent">
           <div class="card">
             <div class="card-content">
+              <div class="field">
+                <div class="control is-expanded has-icons-left">
+                  <input class="input" type="text" v-model="commandInput" placeholder="s/backend1.import.enabled/false/"
+                         @keydown.enter.prevent.stop="applyMiniCommand"/>
+                  <span class="icon is-small is-left">
+                    <i class="fas fa-terminal"></i>
+                  </span>
+                </div>
+                <p class="help has-text-danger" v-if="commandError">
+                  <span class="icon">
+                    <i class="fas fa-exclamation-triangle"/>
+                  </span>
+                  <span>{{ commandError }}</span>
+                </p>
+              </div>
+
               <div class="field" v-if="errorForm.message">
                 <Message :newStyle="true" title="Error" message_class="is-danger" :useClose="true"
                          icon="fas fa-exclamation-triangle" @close="errorForm.message = ''">
@@ -51,6 +67,8 @@
                 <p class="help">
                 </p>
               </div>
+
+
             </div>
 
             <footer class="card-footer">
@@ -104,6 +122,7 @@ import {onMounted, ref} from 'vue'
 import {navigateTo, useRoute} from '#app'
 import Message from '~/components/Message.vue'
 import {notification, parse_api_response, request} from '~/utils'
+import {applyCommand, parseCommand} from '~/utils/jsonCommand'
 
 const id = useRoute().params.user as string
 const isLoading = ref<boolean>(false)
@@ -116,6 +135,9 @@ const errorForm = ref<{
   message: '',
   details: [],
 })
+
+const commandInput = ref<string>('')
+const commandError = ref<string>('')
 
 const loadContent = async (): Promise<void> => {
   isLoading.value = true
@@ -137,6 +159,45 @@ const loadContent = async (): Promise<void> => {
     errorForm.value.message = error.message
   } finally {
     isLoading.value = false
+  }
+}
+
+const applyMiniCommand = async (): Promise<void> => {
+  commandError.value = ''
+
+  try {
+    if (0 === commandInput.value.trim().length) {
+      commandError.value = 'Command cannot be empty.'
+      return
+    }
+
+    let obj: Record<string, any>
+    try {
+      obj = JSON.parse(configContent.value)
+    } catch (e) {
+      commandError.value = 'Current JSON is invalid. Please fix it before applying commands.'
+      return
+    }
+
+    const parsed = parseCommand(commandInput.value)
+    if (!parsed.ok) {
+      commandError.value = parsed.error
+      notification('error', 'Invalid command', parsed.error)
+      return
+    }
+
+    const result = applyCommand(obj, parsed.command)
+    if (!result.ok) {
+      commandError.value = result.error
+      notification('error', 'Failed to apply command', result.error)
+      return
+    }
+    configContent.value = JSON.stringify(result.obj, null, 2)
+    commandInput.value = ''
+  } catch (e) {
+    const err = e as Error
+    commandError.value = err.message
+    notification('error', 'Error', `Failed to apply command. ${err.message}`)
   }
 }
 
@@ -196,7 +257,7 @@ const formatJSON = (): void => {
   try {
     const data = JSON.parse(configContent.value)
     configContent.value = JSON.stringify(data, null, 2)
-    errorForm.value.message = null
+    errorForm.value.message = ''
   } catch (error) {
     // Silently fail - don't show error on blur, user might still be editing
   }
@@ -213,4 +274,3 @@ onMounted((): void => {
   font-size: 0.875rem;
 }
 </style>
-

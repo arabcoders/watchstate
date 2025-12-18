@@ -41,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, onBeforeUnmount, withDefaults, onMounted} from 'vue'
+import {ref, onBeforeUnmount, onMounted} from 'vue'
 import {disableOpacity, enableOpacity, notification} from '~/utils'
 
 const props = withDefaults(defineProps<{
@@ -66,6 +66,7 @@ const props = withDefaults(defineProps<{
   /** Length of the secret key to generate */
   length?: number
 }>(), {
+  warning: '',
   warningIcon: 'fa-info-circle',
   warningIconClass: 'has-text-warning',
   title: 'Confirm action.',
