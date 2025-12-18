@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20251218-4f59887a",
-        "date": "2025-12-18T17:12:42+00:00",
+        "tag": "dev-20251218-3b9b3543",
+        "date": "2025-12-18T19:42:58+00:00",
         "commits": [
+            {
+                "sha": "3b9b3543",
+                "message": "Fix: build.yml would fail to generate frontend assets",
+                "author": "arabcoders",
+                "date": "2025-12-18T19:42:58+00:00",
+                "full_sha": "3b9b35438402696343d414356cddd8447f0b8295"
+            },
             {
                 "sha": "4f59887a",
                 "message": "Fix: Dockerfile build",
@@ -816,7 +823,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "4f59887a7fca345259996ee3c1599fa66641c55a"
+        "full_sha": "3b9b35438402696343d414356cddd8447f0b8295"
     },
     {
         "tag": "dev-20250604-9407bc76",
