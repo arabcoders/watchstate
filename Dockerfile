@@ -2,7 +2,12 @@ FROM node:lts-alpine AS npm_builder
 
 WORKDIR /frontend
 COPY ./frontend ./
-RUN if [ ! -d /frontend/exported ]; then yarn install --production --prefer-offline --frozen-lockfile && yarn run generate; fi
+ENV NODE_ENV=production
+RUN if [ ! -d "/frontend/exported" ]; then \
+  npm install -g pnpm && \
+  NODE_ENV=production pnpm install --frozen-lockfile --prod --ignore-scripts && \
+  pnpm run generate; \
+  else echo "Skipping UI build, already built."; fi
 
 FROM debian:13
 

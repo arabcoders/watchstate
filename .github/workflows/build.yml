@@ -1,4 +1,4 @@
-name: Building
+name: Build and Publish
 
 on:
   workflow_dispatch:
@@ -31,26 +31,48 @@ on:
       - "v*"
     paths-ignore:
       - "**.md"
-      - ".github/**"
+      - ".github/ISSUE_TEMPLATE/**"
 
   pull_request:
     branches:
-      - "master"
+      - master
+      - dev
     paths-ignore:
       - "**.md"
-      - ".github/**"
+      - ".github/ISSUE_TEMPLATE/**"
 
 env:
+  REGISTRY: ${{ vars.REGISTRY != '' && vars.REGISTRY || '' }}
+  BUILD_AMD64: ${{ vars.BUILD_AMD64 != 'false' && 'true' || 'false' }}
+  BUILD_ARM64: ${{ vars.BUILD_ARM64 != 'false' && 'true' || 'false' }}
   DOCKERHUB_SLUG: arabcoders/watchstate
   GHCR_SLUG: ghcr.io/arabcoders/watchstate
-  PLATFORMS: linux/amd64,linux/arm64
   PNPM_VERSION: 10
   NODE_VERSION: 20
 
 jobs:
-  unit-tests:
-    name: PHP ${{ matrix.php }}
+  validate-build-config:
+    name: Validate Build Configuration
     runs-on: ubuntu-latest
+    permissions: { }
+    steps:
+      - name: Ensure at least one architecture is enabled
+        run: |
+          if [ "${{ env.BUILD_AMD64 }}" = "false" ] && [ "${{ env.BUILD_ARM64 }}" = "false" ]; then
+            echo "::error::Both BUILD_AMD64 and BUILD_ARM64 are disabled. Enable at least one architecture."
+            exit 1
+          fi
+
+          echo "Build configuration is valid"
+          echo "BUILD_AMD64: ${{ env.BUILD_AMD64 }}"
+          echo "BUILD_ARM64: ${{ env.BUILD_ARM64 }}"
+
+  test:
+    name: Tests & Frontend Build
+    runs-on: ubuntu-latest
+    needs: [ validate-build-config ]
+    permissions:
+      contents: read
     strategy:
       fail-fast: true
       matrix:
@@ -58,6 +80,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Update Version File
         uses: arabcoders/write-version-to-file@master
@@ -79,23 +103,18 @@ jobs:
         id: composer-cache
         run: echo "COMPOSER_CACHE_DIR=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
 
-      - name: restore cached dependencies
+      - name: Restore cached dependencies
         uses: actions/cache@v4
         with:
           path: ${{ steps.composer-cache.outputs.COMPOSER_CACHE_DIR }}
           key: "${{ matrix.php }}-composer-${{ hashFiles('**/composer.lock') }}"
           restore-keys: ${{ matrix.php }}-composer-
 
-      - run: composer install --prefer-dist --no-interaction --no-progress
-      - run: composer run test
+      - name: Install PHP dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
 
-  pr_build_test:
-    needs: unit-tests
-    if: github.event_name == 'pull_request'
-    runs-on: "ubuntu-latest"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Run PHP tests
+        run: composer run test
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -107,77 +126,67 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
-          cache-dependency-path: 'frontend/pnpm-lock.yaml'
+          cache-dependency-path: "frontend/pnpm-lock.yaml"
 
-      - name: Install frontend dependencies & Build
+      - name: Install frontend dependencies
         working-directory: frontend
+        env:
+          NODE_ENV: production
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          NODE_ENV: production
+        run: pnpm run generate
+
+      - name: Set up Python
+        if: github.event_name != 'pull_request'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install GitPython
+        if: github.event_name != 'pull_request'
+        run: pip install gitpython
+
+      - name: Generate CHANGELOG.json
+        if: github.event_name != 'pull_request'
         run: |
-          pnpm install --production --prefer-offline --frozen-lockfile
-          pnpm run generate
+          python3 .github/scripts/generate_changelog.py -p . -f ./frontend/exported/CHANGELOG.json
 
-      - name: Update Version File
-        uses: arabcoders/write-version-to-file@master
+      - name: Upload frontend build
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
         with:
-          filename: "/config/config.php"
-          placeholder: "$(version_via_ci)"
-          with_date: "true"
-          with_branch: "true"
+          name: frontend-build
+          path: frontend/exported/
+          retention-days: 1
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          platforms: ${{ env.PLATFORMS }}
-          context: .
-          push: false
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha, scope=pr_${{ github.workflow }}
-          cache-to: type=gha, scope=pr_${{ github.workflow }}
-
-  publish_docker_images:
-    needs: unit-tests
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build == 'true')
-    runs-on: "ubuntu-latest"
+  docker-build-amd64:
+    name: Build Container (amd64)
+    runs-on: ubuntu-latest
+    needs: [ test, validate-build-config ]
+    if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build == 'true')) && vars.BUILD_AMD64 != 'false'
     permissions:
       packages: write
       contents: write
-
+    env:
+      ARCH: amd64
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
+      - name: Download frontend build
+        uses: actions/download-artifact@v4
         with:
-          version: ${{ env.PNPM_VERSION }}
+          name: frontend-build
+          path: frontend/exported/
 
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: 'frontend/pnpm-lock.yaml'
-
-      - name: Install frontend dependencies & Build
-        working-directory: frontend
-        run: |
-          pnpm install --production --prefer-offline --frozen-lockfile
-          pnpm run generate
-
-      - name: Install GitPython
-        run: pip install gitpython
-
-      - name: Generate CHANGELOG.json
-        run: |
-          python3 .github/scripts/generate_changelog.py -p . -f ./frontend/exported/CHANGELOG.json
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Update config/config.php
         run: |
@@ -191,7 +200,7 @@ jobs:
           echo "APP_VERSION=${VERSION}"  >> "$GITHUB_ENV"
           echo "APP_SHA=${SHA}"          >> "$GITHUB_ENV"
           echo "APP_DATE=${DATE}"        >> "$GITHUB_ENV"
-            echo "APP_BRANCH=${BRANCH}"    >> "$GITHUB_ENV"
+          echo "APP_BRANCH=${BRANCH}"    >> "$GITHUB_ENV"
 
           sed -i \
           -e "s/'version' => 'dev-master'/'version' => '${VERSION}'/" \
@@ -200,28 +209,33 @@ jobs:
           -e "s/'version_branch' => 'unknown'/'version_branch' => '${BRANCH}'/" \
           config/config.php
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ env.DOCKERHUB_SLUG }}
-            ${{ env.GHCR_SLUG }}
-          tags: |
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
-            type=ref,event=branch
-            type=ref,event=tag
+            name=${{ env.DOCKERHUB_SLUG }},enable=${{ env.REGISTRY == '' }}
+            name=${{ env.GHCR_SLUG }},enable=${{ env.REGISTRY == '' }}
+            name=${{ env.REGISTRY }}/${{ github.repository }},enable=${{ env.REGISTRY != '' }}
           flavor: |
             latest=false
+            suffix=-${{ env.ARCH }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
 
-      - name: Login to github
+      - name: Login to Private Registry
         uses: docker/login-action@v3
+        if: env.REGISTRY != ''
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GIT_TOKEN && secrets.GIT_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: env.REGISTRY == ''
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -229,6 +243,7 @@ jobs:
 
       - name: Login to DockerHub
         uses: docker/login-action@v3
+        if: env.REGISTRY == ''
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -236,16 +251,194 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          platforms: ${{ env.PLATFORMS }}
           context: .
+          platforms: linux/${{ env.ARCH }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha, scope=${{ github.workflow }}
-          cache-to: type=gha, scope=${{ github.workflow }}
+          cache-from: type=gha,scope=${{ github.workflow }}-${{ env.ARCH }}
+          cache-to: type=gha,mode=max,scope=${{ github.workflow }}-${{ env.ARCH }}
+          provenance: true
+
+  docker-build-arm64:
+    name: Build Container (arm64)
+    runs-on: ubuntu-latest
+    needs: [ test, validate-build-config ]
+    if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build == 'true')) && vars.BUILD_ARM64 != 'false'
+    permissions:
+      packages: write
+      contents: write
+    env:
+      ARCH: arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download frontend build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/exported/
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Update config/config.php
+        run: |
+          VERSION="${GITHUB_REF##*/}"
+          SHA=$(git rev-parse HEAD)
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          DATE=$(date -u +"%Y%m%d")
+
+          echo "Current version: ${VERSION}, SHA: ${SHA}, Date: ${DATE}"
+
+          echo "APP_VERSION=${VERSION}"  >> "$GITHUB_ENV"
+          echo "APP_SHA=${SHA}"          >> "$GITHUB_ENV"
+          echo "APP_DATE=${DATE}"        >> "$GITHUB_ENV"
+          echo "APP_BRANCH=${BRANCH}"    >> "$GITHUB_ENV"
+
+          sed -i \
+          -e "s/'version' => 'dev-master'/'version' => '${VERSION}'/" \
+          -e "s/'version_sha' => 'unknown'/'version_sha' => '${SHA}'/" \
+          -e "s/'version_build' => 'unknown'/'version_build' => '${DATE}'/" \
+          -e "s/'version_branch' => 'unknown'/'version_branch' => '${BRANCH}'/" \
+          config/config.php
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            name=${{ env.DOCKERHUB_SLUG }},enable=${{ env.REGISTRY == '' }}
+            name=${{ env.GHCR_SLUG }},enable=${{ env.REGISTRY == '' }}
+            name=${{ env.REGISTRY }}/${{ github.repository }},enable=${{ env.REGISTRY != '' }}
+          flavor: |
+            latest=false
+            suffix=-${{ env.ARCH }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+
+      - name: Login to Private Registry
+        uses: docker/login-action@v3
+        if: env.REGISTRY != ''
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GIT_TOKEN && secrets.GIT_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: env.REGISTRY == ''
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        if: env.REGISTRY == ''
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/${{ env.ARCH }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ github.workflow }}-${{ env.ARCH }}
+          cache-to: type=gha,mode=max,scope=${{ github.workflow }}-${{ env.ARCH }}
+          provenance: true
+
+  docker-publish-manifest:
+    name: Publish multi-arch manifest
+    runs-on: ubuntu-latest
+    needs: [ docker-build-amd64, docker-build-arm64 ]
+    if: |
+      !cancelled() && github.event_name != 'pull_request' &&
+      (needs.docker-build-amd64.result == 'success' || needs.docker-build-arm64.result == 'success')
+    permissions:
+      packages: write
+      contents: write
+    env:
+      AMD64_RESULT: ${{ needs.docker-build-amd64.result }}
+      ARM64_RESULT: ${{ needs.docker-build-arm64.result }}
+    steps:
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            name=${{ env.DOCKERHUB_SLUG }},enable=${{ env.REGISTRY == '' }}
+            name=${{ env.GHCR_SLUG }},enable=${{ env.REGISTRY == '' }}
+            name=${{ env.REGISTRY }}/${{ github.repository }},enable=${{ env.REGISTRY != '' }}
+          flavor: |
+            latest=false
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+
+      - name: Login to Private Registry
+        uses: docker/login-action@v3
+        if: env.REGISTRY != ''
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GIT_TOKEN && secrets.GIT_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: env.REGISTRY == ''
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        if: env.REGISTRY == ''
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create and push manifest list
+        shell: bash
+        run: |
+          IFS=$'\n'
+          BUILD_AMD64="${{ env.BUILD_AMD64 }}"
+          BUILD_ARM64="${{ env.BUILD_ARM64 }}"
+          AMD64_RESULT="${AMD64_RESULT}"
+          ARM64_RESULT="${ARM64_RESULT}"
+
+          for tag in $(echo "${{ steps.meta.outputs.tags }}"); do
+            echo "Creating manifest for ${tag}"
+
+            IMAGES=()
+            if [ "${BUILD_AMD64}" = "true" ] && [ "${AMD64_RESULT}" = "success" ]; then
+              IMAGES+=("${tag}-amd64")
+            fi
+            if [ "${BUILD_ARM64}" = "true" ] && [ "${ARM64_RESULT}" = "success" ]; then
+              IMAGES+=("${tag}-arm64")
+            fi
+
+            if [ ${#IMAGES[@]} -eq 0 ]; then
+              echo "::error::No images available for manifest creation"
+              exit 1
+            fi
+
+            docker buildx imagetools create --tag "${tag}" "${IMAGES[@]}"
+          done
 
       - name: Overwrite GitHub release notes
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') && env.REGISTRY == ''
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -263,15 +456,17 @@ jobs:
               return;
             }
 
-            const { data: commits } = await github.rest.repos.compareCommits({
+            const { data: comparison } = await github.rest.repos.compareCommits({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              base: latestRelease.data[1]?.tag_name || '', // fallback to second latest tag
+              base: latestRelease.data[1]?.tag_name || '',
               head: tag,
             });
 
-            const changelog = commits.commits.map(
-              c => `- ${c.sha.substring(0, 7)} ${c.commit.message.split('\n')[0]} by ${c.commit.author.name}`
+            const commits = comparison.commits.filter(c => 1 === c.parents.length);
+
+            const changelog = commits.map(
+              c => `- ${c.sha.substring(0, 7)} ${c.commit.message.split('\n')[0]}`
             ).join('\n');
 
             if (!changelog) {
@@ -289,10 +484,11 @@ jobs:
             });
 
   dockerhub-sync-readme:
+    name: DockerHub README sync
     runs-on: ubuntu-latest
-    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.update_readme == 'true')
     permissions:
       contents: read
+    if: vars.REGISTRY == '' && ((github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.update_readme == 'true'))
     steps:
       - name: Sync README
         uses: docker://lsiodev/readme-sync:latest

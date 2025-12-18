@@ -4,15 +4,15 @@
 
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4">
-          <span class="icon"><i class="fas fa-external-link" /></span>
+          <span class="icon"><i class="fas fa-external-link"/></span>
           URL Checker
         </span>
         <div class="is-pulled-right" v-if="response.response?.status">
           <div class="field is-grouped">
             <p class="control">
               <button class="button is-info" @click="() => copyText(JSON.stringify(response, null, 2))"
-                v-tooltip.bottom="'Copy request & response.'">
-                <span class="icon"><i class="fas fa-copy" /></span>
+                      v-tooltip.bottom="'Copy request & response.'">
+                <span class="icon"><i class="fas fa-copy"/></span>
               </button>
             </p>
           </div>
@@ -25,7 +25,7 @@
       <div class="column is-12">
         <h1 class="title is-4 is-clickable" @click="toggleForm">
           <span class="icon" v-if="response.response.status && !invalid_form">
-            <i class="fas" :class="{ 'fa-arrow-up': toggle_form, 'fa-arrow-down': !toggle_form }" />
+            <i class="fas" :class="{ 'fa-arrow-up': toggle_form, 'fa-arrow-down': !toggle_form }"/>
           </span>
           Request Form
         </h1>
@@ -45,7 +45,7 @@
               <div class="control">
                 <div class="select is-fullwidth">
                   <select v-model="use_template" :disabled="is_loading">
-                    <option value="" v-text="'Select a template'" disabled />
+                    <option value="" v-text="'Select a template'" disabled/>
                     <option v-for="template in templates" :key="template.key" :value="template.key">
                       {{ template.id }}. {{ template.key }}
                     </option>
@@ -53,7 +53,7 @@
                 </div>
               </div>
               <p class="help is-bold">
-                <span class="icon"><i class="fas fa-info-circle" /></span>
+                <span class="icon"><i class="fas fa-info-circle"/></span>
                 Gives a pre-defined template for the URL to check.
               </p>
             </div>
@@ -64,18 +64,18 @@
                 <div class="control">
                   <div class="select is-fullwidth">
                     <select v-model="item.method" :disabled="is_loading">
-                      <option v-for="method in methods" :key="method" :value="method" v-text="method" />
+                      <option v-for="method in methods" :key="method" :value="method" v-text="method"/>
                     </select>
                   </div>
                 </div>
                 <div class="control is-expanded has-icons-left">
                   <input class="input" type="text" id="url" v-model="item.url" autocomplete="off"
-                    placeholder="https://example.com/api/v1/" :disabled="is_loading">
-                  <div class="icon is-left"><i class="fas fa-link" /></div>
+                         placeholder="https://example.com/api/v1/" :disabled="is_loading">
+                  <div class="icon is-left"><i class="fas fa-link"/></div>
                 </div>
               </div>
               <p class="help is-bold">
-                <span class="icon"><i class="fas fa-info-circle" /></span>
+                <span class="icon"><i class="fas fa-info-circle"/></span>
                 The URL to check. It must be a valid URL.
               </p>
             </div>
@@ -83,23 +83,23 @@
             <div class="field">
               <label class="label is-unselectable">
                 Headers -
-                <NuxtLink @click="add_header()" v-text="'Add'" />
+                <NuxtLink @click="add_header()" v-text="'Add'"/>
               </label>
 
               <div class="control mb-2" v-for="(header, index) in item.headers" :key="index">
                 <div class="field is-grouped">
                   <div class="control is-expanded">
                     <input class="input" type="text" v-model="header.key" placeholder="Header Key" required
-                      :disabled="is_loading">
+                           :disabled="is_loading">
                   </div>
                   <div class="control is-expanded">
                     <input class="input" type="text" v-model="header.value" placeholder="Header Value" required
-                      :disabled="is_loading">
+                           :disabled="is_loading">
                   </div>
                   <div class="control">
                     <button class="button is-danger" type="button" @click="item.headers.splice(index, 1)"
-                      :disabled="is_loading">
-                      <span class="icon"><i class="fas fa-times" /></span>
+                            :disabled="is_loading">
+                      <span class="icon"><i class="fas fa-times"/></span>
                     </button>
                   </div>
                 </div>
@@ -109,17 +109,26 @@
             <div class="field is-grouped">
               <div class="control is-expanded">
                 <button class="button is-fullwidth is-primary" type="submit" :disabled="invalid_form || is_loading"
-                  :class="{ 'is-loading': is_loading }">
+                        :class="{ 'is-loading': is_loading }">
                   <span class="icon-text">
-                    <span class="icon"><i class="fas fa-paper-plane" /></span>
+                    <span class="icon"><i class="fas fa-paper-plane"/></span>
                     <span>Send Request</span>
                   </span>
                 </button>
               </div>
+              <p class="control is-expanded">
+                <button class="button is-fullwidth is-warning" type="button" :disabled="invalid_form || is_loading"
+                        @click="generateCurl">
+                  <span class="icon-text">
+                    <span class="icon"><i class="fas fa-terminal"/></span>
+                    <span>Copy CURL</span>
+                  </span>
+                </button>
+              </p>
               <div class="control is-expanded">
                 <button class="button is-fullwidth is-danger" type="button" @click="reset_form" :disabled="is_loading">
                   <span class="icon-text">
-                    <span class="icon"><i class="fas fa-times" /></span>
+                    <span class="icon"><i class="fas fa-times"/></span>
                     <span>Reset Form</span>
                   </span>
                 </button>
@@ -138,7 +147,7 @@
             </div>
             <button class="card-header-icon">
               <span class="icon">
-                <i class="fas" :class="{ 'fa-arrow-up': toggle_request, 'fa-arrow-down': !toggle_request }" />
+                <i class="fas" :class="{ 'fa-arrow-up': toggle_request, 'fa-arrow-down': !toggle_request }"/>
               </span>
             </button>
           </div>
@@ -147,23 +156,23 @@
               <div class="table-container">
                 <table class="table is-fullwidth is-hoverable is-striped" style="table-layout: fixed;">
                   <thead>
-                    <tr>
-                      <th class="has-text-centered" style="min-width:150px">Header</th>
-                      <th>Value</th>
-                    </tr>
+                  <tr>
+                    <th class="has-text-centered" style="min-width:150px">Header</th>
+                    <th>Value</th>
+                  </tr>
                   </thead>
                   <tbody v-if="Object.keys(response.request?.headers ?? {}).length > 0">
-                    <tr v-for="(v, k) in response.request.headers" :key="k">
-                      <td class="is-vcentered is-ellipsis">
-                        <abbr :title="uc_words(k)" v-text="uc_words(k)" class="is-pointer-help" />
-                      </td>
-                      <td class="is-vcentered">{{ v }}</td>
-                    </tr>
+                  <tr v-for="(v, k) in response.request.headers" :key="k">
+                    <td class="is-vcentered is-ellipsis">
+                      <abbr :title="uc_words(k)" v-text="uc_words(k)" class="is-pointer-help"/>
+                    </td>
+                    <td class="is-vcentered">{{ v }}</td>
+                  </tr>
                   </tbody>
                   <tbody v-else>
-                    <tr>
-                      <td colspan="2" class="has-text-centered">No request headers found.</td>
-                    </tr>
+                  <tr>
+                    <td colspan="2" class="has-text-centered">No request headers found.</td>
+                  </tr>
                   </tbody>
                 </table>
               </div>
@@ -177,13 +186,13 @@
           <div class="card-header is-clickable" @click="toggle_response = !toggle_response">
             <div class="card-header-title is-block is-ellipsis">
               <span class="is-underlined" :class="colorStatus(response.response.status)">{{
-                response.response.status
-              }}</span>
+                  response.response.status
+                }}</span>
               Status code response.
             </div>
             <button class="card-header-icon">
               <span class="icon">
-                <i class="fas" :class="{ 'fa-arrow-up': toggle_response, 'fa-arrow-down': !toggle_response }" />
+                <i class="fas" :class="{ 'fa-arrow-up': toggle_response, 'fa-arrow-down': !toggle_response }"/>
               </span>
             </button>
           </div>
@@ -192,23 +201,23 @@
               <div class="table-container">
                 <table class="table is-fullwidth is-bordered is-hoverable is-striped" style="table-layout: fixed;">
                   <thead>
-                    <tr>
-                      <th class="has-text-centered" style="width:150px">Header</th>
-                      <th>Value</th>
-                    </tr>
+                  <tr>
+                    <th class="has-text-centered" style="width:150px">Header</th>
+                    <th>Value</th>
+                  </tr>
                   </thead>
                   <tbody v-if="Object.keys(response.response?.headers ?? {}).length > 0">
-                    <tr v-for="(v, k) in response.response.headers" :key="k">
-                      <td class="is-vcentered is-ellipsis">
-                        <abbr :title="uc_words(k)" v-text="uc_words(k)" class="is-pointer-help" />
-                      </td>
-                      <td class="is-vcentered" :class="colorize(k)">{{ v }}</td>
-                    </tr>
+                  <tr v-for="(v, k) in response.response.headers" :key="k">
+                    <td class="is-vcentered is-ellipsis">
+                      <abbr :title="uc_words(k)" v-text="uc_words(k)" class="is-pointer-help"/>
+                    </td>
+                    <td class="is-vcentered" :class="colorize(k)">{{ v }}</td>
+                  </tr>
                   </tbody>
                   <tbody v-else>
-                    <tr>
-                      <td colspan="2" class="has-text-centered">No response headers found.</td>
-                    </tr>
+                  <tr>
+                    <td colspan="2" class="has-text-centered">No response headers found.</td>
+                  </tr>
                   </tbody>
                 </table>
               </div>
@@ -225,15 +234,15 @@
             </div>
             <button class="card-header-icon">
               <span class="icon">
-                <i class="fas" :class="{ 'fa-arrow-up': toggle_body, 'fa-arrow-down': !toggle_body }" />
+                <i class="fas" :class="{ 'fa-arrow-up': toggle_body, 'fa-arrow-down': !toggle_body }"/>
               </span>
             </button>
           </div>
           <div class="card-content content p-0 m-0" v-if="toggle_body">
             <div style="max-height: 300px" class="is-overflow-auto">
               <pre><code>{{
-                response.response.body ? tryParse(response.response.body) : 'Empty body'
-              }}</code></pre>
+                  response.response.body ? tryParse(response.response.body) : 'Empty body'
+                }}</code></pre>
             </div>
           </div>
         </div>
@@ -241,7 +250,7 @@
 
       <div class="column is-12">
         <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
-          @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+                 @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
           <ul>
             <li>
               Values in the form with <code>[...]</code> are <strong>template values</strong>. If they are part of a
@@ -280,9 +289,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
-import { useStorage } from '@vueuse/core'
-import { request, notification, parse_api_response } from '~/utils'
+import {computed, nextTick, onBeforeUnmount, onMounted, ref, watch} from 'vue'
+import {useStorage} from '@vueuse/core'
+import {copyText, notification, parse_api_response, request} from '~/utils'
 import Message from '~/components/Message.vue'
 
 type Item = {
@@ -321,7 +330,7 @@ type URLCheckResponse = {
 }
 
 
-useHead({ title: 'URL Checker' })
+useHead({title: 'URL Checker'})
 
 const show_page_tips = useStorage<boolean>('show_page_tips', true)
 
@@ -338,8 +347,8 @@ const templates = ref<Array<{ id: number, key: string, override: Item }>>([
       method: "GET",
       url: "http://[ip:port]/items",
       headers: [
-        { key: "Accept", value: "application/json" },
-        { key: "X-MediaBrowser-Token", value: "[API_KEY]" },
+        {key: "Accept", value: "application/json"},
+        {key: "X-MediaBrowser-Token", value: "[API_KEY]"},
       ]
     },
   },
@@ -350,8 +359,8 @@ const templates = ref<Array<{ id: number, key: string, override: Item }>>([
       method: "GET",
       url: "http://[ip:port]/",
       headers: [
-        { key: "Accept", value: "application/json" },
-        { key: "X-Plex-Token", value: "[PLEX_TOKEN]" },
+        {key: "Accept", value: "application/json"},
+        {key: "X-Plex-Token", value: "[PLEX_TOKEN]"},
       ]
     },
   },
@@ -362,8 +371,8 @@ const templates = ref<Array<{ id: number, key: string, override: Item }>>([
       method: "GET",
       url: "http://[ip:port]/library/sections",
       headers: [
-        { key: "Accept", value: "application/json" },
-        { key: "X-Plex-Token", value: "[PLEX_TOKEN]" },
+        {key: "Accept", value: "application/json"},
+        {key: "X-Plex-Token", value: "[PLEX_TOKEN]"},
       ]
     },
   },
@@ -374,7 +383,7 @@ const templates = ref<Array<{ id: number, key: string, override: Item }>>([
       method: "GET",
       url: "http://plex.tv/api/users",
       headers: [
-        { key: "X-Plex-Token", value: "[PLEX_TOKEN]" },
+        {key: "X-Plex-Token", value: "[PLEX_TOKEN]"},
       ]
     },
   },
@@ -385,22 +394,22 @@ const templates = ref<Array<{ id: number, key: string, override: Item }>>([
       method: "GET",
       url: "http://plex.tv/api/v2/home/users/",
       headers: [
-        { key: "X-Plex-Token", value: "[PLEX_TOKEN]" },
-        { key: "X-Plex-Client-Identifier", value: "[machineIdentifier]" },
+        {key: "X-Plex-Token", value: "[PLEX_TOKEN]"},
+        {key: "X-Plex-Client-Identifier", value: "[machineIdentifier]"},
       ]
     },
   },
 ])
 const methods = ref<Array<string>>(['GET', 'POST', 'PUT', 'PATCH', 'HEAD', 'DELETE'])
 
-const defaultData = () => ({ url: "", method: "GET", headers: [] } as Item)
+const defaultData = () => ({url: "", method: "GET", headers: []} as Item)
 
 const item = ref<Item>(defaultData())
 const is_loading = ref<boolean>(false)
 
 const defaultResponse = () => ({
-  request: { url: "", method: "GET", headers: {} },
-  response: { status: null, headers: {}, body: "" }
+  request: {url: "", method: "GET", headers: {}},
+  response: {status: null, headers: {}, body: ""}
 } as URLCheckResponse)
 
 const response = ref<URLCheckResponse>(defaultResponse())
@@ -451,7 +460,7 @@ const has_template_values = (): boolean => {
 }
 
 const add_header = (k?: string, v?: string): void => {
-  item.value.headers.push({ key: k ?? "", value: v ?? "" })
+  item.value.headers.push({key: k ?? "", value: v ?? ""})
 }
 
 const check_url = async (): Promise<void> => {
@@ -461,7 +470,7 @@ const check_url = async (): Promise<void> => {
   }
 
   if (has_template_values()) {
-    const { status: confirmStatus } = await useDialog().confirmDialog({
+    const {status: confirmStatus} = await useDialog().confirmDialog({
       title: 'Template values found',
       message: 'The form contains template values. Do you want to continue?',
       confirmColor: 'is-warning'
@@ -505,6 +514,62 @@ const tryParse = (body: string): string => {
     return JSON.stringify(JSON.parse(body), null, 2)
   } catch (e) {
     return body
+  }
+}
+const _escape = (str: string): string => str.replace(/'/g, "'\\''")
+
+const buildCurlCommand = (req: {
+  url: string,
+  method?: string,
+  headers?: Record<string, string> | Array<{ key: string, value: string }>,
+  body?: string
+}): string => {
+  const method = req.method ?? 'GET'
+  const parts: Array<string> = ['curl', '-v']
+
+  if ('GET' !== method) {
+    parts.push('-X')
+    parts.push(method)
+  }
+
+  const _headers: Array<{ key: string, value: string }> = []
+  if (req.headers) {
+    if (Array.isArray(req.headers)) {
+      for (const h of req.headers) {
+        _headers.push({key: h.key, value: h.value})
+      }
+    } else {
+      for (const k of Object.keys(req.headers)) {
+        _headers.push({key: k, value: (req.headers as Record<string, string>)[k] ?? ''})
+      }
+    }
+  }
+
+  for (const h of _headers) {
+    const hLine = `${h.key}: ${h.value}`
+    parts.push('-H')
+    parts.push(`'${_escape(hLine)}'`)
+  }
+
+  if (req.body) {
+    parts.push("--data")
+    parts.push(`'${_escape(req.body)}'`)
+  }
+
+  parts.push(`'${_escape(req.url)}'`)
+
+  return parts.map(p => p.toString()).join(' ')
+}
+
+const generateCurl = async (): Promise<void> => {
+  try {
+    copyText(buildCurlCommand({
+      url: item.value.url,
+      method: item.value.method,
+      headers: item.value.headers.map(h => ({key: h.key, value: h.value})),
+    }))
+  } catch (e) {
+    notification('error', 'Error', `Failed to generate cURL command. ${e}`)
   }
 }
 
