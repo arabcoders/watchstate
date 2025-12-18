@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20251218-53a4038e",
-        "date": "2025-12-18T17:02:21+00:00",
+        "tag": "dev-20251218-4f59887a",
+        "date": "2025-12-18T17:12:42+00:00",
         "commits": [
+            {
+                "sha": "4f59887a",
+                "message": "Fix: Dockerfile build",
+                "author": "arabcoders",
+                "date": "2025-12-18T17:12:42+00:00",
+                "full_sha": "4f59887a7fca345259996ee3c1599fa66641c55a"
+            },
             {
                 "sha": "53a4038e",
                 "message": "Chore: update external packages",
@@ -809,7 +816,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "53a4038ee11e21a8de6438d96e149b14ec86971f"
+        "full_sha": "4f59887a7fca345259996ee3c1599fa66641c55a"
     },
     {
         "tag": "dev-20250604-9407bc76",
