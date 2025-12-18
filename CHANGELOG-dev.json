@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20251218-571af452",
-        "date": "2025-12-18T20:48:34+00:00",
+        "tag": "dev-20251218-1d60cd9a",
+        "date": "2025-12-18T20:53:21+00:00",
         "commits": [
+            {
+                "sha": "1d60cd9a",
+                "message": "Fix: followup",
+                "author": "arabcoders",
+                "date": "2025-12-18T20:53:21+00:00",
+                "full_sha": "1d60cd9a9f325d39452521098f4426b043c9ed53"
+            },
             {
                 "sha": "571af452",
                 "message": "Fix: change the repo name from testing to actual repo",
@@ -837,7 +844,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "571af45259d268d934697ea43ac40b4ef70c5e97"
+        "full_sha": "1d60cd9a9f325d39452521098f4426b043c9ed53"
     },
     {
         "tag": "dev-20250604-9407bc76",
