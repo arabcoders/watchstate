@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20251128-8d5495ee",
-        "date": "2025-11-28T15:31:50+00:00",
+        "tag": "dev-20251218-0735f04f",
+        "date": "2025-12-18T16:58:11+00:00",
         "commits": [
+            {
+                "sha": "0735f04f",
+                "message": "Feat: minor UI additions",
+                "author": "arabcoders",
+                "date": "2025-12-18T16:58:11+00:00",
+                "full_sha": "0735f04f938b8251826b4186bee64c333c5a7c71"
+            },
             {
                 "sha": "8d5495ee",
                 "message": "Doc: update README/FAQ",
@@ -795,7 +802,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "8d5495ee32cb334cc6022ef95a503fa76ea6789f"
+        "full_sha": "0735f04f938b8251826b4186bee64c333c5a7c71"
     },
     {
         "tag": "dev-20250604-9407bc76",
