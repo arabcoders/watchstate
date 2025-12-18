@@ -45,11 +45,11 @@ env:
   REGISTRY: ${{ vars.REGISTRY != '' && vars.REGISTRY || '' }}
   BUILD_AMD64: ${{ vars.BUILD_AMD64 != 'false' && 'true' || 'false' }}
   BUILD_ARM64: ${{ vars.BUILD_ARM64 != 'false' && 'true' || 'false' }}
-  DOCKERHUB_SLUG: arabcoders/ws-test
-  GHCR_SLUG: ghcr.io/arabcoders/ws-test
+  DOCKERHUB_SLUG: arabcoders/watchstate
+  GHCR_SLUG: ghcr.io/arabcoders/watchstate
   PNPM_VERSION: 10
   NODE_VERSION: 20
-  
+
 jobs:
   validate-build-config:
     name: Validate Build Configuration
