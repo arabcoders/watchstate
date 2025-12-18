@@ -1,8 +1,57 @@
 [
     {
-        "tag": "master-20251128-9063155a",
-        "date": "2025-11-28T15:38:47+00:00",
+        "tag": "master-20251219-40a2de1b",
+        "date": "2025-12-18T21:00:12+00:00",
         "commits": [
+            {
+                "sha": "1d60cd9a",
+                "message": "Fix: followup",
+                "author": "arabcoders",
+                "date": "2025-12-18T20:53:21+00:00",
+                "full_sha": "1d60cd9a9f325d39452521098f4426b043c9ed53"
+            },
+            {
+                "sha": "571af452",
+                "message": "Fix: change the repo name from testing to actual repo",
+                "author": "arabcoders",
+                "date": "2025-12-18T20:48:34+00:00",
+                "full_sha": "571af45259d268d934697ea43ac40b4ef70c5e97"
+            },
+            {
+                "sha": "ad3dbc64",
+                "message": "Refactor: Rework build.yml",
+                "author": "arabcoders",
+                "date": "2025-12-18T20:43:44+00:00",
+                "full_sha": "ad3dbc643832b3c01b40b7cfbf03e384e35a4c96"
+            },
+            {
+                "sha": "3b9b3543",
+                "message": "Fix: build.yml would fail to generate frontend assets",
+                "author": "arabcoders",
+                "date": "2025-12-18T19:42:58+00:00",
+                "full_sha": "3b9b35438402696343d414356cddd8447f0b8295"
+            },
+            {
+                "sha": "4f59887a",
+                "message": "Fix: Dockerfile build",
+                "author": "arabcoders",
+                "date": "2025-12-18T17:12:42+00:00",
+                "full_sha": "4f59887a7fca345259996ee3c1599fa66641c55a"
+            },
+            {
+                "sha": "53a4038e",
+                "message": "Chore: update external packages",
+                "author": "arabcoders",
+                "date": "2025-12-18T17:02:21+00:00",
+                "full_sha": "53a4038ee11e21a8de6438d96e149b14ec86971f"
+            },
+            {
+                "sha": "0735f04f",
+                "message": "Feat: minor UI additions",
+                "author": "arabcoders",
+                "date": "2025-12-18T16:58:11+00:00",
+                "full_sha": "0735f04f938b8251826b4186bee64c333c5a7c71"
+            },
             {
                 "sha": "8d5495ee",
                 "message": "Doc: update README/FAQ",
@@ -760,7 +809,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "9063155a26744b962182ef360653db1fb4841a96"
+        "full_sha": "40a2de1b0b74b135de1a35224ae9645d97758f1e"
     },
     {
         "tag": "master-20250614-e3307c58",
