@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20251218-ad3dbc64",
-        "date": "2025-12-18T20:43:44+00:00",
+        "tag": "dev-20251218-571af452",
+        "date": "2025-12-18T20:48:34+00:00",
         "commits": [
+            {
+                "sha": "571af452",
+                "message": "Fix: change the repo name from testing to actual repo",
+                "author": "arabcoders",
+                "date": "2025-12-18T20:48:34+00:00",
+                "full_sha": "571af45259d268d934697ea43ac40b4ef70c5e97"
+            },
             {
                 "sha": "ad3dbc64",
                 "message": "Refactor: Rework build.yml",
@@ -830,7 +837,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "ad3dbc643832b3c01b40b7cfbf03e384e35a4c96"
+        "full_sha": "571af45259d268d934697ea43ac40b4ef70c5e97"
     },
     {
         "tag": "dev-20250604-9407bc76",
