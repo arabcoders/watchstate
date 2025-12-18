@@ -111,6 +111,8 @@ jobs:
 
       - name: Install frontend dependencies & Build
         working-directory: frontend
+        env:
+          NODE_ENV: production
         run: |
           pnpm install --production --prefer-offline --frozen-lockfile
           pnpm run generate
@@ -168,6 +170,8 @@ jobs:
 
       - name: Install frontend dependencies & Build
         working-directory: frontend
+        env:
+          NODE_ENV: production
         run: |
           pnpm install --production --prefer-offline --frozen-lockfile
           pnpm run generate
