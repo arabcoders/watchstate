@@ -49,9 +49,7 @@ env:
   GHCR_SLUG: ghcr.io/arabcoders/ws-test
   PNPM_VERSION: 10
   NODE_VERSION: 20
-  PHP_VERSION: 8.4
-  PYTHON_VERSION: "3.13"
-
+  
 jobs:
   validate-build-config:
     name: Validate Build Configuration
@@ -146,7 +144,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: "3.13"
 
       - name: Install GitPython
         if: github.event_name != 'pull_request'
