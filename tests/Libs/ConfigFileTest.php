@@ -44,8 +44,8 @@ class ConfigFileTest extends TestCase
     {
         $this->checkException(
             closure: fn() => new ConfigFile(
-                'nonexistent.json',
-                'json',
+                file: 'nonexistent.json',
+                type: 'json',
                 autoSave: false,
                 autoCreate: false,
                 autoBackup: false
@@ -57,8 +57,8 @@ class ConfigFileTest extends TestCase
 
         $this->checkException(
             closure: fn() => new ConfigFile(
-                'nonexistent.json',
-                'php',
+                file: 'nonexistent.json',
+                type: 'php',
                 autoSave: false,
                 autoCreate: false,
                 autoBackup: false
@@ -70,8 +70,8 @@ class ConfigFileTest extends TestCase
 
         $this->checkException(
             closure: fn() => new ConfigFile(
-                '/root/test.json',
-                'json',
+                file: '/sys/' . uniqid('testfile_', true) . '/test.json',
+                type: 'json',
                 autoSave: false,
                 autoCreate: true,
                 autoBackup: false

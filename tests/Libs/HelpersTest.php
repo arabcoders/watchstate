@@ -37,6 +37,7 @@ class HelpersTest extends TestCase
 
     protected function setUp(): void
     {
+        $_ENV['ONLY_ENV'] = false;
         parent::setUp();
         $this->cache = new class implements CacheInterface {
             public array $cache = [];
@@ -972,6 +973,9 @@ class HelpersTest extends TestCase
 
     public function test_inContainer()
     {
+        $_ENV['ONLY_ENV'] = true;
+        $_ENV['IN_CONTAINER'] = false;
+
         $this->assertFalse(inContainer(), 'When not in container, false is returned.');
 
         $_ENV['IN_CONTAINER'] = true;
@@ -1385,6 +1389,7 @@ class HelpersTest extends TestCase
 
     public function test_isTaskWorkerRunning()
     {
+        $_ENV['ONLY_ENV'] = true;
         $_ENV['IN_CONTAINER'] = false;
         $d = isSchedulerRunning();
         $this->assertTrue($d['status'], 'When not in container, and $ignoreContainer is false, it should return true.');
@@ -1666,6 +1671,7 @@ class HelpersTest extends TestCase
 
     public function test_commandContext()
     {
+        $_ENV['ONLY_ENV'] = true;
         $_ENV['IN_CONTAINER'] = true;
         $this->assertSame(
             'docker exec -ti watchstate console',
