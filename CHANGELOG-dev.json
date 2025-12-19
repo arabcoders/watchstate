@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20251218-1d60cd9a",
-        "date": "2025-12-18T20:53:21+00:00",
+        "tag": "dev-20251219-d8a4f5ce",
+        "date": "2025-12-19T17:53:27+00:00",
         "commits": [
+            {
+                "sha": "d8a4f5ce",
+                "message": "Refactor: support building watchstate in gitea. Update tests to account for difference in test env",
+                "author": "arabcoders",
+                "date": "2025-12-19T17:53:27+00:00",
+                "full_sha": "d8a4f5ceb7f3690016766774a556f5bc574fe9b0"
+            },
             {
                 "sha": "1d60cd9a",
                 "message": "Fix: followup",
@@ -844,7 +851,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "1d60cd9a9f325d39452521098f4426b043c9ed53"
+        "full_sha": "d8a4f5ceb7f3690016766774a556f5bc574fe9b0"
     },
     {
         "tag": "dev-20250604-9407bc76",
