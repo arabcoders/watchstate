@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20251219-d8a4f5ce",
-        "date": "2025-12-19T17:53:27+00:00",
+        "tag": "dev-20251224-8ff660ca",
+        "date": "2025-12-24T14:17:46+00:00",
         "commits": [
+            {
+                "sha": "8ff660ca",
+                "message": "Fix: issue related to scoping issue with variable naming",
+                "author": "arabcoders",
+                "date": "2025-12-24T14:17:46+00:00",
+                "full_sha": "8ff660ca7b7a1ab7d63ed8d574e1faac7c01a187"
+            },
             {
                 "sha": "d8a4f5ce",
                 "message": "Refactor: support building watchstate in gitea. Update tests to account for difference in test env",
@@ -851,7 +858,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "d8a4f5ceb7f3690016766774a556f5bc574fe9b0"
+        "full_sha": "8ff660ca7b7a1ab7d63ed8d574e1faac7c01a187"
     },
     {
         "tag": "dev-20250604-9407bc76",
