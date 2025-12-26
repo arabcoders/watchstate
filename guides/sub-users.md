@@ -129,6 +129,16 @@ Once users are properly grouped (in multi-backend mode) or configured (in single
 
 ---
 
+### 7. Configure Settings for Sub-Users
+
+With user mapping in place:
+
+* Select `Change User` in the top right of the WebUI.
+* `Browse as` a sub-user.
+* Configure settings for each sub-user.
+
+---
+
 ## Maintaining Sub-User Configurations
 
 If you make changes to the main user configuration (e.g., change backend URLs, tokens, etc.), you must also update
