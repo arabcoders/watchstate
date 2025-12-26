@@ -1,7 +1,7 @@
 [
     {
-        "tag": "dev-20251227-39f86f76",
-        "date": "2025-12-26T21:01:53+00:00",
+        "tag": "dev-20251227-56a9e0a4",
+        "date": "2025-12-26T21:05:25+00:00",
         "commits": [
             {
                 "sha": "39f86f76",
@@ -16,6 +16,20 @@
                 "author": "arabcoders",
                 "date": "2025-12-26T21:00:35+00:00",
                 "full_sha": "c2000e798a0853db6943f5c049bc36c1d01d8adb"
+            },
+            {
+                "sha": "65231644",
+                "message": "Update sub-users.md",
+                "author": "YabaiKai",
+                "date": "2025-12-26T19:41:56+00:00",
+                "full_sha": "65231644236bd8b3f94629d50ddc9298d73d66eb"
+            },
+            {
+                "sha": "f5e85aa9",
+                "message": "Update sub-users.md\n\nI had trouble following the multi-user guide and couldn't figure out why importing/exporting on my main user account was not affecting sub-users. Added a section to clarify this.",
+                "author": "YabaiKai",
+                "date": "2025-12-26T18:24:56+00:00",
+                "full_sha": "f5e85aa92e0b73888b1d471dbf6ac76b0091508f"
             },
             {
                 "sha": "8ff660ca",
@@ -872,7 +886,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "39f86f76714c2c7a8c205e9352c566ef234969df"
+        "full_sha": "56a9e0a4aa9712bde87bde201e612e9ef5de0164"
     },
     {
         "tag": "dev-20250604-9407bc76",

@@ -1,8 +1,8 @@
 [
   {
-    "tag": "Unreleased (5d659a0e)",
-    "full_sha": "5d659a0e46f38441802d1bee1baabe810079778d",
-    "date": "2025-12-26T21:04:51+00:00",
+    "tag": "v1.0.5",
+    "full_sha": "56a9e0a4aa9712bde87bde201e612e9ef5de0164",
+    "date": "2025-12-26T21:05:25+00:00",
     "commits": [
       {
         "sha": "39f86f76",
@@ -17,6 +17,20 @@
         "message": "Feat: Use proper shell parsing for console commands",
         "author": "arabcoders",
         "date": "2025-12-26T21:00:35+00:00"
+      },
+      {
+        "sha": "65231644",
+        "full_sha": "65231644236bd8b3f94629d50ddc9298d73d66eb",
+        "message": "Update sub-users.md",
+        "author": "YabaiKai",
+        "date": "2025-12-26T19:41:56+00:00"
+      },
+      {
+        "sha": "f5e85aa9",
+        "full_sha": "f5e85aa92e0b73888b1d471dbf6ac76b0091508f",
+        "message": "Update sub-users.md\n\nI had trouble following the multi-user guide and couldn't figure out why importing/exporting on my main user account was not affecting sub-users. Added a section to clarify this.",
+        "author": "YabaiKai",
+        "date": "2025-12-26T18:24:56+00:00"
       },
       {
         "sha": "8ff660ca",
