@@ -129,7 +129,7 @@ Once users are properly grouped (in multi-backend mode) or configured (in single
 
 ---
 
-## Maintaining Sub-User Configurations
+## Managing Sub-Users Configurations
 
 If you make changes to the main user configuration (e.g., change backend URLs, tokens, etc.), you must also update
 sub-user configurations.
@@ -137,9 +137,12 @@ sub-user configurations.
 You can do this in one of two ways:
 
 1. **Manually Update Each Sub-User**
-   Adjust the configurations for each sub-user individually.
+    * Select `Change User` in the top right of the WebUI.
+    * `Browse as` a sub-user.
+    * Configure settings for each sub-user.
 
-2. **Click `Update Sub-users`**
+3. **Click `Update Sub-users`**
+   
    This will:
 
     * Attempt to propagate changes from the main configuration.
