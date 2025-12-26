@@ -1,8 +1,36 @@
 [
     {
-        "tag": "master-20251219-40a2de1b",
-        "date": "2025-12-18T21:00:12+00:00",
+        "tag": "master-20251227-5d659a0e",
+        "date": "2025-12-26T21:04:51+00:00",
         "commits": [
+            {
+                "sha": "39f86f76",
+                "message": "Chore: update external dependancies",
+                "author": "arabcoders",
+                "date": "2025-12-26T21:01:53+00:00",
+                "full_sha": "39f86f76714c2c7a8c205e9352c566ef234969df"
+            },
+            {
+                "sha": "c2000e79",
+                "message": "Feat: Use proper shell parsing for console commands",
+                "author": "arabcoders",
+                "date": "2025-12-26T21:00:35+00:00",
+                "full_sha": "c2000e798a0853db6943f5c049bc36c1d01d8adb"
+            },
+            {
+                "sha": "8ff660ca",
+                "message": "Fix: issue related to scoping issue with variable naming",
+                "author": "arabcoders",
+                "date": "2025-12-24T14:17:46+00:00",
+                "full_sha": "8ff660ca7b7a1ab7d63ed8d574e1faac7c01a187"
+            },
+            {
+                "sha": "d8a4f5ce",
+                "message": "Refactor: support building watchstate in gitea. Update tests to account for difference in test env",
+                "author": "arabcoders",
+                "date": "2025-12-19T17:53:27+00:00",
+                "full_sha": "d8a4f5ceb7f3690016766774a556f5bc574fe9b0"
+            },
             {
                 "sha": "1d60cd9a",
                 "message": "Fix: followup",
@@ -809,7 +837,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "40a2de1b0b74b135de1a35224ae9645d97758f1e"
+        "full_sha": "5d659a0e46f38441802d1bee1baabe810079778d"
     },
     {
         "tag": "master-20250614-e3307c58",
