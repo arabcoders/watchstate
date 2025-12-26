@@ -1194,7 +1194,7 @@ if (!function_exists('inContainer')) {
             return true;
         }
 
-        if (true === @file_exists('/.dockerenv') || true === @file_exists('/run/.containerenv')) {
+        if (!env('ONLY_ENV') && true === (@file_exists('/.dockerenv') || @file_exists('/run/.containerenv'))) {
             return true;
         }
 

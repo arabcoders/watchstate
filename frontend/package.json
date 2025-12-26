@@ -22,8 +22,8 @@
         "@pinia/nuxt": "^0.11.3",
         "@vueuse/core": "^14.1.0",
         "@vueuse/nuxt": "^14.1.0",
-        "@xterm/addon-fit": "^0.10.0",
-        "@xterm/xterm": "^5.5.0",
+        "@xterm/addon-fit": "^0.11.0",
+        "@xterm/xterm": "^6.0.0",
         "cronstrue": "^3.9.0",
         "floating-vue": "^5.2.2",
         "hls.js": "^1.6.15",
@@ -35,7 +35,7 @@
         "nuxt": "^4.2.2",
         "pinia": "^3.0.4",
         "plyr": "^3.8.3",
-        "vue": "^3.5.25",
+        "vue": "^3.5.26",
         "vue-router": "^4.6.4",
         "vue-toastification": "2.0.0-rc.5",
         "vuedraggable": "^4.1.0"
@@ -49,12 +49,12 @@
     "devDependencies": {
         "@nuxt/eslint": "^1.12.1",
         "@nuxt/eslint-config": "^1.12.1",
-        "@typescript-eslint/parser": "^8.50.0",
+        "@typescript-eslint/parser": "^8.50.1",
         "eslint": "^9.39.2",
         "typescript": "^5.9.3",
         "vitest": "^4.0.16",
         "vue-eslint-parser": "^10.2.0",
-        "vue-tsc": "^3.1.8"
+        "vue-tsc": "^3.2.1"
     },
     "eslintIgnore": [
         ".gitignore"

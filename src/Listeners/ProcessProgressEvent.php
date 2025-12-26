@@ -43,32 +43,32 @@ final readonly class ProcessProgressEvent
         ini_set('memory_limit', '-1');
     }
 
-    public function __invoke(DataEvent $e): DataEvent
+    public function __invoke(DataEvent $event): DataEvent
     {
-        $writer = function (Level $level, string $message, array $context = []) use ($e) {
-            $e->addLog($level->getName() . ': ' . r($message, $context));
+        $writer = function (Level $level, string $message, array $context = []) use ($event) {
+            $event->addLog($level->getName() . ': ' . r($message, $context));
             $this->logger->log($level, $message, $context);
         };
 
-        $e->stopPropagation();
+        $event->stopPropagation();
 
-        $user = ag($e->getOptions(), Options::CONTEXT_USER, 'main');
+        $user = ag($event->getOptions(), Options::CONTEXT_USER, 'main');
 
         try {
             $userContext = getUserContext(user: $user, mapper: $this->mapper, logger: $this->logger);
         } catch (RuntimeException $ex) {
             $writer(Level::Error, $ex->getMessage());
-            return $e;
+            return $event;
         }
 
-        $options = $e->getOptions();
+        $options = $event->getOptions();
 
-        if (null === ($item = $userContext->db->get(Container::get(iState::class)::fromArray($e->getData())))) {
+        if (null === ($item = $userContext->db->get(Container::get(iState::class)::fromArray($event->getData())))) {
             $writer(Level::Error, "'{user}' item '{id}' is not referenced locally yet.", [
                 'user' => $userContext->name,
-                'id' => ag($e->getData(), 'id', '?'),
+                'id' => ag($event->getData(), 'id', '?'),
             ]);
-            return $e;
+            return $event;
         }
 
         if ($item->isWatched()) {
@@ -90,7 +90,7 @@ final readonly class ProcessProgressEvent
                         ]) : 'watch progress sync for played items is disabled.',
                     ]
                 );
-                return $e;
+                return $event;
             }
         }
 
@@ -100,7 +100,7 @@ final readonly class ProcessProgressEvent
                 'title' => $item->title,
                 'user' => $userContext->name,
             ]);
-            return $e;
+            return $event;
         }
 
         $list = [];
@@ -146,7 +146,7 @@ final readonly class ProcessProgressEvent
 
         if (empty($list)) {
             $writer(Level::Warning, 'There are no backends to send the events to.');
-            return $e;
+            return $event;
         }
 
         foreach ($list as $name => &$backend) {
@@ -170,29 +170,17 @@ final readonly class ProcessProgressEvent
                     UserContext::class => $userContext,
                 ]);
                 $backend['class']->progress(entities: [$item->id => $item], queue: $this->queue);
-            } catch (UnexpectedVersionException|NotImplementedException $e) {
+            } catch (UnexpectedVersionException|NotImplementedException $ex) {
                 $writer(
                     Level::Notice,
                     "This feature is not available for '{user}@{backend}'. '{error.message}' at '{error.file}:{error.line}'.",
                     [
                         'user' => $userContext->name,
                         'backend' => $name,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
+                        ...exception_log($ex),
                     ]
                 );
-            } catch (Throwable $e) {
+            } catch (Throwable $ex) {
                 $writer(
                     Level::Error,
                     "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to sync '#{id}: {title}' progress. '{error.message}' at '{error.file}:{error.line}'.",
@@ -201,19 +189,7 @@ final readonly class ProcessProgressEvent
                         'backend' => $name,
                         'title' => $item->getName(),
                         'user' => $userContext->name,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => $e::class,
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
+                        ...exception_log($ex),
                     ]
                 );
             }
@@ -223,7 +199,7 @@ final readonly class ProcessProgressEvent
 
         if (count($this->queue) < 1) {
             $writer(Level::Notice, "Backend clients didn't queue items to be updated.");
-            return $e;
+            return $event;
         }
 
         $progress = formatDuration($item->getPlayProgress());
@@ -275,31 +251,19 @@ final readonly class ProcessProgressEvent
                         'status_code' => $response->getStatusCode(),
                     ]
                 );
-            } catch (Throwable $e) {
+            } catch (Throwable $ex) {
                 $writer(
                     level: Level::Error,
                     message: "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to change watch progress of {item.type} '#{id}: {item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [
                         'id' => $item->id,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
+                        ...exception_log($ex),
                         ...$context,
                     ]
                 );
             }
         }
 
-        return $e;
+        return $event;
     }
 }

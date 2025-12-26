@@ -10,6 +10,7 @@ use App\Libs\Config;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Extends\Date;
+use App\Libs\Shlex;
 use App\Libs\StreamedBody;
 use DateInterval;
 use Psr\Http\Message\ResponseInterface as iResponse;
@@ -98,12 +99,22 @@ final class Command
             $cwd = $data->get('cwd', Config::get('path', fn() => getcwd()));
 
             try {
-                $userCommand = "{$path}/bin/console -n {$command}";
                 if (true === (bool)Config::get('console.enable.all') && str_starts_with($command, '$')) {
                     $userCommand = trim(after($command, '$'));
+                    $cmd = ['sh', '-c', $userCommand];
+                } else {
+                    try {
+                        $cmd = Shlex::split("{$path}/bin/console -n " . trim(after($command, 'console')));
+                    } catch (\InvalidArgumentException $e) {
+                        $this->write('error', "Failed to parse command: {$e->getMessage()}");
+                        $this->write('exit_code', '1');
+                        $this->write('close', (string)makeDate());
+                        return;
+                    }
                 }
-                $process = Process::fromShellCommandline(
-                    command: $userCommand,
+
+                $process = new Process(
+                    command: $cmd,
                     cwd: $cwd,
                     env: array_replace_recursive([
                         'LANG' => 'en_US.UTF-8',
@@ -115,6 +126,7 @@ final class Command
                     timeout: $data->get('timeout', 7200),
                 );
 
+                $this->write('cmd', (string)json_encode($cmd));
                 $this->write('cwd', (string)$cwd);
 
                 $process->setPty(true);
