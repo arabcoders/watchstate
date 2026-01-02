@@ -447,42 +447,55 @@ jobs:
           script: |
             const tag = context.ref.replace('refs/tags/', '');
 
-            const latestRelease = await github.rest.repos.listReleases({
+            const { data: releases } = await github.rest.repos.listReleases({
               owner: context.repo.owner,
               repo: context.repo.repo,
             });
 
-            const release = latestRelease.data.find(r => r.tag_name === tag);
+            const release = releases.find(r => r.tag_name === tag);
             if (!release) {
               core.setFailed(`Release with tag ${tag} not found`);
+              return;
+            }
+
+            const baseTag = releases[1]?.tag_name || '';
+            if (!baseTag) {
+              core.setFailed('Could not determine a base tag (no previous release found)');
               return;
             }
 
             const { data: comparison } = await github.rest.repos.compareCommits({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              base: latestRelease.data[1]?.tag_name || '',
+              base: baseTag,
               head: tag,
             });
 
-            const commits = comparison.commits.filter(c => 1 === c.parents.length);
+            const commits = comparison.commits.filter(c => c.parents.length === 1);
 
-            const changelog = commits.map(
-              c => `- ${c.sha.substring(0, 7)} ${c.commit.message.split('\n')[0]}`
-            ).join('\n');
+            const changelog = commits
+              .map(c => `- ${c.sha.substring(0, 7)} ${c.commit.message.split('\n')[0]}`)
+              .join('\n');
 
             if (!changelog) {
               core.setFailed('No commits found for the changelog');
               return;
             }
 
-            console.log(`Changelog for ${tag}:\n${changelog}`);
+            const existingBody = (release.body || '').trim();
+
+            const separator = `\n\n---\n\n## Commits since ${baseTag}\n\n`;
+            const newBody = existingBody
+              ? `${existingBody}${separator}${changelog}`
+              : `## Commits since ${baseTag}\n\n${changelog}`;
+
+            console.log(`Updating release ${tag}. Appending ${commits.length} commits under existing body.`);
 
             await github.rest.repos.updateRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
               release_id: release.id,
-              body: changelog
+              body: newBody,
             });
 
   dockerhub-sync-readme:
