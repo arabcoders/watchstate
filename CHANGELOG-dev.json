@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20251227-56a9e0a4",
-        "date": "2025-12-26T21:05:25+00:00",
+        "tag": "dev-20260102-a1ae08bd",
+        "date": "2026-01-02T18:15:39+00:00",
         "commits": [
+            {
+                "sha": "a1ae08bd",
+                "message": "Refactor: Update rather than overwrite github release notes.",
+                "author": "arabcoders",
+                "date": "2026-01-02T18:15:39+00:00",
+                "full_sha": "a1ae08bdb741332c1a20fe2a01ce0bb641bef460"
+            },
             {
                 "sha": "39f86f76",
                 "message": "Chore: update external dependancies",
@@ -886,7 +893,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "56a9e0a4aa9712bde87bde201e612e9ef5de0164"
+        "full_sha": "a1ae08bdb741332c1a20fe2a01ce0bb641bef460"
     },
     {
         "tag": "dev-20250604-9407bc76",
