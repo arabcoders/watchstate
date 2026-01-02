@@ -1,5 +1,19 @@
 [
   {
+    "tag": "Unreleased (44018346)",
+    "full_sha": "440183466f88c0a983a31b1873c484172f51f164",
+    "date": "2026-01-02T18:22:09+00:00",
+    "commits": [
+      {
+        "sha": "a1ae08bd",
+        "full_sha": "a1ae08bdb741332c1a20fe2a01ce0bb641bef460",
+        "message": "Refactor: Update rather than overwrite github release notes.",
+        "author": "arabcoders",
+        "date": "2026-01-02T18:15:39+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v1.0.5",
     "full_sha": "56a9e0a4aa9712bde87bde201e612e9ef5de0164",
     "date": "2025-12-26T21:05:25+00:00",
