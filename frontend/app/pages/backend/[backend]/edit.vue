@@ -166,7 +166,7 @@
                   <template v-if="plex_oauth_url">
                     <div class="field is-grouped">
                       <div class="control">
-                        <NuxtLink @click="plex_get_token" type="button" :disabled="plex_oauth_loading">
+                        <NuxtLink @click="() => plex_get_token()" type="button" :disabled="plex_oauth_loading">
                           <span class="icon-text">
                             <span class="icon"><i class="fas"
                                                   :class="{ 'fa-check-double': !plex_oauth_loading, 'fa-spinner fa-pulse': plex_oauth_loading }"/></span>
@@ -440,6 +440,7 @@ const servers = ref<Array<BackendServer>>([])
 const serversLoading = ref<boolean>(false)
 const isLimitedToken = computed(() => Boolean(backend.value.options?.is_limited_token))
 const api_user = useStorage('api_user', 'main')
+const optionsVersion = ref<number>(0)
 
 const selectedOptionHelp = computed((): string => {
   const option = optionsList.value.find(v => selectedOption.value === v.key)
@@ -858,7 +859,11 @@ const flattenOptions = (obj: Record<string, any>, prefix: string = ''): Array<st
   return out
 }
 
-const flatOptionPaths = computed(() => flattenOptions(backend.value.options))
+const flatOptionPaths = computed(() => {
+  // Depend on optionsVersion to force re-evaluation
+  optionsVersion.value
+  return flattenOptions(backend.value.options)
+})
 
 const option_get = (path: string): unknown => {
   return path.split('.').reduce((o: any, k: string) => (o == null ? undefined : o[k]), backend.value.options as Record<string, any>)
@@ -878,6 +883,7 @@ const option_set = (path: string, value: unknown): void => {
   if (last) {
     target[last] = value
   }
+  optionsVersion.value++
 }
 
 const option_describe = (path: string): string => {

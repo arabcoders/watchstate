@@ -55,6 +55,8 @@ final class Options
     public const string INTERNAL_REQUEST = 'INTERNAL_REQUEST';
     public const string IS_GENERIC = 'IS_GENERIC';
     public const string DISABLE_MARK_UNPLAYED = 'DISABLE_MARK_UNPLAYED';
+    public const string SKIP_STATE = 'SKIP_STATE';
+    public const string ON_SKIP_STATE = 'ON_SKIP_STATE';
 
     private function __construct()
     {
