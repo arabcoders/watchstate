@@ -651,7 +651,10 @@ class DirectMapper implements ImportInterface
                 $entity->updated
             );
             $entity->setIsTainted(true);
-
+            $opts[Options::SKIP_STATE] = true;
+            if (null !== ($callback = ag($opts, Options::ON_SKIP_STATE))) {
+                $callback($entity);
+            }
             return $this->add($entity, $opts);
         }
 
@@ -1233,6 +1236,10 @@ class DirectMapper implements ImportInterface
     private function shouldProgressUpdate(iState $old, iState $new, array $opts = []): bool
     {
         if (true === (bool)ag($opts, Options::IMPORT_METADATA_ONLY, false)) {
+            return false;
+        }
+
+        if (true === (bool)ag($opts, Options::SKIP_STATE, false)) {
             return false;
         }
 
