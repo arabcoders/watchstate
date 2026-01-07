@@ -1,9 +1,30 @@
 [
   {
-    "tag": "Unreleased (44018346)",
-    "full_sha": "440183466f88c0a983a31b1873c484172f51f164",
-    "date": "2026-01-02T18:22:09+00:00",
+    "tag": "Unreleased (b589178d)",
+    "full_sha": "b589178d02c0e283fd5157266ccea11d9ea092ff",
+    "date": "2026-01-07T17:02:12+00:00",
     "commits": [
+      {
+        "sha": "81494742",
+        "full_sha": "81494742ffb3b0dc0263b1d0d12b6680fc89f098",
+        "message": "Fix: prevent older items updating watch progress",
+        "author": "arabcoders",
+        "date": "2026-01-07T16:44:26+00:00"
+      },
+      {
+        "sha": "af2f7d13",
+        "full_sha": "af2f7d139f2484a1645bf4acad07653e3db2fb4e",
+        "message": "chore: update external packages",
+        "author": "arabcoders",
+        "date": "2026-01-07T16:04:53+00:00"
+      },
+      {
+        "sha": "503c3aaf",
+        "full_sha": "503c3aaf81ad234790cb567537c35ae8bf6a52b5",
+        "message": "fix: adding extra options. #767",
+        "author": "arabcoders",
+        "date": "2026-01-07T16:03:47+00:00"
+      },
       {
         "sha": "a1ae08bd",
         "full_sha": "a1ae08bdb741332c1a20fe2a01ce0bb641bef460",

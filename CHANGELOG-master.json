@@ -1,8 +1,29 @@
 [
     {
-        "tag": "master-20260102-44018346",
-        "date": "2026-01-02T18:22:09+00:00",
+        "tag": "master-20260107-b589178d",
+        "date": "2026-01-07T17:02:12+00:00",
         "commits": [
+            {
+                "sha": "81494742",
+                "message": "Fix: prevent older items updating watch progress",
+                "author": "arabcoders",
+                "date": "2026-01-07T16:44:26+00:00",
+                "full_sha": "81494742ffb3b0dc0263b1d0d12b6680fc89f098"
+            },
+            {
+                "sha": "af2f7d13",
+                "message": "chore: update external packages",
+                "author": "arabcoders",
+                "date": "2026-01-07T16:04:53+00:00",
+                "full_sha": "af2f7d139f2484a1645bf4acad07653e3db2fb4e"
+            },
+            {
+                "sha": "503c3aaf",
+                "message": "fix: adding extra options. #767",
+                "author": "arabcoders",
+                "date": "2026-01-07T16:03:47+00:00",
+                "full_sha": "503c3aaf81ad234790cb567537c35ae8bf6a52b5"
+            },
             {
                 "sha": "a1ae08bd",
                 "message": "Refactor: Update rather than overwrite github release notes.",
@@ -858,7 +879,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "440183466f88c0a983a31b1873c484172f51f164"
+        "full_sha": "b589178d02c0e283fd5157266ccea11d9ea092ff"
     },
     {
         "tag": "master-20250614-e3307c58",
