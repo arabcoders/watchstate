@@ -92,6 +92,13 @@ return [
         'description' => 'The last time data was imported from the backend.',
     ],
     [
+        'key' => 'options',
+        'type' => 'array',
+        'visible' => false,
+        'description' => 'Additional options for the backend.',
+        'immutable' => true,
+    ],
+    [
         'key' => 'options.ignore',
         'type' => 'string',
         'visible' => true,
