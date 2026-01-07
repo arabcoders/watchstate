@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260107-af2f7d13",
-        "date": "2026-01-07T16:04:53+00:00",
+        "tag": "dev-20260107-81494742",
+        "date": "2026-01-07T16:44:26+00:00",
         "commits": [
+            {
+                "sha": "81494742",
+                "message": "Fix: prevent older items updating watch progress",
+                "author": "arabcoders",
+                "date": "2026-01-07T16:44:26+00:00",
+                "full_sha": "81494742ffb3b0dc0263b1d0d12b6680fc89f098"
+            },
             {
                 "sha": "af2f7d13",
                 "message": "chore: update external packages",
@@ -907,7 +914,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "af2f7d139f2484a1645bf4acad07653e3db2fb4e"
+        "full_sha": "81494742ffb3b0dc0263b1d0d12b6680fc89f098"
     },
     {
         "tag": "dev-20250604-9407bc76",
