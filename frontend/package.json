@@ -34,7 +34,7 @@
         "moment": "^2.30.1",
         "nuxt": "^4.2.2",
         "pinia": "^3.0.4",
-        "plyr": "^3.8.3",
+        "plyr": "^3.8.4",
         "vue": "^3.5.26",
         "vue-router": "^4.6.4",
         "vue-toastification": "2.0.0-rc.5",
@@ -49,12 +49,12 @@
     "devDependencies": {
         "@nuxt/eslint": "^1.12.1",
         "@nuxt/eslint-config": "^1.12.1",
-        "@typescript-eslint/parser": "^8.50.1",
+        "@typescript-eslint/parser": "^8.52.0",
         "eslint": "^9.39.2",
         "typescript": "^5.9.3",
         "vitest": "^4.0.16",
         "vue-eslint-parser": "^10.2.0",
-        "vue-tsc": "^3.2.1"
+        "vue-tsc": "^3.2.2"
     },
     "eslintIgnore": [
         ".gitignore"
