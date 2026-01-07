@@ -1,8 +1,22 @@
 [
     {
-        "tag": "dev-20260102-a1ae08bd",
-        "date": "2026-01-02T18:15:39+00:00",
+        "tag": "dev-20260107-af2f7d13",
+        "date": "2026-01-07T16:04:53+00:00",
         "commits": [
+            {
+                "sha": "af2f7d13",
+                "message": "chore: update external packages",
+                "author": "arabcoders",
+                "date": "2026-01-07T16:04:53+00:00",
+                "full_sha": "af2f7d139f2484a1645bf4acad07653e3db2fb4e"
+            },
+            {
+                "sha": "503c3aaf",
+                "message": "fix: adding extra options. #767",
+                "author": "arabcoders",
+                "date": "2026-01-07T16:03:47+00:00",
+                "full_sha": "503c3aaf81ad234790cb567537c35ae8bf6a52b5"
+            },
             {
                 "sha": "a1ae08bd",
                 "message": "Refactor: Update rather than overwrite github release notes.",
@@ -893,7 +907,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "a1ae08bdb741332c1a20fe2a01ce0bb641bef460"
+        "full_sha": "af2f7d139f2484a1645bf4acad07653e3db2fb4e"
     },
     {
         "tag": "dev-20250604-9407bc76",
