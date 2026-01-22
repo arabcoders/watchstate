@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260107-81494742",
-        "date": "2026-01-07T16:44:26+00:00",
+        "tag": "dev-20260122-76a1be1c",
+        "date": "2026-01-22T19:36:47+00:00",
         "commits": [
+            {
+                "sha": "76a1be1c",
+                "message": "refactor: make it possible to increase log level for dispatch task",
+                "author": "arabcoders",
+                "date": "2026-01-22T19:36:47+00:00",
+                "full_sha": "76a1be1c48035a37dcdd0b23b3d071d74d90bcfe"
+            },
             {
                 "sha": "81494742",
                 "message": "Fix: prevent older items updating watch progress",
@@ -914,7 +921,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "81494742ffb3b0dc0263b1d0d12b6680fc89f098"
+        "full_sha": "76a1be1c48035a37dcdd0b23b3d071d74d90bcfe"
     },
     {
         "tag": "dev-20250604-9407bc76",
