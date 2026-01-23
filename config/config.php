@@ -358,7 +358,7 @@ return (function () {
                 'info' => 'Dispatch queued events to their respective listeners.',
                 'enabled' => true,
                 'timer' => '* * * * *',
-                'args' => '-v',
+                'args' => env('WS_CRON_DISPATCH_ARGS', '-v'),
                 'hide' => true,
             ],
         ],

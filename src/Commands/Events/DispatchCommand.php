@@ -102,7 +102,9 @@ final class DispatchCommand extends Command
         }
 
         if (count($events) < 1) {
-            $this->logger->debug('No pending queued events found.');
+            if ('-v' === env('WS_CRON_DISPATCH_ARGS', '-v')) {
+                $this->logger->debug('No pending queued events found.');
+            }
             return self::SUCCESS;
         }
 
