@@ -1,8 +1,22 @@
 [
     {
-        "tag": "master-20260107-b589178d",
-        "date": "2026-01-07T17:02:12+00:00",
+        "tag": "master-20260123-f1481304",
+        "date": "2026-01-23T10:05:16+00:00",
         "commits": [
+            {
+                "sha": "c45f611b",
+                "message": "Fix: Apply unmark logic in handle untainted entity path. Closes #770",
+                "author": "arabcoders",
+                "date": "2026-01-23T09:45:00+00:00",
+                "full_sha": "c45f611bccbeb487060ac1cf9909cd384e89d8db"
+            },
+            {
+                "sha": "76a1be1c",
+                "message": "refactor: make it possible to increase log level for dispatch task",
+                "author": "arabcoders",
+                "date": "2026-01-22T19:36:47+00:00",
+                "full_sha": "76a1be1c48035a37dcdd0b23b3d071d74d90bcfe"
+            },
             {
                 "sha": "81494742",
                 "message": "Fix: prevent older items updating watch progress",
@@ -879,7 +893,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "b589178d02c0e283fd5157266ccea11d9ea092ff"
+        "full_sha": "f148130489ce1baf68020d84d200d3ffd0189d2a"
     },
     {
         "tag": "master-20250614-e3307c58",

@@ -1,9 +1,23 @@
 [
   {
-    "tag": "Unreleased (b589178d)",
-    "full_sha": "b589178d02c0e283fd5157266ccea11d9ea092ff",
-    "date": "2026-01-07T17:02:12+00:00",
+    "tag": "Unreleased (f1481304)",
+    "full_sha": "f148130489ce1baf68020d84d200d3ffd0189d2a",
+    "date": "2026-01-23T10:05:16+00:00",
     "commits": [
+      {
+        "sha": "c45f611b",
+        "full_sha": "c45f611bccbeb487060ac1cf9909cd384e89d8db",
+        "message": "Fix: Apply unmark logic in handle untainted entity path. Closes #770",
+        "author": "arabcoders",
+        "date": "2026-01-23T09:45:00+00:00"
+      },
+      {
+        "sha": "76a1be1c",
+        "full_sha": "76a1be1c48035a37dcdd0b23b3d071d74d90bcfe",
+        "message": "refactor: make it possible to increase log level for dispatch task",
+        "author": "arabcoders",
+        "date": "2026-01-22T19:36:47+00:00"
+      },
       {
         "sha": "81494742",
         "full_sha": "81494742ffb3b0dc0263b1d0d12b6680fc89f098",
