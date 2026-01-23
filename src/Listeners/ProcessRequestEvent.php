@@ -62,14 +62,14 @@ final readonly class ProcessRequestEvent
         $entity = Container::get(iState::class)::fromArray($e->getData())
             ->setIsTainted((bool)ag($e->getOptions(), 'tainted', false));
 
+        $backend = makeBackend(backend: $userContext->config->get($entity->via), name: $entity->via, options: [
+            iLogger::class => LoggerProxy::create($writer),
+            UserContext::class => $userContext,
+        ]);
+
+        // -- revalidate the metadata based on user context.
         if (true === $isGeneric) {
             try {
-                // -- revalidate the metadata based on user context.
-                $backend = makeBackend(backend: $userContext->config->get($entity->via), name: $entity->via, options: [
-                    iLogger::class => LoggerProxy::create($writer),
-                    UserContext::class => $userContext,
-                ]);
-
                 $backend->getMetadata(ag($entity->getMetadata($entity->via), iState::COLUMN_ID));
             } catch (Throwable $ex) {
                 $writer(Level::Info, $ex->getMessage());
@@ -97,8 +97,15 @@ final readonly class ProcessRequestEvent
 
         $writer(Level::Notice, $message);
 
+        $isDebug = (bool)ag($e->getOptions(), Options::DEBUG_TRACE, false);
+        if (true === (bool)ag($backend->getContext()->options, Options::DEBUG_TRACE, false)) {
+            $isDebug = true;
+        }
+
         $mapper = $userContext->mapper;
-        if (true === (bool)ag($e->getOptions(), Options::DEBUG_TRACE, false)) {
+
+        if (true === $isDebug) {
+            $writer(Level::Notice, 'Debug mode enabled.');
             $mapper = $mapper->setOptions(ag_set($mapper->getOptions(), Options::DEBUG_TRACE, true));
         }
 
@@ -108,14 +115,19 @@ final readonly class ProcessRequestEvent
         $handler = ProxyHandler::create($e->addLog(...), Level::Info);
         $logger->pushHandler($handler);
         $mapper->setLogger($logger);
-
-        $mapper->add($entity, [
+        $opts = [
             Options::IMPORT_METADATA_ONLY => (bool)ag($e->getOptions(), Options::IMPORT_METADATA_ONLY),
             Options::DISABLE_MARK_UNPLAYED => (bool)ag($e->getOptions(), Options::DISABLE_MARK_UNPLAYED),
             Options::STATE_UPDATE_EVENT => fn(iState $state) => queuePush(entity: $state, userContext: $userContext),
             Options::LOG_TO_WRITER => $writer,
-            'after' => $lastSync,
-        ]);
+            Options::AFTER => $lastSync,
+        ];
+
+        if (true === $isDebug) {
+            $opts[Options::DEBUG_TRACE] = true;
+        }
+
+        $mapper->add($entity, $opts);
 
         $mapper->commit();
         $handler->close();

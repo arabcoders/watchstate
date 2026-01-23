@@ -3469,12 +3469,12 @@
       "source": {
         "type": "git",
         "url": "https://github.com/Roave/SecurityAdvisories.git",
-        "reference": "19c565321319de1159ffc1740d8dfd5ce0fa25aa"
+        "reference": "e9ef206cc31853d344989f9e998d91b3da3db819"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/19c565321319de1159ffc1740d8dfd5ce0fa25aa",
-        "reference": "19c565321319de1159ffc1740d8dfd5ce0fa25aa",
+        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/e9ef206cc31853d344989f9e998d91b3da3db819",
+        "reference": "e9ef206cc31853d344989f9e998d91b3da3db819",
         "shasum": ""
       },
       "conflict": {
@@ -4192,7 +4192,7 @@
         "snipe/snipe-it": "<=8.3.4",
         "socalnick/scn-social-auth": "<1.15.2",
         "socialiteproviders/steam": "<1.1",
-        "solspace/craft-freeform": "<4.1.29|>=5,<5.10.16",
+        "solspace/craft-freeform": "<=5.14.6",
         "soosyze/soosyze": "<=2",
         "spatie/browsershot": "<5.0.5",
         "spatie/image-optimizer": "<1.7.3",
@@ -4476,7 +4476,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2026-01-22T18:08:55+00:00"
+      "time": "2026-01-22T22:06:32+00:00"
     },
     {
       "name": "sebastian/cli-parser",

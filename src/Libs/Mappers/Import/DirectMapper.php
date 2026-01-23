@@ -489,6 +489,10 @@ class DirectMapper implements ImportInterface
                     fields: array_merge($keys, [iState::COLUMN_EXTRA])
                 )->markAsUnplayed($entity);
 
+                if (null !== ($testFunc = ag($opts, 'test_mark_as_unplayed', null))) {
+                    $testFunc(true, $local);
+                }
+
                 if (false === $inDryRunMode) {
                     $this->db->update($local);
                     if (null !== ($onStateUpdate = ag($opts, Options::STATE_UPDATE_EVENT, null))) {
@@ -562,10 +566,10 @@ class DirectMapper implements ImportInterface
                         }
                         $local = $local->apply($entity, fields: $_keys);
 
-                        $message = "{mapper}: [O] '{user}@{backend}' updated '#{id}: {title}' ";
+                        $message = "{mapper}: [O] '{user}@{backend}' updated '#{id}: {title}'";
                         $this->logger->log(
                             true === $progressChange ? LogLevel::NOTICE : LogLevel::INFO,
-                            $message . (true === $progressChange ? "due to play progress change." : "metadata."),
+                            $message . (true === $progressChange ? " due to play progress change." : " metadata."),
                             [
                                 'user' => $this->userContext?->name ?? 'main',
                                 'mapper' => afterLast(self::class, '\\'),
@@ -628,7 +632,7 @@ class DirectMapper implements ImportInterface
 
         Message::increment("{$entity->via}.{$entity->type}.ignored_not_played_since_last_sync");
 
-        $hasAfter = null !== ($opts['after'] ?? null) && true === ($opts['after'] instanceof iDate);
+        $hasAfter = null !== ($opts[Options::AFTER] ?? null) && true === ($opts[Options::AFTER] instanceof iDate);
         if ($entity->isWatched() !== $local->isWatched() && $hasAfter) {
             $this->logger->notice(
                 "{mapper}: [O] '{user}@{backend}' item '#{id}: {title}' date '{remote_date}' is older than last sync date '{local_date}'. Marking the item as tainted and re-processing.",
@@ -638,7 +642,7 @@ class DirectMapper implements ImportInterface
                     'id' => $cloned->id ?? 'New',
                     'backend' => $entity->via,
                     'remote_date' => makeDate($entity->updated),
-                    'local_date' => makeDate($opts['after']),
+                    'local_date' => makeDate($opts[Options::AFTER]),
                     'state' => $entity->isWatched() ? 'played' : 'unplayed',
                     'local_state' => $local->isWatched() ? 'played' : 'unplayed',
                     'title' => $entity->getName(),
@@ -734,8 +738,8 @@ class DirectMapper implements ImportInterface
         }
 
         // -- Item date is older than recorded last sync date logic handling.
-        $hasAfter = null !== ($opts['after'] ?? null) && true === ($opts['after'] instanceof iDate);
-        if (true === $hasAfter && $opts['after']->getTimestamp() >= $entity->updated) {
+        $hasAfter = null !== ($opts[Options::AFTER] ?? null) && true === ($opts[Options::AFTER] instanceof iDate);
+        if (true === $hasAfter && $opts[Options::AFTER]->getTimestamp() >= $entity->updated) {
             return $this->handleOldEntity($cloned, $entity, $opts);
         }
 
@@ -801,7 +805,10 @@ class DirectMapper implements ImportInterface
             )
         );
 
-        if (true === $progressChange || true === (clone $cloned)->apply($entity, fields: $keys)->isChanged($keys)) {
+        $shouldMark = (clone $cloned)->shouldMarkAsUnplayed($entity, $this->userContext);
+        $isChanged = (clone $cloned)->apply($entity, fields: $keys)->isChanged($keys);
+
+        if (true === $progressChange || true === $isChanged || true === $shouldMark) {
             try {
                 $_keys = array_merge($keys, [iState::COLUMN_EXTRA]);
                 if (true === $progressChange) {
@@ -809,6 +816,18 @@ class DirectMapper implements ImportInterface
                 }
 
                 $local = $local->apply(entity: $entity, fields: $_keys);
+
+                /**
+                 * Fix for issue #770 {@see https://github.com/arabcoders/watchstate/issues/770}
+                 * Ensure mark as unplayed logic works correctly.
+                 */
+                if (true === $shouldMark) {
+                    $local = $local->markAsUnplayed($cloned);
+                    if (null !== ($testFunc = ag($opts, 'test_mark_as_unplayed', null))) {
+                        $testFunc(true, $local);
+                    }
+                }
+
                 $this->removePointers($cloned)->addPointers($local, $local->id);
 
                 $changes = $local->diff(fields: $_keys);
@@ -823,9 +842,6 @@ class DirectMapper implements ImportInterface
 
                 if (true === $stateChange) {
                     $message = "{mapper}: [U] '{user}@{backend}' Updated and marked '#{id}: {title}' as '{state}'.";
-                    if (null !== ($onStateUpdate = ag($opts, Options::STATE_UPDATE_EVENT, null))) {
-                        $onStateUpdate($local);
-                    }
                 }
 
                 if (true === $progressChange || count($changes) >= 1) {
@@ -842,7 +858,10 @@ class DirectMapper implements ImportInterface
 
                 if (false === $inDryRunMode) {
                     $this->db->update($local);
-                    if (true === $progressChange) {
+                    if (null !== ($onStateUpdate = ag($opts, Options::STATE_UPDATE_EVENT, null))) {
+                        $onStateUpdate($local);
+                    }
+                    if (true === $progressChange && !$stateChange) {
                         $itemId = r('{type}://{id}:{tainted}@{backend}', [
                             'type' => $entity->type,
                             'backend' => $entity->via,

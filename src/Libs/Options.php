@@ -9,6 +9,7 @@ namespace App\Libs;
  */
 final class Options
 {
+    public const string AFTER = 'after';
     public const string DRY_RUN = 'DRY_RUN';
     public const string NO_CACHE = 'NO_CACHE';
     public const string CACHE_TTL = 'CACHE_TTL';
