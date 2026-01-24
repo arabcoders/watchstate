@@ -10,33 +10,13 @@ Although webhooks are great for syncing data quickly, they should not be used as
 Webhooks are not 100% reliable, they may be missed or delayed. To ensure your data is always up-to-date, it’s
 recommended to use webhooks in combination with scheduled tasks with high scheduled time i.e. `every 12 hours`.
 
-We have re-designed the webhook system to be generic rather than backend and user specific, so that means you only need
+We have designed the webhook system to be generic rather than backend and user specific, so that means you only need
 to use single webhook for all users and backends. This is a big improvement over the previous system, which required you
 to create a separate webhook for each user and backend.
 
-## Improvements over the old system
+## Webhook URL
 
-- **Generic**: The new webhook system is generic, meaning you can use a single webhook for all users and backends.
-- **Improved performance**: The new webhook system is faster and more efficient than the old system.
-- **Support generic events**: The new webhook system supports generic events which don't contain userdata, by triggering
-  the webhook event to all users that match the same backend ID, Previously it wasn't possible to do this.
-    - For example, jellyfin `ItemAdded` event doesn't contain user data, so the webhook event will be triggered to all
-      users that match the same backend ID.
-    - Events marked as generic are `jellyfin.ItemAdded`, `plex.library.new`, `tautulli.created`, and `emby.library.new`.
-
-## Restrictions
-
-- This endpoint enforces matching backend id regardless of the **Enable match backend id for webhook?** setting.
-- This endpoint enforces matching user id for non-generic events regardless of the **Enable match user for webhook?**
-  setting.
-
-Eventually, we will be removing the old webhook system alongside the related settings. The new system is designed to be
-more user-friendly and enforces good practices and defaults, as we noticed many users don't really understand the old
-system and how to set it up correctly.
-
-## The generic webhook URL
-
-The new webhook generic URL is `/v1/api/webhook`, of course, if you have enabled secure all endpoints you need to
+The webhook URL is `/v1/api/webhook`, of course, if you have enabled secure all endpoints you need to
 add `?apikey=your_ws_apikey` to the URL. which you can obtain by going to <!--i:fa-ellipsis-vertical-->
 *More* > <!--i:fa-terminal--> *Terminal* and then write `system:apikey` in the box. You should get the apikey which is
 hexadecimal string.
@@ -52,6 +32,10 @@ If you have enabled `WS_SECURE_API_ENDPOINTS` environment variable, then you nee
 ```
 https://your_ws_url/v1/api/webhook?apikey=[api_key_you_got_from_terminal]
 ```
+
+> ![IMPORTANT]
+> Webhooks require that the local db contain references and metadata from the backends. Therefore, ensure that you have
+> completed the initial import for each backend before setting up webhooks. Otherwise, you may get unexpected results.
 
 # Adding Webhooks to Your Backends
 

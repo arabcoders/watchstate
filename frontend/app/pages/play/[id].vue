@@ -5,8 +5,7 @@
         <span class="title is-4">
           <span class="icon"><i class="fas fa-play"></i></span>
           Play :
-          <template v-if="item">{{ makeName(item) }}</template>
-          <template v-else>{{ id }}</template>
+          {{ displayName }}
         </span>
         <div class="is-pulled-right">
           <div class="field is-grouped" v-if="isPlaying">
@@ -64,9 +63,9 @@
                 <div class="select is-fullwidth">
                   <select v-model="config.path" @change="(e) => changeStream(e)">
                     <option value="">Select...</option>
-                    <template v-for="item in item?.files" :key="item.path">
-                      <optgroup :label="`In: ${item.source.join(', ')}`">
-                        <option :value="item.path" v-text="basename(item.path)" />
+                    <template v-for="file in item?.files" :key="file.path">
+                      <optgroup :label="`In: ${file.source.join(', ')}`">
+                        <option :value="file.path" v-text="basename(file.path)" />
                       </optgroup>
                     </template>
                   </select>
@@ -83,14 +82,14 @@
                 <div class="select is-fullwidth">
                   <select v-model="config.audio">
                     <option value="">Select audio stream...</option>
-                    <template v-for="item in filterStreams('audio')" :key="`audio-${item.index}`">
-                      <option :value="item.index">
-                        {{ item.index }} - {{ String(item.codec_name).toUpperCase() }}
-                        <template v-if="ag(item.tags || {}, 'title')">
-                          - {{ ucFirst(String(ag(item.tags || {}, 'title'))) }}
+                    <template v-for="stream in filterStreams('audio')" :key="`audio-${stream.index}`">
+                      <option :value="stream.index">
+                        {{ stream.index }} - {{ String(stream.codec_name).toUpperCase() }}
+                        <template v-if="stream.tags?.title">
+                          - {{ ucFirst(String(stream.tags.title)) }}
                         </template>
-                        <template v-if="ag(item.tags || {}, 'language')">
-                          - ({{ String(ag(item.tags || {}, 'language')).toUpperCase() }})
+                        <template v-if="stream.tags?.language">
+                          - ({{ String(stream.tags.language).toUpperCase() }})
                         </template>
                       </option>
                     </template>
@@ -102,7 +101,7 @@
               </div>
             </div>
 
-            <div class="field" v-if="filterStreams('subtitle').length > 0 || selectedItem?.subtitles?.length > 0">
+            <div class="field" v-if="filterStreams('subtitle').length > 0 || externalSubtitles.length > 0">
               <label class="label">Burn subtitles</label>
               <div class="control has-icons-left">
                 <div class="select is-fullwidth">
@@ -110,22 +109,22 @@
                     <option value="">Select subtitle...</option>
                     <template v-if="filterStreams('subtitle').length > 0">
                       <optgroup label="Internal Subtitles">
-                        <option v-for="item in filterStreams('subtitle')" :key="`subtitle-${item.index}`"
-                          :value="item.index">
-                          {{ item.index }} - {{ String(item.codec_name).toUpperCase() }}
-                          <template v-if="ag(item.tags || {}, 'title')">
-                            - {{ ucFirst(String(ag(item.tags || {}, 'title'))) }}
+                        <option v-for="stream in filterStreams('subtitle')" :key="`subtitle-${stream.index}`"
+                          :value="stream.index">
+                          {{ stream.index }} - {{ String(stream.codec_name).toUpperCase() }}
+                          <template v-if="stream.tags?.title">
+                            - {{ ucFirst(String(stream.tags.title)) }}
                           </template>
-                          <template v-if="ag(item.tags || {}, 'language')">
-                            - ({{ String(ag(item.tags || {}, 'language')).toUpperCase() }})
+                          <template v-if="stream.tags?.language">
+                            - ({{ String(stream.tags.language).toUpperCase() }})
                           </template>
                         </option>
                       </optgroup>
                     </template>
-                    <template v-if="selectedItem?.subtitles.length > 0">
+                    <template v-if="externalSubtitles.length > 0">
                       <optgroup label="External Subtitles">
-                        <option v-for="item in selectedItem.subtitles" :key="`subtitle-${item}`" :value="item">
-                          {{ basename(item) }}
+                        <option v-for="subtitle in externalSubtitles" :key="`subtitle-${subtitle}`" :value="subtitle">
+                          {{ basename(subtitle) }}
                         </option>
                       </optgroup>
                     </template>
@@ -150,8 +149,8 @@
                   <div class="select is-fullwidth">
                     <select v-model="video_codec" @change="e => updateHwAccel((e.target as HTMLSelectElement)?.value)">
                       <option value="" disabled>Select codec...</option>
-                      <option v-for="item in item.hardware?.codecs" :key="`codec-${item.codec}`" :value="item.codec"
-                        v-text="item.name" />
+                      <option v-for="codec in item.hardware?.codecs" :key="`codec-${codec.codec}`" :value="codec.codec"
+                        v-text="codec.name" />
                     </select>
                   </div>
                   <div class="icon is-left">
@@ -171,8 +170,8 @@
                   <div class="select is-fullwidth">
                     <select v-model="vaapi_device">
                       <option value="" disabled>Select device...</option>
-                      <option v-for="item in item.hardware?.devices" :key="`codec-${item}`" :value="item"
-                        v-text="basename(item)" />
+                      <option v-for="device in item.hardware?.devices" :key="`codec-${device}`" :value="device"
+                        v-text="basename(device)" />
                     </select>
                   </div>
                   <div class="icon is-left">
@@ -247,17 +246,71 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute, useRouter, navigateTo } from '#app'
+import { useRoute, navigateTo } from '#app'
 import { useStorage } from '@vueuse/core'
 import Message from '~/components/Message.vue'
 import Player from '~/components/Player.vue'
-import { request, basename, makeName, notification, ag, ucFirst } from '~/utils'
-import type { PlayableItem, FFProbeStream, MediaFile } from '~/types'
+import {request, basename, notification, ucFirst, parse_api_response} from '~/utils'
+import {useDialog} from '~/composables/useDialog'
+type PlayStream = {
+  index: number
+  codec_type: 'video' | 'audio' | 'subtitle'
+  codec_name: string
+  tags?: {
+    title?: string
+    language?: string
+  }
+  disposition?: {
+    default?: number
+  }
+}
 
 const route = useRoute()
 
 const id = route.params.id as string
-const item = ref<PlayableItem>({} as PlayableItem)
+type PlayMediaFile = {
+  path: string
+  source: Array<string>
+  subtitles: Array<string>
+  ffprobe?: {
+    streams?: Array<PlayStream>
+  }
+}
+
+type PlayItem = {
+  id: string | number
+  type: string
+  title: string
+  year?: number
+  season?: number
+  episode?: number
+  watched: boolean
+  content_title?: string
+  files?: Array<PlayMediaFile>
+  hardware?: {
+    codecs?: Array<{codec: string; name: string; hwaccel: boolean}>
+    devices?: Array<string>
+  }
+}
+
+type PlayNameInfo = {
+  title?: string
+  year?: number
+  type?: string
+  season?: number
+  episode?: number
+}
+
+const item = ref<PlayItem>({
+  id,
+  type: 'movie',
+  title: '',
+  watched: false,
+})
+const playNameInfo = ref<PlayNameInfo>({
+  title: '',
+  type: 'movie',
+})
 const isLoading = ref<boolean>(false)
 const isPlaying = ref<boolean>(false)
 const isGenerating = ref<boolean>(false)
@@ -293,13 +346,49 @@ const config = ref<{
   debug: session_debug.value,
 })
 
-const selectedItem = ref<MediaFile>({} as MediaFile)
+const selectedItem = ref<PlayMediaFile | null>(null)
+const externalSubtitles = computed((): Array<string> => selectedItem.value?.subtitles ?? [])
+
+const formatPlayName = (value: PlayNameInfo): string => {
+  const title = value.title || '??'
+  const year = value.year ?? '0000'
+  const type = value.type || 'movie'
+
+  if (['show', 'movie'].includes(type)) {
+    return `${title} (${year})`
+  }
+
+  const season = String(value.season ?? 0).padStart(2, '0')
+  const episode = String(value.episode ?? 0).padStart(3, '0')
+
+  return `${title} (${year}) - ${season}x${episode}`
+}
+
+const displayName = computed((): string => {
+  if (playNameInfo.value.title) {
+    return formatPlayName(playNameInfo.value)
+  }
+
+  return String(id)
+})
 
 const loadContent = async (): Promise<void> => {
   isLoading.value = true
   try {
     const response = await request(`/history/${id}?files=true`)
-    item.value = await response.json() as PlayableItem
+    const json = await parse_api_response<PlayItem>(response)
+    if ('error' in json) {
+      notification('error', 'Error', 'Failed to load item.')
+      return
+    }
+    item.value = json
+    playNameInfo.value = {
+      title: json.title,
+      year: json.year,
+      type: json.type,
+      season: json.season,
+      episode: json.episode,
+    }
   } catch (error) {
     console.error(error)
     notification('error', 'Error', 'Failed to load item.')
@@ -387,32 +476,39 @@ const changeStream = async (e: Event | null, path: string | null = null): Promis
     path = target?.value
   }
   if (!path) {
-    selectedItem.value = {} as MediaFile
+    selectedItem.value = null
     return
   }
 
-  selectedItem.value = item.value.files?.find(item => item.path === path) || {} as MediaFile
-  filterStreams(['subtitle', 'audio']).forEach(s => {
-    if (1 === parseInt(ag(s, 'disposition.default', 0))) {
-      config.value['audio' === s.codec_type ? 'audio' : 'subtitle'] = s.index
+  const files = item.value.files ?? []
+  let matchedFile: PlayMediaFile | null = null
+  for (const file of files) {
+    if (file.path === path) {
+      matchedFile = file
+      break
+    }
+  }
+  selectedItem.value = matchedFile
+  filterStreams(['subtitle', 'audio']).forEach(stream => {
+    const isDefault = Number(stream.disposition?.default ?? 0)
+    if (1 === isDefault) {
+      config.value['audio' === stream.codec_type ? 'audio' : 'subtitle'] = stream.index
     }
   })
 }
 
-const filterStreams = (type?: string | Array<string>): Array<FFProbeStream> => {
-  if (!selectedItem?.value || !selectedItem.value?.ffprobe?.streams) {
-    return []
-  }
+const filterStreams = (
+  type?: PlayStream['codec_type'] | Array<PlayStream['codec_type']>
+): Array<PlayStream> => {
+  const streams = selectedItem.value?.ffprobe?.streams ?? []
 
   if (!type) {
-    return selectedItem.value?.ffprobe?.streams
+    return streams
   }
 
-  if ('string' === typeof type) {
-    type = [type]
-  }
+  const types = Array.isArray(type) ? type : [type]
 
-  return selectedItem.value?.ffprobe?.streams.filter(s => type.includes(s.codec_type))
+  return streams.filter(stream => types.includes(stream.codec_type))
 }
 
 const closeStream = async (): Promise<void> => {
@@ -425,7 +521,12 @@ const toggleWatched = async (): Promise<void> => {
   if (!item.value) {
     return
   }
-  if (!confirm(`Mark '${makeName(item.value)}' as ${item.value.watched ? 'unplayed' : 'played'}?`)) {
+  const {status} = await useDialog().confirmDialog({
+    title: 'Confirm',
+    message: `Mark '${displayName.value}' as ${item.value.watched ? 'unplayed' : 'played'}?`,
+  })
+
+  if (true !== status) {
     return
   }
   try {
@@ -441,7 +542,7 @@ const toggleWatched = async (): Promise<void> => {
     }
 
     item.value.watched = !item.value.watched
-    notification('success', '', `Marked '${makeName(item.value)}' as ${item.value.watched ? 'played' : 'unplayed'}`)
+    notification('success', '', `Marked '${displayName.value}' as ${item.value.watched ? 'played' : 'unplayed'}`)
   } catch (e) {
     notification('error', 'Error', `Request error. ${e}`)
   }

@@ -60,19 +60,20 @@
   </div>
 </template>
 
-<script setup>
-import {request, copyText} from '~/utils'
+<script setup lang="ts">
+import {ref, watch} from 'vue'
+import {useHead, useRoute} from '#app'
+import {copyText, parse_api_response, request} from '~/utils'
 
 useHead({title: `System Report`})
 
-const data = ref([])
+const route = useRoute()
+
+const data = ref<Array<string>>([])
 const show_report_warning = ref(true)
 
-/** @type {Ref<HTMLPreElement|null>} */
-const bottomMarker = ref(null)
-
-/** @type {Ref<HTMLPreElement|null>} */
-const topMarker = ref(null)
+const bottomMarker = ref<HTMLElement | null>(null)
+const topMarker = ref<HTMLElement | null>(null)
 
 watch(show_report_warning, async v => {
   if (false !== v) {
@@ -80,9 +81,12 @@ watch(show_report_warning, async v => {
   }
 
   const response = await request(`/system/report`)
-  const json = await response.json()
+  const json = await parse_api_response<Array<string>>(response)
+  if ('error' in json) {
+    return
+  }
 
-  if (useRoute().name !== 'report') {
+  if (route.name !== 'report') {
     return
   }
 

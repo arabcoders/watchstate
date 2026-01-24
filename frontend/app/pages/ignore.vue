@@ -183,7 +183,7 @@
         </form>
       </div>
 
-      <div v-else class="column is-12" v-if="items">
+      <div v-else-if="items" class="column is-12">
         <div class="columns is-multiline">
           <div class="column is-6" v-for="item in items" :key="item.rule">
             <div class="card">
@@ -206,13 +206,13 @@
                     <span class="icon-text">
                       <span class="icon"><i class="fas fa-server"></i></span>
                       <span>
-                        <NuxtLink :to="`/backend/${item.backend}`" v-text="item.backend"/>
+                        <NuxtLink :to="`/backend/${item.backend}`">{{ item.backend }}</NuxtLink>
                       </span>
                     </span>
                   </div>
                   <div class="column is-6 has-text-right">
                     <strong>Scope:&nbsp;</strong>
-                    <NuxtLink :to="makeItemLink(item)" v-text="item.scoped_to" v-if="item.scoped_to"/>
+                    <NuxtLink :to="makeItemLink(item)" v-if="item.scoped_to">{{ item.scoped_to }}</NuxtLink>
                     <template v-else>Global</template>
                   </div>
 
@@ -220,8 +220,9 @@
                     <span class="icon-text">
                       <span class="icon"><i class="fas fa-database"></i></span>
                       <span>
-                        <NuxtLink target="_blank" :to="makeGUIDLink(item.type, item.db, item.id)"
-                                  v-text="`${item.db}://${item.id}`"/>
+                        <NuxtLink target="_blank" :to="makeGUIDLink(item.type, item.db, item.id)">
+                          {{ `${item.db}://${item.id}` }}
+                        </NuxtLink>
                       </span>
                     </span>
                   </div>
@@ -348,7 +349,7 @@ const loadContent = async (): Promise<void> => {
     if ('ignore' !== useRoute().name) {
       return
     }
-  } catch (e: any) {
+  } catch {
     json = {
       error: {
         code: response.status,

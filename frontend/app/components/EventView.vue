@@ -123,7 +123,7 @@
         <div v-if="toggleLogs" class="is-relative">
           <code class="is-block text-container p-4 is-terminal"
             :class="{ 'is-pre': !wrapLines, 'is-pre-wrap': wrapLines }">
-      <span class="is-block pt-1" v-for="(item, index) in filteredRows" :key="'log_line-' + index" v-text="item" />
+      <span class="is-block pt-1" v-for="(logLine, index) in filteredRows" :key="'log_line-' + index" v-text="logLine" />
     </code>
           <button class="button m-4" v-tooltip="'Copy logs'" @click="() => copyText(filteredRows.join('\n'))"
             style="position: absolute; top:0; right:0;">
@@ -155,21 +155,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import { useHead, createError } from '#app'
+import {ref, computed, watch, onMounted, onBeforeUnmount} from 'vue'
+import {useHead, createError} from '#app'
 import {
-  copyText, disableOpacity, enableOpacity, notification, parse_api_response,
-  TOOLTIP_DATE_FORMAT, request, makeEventName, getEventStatusClass
+  copyText,
+  disableOpacity,
+  enableOpacity,
+  notification,
+  parse_api_response,
+  TOOLTIP_DATE_FORMAT,
+  request,
+  makeEventName,
+  getEventStatusClass,
 } from '~/utils'
 import moment from 'moment'
-import { useStorage } from '@vueuse/core'
-import { useDialog } from '~/composables/useDialog'
-import type { EventsItem } from '~/types'
+import {useStorage} from '@vueuse/core'
+import {useDialog} from '~/composables/useDialog'
+import type {EventsItem, GenericError} from '~/types'
 
 const emit = defineEmits<{
-  (e: 'closeOverlay'): void
-  (e: 'delete', item: EventsItem): void
-  (e: 'deleted', item: EventsItem): void
+  closeOverlay: []
+  delete: [EventsItem]
+  deleted: [EventsItem]
 }>()
 
 const props = defineProps<{ id: string }>()
@@ -214,10 +221,16 @@ const loadContent = async (): Promise<void> => {
   try {
     isLoading.value = true
     const response = await request(`/system/events/${props.id}`)
-    const json = await parse_api_response(response)
+    const json = await parse_api_response<EventsItem>(response)
+
+    if ('error' in json) {
+      const errorJson = json as GenericError
+      notification('error', 'Error', `Errors viewItem request error. ${errorJson.error.code}: ${errorJson.error.message}`)
+      return
+    }
 
     if (200 !== response.status) {
-      notification('error', 'Error', `Errors viewItem request error. ${json.error.code}: ${json.error.message}`)
+      notification('error', 'Error', 'Errors viewItem request error.')
       return
     }
 
@@ -235,9 +248,10 @@ const loadContent = async (): Promise<void> => {
     item.value = json
 
     useHead({ title: `Event: ${json.id}` })
-  } catch (e: any) {
-    console.error(e)
-    notification('crit', 'Error', `Errors viewItem Request failure. ${e.message}`)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unexpected error'
+    console.error(error)
+    notification('crit', 'Error', `Errors viewItem Request failure. ${message}`)
   } finally {
     isLoading.value = false
   }

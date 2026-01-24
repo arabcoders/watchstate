@@ -3,7 +3,22 @@ import {useToast} from 'vue-toastification'
 import {toRaw} from 'vue';
 import {navigateTo} from '#app'
 import {useDialog} from '~/composables/useDialog'
-import type {GenericError, PaginationItem, RequestOptions} from "~/types"
+import type {
+    GenericError,
+    JsonObject,
+    JsonValue,
+    PaginationItem,
+    RequestOptions,
+} from '~/types'
+
+type ToastMethod = 'info' | 'success' | 'warning' | 'error'
+type NotificationType = ToastMethod | string
+type ToastOptionValue = JsonValue | ((...args: Array<unknown>) => void)
+
+type ToastOptions = {
+    timeout?: number
+    [key: string]: ToastOptionValue | undefined
+}
 
 const toast = useToast();
 
@@ -47,19 +62,23 @@ const getValue = <T>(obj: (() => T) | T): T => typeof obj === 'function' ? (obj 
 /**
  * Get value from object or function and return default value if it's undefined  or null
  */
-const ag = (obj: Record<string, any>, path: string, defaultValue: any = null): any => {
+const ag = <T = JsonValue>(obj: JsonObject, path: string, defaultValue: T = null as T): T => {
     const keys = path.split(AG_SEPARATOR);
-    let at = obj;
+    let at: JsonValue = obj;
 
     for (const key of keys) {
-        if (typeof at === 'object' && at !== null && key in at) {
-            at = at[key];
+        if (typeof at === 'object' && at !== null && !Array.isArray(at) && key in at) {
+            const current: JsonValue | undefined = (at as JsonObject)[key]
+            if (current === undefined) {
+                return getValue(defaultValue)
+            }
+            at = current
         } else {
             return getValue(defaultValue);
         }
     }
 
-    return getValue(at === null ? defaultValue : at);
+    return getValue(at === null ? defaultValue : (at as T));
 };
 
 /**
@@ -124,15 +143,14 @@ const awaitElement = (
     sel: string,
     callback: (sel: string, elm: Element) => void
 ): void => {
-    let interval: ReturnType<typeof setInterval> | undefined;
-    let $elm = document.querySelector(sel);
+    const $elm = document.querySelector(sel);
 
     if ($elm) {
         callback(sel, $elm);
         return;
     }
 
-    interval = setInterval(() => {
+    const interval = setInterval(() => {
         const $elm = document.querySelector(sel);
         if ($elm) {
             clearInterval(interval);
@@ -155,14 +173,14 @@ const ucFirst = (str: string): string => {
  * Display a notification
  */
 const notification = (
-    type: string,
+    type: NotificationType,
     title: string,
     text: string,
     duration: number = 3000,
-    opts: Record<string, any> = {}
+    opts: ToastOptions = {}
 ): void => {
-    let method = '';
-    let options = {
+    let method: ToastMethod = 'info';
+    let options: ToastOptions = {
         timeout: duration,
     };
 
@@ -188,13 +206,13 @@ const notification = (
             }
             break;
     }
-    (toast as any)[method](text || title, options);
+    toast[method](text || title, options);
 };
 
 /**
  * Replace tags in text with values from context
  */
-const r = (text: string, context: Record<string, any> = {}): string => {
+const r = (text: string, context: JsonObject = {}): string => {
     const tagLeft = '{';
     const tagRight = '}';
 
@@ -209,14 +227,15 @@ const r = (text: string, context: Record<string, any> = {}): string => {
         return text;
     }
 
-    const replacements: Record<string, any> = {};
+    const replacements: Record<string, string> = {};
 
     matches.forEach(match => {
-        replacements[match] = ag(context, match.slice(1, -1), '');
+        replacements[match] = String(ag(context, match.slice(1, -1), ''));
     });
 
     for (const key in replacements) {
-        text = text.replace(new RegExp(key, 'g'), replacements[key]);
+        const replacement = replacements[key] ?? ''
+        text = text.replace(new RegExp(key, 'g'), replacement);
     }
 
     return text;
@@ -225,7 +244,7 @@ const r = (text: string, context: Record<string, any> = {}): string => {
 /**
  * Make GUID link
  */
-const makeGUIDLink = (type: string, source: string, guid: string, data: Record<string, any> = {}): string => {
+const makeGUIDLink = (type: string, source: string, guid: string, data: JsonObject = {}): string => {
     if (source === 'youtube') {
         if (YT_CH.test(guid)) {
             source = 'youtube_channel';
@@ -244,7 +263,7 @@ const makeGUIDLink = (type: string, source: string, guid: string, data: Record<s
 
     const link = ag(guid_links, `${type}.${source}`, null);
 
-    return link == null ? '' : r(link, {_guid: guid, ...toRaw(data)});
+    return link == null ? '' : r(link, {_guid: guid, ...toRaw(data)} as JsonObject);
 };
 
 /**
@@ -254,7 +273,7 @@ const formatDuration = (milliseconds: number): string => {
     milliseconds = parseInt(milliseconds.toString());
     let seconds = Math.floor(milliseconds / 1000);
     let minutes = Math.floor(seconds / 60);
-    let hours = Math.floor(minutes / 60);
+    const hours = Math.floor(minutes / 60);
     seconds %= 60;
     minutes %= 60;
 
@@ -323,7 +342,7 @@ const makeSearchLink = (type: string, query: string): string => {
 /**
  * Dispatch event.
  */
-const dEvent = (eventName: string, detail: Record<string, any> = {}): boolean => {
+const dEvent = (eventName: string, detail: JsonObject = {}): boolean => {
     if (!window) {
         return false;
     }
@@ -333,7 +352,7 @@ const dEvent = (eventName: string, detail: Record<string, any> = {}): boolean =>
 /**
  * Make name
  */
-const makeName = (item: Record<string, any>, asMovie: boolean = false): string | null => {
+const makeName = (item: JsonObject, asMovie: boolean = false): string | null => {
     if (!item) {
         return null;
     }
@@ -408,15 +427,20 @@ const basename = (path: string, ext: string = ''): string => {
  * @param r The Response object to parse
  * @returns Promise resolving to either the typed response or an error object
  */
-const parse_api_response = async <T = any>(r: Response): Promise<T | GenericError> => {
+const parse_api_response = async <T = JsonObject>(r: Response): Promise<T | GenericError> => {
     try {
         return await r.json() as T;
-    } catch (e) {
+    } catch {
         return {error: {code: r.status, message: r.statusText}} as GenericError;
     }
 };
 
-const goto_history_item = async (item: Record<string, any>): Promise<void> => {
+type HistoryLogItem = {
+    item_id?: string | number | null
+    user?: string | null
+}
+
+const goto_history_item = async (item: HistoryLogItem): Promise<void> => {
     if (!item.item_id) {
         return;
     }
@@ -447,11 +471,11 @@ const goto_history_item = async (item: Record<string, any>): Promise<void> => {
  */
 const queue_event = async (
     event: string,
-    event_data: Record<string, any> = {},
+    event_data: JsonObject = {},
     delay: number = 0,
-    opts: Record<string, any> = {}
+    opts: JsonObject = {}
 ): Promise<number> => {
-    let reqData: Record<string, any> = {event};
+    let reqData: JsonObject = {event};
     if (event_data) {
         reqData.event_data = event_data;
     }
@@ -493,12 +517,18 @@ const disableOpacity = (): void => {
  *
  * @returns The result of the test function.
  */
-const awaiter = async (test: Function, timeout_ms: number = 20 * 1000, frequency: number = 200) => {
-    if (typeof (test) != "function") {
-        throw new Error("test should be a function in awaiter(test, [timeout_ms], [frequency])")
-    }
+const awaiter = async <T>(test: () => T, timeout_ms: number = 20 * 1000, frequency: number = 200): Promise<T | false> => {
+    const isNotTruthy = (val: unknown): boolean => {
+        if (val === undefined || val === false || val === null) {
+            return true
+        }
 
-    const isNotTruthy = (val: any) => val === undefined || val === false || val === null || val.length === 0;
+        if (typeof (val as {length?: number}).length === 'number') {
+            return (val as {length: number}).length === 0
+        }
+
+        return false
+    };
     const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
     const endTime: number = Date.now() + timeout_ms;
 

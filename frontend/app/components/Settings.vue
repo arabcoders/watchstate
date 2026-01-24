@@ -140,6 +140,7 @@
 import {ref} from 'vue'
 import {useStorage} from '@vueuse/core'
 import {request, parse_api_response, notification} from '~/utils'
+import type {GenericError, GenericResponse} from '~/types'
 import {navigateTo} from '#app'
 import {useDialog} from '~/composables/useDialog'
 import {useAuthStore} from '~/store/auth'
@@ -193,9 +194,14 @@ const change_password = async (): Promise<void> => {
         current_password: user.value.current_password,
       })
     })
-    const json = await parse_api_response(response)
+    const json = await parse_api_response<GenericResponse>(response)
+    if ('error' in json) {
+      const errorJson = json as GenericError
+      notification('Error', 'Error', errorJson.error.message, 2000)
+      return
+    }
     if (200 !== response.status) {
-      notification('Error', 'Error', json.error.message, 2000)
+      notification('Error', 'Error', 'Failed to change password.', 2000)
       return
     }
     notification('Success', 'Success', json.info.message)
@@ -219,9 +225,14 @@ const invalidate_sessions = async (): Promise<void> => {
   try {
     isLoading.value = true
     const response = await request('/system/auth/sessions', {method: 'DELETE'})
-    const json = await parse_api_response(response)
+    const json = await parse_api_response<GenericResponse>(response)
+    if ('error' in json) {
+      const errorJson = json as GenericError
+      notification('Error', 'Error', errorJson.error.message, 2000)
+      return
+    }
     if (200 !== response.status) {
-      notification('Error', 'Error', json.error.message, 2000)
+      notification('Error', 'Error', 'Failed to invalidate sessions.', 2000)
       return
     }
     notification('Success', 'Success', json.info.message)

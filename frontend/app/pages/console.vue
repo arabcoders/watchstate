@@ -122,15 +122,16 @@
 
 <script setup lang="ts">
 import '@xterm/xterm/css/xterm.css'
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { useHead, useRoute, useRouter } from '#app'
-import { Terminal, type ITerminalOptions } from '@xterm/xterm'
+import {ref, computed, onMounted, onUnmounted, nextTick} from 'vue'
+import {useHead, useRoute, useRouter} from '#app'
+import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { useStorage } from '@vueuse/core'
-import { request, disableOpacity, enableOpacity, notification, parse_api_response } from '~/utils'
+import {request, disableOpacity, enableOpacity, notification, parse_api_response} from '~/utils'
 import Message from '~/components/Message.vue'
 import { fetchEventSource } from '@microsoft/fetch-event-source'
-import type { EnvVar } from '~/types'
+import type {EnvVar, GenericError, GenericResponse} from '~/types'
+import {useDialog} from '~/composables/useDialog'
 
 useHead({ title: 'Console' })
 
@@ -167,7 +168,12 @@ const RunCommand = async (): Promise<void> => {
 
   // use regex to check if command contains [...]
   if (userCommand.match(/\[.*]/)) {
-    if (!confirm('The command contains placeholders \'[...]\'. Are you sure you want to run as it is?')) {
+    const {status} = await useDialog().confirmDialog({
+      title: 'Confirm command',
+      message: 'The command contains placeholders "[...]". Are you sure you want to run as it is?',
+    })
+
+    if (true !== status) {
       return
     }
   }
@@ -259,17 +265,25 @@ const RunCommand = async (): Promise<void> => {
         return
       }
 
-      const json = await parse_api_response(response)
+      const json = await parse_api_response<GenericResponse>(response)
 
-      if ('error' in json && 400 === json.error.code) {
+      if ('error' in json) {
+        const errorJson = json as GenericError
+        if (400 === errorJson.error.code) {
+          ctrl.abort()
+          return
+        }
+        const message = `${errorJson.error.code}: ${errorJson.error.message}`
+        notification('error', 'Error', message, 3000)
+        await finished()
+        return
+      }
+
+      if (400 === response.status) {
         ctrl.abort()
         return
       }
 
-      if ('error' in json) {
-        const message = `${json.error.code}: ${json.error.message}`
-        notification('error', 'Error', message, 3000)
-      }
       await finished()
     },
     onerror: (e: unknown): void => {
@@ -323,7 +337,7 @@ const finished = async (): Promise<void> => {
   }
 }
 
-const recentCommands = computed(() => executedCommands.value.reverse().slice(-10))
+const recentCommands = computed(() => executedCommands.value.slice(-10).reverse())
 
 const reSizeTerminal = (): void => {
   if (!terminal.value || !terminalFit.value) {
@@ -382,7 +396,7 @@ onMounted(async () => {
     } else {
       allEnabled.value = false
     }
-  } catch (e: unknown) {
+  } catch {
     allEnabled.value = false
   }
 

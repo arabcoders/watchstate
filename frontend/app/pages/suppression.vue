@@ -75,7 +75,7 @@
                     <template v-if="'regex' === formData.type">
                       Regular expression. To test try
                       <span>
-                        <NuxtLink to="https://regex101.com/" target="_blank" v-text="'this link'"/>
+                        <NuxtLink to="https://regex101.com/" target="_blank">this link</NuxtLink>
                       </span><span></span>. Select <code>PCRE2 (PHP >=7.3)</code> flavor.
                     </template>
                     <template v-else>

@@ -179,7 +179,7 @@
         </div>
       </div>
 
-      <div class="column is-12" v-if="items?.length < 1 || filteredRows(items).length < 1">
+      <div class="column is-12" v-if="items?.length < 1 || filteredItems.length < 1">
         <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
                  icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
         <Message v-else class="has-background-warning-80 has-text-dark" title="Warning"
@@ -195,7 +195,7 @@
 
       <div class="column is-12">
         <div class="columns is-multiline" v-if="items?.length > 0">
-          <template v-for="item in items" :key="item.id">
+          <template v-for="item in filteredItems" :key="item.id">
             <Lazy :unrender="true" :min-height="240" class="column is-6-tablet" v-if="filterItem(item)">
               <div class="card" :class="{ 'is-success': item.watched }">
                 <header class="card-header">
@@ -208,11 +208,11 @@
                     <FloatingImage :image="`/history/${item.id}/images/poster`" :item_class="'scaled-image'"
                                    v-if="poster_enable">
                       <NuxtLink :to="'/history/' + item.id">
-                        {{ item?.full_title || makeName(item) }}
+                        {{ item?.full_title || makeName(item as unknown as JsonObject) }}
                       </NuxtLink>
                     </FloatingImage>
                     <NuxtLink :to="'/history/' + item.id" v-else>
-                      {{ item?.full_title || makeName(item) }}
+                      {{ item?.full_title || makeName(item as unknown as JsonObject) }}
                     </NuxtLink>
                   </p>
                   <span class="card-header-icon" @click="item.showRawData = !item?.showRawData">
@@ -327,7 +327,7 @@ import {
   TOOLTIP_DATE_FORMAT,
   parse_api_response
 } from '~/utils'
-import type {HistoryItem, RequestOptions, PaginationInfo} from '~/types'
+import type {HistoryItem, JsonObject, PaginationInfo, RequestOptions} from '~/types'
 import {useDialog} from "~/composables/useDialog.ts";
 
 /**
@@ -357,7 +357,13 @@ useHead({title: 'History'})
 const poster_enable = useStorage('poster_enable', true)
 
 // UI-specific extensions to HistoryItem
-type HistoryItemWithUIState = HistoryItem & {
+type HistoryItemWithUIState = Omit<HistoryItem, 'metadata' | 'extra' | 'files' | 'parent' | 'rguids'> & {
+  metadata?: Record<string, {via?: string}>
+  extra?: Record<string, unknown>
+  files?: Array<unknown>
+  parent?: Record<string, string>
+  rguids?: Record<string, string>
+  full_title?: string
   /** UI: Whether to show raw data */
   showRawData?: boolean
   /** UI: Whether to expand the title field */
@@ -397,7 +403,7 @@ const selected_ids = ref<Array<number>>([])
 const massActionInProgress = ref<boolean>(false)
 
 watch(selectAll, (v: boolean) => {
-  selected_ids.value = v ? filteredRows(items.value).map(i => i.id) : []
+  selected_ids.value = v ? filteredRows(items.value as Array<HistoryItemWithUIState>).map(i => i.id) : []
 })
 
 const loadContent = async (pageNumber: number, fromPopState: boolean = false): Promise<void> => {
@@ -500,12 +506,13 @@ const loadContent = async (pageNumber: number, fromPopState: boolean = false): P
 
     if (json.history) {
       json.history.forEach((item: HistoryItem) => {
-        const fullTitle = makeName(item)
+        const fullTitle = makeName(item as unknown as JsonObject)
         if (fullTitle) {
           item.full_title = fullTitle
         }
         // Cast to HistoryItemWithUIState since we're adding UI properties
-        items.value.push(item as HistoryItemWithUIState)
+        const itemWithUI = item as unknown as HistoryItemWithUIState
+        items.value.push(itemWithUI)
       })
     }
 
@@ -606,7 +613,7 @@ const massAction = async (action: 'delete' | 'mark_played' | 'mark_unplayed'): P
   if ('mark_played' === action || 'mark_unplayed' === action) {
     opts = {method: 'mark_played' === action ? 'POST' : 'DELETE'}
     const ids = selected_ids.value
-        .map(id => items.value.find(i => i.id === id))
+        .map(id => (items.value as Array<HistoryItemWithUIState>).find(i => i.id === id))
         .filter((i): i is HistoryItemWithUIState => i !== undefined)
         .filter(i => 'mark_played' === action ? !i.watched : i.watched)
         .map(i => i.id)
@@ -682,19 +689,21 @@ const filteredRows = (items: Array<HistoryItemWithUIState>): Array<HistoryItemWi
     return items
   }
 
-  return items.filter(i => Object.values(i).some(v =>
-      typeof v === 'string' ? v.toLowerCase().includes(filter.value.toLowerCase()) : false
-  ))
+  return items.filter(i => stringifyItem(i).includes(filter.value.toLowerCase()))
 }
+
+const filteredItems = computed(() => filteredRows(items.value as Array<HistoryItemWithUIState>))
 
 const filterItem = (item: HistoryItemWithUIState): boolean => {
   if (!filter.value || !item) {
     return true
   }
 
-  return Object.values(item).some(v =>
-      typeof v === 'string' ? v.toLowerCase().includes(filter.value.toLowerCase()) : false
-  )
+  return stringifyItem(item).includes(filter.value.toLowerCase())
+}
+
+const stringifyItem = (item: HistoryItemWithUIState): string => {
+  return JSON.stringify(item).toLowerCase()
 }
 
 watch(filter, (val: string) => {

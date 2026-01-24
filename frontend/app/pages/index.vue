@@ -36,11 +36,11 @@
                   <FloatingImage :image="`/history/${item.id}/images/poster`" :item_class="'scaled-image'"
                     v-if="poster_enable">
                     <NuxtLink :to="'/history/' + item.id">
-                      {{ item?.full_title || makeName(item) }}
+                      {{ item?.full_title || makeName(item as unknown as JsonObject) }}
                     </NuxtLink>
                   </FloatingImage>
                   <NuxtLink :to="'/history/' + item.id" v-else>
-                    {{ item?.full_title || makeName(item) }}
+                    {{ item?.full_title || makeName(item as unknown as JsonObject) }}
                   </NuxtLink>
                 </p>
                 <span class="card-header-icon">
@@ -198,7 +198,7 @@ import moment from 'moment'
 import Message from '~/components/Message.vue'
 import FloatingImage from '~/components/FloatingImage.vue'
 import { formatDuration, goto_history_item, makeName, parse_api_response, request, TOOLTIP_DATE_FORMAT } from '~/utils'
-import type { HistoryItem } from '~/types'
+import type {HistoryItem, JsonObject} from '~/types'
 import Popover from '~/components/Popover.vue'
 import DuplicateRecordList from '~/components/DuplicateRecordList.vue'
 
@@ -264,25 +264,25 @@ const loadContent = async (): Promise<void> => {
   }
 
   if (lastHistory.value.length > 0) {
-    lastHistory.value.forEach(async (item: HistoryItem) => {
+    for (const item of lastHistory.value) {
       if (item.duplicate_reference_ids && item.duplicate_reference_ids.length > 0) {
-        return
+        continue
       }
 
       try {
         const response = await request(`/history/${item.id}/duplicates`)
         if (response.ok) {
-          const historyResponse = await parse_api_response<{ duplicate_reference_ids: Array<number> }>(response)
+          const historyResponse = await parse_api_response<{duplicate_reference_ids: Array<number>}>(response)
 
           if ('error' in historyResponse || 'index' !== useRoute().name) {
-            return
+            continue
           }
 
           item.duplicate_reference_ids = historyResponse.duplicate_reference_ids
         }
       } catch {
       }
-    })
+    }
   }
 }
 

@@ -66,8 +66,8 @@
           title="Information" icon="fas fa-check">
           The filter <code>{{ filter }}</code> did not match any records.
         </Message>
-        <Message message_class="has-background-success-90 has-text-dark" v-else title="Success" icon="fas fa-check"
-          v-if="!isLoading && items.length < 1">
+        <Message message_class="has-background-success-90 has-text-dark" v-else-if="!isLoading && items.length < 1"
+          title="Success" icon="fas fa-check">
           WatchState did not find any file references that are no longer on the system.
         </Message>
       </div>
@@ -130,9 +130,9 @@
                     </span>
                     <FloatingImage :image="`/history/${item.id}/images/poster`" :item_class="'scaled-image'"
                       v-if="poster_enable">
-                      <NuxtLink :to="`/history/${item.id}`" v-text="makeName(item)" />
+                      <NuxtLink :to="`/history/${item.id}`">{{ makeName(item) }}</NuxtLink>
                     </FloatingImage>
-                    <NuxtLink :to="`/history/${item.id}`" v-text="makeName(item)" v-else />
+                    <NuxtLink :to="`/history/${item.id}`" v-else>{{ makeName(item) }}</NuxtLink>
                   </p>
                   <span class="card-header-icon" @click="item.showRawData = !item?.showRawData">
                     <span class="icon">
@@ -150,11 +150,12 @@
                           @click="item.expand_title = !item?.expand_title">
                           <span class="icon"><i class="fas fa-heading" />&nbsp;</span>
                           <template v-if="item?.content_title">
-                            <NuxtLink :to="makeSearchLink('subtitle', item.content_title)"
-                              v-text="item.content_title" />
+                            <NuxtLink :to="makeSearchLink('subtitle', item.content_title)">
+                              {{ item.content_title }}
+                            </NuxtLink>
                           </template>
                           <template v-else>
-                            <NuxtLink :to="makeSearchLink('subtitle', item.title)" v-text="item.title" />
+                            <NuxtLink :to="makeSearchLink('subtitle', item.title)">{{ item.title }}</NuxtLink>
                           </template>
                         </div>
                         <div class="control">
@@ -169,8 +170,9 @@
                           :class="{ 'is-text-overflow': !item?.expand_path, 'is-text-contents': item?.expand_path }"
                           @click="item.expand_path = !item?.expand_path">
                           <span class="icon"><i class="fas fa-file" />&nbsp;</span>
-                          <NuxtLink v-if="item?.content_path" :to="makeSearchLink('path', item.content_path)"
-                            v-text="item.content_path" />
+                          <NuxtLink v-if="item?.content_path" :to="makeSearchLink('path', item.content_path)">
+                            {{ item.content_path }}
+                          </NuxtLink>
                           <span v-else>No path found.</span>
                         </div>
                         <div class="control">
@@ -188,16 +190,16 @@
                           <span>Has metadata</span>
                         </div>
                         <div class="control">
-                          <template v-for="backend in item.reported_by" :key="`${item.id}-rb-${backend}`">
-                            <NuxtLink :to="'/backend/' + backend" class="tag is-primary ml-1">
+                          <template v-for="reportedBackend in item.reported_by" :key="`${item.id}-rb-${reportedBackend}`">
+                            <NuxtLink :to="'/backend/' + reportedBackend" class="tag is-primary ml-1">
                               <span class="icon"><i class="fas fa-check" /></span>
-                              <span v-text="backend" />
+                              <span>{{ reportedBackend }}</span>
                             </NuxtLink>
                           </template>
-                          <template v-for="backend in item.not_reported_by" :key="`${item.id}-rb-${backend}`">
-                            <NuxtLink :to="'/backend/' + backend" class="tag is-danger ml-1">
+                          <template v-for="missingBackend in item.not_reported_by" :key="`${item.id}-rb-${missingBackend}`">
+                            <NuxtLink :to="'/backend/' + missingBackend" class="tag is-danger ml-1">
                               <span class="icon"><i class="fas fa-xmark" /></span>
-                              <span v-text="backend" />
+                              <span>{{ missingBackend }}</span>
                             </NuxtLink>
                           </template>
                         </div>

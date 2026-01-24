@@ -22,6 +22,24 @@ export interface GenericResponse {
     }
 }
 
+export type JsonPrimitive = string | number | boolean | null
+
+export type JsonValue = JsonPrimitive | Array<JsonValue> | JsonObject
+
+export interface JsonObject {
+    [key: string]: JsonValue
+}
+
+export type EnvConfigValue =
+    | string
+    | number
+    | boolean
+    | null
+    | Array<string>
+    | Array<number>
+    | Array<boolean>
+    | Record<string, string | number | boolean | null>
+
 /**
  * User list item from /api/users endpoint.
  */
@@ -329,7 +347,7 @@ export interface EnvVar {
     /** The linked config variable */
     config?: string,
     /** The linked config value */
-    config_value?: any,
+    config_value?: EnvConfigValue,
 }
 
 /**
@@ -351,11 +369,11 @@ export interface EventsItem {
     /** Last update timestamp (optional) */
     updated_at?: string
     /** Event data payload (optional) */
-    event_data?: Record<string, any>
+    event_data?: JsonObject
     /** Event logs array (optional) */
     logs?: Array<string>
     /** Event options (optional) */
-    options?: Record<string, any>
+    options?: JsonObject
     /** Display toggle for event data (UI state) */
     _display?: boolean
     /** Delay in seconds (optional) */
@@ -548,7 +566,7 @@ export interface SubUser {
     options?: {
         /** Plex user PIN (4 digits) */
         PLEX_USER_PIN?: string
-        [key: string]: any
+        [key: string]: JsonValue
     }
 }
 
@@ -568,16 +586,16 @@ export interface FFProbeStream {
         title?: string
         /** Language code */
         language?: string
-        [key: string]: any
+        [key: string]: JsonValue
     }
     /** Stream disposition flags */
     disposition?: {
         /** Whether this is the default stream */
         default?: number
-        [key: string]: any
+        [key: string]: JsonValue
     }
 
-    [key: string]: any
+    [key: string]: JsonValue
 }
 
 /**
@@ -600,7 +618,7 @@ export interface MediaFile {
             size?: string
             /** Bitrate */
             bit_rate?: string
-            [key: string]: any
+            [key: string]: JsonValue
         }
     }
     /** Array of external subtitle file paths */
@@ -666,7 +684,7 @@ export interface SearchItem {
     /** Release year */
     year?: number
     /** Additional metadata from backend */
-    metadata?: Record<string, any>
+    metadata?: JsonObject
 }
 
 /**
@@ -726,7 +744,7 @@ export interface HistoryItem {
         }
     }
     /** Additional data */
-    extra: Record<string, any>
+    extra: JsonObject
     /** Created timestamp */
     created_at: number
     /** Updated timestamp */
@@ -912,6 +930,7 @@ export interface MismatchedItem {
 }
 
 export interface UnmatchedItem {
+    id?: string | number
     /** Item title */
     title: string
     /** Item type (e.g., 'Movie', 'Series', etc.) */
@@ -1076,6 +1095,26 @@ export interface PlexOAuthData {
 export interface PlexOAuthTokenResponse {
     /** The authentication token received from Plex */
     authToken?: string
+}
+
+/**
+ * Backend access token response from /api/backends/accesstoken endpoint.
+ */
+export interface BackendAccessTokenResponse {
+    /** Access token for the backend */
+    accesstoken?: string
+    /** Backend user ID */
+    user?: string
+    /** Backend identifier */
+    identifier?: string
+}
+
+/**
+ * Backend UUID response from /api/backends/uuid endpoint.
+ */
+export interface BackendUuidResponse {
+    /** Backend identifier */
+    identifier: string
 }
 
 /**

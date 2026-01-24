@@ -34,7 +34,7 @@
               </button>
             </p>
             <p class="control">
-              <button class="button is-danger" @click="deleteItem(data)" v-tooltip.bottom="'Delete the record'"
+              <button class="button is-danger" @click="deleteItem" v-tooltip.bottom="'Delete the record'"
                 :disabled="isDeleting || isLoading" :class="{ 'is-loading': isDeleting }">
                 <span class="icon"><i class="fas fa-trash" /></span>
               </button>
@@ -76,7 +76,7 @@
           message="Loading data. Please wait..." />
       </div>
 
-      <div class="column is-12" v-if="(data?.duplicate_reference_ids || 0) > 0">
+      <div class="column is-12" v-if="(data?.duplicate_reference_ids?.length ?? 0) > 0">
         <Message message_class="has-background-info-90 has-text-dark">
           <p>
             <span class="icon"><i class="fas fa-info-circle" /></span>
@@ -112,7 +112,7 @@
 
     <div class="columns is-multiline" :style="styleInfo" :class="{ 'bg-fanart': styleInfo }">
       <div class="column is-12" v-if="data?.via">
-        <div class="card" :class="{ 'is-success': parseInt(data.watched), 'transparent-bg': styleInfo }">
+        <div class="card" :class="{ 'is-success': data.watched, 'transparent-bg': styleInfo }">
           <header class="card-header">
             <div class="card-header-title is-clickable is-unselectable" @click="data._toggle = !data._toggle">
               <span class="icon">
@@ -144,9 +144,9 @@
               </div>
 
               <div class="column is-6 has-text-right">
-                <span class="icon-text" v-if="parseInt(data.progress)">
+                <span class="icon-text" v-if="Number(data.progress) > 0">
                   <span class="icon"><i class="fas fa-bars-progress" /></span>
-                  <span><span class="is-hidden-mobile">Progress:</span> {{ formatDuration(data.progress) }}</span>
+                  <span><span class="is-hidden-mobile">Progress:</span> {{ formatDuration(Number(data.progress ?? 0)) }}</span>
                 </span>
                 <span v-else>-</span>
               </div>
@@ -178,8 +178,8 @@
                   <span>
                     <span class="is-hidden-mobile">Updated:&nbsp;</span>
                     <span class="has-tooltip"
-                      v-tooltip="`Backend updated this record at: ${moment.unix(data.updated).format(TOOLTIP_DATE_FORMAT)}`">
-                      {{ moment.unix(data.updated).fromNow() }}
+                      v-tooltip="`Backend updated this record at: ${moment.unix(Number(data.updated ?? 0)).format(TOOLTIP_DATE_FORMAT)}`">
+                      {{ moment.unix(Number(data.updated ?? 0)).fromNow() }}
                     </span>
                   </span>
                 </span>
@@ -200,7 +200,7 @@
                 <span class="icon-text">
                   <span class="icon"><i class="fas fa-tv" /></span>
                   <span><span class="is-hidden-mobile">Season:&nbsp;</span>
-                    <NuxtLink :to="makeSearchLink('season', data.season)">{{ data.season }}</NuxtLink>
+                    <NuxtLink :to="makeSearchLink('season', String(data.season ?? ''))">{{ data.season }}</NuxtLink>
                   </span>
                 </span>
               </div>
@@ -209,7 +209,7 @@
                 <span class="icon-text">
                   <span class="icon"><i class="fas fa-tv" /></span>
                   <span><span class="is-hidden-mobile">Episode:&nbsp;</span>
-                    <NuxtLink :to="makeSearchLink('episode', data.episode)">{{ data.episode }}</NuxtLink>
+                    <NuxtLink :to="makeSearchLink('episode', String(data.episode ?? ''))">{{ data.episode }}</NuxtLink>
                   </span>
                 </span>
               </div>
@@ -220,8 +220,8 @@
                   <span>GUIDs:&nbsp;</span>
                 </span>
                 <span class="tag mr-1" v-for="(guid, source) in data.guids" :key="`guid-${id}-${source}-${guid}`">
-                  <NuxtLink target="_blank" :to="makeGUIDLink(data.type, source.split('guid_')[1], guid, data)">
-                    {{ source.split('guid_')[1] }}://{{ guid }}
+                  <NuxtLink target="_blank" :to="makeGUIDLink(data.type, String(source).split('guid_')[1] ?? String(source), guid, dataContext)">
+                    {{ String(source).split('guid_')[1] ?? String(source) }}://{{ guid }}
                   </NuxtLink>
                 </span>
               </div>
@@ -232,8 +232,8 @@
                   <span>rGUIDs:&nbsp;</span>
                 </span>
                 <span class="tag mr-1" v-for="(guid, source) in data.rguids" :key="`rguid-${id}-${source}-${guid}`">
-                  <NuxtLink :to="makeSearchLink('rguid', `${source.split('guid_')[1]}://${guid}`)">
-                    {{ source.split('guid_')[1] }}://{{ guid }}
+                  <NuxtLink :to="makeSearchLink('rguid', `${String(source).split('guid_')[1] ?? String(source)}://${guid}`)">
+                    {{ String(source).split('guid_')[1] ?? String(source) }}://{{ guid }}
                   </NuxtLink>
                 </span>
               </div>
@@ -245,8 +245,8 @@
                 </span>
                 <span class="tag mr-1" v-for="(guid, source) in data.parent"
                   :key="`parent-guid-${id}-${source}-${guid}`">
-                  <NuxtLink target="_blank" :to="makeGUIDLink('series', source.split('guid_')[1], guid, data)">
-                    {{ source.split('guid_')[1] }}://{{ guid }}
+                  <NuxtLink target="_blank" :to="makeGUIDLink('series', String(source).split('guid_')[1] ?? String(source), guid, dataContext)">
+                    {{ String(source).split('guid_')[1] ?? String(source) }}://{{ guid }}
                   </NuxtLink>
                 </span>
               </div>
@@ -320,7 +320,7 @@
 
       <div class="column is-12" v-if="data?.via && Object.keys(data.metadata).length > 0">
         <div class="card" v-for="(item, key) in data.metadata" :key="key"
-          :class="{ 'is-success': parseInt(item.watched), 'transparent-bg': styleInfo }">
+          :class="{ 'is-success': Number(item.watched), 'transparent-bg': styleInfo }">
           <header class="card-header">
             <div class="card-header-title is-clickable is-unselectable" @click="item._toggle = !item._toggle">
               <span class="icon">
@@ -338,7 +338,7 @@
               <div class="field is-grouped">
                 <div class="control">
                   <NuxtLink
-                    @click="Object.keys(data.metadata).length > 1 ? deleteMetadata(data, key) : deleteItem(data)">
+                      @click="Object.keys(data.metadata).length > 1 ? deleteMetadata(key) : deleteItem()">
                     <span class="icon-text has-text-danger">
                       <span class="icon"><i class="fas fa-trash" /></span>
                       <span>Delete</span>
@@ -375,9 +375,9 @@
               </div>
 
               <div class="column is-6 has-text-right">
-                <span class="icon-text" v-if="parseInt(item?.progress)">
+                <span class="icon-text" v-if="Number(item?.progress) > 0">
                   <span class="icon"><i class="fas fa-bars-progress" /></span>
-                  <span><span class="is-hidden-mobile">Progress:</span> {{ formatDuration(item.progress) }}</span>
+                  <span><span class="is-hidden-mobile">Progress:</span> {{ formatDuration(Number(item?.progress ?? 0)) }}</span>
                 </span>
                 <span v-else>-</span>
               </div>
@@ -385,11 +385,11 @@
               <div class="column is-6">
                 <span class="icon-text">
                   <span class="icon">
-                    <i class="fas fa-eye-slash" :class="parseInt(item.watched) ? 'fa-eye-slash' : 'fa-eye'" />
+                    <i class="fas fa-eye-slash" :class="Number(item.watched) ? 'fa-eye-slash' : 'fa-eye'" />
                   </span>
                   <span>
                     <span class="is-hidden-mobile">Status:</span>
-                    {{ parseInt(item.watched) ? 'Played' : 'Unplayed' }}
+                    {{ Number(item.watched) ? 'Played' : 'Unplayed' }}
                   </span>
                 </span>
               </div>
@@ -433,7 +433,7 @@
                   <span class="icon"><i class="fas fa-tv" /></span>
                   <span>
                     <span class="is-hidden-mobile">Season:&nbsp;</span>
-                    <NuxtLink :to="makeSearchLink('season', item.season)">{{ item.season }}</NuxtLink>
+                    <NuxtLink :to="makeSearchLink('season', String(item.season ?? ''))">{{ item.season }}</NuxtLink>
                   </span>
                 </span>
               </div>
@@ -443,7 +443,7 @@
                   <span class="icon"><i class="fas fa-tv" /></span>
                   <span>
                     <span class="is-hidden-mobile">Episode:&nbsp;</span>
-                    <NuxtLink :to="makeSearchLink('episode', item.episode)">{{ item.episode }}</NuxtLink>
+                    <NuxtLink :to="makeSearchLink('episode', String(item.episode ?? ''))">{{ item.episode }}</NuxtLink>
                   </span>
                 </span>
               </div>
@@ -454,8 +454,8 @@
                   <span>GUIDs:&nbsp;</span>
                 </span>
                 <span class="tag mr-1" v-for="(guid, source) in item.guids" :key="`guid-${item.id}-${source}-${guid}`">
-                  <NuxtLink target="_blank" :to="makeGUIDLink(item.type, source.split('guid_')[1], guid, item)">
-                    {{ source.split('guid_')[1] }}://{{ guid }}
+                  <NuxtLink target="_blank" :to="makeGUIDLink(item.type, String(source).split('guid_')[1] ?? String(source), guid, item as unknown as JsonObject)">
+                    {{ String(source).split('guid_')[1] ?? String(source) }}://{{ guid }}
                   </NuxtLink>
                 </span>
               </div>
@@ -467,8 +467,8 @@
                 </span>
                 <span class="tag mr-1" v-for="(guid, source) in item.parent"
                   :key="`parent-guid-${item.id}-${source}-${guid}`">
-                  <NuxtLink target="_blank" :to="makeGUIDLink('series', source.split('guid_')[1], guid, item)">
-                    {{ source.split('guid_')[1] }}://{{ guid }}
+                  <NuxtLink target="_blank" :to="makeGUIDLink('series', String(source).split('guid_')[1] ?? String(source), guid, item as unknown as JsonObject)">
+                    {{ String(source).split('guid_')[1] ?? String(source) }}://{{ guid }}
                   </NuxtLink>
                 </span>
               </div>
@@ -528,15 +528,8 @@
         </span>
         <p class="subtitle">Useful for debugging.</p>
         <div v-if="showRawData" class="mt-2" style="position: relative; max-height: 400px; overflow-y: auto;">
-          <code class="is-terminal is-block is-pre-wrap p-4">{{
-            JSON.stringify(Object.keys(data)
-              .filter(key => !['files', 'hardware', 'content_exists', '_toggle'].includes(key))
-              .reduce((obj, key) => {
-                obj[key] = data[key];
-                return obj;
-              }, {}), null, 2)
-          }}</code>
-          <button class="button m-4" v-tooltip="'Copy text'" @click="() => copyText(JSON.stringify(data, null, 2))"
+          <code class="is-terminal is-block is-pre-wrap p-4">{{ rawData }}</code>
+          <button class="button m-4" v-tooltip="'Copy text'" @click="() => copyText(rawData)"
             style="position: absolute; top:0; right:0;">
             <span class="icon"><i class="fas fa-copy" /></span>
           </button>
@@ -579,30 +572,115 @@
   </div>
 </template>
 
-<script setup>
-import { request, ag, copyText, formatDuration, makeGUIDLink, makeName, makeSearchLink, notification, TOOLTIP_DATE_FORMAT, ucFirst } from '~/utils'
+<script setup lang="ts">
+import {computed, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
+import {navigateTo, useHead, useRoute} from '#app'
+import {useBreakpoints, useStorage} from '@vueuse/core'
 import moment from 'moment'
-import { useBreakpoints, useStorage } from '@vueuse/core'
 import Message from '~/components/Message.vue'
-import { useDialog } from '~/composables/useDialog'
-const id = useRoute().params.id
+import {useDialog} from '~/composables/useDialog'
+import type {GenericResponse, HistoryItem, JsonObject, MediaFile} from '~/types'
+import {
+  ag,
+  copyText,
+  disableOpacity,
+  enableOpacity,
+  formatDuration,
+  makeGUIDLink,
+  makeSearchLink,
+  notification,
+  parse_api_response,
+  request,
+  TOOLTIP_DATE_FORMAT,
+  ucFirst,
+} from '~/utils'
 
-useHead({ title: `History : ${id}` })
+type HistoryMetadataItem = {
+  id: string
+  type: string
+  watched: string | number | boolean
+  via: string
+  title: string
+  guids: Record<string, string>
+  progress?: string | number
+  season?: number
+  episode?: number
+  year?: number
+  webUrl?: string
+  parent?: Record<string, string>
+  path?: string
+  extra?: {
+    title?: string
+    genres?: Array<string>
+    overview?: string
+  }
+  _toggle?: boolean
+  validated?: boolean
+  validated_message?: string
+  expandGenres?: boolean
+  expandOverview?: boolean
+}
+
+type HistoryViewItem = {
+  id: number
+  type: string
+  watched: boolean
+  via: string
+  title: string
+  year?: number
+  season?: number
+  episode?: number
+  parent?: Record<string, string>
+  rguids?: Record<string, string>
+  guids: Record<string, string>
+  metadata: Record<string, HistoryMetadataItem>
+  extra: Record<string, Record<string, string | number | boolean | null>>
+  created_at?: number
+  updated_at?: number
+  updated?: number
+  content_title?: string
+  content_overview?: string
+  content_genres?: Array<string>
+  content_path?: string
+  content_exists?: boolean
+  reported_by: Array<string>
+  not_reported_by: Array<string>
+  progress?: number | string
+  files: Array<MediaFile>
+  duplicate_reference_ids?: Array<number>
+  _toggle?: boolean
+}
+
+type ValidationResponse = Record<string, {status: boolean; message: string}>
+
+type DuplicateResponse = {
+  duplicate_reference_ids: Array<number>
+  duplicates?: Array<HistoryItem>
+}
+
+const route = useRoute()
+const idParam = Array.isArray(route.params.id) ? route.params.id[0] : route.params.id
+const id = Number.parseInt(idParam ?? '0', 10)
+
+useHead({title: `History : ${id}`})
 
 const show_page_tips = useStorage('show_page_tips', true)
 const api_show_photos = useStorage('api_show_photos', true)
-const breakpoints = useBreakpoints({ mobile: 0, desktop: 640 })
+const breakpoints = useBreakpoints({mobile: 0, desktop: 640})
 const dialog = useDialog()
 
 const isLoading = ref(true)
 const showRawData = ref(false)
 const isDeleting = ref(false)
-const loadedImages = ref({ poster: null, background: null })
+const loadedImages = ref<Record<'poster' | 'background', string | null>>({
+  poster: null,
+  background: null,
+})
 const expandOverview = ref(false)
 const expandGenres = ref(false)
-const bgImage = ref()
+const bgImage = ref<string | null>(null)
 
-const styleInfo = computed(() => {
+const styleInfo = computed<Record<string, string> | ''>(() => {
   if (!bgImage.value || !api_show_photos.value) {
     return ''
   }
@@ -612,50 +690,85 @@ const styleInfo = computed(() => {
   }
 })
 
-const data = ref({
-  id: id,
+const data = ref<HistoryViewItem>({
+  id,
+  type: 'movie',
+  updated: 0,
+  watched: false,
+  via: '',
   title: `${id}`,
-  via: null,
-  metadata: {},
   guids: {},
   parent: {},
   rguids: {},
+  metadata: {},
+  extra: {},
+  created_at: 0,
+  updated_at: 0,
+  reported_by: [],
   not_reported_by: [],
-});
+  files: [],
+  duplicate_reference_ids: [],
+})
 
-const loadContent = async (id) => {
+const dataContext = computed<JsonObject>(() => data.value as unknown as JsonObject)
+
+const historyTitle = computed<string>(() => {
+  const baseTitle = data.value.title ?? id.toString()
+  if ('episode' === data.value.type && data.value.season !== undefined && data.value.episode !== undefined) {
+    const season = String(data.value.season).padStart(2, '0')
+    const episode = String(data.value.episode).padStart(3, '0')
+    const year = data.value.year ?? '0000'
+    return `${baseTitle} (${year}) - ${season}x${episode}`
+  }
+  if (data.value.year !== undefined) {
+    return `${baseTitle} (${data.value.year})`
+  }
+  return baseTitle
+})
+
+const rawData = computed<string>(() => {
+  const dataRecord = data.value as unknown as JsonObject
+  const cleaned = Object.keys(dataRecord)
+    .filter(key => !['files', 'hardware', 'content_exists', '_toggle'].includes(key))
+    .reduce((obj: JsonObject, key: string) => {
+      obj[key] = dataRecord[key] ?? null
+      return obj
+    }, {} as JsonObject)
+  return JSON.stringify(cleaned, null, 2)
+})
+
+const loadContent = async (historyId: number) => {
   isLoading.value = true
 
-  const response = await request(`/history/${id}?files=true`)
-  const json = await response.json()
+  const response = await request(`/history/${historyId}?files=true`)
+  const json = await parse_api_response<HistoryViewItem>(response)
 
-  if (useRoute().name !== 'history-id') {
+  if (route.name !== 'history-id') {
     return
   }
 
-  isLoading.value = false
-
-  if (200 !== response.status) {
-    notification('Error', 'Error loading data', `${json.error.code}: ${json.error.message}`);
+  if ('error' in json) {
+    isLoading.value = false
+    notification('Error', 'Error loading data', `${json.error.code}: ${json.error.message}`)
     if (404 === response.status) {
-      await navigateTo({ name: 'history' })
+      await navigateTo({name: 'history'})
     }
     return
   }
 
-  data.value = json
-  data.value._toggle = true
+  isLoading.value = false
+  data.value = {...json, _toggle: true}
 
-  useHead({ title: `History : ${makeName(json) ?? id}` })
+  useHead({title: `History : ${historyTitle.value}`})
   await loadImage()
-  await nextTick();
+  await nextTick()
   await validateItem()
   await checkDuplicates()
 }
 
 watch(breakpoints.active(), async () => await loadImage())
-watch(api_show_photos, async v => {
-  if (!v) {
+watch(api_show_photos, async value => {
+  if (!value) {
     return enableOpacity()
   }
 
@@ -663,16 +776,19 @@ watch(api_show_photos, async v => {
   await loadImage()
 })
 
-const loadImage = async (t = null) => {
+const loadImage = async (imageType: 'poster' | 'background' | null = null) => {
   if (!api_show_photos.value) {
     return
   }
 
   try {
-    let bgType = t;
-    if (null === t) {
-      bgType = 'mobile' === breakpoints.active().value ? 'poster' : 'background'
-    }
+    const activeBreakpoint = breakpoints.active().value
+    const bgType =
+      null === imageType
+        ? 'mobile' === activeBreakpoint
+          ? 'poster'
+          : 'background'
+        : imageType
 
     if (loadedImages.value[bgType]) {
       bgImage.value = loadedImages.value[bgType]
@@ -682,16 +798,16 @@ const loadImage = async (t = null) => {
     const imgRequest = await request(`/history/${id}/images/${bgType}`)
     loadedImages.value[bgType] = URL.createObjectURL(await imgRequest.blob())
     bgImage.value = loadedImages.value[bgType]
-  } catch { }
+  } catch {}
 }
 
-const deleteItem = async (item) => {
+const deleteItem = async () => {
   if (isDeleting.value) {
     return
   }
 
-  const { status: confirmStatus } = await dialog.confirmDialog({
-    message: `Delete '${makeName(item)}' local record?`,
+  const {status: confirmStatus} = await dialog.confirmDialog({
+    message: `Delete '${historyTitle.value}' local record?`,
     opacityControl: true,
     confirmColor: 'is-danger',
   })
@@ -703,30 +819,27 @@ const deleteItem = async (item) => {
   isDeleting.value = true
 
   try {
-    const response = await request(`/history/${id}`, { method: 'DELETE' })
+    const response = await request(`/history/${id}`, {method: 'DELETE'})
+    const json = await parse_api_response<GenericResponse>(response)
 
-    if (200 !== response.status) {
-      const json = await response.json()
+    if ('error' in json) {
       notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
       return
     }
 
-    notification('success', 'Success!', `Deleted '${makeName(item)}'.`)
-    await navigateTo({ name: 'history' })
-  } catch (e) {
-    notification('error', 'Error', e.message)
+    notification('success', 'Success!', `Deleted '${historyTitle.value}'.`)
+    await navigateTo({name: 'history'})
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Request error.'
+    notification('error', 'Error', message)
   } finally {
     isDeleting.value = false
   }
-};
+}
 
 const toggleWatched = async () => {
-  if (!data.value) {
-    return
-  }
-
-  const { status: confirmStatus } = await dialog.confirmDialog({
-    message: `Mark '${makeName(data.value)}' as ${data.value.watched ? 'unplayed' : 'played'}?`,
+  const {status: confirmStatus} = await dialog.confirmDialog({
+    message: `Mark '${historyTitle.value}' as ${data.value.watched ? 'unplayed' : 'played'}?`,
     opacityControl: true,
   })
 
@@ -736,23 +849,22 @@ const toggleWatched = async () => {
 
   try {
     const response = await request(`/history/${data.value.id}/watch`, {
-      method: data.value.watched ? 'DELETE' : 'POST'
+      method: data.value.watched ? 'DELETE' : 'POST',
     })
 
-    const json = await response.json()
+    const json = await parse_api_response<HistoryViewItem>(response)
 
-    if (200 !== response.status) {
+    if ('error' in json) {
       notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
       return
     }
 
-    data.value = json
+    data.value = {...json, _toggle: data.value._toggle}
 
-    notification('success', '', `Marked '${makeName(data.value)}' as ${data.value.watched ? 'played' : 'unplayed'}`)
+    notification('success', '', `Marked '${historyTitle.value}' as ${data.value.watched ? 'played' : 'unplayed'}`)
     await validateItem()
-
-  } catch (e) {
-    notification('error', 'Error', `Request error. ${e}`)
+  } catch (error) {
+    notification('error', 'Error', `Request error. ${String(error)}`)
   }
 }
 
@@ -764,23 +876,25 @@ const validateItem = async () => {
       return
     }
 
-    const json = await response.json()
+    const json = await parse_api_response<ValidationResponse>(response)
+    if ('error' in json) {
+      return
+    }
 
     for (const [backend, item] of Object.entries(json)) {
       if (data.value.metadata[backend] === undefined) {
         continue
       }
 
-      data.value.metadata[backend]['validated'] = item.status
-      data.value.metadata[backend]['validated_message'] = item.message
+      data.value.metadata[backend].validated = item.status
+      data.value.metadata[backend].validated_message = item.message
     }
-  } catch { }
+  } catch {}
 }
 
-const deleteMetadata = async (item, backend) => {
-
-  const { status: confirmStatus } = await dialog.confirmDialog({
-    message: `Remove '${backend}' metadata from '${makeName(item)}' data?`,
+const deleteMetadata = async (backend: string) => {
+  const {status: confirmStatus} = await dialog.confirmDialog({
+    message: `Remove '${backend}' metadata from '${historyTitle.value}' data?`,
     opacityControl: true,
     confirmColor: 'is-danger',
   })
@@ -790,18 +904,18 @@ const deleteMetadata = async (item, backend) => {
   }
 
   try {
-    const response = await request(`/history/${id}/metadata/${backend}`, { method: 'DELETE' })
+    const response = await request(`/history/${id}/metadata/${backend}`, {method: 'DELETE'})
+    const json = await parse_api_response<GenericResponse>(response)
 
-    if (200 !== response.status) {
-      const json = await parse_api_response(response)
+    if ('error' in json) {
       notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
       return
     }
 
     notification('success', 'Success!', `Deleted '${backend}' metadata.`)
-    await loadContent(id);
-  } catch (e) {
-    notification('error', 'Error', `Request error. ${e}`)
+    await loadContent(id)
+  } catch (error) {
+    notification('error', 'Error', `Request error. ${String(error)}`)
   }
 }
 
@@ -813,7 +927,7 @@ const checkDuplicates = async () => {
       return
     }
 
-    const json = await parse_api_response(response)
+    const json = await parse_api_response<DuplicateResponse>(response)
     if ('error' in json) {
       return
     }
@@ -823,11 +937,12 @@ const checkDuplicates = async () => {
     if (json.duplicates && json.duplicates.length > 0) {
       notification('info', 'Info', `There are ${json.duplicates.length} duplicate items for this record.`, 10000)
     }
-  } catch { }
+  } catch {}
 }
 
-const getMoment = (time) => time.toString().length < 13 ? moment.unix(time) : moment(time)
-const headerTitle = computed(() => isLoading.value ? id : makeName(data.value))
+const getMoment = (time: number | string) =>
+  time.toString().length < 13 ? moment.unix(Number(time)) : moment(time)
+const headerTitle = computed<string>(() => (isLoading.value ? id.toString() : historyTitle.value))
 
 onUnmounted(() => {
   if (api_show_photos.value) {

@@ -151,11 +151,11 @@ div.logbox pre {
 </style>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useHead, useRoute, useRouter } from '#app'
-import { useStorage } from '@vueuse/core'
+import {computed, nextTick, onBeforeUnmount, onMounted, onUnmounted, ref, watch} from 'vue'
+import {useHead, useRoute, useRouter} from '#app'
+import {useStorage} from '@vueuse/core'
 import moment from 'moment'
-import { fetchEventSource } from '@microsoft/fetch-event-source'
+import {fetchEventSource} from '@microsoft/fetch-event-source'
 import {
   copyText,
   disableOpacity,
@@ -165,11 +165,13 @@ import {
   parse_api_response,
   request
 } from '~/utils'
-import type { LogEntry } from '~/types'
+import type {GenericResponse, LogEntry} from '~/types'
 import Message from '~/components/Message.vue'
+import {useDialog} from '~/composables/useDialog'
 
 const router = useRouter()
-const filename = useRoute().params.filename as string
+const route = useRoute()
+const filename = route.params.filename as string
 
 useHead({ title: `Logs : ${filename}` })
 
@@ -185,9 +187,17 @@ const isTodayLog = computed((): boolean => filename.includes(moment().format('YY
 const reachedEnd = ref<boolean>(false)
 const offset = ref<number>(0)
 const contentType = ref<'log' | 'json'>('log')
-let scrollTimeout: NodeJS.Timeout | null = null
+let scrollTimeout: ReturnType<typeof setTimeout> | null = null
 
 const token = useStorage('token', '')
+
+type FilePickerOptions = {
+  suggestedName?: string
+}
+
+type FilePickerHandle = {
+  createWritable: () => Promise<WritableStream>
+}
 
 watch(toggleFilter, async (): Promise<void> => {
   if (!toggleFilter.value) {
@@ -202,7 +212,7 @@ const filterItems = computed((): Array<LogEntry> => {
   return data.value.filter(m => m.text.toLowerCase().includes(query.value.toLowerCase()))
 })
 
-const stream = ref<any>(null)
+const stream = ref<boolean>(false)
 const logContainer = ref<HTMLElement | null>(null)
 const bottomMarker = ref<HTMLElement | null>(null)
 
@@ -234,7 +244,7 @@ const loadContent = async (): Promise<void> => {
       return
     }
 
-    if ('logs-filename' !== useRoute().name) {
+    if ('logs-filename' !== route.name) {
       return
     }
 
@@ -266,8 +276,9 @@ const loadContent = async (): Promise<void> => {
 
     watchLog()
 
-  } catch (e: any) {
-    error.value = e
+   } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unexpected error'
+    error.value = message
   } finally {
     isLoading.value = false
   }
@@ -318,7 +329,7 @@ onUnmounted(async () => {
 })
 
 const watchLog = (): void => {
-  if (!isTodayLog.value || null !== stream.value) {
+  if (!isTodayLog.value || true === stream.value) {
     closeStream()
     return
   }
@@ -363,7 +374,7 @@ const watchLog = (): void => {
 const closeStream = (): void => {
   if (stream.value) {
     ctrl.abort()
-    stream.value = null
+    stream.value = false
   }
 }
 
@@ -371,15 +382,24 @@ const downloadFile = (): void => {
   isDownloading.value = true
 
   const response = request(`/log/${filename}?download=1`)
+  const pickerWindow = window as Window & {
+    showSaveFilePicker?: (options: FilePickerOptions) => Promise<FilePickerHandle>
+  }
+  const showSaveFilePicker = pickerWindow.showSaveFilePicker
 
-  if ('showSaveFilePicker' in window) {
+  if (showSaveFilePicker) {
     response.then(async res => {
       isDownloading.value = false
 
-      return res.body?.pipeTo(await (await (window as any).showSaveFilePicker({
-        suggestedName: `${filename}`
-      })).createWritable())
+      if (!res.body) {
+        notification('error', 'Error', 'No data returned from download request.')
+        return
+      }
 
+      const handle = await showSaveFilePicker({
+        suggestedName: `${filename}`,
+      })
+      await res.body.pipeTo(await handle.createWritable())
     })
   } else {
     response.then(res => res.blob()).then(blob => {
@@ -407,28 +427,24 @@ const deleteFile = async (): Promise<void> => {
   try {
     closeStream()
 
-    const response = await request(`/log/${filename}`, { method: 'DELETE' })
+    const response = await request(`/log/${filename}`, {method: 'DELETE'})
+    const json = await parse_api_response<GenericResponse>(response)
 
     if (response.ok) {
       notification('success', 'Information', `Logfile '${filename}' has been deleted.`)
-      const router = useRouter()
       await router.push('/logs')
       return
     }
 
-    let json: any
-
-    try {
-      json = await response.json()
-    } catch (e: any) {
-      json = {
-        error: { code: response.status, message: `${response.statusText} - ${e.message}` }
-      }
+    if ('error' in json) {
+      notification('error', 'Error', `Request to delete logfile failed. (${json.error.code}: ${json.error.message}).`)
+      return
     }
 
-    notification('error', 'Error', `Request to delete logfile failed. (${json.error.code}: ${json.error.message}).`)
-  } catch (e: any) {
-    notification('error', 'Error', `Failed to request to delete a logfile. ${e}.`)
+    notification('error', 'Error', 'Request to delete logfile failed.')
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    notification('error', 'Error', `Failed to request to delete a logfile. ${message}.`)
   }
 }
 

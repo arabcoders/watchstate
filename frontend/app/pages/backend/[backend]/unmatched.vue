@@ -3,9 +3,9 @@
     <div class="columns is-multiline">
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4">
-          <NuxtLink to="/backends" v-text="'Backends'" />
+          <NuxtLink to="/backends">Backends</NuxtLink>
           -
-          <NuxtLink :to="'/backend/' + backend" v-text="backend" />
+          <NuxtLink :to="'/backend/' + backend">{{ backend }}</NuxtLink>
           : Unmatched
         </span>
         <div class="is-pulled-right" v-if="hasLooked">
@@ -63,7 +63,7 @@
         </h1>
       </div>
 
-      <div class="column is-6" v-for="item in items">
+      <div class="column is-6" v-for="item in items" :key="item.id ?? item.title">
         <div class="card">
           <header class="card-header">
             <p class="card-header-title is-text-overflow">
@@ -92,7 +92,7 @@
                 @click="(e: Event) => (e.target as HTMLElement)?.firstElementChild?.classList?.toggle('is-text-overflow')">
                 <div class="is-text-overflow">
                   <strong class="is-unselectable">Path:&nbsp;</strong>
-                  <NuxtLink :to="makeSearchLink('path', item.path)" v-text="item.path" />
+                  <NuxtLink :to="makeSearchLink('path', item.path)">{{ item.path }}</NuxtLink>
                 </div>
               </div>
             </div>
@@ -184,5 +184,5 @@ const loadContent = async (useCache: boolean = true): Promise<void> => {
   }
 }
 
-const fixTitle = (title: string): string => title.replace(/([\[(]).*?([\])])/g, '').replace(/-\w+$/, '').trim()
+const fixTitle = (title: string): string => title.replace(/[[(].*?[\])]/g, '').replace(/-\w+$/, '').trim()
 </script>

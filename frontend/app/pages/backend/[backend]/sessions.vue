@@ -3,9 +3,9 @@
     <div class="columns is-multiline">
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4">
-          <NuxtLink to="/backends" v-text="'Backends'" />
+          <NuxtLink to="/backends">Backends</NuxtLink>
           -
-          <NuxtLink :to="'/backend/' + backend" v-text="backend" />
+          <NuxtLink :to="'/backend/' + backend">{{ backend }}</NuxtLink>
           : Sessions
         </span>
 
@@ -51,7 +51,7 @@
               <tr v-for="item in items" :key="item.id">
                 <td>{{ item.user_name }}</td>
                 <td>
-                  <NuxtLink :to="makeItemLink(item)" v-text="item.item_title" />
+                  <NuxtLink :to="makeItemLink(item)">{{ item.item_title }}</NuxtLink>
                 </td>
                 <td>{{ item.session_state }}</td>
                 <td>{{ formatDuration(item.item_offset_at) }}</td>

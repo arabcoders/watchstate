@@ -123,6 +123,7 @@ import {navigateTo, useRoute} from '#app'
 import Message from '~/components/Message.vue'
 import {notification, parse_api_response, request} from '~/utils'
 import {applyCommand, parseCommand} from '~/utils/jsonCommand'
+import type {GenericError, GenericResponse, JsonObject} from '~/types'
 
 const id = useRoute().params.user as string
 const isLoading = ref<boolean>(false)
@@ -139,24 +140,33 @@ const errorForm = ref<{
 const commandInput = ref<string>('')
 const commandError = ref<string>('')
 
+type UserSaveError = GenericError & {
+  errors?: Array<string>
+}
+
+type UserSaveResponse = GenericResponse & {
+  errors?: Array<string>
+}
+
 const loadContent = async (): Promise<void> => {
   isLoading.value = true
 
   try {
     const response = await request(`/users/${id}`)
-    const data = await parse_api_response<Record<string, any>>(response)
+    const data = await parse_api_response<JsonObject>(response)
 
     if ('error' in data) {
-      notification('error', 'Error', data.error.message)
-      errorForm.value.message = data.error.message
+      const errorData = data as GenericError
+      notification('error', 'Error', errorData.error.message)
+      errorForm.value.message = errorData.error.message
       return
     }
 
     configContent.value = JSON.stringify(data, null, 2)
-  } catch (e) {
-    const error = e as Error
-    notification('error', 'Error', `Failed to load user configuration. ${error.message}`)
-    errorForm.value.message = error.message
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unexpected error'
+    notification('error', 'Error', `Failed to load user configuration. ${message}`)
+    errorForm.value.message = message
   } finally {
     isLoading.value = false
   }
@@ -171,10 +181,10 @@ const applyMiniCommand = async (): Promise<void> => {
       return
     }
 
-    let obj: Record<string, any>
+    let obj: JsonObject
     try {
-      obj = JSON.parse(configContent.value)
-    } catch (e) {
+      obj = JSON.parse(configContent.value) as JsonObject
+    } catch {
       commandError.value = 'Current JSON is invalid. Please fix it before applying commands.'
       return
     }
@@ -194,10 +204,10 @@ const applyMiniCommand = async (): Promise<void> => {
     }
     configContent.value = JSON.stringify(result.obj, null, 2)
     commandInput.value = ''
-  } catch (e) {
-    const err = e as Error
-    commandError.value = err.message
-    notification('error', 'Error', `Failed to apply command. ${err.message}`)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unexpected error'
+    commandError.value = message
+    notification('error', 'Error', `Failed to apply command. ${message}`)
   }
 }
 
@@ -210,11 +220,11 @@ const saveContent = async (): Promise<void> => {
   isSaving.value = true
 
   try {
-    let data: any
+    let data: JsonObject
 
     // Parse JSON content
     try {
-      data = JSON.parse(configContent.value)
+      data = JSON.parse(configContent.value) as JsonObject
     } catch {
       errorForm.value.message = 'Invalid JSON format. Please check your syntax.'
       isSaving.value = false
@@ -229,21 +239,22 @@ const saveContent = async (): Promise<void> => {
       body: JSON.stringify(data)
     })
 
-    const result = await parse_api_response(response)
+    const result = await parse_api_response<UserSaveResponse>(response)
 
     if ('error' in result) {
-      errorForm.value.message = result.error.message
-      if (result.errors && Array.isArray(result.errors)) {
-        errorForm.value.details = result.errors
+      const errorResult = result as UserSaveError
+      errorForm.value.message = errorResult.error.message
+      if (errorResult.errors && Array.isArray(errorResult.errors)) {
+        errorForm.value.details = errorResult.errors
       }
       return
     }
 
     notification('success', 'Success', `Server configuration updated for user '${id}'`)
     await navigateTo(useRoute().query.redirect as string || '/users')
-  } catch (e) {
-    const error = e as Error
-    errorForm.value.message = `Failed to save configuration. ${error.message}`
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unexpected error'
+    errorForm.value.message = `Failed to save configuration. ${message}`
   } finally {
     isSaving.value = false
   }
@@ -258,7 +269,7 @@ const formatJSON = (): void => {
     const data = JSON.parse(configContent.value)
     configContent.value = JSON.stringify(data, null, 2)
     errorForm.value.message = ''
-  } catch (error) {
+  } catch {
     // Silently fail - don't show error on blur, user might still be editing
   }
 }

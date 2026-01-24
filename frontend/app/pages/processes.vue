@@ -48,7 +48,7 @@
         </Message>
       </div>
 
-      <div v-else class="column is-12" v-if="items">
+      <div v-else-if="items" class="column is-12">
         <div class="table-container" style="max-height: 70vh; overflow-y: auto">
           <table class="table is-fullwidth is-hoverable is-striped is-bordered">
             <thead>

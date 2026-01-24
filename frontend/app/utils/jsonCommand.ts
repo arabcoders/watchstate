@@ -1,3 +1,5 @@
+import type {JsonObject, JsonValue} from '~/types'
+
 export interface JsonCommand {
     op: 'set' | 'delete'
     path: Array<string>
@@ -18,7 +20,7 @@ export type ParseCommandResult = JsonCommandParseSuccess | JsonCommandParseError
 
 export interface JsonCommandApplySuccess {
     ok: true
-    obj: Record<string, any>
+    obj: JsonObject
 }
 
 export interface JsonCommandApplyError {
@@ -27,6 +29,7 @@ export interface JsonCommandApplyError {
 }
 
 export type ApplyCommandResult = JsonCommandApplySuccess | JsonCommandApplyError
+
 
 const splitPathSegments = (pathText: string): Array<string> => {
     const segments: Array<string> = []
@@ -107,9 +110,9 @@ const parseCommand = (input: string): ParseCommandResult => {
     return {ok: true, command}
 }
 
-const parseValue = (raw: string | undefined): any => {
+const parseValue = (raw: string | undefined): JsonValue => {
     if (raw === undefined) {
-        return undefined
+        return null
     }
 
     const trimmed = raw.trim()
@@ -119,31 +122,35 @@ const parseValue = (raw: string | undefined): any => {
     }
 
     try {
-        return JSON.parse(trimmed)
-    } catch (e) {
+        return JSON.parse(trimmed) as JsonValue
+    } catch {
         return raw
     }
 }
 
-const applyCommand = (obj: Record<string, any>, command: JsonCommand): ApplyCommandResult => {
-    const out: Record<string, any> = {...obj}
+const applyCommand = (obj: JsonObject, command: JsonCommand): ApplyCommandResult => {
+    let out: JsonObject = {...obj}
 
     if (!command.path || 0 === command.path.length) {
         return {ok: false, error: 'Empty path in command'}
     }
 
-    let at: Record<string, any> = out
+    let at: JsonObject = out
+    let parent: JsonObject | null = null
+    let parentKey: string | null = null
     const path = command.path
 
     for (let i = 0; i < path.length - 1; i++) {
         const segment = String(path[i])
-        const current = (at as Record<string, any>)[segment]
+        const current = at[segment]
         if ('undefined' === typeof current || null === current) {
-            (at as Record<string, any>)[segment] = {}
+            at[segment] = {}
         } else if ('object' !== typeof current) {
             return {ok: false, error: `Path conflict: '${segment}' is not an object`}
         }
-        at = (at as Record<string, any>)[segment] as Record<string, any>
+        parent = at
+        parentKey = segment
+        at = at[segment] as JsonObject
     }
 
     const last = String(path[path.length - 1])
@@ -153,13 +160,20 @@ const applyCommand = (obj: Record<string, any>, command: JsonCommand): ApplyComm
     }
 
     if ('set' === command.op) {
-        (at as Record<string, any>)[last] = parseValue(command.rawValue)
+        at[last] = parseValue(command.rawValue)
         return {ok: true, obj: out}
     }
 
     if ('delete' === command.op) {
         if (Object.prototype.hasOwnProperty.call(at, last)) {
-            delete (at as Record<string, any>)[last]
+            const updated = Object.fromEntries(
+                Object.entries(at).filter(([key]) => key !== last)
+            ) as JsonObject
+            if (parent && parentKey) {
+                parent[parentKey] = updated
+            } else {
+                out = updated
+            }
             return {ok: true, obj: out}
         }
         return {ok: false, error: `Key not found: ${command.path.join('.')}`}
