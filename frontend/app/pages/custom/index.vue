@@ -80,7 +80,7 @@
           </div>
         </div>
         <div class="is-hidden-mobile">
-          <span class="subtitle">Client <--> WatchState GUID links.</span>
+          <span class="subtitle">Client &lt;--&gt; WatchState GUID links.</span>
         </div>
       </div>
 
@@ -204,12 +204,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useHead, navigateTo } from '#app'
-import { useStorage } from '@vueuse/core'
-import { request, makeConsoleCommand, notification, parse_api_response, ucFirst } from '~/utils'
+import {ref, onMounted} from 'vue'
+import {useHead} from '#app'
+import {useStorage} from '@vueuse/core'
+import {request, makeConsoleCommand, notification, parse_api_response, ucFirst} from '~/utils'
 import Message from '~/components/Message.vue'
-import type { CustomGUID, CustomLink } from '~/types'
+import {useDialog} from '~/composables/useDialog'
+import type {CustomGUID, CustomLink, GenericError, GenericResponse} from '~/types'
 import '~/assets/css/bulma-switch.css'
 
 type CustomLinkWithUI = CustomLink & { show?: boolean }
@@ -254,16 +255,25 @@ onMounted(async (): Promise<void> => {
 })
 
 const deleteGUID = async (index: number, guid: CustomGUID): Promise<void> => {
-  if (!confirm(`Delete '${guid.name}'? links using this GUID will be deleted as well.`)) {
+  const {status} = await useDialog().confirmDialog({
+    title: 'Delete GUID',
+    message: `Delete '${guid.name}'? links using this GUID will be deleted as well.`,
+    confirmColor: 'is-danger',
+  })
+
+  if (true !== status) {
     return
   }
 
   try {
     const response = await request(`/system/guids/custom/${guid.id}`, { method: 'DELETE' })
     if (!response.ok) {
-      const result = await parse_api_response(response)
+      const result = await parse_api_response<GenericResponse>(response)
       if ('error' in result) {
-        notification('error', 'Error', result.error.message)
+        const errorJson = result as GenericError
+        notification('error', 'Error', errorJson.error.message)
+      } else {
+        notification('error', 'Error', 'Failed to delete GUID.')
       }
       return
     }
@@ -272,32 +282,41 @@ const deleteGUID = async (index: number, guid: CustomGUID): Promise<void> => {
     links.value = links.value.filter(link => link.map.to !== guid.name)
 
     notification('success', 'Success', `The GUID '${guid.name}' has been deleted.`)
-  } catch (e) {
-    const error = e as Error
-    notification('error', 'Error', error.message)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unexpected error'
+    notification('error', 'Error', message)
   }
 }
 
 const deleteLink = async (index: number, link: CustomLinkWithUI): Promise<void> => {
-  if (!confirm(`Are you sure you want to delete the '${link.type}' - '${link.id}'?`)) {
+  const {status} = await useDialog().confirmDialog({
+    title: 'Delete Link',
+    message: `Are you sure you want to delete the '${link.type}' - '${link.id}'?`,
+    confirmColor: 'is-danger',
+  })
+
+  if (true !== status) {
     return
   }
 
   try {
     const response = await request(`/system/guids/custom/${link.type}/${link.id}`, { method: 'DELETE' })
     if (!response.ok) {
-      const result = await parse_api_response(response)
+      const result = await parse_api_response<GenericResponse>(response)
       if ('error' in result) {
-        notification('error', 'Error', result.error.message)
+        const errorJson = result as GenericError
+        notification('error', 'Error', errorJson.error.message)
+      } else {
+        notification('error', 'Error', 'Failed to delete link.')
       }
       return
     }
 
     links.value.splice(index, 1)
     notification('success', 'Success', `The link '${link.type}' - '${link.id}' has been deleted.`)
-  } catch (e) {
-    const error = e as Error
-    notification('error', 'Error', error.message)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unexpected error'
+    notification('error', 'Error', message)
   }
 }
 </script>

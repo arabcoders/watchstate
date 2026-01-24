@@ -183,7 +183,7 @@
         </form>
       </div>
 
-      <div v-else class="column is-12" v-if="filteredRows">
+      <div v-else-if="filteredRows" class="column is-12">
         <div class="columns is-multiline">
           <div class="column" v-for="item in filteredRows" :key="item.key"
                :class="{ 'is-4': !item?.danger, 'is-12': item.danger }">
@@ -285,10 +285,11 @@
 import '~/assets/css/bulma-switch.css'
 import {computed, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
 import {navigateTo, useHead, useRoute, useRouter} from '#app'
+import {useDialog} from '~/composables/useDialog'
 import {useStorage} from '@vueuse/core'
 import Message from '~/components/Message.vue'
 import {awaitElement, copyText, notification, parse_api_response, request, ucFirst} from '~/utils'
-import type {EnvVar} from '~/types'
+import type {EnvConfigValue, EnvVar, GenericResponse} from '~/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -304,7 +305,7 @@ const form_mask = ref<boolean>(false)
 const form_expose = ref<boolean>(false)
 const form_choice = ref<Array<string>>([])
 const form_config = ref<string | undefined>(undefined)
-const form_config_value = ref<any>(undefined)
+const form_config_value = ref<string>('')
 
 const show_page_tips = useStorage('show_page_tips', true)
 const isLoading = ref<boolean>(true)
@@ -338,7 +339,8 @@ const loadContent = async (): Promise<void> => {
     }
 
     if (currentRoute.query.edit) {
-      const item = items.value.find(i => i.key === currentRoute.query.edit)
+      const envItems = items.value as Array<{key: string; value?: string}>
+      const item = envItems.find(i => i.key === currentRoute.query.edit) as EnvVar | undefined
       if (item && currentRoute.query?.value && !item?.value) {
         item.value = currentRoute.query.value as string
       }
@@ -349,15 +351,22 @@ const loadContent = async (): Promise<void> => {
         editEnv(item)
       }
     }
-  } catch (e: any) {
-    notification('error', 'Error', `Error. ${e.message}`, 5000)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    notification('error', 'Error', `Error. ${message}`, 5000)
   } finally {
     isLoading.value = false
   }
 }
 
 const deleteEnv = async (env: EnvVar): Promise<void> => {
-  if (!confirm(`Delete '${env.key}'?`)) {
+  const {status} = await useDialog().confirmDialog({
+    title: 'Delete environment variable',
+    message: `Delete '${env.key}'?`,
+    confirmColor: 'is-danger',
+  })
+
+  if (true !== status) {
     return
   }
 
@@ -365,23 +374,25 @@ const deleteEnv = async (env: EnvVar): Promise<void> => {
     const response = await request(`/system/env/${env.key}`, {method: 'DELETE'})
 
     if (200 !== response.status) {
-      const json = await parse_api_response(response)
+      const json = await parse_api_response<GenericResponse>(response)
       if ('error' in json) {
         notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
       }
       return
     }
 
-    items.value = items.value.filter(i => {
+    const envItems = items.value as Array<{key: string; value?: unknown}>
+    items.value = envItems.filter(i => {
       if (i.key === env.key) {
         delete i.value
       }
       return true
-    })
+    }) as Array<EnvVar>
 
     notification('success', 'Success', `Environment variable '${env.key}' successfully deleted.`, 5000)
-  } catch (e: any) {
-    notification('error', 'Error', `Request error. ${e.message}`, 5000)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    notification('error', 'Error', `Request error. ${message}`, 5000)
   }
 }
 
@@ -421,15 +432,17 @@ const addVariable = async (): Promise<void> => {
       return
     }
 
-    const index = items.value.findIndex(i => i.key === key)
+    const envItems = items.value as Array<{key: string}>
+    const index = envItems.findIndex(i => i.key === key)
     if (-1 !== index) {
       items.value[index] = json
     }
 
     notification('success', 'Success', `Environment variable '${key}' successfully updated.`, 5000)
     await cancelForm()
-  } catch (e: any) {
-    notification('error', 'Error', `Request error. ${e.message}`, 5000)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    notification('error', 'Error', `Request error. ${message}`, 5000)
   }
 }
 
@@ -445,7 +458,7 @@ const editEnv = (env: EnvVar): void => {
   form_mask.value = env.mask
   form_choice.value = env.choices || []
   form_config.value = env.config
-  form_config_value.value = env.config_value
+  form_config_value.value = env.config_value === undefined ? '' : JSON.stringify(env.config_value as EnvConfigValue)
 
   toggleForm.value = true
   if (!useRoute().query.edit) {
@@ -461,7 +474,7 @@ const cancelForm = async (): Promise<void> => {
   form_mask.value = false
   form_choice.value = []
   form_config.value = undefined
-  form_config_value.value = undefined
+  form_config_value.value = ''
   toggleForm.value = false
 
   if (currentRoute.query?.callback) {
@@ -493,11 +506,11 @@ const keyChanged = (): void => {
   }
 
   form_choice.value = data.choices || []
-  form_value.value = data.value || ''
+  form_value.value = data.value ?? ''
   form_type.value = data.type || 'string'
   form_mask.value = data.mask || false
   form_config.value = data.config
-  form_config_value.value = data.config_value
+  form_config_value.value = data.config_value === undefined ? '' : JSON.stringify(data.config_value as EnvConfigValue)
 
   nextTick(() => {
     if ('undefined' === typeof form_value.value && 'bool' === form_type.value) {
@@ -531,21 +544,29 @@ const getHelp = (key: string): string => {
   return data?.deprecated ? `<strong><code class="is-strike-through"">Deprecated</code></strong> - ${text}` : text
 }
 
-const fixBool = (v: string | number | boolean | null | undefined): boolean =>
-    [true, 'true', '1'].includes(v as any)
-
-const filteredRows = computed<Array<EnvVar>>(() => {
-  if (!query.value) {
-    return items.value.filter(i => 'undefined' !== typeof i.value)
+const fixBool = (value: string | number | boolean | null | undefined): boolean => {
+  if (true === value) {
+    return true
   }
 
-  return items.value
+  const normalized = String(value ?? '').toLowerCase()
+  return ['true', '1'].includes(normalized)
+}
+
+const filteredRows = computed(() => {
+  const rows = items.value as Array<{key: string; value?: unknown}>
+  if (!query.value) {
+    return rows.filter(i => 'undefined' !== typeof i.value) as Array<EnvVar>
+  }
+
+  return rows
       .filter(i => i.key.toLowerCase().includes(query.value.toLowerCase()))
-      .filter(i => 'undefined' !== typeof i.value)
+      .filter(i => 'undefined' !== typeof i.value) as Array<EnvVar>
 })
 
 const stateCallBack = async (e: PopStateEvent): Promise<void> => {
-  if (!e.state && !(e as any).detail) {
+  const eventDetail = (e as {detail?: unknown}).detail
+  if (!e.state && !eventDetail) {
     return
   }
 

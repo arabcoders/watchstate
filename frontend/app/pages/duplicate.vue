@@ -88,8 +88,8 @@
             </div>
 
             <div class="column is-12">
-                <div class="columns is-multiline" v-if="filteredRows(items)?.length > 0">
-                    <template v-for="item in items" :key="item.id">
+                <div class="columns is-multiline" v-if="filteredItems.length > 0">
+                    <template v-for="item in filteredItems" :key="item.id">
                         <Lazy :unrender="true" :min-height="270" class="column is-6-tablet" v-if="filterItem(item)">
                             <div class="card" :class="{ 'is-success': item.watched }">
                                 <header class="card-header">
@@ -97,11 +97,11 @@
                                         <FloatingImage :image="`/history/${item.id}/images/poster`"
                                             :item_class="'scaled-image'" v-if="poster_enable">
                                             <NuxtLink :to="'/history/' + item.id">
-                                                {{ item?.full_title || makeName(item) }}
+                                                {{ item?.full_title || makeName(item as unknown as JsonObject) }}
                                             </NuxtLink>
                                         </FloatingImage>
                                         <NuxtLink :to="'/history/' + item.id" v-else>
-                                            {{ item?.full_title || makeName(item) }}
+                                            {{ item?.full_title || makeName(item as unknown as JsonObject) }}
                                         </NuxtLink>
                                     </p>
                                     <span class="card-header-icon is-flex is-align-items-center">
@@ -314,7 +314,7 @@ import {
     request,
     TOOLTIP_DATE_FORMAT
 } from '~/utils'
-import type { FileDiffInput, HistoryItem } from '~/types'
+import type {FileDiffInput, GenericError, GenericResponse, HistoryItem, JsonObject} from '~/types'
 
 type DuplicateItemWithUI = HistoryItem & {
     /** UI state: whether title is expanded for display */
@@ -536,15 +536,21 @@ const filteredRows = (items: Array<DuplicateItemWithUI>): Array<DuplicateItemWit
         return items
     }
 
-    return items.filter(i => Object.values(i).some(v => 'string' === typeof v ? v.toLowerCase().includes(filter.value.toLowerCase()) : false))
+    return items.filter(i => stringifyItem(i).includes(filter.value.toLowerCase()))
 }
+
+const filteredItems = computed(() => filteredRows(items.value as Array<DuplicateItemWithUI>))
 
 const filterItem = (item: DuplicateItemWithUI): boolean => {
     if (!filter.value || !item) {
         return true
     }
 
-    return Object.values(item).some(v => 'string' === typeof v ? v.toLowerCase().includes(filter.value.toLowerCase()) : false)
+    return stringifyItem(item).includes(filter.value.toLowerCase())
+}
+
+const stringifyItem = (item: DuplicateItemWithUI): string => {
+    return JSON.stringify(item).toLowerCase()
 }
 
 watch(filter, (val: string) => {
@@ -604,9 +610,12 @@ const deleteRecords = async (): Promise<void> => {
     try {
         const response = await request('/system/duplicate', { method: 'DELETE' })
         if (!response.ok) {
-            const json = await parse_api_response(response)
+            const json = await parse_api_response<GenericResponse>(response)
             if ('error' in json) {
-                notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`)
+                const errorJson = json as GenericError
+                notification('error', 'Error', `API Error. ${errorJson.error.code}: ${errorJson.error.message}`)
+            } else {
+                notification('error', 'Error', 'API Error.')
             }
             return
         }
@@ -614,8 +623,8 @@ const deleteRecords = async (): Promise<void> => {
         notification('success', 'Success', `Successfully deleted '${total.value}' items.`)
         await loadContent(page.value, true, true)
     } catch (error: unknown) {
-        const err = error as Error
-        notification('error', 'Error', `Request error. ${err.message}`)
+        const err = error instanceof Error ? error.message : 'Unexpected error'
+        notification('error', 'Error', `Request error. ${err}`)
     }
 }
 </script>

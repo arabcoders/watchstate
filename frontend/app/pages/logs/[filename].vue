@@ -3,7 +3,7 @@
     <div class="columns is-multiline">
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4">
-          <span class="icon"><i class="fas fa-globe" :class="{ 'fa-spin': isLoading }"/>&nbsp;</span>
+          <span class="icon"><i class="fas fa-globe" :class="{ 'fa-spin': isLoading }" />&nbsp;</span>
           <NuxtLink to="/logs">Logs</NuxtLink>
           : {{ filename }}
         </span>
@@ -12,45 +12,45 @@
           <div class="field is-grouped">
             <div class="control">
               <button v-if="!autoScroll" @click="scrollToBottom" class="button is-primary"
-                      v-tooltip.bottom="'Go to bottom'">
+                v-tooltip.bottom="'Go to bottom'">
                 <span class="icon"><i class="fas fa-arrow-down"></i></span>
               </button>
             </div>
 
             <div class="control has-icons-left" v-if="toggleFilter && 'json' !== contentType">
               <input type="search" v-model.lazy="query" class="input" id="filter" placeholder="Filter">
-              <span class="icon is-left"><i class="fas fa-filter"/></span>
+              <span class="icon is-left"><i class="fas fa-filter" /></span>
             </div>
 
             <div class="control" v-if="'json' !== contentType">
               <button class="button is-danger is-light" v-tooltip.bottom="'Filter log lines.'"
-                      @click="toggleFilter = !toggleFilter">
-                <span class="icon"><i class="fas fa-filter"/></span>
+                @click="toggleFilter = !toggleFilter">
+                <span class="icon"><i class="fas fa-filter" /></span>
               </button>
             </div>
 
             <p class="control">
               <button class="button is-danger" v-tooltip.bottom="'Delete Logfile.'" @click="deleteFile">
-                <span class="icon"><i class="fas fa-trash"/></span>
+                <span class="icon"><i class="fas fa-trash" /></span>
               </button>
             </p>
 
             <p class="control">
-              <button class="button is-purple is-light" v-tooltip.bottom="'Download file.'"
-                      @click="downloadFile" :class="{ 'is-loading': isDownloading }">
-                <span class="icon"><i class="fas fa-download"/></span>
+              <button class="button is-purple is-light" v-tooltip.bottom="'Download file.'" @click="downloadFile"
+                :class="{ 'is-loading': isDownloading }">
+                <span class="icon"><i class="fas fa-download" /></span>
               </button>
             </p>
 
             <p class="control">
               <button class="button is-warning" @click="wrapLines = !wrapLines" v-tooltip.bottom="'Toggle wrap line'">
-                <span class="icon"><i class="fas fa-text-width"/></span>
+                <span class="icon"><i class="fas fa-text-width" /></span>
               </button>
             </p>
 
             <p class="control">
               <button class="button" v-tooltip.bottom="'Copy text'" @click="() => copyData()">
-                <span class="icon"><i class="fas fa-copy"/></span>
+                <span class="icon"><i class="fas fa-copy" /></span>
               </button>
             </p>
           </div>
@@ -69,42 +69,42 @@
       <div class="column is-12">
         <div class="logbox is-grid" ref="logContainer" v-if="!error && 'json' === contentType">
           <code id="logView" class="p-1 logline is-block" :class="{ 'is-pre-wrap': wrapLines, 'is-pre': !wrapLines }">
-            {{ renderJson(data) }}
-          </code>
+      {{ renderJson(data) }}
+    </code>
         </div>
-        <div class="logbox is-grid" ref="logContainer" v-if="!error && 'log'===contentType"
-             @scroll.passive="handleScroll">
+        <div class="logbox is-grid" ref="logContainer" v-if="!error && 'log' === contentType"
+          @scroll.passive="handleScroll">
           <code id="logView" class="p-1 logline is-block" :class="{ 'is-pre-wrap': wrapLines, 'is-pre': !wrapLines }">
-            <span class="is-block m-0 notification is-info is-dark has-text-centered" v-if="reachedEnd && !query">
-              <span class="notification-title">
-                <span class="icon"><i class="fas fa-exclamation-triangle"/></span>
-                No more logs available for this file.
-              </span>
-            </span>
-            <span v-for="item in filterItems" :key="item.id" class="is-block">
-              <span v-if="item.date">[<span class="has-tooltip" :title="item.date">{{
-                  formatDate(item.date)
-                }}</span>]:&nbsp;</span>
-              <span v-if="item?.item_id"><span class="is-clickable has-tooltip" @click="goto_history_item(item)"><span
-                  class="icon"><i class="fas fa-history"/></span><span>View</span></span>&nbsp;</span>
-              <span>{{ item.text }}</span>
-            </span>
-            <span class="is-block" v-if="filterItems.length < 1">
-              <span class="is-block m-0 notification is-warning is-dark has-text-centered" v-if="query">
-                <span class="notification-title is-danger">
-                  <span class="icon"><i class="fas fa-filter"/></span>
-                  No logs match this query: <u>{{ query }}</u>
-                </span>
-              </span>
-              <span v-else>
-                <span class="has-text-danger">No logs available</span></span>
-            </span>
-          </code>
+      <span class="is-block m-0 notification is-info is-dark has-text-centered" v-if="reachedEnd && !query">
+        <span class="notification-title">
+          <span class="icon"><i class="fas fa-exclamation-triangle" /></span>
+          No more logs available for this file.
+        </span>
+      </span>
+      <span v-for="item in filterItems" :key="item.id" class="is-block">
+        <span v-if="item.date">[<span class="has-tooltip" :title="item.date">{{
+          formatDate(item.date)
+        }}</span>]:&nbsp;</span>
+        <span v-if="item?.item_id"><span class="is-clickable has-tooltip" @click="goto_history_item(item)"><span
+              class="icon"><i class="fas fa-history" /></span><span>View</span></span>&nbsp;</span>
+        <span>{{ item.text }}</span>
+      </span>
+      <span class="is-block" v-if="filterItems.length < 1">
+        <span class="is-block m-0 notification is-warning is-dark has-text-centered" v-if="query">
+          <span class="notification-title is-danger">
+            <span class="icon"><i class="fas fa-filter" /></span>
+            No logs match this query: <u>{{ query }}</u>
+          </span>
+        </span>
+        <span v-else>
+          <span class="has-text-danger">No logs available</span></span>
+      </span>
+    </code>
           <div ref="bottomMarker"></div>
         </div>
 
         <Message v-if="error" title="API Error" message_class="has-background-warning-90 has-text-dark" :message="error"
-                 :use-close="true" @close="router.push('/logs')"/>
+          :use-close="true" @close="router.push('/logs')" />
       </div>
     </div>
   </div>
@@ -117,11 +117,11 @@
   max-width: 100%;
 }
 
-#logView > span:nth-child(even) {
+#logView>span:nth-child(even) {
   color: #ffc9d4;
 }
 
-#logView > span:nth-child(odd) {
+#logView>span:nth-child(odd) {
   color: #e3c981;
 }
 
@@ -165,13 +165,15 @@ import {
   parse_api_response,
   request
 } from '~/utils'
-import type {LogEntry} from '~/types'
+import type {GenericResponse, LogEntry} from '~/types'
 import Message from '~/components/Message.vue'
+import {useDialog} from '~/composables/useDialog'
 
 const router = useRouter()
-const filename = useRoute().params.filename as string
+const route = useRoute()
+const filename = route.params.filename as string
 
-useHead({title: `Logs : ${filename}`})
+useHead({ title: `Logs : ${filename}` })
 
 const query = ref<string>('')
 const data = ref<Array<LogEntry>>([])
@@ -185,9 +187,17 @@ const isTodayLog = computed((): boolean => filename.includes(moment().format('YY
 const reachedEnd = ref<boolean>(false)
 const offset = ref<number>(0)
 const contentType = ref<'log' | 'json'>('log')
-let scrollTimeout: NodeJS.Timeout | null = null
+let scrollTimeout: ReturnType<typeof setTimeout> | null = null
 
 const token = useStorage('token', '')
+
+type FilePickerOptions = {
+  suggestedName?: string
+}
+
+type FilePickerHandle = {
+  createWritable: () => Promise<WritableStream>
+}
 
 watch(toggleFilter, async (): Promise<void> => {
   if (!toggleFilter.value) {
@@ -202,7 +212,7 @@ const filterItems = computed((): Array<LogEntry> => {
   return data.value.filter(m => m.text.toLowerCase().includes(query.value.toLowerCase()))
 })
 
-const stream = ref<any>(null)
+const stream = ref<boolean>(false)
 const logContainer = ref<HTMLElement | null>(null)
 const bottomMarker = ref<HTMLElement | null>(null)
 
@@ -234,7 +244,7 @@ const loadContent = async (): Promise<void> => {
       return
     }
 
-    if ('logs-filename' !== useRoute().name) {
+    if ('logs-filename' !== route.name) {
       return
     }
 
@@ -260,14 +270,15 @@ const loadContent = async (): Promise<void> => {
     // Auto-scroll only if the user was already at the bottom
     await nextTick(() => {
       if (autoScroll.value && bottomMarker.value) {
-        bottomMarker.value.scrollIntoView({behavior: 'auto'})
+        bottomMarker.value.scrollIntoView({ behavior: 'auto' })
       }
     })
 
     watchLog()
 
-  } catch (e: any) {
-    error.value = e
+   } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unexpected error'
+    error.value = message
   } finally {
     isLoading.value = false
   }
@@ -300,7 +311,7 @@ const scrollToBottom = (): void => {
   autoScroll.value = true
   nextTick(() => {
     if (bottomMarker.value) {
-      bottomMarker.value.scrollIntoView({behavior: 'smooth'})
+      bottomMarker.value.scrollIntoView({ behavior: 'smooth' })
     }
   })
 }
@@ -318,7 +329,7 @@ onUnmounted(async () => {
 })
 
 const watchLog = (): void => {
-  if (!isTodayLog.value || null !== stream.value) {
+  if (!isTodayLog.value || true === stream.value) {
     closeStream()
     return
   }
@@ -330,7 +341,7 @@ const watchLog = (): void => {
         return
       }
 
-      let lines = evt.data.split(/\n/g)
+      const lines = evt.data.split(/\n/g)
 
       for (let x = 0; x < lines.length; x++) {
         try {
@@ -342,7 +353,7 @@ const watchLog = (): void => {
 
           await nextTick(() => {
             if (autoScroll.value && bottomMarker.value) {
-              bottomMarker.value.scrollIntoView({behavior: 'smooth'})
+              bottomMarker.value.scrollIntoView({ behavior: 'smooth' })
             }
           })
         } catch (error) {
@@ -363,7 +374,7 @@ const watchLog = (): void => {
 const closeStream = (): void => {
   if (stream.value) {
     ctrl.abort()
-    stream.value = null
+    stream.value = false
   }
 }
 
@@ -371,15 +382,24 @@ const downloadFile = (): void => {
   isDownloading.value = true
 
   const response = request(`/log/${filename}?download=1`)
+  const pickerWindow = window as Window & {
+    showSaveFilePicker?: (options: FilePickerOptions) => Promise<FilePickerHandle>
+  }
+  const showSaveFilePicker = pickerWindow.showSaveFilePicker
 
-  if ('showSaveFilePicker' in window) {
+  if (showSaveFilePicker) {
     response.then(async res => {
       isDownloading.value = false
 
-      return res.body?.pipeTo(await (await (window as any).showSaveFilePicker({
-        suggestedName: `${filename}`
-      })).createWritable())
+      if (!res.body) {
+        notification('error', 'Error', 'No data returned from download request.')
+        return
+      }
 
+      const handle = await showSaveFilePicker({
+        suggestedName: `${filename}`,
+      })
+      await res.body.pipeTo(await handle.createWritable())
     })
   } else {
     response.then(res => res.blob()).then(blob => {
@@ -394,7 +414,13 @@ const downloadFile = (): void => {
 }
 
 const deleteFile = async (): Promise<void> => {
-  if (!confirm(`Are you sure you want to delete '${filename}'? this cannot be undone.`)) {
+  const { status: confirmStatus } = await useDialog().confirmDialog({
+    message: `Are you sure you want to delete the log file '${filename}'? This action cannot be undone.`,
+    confirmText: 'Delete',
+    confirmColor: 'is-danger',
+  })
+
+  if (true !== confirmStatus) {
     return
   }
 
@@ -402,27 +428,23 @@ const deleteFile = async (): Promise<void> => {
     closeStream()
 
     const response = await request(`/log/${filename}`, {method: 'DELETE'})
+    const json = await parse_api_response<GenericResponse>(response)
 
     if (response.ok) {
       notification('success', 'Information', `Logfile '${filename}' has been deleted.`)
-      const router = useRouter()
       await router.push('/logs')
       return
     }
 
-    let json: any
-
-    try {
-      json = await response.json()
-    } catch (e) {
-      json = {
-        error: {code: response.status, message: response.statusText}
-      }
+    if ('error' in json) {
+      notification('error', 'Error', `Request to delete logfile failed. (${json.error.code}: ${json.error.message}).`)
+      return
     }
 
-    notification('error', 'Error', `Request to delete logfile failed. (${json.error.code}: ${json.error.message}).`)
-  } catch (e: any) {
-    notification('error', 'Error', `Failed to request to delete a logfile. ${e}.`)
+    notification('error', 'Error', 'Request to delete logfile failed.')
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    notification('error', 'Error', `Failed to request to delete a logfile. ${message}.`)
   }
 }
 

@@ -40,7 +40,7 @@
           <Message v-else message_class="is-background-warning-80 has-text-dark" title="Warning"
             icon="fas fa-exclamation-circle">
             No backends found. Please add new backends to start using the tool. You can add new backend by
-            <NuxtLink @click="toggleForm = true" v-text="'clicking here'" />
+            <NuxtLink @click="toggleForm = true">clicking here</NuxtLink>
             or by clicking the <span class="icon is-clickable" @click="toggleForm = true"><i
                 class="fas fa-add" /></span>
             button above.
@@ -188,14 +188,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useHead, useRoute, navigateTo } from '#app'
-import { useStorage } from '@vueuse/core'
+import {ref, onMounted} from 'vue'
+import {useHead, useRoute, navigateTo} from '#app'
+import {useStorage} from '@vueuse/core'
 import moment from 'moment'
 import BackendAdd from '~/components/BackendAdd.vue'
 import Message from '~/components/Message.vue'
-import { request, ag, copyText, makeConsoleCommand, notification, queue_event, r, TOOLTIP_DATE_FORMAT, ucFirst } from '~/utils'
-import type { Backend, UtilityCommand } from '~/types'
+import {request, ag, copyText, makeConsoleCommand, notification, queue_event, r, TOOLTIP_DATE_FORMAT, ucFirst} from '~/utils'
+import type {Backend, JsonObject, JsonValue, UtilityCommand} from '~/types'
 import '~/assets/css/bulma-switch.css'
 
 type UsefulCommand = UtilityCommand
@@ -209,7 +209,7 @@ type CommandUtility = {
   user: string
   /** Backend name (merged from backend) */
   name?: string
-  [key: string]: any
+  [key: string]: JsonValue | undefined
 }
 
 useHead({ title: 'Backends' })
@@ -287,7 +287,7 @@ const forwardCommand = async (backend: Backend): Promise<void> => {
     user: api_user.value,
   }
 
-  await navigateTo(makeConsoleCommand(r(command.command, { ...backend, ...util })))
+  await navigateTo(makeConsoleCommand(r(command.command, {...backend, ...util} as unknown as JsonObject)))
 }
 
 const loadContent = async (): Promise<void> => {
@@ -409,7 +409,7 @@ const check_state = (backend: Backend, command: { state_key?: string }): boolean
     return true
   }
 
-  const state = ag(backend, command.state_key, false)
+  const state = ag(backend as unknown as JsonObject, command.state_key, false)
   console.log(backend, command.state_key, state)
   return Boolean(state)
 }

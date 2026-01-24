@@ -163,14 +163,14 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter, useHead } from '#app'
-import { copyText, notification, parse_api_response, makeEventName, getEventStatusClass, request } from '~/utils'
+import {copyText, notification, parse_api_response, makeEventName, getEventStatusClass, request} from '~/utils'
 import moment from 'moment'
 import Pager from '~/components/Pager.vue'
 import Message from '~/components/Message.vue'
 import EventView from '~/components/EventView.vue'
 import Overlay from '~/components/Overlay.vue'
 import { useStorage } from '@vueuse/core'
-import type { EventsItem } from '~/types'
+import type {EventsItem, GenericError, GenericResponse} from '~/types'
 import { useDialog } from '~/composables/useDialog'
 
 const route = useRoute()
@@ -318,8 +318,13 @@ const deleteItem = async (item: EventsItem): Promise<void> => {
     const response = await request(`/system/events/${item.id}`, { method: 'DELETE' })
 
     if (200 !== response.status) {
-      const json = await parse_api_response(response)
-      notification('error', 'Error', `Events delete Request error. ${json.error.code}: ${json.error.message}`)
+      const json = await parse_api_response<GenericResponse>(response)
+      if ('error' in json) {
+        const errorJson = json as GenericError
+        notification('error', 'Error', `Events delete Request error. ${errorJson.error.code}: ${errorJson.error.message}`)
+      } else {
+        notification('error', 'Error', 'Events delete Request error.')
+      }
       return
     }
 
@@ -351,10 +356,16 @@ const resetEvent = async (item: EventsItem, status: number = 0): Promise<void> =
       })
     })
 
-    const json = await parse_api_response(response)
+    const json = await parse_api_response<EventsItem>(response)
+
+    if ('error' in json) {
+      const errorJson = json as GenericError
+      notification('error', 'Error', `Events view patch Request error. ${errorJson.error.code}: ${errorJson.error.message}`)
+      return
+    }
 
     if (200 !== response.status) {
-      notification('error', 'Error', `Events view patch Request error. ${json.error.code}: ${json.error.message}`)
+      notification('error', 'Error', 'Events view patch Request error.')
       return
     }
 
@@ -384,8 +395,13 @@ const deleteAll = async (): Promise<void> => {
   try {
     const response = await request('/system/events/', { method: 'DELETE' })
     if (200 !== response.status) {
-      const json = await parse_api_response(response)
-      notification('error', 'Error', `Failed to delete events. ${json.error.code}: ${json.error.message}`)
+      const json = await parse_api_response<GenericResponse>(response)
+      if ('error' in json) {
+        const errorJson = json as GenericError
+        notification('error', 'Error', `Failed to delete events. ${errorJson.error.code}: ${errorJson.error.message}`)
+      } else {
+        notification('error', 'Error', 'Failed to delete events.')
+      }
       return
     }
 

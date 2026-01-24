@@ -83,7 +83,7 @@
             <div class="field">
               <label class="label is-unselectable">
                 Headers -
-                <NuxtLink @click="add_header()" v-text="'Add'"/>
+                <NuxtLink @click="add_header()">Add</NuxtLink>
               </label>
 
               <div class="control mb-2" v-for="(header, index) in item.headers" :key="index">
@@ -441,7 +441,7 @@ const invalid_form = computed<boolean>(() => {
   }
   try {
     new URL(item.value.url)
-  } catch (e) {
+  } catch {
     return true
   }
   return false
@@ -512,7 +512,7 @@ const uc_words = (str: string): string => str.replace(/_/g, ' ').replace(/\b\w/g
 const tryParse = (body: string): string => {
   try {
     return JSON.stringify(JSON.parse(body), null, 2)
-  } catch (e) {
+  } catch {
     return body
   }
 }

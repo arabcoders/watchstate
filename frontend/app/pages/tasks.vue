@@ -70,14 +70,14 @@
               </div>
               <div class="column is-6 has-text-left">
                 <strong class="is-hidden-mobile">Timer:&nbsp;</strong>
-                <NuxtLink class="has-tooltip" :to='makeEnvLink(`WS_CRON_${task.name.toUpperCase()}_AT`, task.timer)'
+                <NuxtLink class="has-tooltip" :to="makeEnvLink(`WS_CRON_${task.name.toUpperCase()}_AT`, task.timer)"
                   v-tooltip="'Edit cron timer.'">
                   {{ task.timer }}
                 </NuxtLink>
               </div>
               <div class="column is-6 has-text-right" v-if="task.args">
                 <strong class="is-hidden-mobile">Args:&nbsp;</strong>
-                <NuxtLink class="has-tooltip" :to='makeEnvLink(`WS_CRON_${task.name.toUpperCase()}_ARGS`, task.args)'
+                <NuxtLink class="has-tooltip" :to="makeEnvLink(`WS_CRON_${task.name.toUpperCase()}_ARGS`, task.args)"
                   v-tooltip="'Edit task arguments.'">
                   {{ task.args }}
                 </NuxtLink>
@@ -156,15 +156,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useHead, navigateTo, useRoute } from '#app'
-import { useStorage } from '@vueuse/core'
+import {ref, onMounted} from 'vue'
+import {useHead, navigateTo, useRoute} from '#app'
+import {useStorage} from '@vueuse/core'
 import moment from 'moment'
 import cronstrue from 'cronstrue'
 import Message from '~/components/Message.vue'
-import { request, awaitElement, makeConsoleCommand, notification, parse_api_response, TOOLTIP_DATE_FORMAT } from '~/utils'
-import { useDialog } from '~/composables/useDialog'
-import type { TaskItem } from '~/types'
+import {request, awaitElement, makeConsoleCommand, notification, parse_api_response, TOOLTIP_DATE_FORMAT} from '~/utils'
+import {useDialog} from '~/composables/useDialog'
+import type {GenericError, GenericResponse, TaskItem} from '~/types'
 
 useHead({ title: 'Tasks' })
 
@@ -211,8 +211,13 @@ const toggleTask = async (task: TaskItem): Promise<void> => {
     })
 
     if (200 !== update.status) {
-      const json = await parse_api_response(update)
-      notification('error', 'Error', `Failed to toggle task '${task.name}' status. ${json.error.message}`)
+      const json = await parse_api_response<GenericResponse>(update)
+      if ('error' in json) {
+        const errorJson = json as GenericError
+        notification('error', 'Error', `Failed to toggle task '${task.name}' status. ${errorJson.error.message}`)
+      } else {
+        notification('error', 'Error', `Failed to toggle task '${task.name}' status.`)
+      }
       const idx = tasks.value.findIndex(b => b.name === task.name)
       if (-1 !== idx) {
         tasks.value[idx]!.enabled = oldState
@@ -226,8 +231,9 @@ const toggleTask = async (task: TaskItem): Promise<void> => {
     if (idx !== -1) {
       tasks.value[idx] = updatedTask
     }
-  } catch (e: any) {
-    notification('error', 'Error', `Request error. ${e.message}`)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unexpected error'
+    notification('error', 'Error', `Request error. ${message}`)
   }
 }
 

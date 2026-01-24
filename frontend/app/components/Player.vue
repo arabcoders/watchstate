@@ -18,7 +18,7 @@
 </style>
 
 <template>
-  <video ref="video" :poster="poster" :controls="isControls" :title="title" preload="auto" playsinline>
+  <video ref="video" :poster="posterUrl" :controls="isControls" :title="title" preload="auto" playsinline>
     <source :src="link" type="application/x-mpegURL"/>
   </video>
 </template>
@@ -45,11 +45,14 @@ const props = withDefaults(defineProps<{
   reference?: unknown
 }>(), {
   isControls: true,
-  debug: false
+  debug: false,
+  title: '',
+  poster: '',
+  reference: undefined,
 })
 
 const video = ref<HTMLVideoElement | null>(null)
-const poster = ref<string | undefined>(undefined)
+const posterUrl = ref<string | undefined>(undefined)
 let player: Plyr | undefined
 let hls: Hls | undefined
 
@@ -69,7 +72,7 @@ const getPoster = async () => {
     const response = await cb(props.poster)
 
     if (200 === response.status) {
-      poster.value = URL.createObjectURL(await response.blob());
+      posterUrl.value = URL.createObjectURL(await response.blob())
     }
   }
 }

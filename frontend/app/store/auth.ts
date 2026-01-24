@@ -1,7 +1,8 @@
-import { defineStore } from 'pinia';
+import {defineStore} from 'pinia';
 import { useStorage } from '@vueuse/core'
 import { reactive, toRefs } from 'vue'
 import { request, parse_api_response } from '~/utils'
+import type {GenericError, GenericResponse} from '~/types'
 
 type AuthState = {
     token: string | null;
@@ -9,6 +10,15 @@ type AuthState = {
     loading: boolean;
     username: string | null;
 };
+
+type HasUserResponse = {
+    token?: string
+    auto_login?: boolean
+}
+
+type LoginResponse = {
+    token?: string
+}
 
 export const useAuthStore = defineStore('auth', () => {
     const state = reactive<AuthState>({
@@ -22,8 +32,11 @@ export const useAuthStore = defineStore('auth', () => {
         const req = await request('/system/auth/has_user');
         const status = req.status === 200;
         if (req.ok && req) {
-            const json = await parse_api_response(req);
-            if (json?.token && json?.auto_login) {
+            const json = await parse_api_response<HasUserResponse>(req);
+            if ('error' in json) {
+                return status;
+            }
+            if (json.token && json.auto_login) {
                 const token = useStorage<string | null>('token', null);
                 state.token = json.token;
                 token.value = json.token;
@@ -44,9 +57,10 @@ export const useAuthStore = defineStore('auth', () => {
         if (req.status === 201) {
             return true;
         }
-        const json = await parse_api_response(req);
-        if (json?.error?.message) {
-            throw new Error(json.error.message);
+        const json = await parse_api_response<GenericResponse>(req);
+        if ('error' in json) {
+            const errorJson = json as GenericError
+            throw new Error(errorJson.error.message);
         }
         throw new Error('Signup failed');
     };
@@ -63,14 +77,15 @@ export const useAuthStore = defineStore('auth', () => {
                 method: 'POST',
                 body: JSON.stringify({ username, password }),
             });
-            const json = await parse_api_response(response);
+            const json = await parse_api_response<LoginResponse>(response);
             if (response.status !== 200) {
-                if (json?.error?.message) {
-                    throw new Error(json.error.message);
+                if ('error' in json) {
+                    const errorJson = json as GenericError
+                    throw new Error(errorJson.error.message);
                 }
                 throw new Error('Login failed');
             }
-            if (!json?.token) {
+            if ('error' in json || !json.token) {
                 throw new Error('Error. API did not return a token.');
             }
             const token = useStorage<string | null>('token', null);
@@ -112,7 +127,7 @@ export const useAuthStore = defineStore('auth', () => {
             state.username = json.username;
             state.authenticated = true;
             return true;
-        } catch (e) {
+        } catch {
             state.token = null;
             state.authenticated = false;
             return false;

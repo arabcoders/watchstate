@@ -45,32 +45,38 @@ import Message from '~/components/Message.vue'
 import {notification, parse_api_response, request} from '~/utils'
 import Confirm from '~/components/Confirm.vue'
 import {useSessionCache} from '~/utils/cache'
-import type {GenericError} from '~/types'
+import type {GenericError, GenericResponse} from '~/types'
 
 const error = ref<GenericError | null>(null)
 const isPurging = ref<boolean>(false)
+const route = useRoute()
 
 const resetCache = async (): Promise<void> => {
   isPurging.value = true
   try {
     error.value = null
     const response = await request('/system/cache', {method: 'DELETE'})
-    const json = await parse_api_response(response)
-    if (useRoute().name !== 'purge_cache') {
+    const json = await parse_api_response<GenericResponse>(response)
+    if (route.name !== 'purge_cache') {
+      return
+    }
+    if ('error' in json) {
+      error.value = json
       return
     }
     if (200 !== response.status) {
-      error.value = json
+      error.value = {error: {code: response.status, message: response.statusText}}
       return
     }
     notification('success', 'Success', 'System Cache has been purged.')
     await navigateTo('/')
     try {
       useSessionCache().clear()
-    } catch (e) {
+    } catch {
     }
-  } catch (e: any) {
-    error.value = {error: {code: 500, message: e.message}}
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unexpected error'
+    error.value = {error: {code: 500, message}}
   } finally {
     isPurging.value = false
   }

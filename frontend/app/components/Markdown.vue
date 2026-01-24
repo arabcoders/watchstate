@@ -76,11 +76,13 @@
 import {ref, onMounted, onBeforeUnmount, onUpdated} from 'vue'
 import {navigateTo} from '#app'
 import {marked} from 'marked'
+import type {MarkedExtension, Tokens} from 'marked'
 import {baseUrl} from 'marked-base-url'
 import markedAlert from 'marked-alert'
 import {gfmHeadingId} from 'marked-gfm-heading-id'
 import Message from '~/components/Message.vue'
 import {parse_api_response} from '~/utils'
+import type {GenericError} from '~/types'
 
 const props = defineProps<{
   /** Path to the markdown file to load */
@@ -136,7 +138,7 @@ onMounted(async () => {
     isLoading.value = true
     const response = await fetch(`${props.file}?_=${Date.now()}`)
     if (!response.ok) {
-      const err = await parse_api_response(response)
+      const err = await parse_api_response<GenericError>(response)
       console.log(err)
       error.value = err.error.message
       return
@@ -145,41 +147,43 @@ onMounted(async () => {
     marked.use(gfmHeadingId())
     marked.use(baseUrl(window.origin))
     marked.use(markedAlert())
-    marked.use({
+    const options = {
       gfm: true,
       hooks: {
-        preprocess: (text: string) => text.replace(
+        preprocess: (value: string) => value.replace(
             /<!--\s*?i:([\w.-]+)\s*?-->/gi,
-            (_, list) => `<span class=\"icon\"><i class=\"fas ${list.split('.').map((n: string) => n.trim()).join(' ')}\"></i></span>`
+            (_: string, list: string) => `<span class="icon"><i class="fas ${list.split('.').map((n: string) => n.trim()).join(' ')}"></i></span>`
         )
       },
-      walkTokens: (token: any) => {
+      walkTokens: (token: Tokens.Generic) => {
         if (token.type !== 'link') {
           return
         }
-        if (token.href.startsWith('#')) {
+        const linkToken = token as Tokens.Link
+        if (linkToken.href.startsWith('#')) {
           return
         }
         const urls = ['FAQ.md', 'README.md', 'NEWS.md']
         const list = ['guides/', ...urls]
-        if (!list.some(l => token.href.includes(l))) {
+        if (!list.some(l => linkToken.href.includes(l))) {
           return
         }
-        if (urls.some(l => token.href.includes(l))) {
-          if (!token.href.startsWith('/')) {
-            token.href = '/' + token.href
+        if (urls.some(l => linkToken.href.includes(l))) {
+          if (!linkToken.href.startsWith('/')) {
+            linkToken.href = '/' + linkToken.href
           }
-          const url = new URL(window.origin + token.href)
+          const url = new URL(window.origin + linkToken.href)
           url.pathname = `/guides${url.pathname}`
-          token.href = url.toString()
+          linkToken.href = url.toString()
         }
-        token.href = token.href.replace('/guides/', '/help/').replace('.md', '')
+        linkToken.href = linkToken.href.replace('/guides/', '/help/').replace('.md', '')
       },
-    })
+    } as MarkedExtension
+    marked.use(options)
     content.value = String(marked.parse(text))
-  } catch (e: any) {
-    console.error(e)
-    error.value = e.message
+  } catch (err) {
+    console.error(err)
+    error.value = err instanceof Error ? err.message : 'Unexpected error'
   } finally {
     isLoading.value = false
   }

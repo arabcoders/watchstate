@@ -4,9 +4,9 @@
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4 ">
           <span class="icon"><i class="fas fa-server"/>&nbsp;</span>
-          <NuxtLink to="/backends" v-text="'Backends'"/>
+          <NuxtLink to="/backends">Backends</NuxtLink>
           -
-          <NuxtLink :to="`/backend/${backend}`" v-text="backend"/>
+          <NuxtLink :to="`/backend/${backend}`">{{ backend }}</NuxtLink>
           : Staleness
         </span>
         <div class="is-pulled-right">
@@ -41,7 +41,7 @@
               <div class="card" :class="{ 'is-success': item.watched }">
                 <header class="card-header">
                   <p class="card-header-title is-text-overflow pr-1">
-                    <NuxtLink :to="'/history/'+item.id" v-text="makeName(item)"/>
+                    <NuxtLink :to="'/history/'+item.id">{{ makeName(item) }}</NuxtLink>
                   </p>
                   <span class="card-header-icon" @click="item.showRawData = !item?.showRawData">
                     <span class="icon">
@@ -59,10 +59,10 @@
                              @click="item.expand_title = !item?.expand_title">
                           <span class="icon"><i class="fas fa-heading"/>&nbsp;</span>
                           <template v-if="item?.content_title">
-                            <NuxtLink :to="makeSearchLink('subtitle', item.content_title)" v-text="item.content_title"/>
+                            <NuxtLink :to="makeSearchLink('subtitle', item.content_title)">{{ item.content_title }}</NuxtLink>
                           </template>
                           <template v-else>
-                            <NuxtLink :to="makeSearchLink('subtitle', item.title)" v-text="item.title"/>
+                            <NuxtLink :to="makeSearchLink('subtitle', item.title)">{{ item.title }}</NuxtLink>
                           </template>
                         </div>
                         <div class="control">
@@ -78,8 +78,9 @@
                              :class="{'is-text-overflow': !item?.expand_path, 'is-text-contents': item?.expand_path}"
                              @click="item.expand_path = !item?.expand_path">
                           <span class="icon"><i class="fas fa-file"/>&nbsp;</span>
-                          <NuxtLink v-if="item?.content_path" :to="makeSearchLink('path', item.content_path)"
-                                    v-text="item.content_path"/>
+                          <NuxtLink v-if="item?.content_path" :to="makeSearchLink('path', item.content_path)">
+                            {{ item.content_path }}
+                          </NuxtLink>
                           <span v-else>No path found.</span>
                         </div>
                         <div class="control">
@@ -96,10 +97,16 @@
                           <span>Has metadata from</span>
                         </div>
                         <div class="control">
-                          <NuxtLink v-for="backend in item.reported_by" :key="`${item.id}-rb-${backend}`"
-                                    :to="'/backend/'+backend" v-text="backend" class="tag is-primary ml-1"/>
-                          <NuxtLink v-for="backend in item.not_reported_by" :key="`${item.id}-nrb-${backend}`"
-                                    :to="'/backend/'+backend" v-text="backend" class="tag is-danger ml-1"/>
+                          <NuxtLink v-for="reportedBackend in item.reported_by"
+                                    :key="`${item.id}-rb-${reportedBackend}`"
+                                    :to="'/backend/' + reportedBackend" class="tag is-primary ml-1">
+                            {{ reportedBackend }}
+                          </NuxtLink>
+                          <NuxtLink v-for="missingBackend in item.not_reported_by"
+                                    :key="`${item.id}-nrb-${missingBackend}`"
+                                    :to="'/backend/' + missingBackend" class="tag is-danger ml-1">
+                            {{ missingBackend }}
+                          </NuxtLink>
                         </div>
                       </div>
                     </div>
@@ -175,7 +182,7 @@ import moment from 'moment'
 import Message from '~/components/Message.vue'
 import Lazy from '~/components/Lazy.vue'
 import { request, copyText, makeName, makeSearchLink, TOOLTIP_DATE_FORMAT, parse_api_response } from '~/utils'
-import type { StaleItem, StaleResponse, StaleCounts, StaleBackendInfo, ExpandableUIState, GenericError } from '~/types'
+import type { StaleItem, StaleResponse, StaleCounts, StaleBackendInfo, ExpandableUIState } from '~/types'
 
 const route = useRoute()
 

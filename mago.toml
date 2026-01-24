@@ -7,7 +7,7 @@ includes = ["vendor"]
 excludes = []
 
 [formatter]
-print-width = 120
+print-width = 140
 tab-width = 4
 use-tabs = false
 

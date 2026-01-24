@@ -103,7 +103,7 @@ const resetSystem = async (): Promise<void> => {
     // -- remove all session storage due to the reset.
     try {
       useSessionCache().clear()
-    } catch (e) {
+    } catch {
     }
   } catch (e: any) {
     error.value = { error: { code: 500, message: e.message } }

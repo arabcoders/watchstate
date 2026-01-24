@@ -306,7 +306,21 @@ import moment from 'moment'
 import draggable from 'vuedraggable'
 import {makeConsoleCommand, notification, parse_api_response, request} from '~/utils'
 import Message from '~/components/Message.vue'
-import type {SubUser} from '~/types'
+import {useDialog} from '~/composables/useDialog'
+import type {GenericResponse} from '~/types'
+
+type SubUserOptions = {
+  PLEX_USER_PIN?: string
+}
+
+type SubUserEntry = {
+  id: string
+  backend: string
+  username: string
+  real_name: string
+  protected?: boolean
+  options?: SubUserOptions
+}
 
 type SubUserMappingData = {
   /** Version identifier for the mapping format */
@@ -316,7 +330,7 @@ type SubUserMappingData = {
     /** Username for this backend */
     name: string
     /** User options (mainly PIN) */
-    options: Record<string, any>
+    options: SubUserOptions
   }>>
 }
 
@@ -324,11 +338,11 @@ type SubUserGroup = {
   /** Display name for this user group */
   user: string
   /** Array of matched users in this group */
-  matched: Array<SubUser>
+  matched: Array<SubUserEntry>
 }
 
 const matched = ref<Array<SubUserGroup>>([])
-const unmatched = ref<Array<SubUser>>([])
+const unmatched = ref<Array<SubUserEntry>>([])
 const isLoading = ref<boolean>(false)
 const toastIsVisible = ref<boolean>(false)
 const recreate = ref<boolean>(false)
@@ -342,6 +356,14 @@ const backendCount = ref<number>(0)
 const expires = ref<string | undefined>()
 const api_user = useStorage('api_user', 'main')
 
+type FilePickerOptions = {
+  suggestedName?: string
+}
+
+type FilePickerHandle = {
+  createWritable: () => Promise<WritableStream>
+}
+
 const addNewUser = (): void => {
   const newUserName = `User group #${matched.value.length + 1}`
   matched.value.push({user: newUserName, matched: []})
@@ -349,7 +371,13 @@ const addNewUser = (): void => {
 
 const loadContent = async (force?: boolean): Promise<void> => {
   if (matched.value.length > 0) {
-    if (!confirm('Reloading will remove all modifications. Are you sure?')) {
+    const {status} = await useDialog().confirmDialog({
+      title: 'Reload data',
+      message: 'Reloading will remove all modifications. Are you sure?',
+      confirmColor: 'is-danger',
+    })
+
+    if (true !== status) {
       return
     }
   }
@@ -365,7 +393,7 @@ const loadContent = async (force?: boolean): Promise<void> => {
     })
     const json = await parse_api_response<{
       matched: Array<SubUserGroup>,
-      unmatched: Array<SubUser>,
+      unmatched: Array<SubUserEntry>,
       has_users: boolean,
       expires?: string,
       backends?: Array<string>,
@@ -375,7 +403,7 @@ const loadContent = async (force?: boolean): Promise<void> => {
       return
     }
 
-    if ("error" in json) {
+    if ('error' in json) {
       notification('error', 'Error', json.error.message || 'Unknown error')
       return
     }
@@ -387,8 +415,9 @@ const loadContent = async (force?: boolean): Promise<void> => {
     hasUsers.value = json.has_users
     backendCount.value = json.backends?.length || 0
     expires.value = json?.expires
-  } catch (e: any) {
-    notification('error', 'Error', e.message)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unexpected error'
+    notification('error', 'Error', message)
   } finally {
     isLoading.value = false
   }
@@ -409,11 +438,22 @@ const generateFile = async (): Promise<void> => {
     body: JSON.stringify(data)
   })
 
-  if ('showSaveFilePicker' in window) {
+  const pickerWindow = window as Window & {
+    showSaveFilePicker?: (options: FilePickerOptions) => Promise<FilePickerHandle>
+  }
+  const showSaveFilePicker = pickerWindow.showSaveFilePicker
+
+  if (showSaveFilePicker) {
     response.then(async res => {
-      return res.body!.pipeTo(await (await (window as any).showSaveFilePicker({
-        suggestedName: `${filename}`
-      })).createWritable())
+      if (!res.body) {
+        notification('error', 'Error', 'No data returned from export request.')
+        return
+      }
+
+      const handle = await showSaveFilePicker({
+        suggestedName: `${filename}`,
+      })
+      await res.body.pipeTo(await handle.createWritable())
     })
   }
 
@@ -428,11 +468,11 @@ const generateFile = async (): Promise<void> => {
 
 interface DragEvent {
   draggedContext: {
-    list: Array<SubUser>
-    element: SubUser
+    list: Array<SubUserEntry>
+    element: SubUserEntry
   }
   relatedContext: {
-    list: Array<SubUser>
+    list: Array<SubUserEntry>
   }
 }
 
@@ -467,10 +507,16 @@ const checkBackend = (e: DragEvent): boolean => {
   return true
 }
 
-const deleteGroup = (i: number): void => {
+const deleteGroup = async (i: number) => {
   const group = matched.value[i]
   if (group && group.matched && group.matched.length) {
-    if (false === confirm(`Delete user group #${i + 1}?, Users will be moved to unmatched`)) {
+    const {status} = await useDialog().confirmDialog({
+      title: 'Delete group',
+      message: `Delete user group #${i + 1}?, Users will be moved to unmatched`,
+      confirmColor: 'is-danger',
+    })
+
+    if (true !== status) {
       return
     }
 
@@ -496,8 +542,15 @@ const saveMap = async (no_toast: boolean = false): Promise<boolean> => {
       body: JSON.stringify(data)
     })
 
-    const response = await parse_api_response(req)
-    if (req.status >= 200 && req.status < 300) {
+    const response = await parse_api_response<GenericResponse>(req)
+    if ('error' in response) {
+      if (!no_toast) {
+        notification('error', 'Error', `${req.status}: ${response.error.message}`)
+      }
+      return false
+    }
+
+    if (200 <= req.status && 300 > req.status) {
       if (!no_toast) {
         notification('success', 'Success', response.info.message)
       }
@@ -505,12 +558,13 @@ const saveMap = async (no_toast: boolean = false): Promise<boolean> => {
     }
 
     if (!no_toast) {
-      notification('error', 'Error', `${req.status}: ${response.error.message}`)
+      notification('error', 'Error', `${req.status}: Request failed`)
     }
 
     return false
-  } catch (e: any) {
-    notification('error', 'Error', `Error: ${e.message}`)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unexpected error'
+    notification('error', 'Error', `Error: ${message}`)
   }
 
   return false
@@ -520,8 +574,11 @@ const formatData = (): SubUserMappingData => {
   const data: SubUserMappingData = {version: '1.6', map: []}
 
   matched.value.forEach((group) => {
-    const users: Record<string, { name: string; options: Record<string, any> }> = {}
-    group?.matched.forEach(u => users[u.backend] = {name: u.username, options: toRaw(u.options || {})})
+    const users: Record<string, {name: string; options: SubUserOptions}> = {}
+    group?.matched.forEach(u => {
+      const options: SubUserOptions = u.options ? toRaw(u.options) : {}
+      users[u.backend] = {name: u.username, options}
+    })
 
     if (Object.keys(users).length < 2) {
       return
@@ -532,7 +589,7 @@ const formatData = (): SubUserMappingData => {
 
   if (allowSingleBackendUsers.value) {
     unmatched.value.forEach(u => data.map.push({
-      [u.backend]: {name: u.username, options: toRaw(u.options || {})}
+      [u.backend]: {name: u.username, options: u.options ? toRaw(u.options) : {}}
     }))
   }
 
@@ -578,11 +635,18 @@ const createUsers = async (): Promise<void> => {
 
 const isSameName = (name1: string, name2: string): boolean => name1.toLowerCase() === name2.toLowerCase()
 
-const setUserPin = async (user: SubUser): Promise<void> => {
-  const pin = prompt(`Enter user PIN for '${user.backend}@${user.username}':`, user?.options?.PLEX_USER_PIN || '')
-  if (null === pin) {
+const setUserPin = async (user: SubUserEntry): Promise<void> => {
+  const {status, value} = await useDialog().promptDialog({
+    title: 'Set PIN',
+    message: `Enter user PIN for '${user.backend}@${user.username}':`,
+    initial: user?.options?.PLEX_USER_PIN || '',
+  })
+
+  if (true !== status) {
     return
   }
+
+  const pin = value
 
   if ('' === pin) {
     if (user?.options?.PLEX_USER_PIN) {
@@ -608,7 +672,7 @@ const setUserPin = async (user: SubUser): Promise<void> => {
   user.options.PLEX_USER_PIN = pin
 }
 
-const setClass = (user: SubUser): string | undefined => {
+const setClass = (user: SubUserEntry): string | undefined => {
   if (!user?.protected) {
     return
   }

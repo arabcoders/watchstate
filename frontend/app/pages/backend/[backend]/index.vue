@@ -23,7 +23,7 @@
         <div class="column is-12 is-clearfix is-unselectable">
           <span class="title is-4">
             <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
-            <NuxtLink to="/backends" v-text="'Backends'"/>
+            <NuxtLink to="/backends">Backends</NuxtLink>
             : {{ backend }}
           </span>
           <div class="is-pulled-right">
@@ -53,22 +53,22 @@
             <h1 class="title is-4">Useful Tools</h1>
             <ul>
               <li>
-                <NuxtLink :to="`/backend/${backend}/mismatched`" v-text="'Find possible mis-identified content.'"/>
+                <NuxtLink :to="`/backend/${backend}/mismatched`">Find possible mis-identified content.</NuxtLink>
               </li>
               <li>
-                <NuxtLink :to="`/backend/${backend}/unmatched`" v-text="'Find unmatched content.'"/>
+                <NuxtLink :to="`/backend/${backend}/unmatched`">Find unmatched content.</NuxtLink>
               </li>
               <li>
-                <NuxtLink :to="`/backend/${backend}/libraries`" v-text="'View backend libraries.'"/>
+                <NuxtLink :to="`/backend/${backend}/libraries`">View backend libraries.</NuxtLink>
               </li>
               <li>
-                <NuxtLink :to="`/backend/${backend}/users`" v-text="'View backend users.'"/>
+                <NuxtLink :to="`/backend/${backend}/users`">View backend users.</NuxtLink>
               </li>
               <li>
-                <NuxtLink :to="`/backend/${backend}/sessions`" v-text="'View active sessions.'"/>
+                <NuxtLink :to="`/backend/${backend}/sessions`">View active sessions.</NuxtLink>
               </li>
               <li>
-                <NuxtLink :to="`/backend/${backend}/search`" v-text="'Search backend content.'"/>
+                <NuxtLink :to="`/backend/${backend}/search`">Search backend content.</NuxtLink>
               </li>
             </ul>
           </div>
@@ -94,9 +94,9 @@
                 <p class="card-header-title is-text-overflow pr-1">
                   <FloatingImage :image="`/history/${item.id}/images/poster`" :item_class="'scaled-image'"
                                  v-if="poster_enable">
-                    <NuxtLink :to="`/history/${item.id}`" v-text="item?.full_title || makeName(item)"/>
+                    <NuxtLink :to="`/history/${item.id}`">{{ item?.full_title || makeName(item as unknown as JsonObject) }}</NuxtLink>
                   </FloatingImage>
-                  <NuxtLink :to="`/history/${item.id}`" v-text="item?.full_title || makeName(item)" v-else/>
+                  <NuxtLink :to="`/history/${item.id}`" v-else>{{ item?.full_title || makeName(item as unknown as JsonObject) }}</NuxtLink>
                 </p>
                 <span class="card-header-icon">
                   <span class="icon" v-if="'episode' === item.type"><i class="fas fa-tv"></i></span>
@@ -118,7 +118,7 @@
                     <span class="icon-text">
                       <span class="icon"><i class="fas fa-server"></i></span>
                       <span>
-                        <NuxtLink :to="'/backend/' + item.via" v-text="item.via"/>
+                        <NuxtLink :to="'/backend/' + item.via">{{ item.via }}</NuxtLink>
                       </span>
                     </span>
                   </div>
@@ -181,16 +181,16 @@ import Message from '~/components/Message.vue'
 import {NuxtLink} from '#components'
 import FloatingImage from '~/components/FloatingImage.vue'
 import {copyText, formatDuration, makeName, parse_api_response, request, TOOLTIP_DATE_FORMAT} from '~/utils'
-import type {HistoryItem} from '~/types'
+import type {GenericError, HistoryItem, JsonObject} from '~/types'
 
 const poster_enable = useStorage('poster_enable', true)
 
 const backend = ref<string>(useRoute().params.backend as string)
 const bHistory = ref<Array<HistoryItem>>([])
-const info = ref<Record<string, any>>({})
+const info = ref<JsonObject | null>(null)
 const isLoading = ref<boolean>(true)
 const isError = ref<boolean>(false)
-const error = ref<string | Error | undefined>()
+const error = ref<string | null>(null)
 
 const loadRecentHistory = async (): Promise<void> => {
   if (!backend.value) {
@@ -218,10 +218,14 @@ const loadRecentHistory = async (): Promise<void> => {
       return
     }
 
+    if (response.ok && 'error' in json) {
+      return
+    }
+
     if (response.ok && 'history' in json) {
       bHistory.value = json.history
     }
-  } catch (e) {
+  } catch {
     // Silently handle errors for this non-critical operation
   }
 }
@@ -230,9 +234,17 @@ const loadInfo = async (): Promise<void> => {
   try {
     isLoading.value = false
     const response = await request(`/backend/${backend.value}/info`)
-    const json = await parse_api_response<Record<string, any>>(response)
+    const json = await parse_api_response<JsonObject>(response)
 
     if ('backend-backend' !== useRoute().name) {
+      return
+    }
+
+    if ('error' in json) {
+      const errorJson = json as GenericError
+      isError.value = true
+      error.value = `${errorJson.error.code}: ${errorJson.error.message}`
+      backend.value = ''
       return
     }
 
@@ -240,18 +252,15 @@ const loadInfo = async (): Promise<void> => {
 
     if (200 !== response.status) {
       isError.value = true
-      if ('error' in json) {
-        error.value = `${json.error.code}: ${json.error.message}`
-      } else {
-        error.value = 'Unknown error occurred'
-      }
+      error.value = 'Unknown error occurred'
       backend.value = ''
       return
     }
     await loadRecentHistory()
     useHead({title: `Backends: ${backend.value}`})
   } catch (e) {
-    error.value = e instanceof Error ? e : new Error(String(e))
+    const message = e instanceof Error ? e.message : String(e)
+    error.value = message
     isError.value = true
   } finally {
     isLoading.value = false

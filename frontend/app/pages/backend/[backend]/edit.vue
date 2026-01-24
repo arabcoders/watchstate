@@ -137,8 +137,9 @@
                       <template v-if="'plex' === backend.type">
                         Enter the <strong>X-Plex-Token</strong>.
                         <NuxtLink target="_blank"
-                                  to="https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/"
-                                  v-text="'Visit This article'"/>
+                                  to="https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/">
+                          Visit This article
+                        </NuxtLink>
                         for more information.
                       </template>
                       <template v-else>
@@ -149,7 +150,7 @@
                 </div>
 
                 <div class="control" v-if="'plex' === backend.type">
-                  <button type="button" class="button is-warning" v-if="Object.keys(plex_oauth).length < 1"
+                  <button type="button" class="button is-warning" v-if="!plex_oauth"
                           :disabled="plex_oauth_loading" @click="generate_plex_auth_request">
                     <span class="icon-text">
                       <template v-if="plex_oauth_loading">
@@ -406,7 +407,10 @@ import type {
   BackendEditUser,
   BackendServer,
   BackendSpecOption,
-  GenericError,
+  BackendUuidResponse,
+  GenericResponse,
+  JsonObject,
+  JsonValue,
   PlexOAuthData,
   PlexOAuthTokenResponse
 } from '~/types'
@@ -441,6 +445,7 @@ const serversLoading = ref<boolean>(false)
 const isLimitedToken = computed(() => Boolean(backend.value.options?.is_limited_token))
 const api_user = useStorage('api_user', 'main')
 const optionsVersion = ref<number>(0)
+type BackendOptionMap = Record<string, JsonValue>
 
 const selectedOptionHelp = computed((): string => {
   const option = optionsList.value.find(v => selectedOption.value === v.key)
@@ -461,7 +466,7 @@ const loadContent = async (): Promise<void> => {
   supported.value = supportedData
 
   const contentResponse = await request(`/backend/${id.value}`)
-  let json = await parse_api_response<Backend>(contentResponse)
+  const json = await parse_api_response<Backend>(contentResponse)
 
   if ('error' in json) {
     notification('error', 'Error', `Failed to load backend: ${json.error.message}`)
@@ -484,10 +489,12 @@ const loadContent = async (): Promise<void> => {
 }
 
 const saveContent = async (): Promise<void> => {
-  const json_text = toRaw(backend.value)
+  const json_text = toRaw(backend.value) as Backend & {options: JsonObject}
 
-  const flat: Record<string, any> = {}
-  flatOptionPaths.value.forEach((path: string) => flat[path] = option_get(path))
+  const flat: Record<string, JsonValue> = {}
+  flatOptionPaths.value.forEach((path: string) => {
+    flat[path] = option_get(path) ?? null
+  })
 
   if (0 < Object.keys(flat).length) {
     json_text.options = flat
@@ -500,7 +507,7 @@ const saveContent = async (): Promise<void> => {
       body: JSON.stringify(json_text)
     })
 
-    const json = await parse_api_response<GenericError>(response)
+    const json = await parse_api_response<GenericResponse>(response)
     if (200 !== response.status) {
       if ('error' in json) {
         notification('error', 'Error', `Failed to save backend settings. (${json.error.code}: ${json.error.message}).`)
@@ -521,9 +528,11 @@ const saveContent = async (): Promise<void> => {
 
 const removeOption = async (key: string): Promise<void> => {
   if (newOptions.value[key]) {
-    delete newOptions.value[key]
-    // Safe delete using type assertion for dynamic options
-    delete (backend.value.options as Record<string, any>)[key]
+    const {[key]: _removed, ...rest} = newOptions.value
+    newOptions.value = rest
+    const options = backend.value.options as BackendOptionMap
+    const {[key]: _optionRemoved, ...optionsRest} = options
+    backend.value.options = optionsRest
     return
   }
 
@@ -540,7 +549,7 @@ const removeOption = async (key: string): Promise<void> => {
   const response = await request(`/backend/${id.value}/option/options.${key}`, {method: 'DELETE'})
 
   if (!response.ok) {
-    const json = await parse_api_response<GenericError>(response)
+    const json = await parse_api_response<GenericResponse>(response)
     if ('error' in json) {
       notification('error', 'Error', `Failed to remove the option. (${json.error.code}: ${json.error.message}).`)
     } else {
@@ -550,8 +559,9 @@ const removeOption = async (key: string): Promise<void> => {
   }
 
   notification('success', 'Information', `Option [${key}] removed successfully.`)
-  // Safe delete using type assertion for dynamic options
-  delete (backend.value.options as Record<string, any>)[key]
+  const options = backend.value.options as BackendOptionMap
+  const {[key]: _optionRemoved, ...optionsRest} = options
+  backend.value.options = optionsRest
 }
 
 const addOption = async (): Promise<void> => {
@@ -584,7 +594,7 @@ const getUUid = async (): Promise<void> => {
     })
   })
 
-  const json = await parse_api_response<{ identifier: string }>(response)
+  const json = await parse_api_response<BackendUuidResponse>(response)
   uuidLoading.value = false
 
   if (!response.ok) {
@@ -612,7 +622,7 @@ const getUsers = async (showAlert: boolean = true, forceReload: boolean = false)
 
   usersLoading.value = true
 
-  let data: Record<string, any> = {
+  const data: JsonObject & {options: JsonObject} = {
     token: backend.value.token,
     url: backend.value.url,
     uuid: backend.value.uuid,
@@ -622,8 +632,8 @@ const getUsers = async (showAlert: boolean = true, forceReload: boolean = false)
 
   const requiredOptions = ['ADMIN_TOKEN', 'plex_guest_user', 'PLEX_USER_PIN', 'is_limited_token']
   requiredOptions.forEach(v => {
-    const optionsRecord = backend.value.options as Record<string, any>
-    if (backend.value.options && optionsRecord[v]) {
+    const optionsRecord = backend.value.options as BackendOptionMap
+    if (backend.value.options && optionsRecord[v] !== undefined) {
       data.options[v] = optionsRecord[v]
     }
   })
@@ -722,12 +732,11 @@ watch(showOptions, async (value: boolean) => {
     return
   }
 
-  json.forEach((v: any) => {
-    if (false === v.key.startsWith('options.')) {
+  json.forEach((option: BackendSpecOption) => {
+    if (false === option.key.startsWith('options.')) {
       return
     }
-    v['key'] = v.key.replace('options.', '')
-    optionsList.value.push(v)
+    optionsList.value.push({...option, key: option.key.replace('options.', '')})
   })
 })
 
@@ -735,8 +744,10 @@ const filteredOptions = (options: Array<BackendSpecOption> | null): Array<Backen
   if (!options) {
     return []
   }
-  const optionsRecord = backend.value.options as Record<string, any>
-  return options.filter((v: BackendSpecOption) => !optionsRecord[v.key] && !newOptions.value[v.key])
+  const optionsRecord = backend.value.options as BackendOptionMap
+  return options.filter((option: BackendSpecOption) =>
+    optionsRecord[option.key] === undefined && !newOptions.value[option.key]
+  )
 }
 
 const getServers = async (): Promise<void> => {
@@ -751,7 +762,7 @@ const getServers = async (): Promise<void> => {
 
   serversLoading.value = true
 
-  let data: Record<string, any> = {
+  const data: JsonObject = {
     token: backend.value.token,
     url: window.location.origin,
   }
@@ -831,7 +842,7 @@ watch(() => backend.value.user, async () => {
   }
 })
 
-const flattenOptions = (obj: Record<string, any>, prefix: string = ''): Array<string> => {
+const flattenOptions = (obj: JsonObject, prefix: string = ''): Array<string> => {
   const out: Array<string> = []
 
   for (const [key, val] of Object.entries(obj)) {
@@ -860,24 +871,35 @@ const flattenOptions = (obj: Record<string, any>, prefix: string = ''): Array<st
 }
 
 const flatOptionPaths = computed(() => {
-  // Depend on optionsVersion to force re-evaluation
-  optionsVersion.value
-  return flattenOptions(backend.value.options)
+  if (0 <= optionsVersion.value) {
+    return flattenOptions(backend.value.options as unknown as JsonObject)
+  }
+  return []
 })
 
-const option_get = (path: string): unknown => {
-  return path.split('.').reduce((o: any, k: string) => (o == null ? undefined : o[k]), backend.value.options as Record<string, any>)
+const option_get = (path: string): JsonValue | undefined => {
+  return path.split('.').reduce((obj: JsonValue | JsonObject | undefined, key: string) => {
+    if (obj === undefined || obj === null) {
+      return undefined
+    }
+
+    if (typeof obj !== 'object' || Array.isArray(obj)) {
+      return undefined
+    }
+
+    return (obj as JsonObject)[key]
+  }, backend.value.options as unknown as JsonObject)
 }
 
-const option_set = (path: string, value: unknown): void => {
+const option_set = (path: string, value: JsonValue): void => {
   const keys = path.split('.')
   const last = keys.pop()
-  let target: Record<string, unknown> = backend.value.options as Record<string, unknown>
+  let target: JsonObject = backend.value.options as unknown as JsonObject
   for (const k of keys) {
     if (target[k] == null || typeof target[k] !== 'object' || Array.isArray(target[k])) {
       target[k] = {}
     }
-    target = target[k] as Record<string, unknown>
+    target = target[k] as JsonObject
   }
 
   if (last) {
@@ -893,7 +915,7 @@ const option_describe = (path: string): string => {
 
 onMounted(async () => await loadContent())
 
-const plex_oauth = ref<PlexOAuthData>({} as PlexOAuthData)
+const plex_oauth = ref<PlexOAuthData | null>(null)
 const plex_oauth_loading = ref<boolean>(false)
 const plex_timeout = ref<NodeJS.Timeout | null>(null)
 const plex_window = ref<Window | null>(null)
@@ -959,7 +981,7 @@ const generate_plex_auth_request = async (): Promise<void> => {
 }
 
 const plex_oauth_url = computed((): string | undefined => {
-  if (0 === Object.keys(plex_oauth.value).length) {
+  if (!plex_oauth.value) {
     return
   }
   const url = new URL('https://app.plex.tv/auth')
@@ -976,6 +998,10 @@ const plex_get_token = async (notify: boolean = true): Promise<void> => {
     return
   }
 
+  if (!plex_oauth.value) {
+    return
+  }
+
   plex_oauth_loading.value = true
 
   try {
@@ -983,9 +1009,10 @@ const plex_get_token = async (notify: boolean = true): Promise<void> => {
       clearTimeout(plex_timeout.value)
       plex_timeout.value = null
     }
+    const plexOauth = plex_oauth.value
     const response = await request('/backends/plex/check', {
       method: 'POST',
-      body: JSON.stringify({id: plex_oauth.value.id, code: plex_oauth.value.code})
+      body: JSON.stringify({id: plexOauth.id, code: plexOauth.code})
     })
 
     const json = await parse_api_response<PlexOAuthTokenResponse>(response)
@@ -1008,13 +1035,13 @@ const plex_get_token = async (notify: boolean = true): Promise<void> => {
       backend.value.token = json.authToken
       backend.value.options.ADMIN_TOKEN = json.authToken
       await nextTick()
-      plex_oauth.value = {} as PlexOAuthData
+      plex_oauth.value = null
       notification('success', 'Success', 'Successfully re-authenticated with plex.tv.')
       if (plex_window.value) {
         try {
           plex_window.value.close()
           plex_window.value = null
-        } catch (e) {
+        } catch {
           // ignore
         }
       }

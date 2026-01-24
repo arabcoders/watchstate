@@ -1,5 +1,5 @@
 <template>
-  <Message title="Important" message_class="has-background-warning-80 has-text-dark" icon="fas fa-info-circle">
+  <Message title="Important" message_class="is-warning" icon="fas fa-info-circle" :newStyle="true">
     <ul>
       <li>
         If you are adding new backend that is fresh and doesn't have your current watch state, you should turn off
@@ -110,8 +110,9 @@
                 <p class="help">
                   <template v-if="'plex' === backend.type">
                     Enter the <strong>X-Plex-Token</strong>.
-                    <NuxtLink target="_blank" to="https://support.plex.tv/articles/204059436"
-                              v-text="'Visit This link'"/>
+                    <NuxtLink target="_blank" to="https://support.plex.tv/articles/204059436">
+                      Visit This link
+                    </NuxtLink>
                     to learn how to get the token. <span class="is-bold">If you plan to add sub-users, YOU MUST use
                     admin level token.</span>
                   </template>
@@ -129,7 +130,7 @@
             </div>
 
             <div class="control" v-if="'plex' === backend.type && !backend.token">
-              <button type="button" class="button is-warning" v-if="Object.keys(plex_oauth).length < 1"
+              <button type="button" class="button is-warning" v-if="!hasPlexOauth"
                       :disabled="plex_oauth_loading" @click="generate_plex_auth_request">
                 <span class="icon-text">
                   <template v-if="plex_oauth_loading">
@@ -228,8 +229,9 @@
                     you can add it via Plex settings page. <strong>Plex > Settings > Network > Custom server access
                     URLs:</strong>. For more information
                     <NuxtLink target="_blank"
-                              to="https://support.plex.tv/articles/200430283-network/#Custom-server-access-URLs"
-                              v-text="'Visit this link'"/>
+                              to="https://support.plex.tv/articles/200430283-network/#Custom-server-access-URLs">
+                      Visit this link
+                    </NuxtLink>
                     .
                   </p>
                 </div>
@@ -422,17 +424,24 @@
 
 <script setup lang="ts">
 import '~/assets/css/bulma-switch.css'
-import {awaitElement, notification, parse_api_response, request} from '~/utils'
+import {ag, awaitElement, notification, parse_api_response, request} from '~/utils'
 import {useStorage} from '@vueuse/core'
-import {computed, nextTick, onMounted, ref, watch} from 'vue'
-import type {Backend, BackendOptions, BackendServer, BackendUser} from '~/types'
+import {computed, nextTick, onMounted, ref, toRaw, watch} from 'vue'
+import type {
+  Backend,
+  BackendAccessTokenResponse,
+  BackendOptions,
+  BackendServer,
+  BackendUser,
+  BackendUuidResponse,
+  GenericResponse,
+  JsonObject,
+  JsonValue,
+  PlexOAuthData,
+  PlexOAuthTokenResponse,
+} from '~/types'
 
-const emit = defineEmits<{
-  (e: 'addBackend', backend: Backend): void
-  (e: 'backupData', backend: Backend): void
-  (e: 'forceExport', backend: Backend): void
-  (e: 'forceImport', backend: Backend): void
-}>()
+const emit = defineEmits<(e: 'addBackend' | 'backupData' | 'forceExport' | 'forceImport', backend: Backend) => void>()
 
 const props = defineProps<{ backends: Array<Backend> }>()
 
@@ -473,9 +482,12 @@ const force_export = ref<boolean>(false)
 const force_import = ref<boolean>(false)
 
 const isLimited = ref<boolean>(false)
-const accessTokenResponse = ref<Record<string, any>>({})
+type NotificationType = 'info' | 'success' | 'warning' | 'error'
 
-const plex_oauth = ref<Record<string, any>>({})
+const accessTokenResponse = ref<BackendAccessTokenResponse | null>(null)
+
+const plex_oauth = ref<PlexOAuthData | null>(null)
+const hasPlexOauth = computed<boolean>(() => !!plex_oauth.value && 0 < Object.keys(plex_oauth.value).length)
 const plex_oauth_loading = ref<boolean>(false)
 const plex_timeout = ref<ReturnType<typeof setTimeout> | null>(null)
 const plex_window = ref<Window | null>(null)
@@ -489,8 +501,8 @@ const generate_plex_auth_request = async (): Promise<void> => {
 
   try {
     const response = await request('/backends/plex/generate', {method: 'POST'})
-    const json = await parse_api_response(response)
-    if (200 !== response.status) {
+    const json = await parse_api_response<PlexOAuthData>(response)
+    if ('error' in json) {
       n_proxy('error', 'Error', `${json.error.code}: ${json.error.message}`)
       return
     }
@@ -522,20 +534,21 @@ const generate_plex_auth_request = async (): Promise<void> => {
       console.error(e)
       n_proxy('error', 'Error', 'Failed to open popup. Please manually click the link.')
     }
-  } catch (e: any) {
-    n_proxy('error', 'Error', `Request error. ${e.message}`, e)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Request error.'
+    n_proxy('error', 'Error', `Request error. ${message}`, error)
   } finally {
     plex_oauth_loading.value = false
   }
 }
 
 const plex_oauth_url = computed<string | undefined>(() => {
-  if (Object.keys(plex_oauth.value).length < 1) {
+  if (!plex_oauth.value) {
     return
   }
   const url = new URL('https://app.plex.tv/auth')
   const params = new URLSearchParams()
-  params.set('code', plex_oauth.value['code'])
+  params.set('code', plex_oauth.value.code)
   params.set('clientID', plex_oauth.value['X-Plex-Client-Identifier'])
   params.set('context[device][product]', plex_oauth.value['X-Plex-Product'])
   url.hash = '?' + params.toString()
@@ -547,6 +560,10 @@ const plex_get_token = async (notify: boolean = true): Promise<void> => {
     return
   }
 
+  if (!plex_oauth.value) {
+    return
+  }
+
   plex_oauth_loading.value = true
 
   try {
@@ -554,17 +571,18 @@ const plex_get_token = async (notify: boolean = true): Promise<void> => {
       clearTimeout(plex_timeout.value)
       plex_timeout.value = null
     }
+    const plexOauth = plex_oauth.value
     const response = await request('/backends/plex/check', {
       method: 'POST',
       body: JSON.stringify({
-        id: plex_oauth.value.id,
-        code: plex_oauth.value.code
+        id: plexOauth.id,
+        code: plexOauth.code
       })
     })
 
-    const json = await parse_api_response(response)
+    const json = await parse_api_response<PlexOAuthTokenResponse>(response)
 
-    if (200 !== response.status) {
+    if ('error' in json) {
       n_proxy('error', 'Error', `${json.error.code}: ${json.error.message}`)
       return
     }
@@ -572,13 +590,13 @@ const plex_get_token = async (notify: boolean = true): Promise<void> => {
     if (json?.authToken) {
       backend.value.token = json.authToken
       await nextTick()
-      plex_oauth.value = {}
+      plex_oauth.value = null
       notification('success', 'Success', 'Successfully authenticated with plex.tv.')
       if (plex_window.value) {
         try {
           plex_window.value.close()
           plex_window.value = null
-        } catch (e) {
+        } catch {
           // ignore
         }
       }
@@ -589,8 +607,9 @@ const plex_get_token = async (notify: boolean = true): Promise<void> => {
       await nextTick()
       plex_timeout.value = setTimeout(() => plex_get_token(false), 3000)
     }
-  } catch (e: any) {
-    n_proxy('error', 'Error', `Request error. ${e.message}`, e)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Request error.'
+    n_proxy('error', 'Error', `Request error. ${message}`, error)
   } finally {
     plex_oauth_loading.value = false
   }
@@ -599,7 +618,7 @@ const plex_get_token = async (notify: boolean = true): Promise<void> => {
 const getUUid = async (): Promise<string | undefined> => {
   const required_values = ['type', 'token', 'url']
 
-  if (true === isLimited.value || Object.keys(accessTokenResponse.value).length > 0) {
+  if (true === isLimited.value || accessTokenResponse.value) {
     return
   }
 
@@ -611,7 +630,7 @@ const getUUid = async (): Promise<string | undefined> => {
   try {
     error.value = null
     uuidLoading.value = true
-    const data: any = {
+    const data: JsonObject = {
       name: backend.value?.name,
       token: backend.value.token,
       url: backend.value.url
@@ -621,7 +640,8 @@ const getUUid = async (): Promise<string | undefined> => {
       data.user = backend.value.user
     }
 
-    const verifyHost = ag(toRaw(backend.value), 'options.client.verify_host', true)
+    const backendRaw = toRaw(backend.value) as unknown as JsonObject
+    const verifyHost = ag<boolean>(backendRaw, 'options.client.verify_host', true)
     if (false === verifyHost) {
       data.options = {client: {verify_host: false}}
     }
@@ -631,9 +651,9 @@ const getUUid = async (): Promise<string | undefined> => {
       body: JSON.stringify(data)
     })
 
-    const json = await response.json()
+    const json = await parse_api_response<BackendUuidResponse>(response)
 
-    if (200 !== response.status) {
+    if ('error' in json) {
       n_proxy('error', 'Error', `${json.error.code}: ${json.error.message}`)
       return
     }
@@ -641,8 +661,9 @@ const getUUid = async (): Promise<string | undefined> => {
     backend.value.uuid = json.identifier
 
     return backend.value.uuid
-  } catch (e: any) {
-    n_proxy('error', 'Error', `Request error. ${e.message}`, e)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Request error.'
+    n_proxy('error', 'Error', `Request error. ${message}`, error)
   } finally {
     uuidLoading.value = false
   }
@@ -656,7 +677,7 @@ const getAccessToken = async (): Promise<boolean | undefined> => {
     return
   }
 
-  if (Object.keys(accessTokenResponse.value).length > 0) {
+  if (accessTokenResponse.value) {
     return
   }
 
@@ -669,14 +690,15 @@ const getAccessToken = async (): Promise<boolean | undefined> => {
   try {
     error.value = null
 
-    const data: any = {
+    const data: JsonObject = {
       name: backend.value?.name,
       url: backend.value.url,
       username: username,
       password: password,
     }
 
-    const verifyHost = ag(toRaw(backend.value), 'options.client.verify_host', true)
+    const backendRaw = toRaw(backend.value) as unknown as JsonObject
+    const verifyHost = ag<boolean>(backendRaw, 'options.client.verify_host', true)
     if (false === verifyHost) {
       data.options = {client: {verify_host: false}}
     }
@@ -686,26 +708,33 @@ const getAccessToken = async (): Promise<boolean | undefined> => {
       body: JSON.stringify(data)
     })
 
-    const json = await response.json()
+    const json = await parse_api_response<BackendAccessTokenResponse>(response)
 
-    if (200 !== response.status) {
+    if ('error' in json) {
       n_proxy('error', 'Error', `${json.error.code}: ${json.error.message}`)
       return
     }
 
     accessTokenResponse.value = json
-    backend.value.token = json?.accesstoken
-    backend.value.user = json?.user
-    backend.value.uuid = json?.identifier
+    if (json.accesstoken) {
+      backend.value.token = json.accesstoken
+    }
+    if (json.user) {
+      backend.value.user = json.user
+    }
+    if (json.identifier) {
+      backend.value.uuid = json.identifier
+    }
     users.value = [{
-      id: json?.user,
+      id: json.user ?? '',
       name: username
     }]
 
     isLimited.value = true
     return true
-  } catch (e: any) {
-    n_proxy('error', 'Error', `Request error. ${e.message}`, e)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Request error.'
+    n_proxy('error', 'Error', `Request error. ${message}`, error)
     return false
   }
 }
@@ -724,7 +753,7 @@ const getUsers = async (showAlert: boolean = true, forceReload: boolean = false)
     error.value = null
     usersLoading.value = true
 
-    const data: any = {
+    const data: JsonObject & {options: JsonObject} = {
       name: backend.value?.name,
       token: backend.value.token,
       url: backend.value.url,
@@ -735,11 +764,12 @@ const getUsers = async (showAlert: boolean = true, forceReload: boolean = false)
     const optionKeys: Array<keyof BackendOptions> = ['ADMIN_TOKEN', 'plex_guest_user', 'PLEX_USER_PIN', 'is_limited_token']
     optionKeys.forEach(key => {
       if (backend.value.options && backend.value.options[key] !== undefined) {
-        data.options[key] = backend.value.options[key]
+        data.options[key] = backend.value.options[key] as JsonValue
       }
     })
 
-    const verifyHost = ag(toRaw(backend.value), 'options.client.verify_host', true)
+    const backendRaw = toRaw(backend.value) as unknown as JsonObject
+    const verifyHost = ag<boolean>(backendRaw, 'options.client.verify_host', true)
     if (false === verifyHost) {
       data.options = {client: {verify_host: false}}
     }
@@ -755,9 +785,9 @@ const getUsers = async (showAlert: boolean = true, forceReload: boolean = false)
       body: JSON.stringify(data)
     })
 
-    const json = await response.json()
+    const json = await parse_api_response<Array<BackendUser>>(response)
 
-    if (200 !== response.status) {
+    if ('error' in json) {
       n_proxy('error', 'Error', `${json.error.code}: ${json.error.message}`)
       return
     }
@@ -765,15 +795,18 @@ const getUsers = async (showAlert: boolean = true, forceReload: boolean = false)
     users.value = json
 
     return users.value
-  } catch (e: any) {
-    n_proxy('error', 'Error', `Request error. ${e.message}`, e)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Request error.'
+    n_proxy('error', 'Error', `Request error. ${message}`, error)
   } finally {
     usersLoading.value = false
   }
 }
 
 onMounted(async () => {
-  supported.value = await (await request('/system/supported')).json()
+  const response = await request('/system/supported')
+  const json = await parse_api_response<Array<string>>(response)
+  supported.value = 'error' in json ? [] : json
   if (supported.value.length > 0 && supported.value[0]) {
     backend.value.type = supported.value[0]
   }
@@ -910,8 +943,8 @@ const addBackend = async (): Promise<boolean> => {
     body: JSON.stringify(backend.value)
   })
 
-  const json = await response.json()
-  if (response.status >= 400) {
+  const json = await parse_api_response<GenericResponse>(response)
+  if ('error' in json) {
     notification('error', 'Error', `Failed to Add backend. (${json.error.code}: ${json.error.message}).`)
     return false
   }
@@ -961,9 +994,9 @@ const getServers = async (): Promise<Array<BackendServer> | undefined> => {
 
     serversLoading.value = false
 
-    const json = await response.json()
+    const json = await parse_api_response<Array<BackendServer>>(response)
 
-    if (200 !== response.status) {
+    if ('error' in json) {
       n_proxy('error', 'Error', `${json.error.code}: ${json.error.message}`)
       return
     }
@@ -971,8 +1004,9 @@ const getServers = async (): Promise<Array<BackendServer> | undefined> => {
     servers.value = json
 
     return servers.value
-  } catch (e: any) {
-    n_proxy('error', 'Error', `Request error. ${e.message}`, e)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Request error.'
+    n_proxy('error', 'Error', `Request error. ${message}`, error)
   } finally {
     serversLoading.value = false
   }
@@ -985,16 +1019,16 @@ const updateIdentifier = async (): Promise<void> => {
   }
 }
 
-const n_proxy = (type: string, title: string, message: string, e: any = null): void => {
+const n_proxy = (type: NotificationType, title: string, message: string, err: unknown = null): void => {
   if ('error' === type) {
     error.value = message
   }
 
-  if (e) {
-    console.error(e)
+  if (err) {
+    console.error(err)
   }
 
-  notification(type as any, title, message)
+  notification(type, title, message)
 }
 
 const explode = (delimiter: string, string: string, limit: number | undefined = undefined): string[] => {

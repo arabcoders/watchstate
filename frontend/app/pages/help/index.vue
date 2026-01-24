@@ -19,8 +19,9 @@
       <div v-for="choice in choices" :key="choice.url" class="column is-6-tablet is-12-mobile">
         <div class="box content" style="height: 100%">
           <h3 class="title is-5">
-            <NuxtLink :to="`${choice.url}?title=${choice.title}`" class="has-text-link"
-                      v-text="`${choice.number}. ${choice.title}`" v-if="choice.url"/>
+            <NuxtLink :to="`${choice.url}?title=${choice.title}`" class="has-text-link" v-if="choice.url">
+              {{ `${choice.number}. ${choice.title}` }}
+            </NuxtLink>
             <span v-else>{{ `${choice.number}. ${choice.title}` }}</span>
           </h3>
           <hr>

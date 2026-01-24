@@ -59,7 +59,7 @@
             <p class="card-header-title is-text-overflow pr-1">
               <span class="icon"><i class="fas fa-download" :class="{ 'fa-spin': item?.isDownloading }"/>&nbsp;</span>
               <span>
-                <NuxtLink @click="downloadFile(item)" v-text="item.filename"/>
+                <NuxtLink @click="downloadFile(item)">{{ item.filename }}</NuxtLink>
               </span>
             </p>
             <span class="card-header-icon">
@@ -77,7 +77,7 @@
                     <template v-for="user in users" :key="user.user">
                       <optgroup :label="`User: ${user.user}`">
                         <option v-for="backend in user.backends" :key="`${user.user}@${backend}`"
-                                :value="`${user.user}@${backend}`" v-text="backend"/>
+                                :value="`${user.user}@${backend}`">{{ backend }}</option>
                       </optgroup>
                     </template>
                   </select>
@@ -130,13 +130,14 @@
               page and from the drop down menu select the 4th option <code>Backup this backend play state</code>, or via
               cli using <code>state:backup</code> command from the console. or by <span class="icon"><i
                 class="fas fa-terminal"/></span>
-              <NuxtLink :to="makeConsoleCommand('state:backup -s [backend] --file /config/backup/[file]')"
-                        v-text="'Web Console'"/>
+              <NuxtLink :to="makeConsoleCommand('state:backup -s [backend] --file /config/backup/[file]')">
+                Web Console
+              </NuxtLink>
               page.
             </li>
             <li>
               The restore process will take you to <span class="icon"><i class="fas fa-terminal"/></span>
-              <NuxtLink to="/console" v-text="'Web Console'"/>
+              <NuxtLink to="/console">Web Console</NuxtLink>
               and pre-fill the command for you to run.
             </li>
           </ul>
@@ -151,9 +152,10 @@ import {computed, onMounted, ref, watch} from 'vue'
 import {navigateTo, useHead, useRoute} from '#app'
 import {useStorage} from '@vueuse/core'
 import moment from 'moment'
-import {humanFileSize, makeConsoleCommand, notification, request, TOOLTIP_DATE_FORMAT} from '~/utils'
+import {humanFileSize, makeConsoleCommand, notification, parse_api_response, request, TOOLTIP_DATE_FORMAT} from '~/utils'
+import {useDialog} from '~/composables/useDialog'
 import Message from '~/components/Message.vue'
-import type {BackupItem, UILoadingState, UserBackends} from '~/types'
+import type {BackupItem, GenericResponse, UILoadingState, UserBackends} from '~/types'
 
 type BackItemWithUI = BackupItem & UILoadingState & {
   /** Currently selected restore target in format 'user@backend' */
@@ -173,6 +175,14 @@ const show_page_tips = useStorage('show_page_tips', true)
 const users = ref<Array<UserBackends>>([])
 const query = ref<string>(route.query.filter as string ?? '')
 const toggleFilter = ref<boolean>(false)
+
+type FilePickerOptions = {
+  suggestedName?: string
+}
+
+type FilePickerHandle = {
+  createWritable: () => Promise<WritableStream>
+}
 
 watch(toggleFilter, (): void => {
   if (!toggleFilter.value) {
@@ -195,8 +205,8 @@ const loadContent = async (): Promise<void> => {
 
   try {
     const response = await request('/system/backup')
-    const json = await parse_api_response<Array<BackItemWithUI>>(response)
-    if ("error" in json) {
+    const json = await parse_api_response<Array<BackupItem>>(response)
+    if ('error' in json) {
       notification('error', 'Error', `API error. ${json.error.code}: ${json.error.message}`)
       return
     }
@@ -208,8 +218,9 @@ const loadContent = async (): Promise<void> => {
     }
 
     queued.value = await isQueued()
-  } catch (e) {
-    notification('error', 'Error', (e as Error).message)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unexpected error'
+    notification('error', 'Error', message)
   } finally {
     isLoading.value = false
   }
@@ -223,14 +234,24 @@ const downloadFile = async (item: BackItemWithUI): Promise<void> => {
   item.isDownloading = true
 
   const response = request(`/system/backup/${filename}`)
+  const pickerWindow = window as Window & {
+    showSaveFilePicker?: (options: FilePickerOptions) => Promise<FilePickerHandle>
+  }
+  const showSaveFilePicker = pickerWindow.showSaveFilePicker
 
-  if ('showSaveFilePicker' in window) {
+  if (showSaveFilePicker) {
     response.then(async (res): Promise<void> => {
       item.isDownloading = false
 
-      return res.body?.pipeTo(await (await (window as any).showSaveFilePicker({
-        suggestedName: `${filename}`
-      })).createWritable())
+      if (!res.body) {
+        notification('error', 'Error', 'No data returned from backup download request.')
+        return
+      }
+
+      const handle = await showSaveFilePicker({
+        suggestedName: `${filename}`,
+      })
+      await res.body.pipeTo(await handle.createWritable())
     })
   } else {
     response.then((res): Promise<Blob> => res.blob()).then((blob): void => {
@@ -248,7 +269,12 @@ const queueTask = async (): Promise<void> => {
   const is_queued: boolean = await isQueued()
   const message: string = is_queued ? 'Remove backup task from queue?' : 'Queue backup task to run in background?'
 
-  if (!confirm(message)) {
+  const {status} = await useDialog().confirmDialog({
+    title: 'Confirm',
+    message,
+  })
+
+  if (true !== status) {
     return
   }
 
@@ -258,13 +284,20 @@ const queueTask = async (): Promise<void> => {
       notification('success', 'Success', `Task backup has been ${is_queued ? 'removed from the queue' : 'queued'}.`)
       queued.value = !is_queued
     }
-  } catch (e) {
-    notification('error', 'Error', `Request error. ${(e as Error).message}`)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unexpected error'
+    notification('error', 'Error', `Request error. ${message}`)
   }
 }
 
 const deleteFile = async (item: BackupItem): Promise<void> => {
-  if (!confirm(`Delete backup file '${item.filename}'?`)) {
+  const {status} = await useDialog().confirmDialog({
+    title: 'Delete backup',
+    message: `Delete backup file '${item.filename}'?`,
+    confirmColor: 'is-danger',
+  })
+
+  if (true !== status) {
     return
   }
 
@@ -277,30 +310,37 @@ const deleteFile = async (item: BackupItem): Promise<void> => {
       return
     }
 
-    let json: any
+    const json = await parse_api_response<GenericResponse>(response)
 
-    try {
-      json = await response.json()
-    } catch (e) {
-      json = {error: {code: response.status, message: response.statusText}}
+    if ('error' in json) {
+      notification('error', 'Error', `API error. ${json.error.code}: ${json.error.message}`)
+      return
     }
 
-    notification('error', 'Error', `API error. ${json.error.code}: ${json.error.message}`)
-  } catch (e) {
-    notification('error', 'Error', `Request error. ${(e as Error).message}`)
+    notification('error', 'Error', `API error. ${response.statusText}`)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unexpected error'
+    notification('error', 'Error', `Request error. ${message}`)
   }
 }
 
 const isQueued = async (): Promise<boolean> => {
   const response = await request('/tasks/backup')
-  const json: { queued: boolean } = await response.json()
+  const json = await parse_api_response<{queued: boolean}>(response)
+  if ('error' in json) {
+    return false
+  }
   return Boolean(json.queued)
 }
 
 onMounted(async (): Promise<void> => {
   const response = await request('/system/users')
-  const usersData: { users: Array<UserBackends> } = await response.json()
-  users.value = usersData.users
+  const usersData = await parse_api_response<{users: Array<UserBackends>}>(response)
+  if ('error' in usersData) {
+    notification('error', 'Error', `Failed to load users. ${usersData.error.message}`)
+  } else {
+    users.value = usersData.users
+  }
   await loadContent()
 })
 
@@ -310,7 +350,13 @@ const generateCommand = async (item: BackItemWithUI): Promise<void> => {
   const backend: string = selected[1] || ''
   const file: string = item.filename
 
-  if (false === confirm(`Are you sure you want to restore '${user}@${backend}' using '${file}'?`)) {
+  const {status} = await useDialog().confirmDialog({
+    title: 'Confirm restore',
+    message: `Are you sure you want to restore '${user}@${backend}' using '${file}'?`,
+    confirmColor: 'is-danger',
+  })
+
+  if (true !== status) {
     return
   }
 

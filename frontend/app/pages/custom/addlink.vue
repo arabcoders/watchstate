@@ -152,10 +152,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useHead, navigateTo } from '#app'
-import { request, notification, parse_api_response, ucFirst } from '~/utils'
-import type { GuidProvider, CustomGUID, CustomLink } from '~/types'
+import {ref, computed, onMounted} from 'vue'
+import {useHead, navigateTo} from '#app'
+import {request, notification, parse_api_response, ucFirst} from '~/utils'
+import type {CustomGUID, CustomLink, GenericError, GenericResponse, GuidProvider} from '~/types'
 import '~/assets/css/bulma-switch.css'
 
 
@@ -166,7 +166,6 @@ type CustomLinkForm = {
   options: {
     /** Whether this is a Plex legacy agent */
     legacy: boolean
-    [key: string]: any
   }
   /** GUID mapping */
   map: {
@@ -297,18 +296,19 @@ const addNewLink = async (): Promise<void> => {
       body: JSON.stringify(formData)
     })
 
-    const json = await parse_api_response(response)
+    const json = await parse_api_response<GenericResponse>(response)
 
     if ('error' in json) {
-      notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
+      const errorJson = json as GenericError
+      notification('error', 'Error', `${errorJson.error.code}: ${errorJson.error.message}`, 5000)
       return
     }
 
     notification('success', 'Success', 'Successfully added new client link.', 5000)
     await navigateTo('/custom')
-  } catch (e) {
-    const error = e as Error
-    notification('error', 'Error', `Request error. ${error.message}`, 5000)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unexpected error'
+    notification('error', 'Error', `Request error. ${message}`, 5000)
   } finally {
     isSaving.value = false
   }

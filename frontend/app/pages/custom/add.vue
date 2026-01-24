@@ -75,7 +75,7 @@
               <span>
                 A Valid regular expression to check the value GUID value. To test your patterns, you can use this
                 website
-                <NuxtLink target="_blank" to="https://regex101.com/#php73" v-text="'regex101.com'" />
+                <NuxtLink target="_blank" to="https://regex101.com/#php73">regex101.com</NuxtLink>
                 .
               </span>
             </p>
@@ -97,7 +97,7 @@
           <div class="field">
             <label class="label is-unselectable">
               Correct values.
-              <NuxtLink class="has-text-primary" @click="form.validator.tests.valid.push('')" v-text="'Add'" />
+              <NuxtLink class="has-text-primary" @click="form.validator.tests.valid.push('')">Add</NuxtLink>
             </label>
             <div class="columns is-multiline">
               <template v-for="(_, index) in form.validator.tests.valid" :key="`valid-${index}`">
@@ -129,7 +129,7 @@
           <div class="field">
             <label class="label is-unselectable">
               Incorrect values.
-              <NuxtLink class="has-text-danger" @click="form.validator.tests.invalid.push('')" v-text="'Add'" />
+              <NuxtLink class="has-text-danger" @click="form.validator.tests.invalid.push('')">Add</NuxtLink>
             </label>
             <div class="columns is-multiline">
               <template v-for="(_, index) in form.validator.tests.invalid" :key="`valid-${index}`">
@@ -181,10 +181,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useHead, navigateTo } from '#app'
-import { request, notification, stringToRegex, parse_api_response } from '~/utils'
-import type { GuidProvider } from '~/types'
+import {ref, computed, onMounted} from 'vue'
+import {useHead, navigateTo} from '#app'
+import {request, notification, stringToRegex, parse_api_response} from '~/utils'
+import type {GenericError, GenericResponse, GuidProvider} from '~/types'
 import '~/assets/css/bulma-switch.css'
 
 useHead({ title: 'Add Custom GUID' })
@@ -315,7 +315,7 @@ const addNewGuid = async (): Promise<void> => {
       }
     }
 
-  } catch (e) {
+  } catch {
     notification('error', 'Error', 'Invalid regex pattern.', 5000)
     return
   }
@@ -328,20 +328,24 @@ const addNewGuid = async (): Promise<void> => {
       body: JSON.stringify(data)
     })
 
-    const json = await parse_api_response(response)
+    const json = await parse_api_response<GenericResponse>(response)
+
+    if ('error' in json) {
+      const errorJson = json as GenericError
+      notification('error', 'Error', `${errorJson.error.code}: ${errorJson.error.message}`, 5000)
+      return
+    }
 
     if (!response.ok) {
-      if ('error' in json) {
-        notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
-      }
+      notification('error', 'Error', `Request failed (${response.status})`, 5000)
       return
     }
 
     notification('success', 'Success', 'Successfully added new GUID.', 5000)
     await navigateTo('/custom')
-  } catch (e) {
-    const error = e as Error
-    notification('error', 'Error', `Request error. ${error.message}`, 5000)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unexpected error'
+    notification('error', 'Error', `Request error. ${message}`, 5000)
   } finally {
     isSaving.value = false
   }

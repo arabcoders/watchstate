@@ -12,6 +12,7 @@
         "lint": "eslint .",
         "lint:ci": "eslint . --quiet",
         "lint:fix": "eslint . --fix",
+        "lint:tsc": "vue-tsc --noEmit",
         "test": "vitest run",
         "test:watch": "vitest",
         "test:ci": "vitest run --silent --reporter=dot"

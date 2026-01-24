@@ -3,9 +3,9 @@
     <div class="columns is-multiline">
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4">
-          <NuxtLink to="/backends" v-text="'Backends'" />
+          <NuxtLink to="/backends">Backends</NuxtLink>
           -
-          <NuxtLink :to="'/backend/' + backend" v-text="backend" />
+          <NuxtLink :to="'/backend/' + backend">{{ backend }}</NuxtLink>
           : Search
         </span>
         <div class="is-pulled-right">
@@ -109,7 +109,7 @@
             <div class="card" :class="{ 'is-success': item.watched }">
               <header class="card-header">
                 <p class="card-header-title is-text-overflow">
-                  <NuxtLink :to="item.webUrl" v-text="makeName(item)" target="_blank" />
+                  <NuxtLink :to="item.webUrl" target="_blank">{{ makeName(item) }}</NuxtLink>
                 </p>
                 <span class="card-header-icon" @click="item.showItem = !item.showItem">
                   <span class="icon">
@@ -125,7 +125,7 @@
                       @click="(e: Event) => (e.target as HTMLElement)?.classList?.toggle('is-text-overflow')">
                       <div class="is-text-overflow">
                         <span class="icon"><i class="fas fa-heading"></i>&nbsp;</span>
-                        <NuxtLink :to="makeSearchLink('title', item.title)" v-text="item.title" />
+                        <NuxtLink :to="makeSearchLink('title', item.title)">{{ item.title }}</NuxtLink>
                       </div>
                     </div>
                   </div>
@@ -133,7 +133,7 @@
                     @click="(e: Event) => (e.target as HTMLElement)?.firstElementChild?.classList?.toggle('is-text-overflow')">
                     <div class="is-text-overflow">
                       <span class="icon"><i class="fas fa-file"></i></span>
-                      <NuxtLink :to="makeSearchLink('path', item.content_path)" v-text="item.content_path" />
+                      <NuxtLink :to="makeSearchLink('path', item.content_path)">{{ item.content_path }}</NuxtLink>
                     </div>
                   </div>
                 </div>

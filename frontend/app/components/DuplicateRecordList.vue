@@ -43,7 +43,7 @@
         </div>
         <p class="is-size-7 mb-0">
           <NuxtLink :to="`/history/${record.id}`">
-            {{ record.full_title || makeName(record) }}
+            {{ record.full_title || makeName(record as unknown as JsonObject) }}
           </NuxtLink>
         </p>
         <hr v-if="index < records.length - 1" class="my-2" />
@@ -54,12 +54,12 @@
 
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import {ref} from 'vue'
 import moment from 'moment'
-import { NuxtLink } from '#components'
-import { makeName, parse_api_response, request } from '~/utils'
+import {NuxtLink} from '#components'
+import {makeName, parse_api_response, request} from '~/utils'
 import { useSessionCache } from '~/utils/cache'
-import type { HistoryItem } from '~/types'
+import type {HistoryItem, JsonObject} from '~/types'
 
 const props = defineProps<{ ids: Array<number> }>()
 
