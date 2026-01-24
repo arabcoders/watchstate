@@ -1,8 +1,22 @@
 [
     {
-        "tag": "master-20260123-f1481304",
-        "date": "2026-01-23T10:05:16+00:00",
+        "tag": "master-20260124-ba0f563e",
+        "date": "2026-01-24T20:41:55+00:00",
         "commits": [
+            {
+                "sha": "2e953633",
+                "message": "refactor: migrate frontend to use more typescript",
+                "author": "arabcoders",
+                "date": "2026-01-24T20:25:22+00:00",
+                "full_sha": "2e953633897370bddcb6b82300c7c68c2bfff50a"
+            },
+            {
+                "sha": "4a03746e",
+                "message": "feat: auto log reload",
+                "author": "arabcoders",
+                "date": "2026-01-24T14:36:21+00:00",
+                "full_sha": "4a03746ec6ac6415a195c287f2692b9c80a82390"
+            },
             {
                 "sha": "c45f611b",
                 "message": "Fix: Apply unmark logic in handle untainted entity path. Closes #770",
@@ -893,7 +907,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "f148130489ce1baf68020d84d200d3ffd0189d2a"
+        "full_sha": "ba0f563e341fc2202f5366f9ba8dd890bdd3424c"
     },
     {
         "tag": "master-20250614-e3307c58",

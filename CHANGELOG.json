@@ -1,9 +1,23 @@
 [
   {
-    "tag": "Unreleased (f1481304)",
-    "full_sha": "f148130489ce1baf68020d84d200d3ffd0189d2a",
-    "date": "2026-01-23T10:05:16+00:00",
+    "tag": "Unreleased (ba0f563e)",
+    "full_sha": "ba0f563e341fc2202f5366f9ba8dd890bdd3424c",
+    "date": "2026-01-24T20:41:55+00:00",
     "commits": [
+      {
+        "sha": "2e953633",
+        "full_sha": "2e953633897370bddcb6b82300c7c68c2bfff50a",
+        "message": "refactor: migrate frontend to use more typescript",
+        "author": "arabcoders",
+        "date": "2026-01-24T20:25:22+00:00"
+      },
+      {
+        "sha": "4a03746e",
+        "full_sha": "4a03746ec6ac6415a195c287f2692b9c80a82390",
+        "message": "feat: auto log reload",
+        "author": "arabcoders",
+        "date": "2026-01-24T14:36:21+00:00"
+      },
       {
         "sha": "c45f611b",
         "full_sha": "c45f611bccbeb487060ac1cf9909cd384e89d8db",
