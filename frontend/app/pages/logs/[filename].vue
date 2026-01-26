@@ -36,14 +36,14 @@
             </p>
 
             <p class="control">
-              <button class="button is-purple is-light" v-tooltip.bottom="'Download file.'" @click="downloadFile"
+              <button class="button is-success" v-tooltip.bottom="'Download file.'" @click="downloadFile"
                 :class="{ 'is-loading': isDownloading }">
                 <span class="icon"><i class="fas fa-download" /></span>
               </button>
             </p>
 
             <p class="control">
-              <button class="button is-warning" @click="wrapLines = !wrapLines" v-tooltip.bottom="'Toggle wrap line'">
+              <button class="button is-purple" @click="wrapLines = !wrapLines" v-tooltip.bottom="'Toggle wrap line'">
                 <span class="icon"><i class="fas fa-text-width" /></span>
               </button>
             </p>

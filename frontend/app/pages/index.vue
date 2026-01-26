@@ -6,25 +6,6 @@
           <span class="icon"><i class="fas fa-history"></i>&nbsp;</span>
           <NuxtLink to="/history">Latest History</NuxtLink>
         </span>
-        <div class="is-pulled-right">
-          <div class="field is-grouped">
-            <p class="control">
-              <button class="button" @click="toggleLogsAutoReload()"
-                :class="autoReloadLogs ? 'is-success' : 'is-warning'"
-                v-tooltip.bottom="autoReloadLogs ? 'Disable auto reload' : 'Enable auto reload'">
-                <span class="icon">
-                  <i class="fas" :class="autoReloadLogs ? 'fa-pause' : 'fa-play'" />
-                </span>
-              </button>
-            </p>
-            <p class="control">
-              <button class="button is-info" @click="reloadLogs()" :disabled="reloadingLogs"
-                :class="{ 'is-loading': reloadingLogs }" v-tooltip.bottom="'Fetch latest log entries.'">
-                <span class="icon"><i class="fas fa-sync" /></span>
-              </button>
-            </p>
-          </div>
-        </div>
       </div>
 
       <div class="column is-12">
@@ -80,7 +61,7 @@
                         v-tooltip="`Also reported by: ${Object.keys(item.metadata).filter(i => i !== item.via).join(', ')}.`">
                         (<span class="has-tooltip">+{{
                           Object.keys(item.metadata).length - 1
-                        }}</span>)
+                          }}</span>)
                       </span>
                     </div>
                   </div>
@@ -123,10 +104,36 @@
               'fa-spin': reloadingLogs
             }" /></span>
           <NuxtLink :to="`/logs/${log.filename}`">
-            Latest {{ log.type }} logs
+            {{ ucFirst(log.type) }} Logs
           </NuxtLink>
+          <div class="is-pulled-right">
+            <div class="field is-grouped">
+              <p class="control">
+                <button class="button" @click="toggleLogsAutoReload()"
+                  :class="autoReloadLogs ? 'is-success' : 'is-warning'"
+                  v-tooltip.bottom="autoReloadLogs ? 'Disable auto reload' : 'Enable auto reload'">
+                  <span class="icon">
+                    <i class="fas" :class="autoReloadLogs ? 'fa-pause' : 'fa-play'" />
+                  </span>
+                </button>
+              </p>
+              <p class="control">
+                <button class="button is-purple" @click="wrapLines = !wrapLines" v-tooltip.bottom="'Toggle wrap line'">
+                  <span class="icon"><i class="fas fa-text-width" /></span>
+                </button>
+              </p>
+
+              <p class="control">
+                <button class="button is-info" @click="reloadLogs()" :disabled="reloadingLogs"
+                  :class="{ 'is-loading': reloadingLogs }" v-tooltip.bottom="'Fetch latest log entries.'">
+                  <span class="icon"><i class="fas fa-sync" /></span>
+                </button>
+              </p>
+            </div>
+          </div>
         </h1>
-        <code class="box logs-container is-terminal is-pre-wrap" style="border-radius: 0 !important;">
+        <code class="box logs-container is-terminal" style="border-radius: 0 !important;"
+          :class="{ 'is-pre-wrap': wrapLines, 'is-pre': !wrapLines }">
     <span class="is-block" v-for="(item, index) in log.lines" :key="log.filename + '-' + index">
       <template v-if="item?.date">[<span class="has-tooltip"
                                                v-tooltip="`${moment(item.date).format(TOOLTIP_DATE_FORMAT)}`">
@@ -185,7 +192,6 @@
 .logs-container {
   max-height: 20vh;
   overflow-y: auto;
-  white-space: pre-wrap;
 }
 </style>
 
@@ -198,7 +204,7 @@ import moment from 'moment'
 import Message from '~/components/Message.vue'
 import FloatingImage from '~/components/FloatingImage.vue'
 import { formatDuration, goto_history_item, makeName, parse_api_response, request, TOOLTIP_DATE_FORMAT } from '~/utils'
-import type {HistoryItem, JsonObject} from '~/types'
+import type { HistoryItem, JsonObject } from '~/types'
 import Popover from '~/components/Popover.vue'
 import DuplicateRecordList from '~/components/DuplicateRecordList.vue'
 
@@ -232,12 +238,14 @@ type IndexLogFile = {
 
 useHead({ title: 'Index' })
 
+const poster_enable = useStorage('poster_enable', true)
+const autoReloadLogs = useStorage<boolean>('auto_reload_logs', true)
+const wrapLines = useStorage('logs_wrap_lines', false)
+
 const lastHistory = ref<Array<HistoryItem>>([])
 const logs = ref<Array<IndexLogFile>>([])
 const reloadingLogs = ref<boolean>(false)
-const poster_enable = useStorage('poster_enable', true)
 const historyLoading = ref<boolean>(true)
-const autoReloadLogs = useStorage<boolean>('auto_reload_logs', true)
 const logReloadInterval = ref<ReturnType<typeof setInterval> | null>(null)
 const logReloadFrequency = 10000
 
@@ -272,7 +280,7 @@ const loadContent = async (): Promise<void> => {
       try {
         const response = await request(`/history/${item.id}/duplicates`)
         if (response.ok) {
-          const historyResponse = await parse_api_response<{duplicate_reference_ids: Array<number>}>(response)
+          const historyResponse = await parse_api_response<{ duplicate_reference_ids: Array<number> }>(response)
 
           if ('error' in historyResponse || 'index' !== useRoute().name) {
             continue
