@@ -1,5 +1,40 @@
 [
   {
+    "tag": "Unreleased (f2e2ea25)",
+    "full_sha": "f2e2ea25f58c4e93a73af4950b063974a87284b2",
+    "date": "2026-01-29T15:48:49+00:00",
+    "commits": [
+      {
+        "sha": "c0cca399",
+        "full_sha": "c0cca3990dd2be6ad1c3854c451a6495ed2078ac",
+        "message": "fix: update links to the generic webhook URL section in documentation",
+        "author": "arabcoders",
+        "date": "2026-01-29T15:47:16+00:00"
+      },
+      {
+        "sha": "be3d83ae",
+        "full_sha": "be3d83ae230d5bf9e9db0d3c08c5b6dad7582088",
+        "message": "refactor: remove debug log",
+        "author": "arabcoders",
+        "date": "2026-01-29T15:41:19+00:00"
+      },
+      {
+        "sha": "f2cbf05c",
+        "full_sha": "f2cbf05c38c7986faa57fd129bb4967cfe03d73e",
+        "message": "fix: workaround for jellyfin API. Closes #774",
+        "author": "arabcoders",
+        "date": "2026-01-29T15:38:11+00:00"
+      },
+      {
+        "sha": "ddba4182",
+        "full_sha": "ddba41826ea70fb6af9e6c700e4b4e609fecc1f3",
+        "message": "refactor: add inline buttons for index logs",
+        "author": "arabcoders",
+        "date": "2026-01-26T15:21:12+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v1.0.6",
     "full_sha": "ba0f563e341fc2202f5366f9ba8dd890bdd3424c",
     "date": "2026-01-24T20:41:55+00:00",

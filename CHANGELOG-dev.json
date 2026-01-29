@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260129-be3d83ae",
-        "date": "2026-01-29T15:41:19+00:00",
+        "tag": "dev-20260129-c0cca399",
+        "date": "2026-01-29T15:47:16+00:00",
         "commits": [
+            {
+                "sha": "c0cca399",
+                "message": "fix: update links to the generic webhook URL section in documentation",
+                "author": "arabcoders",
+                "date": "2026-01-29T15:47:16+00:00",
+                "full_sha": "c0cca3990dd2be6ad1c3854c451a6495ed2078ac"
+            },
             {
                 "sha": "be3d83ae",
                 "message": "refactor: remove debug log",
@@ -963,7 +970,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "be3d83ae230d5bf9e9db0d3c08c5b6dad7582088"
+        "full_sha": "c0cca3990dd2be6ad1c3854c451a6495ed2078ac"
     },
     {
         "tag": "dev-20250604-9407bc76",
