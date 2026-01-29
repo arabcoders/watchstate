@@ -662,7 +662,7 @@ class DirectMapper implements ImportInterface
             }
 
             $this->logger->notice(
-                "{mapper}: [O] '{user}@{backend}' item '#{id}: {title}' date '{remote_date}' is older than last sync date '{local_date}'. Marking the item as tainted and re-processing. {trace}",
+                "{mapper}: [O] '{user}@{backend}' item '#{id}: {title}' date '{remote_date}' is older than last sync date '{local_date}'. Marking the item as tainted and re-processing.",
                 [
                     'user' => $this->userContext?->name ?? 'main',
                     'mapper' => afterLast(self::class, '\\'),
@@ -673,10 +673,6 @@ class DirectMapper implements ImportInterface
                     'state' => $entity->isWatched() ? 'played' : 'unplayed',
                     'local_state' => $local->isWatched() ? 'played' : 'unplayed',
                     'title' => $entity->getName(),
-                    'trace' => true === $this->inTraceMode() ? arrayToJson([
-                        'database' => $local->getAll(),
-                        'backend' => $entity->getAll(),
-                    ]) : '',
                 ]
             );
 
