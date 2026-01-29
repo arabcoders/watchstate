@@ -49,7 +49,7 @@ https://your_ws_url/v1/api/webhook?apikey=[api_key_you_got_from_terminal]
     - Whatever you want, we recommend **WatchState Global Webhook**.
 
 3. **Webhook/Notifications URL**:
-    - see [The generic webhook URL](#the-generic-webhook-url) section.
+    - see [The generic webhook URL](#webhook-url) section.
 
 4. **Request Content Type (Emby v4.9+)**:
     - Select `application/json`.
@@ -82,7 +82,7 @@ Click *Add Webhook / Save*.
     - Whatever you want, we recommend **WatchState Global Webhook**.
 
 4. **Webhook URL**:
-    - see [The generic webhook URL](#the-generic-webhook-url) section.
+    - see [The generic webhook URL](#webhook-url) section.
 
 5. **Notification Type**:
     - Item Added
@@ -116,7 +116,7 @@ Click *Save*.
 1. Go to your Plex Web UI and navigate to *Settings > Your Account > Webhooks*. Click *Add Webhook*.
 
 2. **Webhook URL**:
-    - see [The generic webhook URL](#the-generic-webhook-url) section.
+    - see [The generic webhook URL](#webhook-url) section.
 
 Click *Save Changes*.
 
@@ -125,7 +125,7 @@ Click *Save Changes*.
 1. Go to *Options > Notification Agents* and click *Add a new notification agent > Webhook*.
 
 2. **Webhook URL**:
-    - see [The generic webhook URL](#the-generic-webhook-url) section.
+    - see [The generic webhook URL](#webhook-url) section.
 
 3. **Webhook Method**:
     - Select `PUT`.
