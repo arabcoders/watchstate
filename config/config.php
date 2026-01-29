@@ -236,6 +236,14 @@ return (function () {
         strtolower(JellyfinClient::CLIENT_NAME) => JellyfinClient::class,
     ];
 
+    $config['clients'] = [
+        strtolower(PlexClient::CLIENT_NAME) => [],
+        strtolower(EmbyClient::CLIENT_NAME) => [],
+        strtolower(JellyfinClient::CLIENT_NAME) => [
+            'disable_fix_played' => (bool)env('WS_CLIENTS_JELLYFIN_DISABLE_FIX_PLAYED', false),
+        ],
+    ];
+
     $config['servers'] = [];
     $config['console'] = [
         'enable' => [

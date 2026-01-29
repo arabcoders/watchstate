@@ -85,9 +85,7 @@ class DirectMapper implements ImportInterface
      * @param iDB $db The database instance.
      * @param iCache $cache The cache instance.
      */
-    public function __construct(protected iLogger $logger, protected iDB $db, protected iCache $cache)
-    {
-    }
+    public function __construct(protected iLogger $logger, protected iDB $db, protected iCache $cache) {}
 
     /**
      * @inheritdoc
@@ -289,7 +287,7 @@ class DirectMapper implements ImportInterface
                     $onProgressUpdate($entity);
                 }
             }
-        } catch (PDOException|Throwable $e) {
+        } catch (PDOException | Throwable $e) {
             $this->actions[$entity->type]['failed']++;
             Message::increment("{$entity->via}.{$entity->type}.failed");
             $this->logger->error(
@@ -634,8 +632,37 @@ class DirectMapper implements ImportInterface
 
         $hasAfter = null !== ($opts[Options::AFTER] ?? null) && true === ($opts[Options::AFTER] instanceof iDate);
         if ($entity->isWatched() !== $local->isWatched() && $hasAfter) {
+            /**
+             * Jellyfin has this weird bug where it mark item as played without updating the
+             * Last played date. Which cause issues for our prefered way of handling state update.
+             * This workaround shall be preserved until jellyfin devs fix the API.
+             * For reference check {@see App\Backends\Jellyfin\JellyfinClient::createEntity}
+             */
+            $disable = Config::get('clients.jellyfin.disable_fix_played', false);
+            if (false === $disable && $entity->isWatched() && true === ($entity->getContext('should_mark', false))) {
+                $this->logger->notice(
+                    "{mapper}: [O] '{user}@{backend}' item '#{id}: {title}' date '{remote_date}' is older than last sync date '{local_date}'. Due to bug in jellyfin API a special case handling is applied to mark the item as played.",
+                    [
+                        'user' => $this->userContext?->name ?? 'main',
+                        'mapper' => afterLast(self::class, '\\'),
+                        'id' => $cloned->id ?? 'New',
+                        'backend' => $entity->via,
+                        'remote_date' => makeDate($entity->updated),
+                        'local_date' => makeDate($opts[Options::AFTER]),
+                        'state' => $entity->isWatched() ? 'played' : 'unplayed',
+                        'local_state' => $local->isWatched() ? 'played' : 'unplayed',
+                        'title' => $entity->getName(),
+                    ]
+                );
+                $entity->updated = $opts[Options::AFTER]->getTimestamp() + 1;
+                $entity = $entity->setMeta(iState::COLUMN_META_DATA_PLAYED_AT, $entity->updated);
+                $entity->removeContext('should_mark');
+                $entity->updateOriginal();
+                return $this->add($entity, $opts);
+            }
+
             $this->logger->notice(
-                "{mapper}: [O] '{user}@{backend}' item '#{id}: {title}' date '{remote_date}' is older than last sync date '{local_date}'. Marking the item as tainted and re-processing.",
+                "{mapper}: [O] '{user}@{backend}' item '#{id}: {title}' date '{remote_date}' is older than last sync date '{local_date}'. Marking the item as tainted and re-processing. {trace}",
                 [
                     'user' => $this->userContext?->name ?? 'main',
                     'mapper' => afterLast(self::class, '\\'),
@@ -646,6 +673,10 @@ class DirectMapper implements ImportInterface
                     'state' => $entity->isWatched() ? 'played' : 'unplayed',
                     'local_state' => $local->isWatched() ? 'played' : 'unplayed',
                     'title' => $entity->getName(),
+                    'trace' => true === $this->inTraceMode() ? arrayToJson([
+                        'database' => $local->getAll(),
+                        'backend' => $entity->getAll(),
+                    ]) : '',
                 ]
             );
 
@@ -672,7 +703,7 @@ class DirectMapper implements ImportInterface
         ];
 
         if (true === $this->inTraceMode()) {
-            $this->logger->info($msg);
+            $this->logger->info($msg, $context);
         } elseif (null !== $writer) {
             $writer(Level::Info, $msg, $context);
         }

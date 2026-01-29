@@ -319,6 +319,19 @@ interface StateInterface extends LoggerAwareInterface
     public function setMetadata(array $metadata): StateInterface;
 
     /**
+     * Set meta data key/value related to a specific backend.
+     *
+     * @param string $key key
+     * @param mixed $value value
+     * @param string|null $via if via is omitted, the metadata will be set for the current {@see StateInterface::COLUMN_VIA} backend.
+     *
+     * @return StateInterface Return the updated entity.
+     *
+     * @throws \RuntimeException if no via is set.
+     */
+    public function setMeta(string $key, mixed $value, string|null $via = null): StateInterface;
+
+    /**
      * Get extra.
      *
      * @param string|null $via if via is omitted, the entire "extra" will be returned.
@@ -410,6 +423,15 @@ interface StateInterface extends LoggerAwareInterface
     public function setContext(string $key, mixed $value): StateInterface;
 
     /**
+     * Remove entity contextual data.
+     *
+     * @param string|null $key the key to remove, if null, all context will be removed.
+     *
+     * @return StateInterface Returns the current object.
+     */
+    public function removeContext(string|null $key = null): StateInterface;
+
+    /**
      * Get entity contextual data.
      *
      * @param string|null $key the key to get, if both key and default are null, the entire context is returned.
@@ -448,5 +470,4 @@ interface StateInterface extends LoggerAwareInterface
      * @return array{string: bool|null} Return true if the entity is synced with the backend. or false if not, or null if the backend has no metadata.
      */
     public function isSynced(array $backends): array;
-
 }

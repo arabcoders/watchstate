@@ -342,10 +342,10 @@ return (function () {
 
                 try {
                     return $prefix . password_hash(
-                            $value,
-                            Config::get('password.algo'),
-                            Config::get('password.options', [])
-                        );
+                        $value,
+                        Config::get('password.algo'),
+                        Config::get('password.options', [])
+                    );
                 } catch (ValueError $e) {
                     throw new ValidationException('Invalid password. Password hashing failed.', $e->getCode(), $e);
                 }
@@ -404,6 +404,12 @@ return (function () {
 
                 return (string)$value;
             },
+        ],
+        [
+            'key' => 'WS_CLIENTS_JELLYFIN_DISABLE_FIX_PLAYED',
+            'config' => 'clients.jellyfin.disable_fix_played',
+            'description' => 'Disable the Jellyfin "fix" for marking items as played.',
+            'type' => 'bool',
         ],
     ];
 
