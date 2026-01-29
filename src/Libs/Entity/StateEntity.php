@@ -213,7 +213,9 @@ final class StateEntity implements iState
         $season = str_pad((string)ag($this->data, iState::COLUMN_SEASON, $this->season ?? 0), 2, '0', STR_PAD_LEFT);
         $episode = str_pad((string)ag($this->data, iState::COLUMN_EPISODE, $this->episode ?? 0), 3, '0', STR_PAD_LEFT);
 
-        return r('{title} ({year}) - {season}x{episode}', [
+        return r(
+            '{title} ({year}) - {season}x{episode}',
+            [
                 'title' => !empty($title) ? $title : '??',
                 'year' => $year ?? '0000',
                 'season' => $season,
@@ -509,6 +511,21 @@ final class StateEntity implements iState
     /**
      * @inheritdoc
      */
+    public function setMeta(string $key, mixed $value, string|null $via = null): StateInterface
+    {
+        if (null === $via && empty($this->via)) {
+            throw new RuntimeException('StateEntity: No $via and no $this->via backend was set.');
+        }
+        $via ??= $this->via;
+
+        $this->metadata = ag_set($this->metadata, "{$via}.{$key}", $value);
+
+        return $this;
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function getExtra(string|null $via = null): array
     {
         if (null === $via) {
@@ -738,6 +755,15 @@ final class StateEntity implements iState
     public function hasContext(string $key): bool
     {
         return ag_exists($this->context, $key);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function removeContext(string|null $key = null): StateInterface
+    {
+        $this->context = $key ? ag_delete($this->context, $key) : [];
+        return $this;
     }
 
     public function isSynced(array $backends): array

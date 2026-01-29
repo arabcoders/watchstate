@@ -17,6 +17,7 @@ use App\Libs\Guid;
 use App\Libs\Options;
 use Psr\Http\Message\UriInterface as iUri;
 use Psr\SimpleCache\CacheInterface as iCache;
+use Psr\Log\LoggerInterface as iLogger;
 
 /**
  * Trait JellyfinActionTrait
@@ -121,8 +122,10 @@ trait JellyfinActionTrait
         $metadata = &$builder[iState::COLUMN_META_DATA][$context->backendName];
         $metadataExtra = &$metadata[iState::COLUMN_META_DATA_EXTRA];
 
-        $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = array_map(fn($v) => strtolower($v),
-            ag($item, 'Genres', []));
+        $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = array_map(
+            fn($v) => strtolower($v),
+            ag($item, 'Genres', [])
+        );
 
         // -- jellyfin/emby API does not provide library ID.
         if (null !== ($library = $opts[iState::COLUMN_META_LIBRARY] ?? null)) {
@@ -172,8 +175,10 @@ trait JellyfinActionTrait
         $metadata[iState::COLUMN_META_MULTI] = false;
         if (null !== ($mediaPath = ag($item, 'Path')) && !empty($mediaPath)) {
             $metadata[iState::COLUMN_META_PATH] = (string)$mediaPath;
-            if (iState::TYPE_EPISODE === $type &&
-                true === ag(parseEpisodeRange(basename((string)$mediaPath)), iState::COLUMN_META_MULTI, false)) {
+            if (
+                iState::TYPE_EPISODE === $type &&
+                true === ag(parseEpisodeRange(basename((string)$mediaPath)), iState::COLUMN_META_MULTI, false)
+            ) {
                 $metadata[iState::COLUMN_META_MULTI] = true;
             }
         }
@@ -213,7 +218,24 @@ trait JellyfinActionTrait
             )->getAll();
         }
 
-        return Container::get(iState::class)::fromArray($builder);
+        $entity = Container::get(iState::class)::fromArray($builder);
+
+        /**
+         * Jellyfin has this weird bug where it mark item as played without updating the
+         * Last played date. Which cause issues for our prefered way of handling state update.
+         * This workaround shall be preserved until jellyfin devs fix the API.
+         * For reference check {@see \App\Libs\Mappers\Import\DirectMapper::handleOldEntity()}
+         */
+        if (JellyfinClient::CLIENT_NAME === $context->clientName && $isPlayed) {
+            $uPositionTicks = 0 === (int)ag($item, 'UserData.PlaybackPositionTicks', -1);
+            $uPlayCount = (int)(ag($item, 'UserData.PlayCount', -1)) >= 1;
+            $uIsPlayed = true === (bool)ag($item, 'UserData.Played', false);
+            if ($uIsPlayed && $uPlayCount && $uPositionTicks) {
+                $entity = $entity->setContext('should_mark', true);
+            }
+        }
+
+        return $entity;
     }
 
     /**
