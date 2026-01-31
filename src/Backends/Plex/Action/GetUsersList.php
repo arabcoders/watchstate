@@ -407,9 +407,9 @@ final class GetUsersList
                 $user['updatedAt'] = isset($data['updatedAt']) ? makeDate($data['updatedAt']) : 'Never';
             }
 
-            if (true !== (bool)ag($data, 'admin')) {
-                continue;
-            }
+            // if (true !== (bool)ag($data, 'admin')) {
+            //     continue;
+            // }
 
             $data = [
                 'id' => ag($data, 'id'),
