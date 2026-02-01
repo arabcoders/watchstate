@@ -73,7 +73,7 @@ final class GetUsersList
             $cls = fn() => $this->getExternalUsers($context, $opts);
             return true === (bool)ag($opts, Options::NO_CACHE) ? $cls() : $this->tryCache(
                 $context,
-                $context->backendName . '_' . $context->backendId . '_external_users_' . md5(json_encode($opts)),
+                $context->backendName . '_' . $context->backendId . '_external_users_' . md5((string)json_encode($opts)),
                 $cls,
                 new DateInterval('PT5M'),
                 $this->logger
@@ -84,7 +84,7 @@ final class GetUsersList
 
         $data = true === (bool)ag($opts, Options::NO_CACHE) ? $cls() : $this->tryCache(
             $context,
-            $context->backendName . '_' . $context->backendId . '_users_' . md5(json_encode($opts)),
+            $context->backendName . '_' . $context->backendId . '_users_' . md5((string)json_encode($opts)),
             $cls,
             new DateInterval('PT5M'),
             $this->logger
@@ -279,7 +279,7 @@ final class GetUsersList
         foreach ($data as $user) {
             $uuidStatus = preg_match('/\/users\/(?<uuid>.+?)\/avatar/', ag($user, 'thumb', ''), $matches);
             $list[] = [
-                'id' => ag($user, 'id'),
+                'id' => (int)ag($user, 'id'),
                 'uuid' => 1 === $uuidStatus ? ag($matches, 'uuid') : ag($user, 'invited_user'),
                 'name' => ag($user, ['username', 'title', 'email', 'id'], '??'),
                 'admin' => false,
@@ -391,7 +391,7 @@ final class GetUsersList
             ]);
         }
 
-        if ($users->hasError()) {
+        if ($users->hasError() && $users->error) {
             $this->logger->log($users->error->level(), $users->error->message, $users->error->context);
         }
 
@@ -407,14 +407,10 @@ final class GetUsersList
                 $user['updatedAt'] = isset($data['updatedAt']) ? makeDate($data['updatedAt']) : 'Never';
             }
 
-            // if (true !== (bool)ag($data, 'admin')) {
-            //     continue;
-            // }
-
             $data = [
                 'id' => ag($data, 'id'),
                 'uuid' => ag($data, 'uuid'),
-                'name' => ag($data, ['friendlyName', 'username', 'title', 'email'], '??'),
+                'name' => ag($data, ['friendlyName', 'username', 'title', 'email', 'id'], '??'),
                 'admin' => (bool)ag($data, 'admin'),
                 'guest' => (bool)ag($data, 'guest'),
                 'restricted' => (bool)ag($data, 'restricted'),
@@ -429,7 +425,7 @@ final class GetUsersList
                     username: ag($data, 'name'),
                 );
 
-                if ($tokenRequest->hasError()) {
+                if ($tokenRequest->hasError() && $tokenRequest->error) {
                     $this->logger->log(
                         $tokenRequest->error->level(),
                         $tokenRequest->error->message,
@@ -438,12 +434,24 @@ final class GetUsersList
                 }
 
                 $data['token'] = $tokenRequest->isSuccessful() ? $tokenRequest->response : null;
-                if (true === $tokenRequest->hasError()) {
+                if (true === $tokenRequest->hasError() && $tokenRequest->error) {
                     $data['token_error'] = ag($tokenRequest->error->extra, 'error', $tokenRequest->error->format());
                 }
             }
 
             $list[] = $data;
+        }
+
+        /**
+         * De-duplicate users.
+         * Plex in their infinite wisdom sometimes return home users as external users.
+         */
+        foreach ($list as $user) {
+            foreach ($users as $key => $extUser) {
+                if ((int)$user['id'] === (int)$extUser['id'] && $user['name'] === $extUser['name']) {
+                    unset($users[$key]);
+                }
+            }
         }
 
         array_push($list, ...$users);
