@@ -11,6 +11,7 @@ use App\Backends\Common\Request;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\Attributes\Scanner\Attributes as AttributesScanner;
+use App\Libs\Debug;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
@@ -1424,5 +1425,19 @@ if (!function_exists('send_requests')) {
         } finally {
             gc_collect_cycles();
         }
+    }
+}
+
+if (false === function_exists('ll')) {
+    /**
+     * Writes the given `$input` to the logs.
+     *
+     * @param mixed ...$input The input to log.
+     *
+     * @see Debug::log
+     */
+    function ll(mixed ...$input): void
+    {
+        Debug::log($input, writeToOut: false);
     }
 }

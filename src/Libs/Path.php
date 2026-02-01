@@ -182,14 +182,6 @@ final readonly class Path
      *
      * @return Path A new Path object with the normalized path.
      */
-    /**
-     * Normalizes the path to its absolute, canonical form.
-     *
-     * @param string|Path $path The path to normalize.
-     * @param string $separator The directory separator (default: DIRECTORY_SEPARATOR).
-     *
-     * @return Path A new Path object with the normalized path.
-     */
     public function normalize(string|Path $path, string $separator = DIRECTORY_SEPARATOR): Path
     {
         $path = (string)$path;
@@ -309,11 +301,21 @@ final readonly class Path
      * Finds path names matching a pattern.
      *
      * @param string $pattern The glob pattern.
-     * @return array An array of matching path names.
+     * @return array<Path> An array of matching path names.
      */
     public function glob(string $pattern): array
     {
-        return glob($this->joinPath($pattern)->path);
+        $list = [];
+        $items = glob($this->joinPath($pattern)->path);
+        if (false === $items) {
+            return $list;
+        }
+
+        foreach ($items as $item) {
+            $list[] = new self($item);
+        }
+
+        return $list;
     }
 
     /**
@@ -407,7 +409,7 @@ final readonly class Path
      */
     public function symlinkTo(Path|string $target): void
     {
-        if (!symlink((string)$target, $this->path)) {
+        if (!@symlink((string)$target, $this->path)) {
             throw new RuntimeException("Could not create symlink from {$this->path} to {$target}");
         }
     }
@@ -502,6 +504,47 @@ final readonly class Path
     {
         touch($this->path, $time ?? time());
         chmod($this->path, $mode);
+    }
+
+    /**
+     * Find Children Sidecar Files
+     *
+     * Children files are files that share the same base name but have different extensions.
+     * Common examples include subtitle files (.srt, .ass), metadata files (.nfo), and artwork.
+     *
+     * @param bool $nfoStyle If true, also searches for poster.* and fanart.* files in the parent directory.
+     * @return array<Path> An array of Path objects for the found sidecar files.
+     */
+    public function childrenFiles(bool $nfoStyle = false): array
+    {
+        $list = [];
+        $parent = $this->parent();
+
+        // Handle NFO style artwork files
+        if (true === $nfoStyle) {
+            $possibleExt = ['jpg', 'jpeg', 'png'];
+            foreach ($possibleExt as $ext) {
+                $posterPath = $parent->joinPath("poster.{$ext}");
+                if ($posterPath->exists()) {
+                    $list[] = $posterPath;
+                }
+
+                $fanartPath = $parent->joinPath("fanart.{$ext}");
+                if ($fanartPath->exists()) {
+                    $list[] = $fanartPath;
+                }
+            }
+        }
+
+        $escapedBaseName = preg_replace('/([*?\[])/', '[$1]', $this->stem);
+        foreach ($parent->glob($escapedBaseName . '.*') as $itemPath) {
+            if (false === $itemPath->isFile() || true === $itemPath->sameFile($this)) {
+                continue;
+            }
+            $list[] = $itemPath;
+        }
+
+        return $list;
     }
 
     public function __get(string $name)
