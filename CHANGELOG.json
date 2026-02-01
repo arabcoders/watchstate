@@ -1,9 +1,30 @@
 [
   {
-    "tag": "Unreleased (f2e2ea25)",
-    "full_sha": "f2e2ea25f58c4e93a73af4950b063974a87284b2",
-    "date": "2026-01-29T15:48:49+00:00",
+    "tag": "Unreleased (6724fb73)",
+    "full_sha": "6724fb736283050bc55fd484e9843cc6e615847b",
+    "date": "2026-02-01T15:47:32+00:00",
     "commits": [
+      {
+        "sha": "b197b0d8",
+        "full_sha": "b197b0d8ef28f3516a37f7d175d15a70305332d1",
+        "message": "chore: update external packages",
+        "author": "arabcoders",
+        "date": "2026-02-01T15:19:14+00:00"
+      },
+      {
+        "sha": "0535b62d",
+        "full_sha": "0535b62d82c9c389ca59ddc944ea55b6e629cf37",
+        "message": "refactor: fix plex duplicate users in list selection",
+        "author": "arabcoders",
+        "date": "2026-02-01T15:18:10+00:00"
+      },
+      {
+        "sha": "35ae32b0",
+        "full_sha": "35ae32b006f05003d6d6802f9c885d027b1e32de",
+        "message": "temp: temp fix for possible plex bug?",
+        "author": "arabcoders",
+        "date": "2026-01-31T19:51:36+00:00"
+      },
       {
         "sha": "c0cca399",
         "full_sha": "c0cca3990dd2be6ad1c3854c451a6495ed2078ac",
