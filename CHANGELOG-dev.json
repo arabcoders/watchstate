@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260202-30669682",
-        "date": "2026-02-02T18:31:55+00:00",
+        "tag": "dev-20260202-8e3dada1",
+        "date": "2026-02-02T18:35:47+00:00",
         "commits": [
+            {
+                "sha": "8e3dada1",
+                "message": "fix: js dont make it easy.",
+                "author": "arabcoders",
+                "date": "2026-02-02T18:35:47+00:00",
+                "full_sha": "8e3dada131e49478074df63f0152e25780db2e54"
+            },
             {
                 "sha": "30669682",
                 "message": "fix: prep the frontend for testing",
@@ -1005,7 +1012,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "3066968226ebb52e777729512228ea79b2a7d49a"
+        "full_sha": "8e3dada131e49478074df63f0152e25780db2e54"
     },
     {
         "tag": "dev-20250604-9407bc76",
