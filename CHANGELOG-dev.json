@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260202-4e8f15b1",
-        "date": "2026-02-02T19:12:42+00:00",
+        "tag": "dev-20260202-8d8b35bb",
+        "date": "2026-02-02T20:08:39+00:00",
         "commits": [
+            {
+                "sha": "8d8b35bb",
+                "message": "fix: followup fix for gitea #1",
+                "author": "arabcoders",
+                "date": "2026-02-02T20:08:39+00:00",
+                "full_sha": "8d8b35bb8a5ef7d7b4de3842fab492437cacec71"
+            },
             {
                 "sha": "4e8f15b1",
                 "message": "fix: build using gitea ci",
@@ -1019,7 +1026,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "4e8f15b1fe2847a50486e79770877d667953ff54"
+        "full_sha": "8d8b35bb8a5ef7d7b4de3842fab492437cacec71"
     },
     {
         "tag": "dev-20250604-9407bc76",
