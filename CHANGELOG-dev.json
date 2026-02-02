@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260201-b197b0d8",
-        "date": "2026-02-01T15:19:14+00:00",
+        "tag": "dev-20260202-ddc5d321",
+        "date": "2026-02-02T18:27:09+00:00",
         "commits": [
+            {
+                "sha": "ddc5d321",
+                "message": "refactor: lint code with mago",
+                "author": "arabcoders",
+                "date": "2026-02-02T18:27:09+00:00",
+                "full_sha": "ddc5d3219e33815b7853e85ad8089e3a158acfdd"
+            },
             {
                 "sha": "b197b0d8",
                 "message": "chore: update external packages",
@@ -991,7 +998,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "b197b0d8ef28f3516a37f7d175d15a70305332d1"
+        "full_sha": "ddc5d3219e33815b7853e85ad8089e3a158acfdd"
     },
     {
         "tag": "dev-20250604-9407bc76",
