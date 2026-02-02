@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260202-ddc5d321",
-        "date": "2026-02-02T18:27:09+00:00",
+        "tag": "dev-20260202-30669682",
+        "date": "2026-02-02T18:31:55+00:00",
         "commits": [
+            {
+                "sha": "30669682",
+                "message": "fix: prep the frontend for testing",
+                "author": "arabcoders",
+                "date": "2026-02-02T18:31:55+00:00",
+                "full_sha": "3066968226ebb52e777729512228ea79b2a7d49a"
+            },
             {
                 "sha": "ddc5d321",
                 "message": "refactor: lint code with mago",
@@ -998,7 +1005,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "ddc5d3219e33815b7853e85ad8089e3a158acfdd"
+        "full_sha": "3066968226ebb52e777729512228ea79b2a7d49a"
     },
     {
         "tag": "dev-20250604-9407bc76",
