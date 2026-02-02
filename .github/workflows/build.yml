@@ -43,8 +43,8 @@ on:
 
 env:
   REGISTRY: ${{ vars.REGISTRY != '' && vars.REGISTRY || '' }}
-  BUILD_AMD64: ${{ vars.BUILD_AMD64 != 'false' && 'true' || 'false' }}
-  BUILD_ARM64: ${{ vars.BUILD_ARM64 != 'false' && 'true' || 'false' }}
+  BUILD_AMD64: ${{ vars.BUILD_AMD64 != 'false' }}
+  BUILD_ARM64: ${{ vars.BUILD_ARM64 != 'false' }}
   DOCKERHUB_SLUG: arabcoders/watchstate
   GHCR_SLUG: ghcr.io/arabcoders/watchstate
   PNPM_VERSION: 10
@@ -54,7 +54,7 @@ jobs:
   validate-build-config:
     name: Validate Build Configuration
     runs-on: ubuntu-latest
-    permissions: { }
+    permissions: {}
     steps:
       - name: Ensure at least one architecture is enabled
         run: |
@@ -70,13 +70,13 @@ jobs:
   test:
     name: Tests & Frontend Build
     runs-on: ubuntu-latest
-    needs: [ validate-build-config ]
+    needs: [validate-build-config]
     permissions:
       contents: read
     strategy:
       fail-fast: true
       matrix:
-        php: [ 8.4 ]
+        php: [8.4]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -184,8 +184,8 @@ jobs:
   docker-build-amd64:
     name: Build Container (amd64)
     runs-on: ubuntu-latest
-    needs: [ test, validate-build-config ]
-    if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build == 'true')) && vars.BUILD_AMD64 != 'false'
+    needs: [test, validate-build-config]
+    if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build)) && vars.BUILD_AMD64 != 'false'
     permissions:
       packages: write
       contents: write
@@ -282,8 +282,8 @@ jobs:
   docker-build-arm64:
     name: Build Container (arm64)
     runs-on: ubuntu-latest
-    needs: [ test, validate-build-config ]
-    if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build == 'true')) && vars.BUILD_ARM64 != 'false'
+    needs: [test, validate-build-config]
+    if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build)) && vars.BUILD_ARM64 != 'false'
     permissions:
       packages: write
       contents: write
@@ -380,7 +380,7 @@ jobs:
   docker-publish-manifest:
     name: Publish multi-arch manifest
     runs-on: ubuntu-latest
-    needs: [ docker-build-amd64, docker-build-arm64 ]
+    needs: [docker-build-amd64, docker-build-arm64]
     if: |
       !cancelled() && github.event_name != 'pull_request' &&
       (needs.docker-build-amd64.result == 'success' || needs.docker-build-arm64.result == 'success')
@@ -521,7 +521,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    if: vars.REGISTRY == '' && ((github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.update_readme == 'true'))
+    if: vars.REGISTRY == '' && ((github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.update_readme))
     steps:
       - name: Sync README
         uses: docker://lsiodev/readme-sync:latest
