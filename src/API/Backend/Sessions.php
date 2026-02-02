@@ -43,7 +43,7 @@ final class Sessions
         $opts = [];
         $params = DataUtil::fromRequest($request, true);
 
-        if (true === (bool)$params->get('raw', false)) {
+        if (true === (bool) $params->get('raw', false)) {
             $opts[Options::RAW_RESPONSE] = true;
         }
 

@@ -50,19 +50,19 @@ final readonly class ProcessRequestEvent
         $e->stopPropagation();
 
         $user = ag($e->getOptions(), Options::CONTEXT_USER, 'main');
-        $isGeneric = true === (bool)ag($e->getOptions(), Options::IS_GENERIC, false);
+        $isGeneric = true === (bool) ag($e->getOptions(), Options::IS_GENERIC, false);
 
         try {
-            $userContext = getUserContext(user: $user, mapper: $this->mapper, logger: $this->logger);
+            $userContext = get_user_context(user: $user, mapper: $this->mapper, logger: $this->logger);
         } catch (RuntimeException $ex) {
             $writer(Level::Error, $ex->getMessage());
             return $e;
         }
 
         $entity = Container::get(iState::class)::fromArray($e->getData())
-            ->setIsTainted((bool)ag($e->getOptions(), 'tainted', false));
+            ->setIsTainted((bool) ag($e->getOptions(), 'tainted', false));
 
-        $backend = makeBackend(backend: $userContext->config->get($entity->via), name: $entity->via, options: [
+        $backend = make_backend(backend: $userContext->config->get($entity->via), name: $entity->via, options: [
             iLogger::class => LoggerProxy::create($writer),
             UserContext::class => $userContext,
         ]);
@@ -78,7 +78,7 @@ final readonly class ProcessRequestEvent
         }
 
         if (null !== ($lastSync = ag($userContext->get($entity->via, []), 'import.lastSync'))) {
-            $lastSync = makeDate($lastSync);
+            $lastSync = make_date($lastSync);
         }
 
         $message = r("Processing '{user}@{backend}' {tainted} request '{title}'. {data}", [
@@ -87,7 +87,7 @@ final readonly class ProcessRequestEvent
             'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
             'lastSync' => $lastSync,
             'user' => $userContext->name,
-            'data' => arrayToString([
+            'data' => array_to_string([
                 'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, '??'),
                 'state' => $entity->isWatched() ? 'played' : 'unplayed',
                 'progress' => $entity->hasPlayProgress() ? 'Yes' : 'No',
@@ -97,8 +97,8 @@ final readonly class ProcessRequestEvent
 
         $writer(Level::Notice, $message);
 
-        $isDebug = (bool)ag($e->getOptions(), Options::DEBUG_TRACE, false);
-        if (true === (bool)ag($backend->getContext()->options, Options::DEBUG_TRACE, false)) {
+        $isDebug = (bool) ag($e->getOptions(), Options::DEBUG_TRACE, false);
+        if (true === (bool) ag($backend->getContext()->options, Options::DEBUG_TRACE, false)) {
             $isDebug = true;
         }
 
@@ -110,15 +110,18 @@ final readonly class ProcessRequestEvent
         }
 
         $logger = clone $this->logger;
-        assert($logger instanceof Logger);
+        assert($logger instanceof Logger, 'Expected logger instance for request processing.');
 
         $handler = ProxyHandler::create($e->addLog(...), Level::Info);
         $logger->pushHandler($handler);
         $mapper->setLogger($logger);
         $opts = [
-            Options::IMPORT_METADATA_ONLY => (bool)ag($e->getOptions(), Options::IMPORT_METADATA_ONLY),
-            Options::DISABLE_MARK_UNPLAYED => (bool)ag($e->getOptions(), Options::DISABLE_MARK_UNPLAYED),
-            Options::STATE_UPDATE_EVENT => fn(iState $state) => queuePush(entity: $state, userContext: $userContext),
+            Options::IMPORT_METADATA_ONLY => (bool) ag($e->getOptions(), Options::IMPORT_METADATA_ONLY),
+            Options::DISABLE_MARK_UNPLAYED => (bool) ag($e->getOptions(), Options::DISABLE_MARK_UNPLAYED),
+            Options::STATE_UPDATE_EVENT => static fn(iState $state) => queue_push(
+                entity: $state,
+                userContext: $userContext,
+            ),
             Options::LOG_TO_WRITER => $writer,
             Options::AFTER => $lastSync,
         ];

@@ -20,9 +20,9 @@ final class Tasks
 {
     public const string URL = '%{api.prefix}/tasks';
 
-    public function __construct(private readonly EventsRepository $eventsRepo)
-    {
-    }
+    public function __construct(
+        private readonly EventsRepository $eventsRepo,
+    ) {}
 
     #[Get(self::URL . '[/]', name: 'tasks.index')]
     public function tasksIndex(): iResponse
@@ -31,7 +31,7 @@ final class Tasks
 
         foreach (TasksCommand::getTasks() as $task) {
             $task = self::formatTask($task);
-            if (true === (bool)ag($task, 'hide', false)) {
+            if (true === (bool) ag($task, 'hide', false)) {
                 continue;
             }
 
@@ -40,7 +40,7 @@ final class Tasks
         }
 
         $queued = [];
-        foreach (array_filter($tasks, fn($item) => $item['queued'] === true) as $item) {
+        foreach (array_filter($tasks, static fn($item) => $item['queued'] === true) as $item) {
             $queued[] = $item['name'];
         }
 
@@ -66,9 +66,13 @@ final class Tasks
                 return api_error('Task already queued.', Status::CONFLICT);
             }
 
-            $event = queueEvent(TasksCommand::NAME, ['name' => $id], [
-                EventsTable::COLUMN_REFERENCE => r('task://{name}', ['name' => $id]),
-            ]);
+            $event = queue_event(
+                TasksCommand::NAME,
+                ['name' => $id],
+                [
+                    EventsTable::COLUMN_REFERENCE => r('task://{name}', ['name' => $id]),
+                ],
+            );
 
             return api_response(Status::ACCEPTED, $event->getAll());
         }
@@ -111,10 +115,10 @@ final class Tasks
 
     private function formatTask(array $task): array
     {
-        $isEnabled = (bool)ag($task, 'enabled', false);
+        $isEnabled = (bool) ag($task, 'enabled', false);
 
         $timer = ag($task, 'timer');
-        assert($timer instanceof CronExpression);
+        assert($timer instanceof CronExpression, 'Expected CronExpression for task timer.');
 
         $item = [
             'name' => ag($task, 'name'),
@@ -125,20 +129,20 @@ final class Tasks
             'prev_run' => null,
             'command' => ag($task, 'command'),
             'args' => ag($task, 'args'),
-            'hide' => (bool)ag($task, 'hide', false),
+            'hide' => (bool) ag($task, 'hide', false),
         ];
 
         if (!is_string($item['command'])) {
             $item['command'] = get_debug_type($item['command']);
         }
 
-        $ff = getEnvSpec('WS_CRON_' . strtoupper(ag($task, 'name')));
+        $ff = get_env_spec('WS_CRON_' . strtoupper(ag($task, 'name')));
         $item['allow_disable'] = !empty($ff);
 
         if (true === $isEnabled) {
             try {
-                $item['next_run'] = makeDate($timer->getNextRunDate());
-                $item['prev_run'] = makeDate($timer->getPreviousRunDate());
+                $item['next_run'] = make_date($timer->getNextRunDate());
+                $item['prev_run'] = make_date($timer->getPreviousRunDate());
             } catch (\Exception) {
                 $item['next_run'] = null;
                 $item['prev_run'] = null;
@@ -148,10 +152,10 @@ final class Tasks
         return $item;
     }
 
-    private function isQueued(string $id): Event|null
+    private function isQueued(string $id): ?Event
     {
         return $this->eventsRepo->findByReference(r('task://{name}', ['name' => $id]), [
-            EventsTable::COLUMN_STATUS => EventStatus::PENDING->value
+            EventsTable::COLUMN_STATUS => EventStatus::PENDING->value,
         ]);
     }
 }

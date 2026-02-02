@@ -7,6 +7,4 @@ namespace App\Libs\Exceptions\Backends;
 /**
  * Class InvalidArgumentException
  */
-class InvalidArgumentException extends BackendException
-{
-}
+class InvalidArgumentException extends BackendException {}

@@ -16,9 +16,13 @@ final class HealthCheck
     #[Get(self::URL . '[/]', name: 'system.healthcheck')]
     public function __invoke(iRequest $request): iResponse
     {
-        return api_response(Status::OK, [
-            'status' => 'ok',
-            'message' => 'System is healthy',
-        ], headers: ['X-No-AccessLog' => '1']);
+        return api_response(
+            Status::OK,
+            [
+                'status' => 'ok',
+                'message' => 'System is healthy',
+            ],
+            headers: ['X-No-AccessLog' => '1'],
+        );
     }
 }

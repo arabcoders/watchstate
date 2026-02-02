@@ -26,10 +26,12 @@ final class StaticFiles
     {
         return $cls->serve(
             $request->withUri(
-                $request->getUri()->withPath(
-                    str_replace(parseConfigValue(self::URL), '', $request->getUri()->getPath())
-                )
-            )
+                $request
+                    ->getUri()
+                    ->withPath(
+                        str_replace(parse_config_value(self::URL), '', $request->getUri()->getPath()),
+                    ),
+            ),
         );
     }
 }

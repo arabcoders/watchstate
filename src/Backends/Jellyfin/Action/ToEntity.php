@@ -18,9 +18,9 @@ class ToEntity
 
     private string $action = 'jellyfin.toEntity';
 
-    public function __construct(private JellyfinGuid $guid)
-    {
-    }
+    public function __construct(
+        private JellyfinGuid $guid,
+    ) {}
 
     /**
      * Create an entity from the given item.
@@ -36,7 +36,7 @@ class ToEntity
         return $this->tryResponse(
             context: $context,
             fn: fn() => $this->createEntity($context, $this->guid->withContext($context), $item, $opts),
-            action: $this->action
+            action: $this->action,
         );
     }
 }

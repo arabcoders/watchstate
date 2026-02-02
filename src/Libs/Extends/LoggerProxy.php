@@ -14,9 +14,9 @@ use Stringable;
  */
 final readonly class LoggerProxy implements LoggerInterface
 {
-    public function __construct(private Closure $callback)
-    {
-    }
+    public function __construct(
+        private Closure $callback,
+    ) {}
 
     /**
      * Create a new LoggerProxy instance.
@@ -31,7 +31,7 @@ final readonly class LoggerProxy implements LoggerInterface
 
     public function log($level, Stringable|string $message, array $context = []): void
     {
-        if (false === ($level instanceof Level)) {
+        if (false === $level instanceof Level) {
             $level = Level::tryFrom($level) ?? Level::Notice;
         }
         ($this->callback)($level, $message, $context);
@@ -76,5 +76,4 @@ final readonly class LoggerProxy implements LoggerInterface
     {
         $this->log(Level::Debug, $message, $context);
     }
-
 }

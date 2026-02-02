@@ -24,15 +24,16 @@ readonly class Playlist
     public const string URL = Index::URL . '/playlist';
     public const float SEGMENT_DUR = 6.000;
 
-    public function __construct(private iCache $cache, private iLogger $logger)
-    {
-    }
+    public function __construct(
+        private iCache $cache,
+        private iLogger $logger,
+    ) {}
 
     /**
      * @throws InvalidArgumentException
      */
     #[Get(pattern: self::URL . '/{token}[/[{fake:.*}[/]]]')]
-    public function __invoke(iRequest $request, string $token): iResponse
+    public function __invoke(iRequest $request, #[\SensitiveParameter] string $token): iResponse
     {
         if (null === ($data = $this->cache->get($token, null))) {
             return api_error('Token is expired or invalid.', Status::BAD_REQUEST);
@@ -40,7 +41,7 @@ readonly class Playlist
 
         $params = DataUtil::fromRequest($request);
 
-        $sConfig = (array)ag($data, 'config', []);
+        $sConfig = (array) ag($data, 'config', []);
 
         if (null === ($path = ag($data, 'path', null))) {
             return api_error('Path is empty.', Status::BAD_REQUEST);
@@ -54,7 +55,7 @@ readonly class Playlist
 
         $lc = require __DIR__ . '/../../../config/languageCodes.php';
 
-        $isSecure = (bool)Config::get('api.secure', false);
+        $isSecure = (bool) Config::get('api.secure', false);
 
         $hasSelectedSubs = !empty(ag($sConfig, ['subtitle', 'external'], null));
 
@@ -67,14 +68,14 @@ readonly class Playlist
 
             $sConfig['duration'] = $duration;
             $sConfig['externals'] = [];
-            $sConfig['segment_size'] = number_format((float)$params->get('sd', self::SEGMENT_DUR), 6);
+            $sConfig['segment_size'] = number_format((float) $params->get('sd', self::SEGMENT_DUR), 6);
 
             if (false === $hasSelectedSubs) {
                 // -- Include sidecar subtitles in the playlist.
-                foreach (findSideCarFiles(new SplFileInfo($path)) as $sideFile) {
-                    $extension = getExtension($sideFile);
+                foreach (find_side_car_files(new SplFileInfo($path)) as $sideFile) {
+                    $extension = get_extension($sideFile);
 
-                    if (false === in_array($extension, array_keys(Subtitle::FORMATS))) {
+                    if (false === in_array($extension, array_keys(Subtitle::FORMATS), true)) {
                         continue;
                     }
 
@@ -85,8 +86,8 @@ readonly class Playlist
                         'language' => strtolower($lang[1] ?? 'und'),
                         'forced' => false,
                         'codec' => [
-                            'short' => afterLast($sideFile, '.'),
-                            'long' => 'text/' . afterLast($sideFile, '.'),
+                            'short' => after_last($sideFile, '.'),
+                            'long' => 'text/' . after_last($sideFile, '.'),
                         ],
                     ];
                 }
@@ -94,19 +95,32 @@ readonly class Playlist
 
             if (!ag_exists($sConfig, 'audio')) {
                 foreach (ag($ffprobe, 'streams', []) as $id => $stream) {
-                    if ('audio' === ag($stream, 'codec_type') && true === ag($stream, 'disposition.default', false)) {
-                        $sConfig['audio'] = (int)$id;
-                        break;
+                    if (
+                        !(
+                            'audio' === ag($stream, 'codec_type')
+                            && true === ag(
+                                $stream,
+                                'disposition.default',
+                                false,
+                            )
+                        )
+                    ) {
+                        continue;
                     }
+
+                    $sConfig['audio'] = (int) $id;
+                    break;
                 }
 
                 // -- if no default audio stream, pick the first audio stream.
                 if (!ag_exists($sConfig, 'audio')) {
                     foreach (ag($ffprobe, 'streams', []) as $id => $stream) {
-                        if ('audio' === ag($stream, 'codec_type')) {
-                            $sConfig['audio'] = (int)$id;
-                            break;
+                        if ('audio' !== ag($stream, 'codec_type')) {
+                            continue;
                         }
+
+                        $sConfig['audio'] = (int) $id;
+                        break;
                     }
                 }
             }
@@ -119,11 +133,11 @@ readonly class Playlist
             $lines = [];
             $lines[] = '#EXTM3U';
 
-            $subtitleUrl = parseConfigValue(Subtitle::URL);
+            $subtitleUrl = parse_config_value(Subtitle::URL);
 
             if (false === $hasSelectedSubs) {
                 foreach (ag($sConfig, 'externals', []) as $id => $x) {
-                    $ext = getExtension(ag($x, 'path'));
+                    $ext = get_extension(ag($x, 'path'));
                     $file = ag($x, 'path');
 
                     $lang = ag($x, 'language', 'und');
@@ -143,12 +157,12 @@ readonly class Playlist
                         'id' => $id,
                         'type' => 'webvtt',
                         'token' => $token,
-                        'duration' => round((int)$duration),
+                        'duration' => round((int) $duration),
                         'auth' => $isSecure ? '?apikey=' . Config::get('api.key') : '',
                     ]);
 
                     // -- flag lang to 2 chars
-                    $k = array_filter($lc['short'], fn($v, $k) => $v === $lang, ARRAY_FILTER_USE_BOTH);
+                    $k = array_filter($lc['short'], static fn($v, $k) => $v === $lang, ARRAY_FILTER_USE_BOTH);
                     if (!empty($k)) {
                         $lang = array_keys($k);
                         $lang = array_shift($lang);
@@ -161,7 +175,7 @@ readonly class Playlist
                             'name' => $name,
                             'uri' => $link,
                             'index' => $id,
-                        ]
+                        ],
                     );
                 }
 
@@ -170,7 +184,7 @@ readonly class Playlist
                         continue;
                     }
 
-                    if (false === in_array(ag($x, 'codec_name'), Subtitle::INTERNAL_NAMING)) {
+                    if (false === in_array(ag($x, 'codec_name'), Subtitle::INTERNAL_NAMING, true)) {
                         continue;
                     }
 
@@ -186,7 +200,7 @@ readonly class Playlist
                     ]);
 
                     // -- flip lang to 2 chars
-                    $k = array_filter($lc['short'], fn($v, $k) => $v === $lang, ARRAY_FILTER_USE_BOTH);
+                    $k = array_filter($lc['short'], static fn($v, $k) => $v === $lang, ARRAY_FILTER_USE_BOTH);
                     if (!empty($k)) {
                         $lang = array_keys($k);
                         $lang = array_shift($lang);
@@ -200,18 +214,18 @@ readonly class Playlist
                             'codec' => ag($x, 'codec_name'),
                             'uri' => $link,
                             'index' => $id,
-                        ]
+                        ],
                     );
                 }
             }
 
             $lines[] = r('#EXT-X-STREAM-INF:PROGRAM-ID=1{subs}', [
-                'subs' => !empty(ag($sConfig, 'externals')) ? ',SUBTITLES="subs"' : ''
+                'subs' => !empty(ag($sConfig, 'externals')) ? ',SUBTITLES="subs"' : '',
             ]);
 
             $lines[] = r('{api_url}/{token}/segments.m3u8{auth}', [
                 'token' => $token,
-                'api_url' => parseConfigValue(M3u8::URL),
+                'api_url' => parse_config_value(M3u8::URL),
                 'auth' => $isSecure ? '?apikey=' . Config::get('api.key') : '',
             ]);
 

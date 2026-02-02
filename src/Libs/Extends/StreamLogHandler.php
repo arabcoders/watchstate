@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Libs\Extends;
 
 use App\Libs\Config;
@@ -26,9 +28,9 @@ class StreamLogHandler extends ConsoleHandler
      */
     public function __construct(
         private StreamInterface $stream,
-        OutputInterface|null $output = null,
+        ?OutputInterface $output = null,
         bool $bubble = true,
-        array $levelsMapper = []
+        array $levelsMapper = [],
     ) {
         parent::__construct($output, $bubble, $levelsMapper);
     }
@@ -40,13 +42,13 @@ class StreamLogHandler extends ConsoleHandler
      */
     protected function write(LogRecord|array $record): void
     {
-        if (true === ($record instanceof LogRecord)) {
+        if (true === $record instanceof LogRecord) {
             $record = $record->toArray();
         }
 
         $date = $record['datetime'] ?? 'No date set';
 
-        if (true === ($date instanceof DateTimeInterface)) {
+        if (true === $date instanceof DateTimeInterface) {
             $date = $date->format(DateTimeInterface::ATOM);
         }
 
@@ -56,11 +58,10 @@ class StreamLogHandler extends ConsoleHandler
             'message' => $record['message'],
         ]);
 
-        if (false === empty($record['context']) && true === (bool)Config::get('logs.context')) {
-            $message .= ' ' . arrayToJson($record['context']);
+        if (false === empty($record['context']) && true === (bool) Config::get('logs.context')) {
+            $message .= ' ' . array_to_json($record['context']);
         }
 
         $this->stream->write(trim($message) . PHP_EOL);
     }
-
 }

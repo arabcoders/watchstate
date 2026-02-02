@@ -65,10 +65,11 @@ final class TestCommand extends Command
 
     private bool $runExtended = false;
 
-    private iOutput|null $output = null;
+    private ?iOutput $output = null;
 
-    public function __construct(private iLogger $logger)
-    {
+    public function __construct(
+        private iLogger $logger,
+    ) {
         parent::__construct();
     }
 
@@ -77,28 +78,29 @@ final class TestCommand extends Command
      */
     protected function configure(): void
     {
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->setDescription('Run functional tests on the current configurations.')
             ->addOption(
                 'select-backend',
                 's',
                 InputOption::VALUE_IS_ARRAY | InputOption::VALUE_OPTIONAL,
-                'Select backend.'
+                'Select backend.',
             )
             ->addOption(
                 'run-extended',
                 'e',
                 InputOption::VALUE_NONE,
-                'Run extended tests. It will be slower as it will test all possible actions.'
+                'Run extended tests. It will be slower as it will test all possible actions.',
             )
             ->setHelp(
                 <<<HELP
 
-                This command will check all possible actions against the current configurations.
-                It will check whether we are able to execute the actions in dry mode of course
-                for state changing requests.
+                    This command will check all possible actions against the current configurations.
+                    It will check whether we are able to execute the actions in dry mode of course
+                    for state changing requests.
 
-                HELP,
+                    HELP,
             );
     }
 
@@ -129,7 +131,7 @@ final class TestCommand extends Command
     protected function process(iInput $input, iOutput $output): int
     {
         $this->output = $output;
-        $this->runExtended = (bool)$input->getOption('run-extended');
+        $this->runExtended = (bool) $input->getOption('run-extended');
 
         $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
         $configFile->setLogger($this->logger);
@@ -139,7 +141,7 @@ final class TestCommand extends Command
         $isCustom = !empty($selected) && count($selected) > 0;
 
         foreach ($configFile->getAll() as $backendName => $backend) {
-            if ($isCustom && false === in_array($backendName, $selected)) {
+            if ($isCustom && false === in_array($backendName, $selected, true)) {
                 continue;
             }
             $backends[$backendName] = $backend;
@@ -174,20 +176,35 @@ final class TestCommand extends Command
     private function assert(Closure|bool|null $fn, string $message = ''): void
     {
         if (empty($message)) {
-            if (false === ($fn instanceof Closure)) {
+            if (false === $fn instanceof Closure) {
                 throw new InvalidArgumentException(
-                    'When no message is provided, the first argument must be a closure.'
+                    'When no message is provided, the first argument must be a closure.',
                 );
             }
             $fn();
             return;
         }
 
-        $status = null === $fn ? null : (is_bool($fn) ? $fn : $fn());
-        $this->output?->writeln(r('[{status}] {message}', [
-            'message' => trim($message),
-            'status' => null === $status ? self::SKIP : ($status ? self::OK : self::ERROR)
-        ]), null === $status ? iOutput::VERBOSITY_VERY_VERBOSE : iOutput::OUTPUT_NORMAL);
+        if (null === $fn) {
+            $status = null;
+        } elseif (is_bool($fn)) {
+            $status = $fn;
+        } else {
+            $status = $fn();
+        }
+
+        $statusLabel = match ($status) {
+            null => self::SKIP,
+            true => self::OK,
+            default => self::ERROR,
+        };
+        $this->output?->writeln(
+            r('[{status}] {message}', [
+                'message' => trim($message),
+                'status' => $statusLabel,
+            ]),
+            null === $status ? iOutput::VERBOSITY_VERY_VERBOSE : iOutput::OUTPUT_NORMAL,
+        );
     }
 
     private function test_plex_client(iClient $client, Context $context): void
@@ -255,9 +272,10 @@ final class TestCommand extends Command
             }
 
             // -- get first library that isn't ignored and is supported.
-            $lib = current(array_filter($libraries->response, function ($i) {
-                return true === (bool)ag($i, 'supported', false) && false === (bool)ag($i, 'ignored');
-            }));
+            $lib = current(array_filter(
+                $libraries->response,
+                static fn($i) => true === (bool) ag($i, 'supported', false) && false === (bool) ag($i, 'ignored'),
+            ));
 
             if (empty($lib)) {
                 $this->assert(null, 'GetLibrary');
@@ -295,7 +313,7 @@ final class TestCommand extends Command
 
             $toEntity = Container::get(plex_ToEntity::class)(
                 $context,
-                ag($item->response, 'MediaContainer.Metadata.0')
+                ag($item->response, 'MediaContainer.Metadata.0'),
             );
             $this->assert($toEntity->isSuccessful(), 'ToEntity');
             if (false === $toEntity->isSuccessful()) {
@@ -306,7 +324,7 @@ final class TestCommand extends Command
             }
 
             $entity = $toEntity->response;
-            assert($entity instanceof iState);
+            assert($entity instanceof iState, 'Expected state entity from Plex metadata.');
 
             $itemId = ag($entity->getMetadata($entity->via), iState::COLUMN_ID);
 
@@ -404,10 +422,11 @@ final class TestCommand extends Command
         // -- if the token is limited and with no_fallback, the test should return false as the token doesn't have
         // -- access to the users list.
         $getUsersWithOutFallBack = Container::get(jf_GetUsersList::class)($context, [
-            Options::NO_FALLBACK => true
+            Options::NO_FALLBACK => true,
         ]);
-        $gul_status = ($context->isLimitedToken()) ? !(true === $getUsersWithOutFallBack->isSuccessful(
-            )) : $getUsersWithOutFallBack->isSuccessful();
+        $gul_status = $context->isLimitedToken()
+            ? !(true === $getUsersWithOutFallBack->isSuccessful())
+            : $getUsersWithOutFallBack->isSuccessful();
         $this->assert($gul_status, 'getUsersList with no fallback');
         if (false === $gul_status) {
             $this->output->writeln(r('<error>{error}</error>', [
@@ -438,9 +457,10 @@ final class TestCommand extends Command
             }
 
             // -- get first library that isn't ignored and is supported.
-            $lib = current(array_filter($libraries->response, function ($i) {
-                return true === (bool)ag($i, 'supported', false) && false === (bool)ag($i, 'ignored');
-            }));
+            $lib = current(array_filter(
+                $libraries->response,
+                static fn($i) => true === (bool) ag($i, 'supported', false) && false === (bool) ag($i, 'ignored'),
+            ));
 
             if (empty($lib)) {
                 $this->assert(null, 'GetLibrary');
@@ -487,7 +507,7 @@ final class TestCommand extends Command
             }
 
             $entity = $toEntity->response;
-            assert($entity instanceof iState);
+            assert($entity instanceof iState, 'Expected state entity from Jellyfin metadata.');
 
             $itemId = ag($entity->getMetadata($entity->via), iState::COLUMN_ID);
 

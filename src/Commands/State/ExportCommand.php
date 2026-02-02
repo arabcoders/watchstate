@@ -72,7 +72,8 @@ class ExportCommand extends Command
      */
     protected function configure(): void
     {
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->setDescription('Export play state to backends.')
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full export. Ignore last export date.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes to backends.')
@@ -80,13 +81,13 @@ class ExportCommand extends Command
                 'sync-requests',
                 null,
                 InputOption::VALUE_NONE,
-                'Send one request at a time instead of all at once. note: Slower but more reliable.'
+                'Send one request at a time instead of all at once. note: Slower but more reliable.',
             )
             ->addOption(
                 'async-requests',
                 null,
                 InputOption::VALUE_NONE,
-                'Send all requests at once. note: Faster but less reliable. Default.'
+                'Send all requests at once. note: Faster but less reliable. Default.',
             )
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
             ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Export to this specific user. Default all users.')
@@ -94,13 +95,13 @@ class ExportCommand extends Command
                 'select-backend',
                 's',
                 InputOption::VALUE_IS_ARRAY | InputOption::VALUE_OPTIONAL,
-                'Select backend.'
+                'Select backend.',
             )
             ->addOption(
                 'exclude',
                 'e',
                 InputOption::VALUE_NONE,
-                'Inverse --select-backend logic. Exclude selected backends.'
+                'Inverse --select-backend logic. Exclude selected backends.',
             )
             ->addOption('ignore-date', 'i', InputOption::VALUE_NONE, 'Ignore date comparison.')
             ->addOption('logfile', null, InputOption::VALUE_REQUIRED, 'Save console output to file.');
@@ -131,9 +132,9 @@ class ExportCommand extends Command
      */
     protected function process(iInput $input, iOutput $output): int
     {
-        if (null !== ($logfile = $input->getOption('logfile')) && true === ($this->logger instanceof Logger)) {
+        if (null !== ($logfile = $input->getOption('logfile')) && true === $this->logger instanceof Logger) {
             $this->logger->setHandlers([
-                $this->suppressor->withHandler(new StreamLogHandler(new Stream($logfile, 'w'), $output))
+                $this->suppressor->withHandler(new StreamLogHandler(new Stream($logfile, 'w'), $output)),
             ]);
         }
 
@@ -152,12 +153,12 @@ class ExportCommand extends Command
             $this->mapper->setOptions(options: $mapperOpts);
         }
 
-        $users = getUsersContext(mapper: $this->mapper, logger: $this->logger, opts: [
+        $users = get_users_context(mapper: $this->mapper, logger: $this->logger, opts: [
             DatabaseInterface::class => $dbOpts,
         ]);
 
         if (null !== ($user = $input->getOption('user'))) {
-            $users = array_filter($users, fn($k) => $k === $user, mode: ARRAY_FILTER_USE_KEY);
+            $users = array_filter($users, static fn($k) => $k === $user, mode: ARRAY_FILTER_USE_KEY);
             if (empty($users)) {
                 $output->writeln(r("<error>User '{user}' not found.</error>", ['user' => $user]));
                 return self::FAILURE;
@@ -165,7 +166,7 @@ class ExportCommand extends Command
         }
 
         if (false === ($syncRequests = $input->getOption('sync-requests'))) {
-            $syncRequests = (bool)Config::get('http.default.sync_requests', false);
+            $syncRequests = (bool) Config::get('http.default.sync_requests', false);
         }
 
         if (true === $input->getOption('async-requests')) {
@@ -190,24 +191,24 @@ class ExportCommand extends Command
                     if ($isCustom && $input->getOption('exclude') === $this->in_array($selected, $backendName)) {
                         $this->logger->info("SYSTEM: Ignoring '{user}@{backend}'. As requested.", [
                             'user' => $userContext->name,
-                            'backend' => $backendName
+                            'backend' => $backendName,
                         ]);
                         continue;
                     }
 
-                    if (true !== (bool)ag($backend, 'export.enabled')) {
+                    if (true !== (bool) ag($backend, 'export.enabled')) {
                         if ($isCustom) {
                             $this->logger->warning(
                                 "SYSTEM: Exporting to a export disabled backend '{user}@{backend}' as requested.",
                                 [
                                     'user' => $userContext->name,
-                                    'backend' => $backendName
-                                ]
+                                    'backend' => $backendName,
+                                ],
                             );
                         } else {
                             $this->logger->info("SYSTEM: Ignoring '{user}@{backend}'. Export disabled.", [
                                 'user' => $userContext->name,
-                                'backend' => $backendName
+                                'backend' => $backendName,
                             ]);
                             continue;
                         }
@@ -221,12 +222,12 @@ class ExportCommand extends Command
                                 'backend' => $backendName,
                                 'user' => $userContext->name,
                                 'types' => implode(', ', array_keys($supported)),
-                            ]
+                            ],
                         );
                         continue;
                     }
 
-                    if (null === ($url = ag($backend, 'url')) || false === isValidURL($url)) {
+                    if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {
                         $this->logger->error("SYSTEM: Ignoring '{user}@{backend}'. Invalid URL '{url}'.", [
                             'url' => $url ?? 'None',
                             'backend' => $backendName,
@@ -272,7 +273,7 @@ class ExportCommand extends Command
                     }
 
                     $backend['options'] = $opts;
-                    $backend['class'] = makeBackend(backend: $backend, name: $name, options: [
+                    $backend['class'] = make_backend(backend: $backend, name: $name, options: [
                         UserContext::class => $userContext,
                     ])->setLogger($this->logger);
                 }
@@ -289,7 +290,7 @@ class ExportCommand extends Command
                                 [
                                     'user' => $userContext->name,
                                     'backend' => ag($backend, 'name'),
-                                ]
+                                ],
                             );
 
                             $export[ag($backend, 'name')] = $backend;
@@ -302,7 +303,7 @@ class ExportCommand extends Command
                                 [
                                     'user' => $userContext->name,
                                     'backend' => ag($backend, 'name'),
-                                ]
+                                ],
                             );
 
                             $export[ag($backend, 'name')] = $backend;
@@ -314,10 +315,10 @@ class ExportCommand extends Command
                         }
                     }
 
-                    $lastSync = makeDate($minDate);
+                    $lastSync = make_date($minDate);
 
                     $this->logger->notice("SYSTEM: Loading '{user}' database items that has changed since '{date}'.", [
-                        'date' => (string)$lastSync,
+                        'date' => (string) $lastSync,
                         'user' => $userContext->name,
                     ]);
 
@@ -325,7 +326,7 @@ class ExportCommand extends Command
 
                     if (count($entities) < 1 && count($export) < 1) {
                         $this->logger->notice("SYSTEM: No play state changes detected since '{date}' for '{user}'.", [
-                            'date' => (string)$lastSync,
+                            'date' => (string) $lastSync,
                             'user' => $userContext->name,
                         ]);
                         continue;
@@ -334,7 +335,7 @@ class ExportCommand extends Command
                     if (count($entities) >= 1) {
                         $this->logger->info(
                             "SYSTEM: Checking '{total}' media items for push mode compatibility for '{user}'.",
-                            (function () use ($entities, $input, $userContext): array {
+                            (static function () use ($entities, $input, $userContext): array {
                                 $context = [
                                     'total' => number_format(count($entities)),
                                     'user' => $userContext->name,
@@ -347,7 +348,7 @@ class ExportCommand extends Command
                                 }
 
                                 return $context;
-                            })()
+                            })(),
                         );
 
                         foreach ($entities as $entity) {
@@ -361,9 +362,9 @@ class ExportCommand extends Command
                                 if (false === ag_exists($entity->getMetadata(), $name)) {
                                     $addedDate = ag(
                                         $entity->getMetadata($entity->via),
-                                        iState::COLUMN_META_DATA_ADDED_AT
+                                        iState::COLUMN_META_DATA_ADDED_AT,
                                     );
-                                    $extraMargin = (int)Config::get('export.not_found');
+                                    $extraMargin = (int) Config::get('export.not_found');
 
                                     if (null === $addedDate || false === ctype_digit($addedDate)) {
                                         $this->logger->info(
@@ -378,7 +379,7 @@ class ExportCommand extends Command
                                                 ],
                                                 'added_at' => $addedDate,
                                                 'data' => $input->getOption('trace') ? $entity->getAll() : [],
-                                            ]
+                                            ],
                                         );
                                         continue;
                                     }
@@ -394,12 +395,12 @@ class ExportCommand extends Command
                                                     'title' => $entity->getName(),
                                                 ],
                                                 'wait_period' => [
-                                                    'added_at' => makeDate($addedDate),
+                                                    'added_at' => make_date($addedDate),
                                                     'extra_margin' => $extraMargin,
-                                                    'last_sync_at' => makeDate($lastSync),
+                                                    'last_sync_at' => make_date($lastSync),
                                                     'diff' => $lastSync - ($addedDate + $extraMargin),
                                                 ],
-                                            ]
+                                            ],
                                         );
 
                                         continue;
@@ -418,7 +419,7 @@ class ExportCommand extends Command
                                                 'id' => $entity->id,
                                                 'title' => $entity->getName(),
                                             ],
-                                        ]
+                                        ],
                                     );
 
                                     $export[$name] = $backend;
@@ -433,7 +434,7 @@ class ExportCommand extends Command
                 } else {
                     $export = $backends;
                     $this->logger->notice(
-                        "SYSTEM: Not possible to use push mode when '-f, --force-full' flag is used."
+                        "SYSTEM: Not possible to use push mode when '-f, --force-full' flag is used.",
                     );
                 }
 
@@ -449,8 +450,7 @@ class ExportCommand extends Command
                             'total' => count($export),
                             'list' => implode(', ', array_keys($export)),
                         ],
-
-                    ]
+                    ],
                 );
 
                 if (count($push) >= 1) {
@@ -463,7 +463,7 @@ class ExportCommand extends Command
                         $export,
                         $input->getOption('dry-run'),
                         $input->getOption('force-full'),
-                        $syncRequests
+                        $syncRequests,
                     );
                 }
 
@@ -476,7 +476,7 @@ class ExportCommand extends Command
                     ]);
 
                     foreach ($this->queue->getQueue() as $response) {
-                        if (true === (bool)ag($response->getInfo('user_data'), Options::NO_LOGGING, false)) {
+                        if (true === (bool) ag($response->getInfo('user_data'), Options::NO_LOGGING, false)) {
                             try {
                                 $response->getStatusCode();
                             } catch (Throwable) {
@@ -502,7 +502,7 @@ class ExportCommand extends Command
 
                             $this->logger->notice(
                                 "Marked '{user}@{backend}' '{item.title}' as '{play_state}'.",
-                                $context
+                                $context,
                             );
                         } catch (Throwable $e) {
                             $this->logger->error(
@@ -521,7 +521,7 @@ class ExportCommand extends Command
                                         'kind' => get_class($e),
                                         'message' => $e->getMessage(),
                                     ],
-                                ]
+                                ],
                             );
                         }
                     }
@@ -545,7 +545,7 @@ class ExportCommand extends Command
                         continue;
                     }
 
-                    if (false === (bool)Message::get("{$name}.has_errors", false)) {
+                    if (false === (bool) Message::get("{$name}.has_errors", false)) {
                         $userContext->config->set("{$name}.export.lastSync", time());
                     } else {
                         $this->logger->warning(
@@ -553,7 +553,7 @@ class ExportCommand extends Command
                             [
                                 'backend' => $name,
                                 'user' => $userContext->name,
-                            ]
+                            ],
                         );
                     }
                 }
@@ -570,7 +570,7 @@ class ExportCommand extends Command
                             'file' => after($e->getFile(), ROOT_PATH),
                         ],
                         'user' => $userContext->name,
-                    ]
+                    ],
                 );
             } finally {
                 $this->queue->reset();
@@ -602,7 +602,7 @@ class ExportCommand extends Command
             $backend['class']->push(
                 entities: $entities,
                 queue: $this->queue,
-                after: makeDate(ag($backend, 'export.lastSync'))
+                after: make_date(ag($backend, 'export.lastSync')),
             );
         }
 
@@ -627,7 +627,7 @@ class ExportCommand extends Command
         array $backends,
         bool $inDryMode,
         bool $isFull,
-        bool $syncRequests = false
+        bool $syncRequests = false,
     ): void {
         $this->logger->notice("Export mode started for '{user}@{backends}'.", [
             'user' => $userContext->name,
@@ -638,12 +638,12 @@ class ExportCommand extends Command
             message: "SYSTEM: Preloading user '{user}: {mapper}' data. Memory usage '{memory.now}'.",
             context: [
                 'user' => $userContext->name,
-                'mapper' => afterLast($userContext->mapper::class, '\\'),
+                'mapper' => after_last($userContext->mapper::class, '\\'),
                 'memory' => [
-                    'now' => getMemoryUsage(),
-                    'peak' => getPeakMemoryUsage(),
+                    'now' => get_memory_usage(),
+                    'peak' => get_peak_memory_usage(),
                 ],
-            ]
+            ],
         );
 
         $time = microtime(true);
@@ -653,13 +653,13 @@ class ExportCommand extends Command
             message: "SYSTEM: Preloading user '{user}: {mapper}' data completed in '{duration}s'. Memory usage '{memory.now}'.",
             context: [
                 'user' => $userContext->name,
-                'mapper' => afterLast($userContext->mapper::class, '\\'),
+                'mapper' => after_last($userContext->mapper::class, '\\'),
                 'duration' => round(microtime(true) - $time, 4),
                 'memory' => [
-                    'now' => getMemoryUsage(),
-                    'peak' => getPeakMemoryUsage(),
+                    'now' => get_memory_usage(),
+                    'peak' => get_peak_memory_usage(),
                 ],
-            ]
+            ],
         );
 
         $requests = [];
@@ -677,11 +677,11 @@ class ExportCommand extends Command
                     'user' => $userContext->name,
                 ]);
             } else {
-                $after = makeDate($after);
+                $after = make_date($after);
                 $this->logger->notice("SYSTEM: Exporting play state changes since '{date}' to '{user}@{backend}'.", [
                     'backend' => $name,
                     'user' => $userContext->name,
-                    'date' => (string)$after,
+                    'date' => (string) $after,
                 ]);
             }
 
@@ -689,13 +689,13 @@ class ExportCommand extends Command
             array_push($requests, ...$backend['class']->export($userContext->mapper, $this->queue, $after));
 
             if (false === $inDryMode) {
-                if (true === (bool)Message::get("{$name}.has_errors")) {
+                if (true === (bool) Message::get("{$name}.has_errors")) {
                     $this->logger->warning(
                         "SYSTEM: Not updating '{user}@{backend}' export last sync date. There was errors recorded during the operation.",
                         [
                             'backend' => $name,
                             'user' => $userContext->name,
-                        ]
+                        ],
                     );
                 } else {
                     $userContext->config->set("{$name}.export.lastSync", time());
@@ -721,6 +721,6 @@ class ExportCommand extends Command
 
     private function in_array(array $list, string $search): bool
     {
-        return array_any($list, fn($item) => str_starts_with($search, $item));
+        return array_any($list, static fn($item) => str_starts_with($search, $item));
     }
 }

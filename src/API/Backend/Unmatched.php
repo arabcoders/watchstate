@@ -22,9 +22,10 @@ final class Unmatched
 {
     use APITraits;
 
-    public function __construct(private readonly iImport $mapper, private readonly iLogger $logger)
-    {
-    }
+    public function __construct(
+        private readonly iImport $mapper,
+        private readonly iLogger $logger,
+    ) {}
 
     #[Get(backendIndex::URL . '/{name:backend}/unmatched[/[{id}[/]]]', name: 'backend.unmatched')]
     public function __invoke(iRequest $request, string $name, string|int|null $id = null): iResponse
@@ -44,7 +45,7 @@ final class Unmatched
         $backendOpts = $opts = $list = [];
 
         if ($params->get('timeout')) {
-            $backendOpts = ag_set($backendOpts, 'client.timeout', (float)$params->get('timeout'));
+            $backendOpts = ag_set($backendOpts, 'client.timeout', (float) $params->get('timeout'));
         }
 
         $includeRaw = $params->get('raw') || $params->get(Options::RAW_RESPONSE);
@@ -62,7 +63,7 @@ final class Unmatched
             $ids[] = $id;
         } else {
             foreach ($client->listLibraries() as $library) {
-                if (false === (bool)ag($library, 'supported') || true === (bool)ag($library, 'ignored')) {
+                if (false === (bool) ag($library, 'supported') || true === (bool) ag($library, 'ignored')) {
                     continue;
                 }
                 $ids[] = ag($library, 'id');
@@ -83,9 +84,9 @@ final class Unmatched
                 $builder = $entity->getAll();
 
                 try {
-                    $builder['webUrl'] = (string)$client->getWebUrl(
+                    $builder['webUrl'] = (string) $client->getWebUrl(
                         $entity->type,
-                        ag($entity->getMetadata($entity->via), iState::COLUMN_ID)
+                        ag($entity->getMetadata($entity->via), iState::COLUMN_ID),
                     );
                 } catch (Throwable) {
                     $builder['webUrl'] = null;

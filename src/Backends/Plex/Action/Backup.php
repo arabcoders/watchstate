@@ -45,9 +45,9 @@ final class Backup extends Import
                 ]);
             }
 
-            $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
+            $year = (int) ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
             if (0 === $year && null !== ($airDate = ag($item, 'originallyAvailableAt'))) {
-                $year = (int)makeDate($airDate)->format('Y');
+                $year = (int) make_date($airDate)->format('Y');
             }
 
             try {
@@ -61,13 +61,13 @@ final class Backup extends Import
                         ]),
                         PlexClient::TYPE_EPISODE => r('{title} - ({season}x{episode})', [
                             'title' => ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
-                            'season' => str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
-                            'episode' => str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
+                            'season' => str_pad((string) ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
+                            'episode' => str_pad((string) ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
                         ]),
                         default => throw new InvalidArgumentException(
                             r("Unexpected Content type '{type}' was received.", [
-                                'type' => $type
-                            ])
+                                'type' => $type,
+                            ]),
                         ),
                     },
                     'type' => $type,
@@ -86,7 +86,7 @@ final class Backup extends Import
                         'response' => [
                             'body' => $item,
                         ],
-                    ]
+                    ],
                 );
                 return;
             }
@@ -100,17 +100,17 @@ final class Backup extends Import
                         iState::COLUMN_EXTRA => [
                             $context->backendName => [
                                 iState::COLUMN_EXTRA_EVENT => 'task.backup',
-                                iState::COLUMN_EXTRA_DATE => makeDate('now'),
+                                iState::COLUMN_EXTRA_DATE => make_date('now'),
                             ],
                         ],
-                    ]
-                ])
+                    ],
+                ]),
             );
 
             $arr = [
                 iState::COLUMN_TYPE => $entity->type,
-                iState::COLUMN_WATCHED => (int)$entity->isWatched(),
-                iState::COLUMN_UPDATED => makeDate($entity->updated)->getTimestamp(),
+                iState::COLUMN_WATCHED => (int) $entity->isWatched(),
+                iState::COLUMN_UPDATED => make_date($entity->updated)->getTimestamp(),
                 iState::COLUMN_META_SHOW => '',
                 iState::COLUMN_TITLE => trim($entity->title),
             ];
@@ -120,10 +120,9 @@ final class Backup extends Import
                 $arr[iState::COLUMN_TITLE] = trim(
                     ag(
                         $entity->getMetadata($entity->via),
-                        iState::COLUMN_META_DATA_EXTRA . '.' .
-                        iState::COLUMN_META_DATA_EXTRA_TITLE,
+                        iState::COLUMN_META_DATA_EXTRA . '.' . iState::COLUMN_META_DATA_EXTRA_TITLE,
                         $entity->season . 'x' . $entity->episode,
-                    )
+                    ),
                 );
                 $arr[iState::COLUMN_SEASON] = $entity->season;
                 $arr[iState::COLUMN_EPISODE] = $entity->episode;
@@ -135,14 +134,14 @@ final class Backup extends Import
 
             $arr[iState::COLUMN_GUIDS] = array_filter(
                 $entity->getGuids(),
-                fn($key) => str_contains($key, 'guid_'),
-                ARRAY_FILTER_USE_KEY
+                static fn($key) => str_contains($key, 'guid_'),
+                ARRAY_FILTER_USE_KEY,
             );
             if ($entity->isEpisode()) {
                 $arr[iState::COLUMN_PARENT] = array_filter(
                     $entity->getParentGuids(),
-                    fn($key) => str_contains($key, 'guid_'),
-                    ARRAY_FILTER_USE_KEY
+                    static fn($key) => str_contains($key, 'guid_'),
+                    ARRAY_FILTER_USE_KEY,
                 );
             }
 
@@ -150,28 +149,28 @@ final class Backup extends Import
                 $arr[iState::COLUMN_META_DATA_PROGRESS] = $entity->getPlayProgress();
             }
 
-            if (true !== (bool)ag($opts, 'no_enhance') && null !== ($fromDb = $mapper->get($entity))) {
+            if (true !== (bool) ag($opts, 'no_enhance') && null !== ($fromDb = $mapper->get($entity))) {
                 $arr[iState::COLUMN_GUIDS] = array_replace_recursive(
                     array_filter(
                         $fromDb->getGuids(),
-                        fn($key) => str_contains($key, 'guid_'),
-                        ARRAY_FILTER_USE_KEY
+                        static fn($key) => str_contains($key, 'guid_'),
+                        ARRAY_FILTER_USE_KEY,
                     ),
-                    $arr[iState::COLUMN_GUIDS]
+                    $arr[iState::COLUMN_GUIDS],
                 );
                 if ($entity->isEpisode()) {
                     $arr[iState::COLUMN_PARENT] = array_replace_recursive(
                         array_filter(
                             $fromDb->getParentGuids(),
-                            fn($key) => str_contains($key, 'guid_'),
-                            ARRAY_FILTER_USE_KEY
+                            static fn($key) => str_contains($key, 'guid_'),
+                            ARRAY_FILTER_USE_KEY,
                         ),
-                        $arr[iState::COLUMN_PARENT]
+                        $arr[iState::COLUMN_PARENT],
                     );
                 }
             }
 
-            if (($writer instanceof StreamInterface) && false === (bool)ag($opts, Options::DRY_RUN, false)) {
+            if ($writer instanceof StreamInterface && false === (bool) ag($opts, Options::DRY_RUN, false)) {
                 $writer->write(PHP_EOL . json_encode($arr, self::JSON_FLAGS) . ',');
             }
         } catch (Throwable $e) {
@@ -192,7 +191,7 @@ final class Backup extends Import
                         'message' => $e->getMessage(),
                         'trace' => $e->getTrace(),
                     ],
-                ]
+                ],
             );
         }
     }

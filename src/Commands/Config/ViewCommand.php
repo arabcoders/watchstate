@@ -34,54 +34,55 @@ final class ViewCommand extends Command
      */
     protected function configure(): void
     {
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->setDescription('View Backends settings.')
             ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select user.', 'main')
             ->addOption(
                 'select-backend',
                 's',
                 InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED,
-                'Select backend.'
+                'Select backend.',
             )
             ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backend logic.')
             ->addOption('expose', 'x', InputOption::VALUE_NONE, 'Expose the secret tokens in the view.')
             ->addArgument(
                 'filter',
                 InputArgument::OPTIONAL,
-                'Can be any key from servers.yaml, use dot notion to access sub keys, for example [token]'
+                'Can be any key from servers.yaml, use dot notion to access sub keys, for example [token]',
             )
             ->setHelp(
                 r(
                     <<<HELP
 
-                    This command display all of your backend's information.
-                    You can select and/or filter the displayed information.
+                        This command display all of your backend's information.
+                        You can select and/or filter the displayed information.
 
-                    -------
-                    <notice>[ FAQ ]</notice>
-                    -------
+                        -------
+                        <notice>[ FAQ ]</notice>
+                        -------
 
-                    <question># How to show one backend information?</question>
+                        <question># How to show one backend information?</question>
 
-                    The flag [<flag>-s, --select-backend</flag>] is array option with can accept many backends names,
-                    Using the flag in combination with [<flag>--exclude</flag>] flag will flip the logic to exclude
-                    the selected backends rather than include them.
+                        The flag [<flag>-s, --select-backend</flag>] is array option with can accept many backends names,
+                        Using the flag in combination with [<flag>--exclude</flag>] flag will flip the logic to exclude
+                        the selected backends rather than include them.
 
-                    {cmd} <cmd>{route}</cmd> <flag>-s</flag> <value>my_backend</value>
+                        {cmd} <cmd>{route}</cmd> <flag>-s</flag> <value>my_backend</value>
 
-                    <question># How to show specific <value>key</value>?</question>
+                        <question># How to show specific <value>key</value>?</question>
 
-                    The key can be any value that already exists in the list. to access sub-keys use dot notation for example,
-                    To see if the value of <value>import.enabled</value> you would run:
+                        The key can be any value that already exists in the list. to access sub-keys use dot notation for example,
+                        To see if the value of <value>import.enabled</value> you would run:
 
-                    {cmd} <cmd>{route}</cmd> -- <value>import.enabled</value>
+                        {cmd} <cmd>{route}</cmd> -- <value>import.enabled</value>
 
-                    HELP,
+                        HELP,
                     [
-                        'cmd' => trim(commandContext()),
+                        'cmd' => trim(command_context()),
                         'route' => self::ROUTE,
-                    ]
-                )
+                    ],
+                ),
             );
     }
 
@@ -107,41 +108,42 @@ final class ViewCommand extends Command
             ];
         }
 
-        $response = apiRequest(Method::GET, "/backends", opts: $opts);
+        $response = api_request(Method::GET, '/backends', opts: $opts);
 
         if (Status::OK !== $response->status) {
-            $output->writeln(r("<error>API error. {status}: {message}</error>", [
+            $output->writeln(r('<error>API error. {status}: {message}</error>', [
                 'status' => $response->status->value,
-                'message' => ag($response->body, 'error.message', 'Unknown error.')
+                'message' => ag($response->body, 'error.message', 'Unknown error.'),
             ]));
             return self::FAILURE;
         }
 
-
         foreach ($response->body as $backend) {
             $backendName = ag($backend, 'name', 'Unknown');
 
-            if ($isCustom && $input->getOption('exclude') === in_array($backendName, $selected)) {
+            if ($isCustom && $input->getOption('exclude') === in_array($backendName, $selected, true)) {
                 $output->writeln(r('Ignoring backend \'{backend}\' as requested by [-s, --select-backend].', [
-                    'backend' => $backendName
+                    'backend' => $backendName,
                 ]), OutputInterface::VERBOSITY_VERY_VERBOSE);
                 continue;
             }
 
             if (null === $filter && true !== $input->getOption('expose')) {
                 foreach (Index::BLACK_LIST as $hideValue) {
-                    if (true === ag_exists($backend, $hideValue)) {
-                        $backend = ag_set($backend, $hideValue, '*HIDDEN*');
+                    if (true !== ag_exists($backend, $hideValue)) {
+                        continue;
                     }
+
+                    $backend = ag_set($backend, $hideValue, '*HIDDEN*');
                 }
             }
 
             if ($importLastSync = ag($backend, 'import.lastSync')) {
-                $backend = ag_set($backend, 'import.lastSync', (string)makeDate($importLastSync));
+                $backend = ag_set($backend, 'import.lastSync', (string) make_date($importLastSync));
             }
 
             if ($exportLastSync = ag($backend, 'export.lastSync')) {
-                $backend = ag_set($backend, 'export.lastSync', (string)makeDate($exportLastSync));
+                $backend = ag_set($backend, 'export.lastSync', (string) make_date($exportLastSync));
             }
 
             if (true === ag_exists($backend, 'urls')) {
@@ -153,7 +155,7 @@ final class ViewCommand extends Command
 
         if (empty($list)) {
             $output->writeln(r('<error>{error}</error>', [
-                'error' => $isCustom ? '[-s, --select-backend] did not return any backend.' : 'No backends were found.'
+                'error' => $isCustom ? '[-s, --select-backend] did not return any backend.' : 'No backends were found.',
             ]));
             return self::FAILURE;
         }
@@ -166,7 +168,7 @@ final class ViewCommand extends Command
             $x++;
             $rows[] = [
                 $backendName,
-                $this->filterData($backend, $filter)
+                $this->filterData($backend, $filter),
             ];
 
             if ($x < $count) {
@@ -177,10 +179,12 @@ final class ViewCommand extends Command
         $mode = $input->getOption('output');
 
         if ('table' === $mode) {
-            new Table($output)->setStyle('box')
+            new Table($output)
+                ->setStyle('box')
                 ->setHeaders(
-                    ['Backend', 'Data (Filter: ' . (empty($filter) ? 'None' : $filter) . ')']
-                )->setRows($rows)
+                    ['Backend', 'Data (Filter: ' . (empty($filter) ? 'None' : $filter) . ')'],
+                )
+                ->setRows($rows)
                 ->render();
         } else {
             $this->displayContent($list, $output, $mode);
@@ -206,7 +210,7 @@ final class ViewCommand extends Command
 
             foreach (require __DIR__ . '/../../../config/servers.spec.php' as $column) {
                 $name = ag($column, 'key', '');
-                $visible = (bool)ag($column, 'visible', false);
+                $visible = (bool) ag($column, 'visible', false);
                 if ($visible && (empty($currentValue) || str_starts_with($name, $currentValue))) {
                     $suggest[] = $name;
                 }
@@ -224,13 +228,13 @@ final class ViewCommand extends Command
      *
      * @return string The filtered data in YAML format.
      */
-    private function filterData(array $backend, string|null $filter = null): string
+    private function filterData(array $backend, ?string $filter = null): string
     {
         if (null === $filter || false === str_contains($filter, ',')) {
             return trim(Yaml::dump(ag($backend, $filter, 'Not configured, or invalid key.'), 8, 2));
         }
 
-        $filters = array_map(fn($val) => trim($val), explode(',', $filter));
+        $filters = array_map(trim(...), explode(',', $filter));
         $list = [];
 
         foreach ($filters as $fil) {

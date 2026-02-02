@@ -22,7 +22,7 @@ final class CacheCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        registerEvents(ignoreCache: true);
+        register_events(ignoreCache: true);
 
         return self::SUCCESS;
     }

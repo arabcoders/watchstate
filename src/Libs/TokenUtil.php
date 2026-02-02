@@ -65,7 +65,7 @@ final class TokenUtil
             $base64 .= str_repeat('=', 4 - $pad);
         }
 
-        return base64_decode($base64);
+        return base64_decode($base64, true);
     }
 
     /**
@@ -95,7 +95,7 @@ final class TokenUtil
         $secret = static::generateSecret();
         Config::save('system.secret', $secret);
 
-        $response = APIRequest('POST', '/system/env/WS_SYSTEM_SECRET', [
+        $response = api_request('POST', '/system/env/WS_SYSTEM_SECRET', [
             'value' => $secret,
         ]);
 

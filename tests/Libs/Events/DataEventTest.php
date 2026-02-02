@@ -17,7 +17,7 @@ class DataEventTest extends TestCase
     {
         if (count($data) < 1) {
             $data = [
-                EventsTable::COLUMN_ID => generateUUID(),
+                EventsTable::COLUMN_ID => generate_uuid(),
                 EventsTable::COLUMN_STATUS => EventStatus::PENDING->value,
                 EventsTable::COLUMN_REFERENCE => 'test',
                 EventsTable::COLUMN_EVENT => 'test',

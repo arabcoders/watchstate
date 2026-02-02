@@ -37,18 +37,18 @@ final class Users
         $opts = [];
         $params = DataUtil::fromRequest($request, true);
 
-        if (true === (bool)$params->get('tokens', false)) {
+        if (true === (bool) $params->get('tokens', false)) {
             $opts['tokens'] = true;
         }
 
-        if (true === (bool)$params->get('raw', false)) {
+        if (true === (bool) $params->get('raw', false)) {
             $opts[Options::RAW_RESPONSE] = true;
         }
 
         try {
             return api_response(
                 Status::OK,
-                $this->getClient(name: $name, userContext: $userContext)->getUsersList($opts)
+                $this->getClient(name: $name, userContext: $userContext)->getUsersList($opts),
             );
         } catch (InvalidArgumentException $e) {
             return api_error($e->getMessage(), Status::NOT_FOUND);

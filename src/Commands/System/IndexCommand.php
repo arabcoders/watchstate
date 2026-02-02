@@ -49,7 +49,8 @@ final class IndexCommand extends Command
      */
     protected function configure(): void
     {
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->setDescription('Ensure database has correct indexes.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes.')
             ->addOption('force-reindex', 'f', InputOption::VALUE_NONE, 'Drop existing indexes, and re-create them.')
@@ -57,25 +58,25 @@ final class IndexCommand extends Command
                 r(
                     <<<HELP
 
-                    This command check the status of your database indexes, and update any missed indexes.
-                    You usually should not run command manually as it's run during container startup process.
+                        This command check the status of your database indexes, and update any missed indexes.
+                        You usually should not run command manually as it's run during container startup process.
 
-                    -------
-                    <notice>[ FAQ ]</notice>
-                    -------
+                        -------
+                        <notice>[ FAQ ]</notice>
+                        -------
 
-                    <question># How to recreate the indexes?</question>
+                        <question># How to recreate the indexes?</question>
 
-                    You can drop the current indexes and rebuild them by using the following command
+                        You can drop the current indexes and rebuild them by using the following command
 
-                    {cmd} <cmd>{route}</cmd> <flag>--force-reindex</flag>
+                        {cmd} <cmd>{route}</cmd> <flag>--force-reindex</flag>
 
-                    HELP,
+                        HELP,
                     [
-                        'cmd' => trim(commandContext()),
-                        'route' => self::ROUTE
-                    ]
-                )
+                        'cmd' => trim(command_context()),
+                        'route' => self::ROUTE,
+                    ],
+                ),
             );
     }
 
@@ -89,20 +90,20 @@ final class IndexCommand extends Command
      */
     protected function runCommand(iInput $input, iOutput $output): int
     {
-        foreach (getUsersContext(mapper: $this->mapper, logger: $this->logger) as $userContext) {
+        foreach (get_users_context(mapper: $this->mapper, logger: $this->logger) as $userContext) {
             $output->writeln(r("Ensuring user '{user}' database has correct indexes.", [
-                'user' => $userContext->name
+                'user' => $userContext->name,
             ]), iOutput::VERBOSITY_VERBOSE);
 
             $userContext->db->ensureIndex([
                 UserContext::class => $userContext,
-                Options::DRY_RUN => (bool)$input->getOption('dry-run'),
-                'force-reindex' => (bool)$input->getOption('force-reindex'),
+                Options::DRY_RUN => (bool) $input->getOption('dry-run'),
+                'force-reindex' => (bool) $input->getOption('force-reindex'),
             ]);
 
             if ($input->getOption('force-reindex')) {
                 $output->writeln(r("User '{user}' Database Indexes have been recreated successfully.", [
-                    'user' => $userContext->name
+                    'user' => $userContext->name,
                 ]));
             }
         }

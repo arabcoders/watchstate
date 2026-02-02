@@ -61,12 +61,14 @@ class Import
      * @param iHttp $http The HTTP client instance.
      * @param iLogger $logger The logger instance.
      */
-    public function __construct(iHttp $http, protected iLogger $logger)
-    {
+    public function __construct(
+        iHttp $http,
+        protected iLogger $logger,
+    ) {
         $this->http = new RetryableHttpClient(
             $http,
-            maxRetries: (int)Config::get('http.default.maxRetries', 3),
-            logger: $logger
+            maxRetries: (int) Config::get('http.default.maxRetries', 3),
+            logger: $logger,
         );
     }
 
@@ -85,8 +87,8 @@ class Import
         Context $context,
         iGuid $guid,
         iImport $mapper,
-        iDate|null $after = null,
-        array $opts = []
+        ?iDate $after = null,
+        array $opts = [],
     ): Response {
         return $this->tryResponse(
             context: $context,
@@ -103,7 +105,7 @@ class Import
                         logContext: $logContext,
                         opts: $opts + ['after' => $after],
                     ),
-                    logContext: $logContext
+                    logContext: $logContext,
                 ),
                 error: fn(array $logContext = []) => fn(Throwable $e) => $this->logger->error(
                     message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' library '{library.title}' request. '{error.message}' at '{error.file}:{error.line}'.",
@@ -114,9 +116,9 @@ class Import
                         'user' => $context->userContext->name,
                         ...$logContext,
                         ...exception_log($e),
-                    ]
+                    ],
                 ),
-                opts: $opts
+                opts: $opts,
             ),
             action: $this->action,
         );
@@ -145,11 +147,11 @@ class Import
 
         try {
             $url = $context->backendUrl->withPath(r('/Users/{user_id}/items/', ['user_id' => $context->backendUser]));
-            $rContext['url'] = (string)$url;
+            $rContext['url'] = (string) $url;
 
             $this->logger->debug("Requesting '{client}: {user}@{backend}' libraries.", $rContext);
 
-            $response = $this->http->request(Method::GET, (string)$url, $context->getHttpOptions());
+            $response = $this->http->request(Method::GET, (string) $url, $context->getHttpOptions());
 
             $payload = $response->getContent(false);
 
@@ -177,7 +179,7 @@ class Import
 
                 $this->logger->error(
                     message: "{action}: Request for '{client}: {user}@{backend}' libraries returned with unexpected '{status_code}' status code.",
-                    context: $rContext
+                    context: $rContext,
                 );
 
                 Message::add("{$context->backendName}.has_errors", true);
@@ -187,7 +189,7 @@ class Import
             $json = json_decode(
                 json: $payload,
                 associative: true,
-                flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
             );
 
             $listDirs = ag($json, 'Items', []);
@@ -198,7 +200,7 @@ class Import
                     context: [
                         ...$rContext,
                         'response' => ['body' => $payload],
-                    ]
+                    ],
                 );
                 Message::add("{$context->backendName}.has_errors", true);
                 return [];
@@ -208,8 +210,8 @@ class Import
                 ...lw(
                     message: "{action}: Request for '{client}: {user}@{backend}' libraries has failed. '{error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
                     context: [...$rContext, ...exception_log($e)],
-                    e: $e
-                )
+                    e: $e,
+                ),
             );
             Message::add("{$context->backendName}.has_errors", true);
             return [];
@@ -218,8 +220,8 @@ class Import
                 ...lw(
                     message: "{action}: Request for '{client}: {user}@{backend}' libraries returned with invalid body. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [...$rContext, ...exception_log($e)],
-                    e: $e
-                )
+                    e: $e,
+                ),
             );
             Message::add("{$context->backendName}.has_errors", true);
             return [];
@@ -228,15 +230,15 @@ class Import
                 ...lw(
                     message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' request for libraries. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [...$rContext, ...exception_log($e)],
-                    e: $e
-                )
+                    e: $e,
+                ),
             );
             Message::add("{$context->backendName}.has_errors", true);
             return [];
         }
 
         if (null !== ($ignoreIds = ag($context->options, 'ignore', null))) {
-            $ignoreIds = array_map(fn($v) => trim($v), explode(',', (string)$ignoreIds));
+            $ignoreIds = array_map(trim(...), explode(',', (string) $ignoreIds));
         }
 
         $limitLibraryId = ag($opts, Options::ONLY_LIBRARY_ID, null);
@@ -246,7 +248,7 @@ class Import
 
         // -- Get library items count.
         foreach ($listDirs as $section) {
-            $libraryId = (string)ag($section, 'Id');
+            $libraryId = (string) ag($section, 'Id');
 
             $logContext = [
                 ...$rContext,
@@ -257,54 +259,57 @@ class Import
                 ],
             ];
 
-            if (null !== $limitLibraryId && $libraryId !== (string)$limitLibraryId) {
+            if (null !== $limitLibraryId && $libraryId !== (string) $limitLibraryId) {
                 continue;
             }
 
-            if (true === in_array(ag($logContext, 'library.id'), $ignoreIds ?? [])) {
+            if (true === in_array(ag($logContext, 'library.id'), $ignoreIds ?? [], true)) {
                 continue;
             }
 
-            if (!in_array(ag($logContext, 'library.type'), $types)) {
+            if (!in_array(ag($logContext, 'library.type'), $types, true)) {
                 continue;
             }
 
-            $url = $context->backendUrl->withPath(
-                r('/Users/{user_id}/items/', ['user_id' => $context->backendUser])
-            )->withQuery(
-                http_build_query([
-                    'sortBy' => 'DateCreated',
-                    'sortOrder' => 'Ascending',
-                    'parentId' => ag($logContext, 'library.id'),
-                    'recursive' => 'true',
-                    'collapseBoxSetItems' => 'false',
-                    'excludeLocationTypes' => 'Virtual',
-                    'includeItemTypes' => implode(',', [JFC::TYPE_MOVIE, JFC::TYPE_EPISODE]),
-                    'startIndex' => 0,
-                    'limit' => 0,
-                ])
-            );
+            $url = $context
+                ->backendUrl
+                ->withPath(
+                    r('/Users/{user_id}/items/', ['user_id' => $context->backendUser]),
+                )
+                ->withQuery(
+                    http_build_query([
+                        'sortBy' => 'DateCreated',
+                        'sortOrder' => 'Ascending',
+                        'parentId' => ag($logContext, 'library.id'),
+                        'recursive' => 'true',
+                        'collapseBoxSetItems' => 'false',
+                        'excludeLocationTypes' => 'Virtual',
+                        'includeItemTypes' => implode(',', [JFC::TYPE_MOVIE, JFC::TYPE_EPISODE]),
+                        'startIndex' => 0,
+                        'limit' => 0,
+                    ]),
+                );
 
-            $logContext['library']['url'] = (string)$url;
+            $logContext['library']['url'] = (string) $url;
 
             $this->logger->debug(
                 message: "{action}: Requesting '{client}: {user}@{backend}' - '{library.title}' items count.",
-                context: $logContext
+                context: $logContext,
             );
 
             try {
                 $requests[] = $this->http->request(
                     method: Method::GET,
-                    url: (string)$url,
-                    options: array_replace_recursive($context->getHttpOptions(), ['user_data' => $logContext])
+                    url: (string) $url,
+                    options: array_replace_recursive($context->getHttpOptions(), ['user_data' => $logContext]),
                 );
             } catch (iException $e) {
                 $this->logger->error(
                     ...lw(
                         message: "{action}: Request for '{client}: {user}@{backend}' - '{library.title}' items count failed. '{error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
                         context: [...$logContext, ...exception_log($e)],
-                        e: $e
-                    )
+                        e: $e,
+                    ),
                 );
                 continue;
             } catch (Throwable $e) {
@@ -312,8 +317,8 @@ class Import
                     ...lw(
                         message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' - '{library.title}' items count request. '{error.message}' at '{error.file}:{error.line}'.",
                         context: [...$logContext, ...exception_log($e)],
-                        e: $e
-                    )
+                        e: $e,
+                    ),
                 );
                 continue;
             }
@@ -330,14 +335,14 @@ class Import
                         context: [
                             ...$logContext,
                             'status_code' => $response->getStatusCode(),
-                        ]
+                        ],
                     );
                     continue;
                 }
 
                 $json = json_decode($response->getContent(), true);
 
-                $totalCount = (int)(ag($json, 'TotalRecordCount', 0));
+                $totalCount = (int) ag($json, 'TotalRecordCount', 0);
 
                 if ($totalCount < 1) {
                     $this->logger->warning(
@@ -348,7 +353,7 @@ class Import
                                 'headers' => $response->getHeaders(),
                                 'body' => false === $json ? $response->getContent(false) : $json,
                             ],
-                        ]
+                        ],
                     );
                     continue;
                 }
@@ -357,10 +362,10 @@ class Import
             } catch (iException $e) {
                 $this->logger->error(
                     ...lw(
-                    message: "{action}: Request for '{client}: {user}@{backend}' - '{library.title}' total items has failed. '{error.kind}' '{error.message}' at '{error.file}:{error.line}'.",
-                    context: [...$logContext, ...exception_log($e)],
-                    e: $e
-                ),
+                        message: "{action}: Request for '{client}: {user}@{backend}' - '{library.title}' total items has failed. '{error.kind}' '{error.message}' at '{error.file}:{error.line}'.",
+                        context: [...$logContext, ...exception_log($e)],
+                        e: $e,
+                    ),
                 );
                 continue;
             } catch (Throwable $e) {
@@ -368,8 +373,8 @@ class Import
                     ...lw(
                         message: "Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' requests for items count. '{error.message}' at '{error.file}:{error.line}'.",
                         context: [...$logContext, ...exception_log($e)],
-                        e: $e
-                    )
+                        e: $e,
+                    ),
                 );
                 continue;
             }
@@ -382,7 +387,7 @@ class Import
             $logContext = [
                 ...$rContext,
                 'library' => [
-                    'id' => (string)ag($section, 'Id'),
+                    'id' => (string) ag($section, 'Id'),
                     'title' => ag($section, 'Name', '??'),
                     'type' => ag($section, ['CollectionType', 'Type'], 'unknown'),
                 ],
@@ -392,11 +397,15 @@ class Import
                 ],
             ];
 
-            if (true === in_array(ag($logContext, 'library.id'), $ignoreIds ?? [])) {
+            if (true === in_array(ag($logContext, 'library.id'), $ignoreIds ?? [], true)) {
                 continue;
             }
 
-            if (!in_array(ag($logContext, 'library.type'), [JFC::COLLECTION_TYPE_SHOWS, JFC::COLLECTION_TYPE_MIXED])) {
+            if (!in_array(
+                ag($logContext, 'library.type'),
+                [JFC::COLLECTION_TYPE_SHOWS, JFC::COLLECTION_TYPE_MIXED],
+                true,
+            )) {
                 continue;
             }
 
@@ -404,25 +413,30 @@ class Import
                 $logContext['library']['totalRecords'] = $total[ag($logContext, 'library.id')];
             }
 
-            $url = $context->backendUrl->withPath(r('/Users/{user_id}/items/', [
-                'user_id' => $context->backendUser
-            ]))->withQuery(
-                http_build_query([
-                    'parentId' => ag($logContext, 'library.id'),
-                    'recursive' => 'false',
-                    'enableUserData' => 'false',
-                    'enableImages' => 'false',
-                    'filters' => "IsNotFolder",
-                    'fields' => implode(',', JFC::EXTRA_FIELDS),
-                    'excludeLocationTypes' => 'Virtual',
-                ])
-            );
+            $url = $context
+                ->backendUrl
+                ->withPath(
+                    r('/Users/{user_id}/items/', [
+                        'user_id' => $context->backendUser,
+                    ]),
+                )
+                ->withQuery(
+                    http_build_query([
+                        'parentId' => ag($logContext, 'library.id'),
+                        'recursive' => 'false',
+                        'enableUserData' => 'false',
+                        'enableImages' => 'false',
+                        'filters' => 'IsNotFolder',
+                        'fields' => implode(',', JFC::EXTRA_FIELDS),
+                        'excludeLocationTypes' => 'Virtual',
+                    ]),
+                );
 
-            $logContext['library']['url'] = (string)$url;
+            $logContext['library']['url'] = (string) $url;
 
             $this->logger->debug(
                 message: "{action}: Requesting '{client}: {user}@{backend}' - '{library.title}' series external ids.",
-                context: $logContext
+                context: $logContext,
             );
 
             try {
@@ -437,10 +451,10 @@ class Import
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                    message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' '{library.title}' series external ids request. '{error.message}' at '{error.file}:{error.line}'.",
-                    context: [...$logContext, ...exception_log($e)],
-                    e: $e
-                ),
+                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' '{library.title}' series external ids request. '{error.message}' at '{error.file}:{error.line}'.",
+                        context: [...$logContext, ...exception_log($e)],
+                        e: $e,
+                    ),
                 );
                 continue;
             }
@@ -451,22 +465,22 @@ class Import
             $logContext = [
                 ...$rContext,
                 'library' => [
-                    'id' => (string)ag($section, 'Id'),
+                    'id' => (string) ag($section, 'Id'),
                     'title' => ag($section, 'Name', '??'),
                     'type' => ag($section, ['CollectionType', 'Type'], 'unknown'),
                 ],
             ];
 
-            if (true === in_array(ag($logContext, 'library.id'), $ignoreIds ?? [])) {
+            if (true === in_array(ag($logContext, 'library.id'), $ignoreIds ?? [], true)) {
                 $ignored++;
                 $this->logger->info(
                     message: "{action}: Ignoring '{client}: {user}@{backend}' - '{library.title}'. Requested by user.",
-                    context: $logContext
+                    context: $logContext,
                 );
                 continue;
             }
 
-            if (!in_array(ag($logContext, 'library.type'), $types)) {
+            if (!in_array(ag($logContext, 'library.type'), $types, true)) {
                 $unsupported++;
                 $this->logger->info(
                     message: "{action}: Ignoring '{client}: {user}@{backend}' - '{library.title}'. Library type '{library.type}' is not supported.",
@@ -479,15 +493,15 @@ class Import
                 $ignored++;
                 $this->logger->warning(
                     message: "{action}: Ignoring '{client}: {user}@{backend}' - '{library.title}'. No items count was found.",
-                    context: $logContext
+                    context: $logContext,
                 );
                 continue;
             }
 
             $logContext['library']['totalRecords'] = $total[ag($logContext, 'library.id')];
 
-            $segmentTotal = (int)$total[ag($logContext, 'library.id')];
-            $segmentSize = (int)ag($context->options, Options::LIBRARY_SEGMENT, 1000);
+            $segmentTotal = (int) $total[ag($logContext, 'library.id')];
+            $segmentSize = (int) ag($context->options, Options::LIBRARY_SEGMENT, 1000);
             $segmented = ceil($segmentTotal / $segmentSize);
 
             for ($i = 0; $i < $segmented; $i++) {
@@ -498,26 +512,31 @@ class Import
                         'size' => $segmentSize,
                     ];
 
-                    $url = $context->backendUrl->withPath(r('/Users/{user_id}/items/', [
-                        'user_id' => $context->backendUser
-                    ]))->withQuery(
-                        http_build_query([
-                            'sortBy' => 'DateCreated',
-                            'sortOrder' => 'Ascending',
-                            'collapseBoxSetItems' => 'false',
-                            'parentId' => ag($logContext, 'library.id'),
-                            'recursive' => 'true',
-                            'enableUserData' => 'true',
-                            'enableImages' => 'false',
-                            'excludeLocationTypes' => 'Virtual',
-                            'fields' => implode(',', JFC::EXTRA_FIELDS),
-                            'includeItemTypes' => implode(',', [JFC::TYPE_MOVIE, JFC::TYPE_EPISODE]),
-                            'limit' => $segmentSize,
-                            'startIndex' => $i < 1 ? 0 : ($segmentSize * $i),
-                        ])
-                    );
+                    $url = $context
+                        ->backendUrl
+                        ->withPath(
+                            r('/Users/{user_id}/items/', [
+                                'user_id' => $context->backendUser,
+                            ]),
+                        )
+                        ->withQuery(
+                            http_build_query([
+                                'sortBy' => 'DateCreated',
+                                'sortOrder' => 'Ascending',
+                                'collapseBoxSetItems' => 'false',
+                                'parentId' => ag($logContext, 'library.id'),
+                                'recursive' => 'true',
+                                'enableUserData' => 'true',
+                                'enableImages' => 'false',
+                                'excludeLocationTypes' => 'Virtual',
+                                'fields' => implode(',', JFC::EXTRA_FIELDS),
+                                'includeItemTypes' => implode(',', [JFC::TYPE_MOVIE, JFC::TYPE_EPISODE]),
+                                'limit' => $segmentSize,
+                                'startIndex' => $i < 1 ? 0 : $segmentSize * $i,
+                            ]),
+                        );
 
-                    $logContext['library']['url'] = (string)$url;
+                    $logContext['library']['url'] = (string) $url;
 
                     $this->logger->debug(
                         message: "{action}: Requesting '{client}: {user}@{backend}' '{library.title} {segment.number}/{segment.of}' content list.",
@@ -537,8 +556,8 @@ class Import
                         ...lw(
                             message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' '{library.title} {segment.number}/{segment.of}' content list request. '{error.message}' at '{error.file}:{error.line}'.",
                             context: [...$logContext, ...exception_log($e)],
-                            e: $e
-                        )
+                            e: $e,
+                        ),
                     );
                     continue;
                 }
@@ -580,7 +599,7 @@ class Import
                 context: [
                     ...$logContext,
                     'status_code' => $response->getStatusCode(),
-                ]
+                ],
             );
             return;
         }
@@ -593,18 +612,18 @@ class Import
                 'time' => [
                     'start' => $start,
                 ],
-            ]
+            ],
         );
 
         try {
             $it = Items::fromIterable(
-                iterable: httpClientChunks($this->http->stream($response)),
+                iterable: http_client_chunks($this->http->stream($response)),
                 options: [
                     'pointer' => '/Items',
                     'decoder' => new ErrorWrappingDecoder(
-                        innerDecoder: new ExtJsonDecoder(assoc: true, options: JSON_INVALID_UTF8_IGNORE)
-                    )
-                ]
+                        innerDecoder: new ExtJsonDecoder(assoc: true, options: JSON_INVALID_UTF8_IGNORE),
+                    ),
+                ],
             );
 
             foreach ($it as $entity) {
@@ -618,7 +637,7 @@ class Import
                                     'message' => $entity->getErrorMessage(),
                                     'body' => $entity->getMalformedJson(),
                                 ],
-                            ]
+                            ],
                         );
                         continue;
                     }
@@ -627,7 +646,7 @@ class Import
                     $indexNumber = ag($entity, 'IndexNumber');
                     $indexNumberEnd = ag($entity, 'IndexNumberEnd');
                     if (null !== $indexNumber && null !== $indexNumberEnd && $indexNumberEnd > $indexNumber) {
-                        $episodeRangeLimit = (int)ag($context->options, Options::MAX_EPISODE_RANGE, 5);
+                        $episodeRangeLimit = (int) ag($context->options, Options::MAX_EPISODE_RANGE, 5);
                         $range = range(ag($entity, 'IndexNumber'), $indexNumberEnd);
                         if (count($range) > $episodeRangeLimit) {
                             $this->logger->warning(
@@ -643,7 +662,7 @@ class Import
                                         'indexNumberEnd' => $indexNumberEnd,
                                     ],
                                     ...$logContext,
-                                ]
+                                ],
                             );
                             $callback(item: $entity, logContext: $logContext);
                         } else {
@@ -660,7 +679,7 @@ class Import
                                             'indexNumber' => $indexNumber,
                                             'indexNumberEnd' => $indexNumberEnd,
                                         ],
-                                    ]
+                                    ],
                                 );
                                 $entity['IndexNumber'] = $i;
                                 $callback(item: $entity, logContext: $logContext);
@@ -674,8 +693,8 @@ class Import
                         ...lw(
                             message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' parsing '{library.title} {segment.number}/{segment.of}' item response. '{error.message}' at '{error.file}:{error.line}'.",
                             context: ['entity' => $entity, ...$logContext, ...exception_log($e)],
-                            e: $e
-                        )
+                            e: $e,
+                        ),
                     );
                 }
             }
@@ -684,8 +703,8 @@ class Import
                 ...lw(
                     message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' parsing of '{library.title} {segment.number}/{segment.of}' response. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [...$logContext, ...exception_log($e)],
-                    e: $e
-                )
+                    e: $e,
+                ),
             );
         }
 
@@ -699,10 +718,10 @@ class Import
                     'end' => $end,
                     'duration' => round($end - $start, 2),
                 ],
-            ]
+            ],
         );
 
-        Message::increment('response.size', (int)$response->getInfo('size_download'));
+        Message::increment('response.size', (int) $response->getInfo('size_download'));
     }
 
     /**
@@ -731,12 +750,11 @@ class Import
                 [
                     ...$logContext,
                     'response' => ['body' => $item],
-
-                ]
+                ],
             );
         }
 
-        $providersId = (array)ag($item, 'ProviderIds', []);
+        $providersId = (array) ag($item, 'ProviderIds', []);
 
         if (false === $guid->has(guids: $providersId, context: $logContext)) {
             $message = "{action}: Ignoring '{client}: {user}@{backend}' - '{item.title}'. {item.type} has no valid/supported external ids.";
@@ -758,7 +776,7 @@ class Import
             Guid::fromArray(
                 payload: $guid->get(guids: $providersId, context: $logContext),
                 context: $logContext,
-            )->getAll()
+            )->getAll(),
         );
     }
 
@@ -778,7 +796,7 @@ class Import
         iImport $mapper,
         array $item,
         array $logContext = [],
-        array $opts = []
+        array $opts = [],
     ): void {
         if (JFC::TYPE_SHOW === ($type = ag($item, 'Type'))) {
             $this->processShow(context: $context, guid: $guid, item: $item, logContext: $logContext);
@@ -803,18 +821,18 @@ class Import
                     'title' => match ($type) {
                         JFC::TYPE_MOVIE => r('{title} ({year})', [
                             'title' => ag($item, ['Name', 'OriginalTitle'], '??'),
-                            'year' => ag($item, 'ProductionYear', 0000),
+                            'year' => ag($item, 'ProductionYear', 0o000),
                         ]),
                         JFC::TYPE_EPISODE => r('{title} - ({season}x{episode})', [
                             'title' => ag($item, 'SeriesName', '??'),
-                            'season' => str_pad((string)ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
-                            'episode' => str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
+                            'season' => str_pad((string) ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
+                            'episode' => str_pad((string) ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
                         ]),
                         default => throw new InvalidArgumentException(
                             r("Unexpected Content type '{type}: {title}' was received.", [
                                 'type' => $type,
                                 'title' => ag($item, ['Name', 'OriginalTitle', 'SeriesName'], '??'),
-                            ])
+                            ]),
                         ),
                     },
                     'type' => ag($item, 'Type'),
@@ -833,13 +851,13 @@ class Import
                             'response' => ['body' => $item],
                             ...$logContext,
                         ],
-                        e: $e
-                    )
+                        e: $e,
+                    ),
                 );
                 return;
             }
 
-            $isPlayed = true === (bool)ag($item, 'UserData.Played');
+            $isPlayed = true === (bool) ag($item, 'UserData.Played');
             $dateKey = true === $isPlayed ? 'UserData.LastPlayedDate' : 'DateCreated';
 
             /**
@@ -854,7 +872,7 @@ class Import
                         [
                             'response' => ['body' => $item],
                             ...$logContext,
-                        ]
+                        ],
                     );
                 }
                 $dateKey = 'DateCreated';
@@ -867,7 +885,7 @@ class Import
                         'date_key' => $dateKey,
                         'response' => ['body' => $item],
                         ...$logContext,
-                    ]
+                    ],
                 );
 
                 Message::increment("{$context->backendName}.{$mappedType}.ignored_no_date_is_set");
@@ -885,10 +903,10 @@ class Import
                             iState::COLUMN_EXTRA => [
                                 $context->backendName => [
                                     iState::COLUMN_EXTRA_EVENT => 'task.import',
-                                    iState::COLUMN_EXTRA_DATE => makeDate('now'),
+                                    iState::COLUMN_EXTRA_DATE => make_date('now'),
                                 ],
                             ],
-                        ]
+                        ],
                     ]),
                 );
             } catch (Throwable $e) {
@@ -896,8 +914,8 @@ class Import
                     ...lw(
                         message: "{action}: Exception '{error.kind}' occurred during '{client}: {user}@{backend}' - '{library.title}' - '{item.id}: {item.title}' entity creation. '{error.message}' at '{error.file}:{error.line}'.",
                         context: [...$logContext, ...exception_log($e)],
-                        e: $e
-                    )
+                        e: $e,
+                    ),
                 );
 
                 Message::increment("{$context->backendName}.{$mappedType}.ignored_no_date_is_set");
@@ -905,7 +923,7 @@ class Import
             }
 
             if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
-                $providerIds = (array)ag($item, 'ProviderIds', []);
+                $providerIds = (array) ag($item, 'ProviderIds', []);
                 $message = "{action}: Ignoring '{client}: {user}@{backend}' - '{item.title}'. No valid/supported external ids.";
 
                 if (empty($providerIds)) {
@@ -923,8 +941,8 @@ class Import
 
             $opts = [
                 'after' => ag($opts, 'after', null),
-                Options::IMPORT_METADATA_ONLY => true === (bool)ag($context->options, Options::IMPORT_METADATA_ONLY),
-                Options::DISABLE_MARK_UNPLAYED => true === (bool)ag($context->options, Options::DISABLE_MARK_UNPLAYED),
+                Options::IMPORT_METADATA_ONLY => true === (bool) ag($context->options, Options::IMPORT_METADATA_ONLY),
+                Options::DISABLE_MARK_UNPLAYED => true === (bool) ag($context->options, Options::DISABLE_MARK_UNPLAYED),
             ];
 
             $mapper->add(entity: $entity, opts: $opts);
@@ -933,8 +951,8 @@ class Import
                 ...lw(
                     message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}'  - '{library.title}' - '{item.title}' {action}. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [...$logContext, ...exception_log($e)],
-                    e: $e
-                )
+                    e: $e,
+                ),
             );
         }
     }

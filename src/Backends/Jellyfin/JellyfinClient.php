@@ -15,7 +15,7 @@ use App\Backends\Jellyfin\Action\Backup;
 use App\Backends\Jellyfin\Action\Export;
 use App\Backends\Jellyfin\Action\GenerateAccessToken;
 use App\Backends\Jellyfin\Action\GetIdentifier;
-use App\Backends\Jellyfin\Action\getImagesUrl;
+use App\Backends\Jellyfin\Action\GetImagesUrl;
 use App\Backends\Jellyfin\Action\GetInfo;
 use App\Backends\Jellyfin\Action\GetLibrariesList;
 use App\Backends\Jellyfin\Action\GetLibrary;
@@ -101,6 +101,7 @@ class JellyfinClient implements iClient
         JellyfinClient::TYPE_MOVIE => iState::TYPE_MOVIE,
         JellyfinClient::TYPE_EPISODE => iState::TYPE_EPISODE,
     ];
+
     /**
      * @var Context Backend context.
      */
@@ -164,19 +165,19 @@ class JellyfinClient implements iClient
                         'app' => Config::get('name') . '/' . static::CLIENT_NAME,
                         'os' => PHP_OS,
                         'id' => md5(Config::get('name') . '/' . static::CLIENT_NAME),
-                        'version' => getAppVersion(),
+                        'version' => get_app_version(),
                         'user' => $context->backendUser,
-                    ]
+                    ],
                 ),
             ],
             trace: true === ag($context->options, Options::DEBUG_TRACE),
             options: array_replace_recursive($context->options, [
-                Options::LIBRARY_SEGMENT => (int)ag(
+                Options::LIBRARY_SEGMENT => (int) ag(
                     $context->options,
                     Options::LIBRARY_SEGMENT,
-                    Config::get('library.segment')
+                    Config::get('library.segment'),
                 ),
-            ])
+            ]),
         );
 
         $cloned->guid = $cloned->guid->withContext($cloned->context);
@@ -197,7 +198,7 @@ class JellyfinClient implements iClient
      */
     public function getName(): string
     {
-        return $this->context?->backendName ?? static::CLIENT_NAME;
+        return $this->context->backendName ?? static::CLIENT_NAME;
     }
 
     public function getType(): string
@@ -238,7 +239,7 @@ class JellyfinClient implements iClient
             context: $this->context,
             guid: $this->guid,
             request: $request,
-            opts: $opts
+            opts: $opts,
         );
 
         if ($response->hasError()) {
@@ -255,7 +256,7 @@ class JellyfinClient implements iClient
     /**
      * @inheritdoc
      */
-    public function pull(iImport $mapper, iDate|null $after = null): array
+    public function pull(iImport $mapper, ?iDate $after = null): array
     {
         $response = Container::get(Import::class)(
             context: $this->context,
@@ -278,13 +279,13 @@ class JellyfinClient implements iClient
     /**
      * @inheritdoc
      */
-    public function backup(iImport $mapper, iStream|null $writer = null, array $opts = []): array
+    public function backup(iImport $mapper, ?iStream $writer = null, array $opts = []): array
     {
         $response = Container::get(Backup::class)(
             context: $this->context,
             guid: $this->guid,
             mapper: $mapper,
-            opts: ag_sets($opts, ['writer' => $writer])
+            opts: ag_sets($opts, ['writer' => $writer]),
         );
 
         if ($response->hasError()) {
@@ -301,7 +302,7 @@ class JellyfinClient implements iClient
     /**
      * @inheritdoc
      */
-    public function export(iImport $mapper, QueueRequests $queue, iDate|null $after = null): array
+    public function export(iImport $mapper, QueueRequests $queue, ?iDate $after = null): array
     {
         $response = Container::get(Export::class)(
             context: $this->context,
@@ -325,13 +326,13 @@ class JellyfinClient implements iClient
     /**
      * @inheritdoc
      */
-    public function push(array $entities, QueueRequests $queue, iDate|null $after = null): array
+    public function push(array $entities, QueueRequests $queue, ?iDate $after = null): array
     {
         $response = Container::get(Push::class)(
             context: $this->context,
             entities: $entities,
             queue: $queue,
-            after: $after
+            after: $after,
         );
 
         if ($response->hasError()) {
@@ -348,7 +349,7 @@ class JellyfinClient implements iClient
     /**
      * @inheritdoc
      */
-    public function progress(array $entities, QueueRequests $queue, iDate|null $after = null): array
+    public function progress(array $entities, QueueRequests $queue, ?iDate $after = null): array
     {
         $version = $this->getVersion();
 
@@ -368,9 +369,9 @@ class JellyfinClient implements iClient
                             ],
                         ],
                         level: Levels::ERROR,
-                    )
+                    ),
                 ),
-                className: UnexpectedVersionException::class
+                className: UnexpectedVersionException::class,
             );
         }
 
@@ -379,7 +380,7 @@ class JellyfinClient implements iClient
             guid: $this->guid,
             entities: $entities,
             queue: $queue,
-            after: $after
+            after: $after,
         );
 
         if ($response->hasError()) {
@@ -402,7 +403,7 @@ class JellyfinClient implements iClient
             context: $this->context,
             query: $query,
             limit: $limit,
-            opts: $opts
+            opts: $opts,
         );
 
         if ($response->hasError()) {
@@ -453,7 +454,7 @@ class JellyfinClient implements iClient
      */
     public function getImagesUrl(string|int $id, array $opts = []): array
     {
-        $response = Container::get(getImagesUrl::class)(context: $this->context, id: $id, opts: $opts);
+        $response = Container::get(GetImagesUrl::class)(context: $this->context, id: $id, opts: $opts);
         if (false === $response->isSuccessful()) {
             $this->throwError($response);
         }
@@ -471,7 +472,7 @@ class JellyfinClient implements iClient
             method: $method,
             uri: $uri,
             body: $body,
-            opts: $opts
+            opts: $opts,
         );
     }
 
@@ -481,7 +482,7 @@ class JellyfinClient implements iClient
     public function getLibraryContent(string|int $libraryId, array $opts = []): array
     {
         $mapper = Container::get(ReadOnlyMapper::class)->withOptions([]);
-        assert($mapper instanceof ReadOnlyMapper);
+        assert($mapper instanceof ReadOnlyMapper, 'Expected ReadOnlyMapper for library content mapping.');
         $mapper->asContainer();
 
         $response = Container::get(Import::class)(
@@ -489,7 +490,7 @@ class JellyfinClient implements iClient
             guid: $this->guid,
             mapper: $mapper,
             after: null,
-            opts: ag_sets($opts, [Options::ONLY_LIBRARY_ID => $libraryId])
+            opts: ag_sets($opts, [Options::ONLY_LIBRARY_ID => $libraryId]),
         );
 
         if ($response->hasError()) {
@@ -716,7 +717,7 @@ class JellyfinClient implements iClient
             context: $this->context,
             entities: $entities,
             queue: $queue,
-            opts: $opts
+            opts: $opts,
         );
 
         if ($response->hasError()) {
@@ -727,13 +728,17 @@ class JellyfinClient implements iClient
     /**
      * @inheritdoc
      */
-    public function generateAccessToken(string|int $identifier, string $password, array $opts = []): array
-    {
+    public function generateAccessToken(
+        string|int $identifier,
+        #[\SensitiveParameter]
+        string $password,
+        array $opts = [],
+    ): array {
         $response = Container::get(GenerateAccessToken::class)(
             context: $this->context,
             identifier: $identifier,
             password: $password,
-            opts: $opts
+            opts: $opts,
         );
 
         if ($response->hasError()) {
@@ -771,10 +776,10 @@ class JellyfinClient implements iClient
             message: ag(
                 $response->extra,
                 'message',
-                fn() => $response->error?->format() ?? 'An unexpected error occurred.'
+                static fn() => $response->error?->format() ?? 'An unexpected error occurred.',
             ),
             code: $code,
-            previous: $response->error?->previous
+            previous: $response->error?->previous,
         );
     }
 }

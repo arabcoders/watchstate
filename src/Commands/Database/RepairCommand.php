@@ -27,7 +27,8 @@ class RepairCommand extends Command
 
     protected function configure(): void
     {
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->setDescription('Attempt to repair broken database.')
             ->addArgument('db', InputOption::VALUE_REQUIRED, 'Database to repair.');
     }
@@ -70,15 +71,15 @@ class RepairCommand extends Command
         $proc = Process::fromShellCommandline(r($command, ['file' => $db]));
         $proc->setTimeout(null);
         $proc->setIdleTimeout(null);
-        $proc->run(function ($type, $out) use ($output) {
-            $text = trim((string)$out);
+        $proc->run(static function ($type, $out) use ($output) {
+            $text = trim((string) $out);
             if (empty($text)) {
                 return;
             }
-            if ($type == Process::ERR) {
-                $output->writeln(r("<error>ERROR:</error> SQLite3: {text}", ['text' => $text]));
+            if ($type === Process::ERR) {
+                $output->writeln(r('<error>ERROR:</error> SQLite3: {text}', ['text' => $text]));
             } else {
-                $output->writeln(r("<info>INFO:</info> SQLite3: {text}", ['text' => $text]));
+                $output->writeln(r('<info>INFO:</info> SQLite3: {text}', ['text' => $text]));
             }
         });
         if ($proc->isSuccessful()) {
@@ -93,15 +94,15 @@ class RepairCommand extends Command
         $proc->setTimeout(null);
         $proc->setIdleTimeout(null);
         $output->writeln('<info>INFO:</info> Checking database integrity...');
-        $proc->run(function ($type, $out) use ($output) {
-            $text = trim((string)$out);
+        $proc->run(static function ($type, $out) use ($output) {
+            $text = trim((string) $out);
             if (empty($text)) {
                 return;
             }
-            if ($type == Process::ERR) {
-                $output->writeln(r("<error>ERROR:</error> SQLite3: {text}", ['text' => $text]));
+            if ($type === Process::ERR) {
+                $output->writeln(r('<error>ERROR:</error> SQLite3: {text}', ['text' => $text]));
             } else {
-                $output->writeln(r("<info>INFO:</info> SQLite3: {text}", ['text' => $text]));
+                $output->writeln(r('<info>INFO:</info> SQLite3: {text}', ['text' => $text]));
             }
         });
         if ($proc->isSuccessful()) {
@@ -111,7 +112,7 @@ class RepairCommand extends Command
             return self::FAILURE;
         }
 
-        $output->writeln(r("<info>INFO:</info> Updating database version to {version}.", [
+        $output->writeln(r('<info>INFO:</info> Updating database version to {version}.', [
             'version' => $version,
         ]));
         $pdo = new PDO("sqlite:{$db}.new.db");
@@ -127,7 +128,7 @@ class RepairCommand extends Command
         }
 
         $output->writeln(
-            r("<info>INFO:</info> Repair completed successfully. Database '{db}' is now valid.", ['db' => $db])
+            r("<info>INFO:</info> Repair completed successfully. Database '{db}' is now valid.", ['db' => $db]),
         );
 
         return self::SUCCESS;

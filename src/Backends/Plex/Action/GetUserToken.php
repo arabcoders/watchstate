@@ -29,8 +29,10 @@ final class GetUserToken
     private string $action = 'plex.getUserToken';
     private iHttp $http;
 
-    public function __construct(iHttp $http, protected LoggerInterface $logger)
-    {
+    public function __construct(
+        iHttp $http,
+        protected LoggerInterface $logger,
+    ) {
         $this->http = new RetryableHttpClient(client: $http, maxRetries: $this->maxRetry, logger: $this->logger);
     }
 
@@ -46,7 +48,7 @@ final class GetUserToken
      */
     public function __invoke(Context $context, int|string $userId, string $username, array $opts = []): Response
     {
-        if (true === (bool)ag($opts, Options::PLEX_EXTERNAL_USER, false)) {
+        if (true === (bool) ag($opts, Options::PLEX_EXTERNAL_USER, false)) {
             $fn = fn() => $this->GetExternalUserToken($context, $userId, $username);
         } else {
             $fn = fn() => $this->getUserToken($context, $userId, $username, $opts);
@@ -69,11 +71,13 @@ final class GetUserToken
     {
         try {
             $url = Container::getNew(iUri::class)
-                ->withPort(443)->withScheme('https')->withHost('plex.tv')
+                ->withPort(443)
+                ->withScheme('https')
+                ->withHost('plex.tv')
                 ->withPath(r('/api/v2/home/users/{user_id}/switch', ['user_id' => $userId]));
 
             if (null !== ($pin = ag($opts, Options::PLEX_USER_PIN, ag($context->options, Options::PLEX_USER_PIN)))) {
-                $url = $url->withQuery(http_build_query(['pin' => (string)$pin]));
+                $url = $url->withQuery(http_build_query(['pin' => (string) $pin]));
             }
 
             $this->logger->debug("Requesting temporary access token for '{user}@{backend}' user '{username}'.", [
@@ -81,7 +85,7 @@ final class GetUserToken
                 'backend' => $context->backendName,
                 'username' => $username,
                 'user_id' => $userId,
-                'url' => (string)$url,
+                'url' => (string) $url,
             ]);
 
             $opts['user_info'] = ['username' => $username];
@@ -90,14 +94,14 @@ final class GetUserToken
                 'headers' => ['Accept' => 'application/json'],
             ], $opts));
 
-            if (true === ($response instanceof Response)) {
+            if (true === $response instanceof Response) {
                 return $response;
             }
 
             $json = json_decode(
                 json: $response->getContent(),
                 associative: true,
-                flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
             );
 
             if ($context->trace) {
@@ -106,7 +110,7 @@ final class GetUserToken
                     'backend' => $context->backendName,
                     'username' => $username,
                     'user_id' => $userId,
-                    'url' => (string)$url,
+                    'url' => (string) $url,
                     'trace' => $json,
                     'headers' => $response->getHeaders(),
                 ]);
@@ -114,7 +118,10 @@ final class GetUserToken
 
             $tempToken = ag($json, 'authToken', null);
 
-            $url = Container::getNew(iUri::class)->withPort(443)->withScheme('https')->withHost('plex.tv')
+            $url = Container::getNew(iUri::class)
+                ->withPort(443)
+                ->withScheme('https')
+                ->withHost('plex.tv')
                 ->withPath('/api/v2/resources')
                 ->withQuery(http_build_query(['includeIPv6' => 1, 'includeHttps' => 1, 'includeRelay' => 1]));
 
@@ -123,7 +130,7 @@ final class GetUserToken
                 'backend' => $context->backendName,
                 'username' => $username,
                 'user_id' => $userId,
-                'url' => (string)$url,
+                'url' => (string) $url,
             ]);
 
             $response = $this->request(Method::GET, $url, Status::OK, $context, array_replace_recursive([
@@ -137,7 +144,7 @@ final class GetUserToken
             $json = json_decode(
                 json: $response->getContent(),
                 associative: true,
-                flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
             );
 
             if ($context->trace) {
@@ -148,9 +155,9 @@ final class GetUserToken
                         'backend' => $context->backendName,
                         'username' => $username,
                         'user_id' => $userId,
-                        'url' => (string)$url,
+                        'url' => (string) $url,
                         'trace' => $json,
-                    ]
+                    ],
                 );
             }
 
@@ -173,12 +180,12 @@ final class GetUserToken
             $this->logger->error(
                 "Response had '{count}' associated servers, non match '{user}@{backend}: {backend_id}' unique identifier.",
                 [
-                    'count' => count(($json)),
+                    'count' => count($json),
                     'user' => $context->userContext->name,
                     'backend' => $context->backendName,
                     'backend_id' => $context->backendId,
                     'servers' => $servers,
-                ]
+                ],
             );
 
             return new Response(
@@ -191,7 +198,7 @@ final class GetUserToken
                         'username' => $username,
                         'user_id' => $userId,
                     ],
-                    level: Levels::ERROR
+                    level: Levels::ERROR,
                 ),
             );
         } catch (Throwable $e) {
@@ -221,7 +228,7 @@ final class GetUserToken
                         ],
                     ],
                     level: Levels::ERROR,
-                    previous: $e
+                    previous: $e,
                 ),
             );
         }
@@ -266,7 +273,7 @@ final class GetUserToken
                     'userId' => $userId,
                     'username' => $username,
                 ],
-                level: Levels::ERROR
+                level: Levels::ERROR,
             ),
         );
     }
@@ -288,19 +295,22 @@ final class GetUserToken
         iUri $url,
         Status $expectedStatus,
         Context $context,
-        array $opts = []
+        array $opts = [],
     ): iResponse|Response {
         if (true !== ag($opts, 'no_admin') && null !== ($adminToken = ag($context->options, Options::ADMIN_TOKEN))) {
             if (null !== ($adminPin = ag($context->options, Options::ADMIN_PLEX_USER_PIN))) {
                 parse_str($url->getQuery(), $query);
-                $url = $url->withQuery(http_build_query(['pin' => $adminPin, ...$query,]));
+                $url = $url->withQuery(http_build_query(['pin' => $adminPin, ...$query]));
             }
 
-            $response = $this->http->request($method->value, (string)$url, [
-                'headers' => array_replace_recursive([
-                    'X-Plex-Token' => $adminToken,
-                    'X-Plex-Client-Identifier' => $context->backendId,
-                ], ag($opts, 'headers', [])),
+            $response = $this->http->request($method->value, (string) $url, [
+                'headers' => array_replace_recursive(
+                    [
+                        'X-Plex-Token' => $adminToken,
+                        'X-Plex-Client-Identifier' => $context->backendId,
+                    ],
+                    ag($opts, 'headers', []),
+                ),
                 ...ag($opts, 'options', []),
             ]);
             if ($expectedStatus === Status::from($response->getStatusCode())) {
@@ -308,11 +318,14 @@ final class GetUserToken
             }
         }
 
-        $response = $this->http->request($method->value, (string)$url, [
-            'headers' => array_replace_recursive([
-                'X-Plex-Token' => $context->backendToken,
-                'X-Plex-Client-Identifier' => $context->backendId,
-            ], ag($opts, 'headers', [])),
+        $response = $this->http->request($method->value, (string) $url, [
+            'headers' => array_replace_recursive(
+                [
+                    'X-Plex-Token' => $context->backendToken,
+                    'X-Plex-Client-Identifier' => $context->backendId,
+                ],
+                ag($opts, 'headers', []),
+            ),
             ...ag($opts, 'options', []),
         ]);
 
@@ -340,16 +353,18 @@ final class GetUserToken
                     'body' => $response->getContent(false),
                     'parsed' => $response->toArray(false),
                     'extra_msg' => $extra_msg,
-                    'url' => (string)$url,
+                    'url' => (string) $url,
                     'tokenType' => ag_exists(
                         $context->options,
-                        Options::ADMIN_TOKEN
-                    ) ? 'user & admin token' : 'user token',
+                        Options::ADMIN_TOKEN,
+                    )
+                        ? 'user & admin token'
+                        : 'user token',
                     'response' => $response,
                 ],
                 level: Levels::ERROR,
                 extra: [
-                    'error' => $extra_msg ?? "Failed to get token"
+                    'error' => $extra_msg ?? 'Failed to get token',
                 ],
             ),
         );

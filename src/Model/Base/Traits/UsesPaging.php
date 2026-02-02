@@ -78,5 +78,4 @@ trait UsesPaging
     {
         return $this->order;
     }
-
 }

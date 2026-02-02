@@ -7,6 +7,4 @@ namespace App\Libs\Exceptions\Backends;
 /**
  * Class InvalidContextException
  */
-class InvalidContextException extends BackendException
-{
-}
+class InvalidContextException extends BackendException {}

@@ -19,7 +19,7 @@ final class ServeStatic implements LoggerAwareInterface
 {
     use LoggerAwareTrait;
 
-    private finfo|null $mimeType = null;
+    private ?finfo $mimeType = null;
 
     private const array CONTENT_TYPE = [
         'css' => 'text/css; charset=utf-8',
@@ -50,8 +50,9 @@ final class ServeStatic implements LoggerAwareInterface
         '/guides' => __DIR__ . '/../../',
     ];
 
-    public function __construct(private string|null $staticPath = null)
-    {
+    public function __construct(
+        private ?string $staticPath = null,
+    ) {
         if (null === $this->staticPath) {
             $this->staticPath = Config::get('webui.path', __DIR__ . '/../../public/exported');
         }
@@ -68,10 +69,10 @@ final class ServeStatic implements LoggerAwareInterface
      */
     public function serve(iRequest $request): iResponse
     {
-        if (false === in_array($request->getMethod(), ['GET', 'HEAD', 'OPTIONS'])) {
+        if (false === in_array($request->getMethod(), ['GET', 'HEAD', 'OPTIONS'], true)) {
             throw new BadRequestException(
                 message: r("Method '{method}' is not allowed.", ['method' => $request->getMethod()]),
-                code: Status::METHOD_NOT_ALLOWED->value
+                code: Status::METHOD_NOT_ALLOWED->value,
             );
         }
 
@@ -86,27 +87,29 @@ final class ServeStatic implements LoggerAwareInterface
 
         // -- check if the request path is in the MD_IMAGES array
         foreach (self::MD_IMAGES as $key => $value) {
-            if (str_starts_with($requestPath, $key)) {
-                $staticPath = realpath($value);
-                break;
+            if (!str_starts_with($requestPath, $key)) {
+                continue;
             }
+
+            $staticPath = realpath($value);
+            break;
         }
 
         if (false === ($realBasePath = realpath($staticPath))) {
             throw new BadRequestException(
                 message: r("The static path '{path}' doesn't exists.", ['path' => $staticPath]),
-                code: Status::SERVICE_UNAVAILABLE->value
+                code: Status::SERVICE_UNAVAILABLE->value,
             );
         }
 
-        $filePath = fixPath($staticPath . $requestPath);
+        $filePath = fix_path($staticPath . $requestPath);
         if (is_dir($filePath)) {
-            $filePath = $filePath . '/index.html';
+            $filePath .= '/index.html';
         }
 
         if (!file_exists($filePath)) {
             $this->logger?->debug("File '{file}' is not found.", ['file' => $filePath]);
-            $checkIndex = fixPath($staticPath . $this->deepIndexLookup($staticPath, $requestPath));
+            $checkIndex = fix_path($staticPath . $this->deepIndexLookup($staticPath, $requestPath));
             if (false === file_exists($checkIndex) || false === is_file($checkIndex)) {
                 throw new NotFoundException(r("Path '{file}' is not found.", [
                     'file' => $requestPath,
@@ -115,12 +118,11 @@ final class ServeStatic implements LoggerAwareInterface
             $filePath = $checkIndex;
         }
 
-
         $filePath = realpath($filePath);
         if (false === $filePath || false === str_starts_with($filePath, $realBasePath)) {
             throw new BadRequestException(
                 message: r("Request '{file}' is invalid.", ['file' => $requestPath]),
-                code: Status::BAD_REQUEST->value
+                code: Status::BAD_REQUEST->value,
             );
         }
 
@@ -133,10 +135,10 @@ final class ServeStatic implements LoggerAwareInterface
 
         if (!empty($ifModifiedSince) && false !== $file->getMTime()) {
             try {
-                $ifModifiedSince = makeDate($ifModifiedSince)->getTimestamp();
+                $ifModifiedSince = make_date($ifModifiedSince)->getTimestamp();
                 if ($ifModifiedSince >= $file->getMTime()) {
                     return api_response(Status::NOT_MODIFIED, headers: [
-                        'Last-Modified' => gmdate('D, d M Y H:i:s T', $file->getMTime())
+                        'Last-Modified' => gmdate('D, d M Y H:i:s T', $file->getMTime()),
                     ]);
                 }
             } catch (Throwable) {
@@ -186,7 +188,7 @@ final class ServeStatic implements LoggerAwareInterface
     {
         // -- paths may look like /parent/id/child, do a deep lookup for index.html at each level
         // return the first index.html found
-        $path = fixPath($path);
+        $path = fix_path($path);
         if ('/' === $path || empty($path)) {
             return $path;
         }

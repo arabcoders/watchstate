@@ -19,12 +19,13 @@ final class Option
 {
     use APITraits;
 
-    public function __construct(private readonly iImport $mapper, private readonly iLogger $logger)
-    {
-    }
+    public function __construct(
+        private readonly iImport $mapper,
+        private readonly iLogger $logger,
+    ) {}
 
     #[Route(['GET', 'POST', 'PATCH', 'DELETE'], Index::URL . '/{name:backend}/option[/{option}[/]]')]
-    public function __invoke(iRequest $request, string $name, string|null $option = null): iResponse
+    public function __invoke(iRequest $request, string $name, ?string $option = null): iResponse
     {
         try {
             $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
@@ -38,20 +39,20 @@ final class Option
 
         $data = DataUtil::fromRequest($request);
 
-        if (null === ($option = $option ?? $data->get('key'))) {
+        if (null === ($option ??= $data->get('key'))) {
             return api_error('No option key was given.', Status::BAD_REQUEST);
         }
 
-        $isInternalRequest = true === (bool)$request->getAttribute('INTERNAL_REQUEST', false);
+        $isInternalRequest = true === (bool) $request->getAttribute('INTERNAL_REQUEST', false);
 
         if (false === str_starts_with($option, 'options.') && !$isInternalRequest) {
             return api_error(
                 "Invalid option key was given. Option keys must start with 'options.'",
-                Status::BAD_REQUEST
+                Status::BAD_REQUEST,
             );
         }
 
-        $spec = getServerColumnSpec($option);
+        $spec = get_server_column_spec($option);
         if (empty($spec)) {
             return api_error(r("Invalid option '{key}'.", ['key' => $option]), Status::BAD_REQUEST);
         }
@@ -60,7 +61,7 @@ final class Option
             if (false === $userContext->config->has($name . '.' . $option)) {
                 return api_error(r("Option '{option}' not found in backend '{name}' config.", [
                     'option' => $option,
-                    'name' => $name
+                    'name' => $name,
                 ]), Status::NOT_FOUND);
             }
 
@@ -70,7 +71,7 @@ final class Option
         if ('DELETE' === $request->getMethod() && false === $userContext->config->has("{$name}.{$option}")) {
             return api_error(r("Option '{option}' not found in backend '{name}' config.", [
                 'option' => $option,
-                'name' => $name
+                'name' => $name,
             ]), Status::NOT_FOUND);
         }
 
@@ -94,7 +95,7 @@ final class Option
                 } catch (ValidationException $e) {
                     return api_error(r("Value validation for '{key}' failed. {error}", [
                         'key' => $option,
-                        'error' => $e->getMessage()
+                        'error' => $e->getMessage(),
                     ]), Status::BAD_REQUEST);
                 }
             }
@@ -143,6 +144,6 @@ final class Option
             }
         }
 
-        return (bool)$value;
+        return (bool) $value;
     }
 }

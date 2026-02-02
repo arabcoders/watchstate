@@ -31,5 +31,4 @@ final class PSRContainer extends Container
     {
         return parent::getNew($id);
     }
-
 }

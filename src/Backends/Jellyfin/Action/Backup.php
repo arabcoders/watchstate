@@ -78,13 +78,13 @@ class Backup extends Import
                         ]),
                         JFC::TYPE_EPISODE => r('{title} - ({season}x{episode})', [
                             'title' => ag($item, 'SeriesName', '??'),
-                            'season' => str_pad((string)ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
-                            'episode' => str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
+                            'season' => str_pad((string) ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
+                            'episode' => str_pad((string) ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
                         ]),
                         default => throw new InvalidArgumentException(
                             r('Unexpected Content type [{type}] was received.', [
-                                'type' => $type
-                            ])
+                                'type' => $type,
+                            ]),
                         ),
                     },
                     'type' => $type,
@@ -101,15 +101,15 @@ class Backup extends Import
                 context: $context,
                 guid: $guid,
                 item: $item,
-                opts: $opts + ['library' => ag($logContext, 'library.id')]
+                opts: $opts + ['library' => ag($logContext, 'library.id')],
             );
 
-            assert($entity instanceof StateEntity);
+            assert($entity instanceof StateEntity, 'Expected state entity during Jellyfin backup.');
 
             $arr = [
                 iState::COLUMN_TYPE => $entity->type,
-                iState::COLUMN_WATCHED => (int)$entity->isWatched(),
-                iState::COLUMN_UPDATED => makeDate($entity->updated)->getTimestamp(),
+                iState::COLUMN_WATCHED => (int) $entity->isWatched(),
+                iState::COLUMN_UPDATED => make_date($entity->updated)->getTimestamp(),
                 iState::COLUMN_META_SHOW => '',
                 iState::COLUMN_TITLE => trim($entity->title),
             ];
@@ -119,10 +119,9 @@ class Backup extends Import
                 $arr[iState::COLUMN_TITLE] = trim(
                     ag(
                         $entity->getMetadata($entity->via),
-                        iState::COLUMN_META_DATA_EXTRA . '.' .
-                        iState::COLUMN_META_DATA_EXTRA_TITLE,
+                        iState::COLUMN_META_DATA_EXTRA . '.' . iState::COLUMN_META_DATA_EXTRA_TITLE,
                         $entity->season . 'x' . $entity->episode,
-                    )
+                    ),
                 );
                 $arr[iState::COLUMN_SEASON] = $entity->season;
                 $arr[iState::COLUMN_EPISODE] = $entity->episode;
@@ -134,14 +133,14 @@ class Backup extends Import
 
             $arr[iState::COLUMN_GUIDS] = array_filter(
                 $entity->getGuids(),
-                fn($key) => str_contains($key, 'guid_'),
-                ARRAY_FILTER_USE_KEY
+                static fn($key) => str_contains($key, 'guid_'),
+                ARRAY_FILTER_USE_KEY,
             );
             if ($entity->isEpisode()) {
                 $arr[iState::COLUMN_PARENT] = array_filter(
                     $entity->getParentGuids(),
-                    fn($key) => str_contains($key, 'guid_'),
-                    ARRAY_FILTER_USE_KEY
+                    static fn($key) => str_contains($key, 'guid_'),
+                    ARRAY_FILTER_USE_KEY,
                 );
             }
 
@@ -149,28 +148,28 @@ class Backup extends Import
                 $arr[iState::COLUMN_META_DATA_PROGRESS] = $entity->getPlayProgress();
             }
 
-            if (true !== (bool)ag($opts, 'no_enhance') && null !== ($fromDb = $mapper->get($entity))) {
+            if (true !== (bool) ag($opts, 'no_enhance') && null !== ($fromDb = $mapper->get($entity))) {
                 $arr[iState::COLUMN_GUIDS] = array_replace_recursive(
                     array_filter(
                         $fromDb->getGuids(),
-                        fn($key) => str_contains($key, 'guid_'),
-                        ARRAY_FILTER_USE_KEY
+                        static fn($key) => str_contains($key, 'guid_'),
+                        ARRAY_FILTER_USE_KEY,
                     ),
-                    $arr[iState::COLUMN_GUIDS]
+                    $arr[iState::COLUMN_GUIDS],
                 );
                 if ($entity->isEpisode()) {
                     $arr[iState::COLUMN_PARENT] = array_replace_recursive(
                         array_filter(
                             $fromDb->getParentGuids(),
-                            fn($key) => str_contains($key, 'guid_'),
-                            ARRAY_FILTER_USE_KEY
+                            static fn($key) => str_contains($key, 'guid_'),
+                            ARRAY_FILTER_USE_KEY,
                         ),
-                        $arr[iState::COLUMN_PARENT] ?? []
+                        $arr[iState::COLUMN_PARENT] ?? [],
                     );
                 }
             }
 
-            if (($writer instanceof StreamInterface) && false === (bool)ag($opts, Options::DRY_RUN, false)) {
+            if ($writer instanceof StreamInterface && false === (bool) ag($opts, Options::DRY_RUN, false)) {
                 $writer->write(PHP_EOL . json_encode($arr, self::JSON_FLAGS) . ',');
             }
         } catch (Throwable $e) {
@@ -191,7 +190,7 @@ class Backup extends Import
                         'message' => $e->getMessage(),
                         'trace' => $e->getTrace(),
                     ],
-                ]
+                ],
             );
         }
     }

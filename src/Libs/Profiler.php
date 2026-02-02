@@ -12,7 +12,7 @@ use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Random\RandomException;
 use Throwable;
 
-readonly final class Profiler
+final readonly class Profiler
 {
     public const string QUERY_NAME = '_profile';
     public const string HEADER_NAME = 'X-Profile';
@@ -30,8 +30,7 @@ readonly final class Profiler
         private int $sample = 5000,
         private array $config = [],
         private array $flags = ['PROFILER_CPU_PROFILING', 'PROFILER_MEMORY_PROFILING'],
-    ) {
-    }
+    ) {}
 
     /**
      * Process the function and profile it.
@@ -41,7 +40,7 @@ readonly final class Profiler
      *
      * @return mixed The result of the function.
      */
-    public function process(callable $func, iRequest|null $request = null): mixed
+    public function process(callable $func, ?iRequest $request = null): mixed
     {
         if (false === extension_loaded('xhprof') || false === class_exists('Xhgui\Profiler\Profiler')) {
             return $func();
@@ -82,7 +81,7 @@ readonly final class Profiler
         $data = ag_set(
             $data,
             'meta.id',
-            ag($request->getServerParams(), 'X_REQUEST_ID', fn() => generateUUID())
+            ag($request->getServerParams(), 'X_REQUEST_ID', generate_uuid(...)),
         );
 
         ($this->callback)($data, $response);

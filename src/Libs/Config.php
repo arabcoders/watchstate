@@ -25,7 +25,7 @@ final class Config
      */
     public static function init(Closure|array $data): void
     {
-        self::$config = getValue($data);
+        self::$config = get_value($data);
     }
 
     /**
@@ -50,9 +50,9 @@ final class Config
      */
     public static function append(Closure|array $data): bool
     {
-        $data = getValue($data);
+        $data = get_value($data);
 
-        foreach ((array)$data as $key => $val) {
+        foreach ((array) $data as $key => $val) {
             self::$config = ag_set(self::$config, $key, $val);
         }
 

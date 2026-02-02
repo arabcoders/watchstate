@@ -39,9 +39,11 @@ class GetMetaData
      * @param iLogger $logger The logger instance.
      * @param iCache $cache The cache instance.
      */
-    public function __construct(protected iHttp $http, protected iLogger $logger, protected iCache $cache)
-    {
-    }
+    public function __construct(
+        protected iHttp $http,
+        protected iLogger $logger,
+        protected iCache $cache,
+    ) {}
 
     /**
      * Get Backend item metadata.
@@ -58,28 +60,31 @@ class GetMetaData
             context: $context,
             fn: function () use ($context, $id, $opts) {
                 $cacheKey = null;
-                $isGeneric = true === (bool)ag($opts, Options::IS_GENERIC, false);
-                if (true !== (bool)ag($opts, Options::NO_CACHE, false)) {
-                    $cacheKey = r("{client}_{split}_{id}_metadata", [
+                $isGeneric = true === (bool) ag($opts, Options::IS_GENERIC, false);
+                if (true !== (bool) ag($opts, Options::NO_CACHE, false)) {
+                    $cacheKey = r('{client}_{split}_{id}_metadata', [
                         'id' => $id,
                         'client' => $context->clientName,
                         'split' => true === $isGeneric ? $context->backendId : $context->backendName,
                     ]);
                 }
 
-                $url = $context->backendUrl->withPath(
-                    r('/Users/{user_id}/items/{item_id}', ['user_id' => $context->backendUser, 'item_id' => $id])
-                )->withQuery(
-                    http_build_query(
-                        array_merge_recursive([
-                            'recursive' => 'false',
-                            'fields' => implode(',', JellyfinClient::EXTRA_FIELDS),
-                            'enableUserData' => 'true',
-                            'enableImages' => 'false',
-                            'includeItemTypes' => 'Episode,Movie,Series',
-                        ], $opts['query'] ?? []),
+                $url = $context
+                    ->backendUrl
+                    ->withPath(
+                        r('/Users/{user_id}/items/{item_id}', ['user_id' => $context->backendUser, 'item_id' => $id]),
                     )
-                );
+                    ->withQuery(
+                        http_build_query(
+                            array_merge_recursive([
+                                'recursive' => 'false',
+                                'fields' => implode(',', JellyfinClient::EXTRA_FIELDS),
+                                'enableUserData' => 'true',
+                                'enableImages' => 'false',
+                                'includeItemTypes' => 'Episode,Movie,Series',
+                            ], $opts['query'] ?? []),
+                        ),
+                    );
 
                 $logContext = [
                     'id' => $id,
@@ -87,27 +92,27 @@ class GetMetaData
                     'client' => $context->clientName,
                     'backend' => $context->backendName,
                     'user' => $context->userContext->name,
-                    'url' => (string)$url,
+                    'url' => (string) $url,
                     ...ag($opts, Options::LOG_CONTEXT, []),
                 ];
 
                 $this->logger->debug(
                     "{action}: Requesting '{client}: {user}@{backend}' - '{id}' item metadata.",
-                    $logContext
+                    $logContext,
                 );
 
                 if (null !== $cacheKey && $this->cache->has($cacheKey)) {
                     $item = $this->cache->get(key: $cacheKey);
                     $fromCache = true;
                 } else {
-                    assert($this->http instanceof HttpClient);
+                    assert($this->http instanceof HttpClient, 'Expected HttpClient for Jellyfin metadata requests.');
                     $response = $this->http->request(
                         method: Method::GET,
-                        url: (string)$url,
+                        url: (string) $url,
                         options: array_replace_recursive(
                             $context->getHttpOptions(),
                             true === ag_exists($opts, 'headers') ? ['headers' => $opts['headers']] : [],
-                        )
+                        ),
                     );
 
                     if (Status::OK !== Status::from($response->getStatusCode())) {
@@ -118,22 +123,22 @@ class GetMetaData
                                 context: [
                                     ...$logContext,
                                     'status_code' => $response->getStatusCode(),
-                                ]
-                            )
+                                ],
+                            ),
                         );
                     }
 
                     $item = json_decode(
                         json: $response->getContent(),
                         associative: true,
-                        flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                        flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
                     );
 
                     if (null !== $cacheKey) {
                         $this->cache->set(
                             key: $cacheKey,
                             value: $item,
-                            ttl: $opts[Options::CACHE_TTL] ?? new DateInterval('PT2M')
+                            ttl: $opts[Options::CACHE_TTL] ?? new DateInterval('PT2M'),
                         );
                     }
 
@@ -145,7 +150,7 @@ class GetMetaData
                         ...$logContext,
                         'cached' => $fromCache,
                         'response' => [
-                            'body' => $item
+                            'body' => $item,
                         ],
                     ]);
                 }

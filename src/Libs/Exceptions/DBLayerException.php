@@ -20,7 +20,7 @@ class DBLayerException extends PDOException implements AppExceptionInterface
     public array $bind = [];
 
     public array $options = [];
-    public array|null $errorInfo = [];
+    public ?array $errorInfo = [];
 
     /**
      * @param string $queryString
@@ -34,7 +34,7 @@ class DBLayerException extends PDOException implements AppExceptionInterface
         string $queryString,
         array $bind = [],
         array $errorInfo = [],
-        mixed $errorCode = 0
+        mixed $errorCode = 0,
     ): self {
         $this->queryString = $queryString;
         $this->bind = $bind;

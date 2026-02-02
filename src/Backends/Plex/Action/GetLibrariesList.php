@@ -27,9 +27,10 @@ final class GetLibrariesList
 
     private string $action = 'plex.getLibrariesList';
 
-    public function __construct(protected iHttp $http, protected iLogger $logger)
-    {
-    }
+    public function __construct(
+        protected iHttp $http,
+        protected iLogger $logger,
+    ) {}
 
     /**
      * Get Backend libraries list.
@@ -67,17 +68,19 @@ final class GetLibrariesList
         try {
             $cls = fn() => $this->real_request($context, $logContext);
 
-            $json = true === (bool)ag($opts, Options::NO_CACHE) ? $cls() : $this->tryCache(
-                $context,
-                'libraries_list',
-                $cls,
-                new DateInterval('PT1M'),
-                $this->logger
-            );
+            $json = true === (bool) ag($opts, Options::NO_CACHE)
+                ? $cls()
+                : $this->tryCache(
+                    $context,
+                    'libraries_list',
+                    $cls,
+                    new DateInterval('PT1M'),
+                    $this->logger,
+                );
         } catch (RuntimeException $e) {
             return new Response(
                 status: false,
-                error: new Error(message: $e->getMessage(), level: Levels::ERROR, previous: $e)
+                error: new Error(message: $e->getMessage(), level: Levels::ERROR, previous: $e),
             );
         }
 
@@ -96,29 +99,32 @@ final class GetLibrariesList
                 error: new Error(
                     message: "{action}: Request for '{client}: {user}@{backend}' libraries returned empty list.",
                     context: [...$logContext, 'response' => ['key' => 'MediaContainer.Directory', 'body' => $json]],
-                    level: Levels::WARNING
+                    level: Levels::WARNING,
                 ),
             );
         }
 
         if (null !== ($ignoreIds = ag($context->options, 'ignore', null))) {
-            $ignoreIds = array_map(fn($v) => (int)trim($v), explode(',', (string)$ignoreIds));
+            $ignoreIds = array_map(static fn($v) => (int) trim($v), explode(',', (string) $ignoreIds));
         }
 
         $list = [];
 
         foreach ($listDirs as $section) {
-            $key = (int)ag($section, 'key');
+            $key = (int) ag($section, 'key');
             $type = ag($section, 'type', 'unknown');
             $agent = ag($section, 'agent', 'unknown');
             $supportedType = PlexClient::TYPE_MOVIE === $type || PlexClient::TYPE_SHOW === $type;
 
-            $webUrl = $context->backendUrl->withPath('/web/index.html')->withFragment(
-                r('!/media/{backend_id}/com.plexapp.plugins.library?source={key}', [
-                    'key' => $key,
-                    'backend_id' => $context->backendId,
-                ])
-            );
+            $webUrl = $context
+                ->backendUrl
+                ->withPath('/web/index.html')
+                ->withFragment(
+                    r('!/media/{backend_id}/com.plexapp.plugins.library?source={key}', [
+                        'key' => $key,
+                        'backend_id' => $context->backendId,
+                    ]),
+                );
 
             $contentType = match ($type) {
                 PlexClient::TYPE_SHOW => iState::TYPE_SHOW,
@@ -130,15 +136,15 @@ final class GetLibrariesList
                 'id' => $key,
                 'title' => ag($section, 'title', '???'),
                 'type' => ucfirst($type),
-                'ignored' => true === in_array($key, $ignoreIds ?? []),
-                'supported' => $supportedType && true === in_array($agent, PlexClient::SUPPORTED_AGENTS),
+                'ignored' => true === in_array($key, $ignoreIds ?? [], true),
+                'supported' => $supportedType && true === in_array($agent, PlexClient::SUPPORTED_AGENTS, true),
                 'agent' => ag($section, 'agent'),
                 'scanner' => ag($section, 'scanner'),
                 'contentType' => $contentType,
-                'webUrl' => (string)$webUrl,
+                'webUrl' => (string) $webUrl,
             ];
 
-            if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
+            if (true === (bool) ag($opts, Options::RAW_RESPONSE)) {
                 $builder['raw'] = $section;
             }
 
@@ -163,11 +169,11 @@ final class GetLibrariesList
     {
         $url = $context->backendUrl->withPath('/library/sections');
 
-        $logContext['url'] = (string)$url;
+        $logContext['url'] = (string) $url;
 
         $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' libraries list.", $logContext);
 
-        $response = $this->http->request(Method::GET, (string)$url, $context->getHttpOptions());
+        $response = $this->http->request(Method::GET, (string) $url, $context->getHttpOptions());
 
         $payload = $response->getContent(false);
 
@@ -182,15 +188,15 @@ final class GetLibrariesList
             throw new RuntimeException(
                 r(
                     text: "{action}: Request for '{client}: {user}@{backend}' libraries returned with unexpected '{status_code}' status code.",
-                    context: [...$logContext, 'status_code' => $response->getStatusCode()]
-                )
+                    context: [...$logContext, 'status_code' => $response->getStatusCode()],
+                ),
             );
         }
 
         return json_decode(
             json: $payload,
             associative: true,
-            flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+            flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
         );
     }
 }

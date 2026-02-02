@@ -25,7 +25,7 @@ final class Cache
 
         return api_message(
             $status ? 'Cache purged successfully.' : 'Failed to purge cache.',
-            $status ? Status::OK : Status::INTERNAL_SERVER_ERROR
+            $status ? Status::OK : Status::INTERNAL_SERVER_ERROR,
         );
     }
 }

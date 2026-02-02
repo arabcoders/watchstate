@@ -34,5 +34,4 @@ trait EmbyActionTrait
 
         throw new RuntimeException(message: $response->error->format(), previous: $response->error->previous);
     }
-
 }

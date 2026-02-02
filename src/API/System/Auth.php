@@ -43,11 +43,11 @@ final class Auth
         }
 
         $localNet = Config::get('trust.local_net', []);
-        if (true !== (bool)Config::get('trust.local', false) || count($localNet) < 1) {
+        if (true !== (bool) Config::get('trust.local', false) || count($localNet) < 1) {
             return api_response(Status::OK);
         }
 
-        $localAddress = getClientIp($request);
+        $localAddress = get_client_ip($request);
 
         if (false === IpUtils::checkIp($localAddress, $localNet)) {
             return api_response(Status::OK);
@@ -56,7 +56,7 @@ final class Auth
         $payload = [
             'username' => Config::get('system.user'),
             'iat' => time(),
-            'version' => getAppVersion(),
+            'version' => get_app_version(),
         ];
 
         if (false === ($token = json_encode($payload))) {
@@ -84,6 +84,7 @@ final class Auth
             [$type, $value] = explode(' ', $auth, 2);
             $type = strtolower(trim($type));
 
+            // @mago-expect lint:no-insecure-comparison
             if ('token' !== $type) {
                 continue;
             }
@@ -124,8 +125,8 @@ final class Auth
 
         try {
             $payload = json_decode($payload, true, flags: JSON_THROW_ON_ERROR);
-            $tokenUser = ag($payload, 'username', fn() => TokenUtil::generateSecret());
-            $systemUser = Config::get('system.user', fn() => TokenUtil::generateSecret());
+            $tokenUser = ag($payload, 'username', TokenUtil::generateSecret(...));
+            $systemUser = Config::get('system.user', TokenUtil::generateSecret(...));
 
             if (false === hash_equals($systemUser, $tokenUser)) {
                 return api_error('Invalid token.', Status::UNAUTHORIZED);
@@ -133,7 +134,7 @@ final class Auth
 
             return api_response(Status::OK, [
                 'username' => ag($payload, 'username', '??'),
-                'created_at' => makeDate(ag($payload, 'iat', 0)),
+                'created_at' => make_date(ag($payload, 'iat', 0)),
             ]);
         } catch (Throwable) {
             return api_error('Failed to decode payload.', Status::UNAUTHORIZED);
@@ -159,21 +160,21 @@ final class Auth
             return api_error('Username and password are required.', Status::BAD_REQUEST);
         }
 
-        $response = APIRequest(Method::POST, '/system/env/WS_SYSTEM_PASSWORD', ['value' => $password]);
+        $response = api_request(Method::POST, '/system/env/WS_SYSTEM_PASSWORD', ['value' => $password]);
         if (Status::OK !== $response->status) {
-            $message = r("Failed to set system password. {status}: {message}", [
+            $message = r('Failed to set system password. {status}: {message}', [
                 'status' => $response->status->value,
-                'message' => ag($response->body, 'error.message', 'Unknown error.')
+                'message' => ag($response->body, 'error.message', 'Unknown error.'),
             ]);
             return api_error($message, $response->status);
         }
 
-        $response = APIRequest(Method::POST, '/system/env/WS_SYSTEM_USER', ['value' => $username]);
+        $response = api_request(Method::POST, '/system/env/WS_SYSTEM_USER', ['value' => $username]);
 
         if (Status::OK !== $response->status) {
-            $message = r("Failed to set system user. {status}: {message}", [
+            $message = r('Failed to set system user. {status}: {message}', [
                 'status' => $response->status->value,
-                'message' => ag($response->body, 'error.message', 'Unknown error.')
+                'message' => ag($response->body, 'error.message', 'Unknown error.'),
             ]);
             return api_error($message, $response->status);
         }
@@ -213,13 +214,13 @@ final class Auth
         $opts = Config::get('password.options', []);
 
         if (true === password_needs_rehash($system_pass, $algo, $opts)) {
-            APIRequest(Method::POST, '/system/env/WS_SYSTEM_PASSWORD', ['value' => $password]);
+            api_request(Method::POST, '/system/env/WS_SYSTEM_PASSWORD', ['value' => $password]);
         }
 
         $payload = [
             'username' => $system_user,
             'iat' => time(),
-            'version' => getAppVersion(),
+            'version' => get_app_version(),
         ];
 
         if (false === ($token = json_encode($payload))) {
@@ -255,7 +256,7 @@ final class Auth
             return api_error('Invalid current password.', Status::UNAUTHORIZED);
         }
 
-        $response = APIRequest(Method::POST, '/system/env/WS_SYSTEM_PASSWORD', ['value' => $new_password]);
+        $response = api_request(Method::POST, '/system/env/WS_SYSTEM_PASSWORD', ['value' => $new_password]);
         if (Status::OK !== $response->status) {
             return api_error('Failed to set new password.', Status::INTERNAL_SERVER_ERROR);
         }
@@ -266,7 +267,7 @@ final class Auth
     #[Delete(self::URL . '/sessions[/]', name: 'system.auth.sessions')]
     public function invalidate_sessions(): iResponse
     {
-        $response = APIRequest(Method::POST, '/system/env/WS_SYSTEM_SECRET', ['value' => TokenUtil::generateSecret()]);
+        $response = api_request(Method::POST, '/system/env/WS_SYSTEM_SECRET', ['value' => TokenUtil::generateSecret()]);
         if (Status::OK !== $response->status) {
             return api_error('Failed to invalidate sessions.', Status::INTERNAL_SERVER_ERROR);
         }

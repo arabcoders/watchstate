@@ -15,13 +15,13 @@ final class Report
     #[Get(self::URL . '[/]', name: 'system.report')]
     public function basic_report(): iResponse
     {
-        return api_response(Status::OK, runCommand('system:report', asArray: true));
+        return api_response(Status::OK, run_command('system:report', asArray: true));
     }
 
     #[Get(self::URL . '/ini[/]', name: 'system.ini')]
     public function php_ini(): iResponse
     {
-        if (false === str_starts_with(getAppVersion(), 'dev')) {
+        if (false === str_starts_with(get_app_version(), 'dev')) {
             return api_error('This endpoint is only available in development mode.', Status::FORBIDDEN);
         }
 

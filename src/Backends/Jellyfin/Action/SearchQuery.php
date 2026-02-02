@@ -41,9 +41,8 @@ class SearchQuery
         protected iHttp $http,
         protected iLogger $logger,
         private JellyfinGuid $jellyfinGuid,
-        private iDB $db
-    ) {
-    }
+        private iDB $db,
+    ) {}
 
     /**
      * Wrap the operation in a try response block.
@@ -60,7 +59,7 @@ class SearchQuery
         return $this->tryResponse(
             context: $context,
             fn: fn() => $this->search($context, $query, $limit, $opts),
-            action: $this->action
+            action: $this->action,
         );
     }
 
@@ -77,21 +76,24 @@ class SearchQuery
      */
     private function search(Context $context, string $query, int $limit = 25, array $opts = []): Response
     {
-        $url = $context->backendUrl->withPath(
-            path: r('/Users/{user_id}/items/', ['user_id' => $context->backendUser])
-        )->withQuery(
-            http_build_query(
-                array_replace_recursive([
-                    'searchTerm' => $query,
-                    'limit' => $limit,
-                    'recursive' => 'true',
-                    'fields' => implode(',', JellyfinClient::EXTRA_FIELDS),
-                    'enableUserData' => 'true',
-                    'enableImages' => 'false',
-                    'includeItemTypes' => join(',', array_keys(JellyfinClient::TYPE_MAPPER)),
-                ], $opts['query'] ?? [])
+        $url = $context
+            ->backendUrl
+            ->withPath(
+                path: r('/Users/{user_id}/items/', ['user_id' => $context->backendUser]),
             )
-        );
+            ->withQuery(
+                http_build_query(
+                    array_replace_recursive([
+                        'searchTerm' => $query,
+                        'limit' => $limit,
+                        'recursive' => 'true',
+                        'fields' => implode(',', JellyfinClient::EXTRA_FIELDS),
+                        'enableUserData' => 'true',
+                        'enableImages' => 'false',
+                        'includeItemTypes' => implode(',', array_keys(JellyfinClient::TYPE_MAPPER)),
+                    ], $opts['query'] ?? []),
+                ),
+            );
 
         $logContext = [
             'query' => $query,
@@ -99,18 +101,18 @@ class SearchQuery
             'client' => $context->clientName,
             'backend' => $context->backendName,
             'user' => $context->userContext->name,
-            'url' => (string)$url,
+            'url' => (string) $url,
         ];
 
         $this->logger->debug("{action}: Searching '{client}: {user}@{backend}' libraries for '{query}'.", $logContext);
 
         $response = $this->http->request(
             method: Method::GET,
-            url: (string)$url,
+            url: (string) $url,
             options: array_replace_recursive(
                 $context->getHttpOptions(),
                 true === ag_exists($opts, 'headers') ? ['headers' => $opts['headers']] : [],
-            )
+            ),
         );
 
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
@@ -122,7 +124,7 @@ class SearchQuery
                         ...$logContext,
                         'status_code' => $response->getStatusCode(),
                     ],
-                    level: Levels::ERROR
+                    level: Levels::ERROR,
                 ),
             );
         }
@@ -130,13 +132,13 @@ class SearchQuery
         $json = json_decode(
             json: $response->getContent(),
             associative: true,
-            flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+            flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
         );
 
         if ($context->trace) {
             $this->logger->debug(
                 message: "{action}: Parsing Searching '{client}: {user}@{backend}' libraries for '{query}' payload.",
-                context: [...$logContext, 'response' => ['body' => $json]]
+                context: [...$logContext, 'response' => ['body' => $json]],
             );
         }
 
@@ -150,7 +152,7 @@ class SearchQuery
             } catch (Throwable $e) {
                 $this->logger->error(
                     message: "{action}: Failed to map '{client}: {user}@{backend}' item to entity. {error}",
-                    context: [...$logContext, 'error' => $e->getMessage()]
+                    context: [...$logContext, 'error' => $e->getMessage()],
                 );
                 continue;
             }
@@ -161,7 +163,7 @@ class SearchQuery
 
             $builder = $entity->getAll();
 
-            if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
+            if (true === (bool) ag($opts, Options::RAW_RESPONSE)) {
                 $builder[Options::RAW_RESPONSE] = $item;
             }
 

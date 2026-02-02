@@ -22,9 +22,10 @@ class UpdateState
 
     protected string $action = 'jellyfin.updateState';
 
-    public function __construct(protected iHttp $http, protected iLogger $logger)
-    {
-    }
+    public function __construct(
+        protected iHttp $http,
+        protected iLogger $logger,
+    ) {}
 
     /**
      * Get Backend unique identifier.
@@ -54,7 +55,7 @@ class UpdateState
                         continue;
                     }
 
-                    if ($entity->isWatched() === (bool)ag($meta, iState::COLUMN_WATCHED)) {
+                    if ($entity->isWatched() === (bool) ag($meta, iState::COLUMN_WATCHED)) {
                         continue;
                     }
 
@@ -66,18 +67,18 @@ class UpdateState
                         r('/Users/{user_id}/PlayedItems/{item_id}', [
                             'user_id' => $context->backendUser,
                             'item_id' => $itemId,
-                        ])
+                        ]),
                     );
 
                     if ($context->clientName === JellyfinClient::CLIENT_NAME) {
                         $url = $url->withQuery(
                             http_build_query([
-                                'DatePlayed' => makeDate($entity->updated)->format(Date::ATOM)
-                            ])
+                                'DatePlayed' => make_date($entity->updated)->format(Date::ATOM),
+                            ]),
                         );
                     }
 
-                    if (true === (bool)ag($context->options, Options::DRY_RUN, false)) {
+                    if (true === (bool) ag($context->options, Options::DRY_RUN, false)) {
                         $this->logger->notice(
                             message: "{action}: Would mark '{client}: {user}@{backend}' {item.type} '{item.title}' as '{item.play_state}'.",
                             context: [
@@ -85,10 +86,10 @@ class UpdateState
                                 'item' => [
                                     'id' => $itemId,
                                     'title' => $entity->getName(),
-                                    'type' => $entity->type == iState::TYPE_EPISODE ? 'episode' : 'movie',
+                                    'type' => $entity->type === iState::TYPE_EPISODE ? 'episode' : 'movie',
                                     'play_state' => $entity->isWatched() ? 'played' : 'unplayed',
                                 ],
-                            ]
+                            ],
                         );
                         return new Response(status: true);
                     }
@@ -96,7 +97,7 @@ class UpdateState
                     $queue->add(
                         $this->http->request(
                             method: $entity->isWatched() ? Method::POST : Method::DELETE,
-                            url: (string)$url,
+                            url: (string) $url,
                             options: array_replace_recursive($context->getHttpOptions(), [
                                 'user_data' => [
                                     'context' => [
@@ -105,20 +106,20 @@ class UpdateState
                                         'item' => [
                                             'id' => $itemId,
                                             'title' => $entity->getName(),
-                                            'type' => $entity->type == iState::TYPE_EPISODE ? 'episode' : 'movie',
+                                            'type' => $entity->type === iState::TYPE_EPISODE ? 'episode' : 'movie',
                                             'state' => $entity->isWatched() ? 'played' : 'unplayed',
                                         ],
-                                        'url' => (string)$url,
-                                    ]
+                                        'url' => (string) $url,
+                                    ],
                                 ],
-                            ])
-                        )
+                            ]),
+                        ),
                     );
                 }
 
                 return new Response(status: true);
             },
-            action: $this->action
+            action: $this->action,
         );
     }
 }

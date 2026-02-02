@@ -17,10 +17,9 @@ final readonly class Response
     public function __construct(
         public bool $status,
         public mixed $response = null,
-        public Error|null $error = null,
+        public ?Error $error = null,
         public array $extra = [],
-    ) {
-    }
+    ) {}
 
     /**
      * Does the response contain an error object?

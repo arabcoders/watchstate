@@ -24,7 +24,7 @@ final class Processes
 
         if (!$proc->isSuccessful()) {
             return api_error('Failed to get process list.', Status::INTERNAL_SERVER_ERROR, [
-                'error' => $proc->getErrorOutput()
+                'error' => $proc->getErrorOutput(),
             ]);
         }
 
@@ -33,9 +33,9 @@ final class Processes
         $headerLine = array_shift($lines);
         $headers = preg_split('/\s+/', $headerLine, 11);
         $headers = array_map(
-            fn($key, $value) => str_replace('%', '', strtolower($value)),
+            static fn($key, $value) => str_replace('%', '', strtolower($value)),
             range(0, count($headers) - 1),
-            $headers
+            $headers,
         );
         $processes = [];
 
@@ -69,15 +69,15 @@ final class Processes
             return api_error('Invalid process ID.', Status::BAD_REQUEST);
         }
 
-        $pid = (int)$id;
+        $pid = (int) $id;
         $proc = r('/proc/{pid}/status', ['pid' => $pid]);
 
         if (false === file_exists($proc)) {
-            return api_error("Process does not exist.", Status::NOT_FOUND);
+            return api_error('Process does not exist.', Status::NOT_FOUND);
         }
 
-        if (preg_match('/^State:\s+Z\s+\(zombie\)/m', (string)Stream::make($proc, 'r'))) {
-            return api_error("Process does not exist.", Status::NOT_FOUND);
+        if (preg_match('/^State:\s+Z\s+\(zombie\)/m', (string) Stream::make($proc, 'r'))) {
+            return api_error('Process does not exist.', Status::NOT_FOUND);
         }
 
         if (false === posix_kill($pid, 15)) {
@@ -97,7 +97,7 @@ final class Processes
                 return api_response(Status::OK);
             }
 
-            if (preg_match('/^State:\s+Z\s+\(zombie\)/m', (string)Stream::make($proc, 'r'))) {
+            if (preg_match('/^State:\s+Z\s+\(zombie\)/m', (string) Stream::make($proc, 'r'))) {
                 return api_response(Status::OK);
             }
 

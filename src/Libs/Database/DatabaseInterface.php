@@ -26,7 +26,7 @@ interface DatabaseInterface
      *
      * @return self Return new instance.
      */
-    public function with(iLogger|null $logger = null, DBLayer|null $db = null, array|null $options = null): self;
+    public function with(?iLogger $logger = null, ?DBLayer $db = null, ?array $options = null): self;
 
     /**
      * Set options
@@ -72,7 +72,7 @@ interface DatabaseInterface
      *
      * @return iState|null Return null if not found.
      */
-    public function get(iState $entity): iState|null;
+    public function get(iState $entity): ?iState;
 
     /**
      * Load entities from database.
@@ -82,7 +82,7 @@ interface DatabaseInterface
      *
      * @return array<iState>
      */
-    public function getAll(iDate|null $date = null, array $opts = []): array;
+    public function getAll(?iDate $date = null, array $opts = []): array;
 
     /**
      * Return database records for given items.
@@ -102,7 +102,7 @@ interface DatabaseInterface
      *
      * @return iState|null Return null if not found.
      */
-    public function findByBackendId(string $backend, int|string $id, string|null $type = null): iState|null;
+    public function findByBackendId(string $backend, int|string $id, ?string $type = null): ?iState;
 
     /**
      * Update entity immediately.
@@ -159,7 +159,7 @@ interface DatabaseInterface
      *
      * @return mixed Return value depends on the driver.
      */
-    public function migrateData(string $version, iLogger|null $logger = null): mixed;
+    public function migrateData(string $version, ?iLogger $logger = null): mixed;
 
     /**
      * Is the database up to date with migrations?

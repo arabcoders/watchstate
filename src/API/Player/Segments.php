@@ -28,15 +28,16 @@ readonly class Segments
         'dvd_subtitle',
     ];
 
-    public function __construct(private iCache $cache, private iLogger $logger)
-    {
-    }
+    public function __construct(
+        private iCache $cache,
+        private iLogger $logger,
+    ) {}
 
     /**
      * @throws InvalidArgumentException
      */
     #[Get(pattern: self::URL . '/{token}/{segment}[.{type}]')]
-    public function __invoke(iRequest $request, string $token, string $segment): iResponse
+    public function __invoke(iRequest $request, #[\SensitiveParameter] string $token, string $segment): iResponse
     {
         if (null === ($json = $this->cache->get($token, null))) {
             return api_error('Token is expired or invalid.', Status::BAD_REQUEST);
@@ -60,8 +61,8 @@ readonly class Segments
             return api_error(r("Path '{path}' is not a file.", ['path' => $path]), Status::BAD_REQUEST);
         }
 
-        $segment = (int)$segment;
-        $sConfig = (array)ag($json, 'config', []);
+        $segment = (int) $segment;
+        $sConfig = (array) ag($json, 'config', []);
 
         try {
             $json = ffprobe_file($path, $this->cache);
@@ -81,19 +82,19 @@ readonly class Segments
             $incr++;
         }
 
-        $sConfig['segment_size'] = number_format((int)$sConfig['segment_size'], 6);
+        $sConfig['segment_size'] = number_format((int) $sConfig['segment_size'], 6);
 
         $params = DataUtil::fromArray($sConfig);
 
         $audio = $params->get('audio');
         $subtitle = $params->get('subtitle');
         $external = $params->get('external', null);
-        $hwaccel = (bool)$params->get('hwaccel', false);
+        $hwaccel = (bool) $params->get('hwaccel', false);
         $vaapi_device = $params->get('vaapi_device', '/dev/dri/renderD128');
         $vCodec = $params->get('video_codec', $hwaccel ? 'h264_vaapi' : 'libx264');
         $isVAAPI = $hwaccel && 'h264_vaapi' === $vCodec;
         $isQSV = $hwaccel && 'h264_qsv' === $vCodec;
-        $segmentSize = number_format((int)$params->get('segment_size', Playlist::SEGMENT_DUR), 6);
+        $segmentSize = number_format((int) $params->get('segment_size', Playlist::SEGMENT_DUR), 6);
         $directPlay = null === $subtitle && null === $external && $params->has('direct_play');
 
         if ($isVAAPI && false === file_exists($vaapi_device)) {
@@ -105,14 +106,14 @@ readonly class Segments
         }
 
         // -- Only transcode one segment per file, Otherwise wait until it finishes.
-        $tmpVidLock = r("{path}/t-{name}.lock", [
+        $tmpVidLock = r('{path}/t-{name}.lock', [
             'path' => sys_get_temp_dir(),
             'name' => $token,
-            'type' => getExtension($path),
+            'type' => get_extension($path),
         ]);
 
         while (true === file_exists($tmpVidLock)) {
-            $pid = (int)file_get_contents($tmpVidLock);
+            $pid = (int) file_get_contents($tmpVidLock);
             if (false === file_exists("/proc/{$pid}")) {
                 @unlink($tmpVidLock);
                 break;
@@ -125,9 +126,9 @@ readonly class Segments
         $cmd = ['ffmpeg'];
         if (false === $directPlay) {
             $cmd[] = '-ss';
-            $cmd[] = (string)($segment === 0 ? 0 : ($segmentSize * $segment));
+            $cmd[] = (string) ($segment === 0 ? 0 : $segmentSize * $segment);
             $cmd[] = '-t';
-            $cmd[] = (string)(ag($request->getQueryParams(), 'sd', $segmentSize));
+            $cmd[] = (string) ag($request->getQueryParams(), 'sd', $segmentSize);
         }
         $cmd[] = '-xerror';
         $cmd[] = '-hide_banner';
@@ -135,15 +136,17 @@ readonly class Segments
         $cmd[] = 'error';
 
         $tmpSubFile = null;
-        $tmpVidFile = r("{path}/t-{name}-vlink.{type}", [
+        $tmpVidFile = r('{path}/t-{name}-vlink.{type}', [
             'path' => sys_get_temp_dir(),
             'name' => $token,
-            'type' => getExtension($path),
+            'type' => get_extension($path),
         ]);
 
         // -- video section. overlay picture based subs.
-        $overlay = empty($external) && null !== $subtitle &&
-            in_array(ag($this->getStream(ag($json, 'streams', []), $subtitle), 'codec_name', ''), self::OVERLAY);
+        $overlay =
+            empty($external)
+            && null !== $subtitle
+            && in_array(ag($this->getStream(ag($json, 'streams', []), $subtitle), 'codec_name', ''), self::OVERLAY, true);
 
         if (false === file_exists($tmpVidFile)) {
             symlink($path, $tmpVidFile);
@@ -178,12 +181,12 @@ readonly class Segments
 
         if (true === $directPlay) {
             $cmd[] = '-ss';
-            $cmd[] = (string)($segment === 0 ? 0 : ($segmentSize * $segment));
+            $cmd[] = (string) ($segment === 0 ? 0 : $segmentSize * $segment);
             $cmd[] = '-t';
-            $cmd[] = (string)(ag($request->getQueryParams(), 'sd', $segmentSize));
+            $cmd[] = (string) ag($request->getQueryParams(), 'sd', $segmentSize);
         }
 
-        # remove garbage metadata.
+        // remove garbage metadata.
         $cmd[] = '-map_metadata';
         $cmd[] = '-1';
         $cmd[] = '-map_chapters';
@@ -194,7 +197,7 @@ readonly class Segments
 
         if (true === $directPlay) {
             $cmd[] = '-force_key_frames';
-            $cmd[] = 'expr:gte(t,n_forced*' . (int)$sConfig['segment_size'] . ')';
+            $cmd[] = 'expr:gte(t,n_forced*' . (int) $sConfig['segment_size'] . ')';
         } else {
             $cmd[] = '-g';
             $cmd[] = '52';
@@ -203,11 +206,11 @@ readonly class Segments
         if ($overlay && empty($external) && null !== $subtitle) {
             $cmd[] = '-filter_complex';
             if ($isVAAPI) {
-                $cmd[] = "[0:0]hwdownload,format=nv12[base];[base][0:" . $subtitle . "]overlay[v];[v]hwupload[k]";
+                $cmd[] = '[0:0]hwdownload,format=nv12[base];[base][0:' . $subtitle . ']overlay[v];[v]hwupload[k]';
                 $cmd[] = '-map';
                 $cmd[] = '[k]';
             } else {
-                $cmd[] = "[0:v:0][0:" . $subtitle . "]overlay[v]";
+                $cmd[] = '[0:v:0][0:' . $subtitle . ']overlay[v]';
                 $cmd[] = '-map';
                 $cmd[] = '[v]';
             }
@@ -231,7 +234,7 @@ readonly class Segments
             $cmd[] = '-preset:v';
             $cmd[] = $params->get('video_preset', 'fast');
 
-            if (0 !== (int)$params->get('video_bitrate', 0)) {
+            if (0 !== (int) $params->get('video_bitrate', 0)) {
                 $cmd[] = '-b:v';
                 $cmd[] = $params->get('video_bitrate', '192k');
             }
@@ -258,10 +261,10 @@ readonly class Segments
 
         // -- subtitles.
         if (null !== $external) {
-            $tmpSubFile = r("{path}/t-{name}-slink.{type}", [
+            $tmpSubFile = r('{path}/t-{name}-slink.{type}', [
                 'path' => sys_get_temp_dir(),
                 'name' => $token,
-                'type' => getExtension($external),
+                'type' => get_extension($external),
             ]);
             if (false === file_exists($tmpSubFile)) {
                 symlink($external, $tmpSubFile);
@@ -269,8 +272,8 @@ readonly class Segments
             $cmd[] = '-vf';
             $cmd[] = "subtitles={$tmpSubFile}" . ($isVAAPI ? ',format=nv12,hwupload' : '');
         } elseif (null !== $subtitle && !$overlay) {
-            $subStreamIndex = (int)$subIndex[$subtitle];
-            $tmpSubFile = r("{path}/t-{name}-internal-sub-{index}.{type}", [
+            $subStreamIndex = (int) $subIndex[$subtitle];
+            $tmpSubFile = r('{path}/t-{name}-internal-sub-{index}.{type}', [
                 'path' => sys_get_temp_dir(),
                 'name' => $token,
                 'index' => $subStreamIndex,
@@ -280,7 +283,7 @@ readonly class Segments
                 $tmpVidFile,
                 $internalSubs[$subStreamIndex]['codec_name'],
                 $subStreamIndex,
-                $tmpSubFile
+                $tmpSubFile,
             );
 
             $cmd[] = '-vf';
@@ -291,7 +294,7 @@ readonly class Segments
 
         if (true === $directPlay) {
             $cmd[] = '-output_ts_offset';
-            $cmd[] = (string)($segment * $segmentSize);
+            $cmd[] = (string) ($segment * $segmentSize);
         }
 
         $cmd[] = '-muxdelay';
@@ -299,7 +302,7 @@ readonly class Segments
         $cmd[] = '-f';
         $cmd[] = 'mpegts';
         $cmd[] = 'pipe:1';
-        $debug = (bool)ag($sConfig, 'debug', false);
+        $debug = (bool) ag($sConfig, 'debug', false);
 
         try {
             $start = microtime(true);
@@ -308,7 +311,7 @@ readonly class Segments
             $process->start();
 
             $lock = new Stream($tmpVidLock, 'w');
-            $lock->write((string)$process->getPid());
+            $lock->write((string) $process->getPid());
             $lock->close();
 
             $process->wait();
@@ -323,7 +326,7 @@ readonly class Segments
                         'Ffmpeg' => $process->getCommandLine(),
                         'config' => $sConfig,
                         'command' => $this->cmdLog($cmd),
-                    ]
+                    ],
                 );
 
                 $response = api_error(
@@ -333,7 +336,7 @@ readonly class Segments
                     Status::INTERNAL_SERVER_ERROR,
                     headers: [
                         'X-Transcode-Time' => round($end - $start, 6),
-                    ]
+                    ],
                 );
 
                 if (true === $debug) {
@@ -341,7 +344,7 @@ readonly class Segments
                         ->withHeader('X-Ffmpeg', $this->cmdLog($cmd))
                         ->withHeader(
                             'X-Transcode-Config',
-                            json_encode($sConfig, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+                            json_encode($sConfig, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
                         );
                 }
 
@@ -349,7 +352,7 @@ readonly class Segments
             }
 
             $response = api_response(Status::OK, body: Stream::create($process->getOutput()), headers: [
-//                'Access-Control-Allow-Origin' => '*',
+                //                'Access-Control-Allow-Origin' => '*',
                 'Content-Type' => 'video/mpegts',
                 'X-Transcode-Time' => round($end - $start, 6),
                 'X-Emitter-Flush' => 1,
@@ -360,10 +363,11 @@ readonly class Segments
                     ->withHeader('X-Ffmpeg', $this->cmdLog($cmd))
                     ->withHeader(
                         'X-Transcode-Config',
-                        json_encode($sConfig, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+                        json_encode($sConfig, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
                     );
             } else {
-                $response = $response->withHeader('Pragma', 'public')
+                $response = $response
+                    ->withHeader('Pragma', 'public')
                     ->withHeader('Cache-Control', sprintf('public, max-age=%s', time() + 31536000))
                     ->withHeader('Last-Modified', sprintf('%s GMT', gmdate('D, d M Y H:i:s', time())))
                     ->withHeader('Expires', sprintf('%s GMT', gmdate('D, d M Y H:i:s', time() + 31536000)));
@@ -389,7 +393,7 @@ readonly class Segments
                     ->withHeader('X-Ffmpeg', $this->cmdLog($cmd))
                     ->withHeader(
                         'X-Transcode-Config',
-                        json_encode($sConfig, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+                        json_encode($sConfig, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
                     );
             }
             return $response;
@@ -475,15 +479,17 @@ readonly class Segments
     private function getStream(array $streams, int $index): array
     {
         foreach ($streams as $stream) {
-            if ((int)ag($stream, 'index') === $index) {
-                return $stream;
+            if ((int) ag($stream, 'index') !== $index) {
+                continue;
             }
+
+            return $stream;
         }
         return [];
     }
 
     private function cmdLog(array $cmd): string
     {
-        return implode(' ', array_map(fn($v) => str_contains($v, ' ') ? escapeshellarg($v) : $v, $cmd));
+        return implode(' ', array_map(static fn($v) => str_contains($v, ' ') ? escapeshellarg($v) : $v, $cmd));
     }
 }

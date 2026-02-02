@@ -46,7 +46,7 @@ final class Stream implements StreamInterface, Stringable, LoggerAwareInterface
         $resource = $stream;
 
         if (is_string($stream)) {
-            set_error_handler(function ($severity, $message, $file, $line) use (&$error) {
+            set_error_handler(static function ($severity, $message, $file, $line) use (&$error) {
                 if ($severity !== E_WARNING) {
                     return;
                 }
@@ -54,7 +54,7 @@ final class Stream implements StreamInterface, Stringable, LoggerAwareInterface
                 $error = r("Stream: Failed to open stream. '{message}' at '{file}:{line}'", [
                     'message' => trim($message),
                     'file' => $file,
-                    'line' => $line
+                    'line' => $line,
                 ]);
             });
             $resource = fopen($stream, $mode);
@@ -71,8 +71,8 @@ final class Stream implements StreamInterface, Stringable, LoggerAwareInterface
                     text: 'Stream: Unexpected [{type}] type was given. Stream must be a file path or stream resource.',
                     context: [
                         'type' => gettype($resource),
-                    ]
-                )
+                    ],
+                ),
             );
         }
 
@@ -117,7 +117,7 @@ final class Stream implements StreamInterface, Stringable, LoggerAwareInterface
 
         if (!self::isValidResourceType($body)) {
             throw new InvalidArgumentException(
-                'First argument to Stream::create() must be a string, resource or StreamInterface'
+                'First argument to Stream::create() must be a string, resource or StreamInterface',
             );
         }
 
@@ -273,8 +273,13 @@ final class Stream implements StreamInterface, Stringable, LoggerAwareInterface
 
         try {
             $mode = $this->getMetadata('mode');
-            return (str_contains($mode, 'x') || str_contains($mode, 'w') ||
-                str_contains($mode, 'c') || str_contains($mode, 'a') || str_contains($mode, '+'));
+            return (
+                str_contains($mode, 'x')
+                || str_contains($mode, 'w')
+                || str_contains($mode, 'c')
+                || str_contains($mode, 'a')
+                || str_contains($mode, '+')
+            );
         } catch (Throwable $e) {
             $this->logger?->error('Stream: {class}: {message}', [
                 'class' => $e::class,
@@ -370,11 +375,11 @@ final class Stream implements StreamInterface, Stringable, LoggerAwareInterface
     /**
      * {@inheritdoc}
      */
-    public function getMetadata(string|null $key = null)
+    public function getMetadata(?string $key = null)
     {
         $metadata = stream_get_meta_data($this->resource);
 
-        return null !== $key ? ($metadata[$key] ?? null) : $metadata;
+        return null !== $key ? $metadata[$key] ?? null : $metadata;
     }
 
     /**
@@ -394,7 +399,7 @@ final class Stream implements StreamInterface, Stringable, LoggerAwareInterface
             return false;
         }
 
-        if (true === ($resource instanceof \GdImage)) {
+        if (true === $resource instanceof \GdImage) {
             return true;
         }
 

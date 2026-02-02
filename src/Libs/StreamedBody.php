@@ -11,8 +11,10 @@ final readonly class StreamedBody implements StreamInterface
 {
     private mixed $func;
 
-    public function __construct(callable $func, private bool $isReadable = true)
-    {
+    public function __construct(
+        callable $func,
+        private bool $isReadable = true,
+    ) {
         $this->func = $func;
     }
 

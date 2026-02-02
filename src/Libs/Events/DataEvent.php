@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Libs\Events;
 
 use App\Model\Events\Event as EventInfo;
@@ -10,8 +12,9 @@ class DataEvent extends Event
 {
     private EventStatus $status;
 
-    public function __construct(private readonly EventInfo $eventInfo)
-    {
+    public function __construct(
+        private readonly EventInfo $eventInfo,
+    ) {
         $this->status = $eventInfo->status;
     }
 
@@ -31,7 +34,7 @@ class DataEvent extends Event
         return $this->eventInfo;
     }
 
-    public function getReference(): string|null
+    public function getReference(): ?string
     {
         return $this->eventInfo->reference;
     }

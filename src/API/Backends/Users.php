@@ -32,11 +32,11 @@ final class Users
 
         $users = $opts = [];
 
-        if (true === (bool)$params->get(Options::GET_TOKENS, false)) {
+        if (true === (bool) $params->get(Options::GET_TOKENS, false)) {
             $opts[Options::GET_TOKENS] = true;
         }
 
-        if (true === (bool)$params->get('no_cache', false)) {
+        if (true === (bool) $params->get('no_cache', false)) {
             $opts[Options::NO_CACHE] = true;
         }
 

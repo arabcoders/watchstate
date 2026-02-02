@@ -9,6 +9,4 @@ use InvalidArgumentException;
 /**
  * All Validation Should Extend this class.
  */
-class ValidationException extends InvalidArgumentException
-{
-}
+class ValidationException extends InvalidArgumentException {}

@@ -26,7 +26,7 @@ final class UrlChecker
             return api_error('No url was given.', Status::BAD_REQUEST);
         }
 
-        if (false === isValidURL($url)) {
+        if (false === is_valid_url($url)) {
             return api_error('Invalid url.', Status::BAD_REQUEST);
         }
 
@@ -45,7 +45,7 @@ final class UrlChecker
                 continue;
             }
             if ('ws-timeout' === $headerKey) {
-                $timeout = (int)$headerValue;
+                $timeout = (int) $headerValue;
                 continue;
             }
             $headers[$headerKey] = $headerValue;
@@ -56,7 +56,7 @@ final class UrlChecker
 
             $response = $client->request($method->value, $url, [
                 'timeout' => $timeout,
-                'headers' => $headers
+                'headers' => $headers,
             ]);
             $flattenedHeaders = [];
             foreach ($response->getHeaders(false) as $key => $value) {

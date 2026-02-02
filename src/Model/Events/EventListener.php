@@ -14,7 +14,7 @@ final readonly class EventListener
      *
      * @param string $event Event to listen to.
      */
-    public function __construct(public string $event)
-    {
-    }
+    public function __construct(
+        public string $event,
+    ) {}
 }

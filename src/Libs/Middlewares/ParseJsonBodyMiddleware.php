@@ -19,11 +19,11 @@ class ParseJsonBodyMiddleware implements iMiddleware
     {
         if (null === ($method = Method::tryFrom($request->getMethod()))) {
             throw new RuntimeException(r('Invalid HTTP method. "{method}".', [
-                'method' => $request->getMethod()
+                'method' => $request->getMethod(),
             ]), Status::METHOD_NOT_ALLOWED->value);
         }
 
-        if (true === in_array($method, [Method::GET, Method::HEAD, Method::OPTIONS])) {
+        if (true === in_array($method, [Method::GET, Method::HEAD, Method::OPTIONS], true)) {
             return $handler->handle($request);
         }
 
@@ -38,7 +38,7 @@ class ParseJsonBodyMiddleware implements iMiddleware
 
     private function parse(iRequest $request): iRequest
     {
-        $body = (string)$request->getBody();
+        $body = (string) $request->getBody();
 
         if ($request->getBody()->isSeekable()) {
             $request->getBody()->rewind();
@@ -51,9 +51,13 @@ class ParseJsonBodyMiddleware implements iMiddleware
         try {
             return $request->withParsedBody(json_decode($body, true, flags: JSON_THROW_ON_ERROR));
         } catch (JsonException $e) {
-            throw new RuntimeException(r('Error when parsing JSON request body. {error}', [
-                'error' => $e->getMessage()
-            ]), Status::BAD_REQUEST->value, $e);
+            throw new RuntimeException(
+                r('Error when parsing JSON request body. {error}', [
+                    'error' => $e->getMessage(),
+                ]),
+                Status::BAD_REQUEST->value,
+                $e,
+            );
         }
     }
 }

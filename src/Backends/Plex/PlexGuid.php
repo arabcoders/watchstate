@@ -71,15 +71,16 @@ final class PlexGuid implements iGuid
     /**
      * @var Context|null Backend context.
      */
-    private Context|null $context = null;
+    private ?Context $context = null;
 
     /**
      * Class constructor.
      *
      * @param iLogger $logger Logger instance.
      */
-    public function __construct(private readonly iLogger $logger)
-    {
+    public function __construct(
+        private readonly iLogger $logger,
+    ) {
         $file = Config::get('guid.file', null);
 
         try {
@@ -131,14 +132,18 @@ final class PlexGuid implements iGuid
                 ]));
             }
         } catch (ParseException $e) {
-            throw new InvalidArgumentException(r("Failed to parse GUIDs file. Error '{error}'.", [
-                'error' => $e->getMessage(),
-            ]), code: (int)$e->getCode(), previous: $e);
+            throw new InvalidArgumentException(
+                r("Failed to parse GUIDs file. Error '{error}'.", [
+                    'error' => $e->getMessage(),
+                ]),
+                code: (int) $e->getCode(),
+                previous: $e,
+            );
         }
 
         $supported = array_keys(Guid::getSupported());
         $supportedVersion = Config::get('guid.version', '0.0');
-        $guidVersion = (string)ag($yaml, 'version', $supportedVersion);
+        $guidVersion = (string) ag($yaml, 'version', $supportedVersion);
 
         if (true === version_compare($supportedVersion, $guidVersion, '<')) {
             throw new InvalidArgumentException(r("Unsupported file version '{version}'. Expecting '{supported}'.", [
@@ -181,7 +186,7 @@ final class PlexGuid implements iGuid
                         [
                             'key' => $key,
                             'given' => get_debug_type($replace),
-                        ]
+                        ],
                     );
                     continue;
                 }
@@ -194,7 +199,7 @@ final class PlexGuid implements iGuid
                         "Ignoring 'links.{key}'. options.replace.from field is empty or not a string.",
                         [
                             'key' => $key,
-                        ]
+                        ],
                     );
                     continue;
                 }
@@ -241,12 +246,12 @@ final class PlexGuid implements iGuid
                         [
                             'key' => $key,
                             'to' => $to,
-                        ]
+                        ],
                     );
                     continue;
                 }
 
-                if (false === in_array($to, $supported)) {
+                if (false === in_array($to, $supported, true)) {
                     $this->logger->warning("Ignoring 'links.{key}'. map.to field is not a supported GUID type.", [
                         'key' => $key,
                         'to' => $to,
@@ -254,12 +259,12 @@ final class PlexGuid implements iGuid
                     continue;
                 }
 
-                if (false === (bool)ag($map, 'options.legacy', true)) {
+                if (false === (bool) ag($map, 'options.legacy', true)) {
                     $this->guidMapper[$from] = $to;
                     continue;
                 }
 
-                if (true === in_array($from, $this->guidLegacy)) {
+                if (true === in_array($from, $this->guidLegacy, true)) {
                     $this->logger->warning("Ignoring 'links.{key}'. map.from already exists.", [
                         'key' => $key,
                         'from' => $from,
@@ -318,7 +323,7 @@ final class PlexGuid implements iGuid
      */
     public function isLocal(string $guid): bool
     {
-        return true === in_array(before(strtolower($guid), '://'), $this->guidLocal);
+        return true === in_array(before(strtolower($guid), '://'), $this->guidLocal, true);
     }
 
     /**
@@ -359,7 +364,7 @@ final class PlexGuid implements iGuid
                         $this->logger->info("PlexGuid: Unable to parse '{backend}: {agent}' identifier.", [
                             'backend' => $this->context->backendName,
                             'agent' => $val,
-                            ...$context
+                            ...$context,
                         ]);
                     }
                     continue;
@@ -372,7 +377,7 @@ final class PlexGuid implements iGuid
                     continue;
                 }
 
-                if (true === isIgnoredId($this->context->userContext, $bName, $type, $key, $value, $id)) {
+                if (true === is_ignored_id($this->context->userContext, $bName, $type, $key, $value, $id)) {
                     if (true === $log) {
                         $this->logger->debug(
                             "PlexGuid: Ignoring '{client}: {backend}' external id '{source}' for {item.type} '{item.id}: {item.title}' as requested.",
@@ -384,8 +389,8 @@ final class PlexGuid implements iGuid
                                     'source' => $key,
                                     'value' => $value,
                                 ],
-                                ...$context
-                            ]
+                                ...$context,
+                            ],
                         );
                     }
                     continue;
@@ -401,8 +406,8 @@ final class PlexGuid implements iGuid
                                 'backend' => $this->context->backendName,
                                 'key' => $key,
                                 'ids' => sprintf('%s, %s', $guid[$this->guidMapper[$key]], $value),
-                                ...$context
-                            ]
+                                ...$context,
+                            ],
                         );
                     }
 
@@ -410,7 +415,7 @@ final class PlexGuid implements iGuid
                         continue;
                     }
 
-                    if ((int)$guid[$this->guidMapper[$key]] < (int)$value) {
+                    if ((int) $guid[$this->guidMapper[$key]] < (int) $value) {
                         continue;
                     }
                 }
@@ -421,13 +426,13 @@ final class PlexGuid implements iGuid
                     $this->logger->info(
                         message: "{class}: Ignoring '{user}@{backend}' invalid GUID '{agent}' for {item.type} '{item.id}: {item.title}'.",
                         context: [
-                            'class' => afterLast(self::class, '\\'),
+                            'class' => after_last(self::class, '\\'),
                             'user' => $this->context->userContext->name,
                             'backend' => $this->context->backendName,
                             'agent' => $val,
                             ...$context,
                             ...exception_log($e),
-                        ]
+                        ],
                     );
                 }
                 continue;
@@ -451,7 +456,7 @@ final class PlexGuid implements iGuid
      */
     private function parseLegacyAgent(string $guid, array $context = [], bool $log = true): string
     {
-        if (false === in_array(before($guid, '://'), $this->guidLegacy)) {
+        if (false === in_array(before($guid, '://'), $this->guidLegacy, true)) {
             return $guid;
         }
 
@@ -502,7 +507,7 @@ final class PlexGuid implements iGuid
                             'trace' => $e->getTrace(),
                         ],
                         ...$context,
-                    ]
+                    ],
                 );
             }
             return $guid;

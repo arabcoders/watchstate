@@ -23,9 +23,9 @@ final class PlexToken
 
     use APITraits;
 
-    public function __construct(private readonly iLogger $logger)
-    {
-    }
+    public function __construct(
+        private readonly iLogger $logger,
+    ) {}
 
     /**
      * Check if given plex token is valid.
@@ -57,9 +57,9 @@ final class PlexToken
             return api_error(
                 r(
                     text: "Request for OAuth PIN returned with unexpected '{status_code}' status code.",
-                    context: ['status_code' => $req->getStatusCode()]
+                    context: ['status_code' => $req->getStatusCode()],
                 ),
-                Status::from($req->getStatusCode())
+                Status::from($req->getStatusCode()),
             );
         }
 
@@ -105,13 +105,12 @@ final class PlexToken
             return api_error(
                 r(
                     text: "Request for OAuth PIN check returned with unexpected '{status_code}' status code.",
-                    context: ['status_code' => $req->getStatusCode()]
+                    context: ['status_code' => $req->getStatusCode()],
                 ),
-                Status::from($req->getStatusCode())
+                Status::from($req->getStatusCode()),
             );
         }
 
         return api_response(Status::OK, $req->toArray());
     }
-
 }

@@ -11,7 +11,7 @@ use App\Backends\Plex\PlexActionTrait;
 use App\Libs\Options;
 use DateInterval;
 
-class getImagesUrl
+class GetImagesUrl
 {
     use CommonTrait;
     use PlexActionTrait;
@@ -42,14 +42,14 @@ class getImagesUrl
 
         return $this->tryResponse(
             context: $context,
-            fn: fn() => new Response(
+            fn: static fn() => new Response(
                 status: true,
                 response: [
                     'poster' => $poster ? $context->backendUrl->withPath($poster) : null,
                     'background' => $background ? $context->backendUrl->withPath($background) : null,
-                ]
+                ],
             ),
-            action: $this->action
+            action: $this->action,
         );
     }
 }

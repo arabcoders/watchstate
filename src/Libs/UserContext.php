@@ -42,12 +42,12 @@ final class UserContext
             return $this->data['path'];
         }
 
-        return fixPath(Config::get('path') . '/' . ('main' === $this->name ? 'config' : "users/{$this->name}"));
+        return fix_path(Config::get('path') . '/' . ('main' === $this->name ? 'config' : "users/{$this->name}"));
     }
 
     public function getBackendsNames(): string
     {
-        return join(', ', array_keys($this->config->getAll()));
+        return implode(', ', array_keys($this->config->getAll()));
     }
 
     public function add(string $key, mixed $value): self

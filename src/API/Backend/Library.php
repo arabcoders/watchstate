@@ -21,9 +21,10 @@ final class Library
 {
     use APITraits;
 
-    public function __construct(private readonly iImport $mapper, private readonly iLogger $logger)
-    {
-    }
+    public function __construct(
+        private readonly iImport $mapper,
+        private readonly iLogger $logger,
+    ) {}
 
     #[Get(BackendsIndex::URL . '/{name:backend}/library[/]', name: 'backend.library')]
     public function listLibraries(iRequest $request, string $name): iResponse
@@ -68,15 +69,15 @@ final class Library
         }
 
         $ignoreIds = array_map(
-            fn($v) => trim($v),
-            explode(',', (string)$userContext->config->get("{$name}.options." . Options::IGNORE, ''))
+            trim(...),
+            explode(',', (string) $userContext->config->get("{$name}.options." . Options::IGNORE, '')),
         );
 
         $mode = !(true === $remove);
-        if ($mode === in_array($id, $ignoreIds)) {
+        if ($mode === in_array($id, $ignoreIds, true)) {
             return api_error(r("Library id '{id}' is {message} ignored.", [
                 'id' => $id,
-                'message' => $remove ? "not" : 'already',
+                'message' => $remove ? 'not' : 'already',
             ]), Status::CONFLICT);
         }
 
@@ -85,12 +86,14 @@ final class Library
         $libraries = $this->getClient(name: $name, userContext: $userContext)->listLibraries();
 
         foreach ($libraries as &$library) {
-            if ((string)ag($library, 'id') === (string)$id) {
-                $ignoreIds[] = $id;
-                $library['ignored'] = !$remove;
-                $found = true;
-                break;
+            if ((string) ag($library, 'id') !== (string) $id) {
+                continue;
             }
+
+            $ignoreIds[] = $id;
+            $library['ignored'] = !$remove;
+            $found = true;
+            break;
         }
 
         if (false === $found) {
@@ -103,7 +106,8 @@ final class Library
             $ignoreIds = array_diff($ignoreIds, [$id]);
         }
 
-        $userContext->config
+        $userContext
+            ->config
             ->set("{$name}.options." . Options::IGNORE, implode(',', array_values($ignoreIds)))
             ->persist();
 

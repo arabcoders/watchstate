@@ -31,9 +31,9 @@ final class Command
 
     private bool $toBackground = false;
 
-    public function __construct(private iCache $cache)
-    {
-    }
+    public function __construct(
+        private iCache $cache,
+    ) {}
 
     /**
      * @throws InvalidArgumentException
@@ -63,8 +63,8 @@ final class Command
 
         return api_response(Status::CREATED, [
             'token' => $code,
-            'tracking' => r("{url}/{code}", ['url' => parseConfigValue(self::URL), 'code' => $code]),
-            'expires' => makeDate()->add($ttl)->format(Date::ATOM),
+            'tracking' => r('{url}/{code}', ['url' => parse_config_value(self::URL), 'code' => $code]),
+            'expires' => make_date()->add($ttl)->format(Date::ATOM),
         ]);
     }
 
@@ -72,7 +72,7 @@ final class Command
      * @throws InvalidArgumentException
      */
     #[Get(self::URL . '/{token}[/]', name: 'system.command.stream')]
-    public function stream(string $token): iResponse
+    public function stream(#[\SensitiveParameter] string $token): iResponse
     {
         if (null === ($data = $this->cache->get($token))) {
             return api_error('Token is invalid or has expired.', Status::BAD_REQUEST);
@@ -96,10 +96,10 @@ final class Command
             ignore_user_abort(true);
 
             $path = realpath(__DIR__ . '/../../../');
-            $cwd = $data->get('cwd', Config::get('path', fn() => getcwd()));
+            $cwd = $data->get('cwd', Config::get('path', getcwd(...)));
 
             try {
-                if (true === (bool)Config::get('console.enable.all') && str_starts_with($command, '$')) {
+                if (true === (bool) Config::get('console.enable.all') && str_starts_with($command, '$')) {
                     $userCommand = trim(after($command, '$'));
                     $cmd = ['sh', '-c', $userCommand];
                 } else {
@@ -108,7 +108,7 @@ final class Command
                     } catch (\InvalidArgumentException $e) {
                         $this->write('error', "Failed to parse command: {$e->getMessage()}");
                         $this->write('exit_code', '1');
-                        $this->write('close', (string)makeDate());
+                        $this->write('close', (string) make_date());
                         return;
                     }
                 }
@@ -120,14 +120,14 @@ final class Command
                         'LANG' => 'en_US.UTF-8',
                         'LC_ALL' => 'en_US.UTF-8',
                         'TERM' => 'xterm-256color',
-                        'FORCE_COLOR' => (string)$data->get('force_color', 'true'),
+                        'FORCE_COLOR' => (string) $data->get('force_color', 'true'),
                         'PWD' => $path,
                     ], $_ENV),
                     timeout: $data->get('timeout', 7200),
                 );
 
-                $this->write('cmd', (string)json_encode($cmd));
-                $this->write('cwd', (string)$cwd);
+                $this->write('cmd', (string) json_encode($cmd));
+                $this->write('cwd', (string) $cwd);
 
                 $process->setPty(true);
 
@@ -139,7 +139,7 @@ final class Command
 
                     $this->write(
                         'data',
-                        json_encode(['data' => $data, 'type' => $type], flags: JSON_INVALID_UTF8_IGNORE)
+                        json_encode(['data' => $data, 'type' => $type], flags: JSON_INVALID_UTF8_IGNORE),
                     );
 
                     if (connection_aborted()) {
@@ -157,21 +157,21 @@ final class Command
 
                     $this->counter = self::TIMES_BEFORE_PING;
 
-                    $this->write('ping', (string)makeDate());
+                    $this->write('ping', (string) make_date());
 
                     if (connection_aborted()) {
                         $this->toBackground = true;
                     }
                 }
 
-                $this->write('exit_code', (string)$process->getExitCode());
+                $this->write('exit_code', (string) $process->getExitCode());
             } catch (ProcessTimedOutException) {
             }
 
             if (false === $this->toBackground && !connection_aborted()) {
-                $this->write('close', (string)makeDate());
+                $this->write('close', (string) make_date());
             }
-            exit;
+            exit();
         };
 
         set_time_limit(0);
@@ -187,7 +187,7 @@ final class Command
 
     private function write(string $event, string $data, bool $multiLine = false): void
     {
-        echo "id: " . hrtime(true) . "\n";
+        echo 'id: ' . hrtime(true) . "\n";
         echo "event: {$event}\n";
         if (true === $multiLine) {
             foreach (explode(PHP_EOL, $data) as $line) {

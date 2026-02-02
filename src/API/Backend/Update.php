@@ -30,9 +30,10 @@ final class Update
 
     private const array IMMUTABLE_KEYS = ['name', 'type', 'options', 'import', 'export'];
 
-    public function __construct(private readonly iImport $mapper, private readonly iLogger $logger)
-    {
-    }
+    public function __construct(
+        private readonly iImport $mapper,
+        private readonly iLogger $logger,
+    ) {}
 
     #[Put(Index::URL . '/{name:backend}[/]', name: 'backend.update')]
     public function update(iRequest $request, string $name): iResponse
@@ -68,8 +69,10 @@ final class Update
             if (false === $client->validateContext($context)) {
                 return api_error('Context information validation failed.', Status::BAD_REQUEST);
             }
-            $userContext->config->set($name, $config->getAll())
-                ->addFilter('removed.keys', function (array $data): array {
+            $userContext
+                ->config
+                ->set($name, $config->getAll())
+                ->addFilter('removed.keys', static function (array $data): array {
                     $removed = include __DIR__ . '/../../../config/removed.keys.php';
                     foreach (ag($removed, 'backend', []) as $key) {
                         foreach ($data as &$v) {
@@ -83,10 +86,11 @@ final class Update
                         }
                     }
                     return $data;
-                })->persist();
+                })
+                ->persist();
 
             // -- sanity check.
-            if (true === (bool)$userContext->config->get("{$name}.import.enabled", false)) {
+            if (true === (bool) $userContext->config->get("{$name}.import.enabled", false)) {
                 if ($userContext->config->has("{$name}.options." . Options::IMPORT_METADATA_ONLY)) {
                     $userContext->config->delete("{$name}.options." . Options::IMPORT_METADATA_ONLY);
                 }
@@ -122,7 +126,7 @@ final class Update
         }
 
         try {
-            $data = json_decode((string)$request->getBody(), true, flags: JSON_THROW_ON_ERROR);
+            $data = json_decode((string) $request->getBody(), true, flags: JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
             return api_error(r('Invalid JSON data. {error}', ['error' => $e->getMessage()]), Status::BAD_REQUEST);
         }
@@ -137,7 +141,7 @@ final class Update
                 return api_error('No key to update was present.', Status::BAD_REQUEST);
             }
 
-            $spec = getServerColumnSpec($key);
+            $spec = get_server_column_spec($key);
 
             if (empty($spec)) {
                 return api_error(r("Invalid key '{key}' was given.", ['key' => $key]), Status::BAD_REQUEST);
@@ -151,7 +155,7 @@ final class Update
                 } catch (ValidationException $e) {
                     return api_error(r("Value validation for '{key}' failed. {error}", [
                         'key' => $key,
-                        'error' => $e->getMessage()
+                        'error' => $e->getMessage(),
                     ]), Status::BAD_REQUEST);
                 }
             }
@@ -167,8 +171,8 @@ final class Update
             $userContext->config->set($key, $value);
         }
 
-        # -- sanity check.
-        if (true === (bool)$userContext->config->get("{$name}.import.enabled", false)) {
+        // -- sanity check.
+        if (true === (bool) $userContext->config->get("{$name}.import.enabled", false)) {
             if ($userContext->config->has("{$name}.options." . Options::IMPORT_METADATA_ONLY)) {
                 $userContext->config->delete("{$name}.options." . Options::IMPORT_METADATA_ONLY);
             }
@@ -190,7 +194,7 @@ final class Update
     private function fromRequest(array $config, iRequest $request, iClient $client): array
     {
         $data = DataUtil::fromArray(
-            array_map(fn($v) => false === is_string($v) ? $v : trim($v), $request->getParsedBody())
+            array_map(static fn($v) => false === is_string($v) ? $v : trim($v), $request->getParsedBody()),
         );
 
         $newData = [
@@ -199,16 +203,16 @@ final class Update
             'user' => $data->get('user'),
             'uuid' => $data->get('uuid'),
             'export' => [
-                'enabled' => (bool)$data->get('export.enabled', false),
+                'enabled' => (bool) $data->get('export.enabled', false),
             ],
             'import' => [
-                'enabled' => (bool)$data->get('import.enabled', false),
+                'enabled' => (bool) $data->get('import.enabled', false),
             ],
         ];
 
         foreach ($data->get('options', []) as $key => $value) {
             $key = "options.{$key}";
-            $spec = getServerColumnSpec($key);
+            $spec = get_server_column_spec($key);
 
             if (empty($spec) || null === $value) {
                 continue;
@@ -220,16 +224,20 @@ final class Update
                 try {
                     $value = $spec['validate']($value, $spec);
                 } catch (ValidationException $e) {
-                    throw new ValidationException(r("Value validation for '{key}' failed. {error}", [
-                        'key' => $key,
-                        'error' => $e->getMessage()
-                    ]), $e->getCode(), $e);
+                    throw new ValidationException(
+                        r("Value validation for '{key}' failed. {error}", [
+                            'key' => $key,
+                            'error' => $e->getMessage(),
+                        ]),
+                        $e->getCode(),
+                        $e,
+                    );
                 }
             }
 
             $newData = ag_set($newData, $key, $value);
         }
 
-        return deepArrayMerge([$config, $client->fromRequest($newData, $request)]);
+        return deep_array_merge([$config, $client->fromRequest($newData, $request)]);
     }
 }

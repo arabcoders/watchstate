@@ -16,9 +16,10 @@ final class GetVersion
 
     private string $action = 'plex.getVersion';
 
-    public function __construct(protected readonly iHttp $http, protected readonly iLogger $logger)
-    {
-    }
+    public function __construct(
+        protected readonly iHttp $http,
+        protected readonly iLogger $logger,
+    ) {}
 
     /**
      * Get Backend unique identifier.
@@ -33,7 +34,7 @@ final class GetVersion
         return $this->tryResponse(
             context: $context,
             fn: function () use ($context, $opts) {
-                $info = new GetInfo($this->http, $this->logger)(context: $context, opts: $opts);
+                $info = (new GetInfo($this->http, $this->logger))(context: $context, opts: $opts);
 
                 if (false === $info->status) {
                     return $info;
@@ -41,7 +42,7 @@ final class GetVersion
 
                 return new Response(status: true, response: ag($info->response, 'version'));
             },
-            action: $this->action
+            action: $this->action,
         );
     }
 }

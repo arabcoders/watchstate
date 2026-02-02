@@ -55,7 +55,7 @@ class AuthorizationMiddlewareTest extends TestCase
         ];
 
         foreach ($routes as $route) {
-            $uri = parseConfigValue($route);
+            $uri = parse_config_value($route);
             $result = new AuthorizationMiddleware()->process(
                 request: $this->getRequest(uri: $uri),
                 handler: $this->getHandler()
@@ -64,7 +64,7 @@ class AuthorizationMiddlewareTest extends TestCase
         }
 
         foreach ($routesSemiOpen as $route) {
-            $uri = parseConfigValue($route);
+            $uri = parse_config_value($route);
             $result = new AuthorizationMiddleware()->process(
                 request: $this->getRequest(uri: $uri),
                 handler: $this->getHandler()
@@ -75,7 +75,7 @@ class AuthorizationMiddlewareTest extends TestCase
         Config::save('api.secure', true);
 
         foreach ($routesSemiOpen as $route) {
-            $uri = parseConfigValue($route);
+            $uri = parse_config_value($route);
             $result = new AuthorizationMiddleware()->process(
                 request: $this->getRequest(uri: $uri)->withoutHeader('Authorization'),
                 handler: $this->getHandler()
@@ -88,7 +88,7 @@ class AuthorizationMiddlewareTest extends TestCase
         }
 
         foreach ($routesSemiOpen as $route) {
-            $uri = parseConfigValue($route);
+            $uri = parse_config_value($route);
             $result = new AuthorizationMiddleware()->process(
                 request: $this->getRequest(uri: $uri)->withHeader('Authorization', 'Bearer api'),
                 handler: $this->getHandler()
@@ -102,7 +102,7 @@ class AuthorizationMiddlewareTest extends TestCase
 
         Config::save('api.key', 'api_test_token');
         foreach ($routesSemiOpen as $route) {
-            $uri = parseConfigValue($route);
+            $uri = parse_config_value($route);
             $result = new AuthorizationMiddleware()->process(
                 request: $this->getRequest(uri: $uri, query: ['apikey' => 'api_test_token'])->withHeader(
                     'X-apikey',

@@ -42,7 +42,7 @@ final class Discover
                 return api_error('Discover is only available for Plex backends.', Status::BAD_REQUEST);
             }
 
-            assert($client instanceof PlexClient);
+            assert($client instanceof PlexClient, 'Expected Plex client for discover request.');
 
             $context = $client->getContext();
             $opts = [];

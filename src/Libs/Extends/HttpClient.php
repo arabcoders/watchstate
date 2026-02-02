@@ -26,10 +26,10 @@ class HttpClient implements iHttp, iLoggerAware, iReset
     private array $blacklisted = [
         'x-plex-token',
         'x-mediabrowser-token',
-        'authorization'
+        'authorization',
     ];
 
-    private iLogger|null $logger = null;
+    private ?iLogger $logger = null;
 
     /**
      * Constructor.
@@ -37,9 +37,9 @@ class HttpClient implements iHttp, iLoggerAware, iReset
      * @param iHttp $client The HTTP client instance.
      * @return void
      */
-    public function __construct(private iHttp $client)
-    {
-    }
+    public function __construct(
+        private iHttp $client,
+    ) {}
 
     /**
      * Sends an HTTP request.
@@ -56,7 +56,7 @@ class HttpClient implements iHttp, iLoggerAware, iReset
      */
     public function request(string|Method $method, string $url, array $options = []): iResponse
     {
-        if (true === ($method instanceof Method)) {
+        if (true === $method instanceof Method) {
             $method = $method->value;
         }
 
@@ -64,7 +64,7 @@ class HttpClient implements iHttp, iLoggerAware, iReset
             $headers = [];
 
             foreach ($options['headers'] ?? [] as $key => $value) {
-                $headers[$key] = in_array(strtolower($key), $this->blacklisted) ? '**hidden**' : $value;
+                $headers[$key] = in_array(strtolower($key), $this->blacklisted, true) ? '**hidden**' : $value;
             }
 
             $rUrl = new Uri($url);
@@ -73,9 +73,9 @@ class HttpClient implements iHttp, iLoggerAware, iReset
                 parse_str($query, $params);
                 if (!empty($params)) {
                     $params = array_map(
-                        fn($value, $key) => in_array($key, $this->blacklisted) ? '**hidden**' : $value,
+                        fn($value, $key) => in_array($key, $this->blacklisted, true) ? '**hidden**' : $value,
                         $params,
-                        array_keys($params)
+                        array_keys($params),
                     );
                     $rUrl = $rUrl->withQuery(http_build_query($params));
                 }
@@ -83,14 +83,14 @@ class HttpClient implements iHttp, iLoggerAware, iReset
 
             $this->logger->debug('HttpClient - Request [ {method}: {url} ]', [
                 'method' => $method,
-                'url' => (string)$rUrl,
+                'url' => (string) $rUrl,
                 'options' => array_replace_recursive($options, [
                     'headers' => $headers,
                     'user_data' => [
                         'ok' => 'callable',
-                        'error' => 'callable'
+                        'error' => 'callable',
                     ],
-                ])
+                ]),
             ]);
         }
 

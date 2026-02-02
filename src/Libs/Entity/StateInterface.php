@@ -296,7 +296,7 @@ interface StateInterface extends LoggerAwareInterface
      *
      * @return array Return an array of metadata.
      */
-    public function getMetadata(string|null $via = null): array;
+    public function getMetadata(?string $via = null): array;
 
     /**
      * Get metadata.
@@ -329,7 +329,7 @@ interface StateInterface extends LoggerAwareInterface
      *
      * @throws \RuntimeException if no via is set.
      */
-    public function setMeta(string $key, mixed $value, string|null $via = null): StateInterface;
+    public function setMeta(string $key, mixed $value, ?string $via = null): StateInterface;
 
     /**
      * Get extra.
@@ -338,7 +338,7 @@ interface StateInterface extends LoggerAwareInterface
      *
      * @return array
      */
-    public function getExtra(string|null $via = null): array;
+    public function getExtra(?string $via = null): array;
 
     /**
      * Set Extra related to {$this->via} backend.
@@ -379,7 +379,7 @@ interface StateInterface extends LoggerAwareInterface
      *
      * @return bool Return true if all conditions are met.
      */
-    public function shouldMarkAsUnplayed(StateInterface $backend, UserContext|null $userContext = null): bool;
+    public function shouldMarkAsUnplayed(StateInterface $backend, ?UserContext $userContext = null): bool;
 
     /**
      * Mark item as unplayed.<br><br>
@@ -429,7 +429,7 @@ interface StateInterface extends LoggerAwareInterface
      *
      * @return StateInterface Returns the current object.
      */
-    public function removeContext(string|null $key = null): StateInterface;
+    public function removeContext(?string $key = null): StateInterface;
 
     /**
      * Get entity contextual data.
@@ -439,7 +439,7 @@ interface StateInterface extends LoggerAwareInterface
      *
      * @return mixed
      */
-    public function getContext(string|null $key = null, mixed $default = null): mixed;
+    public function getContext(?string $key = null, mixed $default = null): mixed;
 
     /**
      * Get the metadata that is likely to be correct based on the quorum.

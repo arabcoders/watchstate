@@ -22,9 +22,10 @@ class Proxy
 
     private string $action = 'jellyfin.proxy';
 
-    public function __construct(protected readonly iHttp $http, protected readonly iLogger $logger)
-    {
-    }
+    public function __construct(
+        protected readonly iHttp $http,
+        protected readonly iLogger $logger,
+    ) {}
 
     /**
      * Get Backend unique identifier.
@@ -42,12 +43,12 @@ class Proxy
         Method $method,
         iUri $uri,
         array|iStream|null $body = null,
-        array $opts = []
+        array $opts = [],
     ): Response {
         return $this->tryResponse(
             context: $context,
             fn: function () use ($context, $method, $uri, $body, $opts) {
-                $url = (string)$uri;
+                $url = (string) $uri;
 
                 $logContext = [
                     'action' => $this->action,
@@ -59,7 +60,7 @@ class Proxy
 
                 $this->logger->debug(
                     message: "{action}: proxying request via '{client}: {user}@{backend}'.",
-                    context: $logContext
+                    context: $logContext,
                 );
 
                 $requestOpts = $context->getHttpOptions();
@@ -68,8 +69,8 @@ class Proxy
                     $requestOpts['headers'] = array_replace_recursive($requestOpts['headers'], $opts['headers']);
                 }
 
-                if (null !== $body && false === in_array($method, [Method::GET, Method::HEAD])) {
-                    if (true === ($body instanceof iStream)) {
+                if (null !== $body && false === in_array($method, [Method::GET, Method::HEAD], true)) {
+                    if (true === $body instanceof iStream) {
                         $requestOpts['body'] = $body->detach();
                     }
                     if (true === is_array($body) && count($body) > 0) {
@@ -84,11 +85,11 @@ class Proxy
                     response: new APIResponse(
                         status: Status::from($response->getStatusCode()),
                         headers: $response->getHeaders(false),
-                        stream: Stream::create($response->getContent(false))
-                    )
+                        stream: Stream::create($response->getContent(false)),
+                    ),
                 );
             },
-            action: $this->action
+            action: $this->action,
         );
     }
 }

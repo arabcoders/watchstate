@@ -13,9 +13,9 @@ class Route
     public readonly array $methods;
     public readonly string $pattern;
     public readonly array $middleware;
-    public readonly string|null $host;
-    public readonly string|null $name;
-    public readonly string|null $scheme;
+    public readonly ?string $host;
+    public readonly ?string $name;
+    public readonly ?string $scheme;
     public readonly string|int|null $port;
 
     /**
@@ -33,20 +33,20 @@ class Route
         array $methods,
         string $pattern,
         array|string $middleware = [],
-        string|null $host = null,
-        string|null $name = null,
-        string|null $scheme = null,
+        ?string $host = null,
+        ?string $name = null,
+        ?string $scheme = null,
         string|int|null $port = null,
-        array $opts = []
+        array $opts = [],
     ) {
         $this->name = $name;
         $this->methods = $methods;
-        $this->pattern = parseConfigValue($pattern);
+        $this->pattern = parse_config_value($pattern);
         $this->middleware = is_string($middleware) ? [$middleware] : $middleware;
-        $this->port = null !== $port ? parseConfigValue($port) : $port;
-        $this->scheme = null !== $scheme ? parseConfigValue($scheme) : $scheme;
-        $this->host = null !== $host ? parseConfigValue($host, fn($v) => parse_url($v, PHP_URL_HOST)) : $host;
+        $this->port = null !== $port ? parse_config_value($port) : $port;
+        $this->scheme = null !== $scheme ? parse_config_value($scheme) : $scheme;
+        $this->host = null !== $host ? parse_config_value($host, static fn($v) => parse_url($v, PHP_URL_HOST)) : $host;
 
-        $this->isCli = true === (bool)ag($opts, 'cli', false);
+        $this->isCli = true === (bool) ag($opts, 'cli', false);
     }
 }

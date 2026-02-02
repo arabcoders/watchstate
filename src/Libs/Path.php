@@ -26,7 +26,7 @@ final readonly class Path
      */
     public function __construct(Path|string $path)
     {
-        $this->path = (string)$path;
+        $this->path = (string) $path;
         $this->name = basename($this->path);
         $this->stem = pathinfo($this->path, PATHINFO_FILENAME);
         $this->suffix = pathinfo($this->path, PATHINFO_EXTENSION);
@@ -61,8 +61,8 @@ final readonly class Path
      */
     public function joinPath(Path|string ...$paths): self
     {
-        $segments = array_map(fn($p) => (string)$p, array_merge([$this->path], $paths));
-        return new self(join(DIRECTORY_SEPARATOR, $segments));
+        $segments = array_map(static fn($p) => (string) $p, array_merge([$this->path], $paths));
+        return new self(implode(DIRECTORY_SEPARATOR, $segments));
     }
 
     /**
@@ -103,7 +103,7 @@ final readonly class Path
      * @param bool $exist_ok Whether to ignore if the directory already exists.
      * @throws RuntimeException If the directory already exists and $exist_ok is false.
      */
-    public function mkdir(int $mode = 0777, bool $recursive = false, bool $exist_ok = false): void
+    public function mkdir(int $mode = 0o777, bool $recursive = false, bool $exist_ok = false): void
     {
         if (!$exist_ok && $this->exists()) {
             throw new RuntimeException("Directory already exists: {$this->path}");
@@ -184,7 +184,7 @@ final readonly class Path
      */
     public function normalize(string|Path $path, string $separator = DIRECTORY_SEPARATOR): Path
     {
-        $path = (string)$path;
+        $path = (string) $path;
         $isAbsolute = str_starts_with($path, $separator);
 
         // Use realpath if the file exists
@@ -208,7 +208,7 @@ final readonly class Path
         }
 
         // Split and resolve segments
-        $parts = array_filter(explode($separator, $path), fn($p) => $p !== '' && $p !== '.');
+        $parts = array_filter(explode($separator, $path), static fn($p) => $p !== '' && $p !== '.');
         $stack = [];
 
         foreach ($parts as $part) {
@@ -232,7 +232,8 @@ final readonly class Path
         }
 
         // Return fallback if normalization produced an empty string
-        return new self($normalized === '' ? ($prefix ?: $separator) : $normalized);
+        $fallback = $prefix !== '' ? $prefix : $separator;
+        return new self($normalized === '' ? $fallback : $normalized);
     }
 
     /**
@@ -398,7 +399,7 @@ final readonly class Path
      */
     public function sameFile(Path|string $other): bool
     {
-        return (string)$this->normalize($this->path) === (string)$this->normalize((string)$other);
+        return (string) $this->normalize($this->path) === (string) $this->normalize((string) $other);
     }
 
     /**
@@ -409,7 +410,7 @@ final readonly class Path
      */
     public function symlinkTo(Path|string $target): void
     {
-        if (!@symlink((string)$target, $this->path)) {
+        if (!@symlink((string) $target, $this->path)) {
             throw new RuntimeException("Could not create symlink from {$this->path} to {$target}");
         }
     }
@@ -443,8 +444,8 @@ final readonly class Path
      */
     public function relativeTo(Path|string $other): self
     {
-        $other = (string)$this->normalize((string)$other);
-        $thisReal = (string)$this->normalize($this->path);
+        $other = (string) $this->normalize((string) $other);
+        $thisReal = (string) $this->normalize($this->path);
 
         if (!str_starts_with($thisReal, $other . DIRECTORY_SEPARATOR)) {
             throw new RuntimeException("{$this->path} is not relative to {$other}");
@@ -481,7 +482,7 @@ final readonly class Path
      */
     public function rename(Path|string $target): void
     {
-        rename($this->path, (string)$target);
+        rename($this->path, (string) $target);
     }
 
     /**
@@ -500,7 +501,7 @@ final readonly class Path
      * @param int $mode The permissions mode (default: 0777).
      * @param int|null $time The modification time (default: current time).
      */
-    public function touch(int $mode = 0777, int|null $time = null): void
+    public function touch(int $mode = 0o777, ?int $time = null): void
     {
         touch($this->path, $time ?? time());
         chmod($this->path, $mode);
@@ -555,5 +556,4 @@ final readonly class Path
             default => throw new RuntimeException("Unknown property: {$name}"),
         };
     }
-
 }

@@ -34,8 +34,10 @@ final class PruneCommand extends Command
      *
      * @param iLogger $logger The logger implementation used for logging.
      */
-    public function __construct(private readonly iLogger $logger, private readonly DBLayer $db)
-    {
+    public function __construct(
+        private readonly iLogger $logger,
+        private readonly DBLayer $db,
+    ) {
         parent::__construct();
     }
 
@@ -44,25 +46,26 @@ final class PruneCommand extends Command
      */
     protected function configure(): void
     {
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not perform any actions on files.')
             ->setDescription('Remove automatically generated files.')
             ->setHelp(
                 r(
                     <<<HELP
 
-                    This command remove automatically generated files. like logs and backups.
+                        This command remove automatically generated files. like logs and backups.
 
-                    to see what files will be removed without actually removing them. run the following command.
+                        to see what files will be removed without actually removing them. run the following command.
 
-                    {cmd} <cmd>{route}</cmd> <flag>--dry-run</flag> <flag>-vvv</flag>
+                        {cmd} <cmd>{route}</cmd> <flag>--dry-run</flag> <flag>-vvv</flag>
 
-                    HELP,
+                        HELP,
                     [
-                        'cmd' => trim(commandContext()),
+                        'cmd' => trim(command_context()),
                         'route' => self::ROUTE,
-                    ]
-                )
+                    ],
+                ),
             );
     }
 
@@ -84,39 +87,40 @@ final class PruneCommand extends Command
                 'path' => Config::get('tmpDir') . '/logs',
                 'base' => Config::get('tmpDir'),
                 'filter' => '/\.log$/',
-                'time' => strtotime('-7 DAYS', $time)
+                'time' => strtotime('-7 DAYS', $time),
             ],
             [
                 'name' => 'webhooks_remover',
                 'path' => Config::get('tmpDir') . '/webhooks',
                 'base' => Config::get('tmpDir'),
                 'filter' => '/\.json$/',
-                'time' => strtotime('-3 DAYS', $time)
+                'time' => strtotime('-3 DAYS', $time),
             ],
             [
                 'name' => 'profiler_remover',
                 'path' => Config::get('tmpDir') . '/profiler',
                 'base' => Config::get('tmpDir'),
                 'filter' => '/\.json$/',
-                'time' => strtotime('-3 DAYS', $time)
+                'time' => strtotime('-3 DAYS', $time),
             ],
             [
                 'name' => 'debug_remover',
                 'path' => Config::get('tmpDir') . '/debug',
                 'base' => Config::get('tmpDir'),
                 'filter' => '/\.json$/',
-                'time' => strtotime('-3 DAYS', $time)
+                'time' => strtotime('-3 DAYS', $time),
             ],
             [
                 'name' => 'backup_remover',
                 'path' => Config::get('path') . '/backup',
                 'base' => Config::get('path'),
                 'filter' => '/\.json$|\.json.zip$/',
-                'validate' => fn(SplFileInfo $f): bool => 1 === @preg_match(
-                        '/^(\w+\.)?\w+\.\d{8}\.json(\.zip)?$/i',
-                        $f->getBasename()
-                    ),
-                'time' => strtotime('-90 DAYS', $time)
+                'validate' => static fn(SplFileInfo $f): bool => 1
+                === @preg_match(
+                    '/^(\w+\.)?\w+\.\d{8}\.json(\.zip)?$/i',
+                    $f->getBasename(),
+                ),
+                'time' => strtotime('-90 DAYS', $time),
             ],
         ];
 
@@ -130,16 +134,16 @@ final class PruneCommand extends Command
             if (null === ($expiresAt = ag($item, 'time'))) {
                 $this->logger->warning("No expected time to live was found for '{name}' - '{path}'.", [
                     'name' => $name,
-                    'path' => $path
+                    'path' => $path,
                 ]);
                 continue;
             }
 
             if (null === $path || !is_dir($path)) {
-                if (true === (bool)ag($item, 'report', true)) {
+                if (true === (bool) ag($item, 'report', true)) {
                     $this->logger->warning("{name}: Path '{path}' not found or is inaccessible.", [
                         'name' => $name,
-                        'path' => $path
+                        'path' => $path,
                     ]);
                 }
                 continue;
@@ -183,7 +187,7 @@ final class PruneCommand extends Command
 
                 $this->logger->notice("{name}: Removing '{file}'. expired TTL.", [
                     'name' => $name,
-                    'file' => after($file->getRealPath(), ag($item, 'base') . '/')
+                    'file' => after($file->getRealPath(), ag($item, 'base') . '/'),
                 ]);
 
                 if (false === $inDryRunMode) {
@@ -198,13 +202,13 @@ final class PruneCommand extends Command
 
     private function cleanUp(): void
     {
-        $before = makeDate(strtotime('-7 DAYS'));
+        $before = make_date(strtotime('-7 DAYS'));
 
-        $sql = "DELETE FROM
-                " . EventsTable::TABLE_NAME . "
+        $sql = 'DELETE FROM
+                ' . EventsTable::TABLE_NAME . '
                 WHERE
-                " . EventsTable::COLUMN_CREATED_AT . " < datetime(:before)
-        ";
+                ' . EventsTable::COLUMN_CREATED_AT . ' < datetime(:before)
+        ';
         $stmt = $this->db->query($sql, ['before' => $before->format('Y-m-d')]);
 
         $count = $stmt->rowCount();

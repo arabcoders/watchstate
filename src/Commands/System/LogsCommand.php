@@ -47,15 +47,16 @@ final class LogsCommand extends Command
      */
     protected function configure(): void
     {
-        $defaultDate = makeDate()->format('Ymd');
+        $defaultDate = make_date()->format('Ymd');
 
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->addOption(
                 'type',
                 't',
                 InputOption::VALUE_REQUIRED,
                 sprintf('Log type, can be [%s].', implode(', ', self::LOG_FILES)),
-                self::LOG_FILES[0]
+                self::LOG_FILES[0],
             )
             ->addOption(
                 'date',
@@ -70,7 +71,7 @@ final class LogsCommand extends Command
                 'l',
                 InputOption::VALUE_OPTIONAL,
                 'Show last X number of log lines.',
-                self::DEFAULT_LIMIT
+                self::DEFAULT_LIMIT,
             )
             ->addOption('follow', 'f', InputOption::VALUE_NONE, 'Follow log file.')
             ->addOption('clear', null, InputOption::VALUE_NONE, 'Clear log file')
@@ -79,60 +80,60 @@ final class LogsCommand extends Command
                 r(
                     <<<HELP
 
-                    This command allow you to access all recorded logs.
+                        This command allow you to access all recorded logs.
 
-                    -------------------
-                    <notice>[ Expected Values ]</notice>
-                    -------------------
+                        -------------------
+                        <notice>[ Expected Values ]</notice>
+                        -------------------
 
-                    <flag>type</flag>  expects the value to be one of [{files}]. [<value>Default: {defaultLog}</value>].
-                    <flag>date</flag>  expects the value to be [<value>(number){8}</value>]. [<value>Default: {defaultDate}</value>].
-                    <flag>limit</flag> expects the value to be [<value>(number)</value>]. [<value>Default: {defaultLimit}</value>].
+                        <flag>type</flag>  expects the value to be one of [{files}]. [<value>Default: {defaultLog}</value>].
+                        <flag>date</flag>  expects the value to be [<value>(number){8}</value>]. [<value>Default: {defaultDate}</value>].
+                        <flag>limit</flag> expects the value to be [<value>(number)</value>]. [<value>Default: {defaultLimit}</value>].
 
-                    -------
-                    <notice>[ FAQ ]</notice>
-                    -------
+                        -------
+                        <notice>[ FAQ ]</notice>
+                        -------
 
-                    <question># How to see all log files?</question>
+                        <question># How to see all log files?</question>
 
-                    {cmd} <cmd>{route}</cmd> <flag>--list</flag>
+                        {cmd} <cmd>{route}</cmd> <flag>--list</flag>
 
-                    <question># How to follow log file?</question>
+                        <question># How to follow log file?</question>
 
-                    {cmd} <cmd>{route}</cmd> <flag>--follow</flag>
+                        {cmd} <cmd>{route}</cmd> <flag>--follow</flag>
 
-                    <question># How to clear log file?</question>
+                        <question># How to clear log file?</question>
 
-                    {cmd} <cmd>{route}</cmd> <flag>--type</flag> <value>{defaultLog}</value> <flag>--date</flag> <value>{defaultDate}</value> <flag>--clear</flag>
+                        {cmd} <cmd>{route}</cmd> <flag>--type</flag> <value>{defaultLog}</value> <flag>--date</flag> <value>{defaultDate}</value> <flag>--clear</flag>
 
-                    You can clear log file by running this command, However clearing log file require <notice>interaction</notice>.
-                    To bypass the check use <flag>[-n, --no-interaction]</flag> flag.
+                        You can clear log file by running this command, However clearing log file require <notice>interaction</notice>.
+                        To bypass the check use <flag>[-n, --no-interaction]</flag> flag.
 
-                    <question># How to increase/decrease the returned log lines?</question>
+                        <question># How to increase/decrease the returned log lines?</question>
 
-                    By default, we return the last [<value>{defaultLimit}</value>] log lines. However, you can increase/decrease
-                    the limit however you like by using [<flag>-l, --limit</flag>] flag. For example,
+                        By default, we return the last [<value>{defaultLimit}</value>] log lines. However, you can increase/decrease
+                        the limit however you like by using [<flag>-l, --limit</flag>] flag. For example,
 
-                    {cmd} <cmd>{route}</cmd> <flag>--limit</flag> <value>100</value>
+                        {cmd} <cmd>{route}</cmd> <flag>--limit</flag> <value>100</value>
 
-                    <question># Where log files stored?</question>
+                        <question># Where log files stored?</question>
 
-                    By default, We store logs at [<value>{logsPath}</value>]
+                        By default, We store logs at [<value>{logsPath}</value>]
 
-                    HELP,
+                        HELP,
                     [
                         'files' => implode(
                             ', ',
-                            array_map(fn($val) => '<value>' . $val . '</value>', self::LOG_FILES)
+                            array_map(static fn($val) => '<value>' . $val . '</value>', self::LOG_FILES),
                         ),
                         'defaultLog' => self::LOG_FILES[0],
                         'defaultDate' => $defaultDate,
                         'defaultLimit' => self::DEFAULT_LIMIT,
-                        'cmd' => trim(commandContext()),
+                        'cmd' => trim(command_context()),
                         'route' => self::ROUTE,
                         'logsPath' => Config::get('tmpDir') . '/logs',
-                    ]
-                )
+                    ],
+                ),
             );
     }
 
@@ -155,9 +156,9 @@ final class LogsCommand extends Command
 
         $type = $input->getOption('type');
 
-        if (false === in_array($type, self::LOG_FILES)) {
+        if (false === in_array($type, self::LOG_FILES, true)) {
             throw new InvalidArgumentException(
-                sprintf('Log type has to be one of the supported log files [%s].', implode(', ', self::LOG_FILES))
+                sprintf('Log type has to be one of the supported log files [%s].', implode(', ', self::LOG_FILES)),
             );
         }
 
@@ -167,19 +168,19 @@ final class LogsCommand extends Command
             throw new InvalidArgumentException('Log date must be in [YYYYMMDD] format. For example [20220622].');
         }
 
-        $limit = (int)$input->getOption('limit');
+        $limit = (int) $input->getOption('limit');
 
         $file = r(text: Config::get('tmpDir') . '/logs/{type}.{date}.log', context: [
             'type' => $type,
-            'date' => $date
+            'date' => $date,
         ]);
 
         if (false === file_exists($file)) {
             $output->writeln(
                 sprintf(
                     '<info>Log file [%s] does not exist or is empty. This means it has been pruned, the date is incorrect or nothing has written to that file yet.</info>',
-                    after($file, dirname(Config::get('tmpDir')))
-                )
+                    after($file, dirname(Config::get('tmpDir'))),
+                ),
             );
             return self::SUCCESS;
         }
@@ -203,7 +204,7 @@ final class LogsCommand extends Command
                 } elseif ($len > $lastPos) {
                     if (false === ($f = fopen($p, 'rb'))) {
                         $output->writeln(
-                            sprintf('<error>Unable to open file \'%s\'.</error>', $file->getRealPath())
+                            sprintf('<error>Unable to open file \'%s\'.</error>', $file->getRealPath()),
                         );
                         return self::FAILURE;
                     }
@@ -212,7 +213,7 @@ final class LogsCommand extends Command
 
                     while (!feof($f)) {
                         $buffer = fread($f, 4096);
-                        $output->write((string)$buffer);
+                        $output->write((string) $buffer);
                         flush();
                     }
 
@@ -229,7 +230,7 @@ final class LogsCommand extends Command
 
         if ($file->getSize() < 1) {
             $output->writeln(
-                sprintf('<comment>File \'%s\' is empty.</comment>', $file->getRealPath())
+                sprintf('<comment>File \'%s\' is empty.</comment>', $file->getRealPath()),
             );
             return self::SUCCESS;
         }
@@ -241,7 +242,7 @@ final class LogsCommand extends Command
         $it = new LimitIterator($file, max(0, $lastLine - $limit), $lastLine);
 
         foreach ($it as $line) {
-            $line = trim((string)$line);
+            $line = trim((string) $line);
 
             if (empty($line)) {
                 continue;
@@ -263,7 +264,7 @@ final class LogsCommand extends Command
      */
     private function listLogs(InputInterface $input, OutputInterface $output): int
     {
-        $path = fixPath(Config::get('tmpDir') . '/logs');
+        $path = fix_path(Config::get('tmpDir') . '/logs');
 
         $list = [];
 
@@ -278,12 +279,12 @@ final class LogsCommand extends Command
                 'type' => $matches[1] ?? '??',
                 'tag' => $matches[2] ?? '??',
                 'size' => $isTable ? fsize($size) : $size,
-                'modified' => makeDate(filemtime($file))->format('Y-m-d H:i:s T'),
+                'modified' => make_date(filemtime($file))->format('Y-m-d H:i:s T'),
             ];
 
             if (!$isTable) {
                 $builder['file'] = $file;
-                $builder['modified'] = makeDate(filemtime($file));
+                $builder['modified'] = make_date(filemtime($file));
             }
 
             $list[] = $builder;
@@ -327,7 +328,7 @@ final class LogsCommand extends Command
             if (false === $tty) {
                 $output->writeln('<error>ERROR: no interactive session found.</error>');
                 $output->writeln(
-                    '<comment>to clear log without interactive session, pass</comment> [<flag>-n, --no-interaction</flag>] flag.'
+                    '<comment>to clear log without interactive session, pass</comment> [<flag>-n, --no-interaction</flag>] flag.',
                 );
                 return self::FAILURE;
             }
@@ -338,12 +339,12 @@ final class LogsCommand extends Command
                     after($file->getRealPath(), Config::get('tmpDir') . '/'),
                     '[Y|N] [Default: No]',
                 ),
-                false
+                false,
             );
 
             $confirmClear = $this->getHelper('question')->ask($input, $output, $question);
 
-            if (true !== (bool)$confirmClear) {
+            if (true !== (bool) $confirmClear) {
                 return self::SUCCESS;
             }
         }
@@ -369,9 +370,11 @@ final class LogsCommand extends Command
             $suggest = [];
 
             foreach (self::LOG_FILES as $name) {
-                if (empty($currentValue) || str_starts_with($name, $currentValue)) {
-                    $suggest[] = $name;
+                if (!(empty($currentValue) || str_starts_with($name, $currentValue))) {
+                    continue;
                 }
+
+                $suggest[] = $name;
             }
 
             $suggestions->suggestValues($suggest);

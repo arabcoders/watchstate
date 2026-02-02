@@ -11,7 +11,7 @@ class UtilsTest extends TestCase
 {
     public function test_flatArray_with_empty_array(): void
     {
-        $result = flatArray([]);
+        $result = flat_array([]);
         $this->assertSame([], $result, 'Empty array should return empty array');
     }
 
@@ -23,7 +23,7 @@ class UtilsTest extends TestCase
             'active' => true,
         ];
 
-        $result = flatArray($input);
+        $result = flat_array($input);
 
         $expected = [
             'name' => 'John',
@@ -44,7 +44,7 @@ class UtilsTest extends TestCase
             'active' => true,
         ];
 
-        $result = flatArray($input);
+        $result = flat_array($input);
 
         $expected = [
             'user.name' => 'John',
@@ -67,7 +67,7 @@ class UtilsTest extends TestCase
             ],
         ];
 
-        $result = flatArray($input);
+        $result = flat_array($input);
 
         $expected = [
             'company.department.team.lead' => 'Alice',
@@ -83,7 +83,7 @@ class UtilsTest extends TestCase
             'name' => 'John',
         ];
 
-        $result = flatArray($input);
+        $result = flat_array($input);
 
         $expected = [
             'user' => [],
@@ -106,7 +106,7 @@ class UtilsTest extends TestCase
             ],
         ];
 
-        $result = flatArray($input);
+        $result = flat_array($input);
 
         $expected = [
             'string' => 'value',
@@ -130,7 +130,7 @@ class UtilsTest extends TestCase
             'user' => $obj,
         ];
 
-        $result = flatArray($input);
+        $result = flat_array($input);
 
         $expected = [
             'user.name' => 'John',
@@ -153,7 +153,7 @@ class UtilsTest extends TestCase
             'user' => $userObj,
         ];
 
-        $result = flatArray($input);
+        $result = flat_array($input);
 
         $expected = [
             'user.name' => 'John',
@@ -170,7 +170,7 @@ class UtilsTest extends TestCase
             'email' => 'john@example.com',
         ];
 
-        $result = flatArray($input, 'user');
+        $result = flat_array($input, 'user');
 
         $expected = [
             'user.name' => 'John',
@@ -189,7 +189,7 @@ class UtilsTest extends TestCase
             ],
         ];
 
-        $result = flatArray($input, 'user');
+        $result = flat_array($input, 'user');
 
         $expected = [
             'user.profile.name' => 'John',
@@ -213,7 +213,7 @@ class UtilsTest extends TestCase
             'top' => 'level',
         ];
 
-        $result = flatArray($input);
+        $result = flat_array($input);
 
         $expected = [
             'level1.level2.level3.value' => 'deep',
@@ -231,7 +231,7 @@ class UtilsTest extends TestCase
             'name' => 'John',
         ];
 
-        $result = flatArray($input);
+        $result = flat_array($input);
 
         $this->assertArrayHasKey('user', $result, 'Empty object should be included');
         $this->assertInstanceOf(\stdClass::class, $result['user'], 'Empty object should remain as object');
@@ -248,7 +248,7 @@ class UtilsTest extends TestCase
             ],
         ];
 
-        $result = flatArray($input);
+        $result = flat_array($input);
 
         $expected = [
             'count' => 0,
@@ -268,7 +268,7 @@ class UtilsTest extends TestCase
             ],
         ];
 
-        $result = flatArray($input);
+        $result = flat_array($input);
 
         $expected = [
             'active' => false,
@@ -287,7 +287,7 @@ class UtilsTest extends TestCase
             ],
         ];
 
-        $result = flatArray($input);
+        $result = flat_array($input);
 
         $expected = [
             'name' => '',
@@ -307,7 +307,7 @@ class UtilsTest extends TestCase
             ],
         ];
 
-        $result = flatArray($input);
+        $result = flat_array($input);
 
         $expected = [
             'items.0' => 'first',
@@ -328,7 +328,7 @@ class UtilsTest extends TestCase
             ],
         ];
 
-        $result = flatArray($input);
+        $result = flat_array($input);
 
         $expected = [
             'user_name' => 'John',
@@ -348,7 +348,7 @@ class UtilsTest extends TestCase
             ],
         ];
 
-        $result = flatArray($input);
+        $result = flat_array($input);
 
         $expected = [
             'config.tags.0' => 'tag1',
@@ -369,7 +369,7 @@ class UtilsTest extends TestCase
             'active' => true,
         ];
 
-        $result = flatArray($input, '', '_');
+        $result = flat_array($input, '', '_');
 
         $expected = [
             'user_name' => 'John',
@@ -388,7 +388,7 @@ class UtilsTest extends TestCase
             ],
         ];
 
-        $result = flatArray($input, 'user', '_');
+        $result = flat_array($input, 'user', '_');
 
         $expected = [
             'user_profile_name' => 'John',
@@ -407,7 +407,7 @@ class UtilsTest extends TestCase
             ],
         ];
 
-        $result = flatArray($input, '', '-');
+        $result = flat_array($input, '', '-');
 
         $expected = [
             'company-department-team' => 'engineering',
@@ -426,7 +426,7 @@ class UtilsTest extends TestCase
             ],
         ];
 
-        $result = flatArray($input, '', '::');
+        $result = flat_array($input, '', '::');
 
         $expected = [
             'app::config::debug' => true,
@@ -447,7 +447,7 @@ class UtilsTest extends TestCase
             ],
         ];
 
-        $result = flatArray($input, '', '|');
+        $result = flat_array($input, '', '|');
 
         $expected = [
             'level1|level2|level3|value' => 'deep',
@@ -464,7 +464,7 @@ class UtilsTest extends TestCase
             ],
         ];
 
-        $result = flatArray($input);
+        $result = flat_array($input);
 
         $this->assertArrayHasKey('user.name', $result, 'Default separator should be dot');
         $this->assertSame('John', $result['user.name']);
@@ -478,7 +478,7 @@ class UtilsTest extends TestCase
             ],
         ];
 
-        $result = flatArray($input, '', '');
+        $result = flat_array($input, '', '');
 
         $expected = [
             'ab' => 'value',
@@ -500,7 +500,7 @@ class UtilsTest extends TestCase
             ],
         ];
 
-        $result = flatArray($input, '', '/');
+        $result = flat_array($input, '', '/');
 
         $expected = [
             'string' => 'text',
@@ -521,7 +521,7 @@ class UtilsTest extends TestCase
             ],
         ];
 
-        $result = flatArray($input, '', '-');
+        $result = flat_array($input, '', '-');
 
         $expected = [
             'items-0' => 'first',
@@ -541,7 +541,7 @@ class UtilsTest extends TestCase
             ],
         ];
 
-        $result = flatArray($input, 'app', '::');
+        $result = flat_array($input, 'app', '::');
 
         $expected = [
             'app::config::database::host' => 'localhost',
@@ -571,7 +571,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertTrue($result['valid'], 'Valid configuration should pass validation');
         $this->assertArrayNotHasKey('errors', $result, 'Valid configuration should not have errors');
@@ -600,7 +600,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertTrue($result['valid'], 'Multiple valid backends should pass validation');
     }
@@ -614,7 +614,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertFalse($result['valid'], 'Invalid backend name should fail validation');
         $this->assertArrayHasKey('errors', $result, 'Should return errors array');
@@ -636,7 +636,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertFalse($result['valid'], 'Invalid backend type should fail validation');
         $this->assertArrayHasKey('errors', $result, 'Should return errors array');
@@ -658,7 +658,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertFalse($result['valid'], 'Unknown field should fail validation');
         $this->assertArrayHasKey('errors', $result, 'Should return errors array');
@@ -682,7 +682,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertFalse($result['valid'], 'LIBRARY_SEGMENT below 300 should fail validation');
         $this->assertArrayHasKey('errors', $result, 'Should return errors array');
@@ -706,7 +706,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertTrue($result['valid'], 'LIBRARY_SEGMENT >= 300 should pass validation');
     }
@@ -729,7 +729,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertTrue($result['valid'], 'Nested options should pass validation');
     }
@@ -744,7 +744,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertTrue($result['valid'], 'Int 1 should be coerced to boolean true');
     }
@@ -759,7 +759,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertTrue($result['valid'], 'Numeric string should be coerced to integer');
     }
@@ -774,7 +774,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertFalse($result['valid'], 'Invalid boolean value should fail validation');
         $this->assertStringContainsString('boolean', $result['errors'][0], 'Error should mention boolean type');
@@ -790,7 +790,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertFalse($result['valid'], 'Invalid integer value should fail validation');
         $this->assertStringContainsString('integer', $result['errors'][0], 'Error should mention integer type');
@@ -802,7 +802,7 @@ class UtilsTest extends TestCase
             'my_backend' => 'not_an_array'
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertFalse($result['valid'], 'Non-array backend data should fail validation');
         $this->assertArrayHasKey('errors', $result, 'Should return errors array');
@@ -817,7 +817,7 @@ class UtilsTest extends TestCase
     {
         $data = [];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertTrue($result['valid'], 'Empty data should be considered valid');
     }
@@ -835,7 +835,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertFalse($result['valid'], 'Multiple errors should fail validation');
         $this->assertArrayHasKey('errors', $result, 'Should return errors array');
@@ -857,7 +857,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertTrue($result['valid'], 'Valid backend configuration should pass validation');
     }
@@ -892,7 +892,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertTrue($result['valid'], 'Complex nested structure should pass validation');
     }
@@ -912,7 +912,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertFalse($result['valid'], 'Multiple backend errors should fail validation');
         $this->assertArrayHasKey('errors', $result, 'Should return errors array');
@@ -930,7 +930,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertTrue($result['valid'], 'Minimal valid configuration should pass validation');
     }
@@ -944,7 +944,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertIsArray($result, 'Should return an array');
         $this->assertArrayHasKey('valid', $result, 'Should have valid key');
@@ -960,7 +960,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertFalse($result['valid'], 'Invalid data should fail');
         $this->assertArrayHasKey('errors', $result, 'Should have errors key');
@@ -982,7 +982,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertTrue($result['valid'], 'Nullable field with null value should pass validation');
     }
@@ -1000,7 +1000,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertTrue($result['valid'], 'Nullable field with valid value should pass validation');
     }
@@ -1018,7 +1018,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertFalse($result['valid'], 'Nullable field with invalid type should fail validation');
         $this->assertArrayHasKey('errors', $result, 'Should have errors');
@@ -1043,7 +1043,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertTrue($result['valid'], 'Multiple nullable fields with null values should pass validation');
     }
@@ -1067,7 +1067,7 @@ class UtilsTest extends TestCase
             ]
         ];
 
-        $result = validateServersData($data);
+        $result = validate_servers_data($data);
 
         $this->assertTrue($result['valid'], 'Mix of nullable and non-nullable fields should work correctly');
     }

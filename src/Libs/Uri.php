@@ -39,7 +39,7 @@ final class Uri implements UriInterface, Stringable
     private string $host = '';
 
     /** @var int|null Uri port. */
-    private int|null $port = null;
+    private ?int $port = null;
 
     /** @var string Uri path. */
     private string $path = '';
@@ -55,22 +55,24 @@ final class Uri implements UriInterface, Stringable
     public function __construct(string $uri = '')
     {
         if ('' !== $uri) {
-            if (false === $parts = parse_url($uri)) {
+            if (false === ($parts = parse_url($uri))) {
                 throw new InvalidArgumentException(sprintf('Unable to parse URI: "%s"', $uri));
             }
 
             // Apply parse_url parts to a URI.
-            $this->scheme = isset($parts['scheme']) ? strtr(
-                $parts['scheme'],
-                'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-                'abcdefghijklmnopqrstuvwxyz'
-            ) : '';
+            $this->scheme = isset($parts['scheme'])
+                ? strtr(
+                    $parts['scheme'],
+                    'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+                    'abcdefghijklmnopqrstuvwxyz',
+                ) : '';
             $this->userInfo = $parts['user'] ?? '';
-            $this->host = isset($parts['host']) ? strtr(
-                $parts['host'],
-                'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-                'abcdefghijklmnopqrstuvwxyz'
-            ) : '';
+            $this->host = isset($parts['host'])
+                ? strtr(
+                    $parts['host'],
+                    'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+                    'abcdefghijklmnopqrstuvwxyz',
+                ) : '';
             $this->port = isset($parts['port']) ? $this->filterPort($parts['port']) : null;
             $this->path = isset($parts['path']) ? $this->filterPath($parts['path']) : '';
 
@@ -93,7 +95,7 @@ final class Uri implements UriInterface, Stringable
             $this->getAuthority(),
             $this->getPath(),
             $this->getQuery(),
-            $this->getFragment()
+            $this->getFragment(),
         );
     }
 
@@ -173,7 +175,7 @@ final class Uri implements UriInterface, Stringable
             throw new InvalidArgumentException('Scheme must be a string');
         }
 
-        if ($this->scheme === $scheme = strtr($scheme, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')) {
+        if ($this->scheme === ($scheme = strtr($scheme, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'))) {
             return $this;
         }
 
@@ -184,7 +186,7 @@ final class Uri implements UriInterface, Stringable
         return $new;
     }
 
-    public function withUserInfo($user, $password = null): UriInterface
+    public function withUserInfo($user, #[\SensitiveParameter] $password = null): UriInterface
     {
         if (!is_string($user)) {
             throw new InvalidArgumentException('User must be a string');
@@ -192,8 +194,8 @@ final class Uri implements UriInterface, Stringable
 
         $info = preg_replace_callback(
             '/[' . self::CHAR_GEN_DELIMS . self::CHAR_SUB_DELIMS . ']++/',
-            fn(array $match): string => rawurlencode($match[0]),
-            $user
+            static fn(array $match): string => rawurlencode($match[0]),
+            $user,
         );
 
         if (null !== $password && '' !== $password) {
@@ -201,11 +203,12 @@ final class Uri implements UriInterface, Stringable
                 throw new InvalidArgumentException('Password must be a string');
             }
 
-            $info .= ':' . preg_replace_callback(
-                    '/[' . self::CHAR_GEN_DELIMS . self::CHAR_SUB_DELIMS . ']++/',
-                    fn(array $match): string => rawurlencode($match[0]),
-                    $password
-                );
+            $info .= ':'
+            . preg_replace_callback(
+                '/[' . self::CHAR_GEN_DELIMS . self::CHAR_SUB_DELIMS . ']++/',
+                static fn(array $match): string => rawurlencode($match[0]),
+                $password,
+            );
         }
 
         if ($this->userInfo === $info) {
@@ -224,7 +227,7 @@ final class Uri implements UriInterface, Stringable
             throw new InvalidArgumentException('Host must be a string');
         }
 
-        if ($this->host === $host = strtr($host, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')) {
+        if ($this->host === ($host = strtr($host, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'))) {
             return $this;
         }
 
@@ -236,7 +239,7 @@ final class Uri implements UriInterface, Stringable
 
     public function withPort($port): self
     {
-        if ($this->port === $port = $this->filterPort($port)) {
+        if ($this->port === ($port = $this->filterPort($port))) {
             return $this;
         }
 
@@ -248,7 +251,7 @@ final class Uri implements UriInterface, Stringable
 
     public function withPath($path): self
     {
-        if ($this->path === $path = $this->filterPath($path)) {
+        if ($this->path === ($path = $this->filterPath($path))) {
             return $this;
         }
 
@@ -260,7 +263,7 @@ final class Uri implements UriInterface, Stringable
 
     public function withQuery($query): self
     {
-        if ($this->query === $query = $this->filterQueryAndFragment($query)) {
+        if ($this->query === ($query = $this->filterQueryAndFragment($query))) {
             return $this;
         }
 
@@ -272,7 +275,7 @@ final class Uri implements UriInterface, Stringable
 
     public function withFragment($fragment): self
     {
-        if ($this->fragment === $fragment = $this->filterQueryAndFragment($fragment)) {
+        if ($this->fragment === ($fragment = $this->filterQueryAndFragment($fragment))) {
             return $this;
         }
 
@@ -290,7 +293,7 @@ final class Uri implements UriInterface, Stringable
         string $authority,
         string $path,
         string $query,
-        string $fragment
+        string $fragment,
     ): string {
         $uri = '';
         if ('' !== $scheme) {
@@ -343,7 +346,7 @@ final class Uri implements UriInterface, Stringable
             return null;
         }
 
-        $port = (int)$port;
+        $port = (int) $port;
         if (0 > $port || 0xFFFF < $port) {
             throw new InvalidArgumentException(sprintf('Invalid port: %d. Must be between 0 and 65535', $port));
         }
@@ -359,8 +362,8 @@ final class Uri implements UriInterface, Stringable
 
         return preg_replace_callback(
             '/(?:[^' . self::CHAR_UNRESERVED . self::CHAR_SUB_DELIMS . '%:@\/]++|%(?![A-Fa-f0-9]{2}))/',
-            fn(array $match): string => rawurlencode($match[0]),
-            $path
+            static fn(array $match): string => rawurlencode($match[0]),
+            $path,
         );
     }
 
@@ -372,8 +375,8 @@ final class Uri implements UriInterface, Stringable
 
         return preg_replace_callback(
             '/(?:[^' . self::CHAR_UNRESERVED . self::CHAR_SUB_DELIMS . '%:@\/\?]++|%(?![A-Fa-f0-9]{2}))/',
-            fn(array $match): string => rawurlencode($match[0]),
-            $str
+            static fn(array $match): string => rawurlencode($match[0]),
+            $str,
         );
     }
 }

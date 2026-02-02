@@ -27,9 +27,8 @@ final class SearchId
         protected iHttp $http,
         protected iLogger $logger,
         private iDB $db,
-        private PlexGuid $plexGuid
-    ) {
-    }
+        private PlexGuid $plexGuid,
+    ) {}
 
     /**
      * Search Backend for ID.
@@ -45,7 +44,7 @@ final class SearchId
         return $this->tryResponse(
             context: $context,
             fn: fn() => $this->search($context, $id, $opts),
-            action: $this->action
+            action: $this->action,
         );
     }
 
@@ -64,7 +63,7 @@ final class SearchId
         $entity = $this->createEntity(
             $context,
             $this->plexGuid->withContext($context),
-            ag($item->response, 'MediaContainer.Metadata.0', [])
+            ag($item->response, 'MediaContainer.Metadata.0', []),
         );
 
         if (null !== ($localEntity = $this->db->get($entity))) {
@@ -73,7 +72,7 @@ final class SearchId
 
         $builder = $entity->getAll();
 
-        if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
+        if (true === (bool) ag($opts, Options::RAW_RESPONSE)) {
             $builder[Options::RAW_RESPONSE] = $item->response;
         }
 

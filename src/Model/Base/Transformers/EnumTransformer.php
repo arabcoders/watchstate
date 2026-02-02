@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Model\Base\Transformers;
 
 use App\Model\Base\Enums\TransformType;
@@ -10,14 +12,14 @@ final class EnumTransformer
     /**
      * @param string<class-string> $enumName The class name of the enum.
      */
-    public function __construct(private string $enumName)
-    {
-    }
+    public function __construct(
+        private string $enumName,
+    ) {}
 
     public static function create(string $enumName): callable
     {
         $class = new self($enumName);
-        return fn(TransformType $type, mixed $data) => $class($type, $data);
+        return $class(...);
     }
 
     public function __invoke(TransformType $type, mixed $value): mixed
@@ -40,7 +42,7 @@ final class EnumTransformer
     private function decode(mixed $data): mixed
     {
         return is_subclass_of($this->enumName, BackedEnum::class)
-            ? ($this->enumName)::from($data)
+            ? $this->enumName::from($data)
             : constant($this->enumName . '::' . $data);
     }
 }

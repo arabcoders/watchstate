@@ -10,11 +10,17 @@
         "optimize-autoloader": true,
         "preferred-install": {
             "*": "dist"
+        },
+        "allow-plugins": {
+            "carthage-software/mago": true
         }
     },
     "scripts": {
         "test": "vendor/bin/phpunit",
         "tests": "vendor/bin/phpunit",
+        "format": "vendor/bin/mago format",
+        "format_ci": "vendor/bin/mago format --check",
+        "lint": "vendor/bin/mago lint",
         "ui_update": "pnpm up --dir ./frontend --latest",
         "ui_gen": "pnpm run --dir ./frontend generate",
         "ui_dev": "pnpm run --dir ./frontend dev",
@@ -62,8 +68,7 @@
         "roave/security-advisories": "dev-latest",
         "symfony/var-dumper": "^7.2",
         "phpunit/phpunit": "^11.5.2",
-        "phpstan/phpstan": "^2.0",
-        "psalm/phar": "^5.26"
+        "carthage-software/mago": "^1.3.0"
     },
     "autoload-dev": {
         "psr-4": {

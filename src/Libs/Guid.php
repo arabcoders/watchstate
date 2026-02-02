@@ -128,7 +128,7 @@ final class Guid implements JsonSerializable, Stringable
     /**
      * @var null|iLogger $logger The logger instance used for logging.
      */
-    private static iLogger|null $logger = null;
+    private static ?iLogger $logger = null;
 
     private static bool $checkedExternalFile = false;
 
@@ -139,7 +139,7 @@ final class Guid implements JsonSerializable, Stringable
      * @param array $context
      * @param iLogger|null $logger
      */
-    public function __construct(array $guids, array $context = [], iLogger|null $logger = null)
+    public function __construct(array $guids, array $context = [], ?iLogger $logger = null)
     {
         if (null !== $logger) {
             self::$logger = $logger;
@@ -164,7 +164,7 @@ final class Guid implements JsonSerializable, Stringable
                             'actual' => $valueType,
                         ],
                         ...$context,
-                    ]
+                    ],
                 );
                 continue;
             }
@@ -178,7 +178,7 @@ final class Guid implements JsonSerializable, Stringable
                             'expected' => self::$validateGuid[$key]['example'],
                             'given' => $value,
                             ...$context,
-                        ]
+                        ],
                     );
                     continue;
                 }
@@ -232,13 +232,17 @@ final class Guid implements JsonSerializable, Stringable
                 ]));
             }
         } catch (ParseException $e) {
-            throw new InvalidArgumentException(r("Failed to parse GUIDs file. Error '{error}'.", [
-                'error' => $e->getMessage(),
-            ]), (int)$e->getCode(), $e);
+            throw new InvalidArgumentException(
+                r("Failed to parse GUIDs file. Error '{error}'.", [
+                    'error' => $e->getMessage(),
+                ]),
+                (int) $e->getCode(),
+                $e,
+            );
         }
 
         $supportedVersion = ag(require __DIR__ . '/../../config/config.php', 'guid.version', '0.0');
-        $guidVersion = (string)ag($yaml, 'version', Config::get('guid.version', '0.0'));
+        $guidVersion = (string) ag($yaml, 'version', Config::get('guid.version', '0.0'));
 
         if (true === version_compare($supportedVersion, $guidVersion, '<')) {
             throw new InvalidArgumentException(r("Unsupported file version '{version}'. Expecting '{supported}'.", [
@@ -262,7 +266,7 @@ final class Guid implements JsonSerializable, Stringable
                     [
                         'key' => $key,
                         'given' => get_debug_type($def),
-                    ]
+                    ],
                 );
                 continue;
             }
@@ -274,7 +278,7 @@ final class Guid implements JsonSerializable, Stringable
                     [
                         'key' => $key,
                         'given' => $name ?? 'null',
-                    ]
+                    ],
                 );
                 continue;
             }
@@ -287,7 +291,7 @@ final class Guid implements JsonSerializable, Stringable
                         'key' => $key,
                         'name' => $name,
                         'given' => get_debug_type($type),
-                    ]
+                    ],
                 );
                 continue;
             }
@@ -300,7 +304,7 @@ final class Guid implements JsonSerializable, Stringable
                         'key' => $key,
                         'name' => $name,
                         'given' => get_debug_type($validator),
-                    ]
+                    ],
                 );
                 continue;
             }
@@ -343,17 +347,19 @@ final class Guid implements JsonSerializable, Stringable
             }
 
             foreach ($valid as $val) {
-                if (1 !== @preg_match($pattern, $val)) {
-                    self::$logger?->warning(
-                        "Ignoring 'guids.{key}.{name}'. validator.tests.valid value '{val}' does not match pattern.",
-                        [
-                            'key' => $key,
-                            'name' => $name,
-                            'val' => $val,
-                        ]
-                    );
-                    continue 2;
+                if (1 === @preg_match($pattern, $val)) {
+                    continue;
                 }
+
+                self::$logger?->warning(
+                    "Ignoring 'guids.{key}.{name}'. validator.tests.valid value '{val}' does not match pattern.",
+                    [
+                        'key' => $key,
+                        'name' => $name,
+                        'val' => $val,
+                    ],
+                );
+                continue 2;
             }
 
             $invalid = ag($tests, 'invalid', []);
@@ -363,29 +369,31 @@ final class Guid implements JsonSerializable, Stringable
                     [
                         'key' => $key,
                         'name' => $name,
-                    ]
+                    ],
                 );
                 continue;
             }
 
             foreach ($invalid as $val) {
-                if (1 === @preg_match($pattern, $val)) {
-                    self::$logger?->warning(
-                        "Ignoring 'guids.{key}.{name}'. validator.tests.invalid value '{val}' matches pattern.",
-                        [
-                            'key' => $key,
-                            'name' => $name,
-                            'val' => $val,
-                        ]
-                    );
-                    continue 2;
+                if (1 !== @preg_match($pattern, $val)) {
+                    continue;
                 }
+
+                self::$logger?->warning(
+                    "Ignoring 'guids.{key}.{name}'. validator.tests.invalid value '{val}' matches pattern.",
+                    [
+                        'key' => $key,
+                        'name' => $name,
+                        'val' => $val,
+                    ],
+                );
+                continue 2;
             }
 
             self::$supported[$name] = $type;
             self::$validateGuid[$name] = [
-                'description' => ag($validator, 'description', fn() => r("The {name} ID Parser.", [
-                    'name' => after($name, 'guid_')
+                'description' => ag($validator, 'description', static fn() => r('The {name} ID Parser.', [
+                    'name' => after($name, 'guid_'),
                 ])),
                 'pattern' => $pattern,
                 'example' => $example,
@@ -438,7 +446,7 @@ final class Guid implements JsonSerializable, Stringable
      *
      * @return self
      */
-    public static function fromArray(array $payload, array $context = [], Logger|null $logger = null): self
+    public static function fromArray(array $payload, array $context = [], ?Logger $logger = null): self
     {
         return new self(guids: $payload, context: $context, logger: $logger);
     }
@@ -462,7 +470,10 @@ final class Guid implements JsonSerializable, Stringable
         if (false === array_key_exists($lookup, self::$supported)) {
             throw new InvalidArgumentException(r("Invalid db '{db}' source was given. Expecting '{db_list}'.", [
                 'db' => $db,
-                'db_list' => implode(', ', array_map(fn($f) => after($f, 'guid_'), array_keys(self::$supported))),
+                'db_list' => implode(
+                    ', ',
+                    array_map(static fn($f) => after($f, 'guid_'), array_keys(self::$supported)),
+                ),
             ]));
         }
 
@@ -584,6 +595,6 @@ final class Guid implements JsonSerializable, Stringable
      */
     public static function validateGUIDName(string $name): bool
     {
-        return str_starts_with($name, 'guid_') && isValidName($name);
+        return str_starts_with($name, 'guid_') && is_valid_name($name);
     }
 }

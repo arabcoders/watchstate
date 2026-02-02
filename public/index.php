@@ -46,7 +46,7 @@ $errorHandler = function (int $number, mixed $error, mixed $file, int $line) {
 set_error_handler($errorHandler);
 
 set_exception_handler(function (Throwable $e) {
-    $out = fn($message) => inContainer() ? fwrite(STDERR, $message) : syslog(LOG_ERR, $message);
+    $out = fn($message) => in_container() ? fwrite(STDERR, $message) : syslog(LOG_ERR, $message);
     $out(r(text: '{kind}: {message} ({file}:{line}).', context: [
         'kind' => $e::class,
         'line' => $e->getLine(),
@@ -58,7 +58,7 @@ set_exception_handler(function (Throwable $e) {
 
 $factory = new Psr17Factory();
 if (!isset($_SERVER['X_REQUEST_ID'])) {
-    $_SERVER['X_REQUEST_ID'] = generateUUID();
+    $_SERVER['X_REQUEST_ID'] = generate_uuid();
 }
 $request = new ServerRequestCreator($factory, $factory, $factory, $factory)->fromGlobals();
 $profiler = new Profiler(callback: function (array $data) {
@@ -155,19 +155,19 @@ $profiler = new Profiler(callback: function (array $data) {
 
         return $data;
     };
-    queueEvent(ProcessProfileEvent::NAME, $filter($data));
+    queue_event(ProcessProfileEvent::NAME, $filter($data));
 });
 
 $exitCode = $profiler->process(function () use ($request) {
     try {
         // -- In case the frontend proxy does not generate request unique id.
         if (!isset($_SERVER['X_REQUEST_ID'])) {
-            $_SERVER['X_REQUEST_ID'] = generateUUID();
+            $_SERVER['X_REQUEST_ID'] = generate_uuid();
         }
 
         $app = new App\Libs\Initializer()->boot();
     } catch (Throwable $e) {
-        $out = fn($message) => inContainer() ? fwrite(STDERR, $message) : syslog(LOG_ERR, $message);
+        $out = fn($message) => in_container() ? fwrite(STDERR, $message) : syslog(LOG_ERR, $message);
 
         $out(
             r(
@@ -191,7 +191,7 @@ $exitCode = $profiler->process(function () use ($request) {
     try {
         new Emitter()($app->http($request));
     } catch (Throwable $e) {
-        $out = fn($message) => inContainer() ? fwrite(STDERR, $message) : syslog(LOG_ERR, $message);
+        $out = fn($message) => in_container() ? fwrite(STDERR, $message) : syslog(LOG_ERR, $message);
 
         $out(
             r(

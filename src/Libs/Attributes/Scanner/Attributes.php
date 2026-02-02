@@ -36,9 +36,10 @@ final class Attributes implements LoggerAwareInterface
         return new self($dirs, $allowNonInvokable);
     }
 
-    private function __construct(private readonly array $dirs, private bool $allowNonInvokable)
-    {
-    }
+    private function __construct(
+        private readonly array $dirs,
+        private bool $allowNonInvokable,
+    ) {}
 
     /**
      * Scan for attributes.
@@ -49,7 +50,7 @@ final class Attributes implements LoggerAwareInterface
      * @return array<array-key,Item> List of attributes found. Empty array if none found.
      * @throws \ReflectionException
      */
-    public function for(object|string $attribute, Closure|null $filter = null): array
+    public function for(object|string $attribute, ?Closure $filter = null): array
     {
         $references = [];
 
@@ -86,14 +87,14 @@ final class Attributes implements LoggerAwareInterface
      *
      * @return array<array-key,array{callable:string}> List of attributes found. Empty array if none found.
      */
-    private function lookup(string $dir, object $attribute, Closure|null $filter = null): array
+    private function lookup(string $dir, object $attribute, ?Closure $filter = null): array
     {
         $classes = $callables = [];
 
         $it = $this->getSorter(
             new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS)
-            )
+                new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
+            ),
         );
 
         foreach ($it as $file) {
@@ -101,7 +102,7 @@ final class Attributes implements LoggerAwareInterface
                 continue;
             }
 
-            $class = $this->parse((string)$file);
+            $class = $this->parse((string) $file);
 
             if (empty($class)) {
                 continue;
@@ -118,7 +119,7 @@ final class Attributes implements LoggerAwareInterface
 
             array_push(
                 $callables,
-                ...$this->find(new ReflectionClass($className), $attribute, $filter)
+                ...$this->find(new ReflectionClass($className), $attribute, $filter),
             );
         }
 
@@ -134,7 +135,7 @@ final class Attributes implements LoggerAwareInterface
      *
      * @return array<array-key,array{callable:string}> List of attributes found. Empty array if none found.
      */
-    private function find(ReflectionClass $class, object $attribute, Closure|null $filter = null): array
+    private function find(ReflectionClass $class, object $attribute, ?Closure $filter = null): array
     {
         $routes = [];
 
@@ -143,9 +144,11 @@ final class Attributes implements LoggerAwareInterface
         $invokable = false;
 
         foreach ($class->getMethods() as $method) {
-            if ($method->getName() === '__invoke') {
-                $invokable = true;
+            if ($method->getName() !== '__invoke') {
+                continue;
             }
+
+            $invokable = true;
         }
 
         // -- for invokable classes.
@@ -156,7 +159,6 @@ final class Attributes implements LoggerAwareInterface
                 continue;
             }
 
-
             if (!$attributeClass instanceof $attribute) {
                 continue;
             }
@@ -166,8 +168,8 @@ final class Attributes implements LoggerAwareInterface
                     sprintf(
                         "Found attribute '%s' on non-invokable class. '%s'.",
                         $attributeClass->pattern,
-                        $class->getName()
-                    )
+                        $class->getName(),
+                    ),
                 );
             }
 

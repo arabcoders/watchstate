@@ -17,15 +17,15 @@ final class EventsRepository
 
     public function getObject(array $row, bool $isCustom = false, array $opts = []): EntityItem
     {
-        return (new EntityItem($row, $isCustom, $opts));
+        return new EntityItem($row, $isCustom, $opts);
     }
 
-    public function findOne(array $criteria): EntityItem|null
+    public function findOne(array $criteria): ?EntityItem
     {
         return $this->_findOne($criteria);
     }
 
-    public function findById(string $id): EntityItem|null
+    public function findById(string $id): ?EntityItem
     {
         return $this->_findOne([$this->primaryKey => $id]);
     }
@@ -38,11 +38,14 @@ final class EventsRepository
      *
      * @return EntityItem|null The event or null if not found.
      */
-    public function findByReference(string|int $reference, array $criteria = []): EntityItem|null
+    public function findByReference(string|int $reference, array $criteria = []): ?EntityItem
     {
         $criteria[EntityTable::COLUMN_REFERENCE] = $reference;
 
-        $items = (clone $this)->setPerpage(1)->setStart(0)->setDescendingOrder()
+        $items = (clone $this)
+            ->setPerpage(1)
+            ->setStart(0)
+            ->setDescendingOrder()
             ->setSort(EntityTable::COLUMN_CREATED_AT)
             ->findAll($criteria);
 

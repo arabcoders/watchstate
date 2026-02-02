@@ -34,7 +34,7 @@ final class AccessToken
             return api_error('Invalid username or password.', Status::BAD_REQUEST);
         }
 
-        if (false === in_array($type, ['jellyfin', 'emby'])) {
+        if (false === in_array($type, ['jellyfin', 'emby'], true)) {
             return api_error('Access token endpoint only supported on jellyfin, emby.', Status::BAD_REQUEST);
         }
 

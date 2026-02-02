@@ -49,23 +49,26 @@ class GetWebUrl
                         'user' => $context->userContext,
                     ],
                     level: Levels::WARNING,
-                )
+                ),
             );
         }
 
         return $this->tryResponse(
             context: $context,
-            fn: fn() => new Response(
+            fn: static fn() => new Response(
                 status: true,
-                response: $context->backendUrl->withPath('/web/index.html')->withFragment(
-                    r('!/{action}?id={id}&serverId={backend_id}', [
-                        'backend_id' => $context->backendId,
-                        'id' => $id,
-                        'action' => JellyfinClient::CLIENT_NAME === $context->clientName ? 'details' : 'item',
-                    ])
-                )
+                response: $context
+                    ->backendUrl
+                    ->withPath('/web/index.html')
+                    ->withFragment(
+                        r('!/{action}?id={id}&serverId={backend_id}', [
+                            'backend_id' => $context->backendId,
+                            'id' => $id,
+                            'action' => JellyfinClient::CLIENT_NAME === $context->clientName ? 'details' : 'item',
+                        ]),
+                    ),
             ),
-            action: $this->action
+            action: $this->action,
         );
     }
 }

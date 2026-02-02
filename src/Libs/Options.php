@@ -6,6 +6,7 @@ namespace App\Libs;
 
 /**
  * Options class represents the list of options that can be passed to the different classes.
+ * @mago-expect lint:no-literal-password
  */
 final class Options
 {
@@ -59,7 +60,5 @@ final class Options
     public const string SKIP_STATE = 'SKIP_STATE';
     public const string ON_SKIP_STATE = 'ON_SKIP_STATE';
 
-    private function __construct()
-    {
-    }
+    private function __construct() {}
 }

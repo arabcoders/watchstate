@@ -41,8 +41,10 @@ final class PDOMigrations
      *
      * @return void
      */
-    public function __construct(private DBLayer $db, private LoggerInterface $logger)
-    {
+    public function __construct(
+        private DBLayer $db,
+        private LoggerInterface $logger,
+    ) {
         $this->path = __DIR__ . '/../../../../migrations';
         $this->driver = $this->getDriver();
     }
@@ -107,7 +109,7 @@ final class PDOMigrations
             if (null === ag($migrate, iDB::MIGRATE_UP, null)) {
                 $this->logger->debug(r('PDOMigrations: Migration #{id} - {name} has no up path, Skipping.', context: [
                     'id' => ag($migrate, 'id'),
-                    'name' => ag($migrate, 'name')
+                    'name' => ag($migrate, 'name'),
                 ]));
                 continue;
             }
@@ -116,16 +118,16 @@ final class PDOMigrations
 
             $this->logger->info(r('PDOMigrations: Applying Migration #{id} - {name}.', context: [
                 'id' => ag($migrate, 'id'),
-                'name' => ag($migrate, 'name')
+                'name' => ag($migrate, 'name'),
             ]));
 
-            $this->db->exec((string)ag($migrate, iDB::MIGRATE_UP));
+            $this->db->exec((string) ag($migrate, iDB::MIGRATE_UP));
             $this->setVersion(ag($migrate, 'id'));
         }
 
         if (0 === $run) {
             $this->logger->debug(r('PDOMigrations: No migrations is needed. Version @ {version}', context: [
-                'version' => $version
+                'version' => $version,
             ]));
         } else {
             $this->logger->info(r('PDOMigrations: Applied ({total}) migrations. Version is at number {number}.', [
@@ -158,7 +160,7 @@ final class PDOMigrations
      */
     public function make(string $name): string
     {
-        $name = str_replace(chr(040), '_', $name);
+        $name = str_replace(chr(0o40), '_', $name);
 
         $fileName = sprintf('%s_%d_%s.sql', $this->driver, time(), $name);
 
@@ -166,27 +168,27 @@ final class PDOMigrations
 
         if (!touch($file)) {
             throw new RuntimeException(r("PDOMigrations: Unable to create new migration at '{file}'.", [
-                'file' => $this->path
+                'file' => $this->path,
             ]));
         }
 
         $stream = new Stream($file, 'w');
         $stream->write(
             <<<SQL
-        -- # migrate_up
+                -- # migrate_up
 
-        -- Put your upgrade database commands here.
+                -- Put your upgrade database commands here.
 
-        -- # migrate_down
+                -- # migrate_down
 
-        -- put your downgrade database commands here.
+                -- put your downgrade database commands here.
 
-        SQL
+                SQL,
         );
         $stream->close();
 
         $this->logger->info(r("PDOMigrations: Created new Migration file at '{file}'.", [
-            'file' => $file
+            'file' => $file,
         ]));
 
         return $file;
@@ -213,7 +215,7 @@ final class PDOMigrations
      */
     private function getVersion(): int
     {
-        return (int)$this->db->query('PRAGMA user_version')->fetchColumn();
+        return (int) $this->db->query('PRAGMA user_version')->fetchColumn();
     }
 
     /**
@@ -254,28 +256,28 @@ final class PDOMigrations
         $migrations = [];
 
         foreach ($this->getFiles() as $file) {
-            [$type, $id, $name] = (array)preg_split(
+            [$type, $id, $name] = (array) preg_split(
                 '#^(\w+)_(\d+)_(.+)\.sql$#',
                 $file->getBasename(),
                 -1,
-                PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE
+                PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE,
             );
 
             if ($type !== $this->driver) {
                 continue;
             }
 
-            $id = (int)$id;
+            $id = (int) $id;
 
-            [$up, $down] = (array)preg_split(
+            [$up, $down] = (array) preg_split(
                 '/^-- #\s+?migrate_down\b/im',
-                (string)$file->fread($file->getSize()),
+                (string) $file->fread($file->getSize()),
                 -1,
-                PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE
+                PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE,
             );
 
-            $up = trim(preg_replace('/^-- #\s+?migrate_up\b/i', '', (string)$up));
-            $down = trim((string)$down);
+            $up = trim(preg_replace('/^-- #\s+?migrate_up\b/i', '', (string) $up));
+            $down = trim((string) $down);
 
             $migrations[$id] = [
                 'type' => $type,
@@ -300,10 +302,10 @@ final class PDOMigrations
             return $this->files;
         }
 
-        foreach ((array)glob($this->path . '/*.sql') as $file) {
+        foreach ((array) glob($this->path . '/*.sql') as $file) {
             if (!is_string($file) || false === ($f = realpath($file))) {
                 throw new RuntimeException(r("PDOMigrations: Unable to get real path to '{file}'.", [
-                    'file' => $file
+                    'file' => $file,
                 ]));
             }
 

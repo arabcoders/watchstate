@@ -20,14 +20,15 @@ final class APIKeyCommand extends Command
 
     protected function configure(): void
     {
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->addOption('regenerate', 'r', InputOption::VALUE_NONE, 'Re-generate a new API key.')
             ->setDescription('Show current API key or generate a new one.');
     }
 
     protected function runCommand(iInput $input, iOutput $output): int
     {
-        $regenerate = (bool)$input->getOption('regenerate');
+        $regenerate = (bool) $input->getOption('regenerate');
         if ($regenerate || null === ($apiKey = Config::get('api.key'))) {
             return $this->regenerate($output);
         }
@@ -41,12 +42,12 @@ final class APIKeyCommand extends Command
     private function regenerate(iOutput $output): int
     {
         $apiKey = TokenUtil::generateSecret(16);
-        $response = APIRequest('POST', '/system/env/WS_API_KEY', [
+        $response = api_request('POST', '/system/env/WS_API_KEY', [
             'value' => $apiKey,
         ]);
 
         if (Status::OK !== $response->status) {
-            $output->writeln(r("<error>Failed to set the new API key.</error>"));
+            $output->writeln(r('<error>Failed to set the new API key.</error>'));
             return self::FAILURE;
         }
 

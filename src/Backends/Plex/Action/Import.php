@@ -44,12 +44,14 @@ class Import
 
     protected RetryableHttpClient $http;
 
-    public function __construct(iHttp $http, protected iLogger $logger)
-    {
+    public function __construct(
+        iHttp $http,
+        protected iLogger $logger,
+    ) {
         $this->http = new RetryableHttpClient(
             $http,
-            maxRetries: (int)Config::get('http.default.maxRetries', 3),
-            logger: $logger
+            maxRetries: (int) Config::get('http.default.maxRetries', 3),
+            logger: $logger,
         );
     }
 
@@ -66,8 +68,8 @@ class Import
         Context $context,
         iGuid $guid,
         iImport $mapper,
-        iDate|null $after = null,
-        array $opts = []
+        ?iDate $after = null,
+        array $opts = [],
     ): Response {
         return $this->tryResponse(
             context: $context,
@@ -84,7 +86,7 @@ class Import
                         logContext: $logContext,
                         opts: $opts + ['after' => $after],
                     ),
-                    logContext: $logContext
+                    logContext: $logContext,
                 ),
                 error: fn(array $logContext = []) => fn(Throwable $e) => $this->logger->error(
                     message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' library '{library.title}' request. '{error.message}' at '{error.file}:{error.line}'.",
@@ -94,18 +96,18 @@ class Import
                         'client' => $context->clientName,
                         'user' => $context->userContext->name,
                         ...$logContext,
-                        ...exception_log($e)
-                    ]
+                        ...exception_log($e),
+                    ],
                 ),
                 opts: $opts,
             ),
-            action: $this->action
+            action: $this->action,
         );
     }
 
     protected function getLibraries(Context $context, Closure $handle, Closure $error, array $opts = []): array
     {
-        $segmentSize = (int)ag($context->options, Options::LIBRARY_SEGMENT, 1000);
+        $segmentSize = (int) ag($context->options, Options::LIBRARY_SEGMENT, 1000);
 
         $rContext = [
             'action' => property_exists($this, 'action') ? $this->action : 'import',
@@ -116,11 +118,11 @@ class Import
 
         try {
             $url = $context->backendUrl->withPath('/library/sections');
-            $rContext['url'] = (string)$url;
+            $rContext['url'] = (string) $url;
 
             $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' libraries.", $rContext);
 
-            $response = $this->http->request(Method::GET, (string)$url, $context->getHttpOptions());
+            $response = $this->http->request(Method::GET, (string) $url, $context->getHttpOptions());
 
             $payload = $response->getContent(false);
 
@@ -150,7 +152,7 @@ class Import
 
                 $this->logger->error(
                     "{action}: Request for '{client}: {user}@{backend}' libraries returned with unexpected '{status_code}' status code.",
-                    $logContext
+                    $logContext,
                 );
 
                 Message::add("{$context->backendName}.has_errors", true);
@@ -160,7 +162,7 @@ class Import
             $json = json_decode(
                 json: $payload,
                 associative: true,
-                flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
             );
 
             unset($payload);
@@ -176,7 +178,7 @@ class Import
                             'key' => 'MediaContainer.Directory',
                             'body' => $json,
                         ],
-                    ]
+                    ],
                 );
                 Message::add("{$context->backendName}.has_errors", true);
                 return [];
@@ -186,8 +188,8 @@ class Import
                 ...lw(
                     message: "{action}: Request for '{client}: {user}@{backend}' libraries has failed. '{error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
                     context: [...$rContext, ...exception_log($e)],
-                    e: $e
-                )
+                    e: $e,
+                ),
             );
             Message::add("{$context->backendName}.has_errors", true);
             return [];
@@ -196,8 +198,8 @@ class Import
                 ...lw(
                     message: "{action}: Request for '{client}: {user}@{backend}' libraries returned with invalid body. '{error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
                     context: [...$rContext, ...exception_log($e)],
-                    e: $e
-                )
+                    e: $e,
+                ),
             );
             Message::add("{$context->backendName}.has_errors", true);
             return [];
@@ -206,15 +208,15 @@ class Import
                 ...lw(
                     message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' request for libraries. {error.message} at '{error.file}:{error.line}'.",
                     context: [...$rContext, ...exception_log($e)],
-                    e: $e
-                )
+                    e: $e,
+                ),
             );
             Message::add("{$context->backendName}.has_errors", true);
             return [];
         }
 
         if (null !== ($ignoreIds = ag($context->options, 'ignore', null))) {
-            $ignoreIds = array_map(fn($v) => (int)trim($v), explode(',', (string)$ignoreIds));
+            $ignoreIds = array_map(static fn($v) => (int) trim($v), explode(',', (string) $ignoreIds));
         }
 
         $limitLibraryId = ag($opts, Options::ONLY_LIBRARY_ID, null);
@@ -224,9 +226,9 @@ class Import
 
         // -- Get library items count.
         foreach ($listDirs as $section) {
-            $key = (int)ag($section, 'key');
+            $key = (int) ag($section, 'key');
 
-            if (null !== $limitLibraryId && $key !== (int)$limitLibraryId) {
+            if (null !== $limitLibraryId && $key !== (int) $limitLibraryId) {
                 continue;
             }
 
@@ -240,28 +242,36 @@ class Import
                 ],
             ];
 
-            if (true === in_array($key, $ignoreIds ?? [])) {
+            if (true === in_array($key, $ignoreIds ?? [], true)) {
                 continue;
             }
 
-            if (false === in_array(ag($logContext, 'library.type'), [PlexClient::TYPE_MOVIE, PlexClient::TYPE_SHOW])) {
+            if (
+                false === in_array(
+                    ag($logContext, 'library.type'),
+                    [PlexClient::TYPE_MOVIE, PlexClient::TYPE_SHOW],
+                    true,
+                )
+            ) {
                 continue;
             }
 
-            if (false === in_array(ag($logContext, 'library.agent'), PlexClient::SUPPORTED_AGENTS)) {
+            if (false === in_array(ag($logContext, 'library.agent'), PlexClient::SUPPORTED_AGENTS, true)) {
                 $this->logger->notice(
                     message: "{action}: Ignoring '{client}: {user}@{backend}' - '{library.title}' Unsupported agent type. '{agent}'.",
                     context: [
                         ...$logContext,
                         'agent' => ag($logContext, 'library.agent', '??'),
-                    ]
+                    ],
                 );
                 continue;
             }
 
             $isMovieLibrary = PlexClient::TYPE_MOVIE === ag($logContext, 'library.type');
 
-            $url = $context->backendUrl->withPath(r('/library/sections/{library_id}/all', ['library_id' => $key]))
+            $url = $context
+                ->backendUrl
+                ->withPath(r('/library/sections/{library_id}/all', ['library_id' => $key]))
                 ->withQuery(
                     http_build_query([
                         'includeGuids' => 1,
@@ -269,27 +279,27 @@ class Import
                         'sort' => $isMovieLibrary ? 'addedAt' : 'episode.addedAt',
                         'X-Plex-Container-Start' => 0,
                         'X-Plex-Container-Size' => $segmentSize,
-                    ])
+                    ]),
                 );
 
             $logContext['library']['url'] = $url;
 
             $this->logger->debug(
                 message: "{action}: Requesting '{client}: {user}@{backend}' - '{library.title}' items count.",
-                context: $logContext
+                context: $logContext,
             );
 
             try {
                 $requests[] = $this->http->request(
                     method: Method::GET,
-                    url: (string)$url,
+                    url: (string) $url,
                     options: array_replace_recursive($context->getHttpOptions(), [
                         'headers' => [
                             'X-Plex-Container-Start' => 0,
                             'X-Plex-Container-Size' => 0,
                         ],
                         'user_data' => $logContext,
-                    ])
+                    ]),
                 );
 
                 // -- parse total tv shows count.
@@ -301,7 +311,7 @@ class Import
                             'type' => 2,
                             'X-Plex-Container-Start' => 0,
                             'X-Plex-Container-Size' => $segmentSize,
-                        ])
+                        ]),
                     );
 
                     $this->logger->debug(
@@ -311,7 +321,7 @@ class Import
 
                     $requests[] = $this->http->request(
                         method: Method::GET,
-                        url: (string)$logContextSub['library']['url'],
+                        url: (string) $logContextSub['library']['url'],
                         options: array_replace_recursive($context->getHttpOptions(), [
                             'headers' => [
                                 'X-Plex-Container-Start' => 0,
@@ -319,9 +329,9 @@ class Import
                             ],
                             'user_data' => [
                                 'isShowRequest' => true,
-                                ...$logContextSub
+                                ...$logContextSub,
                             ],
-                        ])
+                        ]),
                     );
                 }
             } catch (ExceptionInterface $e) {
@@ -329,17 +339,17 @@ class Import
                     ...lw(
                         message: "{action}: Request for '{client}: {user}@{backend}' - '{library.title}' items count has failed. '{error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
                         context: [...$rContext, ...exception_log($e), ...$logContext],
-                        e: $e
-                    )
+                        e: $e,
+                    ),
                 );
                 continue;
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
                         message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' request for libraries. {error.message} at '{error.file}:{error.line}'.",
-                        context: [...$rContext, ...exception_log($e), ...$logContext,],
-                        e: $e
-                    )
+                        context: [...$rContext, ...exception_log($e), ...$logContext],
+                        e: $e,
+                    ),
                 );
                 continue;
             }
@@ -356,12 +366,12 @@ class Import
                         context: [
                             ...$logContext,
                             'status_code' => $response->getStatusCode(),
-                        ]
+                        ],
                     );
                     continue;
                 }
 
-                $totalCount = (int)(ag($response->getHeaders(), 'x-plex-container-total-size')[0] ?? 0);
+                $totalCount = (int) (ag($response->getHeaders(), 'x-plex-container-total-size')[0] ?? 0);
 
                 if ($totalCount < 1) {
                     $this->logger->warning(
@@ -371,7 +381,7 @@ class Import
                             'response' => [
                                 'headers' => $response->getHeaders(),
                             ],
-                        ]
+                        ],
                     );
                     continue;
                 }
@@ -379,15 +389,15 @@ class Import
                 if (ag_exists($logContext, 'isShowRequest')) {
                     $total['show_' . ag($logContext, 'library.id')] = $totalCount;
                 } else {
-                    $total[(int)ag($logContext, 'library.id')] = $totalCount;
+                    $total[(int) ag($logContext, 'library.id')] = $totalCount;
                 }
             } catch (ExceptionInterface $e) {
                 $this->logger->error(
                     ...lw(
                         message: "{action}: Request for '{client}: {user}@{backend}' - '{library.title}' total items has failed. '{error.kind}' '{error.message}' at '{error.file}:{error.line}'.",
                         context: [...$logContext, ...exception_log($e)],
-                        e: $e
-                    )
+                        e: $e,
+                    ),
                 );
                 continue;
             } catch (Throwable $e) {
@@ -395,8 +405,8 @@ class Import
                     ...lw(
                         message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' request for items count. {error.message} at '{error.file}:{error.line}'.",
                         context: [...$logContext, ...exception_log($e)],
-                        e: $e
-                    )
+                        e: $e,
+                    ),
                 );
                 continue;
             }
@@ -406,17 +416,17 @@ class Import
 
         // -- get paginated tv shows metadata.
         foreach ($listDirs as $section) {
-            $key = (int)ag($section, 'key');
+            $key = (int) ag($section, 'key');
 
             if (PlexClient::TYPE_SHOW !== ag($section, 'type', 'unknown')) {
                 continue;
             }
 
-            if (!in_array(ag($section, 'agent'), PlexClient::SUPPORTED_AGENTS)) {
+            if (!in_array(ag($section, 'agent'), PlexClient::SUPPORTED_AGENTS, true)) {
                 continue;
             }
 
-            if (true === in_array($key, $ignoreIds ?? [])) {
+            if (true === in_array($key, $ignoreIds ?? [], true)) {
                 continue;
             }
 
@@ -434,14 +444,14 @@ class Import
                 $ignored++;
                 $this->logger->warning(
                     message: "{action}: Ignoring '{client}: {user}@{backend}' - '{library.title}'. No series items count was found.",
-                    context: $logContext
+                    context: $logContext,
                 );
                 continue;
             }
 
             $logContext['library']['totalRecords'] = $total['show_' . $key];
 
-            $segmentTotal = (int)$total['show_' . $key];
+            $segmentTotal = (int) $total['show_' . $key];
             $segmented = ceil($segmentTotal / $segmentSize);
 
             for ($i = 0; $i < $segmented; $i++) {
@@ -452,16 +462,19 @@ class Import
                         'size' => $segmentSize,
                     ];
 
-                    $url = $context->backendUrl->withPath(
-                        r('/library/sections/{library_id}/all', ['library_id' => $key])
-                    )->withQuery(
-                        http_build_query([
-                            'type' => 2,
-                            'includeGuids' => 1,
-                            'X-Plex-Container-Size' => $segmentSize,
-                            'X-Plex-Container-Start' => $i < 1 ? 0 : ($segmentSize * $i),
-                        ])
-                    );
+                    $url = $context
+                        ->backendUrl
+                        ->withPath(
+                            r('/library/sections/{library_id}/all', ['library_id' => $key]),
+                        )
+                        ->withQuery(
+                            http_build_query([
+                                'type' => 2,
+                                'includeGuids' => 1,
+                                'X-Plex-Container-Size' => $segmentSize,
+                                'X-Plex-Container-Start' => $i < 1 ? 0 : $segmentSize * $i,
+                            ]),
+                        );
 
                     $logContext['library']['url'] = $url;
 
@@ -476,20 +489,20 @@ class Import
                         options: array_replace_recursive($context->getHttpOptions(), [
                             'headers' => [
                                 'X-Plex-Container-Size' => $segmentSize,
-                                'X-Plex-Container-Start' => $i < 1 ? 0 : ($segmentSize * $i),
-                            ]
+                                'X-Plex-Container-Start' => $i < 1 ? 0 : $segmentSize * $i,
+                            ],
                         ]),
                         success: $handle($logContext),
                         error: $error($logContext),
-                        extras: ['logContext' => $logContext, iHttp::class => $this->http]
+                        extras: ['logContext' => $logContext, iHttp::class => $this->http],
                     );
                 } catch (Throwable $e) {
                     $this->logger->error(
                         ...lw(
                             message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' '{library.title} {segment.number}/{segment.of}' series external ids request. {error.message} at '{error.file}:{error.line}'.",
                             context: [...$logContext, ...exception_log($e)],
-                            e: $e
-                        )
+                            e: $e,
+                        ),
                     );
                     continue;
                 }
@@ -498,7 +511,7 @@ class Import
 
         // -- get paginated movies/episodes.
         foreach ($listDirs as $section) {
-            $key = (int)ag($section, 'key');
+            $key = (int) ag($section, 'key');
 
             $logContext = [
                 ...$rContext,
@@ -509,11 +522,11 @@ class Import
                 ],
             ];
 
-            if (!in_array(ag($section, 'agent'), PlexClient::SUPPORTED_AGENTS)) {
+            if (!in_array(ag($section, 'agent'), PlexClient::SUPPORTED_AGENTS, true)) {
                 continue;
             }
 
-            if (true === in_array($key, $ignoreIds ?? [])) {
+            if (true === in_array($key, $ignoreIds ?? [], true)) {
                 $ignored++;
                 $this->logger->info(
                     message: "{action}: Ignoring '{client}: {user}@{backend}' - '{library.title}'. Requested by user.",
@@ -522,7 +535,7 @@ class Import
                 continue;
             }
 
-            if (!in_array(ag($logContext, 'library.type'), [PlexClient::TYPE_MOVIE, PlexClient::TYPE_SHOW])) {
+            if (!in_array(ag($logContext, 'library.type'), [PlexClient::TYPE_MOVIE, PlexClient::TYPE_SHOW], true)) {
                 $unsupported++;
                 $this->logger->info(
                     message: "{action}: Ignoring '{client}: {user}@{backend}' - '{library.title}'. Library type '{library.type}' is not supported.",
@@ -542,7 +555,7 @@ class Import
 
             $logContext['library']['totalRecords'] = $total[$key];
 
-            $segmentTotal = (int)$total[$key];
+            $segmentTotal = (int) $total[$key];
             $segmented = ceil($segmentTotal / $segmentSize);
 
             for ($i = 0; $i < $segmented; $i++) {
@@ -555,17 +568,22 @@ class Import
 
                     $isMovieLibrary = PlexClient::TYPE_MOVIE === ag($logContext, 'library.type');
 
-                    $url = $context->backendUrl->withPath(r('/library/sections/{library_id}/all', [
-                        'library_id' => $key
-                    ]))->withQuery(
-                        http_build_query([
-                            'includeGuids' => 1,
-                            'type' => $isMovieLibrary ? 1 : 4,
-                            'sort' => $isMovieLibrary ? 'addedAt' : 'episode.addedAt',
-                            'X-Plex-Container-Size' => $segmentSize,
-                            'X-Plex-Container-Start' => $i < 1 ? 0 : ($segmentSize * $i),
-                        ])
-                    );
+                    $url = $context
+                        ->backendUrl
+                        ->withPath(
+                            r('/library/sections/{library_id}/all', [
+                                'library_id' => $key,
+                            ]),
+                        )
+                        ->withQuery(
+                            http_build_query([
+                                'includeGuids' => 1,
+                                'type' => $isMovieLibrary ? 1 : 4,
+                                'sort' => $isMovieLibrary ? 'addedAt' : 'episode.addedAt',
+                                'X-Plex-Container-Size' => $segmentSize,
+                                'X-Plex-Container-Start' => $i < 1 ? 0 : $segmentSize * $i,
+                            ]),
+                        );
 
                     $logContext['library']['url'] = $url;
 
@@ -580,20 +598,20 @@ class Import
                         options: array_replace_recursive($context->getHttpOptions(), [
                             'headers' => [
                                 'X-Plex-Container-Size' => $segmentSize,
-                                'X-Plex-Container-Start' => $i < 1 ? 0 : ($segmentSize * $i),
-                            ]
+                                'X-Plex-Container-Start' => $i < 1 ? 0 : $segmentSize * $i,
+                            ],
                         ]),
                         success: $handle($logContext),
                         error: $error($logContext),
-                        extras: ['logContext' => $logContext, iHttp::class => $this->http]
+                        extras: ['logContext' => $logContext, iHttp::class => $this->http],
                     );
                 } catch (Throwable $e) {
                     $this->logger->error(
                         ...lw(
                             message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' - '{library.title} {segment.number}/{segment.of}' content list request. {error.message} at '{error.file}:{error.line}'.",
                             context: [...$logContext, ...exception_log($e)],
-                            e: $e
-                        )
+                            e: $e,
+                        ),
                     );
                     continue;
                 }
@@ -629,7 +647,7 @@ class Import
                 context: [
                     ...$logContext,
                     'status_code' => $response->getStatusCode(),
-                ]
+                ],
             );
             return;
         }
@@ -642,21 +660,21 @@ class Import
                 'time' => [
                     'start' => $start,
                 ],
-            ]
+            ],
         );
 
         try {
             $it = Items::fromIterable(
-                iterable: httpClientChunks($this->http->stream($response)),
+                iterable: http_client_chunks($this->http->stream($response)),
                 options: [
                     'pointer' => '/MediaContainer/Metadata',
                     'decoder' => new ErrorWrappingDecoder(
                         innerDecoder: new ExtJsonDecoder(
                             assoc: true,
-                            options: JSON_INVALID_UTF8_IGNORE
-                        )
-                    )
-                ]
+                            options: JSON_INVALID_UTF8_IGNORE,
+                        ),
+                    ),
+                ],
             );
 
             foreach ($it as $entity) {
@@ -670,7 +688,7 @@ class Import
                                     'message' => $entity->getErrorMessage(),
                                     'body' => $entity->getMalformedJson(),
                                 ],
-                            ]
+                            ],
                         );
                         continue;
                     }
@@ -680,8 +698,8 @@ class Import
                         ...lw(
                             message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' parsing '{library.title} {segment.number}/{segment.of}' item response. {error.message} at '{error.file}:{error.line}'.",
                             context: [...$logContext, ...exception_log($e), 'entity' => $entity],
-                            e: $e
-                        )
+                            e: $e,
+                        ),
                     );
                 }
             }
@@ -690,8 +708,8 @@ class Import
                 ...lw(
                     message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' parsing of '{library.title} {segment.number}/{segment.of}' response. {error.message} at '{error.file}:{error.line}'.",
                     context: [...$logContext, ...exception_log($e)],
-                    e: $e
-                )
+                    e: $e,
+                ),
             );
         }
 
@@ -705,10 +723,10 @@ class Import
                     'end' => $end,
                     'duration' => round($end - $start, 2),
                 ],
-            ]
+            ],
         );
 
-        Message::increment('response.size', (int)$response->getInfo('size_download'));
+        Message::increment('response.size', (int) $response->getInfo('size_download'));
     }
 
     protected function processShow(Context $context, iGuid $guid, array $item, array $logContext = []): void
@@ -723,9 +741,9 @@ class Import
             $guids[] = ['id' => $itemGuid];
         }
 
-        $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
+        $year = (int) ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
         if (0 === $year && null !== ($airDate = ag($item, 'originallyAvailableAt'))) {
-            $year = (int)makeDate($airDate)->format('Y');
+            $year = (int) make_date($airDate)->format('Y');
         }
 
         $logContext['item'] = [
@@ -744,9 +762,9 @@ class Import
                 context: [
                     ...$logContext,
                     'response' => [
-                        'body' => $item
+                        'body' => $item,
                     ],
-                ]
+                ],
             );
         }
 
@@ -768,15 +786,15 @@ class Import
         $gContext = ag_set(
             $logContext,
             'item.plex_id',
-            str_starts_with($itemGuid ?? 'None', 'plex://') ? ag($item, 'guid') : 'none'
+            str_starts_with($itemGuid ?? 'None', 'plex://') ? ag($item, 'guid') : 'none',
         );
 
         $context->cache->set(
             PlexClient::TYPE_SHOW . '.' . ag($logContext, 'item.id'),
             Guid::fromArray(
                 payload: $guid->get(guids: $guids, context: [...$gContext]),
-                context: $logContext
-            )->getAll()
+                context: $logContext,
+            )->getAll(),
         );
     }
 
@@ -786,7 +804,7 @@ class Import
         iImport $mapper,
         array $item,
         array $logContext = [],
-        array $opts = []
+        array $opts = [],
     ): void {
         if (PlexClient::TYPE_SHOW === ($type = ag($item, 'type'))) {
             $this->processShow(context: $context, guid: $guid, item: $item, logContext: $logContext);
@@ -807,9 +825,9 @@ class Import
 
             Message::increment("{$context->backendName}.{$mappedType}.total");
 
-            $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
+            $year = (int) ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
             if (0 === $year && null !== ($airDate = ag($item, 'originallyAvailableAt'))) {
-                $year = (int)makeDate($airDate)->format('Y');
+                $year = (int) make_date($airDate)->format('Y');
             }
 
             try {
@@ -822,14 +840,14 @@ class Import
                         ]),
                         PlexClient::TYPE_EPISODE => r('{title} - ({season}x{episode})', [
                             'title' => ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
-                            'season' => str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
-                            'episode' => str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
+                            'season' => str_pad((string) ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
+                            'episode' => str_pad((string) ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
                         ]),
                         default => throw new InvalidArgumentException(
                             r(
                                 text: "{action}: Unexpected content type '{type}' was received from '{client}: {user}@{backend}'.",
-                                context: [...$logContext, 'type' => $type]
-                            )
+                                context: [...$logContext, 'type' => $type],
+                            ),
                         ),
                     },
                     'type' => ag($item, 'type', 'unknown'),
@@ -850,22 +868,22 @@ class Import
                                 'body' => $item,
                             ],
                         ],
-                        e: $e
-                    )
+                        e: $e,
+                    ),
                 );
                 return;
             }
 
-            if (null === ag($item, true === (bool)ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt')) {
+            if (null === ag($item, true === (bool) ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt')) {
                 $this->logger->debug(
                     message: "{action}: Ignoring '{client}: {backend}' - '{item.id}: {item.title}'. No date '{date_key}' is set on object. '{body}'",
                     context: [
                         ...$logContext,
-                        'date_key' => true === (bool)ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt',
+                        'date_key' => true === (bool) ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt',
                         'response' => [
                             'body' => $item,
                         ],
-                    ]
+                    ],
                 );
 
                 Message::increment("{$context->backendName}.{$mappedType}.ignored_no_date_is_set");
@@ -877,17 +895,18 @@ class Import
                     context: $context,
                     guid: $guid,
                     item: $item,
-                    opts: $opts + [
+                    opts: $opts
+                    + [
                         iState::COLUMN_META_LIBRARY => ag($logContext, 'library.id'),
                         'override' => [
                             iState::COLUMN_EXTRA => [
                                 $context->backendName => [
                                     iState::COLUMN_EXTRA_EVENT => 'task.import',
-                                    iState::COLUMN_EXTRA_DATE => makeDate('now'),
+                                    iState::COLUMN_EXTRA_DATE => make_date('now'),
                                 ],
                             ],
                         ],
-                    ]
+                    ],
                 );
             } catch (Throwable $e) {
                 $this->logger->error(
@@ -902,8 +921,8 @@ class Import
                                 'file' => after($e->getFile(), ROOT_PATH),
                             ],
                         ],
-                        e: $e
-                    )
+                        e: $e,
+                    ),
                 );
                 return;
             }
@@ -934,16 +953,16 @@ class Import
 
             $mapper->add(entity: $entity, opts: [
                 'after' => ag($opts, 'after', null),
-                Options::IMPORT_METADATA_ONLY => true === (bool)ag($context->options, Options::IMPORT_METADATA_ONLY),
-                Options::DISABLE_MARK_UNPLAYED => true === (bool)ag($context->options, Options::DISABLE_MARK_UNPLAYED),
+                Options::IMPORT_METADATA_ONLY => true === (bool) ag($context->options, Options::IMPORT_METADATA_ONLY),
+                Options::DISABLE_MARK_UNPLAYED => true === (bool) ag($context->options, Options::DISABLE_MARK_UNPLAYED),
             ]);
         } catch (Throwable $e) {
             $this->logger->error(
                 ...lw(
                     message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' - '{library.title}' - '{item.title}' item process. {error.message} at '{error.file}:{error.line}'.",
                     context: [...$logContext, ...exception_log($e)],
-                    e: $e
-                )
+                    e: $e,
+                ),
             );
         }
     }

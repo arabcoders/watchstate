@@ -19,7 +19,7 @@ final class InspectRequest
     {
         return $this->tryResponse(
             context: $context,
-            fn: function () use ($request, $context) {
+            fn: static function () use ($request, $context) {
                 $userAgent = trim(ag($request->getServerParams(), 'HTTP_USER_AGENT', ''));
                 $isTautulli = false !== str_starts_with($userAgent, 'Tautulli/');
                 $isPlex = false !== str_starts_with($userAgent, 'PlexMediaServer/');
@@ -35,7 +35,7 @@ final class InspectRequest
                     $json = json_decode(
                         json: $payload,
                         associative: true,
-                        flags: JSON_INVALID_UTF8_IGNORE | JSON_THROW_ON_ERROR
+                        flags: JSON_INVALID_UTF8_IGNORE | JSON_THROW_ON_ERROR,
                     );
                 }
 
@@ -54,7 +54,7 @@ final class InspectRequest
                         'id' => ag($json, 'Server.uuid', ''),
                         'name' => ag($json, 'Server.title'),
                         'client' => $context->clientName,
-                        'version' => ag($json, 'Server.version', fn() => afterLast($userAgent, '/')),
+                        'version' => ag($json, 'Server.version', static fn() => after_last($userAgent, '/')),
                     ],
                     'user' => [
                         'id' => ag($json, 'Account.id', ''),
@@ -76,7 +76,7 @@ final class InspectRequest
 
                 return new Response(status: true, response: $alteredRequest);
             },
-            action: $this->action
+            action: $this->action,
         );
     }
 
@@ -94,16 +94,16 @@ final class InspectRequest
         }
 
         $item = ag_sets($item, [
-            'Account.id' => (int)ag($item, 'Account.id', 0),
-            'Player.local' => (bool)ag($item, 'Player.local', false),
-            'Metadata.index' => (int)ag($item, 'Metadata.index', 0),
-            'Metadata.parentIndex' => (int)ag($item, 'Metadata.parentIndex', 0),
-            'Metadata.audienceRating' => (float)ag($item, 'Metadata.audienceRating', 0),
-            'Metadata.viewOffset' => (int)ag($item, 'Metadata.viewOffset', 0),
-            'Metadata.year' => (int)ag($item, 'Metadata.year', 0),
-            'Metadata.duration' => (int)ag($item, 'Metadata.duration', 0),
-            'Metadata.addedAt' => makeDate(ag($item, 'Metadata.addedAt'))->getTimestamp(),
-            'Metadata.updatedAt' => makeDate(ag($item, 'Metadata.updatedAt'))->getTimestamp(),
+            'Account.id' => (int) ag($item, 'Account.id', 0),
+            'Player.local' => (bool) ag($item, 'Player.local', false),
+            'Metadata.index' => (int) ag($item, 'Metadata.index', 0),
+            'Metadata.parentIndex' => (int) ag($item, 'Metadata.parentIndex', 0),
+            'Metadata.audienceRating' => (float) ag($item, 'Metadata.audienceRating', 0),
+            'Metadata.viewOffset' => (int) ag($item, 'Metadata.viewOffset', 0),
+            'Metadata.year' => (int) ag($item, 'Metadata.year', 0),
+            'Metadata.duration' => (int) ag($item, 'Metadata.duration', 0),
+            'Metadata.addedAt' => make_date(ag($item, 'Metadata.addedAt'))->getTimestamp(),
+            'Metadata.updatedAt' => make_date(ag($item, 'Metadata.updatedAt'))->getTimestamp(),
             'Metadata.lastViewedAt' => null,
             'Metadata.Guid' => [],
             'Metadata.viewCount' => 0,
@@ -111,7 +111,7 @@ final class InspectRequest
 
         $lastViewedAt = ag($item, 'Metadata.lastViewedAt', '');
         if (!empty($lastViewedAt)) {
-            $item = ag_set($item, 'Metadata.lastViewedAt', makeDate($lastViewedAt)->getTimestamp());
+            $item = ag_set($item, 'Metadata.lastViewedAt', make_date($lastViewedAt)->getTimestamp());
         }
 
         if (null !== ($guids = ag($item, 'Metadata.Guids', null))) {

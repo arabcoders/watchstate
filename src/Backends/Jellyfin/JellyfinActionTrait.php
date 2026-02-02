@@ -17,7 +17,6 @@ use App\Libs\Guid;
 use App\Libs\Options;
 use Psr\Http\Message\UriInterface as iUri;
 use Psr\SimpleCache\CacheInterface as iCache;
-use Psr\Log\LoggerInterface as iLogger;
 
 /**
  * Trait JellyfinActionTrait
@@ -42,15 +41,15 @@ trait JellyfinActionTrait
     {
         // -- Handle watched/updated column in a special way to support mark as unplayed.
         if (null !== ($opts['override'][iState::COLUMN_WATCHED] ?? null)) {
-            $isPlayed = (bool)$opts['override'][iState::COLUMN_WATCHED];
+            $isPlayed = (bool) $opts['override'][iState::COLUMN_WATCHED];
             $date = $opts['override'][iState::COLUMN_UPDATED] ?? ag($item, 'DateCreated');
         } else {
-            $isPlayed = (bool)ag($item, 'UserData.Played', false);
+            $isPlayed = (bool) ag($item, 'UserData.Played', false);
             $date = ag($item, true === $isPlayed ? ['UserData.LastPlayedDate', 'DateCreated'] : 'DateCreated');
         }
 
         // -- For Progress action we need to use the latest date.
-        if (true === (bool)($opts['latest_date'] ?? false)) {
+        if (true === (bool) ($opts['latest_date'] ?? false)) {
             if (null !== ($_lastPlayed = ag($item, 'UserData.LastPlayedDate'))) {
                 $date = $_lastPlayed;
             }
@@ -71,49 +70,49 @@ trait JellyfinActionTrait
             'backend' => $context->backendName,
             'user' => $context->userContext->name,
             'item' => [
-                'id' => (string)ag($item, 'Id'),
+                'id' => (string) ag($item, 'Id'),
                 'type' => $type,
                 'title' => match ($type) {
                     iState::TYPE_MOVIE, iState::TYPE_SHOW => sprintf(
                         '%s (%s)',
                         ag($item, ['Name', 'OriginalTitle'], '??'),
-                        ag($item, 'ProductionYear', '0000')
+                        ag($item, 'ProductionYear', '0000'),
                     ),
                     iState::TYPE_EPISODE => sprintf(
                         '%s - (%sx%s)',
                         ag($item, ['Name', 'OriginalTitle'], '??'),
-                        str_pad((string)ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
-                        str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
+                        str_pad((string) ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
+                        str_pad((string) ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
                     ),
                     default => throw new InvalidArgumentException(
                         r("Unexpected Content type '{type}' was received.", [
                             'type' => $type,
-                        ])
+                        ]),
                     ),
                 },
-                'year' => (string)ag($item, 'ProductionYear', '0000'),
+                'year' => (string) ag($item, 'ProductionYear', '0000'),
             ],
         ];
 
         $builder = [
             iState::COLUMN_TYPE => $type,
-            iState::COLUMN_UPDATED => makeDate($date)->getTimestamp(),
-            iState::COLUMN_WATCHED => (int)$isPlayed,
+            iState::COLUMN_UPDATED => make_date($date)->getTimestamp(),
+            iState::COLUMN_WATCHED => (int) $isPlayed,
             iState::COLUMN_VIA => $context->backendName,
             iState::COLUMN_TITLE => ag($item, ['Name', 'OriginalTitle'], '??'),
             iState::COLUMN_GUIDS => $guid->get(guids: ag($item, 'ProviderIds', []), context: $logContext),
             iState::COLUMN_META_DATA => [
                 $context->backendName => [
-                    iState::COLUMN_ID => (string)ag($item, 'Id'),
+                    iState::COLUMN_ID => (string) ag($item, 'Id'),
                     iState::COLUMN_TYPE => $type,
                     iState::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
                     iState::COLUMN_VIA => $context->backendName,
                     iState::COLUMN_TITLE => ag($item, ['Name', 'OriginalTitle'], '??'),
                     iState::COLUMN_GUIDS => $guid->parse(
-                        guids: (array)ag($item, 'ProviderIds', []),
-                        context: $logContext
+                        guids: (array) ag($item, 'ProviderIds', []),
+                        context: $logContext,
                     ),
-                    iState::COLUMN_META_DATA_ADDED_AT => (string)makeDate(ag($item, 'DateCreated'))->getTimestamp(),
+                    iState::COLUMN_META_DATA_ADDED_AT => (string) make_date(ag($item, 'DateCreated'))->getTimestamp(),
                 ],
             ],
             iState::COLUMN_EXTRA => [],
@@ -123,13 +122,13 @@ trait JellyfinActionTrait
         $metadataExtra = &$metadata[iState::COLUMN_META_DATA_EXTRA];
 
         $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = array_map(
-            fn($v) => strtolower($v),
-            ag($item, 'Genres', [])
+            strtolower(...),
+            ag($item, 'Genres', []),
         );
 
         // -- jellyfin/emby API does not provide library ID.
         if (null !== ($library = $opts[iState::COLUMN_META_LIBRARY] ?? null)) {
-            $metadata[iState::COLUMN_META_LIBRARY] = (string)$library;
+            $metadata[iState::COLUMN_META_LIBRARY] = (string) $library;
         }
 
         if (iState::TYPE_EPISODE === $type) {
@@ -137,12 +136,12 @@ trait JellyfinActionTrait
             $builder[iState::COLUMN_EPISODE] = ag($item, 'IndexNumber', 0);
 
             if (null !== ($parentId = ag($item, 'SeriesId'))) {
-                $metadata[iState::COLUMN_META_SHOW] = (string)$parentId;
+                $metadata[iState::COLUMN_META_SHOW] = (string) $parentId;
             }
 
             $metadata[iState::COLUMN_TITLE] = ag($item, 'SeriesName', '??');
-            $metadata[iState::COLUMN_SEASON] = (string)$builder[iState::COLUMN_SEASON];
-            $metadata[iState::COLUMN_EPISODE] = (string)$builder[iState::COLUMN_EPISODE];
+            $metadata[iState::COLUMN_SEASON] = (string) $builder[iState::COLUMN_SEASON];
+            $metadata[iState::COLUMN_EPISODE] = (string) $builder[iState::COLUMN_EPISODE];
 
             $metadataExtra[iState::COLUMN_META_DATA_EXTRA_TITLE] = $builder[iState::COLUMN_TITLE];
             $builder[iState::COLUMN_TITLE] = $metadata[iState::COLUMN_TITLE];
@@ -159,36 +158,35 @@ trait JellyfinActionTrait
 
                 if (count($metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES]) < 1) {
                     $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = array_map(
-                        fn($v) => strtolower($v),
-                        ag($this->getItemDetails(context: $context, id: $parentId, opts: $opts), 'Genres', [])
+                        strtolower(...),
+                        ag($this->getItemDetails(context: $context, id: $parentId, opts: $opts), 'Genres', []),
                     );
                 }
             }
         }
 
-
         if (!empty($metadata) && null !== ($mediaYear = ag($item, 'ProductionYear'))) {
-            $builder[iState::COLUMN_YEAR] = (int)$mediaYear;
-            $metadata[iState::COLUMN_YEAR] = (string)$mediaYear;
+            $builder[iState::COLUMN_YEAR] = (int) $mediaYear;
+            $metadata[iState::COLUMN_YEAR] = (string) $mediaYear;
         }
 
         $metadata[iState::COLUMN_META_MULTI] = false;
         if (null !== ($mediaPath = ag($item, 'Path')) && !empty($mediaPath)) {
-            $metadata[iState::COLUMN_META_PATH] = (string)$mediaPath;
+            $metadata[iState::COLUMN_META_PATH] = (string) $mediaPath;
             if (
-                iState::TYPE_EPISODE === $type &&
-                true === ag(parseEpisodeRange(basename((string)$mediaPath)), iState::COLUMN_META_MULTI, false)
+                iState::TYPE_EPISODE === $type
+                && true === ag(parse_episode_range(basename((string) $mediaPath)), iState::COLUMN_META_MULTI, false)
             ) {
                 $metadata[iState::COLUMN_META_MULTI] = true;
             }
         }
 
         if (null !== ($PremieredAt = ag($item, 'PremiereDate'))) {
-            $metadataExtra[iState::COLUMN_META_DATA_EXTRA_DATE] = makeDate($PremieredAt)->format('Y-m-d');
+            $metadataExtra[iState::COLUMN_META_DATA_EXTRA_DATE] = make_date($PremieredAt)->format('Y-m-d');
         }
 
         if (null !== ($IsFavorite = ag($item, 'UserData.IsFavorite'))) {
-            $metadataExtra[iState::COLUMN_META_DATA_EXTRA_FAVORITE] = (int)$IsFavorite;
+            $metadataExtra[iState::COLUMN_META_DATA_EXTRA_FAVORITE] = (int) $IsFavorite;
         }
 
         if (null !== ($overView = ag($item, 'Overview'))) {
@@ -196,13 +194,13 @@ trait JellyfinActionTrait
         }
 
         if (true === $isPlayed) {
-            $metadata[iState::COLUMN_META_DATA_PLAYED_AT] = (string)makeDate($date)->getTimestamp();
-            $metadata[iState::COLUMN_META_DATA_PROGRESS] = "0";
+            $metadata[iState::COLUMN_META_DATA_PLAYED_AT] = (string) make_date($date)->getTimestamp();
+            $metadata[iState::COLUMN_META_DATA_PROGRESS] = '0';
         }
 
         if (false === $isPlayed && null !== ($progress = ag($item, 'UserData.PlaybackPositionTicks', null))) {
             // -- Convert to play progress to milliseconds.
-            $metadata[iState::COLUMN_META_DATA_PROGRESS] = (string)floor($progress / 1_00_00);
+            $metadata[iState::COLUMN_META_DATA_PROGRESS] = (string) floor($progress / 1_00_00);
         }
 
         unset($metadata, $metadataExtra);
@@ -227,9 +225,9 @@ trait JellyfinActionTrait
          * For reference check {@see \App\Libs\Mappers\Import\DirectMapper::handleOldEntity()}
          */
         if (JellyfinClient::CLIENT_NAME === $context->clientName && $isPlayed) {
-            $uPositionTicks = 0 === (int)ag($item, 'UserData.PlaybackPositionTicks', -1);
-            $uPlayCount = (int)(ag($item, 'UserData.PlayCount', -1)) >= 1;
-            $uIsPlayed = true === (bool)ag($item, 'UserData.Played', false);
+            $uPositionTicks = 0 === (int) ag($item, 'UserData.PlaybackPositionTicks', -1);
+            $uPlayCount = (int) ag($item, 'UserData.PlayCount', -1) >= 1;
+            $uIsPlayed = true === (bool) ag($item, 'UserData.Played', false);
             if ($uIsPlayed && $uPlayCount && $uPositionTicks) {
                 $entity = $entity->setContext('should_mark', true);
             }
@@ -276,7 +274,7 @@ trait JellyfinActionTrait
         iGuid $guid,
         int|string $id,
         array $logContext = [],
-        array $opts = []
+        array $opts = [],
     ): array {
         $cacheKey = JellyfinClient::TYPE_SHOW . '.' . $id;
         $globalCacheKey = null;
@@ -302,7 +300,7 @@ trait JellyfinActionTrait
             'title' => sprintf(
                 '%s (%s)',
                 ag($json, ['Name', 'OriginalTitle'], '??'),
-                ag($json, 'ProductionYear', '0000')
+                ag($json, 'ProductionYear', '0000'),
             ),
             'year' => ag($json, 'ProductionYear', null),
             'type' => ag($json, 'Type'),
@@ -312,7 +310,7 @@ trait JellyfinActionTrait
             return [];
         }
 
-        $providersId = (array)ag($json, 'ProviderIds', []);
+        $providersId = (array) ag($json, 'ProviderIds', []);
 
         if (false === $guid->has(guids: $providersId, context: $logContext)) {
             $context->cache->set($cacheKey, []);
@@ -321,7 +319,7 @@ trait JellyfinActionTrait
 
         $data = Guid::fromArray(
             payload: $guid->get(guids: $providersId, context: $logContext),
-            context: ['backend' => $context->backendName, ...$logContext]
+            context: ['backend' => $context->backendName, ...$logContext],
         )->getAll();
 
         $context->cache->set($cacheKey, $data);
@@ -393,7 +391,7 @@ trait JellyfinActionTrait
         return in_array(
             JellyfinClient::TYPE_MAPPER[$type] ?? JellyfinClient::TYPE_MAPPER[strtolower($type)] ?? $type,
             iState::TYPES_LIST,
-            true
+            true,
         );
     }
 }

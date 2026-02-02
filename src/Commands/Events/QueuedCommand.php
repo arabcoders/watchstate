@@ -18,14 +18,16 @@ final class QueuedCommand extends Command
 {
     public const string ROUTE = 'events:queued';
 
-    public function __construct(private readonly EventsRepository $repo)
-    {
+    public function __construct(
+        private readonly EventsRepository $repo,
+    ) {
         parent::__construct(null);
     }
 
     protected function configure(): void
     {
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->addOption('all', 'a', InputOption::VALUE_NONE, 'Show all.')
             ->setDescription('Show queued events.');
     }
@@ -33,7 +35,7 @@ final class QueuedCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $filter = [
-            EventsTable::COLUMN_STATUS => Status::PENDING->value
+            EventsTable::COLUMN_STATUS => Status::PENDING->value,
         ];
 
         if ($input->getOption('all')) {
@@ -59,7 +61,7 @@ final class QueuedCommand extends Command
 
             $keys = $list;
         } else {
-            $keys = array_map(fn($event) => $event->getAll(), $events);
+            $keys = array_map(static fn($event) => $event->getAll(), $events);
         }
 
         $this->displayContent($keys, $output, $mode);

@@ -30,9 +30,8 @@ class GetSessions
     public function __construct(
         protected readonly iHttp $http,
         protected readonly iLogger $logger,
-        protected readonly iCache $cache
-    ) {
-    }
+        protected readonly iCache $cache,
+    ) {}
 
     /**
      * Get backend information.
@@ -54,18 +53,18 @@ class GetSessions
                     'client' => $context->clientName,
                     'backend' => $context->backendName,
                     'user' => $context->userContext->name,
-                    'url' => (string)$url
+                    'url' => (string) $url,
                 ];
 
                 $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' play sessions.", $logContext);
 
                 $response = $this->http->request(
                     method: Method::GET,
-                    url: (string)$url,
+                    url: (string) $url,
                     options: array_replace_recursive(
                         $context->getHttpOptions(),
                         true === ag_exists($opts, 'headers') ? ['headers' => $opts['headers']] : [],
-                    )
+                    ),
                 );
 
                 $content = $response->getContent(false);
@@ -80,8 +79,8 @@ class GetSessions
                                 'status_code' => $response->getStatusCode(),
                                 'response' => ['body' => $content],
                             ],
-                            level: Levels::WARNING
-                        )
+                            level: Levels::WARNING,
+                        ),
                     );
                 }
 
@@ -94,15 +93,15 @@ class GetSessions
                                 ...$logContext,
                                 'response' => ['status_code' => $response->getStatusCode(), 'body' => $content],
                             ],
-                            level: Levels::ERROR
-                        )
+                            level: Levels::ERROR,
+                        ),
                     );
                 }
 
                 $items = json_decode(
                     json: $content,
                     associative: true,
-                    flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                    flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
                 );
 
                 if (true === $context->trace) {
@@ -134,8 +133,8 @@ class GetSessions
                         'item_title' => ag($item, 'NowPlayingItem.Name'),
                         'item_type' => ag($item, 'NowPlayingItem.Type'),
                         'item_offset_at' => ag($item, 'PlayState.PositionTicks') / 1_00_00,
-                        'session_state' => (bool)ag($item, 'PlayState.IsPaused', false) === true ? 'paused' : 'playing',
-                        'session_updated_at' => makeDate(ag($item, 'LastActivityDate')),
+                        'session_state' => (bool) ag($item, 'PlayState.IsPaused', false) === true ? 'paused' : 'playing',
+                        'session_updated_at' => make_date(ag($item, 'LastActivityDate')),
                         'session_id' => ag($item, 'Id'),
                     ];
                 }

@@ -58,7 +58,7 @@ final class Index
     public function __construct(
         #[Inject(DirectMapper::class)]
         private iImport $mapper,
-        private iLogger $logger
+        private iLogger $logger,
     ) {}
 
     #[Get(self::URL . '[/]', name: 'history.list')]
@@ -74,15 +74,20 @@ final class Index
 
         $data = DataUtil::fromArray($request->getQueryParams());
 
-        $es = fn(string $val) => $db->escapeIdentifier($val, true);
+        $es = static fn(string $val) => $db->escapeIdentifier($val, true);
         $filters = [];
 
-        $page = (int)$data->get('page', 1);
-        $perpage = (int)$data->get('perpage', 12);
+        $page = (int) $data->get('page', 1);
+        $perpage = (int) $data->get('perpage', 12);
         $customView = $data->get('view', null);
 
-        $start = (($page <= 2) ? ((1 === $page) ? 0 : $perpage) : $perpage * ($page - 1));
-        $start = (!$page) ? 0 : $start;
+        if ($page < 1 || 1 === $page) {
+            $start = 0;
+        } elseif (2 === $page) {
+            $start = $perpage;
+        } else {
+            $start = $perpage * ($page - 1);
+        }
 
         $params = [];
         $total = null;
@@ -97,7 +102,7 @@ final class Index
             if (1 !== preg_match($regex, $data->get('rguid'), $matches)) {
                 return api_error(
                     'Invalid value for rguid query string expected value format is guid://parentID/seasonNumber[/episodeNumber].',
-                    Status::BAD_REQUEST
+                    Status::BAD_REQUEST,
                 );
             }
 
@@ -117,7 +122,7 @@ final class Index
 
         if ($data->has(iState::COLUMN_WATCHED)) {
             $where[] = $es(iState::COLUMN_WATCHED) . ' = :' . iState::COLUMN_WATCHED;
-            $params[iState::COLUMN_WATCHED] = (int)$data->get(iState::COLUMN_WATCHED);
+            $params[iState::COLUMN_WATCHED] = (int) $data->get(iState::COLUMN_WATCHED);
             $filters[iState::COLUMN_WATCHED] = $data->get(iState::COLUMN_WATCHED);
         }
 
@@ -174,11 +179,11 @@ final class Index
             if (null === $parent) {
                 return api_error(
                     'Invalid value for parent query string expected value format is db://id.',
-                    Status::BAD_REQUEST
+                    Status::BAD_REQUEST,
                 );
             }
 
-            $where[] = "json_extract(" . iState::COLUMN_PARENT . ",'$.{$parent}') = :" . iState::COLUMN_PARENT;
+            $where[] = 'json_extract(' . iState::COLUMN_PARENT . ",'$.{$parent}') = :" . iState::COLUMN_PARENT;
             $params[iState::COLUMN_PARENT] = array_values($d->getAll())[0];
             $filters[iState::COLUMN_PARENT] = $data->get(iState::COLUMN_PARENT);
         }
@@ -191,11 +196,11 @@ final class Index
             if (null === $guid) {
                 return api_error(
                     'Invalid value for guid query string expected value format is db://id.',
-                    Status::BAD_REQUEST
+                    Status::BAD_REQUEST,
                 );
             }
 
-            $where[] = "json_extract(" . iState::COLUMN_GUIDS . ",'$.{$guid}') = :" . iState::COLUMN_GUIDS;
+            $where[] = 'json_extract(' . iState::COLUMN_GUIDS . ",'$.{$guid}') = :" . iState::COLUMN_GUIDS;
             $params[iState::COLUMN_GUIDS] = array_values($d->getAll())[0];
             $filters[iState::COLUMN_GUIDS] = $data->get(iState::COLUMN_GUIDS);
         }
@@ -206,21 +211,21 @@ final class Index
             if (null === $sField || null === $sValue) {
                 return api_error(
                     'When searching using JSON fields the query string \'key\' and \'value\' must be set.',
-                    Status::BAD_REQUEST
+                    Status::BAD_REQUEST,
                 );
             }
 
             if (preg_match('/[^a-zA-Z0-9_.]/', $sField)) {
                 return api_error(
                     'Invalid value for key query string expected value format is [a-zA-Z0-9_].',
-                    Status::BAD_REQUEST
+                    Status::BAD_REQUEST,
                 );
             }
 
             if ($data->get('exact')) {
-                $where[] = "json_extract(" . iState::COLUMN_META_DATA . ",'$.{$sField}') = :jf_metadata_value";
+                $where[] = 'json_extract(' . iState::COLUMN_META_DATA . ",'$.{$sField}') = :jf_metadata_value";
             } else {
-                $where[] = "json_extract(" . iState::COLUMN_META_DATA . ",'$.{$sField}') LIKE \"%\" || :jf_metadata_value || \"%\"";
+                $where[] = 'json_extract(' . iState::COLUMN_META_DATA . ",'$.{$sField}') LIKE \"%\" || :jf_metadata_value || \"%\"";
             }
 
             $params['jf_metadata_value'] = $sValue;
@@ -234,9 +239,9 @@ final class Index
         if ($data->get(iState::COLUMN_META_PATH)) {
             foreach (array_keys($userContext->config->getAll()) as $bName) {
                 if ($data->get('exact')) {
-                    $or[] = "json_extract(" . iState::COLUMN_META_DATA . ",'$.{$bName}.path') = :path_{$bName}";
+                    $or[] = 'json_extract(' . iState::COLUMN_META_DATA . ",'$.{$bName}.path') = :path_{$bName}";
                 } else {
-                    $or[] = "json_extract(" . iState::COLUMN_META_DATA . ",'$.{$bName}.path') LIKE \"%\" || :path_{$bName} || \"%\"";
+                    $or[] = 'json_extract(' . iState::COLUMN_META_DATA . ",'$.{$bName}.path') LIKE \"%\" || :path_{$bName} || \"%\"";
                 }
 
                 $params["path_{$bName}"] = $data->get(iState::COLUMN_META_PATH);
@@ -248,9 +253,10 @@ final class Index
         if ($data->get('subtitle')) {
             foreach (array_keys($userContext->config->getAll()) as $bName) {
                 if ($data->get('exact')) {
-                    $or[] = "json_extract(" . iState::COLUMN_META_DATA . ",'$.{$bName}.extra.title') = :subtitle_{$bName}";
+                    $or[] = 'json_extract(' . iState::COLUMN_META_DATA . ",'$.{$bName}.extra.title') = :subtitle_{$bName}";
                 } else {
-                    $or[] = "json_extract(" . iState::COLUMN_META_DATA . ",'$.{$bName}.extra.title') LIKE \"%\" || :subtitle_{$bName} || \"%\"";
+                    $or[] =
+                        'json_extract(' . iState::COLUMN_META_DATA . ",'$.{$bName}.extra.title') LIKE \"%\" || :subtitle_{$bName} || \"%\"";
                 }
 
                 $params["subtitle_{$bName}"] = $data->get('subtitle');
@@ -265,21 +271,21 @@ final class Index
             if (null === $sField || null === $sValue) {
                 return api_error(
                     'When searching using JSON fields the query string \'key\' and \'value\' must be set.',
-                    Status::BAD_REQUEST
+                    Status::BAD_REQUEST,
                 );
             }
 
             if (preg_match('/[^a-zA-Z0-9_.]/', $sField)) {
                 return api_error(
                     'Invalid value for key query string expected value format is [a-zA-Z0-9_].',
-                    Status::BAD_REQUEST
+                    Status::BAD_REQUEST,
                 );
             }
 
             if ($data->get('exact')) {
-                $where[] = "json_extract(" . iState::COLUMN_EXTRA . ",'$.{$sField}') = :jf_extra_value";
+                $where[] = 'json_extract(' . iState::COLUMN_EXTRA . ",'$.{$sField}') = :jf_extra_value";
             } else {
-                $where[] = "json_extract(" . iState::COLUMN_EXTRA . ",'$.{$sField}') LIKE \"%\" || :jf_extra_value || \"%\"";
+                $where[] = 'json_extract(' . iState::COLUMN_EXTRA . ",'$.{$sField}') LIKE \"%\" || :jf_extra_value || \"%\"";
             }
 
             $params['jf_extra_value'] = $sValue;
@@ -297,7 +303,7 @@ final class Index
             /** @noinspection SqlType */
             $stmt = $db->prepare(
                 "SELECT COUNT(DISTINCT t.id) FROM state AS t, json_each(t.metadata) AS _b,
-                              json_each(json_extract(_b.value, '$.extra.genres')) AS _g WHERE _g.value {$genreFilter}"
+                              json_each(json_extract(_b.value, '$.extra.genres')) AS _g WHERE _g.value {$genreFilter}",
             );
             $stmt->execute(['genre' => $genre]);
             $total = $stmt->fetchColumn();
@@ -306,11 +312,11 @@ final class Index
             $stmt = $db->prepare(
                 "SELECT DISTINCT t.id FROM state AS t, json_each(t.metadata) AS _b,
                 json_each(json_extract(_b.value, '$.extra.genres')) AS _g WHERE _g.value {$genreFilter}
-                LIMIT :start, :perpage"
+                LIMIT :start, :perpage",
             );
             $stmt->execute(['genre' => $genre, 'start' => $start, 'perpage' => $perpage]);
             $genres_ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
-            $where[] = "id IN (" . implode(',', count($genres_ids) > 0 ? $genres_ids : [-1]) . ")";
+            $where[] = 'id IN (' . implode(',', count($genres_ids) > 0 ? $genres_ids : [-1]) . ')';
             $filters[iState::COLUMN_META_DATA_EXTRA_GENRES] = [
                 'key' => iState::COLUMN_META_DATA_EXTRA_GENRES,
                 'value' => $genre,
@@ -349,10 +355,14 @@ final class Index
                 continue;
             }
 
-            if (null === ($matches['field'] ?? null) || false === in_array(
-                $matches['field'],
-                self::COLUMNS_SORTABLE
-            )) {
+            if (
+                null === ($matches['field'] ?? null)
+                || false === in_array(
+                    $matches['field'],
+                    self::COLUMNS_SORTABLE,
+                    true,
+                )
+            ) {
                 continue;
             }
 
@@ -362,7 +372,7 @@ final class Index
                 match (strtolower($matches['dir'] ?? 'desc')) {
                     default => 'DESC',
                     'asc' => 'ASC',
-                }
+                },
             );
         }
 
@@ -384,26 +394,31 @@ final class Index
 
         $pagingUrl = $getUri->withPath($request->getUri()->getPath());
 
-        $firstUrl = (string)$pagingUrl->withQuery(
-            http_build_query($data->with('page', 1)->getAll())
+        $firstUrl = (string) $pagingUrl->withQuery(
+            http_build_query($data->with('page', 1)->getAll()),
         );
-        $nextUrl = $page < @ceil($total / $perpage) ? (string)$pagingUrl->withQuery(
-            http_build_query($data->with('page', $page + 1)->getAll())
-        ) : null;
+        $nextUrl = $page < @ceil($total / $perpage)
+            ? (string) $pagingUrl->withQuery(
+                http_build_query($data->with('page', $page + 1)->getAll()),
+            )
+            : null;
 
         $totalPages = @ceil($total / $perpage);
 
-        $prevUrl = !empty($total) && $page > 1 && $page <= $totalPages ? (string)$pagingUrl->withQuery(
-            http_build_query($data->with('page', $page - 1)->getAll())
-        ) : null;
+        $prevUrl =
+            !empty($total) && $page > 1 && $page <= $totalPages
+                ? (string) $pagingUrl->withQuery(
+                    http_build_query($data->with('page', $page - 1)->getAll()),
+                )
+                : null;
 
-        $lastUrl = (string)$pagingUrl->withQuery(
-            http_build_query($data->with('page', @ceil($total / $perpage))->getAll())
+        $lastUrl = (string) $pagingUrl->withQuery(
+            http_build_query($data->with('page', @ceil($total / $perpage))->getAll()),
         );
 
         $response = [
             'paging' => [
-                'total' => (int)$total,
+                'total' => (int) $total,
                 'perpage' => $perpage,
                 'current_page' => $page,
                 'first_page' => 1,
@@ -414,7 +429,7 @@ final class Index
             'filters' => $filters,
             'history' => [],
             'links' => [
-                'self' => (string)$getUri,
+                'self' => (string) $getUri,
                 'first_url' => $firstUrl,
                 'next_url' => $nextUrl,
                 'prev_url' => $prevUrl,
@@ -524,10 +539,16 @@ final class Index
                 $entity = $customEntity;
             } elseif ($data->get('with_duplicates')) {
                 try {
-                    $entity['duplicate_reference_ids'] = array_reduce(array_values(array_map(
-                        fn(iState $i) => $i->id,
-                        $userContext->db->duplicates(StateEntity::fromArray($entity), $userContext->cache)
-                    )), fn(array $r, $i) => $i !== $entity['id'] ? [...$r, $i] : $r, []);
+                    $entity['duplicate_reference_ids'] = array_reduce(
+                        array_values(
+                            array_map(
+                                static fn(iState $i) => $i->id,
+                                $userContext->db->duplicates(StateEntity::fromArray($entity), $userContext->cache),
+                            ),
+                        ),
+                        static fn(array $r, $i) => $i !== $entity['id'] ? [...$r, $i] : $r,
+                        [],
+                    );
                 } catch (Throwable $e) {
                     $this->logger->error($e->getMessage());
                 }
@@ -581,7 +602,7 @@ final class Index
 
                 try {
                     $data = ffprobe_file($file, $userContext->cache);
-                } catch (RuntimeException | JsonException) {
+                } catch (RuntimeException|JsonException) {
                     continue;
                 }
 
@@ -590,9 +611,9 @@ final class Index
                     'source' => [$backend],
                     'ffprobe' => $data,
                     'subtitles' => array_filter(
-                        findSideCarFiles(new SplFileInfo($file)),
-                        fn($sideCar) => isset(Subtitle::FORMATS[getExtension($sideCar)])
-                    )
+                        find_side_car_files(new SplFileInfo($file)),
+                        static fn($sideCar) => isset(Subtitle::FORMATS[get_extension($sideCar)]),
+                    ),
                 ];
             }
 
@@ -641,10 +662,16 @@ final class Index
 
         if ($params->get('with_duplicates')) {
             try {
-                $entity['duplicate_reference_ids'] = array_reduce(array_values(array_map(
-                    fn(iState $i) => $i->id,
-                    $userContext->db->duplicates($item, $userContext->cache)
-                )), fn(array $r, $i) => $i !== $item->id ? [...$r, $i] : $r, []);
+                $entity['duplicate_reference_ids'] = array_reduce(
+                    array_values(
+                        array_map(
+                            static fn(iState $i) => $i->id,
+                            $userContext->db->duplicates($item, $userContext->cache),
+                        ),
+                    ),
+                    static fn(array $r, $i) => $i !== $item->id ? [...$r, $i] : $r,
+                    [],
+                );
             } catch (Throwable $e) {
                 $this->logger->error($e->getMessage());
             }
@@ -673,10 +700,16 @@ final class Index
         ];
 
         try {
-            $data['duplicate_reference_ids'] = array_reduce(array_values(array_map(
-                fn(iState $i) => $i->id,
-                $userContext->db->duplicates($item, $userContext->cache)
-            )), fn(array $r, $i) => $i !== $item->id ? [...$r, $i] : $r, []);
+            $data['duplicate_reference_ids'] = array_reduce(
+                array_values(
+                    array_map(
+                        static fn(iState $i) => $i->id,
+                        $userContext->db->duplicates($item, $userContext->cache),
+                    ),
+                ),
+                static fn(array $r, $i) => $i !== $item->id ? [...$r, $i] : $r,
+                [],
+            );
         } catch (Throwable $e) {
             $this->logger->error($e->getMessage());
             return api_error('Failed to get duplicates', Status::INTERNAL_SERVER_ERROR);
@@ -736,12 +769,12 @@ final class Index
         $item->updated = time();
         $item->extra = ag_set($item->getExtra(), $item->via, [
             iState::COLUMN_EXTRA_EVENT => 'webui.mark' . ($item->isWatched() ? 'played' : 'unplayed'),
-            iState::COLUMN_EXTRA_DATE => (string)makeDate('now'),
+            iState::COLUMN_EXTRA_DATE => (string) make_date('now'),
         ]);
 
         $userContext->mapper->add($item)->commit();
 
-        queuePush($item, userContext: $userContext);
+        queue_push($item, userContext: $userContext);
 
         return $this->read($request, $id);
     }
@@ -897,10 +930,10 @@ final class Index
         }
 
         $response = $apiRequest->response;
-        assert($response instanceof APIResponse);
+        assert($response instanceof APIResponse, 'Expected APIResponse from image proxy.');
 
         if (Status::OK !== $response->status) {
-            return api_error(r("Failed to fetch image."), $response->status);
+            return api_error(r('Failed to fetch image.'), $response->status);
         }
 
         return api_response($response->status, body: $response->stream, headers: [

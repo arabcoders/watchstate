@@ -43,7 +43,7 @@ final class Initializer
 {
     private Cli $cli;
     private ConsoleOutput $cliOutput;
-    private iLogger|null $accessLog = null;
+    private ?iLogger $accessLog = null;
 
     /**
      * Initializes the object.
@@ -56,16 +56,16 @@ final class Initializer
     public function __construct()
     {
         // -- Load user custom environment variables.
-        (function () {
+        (static function () {
             // -- This env file should only be used during development or direct installation.
             if (file_exists(__DIR__ . '/../../.env')) {
-                loadEnvFile(file: __DIR__ . '/../../.env', usePutEnv: true, override: true);
+                load_env_file(file: __DIR__ . '/../../.env', usePutEnv: true, override: true);
             }
 
             // -- This is the official place where users are supposed to store .env file.
-            $dataPath = env('WS_DATA_PATH', fn() => inContainer() ? '/config' : __DIR__ . '/../../var');
+            $dataPath = env('WS_DATA_PATH', static fn() => in_container() ? '/config' : __DIR__ . '/../../var');
             if (file_exists($dataPath . '/config/.env')) {
-                loadEnvFile(file: $dataPath . '/config/.env', usePutEnv: true, override: true);
+                load_env_file(file: $dataPath . '/config/.env', usePutEnv: true, override: true);
             }
         })();
 
@@ -73,7 +73,7 @@ final class Initializer
 
         Config::init(require __DIR__ . '/../../config/config.php');
 
-        foreach ((array)require __DIR__ . '/../../config/services.php' as $name => $definition) {
+        foreach ((array) require __DIR__ . '/../../config/services.php' as $name => $definition) {
             Container::add($name, $definition);
         }
 
@@ -102,11 +102,11 @@ final class Initializer
 
         $this->createDirectories();
 
-        (function () {
+        (static function () {
             $path = Config::get('path') . '/config/config.yaml';
 
             if (file_exists($path)) {
-                Config::init(fn() => array_replace_recursive(Config::getAll(), Yaml::parseFile($path)));
+                Config::init(static fn() => array_replace_recursive(Config::getAll(), Yaml::parseFile($path)));
             }
 
             $path = Config::get('path') . '/config/servers.yaml';
@@ -120,7 +120,7 @@ final class Initializer
                 if (($yaml = Yaml::parseFile($path)) && is_array($yaml)) {
                     $list = [];
                     foreach ($yaml as $key => $val) {
-                        $list[(string)makeIgnoreId($key)] = $val;
+                        $list[(string) make_ignore_id($key)] = $val;
                     }
                     Config::save('ignore', $list);
                 }
@@ -133,24 +133,24 @@ final class Initializer
 
         $this->setupLoggers($logger, Config::get('logger'));
 
-        set_error_handler(function ($severity, $message, $file, $line) {
+        set_error_handler(static function ($severity, $message, $file, $line) {
             if (!(error_reporting() & $severity)) {
                 return;
             }
             throw new ErrorException($message, 0, $severity, $file, $line);
         });
 
-        set_exception_handler(function (Throwable $e) use ($logger) {
-            $logger->error(message: "{class}: {error} ({file}:{line})." . PHP_EOL, context: [
+        set_exception_handler(static function (Throwable $e) use ($logger) {
+            $logger->error(message: '{class}: {error} ({file}:{line}).' . PHP_EOL, context: [
                 'class' => $e::class,
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
-                'line' => $e->getLine()
+                'line' => $e->getLine(),
             ]);
             exit(1);
         });
 
-        register_shutdown_function(function () use ($logger) {
+        register_shutdown_function(static function () use ($logger) {
             if (null === ($error = error_get_last())) {
                 return;
             }
@@ -166,7 +166,7 @@ final class Initializer
             ]);
         });
 
-        registerEvents();
+        register_events();
         $booted = true;
 
         return $this;
@@ -183,7 +183,7 @@ final class Initializer
             $cache = Container::get(CacheInterface::class);
 
             $routes = [];
-            $loader = false === $cache->has('routes_cli') ? generateRoutes() : $cache->get('routes_cli', []);
+            $loader = false === $cache->has('routes_cli') ? generate_routes() : $cache->get('routes_cli', []);
 
             foreach ($loader as $route) {
                 $routes[ag($route, 'path')] = ag($route, 'callable');
@@ -206,7 +206,7 @@ final class Initializer
      *
      * @return iResponse Returns the HTTP response.
      */
-    public function http(iRequest|null $request = null, Closure|null $fn = null): iResponse
+    public function http(?iRequest $request = null, ?Closure $fn = null): iResponse
     {
         if (null === $request) {
             $factory = new Psr17Factory();
@@ -217,7 +217,7 @@ final class Initializer
             $response = null === $fn ? $this->defaultHttpServer($request) : $fn($request);
 
             if (false === $response->hasHeader('X-Application-Version')) {
-                $response = $response->withAddedHeader('X-Application-Version', getAppVersion());
+                $response = $response->withAddedHeader('X-Application-Version', get_app_version());
             }
 
             if ($response->hasHeader('X-No-AccessLog') || 'OPTIONS' === $request->getMethod()) {
@@ -227,10 +227,10 @@ final class Initializer
             $this->write(
                 $request,
                 $response->getStatusCode() >= 400 ? Level::Error : Level::Info,
-                $this->formatLog($request, $response)
+                $this->formatLog($request, $response),
             );
         } catch (HttpException|RouterHttpException $e) {
-            $realStatusCode = ($e instanceof RouterHttpException) ? $e->getStatusCode() : $e->getCode();
+            $realStatusCode = $e instanceof RouterHttpException ? $e->getStatusCode() : $e->getCode();
             $statusCode = $realStatusCode >= 200 && $realStatusCode <= 499 ? $realStatusCode : 503;
 
             $response = api_error(
@@ -250,21 +250,23 @@ final class Initializer
             $this->write(
                 $request,
                 $statusCode >= 400 ? Level::Error : Level::Info,
-                $this->formatLog($request, $response)
+                $this->formatLog($request, $response),
             );
         } catch (Throwable $e) {
             $response = api_error(
                 message: 'Unable to serve request check logs.',
                 httpCode: Status::SERVICE_UNAVAILABLE,
-                body: true !== (bool)Config::get('debug.enabled', false) ? [] : [
-                    'exception' => [
-                        'message' => $e->getMessage(),
-                        'kind' => $e::class,
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'trace' => $e->getTrace(),
+                body: true !== (bool) Config::get('debug.enabled', false)
+                    ? []
+                    : [
+                        'exception' => [
+                            'message' => $e->getMessage(),
+                            'kind' => $e::class,
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'trace' => $e->getTrace(),
+                        ],
                     ],
-                ]
             );
 
             Container::get(iLogger::class)->error($e->getMessage(), [
@@ -298,7 +300,9 @@ final class Initializer
             return $this->defaultAPIServer(clone $request);
         }
 
-        return new ServeStatic()->serve($request)->withHeader('Access-Control-Allow-Origin', '*')
+        return new ServeStatic()
+            ->serve($request)
+            ->withHeader('Access-Control-Allow-Origin', '*')
             ->withHeader('Access-Control-Allow-Credentials', 'true');
     }
 
@@ -322,7 +326,7 @@ final class Initializer
         $router->setStrategy($strategy);
 
         $mw = require __DIR__ . '/../../config/Middlewares.php';
-        $middlewares = (array)$mw(Container::getContainer());
+        $middlewares = (array) $mw(Container::getContainer());
 
         foreach ($middlewares as $middleware) {
             $router->middleware($middleware(Container::getContainer()));
@@ -355,9 +359,9 @@ final class Initializer
         };
 
         // -- Register HTTP API routes.
-        (function () use ($fn, $router) {
+        (static function () use ($fn, $router) {
             $cache = Container::get(CacheInterface::class);
-            foreach ($cache->has('routes_http') ? $cache->get('routes_http') : generateRoutes('http') as $route) {
+            foreach ($cache->has('routes_http') ? $cache->get('routes_http') : generate_routes('http') as $route) {
                 if (!empty($route['middlewares'])) {
                     $route['lazymiddlewares'] = $route['middlewares'];
                     unset($route['middlewares']);
@@ -390,9 +394,9 @@ final class Initializer
             throw new RuntimeException('No ENV:WS_TMP_DIR was set.');
         }
 
-        $fn = function (string $key, string $path): string {
+        $fn = static function (string $key, string $path): string {
             if (false === file_exists($path)) {
-                if (false === @mkdir($path, 0755, true) && false === is_dir($path)) {
+                if (false === @mkdir($path, 0o755, true) && false === is_dir($path)) {
                     throw new RuntimeException(r("Unable to create '{path}' directory.", ['path' => $path]));
                 }
             }
@@ -405,7 +409,7 @@ final class Initializer
                 throw new RuntimeException(
                     r("Unable to write to '{path}' directory. Check user permissions and/or user mapping.", [
                         'path' => $path,
-                    ])
+                    ]),
                 );
             }
 
@@ -413,7 +417,7 @@ final class Initializer
                 throw new RuntimeException(
                     r("Unable to read data from '{path}' directory. Check user permissions and/or user mapping.", [
                         'path' => $path,
-                    ])
+                    ]),
                 );
             }
 
@@ -429,7 +433,7 @@ final class Initializer
             $dir = r($dir, $list);
 
             if (false === file_exists($dir)) {
-                if (false === @mkdir($dir, 0755, true) && false === is_dir($dir)) {
+                if (false === @mkdir($dir, 0o755, true) && false === is_dir($dir)) {
                     throw new RuntimeException(r("Unable to create '{path}' directory.", ['path' => $dir]));
                 }
             }
@@ -446,16 +450,17 @@ final class Initializer
      */
     private function setupLoggers(Logger $logger, array $loggers): void
     {
-        $inContainer = inContainer();
+        $inContainer = in_container();
 
         $wrap = Container::get(LogSuppressor::class);
 
         if (null !== ($logfile = Config::get('api.logfile'))) {
-            $this->accessLog = $logger->withName(name: 'http')
+            $this->accessLog = $logger
+                ->withName(name: 'http')
                 ->pushHandler($wrap->withHandler(new StreamHandler($logfile, Level::Info, true)));
 
             if (true === $inContainer) {
-                assert($this->accessLog instanceof Logger);
+                assert($this->accessLog instanceof Logger, 'Expected logger instance for access log.');
                 $this->accessLog->pushHandler($wrap->withHandler(new StreamHandler('php://stderr', Level::Info, true)));
             }
         }
@@ -465,12 +470,12 @@ final class Initializer
                 throw new RuntimeException(r("Logger '{name}' has no type set.", ['name' => $name]));
             }
 
-            if (true !== (bool)ag($context, 'enabled', false)) {
+            if (true !== (bool) ag($context, 'enabled', false)) {
                 continue;
             }
 
             if (null !== ($cDocker = ag($context, 'docker', null))) {
-                $cDocker = (bool)$cDocker;
+                $cDocker = (bool) $cDocker;
                 if (true === $cDocker && !$inContainer) {
                     continue;
                 }
@@ -487,9 +492,9 @@ final class Initializer
                             new StreamHandler(
                                 ag($context, 'filename'),
                                 ag($context, 'level', Level::Info),
-                                (bool)ag($context, 'bubble', true),
-                            )
-                        )
+                                (bool) ag($context, 'bubble', true),
+                            ),
+                        ),
                     );
                     break;
                 case 'remote':
@@ -500,9 +505,9 @@ final class Initializer
                                     Container::get(iHttp::class),
                                     $remoteUrl,
                                     ag($context, 'level', Level::Warning),
-                                    (bool)ag($context, 'bubble', true),
-                                )
-                            )
+                                    (bool) ag($context, 'bubble', true),
+                                ),
+                            ),
                         );
                     }
                     break;
@@ -516,15 +521,15 @@ final class Initializer
                                 ag($context, 'name', Config::get('name')),
                                 ag($context, 'facility', LOG_USER),
                                 ag($context, 'level', Level::Info),
-                                (bool)Config::get('bubble', true),
-                            )
-                        )
+                                (bool) Config::get('bubble', true),
+                            ),
+                        ),
                     );
                     break;
                 default:
                     throw new RuntimeException(r("Logger '{name}' used unknown Logger type '{type}'.", [
                         'type' => $context['type'],
-                        'name' => $name
+                        'name' => $name,
                     ]));
             }
         }
@@ -543,7 +548,7 @@ final class Initializer
         int|string|Level $level,
         string $message,
         array $context = [],
-        bool $forceContext = false
+        bool $forceContext = false,
     ): void {
         if (null === $this->accessLog) {
             return;
@@ -551,12 +556,13 @@ final class Initializer
 
         $params = $request->getServerParams();
 
-        $uri = new Uri((string)ag($params, 'REQUEST_URI', '/'));
+        $uri = new Uri((string) ag($params, 'REQUEST_URI', '/'));
 
         if (false === empty($uri->getQuery())) {
             $query = [];
             parse_str($uri->getQuery(), $query);
             if (true === ag_exists($query, 'apikey')) {
+                // @mago-expect lint:no-literal-password
                 $query['apikey'] = 'api_key_removed';
                 $uri = $uri->withQuery(http_build_query($query));
             }
@@ -567,9 +573,9 @@ final class Initializer
                 'method' => $request->getMethod(),
                 'path' => $uri->getPath(),
                 'id' => ag($params, 'X_REQUEST_ID'),
-                'ip' => getClientIp($request),
+                'ip' => get_client_ip($request),
                 'agent' => ag($params, 'HTTP_USER_AGENT'),
-                'uri' => (string)$uri,
+                'uri' => (string) $uri,
             ],
         ], $context);
 
@@ -586,17 +592,19 @@ final class Initializer
         }
     }
 
-    private function formatLog(iRequest $request, iResponse $response, string|null $message = null): string
+    private function formatLog(iRequest $request, iResponse $response, ?string $message = null): string
     {
         $refer = '-';
 
         if (true === ag_exists($request->getServerParams(), 'HTTP_REFERER')) {
             $refer = new Uri(ag($request->getServerParams(), 'HTTP_REFERER'))
-                ->withQuery('')->withFragment('')->withUserInfo('');
+                ->withQuery('')
+                ->withFragment('')
+                ->withUserInfo('');
         }
 
         return r('{ip} - "{method} {uri} {protocol}" {status} {size} "{refer}" "{agent}" "{message}"', [
-            'ip' => getClientIp($request),
+            'ip' => get_client_ip($request),
             'user' => ag($request->getServerParams(), 'REMOTE_USER', '-'),
             'method' => $request->getMethod(),
             'uri' => $request->getUri()->getPath(),
@@ -604,7 +612,7 @@ final class Initializer
             'status' => $response->getStatusCode(),
             'size' => $response->getBody()->getSize() ?? 0,
             'agent' => ag($request->getServerParams(), 'HTTP_USER_AGENT', '-'),
-            'refer' => (string)$refer,
+            'refer' => (string) $refer,
             'message' => $message ?? '-',
         ]);
     }

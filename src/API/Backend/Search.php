@@ -20,9 +20,10 @@ final class Search
 {
     use APITraits;
 
-    public function __construct(private readonly iImport $mapper, private readonly iLogger $logger)
-    {
-    }
+    public function __construct(
+        private readonly iImport $mapper,
+        private readonly iLogger $logger,
+    ) {}
 
     #[Get(Index::URL . '/{name:backend}/search[/[{id}[/]]]', name: 'backend.search')]
     public function __invoke(iRequest $request, string $name, string|int|null $id = null): iResponse
@@ -39,7 +40,7 @@ final class Search
 
         $params = DataUtil::fromRequest($request, true);
 
-        $id = $id ?? $params->get('id') ?? null;
+        $id ??= $params->get('id') ?? null;
         $query = $params->get('q', null);
 
         if (null === $id && null === $query) {
@@ -69,8 +70,8 @@ final class Search
             } else {
                 $data = $backend->search(
                     query: $query,
-                    limit: (int)$params->get('limit', 25),
-                    opts: [Options::RAW_RESPONSE => $raw]
+                    limit: (int) $params->get('limit', 25),
+                    opts: [Options::RAW_RESPONSE => $raw],
                 );
                 foreach ($data as $entity) {
                     $item = $this->formatEntity($entity, userContext: $userContext);
@@ -86,11 +87,10 @@ final class Search
 
         if (count($data) < 1) {
             return api_error(r("No results were found for '{query}'.", [
-                'query' => $id ?? $query
+                'query' => $id ?? $query,
             ]), Status::NOT_FOUND);
         }
 
         return api_response(Status::OK, $response);
     }
-
 }

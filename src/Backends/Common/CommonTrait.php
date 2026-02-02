@@ -23,12 +23,12 @@ trait CommonTrait
      * @todo Expand the catch to include common http errors. json decode failing.
      * @todo raise the log level to error instead of warning as it's currently doing, warning imply it's ok to ignore.
      */
-    protected function tryResponse(Context $context, callable $fn, string|null $action = null): Response
+    protected function tryResponse(Context $context, callable $fn, ?string $action = null): Response
     {
         try {
             $response = $fn();
 
-            if (false === ($response instanceof Response)) {
+            if (false === $response instanceof Response) {
                 return new Response(status: true, response: $response);
             }
 
@@ -38,31 +38,31 @@ trait CommonTrait
                 status: false,
                 error: new Error(
                     ...lw(
-                    message: "{client}: '{backend}' {action} thrown unhandled exception '{error.kind}'. '{error.message}' at '{error.file}:{error.line}'.",
-                    context: [
-                        'action' => $action ?? '',
-                        'backend' => $context->backendName,
-                        'client' => $context->clientName,
-                        'message' => $e->getMessage(),
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
+                        message: "{client}: '{backend}' {action} thrown unhandled exception '{error.kind}'. '{error.message}' at '{error.file}:{error.line}'.",
+                        context: [
+                            'action' => $action ?? '',
+                            'backend' => $context->backendName,
+                            'client' => $context->clientName,
                             'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
+                            'error' => [
+                                'kind' => $e::class,
+                                'line' => $e->getLine(),
+                                'message' => $e->getMessage(),
+                                'file' => after($e->getFile(), ROOT_PATH),
+                            ],
+                            'exception' => [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                                'message' => $e->getMessage(),
+                                'trace' => $e->getTrace(),
+                            ],
                         ],
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ]
-                    ],
-                    e: $e
-                ),
+                        e: $e,
+                    ),
                     level: Levels::WARNING,
-                    previous: $e
-                )
+                    previous: $e,
+                ),
             );
         }
     }
@@ -83,13 +83,13 @@ trait CommonTrait
         string $key,
         callable $fn,
         DateInterval $ttl,
-        iLogger|null $logger = null
+        ?iLogger $logger = null,
     ): mixed {
         try {
             $cache = $context->cache->getInterface();
             $cacheKey = $context->backendName . '_' . $key;
             if (true === ag_exists($context->options, Options::PLEX_USER_PIN)) {
-                $cacheKey = $cacheKey . '_with_pin';
+                $cacheKey .= '_with_pin';
             }
 
             if (true === $cache->has($cacheKey)) {

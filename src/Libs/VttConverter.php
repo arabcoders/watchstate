@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Libs;
 
 use InvalidArgumentException;
@@ -45,7 +47,7 @@ final readonly class VttConverter
                 preg_match(
                     '/((?:\d{1,2}:){1,2}\d{2}\.\d{1,3})\s+-->\s+((?:\d{1,2}:){1,2}\d{2}\.\d{1,3}) *(.*)/',
                     $line,
-                    $matches
+                    $matches,
                 );
 
                 if (isset($matches[3]) && ltrim($matches[3])) {
@@ -82,9 +84,11 @@ final readonly class VttConverter
                 $is_speaker = false;
 
                 foreach ($internalFormat[$i]['vtt']['speakers'] as $tmp_speaker) {
-                    if ($tmp_speaker !== null) {
-                        $is_speaker = true;
+                    if ($tmp_speaker === null) {
+                        continue;
                     }
+
+                    $is_speaker = true;
                 }
 
                 if (false === $is_speaker) {
@@ -143,23 +147,24 @@ final readonly class VttConverter
 
         if (!isset($parts[1])) {
             throw new InvalidArgumentException(r("Invalid timestamp - time doesn't have milliseconds: '{time}'.", [
-                'time' => $vtt_time
+                'time' => $vtt_time,
             ]));
         }
 
         $onlySeconds = strtotime("1970-01-01 {$parts[0]} UTC");
-        $milliseconds = (float)('0.' . $parts[1]);
+        $milliseconds = (float) ('0.' . $parts[1]);
 
         return $onlySeconds + $milliseconds;
     }
 
-    private static function internalTimeToVtt($internal_time): string
+    private static function internalTimeToVtt(string|float $internal_time): string
     {
-        $parts = explode('.', $internal_time); // 1.23
-        $whole = $parts[0]; // 1
-        $decimal = isset($parts[1]) ? substr($parts[1], 0, 3) : 0; // 23
+        $parts = explode('.', (string) $internal_time); // 1.23
+        $whole = (float) $parts[0]; // 1
+        $decimal = isset($parts[1]) ? substr($parts[1], 0, 3) : '0'; // 23
+        $seconds = (int) floor($whole);
 
-        return gmdate("H:i:s", floor($whole)) . '.' . str_pad($decimal, 3, '0', STR_PAD_RIGHT);
+        return gmdate('H:i:s', $seconds) . '.' . str_pad($decimal, 3, '0', STR_PAD_RIGHT);
     }
 
     private static function removeComments($content): string
@@ -198,19 +203,32 @@ final readonly class VttConverter
         // if there is text before it, then it is not a timestamp
         $rightTimestamp = '';
 
-        if (isset($timestamps['start']) && (substr_count($timestamps['start'], ':') >= $colonCount || substr_count(
+        if (
+            isset($timestamps['start'])
+            && (
+                substr_count($timestamps['start'], ':') >= $colonCount
+                || substr_count(
                     $timestamps['start'],
-                    ';'
-                ) >= $colonCount)) {
+                    ';',
+                ) >= $colonCount
+            )
+        ) {
             $textBeforeTimestamp = substr($line, 0, strpos($line, $timestamps['start']));
             if (!self::hasText($textBeforeTimestamp)) {
                 // start
                 $matches['start'] = $timestamps['start'];
                 $rightTimestamp = $matches['start'];
-                if ($timestampCount === 2 && isset($timestamps['end']) && (substr_count(
+                if (
+                    $timestampCount === 2
+                    && isset($timestamps['end'])
+                    && (
+                        substr_count(
                             $timestamps['end'],
-                            ':'
-                        ) >= $colonCount || substr_count($timestamps['end'], ';') >= $colonCount)) {
+                            ':',
+                        ) >= $colonCount
+                        || substr_count($timestamps['end'], ';') >= $colonCount
+                    )
+                ) {
                     // end
                     $matches['end'] = $timestamps['end'];
                     $rightTimestamp = $matches['end'];
@@ -271,5 +289,4 @@ final readonly class VttConverter
     {
         return 1 === preg_match('/\d/', $line);
     }
-
 }

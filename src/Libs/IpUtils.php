@@ -20,9 +20,7 @@ final class IpUtils
     /**
      * This class should not be instantiated.
      */
-    private function __construct()
-    {
-    }
+    private function __construct() {}
 
     /**
      * Checks if an IPv4 or IPv6 address is contained in the list of given IPs or subnets.
@@ -40,7 +38,7 @@ final class IpUtils
 
         $method = substr_count($requestIp, ':') > 1 ? 'checkIp6' : 'checkIp4';
 
-        return array_any($ips, fn($ip) => self::$method($requestIp, $ip));
+        return array_any($ips, static fn($ip) => self::$method($requestIp, $ip));
     }
 
     /**
@@ -81,11 +79,11 @@ final class IpUtils
         }
 
         return self::$checkedIps[$cacheKey] = 0 === substr_compare(
-                sprintf('%032b', ip2long($requestIp)),
-                sprintf('%032b', ip2long($address)),
-                0,
-                (int)$netmask
-            );
+            sprintf('%032b', ip2long($requestIp)),
+            sprintf('%032b', ip2long($address)),
+            0,
+            (int) $netmask,
+        );
     }
 
     /**
@@ -110,9 +108,9 @@ final class IpUtils
             return self::$checkedIps[$cacheKey];
         }
 
-        if (!((extension_loaded('sockets') && defined('AF_INET6')) || @inet_pton('::1'))) {
+        if (!(extension_loaded('sockets') && defined('AF_INET6') || @inet_pton('::1'))) {
             throw new RuntimeException(
-                'Unable to check Ipv6. Check that PHP was not compiled with option "disable-ipv6".'
+                'Unable to check Ipv6. Check that PHP was not compiled with option "disable-ipv6".',
             );
         }
 
@@ -120,7 +118,7 @@ final class IpUtils
             [$address, $netmask] = explode('/', $ip, 2);
 
             if ('0' === $netmask) {
-                return (bool)unpack('n*', @inet_pton($address));
+                return (bool) unpack('n*', @inet_pton($address));
             }
 
             if ($netmask < 1 || $netmask > 128) {
@@ -139,10 +137,10 @@ final class IpUtils
         }
 
         for ($i = 1, $ceil = ceil($netmask / 16); $i <= $ceil; ++$i) {
-            $left = $netmask - 16 * ($i - 1);
-            $left = ($left <= 16) ? $left : 16;
+            $left = $netmask - (16 * ($i - 1));
+            $left = $left <= 16 ? $left : 16;
             $mask = ~(0xFFFF >> $left) & 0xFFFF;
-            if (($bytesAddr[$i] & $mask) != ($bytesTest[$i] & $mask)) {
+            if (($bytesAddr[$i] & $mask) !== ($bytesTest[$i] & $mask)) {
                 return self::$checkedIps[$cacheKey] = false;
             }
         }

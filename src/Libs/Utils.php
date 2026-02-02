@@ -50,7 +50,7 @@ use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\Process\Process;
 
-if (!function_exists('checkIgnoreRule')) {
+if (!function_exists('check_ignore_rule')) {
     /**
      * Check if the given ignore rule is valid.
      *
@@ -60,7 +60,7 @@ if (!function_exists('checkIgnoreRule')) {
      * @return bool True if the ignore rule is valid, false otherwise.
      * @throws RuntimeException Throws an exception if the ignore rule is invalid.
      */
-    function checkIgnoreRule(string $guid, UserContext|null $userContext = null): bool
+    function check_ignore_rule(string $guid, ?UserContext $userContext = null): bool
     {
         $urlParts = parse_url($guid);
 
@@ -74,7 +74,7 @@ if (!function_exists('checkIgnoreRule')) {
 
         $sources = array_keys(Guid::getSupported());
 
-        if (false === in_array('guid_' . $db, $sources)) {
+        if (false === in_array('guid_' . $db, $sources, true)) {
             throw new RuntimeException(r("Invalid db source name '{db}' was given. Expected values are '{dbs}'.", [
                 'db' => $db,
                 'dbs' => implode(', ', array_map(fn($f) => after($f, 'guid_'), $sources)),
@@ -91,10 +91,10 @@ if (!function_exists('checkIgnoreRule')) {
             throw new RuntimeException('No type was given.');
         }
 
-        if (false === in_array($type, iState::TYPES_LIST)) {
+        if (false === in_array($type, iState::TYPES_LIST, true)) {
             throw new RuntimeException(r("Invalid type '{type}' was given. Expected values are '{types}'.", [
                 'type' => $type,
-                'types' => implode(', ', iState::TYPES_LIST)
+                'types' => implode(', ', iState::TYPES_LIST),
             ]));
         }
 
@@ -108,7 +108,7 @@ if (!function_exists('checkIgnoreRule')) {
             $backends = array_keys(Config::get('servers', []));
         }
 
-        if (false === in_array($backend, $backends)) {
+        if (false === in_array($backend, $backends, true)) {
             throw new RuntimeException(r("Invalid backend name '{backend}' was given. Expected values are '{list}'.", [
                 'backend' => $backend,
                 'list' => implode(', ', $backends),
@@ -119,7 +119,7 @@ if (!function_exists('checkIgnoreRule')) {
     }
 }
 
-if (!function_exists('runCommand')) {
+if (!function_exists('run_command')) {
     /**
      * Run a command.
      *
@@ -130,7 +130,7 @@ if (!function_exists('runCommand')) {
      *
      * @return string|array The output of the command.
      */
-    function runCommand(string $command, array $args = [], bool $asArray = false, array $opts = []): string|array
+    function run_command(string $command, array $args = [], bool $asArray = false, array $opts = []): string|array
     {
         $path = realpath(__DIR__ . '/../../');
 
@@ -159,7 +159,7 @@ if (!function_exists('runCommand')) {
     }
 }
 
-if (!function_exists('tryCatch')) {
+if (!function_exists('try_catch')) {
     /**
      * Try to execute a callback and catch any exceptions.
      *
@@ -169,7 +169,7 @@ if (!function_exists('tryCatch')) {
      *
      * @return mixed The result of the callback or the catch. or null if no catch is provided.
      */
-    function tryCatch(Closure $callback, Closure|null $catch = null, Closure|null $finally = null): mixed
+    function try_catch(Closure $callback, ?Closure $catch = null, ?Closure $finally = null): mixed
     {
         try {
             return $callback();
@@ -183,7 +183,7 @@ if (!function_exists('tryCatch')) {
     }
 }
 
-if (!function_exists('APIRequest')) {
+if (!function_exists('api_request')) {
     /**
      * Make internal request to the API.
      *
@@ -194,7 +194,7 @@ if (!function_exists('APIRequest')) {
      *
      * @return APIResponse The response object.
      */
-    function APIRequest(Method|string $method, string $path, array $json = [], array $opts = []): APIResponse
+    function api_request(Method|string $method, string $path, array $json = [], array $opts = []): APIResponse
     {
         $initializer = Container::get(Initializer::class);
 
@@ -204,14 +204,14 @@ if (!function_exists('APIRequest')) {
         $uri = new Uri($path);
 
         $server = [
-            'REQUEST_METHOD' => ($method instanceof Method) ? $method->value : strtoupper($method),
+            'REQUEST_METHOD' => $method instanceof Method ? $method->value : strtoupper($method),
             'SCRIPT_FILENAME' => realpath(__DIR__ . '/../../public/index.php'),
             'REMOTE_ADDR' => '127.0.0.1',
             'REQUEST_URI' => Config::get('api.prefix') . $uri->getPath(),
             'SERVER_NAME' => 'localhost',
             'SERVER_PORT' => 80,
             'HTTP_USER_AGENT' => Config::get('http.default.options.headers.User-Agent', 'APIRequest'),
-            'X_REQUEST_ID' => generateUUID('intr'),
+            'X_REQUEST_ID' => generate_uuid('intr'),
             ...ag($opts, 'server', []),
         ];
 
@@ -235,7 +235,7 @@ if (!function_exists('APIRequest')) {
 
         if (!empty($uri->getQuery())) {
             parse_str($uri->getQuery(), $queryFromPath);
-            $query = deepArrayMerge([$queryFromPath, $query]);
+            $query = deep_array_merge([$queryFromPath, $query]);
         }
 
         if (!empty($query)) {
@@ -247,7 +247,7 @@ if (!function_exists('APIRequest')) {
             headers: $headers,
             get: $query,
             post: $json,
-            body: $body
+            body: $body,
         )->withAttribute(Options::INTERNAL_REQUEST, true);
 
         if (null !== ($callback = ag($opts, 'callback'))) {
@@ -278,7 +278,7 @@ if (!function_exists('APIRequest')) {
     }
 }
 
-if (!function_exists('getServerColumnSpec')) {
+if (!function_exists('get_server_column_spec')) {
     /**
      * Returns the spec for the given server column.
      *
@@ -286,7 +286,7 @@ if (!function_exists('getServerColumnSpec')) {
      *
      * @return array The spec for the given column. Otherwise, an empty array.
      */
-    function getServerColumnSpec(string $column): array
+    function get_server_column_spec(string $column): array
     {
         static $_serverSpec = null;
 
@@ -295,16 +295,18 @@ if (!function_exists('getServerColumnSpec')) {
         }
 
         foreach ($_serverSpec as $spec) {
-            if (ag($spec, 'key') === $column) {
-                return $spec;
+            if (ag($spec, 'key') !== $column) {
+                continue;
             }
+
+            return $spec;
         }
 
         return [];
     }
 }
 
-if (!function_exists('getEnvSpec')) {
+if (!function_exists('get_env_spec')) {
     /**
      * Returns the spec for the given environment variable.
      *
@@ -312,7 +314,7 @@ if (!function_exists('getEnvSpec')) {
      *
      * @return array The spec for the given column. Otherwise, an empty array.
      */
-    function getEnvSpec(string $env): array
+    function get_env_spec(string $env): array
     {
         static $_envSpec = null;
 
@@ -321,16 +323,18 @@ if (!function_exists('getEnvSpec')) {
         }
 
         foreach ($_envSpec as $spec) {
-            if (ag($spec, 'key') === $env) {
-                return $spec;
+            if (ag($spec, 'key') !== $env) {
+                continue;
             }
+
+            return $spec;
         }
 
         return [];
     }
 }
 
-if (!function_exists('parseEnvFile')) {
+if (!function_exists('parse_env_file')) {
     /**
      * Parse the environment file, and returns key/value pairs.
      *
@@ -339,7 +343,7 @@ if (!function_exists('parseEnvFile')) {
      * @return array<string, string> The environment variables.
      * @throws InvalidArgumentException Throws an exception if the file does not exist.
      */
-    function parseEnvFile(string $file): array
+    function parse_env_file(string $file): array
     {
         $env = [];
 
@@ -355,8 +359,9 @@ if (!function_exists('parseEnvFile')) {
             [$name, $value] = explode('=', $line, 2);
 
             // -- check if value is quoted.
-            if ((true === str_starts_with($value, '"') && true === str_ends_with($value, '"')) ||
-                (true === str_starts_with($value, "'") && true === str_ends_with($value, "'"))
+            if (
+                true === str_starts_with($value, '"') && true === str_ends_with($value, '"')
+                || true === str_starts_with($value, "'") && true === str_ends_with($value, "'")
             ) {
                 $value = substr($value, 1, -1);
             }
@@ -372,7 +377,7 @@ if (!function_exists('parseEnvFile')) {
     }
 }
 
-if (!function_exists('loadEnvFile')) {
+if (!function_exists('load_env_file')) {
     /**
      * Load the environment file.
      *
@@ -382,10 +387,10 @@ if (!function_exists('loadEnvFile')) {
      *
      * @return void
      */
-    function loadEnvFile(string $file, bool $usePutEnv = false, bool $override = true): void
+    function load_env_file(string $file, bool $usePutEnv = false, bool $override = true): void
     {
         try {
-            $env = parseEnvFile($file);
+            $env = parse_env_file($file);
 
             if (count($env) < 1) {
                 return;
@@ -412,7 +417,7 @@ if (!function_exists('loadEnvFile')) {
     }
 }
 
-if (!function_exists('isSchedulerRunning')) {
+if (!function_exists('is_scheduler_running')) {
     /**
      * Check if the task scheduler is running. This function is only available when running in a container.
      *
@@ -421,21 +426,21 @@ if (!function_exists('isSchedulerRunning')) {
      *
      * @return array{ status: bool, message: string }
      */
-    function isSchedulerRunning(string $pidFile = '/tmp/ws-job-runner.pid', bool $ignoreContainer = false): array
+    function is_scheduler_running(string $pidFile = '/tmp/ws-job-runner.pid', bool $ignoreContainer = false): array
     {
-        if (false === $ignoreContainer && !inContainer()) {
+        if (false === $ignoreContainer && !in_container()) {
             return [
                 'status' => true,
                 'restartable' => false,
-                'message' => 'We can only track the task scheduler status when running in a container.'
+                'message' => 'We can only track the task scheduler status when running in a container.',
             ];
         }
 
-        if (true === (bool)env('DISABLE_CRON', false)) {
+        if (true === (bool) env('DISABLE_CRON', false)) {
             return [
                 'status' => false,
                 'restartable' => false,
-                'message' => "Task scheduler is disabled via 'DISABLE_CRON' environment variable."
+                'message' => "Task scheduler is disabled via 'DISABLE_CRON' environment variable.",
             ];
         }
 
@@ -443,12 +448,12 @@ if (!function_exists('isSchedulerRunning')) {
             return [
                 'status' => false,
                 'restartable' => true,
-                'message' => 'No PID file was found - Likely means task scheduler failed to start.'
+                'message' => 'No PID file was found - Likely means task scheduler failed to start.',
             ];
         }
 
         try {
-            $pid = trim((string)Stream::make($pidFile));
+            $pid = trim((string) Stream::make($pidFile));
         } catch (Throwable $e) {
             return ['status' => false, 'message' => $e->getMessage()];
         }
@@ -456,14 +461,16 @@ if (!function_exists('isSchedulerRunning')) {
         if (true === str_starts_with(PHP_OS, 'WIN')) {
             // Use tasklist to check if the process is running
             $output = [];
-            $iPid = (int)$pid;
+            $iPid = (int) $pid;
             exec("tasklist /FI \"PID eq {$iPid}\"", $output);
             $found = false;
             foreach ($output as $line) {
-                if (true === str_contains($line, $pid)) {
-                    $found = true;
-                    break;
+                if (true !== str_contains($line, $pid)) {
+                    continue;
                 }
+
+                $found = true;
+                break;
             }
 
             if (false === $found) {
@@ -472,8 +479,8 @@ if (!function_exists('isSchedulerRunning')) {
                     'restartable' => true,
                     'message' => r(
                         "Found PID '{pid}' in file, but it seems the process is not active.",
-                        ['pid' => $pid]
-                    )
+                        ['pid' => $pid],
+                    ),
                 ];
             }
         } else {
@@ -482,8 +489,7 @@ if (!function_exists('isSchedulerRunning')) {
                 return [
                     'status' => false,
                     'restartable' => true,
-                    'message' => r("Found PID '{pid}' in file, but it seems the process is not active.", ['pid' => $pid]
-                    )
+                    'message' => r("Found PID '{pid}' in file, but it seems the process is not active.", ['pid' => $pid]),
                 ];
             }
 
@@ -493,7 +499,7 @@ if (!function_exists('isSchedulerRunning')) {
                 return [
                     'status' => false,
                     'restartable' => true,
-                    'message' => r("Found PID '{pid}', but it is a zombie. Restart the process.", ['pid' => $pid])
+                    'message' => r("Found PID '{pid}', but it is a zombie. Restart the process.", ['pid' => $pid]),
                 ];
             }
         }
@@ -502,12 +508,12 @@ if (!function_exists('isSchedulerRunning')) {
             'pid' => $pid,
             'status' => true,
             'restartable' => true,
-            'message' => 'Task scheduler is running.'
+            'message' => 'Task scheduler is running.',
         ];
     }
 }
 
-if (!function_exists('restartScheduler')) {
+if (!function_exists('restart_scheduler')) {
     /**
      * Restart the task scheduler.
      *
@@ -516,13 +522,13 @@ if (!function_exists('restartScheduler')) {
      *
      * @return array{ status: bool, message: string }
      */
-    function restartScheduler(bool $ignoreContainer = false, bool $force = false): array
+    function restart_scheduler(bool $ignoreContainer = false, bool $force = false): array
     {
-        if (false === $ignoreContainer && !inContainer()) {
+        if (false === $ignoreContainer && !in_container()) {
             return [
                 'status' => true,
                 'restartable' => false,
-                'message' => 'We can only restart the task scheduler when running in a container.'
+                'message' => 'We can only restart the task scheduler when running in a container.',
             ];
         }
 
@@ -530,13 +536,13 @@ if (!function_exists('restartScheduler')) {
 
         if (true === file_exists($pidFile)) {
             try {
-                $pid = trim((string)Stream::make($pidFile));
+                $pid = trim((string) Stream::make($pidFile));
             } catch (Throwable $e) {
                 return ['status' => false, 'restartable' => true, 'message' => $e->getMessage()];
             }
 
             if (file_exists(r('/proc/{pid}/status', ['pid' => $pid]))) {
-                @posix_kill((int)$pid, $force ? 9 : 1);
+                @posix_kill((int) $pid, $force ? 9 : 1);
             }
 
             clearstatcache(true, $pidFile);
@@ -557,8 +563,8 @@ if (!function_exists('restartScheduler')) {
     }
 }
 
-if (!function_exists('findSideCarFiles')) {
-    function findSideCarFiles(SplFileInfo $path): array
+if (!function_exists('find_side_car_files')) {
+    function find_side_car_files(SplFileInfo $path): array
     {
         $list = [];
 
@@ -599,24 +605,26 @@ if (!function_exists('findSideCarFiles')) {
 if (!function_exists('array_change_key_case_recursive')) {
     function array_change_key_case_recursive(array $input, int $case = CASE_LOWER): array
     {
-        if (!in_array($case, [CASE_UPPER, CASE_LOWER])) {
+        if (!in_array($case, [CASE_UPPER, CASE_LOWER], true)) {
             throw new RuntimeException("Case parameter '{$case}' is invalid.");
         }
 
         $input = array_change_key_case($input, $case);
 
         foreach ($input as $key => $array) {
-            if (is_array($array)) {
-                $input[$key] = array_change_key_case_recursive($array, $case);
+            if (!is_array($array)) {
+                continue;
             }
+
+            $input[$key] = array_change_key_case_recursive($array, $case);
         }
 
         return $input;
     }
 }
 
-if (!function_exists('getMimeType')) {
-    function getMimeType(string $file): string
+if (!function_exists('get_mime_type')) {
+    function get_mime_type(string $file): string
     {
         static $fileInfo = null;
 
@@ -628,8 +636,8 @@ if (!function_exists('getMimeType')) {
     }
 }
 
-if (!function_exists('getExtension')) {
-    function getExtension(string $filename): string
+if (!function_exists('get_extension')) {
+    function get_extension(string $filename): string
     {
         return new SplFileInfo($filename)->getExtension();
     }
@@ -644,16 +652,16 @@ if (!function_exists('ffprobe_file')) {
      * @return array
      * @noinspection PhpDocMissingThrowsInspection
      */
-    function ffprobe_file(string $path, iCache|null $cache = null): array
+    function ffprobe_file(string $path, ?iCache $cache = null): array
     {
         $cacheKey = md5($path . filesize($path));
 
         if (null !== $cache && $cache->has($cacheKey)) {
             $data = $cache->get($cacheKey);
-            return (is_array($data) ? $data : json_decode($data, true));
+            return is_array($data) ? $data : json_decode($data, true);
         }
 
-        $mimeType = getMimeType($path);
+        $mimeType = get_mime_type($path);
 
         $isTs = str_ends_with($path, '.ts') && 'application/octet-stream' === $mimeType;
         if (!str_starts_with($mimeType, 'video/') && !str_starts_with($mimeType, 'audio/') && !$isTs) {
@@ -668,7 +676,7 @@ if (!function_exists('ffprobe_file')) {
             'json',
             '-show_format',
             '-show_streams',
-            'file:' . basename($path)
+            'file:' . basename($path),
         ], cwd: dirname($path));
 
         $process->run();
@@ -687,8 +695,8 @@ if (!function_exists('ffprobe_file')) {
     }
 }
 
-if (!function_exists('generateUUID')) {
-    function generateUUID(string|int|null $prefix = null): string
+if (!function_exists('generate_uuid')) {
+    function generate_uuid(string|int|null $prefix = null): string
     {
         $prefixUUID = '';
 
@@ -700,7 +708,7 @@ if (!function_exists('generateUUID')) {
     }
 }
 
-if (!function_exists('cacheableItem')) {
+if (!function_exists('cacheable_item')) {
     /**
      * Get Item From Cache or call Callable and cache result.
      *
@@ -712,7 +720,7 @@ if (!function_exists('cacheableItem')) {
      *
      * @return mixed
      */
-    function cacheableItem(
+    function cacheable_item(
         string $key,
         Closure $function,
         DateInterval|int|null $ttl = null,
@@ -738,11 +746,11 @@ if (!function_exists('cacheableItem')) {
     }
 }
 
-if (!function_exists('registerEvents')) {
+if (!function_exists('register_events')) {
     /**
      * Register events.
      */
-    function registerEvents(bool $ignoreCache = false): void
+    function register_events(bool $ignoreCache = false): void
     {
         static $alreadyRegistered = false;
 
@@ -752,14 +760,14 @@ if (!function_exists('registerEvents')) {
 
         $logger = Container::get(iLogger::class);
         $dispatcher = Container::get(EventDispatcherInterface::class);
-        assert($dispatcher instanceof EventDispatcher);
+        assert($dispatcher instanceof EventDispatcher, 'Expected EventDispatcher for event registration.');
 
         /** @var array<ScannerItem> $list */
-        $list = cacheableItem(
+        $list = cacheable_item(
             'event_listeners',
             fn() => AttributesScanner::scan(Config::get('events.listeners.locations', []))->for(EventListener::class),
             Config::get('events.listeners.cache', fn() => new DateInterval('PT1H')),
-            $ignoreCache
+            $ignoreCache,
         );
 
         foreach ($list as $item) {
@@ -780,7 +788,7 @@ if (!function_exists('registerEvents')) {
     }
 }
 
-if (!function_exists('queueEvent')) {
+if (!function_exists('queue_event')) {
     /**
      * Queue Event.
      *
@@ -791,15 +799,15 @@ if (!function_exists('queueEvent')) {
      * @return EventInfo
      * @throws \Psr\SimpleCache\InvalidArgumentException May throw this exception if saving to db fails and fallback also fail.
      */
-    function queueEvent(string $event, array $data = [], array $opts = []): EventInfo
+    function queue_event(string $event, array $data = [], array $opts = []): EventInfo
     {
         $repo = ag($opts, EventsRepository::class, fn() => Container::get(EventsRepository::class));
-        assert($repo instanceof EventsRepository);
+        assert($repo instanceof EventsRepository, 'Expected EventsRepository for queue event.');
 
         $item = null;
         if (null !== ($reference = ag($opts, EventsTable::COLUMN_REFERENCE))) {
             $criteria = [];
-            $isUnique = (bool)ag($opts, 'unique', false);
+            $isUnique = (bool) ag($opts, 'unique', false);
 
             if (false === $isUnique) {
                 $criteria[EventsTable::COLUMN_STATUS] = EventStatus::PENDING->value;
@@ -814,14 +822,14 @@ if (!function_exists('queueEvent')) {
             unset($refItem);
         }
 
-        $item = $item ?? $repo->getObject([]);
+        $item ??= $repo->getObject([]);
         $item->event = $event;
         $item->status = EventStatus::PENDING;
         $item->event_data = $data;
         if (ag_exists($opts, EventsTable::COLUMN_CREATED_AT)) {
             $item->created_at = $opts[EventsTable::COLUMN_CREATED_AT];
         } else {
-            $item->created_at = makeDate();
+            $item->created_at = make_date();
         }
 
         $item->options = [
@@ -852,7 +860,7 @@ if (!function_exists('queueEvent')) {
             if (false === ag_exists($opts, 'cached') && false !== stripos($e->getMessage(), 'database is locked')) {
                 $cache = Container::get(iCache::class);
                 $events = $cache->get('events', []);
-                $opts[EventsTable::COLUMN_CREATED_AT] = makeDate();
+                $opts[EventsTable::COLUMN_CREATED_AT] = make_date();
                 $opts['cached'] = true;
                 $events[] = ['event' => $event, 'data' => $data, 'opts' => $opts];
                 $cache->set('events', $events, new DateInterval('PT1H'));
@@ -865,7 +873,7 @@ if (!function_exists('queueEvent')) {
     }
 }
 
-if (!function_exists('validateServersData')) {
+if (!function_exists('validate_servers_data')) {
     /**
      * Validates servers data against the servers.spec.php specification.
      *
@@ -874,10 +882,10 @@ if (!function_exists('validateServersData')) {
      *
      * @return array Returns ['valid' => true] on success, or ['valid' => false, 'errors' => [...]] on failure.
      */
-    function validateServersData(array $data, array $options = []): array
+    function validate_servers_data(array $data, array $options = []): array
     {
         $errors = [];
-        $validateImmutable = (bool)ag($options, 'validate_immutable', false);
+        $validateImmutable = (bool) ag($options, 'validate_immutable', false);
 
         // -- Load removed keys from config
         $removedKeys = ag(include __DIR__ . '/../../config/removed.keys.php', 'backend', []);
@@ -889,9 +897,9 @@ if (!function_exists('validateServersData')) {
             }
 
             // -- Validate backend name format
-            if (false === isValidName($backendName)) {
+            if (false === is_valid_name($backendName)) {
                 $errors[] = r("Backend name '{backend}' is invalid. Must only contain [lowercase a-z, 0-9, _].", [
-                    'backend' => $backendName
+                    'backend' => $backendName,
                 ]);
                 continue;
             }
@@ -900,7 +908,7 @@ if (!function_exists('validateServersData')) {
             $flattenedData = [];
             foreach ($backendData as $key => $value) {
                 if (is_array($value)) {
-                    foreach (flatArray([$key => $value]) as $subKey => $subValue) {
+                    foreach (flat_array([$key => $value]) as $subKey => $subValue) {
                         $flattenedData[$subKey] = $subValue;
                     }
                 } else {
@@ -914,17 +922,17 @@ if (!function_exists('validateServersData')) {
                 if (true === in_array($key, $removedKeys, true)) {
                     $errors[] = r("{backend}: Field '{key}' is no longer supported. Remove it", [
                         'backend' => $backendName,
-                        'key' => $key
+                        'key' => $key,
                     ]);
                     continue;
                 }
 
-                $spec = getServerColumnSpec($key);
+                $spec = get_server_column_spec($key);
 
                 if (empty($spec)) {
                     $errors[] = r("{backend}: Unknown field '{key}'.", [
                         'backend' => $backendName,
-                        'key' => $key
+                        'key' => $key,
                     ]);
                     continue;
                 }
@@ -933,7 +941,7 @@ if (!function_exists('validateServersData')) {
                 if (true === $validateImmutable && true === ag($spec, 'immutable', false)) {
                     $errors[] = r("{backend}: Field '{key}' is immutable and cannot be modified.", [
                         'backend' => $backendName,
-                        'key' => $key
+                        'key' => $key,
                     ]);
                     continue;
                 }
@@ -956,15 +964,18 @@ if (!function_exists('validateServersData')) {
 
                     // -- Check if type coercion was successful
                     if ('bool' === $expectedType || 'boolean' === $expectedType) {
-                        if (false === is_bool($value) && false === in_array(
+                        if (
+                            false === is_bool($value)
+                            && false === in_array(
                                 $value,
                                 [0, 1, '0', '1', 'true', 'false'],
-                                true
-                            )) {
+                                true,
+                            )
+                        ) {
                             $errors[] = r("{backend}: Field '{key}' must be a boolean, got {type}.", [
                                 'backend' => $backendName,
                                 'key' => $key,
-                                'type' => $actualType
+                                'type' => $actualType,
                             ]);
                             continue;
                         }
@@ -973,17 +984,21 @@ if (!function_exists('validateServersData')) {
                             $errors[] = r("{backend}: Field '{key}' must be an integer, got {type}.", [
                                 'backend' => $backendName,
                                 'key' => $key,
-                                'type' => $actualType
+                                'type' => $actualType,
                             ]);
                             continue;
                         }
-                    } elseif ('string' === $expectedType && false === is_string($value) && false === is_numeric(
-                            $value
-                        )) {
+                    } elseif (
+                        'string' === $expectedType
+                        && false === is_string($value)
+                        && false === is_numeric(
+                            $value,
+                        )
+                    ) {
                         $errors[] = r("{backend}: Field '{key}' must be a string, got {type}.", [
                             'backend' => $backendName,
                             'key' => $key,
-                            'type' => $actualType
+                            'type' => $actualType,
                         ]);
                         continue;
                     }
@@ -998,7 +1013,7 @@ if (!function_exists('validateServersData')) {
                             $errors[] = r("{backend}: Validation failed for '{key}': {error}", [
                                 'backend' => $backendName,
                                 'key' => $key,
-                                'error' => $e->getMessage()
+                                'error' => $e->getMessage(),
                             ]);
                         }
                     }
@@ -1013,8 +1028,8 @@ if (!function_exists('validateServersData')) {
                                     'backend' => $backendName,
                                     'key' => $key,
                                     'choices' => implode(', ', $spec['choices']),
-                                    'value' => $value
-                                ]
+                                    'value' => $value,
+                                ],
                             );
                         }
                     }
@@ -1027,7 +1042,7 @@ if (!function_exists('validateServersData')) {
                     $errors[] = r("{backend}: Type conversion failed for '{key}': {error}", [
                         'backend' => $backendName,
                         'key' => $key,
-                        'error' => $e->getMessage()
+                        'error' => $e->getMessage(),
                     ]);
                 }
             }
@@ -1036,7 +1051,7 @@ if (!function_exists('validateServersData')) {
         if (false === empty($errors)) {
             return [
                 'valid' => false,
-                'errors' => $errors
+                'errors' => $errors,
             ];
         }
 
@@ -1044,27 +1059,32 @@ if (!function_exists('validateServersData')) {
     }
 }
 
-if (!function_exists('getPagination')) {
-    function getPagination(iRequest $request, int $page = 1, int $perpage = 0, array $options = []): array
+if (!function_exists('get_pagination')) {
+    function get_pagination(iRequest $request, int $page = 1, int $perpage = 0, array $options = []): array
     {
-        $page = (int)($request->getQueryParams()['page'] ?? $page);
+        $page = (int) ($request->getQueryParams()['page'] ?? $page);
 
         if (0 === $perpage) {
             $perpage = 25;
         }
 
         if (false === array_key_exists('force_perpage', $options)) {
-            $perpage = (int)($request->getQueryParams()['perpage'] ?? $perpage);
+            $perpage = (int) ($request->getQueryParams()['perpage'] ?? $perpage);
         }
 
-        $start = (($page <= 2) ? ((1 === $page) ? 0 : $perpage) : $perpage * ($page - 1));
-        $start = (!$page) ? 0 : $start;
+        if ($page < 1 || 1 === $page) {
+            $start = 0;
+        } elseif (2 === $page) {
+            $start = $perpage;
+        } else {
+            $start = $perpage * ($page - 1);
+        }
 
         return [$page, $perpage, $start];
     }
 }
 
-if (!function_exists('getBackend')) {
+if (!function_exists('get_backend')) {
     /**
      * Retrieves the backend client for the specified name.
      *
@@ -1076,13 +1096,13 @@ if (!function_exists('getBackend')) {
      * @return iClient The backend client instance.
      * @throws RuntimeException If no backend with the specified name is found.
      */
-    function getBackend(
+    function get_backend(
         string $name,
         array $config = [],
-        ConfigFile|null $configFile = null,
-        array $options = []
+        ?ConfigFile $configFile = null,
+        array $options = [],
     ): iClient {
-        $configFile = $configFile ?? ConfigFile::open(Config::get('backends_file'), 'yaml');
+        $configFile ??= ConfigFile::open(Config::get('backends_file'), 'yaml');
 
         if (null === $configFile->get("{$name}.type", null)) {
             throw new RuntimeException(r("No backend named '{backend}' was found.", ['backend' => $name]));
@@ -1092,7 +1112,7 @@ if (!function_exists('getBackend')) {
         $default['name'] = $name;
         $data = array_replace_recursive($default, $config);
 
-        return makeBackend(backend: $data, name: $name, options: $options);
+        return make_backend(backend: $data, name: $name, options: $options);
     }
 }
 
@@ -1110,7 +1130,7 @@ if (!function_exists('lw')) {
      *
      * @return array{ message: string, context: array} The wrapped log message and context.
      */
-    function lw(string $message, array $context, Throwable|null $e = null): array
+    function lw(string $message, array $context, ?Throwable $e = null): array
     {
         if (null === $e) {
             return [
@@ -1119,7 +1139,7 @@ if (!function_exists('lw')) {
             ];
         }
 
-        if (true === ($e instanceof DBLayerException)) {
+        if (true === $e instanceof DBLayerException) {
             $context[DBLayer::class] = [
                 'query' => $e->getQueryString(),
                 'bind' => $e->getQueryBind(),
@@ -1127,7 +1147,7 @@ if (!function_exists('lw')) {
             ];
         }
 
-        if (true === ($e instanceof AppExceptionInterface) && $e->hasContext()) {
+        if (true === $e instanceof AppExceptionInterface && $e->hasContext()) {
             $context[AppExceptionInterface::class] = $e->getContext();
         }
 
@@ -1138,7 +1158,7 @@ if (!function_exists('lw')) {
     }
 }
 
-if (!function_exists('timeIt')) {
+if (!function_exists('time_it')) {
     /**
      * Time the execution of a function.
      *
@@ -1148,7 +1168,7 @@ if (!function_exists('timeIt')) {
      *
      * @return string
      */
-    function timeIt(Closure $function, string $name, int $round = 6): string
+    function time_it(Closure $function, string $name, int $round = 6): string
     {
         $start = microtime(true);
         $function();
@@ -1161,7 +1181,7 @@ if (!function_exists('timeIt')) {
     }
 }
 
-if (!function_exists('deletePath')) {
+if (!function_exists('delete_path')) {
     /**
      * Delete the contents of given path.
      *
@@ -1171,7 +1191,7 @@ if (!function_exists('deletePath')) {
      *
      * @return bool Whether the operation was successful.
      */
-    function deletePath(string $path, iLogger|null $logger = null, bool $dryRun = false): bool
+    function delete_path(string $path, ?iLogger $logger = null, bool $dryRun = false): bool
     {
         if (false === is_dir($path)) {
             return false;
@@ -1179,14 +1199,14 @@ if (!function_exists('deletePath')) {
 
         $iterator = new RecursiveIteratorIterator(
             iterator: new RecursiveDirectoryIterator(directory: $path, flags: FilesystemIterator::SKIP_DOTS),
-            mode: RecursiveIteratorIterator::CHILD_FIRST
+            mode: RecursiveIteratorIterator::CHILD_FIRST,
         );
 
         foreach ($iterator as $item) {
             if (null !== $logger) {
                 $context = [
                     'path' => $item->getPathname(),
-                    'type' => $item->isDir() ? 'directory' : 'file'
+                    'type' => $item->isDir() ? 'directory' : 'file',
                 ];
                 $logger->info("Removing {type} '{path}'.", $context);
             }
@@ -1207,7 +1227,7 @@ if (!function_exists('deletePath')) {
     }
 }
 
-if (!function_exists('normalizeName')) {
+if (!function_exists('normalize_name')) {
     /**
      * Normalize the name to be in [a-z_0-9] format.
      *
@@ -1216,7 +1236,7 @@ if (!function_exists('normalizeName')) {
      *
      * @return string The normalized name.
      */
-    function normalizeName(string $name, iLogger|null $logger = null, array $opts = []): string
+    function normalize_name(string $name, ?iLogger $logger = null, array $opts = []): string
     {
         if (true === ctype_digit($name)) {
             $newName = 'user_' . $name;
@@ -1230,7 +1250,7 @@ if (!function_exists('normalizeName')) {
             $logger->notice(ag($opts, 'log_message', "Normalized '{name}' to '{new_name}'."), [
                 'name' => $name,
                 'new_name' => $newName,
-                ...ag($opts, 'context', [])
+                ...ag($opts, 'context', []),
             ]);
         }
 
@@ -1253,7 +1273,7 @@ if (!function_exists('compress_files')) {
         $zip = new ZipArchive();
 
         if (null !== ($affix = ag($opts, 'affix'))) {
-            $to = r("{to}.{affix}", ['to' => $to, 'affix' => $affix]);
+            $to = r('{to}.{affix}', ['to' => $to, 'affix' => $affix]);
         }
 
         if (true !== $zip->open($to, ZipArchive::CREATE)) {
@@ -1281,7 +1301,7 @@ if (!function_exists('uncompressed_file')) {
      * @return bool Whether the file was uncompressed.
      * @noinspection PhpUnused
      */
-    function uncompress_file(string $file, string|null $destination = null): bool
+    function uncompress_file(string $file, ?string $destination = null): bool
     {
         $zip = new ZipArchive();
 
@@ -1289,7 +1309,7 @@ if (!function_exists('uncompressed_file')) {
             return false;
         }
 
-        $destination = $destination ?? dirname($file);
+        $destination ??= dirname($file);
 
         $zip->extractTo($destination);
         $zip->close();
@@ -1298,7 +1318,7 @@ if (!function_exists('uncompressed_file')) {
     }
 }
 
-if (!function_exists('readFileFromArchive')) {
+if (!function_exists('read_file_from_archive')) {
     /**
      * Read file from archive.
      * @param string $archive The archive file.
@@ -1306,7 +1326,7 @@ if (!function_exists('readFileFromArchive')) {
      *
      * @return array The stream and the ZipArchive instance.
      */
-    function readFileFromArchive(string $archive, string $file): array
+    function read_file_from_archive(string $archive, string $file): array
     {
         $zip = new ZipArchive();
 
@@ -1314,7 +1334,7 @@ if (!function_exists('readFileFromArchive')) {
             throw new InvalidArgumentException(r("Unable to open archive '{archive}'.", ['archive' => $archive]));
         }
 
-        if (true === str_contains($file, "*")) {
+        if (true === str_contains($file, '*')) {
             $found = false;
 
             for ($i = 0; $i < $zip->numFiles; $i++) {
@@ -1347,7 +1367,7 @@ if (!function_exists('readFileFromArchive')) {
     }
 }
 
-if (!function_exists('perUserDb')) {
+if (!function_exists('per_user_db')) {
     /**
      * Per User Database.
      *
@@ -1355,17 +1375,17 @@ if (!function_exists('perUserDb')) {
      *
      * @return iDB new mapper instance.
      */
-    function perUserDb(string $user): iDB
+    function per_user_db(string $user): iDB
     {
-        $path = fixPath(r("{path}/users/{user}", ['path' => Config::get('path'), 'user' => $user]));
+        $path = fix_path(r('{path}/users/{user}', ['path' => Config::get('path'), 'user' => $user]));
 
         if (false === file_exists($path)) {
-            if (false === @mkdir($path, 0755, true) && false === is_dir($path)) {
+            if (false === @mkdir($path, 0o755, true) && false === is_dir($path)) {
                 throw new RuntimeException(r("Unable to create '{path}' directory.", ['path' => $path]));
             }
         }
 
-        $dbFile = fixPath(r("{path}/user.db", ['path' => $path]));
+        $dbFile = fix_path(r('{path}/user.db', ['path' => $path]));
         $inTestMode = true === (defined('IN_TEST_MODE') && true === IN_TEST_MODE);
         $dsn = r('sqlite:{src}', ['src' => $inTestMode ? ':memory:' : $dbFile]);
 
@@ -1375,8 +1395,8 @@ if (!function_exists('perUserDb')) {
 
         $pdo = new PDO(dsn: $dsn, options: Config::get('database.options', []));
 
-        if (!$inTestMode && $changePerm && inContainer() && 644 !== (int)(decoct(fileperms($dbFile) & 0644))) {
-            @chmod($dbFile, 0644);
+        if (!$inTestMode && $changePerm && in_container() && 644 !== (int) decoct(fileperms($dbFile) & 0o644)) {
+            @chmod($dbFile, 0o644);
         }
 
         foreach (Config::get('database.exec', []) as $cmd) {
@@ -1395,7 +1415,7 @@ if (!function_exists('perUserDb')) {
     }
 }
 
-if (!function_exists('perUserConfig')) {
+if (!function_exists('per_user_config')) {
     /**
      * Return user backends config.
      *
@@ -1403,23 +1423,23 @@ if (!function_exists('perUserConfig')) {
      *
      * @return ConfigFile new mapper instance.
      */
-    function perUserConfig(string $user): ConfigFile
+    function per_user_config(string $user): ConfigFile
     {
-        $path = fixPath(r("{path}/users/{user}", ['path' => Config::get('path'), 'user' => $user]));
+        $path = fix_path(r('{path}/users/{user}', ['path' => Config::get('path'), 'user' => $user]));
         if (false === file_exists($path)) {
-            if (false === @mkdir($path, 0755, true) && false === is_dir($path)) {
+            if (false === @mkdir($path, 0o755, true) && false === is_dir($path)) {
                 throw new RuntimeException(r("Unable to create '{path}' directory.", ['path' => $path]));
             }
         }
 
-        return ConfigFile::open(fixPath(r("{path}/servers.yaml", ['path' => $path])), 'yaml', autoCreate: true);
+        return ConfigFile::open(fix_path(r('{path}/servers.yaml', ['path' => $path])), 'yaml', autoCreate: true);
     }
 }
 
-if (!function_exists('perUserCacheAdapter')) {
-    function perUserCacheAdapter(string $user): CacheInterface
+if (!function_exists('per_user_cache_adapter')) {
+    function per_user_cache_adapter(string $user): CacheInterface
     {
-        if (true === (bool)env('WS_CACHE_NULL', false)) {
+        if (true === (bool) env('WS_CACHE_NULL', false)) {
             return new Psr16Cache(new NullAdapter());
         }
 
@@ -1427,18 +1447,18 @@ if (!function_exists('perUserCacheAdapter')) {
             return new Psr16Cache(new ArrayAdapter());
         }
 
-        $ns = getAppVersion();
-        $ns .= isValidName($user) ? ".{$user}" : '.' . md5($user);
+        $ns = get_app_version();
+        $ns .= is_valid_name($user) ? ".{$user}" : '.' . md5($user);
 
         try {
             $backend = new RedisAdapter(redis: Container::get(Redis::class), namespace: $ns);
         } catch (Throwable) {
             // -- in case of error, fallback to file system cache.
-            $path = fixPath(r("{path}/users/{user}/cache", ['path' => Config::get('path'), 'user' => $user]));
+            $path = fix_path(r('{path}/users/{user}/cache', ['path' => Config::get('path'), 'user' => $user]));
             if (false === file_exists($path)) {
-                if (false === @mkdir($path, 0755, true) && false === is_dir($path)) {
+                if (false === @mkdir($path, 0o755, true) && false === is_dir($path)) {
                     throw new RuntimeException(
-                        r("Unable to create per user cache '{path}' directory.", ['path' => $path])
+                        r("Unable to create per user cache '{path}' directory.", ['path' => $path]),
                     );
                 }
             }
@@ -1449,7 +1469,7 @@ if (!function_exists('perUserCacheAdapter')) {
     }
 }
 
-if (!function_exists('deleteUserConfig')) {
+if (!function_exists('delete_user_config')) {
     /**
      * Return user backends config.
      *
@@ -1458,15 +1478,15 @@ if (!function_exists('deleteUserConfig')) {
      *
      * @return bool Whether the operation was successful.
      */
-    function deleteUserConfig(string $user, iCache|null $cache = null): bool
+    function delete_user_config(string $user, ?iCache $cache = null): bool
     {
-        $path = fixPath(r("{path}/users/{user}", ['path' => Config::get('path'), 'user' => $user]));
+        $path = fix_path(r('{path}/users/{user}', ['path' => Config::get('path'), 'user' => $user]));
         if (false === file_exists($path)) {
             throw new RuntimeException(r("User '{user}' does not exist.", ['user' => $user]));
         }
 
         if (null !== $cache) {
-            foreach (perUserConfig($user)->getAll() as $backendName => $conf) {
+            foreach (per_user_config($user)->getAll() as $backendName => $conf) {
                 $cache_key = r('{client}_{backend}', [
                     'backend' => $backendName,
                     'client' => ucfirst(ag($conf, 'type', 'unknown')),
@@ -1477,7 +1497,7 @@ if (!function_exists('deleteUserConfig')) {
             }
         }
 
-        $status = deletePath($path);
+        $status = delete_path($path);
 
         rmdir($path);
 
@@ -1485,7 +1505,7 @@ if (!function_exists('deleteUserConfig')) {
     }
 }
 
-if (!function_exists('getUsersContext')) {
+if (!function_exists('get_users_context')) {
     /**
      * Retrieves users configuration and related classes.
      *
@@ -1496,7 +1516,7 @@ if (!function_exists('getUsersContext')) {
      * @return array<array-key, UserContext> The user data.
      * @throws RuntimeException If the users directory is not readable.
      */
-    function getUsersContext(iImport $mapper, iLogger $logger, array $opts = []): array
+    function get_users_context(iImport $mapper, iLogger $logger, array $opts = []): array
     {
         $dbOpts = ag($opts, iDB::class, []);
 
@@ -1507,14 +1527,14 @@ if (!function_exists('getUsersContext')) {
                 mapper: $mapper,
                 cache: Container::get(iCache::class),
                 db: Container::get(iDB::class)->setOptions($dbOpts),
-            )
+            ),
         ];
 
-        if (true === (bool)ag($opts, 'main_user_only', false)) {
+        if (true === (bool) ag($opts, 'main_user_only', false)) {
             return $configs;
         }
 
-        if (true === (bool)ag($opts, 'no_main_user', false)) {
+        if (true === (bool) ag($opts, 'no_main_user', false)) {
             $configs = [];
         }
 
@@ -1526,7 +1546,7 @@ if (!function_exists('getUsersContext')) {
 
         if (false === is_readable($usersDir)) {
             throw new RuntimeException(r("Unable to read '{path}' directory.", [
-                'path' => $usersDir
+                'path' => $usersDir,
             ]));
         }
 
@@ -1537,24 +1557,25 @@ if (!function_exists('getUsersContext')) {
 
             if (true === array_key_exists($path->getBasename(), $configs)) {
                 throw new RuntimeException(r("Duplicate user name '{user}' found.", [
-                    'user' => $path->getBasename()
+                    'user' => $path->getBasename(),
                 ]));
             }
 
-            $config = perUserConfig($path->getBasename());
+            $config = per_user_config($path->getBasename());
 
             $userName = $path->getBasename();
-            $perUserCache = perUserCacheAdapter($userName);
-            $db = perUserDb($userName);
+            $perUserCache = per_user_cache_adapter($userName);
+            $db = per_user_db($userName);
             if (count($dbOpts) > 0) {
                 $db->setOptions($dbOpts);
             }
 
-            $mapper = $mapper->withDB($db)
+            $mapper = $mapper
+                ->withDB($db)
                 ->withCache($perUserCache)
                 ->withLogger($logger)
                 ->withOptions(array_replace_recursive($mapper->getOptions(), [Options::ALT_NAME => $userName]));
-            assert($mapper instanceof iImport);
+            assert($mapper instanceof iImport, 'Expected import mapper for user context.');
 
             $configs[$userName] = new UserContext(
                 name: $userName,
@@ -1569,7 +1590,7 @@ if (!function_exists('getUsersContext')) {
     }
 }
 
-if (!function_exists('getUserContext')) {
+if (!function_exists('get_user_context')) {
     /**
      * Get the user context.
      *
@@ -1580,13 +1601,13 @@ if (!function_exists('getUserContext')) {
      * @return UserContext The user context.
      * @throws RuntimeException If the user is not found.
      */
-    function getUserContext(string $user, iImport $mapper, iLogger $logger): UserContext
+    function get_user_context(string $user, iImport $mapper, iLogger $logger): UserContext
     {
-        $users = getUsersContext($mapper, $logger);
+        $users = get_users_context($mapper, $logger);
         if (false === in_array($user, array_keys($users), true)) {
             $logger->error("User '{user}' not found.", [
                 'user' => $user,
-                'users' => array_keys($users)
+                'users' => array_keys($users),
             ]);
             throw new RuntimeException(r("User '{user}' not found.", ['user' => $user]), 1001);
         }
@@ -1623,7 +1644,7 @@ if (!function_exists('exception_log')) {
     }
 }
 
-if (!function_exists('parseEpisodeRange')) {
+if (!function_exists('parse_episode_range')) {
     /**
      * Parse episode range from a file name.
      *
@@ -1631,7 +1652,7 @@ if (!function_exists('parseEpisodeRange')) {
      *
      * @return array{status: bool, multi: bool, season: int, start: int, end: int} Returns an array with the parsing result.
      */
-    function parseEpisodeRange(string $file): array
+    function parse_episode_range(string $file): array
     {
         $file = trim($file);
         if (empty($file)) {
@@ -1648,7 +1669,7 @@ if (!function_exists('parseEpisodeRange')) {
         // 1) Explicit E-captures: E01, E02, ...
         if (preg_match_all('/E(\d{1,3})/i', $file, $m1)) {
             foreach ($m1[1] as $e) {
-                $eps[] = (int)$e;
+                $eps[] = (int) $e;
             }
         }
 
@@ -1659,14 +1680,14 @@ if (!function_exists('parseEpisodeRange')) {
             foreach ($m2 as $match) {
                 [$_, $fullOffset] = $match[0];
                 [$value, $offset] = $match[1];
-                $nextIndex = (int)($offset) + strlen($value);
+                $nextIndex = (int) $offset + strlen($value);
                 $nextChar = $file[$nextIndex] ?? '';
 
                 if ('' !== $nextChar && ctype_alpha($nextChar)) {
                     continue;
                 }
 
-                $prefix = substr($file, 0, (int)$fullOffset);
+                $prefix = substr($file, 0, (int) $fullOffset);
                 $lastEpisodeIndex = strripos($prefix, 'E');
                 if (false === $lastEpisodeIndex) {
                     continue;
@@ -1679,30 +1700,30 @@ if (!function_exists('parseEpisodeRange')) {
                     continue;
                 }
 
-                $eps[] = (int)$value;
+                $eps[] = (int) $value;
             }
         }
 
         // If nothing captured yet (edge case), try a final fallback: SxxEyy only
         if (!$eps && preg_match('/S\d{1,3}E(\d{1,3})/i', $file, $m3)) {
-            $eps[] = (int)$m3[1];
+            $eps[] = (int) $m3[1];
         }
 
         if (!$eps) {
-            return ['status' => false, 'multi' => false, 'season' => (int)$season[1], 'start' => 0, 'end' => 0];
+            return ['status' => false, 'multi' => false, 'season' => (int) $season[1], 'start' => 0, 'end' => 0];
         }
 
         return [
             'status' => true,
             'multi' => count($eps) > 1,
-            'season' => (int)$season[1],
+            'season' => (int) $season[1],
             'start' => min($eps),
-            'end' => max($eps)
+            'end' => max($eps),
         ];
     }
 }
 
-if (!function_exists('flatArray')) {
+if (!function_exists('flat_array')) {
     /**
      * Flatten an array.
      *
@@ -1712,15 +1733,15 @@ if (!function_exists('flatArray')) {
      *
      * @return array The flattened array.
      */
-    function flatArray(array $obj, string $prefix = '', string $separator = '.'): array
+    function flat_array(array $obj, string $prefix = '', string $separator = '.'): array
     {
         $out = [];
 
         foreach ($obj as $key => $val) {
             $path = $prefix ? "{$prefix}{$separator}{$key}" : $key;
 
-            if ((is_array($val) || is_object($val)) && count((array)$val) > 0) {
-                $out = array_merge($out, flatArray((array)$val, $path, $separator));
+            if ((is_array($val) || is_object($val)) && count((array) $val) > 0) {
+                $out = array_merge($out, flat_array((array) $val, $path, $separator));
                 continue;
             }
             // Add scalar, empty array, or empty object
@@ -1761,6 +1782,6 @@ if (!function_exists('urlsafe_b64decode')) {
             $input .= \str_repeat('=', $pad_length);
         }
 
-        return \base64_decode(\strtr($input, '-_', '+/'));
+        return \base64_decode(\strtr($input, '-_', '+/'), true);
     }
 }

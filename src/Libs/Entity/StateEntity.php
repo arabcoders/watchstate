@@ -72,15 +72,15 @@ final class StateEntity implements iState
     /**
      * @var int|null $year The year of the entity.
      */
-    public int|null $year = null;
+    public ?int $year = null;
     /**
      * @var int|null $season The season number of the episode if event type is episode.
      */
-    public int|null $season = null;
+    public ?int $season = null;
     /**
      * @var int|null $episode The episode number of the episode event type is episode.
      */
-    public int|null $episode = null;
+    public ?int $episode = null;
 
     /**
      * @var array $parent The parent guids for this entity. Empty if event type is movie.
@@ -116,16 +116,16 @@ final class StateEntity implements iState
     public function __construct(array $data)
     {
         foreach ($data as $key => $val) {
-            if (!in_array($key, iState::ENTITY_KEYS)) {
+            if (!in_array($key, iState::ENTITY_KEYS, true)) {
                 continue;
             }
 
-            if (iState::COLUMN_TYPE === $key && false === in_array($val, self::TYPES_LIST)) {
+            if (iState::COLUMN_TYPE === $key && false === in_array($val, self::TYPES_LIST, true)) {
                 throw new RuntimeException(
                     r("StateEntity: Unexpected '{value}' type was given. Expecting '{types_list}'.", context: [
                         'value' => $val,
                         'types_list' => implode(', ', self::TYPES_LIST),
-                    ])
+                    ]),
                 );
             }
 
@@ -179,7 +179,7 @@ final class StateEntity implements iState
                 continue;
             }
 
-            if (true === in_array($key, iState::ENTITY_ARRAY_KEYS)) {
+            if (true === in_array($key, iState::ENTITY_ARRAY_KEYS, true)) {
                 $changes = $this->arrayDiff($this->data[$key] ?? [], $this->{$key} ?? []);
                 if (!empty($changes)) {
                     $changed[$key] = $changes;
@@ -187,7 +187,7 @@ final class StateEntity implements iState
             } else {
                 $changed[$key] = [
                     'old' => $this->data[$key] ?? 'None',
-                    'new' => $this->{$key} ?? 'None'
+                    'new' => $this->{$key} ?? 'None',
                 ];
             }
         }
@@ -206,12 +206,12 @@ final class StateEntity implements iState
         if ($this->isMovie() || $this->isShow() || true === $asMovie) {
             return r('{title} ({year})', [
                 'title' => !empty($title) ? $title : '??',
-                'year' => $year ?? '0000'
+                'year' => $year ?? '0000',
             ]);
         }
 
-        $season = str_pad((string)ag($this->data, iState::COLUMN_SEASON, $this->season ?? 0), 2, '0', STR_PAD_LEFT);
-        $episode = str_pad((string)ag($this->data, iState::COLUMN_EPISODE, $this->episode ?? 0), 3, '0', STR_PAD_LEFT);
+        $season = str_pad((string) ag($this->data, iState::COLUMN_SEASON, $this->season ?? 0), 2, '0', STR_PAD_LEFT);
+        $episode = str_pad((string) ag($this->data, iState::COLUMN_EPISODE, $this->episode ?? 0), 3, '0', STR_PAD_LEFT);
 
         return r(
             '{title} ({year}) - {season}x{episode}',
@@ -220,7 +220,7 @@ final class StateEntity implements iState
                 'year' => $year ?? '0000',
                 'season' => $season,
                 'episode' => $episode,
-            ]
+            ],
         );
     }
 
@@ -261,7 +261,7 @@ final class StateEntity implements iState
      */
     public function hasGuids(): bool
     {
-        if (iState::TYPE_EPISODE === $this->type && true === (bool)Config::get('guid.disable.episode', false)) {
+        if (iState::TYPE_EPISODE === $this->type && true === (bool) Config::get('guid.disable.episode', false)) {
             return false;
         }
 
@@ -275,7 +275,7 @@ final class StateEntity implements iState
      */
     public function getGuids(): array
     {
-        if (iState::TYPE_EPISODE === $this->type && true === (bool)Config::get('guid.disable.episode', false)) {
+        if (iState::TYPE_EPISODE === $this->type && true === (bool) Config::get('guid.disable.episode', false)) {
             return [];
         }
 
@@ -285,9 +285,9 @@ final class StateEntity implements iState
     /**
      * @inheritdoc
      */
-    public function getPointers(array|null $guids = null): array
+    public function getPointers(?array $guids = null): array
     {
-        if (iState::TYPE_EPISODE === $this->type && true === (bool)Config::get('guid.disable.episode', false)) {
+        if (iState::TYPE_EPISODE === $this->type && true === (bool) Config::get('guid.disable.episode', false)) {
             return [];
         }
 
@@ -298,8 +298,8 @@ final class StateEntity implements iState
                 iState::COLUMN_ID => $this->id,
                 iState::COLUMN_TYPE => $this->type,
                 iState::COLUMN_YEAR => $this->year,
-                iState::COLUMN_TITLE => $this->getName()
-            ]
+                iState::COLUMN_TITLE => $this->getName(),
+            ],
         ])->getPointers();
     }
 
@@ -390,8 +390,8 @@ final class StateEntity implements iState
                 iState::COLUMN_ID => $this->id,
                 iState::COLUMN_TYPE => $this->type,
                 iState::COLUMN_YEAR => $this->year,
-                iState::COLUMN_TITLE => $this->getName()
-            ]
+                iState::COLUMN_TITLE => $this->getName(),
+            ],
         ])->getPointers();
 
         $rPointers = [];
@@ -410,7 +410,13 @@ final class StateEntity implements iState
     {
         if (!empty($fields)) {
             foreach ($fields as $key) {
-                if (false === in_array($key, iState::ENTITY_KEYS) || true === $this->isEqualValue($key, $entity)) {
+                if (
+                    false === in_array($key, iState::ENTITY_KEYS, true)
+                    || true === $this->isEqualValue(
+                        $key,
+                        $entity,
+                    )
+                ) {
                     continue;
                 }
                 $this->updateValue($key, $entity);
@@ -466,7 +472,7 @@ final class StateEntity implements iState
     /**
      * @inheritdoc
      */
-    public function getMetadata(string|null $via = null): array
+    public function getMetadata(?string $via = null): array
     {
         if (null === $via) {
             return $this->metadata;
@@ -500,10 +506,12 @@ final class StateEntity implements iState
             throw new RuntimeException('StateEntity: No backend was set in $this->via parameter.');
         }
 
-        $this->metadata[$this->via] = empty($metadata) ? [] : array_replace_recursive(
-            $this->metadata[$this->via],
-            $metadata
-        );
+        $this->metadata[$this->via] = empty($metadata)
+            ? []
+            : array_replace_recursive(
+                $this->metadata[$this->via],
+                $metadata,
+            );
 
         return $this;
     }
@@ -511,7 +519,7 @@ final class StateEntity implements iState
     /**
      * @inheritdoc
      */
-    public function setMeta(string $key, mixed $value, string|null $via = null): StateInterface
+    public function setMeta(string $key, mixed $value, ?string $via = null): StateInterface
     {
         if (null === $via && empty($this->via)) {
             throw new RuntimeException('StateEntity: No $via and no $this->via backend was set.');
@@ -526,7 +534,7 @@ final class StateEntity implements iState
     /**
      * @inheritdoc
      */
-    public function getExtra(string|null $via = null): array
+    public function getExtra(?string $via = null): array
     {
         if (null === $via) {
             return $this->extra;
@@ -544,10 +552,12 @@ final class StateEntity implements iState
             throw new RuntimeException('StateEntity: No backend was set in $this->via parameter.');
         }
 
-        $this->extra[$this->via] = empty($extra) ? [] : array_replace_recursive(
-            $this->extra[$this->via],
-            $extra
-        );
+        $this->extra[$this->via] = empty($extra)
+            ? []
+            : array_replace_recursive(
+                $this->extra[$this->via],
+                $extra,
+            );
 
         return $this;
     }
@@ -555,7 +565,7 @@ final class StateEntity implements iState
     /**
      * @inheritdoc
      */
-    public function shouldMarkAsUnplayed(iState $backend, UserContext|null $userContext = null): bool
+    public function shouldMarkAsUnplayed(iState $backend, ?UserContext $userContext = null): bool
     {
         // -- Condition: 1 & 2
         if (false !== $backend->isWatched() && true === $this->isWatched()) {
@@ -580,7 +590,7 @@ final class StateEntity implements iState
         }
 
         // -- Condition: 5
-        if (1 !== (int)$watched) {
+        if (1 !== (int) $watched) {
             return false;
         }
 
@@ -590,7 +600,7 @@ final class StateEntity implements iState
         }
 
         // -- Condition: 7
-        if ((int)$addedAt !== $backend->updated) {
+        if ((int) $addedAt !== $backend->updated) {
             return false;
         }
 
@@ -620,18 +630,18 @@ final class StateEntity implements iState
      */
     public function hasPlayProgress(): bool
     {
-        $allowUpdate = (int)Config::get('progress.threshold', 0);
-        $minimumProgress = (int)Config::get('progress.minimum', 60000);
+        $allowUpdate = (int) Config::get('progress.threshold', 0);
+        $minimumProgress = (int) Config::get('progress.minimum', 60000);
 
         if ($this->isWatched() && $allowUpdate < 1) {
             return false;
         }
 
         foreach ($this->getMetadata() as $metadata) {
-            if (0 !== (int)ag($metadata, iState::COLUMN_WATCHED, 0) && $allowUpdate < 1) {
+            if (0 !== (int) ag($metadata, iState::COLUMN_WATCHED, 0) && $allowUpdate < 1) {
                 continue;
             }
-            if ((int)ag($metadata, iState::COLUMN_META_DATA_PROGRESS, 0) > $minimumProgress) {
+            if ((int) ag($metadata, iState::COLUMN_META_DATA_PROGRESS, 0) > $minimumProgress) {
                 return true;
             }
         }
@@ -644,30 +654,30 @@ final class StateEntity implements iState
      */
     public function getPlayProgress(): int
     {
-        $allowUpdate = (int)Config::get('progress.threshold', 0);
+        $allowUpdate = (int) Config::get('progress.threshold', 0);
         if ($this->isWatched() && $allowUpdate < 1) {
             return 0;
         }
 
         $compare = [];
-        $minimumProgress = (int)Config::get('progress.minimum', 60000);
+        $minimumProgress = (int) Config::get('progress.minimum', 60000);
 
         foreach ($this->getMetadata() as $backend => $metadata) {
-            if (0 !== (int)ag($metadata, iState::COLUMN_WATCHED, 0) && $allowUpdate < 1) {
+            if (0 !== (int) ag($metadata, iState::COLUMN_WATCHED, 0) && $allowUpdate < 1) {
                 continue;
             }
-            if ((int)ag($metadata, iState::COLUMN_META_DATA_PROGRESS, 0) < $minimumProgress) {
+            if ((int) ag($metadata, iState::COLUMN_META_DATA_PROGRESS, 0) < $minimumProgress) {
                 continue;
             }
 
             $compare[$backend] = [
-                'progress' => (int)ag($metadata, iState::COLUMN_META_DATA_PROGRESS, 0),
+                'progress' => (int) ag($metadata, iState::COLUMN_META_DATA_PROGRESS, 0),
                 'datetime' => ag($this->getExtra($backend), iState::COLUMN_EXTRA_DATE, 0),
             ];
         }
 
         $lastProgress = 0;
-        $lastDate = makeDate($this->updated - 1);
+        $lastDate = make_date($this->updated - 1);
 
         foreach ($compare as $data) {
             if (null === ($progress = ag($data, 'progress', null))) {
@@ -677,11 +687,11 @@ final class StateEntity implements iState
                 continue;
             }
 
-            if ($progress < $minimumProgress || $lastDate->getTimestamp() > makeDate($datetime)->getTimestamp()) {
+            if ($progress < $minimumProgress || $lastDate->getTimestamp() > make_date($datetime)->getTimestamp()) {
                 continue;
             }
 
-            $lastDate = makeDate($datetime);
+            $lastDate = make_date($datetime);
             $lastProgress = $progress;
         }
 
@@ -700,7 +710,7 @@ final class StateEntity implements iState
     /**
      * @inheritdoc
      */
-    public function getContext(string|null $key = null, mixed $default = null): mixed
+    public function getContext(?string $key = null, mixed $default = null): mixed
     {
         if (null === $key) {
             return $default ?? $this->context;
@@ -725,7 +735,7 @@ final class StateEntity implements iState
 
         if ($quorum < 2) {
             $this->logger?->warning("StateEntity: Quorum is less than 2. '{quorum}' Using default value.", [
-                'quorum' => $quorum
+                'quorum' => $quorum,
             ]);
             return ag($this->metadata[$this->via], $key, $default);
         }
@@ -739,10 +749,12 @@ final class StateEntity implements iState
         }
 
         foreach ($values as $value => $count) {
-            if ($count >= $quorum) {
-                $this->logger?->info('StateEntity: quorum found. Using value from {value}.', ['value' => $value]);
-                return $value;
+            if ($count < $quorum) {
+                continue;
             }
+
+            $this->logger?->info('StateEntity: quorum found. Using value from {value}.', ['value' => $value]);
+            return $value;
         }
 
         $this->logger?->warning('StateEntity: no quorum found. Using default value.');
@@ -760,7 +772,7 @@ final class StateEntity implements iState
     /**
      * @inheritdoc
      */
-    public function removeContext(string|null $key = null): StateInterface
+    public function removeContext(?string $key = null): StateInterface
     {
         $this->context = $key ? ag_delete($this->context, $key) : [];
         return $this;
@@ -775,7 +787,7 @@ final class StateEntity implements iState
                 $match[$backend] = null;
                 continue;
             }
-            $match[$backend] = $this->isWatched() === (bool)ag($this->metadata[$backend], iState::COLUMN_WATCHED, 0);
+            $match[$backend] = $this->isWatched() === (bool) ag($this->metadata[$backend], iState::COLUMN_WATCHED, 0);
         }
 
         return $match;
@@ -831,7 +843,7 @@ final class StateEntity implements iState
             return;
         }
 
-        if (true === in_array($key, iState::ENTITY_ARRAY_KEYS)) {
+        if (true === in_array($key, iState::ENTITY_ARRAY_KEYS, true)) {
             $this->{$key} = array_replace_recursive($this->{$key} ?? [], $remote->{$key} ?? []);
         } else {
             $this->{$key} = $remote->{$key};

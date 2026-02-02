@@ -18,8 +18,10 @@ final class ProxyHandler extends AbstractProcessingHandler
 {
     private bool $closed = false;
 
-    public function __construct(private readonly Closure $callback, $level = Level::Debug)
-    {
+    public function __construct(
+        private readonly Closure $callback,
+        $level = Level::Debug,
+    ) {
         $this->bubble = true;
         parent::__construct($level, true);
     }
@@ -42,7 +44,7 @@ final class ProxyHandler extends AbstractProcessingHandler
 
         $date = $record['datetime'] ?? 'No date set';
 
-        if (true === ($date instanceof DateTimeInterface)) {
+        if (true === $date instanceof DateTimeInterface) {
             $date = $date->format(DateTimeInterface::ATOM);
         }
 
@@ -52,8 +54,8 @@ final class ProxyHandler extends AbstractProcessingHandler
             'message' => $record['message'],
         ]);
 
-        if (false === empty($record['context']) && true === (bool)Config::get('logs.context')) {
-            $message .= ' ' . arrayToJson($record['context']);
+        if (false === empty($record['context']) && true === (bool) Config::get('logs.context')) {
+            $message .= ' ' . array_to_json($record['context']);
         }
 
         ($this->callback)($message, $record);

@@ -6,6 +6,4 @@ namespace App\Backends\Emby;
 
 use App\Backends\Jellyfin\JellyfinValidateContext;
 
-class EmbyValidateContext extends JellyfinValidateContext
-{
-}
+class EmbyValidateContext extends JellyfinValidateContext {}

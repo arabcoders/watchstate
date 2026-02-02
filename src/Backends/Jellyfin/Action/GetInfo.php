@@ -32,9 +32,10 @@ class GetInfo
      * @param iHttp $http The HTTP client instance to use.
      * @param iLogger $logger The logger instance to use.
      */
-    public function __construct(protected readonly iHttp $http, protected readonly iLogger $logger)
-    {
-    }
+    public function __construct(
+        protected readonly iHttp $http,
+        protected readonly iLogger $logger,
+    ) {}
 
     /**
      * Get backend information.
@@ -55,18 +56,18 @@ class GetInfo
                     'client' => $context->clientName,
                     'backend' => $context->backendName,
                     'user' => $context->userContext->name,
-                    'url' => (string)$url
+                    'url' => (string) $url,
                 ];
 
                 $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' info.", $logContext);
 
                 $response = $this->http->request(
                     method: Method::GET,
-                    url: (string)$url,
+                    url: (string) $url,
                     options: array_replace_recursive(
                         $context->getHttpOptions(),
                         true === ag_exists($opts, 'headers') ? ['headers' => $opts['headers']] : [],
-                    )
+                    ),
                 );
 
                 $content = $response->getContent(false);
@@ -83,8 +84,8 @@ class GetInfo
                                     'body' => $content,
                                 ],
                             ],
-                            level: Levels::WARNING
-                        )
+                            level: Levels::WARNING,
+                        ),
                     );
                 }
 
@@ -97,18 +98,18 @@ class GetInfo
                                 ...$logContext,
                                 'response' => [
                                     'status_code' => $response->getStatusCode(),
-                                    'body' => $content
+                                    'body' => $content,
                                 ],
                             ],
-                            level: Levels::ERROR
-                        )
+                            level: Levels::ERROR,
+                        ),
                     );
                 }
 
                 $item = json_decode(
                     json: $content,
                     associative: true,
-                    flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                    flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
                 );
 
                 if (true === $context->trace) {

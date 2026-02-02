@@ -35,7 +35,7 @@ final class Shlex
     private readonly string $quotes;
     private readonly string $escape;
     private readonly string $escapedquotes;
-    private string|null $state = ' ';
+    private ?string $state = ' ';
     private string $token = '';
 
     /**
@@ -74,7 +74,7 @@ final class Shlex
      * @return string|null The next token or null at EOF
      * @throws InvalidArgumentException On unclosed quotes or incomplete escape sequences
      */
-    public function nextToken(): string|null
+    public function nextToken(): ?string
     {
         $quoted = false;
         $escapedstate = ' ';
@@ -94,7 +94,7 @@ final class Shlex
                 }
 
                 if ($this->inCharset($nextchar, $this->whitespace)) {
-                    if ('' !== $this->token || ($this->posix && $quoted)) {
+                    if ('' !== $this->token || $this->posix && $quoted) {
                         break;
                     }
                     continue;
@@ -141,11 +141,7 @@ final class Shlex
                     continue;
                 }
 
-                if (
-                    $this->posix &&
-                    $this->inCharset($nextchar, $this->escape) &&
-                    $this->inCharset($this->state, $this->escapedquotes)
-                ) {
+                if ($this->posix && $this->inCharset($nextchar, $this->escape) && $this->inCharset($this->state, $this->escapedquotes)) {
                     $escapedstate = $this->state;
                     $this->state = $nextchar;
                     continue;
@@ -160,11 +156,7 @@ final class Shlex
                     throw new InvalidArgumentException('No closing quotation');
                 }
 
-                if (
-                    $this->inCharset($escapedstate, $this->quotes) &&
-                    $nextchar !== $this->state &&
-                    $nextchar !== $escapedstate
-                ) {
+                if ($this->inCharset($escapedstate, $this->quotes) && $nextchar !== $this->state && $nextchar !== $escapedstate) {
                     $this->token .= $this->state;
                 }
 
@@ -181,7 +173,7 @@ final class Shlex
 
                 if ($this->inCharset($nextchar, $this->whitespace)) {
                     $this->state = ' ';
-                    if ('' !== $this->token || ($this->posix && $quoted)) {
+                    if ('' !== $this->token || $this->posix && $quoted) {
                         break;
                     }
                     continue;
@@ -206,7 +198,7 @@ final class Shlex
                 // Non-word character, push back and end token
                 $this->pos--;
                 $this->state = ' ';
-                if ('' !== $this->token || ($this->posix && $quoted)) {
+                if ('' !== $this->token || $this->posix && $quoted) {
                     break;
                 }
                 // Will pick up the character on next iteration
@@ -304,4 +296,3 @@ final class Shlex
         return "'" . str_replace("'", "'\"'\"'", $s) . "'";
     }
 }
-

@@ -15,8 +15,9 @@ trait UsesBasicRepository
 {
     use UsesPaging;
 
-    public function __construct(private readonly DBLayer $db)
-    {
+    public function __construct(
+        private readonly DBLayer $db,
+    ) {
         $this->init($this->db);
 
         if (empty($this->table)) {
@@ -111,7 +112,7 @@ trait UsesBasicRepository
         if (true === ($isCustomID = is_a($this, IDInterface::class))) {
             $object->{$object->getPrimaryKey()} = $this->makeId($object);
         } elseif ($useUUID) {
-            $object->{$object->getPrimaryKey()} = generateUUID();
+            $object->{$object->getPrimaryKey()} = generate_uuid();
         }
 
         $this->db->transactional(function (DBLayer $db) use (&$object, $isCustomID, $useUUID) {
@@ -119,7 +120,7 @@ trait UsesBasicRepository
             $db->insert($this->table, $obj);
 
             if (!$isCustomID && !$useUUID) {
-                $object->{$object->getPrimaryKey()} = (int)$db->id();
+                $object->{$object->getPrimaryKey()} = (int) $db->id();
             }
 
             $object->updatePrimaryData();
@@ -157,7 +158,7 @@ trait UsesBasicRepository
                     /** @noinspection PhpUndefinedMethodInspection */
                     $object->{$object->getPrimaryKey()} = $this->makeId($object);
                 } elseif ($useUUID) {
-                    $object->{$object->getPrimaryKey()} = generateUUID();
+                    $object->{$object->getPrimaryKey()} = generate_uuid();
                 }
 
                 $obj = $object->getAll(transform: true);
@@ -165,7 +166,7 @@ trait UsesBasicRepository
                 $db->insert($this->table, $obj);
 
                 if (!$isCustomID && !$useUUID) {
-                    $object->{$object->getPrimaryKey()} = (int)$db->id();
+                    $object->{$object->getPrimaryKey()} = (int) $db->id();
                 }
 
                 $object->updatePrimaryData();
@@ -196,7 +197,7 @@ trait UsesBasicRepository
             $count = $db->delete($this->table, $criteria);
         });
 
-        return (bool)$count;
+        return (bool) $count;
     }
 
     private function _removeById(string|int $id, string $columnName = 'id'): bool

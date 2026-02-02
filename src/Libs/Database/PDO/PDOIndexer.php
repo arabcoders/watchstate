@@ -46,9 +46,10 @@ final class PDOIndexer
      * @param DBLayer $db The PDO object used for database connections and queries.
      * @param iLogger $logger The logger object used for logging information.
      */
-    public function __construct(private DBLayer $db, private iLogger $logger)
-    {
-    }
+    public function __construct(
+        private DBLayer $db,
+        private iLogger $logger,
+    ) {}
 
     /**
      * Ensures the existence of required indexes in the "state" table.
@@ -67,8 +68,8 @@ final class PDOIndexer
         $drop = 'DROP INDEX IF EXISTS "${name}"';
         $insert = 'CREATE INDEX IF NOT EXISTS "${name}" ON "state" (${expr});';
 
-        $reindex = (bool)ag($opts, 'force-reindex');
-        $inDryRunMode = (bool)ag($opts, Options::DRY_RUN);
+        $reindex = (bool) ag($opts, 'force-reindex');
+        $inDryRunMode = (bool) ag($opts, Options::DRY_RUN);
 
         if (true === $reindex) {
             $this->logger->debug('PDOIndexer: Force reindex is called.');
@@ -78,8 +79,8 @@ final class PDOIndexer
                 $name = ag($row, 'name');
                 $query = r(
                     text: $drop,
-                    context: [ 'name' => $name ],
-                    opts: ['tag_left' => '${','tag_right' => '}']
+                    context: ['name' => $name],
+                    opts: ['tag_left' => '${', 'tag_right' => '}'],
                 );
 
                 $this->logger->info("PDOIndexer: Dropping Index '{index}'.", [
@@ -92,7 +93,7 @@ final class PDOIndexer
         }
 
         foreach (iState::ENTITY_KEYS as $column) {
-            if (true === in_array($column, self::INDEX_IGNORE_ON)) {
+            if (true === in_array($column, self::INDEX_IGNORE_ON, true)) {
                 continue;
             }
 
@@ -104,8 +105,8 @@ final class PDOIndexer
                 ],
                 opts: [
                     'tag_left' => '${',
-                    'tag_right' => '}'
-                ]
+                    'tag_right' => '}',
+                ],
             );
 
             $this->logger->info("PDOIndexer: Generating index on '{column}'.", [
@@ -125,7 +126,7 @@ final class PDOIndexer
                         'name' => sprintf('state_%s_%s', $column, $subKey),
                         'expr' => sprintf("JSON_EXTRACT(%s,'$.%s')", $column, $subKey),
                     ],
-                    opts: ['tag_left' => '${', 'tag_right' => '}']
+                    opts: ['tag_left' => '${', 'tag_right' => '}'],
                 );
 
                 $this->logger->debug("PDOIndexer: Generating index on '{column}' column '{key}' key.", [
@@ -139,7 +140,7 @@ final class PDOIndexer
         }
 
         if (null !== ($userContext = $opts[UserContext::class] ?? null)) {
-            assert($userContext instanceof UserContext);
+            assert($userContext instanceof UserContext, 'Expected UserContext for indexer options.');
             $servers = $userContext->config->getAll();
         } else {
             $servers = Config::get('servers', []);
@@ -154,7 +155,7 @@ final class PDOIndexer
                         'name' => sprintf('state_%s_%s_%s', iState::COLUMN_META_DATA, $backend, $subKey),
                         'expr' => sprintf("JSON_EXTRACT(%s,'$.%s.%s')", iState::COLUMN_META_DATA, $backend, $subKey),
                     ],
-                    opts: ['tag_left' => '${', 'tag_right' => '}']
+                    opts: ['tag_left' => '${', 'tag_right' => '}'],
                 );
 
                 $this->logger->info("PDOIndexer: Generating index on '{backend}' metadata column '{key}' key.", [
@@ -181,7 +182,7 @@ final class PDOIndexer
         foreach ($queries as $query) {
             $this->logger->debug("PDOIndexer: Running SQL query '{query}'.", [
                 'query' => $query,
-                'start' => makeDate(),
+                'start' => make_date(),
             ]);
             $this->db->query($query);
         }

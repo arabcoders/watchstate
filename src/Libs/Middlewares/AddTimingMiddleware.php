@@ -15,7 +15,7 @@ final class AddTimingMiddleware implements iMiddleware
     {
         return $handler->handle($request)->withHeader(
             'X-Application-Finished-In',
-            round(microtime(true) - APP_START, 6) . 's'
+            round(microtime(true) - APP_START, 6) . 's',
         );
     }
 }

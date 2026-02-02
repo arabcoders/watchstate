@@ -17,15 +17,15 @@ final readonly class M3u8
 {
     public const string URL = Index::URL . '/m3u8';
 
-    public function __construct(private iCache $cache)
-    {
-    }
+    public function __construct(
+        private iCache $cache,
+    ) {}
 
     /**
      * @throws InvalidArgumentException
      */
     #[Get(pattern: self::URL . '/{token}[/[{fake:.*}]]')]
-    public function __invoke(iRequest $request, string $token): iResponse
+    public function __invoke(iRequest $request, #[\SensitiveParameter] string $token): iResponse
     {
         if (null === ($data = $this->cache->get($token, null))) {
             return api_error('Token is expired or invalid.', Status::BAD_REQUEST);
@@ -35,21 +35,21 @@ final readonly class M3u8
             return api_response(Status::NOT_MODIFIED, headers: ['Cache-Control' => 'public, max-age=25920000']);
         }
 
-        $isSecure = (bool)Config::get('api.secure', false);
+        $isSecure = (bool) Config::get('api.secure', false);
         $duration = ag($data, 'config.duration');
-        $segmentSize = number_format((float)ag($data, 'config.segment_size'), 6);
-        $splits = (int)ceil($duration / $segmentSize);
+        $segmentSize = number_format((float) ag($data, 'config.segment_size'), 6);
+        $splits = (int) ceil($duration / $segmentSize);
 
-        $lines[] = "#EXTM3U";
-        $lines[] = r("#EXT-X-TARGETDURATION:{duration}", ['duration' => $segmentSize]);
-        $lines[] = "#EXT-X-VERSION:4";
-        $lines[] = "#EXT-X-MEDIA-SEQUENCE:0";
-        $lines[] = "#EXT-X-PLAYLIST-TYPE:VOD";
+        $lines[] = '#EXTM3U';
+        $lines[] = r('#EXT-X-TARGETDURATION:{duration}', ['duration' => $segmentSize]);
+        $lines[] = '#EXT-X-VERSION:4';
+        $lines[] = '#EXT-X-MEDIA-SEQUENCE:0';
+        $lines[] = '#EXT-X-PLAYLIST-TYPE:VOD';
 
-        $segmentUrl = parseConfigValue(Segments::URL);
+        $segmentUrl = parse_config_value(Segments::URL);
         for ($i = 0; $i < $splits; $i++) {
-            $sSize = ($i + 1) === $splits ? number_format($duration - (($i * $segmentSize)), 6) : $segmentSize;
-            $lines[] = r("#EXTINF:{duration},", ['duration' => $sSize]);
+            $sSize = ($i + 1) === $splits ? number_format($duration - ($i * $segmentSize), 6) : $segmentSize;
+            $lines[] = r('#EXTINF:{duration},', ['duration' => $sSize]);
 
             $query = [];
 
@@ -64,12 +64,12 @@ final readonly class M3u8
             $lines[] = r('{api_url}/{token}/{seg}.ts{query}', [
                 'api_url' => $segmentUrl,
                 'token' => $token,
-                'seg' => (string)$i,
+                'seg' => (string) $i,
                 'query' => !empty($query) ? '?' . http_build_query($query) : '',
             ]);
         }
 
-        $lines[] = "#EXT-X-ENDLIST";
+        $lines[] = '#EXT-X-ENDLIST';
 
         return api_response(Status::OK, Stream::create(implode("\n", $lines)), [
             'Content-Type' => 'application/x-mpegurl',

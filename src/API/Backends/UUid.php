@@ -29,7 +29,7 @@ final class UUid
             $info = $client->getInfo();
 
             return api_response(Status::OK, [
-                'type' => strtolower((string)ag($info, 'type')),
+                'type' => strtolower((string) ag($info, 'type')),
                 'identifier' => ag($info, 'identifier'),
             ]);
         } catch (InvalidArgumentException $e) {

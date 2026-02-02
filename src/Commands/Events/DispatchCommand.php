@@ -40,7 +40,8 @@ final class DispatchCommand extends Command
 
     protected function configure(): void
     {
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->addOption('id', 'i', InputOption::VALUE_REQUIRED, 'Force run this event.')
             ->addOption('reset', 'r', InputOption::VALUE_NONE, 'Reset event logs.')
             ->setDescription('Run queued events.');
@@ -50,7 +51,7 @@ final class DispatchCommand extends Command
     {
         $this->unloadEvents();
 
-        registerEvents();
+        register_events();
 
         $debug = $input->getOption('debug') || Config::get('debug.enabled');
 
@@ -75,7 +76,8 @@ final class DispatchCommand extends Command
     protected function runEvents(bool $debug = false): int
     {
         $repo = $this->repo
-            ->setSort(EventsTable::COLUMN_CREATED_AT)->setAscendingOrder()
+            ->setSort(EventsTable::COLUMN_CREATED_AT)
+            ->setAscendingOrder()
             ->findAll([EventsTable::COLUMN_STATUS => Status::PENDING->value]);
 
         $events = [];
@@ -93,7 +95,7 @@ final class DispatchCommand extends Command
                         'event' => $event->event,
                         'delay' => $delay,
                         'wait' => $created - $now,
-                    ]
+                    ],
                 );
                 continue;
             }
@@ -108,12 +110,12 @@ final class DispatchCommand extends Command
             return self::SUCCESS;
         }
 
-        assert($this->dispatcher instanceof EventDispatcher);
+        assert($this->dispatcher instanceof EventDispatcher, 'Expected EventDispatcher in dispatch command.');
 
         foreach ($events as $event) {
             if (null === ($newState = $this->repo->findById($event->id))) {
                 $this->logger->notice("The event '{id}' was deleted while the dispatcher was running", [
-                    'id' => $event->id
+                    'id' => $event->id,
                 ]);
                 continue;
             }
@@ -124,7 +126,7 @@ final class DispatchCommand extends Command
                     [
                         'id' => $event->id,
                         'status' => $newState->status->name,
-                    ]
+                    ],
                 );
                 continue;
             }
@@ -141,7 +143,7 @@ final class DispatchCommand extends Command
             $message = "Dispatching Event: '{event}' queued at '{date}'.";
             $log_data = [
                 'event' => $event->event,
-                'date' => makeDate($event->created_at),
+                'date' => make_date($event->created_at),
             ];
 
             $event->logs[] = r($message, $log_data);
@@ -153,7 +155,7 @@ final class DispatchCommand extends Command
             $this->logger->info($message, $log_data);
 
             $event->status = Status::RUNNING;
-            $event->updated_at = (string)makeDate();
+            $event->updated_at = (string) make_date();
             $event->attempts += 1;
             if (true === $debug) {
                 $event->options[Options::DEBUG_TRACE] = true;
@@ -169,7 +171,7 @@ final class DispatchCommand extends Command
                 $event->status = Status::SUCCESS;
             }
 
-            $event->updated_at = (string)makeDate();
+            $event->updated_at = (string) make_date();
             $event->logs[] = r("Event '{event}' was dispatched.", ['event' => $event->event]);
 
             $this->repo->save($event);
@@ -182,7 +184,7 @@ final class DispatchCommand extends Command
             $event->logs[] = $errorLog;
             array_push($event->logs, ...$e->getTrace());
             $event->status = Status::FAILED;
-            $event->updated_at = (string)makeDate();
+            $event->updated_at = (string) make_date();
             $this->repo->save($event);
 
             $this->logger->error($errorLog, ['trace' => $e->getTrace()]);
@@ -205,10 +207,10 @@ final class DispatchCommand extends Command
             }
             foreach ($events as $eventData) {
                 try {
-                    queueEvent(...$eventData);
+                    queue_event(...$eventData);
                     $this->logger->info(
                         "Queued '{event}' event. it was saved to cache due to failure to persist it.",
-                        $eventData
+                        $eventData,
                     );
                 } catch (Throwable) {
                     $this->logger->error("Failed to re-queue '{event}' event.", $eventData);

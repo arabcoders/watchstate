@@ -48,27 +48,30 @@ final class GetWebUrl
                         'type' => $type,
                     ],
                     level: Levels::WARNING,
-                )
+                ),
             );
         }
 
         return $this->tryResponse(
             context: $context,
-            fn: function () use ($context, $type, $id, $opts) {
+            fn: static function () use ($context, $type, $id, $opts) {
                 $key = $context->backendUrl->withPath(
-                    r('/library/metadata/{item_id}', ['item_id' => $id])
+                    r('/library/metadata/{item_id}', ['item_id' => $id]),
                 );
 
-                $webUrl = $context->backendUrl->withPath('/web/index.html')->withFragment(
-                    r('!/server/{backend_id}/details?key={key}&context=external', [
-                        'backend_id' => $context->backendId,
-                        'key' => urlencode($key->getPath())
-                    ])
-                );
+                $webUrl = $context
+                    ->backendUrl
+                    ->withPath('/web/index.html')
+                    ->withFragment(
+                        r('!/server/{backend_id}/details?key={key}&context=external', [
+                            'backend_id' => $context->backendId,
+                            'key' => urlencode($key->getPath()),
+                        ]),
+                    );
 
                 return new Response(status: true, response: $webUrl);
             },
-            action: $this->action
+            action: $this->action,
         );
     }
 }

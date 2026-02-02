@@ -139,10 +139,10 @@ class HelpersTest extends TestCase
 
     public function test_getValue(): void
     {
-        $this->assertSame('foo', getValue('foo'), 'When scalar value is passed, it is returned');
+        $this->assertSame('foo', get_value('foo'), 'When scalar value is passed, it is returned');
         $this->assertSame(
             'foo',
-            getValue(fn() => 'foo'),
+            get_value(fn() => 'foo'),
             'When callable is passed, it is called and result is returned'
         );
     }
@@ -151,27 +151,27 @@ class HelpersTest extends TestCase
     {
         $this->assertSame(
             '2020-01-01',
-            makeDate('2020-01-01')->format('Y-m-d'),
+            make_date('2020-01-01')->format('Y-m-d'),
             'When date string is passed, parsed it into Y-m-d format'
         );
         $this->assertSame(
             '2020-01-01',
-            makeDate(strtotime('2020-01-01'))->format('Y-m-d'),
+            make_date(strtotime('2020-01-01'))->format('Y-m-d'),
             'When timestamp is passed, parsed it into Y-m-d format'
         );
         $this->assertSame(
             '2020-01-01',
-            makeDate('2020-01-01 00:00:00')->format('Y-m-d'),
+            make_date('2020-01-01 00:00:00')->format('Y-m-d'),
             'Parse datetime string, and parse it into Y-m-d format'
         );
         $this->assertSame(
             '2020-01-01 00:00:00',
-            makeDate('2020-01-01 00:00:00')->format('Y-m-d H:i:s'),
+            make_date('2020-01-01 00:00:00')->format('Y-m-d H:i:s'),
             'Parse datetime string, and parse it into Y-m-d H:i:s format'
         );
         $this->assertSame(
             '2020-01-01 00:00:00',
-            makeDate(
+            make_date(
                 new \DateTimeImmutable('2020-01-01 00:00:00')
             )->format('Y-m-d H:i:s'),
             'When datetime DateTimeInterface is passed, it used as it is.'
@@ -180,49 +180,49 @@ class HelpersTest extends TestCase
         // Test Unix epoch (timestamp 0)
         $this->assertSame(
             '1970-01-01 00:00:00',
-            makeDate(0)->format('Y-m-d H:i:s'),
+            make_date(0)->format('Y-m-d H:i:s'),
             'Unix epoch (timestamp 0) should work correctly'
         );
 
         // Test negative timestamp (before Unix epoch)
         $this->assertSame(
             '1969-12-31',
-            makeDate(-86400)->format('Y-m-d'),
+            make_date(-86400)->format('Y-m-d'),
             'Negative timestamp (1 day before Unix epoch) should work correctly'
         );
 
         // Test earlier negative timestamp
         $this->assertSame(
             '1960-01-01',
-            makeDate(-315619200)->format('Y-m-d'),
+            make_date(-315619200)->format('Y-m-d'),
             'Negative timestamp for year 1960 should work correctly'
         );
 
         // Test negative timestamp as string
         $this->assertSame(
             '1969-12-31',
-            makeDate('-86400')->format('Y-m-d'),
+            make_date('-86400')->format('Y-m-d'),
             'Negative timestamp as string should work correctly'
         );
 
         // Test large positive timestamp
         $this->assertSame(
             '2038-01-19',
-            makeDate(2147483647)->format('Y-m-d'),
+            make_date(2147483647)->format('Y-m-d'),
             'Large positive timestamp (near 32-bit limit) should work correctly'
         );
 
         // Test numeric string (positive)
         $this->assertSame(
             '2020-01-01',
-            makeDate('1577836800')->format('Y-m-d'),
+            make_date('1577836800')->format('Y-m-d'),
             'Positive numeric string timestamp should work correctly'
         );
 
         // Test zero as string
         $this->assertSame(
             '1970-01-01 00:00:00',
-            makeDate('0')->format('Y-m-d H:i:s'),
+            make_date('0')->format('Y-m-d H:i:s'),
             'Zero as string should work as Unix epoch'
         );
     }
@@ -405,13 +405,13 @@ class HelpersTest extends TestCase
     {
         $this->assertSame(
             '/foo' . DIRECTORY_SEPARATOR . 'bar',
-            fixPath('/foo' . DIRECTORY_SEPARATOR . 'bar' . DIRECTORY_SEPARATOR),
+            fix_path('/foo' . DIRECTORY_SEPARATOR . 'bar' . DIRECTORY_SEPARATOR),
             'When path ends with directory separator, it is removed.'
         );
 
         $this->assertSame(
             'foo' . DIRECTORY_SEPARATOR . 'bar',
-            fixPath('foo' . DIRECTORY_SEPARATOR . 'bar'),
+            fix_path('foo' . DIRECTORY_SEPARATOR . 'bar'),
             'When path does not end with directory separator, it is not modified.'
         );
     }
@@ -441,7 +441,7 @@ class HelpersTest extends TestCase
         $factory = new Psr17Factory();
         $request = new ServerRequestCreator($factory, $factory, $factory, $factory)
             ->fromArrays(['REQUEST_METHOD' => 'GET']);
-        saveWebhookPayload(entity: $entity, request: $request, file: $stream);
+        save_webhook_payload(entity: $entity, request: $request, file: $stream);
 
         $stream->rewind();
         $data = trim($stream->getContents());
@@ -455,7 +455,7 @@ class HelpersTest extends TestCase
         );
 
         $this->expectException(RuntimeException::class);
-        saveWebhookPayload(entity: $entity, request: $request);
+        save_webhook_payload(entity: $entity, request: $request);
     }
 
     public function test_saveRequestPayload(): void
@@ -473,7 +473,7 @@ class HelpersTest extends TestCase
             ->withQueryParams(['foo' => 'bar', 'baz' => 'taz'])
             ->withAttribute('foo', 'bar');
 
-        saveRequestPayload(request: $request, file: $stream);
+        save_request_payload(request: $request, file: $stream);
 
         $stream->rewind();
         $data = trim($stream->getContents());
@@ -493,7 +493,7 @@ class HelpersTest extends TestCase
         $this->assertSame($request->getParsedBody(), $fromFile->getParsedBody());
 
         $this->expectException(RuntimeException::class);
-        saveRequestPayload(request: $request);
+        save_request_payload(request: $request);
     }
 
     public function test_api_response(): void
@@ -503,7 +503,7 @@ class HelpersTest extends TestCase
                 'response' => [
                     'headers' => [
                         'Content-Type' => 'application/json',
-                        'X-Application-Version' => fn() => getAppVersion(),
+                        'X-Application-Version' => fn() => get_app_version(),
                         'Access-Control-Allow-Origin' => '*',
                     ],
                 ],
@@ -514,7 +514,7 @@ class HelpersTest extends TestCase
         $response = api_response(Status::OK, $data);
         $this->assertSame(Status::OK->value, $response->getStatusCode());
         $this->assertSame('application/json', $response->getHeaderLine('Content-Type'));
-        $this->assertSame(getAppVersion(), $response->getHeaderLine('X-Application-Version'));
+        $this->assertSame(get_app_version(), $response->getHeaderLine('X-Application-Version'));
         $this->assertSame($data, json_decode($response->getBody()->getContents(), true));
     }
 
@@ -525,7 +525,7 @@ class HelpersTest extends TestCase
                 'response' => [
                     'headers' => [
                         'Content-Type' => 'application/json',
-                        'X-Application-Version' => fn() => getAppVersion(),
+                        'X-Application-Version' => fn() => get_app_version(),
                         'Access-Control-Allow-Origin' => '*',
                     ],
                 ],
@@ -538,7 +538,7 @@ class HelpersTest extends TestCase
         ]);
         $this->assertSame(Status::BAD_REQUEST->value, $response->getStatusCode());
         $this->assertSame('application/json', $response->getHeaderLine('Content-Type'));
-        $this->assertSame(getAppVersion(), $response->getHeaderLine('X-Application-Version'));
+        $this->assertSame(get_app_version(), $response->getHeaderLine('X-Application-Version'));
         $this->assertSame('test', $response->getHeaderLine('X-Test-Header'));
         $this->assertSame($data, json_decode($response->getBody()->getContents(), true));
 
@@ -555,7 +555,7 @@ class HelpersTest extends TestCase
                 'response' => [
                     'headers' => [
                         'Content-Type' => 'application/json',
-                        'X-Application-Version' => fn() => getAppVersion(),
+                        'X-Application-Version' => fn() => get_app_version(),
                         'Access-Control-Allow-Origin' => '*',
                     ],
                 ],
@@ -568,7 +568,7 @@ class HelpersTest extends TestCase
         ]);
         $this->assertSame(Status::OK->value, $response->getStatusCode());
         $this->assertSame('application/json', $response->getHeaderLine('Content-Type'));
-        $this->assertSame(getAppVersion(), $response->getHeaderLine('X-Application-Version'));
+        $this->assertSame(get_app_version(), $response->getHeaderLine('X-Application-Version'));
         $this->assertSame('test', $response->getHeaderLine('X-Test-Header'));
         $this->assertSame($data, json_decode($response->getBody()->getContents(), true));
 
@@ -594,7 +594,7 @@ class HelpersTest extends TestCase
 
         /** @noinspection PhpUnhandledExceptionInspection */
         $it = Items::fromIterable(
-            iterable: httpClientChunks($client->stream($response)),
+            iterable: http_client_chunks($client->stream($response)),
             options: [
                 'decoder' => new ErrorWrappingDecoder(
                     new ExtJsonDecoder(assoc: true, options: JSON_INVALID_UTF8_IGNORE)
@@ -613,17 +613,17 @@ class HelpersTest extends TestCase
     {
         $this->assertSame(
             'bar',
-            afterLast('foo/bar', '/'),
+            after_last('foo/bar', '/'),
             'When search delimiter is found, string after last delimiter is returned.'
         );
         $this->assertSame(
             'foo/bar',
-            afterLast('foo/bar', '_'),
+            after_last('foo/bar', '_'),
             'When search delimiter is not found, original string is returned.'
         );
         $this->assertSame(
             'foo/bar',
-            afterLast('foo/bar', ''),
+            after_last('foo/bar', ''),
             'When search delimiter is empty, original string is returned.'
         );
     }
@@ -671,12 +671,12 @@ class HelpersTest extends TestCase
         $data = ['foo' => ['bar' => 'baz'], 'kaz' => ['taz' => 'raz']];
         $this->assertSame(
             '(foo: [ (bar: baz) ]), (kaz: [ (taz: raz) ])',
-            arrayToString($data),
+            array_to_string($data),
             'When array is passed, it is converted into array text separated by delimiter.'
         );
         $this->assertSame(
             '(foo: [ (bar: baz) ])@ (kaz: [ (taz: raz) ])',
-            arrayToString($data, '@ '),
+            array_to_string($data, '@ '),
             'When array is passed, it is converted into array text separated by delimiter.'
         );
 
@@ -705,13 +705,13 @@ class HelpersTest extends TestCase
 
         $this->assertSame(
             '(baz: {"foo":"bar"})',
-            arrayToString(['baz' => $cl]),
+            array_to_string(['baz' => $cl]),
             'When array contains a class that implements JsonSerializable it is converted into array string.'
         );
 
         $this->assertSame(
             '(baz: {"foo":"bar"}), (foo: true), (bar: false)',
-            arrayToString([
+            array_to_string([
                 'baz' => $cl2,
                 'foo' => true,
                 'bar' => false,
@@ -721,7 +721,7 @@ class HelpersTest extends TestCase
 
         $this->assertSame(
             '(baz: [ (foo: bar) ])',
-            arrayToString(['baz' => $cl3]),
+            array_to_string(['baz' => $cl3]),
             "When a class doesn't implement JsonSerializable or Stringable, it's converted to array. using object vars."
         );
     }
@@ -732,11 +732,11 @@ class HelpersTest extends TestCase
         $invalidNames = ['foo bar', 'foo-bar', 'foo/bar', 'foo?bar', 'foo*bar', 'foo_baR', 'FOOBAR'];
 
         foreach ($validNames as $name) {
-            $this->assertTrue(isValidName($name), "When given name is '{$name}', true should be is returned.");
+            $this->assertTrue(is_valid_name($name), "When given name is '{$name}', true should be is returned.");
         }
 
         foreach ($invalidNames as $name) {
-            $this->assertFalse(isValidName($name), "When given name is '{$name}', false should be is returned.");
+            $this->assertFalse(is_valid_name($name), "When given name is '{$name}', false should be is returned.");
         }
     }
 
@@ -744,19 +744,19 @@ class HelpersTest extends TestCase
     {
         $this->assertSame(
             '01:00:00',
-            formatDuration(3600000),
+            format_duration(3600000),
             'When duration is passed, it is converted into human readable format.'
         );
 
         $this->assertSame(
             '01:00:00',
-            formatDuration(3600000.0),
+            format_duration(3600000.0),
             'When float duration is passed, it is converted into human readable format.'
         );
 
         $this->assertSame(
             '00:30:00',
-            formatDuration(3600000.0 / 2),
+            format_duration(3600000.0 / 2),
             'When float duration is passed, it is converted into human readable format.'
         );
     }
@@ -784,7 +784,7 @@ class HelpersTest extends TestCase
 
         $this->assertSame(
             $key,
-            (string)makeIgnoreId($keyPassed),
+            (string)make_ignore_id($keyPassed),
             'When ignore url is passed with garbage query string, it is removed.'
         );
     }
@@ -796,9 +796,9 @@ class HelpersTest extends TestCase
         $userContext = $this->createUserContext();
 
         $this->assertTrue(
-            isIgnoredId($userContext, 'test_plex', 'movie', 'guid_tvdb', '1200', '121', opts: [
+            is_ignored_id($userContext, 'test_plex', 'movie', 'guid_tvdb', '1200', '121', opts: [
                 'list' => [
-                    (string)makeIgnoreId($key) => makeDate(),
+                    (string)make_ignore_id($key) => make_date(),
                 ],
             ]),
             'When exact ignore url is passed, and it is found in ignore list, true is returned.'
@@ -806,32 +806,32 @@ class HelpersTest extends TestCase
 
         Config::init([
             'ignore' => [
-                (string)makeIgnoreId($key)->withQuery('') => makeDate(),
+                (string)make_ignore_id($key)->withQuery('') => make_date(),
             ]
         ]);
 
         $this->assertTrue(
-            isIgnoredId($userContext, 'test_plex', 'movie', 'guid_tvdb', '1200', '121', opts: [
+            is_ignored_id($userContext, 'test_plex', 'movie', 'guid_tvdb', '1200', '121', opts: [
                 'list' => [
-                    (string)makeIgnoreId($key)->withQuery('') => makeDate()
+                    (string)make_ignore_id($key)->withQuery('') => make_date()
                 ]
             ]),
             'When ignore url is passed with and ignore list has url without query string, true is returned.'
         );
 
         $this->assertFalse(
-            isIgnoredId($userContext, 'test_plex', 'movie', 'guid_tvdb', '1201', '121', opts: [
+            is_ignored_id($userContext, 'test_plex', 'movie', 'guid_tvdb', '1201', '121', opts: [
                 'list' => [
-                    (string)makeIgnoreId($key)->withQuery('') => makeDate()
+                    (string)make_ignore_id($key)->withQuery('') => make_date()
                 ]
             ]),
             'When ignore url is passed with and ignore list does not contain the url, false is returned.'
         );
 
         $this->expectException(InvalidArgumentException::class);
-        isIgnoredId($userContext, 'test_plex', 'not_real_type', 'guid_tvdb', '1200', '121', opts: [
+        is_ignored_id($userContext, 'test_plex', 'not_real_type', 'guid_tvdb', '1200', '121', opts: [
             'list' => [
-                (string)makeIgnoreId($key)->withQuery('') => makeDate()
+                (string)make_ignore_id($key)->withQuery('') => make_date()
             ]
         ]);
     }
@@ -878,7 +878,7 @@ class HelpersTest extends TestCase
 
         $this->assertSame(
             'Time is: 2020-01-01T00:00:00+00:00',
-            r('Time is: {date}', ['date' => makeDate('2020-01-01', 'UTC')]),
+            r('Time is: {date}', ['date' => make_date('2020-01-01', 'UTC')]),
             'When date is passed, it is converted into string and placeholders are replaced with values.'
         );
 
@@ -911,7 +911,7 @@ class HelpersTest extends TestCase
 
         $this->assertSame(
             '1.2.3.4',
-            getClientIp($request),
+            get_client_ip($request),
             'When request is passed, it returns client ip.'
         );
 
@@ -923,13 +923,13 @@ class HelpersTest extends TestCase
                 'HTTP_X_FORWARDED_FOR' => '4.3.2.1',
             ]);
 
-        $this->assertSame('1.2.3.4', getClientIp($request), 'When trust proxy is disabled, it returns client ip.');
+        $this->assertSame('1.2.3.4', get_client_ip($request), 'When trust proxy is disabled, it returns client ip.');
 
         Config::init(['trust' => ['proxy' => true]]);
 
         $this->assertSame(
             '4.3.2.1',
-            getClientIp($request),
+            get_client_ip($request),
             'When request is passed, it returns client ip.'
         );
     }
@@ -938,35 +938,35 @@ class HelpersTest extends TestCase
     {
         $_SERVER['REMOTE_ADDR'] = '1.2.3.4';
 
-        $this->assertSame('1.2.3.4', getClientIp(), 'When request is passed, it returns client ip.');
+        $this->assertSame('1.2.3.4', get_client_ip(), 'When request is passed, it returns client ip.');
 
         Config::init([]);
 
         $_SERVER['HTTP_X_FORWARDED_FOR'] = '4.3.2.1';
-        $this->assertSame('1.2.3.4', getClientIp(), 'When trust proxy is disabled, it returns client ip.');
+        $this->assertSame('1.2.3.4', get_client_ip(), 'When trust proxy is disabled, it returns client ip.');
 
         Config::init(['trust' => ['proxy' => true]]);
 
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_SERVER['HTTP_X_FORWARDED_FOR'] = '4.3.2.1';
 
-        $this->assertSame('4.3.2.1', getClientIp(), 'When request is passed, it returns client ip.');
+        $this->assertSame('4.3.2.1', get_client_ip(), 'When request is passed, it returns client ip.');
 
         $_SERVER['HTTP_X_FORWARDED_FOR'] = '1.2.3.4';
 
-        $this->assertSame('1.2.3.4', getClientIp(), 'When trust proxy is enabled, and ip is the same return it');
+        $this->assertSame('1.2.3.4', get_client_ip(), 'When trust proxy is enabled, and ip is the same return it');
 
         $_SERVER['HTTP_X_FORWARDED_FOR'] = ',4.3.2.1';
         $this->assertSame(
             '1.2.3.4',
-            getClientIp(),
+            get_client_ip(),
             'When trust proxy is enabled, And first ip is empty return real ip.'
         );
 
         $_SERVER['HTTP_X_FORWARDED_FOR'] = 'garbage,4.3.2.1';
         $this->assertSame(
             '1.2.3.4',
-            getClientIp(),
+            get_client_ip(),
             'When trust proxy is enabled, first ip is garbage return real ip.'
         );
     }
@@ -976,42 +976,51 @@ class HelpersTest extends TestCase
         $_ENV['ONLY_ENV'] = true;
         $_ENV['IN_CONTAINER'] = false;
 
-        $this->assertFalse(inContainer(), 'When not in container, false is returned.');
+        $this->assertFalse(in_container(), 'When not in container, false is returned.');
 
         $_ENV['IN_CONTAINER'] = true;
-        $this->assertTrue(inContainer(), 'When in container, true is returned.');
+        $this->assertTrue(in_container(), 'When in container, true is returned.');
 
 
         putenv('IN_CONTAINER=true');
-        $this->assertTrue(inContainer(), 'When in container, true is returned.');
+        $this->assertTrue(in_container(), 'When in container, true is returned.');
     }
 
     public function test_isValidURL(): void
     {
-        $this->assertTrue(isValidURL('http://example.com'), 'When valid url is passed, true is returned.');
-        $this->assertTrue(isValidURL('https://example.com'), 'When valid url is passed, true is returned.');
-        $this->assertTrue(isValidURL('http://example.com/foo/bar'), 'When valid url is passed, true is returned.');
-        $this->assertTrue(isValidURL('https://example.com/foo/bar'), 'When valid url is passed, true is returned.');
-        $this->assertTrue(isValidURL('http://www.example.com'), 'When valid url is passed, true is returned.');
-        $this->assertTrue(isValidURL('https://www.example.com'), 'When valid url is passed, true is returned.');
-        $this->assertTrue(isValidURL('http://www.example.com/foo/bar'), 'When valid url is passed, true is returned.');
-        $this->assertTrue(isValidURL('https://www.example.com/foo/bar'), 'When valid url is passed, true is returned.');
-        $this->assertTrue(isValidURL('http://127.0.0.1/foo/bar'), 'When valid url is passed, true is returned.');
-        $this->assertTrue(isValidURL('https://127.0.0.1/foo/bar'), 'When valid url is passed, true is returned.');
-        $this->assertTrue(isValidURL('http://localhost:1337/foo/bar'), 'When valid url is passed, true is returned.');
-        $this->assertTrue(isValidURL('https://localhost:1337/foo/bar'), 'When valid url is passed, true is returned.');
+        $this->assertTrue(is_valid_url('http://example.com'), 'When valid url is passed, true is returned.');
+        $this->assertTrue(is_valid_url('https://example.com'), 'When valid url is passed, true is returned.');
+        $this->assertTrue(is_valid_url('http://example.com/foo/bar'), 'When valid url is passed, true is returned.');
+        $this->assertTrue(is_valid_url('https://example.com/foo/bar'), 'When valid url is passed, true is returned.');
+        $this->assertTrue(is_valid_url('http://www.example.com'), 'When valid url is passed, true is returned.');
+        $this->assertTrue(is_valid_url('https://www.example.com'), 'When valid url is passed, true is returned.');
+        $this->assertTrue(
+            is_valid_url('http://www.example.com/foo/bar'),
+            'When valid url is passed, true is returned.'
+        );
+        $this->assertTrue(
+            is_valid_url('https://www.example.com/foo/bar'),
+            'When valid url is passed, true is returned.'
+        );
+        $this->assertTrue(is_valid_url('http://127.0.0.1/foo/bar'), 'When valid url is passed, true is returned.');
+        $this->assertTrue(is_valid_url('https://127.0.0.1/foo/bar'), 'When valid url is passed, true is returned.');
+        $this->assertTrue(is_valid_url('http://localhost:1337/foo/bar'), 'When valid url is passed, true is returned.');
+        $this->assertTrue(
+            is_valid_url('https://localhost:1337/foo/bar'),
+            'When valid url is passed, true is returned.'
+        );
         $this->assertFalse(
-            isValidURL('example.com/foo/bar?foo=bar&baz'),
+            is_valid_url('example.com/foo/bar?foo=bar&baz'),
             'When invalid url is passed, false is returned.'
         );
-        $this->assertFalse(isValidURL('example.com'), 'When invalid url is passed, false is returned.');
+        $this->assertFalse(is_valid_url('example.com'), 'When invalid url is passed, false is returned.');
     }
 
     public function test_parseEnvFile(): void
     {
         $envFile = __DIR__ . '/../Fixtures/test_env_vars';
 
-        $parsed = parseEnvFile($envFile);
+        $parsed = parse_env_file($envFile);
         $correctData = [
             "WS_TZ" => "Asia/Kuwait",
             "WS_CRON_IMPORT" => "1",
@@ -1028,7 +1037,7 @@ class HelpersTest extends TestCase
         }
 
         $this->expectException(InvalidArgumentException::class);
-        parseEnvFile(__DIR__ . '/../Fixtures/non_existing_file');
+        parse_env_file(__DIR__ . '/../Fixtures/non_existing_file');
     }
 
     public function test_loadEnvFile(): void
@@ -1046,7 +1055,7 @@ class HelpersTest extends TestCase
         $_ENV['WS_TZ'] = 'Asia/Kuwait';
         putenv('WS_TZ=Asia/Kuwait');
 
-        loadEnvFile($envFile, usePutEnv: true, override: false);
+        load_env_file($envFile, usePutEnv: true, override: false);
 
         foreach ($correctData as $key => $value) {
             $this->assertSame($value, env($key), 'Make sure correct values are returned when parsing env file.');
@@ -1054,7 +1063,7 @@ class HelpersTest extends TestCase
 
         // -- if given invalid file. it should not throw exception.
         try {
-            loadEnvFile(__DIR__ . '/../Fixtures/non_existing_file');
+            load_env_file(__DIR__ . '/../Fixtures/non_existing_file');
         } catch (\Throwable) {
             $this->fail('This function shouldn\'t throw exception when invalid file is given.');
         }
@@ -1062,7 +1071,7 @@ class HelpersTest extends TestCase
 
     public function test_generateRoutes()
     {
-        $routes = generateRoutes('cli', [CacheInterface::class => $this->cache]);
+        $routes = generate_routes('cli', [CacheInterface::class => $this->cache]);
 
         $this->assertCount(
             2,
@@ -1089,32 +1098,32 @@ class HelpersTest extends TestCase
         $this->cache->reset();
 
         $this->assertSame(
-            generateRoutes('http', [CacheInterface::class => $this->cache]),
+            generate_routes('http', [CacheInterface::class => $this->cache]),
             $this->cache->cache['routes_http'],
             'It should return http routes. when called with http type.'
         );
 
         $this->cache->reset();
         $this->cache->throw = true;
-        $routes = generateRoutes('http', [CacheInterface::class => $this->cache]);
+        $routes = generate_routes('http', [CacheInterface::class => $this->cache]);
         $this->assertCount(0, $this->cache->cache, 'When cache throws exception, it should not save anything.');
         $this->assertNotSame([], $routes, 'Routes should be generated even if cache throws exception.');
 
         // --
         $save = Config::get('supported', []);
         Config::save('supported', ['not_set' => 'not_set_client', 'plex' => PlexClient::class,]);
-        $routes = generateRoutes('http', [CacheInterface::class => $this->cache]);
+        $routes = generate_routes('http', [CacheInterface::class => $this->cache]);
         Config::save('supported', $save);
     }
 
     public function test_getSystemMemoryInfo()
     {
         /** @noinspection PhpUnhandledExceptionInspection */
-        $none = getSystemMemoryInfo(bin2hex(random_bytes(32)));
+        $none = get_system_memory_info(bin2hex(random_bytes(32)));
         $this->assertIsArray($none, 'It should return array.');
         $this->assertSame([], $none, 'When mem-file is not readable, it should return empty array.');
 
-        $info = getSystemMemoryInfo(__DIR__ . '/../Fixtures/meminfo_data.txt');
+        $info = get_system_memory_info(__DIR__ . '/../Fixtures/meminfo_data.txt');
         $this->assertIsArray($info, 'It should return array of memory info.');
         $this->assertArrayHasKey('mem_total', $info, 'It should have total memory key.');
         $this->assertArrayHasKey('mem_free', $info, 'It should have free memory key.');
@@ -1137,7 +1146,7 @@ class HelpersTest extends TestCase
         if (is_writeable(sys_get_temp_dir())) {
             try {
                 $fileName = tempnam(sys_get_temp_dir(), 'meminfo');
-                $none = getSystemMemoryInfo($fileName);
+                $none = get_system_memory_info($fileName);
                 $this->assertIsArray($none, 'It should return array.');
                 $this->assertSame([], $none, 'When mem-file is empty it should return empty array.');
             } finally {
@@ -1154,12 +1163,12 @@ class HelpersTest extends TestCase
     {
         Config::save('servers', ['test_backend' => []]);
         $rule = 'movie://tvdb:276923@test_backend?id=133367';
-        $this->assertTrue(checkIgnoreRule($rule));
+        $this->assertTrue(check_ignore_rule($rule));
 
         // -- if no db source is given, it should throw exception.
         $exception = null;
         try {
-            checkIgnoreRule('movie://test_backend?id=133367&garbage=1');
+            check_ignore_rule('movie://test_backend?id=133367&garbage=1');
         } catch (\Throwable $e) {
             $exception = $e;
         } finally {
@@ -1173,7 +1182,7 @@ class HelpersTest extends TestCase
 
         $exception = null;
         try {
-            checkIgnoreRule('movie://foo@test_backend?id=133367&garbage=1');
+            check_ignore_rule('movie://foo@test_backend?id=133367&garbage=1');
         } catch (\Throwable $e) {
             $exception = $e;
         } finally {
@@ -1187,7 +1196,7 @@ class HelpersTest extends TestCase
 
         $exception = null;
         try {
-            checkIgnoreRule('movie://tvdb@test_backend?id=133367&garbage=1');
+            check_ignore_rule('movie://tvdb@test_backend?id=133367&garbage=1');
         } catch (\Throwable $e) {
             $exception = $e;
         } finally {
@@ -1201,7 +1210,7 @@ class HelpersTest extends TestCase
 
         $exception = null;
         try {
-            checkIgnoreRule('http://tvdb:123@test_backend?id=133367&garbage=1');
+            check_ignore_rule('http://tvdb:123@test_backend?id=133367&garbage=1');
         } catch (\Throwable $e) {
             $exception = $e;
         } finally {
@@ -1219,7 +1228,7 @@ class HelpersTest extends TestCase
 
         $exception = null;
         try {
-            checkIgnoreRule('movie://tvdb:123@not_set?id=133367&garbage=1');
+            check_ignore_rule('movie://tvdb:123@not_set?id=133367&garbage=1');
         } catch (\Throwable $e) {
             $exception = $e;
         } finally {
@@ -1237,7 +1246,7 @@ class HelpersTest extends TestCase
 
         $exception = null;
         try {
-            checkIgnoreRule('//tvdb:123@not_set?id=133367&garbage=1');
+            check_ignore_rule('//tvdb:123@not_set?id=133367&garbage=1');
         } catch (\Throwable $e) {
             $exception = $e;
         } finally {
@@ -1254,7 +1263,7 @@ class HelpersTest extends TestCase
         }
         $exception = null;
         try {
-            checkIgnoreRule('//');
+            check_ignore_rule('//');
         } catch (\Throwable $e) {
             $exception = $e;
         } finally {
@@ -1274,7 +1283,7 @@ class HelpersTest extends TestCase
     public function test_addCors()
     {
         $response = api_response(Status::OK, headers: ['X-Request-Id' => '1']);
-        $response = addCors($response, headers: [
+        $response = add_cors($response, headers: [
             'X-Test-Add' => 'test',
             'X-Request-Id' => '2',
         ], methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']);
@@ -1326,16 +1335,16 @@ class HelpersTest extends TestCase
             ],
         ];
 
-        $this->assertSame($expected, deepArrayMerge([$array1, $array2]), 'It should merge arrays correctly.');
+        $this->assertSame($expected, deep_array_merge([$array1, $array2]), 'It should merge arrays correctly.');
         $this->assertSame(
             [['foo' => 'baz'], ['baz' => 'taz'],],
-            deepArrayMerge([[['foo' => 'bar']], [['foo' => 'baz'], ['baz' => 'taz'],]], true),
+            deep_array_merge([[['foo' => 'bar']], [['foo' => 'baz'], ['baz' => 'taz'],]], true),
             'if preserve keys is true'
         );
 
         $this->assertSame(
             [['foo' => 'bar'], ['foo' => 'baz'], ['baz' => 'taz'],],
-            deepArrayMerge([[['foo' => 'bar']], [['foo' => 'baz'], ['baz' => 'taz'],]], false),
+            deep_array_merge([[['foo' => 'bar']], [['foo' => 'baz'], ['baz' => 'taz'],]], false),
             'if preserve keys is false'
         );
     }
@@ -1343,7 +1352,7 @@ class HelpersTest extends TestCase
     public function test_tryCatch()
     {
         $f = null;
-        $x = tryCatch(fn() => throw new RuntimeException(), fn($e) => $e, function () use (&$f) {
+        $x = try_catch(fn() => throw new RuntimeException(), fn($e) => $e, function () use (&$f) {
             $f = 'finally_was_called';
         });
 
@@ -1364,11 +1373,13 @@ class HelpersTest extends TestCase
                 'visible' => true,
                 'description' => 'The user ID of the backend.',
             ],
-            getServerColumnSpec('user'),
+            get_server_column_spec('user'),
             'It should return correct column spec.'
         );
 
-        $this->assertSame([], getServerColumnSpec('not_set'), 'It should return empty array when column is not set.');
+        $this->assertSame([],
+            get_server_column_spec('not_set'),
+            'It should return empty array when column is not set.');
     }
 
     public function test_getEnvSpec()
@@ -1380,33 +1391,33 @@ class HelpersTest extends TestCase
                 'description' => 'Where to store main data. (config, db).',
                 'type' => 'string',
             ],
-            getEnvSpec('WS_DATA_PATH'),
+            get_env_spec('WS_DATA_PATH'),
             'It should return correct env spec.'
         );
 
-        $this->assertSame([], getEnvSpec('not_set'), 'It should return empty array when env is not set.');
+        $this->assertSame([], get_env_spec('not_set'), 'It should return empty array when env is not set.');
     }
 
     public function test_isTaskWorkerRunning()
     {
         $_ENV['ONLY_ENV'] = true;
         $_ENV['IN_CONTAINER'] = false;
-        $d = isSchedulerRunning();
+        $d = is_scheduler_running();
         $this->assertTrue($d['status'], 'When not in container, and $ignoreContainer is false, it should return true.');
         unset($_ENV['IN_CONTAINER']);
 
         $_ENV['DISABLE_CRON'] = true;
-        $d = isSchedulerRunning(ignoreContainer: true);
+        $d = is_scheduler_running(ignoreContainer: true);
         $this->assertFalse($d['status'], 'When DISABLE_CRON is set, it should return false.');
         unset($_ENV['DISABLE_CRON']);
 
-        $d = isSchedulerRunning(pidFile: __DIR__ . '/../Fixtures/worker.pid', ignoreContainer: true);
+        $d = is_scheduler_running(pidFile: __DIR__ . '/../Fixtures/worker.pid', ignoreContainer: true);
         $this->assertFalse($d['status'], 'When pid file is not found, it should return false.');
 
         $tmpFile = tempnam(sys_get_temp_dir(), 'worker');
         try {
             file_put_contents($tmpFile, getmypid());
-            $d = isSchedulerRunning(pidFile: $tmpFile, ignoreContainer: true);
+            $d = is_scheduler_running(pidFile: $tmpFile, ignoreContainer: true);
             $this->assertTrue($d['status'], 'When pid file is found, and process exists it should return true.');
         } finally {
             if (file_exists($tmpFile)) {
@@ -1418,7 +1429,7 @@ class HelpersTest extends TestCase
         try {
             /** @noinspection PhpUnhandledExceptionInspection */
             file_put_contents($tmpFile, random_int(1, 9999) . getmypid());
-            $d = isSchedulerRunning(pidFile: $tmpFile, ignoreContainer: true);
+            $d = is_scheduler_running(pidFile: $tmpFile, ignoreContainer: true);
             $this->assertFalse(
                 $d['status'],
                 'When pid file is found, and process does not exists it should return false.'
@@ -1435,7 +1446,7 @@ class HelpersTest extends TestCase
         $n = new \SplFileInfo(__DIR__ . '/../Fixtures/local_data/test.mkv');
         $this->assertCount(
             4,
-            findSideCarFiles($n),
+            find_side_car_files($n),
             'It should return side car files for given file.'
         );
     }
@@ -1480,7 +1491,7 @@ class HelpersTest extends TestCase
     {
         $this->assertSame(
             'application/json',
-            getMimeType(__DIR__ . '/../Fixtures/plex_data.json'),
+            get_mime_type(__DIR__ . '/../Fixtures/plex_data.json'),
             'It should return correct mime type.'
         );
     }
@@ -1489,7 +1500,7 @@ class HelpersTest extends TestCase
     {
         $this->assertSame(
             'json',
-            getExtension(__DIR__ . '/../Fixtures/plex_data.json'),
+            get_extension(__DIR__ . '/../Fixtures/plex_data.json'),
             'It should return correct extension.'
         );
     }
@@ -1499,13 +1510,13 @@ class HelpersTest extends TestCase
         #1ef6d04c-23c3-6442-9fd5-c87f54c3d8d1
         $this->assertMatchesRegularExpression(
             '/^[0-9a-f]{8}-[0-9a-f]{4}-6[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/',
-            generateUUID(),
+            generate_uuid(),
             'It should match valid UUID6 pattern.'
         );
 
         $this->assertMatchesRegularExpression(
             '/^test-[0-9a-f]{8}-[0-9a-f]{4}-6[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/',
-            generateUUID('test'),
+            generate_uuid('test'),
             'It should match valid UUID6 pattern.'
         );
     }
@@ -1519,7 +1530,7 @@ class HelpersTest extends TestCase
             }
         };
 
-        $item = fn() => cacheableItem(
+        $item = fn() => cacheable_item(
             key: 'test',
             function: fn() => 'foo',
             ignoreCache: false,
@@ -1543,7 +1554,7 @@ class HelpersTest extends TestCase
             'QUERY_STRING' => 'page=2&perpage=10'
         ], get: ['page' => 2, 'perpage' => 10]);
 
-        [$page, $perpage, $start] = getPagination($request, 1);
+        [$page, $perpage, $start] = get_pagination($request, 1);
 
         $this->assertSame(2, $page, 'It should return correct page number.');
         $this->assertSame(10, $perpage, 'It should return correct perpage number.');
@@ -1561,12 +1572,12 @@ class HelpersTest extends TestCase
 
         $this->assertInstanceOf(
             PlexClient::class,
-            getBackend('test_plex'),
+            get_backend('test_plex'),
             'It should return correct backend client.'
         );
 
         $this->expectException(RuntimeException::class);
-        getBackend('not_set');
+        get_backend('not_set');
     }
 
     public function test_makeBackend()
@@ -1580,7 +1591,7 @@ class HelpersTest extends TestCase
 
         $exception = null;
         try {
-            makeBackend([], 'foo');
+            make_backend([], 'foo');
         } catch (\Throwable $e) {
             $exception = $e;
         } finally {
@@ -1594,7 +1605,7 @@ class HelpersTest extends TestCase
 
         $exception = null;
         try {
-            makeBackend(['type' => 'plex'], 'foo');
+            make_backend(['type' => 'plex'], 'foo');
         } catch (\Throwable $e) {
             $exception = $e;
         } finally {
@@ -1608,7 +1619,7 @@ class HelpersTest extends TestCase
 
         $exception = null;
         try {
-            makeBackend(['type' => 'far', 'url' => 'http://test.example.invalid'], 'foo');
+            make_backend(['type' => 'far', 'url' => 'http://test.example.invalid'], 'foo');
         } catch (\Throwable $e) {
             $exception = $e;
         } finally {
@@ -1624,7 +1635,7 @@ class HelpersTest extends TestCase
 
         $this->assertInstanceOf(
             PlexClient::class,
-            makeBackend($data['test_plex'], 'test_plex'),
+            make_backend($data['test_plex'], 'test_plex'),
             'It should return correct backend client.'
         );
     }
@@ -1675,7 +1686,7 @@ class HelpersTest extends TestCase
         $_ENV['IN_CONTAINER'] = true;
         $this->assertSame(
             'docker exec -ti watchstate console',
-            trim(commandContext()),
+            trim(command_context()),
             'It should return correct command context. When in container.'
         );
         unset($_ENV['IN_CONTAINER']);
@@ -1683,7 +1694,7 @@ class HelpersTest extends TestCase
         $_ENV['IN_CONTAINER'] = false;
         $this->assertSame(
             $_SERVER['argv'][0] ?? 'php bin/console',
-            trim(commandContext()),
+            trim(command_context()),
             'If not in container, it should return argv[0] or defaults to php bin/console.'
         );
         unset($_ENV['IN_CONTAINER']);
@@ -1695,14 +1706,14 @@ class HelpersTest extends TestCase
         foreach ($isValid as $name) {
             $this->assertSame(
                 $name,
-                normalizeName($name),
+                normalize_name($name),
                 "When valid name '{$name}' is passed, it should return same string."
             );
         }
 
         $this->assertSame(
             'user_123',
-            normalizeName('123'),
+            normalize_name('123'),
             'When name is made entirely of numbers, it should prepend user_ to it.'
         );
 
@@ -1715,7 +1726,7 @@ class HelpersTest extends TestCase
         foreach ($invalidNames as $name) {
             $this->assertSame(
                 'foo_bar',
-                normalizeName($name),
+                normalize_name($name),
                 "When invalid name '{$name}' is passed, it should return same string with underscores."
             );
         }
@@ -1826,7 +1837,7 @@ class HelpersTest extends TestCase
         ];
 
         foreach ($cases as [$filename, $expected]) {
-            $result = parseEpisodeRange($filename);
+            $result = parse_episode_range($filename);
             $this->assertSame($expected, $result, "Failed for filename: {$filename}");
         }
     }

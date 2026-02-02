@@ -32,9 +32,10 @@ final class Integrity
 
     private bool $fromCache = false;
 
-    public function __construct(private readonly iImport $mapper, private readonly iLogger $logger)
-    {
-    }
+    public function __construct(
+        private readonly iImport $mapper,
+        private readonly iLogger $logger,
+    ) {}
 
     /**
      * @throws InvalidArgumentException
@@ -65,7 +66,7 @@ final class Integrity
             'fromCache' => $this->fromCache,
         ];
 
-        $sql = "SELECT * FROM state";
+        $sql = 'SELECT * FROM state';
         $stmt = $userContext->db->getDBLayer()->prepare($sql);
         $stmt->execute();
 
@@ -84,10 +85,14 @@ final class Integrity
             }
         }
 
-        $userContext->cache->set('system.integrity', [
-            'dir_exists' => $this->dirExists,
-            'checked_file' => $this->checkedFile,
-        ], new DateInterval('PT1H'));
+        $userContext->cache->set(
+            'system.integrity',
+            [
+                'dir_exists' => $this->dirExists,
+                'checked_file' => $this->checkedFile,
+            ],
+            new DateInterval('PT1H'),
+        );
 
         return api_response(Status::OK, $response);
     }
@@ -144,29 +149,31 @@ final class Integrity
 
             if (false === $this->checkPath($dirName)) {
                 $check['status'] = false;
-                $check['message'] = "File parent directory does not exist.";
+                $check['message'] = 'File parent directory does not exist.';
                 continue;
             } else {
                 $check['status'] = true;
-                $check['message'] = "File parent directory exists.";
+                $check['message'] = 'File parent directory exists.';
             }
 
             if (false === $this->checkFile($path)) {
                 $check['status'] = false;
-                $check['message'] = "File does not exist.";
+                $check['message'] = 'File does not exist.';
             } else {
                 $check['status'] = true;
-                $check['message'] = "File exists.";
+                $check['message'] = 'File exists.';
             }
         }
 
         unset($check);
 
         foreach ($checks as $check) {
-            if (false === $check['status']) {
-                $entity->setContext('integrity', $checks);
-                return false;
+            if (false !== $check['status']) {
+                continue;
             }
+
+            $entity->setContext('integrity', $checks);
+            return false;
         }
 
         return true;

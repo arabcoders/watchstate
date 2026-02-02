@@ -15,8 +15,10 @@ final class EnvFile
 {
     private array $data = [];
 
-    public function __construct(public readonly string $file, bool $create = false)
-    {
+    public function __construct(
+        public readonly string $file,
+        bool $create = false,
+    ) {
         if (!file_exists($this->file)) {
             if ($create) {
                 touch($this->file);
@@ -25,7 +27,7 @@ final class EnvFile
             }
         }
 
-        $this->data = parseEnvFile($this->file);
+        $this->data = parse_env_file($this->file);
     }
 
     /**

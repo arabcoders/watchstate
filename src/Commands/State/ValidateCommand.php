@@ -81,14 +81,15 @@ class ValidateCommand extends Command
      */
     protected function configure(): void
     {
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->setDescription('Validate stored backends reference id against the backends.')
             ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select user. Default all users.')
             ->addOption(
                 'logfile',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Save console output to file. Will not work with progress bar.'
+                'Save console output to file. Will not work with progress bar.',
             )
             ->addOption('progress', null, InputOption::VALUE_NONE, 'Show progress bar.');
     }
@@ -111,9 +112,9 @@ class ValidateCommand extends Command
      */
     protected function process(iInput $input, iOutput $output): int
     {
-        if (null !== ($logfile = $input->getOption('logfile')) && true === ($this->logger instanceof Logger)) {
+        if (null !== ($logfile = $input->getOption('logfile')) && true === $this->logger instanceof Logger) {
             $this->logger->setHandlers([
-                $this->suppressor->withHandler(new StreamLogHandler(new Stream($logfile, 'w'), $output))
+                $this->suppressor->withHandler(new StreamLogHandler(new Stream($logfile, 'w'), $output)),
             ]);
         }
 
@@ -125,10 +126,10 @@ class ValidateCommand extends Command
             $io = new SymfonyStyle($input, $output->section());
         }
 
-        $users = getUsersContext(mapper: $this->mapper, logger: $this->logger);
+        $users = get_users_context(mapper: $this->mapper, logger: $this->logger);
 
         if (null !== ($user = $input->getOption('user'))) {
-            $users = array_filter($users, fn($k) => $k === $user, mode: ARRAY_FILTER_USE_KEY);
+            $users = array_filter($users, static fn($k) => $k === $user, mode: ARRAY_FILTER_USE_KEY);
             if (empty($users)) {
                 $output->writeln(r("<error>User '{user}' not found.</error>", ['user' => $user]));
                 return self::FAILURE;
@@ -140,21 +141,36 @@ class ValidateCommand extends Command
         foreach ($users as $userContext) {
             $userStart = microtime(true);
 
-            $this->output(Level::Notice, "SYSTEM: Validating '{user}' local database metadata reference ids.", [
-                'user' => $userContext->name,
-            ], $logIO);
+            $this->output(
+                Level::Notice,
+                "SYSTEM: Validating '{user}' local database metadata reference ids.",
+                [
+                    'user' => $userContext->name,
+                ],
+                $logIO,
+            );
 
             $this->validate($userContext, $io, $logIO);
 
-            $this->output(Level::Notice, "SYSTEM: Completed '{user}' local database validation in '{duration}'s.", [
-                'user' => $userContext->name,
-                'duration' => round(microtime(true) - $userStart, 4),
-            ], $logIO);
+            $this->output(
+                Level::Notice,
+                "SYSTEM: Completed '{user}' local database validation in '{duration}'s.",
+                [
+                    'user' => $userContext->name,
+                    'duration' => round(microtime(true) - $userStart, 4),
+                ],
+                $logIO,
+            );
         }
 
-        $this->output(Level::Notice, "SYSTEM: Completed local databases validation in '{duration}'s.", [
-            'duration' => round(microtime(true) - $start_time, 4),
-        ], $logIO);
+        $this->output(
+            Level::Notice,
+            "SYSTEM: Completed local databases validation in '{duration}'s.",
+            [
+                'duration' => round(microtime(true) - $start_time, 4),
+            ],
+            $logIO,
+        );
 
         $this->renderStatus($output);
 
@@ -163,13 +179,13 @@ class ValidateCommand extends Command
 
     private function validate(
         UserContext $userContext,
-        SymfonyStyle|null $progBar = null,
-        SymfonyStyle|null $logIO = null
+        ?SymfonyStyle $progBar = null,
+        ?SymfonyStyle $logIO = null,
     ): void {
         $clients = [];
 
         foreach ($userContext->config->getAll() as $backend => $config) {
-            $clients[$backend] = makeBackend($config, $backend, [UserContext::class => $userContext]);
+            $clients[$backend] = make_backend($config, $backend, [UserContext::class => $userContext]);
         }
 
         $records = $userContext->db->getTotal();
@@ -183,7 +199,7 @@ class ValidateCommand extends Command
             'updated' => 0,
             'removed' => 0,
             'no_change' => 0,
-            'backends' => array_map(fn() => ['found' => 0, 'removed' => 0], $userContext->config->getAll()),
+            'backends' => array_map(static fn() => ['found' => 0, 'removed' => 0], $userContext->config->getAll()),
         ];
 
         $ref = &$this->perRun[$userContext->name];
@@ -262,7 +278,6 @@ class ValidateCommand extends Command
                                 'backend' => $backend,
                             ],
                             $logIO,
-
                         );
                         $item->removeMetadata($backend);
                         continue;
@@ -345,11 +360,16 @@ class ValidateCommand extends Command
                 if (null === $progBar) {
                     $progressUpdate++;
                     if (0 === ($progressUpdate % 500)) {
-                        $this->output(Level::Info, "SYSTEM: Processed '{progress}/{total}' %{percent}.", [
-                            'progress' => number_format($progressUpdate),
-                            'total' => $recordsCount,
-                            'percent' => round(($progressUpdate / $records) * 100, 3),
-                        ], $logIO);
+                        $this->output(
+                            Level::Info,
+                            "SYSTEM: Processed '{progress}/{total}' %{percent}.",
+                            [
+                                'progress' => number_format($progressUpdate),
+                                'total' => $recordsCount,
+                                'percent' => round(($progressUpdate / $records) * 100, 3),
+                            ],
+                            $logIO,
+                        );
                     }
                 } else {
                     $progBar->progressAdvance();
@@ -363,7 +383,7 @@ class ValidateCommand extends Command
         }
     }
 
-    private function output(Level $level, string $message, array $context = [], SymfonyStyle|null $io = null): void
+    private function output(Level $level, string $message, array $context = [], ?SymfonyStyle $io = null): void
     {
         if (null !== $io) {
             $io->writeln(r($message, $context), self::TO_VERBOSITY[$level->value] ?? iOutput::VERBOSITY_NORMAL);
@@ -400,7 +420,11 @@ class ValidateCommand extends Command
             }
 
             $output->writeln('');
-            new Table($output)->setHeaders(array_keys($tbl[0]))->setStyle('box')->setRows(array_values($tbl))->render();
+            new Table($output)
+                ->setHeaders(array_keys($tbl[0]))
+                ->setStyle('box')
+                ->setRows(array_values($tbl))
+                ->render();
             $output->writeln('');
         }
     }

@@ -52,10 +52,10 @@ final class Add
             return api_error('No name was given.', Status::BAD_REQUEST);
         }
 
-        if (false === isValidName($name)) {
+        if (false === is_valid_name($name)) {
             return api_error(
                 'Invalid name was given. Backend name must only contain [lowercase a-z, 0-9, _].',
-                Status::BAD_REQUEST
+                Status::BAD_REQUEST,
             );
         }
 
@@ -63,7 +63,7 @@ final class Add
 
         if (!empty($backend)) {
             return api_error(r("Backend '{backend}' already exists.", [
-                'backend' => $name
+                'backend' => $name,
             ]), Status::CONFLICT);
         }
 
@@ -71,7 +71,7 @@ final class Add
             return api_error('No url was given.', Status::BAD_REQUEST);
         }
 
-        if (false === isValidUrl($url)) {
+        if (false === is_valid_url($url)) {
             return api_error('Invalid url was given.', Status::BAD_REQUEST);
         }
 
@@ -114,7 +114,7 @@ final class Add
             $userContext->config->set($name, $config->getAll())->persist();
         } catch (InvalidContextException $e) {
             $logger->error('Failed to validate backend context. {error}', [
-                'verify_host' => (bool)$data->get('options.client.verify_host', true),
+                'verify_host' => (bool) $data->get('options.client.verify_host', true),
                 'error' => $e->getMessage(),
                 'exception' => ag(exception_log($e), 'exception', []),
             ]);
@@ -130,7 +130,7 @@ final class Add
     private function fromRequest(string $type, iRequest $request, iClient $client): array
     {
         $data = DataUtil::fromArray(
-            array_map(fn($v) => false === is_string($v) ? $v : trim($v), $request->getParsedBody())
+            array_map(static fn($v) => false === is_string($v) ? $v : trim($v), $request->getParsedBody()),
         );
 
         $config = [
@@ -140,23 +140,22 @@ final class Add
             'user' => $data->get('user'),
             'uuid' => $data->get('uuid'),
             'export' => [
-                'enabled' => (bool)$data->get('export.enabled', false),
-                'lastSync' => (int)$data->get('export.lastSync', null),
+                'enabled' => (bool) $data->get('export.enabled', false),
+                'lastSync' => (int) $data->get('export.lastSync', null),
             ],
             'import' => [
-                'enabled' => (bool)$data->get('import.enabled', false),
-                'lastSync' => (int)$data->get('import.lastSync', null),
+                'enabled' => (bool) $data->get('import.enabled', false),
+                'lastSync' => (int) $data->get('import.lastSync', null),
             ],
             'options' => [],
         ];
 
-
-        foreach (flatArray($data->get('options', [])) as $key => $value) {
+        foreach (flat_array($data->get('options', [])) as $key => $value) {
             $key = "options.{$key}";
 
-            $spec = getServerColumnSpec($key);
+            $spec = get_server_column_spec($key);
 
-            if ('options.client.verify_host' === $key && false !== (bool)$value) {
+            if ('options.client.verify_host' === $key && false !== (bool) $value) {
                 continue;
             }
 

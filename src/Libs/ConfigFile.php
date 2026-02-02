@@ -21,10 +21,11 @@ use Symfony\Component\Yaml\Yaml;
 final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
 {
     private const array CONTENT_TYPES = ['yaml', 'json', 'yml'];
+
     private array $data = [];
     private array $operations = [];
     private string $file_hash = '';
-    private LoggerInterface|null $logger = null;
+    private ?LoggerInterface $logger = null;
     /**
      * @var array<string, Closure> $filters List of filters to apply to the data before saving.
      */
@@ -50,10 +51,10 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
         private readonly bool $autoBackup = true,
         private readonly array $opts = [],
     ) {
-        if (false === in_array($this->type, self::CONTENT_TYPES)) {
+        if (false === in_array($this->type, self::CONTENT_TYPES, true)) {
             throw new InvalidArgumentException(r("Invalid content type '{type}'. Expecting '{types}'.", [
                 'type' => $type,
-                'types' => implode(', ', self::CONTENT_TYPES)
+                'types' => implode(', ', self::CONTENT_TYPES),
             ]));
         }
 
@@ -87,7 +88,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
         bool $autoSave = true,
         bool $autoCreate = false,
         bool $autoBackup = true,
-        array $opts = []
+        array $opts = [],
     ): self {
         return new self($file, $type, $autoSave, $autoCreate, $autoBackup, $opts);
     }
@@ -118,7 +119,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
         $this->operations[] = [
             'type' => 'set',
             'key' => $key,
-            'value' => $value
+            'value' => $value,
         ];
 
         $this->_set($key, $value);
@@ -137,7 +138,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
     {
         $this->operations[] = [
             'type' => 'delete',
-            'key' => $key
+            'key' => $key,
         ];
 
         $this->_delete($key);
@@ -159,7 +160,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
     {
         $this->operations[] = [
             'type' => 'replaceAll',
-            'value' => $data
+            'value' => $data,
         ];
 
         $this->_replaceAll($data);
@@ -215,9 +216,9 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
                         'file' => $this->file,
                         'hash' => [
                             'new' => $newHash,
-                            'old' => $this->file_hash
+                            'old' => $this->file_hash,
                         ],
-                    ]
+                    ],
                 );
                 $this->loadData();
             }
@@ -246,9 +247,9 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
                 'yaml' => Yaml::dump($this->data, inline: 8, indent: 2),
                 'json' => json_encode($this->data, flags: $json_encode),
                 default => throw new RuntimeException(r("Invalid content type '{type}'.", [
-                    'type' => $this->type
+                    'type' => $this->type,
                 ])),
-            }
+            },
         );
 
         $stream->close();
@@ -372,7 +373,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
                     break;
                 default:
                     throw new RuntimeException(r("Invalid operation type '{type}'.", [
-                        'type' => $operation['type']
+                        'type' => $operation['type'],
                     ]));
             }
         }
@@ -412,7 +413,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
 
         while ($arrays) {
             $array = array_shift($arrays);
-            assert(is_array($array));
+            assert(is_array($array), 'Config merge expects array inputs.');
             if (!$array) {
                 continue;
             }

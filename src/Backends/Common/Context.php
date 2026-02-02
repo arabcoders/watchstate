@@ -34,15 +34,15 @@ final readonly class Context
         public UriInterface $backendUrl,
         public Cache $cache,
         public UserContext $userContext,
-        public iLogger|null $logger = null,
+        public ?iLogger $logger = null,
         public string|int|null $backendId = null,
+        #[\SensitiveParameter]
         public string|int|null $backendToken = null,
         public string|int|null $backendUser = null,
         public array $backendHeaders = [],
         public bool $trace = false,
-        public array $options = []
-    ) {
-    }
+        public array $options = [],
+    ) {}
 
     /**
      * Get HTTP client options for backend requests.
@@ -69,7 +69,7 @@ final readonly class Context
      */
     public function isLimitedToken(bool $withUser = false): bool
     {
-        $status = true === (bool)ag($this->options, Options::IS_LIMITED_TOKEN, false);
+        $status = true === (bool) ag($this->options, Options::IS_LIMITED_TOKEN, false);
         return true === $withUser ? $status && null !== $this->backendUser : $status;
     }
 

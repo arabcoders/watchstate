@@ -52,9 +52,10 @@ final class Mismatched
         '*',
     ];
 
-    public function __construct(private readonly iImport $mapper, private readonly iLogger $logger)
-    {
-    }
+    public function __construct(
+        private readonly iImport $mapper,
+        private readonly iLogger $logger,
+    ) {}
 
     #[Get(backendIndex::URL . '/{name:backend}/mismatched[/[{id}[/]]]', name: 'backend.mismatched')]
     public function __invoke(iRequest $request, string $name, string|int|null $id = null): iResponse
@@ -74,7 +75,7 @@ final class Mismatched
         $backendOpts = $opts = $list = [];
 
         if ($params->get('timeout')) {
-            $backendOpts = ag_set($backendOpts, 'client.timeout', (float)$params->get('timeout'));
+            $backendOpts = ag_set($backendOpts, 'client.timeout', (float) $params->get('timeout'));
         }
 
         $includeRaw = $params->get('raw') || $params->get(Options::RAW_RESPONSE);
@@ -84,14 +85,13 @@ final class Mismatched
         $opts[Options::MISMATCH_DEEP_SCAN] = true;
         $opts[Options::NO_LOGGING] = true;
 
-        $percentage = (float)$params->get('percentage', self::DEFAULT_PERCENT);
+        $percentage = (float) $params->get('percentage', self::DEFAULT_PERCENT);
         $method = $params->get('method', self::METHODS[0]);
 
         if (false === in_array($method, self::METHODS, true)) {
             return api_error(r("Invalid comparison method '{method}'. Expecting '{methods}'", [
                 'method' => $method,
-                'methods' => implode(", ", self::METHODS),
-
+                'methods' => implode(', ', self::METHODS),
             ]), Status::BAD_REQUEST);
         }
 
@@ -106,7 +106,7 @@ final class Mismatched
             $ids[] = $id;
         } else {
             foreach ($client->listLibraries() as $library) {
-                if (false === (bool)ag($library, 'supported') || true === (bool)ag($library, 'ignored')) {
+                if (false === (bool) ag($library, 'supported') || true === (bool) ag($library, 'ignored')) {
                     continue;
                 }
                 $ids[] = ag($library, 'id');
@@ -157,7 +157,7 @@ final class Mismatched
             $item['guids'] = 'None';
         }
 
-        $toLower = fn(string $text, bool $isASCII = false) => trim($isASCII ? strtolower($text) : mb_strtolower($text));
+        $toLower = static fn(string $text, bool $isASCII = false) => trim($isASCII ? strtolower($text) : mb_strtolower($text));
 
         $builder['percent'] = $percent = 0.0;
         $builder['matches'] = [];
@@ -178,7 +178,7 @@ final class Mismatched
 
                 if (1 === preg_match('/\((\d{4})\)/', basename($pathFull), $match)) {
                     $withYear = true;
-                    if (ag($item, 'year') && false === str_contains($title, (string)ag($item, 'year'))) {
+                    if (ag($item, 'year') && false === str_contains($title, (string) ag($item, 'year'))) {
                         $title .= ' ' . ag($item, 'year');
                     }
                 } else {
@@ -228,7 +228,7 @@ final class Mismatched
                     ],
                     'year' => [
                         'inPath' => $withYear,
-                        'parsed' => isset($match[1]) ? (int)$match[1] : 'No',
+                        'parsed' => isset($match[1]) ? (int) $match[1] : 'No',
                         'source' => ag($item, 'year', 'No'),
                     ],
                 ];
@@ -264,9 +264,7 @@ final class Mismatched
     }
 
     /**
-     * Implementation of `mb_similar_text()`.
-     *
-     * (c) Antal Áron <antalaron@antalaron.hu>
+     * Implementation similar_text function for multibyte strings.
      *
      * @see http://php.net/manual/en/function.similar-text.php
      * @see http://locutus.io/php/strings/similar_text/
@@ -277,31 +275,51 @@ final class Mismatched
      *
      * @return int
      */
-    private function mb_similar_text(string $str1, string $str2, float|null &$percent = null): int
+    private static function mb_similar_text(string $str1, string $str2, ?float &$percent = null): int
     {
-        if (0 === mb_strlen($str1) + mb_strlen($str2)) {
-            $percent = 0.0;
+        $a = self::mb_chars($str1);
+        $b = self::mb_chars($str2);
 
+        $similarity = self::similarity_array($a, $b);
+
+        $l1 = count($a);
+        $l2 = count($b);
+
+        $percent = ($l1 + $l2) === 0 ? 0.0 : ($similarity * 200.0) / ($l1 + $l2);
+
+        return $similarity;
+    }
+
+    private static function mb_chars(string $s): array
+    {
+        if ($s === '') {
+            return [];
+        }
+
+        // Requires valid UTF-8 input.
+        return preg_split('//u', $s, -1, PREG_SPLIT_NO_EMPTY) ?? [];
+    }
+
+    private static function similarity_array(array $a, array $b): int
+    {
+        $l1 = count($a);
+        $l2 = count($b);
+
+        if (($l1 + $l2) === 0) {
             return 0;
         }
 
-        $pos1 = $pos2 = $max = 0;
-        $l1 = mb_strlen($str1);
-        $l2 = mb_strlen($str2);
+        $pos1 = 0;
+        $pos2 = 0;
+        $max = 0;
 
-        for ($p = 0; $p < $l1; ++$p) {
-            for ($q = 0; $q < $l2; ++$q) {
-                /** @noinspection LoopWhichDoesNotLoopInspection */
-                /** @noinspection MissingOrEmptyGroupStatementInspection */
-                for (
-                    $l = 0; ($p + $l < $l1) && ($q + $l < $l2) && mb_substr($str1, $p + $l, 1) === mb_substr(
-                    $str2,
-                    $q + $l,
-                    1
-                ); ++$l
-                ) {
-                    // nothing to do
+        for ($p = 0; $p < $l1; $p++) {
+            for ($q = 0; $q < $l2; $q++) {
+                $l = 0;
+                while (($p + $l) < $l1 && ($q + $l) < $l2 && $a[$p + $l] === $b[$q + $l]) {
+                    $l++;
                 }
+
                 if ($l > $max) {
                     $max = $l;
                     $pos1 = $p;
@@ -311,19 +329,26 @@ final class Mismatched
         }
 
         $similarity = $max;
-        if ($similarity) {
-            if ($pos1 && $pos2) {
-                $similarity += self::mb_similar_text(mb_substr($str1, 0, $pos1), mb_substr($str2, 0, $pos2));
-            }
-            if (($pos1 + $max < $l1) && ($pos2 + $max < $l2)) {
-                $similarity += self::mb_similar_text(
-                    mb_substr($str1, $pos1 + $max, $l1 - $pos1 - $max),
-                    mb_substr($str2, $pos2 + $max, $l2 - $pos2 - $max)
-                );
-            }
+
+        if ($similarity === 0) {
+            return 0;
         }
 
-        $percent = ($similarity * 200.0) / ($l1 + $l2);
+        // Leading parts (only if both sides have something before the match)
+        if ($pos1 > 0 && $pos2 > 0) {
+            $similarity += self::similarity_array(
+                array_slice($a, 0, $pos1),
+                array_slice($b, 0, $pos2),
+            );
+        }
+
+        // Trailing parts (only if both sides have something after the match)
+        if (($pos1 + $max) < $l1 && ($pos2 + $max) < $l2) {
+            $similarity += self::similarity_array(
+                array_slice($a, $pos1 + $max),
+                array_slice($b, $pos2 + $max),
+            );
+        }
 
         return $similarity;
     }
@@ -364,7 +389,7 @@ final class Mismatched
                 $c2 = mb_substr($str2, $j, 1, 'UTF-8');
                 $insertions = $prevRow[$j + 1] + 1;
                 $deletions = $currentRow[$j] + 1;
-                $substitutions = $prevRow[$j] + (($c1 !== $c2) ? 1 : 0);
+                $substitutions = $prevRow[$j] + ($c1 !== $c2 ? 1 : 0);
                 $currentRow[] = min($insertions, $deletions, $substitutions);
             }
 
@@ -385,8 +410,8 @@ final class Mismatched
      */
     private function toPercentage(int $base, string $str1, string $str2, bool $isASCII = false): float
     {
-        $length = fn(string $text) => $isASCII ? mb_strlen($text, 'UTF-8') : strlen($text);
+        $length = static fn(string $text) => $isASCII ? mb_strlen($text, 'UTF-8') : strlen($text);
 
-        return (1 - $base / max($length($str1), $length($str2))) * 100;
+        return (1 - ($base / max($length($str1), $length($str2)))) * 100;
     }
 }

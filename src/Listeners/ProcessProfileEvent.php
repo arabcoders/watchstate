@@ -20,6 +20,7 @@ use Throwable;
 final readonly class ProcessProfileEvent
 {
     public const string NAME = 'export_profile';
+
     private array $config;
 
     /**
@@ -28,8 +29,10 @@ final readonly class ProcessProfileEvent
      * @param iLogger $logger The logger object.
      * @param iHttp $client The http client object.
      */
-    public function __construct(private iLogger $logger, private iHttp $client)
-    {
+    public function __construct(
+        private iLogger $logger,
+        private iHttp $client,
+    ) {
         $this->config = Config::get('profiler', []);
     }
 
@@ -43,7 +46,7 @@ final readonly class ProcessProfileEvent
         $e->stopPropagation();
 
         $hasCollector = null !== ($url = ag($this->config, 'collector'));
-        $saveProfile = (bool)ag($this->config, 'save', false);
+        $saveProfile = (bool) ag($this->config, 'save', false);
         if (false === $hasCollector && false === $saveProfile) {
             $writer(Level::Info, 'No profile collector url was set and save is disabled.');
             return $e;
@@ -55,19 +58,19 @@ final readonly class ProcessProfileEvent
             return $e;
         }
 
-        if (true === (bool)ag($this->config, 'save', false)) {
+        if (true === (bool) ag($this->config, 'save', false)) {
             try {
                 $stream = new Stream(r('{path}/{date}-{uuid}.json', [
                     'path' => rtrim(Config::get('profiler.path'), sys_get_temp_dir()),
                     'date' => gmdate('YmdHis'),
-                    'uuid' => ag($e->getData(), 'meta.id', fn() => generateUUID()),
+                    'uuid' => ag($e->getData(), 'meta.id', generate_uuid(...)),
                 ]), 'w');
                 $stream->write($data);
                 $stream->close();
             } catch (Throwable $e) {
                 $writer(Level::Error, 'Failed to save profile data. {message}', [
                     'message' => $e->getMessage(),
-                    'exception' => $e
+                    'exception' => $e,
                 ]);
             }
         }
@@ -92,12 +95,11 @@ final readonly class ProcessProfileEvent
             } catch (TransportExceptionInterface $e) {
                 $writer(Level::Error, 'Error sending profile data to collector. {message}', [
                     'message' => $e->getMessage(),
-                    'exception' => $e
+                    'exception' => $e,
                 ]);
             }
         }
 
         return $e;
     }
-
 }

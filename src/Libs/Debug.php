@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Libs;
 
-use App\Libs\Config;
 use Symfony\Component\VarDumper\Cloner\VarCloner;
 use Symfony\Component\VarDumper\Dumper\CliDumper;
 use Symfony\Component\VarDumper\VarDumper;
@@ -44,7 +43,7 @@ final readonly class Debug
             mkdir(directory: $directory, recursive: true);
         }
 
-        $handle = @fopen((string)Path::make(Config::get('logger.file.filename'))->withName('debug.log'), 'a');
+        $handle = @fopen((string) Path::make(Config::get('logger.file.filename'))->withName('debug.log'), 'a');
 
         if (!$handle) {
             return;
@@ -67,12 +66,14 @@ final readonly class Debug
                 fwrite(STDOUT, $output);
                 fwrite(STDOUT, $callPath . PHP_EOL);
             } else {
-                echo sprintf(
-                    '<span style=" display:inline-block; color: #fff; font-family: %s; padding: 2px 4px; font-size: 0.8rem; margin-bottom: -12px; background: #0071BC;" >%s (%s)</span>',
-                    'Source Code Pro, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace',
-                    $key,
-                    $callPath,
-                );
+                echo
+                    sprintf(
+                        '<span style=" display:inline-block; color: #fff; font-family: %s; padding: 2px 4px; font-size: 0.8rem; margin-bottom: -12px; background: #0071BC;" >%s (%s)</span>',
+                        'Source Code Pro, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace',
+                        $key,
+                        $callPath,
+                    )
+                ;
                 VarDumper::dump($item);
             }
         }
@@ -84,7 +85,7 @@ final readonly class Debug
 
         $output = '';
 
-        $dumper = new CliDumper(function ($line, $depth) use (&$output): void {
+        $dumper = new CliDumper(static function ($line, $depth) use (&$output): void {
             if ($depth < 0) {
                 return;
             }

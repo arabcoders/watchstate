@@ -23,7 +23,7 @@ final class RemoteHandler extends AbstractProcessingHandler
         private readonly iHttp $client,
         private readonly string $url,
         $level = Level::Debug,
-        bool $bubble = true
+        bool $bubble = true,
     ) {
         $this->bubble = $bubble;
 
@@ -50,23 +50,25 @@ final class RemoteHandler extends AbstractProcessingHandler
         $server = $_SERVER ?? [];
 
         foreach ($server as $key => $value) {
-            if (is_string($key) && str_starts_with(strtoupper($key), 'WS_')) {
-                $server[$key] = '***';
+            if (!(is_string($key) && str_starts_with(strtoupper($key), 'WS_'))) {
+                continue;
             }
+
+            $server[$key] = '***';
         }
 
         try {
             $this->requests[] = $this->client->request(Method::POST->value, $this->url, [
                 'timeout' => 6,
                 'json' => [
-                    'id' => generateUUID(),
+                    'id' => generate_uuid(),
                     'message' => $record->message,
                     'trace' => ag($record->context, 'trace', []),
                     'structured' => ag($record->context, 'structured', []),
                     'server' => ag($_SERVER ?? [], ['HTTP_HOST', 'SERVER_NAME'], 'watchstate.cli'),
                     'context' => $server,
                     'raw' => $record->toArray(),
-                ]
+                ],
             ]);
         } catch (Throwable $e) {
             syslog(LOG_ERR, sprintf('%s: %s. (%s:%d)', $e::class, $e->getMessage(), $e->getFile(), $e->getLine()));

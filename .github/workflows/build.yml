@@ -113,6 +113,12 @@ jobs:
       - name: Install PHP dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
 
+      - name: Run PHP formatter check
+        run: composer run format_ci
+
+      - name: Run PHP linter
+        run: composer run lint
+
       - name: Run PHP tests
         run: composer run test
 
@@ -130,9 +136,15 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: frontend
-        env:
-          NODE_ENV: production
         run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Run frontend linter
+        working-directory: frontend
+        run: pnpm run lint
+
+      - name: Run frontend typecheck
+        working-directory: frontend
+        run: pnpm run lint:tsc
 
       - name: Build frontend
         working-directory: frontend

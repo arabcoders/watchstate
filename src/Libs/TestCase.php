@@ -21,7 +21,7 @@ use Throwable;
 
 class TestCase extends \PHPUnit\Framework\TestCase
 {
-    protected TestHandler|null $handler = null;
+    protected ?TestHandler $handler = null;
 
     /**
      * Checks if the given closure throws an exception.
@@ -39,44 +39,46 @@ class TestCase extends \PHPUnit\Framework\TestCase
         string $reason,
         Throwable|string $exception,
         string $exceptionMessage = '',
-        int|null $exceptionCode = null,
-        callable|null $callback = null,
+        ?int $exceptionCode = null,
+        ?callable $callback = null,
     ): void {
         $caught = null;
         try {
             $closure();
         } catch (Throwable $e) {
             $caught = $e;
-        } finally {
-            if (null !== $callback) {
-                $callback($this, $caught);
-                return;
-            }
-            if (null === $caught) {
-                $this->fail('No exception was thrown. ' . $reason);
-            } else {
-                $this->assertSame(
-                    is_object($exception) ? $exception::class : $exception,
-                    is_object($caught) ? $caught::class : $caught,
-                    $reason . '.; ' . $caught->getMessage(),
-                );
-                if (!empty($exceptionMessage)) {
-                    $this->assertStringContainsString($exceptionMessage, $caught->getMessage(), $reason);
-                }
-                if (!empty($exceptionCode)) {
-                    $this->assertEquals($exceptionCode, $caught->getCode(), $reason);
-                }
-            }
+        }
+
+        if (null !== $callback) {
+            $callback($this, $caught);
+            return;
+        }
+
+        if (null === $caught) {
+            $this->fail('No exception was thrown. ' . $reason);
+            return;
+        }
+
+        $this->assertSame(
+            is_object($exception) ? $exception::class : $exception,
+            is_object($caught) ? $caught::class : $caught,
+            $reason . '.; ' . $caught->getMessage(),
+        );
+        if (!empty($exceptionMessage)) {
+            $this->assertStringContainsString($exceptionMessage, $caught->getMessage(), $reason);
+        }
+        if (!empty($exceptionCode)) {
+            $this->assertEquals($exceptionCode, $caught->getCode(), $reason);
         }
     }
 
     protected function createUserContext(
         string $name = 'test',
-        ConfigFile|null $configFile = null,
-        LoggerInterface|null $logger = null,
-        CacheInterface|null $cache = null,
-        PDOAdapter|null $db = null,
-        ImportInterface|null $mapper = null,
+        ?ConfigFile $configFile = null,
+        ?LoggerInterface $logger = null,
+        ?CacheInterface $cache = null,
+        ?PDOAdapter $db = null,
+        ?ImportInterface $mapper = null,
         array $data = [],
     ): UserContext {
         static $instances = null;

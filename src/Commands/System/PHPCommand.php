@@ -29,25 +29,26 @@ final class PHPCommand extends Command
      */
     protected function configure(): void
     {
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->setDescription('Generate php config.')
             ->addOption('fpm', null, InputOption::VALUE_NONE, 'Generate php-fpm config.')
             ->setHelp(
                 r(
                     <<<HELP
 
-                    This command generate expected values for <notice>php.ini</notice> and <notice>fpm</notice> pool worker.
+                        This command generate expected values for <notice>php.ini</notice> and <notice>fpm</notice> pool worker.
 
-                    To generate fpm values run:
+                        To generate fpm values run:
 
-                    {cmd} <cmd>{route}</cmd> <flag>--fpm</flag>
+                        {cmd} <cmd>{route}</cmd> <flag>--fpm</flag>
 
-                    HELP,
+                        HELP,
                     [
-                        'cmd' => trim(commandContext()),
+                        'cmd' => trim(command_context()),
                         'route' => self::ROUTE,
-                    ]
-                )
+                    ],
+                ),
             );
     }
 
@@ -112,7 +113,7 @@ final class PHPCommand extends Command
     private function escapeValue(mixed $val): mixed
     {
         if (is_bool($val) || is_int($val)) {
-            return (int)$val;
+            return (int) $val;
         }
 
         return $val ?? '';
