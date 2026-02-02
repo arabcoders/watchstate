@@ -142,7 +142,7 @@ jobs:
         working-directory: frontend
         env:
           NODE_ENV: development
-        run: pnpm run prepare --envName=development
+        run: pnpm run prepare:test
 
       - name: Run frontend linter
         working-directory: frontend
