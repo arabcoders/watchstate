@@ -275,8 +275,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ github.workflow }}-${{ env.ARCH }}
-          cache-to: type=gha,mode=max,scope=${{ github.workflow }}-${{ env.ARCH }}
+          cache-from: type=gha,scope=${{ github.workflow_ref }}-${{ env.ARCH }}
+          cache-to: type=gha,mode=max,scope=${{ github.workflow_ref }}-${{ env.ARCH }}
           provenance: true
 
   docker-build-arm64:
