@@ -138,6 +138,12 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile --prefer-offline
 
+      - name: Run nuxt prepare
+        working-directory: frontend
+        env:
+          NODE_ENV: development
+        run: pnpm run prepare --envName=development
+
       - name: Run frontend linter
         working-directory: frontend
         run: pnpm run lint
