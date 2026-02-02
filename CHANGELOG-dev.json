@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260202-8e3dada1",
-        "date": "2026-02-02T18:35:47+00:00",
+        "tag": "dev-20260202-4e8f15b1",
+        "date": "2026-02-02T19:12:42+00:00",
         "commits": [
+            {
+                "sha": "4e8f15b1",
+                "message": "fix: build using gitea ci",
+                "author": "arabcoders",
+                "date": "2026-02-02T19:12:42+00:00",
+                "full_sha": "4e8f15b1fe2847a50486e79770877d667953ff54"
+            },
             {
                 "sha": "8e3dada1",
                 "message": "fix: js dont make it easy.",
@@ -1012,7 +1019,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "8e3dada131e49478074df63f0152e25780db2e54"
+        "full_sha": "4e8f15b1fe2847a50486e79770877d667953ff54"
     },
     {
         "tag": "dev-20250604-9407bc76",
