@@ -185,7 +185,7 @@ jobs:
     name: Build Container (amd64)
     runs-on: ubuntu-latest
     needs: [test, validate-build-config]
-    if: vars.BUILD_AMD64 != 'false'
+    if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build)) && vars.BUILD_AMD64 != 'false'
     permissions:
       packages: write
       contents: write
@@ -283,7 +283,7 @@ jobs:
     name: Build Container (arm64)
     runs-on: ubuntu-latest
     needs: [test, validate-build-config]
-    if: vars.BUILD_ARM64 != 'false'
+    if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build)) && vars.BUILD_ARM64 != 'false'
     permissions:
       packages: write
       contents: write
