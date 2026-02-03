@@ -114,7 +114,7 @@ jobs:
         run: composer install --prefer-dist --no-interaction --no-progress
 
       - name: Run PHP formatter check
-        run: composer run format_ci
+        run: composer run format:ci
 
       - name: Run PHP linter
         run: composer run lint

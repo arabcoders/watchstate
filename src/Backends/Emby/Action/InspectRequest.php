@@ -47,6 +47,7 @@ class InspectRequest
                         return new Response(status: false, response: $request);
                     }
                     $request = $request->withParsedBody($payload);
+                    $json = $payload;
                 }
 
                 // -- Due to the fact that Emby doesn't give us an actual user agent, we have to rely on the version

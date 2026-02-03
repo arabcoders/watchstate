@@ -1,0 +1,179 @@
+{
+  "info": {
+    "ServerName": "MediaBrowser Test",
+    "Version": "10.9.0",
+    "Id": "server-1",
+    "OperatingSystem": "Linux"
+  },
+  "users": [
+    {
+      "Id": "user-1",
+      "Name": "Test User",
+      "Policy": {
+        "IsAdministrator": true,
+        "IsHidden": false,
+        "IsDisabled": false
+      },
+      "LastActivityDate": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "user": {
+    "Id": "user-1",
+    "Name": "Test User",
+    "Policy": {
+      "IsAdministrator": true,
+      "IsHidden": false,
+      "IsDisabled": false
+    },
+    "LastActivityDate": "2024-01-01T00:00:00Z"
+  },
+  "auth": {
+    "User": {
+      "Id": "user-1",
+      "Name": "Test User"
+    },
+    "ServerId": "server-1",
+    "AccessToken": "access-token-1"
+  },
+  "sessions": [
+    {
+      "UserId": "user-1",
+      "UserName": "Test User",
+      "NowPlayingItem": {
+        "Id": "item-1",
+        "Name": "Test Movie",
+        "Type": "Movie"
+      },
+      "PlayState": {
+        "PositionTicks": 900000000,
+        "IsPaused": false
+      },
+      "LastActivityDate": "2024-01-01T00:00:00Z",
+      "Id": "session-1"
+    },
+    {
+      "UserId": "user-2",
+      "UserName": "Other User",
+      "NowPlayingItem": null,
+      "Id": "session-2"
+    }
+  ],
+  "libraries": {
+    "Items": [
+      {
+        "Id": "lib-1",
+        "Name": "Movies",
+        "CollectionType": "movies",
+        "Type": "CollectionFolder"
+      },
+      {
+        "Id": "lib-2",
+        "Name": "Shows",
+        "CollectionType": "tvshows",
+        "Type": "CollectionFolder"
+      }
+    ]
+  },
+  "libraries_empty": {
+    "Items": []
+  },
+  "library_items": {
+    "Items": [
+      {
+        "Id": "item-1",
+        "Name": "Test Movie",
+        "Type": "Movie",
+        "ProductionYear": 2020,
+        "DateCreated": "2020-01-02T00:00:00Z",
+        "Path": "/media/movies/test-movie/test-movie.mkv",
+        "ProviderIds": {
+          "Imdb": "tt123",
+          "Tmdb": "123"
+        },
+        "UserData": {
+          "Played": false,
+          "PlaybackPositionTicks": 900000000
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "Id": "item-1",
+    "Name": "Test Movie",
+    "Type": "Movie",
+    "ProductionYear": 2020,
+    "DateCreated": "2020-01-02T00:00:00Z",
+    "Path": "/media/movies/test-movie/test-movie.mkv",
+    "ProviderIds": {
+      "Imdb": "tt123",
+      "Tmdb": "123"
+    },
+    "UserData": {
+      "Played": false,
+      "PlaybackPositionTicks": 900000000
+    }
+  },
+  "metadata_episode": {
+    "Id": "episode-1",
+    "Name": "Pilot",
+    "Type": "Episode",
+    "SeriesName": "Test Show",
+    "ProductionYear": 2020,
+    "DateCreated": "2020-01-02T00:00:00Z",
+    "Path": "/media/shows/test-show/season-1/pilot.mkv",
+    "ParentIndexNumber": 1,
+    "IndexNumber": 1,
+    "ProviderIds": {
+      "Imdb": "tt234",
+      "Tmdb": "234",
+      "Tvdb": "234"
+    },
+    "UserData": {
+      "Played": true,
+      "PlaybackPositionTicks": 0,
+      "PlayCount": 1
+    }
+  },
+  "webhook_jellyfin": {
+    "NotificationType": "PlaybackStop",
+    "ItemType": "Movie",
+    "ItemId": "item-1",
+    "Played": true,
+    "PlaybackPositionTicks": 800000000,
+    "provider_imdb": "tt123",
+    "provider_tmdb": "123"
+  },
+  "webhook_emby": {
+    "Event": "item.markplayed",
+    "Item": {
+      "Id": "item-1",
+      "Type": "Movie",
+      "ProviderIds": {
+        "Imdb": "tt123",
+        "Tmdb": "123"
+      },
+      "DateCreated": "2020-01-02T00:00:00Z",
+      "Played": true
+    }
+  },
+  "search": {
+    "Items": [
+      {
+        "Id": "item-1",
+        "Name": "Test Movie",
+        "Type": "Movie",
+        "ProductionYear": 2020,
+        "DateCreated": "2020-01-02T00:00:00Z",
+        "Path": "/media/movies/test-movie/test-movie.mkv",
+        "ProviderIds": {
+          "Imdb": "tt123",
+          "Tmdb": "123"
+        },
+        "UserData": {
+          "Played": false,
+          "PlaybackPositionTicks": 900000000
+        }
+      }
+    ]
+  }
+}
