@@ -9,6 +9,7 @@ use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Jellyfin\Action\GetLibrariesList;
 use App\Backends\Jellyfin\Action\GetMetaData;
 use App\Backends\Jellyfin\Action\GetWebUrl;
+use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
@@ -224,7 +225,8 @@ trait JellyfinActionTrait
          * This workaround shall be preserved until jellyfin devs fix the API.
          * For reference check {@see \App\Libs\Mappers\Import\DirectMapper::handleOldEntity()}
          */
-        if (JellyfinClient::CLIENT_NAME === $context->clientName && $isPlayed) {
+        $enabled = Config::get('clients.jellyfin.fix_played', false);
+        if ($enabled && JellyfinClient::CLIENT_NAME === $context->clientName && $isPlayed) {
             $uPositionTicks = 0 === (int) ag($item, 'UserData.PlaybackPositionTicks', -1);
             $uPlayCount = (int) ag($item, 'UserData.PlayCount', -1) >= 1;
             $uIsPlayed = true === (bool) ag($item, 'UserData.Played', false);

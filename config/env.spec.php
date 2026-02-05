@@ -406,9 +406,9 @@ return (function () {
             },
         ],
         [
-            'key' => 'WS_CLIENTS_JELLYFIN_DISABLE_FIX_PLAYED',
-            'config' => 'clients.jellyfin.disable_fix_played',
-            'description' => 'Disable the Jellyfin "fix" for marking items as played.',
+            'key' => 'WS_CLIENTS_JELLYFIN_FIX_PLAYED',
+            'config' => 'clients.jellyfin.fix_played',
+            'description' => 'Enable partial fix for Jellyfin marking items as played.',
             'type' => 'bool',
         ],
     ];

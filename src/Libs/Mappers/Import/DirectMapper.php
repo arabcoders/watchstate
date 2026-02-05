@@ -673,8 +673,8 @@ class DirectMapper implements ImportInterface
              * This workaround shall be preserved until jellyfin devs fix the API.
              * For reference check {@see App\Backends\Jellyfin\JellyfinClient::createEntity}
              */
-            $disable = Config::get('clients.jellyfin.disable_fix_played', false);
-            if (false === $disable && $entity->isWatched() && true === $entity->getContext('should_mark', false)) {
+            $enable = Config::get('clients.jellyfin.fix_played', false);
+            if ($enable && $entity->isWatched() && true === $entity->getContext('should_mark', false)) {
                 $this->logger->notice(
                     "{mapper}: [O] '{user}@{backend}' item '#{id}: {title}' date '{remote_date}' is older than last sync date '{local_date}'. Due to bug in jellyfin API a special case handling is applied to mark the item as played.",
                     [

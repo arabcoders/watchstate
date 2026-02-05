@@ -240,7 +240,7 @@ return (function () {
         strtolower(PlexClient::CLIENT_NAME) => [],
         strtolower(EmbyClient::CLIENT_NAME) => [],
         strtolower(JellyfinClient::CLIENT_NAME) => [
-            'disable_fix_played' => (bool)env('WS_CLIENTS_JELLYFIN_DISABLE_FIX_PLAYED', false),
+            'fix_played' => (bool)env('WS_CLIENTS_JELLYFIN_FIX_PLAYED', false),
         ],
     ];
 
