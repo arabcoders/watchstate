@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260205-0a48aef1",
-        "date": "2026-02-05T15:30:16+00:00",
+        "tag": "dev-20260205-740704c2",
+        "date": "2026-02-05T16:23:14+00:00",
         "commits": [
+            {
+                "sha": "740704c2",
+                "message": "refactor: disable jellyfin fix_played by default.",
+                "author": "arabcoders",
+                "date": "2026-02-05T16:23:14+00:00",
+                "full_sha": "740704c2ede1318b00d110317025845a5b39bd73"
+            },
             {
                 "sha": "0a48aef1",
                 "message": "refactor: improve directMapper memory usage.",
@@ -1054,7 +1061,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "0a48aef1f0b095db9df4659be5b586783a0c3b40"
+        "full_sha": "740704c2ede1318b00d110317025845a5b39bd73"
     },
     {
         "tag": "dev-20250604-9407bc76",
