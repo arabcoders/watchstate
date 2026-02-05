@@ -224,7 +224,11 @@ interface DatabaseInterface
     /**
      * Fetch data from database.
      *
-     * @param array $opts (Options to pass to the query)
+     * @param array{fields:array<string>,after:DateTimeInterface|int|null,class:iState|null} $opts (Options to pass to the query)
+     *   Supported options:
+     *     - fields: array<string> Columns to select.
+     *     - after: DateTimeInterface|int|null Only rows updated after this timestamp.
+     *     - class: iState|null Override entity class.
      *
      * @return Generator<iState> Yielding each row of data.
      */

@@ -695,14 +695,29 @@ final class PDOAdapter implements iDB
      */
     public function fetch(array $opts = []): Generator
     {
-        $fromClass = $this->options['class'] ?? null;
+        $fromClass = $opts['class'] ?? $this->options['class'] ?? null;
         if (null === ($fromClass ?? null) || false === $fromClass instanceof iState) {
             $class = Container::get(iState::class);
         } else {
             $class = $fromClass;
         }
 
-        $stmt = $this->db->query('SELECT * FROM state');
+        $fields = '*';
+        if (true === array_key_exists('fields', $opts)) {
+            $fields = implode(', ', $opts['fields']);
+        }
+
+        $sql = "SELECT {$fields} FROM state";
+        $bind = [];
+
+        if (true === array_key_exists(Options::AFTER, $opts) && null !== $opts[Options::AFTER]) {
+            $after = $opts[Options::AFTER];
+            $timestamp = $after instanceof DateTimeInterface ? $after->getTimestamp() : (int) $after;
+            $sql .= ' WHERE ' . iState::COLUMN_UPDATED . ' > :after';
+            $bind['after'] = $timestamp;
+        }
+
+        $stmt = $this->db->query($sql, $bind);
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             yield $class::fromArray($row);
         }
