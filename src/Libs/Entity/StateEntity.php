@@ -293,7 +293,7 @@ final class StateEntity implements iState
 
         return Guid::fromArray(payload: array_intersect_key($this->guids, Guid::getSupported()), context: [
             'backend' => $this->via,
-            'backend_id' => ag($this->getMetadata($this->via), iState::COLUMN_ID),
+            'backend_id' => ag($this->getMetadata($this->via), iState::COLUMN_ID, null),
             'item' => [
                 iState::COLUMN_ID => $this->id,
                 iState::COLUMN_TYPE => $this->type,
@@ -385,7 +385,7 @@ final class StateEntity implements iState
 
         $list = Guid::fromArray(payload: $this->getRelativeGuids(), context: [
             'backend' => $this->via,
-            'backend_id' => ag($this->getMetadata($this->via), iState::COLUMN_ID),
+            'backend_id' => ag($this->getMetadata($this->via), iState::COLUMN_ID, null),
             'item' => [
                 iState::COLUMN_ID => $this->id,
                 iState::COLUMN_TYPE => $this->type,
@@ -638,6 +638,10 @@ final class StateEntity implements iState
         }
 
         foreach ($this->getMetadata() as $metadata) {
+            if (null === $metadata || false === is_array($metadata)) {
+                continue;
+            }
+
             if (0 !== (int) ag($metadata, iState::COLUMN_WATCHED, 0) && $allowUpdate < 1) {
                 continue;
             }
@@ -663,6 +667,10 @@ final class StateEntity implements iState
         $minimumProgress = (int) Config::get('progress.minimum', 60000);
 
         foreach ($this->getMetadata() as $backend => $metadata) {
+            if (null === $metadata || false === is_array($metadata)) {
+                continue;
+            }
+
             if (0 !== (int) ag($metadata, iState::COLUMN_WATCHED, 0) && $allowUpdate < 1) {
                 continue;
             }
@@ -725,7 +733,6 @@ final class StateEntity implements iState
     public function getMeta(string $key, mixed $default = null): mixed
     {
         if (empty($this->via)) {
-            $this->logger?->warning('StateEntity: No backend was set in $this->via parameter.');
             return $default;
         }
 
@@ -734,13 +741,14 @@ final class StateEntity implements iState
         $quorum = round($total / 2, 0, PHP_ROUND_HALF_UP);
 
         if ($quorum < 2) {
-            $this->logger?->warning("StateEntity: Quorum is less than 2. '{quorum}' Using default value.", [
-                'quorum' => $quorum,
-            ]);
-            return ag($this->metadata[$this->via], $key, $default);
+            return ag($this->metadata, "{$this->via}.{$key}", $default);
         }
 
         foreach ($this->metadata as $data) {
+            if (null === $data || false === is_array($data)) {
+                continue;
+            }
+
             if (null === ($value = ag($data, $key, null))) {
                 continue;
             }
@@ -752,13 +760,10 @@ final class StateEntity implements iState
             if ($count < $quorum) {
                 continue;
             }
-
-            $this->logger?->info('StateEntity: quorum found. Using value from {value}.', ['value' => $value]);
             return $value;
         }
 
-        $this->logger?->warning('StateEntity: no quorum found. Using default value.');
-        return ag($this->metadata[$this->via], $key, $default);
+        return ag($this->metadata, "{$this->via}.{$key}", $default);
     }
 
     /**
