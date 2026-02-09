@@ -39,9 +39,10 @@ class Push
      * @param iHttp $http The HTTP client.
      * @param iLogger $logger The logger.
      */
-    public function __construct(protected readonly iHttp $http, protected readonly iLogger $logger)
-    {
-    }
+    public function __construct(
+        protected readonly iHttp $http,
+        protected readonly iLogger $logger,
+    ) {}
 
     /**
      * Wrap the operation in try response block.
@@ -57,7 +58,7 @@ class Push
         Context $context,
         array $entities,
         QueueRequests $queue,
-        DateTimeInterface|null $after = null
+        ?DateTimeInterface $after = null,
     ): Response {
         return $this->tryResponse(context: $context, fn: fn() => $this->action($context, $entities, $queue, $after));
     }
@@ -76,16 +77,16 @@ class Push
         Context $context,
         array $entities,
         QueueRequests $queue,
-        DateTimeInterface|null $after = null
+        ?DateTimeInterface $after = null,
     ): Response {
         $requests = [];
 
         foreach ($entities as $key => $entity) {
-            if (true !== ($entity instanceof iState)) {
+            if (true !== $entity instanceof iState) {
                 continue;
             }
 
-            if (null !== $after && false === (bool)ag($context->options, Options::IGNORE_DATE, false)) {
+            if (null !== $after && false === (bool) ag($context->options, Options::IGNORE_DATE, false)) {
                 if ($after->getTimestamp() > $entity->updated) {
                     continue;
                 }
@@ -108,7 +109,7 @@ class Push
             if (null === ag($metadata, iState::COLUMN_ID, null)) {
                 $this->logger->warning(
                     message: "{action}: Ignoring '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. No metadata was found.",
-                    context: $logContext
+                    context: $logContext,
                 );
                 continue;
             }
@@ -116,31 +117,34 @@ class Push
             $logContext['remote']['id'] = ag($metadata, iState::COLUMN_ID);
 
             try {
-                $url = $context->backendUrl->withPath(
-                    r('/Users/{user_id}/items/{item_id}', [
-                        'user_id' => $context->backendUser,
-                        'item_id' => ag($metadata, iState::COLUMN_ID),
-                    ])
-                )->withQuery(
-                    http_build_query([
-                        'fields' => implode(',', JFC::EXTRA_FIELDS),
-                        'enableUserData' => 'true',
-                        'enableImages' => 'false',
-                    ])
-                );
+                $url = $context
+                    ->backendUrl
+                    ->withPath(
+                        r('/Users/{user_id}/items/{item_id}', [
+                            'user_id' => $context->backendUser,
+                            'item_id' => ag($metadata, iState::COLUMN_ID),
+                        ]),
+                    )
+                    ->withQuery(
+                        http_build_query([
+                            'fields' => implode(',', JFC::EXTRA_FIELDS),
+                            'enableUserData' => 'true',
+                            'enableImages' => 'false',
+                        ]),
+                    );
 
-                $logContext['remote']['url'] = (string)$url;
+                $logContext['remote']['url'] = (string) $url;
 
                 $this->logger->debug(
                     message: "{action}: Requesting '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' metadata.",
-                    context: $logContext
+                    context: $logContext,
                 );
 
                 $requests[] = $this->http->request(
                     method: Method::GET,
-                    url: (string)$url,
+                    url: (string) $url,
                     options: array_replace_recursive($context->getHttpOptions(), [
-                        'user_data' => ['id' => $key, 'context' => $logContext]
+                        'user_data' => ['id' => $key, 'context' => $logContext],
                     ]),
                 );
             } catch (Throwable $e) {
@@ -163,8 +167,8 @@ class Push
                                 'trace' => $e->getTrace(),
                             ],
                         ],
-                        e: $e
-                    )
+                        e: $e,
+                    ),
                 );
             }
         }
@@ -178,25 +182,25 @@ class Push
                 if (null === ($id = ag($response->getInfo('user_data'), 'id'))) {
                     $this->logger->error(
                         message: "{action}: Unable to get entity object id for '{client}: {user}@{backend}'.",
-                        context: $logContext
+                        context: $logContext,
                     );
                     continue;
                 }
 
                 $entity = $entities[$id];
 
-                assert($entity instanceof iState);
+                assert($entity instanceof iState, 'Expected state entity for Jellyfin push response.');
 
                 if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
                     if (Status::NOT_FOUND === Status::tryFrom($response->getStatusCode())) {
                         $this->logger->warning(
                             message: "{action}: Request for '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' metadata returned with (404: Not Found) status code.",
-                            context: [...$logContext, 'status_code' => $response->getStatusCode()]
+                            context: [...$logContext, 'status_code' => $response->getStatusCode()],
                         );
                     } else {
                         $this->logger->error(
                             message: "{action}: Request for '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' metadata returned with unexpected '{status_code}' status code.",
-                            context: [...$logContext, 'status_code' => $response->getStatusCode()]
+                            context: [...$logContext, 'status_code' => $response->getStatusCode()],
                         );
                     }
 
@@ -206,17 +210,17 @@ class Push
                 $json = json_decode(
                     json: $response->getContent(),
                     associative: true,
-                    flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                    flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
                 );
 
                 if ($context->trace) {
                     $this->logger->debug(
                         message: "{action}: Parsing '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' payload.",
-                        context: [...$logContext, 'response' => ['body' => $json]]
+                        context: [...$logContext, 'response' => ['body' => $json]],
                     );
                 }
 
-                $isWatched = (int)(bool)ag($json, 'UserData.Played', false);
+                $isWatched = (int) (bool) ag($json, 'UserData.Played', false);
 
                 if ($entity->watched === $isWatched) {
                     $this->logger->info(
@@ -226,19 +230,19 @@ class Push
                     continue;
                 }
 
-                if (false === (bool)ag($context->options, Options::IGNORE_DATE, false)) {
+                if (false === (bool) ag($context->options, Options::IGNORE_DATE, false)) {
                     $dateKey = 1 === $isWatched ? 'UserData.LastPlayedDate' : 'DateCreated';
                     if (null === ($date = ag($json, $dateKey))) {
                         $this->logger->error(
                             message: "{action}: Ignoring '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}'. No {date_key} is set on backend object.",
-                            context: ['date_key' => $dateKey, ...$logContext, 'response' => ['body' => $json]]
+                            context: ['date_key' => $dateKey, ...$logContext, 'response' => ['body' => $json]],
                         );
                         continue;
                     }
 
-                    $date = makeDate($date);
+                    $date = make_date($date);
 
-                    $timeExtra = (int)(ag($context->options, Options::EXPORT_ALLOWED_TIME_DIFF, 10));
+                    $timeExtra = (int) ag($context->options, Options::EXPORT_ALLOWED_TIME_DIFF, 10);
 
                     if ($date->getTimestamp() >= ($timeExtra + $entity->updated)) {
                         $this->logger->notice(
@@ -246,12 +250,12 @@ class Push
                             context: [
                                 ...$logContext,
                                 'comparison' => [
-                                    'database' => makeDate($entity->updated),
+                                    'database' => make_date($entity->updated),
                                     'backend' => $date,
                                     'difference' => $date->getTimestamp() - $entity->updated,
                                     'extra_margin' => [Options::EXPORT_ALLOWED_TIME_DIFF => $timeExtra],
                                 ],
-                            ]
+                            ],
                         );
                         continue;
                     }
@@ -260,35 +264,36 @@ class Push
                 $url = $context->backendUrl->withPath(
                     r('/Users/{user_id}/PlayedItems/{item_id}', [
                         'user_id' => $context->backendUser,
-                        'item_id' => ag($json, 'Id')
-                    ])
+                        'item_id' => ag($json, 'Id'),
+                    ]),
                 );
 
-                $lastPlayed = makeDate($entity->updated)->format(Date::ATOM);
+                $lastPlayed = make_date($entity->updated)->format(Date::ATOM);
                 if ($context->clientName === JFC::CLIENT_NAME) {
                     $url = $url->withQuery(http_build_query(['DatePlayed' => $lastPlayed]));
                 }
 
-                $logContext['remote']['url'] = (string)$url;
+                $logContext['remote']['url'] = (string) $url;
 
                 $this->logger->debug(
                     message: "{action}: Queuing request to change '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' play state to '{play_state}'.",
-                    context: [...$logContext, 'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed']
+                    context: [...$logContext, 'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed'],
                 );
 
-                if (false === (bool)ag($context->options, Options::DRY_RUN, false)) {
+                if (false === (bool) ag($context->options, Options::DRY_RUN, false)) {
                     $queue->add(
                         $this->http->request(
                             method: $entity->isWatched() ? Method::POST : Method::DELETE,
-                            url: (string)$url,
+                            url: (string) $url,
                             options: array_replace_recursive($context->getHttpOptions(), [
                                 'user_data' => [
-                                    'context' => $logContext + [
-                                            'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed'
+                                    'context' => $logContext
+                                        + [
+                                            'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
                                         ],
                                 ],
-                            ])
-                        )
+                            ]),
+                        ),
                     );
 
                     /**
@@ -300,19 +305,20 @@ class Push
                         $queue->add(
                             $this->http->request(
                                 method: Method::POST,
-                                url: (string)$context->backendUrl->withPath(r('/Users/{user}/Items/{id}/UserData', [
+                                url: (string) $context->backendUrl->withPath(r('/Users/{user}/Items/{id}/UserData', [
                                     'user' => $context->backendUser,
-                                    'id' => ag($json, 'Id')
+                                    'id' => ag($json, 'Id'),
                                 ])),
-                                options: $context->getHttpOptions() + [
+                                options: $context->getHttpOptions()
+                                + [
                                     'json' => [
                                         'Played' => true,
                                         'PlaybackPositionTicks' => 0,
                                         'LastPlayedDate' => $lastPlayed,
                                     ],
-                                    'user_data' => [Options::NO_LOGGING => true]
-                                ]
-                            )
+                                    'user_data' => [Options::NO_LOGGING => true],
+                                ],
+                            ),
                         );
                     }
                 }
@@ -336,8 +342,8 @@ class Push
                                 'trace' => $e->getTrace(),
                             ],
                         ],
-                        e: $e
-                    )
+                        e: $e,
+                    ),
                 );
             }
         }

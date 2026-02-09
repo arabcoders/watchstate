@@ -69,7 +69,8 @@ class RestoreCommand extends Command
      */
     protected function configure(): void
     {
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->setDescription('Restore backend play state from backup file.')
             ->addOption('execute', null, InputOption::VALUE_NONE, 'Commit the changes to backend.')
             ->addOption('assume-yes', null, InputOption::VALUE_NONE, 'Answer yes to understanding the risks.')
@@ -87,13 +88,13 @@ class RestoreCommand extends Command
                 'sync-requests',
                 null,
                 InputOption::VALUE_NONE,
-                'Send one request at a time instead of all at once. note: Slower but more reliable.'
+                'Send one request at a time instead of all at once. note: Slower but more reliable.',
             )
             ->addOption(
                 'async-requests',
                 null,
                 InputOption::VALUE_NONE,
-                'Send all requests at once. note: Faster but less reliable. Default.'
+                'Send all requests at once. note: Faster but less reliable. Default.',
             )
             ->addOption('logfile', null, InputOption::VALUE_REQUIRED, 'Save console output to file.');
     }
@@ -109,9 +110,9 @@ class RestoreCommand extends Command
      */
     protected function runCommand(iInput $input, iOutput $output): int
     {
-        if (null !== ($logfile = $input->getOption('logfile')) && true === ($this->logger instanceof Logger)) {
+        if (null !== ($logfile = $input->getOption('logfile')) && true === $this->logger instanceof Logger) {
             $this->logger->setHandlers([
-                $this->suppressor->withHandler(new StreamLogHandler(new Stream($logfile, 'w'), $output))
+                $this->suppressor->withHandler(new StreamLogHandler(new Stream($logfile, 'w'), $output)),
             ]);
         }
 
@@ -151,7 +152,7 @@ class RestoreCommand extends Command
 
             if (false === file_exists($newFile) || false === is_readable($newFile)) {
                 $output->writeln(r("<error>ERROR: Unable to read backup file '{file}'.</error>", [
-                    'file' => $file
+                    'file' => $file,
                 ]));
                 return self::FAILURE;
             }
@@ -164,9 +165,9 @@ class RestoreCommand extends Command
         $mapper = new RestoreMapper($this->logger, $file);
 
         try {
-            $userContext = getUserContext(user: $userName, mapper: $mapper, logger: $this->logger);
+            $userContext = get_user_context(user: $userName, mapper: $mapper, logger: $this->logger);
         } catch (RuntimeException $e) {
-            $output->writeln(r("<error>{message}</error>", [
+            $output->writeln(r('<error>{message}</error>', [
                 'message' => $e->getMessage(),
             ]));
             return self::FAILURE;
@@ -180,7 +181,7 @@ class RestoreCommand extends Command
             return self::FAILURE;
         }
 
-        if (false === (bool)ag($backend, 'export.enabled')) {
+        if (false === (bool) ag($backend, 'export.enabled')) {
             if (false === $input->getOption('ignore')) {
                 $output->writeln(r("<error>ERROR: Export to '{user}@{backend}' are disabled.</error>", [
                     'backend' => $name,
@@ -194,31 +195,31 @@ class RestoreCommand extends Command
                 [
                     'backend' => $name,
                     'user' => $userContext->name,
-                ]
+                ],
             );
         }
 
-        if (true === (bool)ag($backend, 'import.enabled')) {
+        if (true === (bool) ag($backend, 'import.enabled')) {
             if (false === $input->getOption('assume-yes')) {
                 $helper = $this->getHelper('question');
                 $text = <<<TEXT
-                <options=bold,underscore>Are you sure?</> <comment>[Y|N] [Default: No]</comment>
-                -----------------
-                You are about to restore backend that has imports enabled.
+                    <options=bold,underscore>Are you sure?</> <comment>[Y|N] [Default: No]</comment>
+                    -----------------
+                    You are about to restore backend that has imports enabled.
 
-                <fg=white;bg=red;options=bold>The changes will propagate back to your backends.</>
+                    <fg=white;bg=red;options=bold>The changes will propagate back to your backends.</>
 
-                <comment>If you understand the risks then answer with [<info>yes</info>]
-                If you don't please run same command with <info>[--help]</info> flag.
-                </comment>
-                -----------------
-                TEXT;
+                    <comment>If you understand the risks then answer with [<info>yes</info>]
+                    If you don't please run same command with <info>[--help]</info> flag.
+                    </comment>
+                    -----------------
+                    TEXT;
 
                 $question = new ConfirmationQuestion($text . PHP_EOL . '> ', false);
 
                 if (false === $helper->ask($input, $output, $question)) {
                     $output->writeln(
-                        '<comment>Restore operation is cancelled, you answered no for risk assessment, or interaction is disabled.</comment>'
+                        '<comment>Restore operation is cancelled, you answered no for risk assessment, or interaction is disabled.</comment>',
                     );
                     return self::SUCCESS;
                 }
@@ -228,7 +229,7 @@ class RestoreCommand extends Command
                     [
                         'user' => $userContext->name,
                         'backend' => $name,
-                    ]
+                    ],
                 );
             }
         }
@@ -237,8 +238,8 @@ class RestoreCommand extends Command
             'backend' => $name,
             'user' => $userContext->name,
             'memory' => [
-                'now' => getMemoryUsage(),
-                'peak' => getPeakMemoryUsage(),
+                'now' => get_memory_usage(),
+                'peak' => get_peak_memory_usage(),
             ],
         ]);
 
@@ -251,16 +252,16 @@ class RestoreCommand extends Command
                 'backend' => $name,
                 'user' => $userContext->name,
                 'memory' => [
-                    'now' => getMemoryUsage(),
-                    'peak' => getPeakMemoryUsage(),
+                    'now' => get_memory_usage(),
+                    'peak' => get_peak_memory_usage(),
                 ],
                 'duration' => round(microtime(true) - $start, 4),
-            ]
+            ],
         );
 
         if (false === $input->getOption('execute')) {
             $this->logger->notice(
-                "No changes will be committed to backend. To execute the changes pass '--execute' flag option."
+                "No changes will be committed to backend. To execute the changes pass '--execute' flag option.",
             );
         }
 
@@ -275,7 +276,7 @@ class RestoreCommand extends Command
         }
 
         $backend['options'] = array_replace_recursive($backend['options'] ?? [], $opts);
-        $backend = makeBackend(backend: $backend, name: $name, options: [
+        $backend = make_backend(backend: $backend, name: $name, options: [
             UserContext::class => $userContext,
         ]);
 
@@ -285,7 +286,7 @@ class RestoreCommand extends Command
         ]);
 
         if (false === ($syncRequests = $input->getOption('sync-requests'))) {
-            $syncRequests = (bool)Config::get('http.default.sync_requests', false);
+            $syncRequests = (bool) Config::get('http.default.sync_requests', false);
         }
 
         if (true === $input->getOption('async-requests')) {
@@ -316,11 +317,11 @@ class RestoreCommand extends Command
             $this->logger->notice("SYSTEM: Sending '{total}' change state requests for '{user}@{backend}'.", [
                 'backend' => $name,
                 'user' => $userContext->name,
-                'total' => $total
+                'total' => $total,
             ]);
         }
 
-        if ((int)Message::get("{$userContext->name}.{$name}.export", 0) < 1) {
+        if ((int) Message::get("{$userContext->name}.{$name}.export", 0) < 1) {
             $this->logger->notice("SYSTEM: No difference detected between backup file and '{user}@{backend}'.", [
                 'backend' => $name,
                 'user' => $userContext->name,
@@ -332,7 +333,7 @@ class RestoreCommand extends Command
         }
 
         foreach ($this->queue->getQueue() as $response) {
-            if (true === (bool)ag($response->getInfo('user_data'), Options::NO_LOGGING, false)) {
+            if (true === (bool) ag($response->getInfo('user_data'), Options::NO_LOGGING, false)) {
                 try {
                     $response->getStatusCode();
                 } catch (Throwable) {
@@ -349,14 +350,14 @@ class RestoreCommand extends Command
                 if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
                     $this->logger->error(
                         "Failed to change '{client}: {user}@{backend}' - '{item.title}' play state. Invalid HTTP '{status_code}' status code returned.",
-                        $context
+                        $context,
                     );
                     continue;
                 }
 
                 $this->logger->notice(
                     "Changed '{client}: {user}@{backend}' - '{{item.title}}' play state to '{play_state}'.",
-                    $context
+                    $context,
                 );
             } catch (Throwable $e) {
                 $this->logger->error(
@@ -372,7 +373,7 @@ class RestoreCommand extends Command
                             'kind' => get_class($e),
                             'message' => $e->getMessage(),
                         ],
-                    ]
+                    ],
                 );
             }
         }
@@ -385,7 +386,7 @@ class RestoreCommand extends Command
                 'user' => $userContext->name,
                 'client' => $backend->getContext()->clientName,
                 'duration' => round(microtime(true) - $opStart, 4),
-            ]
+            ],
         );
 
         return self::SUCCESS;

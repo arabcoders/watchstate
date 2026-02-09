@@ -36,7 +36,8 @@ final class SchedulerCommand extends Command
      */
     protected function configure(): void
     {
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->addOption('pid-file', 'p', InputOption::VALUE_REQUIRED, 'PID file.', $this->pidFile)
             ->setDescription('Daemon to run scheduled tasks.');
     }
@@ -52,7 +53,7 @@ final class SchedulerCommand extends Command
     protected function runCommand(iInput $input, iOutput $output): int
     {
         $pidFile = $input->getOption('pid-file');
-        $info = isSchedulerRunning($pidFile);
+        $info = is_scheduler_running($pidFile);
 
         if (true === $info['status']) {
             $output->writeln('Scheduler is already running with PID: ' . $info['pid'], iOutput::VERBOSITY_NORMAL);
@@ -61,7 +62,7 @@ final class SchedulerCommand extends Command
 
         try {
             $stream = Stream::make($pidFile, 'w+');
-            $stream->write((string)getmypid());
+            $stream->write((string) getmypid());
             $stream->close();
 
             while (true) {
@@ -69,8 +70,8 @@ final class SchedulerCommand extends Command
                 sleep(60);
 
                 $output->writeln('Running tasks', iOutput::VERBOSITY_DEBUG);
-                $out = RunCommand(TasksCommand::ROUTE, ['--run', '--save-log'], asArray: true, opts: [
-                    'timeout' => 3600 * 4
+                $out = run_command(TasksCommand::ROUTE, ['--run', '--save-log'], asArray: true, opts: [
+                    'timeout' => 3600 * 4,
                 ]);
 
                 foreach ($out as $line) {

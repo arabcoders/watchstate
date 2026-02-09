@@ -580,4 +580,32 @@
             }
         }
     }
+    ,
+    "server_info_get_200": {
+        "response": {
+            "http_code": 200,
+            "headers": {
+                "Content-Type": "application/json"
+            },
+            "body": {
+                "MediaContainer": {
+                    "friendlyName": "Plex Test",
+                    "version": "1.40.0.0",
+                    "machineIdentifier": "plex-server-1",
+                    "platform": "Linux"
+                }
+            }
+        }
+    },
+    "server_info_get_500": {
+        "response": {
+            "http_code": 500,
+            "headers": {
+                "Content-Type": "application/json"
+            },
+            "body": {
+                "error": "server error"
+            }
+        }
+    }
 }

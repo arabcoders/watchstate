@@ -47,9 +47,13 @@ final class PDOAdapter implements iDB
      * @param iLogger $logger The logger object used for logging.
      * @param DBLayer $db The PDO object used for database connections.
      */
-    public function __construct(private iLogger $logger, private readonly DBLayer $db, private array $options = []) {}
+    public function __construct(
+        private iLogger $logger,
+        private readonly DBLayer $db,
+        private array $options = [],
+    ) {}
 
-    public function with(iLogger|null $logger = null, DBLayer|null $db = null, array|null $options = null): self
+    public function with(?iLogger $logger = null, ?DBLayer $db = null, ?array $options = null): self
     {
         if (null === $logger && null === $db && null === $options) {
             return $this;
@@ -88,25 +92,25 @@ final class PDOAdapter implements iDB
         }
 
         $sql = <<<SQL
-                SELECT
-                    s.id, json_extract(value, '$.path') AS file_path
-                FROM
-                    "state" s, json_each(s.metadata)
-                WHERE
-                    json_extract(value, '$.path') = :file_path
-                AND
-                    COALESCE(json_extract(value, '$.multi'), 0) = 0
-                ORDER BY
-                    s.updated
-                DESC;
-        SQL;
+                    SELECT
+                        s.id, json_extract(value, '$.path') AS file_path
+                    FROM
+                        "state" s, json_each(s.metadata)
+                    WHERE
+                        json_extract(value, '$.path') = :file_path
+                    AND
+                        COALESCE(json_extract(value, '$.multi'), 0) = 0
+                    ORDER BY
+                        s.updated
+                    DESC;
+            SQL;
 
         $stmt = $this->db->query($sql, ['file_path' => $path]);
 
         $items = [];
 
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            if (true === array_key_exists((int)$row['id'], $items)) {
+            if (true === array_key_exists((int) $row['id'], $items)) {
                 continue;
             }
 
@@ -131,9 +135,9 @@ final class PDOAdapter implements iDB
             if (null !== ($entity->id ?? null)) {
                 throw new DBException(
                     r("PDOAdapter: Unable to insert item that has primary key already defined. '#{id}'.", [
-                        'id' => $entity->id
+                        'id' => $entity->id,
                     ]),
-                    21
+                    21,
                 );
             }
 
@@ -145,12 +149,12 @@ final class PDOAdapter implements iDB
                             'via' => $entity->via,
                             'title' => $entity->getName(),
                             'number' => $entity->episode,
-                        ]
-                    )
+                        ],
+                    ),
                 );
             }
 
-            if (false === in_array($entity->type, [iState::TYPE_MOVIE, iState::TYPE_EPISODE])) {
+            if (false === in_array($entity->type, [iState::TYPE_MOVIE, iState::TYPE_EPISODE], true)) {
                 throw new DBException(
                     r(
                         "PDOAdapter: Unexpected content type '{type}' was given for '{via}: {title}'. Expecting '{types}'.",
@@ -159,18 +163,18 @@ final class PDOAdapter implements iDB
                             'types' => implode(', ', [iState::TYPE_MOVIE, iState::TYPE_EPISODE]),
                             'id' => $entity->via,
                             'title' => $entity->getName(),
-                        ]
+                        ],
                     ),
-                    22
+                    22,
                 );
             }
 
             $data = $entity->getAll();
 
-            if (0 === (int)ag($data, iState::COLUMN_CREATED_AT, 0)) {
+            if (0 === (int) ag($data, iState::COLUMN_CREATED_AT, 0)) {
                 $data[iState::COLUMN_CREATED_AT] = time();
             }
-            if (0 === (int)ag($data, iState::COLUMN_UPDATED_AT, 0)) {
+            if (0 === (int) ag($data, iState::COLUMN_UPDATED_AT, 0)) {
                 $data[iState::COLUMN_UPDATED_AT] = $data[iState::COLUMN_CREATED_AT];
             }
 
@@ -188,15 +192,17 @@ final class PDOAdapter implements iDB
             }
 
             foreach (iState::ENTITY_ARRAY_KEYS as $key) {
-                if (null !== ($data[$key] ?? null) && true === is_array($data[$key])) {
-                    ksort($data[$key]);
-                    $data[$key] = json_encode($data[$key], flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                if (!(null !== ($data[$key] ?? null) && true === is_array($data[$key]))) {
+                    continue;
                 }
+
+                ksort($data[$key]);
+                $data[$key] = json_encode($data[$key], flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
             }
 
             if (null === ($this->stmt['insert'] ?? null)) {
                 $this->stmt['insert'] = $this->db->prepare(
-                    $this->pdoInsert('state', iState::ENTITY_KEYS)
+                    $this->pdoInsert('state', iState::ENTITY_KEYS),
                 );
             }
 
@@ -207,10 +213,10 @@ final class PDOAdapter implements iDB
                     }
                     $this->stmt['insert'] = null;
                     return $this->insert($entity);
-                }
+                },
             ]);
 
-            $entity->id = (int)$this->db->lastInsertId();
+            $entity->id = (int) $this->db->lastInsertId();
         } catch (PDOException $e) {
             $this->stmt['insert'] = null;
             if (false === $this->viaTransaction) {
@@ -232,7 +238,7 @@ final class PDOAdapter implements iDB
                             'file' => after($e->getFile(), ROOT_PATH),
                         ],
                         'last' => $this->db->getLastStatement(),
-                    ]
+                    ],
                 );
                 return $entity;
             }
@@ -245,16 +251,16 @@ final class PDOAdapter implements iDB
     /**
      * @inheritdoc
      */
-    public function get(iState $entity): iState|null
+    public function get(iState $entity): ?iState
     {
-        $inTraceMode = true === (bool)($this->options[Options::DEBUG_TRACE] ?? false);
+        $inTraceMode = true === (bool) ($this->options[Options::DEBUG_TRACE] ?? false);
 
         if ($inTraceMode) {
             $this->logger->debug("PDOAdapter: Looking for '{name}'.", ['name' => $entity->getName()]);
         }
 
         if (null !== $entity->id) {
-            $stmt = $this->db->query('SELECT * FROM state WHERE id = :id', ['id' => (int)$entity->id]);
+            $stmt = $this->db->query('SELECT * FROM state WHERE id = :id', ['id' => (int) $entity->id]);
 
             if (false !== ($item = $stmt->fetch(PDO::FETCH_ASSOC))) {
                 $item = $entity::fromArray($item);
@@ -262,7 +268,7 @@ final class PDOAdapter implements iDB
                 if ($inTraceMode) {
                     $this->logger->debug("PDOAdapter: Found '{name}' using direct id match.", [
                         'name' => $item->getName(),
-                        iState::COLUMN_ID => $entity->id
+                        iState::COLUMN_ID => $entity->id,
                     ]);
                 }
 
@@ -286,7 +292,7 @@ final class PDOAdapter implements iDB
     /**
      * @inheritdoc
      */
-    public function getAll(DateTimeInterface|null $date = null, array $opts = []): array
+    public function getAll(?DateTimeInterface $date = null, array $opts = []): array
     {
         $arr = [];
 
@@ -296,9 +302,9 @@ final class PDOAdapter implements iDB
             $fields = '*';
         }
 
-        if (true === (bool)($this->options[Options::DEBUG_TRACE] ?? false)) {
+        if (true === (bool) ($this->options[Options::DEBUG_TRACE] ?? false)) {
             $this->logger->debug("PDOAdapter: Selecting fields '{fields}'.", [
-                'fields' => arrayToString($opts['fields'] ?? ['all'])
+                'fields' => array_to_string($opts['fields'] ?? ['all']),
             ]);
         }
 
@@ -309,7 +315,7 @@ final class PDOAdapter implements iDB
         }
 
         $fromClass = $opts['class'] ?? $this->options['class'] ?? null;
-        if (null === ($fromClass ?? null) || false === ($fromClass instanceof iState)) {
+        if (null === ($fromClass ?? null) || false === $fromClass instanceof iState) {
             $class = Container::get(iState::class);
         } else {
             $class = $fromClass;
@@ -344,7 +350,7 @@ final class PDOAdapter implements iDB
     /**
      * @inheritdoc
      */
-    public function findByBackendId(string $backend, int|string $id, string|null $type = null): iState|null
+    public function findByBackendId(string $backend, int|string $id, ?string $type = null): ?iState
     {
         $key = $backend . '.' . iState::COLUMN_ID;
         $cond = [];
@@ -363,7 +369,7 @@ final class PDOAdapter implements iDB
         }
 
         $fromClass = $this->options['class'] ?? null;
-        if (null === ($fromClass ?? null) || false === ($fromClass instanceof iState)) {
+        if (null === ($fromClass ?? null) || false === $fromClass instanceof iState) {
             $class = Container::get(iState::class);
         } else {
             $class = $fromClass;
@@ -380,7 +386,7 @@ final class PDOAdapter implements iDB
         try {
             if (null === ($entity->id ?? null)) {
                 throw new DBException(r("PDOAdapter: Unable to update '{title}' without primary key defined.", [
-                    'title' => $entity->getName() ?? 'Unknown'
+                    'title' => $entity->getName() ?? 'Unknown',
                 ]), 51);
             }
 
@@ -393,8 +399,8 @@ final class PDOAdapter implements iDB
                             'via' => $entity->via,
                             'title' => $entity->getName(),
                             'number' => $entity->episode,
-                        ]
-                    )
+                        ],
+                    ),
                 );
             }
 
@@ -413,10 +419,12 @@ final class PDOAdapter implements iDB
             }
 
             foreach (iState::ENTITY_ARRAY_KEYS as $key) {
-                if (null !== ($data[$key] ?? null) && true === is_array($data[$key])) {
-                    ksort($data[$key]);
-                    $data[$key] = json_encode($data[$key], flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                if (!(null !== ($data[$key] ?? null) && true === is_array($data[$key]))) {
+                    continue;
                 }
+
+                ksort($data[$key]);
+                $data[$key] = json_encode($data[$key], flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
             }
 
             if (null === ($this->stmt['update'] ?? null)) {
@@ -430,7 +438,7 @@ final class PDOAdapter implements iDB
                     }
                     $this->stmt['update'] = null;
                     return $this->update($entity);
-                }
+                },
             ]);
         } catch (PDOException $e) {
             $this->stmt['update'] = null;
@@ -453,7 +461,7 @@ final class PDOAdapter implements iDB
                             'file' => after($e->getFile(), ROOT_PATH),
                         ],
                         'last' => $this->db->getLastStatement(),
-                    ]
+                    ],
                 );
                 return $entity;
             }
@@ -482,7 +490,7 @@ final class PDOAdapter implements iDB
                 $id = $entity->id;
             }
 
-            $this->db->query('DELETE FROM state WHERE id = :id', ['id' => (int)$id]);
+            $this->db->query('DELETE FROM state WHERE id = :id', ['id' => (int) $id]);
         } catch (PDOException $e) {
             $this->logger->error(
                 message: "PDOAdapter: Exception '{error.kind}' was thrown unhandled. '{error.message}' at '{error.file}:{error.line}'.",
@@ -501,7 +509,7 @@ final class PDOAdapter implements iDB
                         'message' => $e->getMessage(),
                         'file' => after($e->getFile(), ROOT_PATH),
                     ],
-                ]
+                ],
             );
             return false;
         }
@@ -549,7 +557,7 @@ final class PDOAdapter implements iDB
                                 'message' => $e->getMessage(),
                                 'file' => after($e->getFile(), ROOT_PATH),
                             ],
-                        ]
+                        ],
                     );
                 }
             }
@@ -569,7 +577,7 @@ final class PDOAdapter implements iDB
             iDB::MIGRATE_UP => $class->up(),
             iDB::MIGRATE_DOWN => $class->down(),
             default => throw new DBException(r("PDOAdapter: Unknown migration direction '{dir}' was given.", [
-                'name' => $dir
+                'name' => $dir,
             ]), 91),
         };
     }
@@ -585,7 +593,7 @@ final class PDOAdapter implements iDB
     /**
      * @inheritdoc
      */
-    public function migrateData(string $version, iLogger|null $logger = null): mixed
+    public function migrateData(string $version, ?iLogger $logger = null): mixed
     {
         return new PDODataMigration($this->db, $logger ?? $this->logger)->automatic();
     }
@@ -620,10 +628,10 @@ final class PDOAdapter implements iDB
      */
     public function reset(): bool
     {
-        $this->db->transactional(function (DBLayer $db) {
+        $this->db->transactional(static function (DBLayer $db) {
             /** @noinspection SqlResolve */
             $tables = $db->query(
-                'SELECT name FROM sqlite_master WHERE "type" = "table" AND "name" NOT LIKE "sqlite_%"'
+                'SELECT name FROM sqlite_master WHERE "type" = "table" AND "name" NOT LIKE "sqlite_%"',
             );
 
             foreach ($tables->fetchAll(PDO::FETCH_COLUMN) as $table) {
@@ -687,14 +695,29 @@ final class PDOAdapter implements iDB
      */
     public function fetch(array $opts = []): Generator
     {
-        $fromClass = $this->options['class'] ?? null;
-        if (null === ($fromClass ?? null) || false === ($fromClass instanceof iState)) {
+        $fromClass = $opts['class'] ?? $this->options['class'] ?? null;
+        if (null === ($fromClass ?? null) || false === $fromClass instanceof iState) {
             $class = Container::get(iState::class);
         } else {
             $class = $fromClass;
         }
 
-        $stmt = $this->db->query('SELECT * FROM state');
+        $fields = '*';
+        if (true === array_key_exists('fields', $opts)) {
+            $fields = implode(', ', $opts['fields']);
+        }
+
+        $sql = "SELECT {$fields} FROM state";
+        $bind = [];
+
+        if (true === array_key_exists(Options::AFTER, $opts) && null !== $opts[Options::AFTER]) {
+            $after = $opts[Options::AFTER];
+            $timestamp = $after instanceof DateTimeInterface ? $after->getTimestamp() : (int) $after;
+            $sql .= ' WHERE ' . iState::COLUMN_UPDATED . ' > :after';
+            $bind['after'] = $timestamp;
+        }
+
+        $stmt = $this->db->query($sql, $bind);
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             yield $class::fromArray($row);
         }
@@ -710,7 +733,7 @@ final class PDOAdapter implements iDB
             return 0;
         }
 
-        return (int)$row[0];
+        return (int) $row[0];
     }
 
     /**
@@ -756,7 +779,7 @@ final class PDOAdapter implements iDB
         $queryString = str_replace(
             ['{columns}', '{values}'],
             [implode(', ', $sql_columns), implode(', ', $sql_placeholder)],
-            $queryString
+            $queryString,
         );
 
         return trim($queryString);
@@ -773,7 +796,7 @@ final class PDOAdapter implements iDB
     private function pdoUpdate(string $table, array $columns): string
     {
         /** @noinspection SqlWithoutWhere */
-        $queryString = "UPDATE {$table} SET {place} = {holder} WHERE " . iState::COLUMN_ID . " = :id";
+        $queryString = "UPDATE {$table} SET {place} = {holder} WHERE " . iState::COLUMN_ID . ' = :id';
 
         $placeholders = [];
 
@@ -795,7 +818,7 @@ final class PDOAdapter implements iDB
      *
      * @return iState|null Entity if found, null otherwise.
      */
-    private function findByExternalId(iState $entity): iState|null
+    private function findByExternalId(iState $entity): ?iState
     {
         $guids = [];
         $cond = [
@@ -820,7 +843,7 @@ final class PDOAdapter implements iDB
                     continue;
                 }
 
-                $guids[] = "JSON_EXTRACT(" . iState::COLUMN_PARENT . ",'$.{$key}') = :p_{$key}";
+                $guids[] = 'JSON_EXTRACT(' . iState::COLUMN_PARENT . ",'$.{$key}') = :p_{$key}";
                 $cond['p_' . $key] = $val;
             }
         }
@@ -830,13 +853,13 @@ final class PDOAdapter implements iDB
                 continue;
             }
 
-            $guids[] = "JSON_EXTRACT(" . iState::COLUMN_GUIDS . ",'$.{$key}') = :g_{$key}";
+            $guids[] = 'JSON_EXTRACT(' . iState::COLUMN_GUIDS . ",'$.{$key}') = :g_{$key}";
             $cond['g_' . $key] = $val;
         }
 
         if (null !== ($backendId = $entity->getMetadata($entity->via)[iState::COLUMN_ID] ?? null)) {
             $key = $entity->via . '.' . iState::COLUMN_ID;
-            $guids[] = "JSON_EXTRACT(" . iState::COLUMN_META_DATA . ",'$.{$key}') = :m_bid";
+            $guids[] = 'JSON_EXTRACT(' . iState::COLUMN_META_DATA . ",'$.{$key}') = :m_bid";
             $cond['m_bid'] = $backendId;
         }
 
@@ -846,7 +869,7 @@ final class PDOAdapter implements iDB
 
         $sqlGuids = ' AND ( ' . implode(' OR ', $guids) . ' ) ';
 
-        $sql = "SELECT * FROM state WHERE " . iState::COLUMN_TYPE . " = :type {$sqlEpisode} {$sqlGuids} LIMIT 1";
+        $sql = 'SELECT * FROM state WHERE ' . iState::COLUMN_TYPE . " = :type {$sqlEpisode} {$sqlGuids} LIMIT 1";
         $stmt = $this->db->query($sql, $cond);
 
         if (false === ($row = $stmt->fetch(PDO::FETCH_ASSOC))) {

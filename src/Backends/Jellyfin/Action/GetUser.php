@@ -37,9 +37,10 @@ class GetUser
      * @param iHttp $http The HTTP client instance.
      * @param iLogger $logger The logger instance.
      */
-    public function __construct(protected iHttp $http, protected iLogger $logger)
-    {
-    }
+    public function __construct(
+        protected iHttp $http,
+        protected iLogger $logger,
+    ) {}
 
     /**
      * Get Users list.
@@ -54,7 +55,7 @@ class GetUser
         return $this->tryResponse(
             context: $context,
             fn: fn() => $this->getUser($context, $opts),
-            action: $this->action
+            action: $this->action,
         );
     }
 
@@ -79,14 +80,14 @@ class GetUser
                 error: new Error(
                     message: "{action}: Request for '{client}: {user}@{backend}' user info failed. User not set.",
                     context: $logContext,
-                    level: Levels::ERROR
+                    level: Levels::ERROR,
                 ),
             );
         }
 
         $url = $context->backendUrl->withPath('/Users/' . $context->backendUser);
 
-        $logContext['url'] = (string)$url;
+        $logContext['url'] = (string) $url;
         $logContext['userId'] = $context->backendUser;
 
         $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' user '{userId}' info.", $logContext);
@@ -97,7 +98,7 @@ class GetUser
             $options['headers']['X-MediaBrowser-Token'] = $context->backendToken;
         }
 
-        $response = $this->http->request(Method::GET, (string)$url, $options);
+        $response = $this->http->request(Method::GET, (string) $url, $options);
 
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             return new Response(
@@ -108,14 +109,14 @@ class GetUser
                         ...$logContext,
                         'status_code' => $response->getStatusCode(),
                     ],
-                    level: Levels::ERROR
+                    level: Levels::ERROR,
                 ),
             );
         }
         $json = json_decode(
             json: $response->getContent(),
             associative: true,
-            flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+            flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
         );
 
         if ($context->trace) {
@@ -130,13 +131,13 @@ class GetUser
         $data = [
             'id' => ag($json, 'Id'),
             'name' => ag($json, 'Name'),
-            'admin' => (bool)ag($json, 'Policy.IsAdministrator'),
-            'hidden' => (bool)ag($json, 'Policy.IsHidden'),
-            'disabled' => (bool)ag($json, 'Policy.IsDisabled'),
-            'updatedAt' => null !== $date ? makeDate($date) : 'Never',
+            'admin' => (bool) ag($json, 'Policy.IsAdministrator'),
+            'hidden' => (bool) ag($json, 'Policy.IsHidden'),
+            'disabled' => (bool) ag($json, 'Policy.IsDisabled'),
+            'updatedAt' => null !== $date ? make_date($date) : 'Never',
         ];
 
-        if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
+        if (true === (bool) ag($opts, Options::RAW_RESPONSE)) {
             $data[Options::RAW_RESPONSE] = $json;
         }
 

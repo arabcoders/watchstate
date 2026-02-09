@@ -31,9 +31,12 @@ class SearchId
      */
     protected string $action = 'jellyfin.searchId';
 
-    public function __construct(protected iHttp $http, protected iLogger $logger, private iGuid $iGuid, private iDB $db)
-    {
-    }
+    public function __construct(
+        protected iHttp $http,
+        protected iLogger $logger,
+        private iGuid $iGuid,
+        private iDB $db,
+    ) {}
 
     /**
      * Wrap the operation in a try response block.
@@ -49,7 +52,7 @@ class SearchId
         return $this->tryResponse(
             context: $context,
             fn: fn() => $this->search($context, $id, $opts),
-            action: $this->action
+            action: $this->action,
         );
     }
 
@@ -75,7 +78,7 @@ class SearchId
         }
 
         $builder = $entity->getAll();
-        if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
+        if (true === (bool) ag($opts, Options::RAW_RESPONSE)) {
             $builder[Options::RAW_RESPONSE] = $item;
         }
 

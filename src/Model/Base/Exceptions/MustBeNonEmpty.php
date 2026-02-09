@@ -11,6 +11,4 @@ use RuntimeException;
  *
  * @package Model\Base\Exceptions
  */
-class MustBeNonEmpty extends RuntimeException
-{
-}
+class MustBeNonEmpty extends RuntimeException {}

@@ -17,7 +17,7 @@ use Cron\CronExpression;
 use Monolog\Level;
 
 return (function () {
-    $inContainer = inContainer();
+    $inContainer = in_container();
     $progressTimeCheck = fn(int $v, int $d): int => 0 === $v || $v >= 180 ? $v : $d;
     $progressToMS = fn(int $v): int => $v < 60 ? ($v * 1000) : 60000;
 
@@ -30,7 +30,7 @@ return (function () {
         'version_branch' => 'unknown',
         // -- End handled by the build system.
         'tz' => env('WS_TZ', env('TZ', 'UTC')),
-        'path' => fixPath(env('WS_DATA_PATH', fn() => $inContainer ? '/config' : __DIR__ . '/../var')),
+        'path' => fix_path(env('WS_DATA_PATH', fn() => $inContainer ? '/config' : __DIR__ . '/../var')),
         'logs' => [
             'context' => (bool)env('WS_LOGS_CONTEXT', false),
             'prune' => [
@@ -50,13 +50,13 @@ return (function () {
                 'encode' => JSON_INVALID_UTF8_IGNORE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
                 'headers' => [
                     'Content-Type' => 'application/json',
-                    'X-Application-Version' => fn() => getAppVersion(),
+                    'X-Application-Version' => fn() => get_app_version(),
                     'Access-Control-Allow-Origin' => '*',
                 ],
             ],
         ],
         'webui' => [
-            'path' => fixPath(env('WS_WEBUI_PATH', __DIR__ . '/../public/exported')),
+            'path' => fix_path(env('WS_WEBUI_PATH', __DIR__ . '/../public/exported')),
         ],
         'database' => [
             'version' => 'v01',
@@ -96,19 +96,19 @@ return (function () {
 
     $config['guid'] = [
         'version' => '0.0',
-        'file' => fixPath(env('WS_GUID_FILE', ag($config, 'path') . '/config/guid.yaml')),
+        'file' => fix_path(env('WS_GUID_FILE', ag($config, 'path') . '/config/guid.yaml')),
         'disable' => [
             'episode' => (bool)env('WS_GUID_DISABLE_EPISODE', false),
         ],
     ];
 
-    $config['backends_file'] = fixPath(env('WS_BACKENDS_FILE', ag($config, 'path') . '/config/servers.yaml'));
-    $config['mapper_file'] = fixPath(env('WS_MAPPER_FILE', ag($config, 'path') . '/config/mapper.yaml'));
+    $config['backends_file'] = fix_path(env('WS_BACKENDS_FILE', ag($config, 'path') . '/config/servers.yaml'));
+    $config['mapper_file'] = fix_path(env('WS_MAPPER_FILE', ag($config, 'path') . '/config/mapper.yaml'));
 
     date_default_timezone_set(ag($config, 'tz', 'UTC'));
-    $logDateFormat = makeDate()->format('Ymd');
+    $logDateFormat = make_date()->format('Ymd');
 
-    $config['tmpDir'] = fixPath(env('WS_TMP_DIR', ag($config, 'path')));
+    $config['tmpDir'] = fix_path(env('WS_TMP_DIR', ag($config, 'path')));
 
     $dbFile = ag($config, 'path') . '/db/watchstate_' . ag($config, 'database.version') . '.db';
 
@@ -167,7 +167,7 @@ return (function () {
             'sync_requests' => (bool)env('WS_HTTP_SYNC_REQUESTS', false),
             'options' => [
                 'headers' => [
-                    'User-Agent' => ag($config, 'name') . '/' . getAppVersion(),
+                    'User-Agent' => ag($config, 'name') . '/' . get_app_version(),
                 ],
                 'timeout' => 300.0,
                 'extra' => [
@@ -240,7 +240,7 @@ return (function () {
         strtolower(PlexClient::CLIENT_NAME) => [],
         strtolower(EmbyClient::CLIENT_NAME) => [],
         strtolower(JellyfinClient::CLIENT_NAME) => [
-            'disable_fix_played' => (bool)env('WS_CLIENTS_JELLYFIN_DISABLE_FIX_PLAYED', false),
+            'fix_played' => (bool)env('WS_CLIENTS_JELLYFIN_FIX_PLAYED', false),
         ],
     ];
 

@@ -21,12 +21,11 @@ final class Parity
 
     public const string URL = '%{api.prefix}/system/parity';
 
-    public function __construct(private readonly iImport $mapper, private readonly iLogger $logger)
-    {
-    }
+    public function __construct(
+        private readonly iImport $mapper,
+        private readonly iLogger $logger,
+    ) {}
 
-    /**
-     */
     #[Get(self::URL . '[/]', name: 'system.parity')]
     public function __invoke(iRequest $request): iResponse
     {
@@ -38,17 +37,22 @@ final class Parity
 
         $params = DataUtil::fromArray($request->getQueryParams());
 
-        $page = (int)$params->get('page', 1);
-        $perpage = (int)$params->get('perpage', 1000);
-        $start = (($page <= 2) ? ((1 === $page) ? 0 : $perpage) : $perpage * ($page - 1));
-        $start = (!$page) ? 0 : $start;
+        $page = (int) $params->get('page', 1);
+        $perpage = (int) $params->get('perpage', 1000);
+        if ($page < 1 || 1 === $page) {
+            $start = 0;
+        } elseif (2 === $page) {
+            $start = $perpage;
+        } else {
+            $start = $perpage * ($page - 1);
+        }
 
         $response = [
             'paging' => [],
             'items' => [],
         ];
 
-        $counter = (int)$params->get('min', 0);
+        $counter = (int) $params->get('min', 0);
 
         $backends = $this->getBackends(userContext: $userContext);
         $backendsCount = count($backends);
@@ -63,7 +67,7 @@ final class Parity
 
         $sql = "SELECT COUNT(*) FROM state WHERE ( SELECT COUNT(*) FROM JSON_EACH(state.metadata) ) < {$counter}";
         $stmt = $userContext->db->getDBLayer()->query($sql);
-        $total = (int)$stmt->fetchColumn();
+        $total = (int) $stmt->fetchColumn();
 
         $lastPage = @ceil($total / $perpage);
         if ($total && $page > $lastPage) {
@@ -106,14 +110,12 @@ final class Parity
             'last_page' => $lastPage,
             'params' => [
                 'min' => $counter,
-            ]
+            ],
         ];
 
         return api_response(Status::OK, $response);
     }
 
-    /**
-     */
     #[Delete(self::URL . '[/]', name: 'system.parity.delete')]
     public function deleteRecords(iRequest $request): iResponse
     {
@@ -125,7 +127,7 @@ final class Parity
 
         $params = DataUtil::fromRequest($request, true);
 
-        if (0 === ($counter = (int)$params->get('min', 0))) {
+        if (0 === ($counter = (int) $params->get('min', 0))) {
             return api_error('Invalid minimum value.', Status::BAD_REQUEST);
         }
 

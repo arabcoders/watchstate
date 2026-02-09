@@ -18,7 +18,7 @@ final class Event extends EntityTable
     /**
      * @implements EntityTable::COLUMN_ID
      */
-    public string|null $id = null;
+    public ?string $id = null;
 
     /**
      * @implements EntityTable::COLUMN_STATUS
@@ -28,7 +28,7 @@ final class Event extends EntityTable
     /**
      * @implements EntityTable::COLUMN_REFERENCE
      */
-    public string|null $reference = null;
+    public ?string $reference = null;
 
     /**
      * @implements EntityTable::COLUMN_EVENT
@@ -90,5 +90,4 @@ final class Event extends EntityTable
 
         return new EntityValidation($this)->isValid();
     }
-
 }

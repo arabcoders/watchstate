@@ -45,8 +45,10 @@ final class PDODataMigration
      * @param DBLayer $db The PDO instance to use for database connection.
      * @param LoggerInterface $logger The logger instance to use for logging.
      */
-    public function __construct(private DBLayer $db, private LoggerInterface $logger)
-    {
+    public function __construct(
+        private DBLayer $db,
+        private LoggerInterface $logger,
+    ) {
         $this->version = Config::get('database.version');
         $this->dbPath = dirname(after(Config::get('database.dsn'), 'sqlite:'));
     }
@@ -105,7 +107,7 @@ final class PDODataMigration
      * @param string|null $oldDBFile
      * @return mixed
      */
-    public function v0(string|null $oldDBFile = null): mixed
+    public function v0(?string $oldDBFile = null): mixed
     {
         $automatic = $oldDBFile ?? $this->dbPath . DIRECTORY_SEPARATOR . 'watchstate.db';
 
@@ -123,7 +125,7 @@ final class PDODataMigration
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::SQLITE_ATTR_OPEN_FLAGS => PDO::SQLITE_OPEN_READONLY,
-            ]
+            ],
         );
 
         if (!$this->db->inTransaction()) {
@@ -136,13 +138,13 @@ final class PDODataMigration
         /** @noinspection SqlInsertValues */
         $insert = $this->db->prepare("INSERT INTO state ({$columns}) VALUES({$binds})");
 
-        $stmt = $oldDB->query("SELECT * FROM state");
+        $stmt = $oldDB->query('SELECT * FROM state');
 
         foreach ($stmt as $row) {
             $row['meta'] = json_decode(
                 json: $row['meta'] ?? '[]',
                 associative: true,
-                flags: JSON_INVALID_UTF8_IGNORE
+                flags: JSON_INVALID_UTF8_IGNORE,
             );
 
             $extra = [
@@ -190,20 +192,20 @@ final class PDODataMigration
                     value: array_intersect_key(
                         $row,
                         ag($row['meta'], iFace::COLUMN_PARENT, []),
-                        Guid::getSupported()
+                        Guid::getSupported(),
                     ),
-                    flags: $this->jFlags
+                    flags: $this->jFlags,
                 ),
                 iFace::COLUMN_GUIDS => json_encode(
                     value: array_intersect_key($row, Guid::getSupported()),
-                    flags: $this->jFlags
+                    flags: $this->jFlags,
                 ),
                 iFace::COLUMN_META_DATA => json_encode(
-                    value: (function () use ($metadata): array {
+                    value: (static function () use ($metadata): array {
                         $list = [];
 
                         foreach (Config::get('servers', []) as $name => $info) {
-                            if (true !== (bool)ag($info, 'import.enabled', false)) {
+                            if (true !== (bool) ag($info, 'import.enabled', false)) {
                                 continue;
                             }
                             $list[$name] = $metadata;
@@ -211,14 +213,14 @@ final class PDODataMigration
 
                         return $list;
                     })(),
-                    flags: $this->jFlags
+                    flags: $this->jFlags,
                 ),
                 iFace::COLUMN_EXTRA => json_encode(
-                    value: (function () use ($extra): array {
+                    value: (static function () use ($extra): array {
                         $list = [];
 
                         foreach (Config::get('servers', []) as $name => $info) {
-                            if (true !== (bool)ag($info, 'import.enabled', false)) {
+                            if (true !== (bool) ag($info, 'import.enabled', false)) {
                                 continue;
                             }
                             $list[$name] = $extra;
@@ -226,7 +228,7 @@ final class PDODataMigration
 
                         return $list;
                     })(),
-                    flags: $this->jFlags
+                    flags: $this->jFlags,
                 ),
             ]);
         }
@@ -269,7 +271,7 @@ final class PDODataMigration
      * @param string|null $oldDBFile
      * @return mixed
      */
-    public function v01(string|null $oldDBFile = null): mixed
+    public function v01(?string $oldDBFile = null): mixed
     {
         $automatic = $oldDBFile ?? $this->dbPath . DIRECTORY_SEPARATOR . 'watchstate_v0.db';
 
@@ -301,46 +303,46 @@ final class PDODataMigration
         /** @noinspection SqlInsertValues */
         $insert = $this->db->prepare("INSERT INTO state ({$columns}) VALUES({$binds})");
 
-        foreach ($oldDB->query("SELECT * FROM state") as $row) {
+        foreach ($oldDB->query('SELECT * FROM state') as $row) {
             $row[iFace::COLUMN_EXTRA] = json_decode(
                 json: $row[iFace::COLUMN_EXTRA] ?? '[]',
                 associative: true,
-                flags: JSON_INVALID_UTF8_IGNORE
+                flags: JSON_INVALID_UTF8_IGNORE,
             );
 
             $row[iFace::COLUMN_GUIDS] = json_decode(
                 json: $row[iFace::COLUMN_GUIDS] ?? '[]',
                 associative: true,
-                flags: JSON_INVALID_UTF8_IGNORE
+                flags: JSON_INVALID_UTF8_IGNORE,
             );
 
             $row[iFace::COLUMN_PARENT] = json_decode(
                 json: $row[iFace::COLUMN_PARENT] ?? '[]',
                 associative: true,
-                flags: JSON_INVALID_UTF8_IGNORE
+                flags: JSON_INVALID_UTF8_IGNORE,
             );
 
             $row['suids'] = json_decode(
                 json: $row['suids'] ?? '[]',
                 associative: true,
-                flags: JSON_INVALID_UTF8_IGNORE
+                flags: JSON_INVALID_UTF8_IGNORE,
             );
 
             $extra = [
-                iFace::COLUMN_EXTRA_DATE => (string)$row[iFace::COLUMN_UPDATED],
+                iFace::COLUMN_EXTRA_DATE => (string) $row[iFace::COLUMN_UPDATED],
             ];
 
             $metadata = [
                 iFace::COLUMN_TYPE => $row[iFace::COLUMN_TYPE],
-                iFace::COLUMN_UPDATED => (string)$row[iFace::COLUMN_UPDATED],
-                iFace::COLUMN_WATCHED => (string)$row[iFace::COLUMN_WATCHED],
+                iFace::COLUMN_UPDATED => (string) $row[iFace::COLUMN_UPDATED],
+                iFace::COLUMN_WATCHED => (string) $row[iFace::COLUMN_WATCHED],
                 iFace::COLUMN_TITLE => $row[iFace::COLUMN_TITLE],
-                iFace::COLUMN_YEAR => isset($row[iFace::COLUMN_YEAR]) ? (string)$row[iFace::COLUMN_YEAR] : null,
+                iFace::COLUMN_YEAR => isset($row[iFace::COLUMN_YEAR]) ? (string) $row[iFace::COLUMN_YEAR] : null,
             ];
 
             if (iFace::TYPE_EPISODE === $row['type']) {
-                $metadata[iFace::COLUMN_SEASON] = (string)$row[iFace::COLUMN_SEASON];
-                $metadata[iFace::COLUMN_EPISODE] = (string)$row[iFace::COLUMN_EPISODE];
+                $metadata[iFace::COLUMN_SEASON] = (string) $row[iFace::COLUMN_SEASON];
+                $metadata[iFace::COLUMN_EPISODE] = (string) $row[iFace::COLUMN_EPISODE];
             }
 
             $metadata[iFace::COLUMN_META_DATA_EXTRA] = [];
@@ -372,16 +374,16 @@ final class PDODataMigration
                 iFace::COLUMN_PARENT => json_encode(
                     value: array_intersect_key(
                         $row[iFace::COLUMN_PARENT] ?? [],
-                        Guid::getSupported()
+                        Guid::getSupported(),
                     ),
-                    flags: $this->jFlags
+                    flags: $this->jFlags,
                 ),
                 iFace::COLUMN_GUIDS => json_encode(
                     value: array_intersect_key($row[iFace::COLUMN_GUIDS], Guid::getSupported()),
-                    flags: $this->jFlags
+                    flags: $this->jFlags,
                 ),
                 iFace::COLUMN_META_DATA => json_encode(
-                    value: (function () use ($row, $metadata): array {
+                    value: (static function () use ($row, $metadata): array {
                         $list = [];
 
                         foreach (Config::get('servers', []) as $name => $info) {
@@ -395,10 +397,10 @@ final class PDODataMigration
 
                         return $list;
                     })(),
-                    flags: $this->jFlags
+                    flags: $this->jFlags,
                 ),
                 iFace::COLUMN_EXTRA => json_encode(
-                    value: (function () use ($row, $extra): array {
+                    value: (static function () use ($row, $extra): array {
                         $list = [];
 
                         foreach (Config::get('servers', []) as $name => $info) {
@@ -413,7 +415,7 @@ final class PDODataMigration
 
                         return $list;
                     })(),
-                    flags: $this->jFlags
+                    flags: $this->jFlags,
                 ),
             ];
 

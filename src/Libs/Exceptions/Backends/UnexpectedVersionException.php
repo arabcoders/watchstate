@@ -9,6 +9,4 @@ namespace App\Libs\Exceptions\Backends;
  *
  * This exception is thrown when backend version is unexpected.
  */
-class UnexpectedVersionException extends BackendException
-{
-}
+class UnexpectedVersionException extends BackendException {}

@@ -57,7 +57,7 @@ class Export extends Import
             return;
         }
 
-        $mappedType = (string)(JFC::TYPE_MAPPER[$type] ?? $type);
+        $mappedType = (string) (JFC::TYPE_MAPPER[$type] ?? $type);
 
         try {
             if ($context->trace) {
@@ -67,7 +67,7 @@ class Export extends Import
                 ]);
             }
 
-            $queue = ag($opts, 'queue', fn() => Container::get(QueueRequests::class));
+            $queue = ag($opts, 'queue', static fn() => Container::get(QueueRequests::class));
             $after = ag($opts, 'after', null);
 
             Message::increment("{$context->backendName}.{$mappedType}.total");
@@ -82,24 +82,30 @@ class Export extends Import
                         ]),
                         JFC::TYPE_EPISODE => r('{title} - ({season}x{episode})', [
                             'title' => ag($item, 'SeriesName', '??'),
-                            'season' => str_pad((string)ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
-                            'episode' => str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
+                            'season' => str_pad((string) ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
+                            'episode' => str_pad((string) ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
                         ]),
                         default => throw new InvalidArgumentException(
-                            r("Unexpected content type '{type}' was received.", ['type' => $type])
+                            r("Unexpected content type '{type}' was received.", ['type' => $type]),
                         ),
                     },
                     'type' => $type,
                 ];
             } catch (InvalidArgumentException $e) {
-                $this->logger->info(...lw(message: $e->getMessage(), context: [
-                    ...$logContext,
-                    'response' => ['body' => $item],
-                ], e: $e));
+                $this->logger->info(
+                    ...lw(
+                        message: $e->getMessage(),
+                        context: [
+                            ...$logContext,
+                            'response' => ['body' => $item],
+                        ],
+                        e: $e,
+                    ),
+                );
                 return;
             }
 
-            $isPlayed = true === (bool)ag($item, 'UserData.Played');
+            $isPlayed = true === (bool) ag($item, 'UserData.Played');
             $dateKey = true === $isPlayed ? 'UserData.LastPlayedDate' : 'DateCreated';
 
             if (null === ag($item, $dateKey)) {
@@ -111,7 +117,7 @@ class Export extends Import
                         'response' => [
                             'body' => $item,
                         ],
-                    ]
+                    ],
                 );
 
                 Message::increment("{$context->backendName}.{$mappedType}.ignored_no_date_is_set");
@@ -122,11 +128,11 @@ class Export extends Import
                 context: $context,
                 guid: $guid,
                 item: $item,
-                opts: $opts + ['library' => ag($logContext, 'library.id')]
+                opts: $opts + ['library' => ag($logContext, 'library.id')],
             );
 
             if (!$rItem->hasGuids() && !$rItem->hasRelativeGuid()) {
-                $providerIds = (array)ag($item, 'ProviderIds', []);
+                $providerIds = (array) ag($item, 'ProviderIds', []);
 
                 $message = "{action}: Ignoring '{client}: {user}@{backend}' - '{item.title}'. No valid/supported external ids.";
 
@@ -137,7 +143,7 @@ class Export extends Import
                 $this->logger->info($message, [
                     ...$logContext,
                     'context' => [
-                        'guids' => !empty($providerIds) ? $providerIds : 'None'
+                        'guids' => !empty($providerIds) ? $providerIds : 'None',
                     ],
                 ]);
 
@@ -146,16 +152,16 @@ class Export extends Import
             }
 
             if (false === ag($context->options, Options::IGNORE_DATE, false)) {
-                if (true === ($after instanceof DateTimeInterface) && $rItem->updated >= $after->getTimestamp()) {
+                if (true === $after instanceof DateTimeInterface && $rItem->updated >= $after->getTimestamp()) {
                     $this->logger->debug(
                         message: "{action}: Ignoring '{client}: {user}@{backend}' - '{item.title}'. Backend date is equal or newer than last sync date.",
                         context: [
                             ...$logContext,
                             'comparison' => [
-                                'lastSync' => makeDate($after),
-                                'backend' => makeDate($rItem->updated),
+                                'lastSync' => make_date($after),
+                                'backend' => make_date($rItem->updated),
                             ],
-                        ]
+                        ],
                     );
 
                     Message::increment("{$context->backendName}.{$mappedType}.ignored_date_is_equal_or_higher");
@@ -173,7 +179,7 @@ class Export extends Import
             }
 
             if ($rItem->watched === $entity->watched) {
-                if (true === (bool)ag($context->options, Options::DEBUG_TRACE)) {
+                if (true === (bool) ag($context->options, Options::DEBUG_TRACE)) {
                     $this->logger->debug(
                         message: "{action}: Ignoring '{client}: {user}@{backend}' - '{item.title}'. {item.type} play state is identical.",
                         context: [
@@ -182,7 +188,7 @@ class Export extends Import
                                 'backend' => $entity->isWatched() ? 'Played' : 'Unplayed',
                                 'remote' => $rItem->isWatched() ? 'Played' : 'Unplayed',
                             ],
-                        ]
+                        ],
                     );
                 }
 
@@ -196,10 +202,10 @@ class Export extends Import
                     context: [
                         ...$logContext,
                         'comparison' => [
-                            'database' => makeDate($entity->updated),
-                            'backend' => makeDate($rItem->updated),
+                            'database' => make_date($entity->updated),
+                            'backend' => make_date($rItem->updated),
                         ],
-                    ]
+                    ],
                 );
 
                 Message::increment("{$context->backendName}.{$mappedType}.ignored_date_is_newer");
@@ -208,10 +214,10 @@ class Export extends Import
 
             $url = $context->backendUrl->withPath(r('/Users/{user}/PlayedItems/{id}', [
                 'user' => $context->backendUser,
-                'id' => ag($item, 'Id')
+                'id' => ag($item, 'Id'),
             ]));
 
-            $lastPlayed = makeDate($entity->updated)->format(Date::ATOM);
+            $lastPlayed = make_date($entity->updated)->format(Date::ATOM);
 
             if ($context->clientName === JellyfinClient::CLIENT_NAME) {
                 $url = $url->withQuery(http_build_query(['DatePlayed' => $lastPlayed]));
@@ -221,13 +227,13 @@ class Export extends Import
 
             Message::increment("{$context->userContext->name}.{$context->backendName}.export");
 
-            if (true === (bool)ag($context->options, Options::DRY_RUN, false)) {
+            if (true === (bool) ag($context->options, Options::DRY_RUN, false)) {
                 $this->logger->notice(
                     message: "{action}: Queuing request to change '{client}: {user}@{backend}' {item.type} '{item.title}' play state to '{play_state}'.",
                     context: [
                         ...$logContext,
                         'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
-                    ]
+                    ],
                 );
                 return;
             }
@@ -235,16 +241,18 @@ class Export extends Import
             $queue->add(
                 $this->http->request(
                     method: $entity->isWatched() ? Method::POST : Method::DELETE,
-                    url: (string)$url,
-                    options: $context->getHttpOptions() + [
+                    url: (string) $url,
+                    options: $context->getHttpOptions()
+                    + [
                         'user_data' => [
-                            'context' => $logContext + [
+                            'context' => $logContext
+                                + [
                                     'backend' => $context->backendName,
                                     'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
                                 ],
                         ],
-                    ]
-                )
+                    ],
+                ),
             );
 
             /**
@@ -256,19 +264,20 @@ class Export extends Import
                 $queue->add(
                     $this->http->request(
                         method: Method::POST,
-                        url: (string)$context->backendUrl->withPath(r('/Users/{user}/Items/{id}/UserData', [
+                        url: (string) $context->backendUrl->withPath(r('/Users/{user}/Items/{id}/UserData', [
                             'user' => $context->backendUser,
-                            'id' => ag($item, 'Id')
+                            'id' => ag($item, 'Id'),
                         ])),
-                        options: $context->getHttpOptions() + [
+                        options: $context->getHttpOptions()
+                        + [
                             'json' => [
                                 'Played' => true,
                                 'PlaybackPositionTicks' => 0,
                                 'LastPlayedDate' => $lastPlayed,
                             ],
-                            'user_data' => [Options::NO_LOGGING => true]
-                        ]
-                    )
+                            'user_data' => [Options::NO_LOGGING => true],
+                        ],
+                    ),
                 );
             }
         } catch (Throwable $e) {
@@ -291,8 +300,8 @@ class Export extends Import
                             'trace' => $e->getTrace(),
                         ],
                     ],
-                    e: $e
-                )
+                    e: $e,
+                ),
             );
         }
     }

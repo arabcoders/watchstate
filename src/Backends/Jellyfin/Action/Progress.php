@@ -51,9 +51,10 @@ class Progress
      *
      * @return void
      */
-    public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
-    {
-    }
+    public function __construct(
+        protected HttpClientInterface $http,
+        protected LoggerInterface $logger,
+    ) {}
 
     /**
      * Wrap the operation in try response block.
@@ -70,12 +71,12 @@ class Progress
         iGuid $guid,
         array $entities,
         QueueRequests $queue,
-        DateTimeInterface|null $after = null
+        ?DateTimeInterface $after = null,
     ): Response {
         return $this->tryResponse(
             context: $context,
             fn: fn() => $this->action($context, $guid, $entities, $queue, $after),
-            action: $this->action
+            action: $this->action,
         );
     }
 
@@ -95,10 +96,10 @@ class Progress
         iGuid $guid,
         array $entities,
         QueueRequests $queue,
-        DateTimeInterface|null $after = null
+        ?DateTimeInterface $after = null,
     ): Response {
         $sessions = [];
-        $ignoreDate = (bool)ag($context->options, Options::IGNORE_DATE, false);
+        $ignoreDate = (bool) ag($context->options, Options::IGNORE_DATE, false);
 
         try {
             $remoteSessions = Container::get(GetSessions::class)($context);
@@ -120,11 +121,11 @@ class Progress
         }
 
         foreach ($entities as $key => $entity) {
-            if (true !== ($entity instanceof iState)) {
+            if (true !== $entity instanceof iState) {
                 continue;
             }
 
-            if (null !== $after && false === (bool)ag($context->options, Options::IGNORE_DATE, false)) {
+            if (null !== $after && false === (bool) ag($context->options, Options::IGNORE_DATE, false)) {
                 if ($after->getTimestamp() > $entity->updated) {
                     continue;
                 }
@@ -165,23 +166,22 @@ class Progress
                 $this->logger->warning(
                     message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. The event originator did not set a date.",
                     context: $logContext,
-
                 );
                 continue;
             }
-            $senderDate = makeDate($senderDate)->getTimestamp();
-            $senderDate = $senderDate - (int)ag($context->options, 'progress.time_drift', self::DEFAULT_TIME_DRIFT);
+            $senderDate = make_date($senderDate)->getTimestamp();
+            $senderDate -= (int) ag($context->options, 'progress.time_drift', self::DEFAULT_TIME_DRIFT);
 
             $datetime = ag($entity->getExtra($context->backendName), iState::COLUMN_EXTRA_DATE, null);
-            if (false === $ignoreDate && null !== $datetime && makeDate($datetime)->getTimestamp() > $senderDate) {
+            if (false === $ignoreDate && null !== $datetime && make_date($datetime)->getTimestamp() > $senderDate) {
                 $this->logger->warning(
                     message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. Event date '{event_date}' is older than backend local db item date '{local_date}'.",
                     context: [
                         ...$logContext,
-                        'event_date' => makeDate($senderDate),
-                        'local_date' => makeDate($datetime),
-                        'compare' => ['remote' => makeDate($datetime), 'sender' => makeDate($senderDate)],
-                    ]
+                        'event_date' => make_date($senderDate),
+                        'local_date' => make_date($datetime),
+                        'compare' => ['remote' => make_date($datetime), 'sender' => make_date($senderDate)],
+                    ],
                 );
                 continue;
             }
@@ -192,7 +192,6 @@ class Progress
                 $this->logger->notice(
                     message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. The item is playing right now.",
                     context: $logContext,
-
                 );
                 continue;
             }
@@ -201,25 +200,25 @@ class Progress
                 $remoteData = $this->getItemDetails($context, $logContext['remote']['id'], [Options::NO_CACHE => true]);
                 $remoteItem = $this->createEntity($context, $guid, $remoteData, ['latest_date' => true]);
 
-                if (false === $ignoreDate && makeDate($remoteItem->updated)->getTimestamp() > $senderDate) {
+                if (false === $ignoreDate && make_date($remoteItem->updated)->getTimestamp() > $senderDate) {
                     $this->logger->info(
                         message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. Event date '{event_date}' is older than backend remote item date '{remote_date}'.",
                         context: [
                             ...$logContext,
-                            'event_date' => makeDate($senderDate),
-                            'remote_date' => makeDate($remoteItem->updated),
+                            'event_date' => make_date($senderDate),
+                            'remote_date' => make_date($remoteItem->updated),
                             'compare' => [
-                                'remote' => makeDate($remoteItem->updated),
-                                'sender' => makeDate($senderDate)
+                                'remote' => make_date($remoteItem->updated),
+                                'sender' => make_date($senderDate),
                             ],
-                        ]
+                        ],
                     );
                     continue;
                 }
 
                 if ($remoteItem->isWatched()) {
-                    $allowUpdate = (int)Config::get('progress.threshold', 0);
-                    $minThreshold = (int)Config::get('progress.minThreshold', 86_400);
+                    $allowUpdate = (int) Config::get('progress.threshold', 0);
+                    $minThreshold = (int) Config::get('progress.minThreshold', 86_400);
                     if (false === ($allowUpdate >= $minThreshold && time() > ($entity->updated + $allowUpdate))) {
                         $this->logger->info(
                             message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. The backend says the item is marked as watched.",
@@ -231,25 +230,25 @@ class Progress
             } catch (\App\Libs\Exceptions\RuntimeException|RuntimeException|InvalidArgumentException $e) {
                 $this->logger->error(
                     ...lw(
-                    message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' get {item.type} '#{item.id}: {item.title}' status. '{error.message}' at '{error.file}:{error.line}'.",
-                    context: [
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
+                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' get {item.type} '#{item.id}: {item.title}' status. '{error.message}' at '{error.file}:{error.line}'.",
+                        context: [
+                            'error' => [
+                                'kind' => $e::class,
+                                'line' => $e->getLine(),
+                                'message' => $e->getMessage(),
+                                'file' => after($e->getFile(), ROOT_PATH),
+                            ],
+                            ...$logContext,
+                            'exception' => [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                                'message' => $e->getMessage(),
+                                'trace' => $e->getTrace(),
+                            ],
                         ],
-                        ...$logContext,
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
-                    ],
-                    e: $e
-                ),
+                        e: $e,
+                    ),
                 );
                 continue;
             }
@@ -259,40 +258,44 @@ class Progress
                     r('/Users/{user_id}/Items/{item_id}/UserData', [
                         'user_id' => $context->backendUser,
                         'item_id' => $logContext['remote']['id'],
-                    ])
+                    ]),
                 );
 
-                $logContext['remote']['url'] = (string)$url;
+                $logContext['remote']['url'] = (string) $url;
 
                 $this->logger->debug(
                     message: "{action}: Updating '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' watch progress to '{progress}'.",
                     context: [
                         ...$logContext,
-                        'progress' => $entity->hasPlayProgress() ? formatDuration($entity->getPlayProgress()) : '0:0:0',
+                        'progress' => $entity->hasPlayProgress()
+                            ? format_duration(
+                                $entity->getPlayProgress(),
+                            )
+                            : '0:0:0',
                         // -- convert secs to ms for jellyfin/emby to understand it.
                         'time' => floor($entity->getPlayProgress() * 1_00_00),
-                    ]
+                    ],
                 );
 
-                if (false === (bool)ag($context->options, Options::DRY_RUN, false)) {
+                if (false === (bool) ag($context->options, Options::DRY_RUN, false)) {
                     $queue->add(
                         $this->http->request(
                             method: Method::POST,
-                            url: (string)$url,
+                            url: (string) $url,
                             options: array_replace_recursive($context->getHttpOptions(), [
                                 'headers' => [
                                     'Content-Type' => 'application/json',
                                 ],
                                 'json' => [
-                                    'PlaybackPositionTicks' => (string)floor($entity->getPlayProgress() * 1_00_00),
-                                    'LastPlayedDate' => makeDate($senderDate)->format(Date::ATOM),
+                                    'PlaybackPositionTicks' => (string) floor($entity->getPlayProgress() * 1_00_00),
+                                    'LastPlayedDate' => make_date($senderDate)->format(Date::ATOM),
                                 ],
                                 'user_data' => [
                                     'id' => $key,
                                     'context' => $logContext,
                                 ],
-                            ])
-                        )
+                            ]),
+                        ),
                     );
                 }
             } catch (Throwable $e) {
@@ -315,8 +318,8 @@ class Progress
                                 'trace' => $e->getTrace(),
                             ],
                         ],
-                        e: $e
-                    )
+                        e: $e,
+                    ),
                 );
             }
         }

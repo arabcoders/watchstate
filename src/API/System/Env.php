@@ -28,7 +28,7 @@ final class Env
      */
     public function __construct()
     {
-        $this->envFile = (new EnvFile(file: Config::get('path') . '/config/.env', create: true));
+        $this->envFile = new EnvFile(file: Config::get('path') . '/config/.env', create: true);
 
         $spec = require __DIR__ . '/../../../config/env.spec.php';
 
@@ -41,7 +41,7 @@ final class Env
                 continue;
             }
 
-            if (true === (bool)ag($info, 'protected', false)) {
+            if (true === (bool) ag($info, 'protected', false)) {
                 continue;
             }
 
@@ -62,13 +62,13 @@ final class Env
             if (array_key_exists('validate', $info)) {
                 unset($info['validate']);
             }
-            if (true === (bool)ag($info, 'protected', false)) {
+            if (true === (bool) ag($info, 'protected', false)) {
                 continue;
             }
             $list[] = $info;
         }
 
-        if (true === (bool)$params->get('set', false)) {
+        if (true === (bool) $params->get('set', false)) {
             $list = array_filter($list, fn($info) => $this->envFile->has($info['key']));
         }
 
@@ -91,7 +91,7 @@ final class Env
             return api_error(r("Invalid key '{key}' was given.", ['key' => $key]), Status::BAD_REQUEST);
         }
 
-        $isProtected = true === (bool)ag($spec, 'protected', false);
+        $isProtected = true === (bool) ag($spec, 'protected', false);
         if ($isProtected && false === $request->getAttribute('INTERNAL_REQUEST', false)) {
             return api_error(r("Key '{key}' is not set.", ['key' => $key]), Status::NOT_FOUND);
         }
@@ -105,8 +105,8 @@ final class Env
             'value' => $this->settype($spec, ag($spec, 'value', fn() => $this->envFile->get($key))),
             'description' => ag($spec, 'description'),
             'type' => ag($spec, 'type'),
-            'mask' => (bool)ag($spec, 'mask', false),
-            'danger' => (bool)ag($spec, 'danger', false),
+            'mask' => (bool) ag($spec, 'mask', false),
+            'danger' => (bool) ag($spec, 'danger', false),
             'config_value' => ag($spec, 'config_value', null),
             'config' => ag($spec, 'config', null),
         ]);
@@ -127,7 +127,7 @@ final class Env
             return api_error(r("Invalid key '{key}' was given.", ['key' => $key]), Status::BAD_REQUEST);
         }
 
-        $isProtected = true === (bool)ag($spec, 'protected', false);
+        $isProtected = true === (bool) ag($spec, 'protected', false);
         if ($isProtected && false === $request->getAttribute('INTERNAL_REQUEST', false)) {
             return api_error(r("Key '{key}' is not set.", ['key' => $key]), Status::NOT_FOUND);
         }
@@ -140,8 +140,8 @@ final class Env
                 'value' => $this->setType($spec, ag($spec, 'value', fn() => $this->envFile->get($key))),
                 'description' => ag($spec, 'description'),
                 'type' => ag($spec, 'type'),
-                'mask' => (bool)ag($spec, 'mask', false),
-                'danger' => (bool)ag($spec, 'danger', false),
+                'mask' => (bool) ag($spec, 'mask', false),
+                'danger' => (bool) ag($spec, 'danger', false),
                 'config_value' => ag($spec, 'config_value', null),
                 'config' => ag($spec, 'config', null),
             ]);
@@ -162,7 +162,7 @@ final class Env
         } catch (ValidationException $e) {
             return api_error(r("Value validation for '{key}' failed. {error}", [
                 'key' => $key,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]), Status::BAD_REQUEST);
         }
 
@@ -173,8 +173,8 @@ final class Env
             'value' => $value,
             'description' => ag($spec, 'description'),
             'type' => ag($spec, 'type'),
-            'mask' => (bool)ag($spec, 'mask', false),
-            'danger' => (bool)ag($spec, 'danger', false),
+            'mask' => (bool) ag($spec, 'mask', false),
+            'danger' => (bool) ag($spec, 'danger', false),
             'config_value' => ag($spec, 'config_value', null),
             'config' => ag($spec, 'config', null),
         ]);
@@ -205,7 +205,7 @@ final class Env
             if (is_bool($value)) {
                 return $value;
             }
-            if (true === in_array(strtolower((string)$value), ['true', '1', 'yes', 'on'], true)) {
+            if (true === in_array(strtolower((string) $value), ['true', '1', 'yes', 'on'], true)) {
                 return true;
             }
 
@@ -213,9 +213,9 @@ final class Env
         }
 
         return match (ag($spec, 'type', 'string')) {
-            'int' => (int)$value,
-            'float' => (float)$value,
-            default => (string)$value,
+            'int' => (int) $value,
+            'float' => (float) $value,
+            default => (string) $value,
         };
     }
 }

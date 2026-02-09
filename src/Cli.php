@@ -18,9 +18,10 @@ class Cli extends Application
      *
      * @param PSRContainer $container The dependency injection container.
      */
-    public function __construct(protected PSRContainer $container)
-    {
-        parent::__construct(self::getAppName(), getAppVersion());
+    public function __construct(
+        protected PSRContainer $container,
+    ) {
+        parent::__construct(self::getAppName(), get_app_version());
     }
 
     /**
@@ -44,7 +45,7 @@ class Cli extends Application
 
         if (InstalledVersions::isInstalled('perftools/php-profiler')) {
             $definition->addOption(
-                new InputOption('profile', null, InputOption::VALUE_NONE, 'Run profiler on command execution.')
+                new InputOption('profile', null, InputOption::VALUE_NONE, 'Run profiler on command execution.'),
             );
         }
 
@@ -53,8 +54,8 @@ class Cli extends Application
                 'context',
                 null,
                 InputOption::VALUE_NEGATABLE,
-                'Add context to output messages. <comment>Not all commands support this option.</comment>'
-            )
+                'Add context to output messages. <comment>Not all commands support this option.</comment>',
+            ),
         );
 
         $definition->addOption(
@@ -62,19 +63,21 @@ class Cli extends Application
                 'trace',
                 null,
                 InputOption::VALUE_NONE,
-                'Enable tracing mode. <comment>Not all commands support this option.</comment>'
-            )
+                'Enable tracing mode. <comment>Not all commands support this option.</comment>',
+            ),
         );
 
         $definition->addOption(
             new InputOption(
-                'output', 'o', InputOption::VALUE_REQUIRED,
+                'output',
+                'o',
+                InputOption::VALUE_REQUIRED,
                 sprintf(
                     'Change output display mode. Can be [%s]. <comment>Not all commands support this option.</comment>',
-                    '<info>' . implode('</info>,<info> ', Command::DISPLAY_OUTPUT) . '</info>'
+                    '<info>' . implode('</info>,<info> ', Command::DISPLAY_OUTPUT) . '</info>',
                 ),
-                Command::DISPLAY_OUTPUT[0]
-            )
+                Command::DISPLAY_OUTPUT[0],
+            ),
         );
 
         $definition->addOption(
@@ -82,8 +85,8 @@ class Cli extends Application
                 'debug',
                 null,
                 InputOption::VALUE_NONE,
-                'Turn on the <comment>-vvv --context --trace</comment> flags.'
-            )
+                'Turn on the <comment>-vvv --context --trace</comment> flags.',
+            ),
         );
 
         return $definition;

@@ -55,5 +55,4 @@ enum Levels: string
      * Urgent alert.
      */
     case EMERGENCY = 'EMERGENCY';
-
 }

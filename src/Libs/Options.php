@@ -6,6 +6,7 @@ namespace App\Libs;
 
 /**
  * Options class represents the list of options that can be passed to the different classes.
+ * @mago-expect lint:no-literal-password
  */
 final class Options
 {
@@ -46,6 +47,8 @@ final class Options
     public const string ADMIN_PLEX_USER_PIN = 'PLEX_USER_PIN';
     public const string REQUEST_ID = 'REQUEST_ID';
     public const string ONLY_LIBRARY_ID = 'ONLY_LIBRARY_ID';
+    public const string LIBRARY_SELECT = 'LIBRARY_SELECT';
+    public const string LIBRARY_INVERSE = 'LIBRARY_INVERSE';
     public const string ALT_NAME = 'ALT_NAME';
     public const string ALT_ID = 'ALT_ID';
     public const string CONTEXT_USER = 'CONTEXT_USER';
@@ -59,7 +62,5 @@ final class Options
     public const string SKIP_STATE = 'SKIP_STATE';
     public const string ON_SKIP_STATE = 'ON_SKIP_STATE';
 
-    private function __construct()
-    {
-    }
+    private function __construct() {}
 }

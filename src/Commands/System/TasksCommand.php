@@ -44,9 +44,9 @@ final class TasksCommand extends Command
     private array $logs = [];
     private array $taskOutput = [];
 
-    private Closure|null $writer = null;
-    private Closure|null $clear = null;
-    private Closure|null $save = null;
+    private ?Closure $writer = null;
+    private ?Closure $clear = null;
+    private ?Closure $save = null;
     private int $sleep = 1000;
     private bool $needToSave = false;
     private bool $viaEvent = false;
@@ -72,12 +72,13 @@ final class TasksCommand extends Command
         $tasksName = implode(
             ', ',
             array_map(
-                fn($val) => '<comment>' . strtoupper($val) . '</comment>',
-                array_keys(Config::get('tasks.list', []))
-            )
+                static fn($val) => '<comment>' . strtoupper($val) . '</comment>',
+                array_keys(Config::get('tasks.list', [])),
+            ),
         );
 
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->addOption('run', null, InputOption::VALUE_NONE, 'Run scheduled tasks.')
             ->addOption('task', 't', InputOption::VALUE_REQUIRED, 'Run the specified task only.')
             ->addOption('save-log', null, InputOption::VALUE_NONE, 'Save tasks output to file.')
@@ -86,72 +87,72 @@ final class TasksCommand extends Command
                 'args',
                 'a',
                 InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY,
-                'Extra arguments for the task.'
+                'Extra arguments for the task.',
             )
             ->setDescription('List & Run scheduled tasks.')
             ->setHelp(
                 r(
                     <<<HELP
 
-                    This command automates the runs of scheduled tasks.
+                        This command automates the runs of scheduled tasks.
 
-                    -------
-                    <notice>[ FAQ ]</notice>
-                    -------
+                        -------
+                        <notice>[ FAQ ]</notice>
+                        -------
 
-                    <question># How run scheduled tasks?</question>
+                        <question># How run scheduled tasks?</question>
 
-                    To run scheduled tasks, Do the following
+                        To run scheduled tasks, Do the following
 
-                    {cmd} <cmd>{route}</cmd> <flag>--run</flag>
+                        {cmd} <cmd>{route}</cmd> <flag>--run</flag>
 
-                    <question># How to force run specific task?</question>
+                        <question># How to force run specific task?</question>
 
-                    You have to combine both <flag>[--run]</flag> and [<flag>--task</flag> <value>task_name</value>], For example:
+                        You have to combine both <flag>[--run]</flag> and [<flag>--task</flag> <value>task_name</value>], For example:
 
-                    {cmd} <cmd>{route}</cmd> <flag>--task</flag> <value>import</value> <flag>--run</flag>
+                        {cmd} <cmd>{route}</cmd> <flag>--task</flag> <value>import</value> <flag>--run</flag>
 
-                    Running task in force mode, <notice>bypass</notice> the task enabled check.
+                        Running task in force mode, <notice>bypass</notice> the task enabled check.
 
-                    <question># How to configure tasks?</question>
+                        <question># How to configure tasks?</question>
 
-                    All Prebuilt tasks have 3 environment variables associated with them.
+                        All Prebuilt tasks have 3 environment variables associated with them.
 
-                    ## <flag>WS_CRON_<value>{TASK}</value>:</flag>
+                        ## <flag>WS_CRON_<value>{TASK}</value>:</flag>
 
-                    This environment variable control whether the task is enabled or not, it auto cast the value to bool. For example,
-                    to enable <value>import</value> task simply add new environment variable called [<flag>WS_CRON_</flag><value>IMPORT</value>] with value of [<value>true</value>] or [<value>1</value>].
+                        This environment variable control whether the task is enabled or not, it auto cast the value to bool. For example,
+                        to enable <value>import</value> task simply add new environment variable called [<flag>WS_CRON_</flag><value>IMPORT</value>] with value of [<value>true</value>] or [<value>1</value>].
 
-                    ## <info>WS_CRON_<value>{TASK}</value>_AT:</info>
+                        ## <info>WS_CRON_<value>{TASK}</value>_AT:</info>
 
-                    This environment variable control when the task should run, it accepts valid cron expression timer. For example,
-                    to run <value>import</value> every two hours add new environment variable called [<info>WS_CRON_<value>IMPORT</value>_AT</info>] with value of [<info>0 */2 * * *</info>].
+                        This environment variable control when the task should run, it accepts valid cron expression timer. For example,
+                        to run <value>import</value> every two hours add new environment variable called [<info>WS_CRON_<value>IMPORT</value>_AT</info>] with value of [<info>0 */2 * * *</info>].
 
 
-                    ## <info>WS_CRON_<value>{TASK}</value>_ARGS</info>:
+                        ## <info>WS_CRON_<value>{TASK}</value>_ARGS</info>:
 
-                    This environment variable control the options passed to the executed command, For example to expand the information
-                    logged during <value>import</value> run, add new environment variable called [<info>WS_CRON_<value>IMPORT</value>_ARGS</info>] with value of [<info>-vvv --context</info>].
-                    Simply put, run help on the associated command, and you can use any <value>Options</value> listed there in this variable.
+                        This environment variable control the options passed to the executed command, For example to expand the information
+                        logged during <value>import</value> run, add new environment variable called [<info>WS_CRON_<value>IMPORT</value>_ARGS</info>] with value of [<info>-vvv --context</info>].
+                        Simply put, run help on the associated command, and you can use any <value>Options</value> listed there in this variable.
 
-                    ## <value>{TASK}</value>
+                        ## <value>{TASK}</value>
 
-                    Replace <value>{TASK}</value> tag in environment variables which one of the following [ {tasksList} ]
-                    environment variables are in <value>ALL CAPITAL LETTERS</value>.
+                        Replace <value>{TASK}</value> tag in environment variables which one of the following [ {tasksList} ]
+                        environment variables are in <value>ALL CAPITAL LETTERS</value>.
 
-                    <question># How to pass extra arguments to a run task?</question>
+                        <question># How to pass extra arguments to a run task?</question>
 
-                    You can pass extra arguments to a task by using the <flag>--args</flag> option, For example:
+                        You can pass extra arguments to a task by using the <flag>--args</flag> option, For example:
 
-                    {cmd} <cmd>{route}</cmd> <flag>--task</flag> <value>import</value> <flag>--run</flag> <flag>--args</flag>=<value>arg1=arg_value</value> <flag>--args</flag>=<value>arg2=arg_value</value>
+                        {cmd} <cmd>{route}</cmd> <flag>--task</flag> <value>import</value> <flag>--run</flag> <flag>--args</flag>=<value>arg1=arg_value</value> <flag>--args</flag>=<value>arg2=arg_value</value>
 
-                    HELP,
+                        HELP,
                     [
-                        'cmd' => trim(commandContext()),
+                        'cmd' => trim(command_context()),
                         'route' => self::ROUTE,
                         'tasksList' => $tasksName,
-                    ]
-                )
+                    ],
+                ),
             );
     }
 
@@ -198,7 +199,6 @@ final class TasksCommand extends Command
 
         switch ($eventName) {
             case self::NAME:
-            {
                 if (null === ($name = ag($event->getData(), 'name'))) {
                     $event->addLog(r('No task name was specified.'));
                     return $event;
@@ -207,20 +207,17 @@ final class TasksCommand extends Command
                 $task = self::getTasks($name);
                 if (empty($task)) {
                     $event->addLog(
-                        r("Invalid task '{name}'. There are no task with that name registered.", ['name' => $name])
+                        r("Invalid task '{name}'. There are no task with that name registered.", ['name' => $name]),
                     );
                     return $event;
                 }
                 break;
-            }
             case self::CNAME:
-            {
                 if (null === ag($event->getData(), 'command')) {
                     $event->addLog(r('No command name was specified.'));
                     return $event;
                 }
                 break;
-            }
         }
 
         try {
@@ -232,7 +229,7 @@ final class TasksCommand extends Command
             $input->setOption('save-log', true);
             $input->setOption('live', false);
 
-            $this->clear = fn() => $event->clearLogs();
+            $this->clear = $event->clearLogs(...);
 
             $this->save = fn() => $this->eventsRepo->save($event->getEvent());
 
@@ -255,14 +252,14 @@ final class TasksCommand extends Command
                     $this->needToSave = true;
                 }
             };
-            
+
             if (self::CNAME === $eventName) {
                 $event->addLog(r("Task: Run '{name}'.", ['name' => $eventName]));
                 $exitCode = $this->run_command(
                     ag($event->getData(), 'command'),
                     ag($event->getData(), 'args', []),
                     $input,
-                    Container::get(iOutput::class)
+                    Container::get(iOutput::class),
                 );
                 $event->addLog(r("Task: End '{name}' (Exit Code: {code})", [
                     'name' => $eventName,
@@ -306,7 +303,7 @@ final class TasksCommand extends Command
 
             if (false === ag_exists($tasks, $task)) {
                 $output->writeln(r('<error>There are no task named [{task}].</error>', [
-                    'task' => $task
+                    'task' => $task,
                 ]));
                 return self::FAILURE;
             }
@@ -314,11 +311,11 @@ final class TasksCommand extends Command
             $run[] = ag($tasks, $task);
         } else {
             foreach ($tasks as $task) {
-                if (false === (bool)ag($task, 'enabled')) {
+                if (false === (bool) ag($task, 'enabled')) {
                     continue;
                 }
 
-                assert($task['timer'] instanceof CronExpression);
+                assert($task['timer'] instanceof CronExpression, 'Expected CronExpression for task timer.');
                 if ($task['timer']->isDue('now')) {
                     $run[] = $task;
                 }
@@ -327,7 +324,7 @@ final class TasksCommand extends Command
 
         if (count($run) < 1) {
             $output->writeln(r('<info>[{datetime}] No task scheduled to run at this time.</info>', [
-                'datetime' => makeDate(),
+                'datetime' => make_date(),
             ]), iOutput::VERBOSITY_VERBOSE);
         }
 
@@ -341,10 +338,14 @@ final class TasksCommand extends Command
                 $stream->write(preg_replace('#\R+#', PHP_EOL, implode(PHP_EOL, $this->logs)) . PHP_EOL . PHP_EOL);
                 $stream->close();
             } catch (Throwable $e) {
-                $this->write(r("<error>Failed to open/write to logfile '{file}'. Error '{message}'.</error>", [
-                    'file' => Config::get('tasks.logfile'),
-                    'message' => $e->getMessage(),
-                ]), $input, $output);
+                $this->write(
+                    r("<error>Failed to open/write to logfile '{file}'. Error '{message}'.</error>", [
+                        'file' => Config::get('tasks.logfile'),
+                        'message' => $e->getMessage(),
+                    ]),
+                    $input,
+                    $output,
+                );
 
                 return self::INVALID;
             }
@@ -370,11 +371,11 @@ final class TasksCommand extends Command
 
         $process = Process::fromShellCommandline(implode(' ', $cmd), timeout: null);
 
-        $started = makeDate();
+        $started = make_date();
 
         $process->start(function ($std, $out) use ($input, $output) {
-            assert($output instanceof ConsoleOutputInterface);
-            $out = trim((string)$out);
+            assert($output instanceof ConsoleOutputInterface, 'Expected console output interface.');
+            $out = trim((string) $out);
 
             if (empty($out)) {
                 return;
@@ -417,19 +418,23 @@ final class TasksCommand extends Command
                         usleep($this->sleep);
                     } catch (ProcessException $e) {
                         $process->stop();
-                        $this->write(r('Task: {name} (Failed). ({type}: {message}', [
-                            'name' => $task['name'],
-                            'startDate' => $started->format('D, H:i:s T'),
-                            'type' => $e::class,
-                            'message' => $e->getMessage(),
-                        ]), $input, $output);
+                        $this->write(
+                            r('Task: {name} (Failed). ({type}: {message}', [
+                                'name' => $task['name'],
+                                'startDate' => $started->format('D, H:i:s T'),
+                                'type' => $e::class,
+                                'message' => $e->getMessage(),
+                            ]),
+                            $input,
+                            $output,
+                        );
                         break;
                     }
                 }
             }
         }
 
-        $ended = makeDate();
+        $ended = make_date();
 
         if (false === $this->viaEvent && ($task['name'] !== 'dispatch' || count($this->taskOutput) > 0)) {
             $event = $this->eventsRepo->getObject([]);
@@ -475,17 +480,25 @@ final class TasksCommand extends Command
         }
 
         $this->write('--------------------------', $input, $output);
-        $this->write(r('Task: {name} (Started: {startDate})', [
-            'name' => $task['name'],
-            'startDate' => $started->format('D, H:i:s T'),
-        ]), $input, $output);
+        $this->write(
+            r('Task: {name} (Started: {startDate})', [
+                'name' => $task['name'],
+                'startDate' => $started->format('D, H:i:s T'),
+            ]),
+            $input,
+            $output,
+        );
         $this->write(r('Command: {cmd}', ['cmd' => $process->getCommandLine()]), $input, $output);
-        $this->write(r('Exit Code: {code}:{status} (Ended: {end_date}) - Took {duration}s', [
-            'status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
-            'code' => $process->getExitCode() ?? self::INVALID,
-            'end_date' => $ended->format('D, H:i:s T'),
-            'duration' => $ended->getTimestamp() - $started->getTimestamp(),
-        ]), $input, $output);
+        $this->write(
+            r('Exit Code: {code}:{status} (Ended: {end_date}) - Took {duration}s', [
+                'status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
+                'code' => $process->getExitCode() ?? self::INVALID,
+                'end_date' => $ended->format('D, H:i:s T'),
+                'duration' => $ended->getTimestamp() - $started->getTimestamp(),
+            ]),
+            $input,
+            $output,
+        );
         $this->write('--------------------------', $input, $output);
         $this->write(' ' . PHP_EOL, $input, $output);
 
@@ -516,11 +529,11 @@ final class TasksCommand extends Command
 
         $process = Process::fromShellCommandline(implode(' ', $cmd), timeout: null);
 
-        $started = makeDate();
+        $started = make_date();
 
         $process->start(function ($std, $out) use ($input, $output) {
-            assert($output instanceof ConsoleOutputInterface);
-            $out = trim((string)$out);
+            assert($output instanceof ConsoleOutputInterface, 'Expected console output interface.');
+            $out = trim((string) $out);
 
             if (empty($out)) {
                 return;
@@ -563,19 +576,23 @@ final class TasksCommand extends Command
                         usleep($this->sleep);
                     } catch (ProcessException $e) {
                         $process->stop();
-                        $this->write(r('Command: {command} (Failed). ({type}: {message}', [
-                            'command' => $command,
-                            'startDate' => $started->format('D, H:i:s T'),
-                            'type' => $e::class,
-                            'message' => $e->getMessage(),
-                        ]), $input, $output);
+                        $this->write(
+                            r('Command: {command} (Failed). ({type}: {message}', [
+                                'command' => $command,
+                                'startDate' => $started->format('D, H:i:s T'),
+                                'type' => $e::class,
+                                'message' => $e->getMessage(),
+                            ]),
+                            $input,
+                            $output,
+                        );
                         break;
                     }
                 }
             }
         }
 
-        $ended = makeDate();
+        $ended = make_date();
 
         if (count($this->taskOutput) < 1) {
             return $process->getExitCode() ?? self::INVALID;
@@ -590,17 +607,25 @@ final class TasksCommand extends Command
         }
 
         $this->write('--------------------------', $input, $output);
-        $this->write(r('Command: {name} (Started: {startDate})', [
-            'command' => $command,
-            'startDate' => $started->format('D, H:i:s T'),
-        ]), $input, $output);
+        $this->write(
+            r('Command: {name} (Started: {startDate})', [
+                'command' => $command,
+                'startDate' => $started->format('D, H:i:s T'),
+            ]),
+            $input,
+            $output,
+        );
         $this->write(r('Command: {cmd}', ['cmd' => $process->getCommandLine()]), $input, $output);
-        $this->write(r('Exit Code: {code}:{status} (Ended: {end_date}) - Took {duration}s', [
-            'status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
-            'code' => $process->getExitCode() ?? self::INVALID,
-            'end_date' => $ended->format('D, H:i:s T'),
-            'duration' => $ended->getTimestamp() - $started->getTimestamp(),
-        ]), $input, $output);
+        $this->write(
+            r('Exit Code: {code}:{status} (Ended: {end_date}) - Took {duration}s', [
+                'status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
+                'code' => $process->getExitCode() ?? self::INVALID,
+                'end_date' => $ended->format('D, H:i:s T'),
+                'duration' => $ended->getTimestamp() - $started->getTimestamp(),
+            ]),
+            $input,
+            $output,
+        );
         $this->write('--------------------------', $input, $output);
         $this->write(' ' . PHP_EOL, $input, $output);
 
@@ -627,7 +652,7 @@ final class TasksCommand extends Command
      */
     private function write(string $text, iInput $input, iOutput $output, int $level = iOutput::OUTPUT_NORMAL): void
     {
-        assert($output instanceof ConsoleOutput);
+        assert($output instanceof ConsoleOutput, 'Expected console output for task runner.');
         $output->writeln($text, $level);
 
         $message = $output->getLastMessage();
@@ -648,7 +673,7 @@ final class TasksCommand extends Command
      *
      * @return array<string, array{name: string, command: string, args: string, description: string, enabled: bool, timer: CronExpression, next: string }> The list of tasks.
      */
-    public static function getTasks(string|null $name = null): array
+    public static function getTasks(?string $name = null): array
     {
         $list = [];
 
@@ -660,15 +685,19 @@ final class TasksCommand extends Command
                 'command' => $task['command'],
                 'args' => $task['args'] ?? '',
                 'description' => $task['info'] ?? '',
-                'enabled' => (bool)$task['enabled'],
+                'enabled' => (bool) $task['enabled'],
                 'timer' => $timer,
-                'hide' => (bool)($task['hide'] ?? false),
+                'hide' => (bool) ($task['hide'] ?? false),
             ];
 
             try {
-                $list[$task['name']]['next'] = $task['enabled'] ? $timer->getNextRunDate('now')->format(
-                    'Y-m-d H:i:s T'
-                ) : 'Disabled';
+                $list[$task['name']]['next'] = $task['enabled']
+                    ? $timer
+                        ->getNextRunDate('now')
+                        ->format(
+                            'Y-m-d H:i:s T',
+                        )
+                    : 'Disabled';
             } catch (Exception $e) {
                 $list[$task['name']]['next'] = $e->getMessage();
             }
@@ -697,9 +726,11 @@ final class TasksCommand extends Command
             $suggest = [];
 
             foreach (array_keys(Config::get('tasks.list', [])) as $name) {
-                if (empty($currentValue) || str_starts_with($name, $currentValue)) {
-                    $suggest[] = $name;
+                if (!(empty($currentValue) || str_starts_with($name, $currentValue))) {
+                    continue;
                 }
+
+                $suggest[] = $name;
             }
 
             $suggestions->suggestValues($suggest);
@@ -710,7 +741,7 @@ final class TasksCommand extends Command
     {
         $cmd = [];
 
-        # args passed as the following arg_name=arg_value parse and return key value pairs
+        // args passed as the following arg_name=arg_value parse and return key value pairs
         foreach ($args as $arg) {
             if (false === str_contains($arg, '=')) {
                 $cmd[] = $arg;

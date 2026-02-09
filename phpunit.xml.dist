@@ -5,16 +5,6 @@
     <testsuites>
         <testsuite name="WatchState Test Suite">
             <directory>tests</directory>
-            <exclude>./tests/Mappers/Import.php</exclude>
         </testsuite>
     </testsuites>
-    <logging/>
-    <source>
-        <include>
-            <directory suffix=".php">src</directory>
-        </include>
-        <exclude>
-            <directory>tests</directory>
-        </exclude>
-    </source>
 </phpunit>

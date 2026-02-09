@@ -35,9 +35,8 @@ final class Index
     public function __construct(
         #[Inject(DirectMapper::class)]
         private readonly iImport $mapper,
-        private readonly iLogger $logger
-    ) {
-    }
+        private readonly iLogger $logger,
+    ) {}
 
     #[Get(self::URL . '[/]', name: 'ignore')]
     public function __invoke(iRequest $request): iResponse
@@ -95,10 +94,11 @@ final class Index
 
         if (null === ($id = $params->get('rule'))) {
             foreach (['id', 'db', 'backend', 'type'] as $key) {
-                if (null === $params->get($key)) {
-                    return api_error(r('Missing required parameter: {key}', ['key' => $key]),
-                        Status::BAD_REQUEST);
+                if (null !== $params->get($key)) {
+                    continue;
                 }
+
+                return api_error(r('Missing required parameter: {key}', ['key' => $key]), Status::BAD_REQUEST);
             }
 
             $id = r('{type}://{db}:{id}@{backend}?id={scoped_to}', [
@@ -111,12 +111,12 @@ final class Index
         }
 
         try {
-            checkIgnoreRule(guid: $id, userContext: $userContext);
+            check_ignore_rule(guid: $id, userContext: $userContext);
         } catch (RuntimeException $e) {
             return api_error($e->getMessage(), Status::BAD_REQUEST);
         }
 
-        $filtered = (string)makeIgnoreId($id);
+        $filtered = (string) make_ignore_id($id);
         $date = time();
 
         $config = $this->getConfigFile(userContext: $userContext);
@@ -146,12 +146,12 @@ final class Index
         }
 
         try {
-            checkIgnoreRule(guid: $rule, userContext: $userContext);
+            check_ignore_rule(guid: $rule, userContext: $userContext);
         } catch (RuntimeException $e) {
             return api_error($e->getMessage(), Status::BAD_REQUEST);
         }
 
-        $filtered = (string)makeIgnoreId($rule);
+        $filtered = (string) make_ignore_id($rule);
 
         $config = $this->getConfigFile(userContext: $userContext);
 
@@ -173,7 +173,7 @@ final class Index
      *
      * @return string|null Return the name of the item or null if not found.
      */
-    private function getInfo(UserContext $userContext, iUri $uri): string|null
+    private function getInfo(UserContext $userContext, iUri $uri): ?string
     {
         if (empty($uri->getQuery())) {
             return null;
@@ -191,7 +191,7 @@ final class Index
         $sql = sprintf(
             "SELECT * FROM state WHERE JSON_EXTRACT(metadata, '$.%s.%s') = :id LIMIT 1",
             $uri->getHost(),
-            $uri->getScheme() === iState::TYPE_SHOW ? 'show' : 'id'
+            $uri->getScheme() === iState::TYPE_SHOW ? 'show' : 'id',
         );
 
         $stmt = $userContext->db->getDBLayer()->prepare($sql);
@@ -204,13 +204,13 @@ final class Index
         }
 
         $this->cache[$key] = Container::get(iState::class)->fromArray($item)->getName(
-            iState::TYPE_SHOW === $uri->getScheme()
+            iState::TYPE_SHOW === $uri->getScheme(),
         );
 
         return $this->cache[$key];
     }
 
-    public function ruleAsArray(UserContext $userContext, string $guid, int|null $date = null): array
+    public function ruleAsArray(UserContext $userContext, string $guid, ?int $date = null): array
     {
         $urlParts = parse_url($guid);
 
@@ -224,32 +224,31 @@ final class Index
             parse_str($scope, $query);
         }
 
-        $rule = makeIgnoreId($guid);
+        $rule = make_ignore_id($guid);
 
         $scoped_to = null;
 
         if (ag_exists($query, 'id')) {
-            $scoped_to = ctype_digit(ag($query, 'id')) ? (int)ag($query, 'id') : ag($query, 'id');
+            $scoped_to = ctype_digit(ag($query, 'id')) ? (int) ag($query, 'id') : ag($query, 'id');
         }
 
         $builder = [
-            'rule' => (string)$rule,
+            'rule' => (string) $rule,
             'id' => $id,
             'type' => ucfirst($type),
             'backend' => $backend,
             'db' => $db,
-            'title' => null !== $scope ? ($this->getinfo(userContext: $userContext, uri: $rule) ?? 'Unknown') : null,
+            'title' => null !== $scope ? $this->getinfo(userContext: $userContext, uri: $rule) ?? 'Unknown' : null,
             'scoped' => null !== $scoped_to,
             'scoped_to' => $scoped_to,
         ];
 
         if (null !== $date) {
-            $builder['created'] = makeDate($date);
+            $builder['created'] = make_date($date);
         }
 
         return $builder;
     }
-
 
     private function getConfigFile(UserContext $userContext): ConfigFile
     {
@@ -257,7 +256,7 @@ final class Index
             file: $userContext->getPath() . '/ignore.yaml',
             type: 'yaml',
             autoCreate: true,
-            autoBackup: false
+            autoBackup: false,
         );
     }
 }

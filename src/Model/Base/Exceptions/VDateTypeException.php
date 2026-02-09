@@ -9,7 +9,4 @@ namespace App\Model\Base\Exceptions;
  *
  * @package Model\Base\Exceptions
  */
-class VDateTypeException extends ValidationException
-{
-
-}
+class VDateTypeException extends ValidationException {}

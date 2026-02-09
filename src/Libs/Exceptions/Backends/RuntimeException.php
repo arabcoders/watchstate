@@ -7,6 +7,4 @@ namespace App\Libs\Exceptions\Backends;
 /**
  * Class RuntimeException
  */
-class RuntimeException extends BackendException
-{
-}
+class RuntimeException extends BackendException {}

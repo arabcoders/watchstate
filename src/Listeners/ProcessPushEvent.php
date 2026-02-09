@@ -32,9 +32,10 @@ final readonly class ProcessPushEvent
      * @param iLogger $logger The logger object.
      */
     public function __construct(
-        #[Inject(DirectMapper::class)] private iImport $mapper,
+        #[Inject(DirectMapper::class)]
+        private iImport $mapper,
         private iLogger $logger,
-        private QueueRequests $queue
+        private QueueRequests $queue,
     ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
@@ -52,7 +53,7 @@ final readonly class ProcessPushEvent
         $user = ag($e->getOptions(), Options::CONTEXT_USER, 'main');
 
         try {
-            $userContext = getUserContext(user: $user, mapper: $this->mapper, logger: $this->logger);
+            $userContext = get_user_context(user: $user, mapper: $this->mapper, logger: $this->logger);
         } catch (RuntimeException $ex) {
             $writer(Level::Error, $ex->getMessage());
             return $e;
@@ -61,7 +62,7 @@ final readonly class ProcessPushEvent
         if (null === ($item = $userContext->db->get(Container::get(iState::class)::fromArray($e->getData())))) {
             $writer(Level::Error, "Item '{user}: {id}' is not found or has been deleted.", [
                 'user' => $user,
-                'id' => ag($e->getData(), 'id', '?')
+                'id' => ag($e->getData(), 'id', '?'),
             ]);
             return $e;
         }
@@ -80,10 +81,10 @@ final readonly class ProcessPushEvent
         foreach ($userContext->config->getAll() as $backendName => $backend) {
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
-            if (true !== (bool)ag($backend, 'export.enabled')) {
+            if (true !== (bool) ag($backend, 'export.enabled')) {
                 $writer(Level::Notice, "Export to '{user}@{backend}' is disabled by user.", [
                     'user' => $user,
-                    'backend' => $backendName
+                    'backend' => $backendName,
                 ]);
                 continue;
             }
@@ -101,7 +102,7 @@ final readonly class ProcessPushEvent
                 continue;
             }
 
-            if (null === ($url = ag($backend, 'url')) || false === isValidURL($url)) {
+            if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {
                 $writer(Level::Error, "Ignoring '{user}@{backend}'. Invalid URL '{url}'.", [
                     'user' => $user,
                     'backend' => $backendName,
@@ -136,7 +137,7 @@ final readonly class ProcessPushEvent
                 }
 
                 $backend['options'] = $opts;
-                $backend['class'] = makeBackend(backend: $backend, name: $name, options: [
+                $backend['class'] = make_backend(backend: $backend, name: $name, options: [
                     UserContext::class => $userContext,
                 ]);
                 $backend['class']->push(entities: [$item->id => $item], queue: $this->queue);
@@ -164,7 +165,7 @@ final readonly class ProcessPushEvent
                             'message' => $e->getMessage(),
                             'trace' => $e->getTrace(),
                         ],
-                    ]
+                    ],
                 );
             }
         }
@@ -180,13 +181,13 @@ final readonly class ProcessPushEvent
             'id' => $item->id,
             'via' => $item->via,
             'title' => $item->getName(),
-            'data' => arrayToString([
+            'data' => array_to_string([
                 'played' => $item->isWatched(),
             ]),
         ]);
 
         foreach ($this->queue->getQueue() as $response) {
-            if (true === (bool)ag($response->getInfo('user_data'), Options::NO_LOGGING, false)) {
+            if (true === (bool) ag($response->getInfo('user_data'), Options::NO_LOGGING, false)) {
                 try {
                     $response->getStatusCode();
                 } catch (Throwable) {
@@ -202,7 +203,7 @@ final readonly class ProcessPushEvent
                     $writer(
                         Level::Error,
                         "Request to change '{user}@{backend}' - '#{item.id}: {item.title}' play state returned with unexpected '{status_code}' status code.",
-                        $context
+                        $context,
                     );
                     continue;
                 }
@@ -210,7 +211,7 @@ final readonly class ProcessPushEvent
                 $writer(
                     Level::Notice,
                     "Updated '{user}@{backend}' - '#{item.id}: {item.title}' watch state to '{play_state}'.",
-                    $context
+                    $context,
                 );
             } catch (Throwable $e) {
                 $writer(
@@ -231,7 +232,7 @@ final readonly class ProcessPushEvent
                             'message' => $e->getMessage(),
                             'trace' => $e->getTrace(),
                         ],
-                    ]
+                    ],
                 );
             }
         }

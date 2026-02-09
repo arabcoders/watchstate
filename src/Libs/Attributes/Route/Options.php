@@ -12,9 +12,9 @@ final class Options extends Route
     public function __construct(
         string $pattern,
         array|string $middleware = [],
-        string|null $host = null,
-        string|null $name = null,
-        string|null $scheme = null,
+        ?string $host = null,
+        ?string $name = null,
+        ?string $scheme = null,
         string|int|null $port = null,
     ) {
         parent::__construct(
@@ -24,7 +24,7 @@ final class Options extends Route
             host: $host,
             name: $name,
             scheme: $scheme,
-            port: $port
+            port: $port,
         );
     }
 }

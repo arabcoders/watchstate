@@ -16,8 +16,9 @@ final class ListenersCommand extends Command
 {
     public const string ROUTE = 'events:listeners';
 
-    public function __construct(private readonly iDispatcher $dispatcher)
-    {
+    public function __construct(
+        private readonly iDispatcher $dispatcher,
+    ) {
         parent::__construct(null);
     }
 
@@ -31,7 +32,7 @@ final class ListenersCommand extends Command
         $mode = $input->getOption('output');
         $keys = [];
 
-        assert($this->dispatcher instanceof EventDispatcher);
+        assert($this->dispatcher instanceof EventDispatcher, 'Expected EventDispatcher for listeners list.');
         foreach ($this->dispatcher->getListeners() as $key => $val) {
             $listeners = [];
 
@@ -39,7 +40,7 @@ final class ListenersCommand extends Command
                 $listeners[] = get_debug_type($listener);
             }
 
-            $keys[$key] = join(', ', $listeners);
+            $keys[$key] = implode(', ', $listeners);
         }
 
         if ('table' === $mode) {

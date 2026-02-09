@@ -20,9 +20,10 @@ final readonly class Sign
 {
     public const string URL = '%{api.prefix}/system/sign';
 
-    public function __construct(private iCache $cache, private iDB $db)
-    {
-    }
+    public function __construct(
+        private iCache $cache,
+        private iDB $db,
+    ) {}
 
     /**
      * @throws \Exception if the time passed to the DateInterval is invalid.
@@ -49,21 +50,25 @@ final readonly class Sign
         $time = $params->get('time', 'PT24H');
         $expires = new DateInterval($time);
 
-        $key = self::sign([
-            'id' => $id,
-            'path' => $path,
-            'time' => $time,
-            'config' => $params->get('config'),
-            'version' => getAppVersion(),
-        ], $expires, $this->cache);
+        $key = self::sign(
+            [
+                'id' => $id,
+                'path' => $path,
+                'time' => $time,
+                'config' => $params->get('config'),
+                'version' => get_app_version(),
+            ],
+            $expires,
+            $this->cache,
+        );
 
         return api_response(Status::OK, [
             'token' => $key,
-            'expires' => makeDate()->add($expires)->format(DateTimeInterface::ATOM),
+            'expires' => make_date()->add($expires)->format(DateTimeInterface::ATOM),
         ]);
     }
 
-    public static function sign(array $data, DateInterval|null $ttl = null, iCache|null $cache = null): string
+    public static function sign(array $data, ?DateInterval $ttl = null, ?iCache $cache = null): string
     {
         if (null === $cache) {
             $cache = Container::get(iCache::class);
@@ -80,8 +85,8 @@ final readonly class Sign
     public static function update(
         string $key,
         array $data,
-        DateInterval|null $ttl = null,
-        iCache|null $cache = null
+        ?DateInterval $ttl = null,
+        ?iCache $cache = null,
     ): bool {
         if (null === $cache) {
             $cache = Container::get(iCache::class);

@@ -9,6 +9,4 @@ namespace App\Model\Base\Exceptions;
  *
  * @package Model\Base\Exceptions
  */
-class VValidateException extends ValidationException
-{
-}
+class VValidateException extends ValidationException {}

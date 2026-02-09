@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Libs\Extends;
 
 use App\Libs\Config;
@@ -22,7 +24,7 @@ class ConsoleHandler extends AbstractProcessingHandler
     /**
      * @var OutputInterface|null $output The console output interface to be used for printing log records
      */
-    private OutputInterface|null $output;
+    private ?OutputInterface $output;
 
     /**
      * Maps verbosity levels from the OutputInterface to corresponding log levels.
@@ -53,7 +55,7 @@ class ConsoleHandler extends AbstractProcessingHandler
      * @param bool $bubble Whether the log messages should bubble up the stack or not
      * @param array $levelsMapper (Optional) An array mapping verbosity levels to logging levels
      */
-    public function __construct(OutputInterface|null $output = null, bool $bubble = true, array $levelsMapper = [])
+    public function __construct(?OutputInterface $output = null, bool $bubble = true, array $levelsMapper = [])
     {
         parent::__construct(Level::Debug, $bubble);
 
@@ -113,7 +115,7 @@ class ConsoleHandler extends AbstractProcessingHandler
     {
         $date = $record['datetime'] ?? 'No date set';
 
-        if (true === ($date instanceof DateTimeInterface)) {
+        if (true === $date instanceof DateTimeInterface) {
             $date = $date->format(DateTimeInterface::ATOM);
         }
 
@@ -123,8 +125,8 @@ class ConsoleHandler extends AbstractProcessingHandler
             'message' => $record['message'],
         ]);
 
-        if (false === empty($record['context']) && true === (bool)Config::get('logs.context')) {
-            $message .= ' ' . arrayToJson($record['context']);
+        if (false === empty($record['context']) && true === (bool) Config::get('logs.context')) {
+            $message .= ' ' . array_to_json($record['context']);
         }
 
         $errOutput = $this->output instanceof ConsoleOutputInterface ? $this->output->getErrorOutput() : $this->output;

@@ -44,9 +44,10 @@ class GetLibrary
      * @param iHttp $http The HTTP client object.
      * @param iLogger $logger The logger object.
      */
-    public function __construct(protected iHttp $http, protected iLogger $logger)
-    {
-    }
+    public function __construct(
+        protected iHttp $http,
+        protected iLogger $logger,
+    ) {}
 
     /**
      * Get library content.
@@ -63,7 +64,7 @@ class GetLibrary
         return $this->tryResponse(
             context: $context,
             fn: fn() => $this->action($context, $guid, $id, $opts),
-            action: $this->action
+            action: $this->action,
         );
     }
 
@@ -96,10 +97,10 @@ class GetLibrary
                         'user' => $context->userContext->name,
                         'id' => $id,
                         'response' => [
-                            'body' => $libraries
+                            'body' => $libraries,
                         ],
                     ],
-                    level: Levels::WARNING
+                    level: Levels::WARNING,
                 ),
             );
         }
@@ -120,13 +121,13 @@ class GetLibrary
 
         $types = [JFC::COLLECTION_TYPE_MOVIES, JFC::COLLECTION_TYPE_SHOWS, JFC::COLLECTION_TYPE_MIXED];
 
-        if (true !== in_array(ag($logContext, 'library.type'), $types)) {
+        if (true !== in_array(ag($logContext, 'library.type'), $types, true)) {
             return new Response(
                 status: false,
                 error: new Error(
                     message: "{action}: The request for '{client}: {user}@{backend}' library '{library.id}: {library.title}' returned with unsupported type '{library.type}'.",
                     context: $logContext,
-                    level: Levels::WARNING
+                    level: Levels::WARNING,
                 ),
             );
         }
@@ -134,10 +135,12 @@ class GetLibrary
         $extraQueryParams = [];
 
         if (null !== ($limit = ag($opts, Options::LIMIT_RESULTS))) {
-            $extraQueryParams['Limit'] = (int)$limit;
+            $extraQueryParams['Limit'] = (int) $limit;
         }
 
-        $url = $context->backendUrl->withPath(r('/Users/{user_id}/items/', ['user_id' => $context->backendUser]))
+        $url = $context
+            ->backendUrl
+            ->withPath(r('/Users/{user_id}/items/', ['user_id' => $context->backendUser]))
             ->withQuery(
                 http_build_query([
                     'parentId' => $id,
@@ -147,14 +150,14 @@ class GetLibrary
                     'include' => implode(',', [JFC::TYPE_SHOW, JFC::TYPE_MOVIE]),
                     'fields' => implode(',', JFC::EXTRA_FIELDS),
                     ...$extraQueryParams,
-                ])
+                ]),
             );
 
-        $logContext['library']['url'] = (string)$url;
+        $logContext['library']['url'] = (string) $url;
 
         $this->logger->debug("Requesting '{client}: {user}@{backend}' library '{library.title}' content.", $logContext);
 
-        $response = $this->http->request(Method::GET, (string)$url, $context->getHttpOptions());
+        $response = $this->http->request(Method::GET, (string) $url, $context->getHttpOptions());
 
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             return new Response(
@@ -165,19 +168,19 @@ class GetLibrary
                         'status_code' => $response->getStatusCode(),
                         ...$logContext,
                     ],
-                    level: Levels::ERROR
+                    level: Levels::ERROR,
                 ),
             );
         }
 
         $it = Items::fromIterable(
-            iterable: httpClientChunks($this->http->stream($response)),
+            iterable: http_client_chunks($this->http->stream($response)),
             options: [
                 'pointer' => '/Items',
                 'decoder' => new ErrorWrappingDecoder(
-                    new ExtJsonDecoder(assoc: true, options: JSON_INVALID_UTF8_IGNORE)
-                )
-            ]
+                    new ExtJsonDecoder(assoc: true, options: JSON_INVALID_UTF8_IGNORE),
+                ),
+            ],
         );
 
         $list = [];
@@ -192,7 +195,7 @@ class GetLibrary
                             'message' => $entity->getErrorMessage(),
                             'body' => $entity->getMalformedJson(),
                         ],
-                    ]
+                    ],
                 );
                 continue;
             }
@@ -202,7 +205,7 @@ class GetLibrary
             }
 
             $url = $context->backendUrl->withPath(
-                sprintf('/Users/%s/items/%s', $context->backendUser, ag($entity, 'Id'))
+                sprintf('/Users/%s/items/%s', $context->backendUser, ag($entity, 'Id')),
             );
 
             $logContext['item'] = [
@@ -210,19 +213,19 @@ class GetLibrary
                 'title' => ag($entity, ['Name', 'OriginalTitle', 'SortName', 'ForcedSortName'], '??'),
                 'year' => ag($entity, 'ProductionYear', '0000'),
                 'type' => ag($entity, 'Type'),
-                'url' => (string)$url,
+                'url' => (string) $url,
             ];
 
             // -- Handle multi episode entries.
             $indexNumber = ag($entity, 'IndexNumber');
             $indexNumberEnd = ag($entity, 'IndexNumberEnd');
             if (null !== $indexNumber && null !== $indexNumberEnd && $indexNumberEnd > $indexNumber) {
-                $episodeRangeLimit = (int)ag($context->options, Options::MAX_EPISODE_RANGE, 5);
+                $episodeRangeLimit = (int) ag($context->options, Options::MAX_EPISODE_RANGE, 5);
                 $range = range(ag($entity, 'IndexNumber'), $indexNumberEnd);
                 if (count($range) > $episodeRangeLimit) {
                     $list[] = $this->process($context, $entity, $logContext, $opts);
                 } else {
-                    foreach (range((int)ag($entity, 'IndexNumber'), $indexNumberEnd) as $i) {
+                    foreach (range((int) ag($entity, 'IndexNumber'), $indexNumberEnd) as $i) {
                         $entity['IndexNumber'] = $i;
                         $list[] = $this->process($context, $entity, $logContext, $opts);
                     }
@@ -253,9 +256,9 @@ class GetLibrary
         iGuid $guid,
         array $item,
         array $log = [],
-        array $opts = []
+        array $opts = [],
     ): array|iState {
-        if (true === (bool)ag($opts, Options::TO_ENTITY)) {
+        if (true === (bool) ag($opts, Options::TO_ENTITY)) {
             return $this->createEntity($context, $guid, $item, $opts);
         }
 
@@ -270,7 +273,7 @@ class GetLibrary
 
         $this->logger->debug(
             message: "{action}: Processing '{client}: {user}@{backend}' {item.type} '{item.title} ({item.year})'.",
-            context: $data
+            context: $data,
         );
 
         $webUrl = $url->withPath('/web/index.html')->withFragment(r('!/{action}?id={id}&serverId={backend_id}', [
@@ -283,8 +286,8 @@ class GetLibrary
             iState::COLUMN_ID => ag($item, 'Id'),
             iState::COLUMN_TYPE => ucfirst(ag($item, 'Type', 'unknown')),
             iState::COLUMN_META_LIBRARY => ag($log, 'library.title'),
-            'url' => (string)$url,
-            'webUrl' => (string)$webUrl,
+            'url' => (string) $url,
+            'webUrl' => (string) $webUrl,
             iState::COLUMN_TITLE => ag($item, $possibleTitlesList, '??'),
             iState::COLUMN_YEAR => ag($item, 'ProductionYear'),
             iState::COLUMN_GUIDS => [],
@@ -302,7 +305,7 @@ class GetLibrary
             $isASCII = mb_detect_encoding($title, 'ASCII', true);
             $title = trim($isASCII ? strtolower($title) : mb_strtolower($title));
 
-            if (true === in_array($title, $metadata['match']['titles'])) {
+            if (true === in_array($title, $metadata['match']['titles'], true)) {
                 continue;
             }
 
@@ -331,7 +334,7 @@ class GetLibrary
             }
         }
 
-        if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
+        if (true === (bool) ag($opts, Options::RAW_RESPONSE)) {
             $metadata[Options::RAW_RESPONSE] = $item;
         }
 

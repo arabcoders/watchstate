@@ -96,14 +96,14 @@ class Command extends BaseCommand
             'meta.SERVER.HTTP_USER_AGENT',
             'meta.SERVER.PHP_AUTH_USER',
             'meta.SERVER.REMOTE_USER',
-            'meta.SERVER.UNIQUE_ID'
+            'meta.SERVER.UNIQUE_ID',
         ];
 
-        $appVersion = getAppVersion();
-        $inContainer = inContainer();
+        $appVersion = get_app_version();
+        $inContainer = in_container();
 
         $url = str_replace(':', '/', '/cli/' . $this->getName());
-        $data['meta']['id'] = generateUUID();
+        $data['meta']['id'] = generate_uuid();
         $data['meta']['url'] = $data['meta']['simple_url'] = $url;
         $data['meta']['get'] = $data['meta']['env'] = [];
         $data['meta']['SERVER'] = array_replace_recursive($data['meta']['SERVER'], [
@@ -117,12 +117,12 @@ class Command extends BaseCommand
             'DOCUMENT_ROOT' => $inContainer ? '/container/' : '/cli',
             'REMOTE_ADDR' => '127.0.0.1',
             'SERVER_ADDR' => '127.0.0.1',
-            'SERVER_NAME' => ($inContainer ? 'container' : 'cli') . '.watchstate.' . $appVersion
+            'SERVER_NAME' => ($inContainer ? 'container' : 'cli') . '.watchstate.' . $appVersion,
         ]);
 
         $data = ag_delete($data, $removeKeys);
 
-        queueEvent(ProcessProfileEvent::NAME, $data);
+        queue_event(ProcessProfileEvent::NAME, $data);
 
         return $status;
     }
@@ -139,15 +139,15 @@ class Command extends BaseCommand
     protected function single(Closure $closure, iOutput $output, array $opts = []): int
     {
         try {
-            if (!$this->lock(getAppVersion() . ':' . $this->getName())) {
+            if (!$this->lock(get_app_version() . ':' . $this->getName())) {
                 $message = r("The command/task '{name}' is already running in another process.", [
-                    'name' => $this->getName()
+                    'name' => $this->getName(),
                 ]);
 
-                $output->writeln("<error>$message</error>");
+                $output->writeln("<error>{$message}</error>");
 
                 if (null !== ($logger = ag($opts, iLogger::class))) {
-                    assert($logger instanceof iLogger);
+                    assert($logger instanceof iLogger, 'Expected logger instance for task lock logging.');
                     $logger->log(ag($opts, Level::class, Level::Notice), $message);
                 }
 
@@ -192,7 +192,7 @@ class Command extends BaseCommand
         $default = $configFile->get($name);
         $default['name'] = $name;
 
-        return makeBackend(array_replace_recursive($default, $config), $name);
+        return make_backend(array_replace_recursive($default, $config), $name);
     }
 
     /**
@@ -209,8 +209,8 @@ class Command extends BaseCommand
                 $output->writeln(
                     json_encode(
                         value: $content,
-                        flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE
-                    )
+                        flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE,
+                    ),
                 );
                 break;
             case 'table':
@@ -245,9 +245,9 @@ class Command extends BaseCommand
                         ->setStyle(name: 'box')
                         ->setHeaders(
                             array_map(
-                                callback: fn($title) => is_string($title) ? ucfirst($title) : $title,
-                                array: array_keys($list[0])
-                            )
+                                callback: static fn($title) => is_string($title) ? ucfirst($title) : $title,
+                                array: array_keys($list[0]),
+                            ),
                         )
                         ->setRows(rows: $list)
                         ->render();
@@ -287,9 +287,10 @@ class Command extends BaseCommand
         }
 
         if (
-            $input->mustSuggestOptionValuesFor('select-backends') ||
-            $input->mustSuggestOptionValuesFor('select-backend') ||
-            $input->mustSuggestArgumentValuesFor('backend')) {
+            $input->mustSuggestOptionValuesFor('select-backends')
+            || $input->mustSuggestOptionValuesFor('select-backend')
+            || $input->mustSuggestArgumentValuesFor('backend')
+        ) {
             $currentValue = $input->getCompletionValue();
 
             $suggest = [];
@@ -314,9 +315,11 @@ class Command extends BaseCommand
             $suggest = [];
 
             foreach (static::DISPLAY_OUTPUT as $name) {
-                if (empty($currentValue) || str_starts_with($name, $currentValue)) {
-                    $suggest[] = $name;
+                if (!(empty($currentValue) || str_starts_with($name, $currentValue))) {
+                    continue;
                 }
+
+                $suggest[] = $name;
             }
 
             $suggestions->suggestValues($suggest);

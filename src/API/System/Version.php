@@ -22,7 +22,7 @@ final class Version
             'build' => Config::get('version_build'),
             'sha' => Config::get('version_sha'),
             'branch' => Config::get('version_branch'),
-            'container' => inContainer()
+            'container' => in_container(),
         ]);
     }
 }

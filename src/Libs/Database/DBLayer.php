@@ -55,8 +55,10 @@ final class DBLayer implements LoggerAwareInterface
     public const string IS_JSON_EXTRACT = 'JSON_EXTRACT';
     public const string IS_JSON_SEARCH = 'JSON_SEARCH';
 
-    public function __construct(private readonly PDO $pdo, private array $options = [])
-    {
+    public function __construct(
+        private readonly PDO $pdo,
+        private array $options = [],
+    ) {
         $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
 
         if (is_string($driver)) {
@@ -74,7 +76,7 @@ final class DBLayer implements LoggerAwareInterface
      *
      * @return self The new instance.
      */
-    public function withPDO(PDO $pdo, array|null $options = null): self
+    public function withPDO(PDO $pdo, ?array $options = null): self
     {
         return new self($pdo, $options ?? $this->options);
     }
@@ -137,9 +139,9 @@ final class DBLayer implements LoggerAwareInterface
 
             if (!empty($bind)) {
                 array_map(
-                    fn($k, $v) => $stmt->bindValue($k, $v, is_int($v) ? PDO::PARAM_INT : PDO::PARAM_STR),
+                    static fn($k, $v) => $stmt->bindValue($k, $v, is_int($v) ? PDO::PARAM_INT : PDO::PARAM_STR),
                     array_keys($bind),
-                    $bind
+                    $bind,
                 );
             }
 
@@ -243,7 +245,7 @@ final class DBLayer implements LoggerAwareInterface
     {
         $stmt = $this->pdo->prepare($sql, $options);
 
-        if (false === ($stmt instanceof PDOStatement)) {
+        if (false === $stmt instanceof PDOStatement) {
             throw new PDOException('Unable to prepare statement.');
         }
 
@@ -286,7 +288,7 @@ final class DBLayer implements LoggerAwareInterface
         // So it's effectively unavailable to most third-party drivers and programs that use the amalgamation
         // to compile SQLite. As we don't control the build version of SQLite, we can't guarantee that this
         // feature is available. So we'll just skip it for SQLite.
-        $ignoreSafety = 'sqlite' !== $this->driver || true === (bool)ag($options, 'ignore_safety', false);
+        $ignoreSafety = 'sqlite' !== $this->driver || true === (bool) ag($options, 'ignore_safety', false);
         if (array_key_exists('limit', $options) && $ignoreSafety) {
             $_ = $this->limitExpr($options['limit']);
             $query[] = $_['query'];
@@ -325,7 +327,7 @@ final class DBLayer implements LoggerAwareInterface
                     }
                     return $this->escapeIdentifier($text, true);
                 },
-                $cols
+                $cols,
             );
 
             $col = implode(', ', $cols);
@@ -338,7 +340,6 @@ final class DBLayer implements LoggerAwareInterface
         $query = [];
 
         $query[] = "SELECT {$col} FROM " . $this->escapeIdentifier($table, true);
-
 
         if (!empty($conditions)) {
             $andOr = $options['andor'] ?? 'AND';
@@ -360,7 +361,7 @@ final class DBLayer implements LoggerAwareInterface
         }
 
         if (array_key_exists('limit', $options)) {
-            $_ = $this->limitExpr((int)$options['limit'], $options['start'] ?? null);
+            $_ = $this->limitExpr((int) $options['limit'], $options['start'] ?? null);
 
             $query[] = $_['query'];
             $bind = array_replace_recursive($bind, $_['bind']);
@@ -388,7 +389,7 @@ final class DBLayer implements LoggerAwareInterface
     {
         $bind = $query = [];
 
-        $query[] = "SELECT COUNT(*) FROM " . $this->escapeIdentifier($table, true);
+        $query[] = 'SELECT COUNT(*) FROM ' . $this->escapeIdentifier($table, true);
 
         if (!empty($conditions)) {
             $cond = $this->conditionParser($conditions);
@@ -414,7 +415,7 @@ final class DBLayer implements LoggerAwareInterface
             $options['tracer'] = 1;
         }
 
-        $this->count = (int)$this->query(implode(' ', $query), $bind, $options)->fetchColumn();
+        $this->count = (int) $this->query(implode(' ', $query), $bind, $options)->fetchColumn();
 
         return $this->count;
     }
@@ -449,7 +450,7 @@ final class DBLayer implements LoggerAwareInterface
             $updated[] = sprintf(
                 '%s = :%s',
                 $this->escapeIdentifier($columnName, true),
-                $this->escapeIdentifier($bindKey)
+                $this->escapeIdentifier($bindKey),
             );
         }
 
@@ -464,9 +465,9 @@ final class DBLayer implements LoggerAwareInterface
         // So it's effectively unavailable to most third-party drivers and programs that use the amalgamation
         // to compile SQLite. As we don't control the build version of SQLite, we can't guarantee that this
         // feature is available. So we'll just skip it for SQLite.
-        $ignoreSafety = 'sqlite' !== $this->driver || true === (bool)ag($options, 'ignore_safety', false);
+        $ignoreSafety = 'sqlite' !== $this->driver || true === (bool) ag($options, 'ignore_safety', false);
         if (array_key_exists('limit', $options) && $ignoreSafety) {
-            $_ = $this->limitExpr((int)$options['limit']);
+            $_ = $this->limitExpr((int) $options['limit']);
 
             $query[] = $_['query'];
             $bind = array_replace_recursive($bind, $_['bind']);
@@ -508,7 +509,7 @@ final class DBLayer implements LoggerAwareInterface
         $queryString = str_replace(
             ['(columns)', '(values)'],
             [implode(', ', $columns), implode(', ', $placeholder)],
-            $queryString
+            $queryString,
         );
 
         $queryString = trim($queryString);
@@ -530,7 +531,7 @@ final class DBLayer implements LoggerAwareInterface
      */
     public function quote(mixed $text, int $type = PDO::PARAM_STR): string
     {
-        return (string)$this->pdo->quote($text, $type);
+        return (string) $this->pdo->quote($text, $type);
     }
 
     /**
@@ -539,7 +540,7 @@ final class DBLayer implements LoggerAwareInterface
      * @param string|null $name The name of the sequence object from which the ID should be returned.
      * @return string The generated ID, or empty string if no ID was generated.
      */
-    public function id(string|null $name = null): string
+    public function id(?string $name = null): string
     {
         return false !== ($id = $this->pdo->lastInsertId($name)) ? $id : '';
     }
@@ -572,8 +573,8 @@ final class DBLayer implements LoggerAwareInterface
             throw new RuntimeException(
                 sprintf(
                     'Invalid identifier "%s": Column/table must be valid ASCII code.',
-                    $text
-                )
+                    $text,
+                ),
             );
         }
 
@@ -582,8 +583,8 @@ final class DBLayer implements LoggerAwareInterface
             throw new RuntimeException(
                 sprintf(
                     'Invalid identifier "%s": Must begin with a letter or underscore.',
-                    $text
-                )
+                    $text,
+                ),
             );
         }
 
@@ -645,21 +646,19 @@ final class DBLayer implements LoggerAwareInterface
                         [
                             $eColumnName,
                             $eBindName,
-                            (function ($expr): string {
-                                return match ($expr) {
-                                    self::IS_EQUAL => self::IS_EQUAL,
-                                    self::IS_NOT_EQUAL => self::IS_NOT_EQUAL,
-                                    self::IS_HIGHER_THAN => self::IS_HIGHER_THAN,
-                                    self::IS_HIGHER_THAN_OR_EQUAL => self::IS_HIGHER_THAN_OR_EQUAL,
-                                    self::IS_LOWER_THAN => self::IS_LOWER_THAN,
-                                    self::IS_LOWER_THAN_OR_EQUAL => self::IS_LOWER_THAN_OR_EQUAL,
-                                    default => throw new RuntimeException(sprintf('SQL (%s) not implemented.', $expr)),
-                                };
+                            (static fn($expr): string => match ($expr) {
+                                self::IS_EQUAL => self::IS_EQUAL,
+                                self::IS_NOT_EQUAL => self::IS_NOT_EQUAL,
+                                self::IS_HIGHER_THAN => self::IS_HIGHER_THAN,
+                                self::IS_HIGHER_THAN_OR_EQUAL => self::IS_HIGHER_THAN_OR_EQUAL,
+                                self::IS_LOWER_THAN => self::IS_LOWER_THAN,
+                                self::IS_LOWER_THAN_OR_EQUAL => self::IS_LOWER_THAN_OR_EQUAL,
+                                default => throw new RuntimeException(sprintf('SQL (%s) not implemented.', $expr)),
                             })(
-                                $opt[0]
-                            )
+                                $opt[0],
+                            ),
                         ],
-                        '(column) (expr) :(bind)'
+                        '(column) (expr) :(bind)',
                     );
                     $bind[$eBindName] = $opt[1];
                     break;
@@ -673,17 +672,15 @@ final class DBLayer implements LoggerAwareInterface
                             $eColumnName,
                             $eBindName1,
                             $eBindName2,
-                            (function ($expr): string {
-                                return match ($expr) {
-                                    self::IS_BETWEEN => self::IS_BETWEEN,
-                                    self::IS_NOT_BETWEEN => self::IS_NOT_BETWEEN,
-                                    default => throw new RuntimeException(sprintf('SQL (%s) not implemented.', $expr)),
-                                };
+                            (static fn($expr): string => match ($expr) {
+                                self::IS_BETWEEN => self::IS_BETWEEN,
+                                self::IS_NOT_BETWEEN => self::IS_NOT_BETWEEN,
+                                default => throw new RuntimeException(sprintf('SQL (%s) not implemented.', $expr)),
                             })(
-                                $opt[0]
-                            )
+                                $opt[0],
+                            ),
                         ],
-                        "(column) (expr) (bind1) AND (bind2)"
+                        '(column) (expr) (bind1) AND (bind2)',
                     );
                     $bind[$eBindName1] = $opt[1][0];
                     $bind[$eBindName2] = $opt[1][1];
@@ -693,11 +690,9 @@ final class DBLayer implements LoggerAwareInterface
                     $keys[] = str_replace(
                         ['(column)'],
                         [$eColumnName],
-                        (function ($expr): string {
-                            return (self::IS_NULL === $expr) ? "(column) IS NULL" : "(column) IS NOT NULL";
-                        })(
-                            $opt[0]
-                        )
+                        (static fn($expr): string => self::IS_NULL === $expr ? '(column) IS NULL' : '(column) IS NOT NULL')(
+                            $opt[0],
+                        ),
                     );
                     break;
                 case self::IS_LIKE:
@@ -708,24 +703,22 @@ final class DBLayer implements LoggerAwareInterface
                         [
                             $eColumnName,
                             $eBindName,
-                            (function ($expr): string {
-                                return match ($expr) {
-                                    self::IS_LIKE => self::IS_LIKE,
-                                    self::IS_NOT_LIKE => self::IS_NOT_LIKE,
-                                    default => throw new RuntimeException(sprintf('SQL (%s) not implemented.', $expr)),
-                                };
+                            (static fn($expr): string => match ($expr) {
+                                self::IS_LIKE => self::IS_LIKE,
+                                self::IS_NOT_LIKE => self::IS_NOT_LIKE,
+                                default => throw new RuntimeException(sprintf('SQL (%s) not implemented.', $expr)),
                             })(
-                                $opt[0]
-                            )
+                                $opt[0],
+                            ),
                         ],
-                        (function ($driver) {
+                        (static function ($driver) {
                             if ('sqlite' === $driver) {
                                 return "(column) (expr) '%' || :(bind) || '%'";
                             }
                             return "(column) (expr) CONCAT('%',:(bind),'%')";
                         })(
-                            $this->driver
-                        )
+                            $this->driver,
+                        ),
                     );
                     $bind[$eBindName] = $opt[1];
                     break;
@@ -737,17 +730,15 @@ final class DBLayer implements LoggerAwareInterface
                         [
                             $eColumnName,
                             $inExpr['query'],
-                            (function ($expr): string {
-                                return match ($expr) {
-                                    self::IS_IN => self::IS_IN,
-                                    self::IS_NOT_IN => self::IS_NOT_IN,
-                                    default => throw new RuntimeException(sprintf('SQL (%s) not implemented.', $expr)),
-                                };
+                            (static fn($expr): string => match ($expr) {
+                                self::IS_IN => self::IS_IN,
+                                self::IS_NOT_IN => self::IS_NOT_IN,
+                                default => throw new RuntimeException(sprintf('SQL (%s) not implemented.', $expr)),
                             })(
-                                $opt[0]
-                            )
+                                $opt[0],
+                            ),
                         ],
-                        "(column) (expr) ((bind))"
+                        '(column) (expr) ((bind))',
                     );
                     $bind = array_replace_recursive($bind, $inExpr['bind'] ?? []);
                     break;
@@ -758,13 +749,13 @@ final class DBLayer implements LoggerAwareInterface
 
                     if (!is_array($opt[1])) {
                         throw new RuntimeException(
-                            sprintf('IS_MATCH_AGAINST: expects parameter 1 to be array. %s given.', gettype($opt[1]))
+                            sprintf('IS_MATCH_AGAINST: expects parameter 1 to be array. %s given.', gettype($opt[1])),
                         );
                     }
 
                     if (!is_string($opt[2])) {
                         throw new RuntimeException(
-                            sprintf('IS_MATCH_AGAINST: expects parameter 2 to be string. %s given', gettype($opt[2]))
+                            sprintf('IS_MATCH_AGAINST: expects parameter 2 to be string. %s given', gettype($opt[2])),
                         );
                     }
 
@@ -775,16 +766,16 @@ final class DBLayer implements LoggerAwareInterface
                         [
                             $eColumnName,
                             $eBindName,
-                            implode(', ', array_map(fn($columns) => $this->escapeIdentifier($columns, true), $opt[1]))
+                            implode(', ', array_map(fn($columns) => $this->escapeIdentifier($columns, true), $opt[1])),
                         ],
-                        (function ($driver) {
+                        (static function ($driver) {
                             if ('sqlite' === $driver) {
-                                return "(column) MATCH :(bind)";
+                                return '(column) MATCH :(bind)';
                             }
-                            return "MATCH((expr)) AGAINST(:(bind))";
+                            return 'MATCH((expr)) AGAINST(:(bind))';
                         })(
-                            $this->driver
-                        )
+                            $this->driver,
+                        ),
                     );
 
                     $bind[$eBindName] = $opt[2];
@@ -797,10 +788,10 @@ final class DBLayer implements LoggerAwareInterface
                     $eBindName = '__db_jc_' . random_int(1, 1000);
 
                     $keys[] = sprintf(
-                        "JSON_CONTAINS(%s, %s) > %d",
+                        'JSON_CONTAINS(%s, %s) > %d',
                         $this->escapeIdentifier($opt[1], true),
                         ':' . $eBindName,
-                        (int)($opt[3] ?? 0)
+                        (int) ($opt[3] ?? 0),
                     );
 
                     $bind[$eBindName] = $opt[2];
@@ -813,7 +804,7 @@ final class DBLayer implements LoggerAwareInterface
                     $eBindName = '__db_je_' . random_int(1, 1000);
 
                     $keys[] = sprintf(
-                        "JSON_EXTRACT(%s, %s) %s %s",
+                        'JSON_EXTRACT(%s, %s) %s %s',
                         $this->escapeIdentifier($column, true),
                         $this->escapeIdentifier($opt[1], true),
                         $opt[2],
@@ -857,7 +848,7 @@ final class DBLayer implements LoggerAwareInterface
 
         return [
             'bind' => $bind,
-            'query' => ':' . implode(', :', array_keys($bind))
+            'query' => ':' . implode(', :', array_keys($bind)),
         ];
     }
 
@@ -872,7 +863,7 @@ final class DBLayer implements LoggerAwareInterface
     {
         $groupBy = array_map(
             fn($val) => $this->escapeIdentifier($val, true),
-            $groupBy
+            $groupBy,
         );
 
         return ['query' => 'GROUP BY ' . implode(', ', $groupBy)];
@@ -890,7 +881,7 @@ final class DBLayer implements LoggerAwareInterface
         $sortBy = [];
 
         foreach ($orderBy as $columnName => $columnSort) {
-            $columnSort = ('DESC' === strtoupper($columnSort)) ? 'DESC' : 'ASC';
+            $columnSort = 'DESC' === strtoupper($columnSort) ? 'DESC' : 'ASC';
 
             $sortBy[] = $this->escapeIdentifier($columnName, true) . ' ' . $columnSort;
         }
@@ -959,18 +950,18 @@ final class DBLayer implements LoggerAwareInterface
         try {
             return $callback($this, $options);
         } catch (PDOException $e) {
-            $attempts = (int)ag($options, 'attempts', 0);
+            $attempts = (int) ag($options, 'attempts', 0);
             if (true === str_contains(strtolower($e->getMessage()), 'database is locked')) {
                 if ($attempts >= $this->retry) {
-                    throw new DBLayerException($e->getMessage(), (int)$e->getCode(), $e)
+                    throw new DBLayerException($e->getMessage(), (int) $e->getCode(), $e)
                         ->setFile($e->getFile())
                         ->setLine($e->getLine());
                 }
 
-                $sleep = (int)ag($options, 'max_sleep', rand(1, 4));
+                $sleep = (int) ag($options, 'max_sleep', rand(1, 4));
 
                 $this->logger?->warning("PDOAdapter: Database is locked. sleeping for '{sleep}s'.", [
-                    'sleep' => $sleep
+                    'sleep' => $sleep,
                 ]);
 
                 $options['attempts'] = $attempts + 1;
@@ -996,7 +987,7 @@ final class DBLayer implements LoggerAwareInterface
                     throw $e;
                 }
 
-                throw new DBLayerException($e->getMessage(), (int)$e->getCode(), $e)
+                throw new DBLayerException($e->getMessage(), (int) $e->getCode(), $e)
                     ->setInfo($this->last['sql'], $this->last['bind'], $e->errorInfo ?? [], $e->getCode())
                     ->setFile($e->getFile())
                     ->setLine($e->getLine());

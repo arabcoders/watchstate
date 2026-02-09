@@ -291,7 +291,7 @@ return (function () {
                     throw new ValidationException('Invalid remote logger URL. Empty value.');
                 }
 
-                if (false === isValidURL($value)) {
+                if (false === is_valid_url($value)) {
                     throw new ValidationException('Invalid remote logger URL. Must be a valid URL.');
                 }
                 return (string)$value;
@@ -314,7 +314,7 @@ return (function () {
                     throw new ValidationException('Invalid username. Empty value.');
                 }
 
-                if (false === isValidName($value)) {
+                if (false === is_valid_name($value)) {
                     throw new ValidationException(
                         'Invalid username. Username can only contains [lower case a-z, 0-9 and _].'
                     );
@@ -342,10 +342,10 @@ return (function () {
 
                 try {
                     return $prefix . password_hash(
-                        $value,
-                        Config::get('password.algo'),
-                        Config::get('password.options', [])
-                    );
+                            $value,
+                            Config::get('password.algo'),
+                            Config::get('password.options', [])
+                        );
                 } catch (ValueError $e) {
                     throw new ValidationException('Invalid password. Password hashing failed.', $e->getCode(), $e);
                 }
@@ -406,9 +406,9 @@ return (function () {
             },
         ],
         [
-            'key' => 'WS_CLIENTS_JELLYFIN_DISABLE_FIX_PLAYED',
-            'config' => 'clients.jellyfin.disable_fix_played',
-            'description' => 'Disable the Jellyfin "fix" for marking items as played.',
+            'key' => 'WS_CLIENTS_JELLYFIN_FIX_PLAYED',
+            'config' => 'clients.jellyfin.fix_played',
+            'description' => 'Enable partial fix for Jellyfin marking items as played.',
             'type' => 'bool',
         ],
     ];

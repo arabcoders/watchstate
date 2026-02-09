@@ -52,7 +52,7 @@ final class Delete
 
         $removedReference = $stmt->rowCount();
 
-        $sql = "DELETE FROM state WHERE id IN ( SELECT id FROM state WHERE length(metadata) < 10 )";
+        $sql = 'DELETE FROM state WHERE id IN ( SELECT id FROM state WHERE length(metadata) < 10 )';
         $stmt = $db->query($sql);
 
         $deletedRecords = $stmt->rowCount();

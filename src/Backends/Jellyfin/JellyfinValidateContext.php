@@ -18,9 +18,9 @@ use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 class JellyfinValidateContext
 {
-    public function __construct(private readonly iHttp $http)
-    {
-    }
+    public function __construct(
+        private readonly iHttp $http,
+    ) {}
 
     /**
      * Validate backend context.
@@ -44,14 +44,14 @@ class JellyfinValidateContext
                 r("Backend id mismatch. Expected '{expected}', server responded with '{actual}'.", [
                     'expected' => $context->backendId,
                     'actual' => $backendId,
-                ])
+                ]),
             );
         }
 
         $action = Container::get(GetUser::class)($context);
         if ($action->hasError()) {
             throw new InvalidContextException(r('Failed to get user info. {error}', [
-                'error' => $action->error->format()
+                'error' => $action->error->format(),
             ]));
         }
 
@@ -60,7 +60,7 @@ class JellyfinValidateContext
                 r("Expected user id to be '{uid}' but the server responded with '{remote_id}'.", [
                     'uid' => $context->backendUser,
                     'remote_id' => ag($action->response, 'id'),
-                ])
+                ]),
             );
         }
 
@@ -81,13 +81,13 @@ class JellyfinValidateContext
             $url = $context->backendUrl->withPath('/system/Info');
             $request = $this->http->request(
                 method: Method::GET,
-                url: (string)$url,
+                url: (string) $url,
                 options: array_replace_recursive($context->getHttpOptions(), [
                     'headers' => [
                         'Accept' => 'application/json',
                         'X-MediaBrowser-Token' => $context->backendToken,
                     ],
-                ])
+                ]),
             );
 
             if (Status::UNAUTHORIZED === Status::tryFrom($request->getStatusCode())) {
@@ -100,20 +100,18 @@ class JellyfinValidateContext
 
             return $request->getContent(true);
         } catch (TransportExceptionInterface $e) {
-            throw new InvalidContextException(r('Failed to connect to backend. {error}', ['error' => $e->getMessage()]),
-                previous: $e);
+            throw new InvalidContextException(r('Failed to connect to backend. {error}', ['error' => $e->getMessage()]), previous: $e);
         } catch (ClientExceptionInterface $e) {
-            throw new InvalidContextException(r('Got non 200 response. {error}', ['error' => $e->getMessage()]),
-                previous: $e);
+            throw new InvalidContextException(r('Got non 200 response. {error}', ['error' => $e->getMessage()]), previous: $e);
         } catch (RedirectionExceptionInterface $e) {
             throw new InvalidContextException(
                 r('Redirection recursion detected. {error}', ['error' => $e->getMessage()]),
-                previous: $e
+                previous: $e,
             );
         } catch (ServerExceptionInterface $e) {
             throw new InvalidContextException(
                 r('Backend responded with 5xx error. {error}', ['error' => $e->getMessage()]),
-                previous: $e
+                previous: $e,
             );
         }
     }

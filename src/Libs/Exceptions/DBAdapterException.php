@@ -34,7 +34,7 @@ class DBAdapterException extends RuntimeException implements AppExceptionInterfa
         string $queryString,
         array $bind = [],
         array $errorInfo = [],
-        mixed $errorCode = 0
+        mixed $errorCode = 0,
     ): self {
         $this->queryString = $queryString;
         $this->bind = $bind;

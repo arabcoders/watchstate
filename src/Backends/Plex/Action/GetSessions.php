@@ -21,9 +21,10 @@ final class GetSessions
 
     private string $action = 'plex.getSessions';
 
-    public function __construct(protected readonly iHttp $http, protected readonly iLogger $logger)
-    {
-    }
+    public function __construct(
+        protected readonly iHttp $http,
+        protected readonly iLogger $logger,
+    ) {}
 
     /**
      * Get Backend unique identifier.
@@ -45,21 +46,21 @@ final class GetSessions
                     'client' => $context->clientName,
                     'backend' => $context->backendName,
                     'user' => $context->userContext->name,
-                    'url' => (string)$url,
+                    'url' => (string) $url,
                 ];
 
                 $this->logger->debug(
                     message: "{action}: Requesting '{client}: {user}@{backend}' active play sessions.",
-                    context: $logContext
+                    context: $logContext,
                 );
 
                 $response = $this->http->request(
                     method: Method::GET,
-                    url: (string)$url,
+                    url: (string) $url,
                     options: array_replace_recursive(
                         $context->getHttpOptions(),
                         true === ag_exists($opts, 'headers') ? ['headers' => $opts['headers']] : [],
-                    )
+                    ),
                 );
 
                 $content = $response->getContent(false);
@@ -74,8 +75,8 @@ final class GetSessions
                                 'status_code' => $response->getStatusCode(),
                                 'response' => ['body' => $content],
                             ],
-                            level: Levels::WARNING
-                        )
+                            level: Levels::WARNING,
+                        ),
                     );
                 }
 
@@ -89,21 +90,21 @@ final class GetSessions
                                 'status_code' => $response->getStatusCode(),
                                 'response' => ['body' => $content],
                             ],
-                            level: Levels::ERROR
-                        )
+                            level: Levels::ERROR,
+                        ),
                     );
                 }
 
                 $item = json_decode(
                     json: $content,
                     associative: true,
-                    flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                    flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
                 );
 
                 if (true === $context->trace) {
                     $this->logger->debug(
                         message: "{action}: Processing '{client}: {user}@{backend}' active play sessions payload.",
-                        context: [...$logContext, 'response' => ['body' => $content]]
+                        context: [...$logContext, 'response' => ['body' => $content]],
                     );
                 }
 
@@ -121,14 +122,16 @@ final class GetSessions
                     $uuid = preg_match(
                         pattern: '#/users/(.+?)/avatar#i',
                         subject: ag($session, 'User.thumb'),
-                        matches: $matches
-                    ) ? $matches[1] : null;
+                        matches: $matches,
+                    )
+                        ? $matches[1]
+                        : null;
 
                     $item = [
-                        'user_id' => (int)ag($session, 'User.id'),
+                        'user_id' => (int) ag($session, 'User.id'),
                         'user_name' => ag($session, 'User.title'),
                         'user_uuid' => $uuid,
-                        'item_id' => (int)ag($session, 'ratingKey'),
+                        'item_id' => (int) ag($session, 'ratingKey'),
                         'item_title' => ag($session, 'title'),
                         'item_type' => ag($session, 'type'),
                         'item_offset_at' => ag($session, 'viewOffset'),
@@ -137,7 +140,7 @@ final class GetSessions
                     ];
 
                     if ('playing' === $item['session_state']) {
-                        $item['session_updated_at'] = makeDate(date: time());
+                        $item['session_updated_at'] = make_date(date: time());
                     }
 
                     $ret['sessions'][] = $item;
@@ -145,7 +148,7 @@ final class GetSessions
 
                 return new Response(status: true, response: $ret);
             },
-            action: $this->action
+            action: $this->action,
         );
     }
 }

@@ -8,7 +8,7 @@ use App\Backends\Common\CommonTrait;
 use App\Backends\Common\Context;
 use App\Backends\Common\Response;
 
-class getImagesUrl
+class GetImagesUrl
 {
     use CommonTrait;
 
@@ -27,14 +27,14 @@ class getImagesUrl
     {
         return $this->tryResponse(
             context: $context,
-            fn: fn() => new Response(
+            fn: static fn() => new Response(
                 status: true,
                 response: [
                     'poster' => $context->backendUrl->withPath("/emby/Items/{$id}/Images/Primary/"),
                     'background' => $context->backendUrl->withPath("/emby/Items/{$id}/Images/Backdrop/"),
-                ]
+                ],
             ),
-            action: $this->action
+            action: $this->action,
         );
     }
 }

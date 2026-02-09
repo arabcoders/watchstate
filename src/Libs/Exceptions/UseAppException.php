@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Libs\Exceptions;
 
 trait UseAppException
@@ -19,7 +21,7 @@ trait UseAppException
         return $this;
     }
 
-    public function getContext(string|null $key = null): mixed
+    public function getContext(?string $key = null): mixed
     {
         if (null === $key) {
             return $this->appContext;

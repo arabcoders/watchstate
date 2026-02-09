@@ -26,9 +26,8 @@ final class GetMetaData
     public function __construct(
         protected readonly iHttp $http,
         protected readonly iLogger $logger,
-        protected readonly iCache $cache
-    ) {
-    }
+        protected readonly iCache $cache,
+    ) {}
 
     /**
      * Get metadata about specific item from Backend.
@@ -45,16 +44,18 @@ final class GetMetaData
             context: $context,
             fn: function () use ($context, $id, $opts) {
                 $cacheKey = null;
-                $isGeneric = true === (bool)ag($opts, Options::IS_GENERIC, false);
-                if (false === (bool)ag($opts, Options::NO_CACHE, false)) {
-                    $cacheKey = r("{client}_{split}_{id}_metadata", [
+                $isGeneric = true === (bool) ag($opts, Options::IS_GENERIC, false);
+                if (false === (bool) ag($opts, Options::NO_CACHE, false)) {
+                    $cacheKey = r('{client}_{split}_{id}_metadata', [
                         'id' => $id,
                         'client' => $context->clientName,
                         'split' => true === $isGeneric ? $context->backendId : $context->backendName,
                     ]);
                 }
 
-                $url = $context->backendUrl->withPath('/library/metadata/' . $id)
+                $url = $context
+                    ->backendUrl
+                    ->withPath('/library/metadata/' . $id)
                     ->withQuery(http_build_query(array_merge_recursive(['includeGuids' => 1], $opts['query'] ?? [])));
 
                 $logContext = [
@@ -62,28 +63,28 @@ final class GetMetaData
                     'client' => $context->clientName,
                     'backend' => $context->backendName,
                     'user' => $context->userContext->name,
-                    'url' => (string)$url,
+                    'url' => (string) $url,
                     'id' => $id,
                     ...ag($opts, Options::LOG_CONTEXT, []),
                 ];
 
                 $this->logger->debug(
                     message: "{action}: Requesting '{client}: {user}@{backend}' - '{id}' item metadata.",
-                    context: $logContext
+                    context: $logContext,
                 );
 
                 if (null !== $cacheKey && $this->cache->has($cacheKey)) {
                     $item = $this->cache->get(key: $cacheKey);
                     $fromCache = true;
                 } else {
-                    assert($this->http instanceof HttpClient);
+                    assert($this->http instanceof HttpClient, 'Expected HttpClient for Plex metadata requests.');
                     $response = $this->http->request(
                         method: Method::GET,
-                        url: (string)$url,
+                        url: (string) $url,
                         options: array_replace_recursive(
                             $context->getHttpOptions(),
                             true === ag_exists($opts, 'headers') ? ['headers' => $opts['headers']] : [],
-                        )
+                        ),
                     );
 
                     if (Status::OK !== Status::from($response->getStatusCode())) {
@@ -91,8 +92,8 @@ final class GetMetaData
                             status: false,
                             error: new Error(
                                 message: "{action}: Request for '{client}: {user}@{backend}' - '{id}' item returned with unexpected '{status_code}' status code.",
-                                context: [...$logContext, 'status_code' => $response->getStatusCode()]
-                            )
+                                context: [...$logContext, 'status_code' => $response->getStatusCode()],
+                            ),
                         );
                     }
 
@@ -101,14 +102,14 @@ final class GetMetaData
                     $item = json_decode(
                         json: $content,
                         associative: true,
-                        flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                        flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
                     );
 
                     if (null !== $cacheKey) {
                         $this->cache->set(
                             key: $cacheKey,
                             value: $item,
-                            ttl: $opts[Options::CACHE_TTL] ?? new DateInterval('PT5M')
+                            ttl: $opts[Options::CACHE_TTL] ?? new DateInterval('PT5M'),
                         );
                     }
 
@@ -118,13 +119,13 @@ final class GetMetaData
                 if (true === $context->trace) {
                     $this->logger->debug(
                         message: "{action}: Processing '{client}: {user}@{backend}' - '{id}' item payload.",
-                        context: [...$logContext, 'cached' => $fromCache, 'response' => ['body' => $item]]
+                        context: [...$logContext, 'cached' => $fromCache, 'response' => ['body' => $item]],
                     );
                 }
 
                 return new Response(status: true, response: $item, extra: ['cached' => $fromCache]);
             },
-            action: $this->action
+            action: $this->action,
         );
     }
 }

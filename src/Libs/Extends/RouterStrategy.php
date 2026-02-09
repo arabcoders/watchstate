@@ -23,10 +23,14 @@ class RouterStrategy extends ApplicationStrategy implements OptionsHandlerInterf
         ];
 
         if ('cors' === ag($_SERVER, 'HTTP_SEC_FETCH_MODE')) {
-            return fn(): iResponse => addCors(api_response(Status::NO_CONTENT, headers: $headers), $headers, $methods);
+            return static fn(): iResponse => add_cors(
+                api_response(Status::NO_CONTENT, headers: $headers),
+                $headers,
+                $methods,
+            );
         }
 
-        return fn(): iResponse => api_response(Status::NO_CONTENT, headers: $headers);
+        return static fn(): iResponse => api_response(Status::NO_CONTENT, headers: $headers);
     }
 
     /**
@@ -43,8 +47,8 @@ class RouterStrategy extends ApplicationStrategy implements OptionsHandlerInterf
                     ...$route->getVars(),
                     iRequest::class => $request,
                     'args' => $route->getVars(),
-                ]
-            )
+                ],
+            ),
         );
     }
 }

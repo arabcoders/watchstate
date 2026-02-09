@@ -41,7 +41,7 @@ abstract class BasicValidation
             if (!empty($this->schemeDataType)) {
                 if (!array_key_exists($fieldName, $this->schemeDataType)) {
                     throw new ValidationException(
-                        sprintf("'%s' is not part of '%s' data properties.", $fieldName, get_class($model))
+                        sprintf("'%s' is not part of '%s' data properties.", $fieldName, get_class($model)),
                     );
                 }
 
@@ -52,13 +52,13 @@ abstract class BasicValidation
                 foreach ($this->schemeValidate[$fieldName] as $_fn) {
                     if (true !== is_callable($_fn)) {
                         throw new RuntimeException(
-                            sprintf("Validation Filter for '%s' is not a callable.", $fieldName)
+                            sprintf("Validation Filter for '%s' is not a callable.", $fieldName),
                         );
                     }
 
                     if (true !== $_fn($fieldValue)) {
                         throw new VValidateException(
-                            sprintf("Validation Filter for '%s' returned non-true.", $fieldName)
+                            sprintf("Validation Filter for '%s' returned non-true.", $fieldName),
                         );
                     }
                 }
@@ -83,17 +83,19 @@ abstract class BasicValidation
             throw new InvalidArgumentException(
                 sprintf(
                     "Invalid data type returned from schemeDataType. expecting array. got '%s' instead.",
-                    gettype($value)
-                )
+                    gettype($value),
+                ),
             );
         }
 
         $passCheck = false;
 
         foreach ($this->schemeDataType[$name] as $_type) {
-            if ($this->checkType($value, $_type)) {
-                $passCheck = true;
+            if (!$this->checkType($value, $_type)) {
+                continue;
             }
+
+            $passCheck = true;
         }
 
         if (!$passCheck) {
@@ -102,8 +104,8 @@ abstract class BasicValidation
                     "'%s' expects '%s' data type, but '%s' was given.",
                     $name,
                     implode(', ', $this->schemeDataType[$name]),
-                    get_debug_type($value)
-                )
+                    get_debug_type($value),
+                ),
             );
         }
 
@@ -130,8 +132,7 @@ abstract class BasicValidation
             'int', 'integer' => is_int($value),
             'string' => is_string($value),
             'bool', 'boolean' => is_bool($value),
-            'double' => is_double($value),
-            'float' => is_float($value),
+            'double', 'float' => is_float($value),
             'array' => is_array($value),
             'null', 'NULL' => null === $value,
             'object' => is_object($value),
@@ -139,7 +140,7 @@ abstract class BasicValidation
             Stringable::class => $value instanceof Stringable,
             Date::class => $value instanceof Date,
             'mixed' => true,
-            default => false
+            default => false,
         };
     }
 }

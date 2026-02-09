@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Model\Base\Transformers;
 
 use App\Model\Base\Enums\TransformType;
@@ -17,7 +19,7 @@ final class SerializeTransformer
             self::$decode = igbinary_unserialize(...);
         } else {
             self::$encode = serialize(...);
-            self::$decode = fn(string $data) => unserialize($data, ['allowed_classes' => $allowClasses]);
+            self::$decode = static fn(string $data) => unserialize($data, ['allowed_classes' => $allowClasses]);
         }
     }
 

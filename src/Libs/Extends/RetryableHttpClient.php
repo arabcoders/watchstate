@@ -15,7 +15,7 @@ class RetryableHttpClient extends \Symfony\Component\HttpClient\RetryableHttpCli
 {
     public function request(string|Method $method, string $url, array $options = []): iResponse
     {
-        if (true === ($method instanceof Method)) {
+        if (true === $method instanceof Method) {
             $method = $method->value;
         }
 

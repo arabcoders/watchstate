@@ -26,8 +26,9 @@ final class MakeCommand extends Command
      *
      * @param iDB $db The iDB object used for database operations.
      */
-    public function __construct(private iDB $db)
-    {
+    public function __construct(
+        private iDB $db,
+    ) {
         parent::__construct();
     }
 
@@ -36,26 +37,26 @@ final class MakeCommand extends Command
      */
     protected function configure(): void
     {
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->setDescription('Create database schema migration file.')
             ->addArgument('filename', InputArgument::REQUIRED, 'Migration name.')
             ->setHelp(
                 r(
                     <<<HELP
 
-                    This command creates a <notice>migration file</notice> for database schema.
-                    This is mostly used for people who develop features for this tool.
+                        This command creates a <notice>migration file</notice> for database schema.
+                        This is mostly used for people who develop features for this tool.
 
-                    By default, migration files stored at [<value>{migrationPath}</value>].
+                        By default, migration files stored at [<value>{migrationPath}</value>].
 
-                    The migration file name must be in [<value>in_english</value>] without spaces and in lower case.
+                        The migration file name must be in [<value>in_english</value>] without spaces and in lower case.
 
-                    HELP,
+                        HELP,
                     [
-                        'migrationPath' => after(realpath(__DIR__ . '/../../../migrations'), ROOT_PATH)
-                    ]
-                )
-
+                        'migrationPath' => after(realpath(__DIR__ . '/../../../migrations'), ROOT_PATH),
+                    ],
+                ),
             );
     }
 

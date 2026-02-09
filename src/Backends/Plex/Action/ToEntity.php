@@ -18,9 +18,9 @@ final class ToEntity
 
     private string $action = 'plex.toEntity';
 
-    public function __construct(private PlexGuid $guid)
-    {
-    }
+    public function __construct(
+        private PlexGuid $guid,
+    ) {}
 
     /**
      * Create an entity from the given item.
@@ -36,7 +36,7 @@ final class ToEntity
         return $this->tryResponse(
             context: $context,
             fn: fn() => $this->createEntity($context, $this->guid->withContext($context), $item, $opts),
-            action: $this->action
+            action: $this->action,
         );
     }
 }

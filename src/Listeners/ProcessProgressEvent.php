@@ -37,7 +37,7 @@ final readonly class ProcessProgressEvent
         #[Inject(DirectMapper::class)]
         private iImport $mapper,
         private iLogger $logger,
-        private QueueRequests $queue
+        private QueueRequests $queue,
     ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
@@ -55,7 +55,7 @@ final readonly class ProcessProgressEvent
         $user = ag($event->getOptions(), Options::CONTEXT_USER, 'main');
 
         try {
-            $userContext = getUserContext(user: $user, mapper: $this->mapper, logger: $this->logger);
+            $userContext = get_user_context(user: $user, mapper: $this->mapper, logger: $this->logger);
         } catch (RuntimeException $ex) {
             $writer(Level::Error, $ex->getMessage());
             return $event;
@@ -72,8 +72,8 @@ final readonly class ProcessProgressEvent
         }
 
         if ($item->isWatched()) {
-            $allowUpdate = (int)Config::get('progress.threshold', 0);
-            $minThreshold = (int)Config::get('progress.minThreshold', 86_400);
+            $allowUpdate = (int) Config::get('progress.threshold', 0);
+            $minThreshold = (int) Config::get('progress.minThreshold', 86_400);
             if (false === ($allowUpdate >= $minThreshold && time() > ($item->updated + $allowUpdate))) {
                 $writer(
                     level: Level::Info,
@@ -82,13 +82,14 @@ final readonly class ProcessProgressEvent
                         'id' => $item->id,
                         'title' => $item->getName(),
                         'user' => $userContext->name,
-                        'comp' => $allowUpdate > $minThreshold ? arrayToString([
-                            'threshold' => $allowUpdate,
-                            'now' => ['secs' => time(), 'time' => makeDate(time())],
-                            'updated' => ['secs' => $item->updated, 'time' => makeDate($item->updated)],
-                            'diff' => time() - ($item->updated + $allowUpdate),
-                        ]) : 'watch progress sync for played items is disabled.',
-                    ]
+                        'comp' => $allowUpdate > $minThreshold
+                            ? array_to_string([
+                                'threshold' => $allowUpdate,
+                                'now' => ['secs' => time(), 'time' => make_date(time())],
+                                'updated' => ['secs' => $item->updated, 'time' => make_date($item->updated)],
+                                'diff' => time() - ($item->updated + $allowUpdate),
+                            ]) : 'watch progress sync for played items is disabled.',
+                    ],
                 );
                 return $event;
             }
@@ -110,7 +111,7 @@ final readonly class ProcessProgressEvent
         foreach ($userContext->config->getAll() as $backendName => $backend) {
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
-            if (true !== (bool)ag($backend, 'export.enabled')) {
+            if (true !== (bool) ag($backend, 'export.enabled')) {
                 $writer(Level::Notice, "Ignoring '{user}@{backend}'. Export is disabled.", [
                     'backend' => $backendName,
                     'user' => $userContext->name,
@@ -131,7 +132,7 @@ final readonly class ProcessProgressEvent
                 continue;
             }
 
-            if (null === ($url = ag($backend, 'url')) || false === isValidURL($url)) {
+            if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {
                 $writer(Level::Error, "Ignoring '{user}@{backend}'. Invalid URL '{url}'.", [
                     'backend' => $backendName,
                     'url' => $url ?? 'None',
@@ -166,7 +167,7 @@ final readonly class ProcessProgressEvent
                 }
 
                 $backend['options'] = $opts;
-                $backend['class'] = makeBackend(backend: $backend, name: $name, options: [
+                $backend['class'] = make_backend(backend: $backend, name: $name, options: [
                     UserContext::class => $userContext,
                 ]);
                 $backend['class']->progress(entities: [$item->id => $item], queue: $this->queue);
@@ -178,7 +179,7 @@ final readonly class ProcessProgressEvent
                         'user' => $userContext->name,
                         'backend' => $name,
                         ...exception_log($ex),
-                    ]
+                    ],
                 );
             } catch (Throwable $ex) {
                 $writer(
@@ -190,7 +191,7 @@ final readonly class ProcessProgressEvent
                         'title' => $item->getName(),
                         'user' => $userContext->name,
                         ...exception_log($ex),
-                    ]
+                    ],
                 );
             }
         }
@@ -202,7 +203,7 @@ final readonly class ProcessProgressEvent
             return $event;
         }
 
-        $progress = formatDuration($item->getPlayProgress());
+        $progress = format_duration($item->getPlayProgress());
 
         $writer(Level::Notice, "Processing '{user}@{backend}' - '#{id}: {title}' watch progress '{progress}' event.", [
             'id' => $item->id,
@@ -217,26 +218,32 @@ final readonly class ProcessProgressEvent
             $context['user'] = $userContext->name;
 
             try {
-                if (true === (bool)ag($options, 'trace')) {
+                if (true === (bool) ag($options, 'trace')) {
                     $writer(Level::Debug, "Processing '{user}@{backend}' - '#{id}: {item.title}' response.", [
                         'id' => $item->id,
                         'url' => ag($context, 'remote.url', '??'),
                         'status_code' => $response->getStatusCode(),
                         'headers' => $response->getHeaders(false),
                         'response' => $response->getContent(false),
-                        ...$context
+                        ...$context,
                     ]);
                 }
 
-                if (false === in_array(Status::tryFrom($response->getStatusCode()), [Status::OK, Status::NO_CONTENT])) {
+                if (
+                    false === in_array(
+                        Status::tryFrom($response->getStatusCode()),
+                        [Status::OK, Status::NO_CONTENT],
+                        true,
+                    )
+                ) {
                     $writer(
                         level: Level::Error,
                         message: "Request to change '{user}@{backend}' - '#{id}: {item.title}' watch progress returned with unexpected '{status_code}' status code.",
                         context: [
                             'id' => $item->id,
                             'status_code' => $response->getStatusCode(),
-                            ...$context
-                        ]
+                            ...$context,
+                        ],
                     );
                     continue;
                 }
@@ -249,7 +256,7 @@ final readonly class ProcessProgressEvent
                         'id' => $item->id,
                         'progress' => $progress,
                         'status_code' => $response->getStatusCode(),
-                    ]
+                    ],
                 );
             } catch (Throwable $ex) {
                 $writer(
@@ -259,7 +266,7 @@ final readonly class ProcessProgressEvent
                         'id' => $item->id,
                         ...exception_log($ex),
                         ...$context,
-                    ]
+                    ],
                 );
             }
         }

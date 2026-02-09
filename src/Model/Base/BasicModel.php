@@ -79,11 +79,11 @@ abstract class BasicModel implements jsonSerializable
         $this->isCustom = $isCustom;
 
         if (array_key_exists('fromDB', $options)) {
-            $this->fromDB = (bool)$options['fromDB'];
+            $this->fromDB = (bool) $options['fromDB'];
         }
 
         if (array_key_exists('primaryKey', $options)) {
-            $this->primaryKey = (string)$options['primaryKey'];
+            $this->primaryKey = (string) $options['primaryKey'];
         }
 
         $data = $this->transform(TransformType::DECODE, $data);
@@ -138,7 +138,7 @@ abstract class BasicModel implements jsonSerializable
             $value = $src->getValue($this);
 
             if ($value instanceof Stringable) {
-                $value = (string)$value;
+                $value = (string) $value;
             }
 
             $props[$src->getName()] = $value;
@@ -159,16 +159,18 @@ abstract class BasicModel implements jsonSerializable
             $old = $this->data[$key];
 
             // -- custom compare in case of complex data types.
-            if (null !== ($fn = $this->differ[$key] ?? null) && true === (bool)$fn($old, $value)) {
+            if (null !== ($fn = $this->differ[$key] ?? null) && true === (bool) $fn($old, $value)) {
                 continue;
             } elseif ($value === $old) {
                 continue;
             }
 
-            $changed[$key] = false === $deep ? $value : [
-                'old' => $old ?? null,
-                'new' => $value,
-            ];
+            $changed[$key] = false === $deep
+                ? $value
+                : [
+                    'old' => $old ?? null,
+                    'new' => $value,
+                ];
         }
 
         if (true === $transform && !empty($changed)) {
@@ -241,7 +243,7 @@ abstract class BasicModel implements jsonSerializable
             return $value;
         }
 
-        if ('int' === $this->casts[$key] && ($value instanceof Date)) {
+        if ('int' === $this->casts[$key] && $value instanceof Date) {
             $value = $value->getTimestamp();
         }
 

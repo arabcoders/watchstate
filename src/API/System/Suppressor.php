@@ -20,12 +20,13 @@ use Random\RandomException;
 final class Suppressor
 {
     public const string URL = '%{api.prefix}/system/suppressor';
-    public const array TYPES = ['regex', 'contains',];
+    public const array TYPES = ['regex', 'contains'];
+
     private ConfigFile $file;
 
     public function __construct()
     {
-        $this->file = (new ConfigFile(file: Config::get('path') . '/config/suppress.yaml', autoCreate: true));
+        $this->file = new ConfigFile(file: Config::get('path') . '/config/suppress.yaml', autoCreate: true);
     }
 
     #[Get(self::URL . '[/]', name: 'system.suppressor')]
@@ -34,12 +35,12 @@ final class Suppressor
         $list = [];
 
         foreach ($this->file->getAll() as $id => $data) {
-            $list[] = ['id' => $id, ...$data,];
+            $list[] = ['id' => $id, ...$data];
         }
 
         return api_response(Status::OK, [
             'items' => $list,
-            'types' => self::TYPES
+            'types' => self::TYPES,
         ]);
     }
 
@@ -80,7 +81,7 @@ final class Suppressor
             [
                 'type' => $type,
                 'rule' => $rule,
-            ]
+            ],
         ]);
 
         if (false === $suppressor->isSuppressed($example)) {
@@ -93,11 +94,13 @@ final class Suppressor
 
         $id = ag($args, 'id', null);
 
-        $rules = !$id ? $this->file->getAll() : array_filter(
-            $this->file->getAll(),
-            fn($ruleId) => $id !== $ruleId,
-            ARRAY_FILTER_USE_KEY
-        );
+        $rules = !$id
+            ? $this->file->getAll()
+            : array_filter(
+                $this->file->getAll(),
+                static fn($ruleId) => $id !== $ruleId,
+                ARRAY_FILTER_USE_KEY,
+            );
 
         $suppressor = new LogSuppressor($rules);
 
@@ -111,7 +114,7 @@ final class Suppressor
             'example' => $example,
         ];
 
-        $id = $id ?? $this->createId();
+        $id ??= $this->createId();
 
         $this->file->set($id, $data)->persist();
 

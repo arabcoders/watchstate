@@ -14,11 +14,11 @@ final class NoAccessLogMiddleware implements iMiddleware
 {
     public function process(iRequest $request, iHandler $handler): iResponse
     {
-        if (false === (bool)$request->getAttribute('INTERNAL_REQUEST', false)) {
+        if (false === (bool) $request->getAttribute('INTERNAL_REQUEST', false)) {
             return $handler->handle($request);
         }
 
-        if (true === (bool)Config::get('api.logInternal', false)) {
+        if (true === (bool) Config::get('api.logInternal', false)) {
             return $handler->handle($request);
         }
 

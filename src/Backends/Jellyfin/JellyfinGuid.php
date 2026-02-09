@@ -31,17 +31,18 @@ class JellyfinGuid implements iGuid
         'cmdb' => Guid::GUID_CMDB,
     ];
 
-    private Context|null $context = null;
+    private ?Context $context = null;
 
     /**
      * Class to handle Jellyfin external ids Parsing.
      *
      * @param LoggerInterface $logger
      */
-    public function __construct(protected LoggerInterface $logger)
-    {
+    public function __construct(
+        protected LoggerInterface $logger,
+    ) {
         $this->type = strtolower(
-            str_contains(static::class, 'EmbyGuid') ? EmbyClient::CLIENT_NAME : JellyfinClient::CLIENT_NAME
+            str_contains(static::class, 'EmbyGuid') ? EmbyClient::CLIENT_NAME : JellyfinClient::CLIENT_NAME,
         );
 
         $file = Config::get('guid.file', null);
@@ -52,7 +53,7 @@ class JellyfinGuid implements iGuid
             }
         } catch (Throwable $e) {
             $this->logger->error("{class}: Failed to read or parse '{guid}' file. Error '{error}'.", [
-                'class' => afterLast(static::class, '\\'),
+                'class' => after_last(static::class, '\\'),
                 'guid' => $file,
                 'error' => $e->getMessage(),
                 'exception' => [
@@ -96,14 +97,18 @@ class JellyfinGuid implements iGuid
                 ]));
             }
         } catch (ParseException $e) {
-            throw new InvalidArgumentException(r("Failed to parse GUIDs file. Error '{error}'.", [
-                'error' => $e->getMessage(),
-            ]), code: (int)$e->getCode(), previous: $e);
+            throw new InvalidArgumentException(
+                r("Failed to parse GUIDs file. Error '{error}'.", [
+                    'error' => $e->getMessage(),
+                ]),
+                code: (int) $e->getCode(),
+                previous: $e,
+            );
         }
 
         $supported = array_keys(Guid::getSupported());
         $supportedVersion = Config::get('guid.version', '0.0');
-        $guidVersion = (string)ag($yaml, 'version', $supportedVersion);
+        $guidVersion = (string) ag($yaml, 'version', $supportedVersion);
 
         if (true === version_compare($supportedVersion, $guidVersion, '<')) {
             throw new InvalidArgumentException(r("Unsupported file version '{version}'. Expecting '{supported}'.", [
@@ -124,7 +129,6 @@ class JellyfinGuid implements iGuid
         if (count($mapping) < 1) {
             return;
         }
-
 
         foreach ($mapping as $key => $map) {
             if (false === is_array($map)) {
@@ -179,7 +183,7 @@ class JellyfinGuid implements iGuid
                 continue;
             }
 
-            if (false === in_array($to, $supported)) {
+            if (false === in_array($to, $supported, true)) {
                 $this->logger->warning("Ignoring 'links.{key}'. map.to field is not a supported GUID type.", [
                     'type' => $this->type,
                     'key' => $key,
@@ -244,12 +248,12 @@ class JellyfinGuid implements iGuid
             }
 
             try {
-                if (true === isIgnoredId($this->context->userContext, $bName, $type, $key, $value, $id)) {
+                if (true === is_ignored_id($this->context->userContext, $bName, $type, $key, $value, $id)) {
                     if (true === $log) {
                         $this->logger->debug(
                             "{class}: Ignoring '{client}: {user}@{backend}' external id '{source}' for {item.type} '{item.id}: {item.title}' as requested.",
                             [
-                                'class' => afterLast(static::class, '\\'),
+                                'class' => after_last(static::class, '\\'),
                                 'client' => $this->context->clientName,
                                 'user' => $this->context->userContext->name,
                                 'backend' => $bName,
@@ -258,8 +262,8 @@ class JellyfinGuid implements iGuid
                                     'source' => $key,
                                     'value' => $value,
                                 ],
-                                ...$context
-                            ]
+                                ...$context,
+                            ],
                         );
                     }
                     continue;
@@ -271,13 +275,13 @@ class JellyfinGuid implements iGuid
                     $this->logger->info(
                         message: "{class}: Ignoring '{user}@{backend}' invalid GUID '{agent}' for {item.type} '{item.id}: {item.title}'.",
                         context: [
-                            'class' => afterLast(static::class, '\\'),
+                            'class' => after_last(static::class, '\\'),
                             'user' => $this->context->userContext->name,
                             'backend' => $this->context->backendName,
                             'agent' => $value,
                             ...$context,
                             ...exception_log($e),
-                        ]
+                        ],
                     );
                 }
                 continue;

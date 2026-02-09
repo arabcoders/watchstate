@@ -32,9 +32,8 @@ final class SearchQuery
         protected iHttp $http,
         protected iLogger $logger,
         private iDB $db,
-        private PlexGuid $plexGuid
-    ) {
-    }
+        private PlexGuid $plexGuid,
+    ) {}
 
     /**
      * Get Users list.
@@ -51,7 +50,7 @@ final class SearchQuery
         return $this->tryResponse(
             context: $context,
             fn: fn() => $this->search($context, $query, $limit, $opts),
-            action: $this->action
+            action: $this->action,
         );
     }
 
@@ -63,21 +62,24 @@ final class SearchQuery
      */
     private function search(Context $context, string $query, int $limit = 25, array $opts = []): Response
     {
-        $url = $context->backendUrl->withPath('/hubs/search')->withQuery(
-            http_build_query(
-                array_replace_recursive(
-                    [
-                        'query' => $query,
-                        'limit' => $limit,
-                        'includeGuids' => 1,
-                        'includeLocations' => 1,
-                        'includeExternalMedia' => 0,
-                        'includeCollections' => 0,
-                    ],
-                    $opts['query'] ?? []
-                )
-            )
-        );
+        $url = $context
+            ->backendUrl
+            ->withPath('/hubs/search')
+            ->withQuery(
+                http_build_query(
+                    array_replace_recursive(
+                        [
+                            'query' => $query,
+                            'limit' => $limit,
+                            'includeGuids' => 1,
+                            'includeLocations' => 1,
+                            'includeExternalMedia' => 0,
+                            'includeCollections' => 0,
+                        ],
+                        $opts['query'] ?? [],
+                    ),
+                ),
+            );
 
         $logContext = [
             'query' => $query,
@@ -85,18 +87,18 @@ final class SearchQuery
             'client' => $context->clientName,
             'backend' => $context->backendName,
             'user' => $context->userContext->name,
-            'url' => (string)$url,
+            'url' => (string) $url,
         ];
 
         $this->logger->debug("{action}: Searching '{client}: {user}@{backend}' libraries for '{query}'.", $logContext);
 
         $response = $this->http->request(
             method: Method::GET,
-            url: (string)$url,
+            url: (string) $url,
             options: array_replace_recursive(
                 $context->getHttpOptions(),
                 true === ag_exists($opts, 'headers') ? ['headers' => $opts['headers']] : [],
-            )
+            ),
         );
 
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
@@ -108,7 +110,7 @@ final class SearchQuery
                         ...$logContext,
                         'status_code' => $response->getStatusCode(),
                     ],
-                    level: Levels::ERROR
+                    level: Levels::ERROR,
                 ),
             );
         }
@@ -116,13 +118,13 @@ final class SearchQuery
         $json = json_decode(
             json: $response->getContent(),
             associative: true,
-            flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+            flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
         );
 
         if ($context->trace) {
             $this->logger->debug(
                 message: "{action}: Parsing Searching '{client}: {user}@{backend}' libraries for '{query}' payload.",
-                context: [...$logContext, 'response' => ['body' => $json]]
+                context: [...$logContext, 'response' => ['body' => $json]],
             );
         }
 
@@ -143,7 +145,7 @@ final class SearchQuery
                 } catch (Throwable $e) {
                     $this->logger->error(
                         message: "{action}: Failed to map '{client}: {user}@{backend}' item to entity. {error}",
-                        context: [...$logContext, 'error' => $e->getMessage()]
+                        context: [...$logContext, 'error' => $e->getMessage()],
                     );
                     continue;
                 }
@@ -153,7 +155,7 @@ final class SearchQuery
                 }
 
                 $builder = $entity->getAll();
-                if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
+                if (true === (bool) ag($opts, Options::RAW_RESPONSE)) {
                     $builder[Options::RAW_RESPONSE] = $item;
                 }
                 $list[] = $builder;

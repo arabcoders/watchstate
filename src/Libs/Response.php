@@ -117,7 +117,7 @@ class Response implements iResponse
 
     private string $protocol;
 
-    private iStream|null $stream = null;
+    private ?iStream $stream = null;
 
     /**
      * @param Status|int $status Status code for the response, if any.
@@ -129,7 +129,7 @@ class Response implements iResponse
         array $headers = [],
         mixed $body = null,
         string $version = '1.1',
-        string|null $reason = null
+        ?string $reason = null,
     ) {
         if (null !== $body && '' !== $body) {
             $this->stream = Stream::create($body);
@@ -140,7 +140,7 @@ class Response implements iResponse
         $code = !is_int($status) ? $status->value : $status;
         if ($code < 100 || $code > 599) {
             throw new InvalidArgumentException(
-                sprintf("Status code has to be an integer between 100 and 599. A status code of '%d' was given.", $code)
+                sprintf("Status code has to be an integer between 100 and 599. A status code of '%d' was given.", $code),
             );
         }
 
@@ -177,7 +177,7 @@ class Response implements iResponse
 
         if ($code < 100 || $code > 599) {
             throw new InvalidArgumentException(
-                sprintf("Status code has to be an integer between 100 and 599. A status code of '%d' was given.", $code)
+                sprintf("Status code has to be an integer between 100 and 599. A status code of '%d' was given.", $code),
             );
         }
 
@@ -309,7 +309,7 @@ class Response implements iResponse
             if (is_int($header)) {
                 // If a header name was set to a numeric string, PHP will cast the key to an int.
                 // We must cast it back to a string in order to comply with validation.
-                $header = (string)$header;
+                $header = (string) $header;
             }
             $value = $this->validateAndTrimHeader($header, $value);
             $normalized = $this->normalizeHeader($header);
@@ -349,30 +349,33 @@ class Response implements iResponse
 
         if (!is_array($values)) {
             // This is simple, just one value.
-            if ((!is_numeric($values) && !is_string($values)) || 1 !== preg_match(
+            if (
+                !is_numeric($values) && !is_string($values)
+                || 1 !== preg_match(
                     "@^[ \t\x21-\x7E\x80-\xFF]*$@",
-                    (string)$values
-                )) {
+                    (string) $values,
+                )
+            ) {
                 throw new InvalidArgumentException('Header values must be RFC 7230 compatible strings');
             }
 
-            return [trim((string)$values, " \t")];
+            return [trim((string) $values, " \t")];
         }
 
         if (empty($values)) {
             throw new InvalidArgumentException(
-                'Header values must be a string or an array of strings, empty array given'
+                'Header values must be a string or an array of strings, empty array given',
             );
         }
 
         // Assert Non-empty array
         $returnValues = [];
         foreach ($values as $v) {
-            if ((!is_numeric($v) && !is_string($v)) || 1 !== preg_match("@^[ \t\x21-\x7E\x80-\xFF]*$@D", (string)$v)) {
+            if (!is_numeric($v) && !is_string($v) || 1 !== preg_match("@^[ \t\x21-\x7E\x80-\xFF]*$@D", (string) $v)) {
                 throw new InvalidArgumentException('Header values must be RFC 7230 compatible strings');
             }
 
-            $returnValues[] = trim((string)$v, " \t");
+            $returnValues[] = trim((string) $v, " \t");
         }
 
         return $returnValues;

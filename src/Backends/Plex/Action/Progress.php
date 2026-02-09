@@ -34,9 +34,10 @@ class Progress
 
     private string $action = 'plex.progress';
 
-    public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
-    {
-    }
+    public function __construct(
+        protected HttpClientInterface $http,
+        protected LoggerInterface $logger,
+    ) {}
 
     /**
      * Push Play state.
@@ -53,12 +54,12 @@ class Progress
         iGuid $guid,
         array $entities,
         QueueRequests $queue,
-        DateTimeInterface|null $after = null
+        ?DateTimeInterface $after = null,
     ): Response {
         return $this->tryResponse(
             context: $context,
             fn: fn() => $this->action($context, $guid, $entities, $queue, $after),
-            action: $this->action
+            action: $this->action,
         );
     }
 
@@ -67,10 +68,10 @@ class Progress
         iGuid $guid,
         array $entities,
         QueueRequests $queue,
-        DateTimeInterface|null $after = null
+        ?DateTimeInterface $after = null,
     ): Response {
         $sessions = [];
-        $ignoreDate = (bool)ag($context->options, Options::IGNORE_DATE, false);
+        $ignoreDate = (bool) ag($context->options, Options::IGNORE_DATE, false);
 
         /**
          * as plex act weird if we change the progress of a watched item while the item is playing,
@@ -102,11 +103,11 @@ class Progress
         }
 
         foreach ($entities as $key => $entity) {
-            if (true !== ($entity instanceof iState)) {
+            if (true !== $entity instanceof iState) {
                 continue;
             }
 
-            if (null !== $after && false === (bool)ag($context->options, Options::IGNORE_DATE, false)) {
+            if (null !== $after && false === (bool) ag($context->options, Options::IGNORE_DATE, false)) {
                 if ($after->getTimestamp() > $entity->updated) {
                     continue;
                 }
@@ -147,24 +148,23 @@ class Progress
                 $this->logger->warning(
                     message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. The event originator did not set a date.",
                     context: $logContext,
-
                 );
                 continue;
             }
-            $senderDate = makeDate($senderDate)->getTimestamp();
-            $senderDate = $senderDate - (int)ag($context->options, 'progress.time_drift', self::DEFAULT_TIME_DRIFT);
+            $senderDate = make_date($senderDate)->getTimestamp();
+            $senderDate -= (int) ag($context->options, 'progress.time_drift', self::DEFAULT_TIME_DRIFT);
 
             $datetime = ag($entity->getExtra($context->backendName), iState::COLUMN_EXTRA_DATE, null);
 
-            if (false === $ignoreDate && null !== $datetime && makeDate($datetime)->getTimestamp() > $senderDate) {
+            if (false === $ignoreDate && null !== $datetime && make_date($datetime)->getTimestamp() > $senderDate) {
                 $this->logger->warning(
                     message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. Event date '{event_date}' is older than backend local db item date '{local_date}'.",
                     context: [
                         ...$logContext,
-                        'event_date' => makeDate($senderDate),
-                        'local_date' => makeDate($datetime),
-                        'compare' => ['remote' => makeDate($datetime), 'sender' => makeDate($senderDate)],
-                    ]
+                        'event_date' => make_date($senderDate),
+                        'local_date' => make_date($datetime),
+                        'compare' => ['remote' => make_date($datetime), 'sender' => make_date($senderDate)],
+                    ],
                 );
                 continue;
             }
@@ -183,30 +183,30 @@ class Progress
                 $remoteData = ag(
                     $this->getItemDetails($context, $logContext['remote']['id'], [Options::NO_CACHE => true]),
                     'MediaContainer.Metadata.0',
-                    []
+                    [],
                 );
 
-                $remoteItem = $this->createEntity($context, $guid, $remoteData, ['latest_date' => true,]);
+                $remoteItem = $this->createEntity($context, $guid, $remoteData, ['latest_date' => true]);
 
-                if (false === $ignoreDate && makeDate($remoteItem->updated)->getTimestamp() > $senderDate) {
+                if (false === $ignoreDate && make_date($remoteItem->updated)->getTimestamp() > $senderDate) {
                     $this->logger->info(
                         message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. Event date '{event_date}' is older than backend remote item date '{remote_date}'.",
                         context: [
                             ...$logContext,
-                            'event_date' => makeDate($senderDate),
-                            'remote_date' => makeDate($remoteItem->updated),
+                            'event_date' => make_date($senderDate),
+                            'remote_date' => make_date($remoteItem->updated),
                             'compare' => [
-                                'remote' => makeDate($remoteItem->updated),
-                                'sender' => makeDate($senderDate)
+                                'remote' => make_date($remoteItem->updated),
+                                'sender' => make_date($senderDate),
                             ],
-                        ]
+                        ],
                     );
                     continue;
                 }
 
                 if ($remoteItem->isWatched()) {
-                    $allowUpdate = (int)Config::get('progress.threshold', 0);
-                    $minThreshold = (int)Config::get('progress.minThreshold', 86_400);
+                    $allowUpdate = (int) Config::get('progress.threshold', 0);
+                    $minThreshold = (int) Config::get('progress.minThreshold', 86_400);
                     if (false === ($allowUpdate >= $minThreshold && time() > ($entity->updated + $allowUpdate))) {
                         $this->logger->info(
                             message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. The backend says the item is marked as watched.",
@@ -235,45 +235,50 @@ class Progress
                                 'trace' => $e->getTrace(),
                             ],
                         ],
-                        e: $e
-                    )
+                        e: $e,
+                    ),
                 );
                 continue;
             }
 
             try {
                 // -- it seems /:/timeline/ allow us to update external user progress, while /:/progress/ does not.
-                $url = $context->backendUrl->withPath('/:/timeline/')->withQuery(http_build_query([
-                    'ratingKey' => $logContext['remote']['id'],
-                    'key' => '/library/metadata/' . $logContext['remote']['id'],
-                    'identifier' => 'com.plexapp.plugins.library',
-                    'state' => 'stopped',
-                    'time' => $entity->getPlayProgress(),
-                    // -- Without duration & client identifier plex ignore watch progress update.
-                    'duration' => ag($remoteData, 'duration', 0),
-                    'X-Plex-Client-Identifier' => $context->backendId,
-                ]));
+                $url = $context
+                    ->backendUrl
+                    ->withPath('/:/timeline/')
+                    ->withQuery(
+                        http_build_query([
+                            'ratingKey' => $logContext['remote']['id'],
+                            'key' => '/library/metadata/' . $logContext['remote']['id'],
+                            'identifier' => 'com.plexapp.plugins.library',
+                            'state' => 'stopped',
+                            'time' => $entity->getPlayProgress(),
+                            // -- Without duration & client identifier plex ignore watch progress update.
+                            'duration' => ag($remoteData, 'duration', 0),
+                            'X-Plex-Client-Identifier' => $context->backendId,
+                        ]),
+                    );
 
-                $logContext['remote']['url'] = (string)$url;
+                $logContext['remote']['url'] = (string) $url;
 
                 $this->logger->debug(
                     message: "{action}: Updating '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' watch progress to '{progress}'.",
                     context: [
                         ...$logContext,
-                        'progress' => formatDuration($entity->getPlayProgress()),
+                        'progress' => format_duration($entity->getPlayProgress()),
                         'time' => $entity->getPlayProgress(),
-                    ]
+                    ],
                 );
 
-                if (false === (bool)ag($context->options, Options::DRY_RUN, false)) {
+                if (false === (bool) ag($context->options, Options::DRY_RUN, false)) {
                     $queue->add(
                         $this->http->request(
                             method: Method::POST,
-                            url: (string)$url,
+                            url: (string) $url,
                             options: array_replace_recursive($context->getHttpOptions(), [
-                                'user_data' => ['id' => $key, 'context' => $logContext]
-                            ])
-                        )
+                                'user_data' => ['id' => $key, 'context' => $logContext],
+                            ]),
+                        ),
                     );
                 }
             } catch (Throwable $e) {
@@ -296,8 +301,8 @@ class Progress
                                 'trace' => $e->getTrace(),
                             ],
                         ],
-                        e: $e
-                    )
+                        e: $e,
+                    ),
                 );
             }
         }

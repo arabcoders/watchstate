@@ -26,7 +26,7 @@ final class Cache implements Countable
     /**
      * @var string|null The key to identify the data in the cache.
      */
-    private string|null $key = null;
+    private ?string $key = null;
 
     /**
      * @var array The options for retrieving the data.
@@ -39,9 +39,10 @@ final class Cache implements Countable
      * @param iLogger $logger
      * @param iCache $cache
      */
-    public function __construct(private iLogger $logger, private iCache $cache)
-    {
-    }
+    public function __construct(
+        private iLogger $logger,
+        private iCache $cache,
+    ) {}
 
     /**
      * Clone the object with the given logger and cache adapter.
@@ -51,7 +52,7 @@ final class Cache implements Countable
      *
      * @return Cache return new instance of Cache class.
      */
-    public function with(iLogger|null $logger = null, iCache|null $adapter = null): self
+    public function with(?iLogger $logger = null, ?iCache $adapter = null): self
     {
         $cloned = clone $this;
         $cloned->logger = $logger ?? $this->logger;
@@ -152,7 +153,7 @@ final class Cache implements Countable
      */
     public function __destruct()
     {
-        if (null === $this->key || $this->count() < 1 || true === (bool)ag($this->options, Options::DRY_RUN)) {
+        if (null === $this->key || $this->count() < 1 || true === (bool) ag($this->options, Options::DRY_RUN)) {
             return;
         }
 

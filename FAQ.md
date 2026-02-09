@@ -309,7 +309,7 @@ to see list of loaded environment variables, click on `Env` page.
 > the `compose.yaml` file.
 
 | Key           | Type    | Description                        | Default |
-|---------------|---------|------------------------------------|---------|
+| ------------- | ------- | ---------------------------------- | ------- |
 | DISABLE_CRON  | integer | Disable included `Task Scheduler`. | `0`     |
 | DISABLE_CACHE | integer | Disable included `Cache Server`.   | `0`     |
 
@@ -417,8 +417,22 @@ Sadly, this is due to bug in jellyfin, where it marks the item as played without
 such, watchstate doesn't really know the item has changed since last sync. Unfortunately, there is no way to fix this
 issue from our side for the `state:import` task as it working as intended.
 
+### Workarounds.
+
+There are two possible workarounds:
+
+### (1) Webhooks (Recommended)
+
 However, we managed implemented a workaround for this issue using the webhooks as workaround, until jellyfin devs fixes
 the issue. Please enable webhooks for your jellyfin backend to avoid this issue.
+
+### (1) by special handling
+
+We have added an experimental workaround for this issue in the `state:import` command, to enable it, add the env `WS_CLIENTS_JELLYFIN_FIX_PLAYED` via the `Env` page. It's turned off by default as it may cause some issues as it's untested in production, so please use it with caution and report any issues you find.
+
+## CODE: DM001 - Marking the item as tainted and re-processing.
+
+This warning appears when there is a mismatch between the local database and a backend regarding the item. This error mostly occurs in some edge cases. which can be fixed by forced state export to the backend.
 
 ---
 

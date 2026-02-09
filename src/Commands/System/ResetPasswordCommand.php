@@ -17,32 +17,33 @@ final class ResetPasswordCommand extends Command
 
     protected function configure(): void
     {
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->setDescription('Reset the system user and password.')
             ->setHelp('Resets the current system user and password.');
     }
 
     protected function runCommand(iInput $input, iOutput $output): int
     {
-        $response = APIRequest('DELETE', '/system/env/WS_SYSTEM_SECRET');
+        $response = api_request('DELETE', '/system/env/WS_SYSTEM_SECRET');
         if (Status::OK !== $response->status) {
-            $output->writeln(r("<error>Failed to reset the system secret key.</error>"));
+            $output->writeln(r('<error>Failed to reset the system secret key.</error>'));
             return self::FAILURE;
         }
 
-        $response = APIRequest('DELETE', '/system/env/WS_SYSTEM_USER');
+        $response = api_request('DELETE', '/system/env/WS_SYSTEM_USER');
         if (Status::OK !== $response->status) {
-            $output->writeln(r("<error>Failed to reset the system user.</error>"));
+            $output->writeln(r('<error>Failed to reset the system user.</error>'));
             return self::FAILURE;
         }
 
-        $response = APIRequest('DELETE', '/system/env/WS_SYSTEM_PASSWORD');
+        $response = api_request('DELETE', '/system/env/WS_SYSTEM_PASSWORD');
         if (Status::OK !== $response->status) {
-            $output->writeln(r("<error>Failed to reset the system password.</error>"));
+            $output->writeln(r('<error>Failed to reset the system password.</error>'));
             return self::FAILURE;
         }
 
-        $output->writeln(r("<info>System user and password has been reset.</info>"));
+        $output->writeln(r('<info>System user and password has been reset.</info>'));
 
         return self::SUCCESS;
     }

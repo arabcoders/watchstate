@@ -9,6 +9,4 @@ namespace App\Libs\Exceptions\Backends;
  *
  * This exception is thrown when the requested method is not implemented by the backend.
  */
-class NotImplementedException extends BackendException
-{
-}
+class NotImplementedException extends BackendException {}

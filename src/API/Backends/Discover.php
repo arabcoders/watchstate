@@ -20,9 +20,9 @@ final class Discover
 {
     use APITraits;
 
-    public function __construct(private readonly iHttp $http)
-    {
-    }
+    public function __construct(
+        private readonly iHttp $http,
+    ) {}
 
     #[Route(['GET', 'POST'], Index::URL . '/discover/{type}[/]', name: 'backends.get.users')]
     public function __invoke(iRequest $request, array $args = []): iResponse
@@ -37,7 +37,7 @@ final class Discover
 
         try {
             $client = $this->getBasicClient($type, DataUtil::fromRequest($request, true));
-            assert($client instanceof PlexClient);
+            assert($client instanceof PlexClient, 'Expected Plex client for discover request.');
         } catch (InvalidArgumentException $e) {
             return api_error($e->getMessage(), Status::BAD_REQUEST);
         }

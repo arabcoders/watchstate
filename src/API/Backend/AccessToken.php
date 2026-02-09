@@ -21,9 +21,9 @@ final class AccessToken
 {
     use APITraits;
 
-    public function __construct(private readonly iHttp $http)
-    {
-    }
+    public function __construct(
+        private readonly iHttp $http,
+    ) {}
 
     #[Post(Index::URL . '/{name:backend}/accesstoken[/]', name: 'backend.accesstoken')]
     public function __invoke(iRequest $request, string $name, iImport $mapper, iLogger $logger): iResponse

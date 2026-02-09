@@ -21,7 +21,7 @@ final class Reset
     #[Delete(self::URL . '[/]', name: 'system.reset')]
     public function reset(iRequest $request, Redis $redis, iImport $mapper, iLogger $logger): iResponse
     {
-        foreach (getUsersContext($mapper, $logger) as $userContext) {
+        foreach (get_users_context($mapper, $logger) as $userContext) {
             // -- reset database.
             $userContext->db->reset();
 

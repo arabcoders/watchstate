@@ -28,14 +28,16 @@ use Symfony\Component\Console\Output\OutputInterface as iOutput;
 final class DiffCommand extends Command
 {
     public const string ROUTE = 'system:diff';
+
     private array $filterType = ['all', 'played', 'unplayed'];
     private array $sourceType = ['a', 'b'];
 
     /**
      * Class Constructor.
      */
-    public function __construct(private iLogger $logger)
-    {
+    public function __construct(
+        private iLogger $logger,
+    ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
         parent::__construct();
@@ -48,7 +50,8 @@ final class DiffCommand extends Command
      */
     protected function configure(): void
     {
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->addOption('save', 's', InputOption::VALUE_REQUIRED, 'Save difference in a file.')
             ->addOption('filter', 'f', InputOption::VALUE_REQUIRED, 'Filter by all, played or unplayed.', 'all')
             ->addOption('source', 'S', InputOption::VALUE_REQUIRED, 'Source of truth, can be a or b.', 'a')
@@ -101,7 +104,7 @@ final class DiffCommand extends Command
         }
 
         if ($a === $b) {
-            $output->writeln(r("<error>ERROR: source A and source B are the same file.</error>"));
+            $output->writeln(r('<error>ERROR: source A and source B are the same file.</error>'));
             return self::FAILURE;
         }
 
@@ -127,7 +130,7 @@ final class DiffCommand extends Command
             'time' => round($end - $time, 2),
         ]);
 
-        $this->logger->notice("Comparing '{memory}' of data. Please wait.", ['memory' => getMemoryUsage()]);
+        $this->logger->notice("Comparing '{memory}' of data. Please wait.", ['memory' => get_memory_usage()]);
 
         $data = [
             'changed' => [],
@@ -168,12 +171,14 @@ final class DiffCommand extends Command
         }
 
         foreach ($mapper2->getObjects() as $entity) {
-            if (null === $mapper1->get($entity)) {
-                $data['not_in_a'][] = [
-                    'title' => $entity->getName(),
-                    'status' => $entity->isWatched(),
-                ];
+            if (null !== $mapper1->get($entity)) {
+                continue;
             }
+
+            $data['not_in_a'][] = [
+                'title' => $entity->getName(),
+                'status' => $entity->isWatched(),
+            ];
         }
 
         if (null !== $saveFile && count($data['changed']) > 0) {
@@ -210,7 +215,7 @@ final class DiffCommand extends Command
 
         foreach ($data as $row) {
             $entity = $row['a' === $source ? 'entity_a' : 'entity_b'];
-            assert($entity instanceof iState);
+            assert($entity instanceof iState, 'Expected state entity for diff output.');
 
             if ('played' === $filter && false === $entity->isWatched()) {
                 continue;
@@ -232,8 +237,8 @@ final class DiffCommand extends Command
     {
         $arr = [
             iState::COLUMN_TYPE => $entity->type,
-            iState::COLUMN_WATCHED => (int)$entity->isWatched(),
-            iState::COLUMN_UPDATED => makeDate($entity->updated)->getTimestamp(),
+            iState::COLUMN_WATCHED => (int) $entity->isWatched(),
+            iState::COLUMN_UPDATED => make_date($entity->updated)->getTimestamp(),
             iState::COLUMN_META_SHOW => '',
             iState::COLUMN_TITLE => trim($entity->title),
         ];
@@ -243,10 +248,9 @@ final class DiffCommand extends Command
             $arr[iState::COLUMN_TITLE] = trim(
                 ag(
                     $entity->getMetadata($entity->via),
-                    iState::COLUMN_META_DATA_EXTRA . '.' .
-                    iState::COLUMN_META_DATA_EXTRA_TITLE,
+                    iState::COLUMN_META_DATA_EXTRA . '.' . iState::COLUMN_META_DATA_EXTRA_TITLE,
                     $entity->season . 'x' . $entity->episode,
-                )
+                ),
             );
             $arr[iState::COLUMN_SEASON] = $entity->season;
             $arr[iState::COLUMN_EPISODE] = $entity->episode;
@@ -258,15 +262,15 @@ final class DiffCommand extends Command
 
         $arr[iState::COLUMN_GUIDS] = array_filter(
             $entity->getGuids(),
-            fn($key) => str_contains($key, 'guid_'),
-            ARRAY_FILTER_USE_KEY
+            static fn($key) => str_contains($key, 'guid_'),
+            ARRAY_FILTER_USE_KEY,
         );
 
         if ($entity->isEpisode()) {
             $arr[iState::COLUMN_PARENT] = array_filter(
                 $entity->getParentGuids(),
-                fn($key) => str_contains($key, 'guid_'),
-                ARRAY_FILTER_USE_KEY
+                static fn($key) => str_contains($key, 'guid_'),
+                ARRAY_FILTER_USE_KEY,
             );
         }
 
@@ -274,16 +278,19 @@ final class DiffCommand extends Command
             $arr[iState::COLUMN_META_DATA_PROGRESS] = $entity->getPlayProgress();
         }
 
-
         return json_encode($arr, JSON_INVALID_UTF8_IGNORE | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 
     public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
     {
-        if ($input->mustSuggestArgumentValuesFor('a') || $input->mustSuggestArgumentValuesFor(
-                'b'
-            ) || $input->mustSuggestOptionValuesFor('save')) {
-            $realValue = afterLast($input->getCompletionValue(), '/');
+        if (
+            $input->mustSuggestArgumentValuesFor('a')
+            || $input->mustSuggestArgumentValuesFor(
+                'b',
+            )
+            || $input->mustSuggestOptionValuesFor('save')
+        ) {
+            $realValue = after_last($input->getCompletionValue(), '/');
             $filePath = $input->getCompletionValue();
 
             $dirPath = getcwd();

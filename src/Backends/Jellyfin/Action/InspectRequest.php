@@ -35,8 +35,8 @@ final class InspectRequest
     {
         return $this->tryResponse(
             context: $context,
-            fn: function () use ($request, $context) {
-                $userAgent = (string)ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
+            fn: static function () use ($request, $context) {
+                $userAgent = (string) ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
 
                 if (false === str_starts_with($userAgent, 'Jellyfin-Server/')) {
                     return new Response(status: false);
@@ -46,7 +46,7 @@ final class InspectRequest
                 // sets the content-type to `text/plain` for generic destnation webhook so we need to check it and
                 // parse the body if needed.
                 if (null === ($json = $request->getParsedBody()) || false === is_array($json)) {
-                    $body = (string)$request->getBody();
+                    $body = (string) $request->getBody();
 
                     if ($request->getBody()->isSeekable()) {
                         $request->getBody()->rewind();
@@ -59,7 +59,7 @@ final class InspectRequest
                     $json = json_decode(
                         json: $body,
                         associative: true,
-                        flags: JSON_INVALID_UTF8_IGNORE | JSON_THROW_ON_ERROR
+                        flags: JSON_INVALID_UTF8_IGNORE | JSON_THROW_ON_ERROR,
                     );
 
                     $request = $request->withParsedBody($json);
@@ -70,7 +70,7 @@ final class InspectRequest
                         'id' => ag($json, 'ServerId', ''),
                         'name' => ag($json, 'ServerName'),
                         'client' => $context->clientName,
-                        'version' => ag($json, 'ServerVersion', fn() => afterLast($userAgent, '/')),
+                        'version' => ag($json, 'ServerVersion', static fn() => after_last($userAgent, '/')),
                     ],
                     'user' => [
                         'id' => ag($json, 'UserId', ''),
@@ -85,7 +85,7 @@ final class InspectRequest
                         'generic' => in_array(
                             ag($json, 'NotificationType'),
                             ParseWebhook::WEBHOOK_GENERIC_EVENTS,
-                            true
+                            true,
                         ),
                     ],
                 ];
@@ -96,7 +96,7 @@ final class InspectRequest
 
                 return new Response(status: true, response: $request);
             },
-            action: $this->action
+            action: $this->action,
         );
     }
 }

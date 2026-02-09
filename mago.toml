@@ -2,7 +2,7 @@ php-version = "8.4.0"
 
 [source]
 workspace = "."
-paths = ["src", "tests"]
+paths = ["src/", "test/"]
 includes = ["vendor"]
 excludes = []
 
@@ -10,40 +10,40 @@ excludes = []
 print-width = 140
 tab-width = 4
 use-tabs = false
+null-type-hint = "question"
+space-after-logical-not-unary-prefix-operator = false
+space-before-arrow-function-parameter-list-parenthesis = false
+always-break-named-arguments-list = false
+preserve-breaking-member-access-chain = true
+preserve-breaking-argument-list = true
+preserve-breaking-array-like = true
+preserve-breaking-parameter-list = true
+preserve-breaking-attribute-list = true
+preserve-breaking-conditional-expression = true
+empty-line-after-opening-tag = false
 
 [linter]
+excludes = ["tests/"]
 integrations = ["symfony", "phpunit"]
 
 [linter.rules]
-ambiguous-function-call = { enabled = false }
 literal-named-argument = { enabled = false }
-halstead = { enabled = false }
-assertion-style = { enabled = false }
-no-empty = { enabled = false }
-kan-defect = { enabled = false }
-cyclomatic-complexity = { enabled = false }
-prefer-static-closure = { enabled = false }
-too-many-methods = { enabled = false }
-no-error-control-operator = { enabled = false }
 no-boolean-flag-parameter = { enabled = false }
-no-else-clause = { enabled = false }
-assert-description = { enabled = false }
-no-ini-set = { enabled = false }
+no-protected-in-final = { enabled = false }
+too-many-properties = { threshold = 50 }
+too-many-enum-cases = { threshold = 80 }
+excessive-nesting = { threshold = 10 }
 no-multi-assignments = { enabled = false }
+no-empty = { enabled = false }
+no-error-control-operator = { enabled = false }
+too-many-methods = { enabled = false }
+no-ini-set = { enabled = false }
 excessive-parameter-list = { enabled = false }
-function-name = { camel = true, either = true }
-no-literal-password = { enabled = false }
-class-name = { enabled = false }
-
-[analyzer]
-find-unused-definitions = true
-find-unused-expressions = false
-analyze-dead-code = false
-memoize-properties = true
-allow-possibly-undefined-array-keys = true
-check-throws = false
-perform-heuristic-checks = true
-strict-list-index-checks = false
-no-boolean-literal-comparison = false
-check-missing-type-hints = false
-register-super-globals = true
+cyclomatic-complexity = { enabled = false }
+halstead = { enabled = false }
+kan-defect = { enabled = false }
+# no-shorthand-ternary = { enabled = false }
+no-else-clause = { enabled = false }
+no-assign-in-condition = { enabled = false }
+no-empty-catch-clause = { enabled = false }
+no-redundant-use = { enabled = false }

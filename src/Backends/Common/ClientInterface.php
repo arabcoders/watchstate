@@ -87,7 +87,7 @@ interface ClientInterface
      *
      * @return array<array-key,Request> responses.
      */
-    public function pull(iImport $mapper, iDate|null $after = null): array;
+    public function pull(iImport $mapper, ?iDate $after = null): array;
 
     /**
      * Backup play state from backend.
@@ -98,7 +98,7 @@ interface ClientInterface
      *
      * @return array<array-key,Request> responses.
      */
-    public function backup(iImport $mapper, iStream|null $writer = null, array $opts = []): array;
+    public function backup(iImport $mapper, ?iStream $writer = null, array $opts = []): array;
 
     /**
      * Export play state back to backend.
@@ -109,7 +109,7 @@ interface ClientInterface
      *
      * @return array<array-key,Request> responses.
      */
-    public function export(iImport $mapper, QueueRequests $queue, iDate|null $after = null): array;
+    public function export(iImport $mapper, QueueRequests $queue, ?iDate $after = null): array;
 
     /**
      * Compare webhook queued events and push them to backend.
@@ -120,7 +120,7 @@ interface ClientInterface
      *
      * @return array empty array. The data is pushed to the queue.
      */
-    public function push(array $entities, QueueRequests $queue, iDate|null $after = null): array;
+    public function push(array $entities, QueueRequests $queue, ?iDate $after = null): array;
 
     /**
      * Compare watch progress and push to backend.
@@ -133,7 +133,7 @@ interface ClientInterface
      * @throws NotImplementedException is thrown if the backend does not support this feature.
      * @throws UnexpectedVersionException is thrown if the backend version does not support this feature.
      */
-    public function progress(array $entities, QueueRequests $queue, iDate|null $after = null): array;
+    public function progress(array $entities, QueueRequests $queue, ?iDate $after = null): array;
 
     /**
      * Search backend libraries.
@@ -330,7 +330,7 @@ interface ClientInterface
      *
      * @return array
      */
-    public function generateAccessToken(string|int $identifier, string $password, array $opts = []): array;
+    public function generateAccessToken(string|int $identifier, #[\SensitiveParameter] string $password, array $opts = []): array;
 
     /**
      * Get The client specific Guid parser.

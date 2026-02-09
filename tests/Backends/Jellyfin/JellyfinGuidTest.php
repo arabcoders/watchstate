@@ -393,7 +393,7 @@ class JellyfinGuidTest extends TestCase
 
         // -- as we cache the ignore list for each user now,
         // -- and no longer rely on config.ignore key, we needed a workaround to update the ignore list
-        isIgnoredId(
+        is_ignored_id(
             userContext: $this->createUserContext(JellyfinClient::CLIENT_NAME),
             backend: 'test_plex',
             type: 'show',
@@ -402,7 +402,7 @@ class JellyfinGuidTest extends TestCase
             opts: [
                 'reset' => true,
                 'list' => [
-                    (string)makeIgnoreId('show://imdb:123@test_jellyfin') => 1
+                    (string)make_ignore_id('show://imdb:123@test_jellyfin') => 1
                 ]
             ]
         );

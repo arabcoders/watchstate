@@ -22,11 +22,11 @@ final class Users
     public function __invoke(iRequest $request, iImport $mapper, iLogger $logger): iResponse
     {
         $users = [];
-        $usersContext = getUsersContext($mapper, $logger);
+        $usersContext = get_users_context($mapper, $logger);
         foreach ($usersContext as $username => $userContext) {
             $users[] = [
                 'user' => $username,
-                'backends' => array_keys($userContext->config->getAll())
+                'backends' => array_keys($userContext->config->getAll()),
             ];
         }
 

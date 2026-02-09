@@ -25,15 +25,15 @@ final readonly class Events
 
     public const int PERPAGE = 10;
 
-    public function __construct(private EventsRepository $repo)
-    {
-    }
+    public function __construct(
+        private EventsRepository $repo,
+    ) {}
 
     #[Get(pattern: self::URL . '[/]')]
     public function list(iRequest $request): iResponse
     {
         $params = DataUtil::fromRequest($request, true);
-        [$page, $perpage, $start] = getPagination($request, 1, self::PERPAGE);
+        [$page, $perpage, $start] = get_pagination($request, 1, self::PERPAGE);
 
         $arrParams = [];
 
@@ -41,7 +41,10 @@ final readonly class Events
             $arrParams['event'] = [DBLayer::IS_LIKE, $filter];
         }
 
-        $this->repo->setPerpage($perpage)->setStart($start)->setDescendingOrder();
+        $this->repo
+            ->setPerpage($perpage)
+            ->setStart($start)
+            ->setDescendingOrder();
 
         $entities = $this->repo->findAll($arrParams, [
             EntityTable::COLUMN_ID,
@@ -62,7 +65,7 @@ final readonly class Events
                 'total' => $total,
                 'perpage' => $perpage,
                 'next' => $page < @ceil($total / $perpage) ? $page + 1 : null,
-                'previous' => !empty($entities) && $page > 1 ? $page - 1 : null
+                'previous' => !empty($entities) && $page > 1 ? $page - 1 : null,
             ],
             'items' => [],
             'statuses' => [],
@@ -98,25 +101,33 @@ final readonly class Events
         $params = DataUtil::fromRequest($request);
 
         if (null === ($event = $params->get(EntityTable::COLUMN_EVENT))) {
-            return api_error('No event name was given.', Status::BAD_REQUEST, [
-                ...$params->getAll()
-            ]);
+            return api_error(
+                'No event name was given.',
+                Status::BAD_REQUEST,
+                [
+                    ...$params->getAll(),
+                ],
+            );
         }
 
         $opts = [
-            EventsRepository::class => $this->repo
+            EventsRepository::class => $this->repo,
         ];
 
         if (null !== ($delay = $params->get(Options::DELAY_BY))) {
-            $opts[Options::DELAY_BY] = (int)$delay;
+            $opts[Options::DELAY_BY] = (int) $delay;
         }
 
-        $data = (array)$params->get(EntityTable::COLUMN_EVENT_DATA, []);
-        $item = queueEvent($event, $data, $opts);
+        $data = (array) $params->get(EntityTable::COLUMN_EVENT_DATA, []);
+        $item = queue_event($event, $data, $opts);
 
-        return api_message(r("Event '{event}' was queued.", [
-            'event' => $item->event,
-        ]), Status::ACCEPTED, $this->formatEntity($item));
+        return api_message(
+            r("Event '{event}' was queued.", [
+                'event' => $item->event,
+            ]),
+            Status::ACCEPTED,
+            $this->formatEntity($item),
+        );
     }
 
     #[Get(pattern: self::URL . '/{id:uuid}[/]')]
@@ -164,7 +175,7 @@ final readonly class Events
                 return api_error('status parameter must be a number.', Status::BAD_REQUEST);
             }
 
-            if (null == ($status = EventStatus::tryFrom((int)$status))) {
+            if (null === ($status = EventStatus::tryFrom((int) $status))) {
                 return api_error('Invalid status parameter was given.', Status::BAD_REQUEST);
             }
 
@@ -179,14 +190,14 @@ final readonly class Events
             $entity->event_data = $event_data;
         }
 
-        if (true === (bool)$params->get('reset_logs', false)) {
+        if (true === (bool) $params->get('reset_logs', false)) {
             $entity->logs = [];
         }
 
         $changed = !empty($entity->diff());
 
         if ($changed) {
-            $entity->updated_at = (string)makeDate();
+            $entity->updated_at = (string) make_date();
             $entity->logs[] = 'Event was manually updated';
             $this->repo->save($entity);
         }

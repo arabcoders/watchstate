@@ -44,19 +44,19 @@ trait PlexActionTrait
     {
         // -- Handle watched/updated column in a special way to support mark as unplayed.
         if (null !== ($opts['override'][iState::COLUMN_WATCHED] ?? null)) {
-            $isPlayed = (bool)$opts['override'][iState::COLUMN_WATCHED];
+            $isPlayed = (bool) $opts['override'][iState::COLUMN_WATCHED];
             $date = $opts['override'][iState::COLUMN_UPDATED] ?? ag($item, 'addedAt');
         } else {
-            $isPlayed = (bool)ag($item, 'viewCount', false);
+            $isPlayed = (bool) ag($item, 'viewCount', false);
             $date = ag($item, true === $isPlayed ? ['lastViewedAt', 'addedAt'] : 'addedAt');
         }
 
         // -- For Progress action we need to use the latest date.
-        if (true === (bool)($opts['latest_date'] ?? false)) {
+        if (true === (bool) ($opts['latest_date'] ?? false)) {
             $date = max(ag($item, 'lastViewedAt', 0), ag($item, 'addedAt', 0), ag($item, 'updatedAt', 0));
         }
 
-        $type = (string)ag($item, 'type', '');
+        $type = (string) ag($item, 'type', '');
         $type = $this->typeMapper[$type] ?? $this->typeMapper[strtolower($type)] ?? $type;
 
         if (null === $date) {
@@ -66,9 +66,9 @@ trait PlexActionTrait
             $date = 0;
         }
 
-        $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
+        $year = (int) ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
         if (0 === $year && null !== ($airDate = ag($item, 'originallyAvailableAt'))) {
-            $year = (int)makeDate($airDate)->format('Y');
+            $year = (int) make_date($airDate)->format('Y');
         }
 
         if (null === ag($item, 'Guid')) {
@@ -91,13 +91,13 @@ trait PlexActionTrait
                     iState::TYPE_EPISODE => sprintf(
                         '%s - (%sx%s)',
                         ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
-                        str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
-                        str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
+                        str_pad((string) ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
+                        str_pad((string) ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
                     ),
                     default => throw new InvalidArgumentException(
                         r("Unexpected Content type '{type}' was received.", [
-                            'type' => $type
-                        ])
+                            'type' => $type,
+                        ]),
                     ),
                 },
                 'year' => 0 === $year ? '0000' : $year,
@@ -107,21 +107,21 @@ trait PlexActionTrait
 
         $builder = [
             iState::COLUMN_TYPE => $type,
-            iState::COLUMN_UPDATED => (int)$date,
-            iState::COLUMN_WATCHED => (int)$isPlayed,
+            iState::COLUMN_UPDATED => (int) $date,
+            iState::COLUMN_WATCHED => (int) $isPlayed,
             iState::COLUMN_VIA => $context->backendName,
             iState::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
             iState::COLUMN_GUIDS => $guid->get(guids: ag($item, 'Guid', []), context: $logContext),
             iState::COLUMN_META_DATA => [
                 $context->backendName => [
-                    iState::COLUMN_ID => (string)ag($item, 'ratingKey'),
+                    iState::COLUMN_ID => (string) ag($item, 'ratingKey'),
                     iState::COLUMN_TYPE => $type,
                     iState::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
                     iState::COLUMN_VIA => $context->backendName,
                     iState::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
                     iState::COLUMN_GUIDS => $guid->parse(guids: ag($item, 'Guid', []), context: $logContext),
-                    iState::COLUMN_META_DATA_RATING => (string)ag($item, 'userRating', '0'),
-                    iState::COLUMN_META_DATA_ADDED_AT => (string)ag($item, 'addedAt'),
+                    iState::COLUMN_META_DATA_RATING => (string) ag($item, 'userRating', '0'),
+                    iState::COLUMN_META_DATA_ADDED_AT => (string) ag($item, 'addedAt'),
                 ],
             ],
             iState::COLUMN_EXTRA => [],
@@ -134,24 +134,24 @@ trait PlexActionTrait
 
         if (count(ag($item, 'Genre', [])) > 0) {
             $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = array_map(
-                fn($item) => strtolower((string)ag($item, 'tag', '??')),
-                ag($item, 'Genre', [])
+                static fn($item) => strtolower((string) ag($item, 'tag', '??')),
+                ag($item, 'Genre', []),
             );
         }
 
         if (null !== ($library = ag($item, 'librarySectionID', $opts[iState::COLUMN_META_LIBRARY] ?? null))) {
-            $metadata[iState::COLUMN_META_LIBRARY] = (string)$library;
+            $metadata[iState::COLUMN_META_LIBRARY] = (string) $library;
         }
 
         if (iState::TYPE_EPISODE === $type) {
-            $builder[iState::COLUMN_SEASON] = (int)ag($item, 'parentIndex', 0);
-            $builder[iState::COLUMN_EPISODE] = (int)ag($item, 'index', 0);
+            $builder[iState::COLUMN_SEASON] = (int) ag($item, 'parentIndex', 0);
+            $builder[iState::COLUMN_EPISODE] = (int) ag($item, 'index', 0);
 
-            $metadata[iState::COLUMN_META_SHOW] = (string)ag($item, ['grandparentRatingKey', 'parentRatingKey'], '??');
+            $metadata[iState::COLUMN_META_SHOW] = (string) ag($item, ['grandparentRatingKey', 'parentRatingKey'], '??');
 
             $metadata[iState::COLUMN_TITLE] = ag($item, 'grandparentTitle', '??');
-            $metadata[iState::COLUMN_SEASON] = (string)$builder[iState::COLUMN_SEASON];
-            $metadata[iState::COLUMN_EPISODE] = (string)$builder[iState::COLUMN_EPISODE];
+            $metadata[iState::COLUMN_SEASON] = (string) $builder[iState::COLUMN_SEASON];
+            $metadata[iState::COLUMN_EPISODE] = (string) $builder[iState::COLUMN_EPISODE];
 
             $metadataExtra[iState::COLUMN_META_DATA_EXTRA_TITLE] = $builder[iState::COLUMN_TITLE];
             $builder[iState::COLUMN_TITLE] = $metadata[iState::COLUMN_TITLE];
@@ -168,51 +168,53 @@ trait PlexActionTrait
 
                 if (count($metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES]) < 1) {
                     $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = array_map(
-                        fn($i) => strtolower((string)ag($i, 'tag', '??')),
+                        static fn($i) => strtolower((string) ag($i, 'tag', '??')),
                         ag(
                             $this->getItemDetails(context: $context, id: $parentId, opts: $opts),
                             'MediaContainer.Metadata.0.Genre',
-                            []
-                        )
+                            [],
+                        ),
                     );
                 }
             }
         }
 
         if (0 !== $year) {
-            $builder[iState::COLUMN_YEAR] = (int)$year;
-            $metadata[iState::COLUMN_YEAR] = (string)$year;
+            $builder[iState::COLUMN_YEAR] = (int) $year;
+            $metadata[iState::COLUMN_YEAR] = (string) $year;
         }
 
         $metadata[iState::COLUMN_META_MULTI] = false;
         if (null !== ($mediaPath = ag($item, 'Media.0.Part.0.file')) && !empty($mediaPath)) {
-            $metadata[iState::COLUMN_META_PATH] = (string)$mediaPath;
-            if (iState::TYPE_EPISODE === $type &&
-                true === ag(parseEpisodeRange(basename((string)$mediaPath)), iState::COLUMN_META_MULTI, false)) {
+            $metadata[iState::COLUMN_META_PATH] = (string) $mediaPath;
+            if (
+                iState::TYPE_EPISODE === $type
+                && true === ag(parse_episode_range(basename((string) $mediaPath)), iState::COLUMN_META_MULTI, false)
+            ) {
                 $metadata[iState::COLUMN_META_MULTI] = true;
             }
         }
 
         if (null === $mediaPath && null !== ($showPath = ag($item, 'Location.0.path')) && !empty($showPath)) {
-            $metadata[iState::COLUMN_META_PATH] = (string)$showPath;
+            $metadata[iState::COLUMN_META_PATH] = (string) $showPath;
         }
 
         if (null !== ($PremieredAt = ag($item, 'originallyAvailableAt'))) {
-            $metadataExtra[iState::COLUMN_META_DATA_EXTRA_DATE] = makeDate($PremieredAt)->format('Y-m-d');
+            $metadataExtra[iState::COLUMN_META_DATA_EXTRA_DATE] = make_date($PremieredAt)->format('Y-m-d');
         }
 
         if (null !== ($summary = ag($item, 'summary'))) {
-            $metadataExtra[iState::COLUMN_META_DATA_EXTRA_OVERVIEW] = (string)$summary;
+            $metadataExtra[iState::COLUMN_META_DATA_EXTRA_OVERVIEW] = (string) $summary;
         }
 
         if (true === $isPlayed) {
-            $metadata[iState::COLUMN_META_DATA_PLAYED_AT] = (string)$date;
-            $metadata[iState::COLUMN_META_DATA_PROGRESS] = "0";
+            $metadata[iState::COLUMN_META_DATA_PLAYED_AT] = (string) $date;
+            $metadata[iState::COLUMN_META_DATA_PROGRESS] = '0';
         }
 
         if (false === $isPlayed && null !== ($progress = ag($item, 'viewOffset', null))) {
             // -- Plex reports play progress in milliseconds already no need to convert.
-            $metadata[iState::COLUMN_META_DATA_PROGRESS] = (string)$progress;
+            $metadata[iState::COLUMN_META_DATA_PROGRESS] = (string) $progress;
         }
 
         unset($metadata, $metadataExtra);
@@ -282,7 +284,7 @@ trait PlexActionTrait
         iGuid $guid,
         int|string $id,
         array $logContext = [],
-        array $opts = []
+        array $opts = [],
     ): array {
         $cacheKey = PlexClient::TYPE_SHOW . '.' . $id;
         $globalCacheKey = null;
@@ -303,9 +305,9 @@ trait PlexActionTrait
 
         $json = ag($this->getItemDetails(context: $context, id: $id), 'MediaContainer.Metadata.0', []);
 
-        $year = (int)ag($json, ['grandParentYear', 'parentYear', 'year'], 0);
+        $year = (int) ag($json, ['grandParentYear', 'parentYear', 'year'], 0);
         if (0 === $year && null !== ($airDate = ag($json, 'originallyAvailableAt'))) {
-            $year = (int)makeDate($airDate)->format('Y');
+            $year = (int) make_date($airDate)->format('Y');
         }
 
         $logContext['item'] = [
@@ -337,12 +339,12 @@ trait PlexActionTrait
         $gContext = ag_set(
             $logContext,
             'item.plex_id',
-            str_starts_with(ag($json, 'guid', ''), 'plex://') ? ag($json, 'guid') : 'none'
+            str_starts_with(ag($json, 'guid', ''), 'plex://') ? ag($json, 'guid') : 'none',
         );
 
         $data = Guid::fromArray(
             payload: $guid->get(guids: $json['Guid'], context: [...$gContext]),
-            context: ['backend' => $context->backendName, ...$logContext]
+            context: ['backend' => $context->backendName, ...$logContext],
         )->getAll();
 
         $context->cache->set($cacheKey, $data);
@@ -371,7 +373,7 @@ trait PlexActionTrait
         $arr = [];
 
         foreach ($response->response as $item) {
-            $arr[(int)$item['id']] = $item['raw'];
+            $arr[(int) $item['id']] = $item['raw'];
         }
 
         return $arr;
@@ -408,9 +410,9 @@ trait PlexActionTrait
     protected function isSupportedType(string $type): bool
     {
         return true === in_array(
-                PlexClient::TYPE_MAPPER[$type] ?? PlexClient::TYPE_MAPPER[strtolower($type)] ?? $type,
-                iState::TYPES_LIST,
-                true
-            );
+            PlexClient::TYPE_MAPPER[$type] ?? PlexClient::TYPE_MAPPER[strtolower($type)] ?? $type,
+            iState::TYPES_LIST,
+            true,
+        );
     }
 }

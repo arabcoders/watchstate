@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Model\Base\Transformers;
 
 use App\Model\Base\Enums\TransformType;
@@ -8,17 +10,17 @@ use RuntimeException;
 
 final readonly class TimestampTransformer
 {
-    public function __construct(private bool $nullable = false)
-    {
-    }
+    public function __construct(
+        private bool $nullable = false,
+    ) {}
 
     public static function create(bool $nullable = false): callable
     {
         $class = new self(nullable: $nullable);
-        return fn(TransformType $type, mixed $data) => $class($type, $data);
+        return $class(...);
     }
 
-    public function __invoke(TransformType $type, mixed $data): string|null|DateTimeInterface
+    public function __invoke(TransformType $type, mixed $data): int|string|null|DateTimeInterface
     {
         if (null === $data) {
             if ($this->nullable) {
@@ -28,12 +30,12 @@ final readonly class TimestampTransformer
             throw new RuntimeException('Date cannot be null');
         }
 
-        $isDate = true === ($data instanceof DateTimeInterface);
-
-        if (false === $isDate && !ctype_digit($data)) {
+        $isDate = true === $data instanceof DateTimeInterface;
+        $isDigit = is_int($data) || is_string($data) && ctype_digit((string) $data);
+        if (false === $isDate && !$isDigit) {
             if (is_string($data)) {
                 $isDate = true;
-                $data = makeDate($data);
+                $data = make_date($data);
             } else {
                 throw new RuntimeException(r("Date must be a integer or DateTime. '{type}('{data}')' given.", [
                     'type' => get_debug_type($data),
@@ -44,7 +46,7 @@ final readonly class TimestampTransformer
 
         return match ($type) {
             TransformType::ENCODE => $isDate ? $data->getTimestamp() : $data,
-            TransformType::DECODE => $isDate ? $data : makeDate($data),
+            TransformType::DECODE => $isDate ? $data : make_date($data),
         };
     }
 }

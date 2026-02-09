@@ -20,9 +20,10 @@ final readonly class Emitter
     /**
      * @param int $maxBufferLength int Maximum output buffering size for each iteration.
      */
-    public function __construct(protected int $maxBufferLength = 8192, private array $callers = [])
-    {
-    }
+    public function __construct(
+        protected int $maxBufferLength = 8192,
+        private array $callers = [],
+    ) {}
 
     /**
      * Emit a response.
@@ -56,7 +57,7 @@ final readonly class Emitter
         }
 
         if ($response->hasHeader('X-Emitter-Max-Buffer-Length')) {
-            $maxBufferLength = (int)$response->getHeaderLine('X-Emitter-Max-Buffer-Length');
+            $maxBufferLength = (int) $response->getHeaderLine('X-Emitter-Max-Buffer-Length');
             $response = $response->withoutHeader('X-Emitter-Max-Buffer-Length');
         }
 
@@ -152,7 +153,7 @@ final readonly class Emitter
 
             $this->write($body->read($maxBuffer));
 
-            if ($iterations % 5 === 0 && CONNECTION_NORMAL !== connection_status()) {
+            if (($iterations % 5) === 0 && CONNECTION_NORMAL !== connection_status()) {
                 break;
             }
         }
@@ -219,9 +220,9 @@ final readonly class Emitter
 
         return [
             $matches['unit'],
-            (int)$matches['first'],
-            (int)$matches['last'],
-            $matches['length'] === '*' ? '*' : (int)$matches['length'],
+            (int) $matches['first'],
+            (int) $matches['last'],
+            $matches['length'] === '*' ? '*' : (int) $matches['length'],
         ];
     }
 
@@ -240,7 +241,7 @@ final readonly class Emitter
         $line = null;
 
         if ($this->headersSent($filename, $line)) {
-            assert(is_string($filename) && is_int($line));
+            assert(is_string($filename) && is_int($line), 'Expected headers sent location info.');
             throw EmitterException::forHeadersSent($filename, $line);
         }
 
@@ -269,10 +270,10 @@ final readonly class Emitter
                 'HTTP/%s %d%s',
                 $response->getProtocolVersion(),
                 $statusCode,
-                $reasonPhrase ? ' ' . $reasonPhrase : ''
+                $reasonPhrase ? ' ' . $reasonPhrase : '',
             ),
             true,
-            $statusCode
+            $statusCode,
         );
     }
 
@@ -339,5 +340,4 @@ final readonly class Emitter
         echo $data;
         flush();
     }
-
 }

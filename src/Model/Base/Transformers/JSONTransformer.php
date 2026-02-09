@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Model\Base\Transformers;
 
 use App\Model\Base\Enums\TransformType;
@@ -7,22 +9,28 @@ use InvalidArgumentException;
 
 final class JSONTransformer
 {
-    public const int DEFAULT_JSON_FLAGS = JSON_INVALID_UTF8_IGNORE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
+    public const int DEFAULT_JSON_FLAGS =
+        JSON_INVALID_UTF8_IGNORE
+            | JSON_HEX_TAG
+            | JSON_HEX_APOS
+            | JSON_HEX_AMP
+            | JSON_HEX_QUOT
+            | JSON_UNESCAPED_SLASHES
+            | JSON_UNESCAPED_UNICODE;
 
     public function __construct(
         private bool $isAssoc = false,
         private int $flags = self::DEFAULT_JSON_FLAGS,
         private bool $nullable = false,
-    ) {
-    }
+    ) {}
 
     public static function create(
         bool $isAssoc = false,
         int $flags = self::DEFAULT_JSON_FLAGS,
-        bool $nullable = false
+        bool $nullable = false,
     ): callable {
         $class = new self(isAssoc: $isAssoc, flags: $flags, nullable: $nullable);
-        return fn(TransformType $type, mixed $data) => $class($type, $data);
+        return $class(...);
     }
 
     public function __invoke(TransformType $type, mixed $data): string|array|object|null

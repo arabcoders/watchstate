@@ -35,7 +35,7 @@ class InspectRequest
     {
         return $this->tryResponse(
             context: $context,
-            fn: function () use ($request, $context) {
+            fn: static function () use ($request, $context) {
                 if (null === ($json = $request->getParsedBody()) || false === is_array($json)) {
                     return new Response(status: false, response: $request);
                 }
@@ -47,11 +47,12 @@ class InspectRequest
                         return new Response(status: false, response: $request);
                     }
                     $request = $request->withParsedBody($payload);
+                    $json = $payload;
                 }
 
                 // -- Due to the fact that Emby doesn't give us an actual user agent, we have to rely on the version
                 // -- number to determine if the request is from Emby.
-                $version = (string)ag($json, 'Server.Version', '0.0.0.0');
+                $version = (string) ag($json, 'Server.Version', '0.0.0.0');
                 if (version_compare($version, '4.8.0.0', '<') || version_compare($version, '4.99.0.0', '>')) {
                     return new Response(status: false, response: $request);
                 }
@@ -83,7 +84,7 @@ class InspectRequest
 
                 return new Response(status: true, response: $request);
             },
-            action: $this->action
+            action: $this->action,
         );
     }
 }

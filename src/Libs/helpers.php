@@ -11,9 +11,9 @@ use App\Backends\Common\Request;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\Attributes\Scanner\Attributes as AttributesScanner;
-use App\Libs\Debug;
 use App\Libs\Config;
 use App\Libs\Container;
+use App\Libs\Debug;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\InvalidArgumentException;
@@ -51,7 +51,7 @@ if (!function_exists('env')) {
     function env(string $key, mixed $default = null): mixed
     {
         if (false === ($value = $_ENV[$key] ?? getenv($key))) {
-            return getValue($default);
+            return get_value($default);
         }
 
         return match (is_string($value) ? strtolower($value) : $value) {
@@ -64,7 +64,7 @@ if (!function_exists('env')) {
     }
 }
 
-if (!function_exists('getValue')) {
+if (!function_exists('get_value')) {
     /**
      * Get the value of a variable.
      *
@@ -72,13 +72,13 @@ if (!function_exists('getValue')) {
      *
      * @return mixed The value of the variable.
      */
-    function getValue(mixed $var): mixed
+    function get_value(mixed $var): mixed
     {
-        return ($var instanceof Closure) ? $var() : $var;
+        return $var instanceof Closure ? $var() : $var;
     }
 }
 
-if (!function_exists('makeDate')) {
+if (!function_exists('make_date')) {
     /**
      * Make date time object.
      *
@@ -87,9 +87,9 @@ if (!function_exists('makeDate')) {
      *
      * @return Date
      */
-    function makeDate(string|int|DateTimeInterface $date = 'now', DateTimeZone|string|null $tz = null): Date
+    function make_date(string|int|DateTimeInterface $date = 'now', DateTimeZone|string|null $tz = null): Date
     {
-        if (true === is_int($date) || (true === is_string($date) && true === is_numeric($date))) {
+        if (true === is_int($date) || true === is_string($date) && true === is_numeric($date)) {
             $date = '@' . $date;
         }
 
@@ -97,11 +97,11 @@ if (!function_exists('makeDate')) {
             $tz = date_default_timezone_get();
         }
 
-        if (!($tz instanceof DateTimeZone)) {
+        if (!$tz instanceof DateTimeZone) {
             $tz = new DateTimeZone($tz);
         }
 
-        if (true === ($date instanceof DateTimeInterface)) {
+        if (true === $date instanceof DateTimeInterface) {
             $date = $date->format(DateTimeInterface::ATOM);
         }
 
@@ -138,7 +138,7 @@ if (!function_exists('ag')) {
                 }
                 return $val;
             }
-            return getValue($default);
+            return get_value($default);
         }
 
         if (null !== ($array[$path] ?? null)) {
@@ -146,14 +146,14 @@ if (!function_exists('ag')) {
         }
 
         if (!str_contains($path, $separator)) {
-            return $array[$path] ?? getValue($default);
+            return $array[$path] ?? get_value($default);
         }
 
         foreach (explode($separator, $path) as $segment) {
             if (is_array($array) && array_key_exists($segment, $array)) {
                 $array = $array[$segment];
             } else {
-                return getValue($default);
+                return get_value($default);
             }
         }
 
@@ -204,7 +204,7 @@ if (!function_exists('ag_set')) {
                 if (is_array($at)) {
                     $at[array_shift($keys)] = $value;
                 } else {
-                    throw new RuntimeException("Can not set value at this path ($path) because its not array.");
+                    throw new RuntimeException("Can not set value at this path ({$path}) because its not array.");
                 }
             } else {
                 $path = array_shift($keys);
@@ -235,7 +235,7 @@ if (!function_exists('ag_exists')) {
             return true;
         }
 
-        foreach (explode($separator, (string)$path) as $lookup) {
+        foreach (explode($separator, (string) $path) as $lookup) {
             if (isset($array[$lookup])) {
                 $array = $array[$lookup];
             } else {
@@ -300,7 +300,7 @@ if (!function_exists('ag_delete')) {
     }
 }
 
-if (!function_exists('fixPath')) {
+if (!function_exists('fix_path')) {
     /**
      * Fix the given file path by removing any trailing directory separators.
      *
@@ -308,7 +308,7 @@ if (!function_exists('fixPath')) {
      *
      * @return string The fixed file path.
      */
-    function fixPath(string $path): string
+    function fix_path(string $path): string
     {
         return rtrim(implode(DIRECTORY_SEPARATOR, explode(DIRECTORY_SEPARATOR, $path)), DIRECTORY_SEPARATOR);
     }
@@ -328,12 +328,16 @@ if (!function_exists('fsize')) {
     function fsize(string|int $bytes = 0, bool $showUnit = true, int $decimals = 2, int $mod = 1000): string
     {
         $sz = 'BKMGTP';
-        $factor = floor((strlen((string)$bytes) - 1) / 3);
-        return sprintf("%.{$decimals}f", (int)($bytes) / ($mod ** $factor)) . ($showUnit ? $sz[(int)$factor] : '');
+        $factor = floor((strlen((string) $bytes) - 1) / 3);
+        return sprintf(
+            "%.{$decimals}f%s",
+            (int) $bytes / ($mod ** $factor),
+            $showUnit ? $sz[(int) $factor] : '',
+        );
     }
 }
 
-if (!function_exists('saveWebhookPayload')) {
+if (!function_exists('save_webhook_payload')) {
     /**
      * Save webhook payload to stream.
      *
@@ -341,12 +345,12 @@ if (!function_exists('saveWebhookPayload')) {
      * @param iRequest $request Request object.
      * @param iStream|null $file When given a stream, it will be used to write payload.
      */
-    function saveWebhookPayload(iState $entity, iRequest $request, iStream|null $file = null): void
+    function save_webhook_payload(iState $entity, iRequest $request, ?iStream $file = null): void
     {
         $content = [
             'request' => [
                 'server' => $request->getServerParams(),
-                'body' => (string)$request->getBody(),
+                'body' => (string) $request->getBody(),
                 'query' => $request->getQueryParams(),
             ],
             'parsed' => $request->getParsedBody(),
@@ -357,21 +361,21 @@ if (!function_exists('saveWebhookPayload')) {
         $stream = $file ?? new Stream(
             r('{path}/webhooks/' . Config::get('webhook.file_format', 'webhook.{backend}.{event}.{id}.json'), [
                 'path' => Config::get('tmpDir'),
-                'time' => (string)time(),
+                'time' => (string) time(),
                 'backend' => $entity->via,
                 'event' => ag($entity->getExtra($entity->via), 'event', 'unknown'),
                 'id' => ag($request->getServerParams(), 'X_REQUEST_ID', time()),
-                'date' => makeDate('now')->format('Ymd'),
+                'date' => make_date('now')->format('Ymd'),
                 'context' => $content,
             ]),
-            'w'
+            'w',
         );
 
         $stream->write(
             json_encode(
                 value: $content,
-                flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_IGNORE | JSON_UNESCAPED_UNICODE
-            )
+                flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_IGNORE | JSON_UNESCAPED_UNICODE,
+            ),
         );
 
         if (null === $file) {
@@ -380,34 +384,34 @@ if (!function_exists('saveWebhookPayload')) {
     }
 }
 
-if (!function_exists('saveRequestPayload')) {
+if (!function_exists('save_request_payload')) {
     /**
      * Save request payload to stream.
      *
      * @param iRequest $request Request object.
      * @param iStream|null $file When given a stream, it will be used to write payload.
      */
-    function saveRequestPayload(iRequest $request, iStream|null $file = null): void
+    function save_request_payload(iRequest $request, ?iStream $file = null): void
     {
         $content = [
             'query' => $request->getQueryParams(),
             'parsed' => $request->getParsedBody(),
             'server' => $request->getServerParams(),
-            'body' => (string)$request->getBody(),
+            'body' => (string) $request->getBody(),
             'attributes' => $request->getAttributes(),
         ];
 
         $stream = $file ?? new Stream(r('{path}/debug/request.{time}.{id}.json', [
             'path' => Config::get('tmpDir'),
             'time' => time(),
-            'id' => ag($request->getServerParams(), 'X_REQUEST_ID', (string)time()),
+            'id' => ag($request->getServerParams(), 'X_REQUEST_ID', (string) time()),
         ]), 'w');
 
         $stream->write(
             json_encode(
                 value: $content,
-                flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_IGNORE | JSON_UNESCAPED_UNICODE
-            )
+                flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_IGNORE | JSON_UNESCAPED_UNICODE,
+            ),
         );
 
         if (null === $file) {
@@ -431,7 +435,7 @@ if (!function_exists('api_response')) {
         Status|int $status = Status::OK,
         array|null|iStream $body = null,
         array $headers = [],
-        string|null $reason = null
+        ?string $reason = null,
     ): iResponse {
         if (is_int($status)) {
             $status = Status::from($status);
@@ -445,7 +449,7 @@ if (!function_exists('api_response')) {
         );
 
         if (null !== $body && !$response->hasHeader('Content-Length') && ($size = $response->getBody()->getSize())) {
-            $response = $response->withHeader('Content-Length', (string)$size);
+            $response = $response->withHeader('Content-Length', (string) $size);
         }
 
         if (is_array($body) && false === $response->hasHeader('Content-Type')) {
@@ -456,7 +460,7 @@ if (!function_exists('api_response')) {
             if ($response->hasHeader($key)) {
                 continue;
             }
-            $response = $response->withHeader($key, getValue($val));
+            $response = $response->withHeader($key, get_value($val));
         }
 
         return $response;
@@ -479,26 +483,26 @@ if (!function_exists('api_error')) {
         Status $httpCode = Status::BAD_REQUEST,
         array $body = [],
         array $headers = [],
-        string|null $reason = null,
-        array $opts = []
+        ?string $reason = null,
+        array $opts = [],
     ): iResponse {
         $response = api_response(
             status: $httpCode,
             body: array_replace_recursive($body, [
                 ag($opts, 'top_key', 'error') => [
                     'code' => $httpCode->value,
-                    'message' => $message
-                ]
+                    'message' => $message,
+                ],
             ]),
             headers: $headers,
-            reason: $reason
+            reason: $reason,
         );
 
         foreach ($headers as $key => $val) {
             $response = $response->withHeader($key, $val);
         }
 
-        if (array_key_exists('callback', $opts) && ($opts['callback'] instanceof Closure)) {
+        if (array_key_exists('callback', $opts) && $opts['callback'] instanceof Closure) {
             $response = $opts['callback']($response);
         }
 
@@ -524,15 +528,15 @@ if (!function_exists('api_message')) {
         Status|int $httpCode = Status::OK,
         array $body = [],
         array $headers = [],
-        string|null $reason = null,
-        array $opts = []
+        ?string $reason = null,
+        array $opts = [],
     ): iResponse {
         $opts['top_key'] = 'info';
         return api_error($message, $httpCode, $body, $headers, $reason, $opts);
     }
 }
 
-if (!function_exists('httpClientChunks')) {
+if (!function_exists('http_client_chunks')) {
     /**
      * Handle response stream as chunks.
      *
@@ -542,7 +546,7 @@ if (!function_exists('httpClientChunks')) {
      *
      * @throws TransportExceptionInterface if stream is not readable.
      */
-    function httpClientChunks(ResponseStreamInterface $stream): Generator
+    function http_client_chunks(ResponseStreamInterface $stream): Generator
     {
         foreach ($stream as $chunk) {
             yield $chunk->getContent();
@@ -550,7 +554,7 @@ if (!function_exists('httpClientChunks')) {
     }
 }
 
-if (!function_exists('queuePush')) {
+if (!function_exists('queue_push')) {
     /**
      * Add push event to the events queue.
      *
@@ -558,14 +562,14 @@ if (!function_exists('queuePush')) {
      * @param bool $remove Whether to remove the event from the queue if it's in pending state. Default is false.
      * @param UserContext|null $userContext The user context to use for the push event. Default is null.
      */
-    function queuePush(iState $entity, bool $remove = false, UserContext|null $userContext = null): void
+    function queue_push(iState $entity, bool $remove = false, ?UserContext $userContext = null): void
     {
         $logger = Container::get(iLogger::class);
 
         if (!$entity->id) {
             $logger->error("Unable to push event '{via}: {entity}'. It has no local id yet.", [
                 'via' => $entity->via,
-                'entity' => $entity->getName()
+                'entity' => $entity->getName(),
             ]);
             return;
         }
@@ -584,7 +588,7 @@ if (!function_exists('queuePush')) {
             $logger->error("Unable to push '{id}' event '{via}: {entity}'. It has no GUIDs.", [
                 'id' => $entity->id,
                 'via' => $entity->via,
-                'entity' => $entity->getName()
+                'entity' => $entity->getName(),
             ]);
             return;
         }
@@ -597,11 +601,11 @@ if (!function_exists('queuePush')) {
             $opts[Options::CONTEXT_USER] = $userContext->name;
         }
 
-        queueEvent(ProcessPushEvent::NAME, [iState::COLUMN_ID => $entity->id], $opts);
+        queue_event(ProcessPushEvent::NAME, [iState::COLUMN_ID => $entity->id], $opts);
     }
 }
 
-if (!function_exists('afterLast')) {
+if (!function_exists('after_last')) {
     /**
      * Get the substring after the last occurrence of a search string.
      *
@@ -611,7 +615,7 @@ if (!function_exists('afterLast')) {
      * @return string The substring after the last occurrence of the search string.
      *                If the search string is empty or not found in the subject string, the subject string is returned.
      */
-    function afterLast(string $subject, string $search): string
+    function after_last(string $subject, string $search): string
     {
         if (empty($search)) {
             return $subject;
@@ -659,7 +663,7 @@ if (!function_exists('after')) {
     }
 }
 
-if (!function_exists('makeBackend')) {
+if (!function_exists('make_backend')) {
     /**
      * Create new backend client instance.
      *
@@ -670,7 +674,7 @@ if (!function_exists('makeBackend')) {
      * @return iClient backend client instance.
      * @throws InvalidArgumentException if configuration is wrong.
      */
-    function makeBackend(array $backend, string|null $name = null, array $options = []): iClient
+    function make_backend(array $backend, ?string $name = null, array $options = []): iClient
     {
         if (null === ($backendType = ag($backend, 'type'))) {
             throw new InvalidArgumentException('No backend type was set.');
@@ -685,12 +689,12 @@ if (!function_exists('makeBackend')) {
                 r('Unexpected client type [{type}] was given. Expecting [{list}]', [
                     'type' => $backendType,
                     'list' => array_keys(Config::get('supported', [])),
-                ])
+                ]),
             );
         }
 
         if (null !== ($userContext = ag($options, UserContext::class, null))) {
-            assert($userContext instanceof UserContext);
+            assert($userContext instanceof UserContext, 'Expected UserContext for backend creation.');
             $cache = Container::get(BackendCache::class)->with(adapter: $userContext->cache);
         } else {
             $cache = $options[BackendCache::class] ?? Container::get(BackendCache::class);
@@ -707,14 +711,14 @@ if (!function_exists('makeBackend')) {
                 backendId: ag($backend, 'uuid', null),
                 backendToken: ag($backend, 'token', null),
                 backendUser: ag($backend, 'user', null),
-                trace: (bool)ag($backend, 'options.' . Options::DEBUG_TRACE, false),
+                trace: (bool) ag($backend, 'options.' . Options::DEBUG_TRACE, false),
                 options: ag($backend, 'options', []),
-            )
+            ),
         );
     }
 }
 
-if (!function_exists('arrayToString')) {
+if (!function_exists('array_to_string')) {
     /**
      * Convert an array to a string representation.
      *
@@ -723,37 +727,37 @@ if (!function_exists('arrayToString')) {
      *
      * @return string The string representation of the array.
      */
-    function arrayToString(array $arr, string $separator = ', '): string
+    function array_to_string(array $arr, string $separator = ', '): string
     {
         $list = [];
 
         foreach ($arr as $key => $val) {
             if (is_object($val)) {
-                if (($val instanceof JsonSerializable)) {
+                if ($val instanceof JsonSerializable) {
                     $val = json_encode($val, flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-                } elseif (($val instanceof Stringable) || method_exists($val, '__toString')) {
-                    $val = (string)$val;
+                } elseif ($val instanceof Stringable || method_exists($val, '__toString')) {
+                    $val = (string) $val;
                 } else {
                     $val = get_object_vars($val);
                 }
             }
 
             if (is_array($val)) {
-                $val = '[ ' . arrayToString($val) . ' ]';
+                $val = '[ ' . array_to_string($val) . ' ]';
             } elseif (is_bool($val)) {
                 $val = true === $val ? 'true' : 'false';
             } else {
-                $val = $val ?? 'None';
+                $val ??= 'None';
             }
 
-            $list[] = sprintf("(%s: %s)", $key, $val);
+            $list[] = sprintf('(%s: %s)', $key, $val);
         }
 
         return implode($separator, $list);
     }
 }
 
-if (!function_exists('arrayToJson')) {
+if (!function_exists('array_to_json')) {
     /**
      * Convert an array to a JSON string in safe way.
      *
@@ -763,7 +767,7 @@ if (!function_exists('arrayToJson')) {
      * @return string|array The string representation of the array.
      *
      */
-    function arrayToJson(array $data, bool $direct = false): string|array
+    function array_to_json(array $data, bool $direct = false): string|array
     {
         $list = [];
         $safeClasses = [JsonSerializable::class, Stringable::class, DatetimeInterface::class];
@@ -771,18 +775,18 @@ if (!function_exists('arrayToJson')) {
         foreach ($data as $key => $val) {
             if (true === is_object($val) && !in_array($val::class, $safeClasses, true)) {
                 if (method_exists($val, '__toString')) {
-                    $val = (string)$val;
+                    $val = (string) $val;
                 } else {
                     $val = get_object_vars($val);
                 }
             }
 
             if (is_array($val)) {
-                $val = arrayToJson($val, direct: true);
+                $val = array_to_json($val, direct: true);
             } elseif (is_bool($val)) {
                 $val = true === $val ? 'true' : 'false';
             } else {
-                $val = $val ?? 'None';
+                $val ??= 'None';
             }
 
             $list[$key] = $val;
@@ -796,15 +800,15 @@ if (!function_exists('arrayToJson')) {
     }
 }
 
-if (!function_exists('commandContext')) {
+if (!function_exists('command_context')) {
     /**
      * Returns the command context based on the environment.
      *
      * @return string The command context string.
      */
-    function commandContext(): string
+    function command_context(): string
     {
-        if (inContainer()) {
+        if (in_container()) {
             return r('{command} exec -ti {name} console ', [
                 'command' => @file_exists('/run/.containerenv') ? 'podman' : 'docker',
                 'name' => env('CONTAINER_NAME', 'watchstate'),
@@ -815,19 +819,19 @@ if (!function_exists('commandContext')) {
     }
 }
 
-if (!function_exists('getAppVersion')) {
+if (!function_exists('get_app_version')) {
     /**
      * Get the current version of the application.
      *
      * @return string The application version.
      */
-    function getAppVersion(): string
+    function get_app_version(): string
     {
-        return (string)Config::get('version', 'dev-master');
+        return (string) Config::get('version', 'dev-master');
     }
 }
 
-if (!function_exists('isValidName')) {
+if (!function_exists('is_valid_name')) {
     /**
      * Check if the given name is valid.
      *
@@ -837,13 +841,13 @@ if (!function_exists('isValidName')) {
      *
      * @return bool True if the name is valid, false otherwise.
      */
-    function isValidName(string $name): bool
+    function is_valid_name(string $name): bool
     {
         return 1 === preg_match('/^[a-z_0-9]+$/', $name);
     }
 }
 
-if (!function_exists('formatDuration')) {
+if (!function_exists('format_duration')) {
     /**
      * Format duration in milliseconds to HH:MM:SS format.
      *
@@ -851,7 +855,7 @@ if (!function_exists('formatDuration')) {
      *
      * @return string The formatted duration in HH:MM:SS format.
      */
-    function formatDuration(int|float $milliseconds): string
+    function format_duration(int|float $milliseconds): string
     {
         $seconds = floor($milliseconds / 1000);
         $minutes = floor($seconds / 60);
@@ -875,35 +879,35 @@ if (!function_exists('array_keys_diff')) {
      */
     function array_keys_diff(array $base, array $list, bool $has = true): array
     {
-        return array_filter($base, fn($key) => $has === in_array($key, $list), ARRAY_FILTER_USE_KEY);
+        return array_filter($base, fn($key) => $has === in_array($key, $list, true), ARRAY_FILTER_USE_KEY);
     }
 }
 
-if (!function_exists('getMemoryUsage')) {
+if (!function_exists('get_memory_usage')) {
     /**
      * Get the current memory usage.
      *
      * @return string The memory usage in human-readable format.
      */
-    function getMemoryUsage(): string
+    function get_memory_usage(): string
     {
         return fsize(memory_get_usage() - BASE_MEMORY);
     }
 }
 
-if (!function_exists('getPeakMemoryUsage')) {
+if (!function_exists('get_peak_memory_usage')) {
     /**
      * Get the peak memory usage of the script.
      *
      * @return string The peak memory usage in human-readable format.
      */
-    function getPeakMemoryUsage(): string
+    function get_peak_memory_usage(): string
     {
         return fsize(memory_get_peak_usage() - BASE_PEAK_MEMORY);
     }
 }
 
-if (!function_exists('makeIgnoreId')) {
+if (!function_exists('make_ignore_id')) {
     /**
      * Make ignore id from given URL.
      *
@@ -911,7 +915,7 @@ if (!function_exists('makeIgnoreId')) {
      *
      * @return iUri The modified URI.
      */
-    function makeIgnoreId(string $url): iUri
+    function make_ignore_id(string $url): iUri
     {
         static $filterQuery = null;
 
@@ -923,7 +927,7 @@ if (!function_exists('makeIgnoreId')) {
                 parse_str($query, $list);
 
                 foreach ($list as $key => $val) {
-                    if (empty($val) || false === in_array($key, $allowed)) {
+                    if (empty($val) || false === in_array($key, $allowed, true)) {
                         continue;
                     }
 
@@ -934,12 +938,15 @@ if (!function_exists('makeIgnoreId')) {
             };
         }
 
-        $id = new Uri($url)->withPath('')->withFragment('')->withPort(null);
+        $id = new Uri($url)
+            ->withPath('')
+            ->withFragment('')
+            ->withPort(null);
         return $id->withQuery($filterQuery($id->getQuery()));
     }
 }
 
-if (!function_exists('isIgnoredId')) {
+if (!function_exists('is_ignored_id')) {
     /**
      * Check if an ID is ignored.
      *
@@ -952,7 +959,7 @@ if (!function_exists('isIgnoredId')) {
      * @return bool Returns true if the ID is ignored, false otherwise.
      * @throws InvalidArgumentException Throws an exception if an invalid context type is given.
      */
-    function isIgnoredId(
+    function is_ignored_id(
         UserContext $userContext,
         string $backend,
         string $type,
@@ -963,7 +970,7 @@ if (!function_exists('isIgnoredId')) {
     ): bool {
         static $ignoreList = [];
 
-        if (false === in_array($type, iState::TYPES_LIST)) {
+        if (false === in_array($type, iState::TYPES_LIST, true)) {
             throw new InvalidArgumentException(sprintf('Invalid context type \'%s\' was given.', $type));
         }
 
@@ -973,7 +980,7 @@ if (!function_exists('isIgnoredId')) {
             if (true === file_exists($ignoreFile)) {
                 try {
                     foreach (Yaml::parseFile($ignoreFile) as $key => $val) {
-                        $ignoreList[$userContext->name][(string)makeIgnoreId($key)] = $val;
+                        $ignoreList[$userContext->name][(string) make_ignore_id($key)] = $val;
                     }
                 } catch (Throwable) {
                 }
@@ -982,9 +989,9 @@ if (!function_exists('isIgnoredId')) {
 
         $list = $opts['list'] ?? $ignoreList[$userContext->name];
 
-        $key = makeIgnoreId(sprintf('%s://%s:%s@%s?id=%s', $type, $db, $id, $backend, $backendId));
+        $key = make_ignore_id(sprintf('%s://%s:%s@%s?id=%s', $type, $db, $id, $backend, $backendId));
 
-        if (isset($list[(string)$key->withQuery('')])) {
+        if (isset($list[(string) $key->withQuery('')])) {
             return true;
         }
 
@@ -992,7 +999,7 @@ if (!function_exists('isIgnoredId')) {
             return false;
         }
 
-        return isset($list[(string)$key]);
+        return isset($list[(string) $key]);
     }
 }
 
@@ -1049,22 +1056,26 @@ if (!function_exists('r_array')) {
 
             $context = ag_delete($context, $key);
 
-            if (is_null($val) || is_scalar($val) || (is_object($val) && method_exists($val, '__toString'))) {
+            if (is_null($val) || is_scalar($val) || $val instanceof Stringable) {
                 $replacements[$placeholder] = $val;
             } elseif ($val instanceof DateTimeInterface) {
-                $replacements[$placeholder] = (string)$val;
+                $replacements[$placeholder] = (string) $val;
             } elseif ($val instanceof UnitEnum) {
                 $replacements[$placeholder] = $val instanceof BackedEnum ? $val->value : $val->name;
             } elseif (is_object($val)) {
-                $replacements[$placeholder] = $logBehavior ? '[object ' . Utils::getClass($val) . ']' : implode(
-                    ',',
-                    get_object_vars($val)
-                );
+                $replacements[$placeholder] = $logBehavior
+                    ? '[object ' . Utils::getClass($val) . ']'
+                    : implode(
+                        ',',
+                        get_object_vars($val),
+                    );
             } elseif (is_array($val)) {
-                $replacements[$placeholder] = $logBehavior ? 'array' . Utils::jsonEncode($val, null, true) : implode(
-                    ',',
-                    $val
-                );
+                $replacements[$placeholder] = $logBehavior
+                    ? 'array' . Utils::jsonEncode($val, null, true)
+                    : implode(
+                        ',',
+                        $val,
+                    );
             } else {
                 $replacements[$placeholder] = '[' . gettype($val) . ']';
             }
@@ -1072,12 +1083,12 @@ if (!function_exists('r_array')) {
 
         return [
             'message' => strtr($text, $replacements),
-            'context' => $context
+            'context' => $context,
         ];
     }
 }
 
-if (!function_exists('generateRoutes')) {
+if (!function_exists('generate_routes')) {
     /**
      * Generate routes based on the available commands.
      *
@@ -1085,7 +1096,7 @@ if (!function_exists('generateRoutes')) {
      *
      * @return array The generated routes.
      */
-    function generateRoutes(string $type = 'cli', array $opts = []): array
+    function generate_routes(string $type = 'cli', array $opts = []): array
     {
         $cache = $opts[iCache::class] ?? Container::get(iCache::class);
 
@@ -1142,7 +1153,7 @@ if (!function_exists('generateRoutes')) {
     }
 }
 
-if (!function_exists('getClientIp')) {
+if (!function_exists('get_client_ip')) {
     /**
      * Get the client IP address.
      *
@@ -1150,19 +1161,19 @@ if (!function_exists('getClientIp')) {
      *
      * @return string The client IP address.
      */
-    function getClientIp(?iRequest $request = null): string
+    function get_client_ip(?iRequest $request = null): string
     {
         $params = $request?->getServerParams() ?? $_SERVER;
 
-        $realIp = (string)ag($params, 'REMOTE_ADDR', '0.0.0.0');
+        $realIp = (string) ag($params, 'REMOTE_ADDR', '0.0.0.0');
 
-        if (false === (bool)Config::get('trust.proxy', false)) {
+        if (false === (bool) Config::get('trust.proxy', false)) {
             return $realIp;
         }
 
         $forwardIp = ag(
             $params,
-            'HTTP_' . strtoupper(trim(str_replace('-', '_', Config::get('trust.header', 'X-Forwarded-For'))))
+            'HTTP_' . strtoupper(trim(str_replace('-', '_', Config::get('trust.header', 'X-Forwarded-For')))),
         );
 
         if ($forwardIp === $realIp || empty($forwardIp)) {
@@ -1183,15 +1194,15 @@ if (!function_exists('getClientIp')) {
     }
 }
 
-if (!function_exists('inContainer')) {
+if (!function_exists('in_container')) {
     /**
      * Check if the code is running within a container.
      *
      * @return bool True if the code is running within a container, false otherwise.
      */
-    function inContainer(): bool
+    function in_container(): bool
     {
-        if (true === (bool)env('IN_CONTAINER')) {
+        if (true === (bool) env('IN_CONTAINER')) {
             return true;
         }
 
@@ -1203,7 +1214,7 @@ if (!function_exists('inContainer')) {
     }
 }
 
-if (!function_exists('isValidURL')) {
+if (!function_exists('is_valid_url')) {
     /**
      * Validate URL per RFC3987 (IRI)
      *
@@ -1213,24 +1224,24 @@ if (!function_exists('isValidURL')) {
      * @SuppressWarnings
      * @noinspection all
      */
-    function isValidURL(string $url): bool
+    function is_valid_url(string $url): bool
     {
         // RFC 3987 For absolute IRIs (internationalized):
         /** @noinspection all */
-        return (bool)@preg_match(
+        return (bool) @preg_match(
             '/^[a-z](?:[-a-z0-9\+\.])*:(?:\/\/(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:])*@)?(?:\[(?:(?:(?:[0-9a-f]{1,4}:){6}(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3})|::(?:[0-9a-f]{1,4}:){5}(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3})|(?:[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){4}(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3})|(?:[0-9a-f]{1,4}:[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){3}(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3})|(?:(?:[0-9a-f]{1,4}:){0,2}[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){2}(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3})|(?:(?:[0-9a-f]{1,4}:){0,3}[0-9a-f]{1,4})?::[0-9a-f]{1,4}:(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3})|(?:(?:[0-9a-f]{1,4}:){0,4}[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3})|(?:(?:[0-9a-f]{1,4}:){0,5}[0-9a-f]{1,4})?::[0-9a-f]{1,4}|(?:(?:[0-9a-f]{1,4}:){0,6}[0-9a-f]{1,4})?::)|v[0-9a-f]+[-a-z0-9\._~!\$&\'\(\)\*\+,;=:]+)\]|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3}|(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=@])*)(?::[0-9]*)?(?:\/(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@]))*)*|\/(?:(?:(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@]))+)(?:\/(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@]))*)*)?|(?:(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@]))+)(?:\/(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@]))*)*|(?!(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@])))(?:\?(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@])|[\x{E000}-\x{F8FF}\x{F0000}-\x{FFFFD}|\x{100000}-\x{10FFFD}\/\?])*)?(?:\#(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@])|[\/\?])*)?$/iu',
-            $url
+            $url,
         );
     }
 }
 
-if (!function_exists('getSystemMemoryInfo')) {
+if (!function_exists('get_system_memory_info')) {
     /**
      * Get system memory information.
      *
      * @return array{ MemTotal: float, MemFree: float, MemAvailable: float, SwapTotal: float, SwapFree: float }
      */
-    function getSystemMemoryInfo(string $memFile = '/proc/meminfo'): array
+    function get_system_memory_info(string $memFile = '/proc/meminfo'): array
     {
         $keys = [
             'MemTotal' => 'mem_total',
@@ -1264,7 +1275,7 @@ if (!function_exists('getSystemMemoryInfo')) {
 
             $val = trim(str_ireplace(' kB', '', $line[1]));
 
-            $value = 1000 * (float)$val;
+            $value = 1000 * (float) $val;
 
             $result[$keys[$key]] = $value;
         }
@@ -1273,7 +1284,7 @@ if (!function_exists('getSystemMemoryInfo')) {
     }
 }
 
-if (!function_exists('parseConfigValue')) {
+if (!function_exists('parse_config_value')) {
     /**
      * Parse a configuration value.
      *
@@ -1282,7 +1293,7 @@ if (!function_exists('parseConfigValue')) {
      *
      * @return mixed The parsed value.
      */
-    function parseConfigValue(mixed $value, Closure|null $callback = null): mixed
+    function parse_config_value(mixed $value, ?Closure $callback = null): mixed
     {
         if (is_string($value) && preg_match('#%{(.+?)}#s', $value)) {
             $val = preg_replace_callback('#%{(.+?)}#s', fn($match) => Config::get($match[1], $match[1]), $value);
@@ -1293,8 +1304,8 @@ if (!function_exists('parseConfigValue')) {
     }
 }
 
-if (!function_exists('addCors')) {
-    function addCors(iResponse $response, array $headers = [], array $methods = []): iResponse
+if (!function_exists('add_cors')) {
+    function add_cors(iResponse $response, array $headers = [], array $methods = []): iResponse
     {
         $headers += [
             'Access-Control-Max-Age' => 600,
@@ -1318,7 +1329,7 @@ if (!function_exists('addCors')) {
     }
 }
 
-if (!function_exists('deepArrayMerge')) {
+if (!function_exists('deep_array_merge')) {
     /**
      * Recursively merge arrays.
      *
@@ -1327,7 +1338,7 @@ if (!function_exists('deepArrayMerge')) {
      *
      * @return array The merged array.
      */
-    function deepArrayMerge(array $arrays, bool $preserve_integer_keys = false): array
+    function deep_array_merge(array $arrays, bool $preserve_integer_keys = false): array
     {
         $result = [];
         foreach ($arrays as $array) {
@@ -1339,7 +1350,7 @@ if (!function_exists('deepArrayMerge')) {
                     $result[] = $value;
                 } // Recurse when both values are arrays.
                 elseif (isset($result[$key]) && is_array($result[$key]) && is_array($value)) {
-                    $result[$key] = deepArrayMerge([$result[$key], $value], $preserve_integer_keys);
+                    $result[$key] = deep_array_merge([$result[$key], $value], $preserve_integer_keys);
                 } // Otherwise, use the latter value, overriding any previous value.
                 else {
                     $result[$key] = $value;
@@ -1349,7 +1360,6 @@ if (!function_exists('deepArrayMerge')) {
         return $result;
     }
 }
-
 
 if (!function_exists('send_requests')) {
     /**
@@ -1365,8 +1375,8 @@ if (!function_exists('send_requests')) {
         array $requests,
         iHttp $client,
         bool $sync = false,
-        iLogger|null $logger = null,
-        array $opts = []
+        ?iLogger $logger = null,
+        array $opts = [],
     ): void {
         try {
             if (true === $sync) {
@@ -1384,7 +1394,7 @@ if (!function_exists('send_requests')) {
                         $logger?->info("Request '{position}/{total}' completed in '{s}'s.", [
                             'position' => $i,
                             'total' => $total,
-                            's' => round(microtime(true) - $start, 3)
+                            's' => round(microtime(true) - $start, 3),
                         ]);
                     }
                 }
@@ -1397,7 +1407,7 @@ if (!function_exists('send_requests')) {
             foreach ($requests as $request) {
                 $r = $request->toRequest();
                 $r['options'] = array_replace_recursive($r['options'], [
-                    'user_data' => ['ok' => $request->success, 'error' => $request->error]
+                    'user_data' => ['ok' => $request->success, 'error' => $request->error],
                 ]);
 
                 $queue[] = ($request->extras[iHttp::class] ?? $client)->request(...$r);
@@ -1417,7 +1427,7 @@ if (!function_exists('send_requests')) {
 
                 $queue[$_key] = null;
 
-                if (0 === $i % 50) {
+                if (0 === ($i % 50)) {
                     $i = 0;
                     gc_collect_cycles();
                 }

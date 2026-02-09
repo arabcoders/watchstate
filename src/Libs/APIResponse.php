@@ -18,9 +18,8 @@ final readonly class APIResponse
         public Status $status,
         public array $headers = [],
         public array $body = [],
-        public iStream|null $stream = null
-    ) {
-    }
+        public ?iStream $stream = null,
+    ) {}
 
     /**
      * Check if the response has a stream.

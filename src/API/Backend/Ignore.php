@@ -25,8 +25,10 @@ final class Ignore
 
     private ConfigFile $file;
 
-    public function __construct(private readonly iImport $mapper, private readonly iLogger $logger)
-    {
+    public function __construct(
+        private readonly iImport $mapper,
+        private readonly iLogger $logger,
+    ) {
         $this->file = new ConfigFile(Config::get('path') . '/config/ignore.yaml', type: 'yaml', autoCreate: true);
     }
 
@@ -58,16 +60,16 @@ final class Ignore
                 continue;
             }
 
-            $rule = makeIgnoreId($guid);
+            $rule = make_ignore_id($guid);
 
             $list[] = [
-                'rule' => (string)$rule,
+                'rule' => (string) $rule,
                 'type' => ucfirst($type),
                 'backend' => $backend,
                 'db' => $db,
                 'id' => $id,
                 'scoped' => null === $scope ? 'No' : 'Yes',
-                'created' => makeDate($date),
+                'created' => make_date($date),
             ];
         }
 
@@ -94,7 +96,7 @@ final class Ignore
         }
 
         try {
-            checkIgnoreRule($rule, userContext: $userContext);
+            check_ignore_rule($rule, userContext: $userContext);
         } catch (Throwable $e) {
             return api_error($e->getMessage(), Status::BAD_REQUEST);
         }
@@ -132,9 +134,11 @@ final class Ignore
             ];
 
             foreach ($partial as $k => $v) {
-                if (empty($v)) {
-                    return api_error(r('No {key} was given.', ['key' => $k]), Status::BAD_REQUEST);
+                if (!empty($v)) {
+                    continue;
                 }
+
+                return api_error(r('No {key} was given.', ['key' => $k]), Status::BAD_REQUEST);
             }
 
             $partial['type'] = strtolower($partial['type']);
@@ -147,21 +151,21 @@ final class Ignore
         }
 
         try {
-            checkIgnoreRule($rule, userContext: $userContext);
-            $id = makeIgnoreId($rule);
+            check_ignore_rule($rule, userContext: $userContext);
+            $id = make_ignore_id($rule);
         } catch (Throwable $e) {
             return api_error($e->getMessage(), Status::BAD_REQUEST);
         }
 
-        if (true === $this->file->has((string)$id)) {
+        if (true === $this->file->has((string) $id)) {
             return api_error('Rule already exists.', Status::CONFLICT);
         }
 
-        if (true === $this->file->has((string)$id->withQuery(''))) {
+        if (true === $this->file->has((string) $id->withQuery(''))) {
             return api_error('Global rule already exists.', Status::CONFLICT);
         }
 
-        $this->file->set((string)$id, time())->persist();
+        $this->file->set((string) $id, time())->persist();
         return api_response(Status::CREATED);
     }
 }

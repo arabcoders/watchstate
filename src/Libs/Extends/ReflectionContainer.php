@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Libs\Extends;
 
 use App\Libs\Attributes\DI\Inject;
-use League\Container\Argument\{ArgumentInterface,
-    ArgumentResolverInterface,
-    DefaultValueArgument,
-    DefaultValueInterface,
-    LiteralArgument,
-    LiteralArgumentInterface,
-    ResolvableArgument};
+use League\Container\Argument\ArgumentInterface;
+use League\Container\Argument\ArgumentResolverInterface;
+use League\Container\Argument\DefaultValueArgument;
+use League\Container\Argument\DefaultValueInterface;
+use League\Container\Argument\LiteralArgument;
+use League\Container\Argument\LiteralArgumentInterface;
+use League\Container\Argument\ResolvableArgument;
 use League\Container\ContainerAwareTrait;
 use League\Container\Exception\ContainerException;
 use League\Container\Exception\NotFoundException;
@@ -33,9 +33,9 @@ class ReflectionContainer implements ArgumentResolverInterface, ContainerInterfa
      */
     protected array $cache = [];
 
-    public function __construct(protected bool $cacheResolutions = false)
-    {
-    }
+    public function __construct(
+        protected bool $cacheResolutions = false,
+    ) {}
 
     /**
      * @param $id
@@ -54,8 +54,8 @@ class ReflectionContainer implements ArgumentResolverInterface, ContainerInterfa
         if (!$this->has($id)) {
             throw new NotFoundException(
                 r("Alias '{class}' is not an existing class and therefore cannot be resolved.", [
-                    'class' => $id
-                ])
+                    'class' => $id,
+                ]),
             );
         }
 
@@ -65,8 +65,8 @@ class ReflectionContainer implements ArgumentResolverInterface, ContainerInterfa
         if ($construct && !$construct->isPublic()) {
             throw new NotFoundException(
                 r("Alias '{class}' has a non-public constructor and therefore cannot be instantiated.", [
-                    'class' => $id
-                ])
+                    'class' => $id,
+                ]),
             );
         }
 
@@ -204,7 +204,7 @@ class ReflectionContainer implements ArgumentResolverInterface, ContainerInterfa
             $attributes = $param->getAttributes(Inject::class);
             if (count($attributes) > 0) {
                 $injector = $attributes[0]->newInstance();
-                assert($injector instanceof Inject);
+                assert($injector instanceof Inject, 'Expected Inject attribute instance.');
                 if (array_key_exists($injector->name, $args)) {
                     $arguments[] = new LiteralArgument($args[$injector->name]);
                     continue;

@@ -38,9 +38,9 @@ trait APITraits
      * @return iClient The backend client instance.
      * @throws RuntimeException If no backend with the specified name is found.
      */
-    protected function getClient(string $name, array $config = [], UserContext|null $userContext = null): iClient
+    protected function getClient(string $name, array $config = [], ?UserContext $userContext = null): iClient
     {
-        $configFile = $userContext?->config ?? ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
+        $configFile = $userContext->config ?? ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
 
         if (null === $configFile->get("{$name}.type", null)) {
             throw new RuntimeException(r("Backend '{backend}' doesn't exists.", ['backend' => $name]), 1000);
@@ -52,11 +52,11 @@ trait APITraits
 
         if (null !== $userContext) {
             $opts[BackendCache::class] = Container::get(BackendCache::class)->with(
-                adapter: $userContext->cache
+                adapter: $userContext->cache,
             );
         }
 
-        return makeBackend(array_replace_recursive($default, $config), $name, options: $opts);
+        return make_backend(array_replace_recursive($default, $config), $name, options: $opts);
     }
 
     /**
@@ -67,26 +67,26 @@ trait APITraits
      *
      * @return array The list of backends.
      */
-    protected function getBackends(string|null $name = null, UserContext|null $userContext = null): array
+    protected function getBackends(?string $name = null, ?UserContext $userContext = null): array
     {
         $backends = [];
 
-        $list = $userContext?->config ?? ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
+        $list = $userContext->config ?? ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
 
         foreach ($list->getAll() as $backendName => $backend) {
             $backend = ['name' => $backendName, ...$backend];
 
             if (null !== ($import = ag($backend, 'import.lastSync'))) {
-                $backend = ag_set($backend, 'import.lastSync', $import ? makeDate($import) : null);
+                $backend = ag_set($backend, 'import.lastSync', $import ? make_date($import) : null);
             }
 
             if (null !== ($export = ag($backend, 'export.lastSync'))) {
-                $backend = ag_set($backend, 'export.lastSync', $export ? makeDate($export) : null);
+                $backend = ag_set($backend, 'export.lastSync', $export ? make_date($export) : null);
             }
 
-            $webhookUrl = parseConfigValue(WebhookURL::URL);
+            $webhookUrl = parse_config_value(WebhookURL::URL);
 
-            if (true === (bool)Config::get('api.secure')) {
+            if (true === (bool) Config::get('api.secure')) {
                 $webhookUrl .= '?apikey=' . Config::get('api.key');
             }
 
@@ -102,13 +102,13 @@ trait APITraits
         }
 
         if (null !== $name) {
-            return array_filter($backends, fn($backend) => $backend['name'] === $name);
+            return array_filter($backends, static fn($backend) => $backend['name'] === $name);
         }
 
         return $backends;
     }
 
-    protected function getBackend(string $name, UserContext|null $userContext = null): array|null
+    protected function getBackend(string $name, ?UserContext $userContext = null): ?array
     {
         $backends = $this->getBackends($name, userContext: $userContext);
         return count($backends) > 0 ? array_pop($backends) : null;
@@ -128,7 +128,7 @@ trait APITraits
         if (null === ($class = Config::get("supported.{$type}", null))) {
             throw new InvalidArgumentException(
                 r("Unexpected client type '{type}' was given.", ['type' => $type]),
-                2000
+                2000,
             );
         }
 
@@ -151,11 +151,11 @@ trait APITraits
         }
 
         if (null !== $data->get('options.' . Options::IS_LIMITED_TOKEN)) {
-            $options[Options::IS_LIMITED_TOKEN] = (bool)$data->get('options.' . Options::IS_LIMITED_TOKEN, false);
+            $options[Options::IS_LIMITED_TOKEN] = (bool) $data->get('options.' . Options::IS_LIMITED_TOKEN, false);
         }
 
         if (null !== $data->get('options.' . Options::PLEX_GUEST_USER)) {
-            $options[Options::PLEX_GUEST_USER] = (bool)$data->get('options.' . Options::PLEX_GUEST_USER, false);
+            $options[Options::PLEX_GUEST_USER] = (bool) $data->get('options.' . Options::PLEX_GUEST_USER, false);
         }
 
         $instance = Container::getNew($class);
@@ -174,7 +174,7 @@ trait APITraits
                 backendHeaders: [],
                 trace: false,
                 options: $options,
-            )
+            ),
         );
     }
 
@@ -192,7 +192,7 @@ trait APITraits
         string $backend,
         string $type,
         string|int $id,
-        UserContext|null $userContext = null
+        ?UserContext $userContext = null,
     ): iUri {
         static $clients = [];
 
@@ -216,7 +216,7 @@ trait APITraits
     protected function formatEntity(
         iState|array $entity,
         bool $includeContext = false,
-        UserContext|null $userContext = null,
+        ?UserContext $userContext = null,
         array $opts = [],
     ): array {
         if (true === is_array($entity)) {
@@ -227,7 +227,7 @@ trait APITraits
             $this->_backendsNames = array_column($this->getBackends(userContext: $userContext), 'name');
         }
 
-        assert($entity instanceof StateEntity);
+        assert($entity instanceof StateEntity, 'Expected StateEntity when serializing API response.');
 
         $item = $entity->getAll();
 
@@ -238,12 +238,12 @@ trait APITraits
         $item['content_path'] = ag($entity->getMetadata($entity->via), iState::COLUMN_META_PATH);
         $item['content_overview'] = ag(
             $entity->getMetadata($entity->via),
-            iState::COLUMN_EXTRA . '.' . iState::COLUMN_META_DATA_EXTRA_OVERVIEW
+            iState::COLUMN_EXTRA . '.' . iState::COLUMN_META_DATA_EXTRA_OVERVIEW,
         );
 
         $item['content_genres'] = ag(
             $entity->getMetadata($entity->via),
-            iState::COLUMN_EXTRA . '.' . iState::COLUMN_META_DATA_EXTRA_GENRES
+            iState::COLUMN_EXTRA . '.' . iState::COLUMN_META_DATA_EXTRA_GENRES,
         );
 
         $item['rguids'] = [];
@@ -257,25 +257,28 @@ trait APITraits
 
         if (!empty($item[iState::COLUMN_META_DATA])) {
             foreach ($item[iState::COLUMN_META_DATA] as $key => &$metadata) {
-                $metadata['webUrl'] = (string)$this->getBackendItemWebUrl(
+                $metadata['webUrl'] = (string) $this->getBackendItemWebUrl(
                     backend: $key,
                     type: ag($metadata, iState::COLUMN_TYPE),
                     id: ag($metadata, iState::COLUMN_ID),
-                    userContext: $userContext
+                    userContext: $userContext,
                 );
                 $item['reported_by'][] = $key;
             }
         }
 
-        $item['webUrl'] = (string)$this->getBackendItemWebUrl(
+        $item['webUrl'] = (string) $this->getBackendItemWebUrl(
             backend: $entity->via,
             type: $entity->type,
             id: ag($entity->getMetadata($entity->via), iState::COLUMN_ID, 0),
-            userContext: $userContext
+            userContext: $userContext,
         );
 
         $item['not_reported_by'] = array_values(
-            array_filter($this->_backendsNames, fn($key) => false === in_array($key, ag($item, 'reported_by', [])))
+            array_filter(
+                $this->_backendsNames,
+                static fn($key) => false === in_array($key, ag($item, 'reported_by', []), true),
+            ),
         );
 
         $item['isTainted'] = $entity->isTainted();
@@ -301,6 +304,6 @@ trait APITraits
             $user = ag($request->getQueryParams(), 'user', 'main');
         }
 
-        return getUserContext($user, $mapper, $logger);
+        return get_user_context($user, $mapper, $logger);
     }
 }

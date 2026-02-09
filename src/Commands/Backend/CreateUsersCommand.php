@@ -32,7 +32,7 @@ class CreateUsersCommand extends Command
 {
     public const string ROUTE = 'backend:create';
 
-    private static iLogger|null $logger = null;
+    private static ?iLogger $logger = null;
 
     public function __construct(iLogger $logger)
     {
@@ -47,13 +47,14 @@ class CreateUsersCommand extends Command
      */
     protected function configure(): void
     {
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
             ->addOption(
                 're-create',
                 'r',
                 InputOption::VALUE_NONE,
-                'Delete current users configuration files and re-create them.'
+                'Delete current users configuration files and re-create them.',
             )
             ->addOption('regenerate-tokens', 'g', InputOption::VALUE_NONE, 'Generate new tokens for PLEX users.')
             ->addOption('run', null, InputOption::VALUE_NONE, 'Allow creating the users even if data already exists.')
@@ -62,86 +63,86 @@ class CreateUsersCommand extends Command
                 'generate-backup',
                 'B',
                 InputOption::VALUE_NONE,
-                'Generate initial backups for the remote user data.'
+                'Generate initial backups for the remote user data.',
             )
             ->addOption(
                 'update',
                 'u',
                 InputOption::VALUE_NONE,
-                'Override sub users configuration based on main user configuration.'
+                'Override sub users configuration based on main user configuration.',
             )
             ->addOption(
                 'allow-single-backend-users',
                 null,
                 InputOption::VALUE_NONE,
-                'Create sub-users from a single backend (only works when exactly 1 backend is configured).'
+                'Create sub-users from a single backend (only works when exactly 1 backend is configured).',
             )
             ->setDescription('Generate per user configuration, based on the main user data.')
             ->setHelp(
                 r(
                     <<<HELP
 
-                    This command create per user configuration files based on the main user backends configuration.
+                        This command create per user configuration files based on the main user backends configuration.
 
-                    ------------------
-                    <notice>[ Important info ]</notice>
-                    ------------------
+                        ------------------
+                        <notice>[ Important info ]</notice>
+                        ------------------
 
-                    You must have already configured your main user backends with admin access this means:
-                        * For plex: you have admin token
-                        * For jellyfin/emby: you have an APIKEY.
+                        You must have already configured your main user backends with admin access this means:
+                            * For plex: you have admin token
+                            * For jellyfin/emby: you have an APIKEY.
 
-                    -------
-                    <notice>[ FAQ ]</notice>
-                    -------
+                        -------
+                        <notice>[ FAQ ]</notice>
+                        -------
 
-                    <question># How to map users?</question>
+                        <question># How to map users?</question>
 
-                    Mapping is done automatically based on the username, however, if your users have different usernames
-                    on each backend, you can create <value>{path}/config/mapper.yaml</value> file with the following format:
+                        Mapping is done automatically based on the username, however, if your users have different usernames
+                        on each backend, you can create <value>{path}/config/mapper.yaml</value> file with the following format:
 
-                    version: "1.6"
-                    map:
-                        # first user
-                        -
-                          my_plex_server:
-                            name: "mike_jones"
-                          my_jellyfin_server:
-                            name: "jones_mike"
-                            options: { }
-                          my_emby_server:
-                            name: "mikeJones"
-                            replace_with: "mike_jones"
-                        # second user
-                        -
-                          my_emby_server:
-                            name: "jiji_jones"
-                            options: { }
-                          my_plex_server:
-                            name: "jones_jiji"
-                          my_jellyfin_server:
-                            name: "jijiJones"
-                            replace_with: "jiji_jones"
+                        version: "1.6"
+                        map:
+                            # first user
+                            -
+                              my_plex_server:
+                                name: "mike_jones"
+                              my_jellyfin_server:
+                                name: "jones_mike"
+                                options: { }
+                              my_emby_server:
+                                name: "mikeJones"
+                                replace_with: "mike_jones"
+                            # second user
+                            -
+                              my_emby_server:
+                                name: "jiji_jones"
+                                options: { }
+                              my_plex_server:
+                                name: "jones_jiji"
+                              my_jellyfin_server:
+                                name: "jijiJones"
+                                replace_with: "jiji_jones"
 
-                    <question># How to regenerate tokens?</question>
+                        <question># How to regenerate tokens?</question>
 
-                    If you want to regenerate tokens for PLEX users, you can use the <flag>--regenerate-tokens</flag> option.
+                        If you want to regenerate tokens for PLEX users, you can use the <flag>--regenerate-tokens</flag> option.
 
-                    <question># How to update user configuration?</question>
+                        <question># How to update user configuration?</question>
 
-                    If you want to update the user configuration based on the main user configuration, you can use the <flag>--update</flag> option.
+                        If you want to update the user configuration based on the main user configuration, you can use the <flag>--update</flag> option.
 
-                    <question># Do I need to map the main user?</question>
+                        <question># Do I need to map the main user?</question>
 
-                    No, There is no need, as the main user is already configured.
+                        No, There is no need, as the main user is already configured.
 
-                    HELP,
+                        HELP,
                     [
-                        'cmd' => trim(commandContext()),
+                        'cmd' => trim(command_context()),
                         'route' => self::ROUTE,
                         'path' => Config::get('path'),
-                    ]
-                )
+                    ],
+                ),
             );
     }
 
@@ -152,10 +153,10 @@ class CreateUsersCommand extends Command
         }
 
         self::$logger?->notice("SYSTEM: Deleting users directory '{path}' contents.", [
-            'path' => $path
+            'path' => $path,
         ]);
 
-        deletePath(path: $path, logger: self::$logger, dryRun: $dryRun);
+        delete_path(path: $path, logger: self::$logger, dryRun: $dryRun);
     }
 
     /**
@@ -184,7 +185,7 @@ class CreateUsersCommand extends Command
                 continue;
             }
 
-            if (null === ($url = ag($backend, 'url')) || false === isValidURL($url)) {
+            if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {
                 self::$logger?->error("SYSTEM: Ignoring '{backend}'. Invalid url '{url}'.", [
                     'url' => $url ?? 'None',
                     'backend' => $backendName,
@@ -193,8 +194,7 @@ class CreateUsersCommand extends Command
             }
 
             $backend['name'] = $backendName;
-            $backend['class'] = makeBackend($backend, $backendName);
-
+            $backend['class'] = make_backend($backend, $backendName);
 
             if (null !== self::$logger) {
                 $backend['class']->setLogger(self::$logger);
@@ -228,15 +228,15 @@ class CreateUsersCommand extends Command
         }
 
         if (false === $map->has('version')) {
-            self::$logger?->warning("SYSTEM: Starting with mapper.yaml v1.5, the version key is required.");
+            self::$logger?->warning('SYSTEM: Starting with mapper.yaml v1.5, the version key is required.');
         }
 
         if (false === $map->has('map')) {
-            self::$logger?->warning("SYSTEM: Please upgrade your mapper.yaml file to v1.5 format spec.");
+            self::$logger?->warning('SYSTEM: Please upgrade your mapper.yaml file to v1.5 format spec.');
         }
 
-        self::$logger?->info("SYSTEM: Mapper file found, using it to map users.", [
-            'map' => arrayToString($mapping)
+        self::$logger?->info('SYSTEM: Mapper file found, using it to map users.', [
+            'map' => array_to_string($mapping),
         ]);
 
         return $mapping;
@@ -287,10 +287,10 @@ class CreateUsersCommand extends Command
         foreach ($backends as $backend) {
             /** @var iClient $client */
             $client = ag($backend, 'class');
-            assert($backend instanceof iClient);
+            assert($backend instanceof iClient, 'Expected backend client instance.');
 
             self::$logger?->info("SYSTEM: Getting users from '{backend}'.", [
-                'backend' => $client->getContext()->backendName
+                'backend' => $client->getContext()->backendName,
             ]);
 
             try {
@@ -301,11 +301,11 @@ class CreateUsersCommand extends Command
                     $backedName = ag($backend, 'name');
 
                     $user['real_name'] = ag($user, 'name');
-                    $user['protected'] = (bool)ag($user, 'protected', false);
+                    $user['protected'] = (bool) ag($user, 'protected', false);
 
                     // -- this was source of lots of bugs and confusion for users,
                     // -- we decided to normalize the user-names early in the process.
-                    $user['name'] = normalizeName((string)ag($user, 'name'), self::$logger, [
+                    $user['name'] = normalize_name((string) ag($user, 'name'), self::$logger, [
                         'log_message' => "Normalized '{backend}: {name}' to '{backend}: {new_name}'",
                         'context' => ['backend' => $backedName],
                     ]);
@@ -315,10 +315,10 @@ class CreateUsersCommand extends Command
                     }
 
                     // -- If normalization fails, ignore the user.
-                    if (false === isValidName($user['name'])) {
+                    if (false === is_valid_name($user['name'])) {
                         self::$logger?->error(
                             message: "SYSTEM: Invalid user name '{backend}: {name}'. User names must be in [a-z_0-9] format. Skipping user.",
-                            context: ['name' => $user['name'], 'backend' => $backedName]
+                            context: ['name' => $user['name'], 'backend' => $backedName],
                         );
                         continue;
                     }
@@ -329,15 +329,15 @@ class CreateUsersCommand extends Command
                     // -- The display name is used to create user directory.
                     $info['displayName'] = $user['name'];
 
-                    $info['backendName'] = normalizeName(r("{backend}_{user}", [
+                    $info['backendName'] = normalize_name(r('{backend}_{user}', [
                         'backend' => $backedName,
-                        'user' => $user['name']
+                        'user' => $user['name'],
                     ]), self::$logger);
 
-                    if (false === isValidName($info['backendName'])) {
+                    if (false === is_valid_name($info['backendName'])) {
                         self::$logger?->error(
                             message: "SYSTEM: Invalid backend name '{name}'. Backend name must be in [a-z_0-9] format. skipping the associated users.",
-                            context: ['name' => $info['backendName']]
+                            context: ['name' => $info['backendName']],
                         );
                         continue;
                     }
@@ -345,19 +345,20 @@ class CreateUsersCommand extends Command
                     $info = ag_delete($info, 'options.' . Options::PLEX_USER_PIN);
                     $info = ag_sets($info, [
                         'options.' . Options::ALT_NAME => ag($backend, 'name'),
-                        'options.' . Options::ALT_ID => ag($backend, 'user')
+                        'options.' . Options::ALT_ID => ag($backend, 'user'),
                     ]);
 
                     // -- Of course, Plex has to be special.
                     if (PlexClient::CLIENT_NAME === ucfirst(ag($backend, 'type'))) {
                         $info = ag_sets($info, [
+                            // @mago-expect lint:no-literal-password
                             'token' => 'reuse_or_generate_token',
                             'options.' . Options::PLEX_USER_NAME => ag($user, 'name'),
                             'options.' . Options::PLEX_USER_UUID => ag($user, 'uuid'),
                             'options.' . Options::ADMIN_TOKEN => ag(
                                 array: $backend,
-                                path: ['options.' . Options::ADMIN_TOKEN, 'token']
-                            )
+                                path: ['options.' . Options::ADMIN_TOKEN, 'token'],
+                            ),
                         ]);
 
                         if (null !== ($adminUserPIN = ag($user, 'options.' . Options::PLEX_USER_PIN))) {
@@ -368,7 +369,7 @@ class CreateUsersCommand extends Command
                             $info = ag_set($info, 'options.' . Options::PLEX_USER_PIN, $userPin);
                         }
 
-                        if (true === (bool)ag($user, 'guest', false)) {
+                        if (true === (bool) ag($user, 'guest', false)) {
                             $info = ag_set($info, 'options.' . Options::PLEX_EXTERNAL_USER, true);
                         }
                     }
@@ -395,7 +396,7 @@ class CreateUsersCommand extends Command
                             'kind' => get_class($e),
                             'message' => $e->getMessage(),
                         ],
-                    ]
+                    ],
                 );
             }
         }
@@ -414,42 +415,44 @@ class CreateUsersCommand extends Command
      */
     public static function create_user(iInput $input, array $users): void
     {
-        $dryRun = (bool)$input->getOption('dry-run');
-        $updateUsers = (bool)$input->getOption('update');
-        $regenerateTokens = (bool)$input->getOption('regenerate-tokens');
-        $generateBackups = (bool)$input->getOption('generate-backup');
-        $isReCreate = (bool)$input->getOption('re-create');
+        $dryRun = (bool) $input->getOption('dry-run');
+        $updateUsers = (bool) $input->getOption('update');
+        $regenerateTokens = (bool) $input->getOption('regenerate-tokens');
+        $generateBackups = (bool) $input->getOption('generate-backup');
+        $isReCreate = (bool) $input->getOption('re-create');
 
         $removedKeys = ag(include __DIR__ . '/../../../config/removed.keys.php', 'backend', []);
 
         foreach ($users as $user) {
             // -- User subdirectory name.
-            $userName = normalizeName(ag($user, 'name', 'unknown'), self::$logger);
+            $userName = normalize_name(ag($user, 'name', 'unknown'), self::$logger);
 
-            if (false === isValidName($userName)) {
+            if (false === is_valid_name($userName)) {
                 self::$logger?->error(
                     message: "SYSTEM: Invalid username '{user}'. User names must be in [a-z_0-9] format. skipping user.",
-                    context: ['user' => $userName]
+                    context: ['user' => $userName],
                 );
                 continue;
             }
 
-            $subUserPath = r(fixPath(Config::get('path') . '/users/{user}'), ['user' => $userName]);
+            $subUserPath = r(fix_path(Config::get('path') . '/users/{user}'), ['user' => $userName]);
 
             self::$logger?->info(
                 false === is_dir(
-                    $subUserPath
-                ) ? "SYSTEM: Creating '{user}' directory '{path}'." : "SYSTEM: '{user}' directory '{path}' already exists.",
+                    $subUserPath,
+                )
+                    ? "SYSTEM: Creating '{user}' directory '{path}'."
+                    : "SYSTEM: '{user}' directory '{path}' already exists.",
                 [
                     'user' => $userName,
                     'path' => $subUserPath,
-                ]
+                ],
             );
 
-            if (false === $dryRun && false === is_dir($subUserPath) && false === mkdir($subUserPath, 0755, true)) {
+            if (false === $dryRun && false === is_dir($subUserPath) && false === mkdir($subUserPath, 0o755, true)) {
                 self::$logger?->error("SYSTEM: Failed to create '{user}' directory '{path}'.", [
                     'user' => $userName,
-                    'path' => $subUserPath
+                    'path' => $subUserPath,
                 ]);
                 continue;
             }
@@ -457,20 +460,22 @@ class CreateUsersCommand extends Command
             $config_file = "{$subUserPath}/servers.yaml";
             self::$logger?->notice(
                 file_exists(
-                    $config_file
-                ) ? "SYSTEM: '{user}' configuration file '{file}' already exists." : "SYSTEM: Creating '{user}' configuration file '{file}'.",
+                    $config_file,
+                )
+                    ? "SYSTEM: '{user}' configuration file '{file}' already exists."
+                    : "SYSTEM: Creating '{user}' configuration file '{file}'.",
                 [
                     'user' => $userName,
-                    'file' => $config_file
-                ]
+                    'file' => $config_file,
+                ],
             );
 
             $perUser = ConfigFile::open(
-                file: $dryRun ? "php://memory" : $config_file,
+                file: $dryRun ? 'php://memory' : $config_file,
                 type: 'yaml',
                 autoSave: !$dryRun,
                 autoCreate: !$dryRun,
-                autoBackup: !$dryRun
+                autoBackup: !$dryRun,
             );
 
             if (null !== self::$logger) {
@@ -480,10 +485,10 @@ class CreateUsersCommand extends Command
             foreach (ag($user, 'backends', []) as $backend) {
                 $name = ag($backend, 'client_data.backendName');
 
-                if (false === isValidName($name)) {
+                if (false === is_valid_name($name)) {
                     self::$logger?->error(
                         message: "SYSTEM: Invalid backend name '{name}'. Backend name must be in [a-z_0-9] format. skipping backend.",
-                        context: ['name' => $name]
+                        context: ['name' => $name],
                     );
                     continue;
                 }
@@ -519,12 +524,12 @@ class CreateUsersCommand extends Command
                             $update['options.' . Options::PLEX_USER_UUID] = ag($backend, 'uuid');
 
                             if (null !== ($val = ag($backend, 'client_data.options.' . Options::PLEX_EXTERNAL_USER))) {
-                                $update['options.' . Options::PLEX_EXTERNAL_USER] = (bool)$val;
+                                $update['options.' . Options::PLEX_EXTERNAL_USER] = (bool) $val;
                             }
 
                             $update['options.' . Options::ADMIN_TOKEN] = ag($backend, [
                                 'client_data.options.' . Options::ADMIN_TOKEN,
-                                'client_data.token'
+                                'client_data.token',
                             ]);
                         }
 
@@ -539,10 +544,11 @@ class CreateUsersCommand extends Command
                     }
                 }
                 try {
+                    // @mago-expect lint:no-insecure-comparison
                     if (true === $regenerateTokens || 'reuse_or_generate_token' === ag($clientData, 'token')) {
                         /** @var iClient $client */
                         $client = ag($backend, 'client_data.class');
-                        assert($client instanceof iClient);
+                        assert($client instanceof iClient, 'Expected backend client instance.');
                         if (PlexClient::CLIENT_NAME === $client->getType()) {
                             $requestOpts = [];
                             if (ag($clientData, 'options.' . Options::PLEX_EXTERNAL_USER, false)) {
@@ -561,7 +567,7 @@ class CreateUsersCommand extends Command
                             if (false === $token) {
                                 self::$logger?->error(
                                     message: "Failed to generate access token for '{user}@{backend}' backend.",
-                                    context: ['user' => $userName, 'backend' => $name]
+                                    context: ['user' => $userName, 'backend' => $name],
                                 );
                             } else {
                                 $perUser->set("{$name}.token", $token);
@@ -586,51 +592,55 @@ class CreateUsersCommand extends Command
                                 'kind' => get_class($e),
                                 'message' => $e->getMessage(),
                             ],
-                        ]
+                        ],
                     );
                     continue;
                 }
             }
 
-            $dbFile = $subUserPath . "/user.db";
+            $dbFile = $subUserPath . '/user.db';
             self::$logger?->notice(
                 file_exists(
-                    $dbFile
-                ) ? "SYSTEM: '{user}' database file '{db}' already exists." : "SYSTEM: Creating '{user}' database file '{db}'.",
+                    $dbFile,
+                )
+                    ? "SYSTEM: '{user}' database file '{db}' already exists."
+                    : "SYSTEM: Creating '{user}' database file '{db}'.",
                 [
                     'user' => $userName,
-                    'db' => $dbFile
-                ]
+                    'db' => $dbFile,
+                ],
             );
 
             if (false === $dryRun) {
                 if (false === file_exists($dbFile)) {
-                    perUserDb($userName);
+                    per_user_db($userName);
                 }
 
-                $perUser->addFilter('removed.keys', function (array $data) use ($removedKeys): array {
-                    foreach ($removedKeys as $key) {
-                        foreach ($data as &$v) {
-                            if (false === is_array($v)) {
-                                continue;
+                $perUser
+                    ->addFilter('removed.keys', static function (array $data) use ($removedKeys): array {
+                        foreach ($removedKeys as $key) {
+                            foreach ($data as &$v) {
+                                if (false === is_array($v)) {
+                                    continue;
+                                }
+                                if (false === ag_exists($v, $key)) {
+                                    continue;
+                                }
+                                $v = ag_delete($v, $key);
                             }
-                            if (false === ag_exists($v, $key)) {
-                                continue;
-                            }
-                            $v = ag_delete($v, $key);
                         }
-                    }
-                    return $data;
-                })->persist();
+                        return $data;
+                    })
+                    ->persist();
             }
 
             if (true === $generateBackups && false === $isReCreate) {
                 self::$logger?->notice("SYSTEM: Queuing event to backup '{user}' remote watch state.", [
-                    'user' => $userName
+                    'user' => $userName,
                 ]);
 
                 if (false === $dryRun) {
-                    queueEvent(TasksCommand::CNAME, [
+                    queue_event(TasksCommand::CNAME, [
                         'command' => BackupCommand::ROUTE,
                         'args' => ['-v', '-u', $userName, '--file', '{user}.{backend}.{date}.initial_backup.json'],
                     ]);
@@ -654,28 +664,28 @@ class CreateUsersCommand extends Command
             self::$logger?->notice('SYSTEM: Running in dry-run mode. No changes will be made.');
         }
 
-        $allowSingleBackendUsers = (bool)$input->getOption('allow-single-backend-users');
+        $allowSingleBackendUsers = (bool) $input->getOption('allow-single-backend-users');
 
         if (self::hasUsers() && (false === $input->getOption('run') && false === $input->getOption('re-create'))) {
             $output->writeln(
                 <<<Text
-                <error>ERROR:</error> Users configuration already exists.
+                    <error>ERROR:</error> Users configuration already exists.
 
-                If you want to re-create the users configuration, run the same command with [<flag>-r, --re-create</flag>] flag, This will do the following:
+                    If you want to re-create the users configuration, run the same command with [<flag>-r, --re-create</flag>] flag, This will do the following:
 
-                1. Delete the current sub-users configuration and data.
-                2. Re-create the sub-users configuration.
+                    1. Delete the current sub-users configuration and data.
+                    2. Re-create the sub-users configuration.
 
-                Otherwise, you can use the [<flag>--run</flag>] to keep current configuration and update it with the new users.
-                <value>
-                Beware, we have recently changed how we do matching, most likely if you run without re-creating the configuration.
-                it will result in double users for same user or more.
+                    Otherwise, you can use the [<flag>--run</flag>] to keep current configuration and update it with the new users.
+                    <value>
+                    Beware, we have recently changed how we do matching, most likely if you run without re-creating the configuration.
+                    it will result in double users for same user or more.
 
-                -------
+                    -------
 
-                We suggest to re-create the configuration. If you generated your users before date 2025-04-06.
-                </value>
-                Text
+                    We suggest to re-create the configuration. If you generated your users before date 2025-04-06.
+                    </value>
+                    Text,
             );
             return self::FAILURE;
         }
@@ -699,7 +709,7 @@ class CreateUsersCommand extends Command
             $countBackends = count($backends);
             if (1 !== $countBackends) {
                 self::$logger?->error('SYSTEM: Single backend mode requires 1 backend configured. Found {count}.', [
-                    'count' => $countBackends
+                    'count' => $countBackends,
                 ]);
                 return self::FAILURE;
             }
@@ -717,12 +727,12 @@ class CreateUsersCommand extends Command
             $users = ag($obj, 'matched', []);
 
             if (count($users) < 1) {
-                self::$logger?->warning("No sub-users were found in the single backend.");
+                self::$logger?->warning('No sub-users were found in the single backend.');
                 return self::FAILURE;
             }
 
             self::$logger?->notice("SYSTEM: Matched '{results}' from single backend.", [
-                'results' => arrayToString(self::usersList($users)),
+                'results' => array_to_string(self::usersList($users)),
             ]);
 
             self::create_user(input: $input, users: $users);
@@ -731,7 +741,7 @@ class CreateUsersCommand extends Command
         }
 
         self::$logger?->notice("SYSTEM: Getting users list from '{backends}'.", [
-            'backends' => join(', ', array_keys($backends))
+            'backends' => implode(', ', array_keys($backends)),
         ]);
 
         $backendsUser = self::get_backends_users($backends, $mapping);
@@ -750,7 +760,7 @@ class CreateUsersCommand extends Command
         }
 
         self::$logger?->notice("SYSTEM: Matched '{results}'.", [
-            'results' => arrayToString(self::usersList($users)),
+            'results' => array_to_string(self::usersList($users)),
         ]);
 
         self::create_user(input: $input, users: $users);
@@ -771,9 +781,11 @@ class CreateUsersCommand extends Command
     {
         $allBackends = [];
         foreach ($users as $u) {
-            if (!in_array($u['backend'], $allBackends, true)) {
-                $allBackends[] = $u['backend'];
+            if (in_array($u['backend'], $allBackends, true)) {
+                continue;
             }
+
+            $allBackends[] = $u['backend'];
         }
 
         // Build a lookup: $usersBy[backend][lowercased_name] = userObject
@@ -800,7 +812,7 @@ class CreateUsersCommand extends Command
         $used = [];
 
         // Helper: check if a (backend, nameLower) is already used.
-        $alreadyUsed = fn($b, $n): bool => in_array([$b, $n], $used, true);
+        $alreadyUsed = static fn($b, $n): bool => in_array([$b, $n], $used, true);
 
         /**
          * Build a "unified" row from matched users across backends.
@@ -819,13 +831,15 @@ class CreateUsersCommand extends Command
          * ]
          * </code>
          */
-        $buildUnifiedRow = function (array $backendDict) use ($allBackends): array {
+        $buildUnifiedRow = static function (array $backendDict) use ($allBackends): array {
             // Collect the names in the order of $allBackends for tie-breaking.
             $names = [];
             foreach ($allBackends as $b) {
-                if (isset($backendDict[$b])) {
-                    $names[] = $backendDict[$b]['name'];
+                if (!isset($backendDict[$b])) {
+                    continue;
                 }
+
+                $names[] = $backendDict[$b]['name'];
             }
 
             // Tally frequencies
@@ -842,7 +856,7 @@ class CreateUsersCommand extends Command
                 $finalName = 'unknown';
             } else {
                 $max = max($freq);
-                $candidates = array_keys(array_filter($freq, fn($count) => $count === $max));
+                $candidates = array_keys(array_filter($freq, static fn($count) => $count === $max));
 
                 if (1 === count($candidates)) {
                     $finalName = $candidates[0];
@@ -850,10 +864,12 @@ class CreateUsersCommand extends Command
                     // Tie => pick the first from $names that’s in $candidates
                     $finalName = null;
                     foreach ($names as $n) {
-                        if (in_array($n, $candidates, true)) {
-                            $finalName = $n;
-                            break;
+                        if (!in_array($n, $candidates, true)) {
+                            continue;
                         }
+
+                        $finalName = $n;
+                        break;
                     }
                     if (!$finalName) {
                         $finalName = 'unknown';
@@ -869,9 +885,11 @@ class CreateUsersCommand extends Command
 
             // Fill 'backends'
             foreach ($allBackends as $b) {
-                if (isset($backendDict[$b])) {
-                    $row['backends'][$b] = $backendDict[$b];
+                if (!isset($backendDict[$b])) {
+                    continue;
                 }
+
+                $row['backends'][$b] = $backendDict[$b];
             }
 
             return $row;
@@ -894,15 +912,17 @@ class CreateUsersCommand extends Command
                 // Map-based matching first
                 $matchedMapEntry = null;
                 foreach ($map as $mapRow) {
-                    if (ag($mapRow, "{$backend}.name") === $nameLower) {
-                        self::$logger?->notice("Mapper: Found map entry for '{backend}: {user}'", [
-                            'backend' => $backend,
-                            'user' => $nameLower,
-                            'map' => $mapRow,
-                        ]);
-                        $matchedMapEntry = $mapRow;
-                        break;
+                    if (ag($mapRow, "{$backend}.name") !== $nameLower) {
+                        continue;
                     }
+
+                    self::$logger?->notice("Mapper: Found map entry for '{backend}: {user}'", [
+                        'backend' => $backend,
+                        'user' => $nameLower,
+                        'map' => $mapRow,
+                    ]);
+                    $matchedMapEntry = $mapRow;
+                    break;
                 }
 
                 if ($matchedMapEntry) {
@@ -928,27 +948,39 @@ class CreateUsersCommand extends Command
                         foreach ($mapMatch as $b => &$matchedUser) {
                             // If the map entry has an 'options' array for this backend,
                             // merge it into $matchedUser['client_data']['options'].
-                            if (isset($matchedMapEntry[$b]['options']) && is_array($matchedMapEntry[$b]['options'])) {
-                                $mapOptions = $matchedMapEntry[$b]['options'];
-
-                                // Ensure $matchedUser['client_data'] is an array
-                                if (!isset($matchedUser['client_data']) || !is_array($matchedUser['client_data'])) {
-                                    $matchedUser['client_data'] = [];
-                                }
-
-                                // Ensure $matchedUser['client_data']['options'] is an array
-                                if (!isset($matchedUser['client_data']['options']) || !is_array(
-                                        $matchedUser['client_data']['options']
-                                    )) {
-                                    $matchedUser['client_data']['options'] = [];
-                                }
-
-                                // Merge the map's options
-                                $matchedUser['client_data']['options'] = array_replace_recursive(
-                                    $matchedUser['client_data']['options'],
-                                    $mapOptions
-                                );
+                            if (
+                                !(
+                                    isset($matchedMapEntry[$b]['options'])
+                                    && is_array(
+                                        $matchedMapEntry[$b]['options'],
+                                    )
+                                )
+                            ) {
+                                continue;
                             }
+
+                            $mapOptions = $matchedMapEntry[$b]['options'];
+
+                            // Ensure $matchedUser['client_data'] is an array
+                            if (!isset($matchedUser['client_data']) || !is_array($matchedUser['client_data'])) {
+                                $matchedUser['client_data'] = [];
+                            }
+
+                            // Ensure $matchedUser['client_data']['options'] is an array
+                            if (
+                                !isset($matchedUser['client_data']['options'])
+                                || !is_array(
+                                    $matchedUser['client_data']['options'],
+                                )
+                            ) {
+                                $matchedUser['client_data']['options'] = [];
+                            }
+
+                            // Merge the map's options
+                            $matchedUser['client_data']['options'] = array_replace_recursive(
+                                $matchedUser['client_data']['options'],
+                                $mapOptions,
+                            );
                         }
                         unset($matchedUser); // break reference from the loop
 
@@ -1000,18 +1032,19 @@ class CreateUsersCommand extends Command
                 self::$logger?->error("No other users were found that match '{backend}: {user}{real_name}'.", [
                     'backend' => $userObj['backend'],
                     'user' => $userObj['name'],
-                    'real_name' => $userObj['real_name'] !== $userObj['name'] ? r(' ({rl})', [
-                        'rl' => $userObj['real_name']
-                    ]) : '',
-                    'map' => arrayToString($map),
-                    'list' => arrayToString($usersList),
+                    'real_name' => $userObj['real_name'] !== $userObj['name']
+                        ? r(' ({rl})', [
+                            'rl' => $userObj['real_name'],
+                        ]) : '',
+                    'map' => array_to_string($map),
+                    'list' => array_to_string($usersList),
                 ]);
 
                 $unmatched[] = [
                     'id' => $userObj['id'],
                     'name' => $userObj['name'],
                     'backend' => $backend,
-                    'protected' => (bool)ag($userObj, 'protected', false),
+                    'protected' => (bool) ag($userObj, 'protected', false),
                     'client_data' => ag($userObj, 'client_data.type', null),
                     'real_name' => $userObj['real_name'] ?? null,
                     'options' => ag($userObj, 'options', []),
@@ -1032,13 +1065,15 @@ class CreateUsersCommand extends Command
             $pairs = [];
             if (!empty($row['backends']) && is_array($row['backends'])) {
                 foreach ($row['backends'] as $backendName => $backendData) {
-                    if (isset($backendData['name'])) {
-                        $pairs[] = r("{name}@{backend}", ['backend' => $backendName, 'name' => $backendData['name']]);
+                    if (!isset($backendData['name'])) {
+                        continue;
                     }
+
+                    $pairs[] = r('{name}@{backend}', ['backend' => $backendName, 'name' => $backendData['name']]);
                 }
             }
 
-            $chunks[] = r("{name}: {pairs}", ['name' => $name, 'pairs' => implode(', ', $pairs)]);
+            $chunks[] = r('{name}: {pairs}', ['name' => $name, 'pairs' => implode(', ', $pairs)]);
         }
 
         return $chunks;
@@ -1051,6 +1086,7 @@ class CreateUsersCommand extends Command
      * @param string $backend The backend name.
      * @param array $mapping the mapper file data.
      *
+     * ```
      * - my_plex_server:
      *      name: "mike_jones"
      *      options: { }
@@ -1069,17 +1105,17 @@ class CreateUsersCommand extends Command
 
         if (null === ($username = ag($user, 'name'))) {
             self::$logger?->error("MAPPER: No username was given from one user of '{backend}' backend.", [
-                'backend' => $backend
+                'backend' => $backend,
             ]);
             return;
         }
 
-        $hasMapping = array_filter($mapping, fn($map) => array_key_exists($backend, $map));
+        $hasMapping = array_filter($mapping, static fn($map) => array_key_exists($backend, $map));
         if (count($hasMapping) < 1) {
             if (!isset($reported[$backend])) {
                 $reported[$backend] = true;
                 self::$logger?->info("MAPPER: No mapping with '{backend}' as backend exists.", [
-                    'backend' => $backend
+                    'backend' => $backend,
                 ]);
             }
             return;
@@ -1093,7 +1129,7 @@ class CreateUsersCommand extends Command
                 if ($backend !== $map_backend) {
                     continue;
                 }
-                if (ag($loop_map, "name") !== $username) {
+                if (ag($loop_map, 'name') !== $username) {
                     continue;
                 }
                 $found = true;
@@ -1105,7 +1141,7 @@ class CreateUsersCommand extends Command
         if (false === $found) {
             self::$logger?->debug("MAPPER: No map exists for '{backend}: {username}'.", [
                 'backend' => $backend,
-                'username' => $username
+                'username' => $username,
             ]);
             return;
         }
@@ -1118,14 +1154,14 @@ class CreateUsersCommand extends Command
         }
 
         if (null !== ($newUsername = ag($user_map, 'replace_with'))) {
-            if (false === is_string($newUsername) || false === isValidName($newUsername)) {
+            if (false === is_string($newUsername) || false === is_valid_name($newUsername)) {
                 self::$logger?->error(
                     message: "MAPPER: Failed to replace '{backend}: {username}' with '{backend}: {new_username}' name must be in [a-z_0-9] format.",
                     context: [
                         'backend' => $backend,
                         'username' => $username,
-                        'new_username' => $newUsername
-                    ]
+                        'new_username' => $newUsername,
+                    ],
                 );
                 return;
             }
@@ -1135,8 +1171,8 @@ class CreateUsersCommand extends Command
                 context: [
                     'backend' => $backend,
                     'username' => $username,
-                    'new_username' => $newUsername
-                ]
+                    'new_username' => $newUsername,
+                ],
             );
 
             $user['name'] = $newUsername;

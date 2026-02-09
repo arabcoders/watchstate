@@ -34,7 +34,7 @@ final class Version
 
         try {
             return api_response(Status::OK, [
-                'version' => $this->getClient(name: $name, userContext: $userContext)->getVersion()
+                'version' => $this->getClient(name: $name, userContext: $userContext)->getVersion(),
             ]);
         } catch (InvalidArgumentException $e) {
             return api_error($e->getMessage(), Status::NOT_FOUND);

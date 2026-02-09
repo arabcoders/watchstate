@@ -59,7 +59,7 @@ final class Message
      */
     public static function increment(string $key, int $increment = 1): void
     {
-        self::$data = ag_set(self::$data, $key, $increment + (int)ag(self::$data, $key, 0));
+        self::$data = ag_set(self::$data, $key, $increment + (int) ag(self::$data, $key, 0));
     }
 
     /**

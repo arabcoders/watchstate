@@ -19,7 +19,7 @@ final class Container
     /**
      * @var BaseContainer|null An instance of the container.
      */
-    private static BaseContainer|null $container = null;
+    private static ?BaseContainer $container = null;
 
     /**
      * Initialize the container with an optional base container.
@@ -28,7 +28,7 @@ final class Container
      *
      * @return self The initialized container.
      */
-    public static function init(BaseContainer|null $container = null): self
+    public static function init(?BaseContainer $container = null): self
     {
         if (null === self::$container) {
             if (null === $container) {
@@ -112,7 +112,7 @@ final class Container
             }
 
             if (array_key_exists('shared', $definition)) {
-                $service->setShared((bool)$definition['shared']);
+                $service->setShared((bool) $definition['shared']);
             }
 
             if (!empty($definition['call']) && is_array($definition['call'])) {

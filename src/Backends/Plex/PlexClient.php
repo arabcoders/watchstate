@@ -12,7 +12,7 @@ use App\Backends\Common\Response;
 use App\Backends\Plex\Action\Backup;
 use App\Backends\Plex\Action\Export;
 use App\Backends\Plex\Action\GetIdentifier;
-use App\Backends\Plex\Action\getImagesUrl;
+use App\Backends\Plex\Action\GetImagesUrl;
 use App\Backends\Plex\Action\GetInfo;
 use App\Backends\Plex\Action\GetLibrariesList;
 use App\Backends\Plex\Action\GetLibrary;
@@ -161,16 +161,16 @@ class PlexClient implements iClient
             backendHeaders: [
                 'Accept' => 'application/json',
                 'X-Plex-Token' => $context->backendToken,
-                ...self::getHeaders()
+                ...self::getHeaders(),
             ],
             trace: true === ag($context->options, Options::DEBUG_TRACE),
             options: array_replace_recursive($context->options, [
-                Options::LIBRARY_SEGMENT => (int)ag(
+                Options::LIBRARY_SEGMENT => (int) ag(
                     $context->options,
                     Options::LIBRARY_SEGMENT,
-                    Config::get('library.segment')
+                    Config::get('library.segment'),
                 ),
-            ])
+            ]),
         );
 
         $cloned->guid = $cloned->guid->withContext($cloned->context);
@@ -188,7 +188,7 @@ class PlexClient implements iClient
         return [
             'X-Plex-Container-Size' => 0,
             'X-Plex-Product' => Config::get('name'),
-            'X-Plex-Version' => getAppVersion(),
+            'X-Plex-Version' => get_app_version(),
             'X-Plex-Platform' => php_uname('s'),
             'X-Plex-Platform-Version' => php_uname('r'),
             'X-Plex-Device-Name' => Config::get('name'),
@@ -209,7 +209,7 @@ class PlexClient implements iClient
      */
     public function getName(): string
     {
-        return $this->context?->backendName ?? static::CLIENT_NAME;
+        return $this->context->backendName ?? static::CLIENT_NAME;
     }
 
     public function getType(): string
@@ -250,7 +250,7 @@ class PlexClient implements iClient
             context: $this->context,
             guid: $this->guid,
             request: $request,
-            opts: $opts
+            opts: $opts,
         );
 
         if ($response->hasError()) {
@@ -267,7 +267,7 @@ class PlexClient implements iClient
     /**
      * @inheritdoc
      */
-    public function pull(iImport $mapper, iDate|null $after = null): array
+    public function pull(iImport $mapper, ?iDate $after = null): array
     {
         $response = Container::get(Import::class)(
             context: $this->context,
@@ -290,13 +290,13 @@ class PlexClient implements iClient
     /**
      * @inheritdoc
      */
-    public function backup(iImport $mapper, iStream|null $writer = null, array $opts = []): array
+    public function backup(iImport $mapper, ?iStream $writer = null, array $opts = []): array
     {
         $response = Container::get(Backup::class)(
             context: $this->context,
             guid: $this->guid,
             mapper: $mapper,
-            opts: ag_sets($opts, ['writer' => $writer])
+            opts: ag_sets($opts, ['writer' => $writer]),
         );
 
         if ($response->hasError()) {
@@ -313,7 +313,7 @@ class PlexClient implements iClient
     /**
      * @inheritdoc
      */
-    public function export(iImport $mapper, QueueRequests $queue, iDate|null $after = null): array
+    public function export(iImport $mapper, QueueRequests $queue, ?iDate $after = null): array
     {
         $response = Container::get(Export::class)(
             context: $this->context,
@@ -337,13 +337,13 @@ class PlexClient implements iClient
     /**
      * @inheritdoc
      */
-    public function push(array $entities, QueueRequests $queue, iDate|null $after = null): array
+    public function push(array $entities, QueueRequests $queue, ?iDate $after = null): array
     {
         $response = Container::get(Push::class)(
             context: $this->context,
             entities: $entities,
             queue: $queue,
-            after: $after
+            after: $after,
         );
 
         if ($response->hasError()) {
@@ -360,14 +360,14 @@ class PlexClient implements iClient
     /**
      * @inheritdoc
      */
-    public function progress(array $entities, QueueRequests $queue, iDate|null $after = null): array
+    public function progress(array $entities, QueueRequests $queue, ?iDate $after = null): array
     {
         $response = Container::get(Progress::class)(
             context: $this->context,
             guid: $this->guid,
             entities: $entities,
             queue: $queue,
-            after: $after
+            after: $after,
         );
 
         if ($response->hasError()) {
@@ -390,7 +390,7 @@ class PlexClient implements iClient
             context: $this->context,
             query: $query,
             limit: $limit,
-            opts: $opts
+            opts: $opts,
         );
 
         if ($response->hasError()) {
@@ -411,7 +411,7 @@ class PlexClient implements iClient
     {
         $response = Container::get(SearchId::class)(context: $this->context, id: $id, opts: $opts);
 
-        if ($response->hasError() && false === (bool)ag($opts, Options::NO_LOGGING, false)) {
+        if ($response->hasError() && false === (bool) ag($opts, Options::NO_LOGGING, false)) {
             $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
         }
 
@@ -441,7 +441,7 @@ class PlexClient implements iClient
      */
     public function getImagesUrl(string|int $id, array $opts = []): array
     {
-        $response = Container::get(getImagesUrl::class)(context: $this->context, id: $id, opts: $opts);
+        $response = Container::get(GetImagesUrl::class)(context: $this->context, id: $id, opts: $opts);
 
         if (false === $response->isSuccessful()) {
             $this->throwError($response);
@@ -460,7 +460,7 @@ class PlexClient implements iClient
             method: $method,
             uri: $uri,
             body: $body,
-            opts: $opts
+            opts: $opts,
         );
     }
 
@@ -470,7 +470,7 @@ class PlexClient implements iClient
     public function getLibraryContent(string|int $libraryId, array $opts = []): array
     {
         $mapper = Container::get(ReadOnlyMapper::class)->withOptions([]);
-        assert($mapper instanceof ReadOnlyMapper);
+        assert($mapper instanceof ReadOnlyMapper, 'Expected ReadOnlyMapper for library content mapping.');
         $mapper->asContainer();
 
         $response = Container::get(Import::class)(
@@ -710,7 +710,7 @@ class PlexClient implements iClient
         }
 
         if (null !== ($userId = ag($config, 'user')) && !is_int($userId)) {
-            $config = ag_set($config, 'user', (int)$userId);
+            $config = ag_set($config, 'user', (int) $userId);
         }
 
         return $config;
@@ -730,7 +730,7 @@ class PlexClient implements iClient
             context: $this->context,
             entities: $entities,
             queue: $queue,
-            opts: $opts
+            opts: $opts,
         );
 
         if ($response->hasError()) {
@@ -741,8 +741,12 @@ class PlexClient implements iClient
     /**
      * @inheritdoc
      */
-    public function generateAccessToken(string|int $identifier, string $password, array $opts = []): array
-    {
+    public function generateAccessToken(
+        string|int $identifier,
+        #[\SensitiveParameter]
+        string $password,
+        array $opts = [],
+    ): array {
         return [];
     }
 
@@ -760,13 +764,13 @@ class PlexClient implements iClient
      * @throws RedirectionExceptionInterface When a redirection error is encountered.
      * @throws ServerExceptionInterface When a server error is encountered.
      */
-    public static function discover(iHttp $http, string $token, array $opts = []): array
+    public static function discover(iHttp $http, #[\SensitiveParameter] string $token, array $opts = []): array
     {
         try {
             $response = $http->request(
                 method: Method::GET,
                 url: 'https://plex.tv/api/resources?includeHttps=1&includeRelay=0',
-                options: ['headers' => ['X-Plex-Token' => $token]]
+                options: ['headers' => ['X-Plex-Token' => $token]],
             );
 
             $payload = $response->getContent(false);
@@ -784,13 +788,13 @@ class PlexClient implements iClient
                         text: "PlexClient: Request for servers list returned with unexpected '{status_code}' status code. {context}",
                         context: [
                             'status_code' => $response->getStatusCode(),
-                            'context' => arrayToString([
+                            'context' => array_to_string([
                                 'with_admin' => true === ag($opts, 'with_admin'),
-                                'payload' => $payload
+                                'payload' => $payload,
                             ]),
-                        ]
+                        ],
                     ),
-                    $response->getStatusCode()
+                    $response->getStatusCode(),
                 );
             }
         } catch (TransportExceptionInterface $e) {
@@ -802,10 +806,10 @@ class PlexClient implements iClient
                         'error' => $e->getMessage(),
                         'line' => $e->getLine(),
                         'file' => after($e->getFile(), ROOT_PATH),
-                    ]
+                    ],
                 ),
                 code: 500,
-                previous: $e
+                previous: $e,
             );
         }
 
@@ -822,7 +826,7 @@ class PlexClient implements iClient
                 continue;
             }
 
-            $attr = ag((array)$attr, '@attributes');
+            $attr = ag((array) $attr, '@attributes');
 
             if ('server' !== ag($attr, 'provides')) {
                 continue;
@@ -837,16 +841,16 @@ class PlexClient implements iClient
                     continue;
                 }
 
-                $cAttr = ag((array)$cAttr, '@attributes');
+                $cAttr = ag((array) $cAttr, '@attributes');
 
                 $arr = [
                     'name' => ag($attr, 'name'),
                     'identifier' => ag($attr, 'clientIdentifier'),
                     'proto' => ag($cAttr, 'protocol'),
                     'address' => ag($cAttr, 'address'),
-                    'port' => (int)ag($cAttr, 'port'),
+                    'port' => (int) ag($cAttr, 'port'),
                     'uri' => ag($cAttr, 'uri'),
-                    'online' => 1 === (int)ag($attr, 'presence') ? 'Yes' : 'No',
+                    'online' => 1 === (int) ag($attr, 'presence') ? 'Yes' : 'No',
                 ];
 
                 if (true === ag_exists($opts, 'with-tokens')) {
@@ -889,14 +893,14 @@ class PlexClient implements iClient
      * @throws RedirectionExceptionInterface When a redirection error is encountered.
      * @throws ServerExceptionInterface When a server error is encountered.
      */
-    public static function validate_token(iHttp $http, string $token, array $opts = []): bool
+    public static function validate_token(iHttp $http, #[\SensitiveParameter] string $token, array $opts = []): bool
     {
         try {
             $url = 'https://plex.tv/api/users';
             $response = $http->request(
                 method: Method::GET,
                 url: $url,
-                options: ['headers' => ['X-Plex-Token' => $token]]
+                options: ['headers' => ['X-Plex-Token' => $token]],
             );
 
             $status = Status::from($response->getStatusCode());
@@ -906,7 +910,7 @@ class PlexClient implements iClient
                 $payload = json_decode(
                     json: json_encode(simplexml_load_string($body)),
                     associative: true,
-                    flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                    flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
                 );
                 if (false === is_array($payload)) {
                     $payload = ['body' => $body];
@@ -927,8 +931,8 @@ class PlexClient implements iClient
 
             $callback = ag($opts, Options::RAW_RESPONSE_CALLBACK, null);
 
-            if (true === ($callback instanceof Closure)) {
-                ($callback)([['url' => $url, 'headers' => $response->getHeaders(false), 'body' => $payload]]);
+            if (true === $callback instanceof Closure) {
+                $callback([['url' => $url, 'headers' => $response->getHeaders(false), 'body' => $payload]]);
             }
 
             return true;
@@ -941,10 +945,10 @@ class PlexClient implements iClient
                         'error' => $e->getMessage(),
                         'line' => $e->getLine(),
                         'file' => after($e->getFile(), ROOT_PATH),
-                    ]
+                    ],
                 ),
                 code: 500,
-                previous: $e
+                previous: $e,
             );
         }
     }
@@ -976,10 +980,10 @@ class PlexClient implements iClient
             message: ag(
                 $response->extra,
                 'message',
-                fn() => $response->error?->format() ?? 'An unexpected error occurred.'
+                static fn() => $response->error?->format() ?? 'An unexpected error occurred.',
             ),
             code: $code,
-            previous: $response->error?->previous
+            previous: $response->error?->previous,
         );
     }
 }

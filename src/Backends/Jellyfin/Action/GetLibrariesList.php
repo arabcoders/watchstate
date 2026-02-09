@@ -38,9 +38,10 @@ class GetLibrariesList
      * @param iHttp $http The HTTP client object.
      * @param iLogger $logger The logger object.
      */
-    public function __construct(protected readonly iHttp $http, protected readonly iLogger $logger)
-    {
-    }
+    public function __construct(
+        protected readonly iHttp $http,
+        protected readonly iLogger $logger,
+    ) {}
 
     /**
      * Get backend libraries list.
@@ -71,16 +72,19 @@ class GetLibrariesList
         $cls = fn() => $this->real_request($context);
 
         try {
-            $json = true === (bool)ag($opts, Options::NO_CACHE) ? $cls() : $this->tryCache(
-                context: $context,
-                key: 'library_list',
-                fn: $cls,
-                ttl: new DateInterval('PT1M'),
-                logger: $this->logger
-            );
+            $json = true === (bool) ag($opts, Options::NO_CACHE)
+                ? $cls()
+                : $this->tryCache(
+                    context: $context,
+                    key: 'library_list',
+                    fn: $cls,
+                    ttl: new DateInterval('PT1M'),
+                    logger: $this->logger,
+                );
         } catch (RuntimeException $e) {
             return new Response(
-                status: false, error: new Error(message: $e->getMessage(), level: Levels::ERROR, previous: $e)
+                status: false,
+                error: new Error(message: $e->getMessage(), level: Levels::ERROR, previous: $e),
             );
         }
 
@@ -109,19 +113,19 @@ class GetLibrariesList
                         ...$logContext,
                         'response' => ['body' => $json],
                     ],
-                    level: Levels::WARNING
+                    level: Levels::WARNING,
                 ),
             );
         }
 
         if (null !== ($ignoreIds = ag($context->options, Options::IGNORE, null))) {
-            $ignoreIds = array_map(fn($v) => trim($v), explode(',', (string)$ignoreIds));
+            $ignoreIds = array_map(trim(...), explode(',', (string) $ignoreIds));
         }
 
         $list = [];
 
         foreach ($listDirs as $section) {
-            $key = (string)ag($section, 'Id');
+            $key = (string) ag($section, 'Id');
             $type = ag($section, ['CollectionType', 'Type'], 'unknown');
 
             $contentType = match ($type) {
@@ -145,22 +149,25 @@ class GetLibrariesList
                 ]);
             }
 
-            $webUrl = $context->backendUrl->withPath('/web/index.html')->withFragment(r($fragment, [
-                'backend_id' => $context->backendId,
-                'id' => $key,
-            ]));
+            $webUrl = $context
+                ->backendUrl
+                ->withPath('/web/index.html')
+                ->withFragment(r($fragment, [
+                    'backend_id' => $context->backendId,
+                    'id' => $key,
+                ]));
 
             $builder = [
                 'id' => $key,
                 'title' => ag($section, 'Name', '???'),
                 'type' => ucfirst($type),
-                'ignored' => null !== $ignoreIds && in_array($key, $ignoreIds),
-                'supported' => in_array($contentType, [iState::TYPE_SHOW, iState::TYPE_MOVIE, iState::TYPE_MIXED]),
+                'ignored' => null !== $ignoreIds && in_array($key, $ignoreIds, true),
+                'supported' => in_array($contentType, [iState::TYPE_SHOW, iState::TYPE_MOVIE, iState::TYPE_MIXED], true),
                 'contentType' => $contentType,
-                'webUrl' => (string)$webUrl,
+                'webUrl' => (string) $webUrl,
             ];
 
-            if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
+            if (true === (bool) ag($opts, Options::RAW_RESPONSE)) {
                 $builder['raw'] = $section;
             }
 
@@ -187,12 +194,12 @@ class GetLibrariesList
             'client' => $context->clientName,
             'backend' => $context->backendName,
             'user' => $context->userContext->name,
-            'url' => (string)$url
+            'url' => (string) $url,
         ];
 
         $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' libraries list.", $logContext);
 
-        $response = $this->http->request(Method::GET, (string)$url, $context->getHttpOptions());
+        $response = $this->http->request(Method::GET, (string) $url, $context->getHttpOptions());
 
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             throw new RuntimeException(
@@ -201,15 +208,15 @@ class GetLibrariesList
                     context: [
                         ...$logContext,
                         'status_code' => $response->getStatusCode(),
-                    ]
-                )
+                    ],
+                ),
             );
         }
 
         return json_decode(
             json: $response->getContent(),
             associative: true,
-            flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+            flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
         );
     }
 }

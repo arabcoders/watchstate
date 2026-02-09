@@ -31,7 +31,7 @@ class LogMessageProcessor implements ProcessorInterface
         }
 
         $repl = r_array(text: $record->message, context: $record->context, opts: [
-            'log_behavior' => true
+            'log_behavior' => true,
         ]);
 
         return $record->with(...$repl);

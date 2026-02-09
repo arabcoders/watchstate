@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Model\Base\Interfaces;
 
 use App\Model\Base\BasicModel;

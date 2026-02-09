@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Libs\Exceptions;
 
 interface AppExceptionInterface
@@ -30,7 +32,7 @@ interface AppExceptionInterface
      *
      * @return mixed
      */
-    public function getContext(string|null $key = null): mixed;
+    public function getContext(?string $key = null): mixed;
 
     /**
      * Does the exception contain context?

@@ -15,7 +15,8 @@
         "lint:tsc": "vue-tsc --noEmit",
         "test": "vitest run",
         "test:watch": "vitest",
-        "test:ci": "vitest run --silent --reporter=dot"
+        "test:ci": "vitest run --silent --reporter=dot",
+        "prepare:test": "nuxt prepare --envName=development"
     },
     "web-types": "./web-types.json",
     "dependencies": {

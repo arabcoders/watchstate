@@ -44,7 +44,7 @@ final class AuthorizationMiddleware implements MiddlewareInterface
 
     public function process(iRequest $request, iHandler $handler): iResponse
     {
-        if (true === (bool)$request->getAttribute('INTERNAL_REQUEST')) {
+        if (true === (bool) $request->getAttribute('INTERNAL_REQUEST')) {
             return $handler->handle($request);
         }
 
@@ -55,12 +55,12 @@ final class AuthorizationMiddleware implements MiddlewareInterface
         $requestPath = rtrim($request->getUri()->getPath(), '/');
 
         $openRoutes = self::PUBLIC_ROUTES;
-        if (false === (bool)Config::get('api.secure', false)) {
+        if (false === (bool) Config::get('api.secure', false)) {
             $openRoutes = array_merge($openRoutes, self::OPEN_ROUTES);
         }
 
         foreach ($openRoutes as $route) {
-            $route = rtrim(parseConfigValue($route), '/');
+            $route = rtrim(parse_config_value($route), '/');
             if (true === str_starts_with($requestPath, $route) || true === str_ends_with($requestPath, $route)) {
                 return $handler->handle($request);
             }
@@ -72,20 +72,20 @@ final class AuthorizationMiddleware implements MiddlewareInterface
             return api_error('Authorization is required to access the API.', Status::BAD_REQUEST);
         }
 
-        if (array_any($tokens, fn($token, $type) => true === $this->validate($type, $token))) {
+        if (array_any($tokens, fn(#[\SensitiveParameter] $token, $type) => true === $this->validate($type, $token))) {
             return $handler->handle($request);
         }
 
         return api_error('Incorrect authorization credentials.', Status::UNAUTHORIZED);
     }
 
-    private function validate(string $type, ?string $token): bool
+    private function validate(string $type, #[\SensitiveParameter] ?string $token): bool
     {
         if (empty($token)) {
             return false;
         }
 
-        if ('token' === $type || 'ws_token' === $type) {
+        if (true === in_array($type, ['token', 'ws_token'], true)) {
             return $this->validateToken($token);
         }
 
@@ -103,7 +103,7 @@ final class AuthorizationMiddleware implements MiddlewareInterface
      *
      * @return bool true if valid, false otherwise.
      */
-    public static function validateToken(?string $token): bool
+    public static function validateToken(#[\SensitiveParameter] ?string $token): bool
     {
         if (empty($token)) {
             return false;
@@ -132,9 +132,9 @@ final class AuthorizationMiddleware implements MiddlewareInterface
 
         try {
             $payload = json_decode($payload, true, flags: JSON_THROW_ON_ERROR);
-            $rand = fn() => TokenUtil::generateSecret();
-            $systemUser = (string)Config::get('system.user', $rand);
-            $payloadUser = (string)ag($payload, 'username', $rand);
+            $rand = TokenUtil::generateSecret(...);
+            $systemUser = (string) Config::get('system.user', $rand);
+            $payloadUser = (string) ag($payload, 'username', $rand);
 
             if (false === hash_equals($systemUser, $payloadUser)) {
                 return false;
@@ -172,13 +172,13 @@ final class AuthorizationMiddleware implements MiddlewareInterface
             [$type, $value] = explode(' ', $auth, 2);
             $type = strtolower(trim($type));
 
-            if (false === in_array($type, ['bearer', 'token'])) {
+            if (false === in_array($type, ['bearer', 'token'], true)) {
                 continue;
             }
 
             $tokens[$type] = trim($value);
         }
 
-        return array_unique(array_map(fn($val) => rawurldecode($val), $tokens));
+        return array_unique(array_map(rawurldecode(...), $tokens));
     }
 }

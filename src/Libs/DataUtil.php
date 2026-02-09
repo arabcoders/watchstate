@@ -15,7 +15,7 @@ final readonly class DataUtil implements JsonSerializable, Stringable
 
     public function __construct(Closure|array $data)
     {
-        $this->data = getValue($data);
+        $this->data = get_value($data);
     }
 
     public static function fromArray(array $data): self
@@ -28,7 +28,7 @@ final readonly class DataUtil implements JsonSerializable, Stringable
         $params = $includeQueryParams ? $request->getQueryParams() : [];
 
         if (null !== ($data = $request->getParsedBody())) {
-            $params = array_replace_recursive($params, is_object($data) ? (array)$data : $data);
+            $params = array_replace_recursive($params, is_object($data) ? (array) $data : $data);
         }
 
         return new self($params);

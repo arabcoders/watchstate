@@ -16,7 +16,7 @@ final class Scheduler
     #[Get(self::URL . '[/]', name: 'system.task_scheduler.status')]
     public function status(): iResponse
     {
-        return api_response(Status::OK, isSchedulerRunning(ignoreContainer: true), headers: [
+        return api_response(Status::OK, is_scheduler_running(ignoreContainer: true), headers: [
             'X-No-AccessLog' => '1',
         ]);
     }
@@ -24,17 +24,17 @@ final class Scheduler
     #[Post(self::URL . '/restart[/]', name: 'system.task_scheduler.restart')]
     public function restart(): iResponse
     {
-        if (true === (bool)env('DISABLE_CRON', false)) {
+        if (true === (bool) env('DISABLE_CRON', false)) {
             return api_error(
                 "Task scheduler is disabled via 'DISABLE_CRON' environment variable.",
-                Status::BAD_REQUEST
+                Status::BAD_REQUEST,
             );
         }
 
-        if (!inContainer()) {
+        if (!in_container()) {
             return api_error('WatchState is not running in a container.', Status::BAD_REQUEST);
         }
 
-        return api_response(Status::OK, restartScheduler());
+        return api_response(Status::OK, restart_scheduler());
     }
 }

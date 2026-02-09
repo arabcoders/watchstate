@@ -20,9 +20,10 @@ final class UpdateState
 
     private string $action = 'plex.updateState';
 
-    public function __construct(protected iHttp $http, protected iLogger $logger)
-    {
-    }
+    public function __construct(
+        protected iHttp $http,
+        protected iLogger $logger,
+    ) {}
 
     /**
      * Get Backend unique identifier.
@@ -56,13 +57,13 @@ final class UpdateState
                         continue;
                     }
 
-                    $itemBackendState = (bool)ag($meta, iState::COLUMN_WATCHED);
+                    $itemBackendState = (bool) ag($meta, iState::COLUMN_WATCHED);
 
                     if ($entity->isWatched() === $itemBackendState) {
                         continue;
                     }
 
-                    if (true === (bool)ag($context->options, Options::DRY_RUN, false)) {
+                    if (true === (bool) ag($context->options, Options::DRY_RUN, false)) {
                         $this->logger->notice(
                             message: "{action}: Would mark '{client}: {user}@{backend}' {item.type} '{item.title}' as '{item.play_state}'.",
                             context: [
@@ -70,23 +71,25 @@ final class UpdateState
                                 'item' => [
                                     'id' => $itemId,
                                     'title' => $entity->getName(),
-                                    'type' => $entity->type == iState::TYPE_EPISODE ? 'episode' : 'movie',
+                                    'type' => $entity->type === iState::TYPE_EPISODE ? 'episode' : 'movie',
                                     'play_state' => $entity->isWatched() ? 'played' : 'unplayed',
                                 ],
-                            ]
+                            ],
                         );
                         return new Response(status: true);
                     }
 
-                    $url = $context->backendUrl->withPath($entity->isWatched() ? '/:/scrobble' : '/:/unscrobble')
+                    $url = $context
+                        ->backendUrl
+                        ->withPath($entity->isWatched() ? '/:/scrobble' : '/:/unscrobble')
                         ->withQuery(
-                            http_build_query(['identifier' => 'com.plexapp.plugins.library', 'key' => $itemId])
+                            http_build_query(['identifier' => 'com.plexapp.plugins.library', 'key' => $itemId]),
                         );
 
                     $queue->add(
                         $this->http->request(
                             method: Method::GET,
-                            url: (string)$url,
+                            url: (string) $url,
                             options: array_replace_recursive($context->getHttpOptions(), [
                                 'user_data' => [
                                     'context' => [
@@ -95,19 +98,19 @@ final class UpdateState
                                         'item' => [
                                             'id' => $itemId,
                                             'title' => $entity->getName(),
-                                            'type' => $entity->type == iState::TYPE_EPISODE ? 'episode' : 'movie',
+                                            'type' => $entity->type === iState::TYPE_EPISODE ? 'episode' : 'movie',
                                             'state' => $entity->isWatched() ? 'played' : 'unplayed',
                                         ],
-                                    ]
+                                    ],
                                 ],
-                            ])
-                        )
+                            ]),
+                        ),
                     );
                 }
 
                 return new Response(status: true);
             },
-            action: $this->action
+            action: $this->action,
         );
     }
 }

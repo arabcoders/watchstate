@@ -35,19 +35,18 @@ final class Index
     public function __construct(
         #[Inject(DirectMapper::class)]
         private readonly iImport $mapper,
-        private readonly iLogger $logger
-    ) {
-    }
+        private readonly iLogger $logger,
+    ) {}
 
     #[Get(self::URL . '[/]', name: 'users.list')]
     public function users_list(): iResponse
     {
         $users = [];
-        $usersContext = getUsersContext($this->mapper, $this->logger);
+        $usersContext = get_users_context($this->mapper, $this->logger);
         foreach ($usersContext as $username => $userContext) {
             $users[] = [
                 'user' => $username,
-                'backends' => array_keys($userContext->config->getAll())
+                'backends' => array_keys($userContext->config->getAll()),
             ];
         }
 
@@ -63,24 +62,24 @@ final class Index
             return api_error('Missing required parameter: user', Status::BAD_REQUEST);
         }
 
-        if (true !== isValidName($username)) {
+        if (true !== is_valid_name($username)) {
             return api_error('Invalid username format', Status::BAD_REQUEST);
         }
 
         $username = strtolower($username);
 
-        $users = array_map(fn($fn) => strtolower($fn), array_keys(getUsersContext($this->mapper, $this->logger)));
+        $users = array_map(strtolower(...), array_keys(get_users_context($this->mapper, $this->logger)));
 
         if (false !== in_array($username, $users, true)) {
             return api_error(r("User '{user}' already exists", ['user' => $username]), Status::CONFLICT);
         }
 
         try {
-            perUserConfig($username);
+            per_user_config($username);
         } catch (Throwable $e) {
             $this->logger->error(r('Failed to create user {user}: {error.message}', [
                 'user' => $username,
-                ...exception_log($e)
+                ...exception_log($e),
             ]));
 
             return api_error(r('Failed to create user {user}', ['user' => $username]), Status::INTERNAL_SERVER_ERROR);
@@ -96,7 +95,7 @@ final class Index
             return api_error('Missing required parameter: user', Status::BAD_REQUEST);
         }
 
-        if (true !== isValidName($user)) {
+        if (true !== is_valid_name($user)) {
             return api_error('Invalid username format', Status::BAD_REQUEST);
         }
 
@@ -105,17 +104,17 @@ final class Index
         }
 
         try {
-            getUserContext($user, $this->mapper, $this->logger);
+            get_user_context($user, $this->mapper, $this->logger);
         } catch (RuntimeException $e) {
             return api_error(r("User '{user}' doesn't exist", ['user' => $user]), Status::NOT_FOUND);
         }
 
         try {
-            deleteUserConfig($user, $cache);
+            delete_user_config($user, $cache);
         } catch (Throwable $e) {
             $this->logger->error(r('Failed to create user {user}: {error.message}', [
                 'user' => $user,
-                ...exception_log($e)
+                ...exception_log($e),
             ]));
 
             return api_error(r('Failed to create user {user}', ['user' => $user]), Status::INTERNAL_SERVER_ERROR);
@@ -131,12 +130,12 @@ final class Index
             return api_error('Missing required parameter: user', Status::BAD_REQUEST);
         }
 
-        if (true !== isValidName($user)) {
+        if (true !== is_valid_name($user)) {
             return api_error('Invalid username format', Status::BAD_REQUEST);
         }
 
         try {
-            $userContext = getUserContext($user, $this->mapper, $this->logger);
+            $userContext = get_user_context($user, $this->mapper, $this->logger);
         } catch (RuntimeException $e) {
             return api_error(r("User '{user}' doesn't exist", ['user' => $user]), Status::NOT_FOUND);
         }
@@ -151,18 +150,18 @@ final class Index
             return api_error('Missing required parameter: user', Status::BAD_REQUEST);
         }
 
-        if (true !== isValidName($user)) {
+        if (true !== is_valid_name($user)) {
             return api_error('Invalid username format', Status::BAD_REQUEST);
         }
 
         try {
-            $userContext = getUserContext($user, $this->mapper, $this->logger);
+            $userContext = get_user_context($user, $this->mapper, $this->logger);
         } catch (RuntimeException $e) {
             return api_error(r("User '{user}' doesn't exist", ['user' => $user]), Status::NOT_FOUND);
         }
 
         try {
-            $contents = (string)$request->getBody();
+            $contents = (string) $request->getBody();
             if (true === str_contains($request->getHeaderLine('Content-Type'), 'application/json')) {
                 $data = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
             } else {
@@ -176,11 +175,11 @@ final class Index
             return api_error('Request body must be a JSON object', Status::BAD_REQUEST);
         }
 
-        $validation = validateServersData($data);
+        $validation = validate_servers_data($data);
 
         if (false === $validation['valid']) {
             return api_error('Validation failed', Status::BAD_REQUEST, body: [
-                'errors' => $validation['errors']
+                'errors' => $validation['errors'],
             ]);
         }
 

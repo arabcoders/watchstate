@@ -21,9 +21,10 @@ final class GetInfo
 
     protected string $action = 'plex.getInfo';
 
-    public function __construct(protected readonly iHttp $http, protected readonly iLogger $logger)
-    {
-    }
+    public function __construct(
+        protected readonly iHttp $http,
+        protected readonly iLogger $logger,
+    ) {}
 
     /**
      * Get Backend unique identifier.
@@ -45,21 +46,21 @@ final class GetInfo
                     'client' => $context->clientName,
                     'backend' => $context->backendName,
                     'user' => $context->userContext->name,
-                    'url' => (string)$url,
+                    'url' => (string) $url,
                 ];
 
                 $this->logger->debug(
                     message: "{action}: Requesting '{client}: {user}@{backend}' unique identifier.",
-                    context: $logContext
+                    context: $logContext,
                 );
 
                 $response = $this->http->request(
                     method: Method::GET,
-                    url: (string)$url,
+                    url: (string) $url,
                     options: array_replace_recursive(
                         $context->getHttpOptions(),
                         true === ag_exists($opts, 'headers') ? ['headers' => $opts['headers']] : [],
-                    )
+                    ),
                 );
 
                 $content = $response->getContent(false);
@@ -74,8 +75,8 @@ final class GetInfo
                                 'status_code' => $response->getStatusCode(),
                                 'response' => ['body' => $content],
                             ],
-                            level: Levels::WARNING
-                        )
+                            level: Levels::WARNING,
+                        ),
                     );
                 }
 
@@ -84,16 +85,16 @@ final class GetInfo
                         status: false,
                         error: new Error(
                             message: "{action}: Request for '{client}: {user}@{backend}' get info returned with empty response.",
-                            context: [...$logContext, 'response' => ['body' => $content],],
-                            level: Levels::ERROR
-                        )
+                            context: [...$logContext, 'response' => ['body' => $content]],
+                            level: Levels::ERROR,
+                        ),
                     );
                 }
 
                 $item = json_decode(
                     json: $content,
                     associative: true,
-                    flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                    flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
                 );
 
                 if (true === $context->trace) {
@@ -122,7 +123,7 @@ final class GetInfo
                     response: $ret,
                 );
             },
-            action: $this->action
+            action: $this->action,
         );
     }
 }

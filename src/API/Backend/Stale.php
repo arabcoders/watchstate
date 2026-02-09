@@ -24,8 +24,10 @@ final class Stale
 {
     use APITraits;
 
-    public function __construct(private readonly iImport $mapper, private readonly iLogger $logger)
-    {
+    public function __construct(
+        private readonly iImport $mapper,
+        private readonly iLogger $logger,
+    ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
     }
@@ -54,10 +56,10 @@ final class Stale
                 userContext: $userContext,
                 name: $name,
                 id: $id,
-                ignore: (bool)$params->get('ignore', false),
-                timeout: (int)$params->get('timeout', 0),
+                ignore: (bool) $params->get('ignore', false),
+                timeout: (int) $params->get('timeout', 0),
             );
-            $data['items'] = array_map(fn($item) => self::formatEntity($item), $data['items']);
+            $data['items'] = array_map(self::formatEntity(...), $data['items']);
         } catch (RuntimeException $e) {
             return api_error($e->getMessage(), Status::NOT_FOUND);
         }
@@ -98,7 +100,7 @@ final class Stale
         string $name,
         string|int $id,
         bool $ignore = false,
-        int|float $timeout = 0
+        int|float $timeout = 0,
     ): array {
         if (null === $this->getBackend(name: $name, userContext: $userContext)) {
             throw new RuntimeException(r("Backend '{name}' not found.", ['name' => $name]));
@@ -107,21 +109,21 @@ final class Stale
         $backendOpts = $list = [];
 
         if (0 !== $timeout) {
-            $backendOpts = ag_set($backendOpts, 'client.timeout', (float)$timeout);
+            $backendOpts = ag_set($backendOpts, 'client.timeout', (float) $timeout);
         }
 
         $client = $this->getClient(name: $name, config: $backendOpts, userContext: $userContext);
 
-        $remote = cacheableItem(
+        $remote = cacheable_item(
             key: "remote-data-{$id}-{$name}",
-            function: fn() => array_map(
-                callback: fn($item) => ag($item->getMetadata($item->via), iState::COLUMN_ID),
-                array: $client->getLibraryContent($id)
+            function: static fn() => array_map(
+                callback: static fn($item) => ag($item->getMetadata($item->via), iState::COLUMN_ID),
+                array: $client->getLibraryContent($id),
             ),
             ignoreCache: $ignore,
             opts: [
-                iCache::class => $userContext->cache
-            ]
+                iCache::class => $userContext->cache,
+            ],
         );
 
         $localCount = 0;
@@ -136,7 +138,7 @@ final class Stale
                 continue;
             }
 
-            if ((string)$libraryId !== (string)$id) {
+            if ((string) $libraryId !== (string) $id) {
                 continue;
             }
 
@@ -156,7 +158,7 @@ final class Stale
             if (null === ($libraryId = ag($library, 'id'))) {
                 continue;
             }
-            if ((string)$id !== (string)$libraryId) {
+            if ((string) $id !== (string) $libraryId) {
                 continue;
             }
             $libraryInfo = $library;

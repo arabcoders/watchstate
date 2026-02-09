@@ -24,10 +24,9 @@ final readonly class Error implements Stringable
         public string $message,
         public array $context = [],
         public Levels $level = Levels::ERROR,
-        public Throwable|null $previous = null,
+        public ?Throwable $previous = null,
         public array $extra = [],
-    ) {
-    }
+    ) {}
 
     /**
      * Does the error object contain previous stack trace?
@@ -73,7 +72,7 @@ final readonly class Error implements Stringable
 
         $context = $this->context;
 
-        if (true === ($this->previous instanceof DBLayerException)) {
+        if (true === $this->previous instanceof DBLayerException) {
             $context[DBLayer::class] = [
                 'query' => $this->previous->getQueryString(),
                 'bind' => $this->previous->getQueryBind(),

@@ -37,18 +37,18 @@ final class Index
 
     public function __construct(iImport $mapper, iLogger $logger)
     {
-        $this->users = array_keys(getUsersContext(mapper: $mapper, logger: $logger));
+        $this->users = array_keys(get_users_context(mapper: $mapper, logger: $logger));
         $this->logsDir = [
             [
-                'path' => fixPath(Config::get('tmpDir') . '/logs'),
+                'path' => fix_path(Config::get('tmpDir') . '/logs'),
                 'type' => '*.*.log',
             ],
             [
-                'path' => fixPath(Config::get('tmpDir') . '/webhooks'),
+                'path' => fix_path(Config::get('tmpDir') . '/webhooks'),
                 'type' => '*.json',
             ],
             [
-                'path' => fixPath(Config::get('tmpDir') . '/debug'),
+                'path' => fix_path(Config::get('tmpDir') . '/debug'),
                 'type' => '*.json',
             ],
         ];
@@ -79,7 +79,7 @@ final class Index
                     'type' => $matches[1] ?? '??',
                     'date' => $date,
                     'size' => filesize($file),
-                    'modified' => makeDate(filemtime($file)),
+                    'modified' => make_date(filemtime($file)),
                 ];
 
                 $list[] = $builder;
@@ -103,10 +103,10 @@ final class Index
 
         $list = [];
 
-        $today = makeDate()->format('Ymd');
+        $today = make_date()->format('Ymd');
 
         $params = DataUtil::fromArray($request->getQueryParams());
-        $limit = (int)$params->get('limit', 50);
+        $limit = (int) $params->get('limit', 50);
         $limit = $limit < 1 ? 50 : $limit;
 
         foreach (glob($path . '/' . $type) as $file) {
@@ -123,7 +123,7 @@ final class Index
                 'type' => $matches[1] ?? '??',
                 'date' => $matches[2] ?? '??',
                 'size' => filesize($file),
-                'modified' => makeDate(filemtime($file)),
+                'modified' => make_date(filemtime($file)),
                 'lines' => [],
             ];
 
@@ -134,7 +134,7 @@ final class Index
                 $lastLine = $file->key();
                 $it = new LimitIterator($file, max(0, $lastLine - $limit), $lastLine);
                 foreach ($it as $line) {
-                    $line = trim((string)$line);
+                    $line = trim((string) $line);
                     if (empty($line)) {
                         continue;
                     }
@@ -147,7 +147,7 @@ final class Index
         }
 
         return api_response(Status::OK, $list, headers: [
-            'X-No-AccessLog' => '1'
+            'X-No-AccessLog' => '1',
         ]);
     }
 
@@ -174,14 +174,14 @@ final class Index
 
         $file = new SplFileObject($filePath, 'r');
 
-        if (true === (bool)$params->get('download')) {
+        if (true === (bool) $params->get('download')) {
             return $this->download($filePath);
         }
         if ($params->get('stream')) {
             return $this->stream($filePath);
         }
 
-        if (0 === ($offset = (int)$params->get('offset', 0)) || $offset < 0) {
+        if (0 === ($offset = (int) $params->get('offset', 0)) || $offset < 0) {
             $offset = self::MAX_LIMIT;
         }
 
@@ -218,7 +218,7 @@ final class Index
             $it = new LimitIterator($file, $start, 'json' === $contentType ? PHP_INT_MAX : self::MAX_LIMIT);
 
             foreach ($it as $line) {
-                $data['lines'][] = self::formatLog(trim((string)$line), $this->users);
+                $data['lines'][] = self::formatLog(trim((string) $line), $this->users);
             }
 
             $hasMore = $lastLine > $offset;
@@ -253,19 +253,21 @@ final class Index
 
                 $process->start(callback: function ($type, $data) use ($process) {
                     echo "event: data\n";
-                    $data = trim((string)$data);
-                    echo implode(
-                        PHP_EOL,
-                        array_map(
-                            function ($data) {
-                                if (!is_string($data)) {
-                                    return null;
-                                }
-                                return 'data: ' . json_encode(self::formatLog(trim($data), $this->users));
-                            },
-                            (array)preg_split("/\R/", $data)
+                    $data = trim((string) $data);
+                    echo
+                        implode(
+                            PHP_EOL,
+                            array_map(
+                                function ($data) {
+                                    if (!is_string($data)) {
+                                        return null;
+                                    }
+                                    return 'data: ' . json_encode(self::formatLog(trim($data), $this->users));
+                                },
+                                (array) preg_split("/\R/", $data),
+                            ),
                         )
-                    );
+                    ;
                     echo "\n\n";
 
                     flush();
@@ -292,7 +294,7 @@ final class Index
                     $this->counter = 3;
 
                     echo "event: ping\n";
-                    echo 'data: ' . makeDate() . "\n\n";
+                    echo 'data: ' . make_date() . "\n\n";
                     flush();
 
                     if (ob_get_length() > 0) {
@@ -349,12 +351,12 @@ final class Index
     {
         if (empty($line)) {
             return [
-                'id' => md5((string)(hrtime(true) + random_int(1, 10000))),
+                'id' => md5((string) (hrtime(true) + random_int(1, 10000))),
                 'item_id' => null,
                 'user' => null,
                 'backend' => null,
                 'date' => null,
-                'text' => $line
+                'text' => $line,
             ];
         }
 
@@ -365,7 +367,7 @@ final class Index
         $identMatch = preg_match("/'((?P<client>\w+):\s)?(?P<user>\w+)@(?P<backend>\w+)'/i", $line, $identMatches);
 
         $logLine = [
-            'id' => md5($line . hrtime(true) + random_int(1, 10000)),
+            'id' => md5($line . (hrtime(true) + random_int(1, 10000))),
             'item_id' => null,
             'user' => null,
             'backend' => null,

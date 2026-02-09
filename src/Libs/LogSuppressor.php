@@ -15,9 +15,9 @@ final class LogSuppressor implements iHandler
 {
     private static array $suppress = [];
     private static int $count = 0;
-    private iHandler|null $handler;
+    private ?iHandler $handler;
 
-    public function __construct(array $suppress, iHandler|null $handler = null)
+    public function __construct(array $suppress, ?iHandler $handler = null)
     {
         self::$suppress = $suppress;
         self::$count = count($suppress);
@@ -51,7 +51,7 @@ final class LogSuppressor implements iHandler
             return false;
         }
 
-        $log = ($record instanceof LogRecord) ? $record->message : $record;
+        $log = $record instanceof LogRecord ? $record->message : $record;
 
         if (empty($log)) {
             return false;

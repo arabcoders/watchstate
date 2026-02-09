@@ -47,16 +47,16 @@ final class Index
         $this->logfile = new Logger(name: 'webhook', processors: [new LogMessageProcessor()]);
 
         $logfile = Config::get('webhook.log.file');
-        $enabled = (bool)Config::get('webhook.log.enabled', true);
+        $enabled = (bool) Config::get('webhook.log.enabled', true);
         $level = Config::get('webhook.debug') ? Level::Debug : Config::get('webhook.log.level', Level::Info);
 
         if (true === $enabled && null !== $logfile) {
             $this->logfile->pushHandler(
-                $suppressor->withHandler(new StreamHandler($logfile, $level, true))
+                $suppressor->withHandler(new StreamHandler($logfile, $level, true)),
             );
         }
 
-        if (true === inContainer()) {
+        if (true === in_container()) {
             $this->logfile->pushHandler($suppressor->withHandler(new StreamHandler('php://stderr', $level, true)));
         }
     }
@@ -72,11 +72,11 @@ final class Index
     public function __invoke(iRequest $request): iResponse
     {
         if (true === Config::get('webhook.dumpRequest')) {
-            saveRequestPayload(clone $request);
+            save_request_payload(clone $request);
         }
 
         $client = null;
-        $usersContext = getUsersContext(mapper: $this->mapper, logger: $this->logger);
+        $usersContext = get_users_context(mapper: $this->mapper, logger: $this->logger);
 
         // -- Use main user backends to infer the payload content type.
         foreach (array_keys($usersContext['main']->config->getAll()) as $backendName) {
@@ -91,16 +91,22 @@ final class Index
         }
 
         if (null === $client) {
-            $message = "No backend client were able to parse the the request.";
-            $this->write($request, Level::Info, $message, context: [
-                'headers' => $request->getHeaders(),
-                'payload' => $request->getParsedBody(),
-            ], forceContext: true);
+            $message = 'No backend client were able to parse the the request.';
+            $this->write(
+                $request,
+                Level::Info,
+                $message,
+                context: [
+                    'headers' => $request->getHeaders(),
+                    'payload' => $request->getParsedBody(),
+                ],
+                forceContext: true,
+            );
             return api_error($message, Status::BAD_REQUEST);
         }
 
         $attr = $request->getAttributes();
-        $isGeneric = (bool)ag($attr, 'webhook.generic', false);
+        $isGeneric = (bool) ag($attr, 'webhook.generic', false);
         $userId = ag($attr, 'user.id');
         $uuid = ag($attr, 'backend.id');
 
@@ -121,11 +127,11 @@ final class Index
         // -- Now we need to match the request down to the user and backend.
         foreach ($usersContext as $userContext) {
             foreach ($userContext->config->getAll() as $backendName => $backendData) {
-                if ((string)$uuid !== (string)ag($backendData, 'uuid')) {
+                if ((string) $uuid !== (string) ag($backendData, 'uuid')) {
                     continue;
                 }
 
-                if (false === $isGeneric && (string)$userId !== (string)ag($backendData, 'user')) {
+                if (false === $isGeneric && (string) $userId !== (string) ag($backendData, 'user')) {
                     continue;
                 }
 
@@ -140,11 +146,17 @@ final class Index
 
         if (count($backends) < 1) {
             $message = "Request from '{client}' didn't match any user/backend.";
-            $this->write($request, Level::Info, $message, context: [
-                'client' => $client->getName(),
-                'headers' => $request->getHeaders(),
-                'payload' => $request->getParsedBody(),
-            ], forceContext: true);
+            $this->write(
+                $request,
+                Level::Info,
+                $message,
+                context: [
+                    'client' => $client->getName(),
+                    'headers' => $request->getHeaders(),
+                    'payload' => $request->getParsedBody(),
+                ],
+                forceContext: true,
+            );
             return api_error($message, Status::BAD_REQUEST);
         }
 
@@ -156,7 +168,7 @@ final class Index
                     backendName: $mainBackend['backendName'],
                     client: $mainBackend['client'],
                     request: $request,
-                    isGeneric: $isGeneric
+                    isGeneric: $isGeneric,
                 );
             }
 
@@ -173,7 +185,7 @@ final class Index
                     'backend' => $mainBackend['backendName'],
                     'msg' => $e->getMessage(),
                     ...exception_log($e),
-                ]
+                ],
             );
             return api_response(Status::NOT_MODIFIED);
         }
@@ -190,12 +202,12 @@ final class Index
                         'title' => $entity->getName(),
                         'type' => $entity->type,
                     ],
-                ]
+                ],
             );
             return api_response(Status::NOT_MODIFIED);
         }
 
-        if ((0 === (int)$entity->episode || null === $entity->season) && true === $entity->isEpisode()) {
+        if ((0 === (int) $entity->episode || null === $entity->season) && true === $entity->isEpisode()) {
             $this->write(
                 request: $request,
                 level: Level::Notice,
@@ -206,10 +218,10 @@ final class Index
                     'item' => [
                         'title' => $entity->getName(),
                         'type' => $entity->type,
-                        'season' => (string)($entity->season ?? 'None'),
-                        'episode' => (string)($entity->episode ?? 'None'),
-                    ]
-                ]
+                        'season' => (string) ($entity->season ?? 'None'),
+                        'episode' => (string) ($entity->episode ?? 'None'),
+                    ],
+                ],
             );
 
             return api_response(Status::NOT_MODIFIED);
@@ -222,13 +234,13 @@ final class Index
                 ag_sets(ag($request->getAttributes(), 'backend', []), [
                     'id' => ag($backend, 'uuid'),
                     'name' => $target['backendName'],
-                ])
+                ]),
             )->withAttribute(
                 'user',
                 ag_sets(ag($request->getAttributes(), 'backend', []), [
                     'id' => ag($backend, 'user'),
                     'name' => $target['userContext']->name,
-                ])
+                ]),
             );
 
             try {
@@ -237,7 +249,7 @@ final class Index
                     backendName: $target['backendName'],
                     client: $target['client'],
                     request: $perUserRequest,
-                    isGeneric: $isGeneric
+                    isGeneric: $isGeneric,
                 );
             } catch (Throwable $e) {
                 $this->write(
@@ -254,7 +266,7 @@ final class Index
                         ],
                         'msg' => $e->getMessage(),
                         ...exception_log($e),
-                    ]
+                    ],
                 );
             }
         }
@@ -270,20 +282,20 @@ final class Index
         string $backendName,
         iClient $client,
         iRequest $request,
-        bool $isGeneric = false
+        bool $isGeneric = false,
     ): iResponse {
         $backend = $userContext->config->get($backendName);
 
-        $debugTrace = true === (bool)ag($backend, 'options.' . Options::DEBUG_TRACE);
+        $debugTrace = true === (bool) ag($backend, 'options.' . Options::DEBUG_TRACE);
 
-        if (true === ($importEnabled = (bool)ag($backend, 'import.enabled'))) {
+        if (true === ($importEnabled = (bool) ag($backend, 'import.enabled'))) {
             if (true === ag_exists($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
                 $backend = ag_delete($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
                 $userContext->config->delete("{$backendName}.options." . Options::IMPORT_METADATA_ONLY)->persist();
             }
         }
 
-        $metadataOnly = true === (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
+        $metadataOnly = true === (bool) ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
 
         if (true !== $metadataOnly && true !== $importEnabled) {
             $response = api_response(Status::NOT_ACCEPTABLE);
@@ -291,10 +303,16 @@ final class Index
                 return $response;
             }
 
-            $this->write($request, Level::Warning, "Import are disabled for '{user}@{backend}'.", context: [
-                'user' => $userContext->name,
-                'backend' => $client->getName(),
-            ], forceContext: true);
+            $this->write(
+                $request,
+                Level::Warning,
+                "Import are disabled for '{user}@{backend}'.",
+                context: [
+                    'user' => $userContext->name,
+                    'backend' => $client->getName(),
+                ],
+                forceContext: true,
+            );
 
             return $response;
         }
@@ -310,8 +328,8 @@ final class Index
             throw $e;
         }
 
-        if (true === (bool)ag($backend, 'options.' . Options::DUMP_PAYLOAD)) {
-            saveWebhookPayload($entity, $request);
+        if (true === (bool) ag($backend, 'options.' . Options::DUMP_PAYLOAD)) {
+            save_webhook_payload($entity, $request);
         }
 
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
@@ -331,13 +349,13 @@ final class Index
                         'title' => $entity->getName(),
                         'type' => $entity->type,
                     ],
-                ]
+                ],
             );
 
             return $response;
         }
 
-        if ((0 === (int)$entity->episode || null === $entity->season) && $entity->isEpisode()) {
+        if ((0 === (int) $entity->episode || null === $entity->season) && $entity->isEpisode()) {
             $response = api_response(Status::NOT_MODIFIED);
             if (true === $isGeneric) {
                 return $response;
@@ -353,10 +371,10 @@ final class Index
                     'item' => [
                         'title' => $entity->getName(),
                         'type' => $entity->type,
-                        'season' => (string)($entity->season ?? 'None'),
-                        'episode' => (string)($entity->episode ?? 'None'),
-                    ]
-                ]
+                        'season' => (string) ($entity->season ?? 'None'),
+                        'episode' => (string) ($entity->episode ?? 'None'),
+                    ],
+                ],
             );
 
             return $response;
@@ -370,7 +388,7 @@ final class Index
             'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
         ]);
 
-        queueEvent(ProcessRequestEvent::NAME, $entity->getAll(), [
+        queue_event(ProcessRequestEvent::NAME, $entity->getAll(), [
             'unique' => true,
             EventsTable::COLUMN_REFERENCE => $itemId,
             EventsTable::COLUMN_OPTIONS => [
@@ -395,7 +413,7 @@ final class Index
                     'type' => $entity->type,
                     'title' => $entity->getName(),
                 ],
-                'data' => arrayToString([
+                'data' => array_to_string([
                     'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, '?'),
                     'played' => $entity->isWatched(),
                     'has_progress' => $entity->hasPlayProgress(),
@@ -404,7 +422,7 @@ final class Index
                     'progress' => $entity->hasPlayProgress() ? $entity->getPlayProgress() : null,
                     'generic' => $isGeneric,
                 ]),
-            ]
+            ],
         );
 
         return api_response(Status::OK);
@@ -423,16 +441,17 @@ final class Index
         int|string|Level $level,
         string $message,
         array $context = [],
-        bool $forceContext = false
+        bool $forceContext = false,
     ): void {
         $params = $request->getServerParams();
 
-        $uri = new Uri((string)ag($params, 'REQUEST_URI', '/'));
+        $uri = new Uri((string) ag($params, 'REQUEST_URI', '/'));
 
         if (false === empty($uri->getQuery())) {
             $query = [];
             parse_str($uri->getQuery(), $query);
             if (true === ag_exists($query, 'apikey')) {
+                // @mago-expect lint:no-literal-password
                 $query['apikey'] = 'api_key_removed';
                 $uri = $uri->withQuery(http_build_query($query));
             }
@@ -442,9 +461,9 @@ final class Index
             'request' => [
                 'method' => $request->getMethod(),
                 'id' => ag($params, 'X_REQUEST_ID'),
-                'ip' => getClientIp($request),
+                'ip' => get_client_ip($request),
                 'agent' => ag($params, 'HTTP_USER_AGENT'),
-                'uri' => (string)$uri,
+                'uri' => (string) $uri,
             ],
         ], $context);
 

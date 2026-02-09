@@ -36,14 +36,14 @@ final class Index
             if (!$request->getAttribute(Options::INTERNAL_REQUEST)) {
                 $item = array_filter(
                     $backend,
-                    fn($key) => false === in_array($key, ['options', ...$removedKeys], true),
-                    ARRAY_FILTER_USE_KEY
+                    static fn($key) => false === in_array($key, ['options', ...$removedKeys], true),
+                    ARRAY_FILTER_USE_KEY,
                 );
 
                 $item = ag_set(
                     $item,
                     'options.' . Options::IMPORT_METADATA_ONLY,
-                    (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY, false)
+                    (bool) ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY, false),
                 );
                 $list[] = $item;
                 continue;

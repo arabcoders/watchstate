@@ -24,7 +24,7 @@ final class Backup
     {
         $list = [];
 
-        foreach (new DirectoryIterator(fixPath(Config::get('path') . '/backup')) as $file) {
+        foreach (new DirectoryIterator(fix_path(Config::get('path') . '/backup')) as $file) {
             if ($file->isDot() || $file->isDir() || $file->isLink() || false === $file->isFile()) {
                 continue;
             }
@@ -45,7 +45,7 @@ final class Backup
         array_multisort($sorter, SORT_DESC, $list);
 
         foreach ($list as &$item) {
-            $item['date'] = makeDate(ag($item, 'date'));
+            $item['date'] = make_date(ag($item, 'date'));
         }
 
         return api_response(Status::OK, $list);
@@ -54,7 +54,7 @@ final class Backup
     #[Route(['GET', 'DELETE'], self::URL . '/{filename}[/]', name: 'system.backup.view')]
     public function read(iRequest $request, string $filename): iResponse
     {
-        $path = realpath(fixPath(Config::get('path') . '/backup'));
+        $path = realpath(fix_path(Config::get('path') . '/backup'));
 
         $filePath = realpath($path . '/' . $filename);
 

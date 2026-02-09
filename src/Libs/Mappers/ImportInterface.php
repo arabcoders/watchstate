@@ -46,7 +46,7 @@ interface ImportInterface extends Countable
      *
      * @return self
      */
-    public function loadData(DateTimeInterface|null $date = null): self;
+    public function loadData(?DateTimeInterface $date = null): self;
 
     /**
      * Add entity data to the mapper. if the entity already exists, then it will be updated.
@@ -66,7 +66,7 @@ interface ImportInterface extends Countable
      *
      * @return null|iState Returns the entity from mapper if exists, null otherwise.
      */
-    public function get(iState $entity): null|iState;
+    public function get(iState $entity): ?iState;
 
     /**
      * Remove an entity from the mapper.

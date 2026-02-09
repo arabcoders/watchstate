@@ -44,17 +44,18 @@ final class MigrationsCommand extends Command
      */
     protected function configure(): void
     {
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->setDescription('Run database migrations.')
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Start migrations from start.')
             ->setHelp(
                 <<<HELP
 
-                This command execute <notice>database schema migrations</notice> to make sure the database is up-to-date.
-                You do not need to run this command unless told by the team.
-                This is done automatically on container startup.
+                    This command execute <notice>database schema migrations</notice> to make sure the database is up-to-date.
+                    You do not need to run this command unless told by the team.
+                    This is done automatically on container startup.
 
-                HELP
+                    HELP,
             );
     }
 
@@ -86,9 +87,9 @@ final class MigrationsCommand extends Command
             $opts['fresh'] = true;
         }
 
-        foreach (getUsersContext(mapper: $this->mapper, logger: $this->logger) as $userContext) {
+        foreach (get_users_context(mapper: $this->mapper, logger: $this->logger) as $userContext) {
             $output->writeln(r("Running database migrations for '{user}' database.", [
-                'user' => $userContext->name
+                'user' => $userContext->name,
             ]), iOutput::VERBOSITY_VERBOSE);
 
             $userContext->db->migrations(iDB::MIGRATE_UP, $opts);

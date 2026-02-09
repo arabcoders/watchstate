@@ -35,7 +35,7 @@ final class Guids
             $item = [
                 'guid' => after($guid, 'guid_'),
                 'type' => $type,
-                'validator' => ag($validator, $guid, fn() => new \stdClass()),
+                'validator' => ag($validator, $guid, static fn() => new \stdClass()),
             ];
 
             $list[] = $item;
@@ -57,7 +57,7 @@ final class Guids
 
         $requiredFields = [
             'name' => 'string',
-            'type' => join('|', array_keys(Config::get('supported'))),
+            'type' => implode('|', array_keys(Config::get('supported'))),
             'description' => 'string',
             'validator.pattern' => 'string',
             'validator.example' => 'string',
@@ -66,11 +66,17 @@ final class Guids
         ];
 
         foreach ($requiredFields as $field => $type) {
-            if (!$params->get($field)) {
-                return api_error(r("Field '{field}' is required. And is missing from request.", [
-                    'field' => $field
-                ]), httpCode: Status::BAD_REQUEST, body: ['requiredFields' => $requiredFields]);
+            if ($params->get($field)) {
+                continue;
             }
+
+            return api_error(
+                r("Field '{field}' is required. And is missing from request.", [
+                    'field' => $field,
+                ]),
+                httpCode: Status::BAD_REQUEST,
+                body: ['requiredFields' => $requiredFields],
+            );
         }
 
         try {
@@ -97,11 +103,11 @@ final class Guids
             if (empty($test)) {
                 return api_error(r("Empty value {index} - '{test}' is not allowed.", [
                     'index' => $index,
-                    'test' => $test
+                    'test' => $test,
                 ]), Status::BAD_REQUEST);
             }
 
-            if (1 === preg_match($pattern, (string)$test)) {
+            if (1 === preg_match($pattern, (string) $test)) {
                 continue;
             }
 
@@ -111,7 +117,7 @@ final class Guids
                     'test' => $test,
                     'pattern' => $pattern,
                 ]),
-                Status::BAD_REQUEST
+                Status::BAD_REQUEST,
             );
         }
 
@@ -120,19 +126,19 @@ final class Guids
         }
 
         foreach ($params->get('validator.tests.invalid', []) as $index => $test) {
-            if (1 !== preg_match($pattern, (string)$test)) {
+            if (1 !== preg_match($pattern, (string) $test)) {
                 continue;
             }
 
             return api_error(r("Incorrect value {index} - '{test}' matched given pattern '{pattern}'.", [
                 'index' => $index,
                 'test' => $test,
-                'pattern' => $pattern
+                'pattern' => $pattern,
             ]), Status::BAD_REQUEST);
         }
 
         $data = [
-            'id' => generateUUID(),
+            'id' => generate_uuid(),
             'type' => $params->get('type'),
             'name' => $params->get('name'),
             'description' => $params->get('description'),
@@ -141,9 +147,9 @@ final class Guids
                 'example' => $params->get('validator.example'),
                 'tests' => [
                     'valid' => $params->get('validator.tests.valid'),
-                    'invalid' => $params->get('validator.tests.invalid')
-                ]
-            ]
+                    'invalid' => $params->get('validator.tests.invalid'),
+                ],
+            ],
         ];
 
         $file = ConfigFile::open(Config::get('guid.file'), 'yaml', autoSave: false, autoCreate: true, autoBackup: true);
@@ -168,12 +174,14 @@ final class Guids
         $found = false;
 
         foreach ($file->get('guids', []) as $index => $guid) {
-            if ($guid['id'] === $id) {
-                $data = $guid;
-                $file->delete('guids.' . $index);
-                $found = true;
-                break;
+            if ($guid['id'] !== $id) {
+                continue;
             }
+
+            $data = $guid;
+            $file->delete('guids.' . $index);
+            $found = true;
+            break;
         }
 
         if (false === $found) {
@@ -185,10 +193,12 @@ final class Guids
 
         $linkRemoved = false;
         foreach ($file->get('links', []) as $index => $link) {
-            if (ag($link, 'map.to') === ag($data, 'name')) {
-                $file->delete('links.' . $index);
-                $linkRemoved = true;
+            if (ag($link, 'map.to') !== ag($data, 'name')) {
+                continue;
             }
+
+            $file->delete('links.' . $index);
+            $linkRemoved = true;
         }
 
         if (true === $linkRemoved) {
@@ -210,7 +220,7 @@ final class Guids
 
         return api_response(
             Status::OK,
-            array_filter(ag($this->getData(), 'links', []), fn($link) => $link['type'] === $client)
+            array_filter(ag($this->getData(), 'links', []), static fn($link) => $link['type'] === $client),
         );
     }
 
@@ -230,16 +240,18 @@ final class Guids
         }
 
         foreach ($requiredFields as $field) {
-            if (!$params->get($field)) {
-                return api_error(r("Field '{field}' is required. And is missing from request.", [
-                    'field' => $field
-                ]), Status::BAD_REQUEST);
+            if ($params->get($field)) {
+                continue;
             }
+
+            return api_error(r("Field '{field}' is required. And is missing from request.", [
+                'field' => $field,
+            ]), Status::BAD_REQUEST);
         }
 
         if (false === array_key_exists($client, Config::get('supported', []))) {
             return api_error(r("Client name '{client}' is unsupported or incorrect.", [
-                'client' => $client
+                'client' => $client,
             ]), Status::BAD_REQUEST);
         }
 
@@ -250,27 +262,27 @@ final class Guids
 
         if (false === array_key_exists($mapTo, Guid::getSupported())) {
             return api_error(r("The map.to GUID '{guid}' is not supported.", [
-                'guid' => $params->get('map.to')
+                'guid' => $params->get('map.to'),
             ]), Status::BAD_REQUEST);
         }
 
         $exists = array_any(
             ag($this->getData(), 'links', []),
-            fn($link) => $link['type'] === $client && $link['map']['from'] === $params->get('map.from')
+            static fn($link) => $link['type'] === $client && $link['map']['from'] === $params->get('map.from'),
         );
 
         if (true === $exists) {
             return api_error(
                 r("The client '{client}' map.from '{from}' is already exists.", [
                     'client' => $client,
-                    'from' => $params->get('map.from')
+                    'from' => $params->get('map.from'),
                 ]),
-                Status::BAD_REQUEST
+                Status::BAD_REQUEST,
             );
         }
 
         $link = [
-            'id' => generateUUID(),
+            'id' => generate_uuid(),
             'type' => $client,
             'map' => [
                 'from' => $params->get('map.from'),
@@ -280,7 +292,7 @@ final class Guids
 
         if ('plex' === $client) {
             $link['options'] = [
-                'legacy' => (bool)$params->get('options.legacy'),
+                'legacy' => (bool) $params->get('options.legacy'),
             ];
 
             if ($params->get('replace.from') && $params->get('replace.to')) {
@@ -324,14 +336,15 @@ final class Guids
         if (null === $refIndex) {
             return api_error(r("The client '{client}' link id '{id}' is not found.", [
                 'client' => $client,
-                'id' => $id
+                'id' => $id,
             ]), Status::NOT_FOUND);
         }
 
         $file->delete('links.' . $refIndex);
 
         $links = $file->get('links', []);
-        $file->set('links', null)
+        $file
+            ->set('links', null)
             ->set('links', array_values($links))
             ->persist();
 

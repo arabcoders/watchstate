@@ -69,9 +69,9 @@ final class ParseWebhook
 
     private string $action = 'plex.parseWebhook';
 
-    public function __construct(private readonly iCache $cache)
-    {
-    }
+    public function __construct(
+        private readonly iCache $cache,
+    ) {}
 
     /**
      * Parse Webhook payload.
@@ -88,7 +88,7 @@ final class ParseWebhook
         return $this->tryResponse(
             context: $context,
             fn: fn() => $this->parse($context, $guid, $request, $opts),
-            action: $this->action
+            action: $this->action,
         );
     }
 
@@ -116,7 +116,7 @@ final class ParseWebhook
                 'http_code' => Status::BAD_REQUEST->value,
                 'message' => r(
                     text: "Ignoring '{client}: {user}@{backend}' request. Invalid request, no payload.",
-                    context: $logContext
+                    context: $logContext,
                 ),
             ]);
         }
@@ -126,23 +126,23 @@ final class ParseWebhook
         $event = ag($json, 'event', null);
         $id = ag($item, 'ratingKey');
 
-        if (null === $type || false === in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
+        if (null === $type || false === in_array($type, self::WEBHOOK_ALLOWED_TYPES, true)) {
             return new Response(status: false, extra: [
                 'http_code' => Status::OK->value,
                 'message' => r(
                     text: "{user}@{backend}: Webhook content type '{type}' is not supported.",
-                    context: [...$logContext, 'type' => $type]
-                )
+                    context: [...$logContext, 'type' => $type],
+                ),
             ]);
         }
 
-        if (null === $event || false === in_array($event, self::WEBHOOK_ALLOWED_EVENTS)) {
+        if (null === $event || false === in_array($event, self::WEBHOOK_ALLOWED_EVENTS, true)) {
             return new Response(status: false, extra: [
                 'http_code' => Status::OK->value,
                 'message' => r(
                     text: "{user}@{backend}: Webhook event type '{event}' is not supported.",
-                    context: [...$logContext, 'event' => $event]
-                )
+                    context: [...$logContext, 'event' => $event],
+                ),
             ]);
         }
 
@@ -154,10 +154,10 @@ final class ParseWebhook
         }
 
         if (null !== ($ignoreIds = ag($context->options, 'ignore', null))) {
-            $ignoreIds = array_map(fn($v) => trim($v), explode(',', (string)$ignoreIds));
+            $ignoreIds = array_map(trim(...), explode(',', (string) $ignoreIds));
         }
 
-        if (null !== $ignoreIds && in_array(ag($item, 'librarySectionID', '???'), $ignoreIds)) {
+        if (null !== $ignoreIds && in_array(ag($item, 'librarySectionID', '???'), $ignoreIds, true)) {
             return new Response(status: false, extra: [
                 'http_code' => Status::OK->value,
                 'message' => r('{user}@{backend}: Library id is ignored by user config.', $logContext),
@@ -167,15 +167,15 @@ final class ParseWebhook
         try {
             $obj = ag($this->getItemDetails(context: $context, id: $id, opts: [
                 Options::LOG_CONTEXT => ['request' => $json],
-                ...$opts
+                ...$opts,
             ]), 'MediaContainer.Metadata.0', []);
 
-            $isPlayed = (bool)ag($item, 'viewCount', false);
+            $isPlayed = (bool) ag($item, 'viewCount', false);
             $lastPlayedAt = true === $isPlayed ? ag($item, 'lastViewedAt') : null;
 
-            $year = (int)ag($obj, ['grandParentYear', 'parentYear', 'year'], 0);
+            $year = (int) ag($obj, ['grandParentYear', 'parentYear', 'year'], 0);
             if (0 === $year && null !== ($airDate = ag($obj, 'originallyAvailableAt'))) {
-                $year = (int)makeDate($airDate)->format('Y');
+                $year = (int) make_date($airDate)->format('Y');
             }
 
             $logContext = [
@@ -190,13 +190,13 @@ final class ParseWebhook
                         ]),
                         iState::TYPE_EPISODE => r('{title} - ({season}x{episode})', [
                             'title' => ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
-                            'season' => str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
-                            'episode' => str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
+                            'season' => str_pad((string) ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
+                            'episode' => str_pad((string) ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
                         ]),
                         default => throw new InvalidArgumentException(
                             r('Unexpected Content type [{type}] was received.', [
-                                'type' => $type
-                            ])
+                                'type' => $type,
+                            ]),
                         ),
                     },
                     'year' => 0 === $year ? '0000' : $year,
@@ -205,54 +205,54 @@ final class ParseWebhook
             ];
 
             $fields = [
-                iState::COLUMN_WATCHED => (int)$isPlayed,
+                iState::COLUMN_WATCHED => (int) $isPlayed,
                 iState::COLUMN_GUIDS => $guid->get(guids: ag($item, 'Guid', []), context: $logContext),
                 iState::COLUMN_META_DATA => [
                     $context->backendName => [
                         iState::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
                         iState::COLUMN_GUIDS => $guid->parse(
                             guids: ag($item, 'Guid', []),
-                            context: $logContext
+                            context: $logContext,
                         ),
-                        iState::COLUMN_META_DATA_PROGRESS => "0",
-                    ]
+                        iState::COLUMN_META_DATA_PROGRESS => '0',
+                    ],
                 ],
                 iState::COLUMN_EXTRA => [
                     $context->backendName => [
                         iState::COLUMN_EXTRA_EVENT => $event,
-                        iState::COLUMN_EXTRA_DATE => makeDate('now'),
+                        iState::COLUMN_EXTRA_DATE => make_date('now'),
                     ],
                 ],
             ];
 
             if (true === $isPlayed && null !== $lastPlayedAt) {
                 $fields = array_replace_recursive($fields, [
-                    iState::COLUMN_UPDATED => (int)$lastPlayedAt,
+                    iState::COLUMN_UPDATED => (int) $lastPlayedAt,
                     iState::COLUMN_META_DATA => [
                         $context->backendName => [
-                            iState::COLUMN_META_DATA_PLAYED_AT => (string)$lastPlayedAt,
-                        ]
+                            iState::COLUMN_META_DATA_PLAYED_AT => (string) $lastPlayedAt,
+                        ],
                     ],
                 ]);
             }
 
-            $allowUpdate = (int)Config::get('progress.threshold', 0);
+            $allowUpdate = (int) Config::get('progress.threshold', 0);
             $progCheck = $allowUpdate || false === $isPlayed;
 
             if ($progCheck && null !== ($progress = ag($item, 'viewOffset', null))) {
                 // -- Plex reports play progress in milliseconds already no need to convert.
-                $fields[iState::COLUMN_META_DATA][$context->backendName][iState::COLUMN_META_DATA_PROGRESS] = (string)$progress;
+                $fields[iState::COLUMN_META_DATA][$context->backendName][iState::COLUMN_META_DATA_PROGRESS] = (string) $progress;
             }
 
             $entityOpts = ['override' => $fields];
 
-            if (true === (bool)ag($opts, Options::IS_GENERIC, false)) {
+            if (true === (bool) ag($opts, Options::IS_GENERIC, false)) {
                 $entityOpts[Options::IS_GENERIC] = true;
                 $entityOpts[iCache::class] = $this->cache;
             }
 
             $entity = $this->createEntity(context: $context, guid: $guid, item: $obj, opts: $entityOpts)
-                ->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
+                ->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS, true));
 
             if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
                 return new Response(
@@ -268,11 +268,11 @@ final class ParseWebhook
                                 'payload' => $request->getParsedBody(),
                             ],
                         ],
-                        level: Levels::ERROR
+                        level: Levels::ERROR,
                     ),
                     extra: [
                         'http_code' => Status::OK->value,
-                        'message' => r("{user}@{backend}: No valid/supported external ids.", $logContext)
+                        'message' => r('{user}@{backend}: No valid/supported external ids.', $logContext),
                     ],
                 );
             }
@@ -308,15 +308,15 @@ final class ParseWebhook
                         ],
                     ],
                     level: Levels::ERROR,
-                    previous: $e
+                    previous: $e,
                 ),
                 extra: [
                     'http_code' => Status::OK->value,
-                    'message' => r("{user}@{backend}: Failed to process event check logs.", [
+                    'message' => r('{user}@{backend}: Failed to process event check logs.', [
                         'client' => $context->clientName,
                         'backend' => $context->backendName,
                         'user' => $context->userContext->name,
-                    ])
+                    ]),
                 ],
             );
         }

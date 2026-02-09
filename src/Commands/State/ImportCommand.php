@@ -69,7 +69,8 @@ class ImportCommand extends Command
      */
     protected function configure(): void
     {
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->setDescription('Import play state and metadata from backends.')
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full import. Ignore last sync date.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
@@ -77,13 +78,13 @@ class ImportCommand extends Command
                 'sync-requests',
                 null,
                 InputOption::VALUE_NONE,
-                'Send one request at a time instead of all at once. note: Slower but more reliable.'
+                'Send one request at a time instead of all at once. note: Slower but more reliable.',
             )
             ->addOption(
                 'async-requests',
                 null,
                 InputOption::VALUE_NONE,
-                'Send all requests at once. note: Faster but less reliable. Default.'
+                'Send all requests at once. note: Faster but less reliable. Default.',
             )
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
             ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select sub user. Default all users.')
@@ -91,25 +92,37 @@ class ImportCommand extends Command
                 'select-backend',
                 's',
                 InputOption::VALUE_IS_ARRAY | InputOption::VALUE_OPTIONAL,
-                'Select backend.'
+                'Select backend.',
             )
             ->addOption(
                 'exclude',
                 'e',
                 InputOption::VALUE_NONE,
-                'Inverse --select-backend logic. Exclude selected backends.'
+                'Inverse --select-backend logic. Exclude selected backends.',
+            )
+            ->addOption(
+                'select-library',
+                'S',
+                InputOption::VALUE_IS_ARRAY | InputOption::VALUE_OPTIONAL,
+                'Select library ids.',
+            )
+            ->addOption(
+                'exclude-library',
+                'I',
+                InputOption::VALUE_NONE,
+                'Inverse --select-library logic. Exclude selected libraries.',
             )
             ->addOption(
                 'metadata-only',
                 null,
                 InputOption::VALUE_NONE,
-                'import metadata changes only. Works when there are records in database.'
+                'import metadata changes only. Works when there are records in database.',
             )
             ->addOption(
                 'always-update-metadata',
                 null,
                 InputOption::VALUE_NONE,
-                'Mapper option. Always update the locally stored metadata from backend.'
+                'Mapper option. Always update the locally stored metadata from backend.',
             )
             ->addOption('show-messages', null, InputOption::VALUE_NONE, 'Show internal messages.')
             ->addOption('logfile', null, InputOption::VALUE_REQUIRED, 'Save console output to file.');
@@ -141,9 +154,9 @@ class ImportCommand extends Command
      */
     protected function process(InputInterface $input, OutputInterface $output): int
     {
-        if (null !== ($logfile = $input->getOption('logfile')) && true === ($this->logger instanceof Logger)) {
+        if (null !== ($logfile = $input->getOption('logfile')) && true === $this->logger instanceof Logger) {
             $this->logger->setHandlers([
-                $this->suppressor->withHandler(new StreamLogHandler(new Stream($logfile, 'w'), $output))
+                $this->suppressor->withHandler(new StreamLogHandler(new Stream($logfile, 'w'), $output)),
             ]);
         }
 
@@ -154,8 +167,8 @@ class ImportCommand extends Command
             $mapperOpts[Options::DRY_RUN] = true;
         }
 
-        if (true === (bool)Config::get('guid.disable.episode', false)) {
-            $this->logger->notice("Mapper: Matching episodes via GUID is disabled.");
+        if (true === (bool) Config::get('guid.disable.episode', false)) {
+            $this->logger->notice('Mapper: Matching episodes via GUID is disabled.');
         }
 
         if ($input->getOption('trace')) {
@@ -168,7 +181,7 @@ class ImportCommand extends Command
         }
 
         if (false === ($syncRequests = $input->getOption('sync-requests'))) {
-            $syncRequests = (bool)Config::get('http.default.sync_requests', false);
+            $syncRequests = (bool) Config::get('http.default.sync_requests', false);
         }
 
         if (true === $input->getOption('async-requests')) {
@@ -177,12 +190,12 @@ class ImportCommand extends Command
 
         $this->mapper->setOptions($mapperOpts);
 
-        $users = getUsersContext(mapper: $this->mapper, logger: $this->logger, opts: [
+        $users = get_users_context(mapper: $this->mapper, logger: $this->logger, opts: [
             DatabaseInterface::class => $dbOpts,
         ]);
 
         if (null !== ($user = $input->getOption('user'))) {
-            $users = array_filter($users, fn($k) => $k === $user, mode: ARRAY_FILTER_USE_KEY);
+            $users = array_filter($users, static fn($k) => $k === $user, mode: ARRAY_FILTER_USE_KEY);
             if (empty($users)) {
                 $output->writeln(r("<error>User '{user}' not found.</error>", ['user' => $user]));
                 return self::FAILURE;
@@ -191,6 +204,9 @@ class ImportCommand extends Command
 
         $selected = $input->getOption('select-backend');
         $isCustom = !empty($selected) && count($selected) > 0;
+        $selectLibrary = $this->parseLibraryIds($input->getOption('select-library'));
+        $hasLibrarySelect = count($selectLibrary) > 0;
+        $inverseLibrarySelect = true === $input->getOption('exclude-library');
         $supported = Config::get('supported', []);
 
         $totalStartTime = microtime(true);
@@ -202,7 +218,7 @@ class ImportCommand extends Command
 
             $this->logger->notice("SYSTEM: Importing user '{user}' play states.", [
                 'user' => $userContext->name,
-                'backends' => join(', ', array_keys($list)),
+                'backends' => implode(', ', array_keys($list)),
             ]);
 
             foreach ($userContext->config->getAll() as $backendName => $backend) {
@@ -212,19 +228,19 @@ class ImportCommand extends Command
                 if ($isCustom && $input->getOption('exclude') === $this->in_array($selected, $backendName)) {
                     $this->logger->info("SYSTEM: Ignoring '{user}@{backend}'. as requested.", [
                         'user' => $userContext->name,
-                        'backend' => $backendName
+                        'backend' => $backendName,
                     ]);
                     continue;
                 }
 
                 // -- sanity check in case user has both import.enabled and options.IMPORT_METADATA_ONLY enabled.
-                if (true === (bool)ag($backend, 'import.enabled')) {
+                if (true === (bool) ag($backend, 'import.enabled')) {
                     if (true === ag_exists($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
                         $backend = ag_delete($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
                     }
                 }
 
-                if (true === (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
+                if (true === (bool) ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
                     $metadata = true;
                 }
 
@@ -232,19 +248,19 @@ class ImportCommand extends Command
                     $metadata = true;
                 }
 
-                if (true !== $metadata && true !== (bool)ag($backend, 'import.enabled')) {
+                if (true !== $metadata && true !== (bool) ag($backend, 'import.enabled')) {
                     if ($isCustom) {
                         $this->logger->warning(
                             message: "SYSTEM: Importing from import disabled '{user}@{backend}' As requested.",
                             context: [
                                 'user' => $userContext->name,
-                                'backend' => $backendName
-                            ]
+                                'backend' => $backendName,
+                            ],
                         );
                     } else {
                         $this->logger->info("SYSTEM: Ignoring '{user}@{backend}'. Import disabled.", [
                             'user' => $userContext->name,
-                            'backend' => $backendName
+                            'backend' => $backendName,
                         ]);
                         continue;
                     }
@@ -260,7 +276,7 @@ class ImportCommand extends Command
                     continue;
                 }
 
-                if (null === ($url = ag($backend, 'url')) || false === isValidURL($url)) {
+                if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {
                     $this->logger->error("SYSTEM: Ignoring '{user}@{backend}'. Invalid URL '{url}'.", [
                         'user' => $userContext->name,
                         'url' => $url ?? 'None',
@@ -275,9 +291,10 @@ class ImportCommand extends Command
 
             if (empty($list)) {
                 $this->logger->warning(
-                    $isCustom ? r("[-s, --select-backend] flag did not match any backend for '{user}'.", [
-                        'user' => $userContext->name,
-                    ]) : 'No backends were found.'
+                    $isCustom
+                        ? r("[-s, --select-backend] flag did not match any backend for '{user}'.", [
+                            'user' => $userContext->name,
+                        ]) : 'No backends were found.',
                 );
                 continue;
             }
@@ -289,12 +306,12 @@ class ImportCommand extends Command
                 message: "SYSTEM: Preloading user '{user}: {mapper}' data. Memory usage '{memory.now}'.",
                 context: [
                     'user' => $userContext->name,
-                    'mapper' => afterLast($userContext->mapper::class, '\\'),
+                    'mapper' => after_last($userContext->mapper::class, '\\'),
                     'memory' => [
-                        'now' => getMemoryUsage(),
-                        'peak' => getPeakMemoryUsage(),
+                        'now' => get_memory_usage(),
+                        'peak' => get_peak_memory_usage(),
                     ],
-                ]
+                ],
             );
 
             $time = microtime(true);
@@ -304,20 +321,25 @@ class ImportCommand extends Command
                 message: "SYSTEM: Preloading user '{user}: {mapper}' data completed in '{duration}s'. Memory usage '{memory.now}'.",
                 context: [
                     'user' => $userContext->name,
-                    'mapper' => afterLast($userContext->mapper::class, '\\'),
+                    'mapper' => after_last($userContext->mapper::class, '\\'),
                     'duration' => round(microtime(true) - $time, 4),
                     'memory' => [
-                        'now' => getMemoryUsage(),
-                        'peak' => getPeakMemoryUsage(),
+                        'now' => get_memory_usage(),
+                        'peak' => get_peak_memory_usage(),
                     ],
-                ]
+                ],
             );
 
             foreach ($list as $name => &$backend) {
                 $metadata = false;
                 $opts = ag($backend, 'options', []);
 
-                if (true === (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
+                if (true === $hasLibrarySelect) {
+                    $opts[Options::LIBRARY_SELECT] = $selectLibrary;
+                    $opts[Options::LIBRARY_INVERSE] = $inverseLibrarySelect;
+                }
+
+                if (true === (bool) ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
                     $opts[Options::IMPORT_METADATA_ONLY] = true;
                     $metadata = true;
                 }
@@ -332,29 +354,32 @@ class ImportCommand extends Command
                 }
 
                 if ($input->getOption('timeout')) {
-                    $opts['client']['timeout'] = (float)$input->getOption('timeout');
+                    $opts['client']['timeout'] = (float) $input->getOption('timeout');
                 }
-
-                $backend['options'] = $opts;
-                $backend['class'] = makeBackend(backend: $backend, name: $name, options: [
-                    UserContext::class => $userContext,
-                ]);
 
                 $after = ag($backend, 'import.lastSync', null);
 
-                if (true === (bool)ag($opts, Options::FORCE_FULL, false) || true === $input->getOption('force-full')) {
+                $forceFull = true === (bool) ag($opts, Options::FORCE_FULL, false) || true === $input->getOption('force-full');
+
+                if (true === $forceFull) {
                     $after = null;
+                    $opts[Options::FORCE_FULL] = true;
                 }
 
+                $backend['options'] = $opts;
+                $backend['class'] = make_backend(backend: $backend, name: $name, options: [
+                    UserContext::class => $userContext,
+                ]);
+
                 if (null !== $after) {
-                    $after = makeDate($after);
+                    $after = make_date($after);
                 }
 
                 $this->logger->notice("SYSTEM: Importing '{user}@{backend}' {import_type} changes.", [
                     'user' => $userContext->name,
                     'backend' => $name,
                     'import_type' => true === $metadata ? 'metadata' : 'metadata & play state',
-                    'since' => null === $after ? 'Beginning' : (string)$after,
+                    'since' => null === $after ? 'Beginning' : (string) $after,
                 ]);
 
                 array_push($queue, ...$backend['class']->pull($userContext->mapper, $after));
@@ -362,13 +387,13 @@ class ImportCommand extends Command
                 $inDryMode = $userContext->mapper->inDryRunMode() || ag($backend, 'options.' . Options::DRY_RUN);
 
                 if (false === $inDryMode) {
-                    if (true === (bool)Message::get("{$name}.has_errors")) {
+                    if (true === (bool) Message::get("{$name}.has_errors")) {
                         $this->logger->warning(
                             message: "SYSTEM: Not updating '{user}@{backend}' import last sync date. There was errors recorded during the operation.",
                             context: [
                                 'user' => $userContext->name,
                                 'backend' => $name,
-                            ]
+                            ],
                         );
                     } else {
                         $userContext->config->set("{$name}.import.lastSync", time());
@@ -384,8 +409,8 @@ class ImportCommand extends Command
                 'total' => number_format(count($queue)),
                 'sync' => $syncRequests ? 'sync ' : '',
                 'memory' => [
-                    'now' => getMemoryUsage(),
-                    'peak' => getPeakMemoryUsage(),
+                    'now' => get_memory_usage(),
+                    'peak' => get_peak_memory_usage(),
                 ],
             ]);
 
@@ -398,13 +423,13 @@ class ImportCommand extends Command
                     'total' => number_format(count($queue)),
                     'duration' => round(microtime(true) - $start, 4),
                     'memory' => [
-                        'now' => getMemoryUsage(),
-                        'peak' => getPeakMemoryUsage(),
+                        'now' => get_memory_usage(),
+                        'peak' => get_peak_memory_usage(),
                     ],
                     'responses' => [
-                        'size' => fsize((int)Message::get('response.size', 0)),
+                        'size' => fsize((int) Message::get('response.size', 0)),
                     ],
-                ]
+                ],
             );
 
             $queue = null;
@@ -416,8 +441,8 @@ class ImportCommand extends Command
                     'user' => $userContext->name,
                     'total' => $total,
                     'memory' => [
-                        'now' => getMemoryUsage(),
-                        'peak' => getPeakMemoryUsage(),
+                        'now' => get_memory_usage(),
+                        'peak' => get_peak_memory_usage(),
                     ],
                 ]);
             }
@@ -447,17 +472,21 @@ class ImportCommand extends Command
                 "SYSTEM: Importing '{user}' play states completed in '{duration}'s. Memory usage '{memory.now}'.",
                 [
                     'user' => $userContext->name,
-                    'backends' => join(', ', array_keys($list)),
+                    'backends' => implode(', ', array_keys($list)),
                     'duration' => round(microtime(true) - $userStart, 4),
                     'memory' => [
-                        'now' => getMemoryUsage(),
-                        'peak' => getPeakMemoryUsage(),
+                        'now' => get_memory_usage(),
+                        'peak' => get_peak_memory_usage(),
                     ],
-                ]
+                ],
             );
 
             $output->writeln('');
-            new Table($output)->setHeaders(array_keys($a[0]))->setStyle('box')->setRows(array_values($a))->render();
+            new Table($output)
+                ->setHeaders(array_keys($a[0]))
+                ->setStyle('box')
+                ->setRows(array_values($a))
+                ->render();
             $output->writeln('');
 
             if (false === $input->getOption('dry-run')) {
@@ -468,7 +497,7 @@ class ImportCommand extends Command
                 $this->displayContent(
                     Message::getAll(),
                     $output,
-                    $input->getOption('output') === 'json' ? 'json' : 'yaml'
+                    $input->getOption('output') === 'json' ? 'json' : 'yaml',
                 );
             }
         }
@@ -482,6 +511,26 @@ class ImportCommand extends Command
 
     private function in_array(array $list, string $search): bool
     {
-        return array_any($list, fn($item) => str_starts_with($search, $item));
+        return array_any($list, static fn($item) => str_starts_with($search, $item));
+    }
+
+    /**
+     * @param array|string|null $value
+     *
+     * @return array<string>
+     */
+    private function parseLibraryIds(array|string|null $value): array
+    {
+        if (null === $value) {
+            return [];
+        }
+
+        if (true === is_string($value)) {
+            $value = explode(',', $value);
+        }
+
+        $ids = array_filter(array_map(trim(...), $value), static fn($item) => '' !== $item);
+
+        return array_values(array_unique($ids));
     }
 }

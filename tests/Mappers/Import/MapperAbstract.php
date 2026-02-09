@@ -110,7 +110,7 @@ abstract class MapperAbstract extends TestCase
 
         $this->db->commit([$testEpisode, $testMovie]);
 
-        $this->mapper->loadData(makeDate($time - 1));
+        $this->mapper->loadData(make_date($time - 1));
 
         $this->assertSame(
             1,
@@ -383,7 +383,7 @@ abstract class MapperAbstract extends TestCase
             'get() should return null as load data was called with fully loaded.'
         );
 
-        $this->mapper->loadData(makeDate($time - 1));
+        $this->mapper->loadData(make_date($time - 1));
         $this->assertInstanceOf(
             iState::class,
             $this->mapper->get($testEpisode),
@@ -477,7 +477,7 @@ abstract class MapperAbstract extends TestCase
             $this->mapper->has($testEpisode),
             'has() should return false as loadData was called before inserting the records into db.'
         );
-        $this->mapper->loadData(makeDate($time - 1));
+        $this->mapper->loadData(make_date($time - 1));
         $this->assertTrue(
             $this->mapper->has($testEpisode),
             'has() should return true as loadData was called with a date that is older than the entity updated'

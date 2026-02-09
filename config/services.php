@@ -143,9 +143,9 @@ return (function (): array {
                     return new Psr16Cache(new ArrayAdapter());
                 }
 
-                $ns = getAppVersion();
+                $ns = get_app_version();
 
-                if (null !== ($prefix = Config::get('cache.prefix')) && true === isValidName($prefix)) {
+                if (null !== ($prefix = Config::get('cache.prefix')) && true === is_valid_name($prefix)) {
                     $ns .= '.' . $prefix;
                 }
 
@@ -214,7 +214,7 @@ return (function (): array {
 
                 $pdo = new PDO(dsn: $dsn, options: Config::get('database.options', []));
 
-                if (!$inTestMode && $changePerm && inContainer() && 777 !== (int)(decoct(fileperms($dbFile) & 0777))) {
+                if (!$inTestMode && $changePerm && in_container() && 777 !== (int)(decoct(fileperms($dbFile) & 0777))) {
                     @chmod($dbFile, 0777);
                 }
 

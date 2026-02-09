@@ -32,22 +32,28 @@ final readonly class Subtitle
     public const array INTERNAL_NAMING = [
         'subrip',
         'ass',
-        'vtt'
+        'vtt',
     ];
 
     private const string EXTERNAL = 'x';
     private const string INTERNAL = 'i';
 
-    public function __construct(private iCache $cache, private iLogger $logger)
-    {
-    }
+    public function __construct(
+        private iCache $cache,
+        private iLogger $logger,
+    ) {}
 
     /**
      * @throws InvalidArgumentException
      */
     #[Get(pattern: self::URL . '/{token}/{type}.{source:\w{1}}{index:number}.m3u8')]
-    public function m3u8(iRequest $request, string $token, string $source, string $index): iResponse
-    {
+    public function m3u8(
+        iRequest $request,
+        #[\SensitiveParameter]
+        string $token,
+        string $source,
+        string $index,
+    ): iResponse {
         if (null === ($data = $this->cache->get($token, null))) {
             return api_error('Token is expired or invalid.', Status::BAD_REQUEST);
         }
@@ -62,7 +68,7 @@ final readonly class Subtitle
                 return api_error('No external subtitles found.', Status::BAD_REQUEST);
             }
 
-            $subtitle = array_filter($subtitles, fn($s) => $s === (int)$index, ARRAY_FILTER_USE_KEY);
+            $subtitle = array_filter($subtitles, static fn($s) => $s === (int) $index, ARRAY_FILTER_USE_KEY);
             if (empty($subtitle)) {
                 return api_error('Subtitle not found.', Status::BAD_REQUEST);
             }
@@ -70,8 +76,8 @@ final readonly class Subtitle
             $subtitle = array_shift($subtitle);
         }
 
-        $isSecure = (bool)Config::get('api.secure', false);
-        $subtitleUrl = parseConfigValue(Subtitle::URL);
+        $isSecure = (bool) Config::get('api.secure', false);
+        $subtitleUrl = parse_config_value(Subtitle::URL);
 
         $lines = [];
         $lines[] = '#EXTM3U';
@@ -104,8 +110,13 @@ final readonly class Subtitle
      * @throws InvalidArgumentException
      */
     #[Get(pattern: self::URL . '/{token}/{source:\w{1}}{index:\d{1}}.{ext:\w{3,10}}')]
-    public function convert(iRequest $request, string $token, string $source, string $index): iResponse
-    {
+    public function convert(
+        iRequest $request,
+        #[\SensitiveParameter]
+        string $token,
+        string $source,
+        string $index,
+    ): iResponse {
         if (null === ($data = $this->cache->get($token, null))) {
             return api_error('Token is expired or invalid.', Status::BAD_REQUEST);
         }
@@ -118,47 +129,43 @@ final readonly class Subtitle
 
         switch ($source) {
             case self::EXTERNAL:
-                {
-                    $subtitles = ag($data, 'config.externals', []);
-                    if (empty($subtitles)) {
-                        return api_error('No external subtitles found.', Status::BAD_REQUEST);
-                    }
-
-                    $subtitle = array_filter($subtitles, fn($s) => $s === (int)$index, ARRAY_FILTER_USE_KEY);
-
-                    if (empty($subtitle)) {
-                        return api_error('Subtitle not found.', Status::BAD_REQUEST);
-                    }
-
-                    $subtitle = array_shift($subtitle);
-
-                    if (null === ($path = ag($subtitle, 'path'))) {
-                        return api_error('Subtitle path not found.', Status::BAD_REQUEST);
-                    }
-
-                    $path = rawurldecode($path);
+                $subtitles = ag($data, 'config.externals', []);
+                if (empty($subtitles)) {
+                    return api_error('No external subtitles found.', Status::BAD_REQUEST);
                 }
+
+                $subtitle = array_filter($subtitles, static fn($s) => $s === (int) $index, ARRAY_FILTER_USE_KEY);
+
+                if (empty($subtitle)) {
+                    return api_error('Subtitle not found.', Status::BAD_REQUEST);
+                }
+
+                $subtitle = array_shift($subtitle);
+
+                if (null === ($path = ag($subtitle, 'path'))) {
+                    return api_error('Subtitle path not found.', Status::BAD_REQUEST);
+                }
+
+                $path = rawurldecode($path);
                 break;
             case self::INTERNAL:
-                {
-                    if (null === ($path = ag($data, 'path', null))) {
-                        return api_error('Path is empty.', Status::BAD_REQUEST);
-                    }
-                    $path = rawurldecode($path);
-                    $stream = (int)$index;
+                if (null === ($path = ag($data, 'path', null))) {
+                    return api_error('Path is empty.', Status::BAD_REQUEST);
                 }
+                $path = rawurldecode($path);
+                $stream = (int) $index;
                 break;
             default:
                 return api_error(r("Invalid source '{source}' was specified.", [
-                    'source' => $source
+                    'source' => $source,
                 ]), Status::BAD_REQUEST);
         }
 
         $response = $this->make(
             $path,
             $stream,
-            (bool)ag($data, 'config.debug', false),
-            (bool)ag($request->getQueryParams(), 'reload', false)
+            (bool) ag($data, 'config.debug', false),
+            (bool) ag($request->getQueryParams(), 'reload', false),
         );
 
         if (Status::OK !== Status::from($response->getStatusCode())) {
@@ -184,7 +191,7 @@ final readonly class Subtitle
     /**
      * @throws InvalidArgumentException
      */
-    private function make(string $file, int|null $stream = null, bool $debug = false, bool $noCache = false): iResponse
+    private function make(string $file, ?int $stream = null, bool $debug = false, bool $noCache = false): iResponse
     {
         if (false === file_exists($file)) {
             return api_error(r("Path '{path}' is not found.", ['path' => $file]), Status::NOT_FOUND);
@@ -212,8 +219,8 @@ final readonly class Subtitle
             ]);
         }
 
-        if (null === $stream && !array_key_exists(getExtension($file), self::FORMATS)) {
-            return api_error("Unsupported subtitle file.", Status::BAD_REQUEST);
+        if (null === $stream && !array_key_exists(get_extension($file), self::FORMATS)) {
+            return api_error('Unsupported subtitle file.', Status::BAD_REQUEST);
         }
 
         $tmpFile = sys_get_temp_dir() . '/ffmpeg_' . $cacheKey . '.' . $type;
@@ -227,15 +234,19 @@ final readonly class Subtitle
                 $codecType = ag($streamInfo, 'codec_type', '');
 
                 if ('subtitle' !== $codecType) {
-                    return api_error("Only subtitle stream conversion is supported.", Status::BAD_REQUEST, $streamInfo);
+                    return api_error('Only subtitle stream conversion is supported.', Status::BAD_REQUEST, $streamInfo);
                 }
 
                 $codec = ag($streamInfo, 'codec_name', '');
 
-                if (false === in_array($codec, self::INTERNAL_NAMING)) {
-                    return api_error(r("This codec type '{codec}' is not supported.", [
-                        'codec' => $codec
-                    ]), Status::BAD_REQUEST, $streamInfo);
+                if (false === in_array($codec, self::INTERNAL_NAMING, true)) {
+                    return api_error(
+                        r("This codec type '{codec}' is not supported.", [
+                            'codec' => $codec,
+                        ]),
+                        Status::BAD_REQUEST,
+                        $streamInfo,
+                    );
                 }
             } catch (RuntimeException|JsonException $e) {
                 return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);
@@ -249,7 +260,7 @@ final readonly class Subtitle
             '-loglevel',
             'error',
             '-i',
-            'file:' . $tmpFile
+            'file:' . $tmpFile,
         ];
 
         if (null !== $stream) {
@@ -271,7 +282,7 @@ final readonly class Subtitle
             if (!$process->isSuccessful()) {
                 if (true === $debug) {
                     return api_error($process->getErrorOutput(), Status::INTERNAL_SERVER_ERROR, headers: [
-                        'X-FFmpeg' => $process->getCommandLine()
+                        'X-FFmpeg' => $process->getCommandLine(),
                     ]);
                 }
 
@@ -303,7 +314,7 @@ final readonly class Subtitle
 
             return api_response(Status::OK, Stream::create($body), [
                 'Content-Type' => self::FORMATS[$type],
-                'X-Cache' => 'miss'
+                'X-Cache' => 'miss',
             ]);
         } catch (Throwable $e) {
             return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);
@@ -317,9 +328,11 @@ final readonly class Subtitle
     private function getStream(array $streams, int $index): array
     {
         foreach ($streams as $stream) {
-            if ((int)ag($stream, 'index') === $index) {
-                return $stream;
+            if ((int) ag($stream, 'index') !== $index) {
+                continue;
             }
+
+            return $stream;
         }
         return [];
     }

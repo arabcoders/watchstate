@@ -26,18 +26,18 @@ final readonly class Request
         public Method $method,
         public Uri|string $url,
         public array $options = [],
-        public Closure|null $success = null,
-        public Closure|null $error = null,
+        public ?Closure $success = null,
+        public ?Closure $error = null,
         public array $extras = [],
     ) {
-        $this->id = generateUUID();
+        $this->id = generate_uuid();
     }
 
     public function toRequest(): array
     {
         return [
             'method' => $this->method->value,
-            'url' => (string)$this->url,
+            'url' => (string) $this->url,
             'options' => $this->options,
         ];
     }

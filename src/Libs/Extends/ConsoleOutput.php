@@ -21,7 +21,7 @@ use Symfony\Component\Console\Output\ConsoleOutput as baseConsoleOutput;
 final class ConsoleOutput extends baseConsoleOutput
 {
     private bool $noSuppressor = false;
-    private LogSuppressor|null $suppressor = null;
+    private ?LogSuppressor $suppressor = null;
 
     /**
      * Constructor for the class.
@@ -35,9 +35,9 @@ final class ConsoleOutput extends baseConsoleOutput
     public function __construct(
         int $verbosity = parent::VERBOSITY_NORMAL,
         ?bool $decorated = null,
-        ?iOutput $formatter = null
+        ?iOutput $formatter = null,
     ) {
-        $formatter = $formatter ?? new OutputFormatter();
+        $formatter ??= new OutputFormatter();
 
         if (null !== $formatter) {
             //(black, red, green, yellow, blue, magenta, cyan, white, default, gray, bright-red, bright-green,

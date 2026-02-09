@@ -23,8 +23,9 @@ final class RoutesCommand extends Command
 {
     public const string ROUTE = 'system:routes';
 
-    public function __construct(private readonly iCache $cache)
-    {
+    public function __construct(
+        private readonly iCache $cache,
+    ) {
         parent::__construct();
     }
 
@@ -33,16 +34,18 @@ final class RoutesCommand extends Command
      */
     protected function configure(): void
     {
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->addOption('list', 'l', null, 'List all routes')
-            ->setDescription('Generate routes')->setHelp(
+            ->setDescription('Generate routes')
+            ->setHelp(
                 <<<HELP
 
-                This command force routes <notice>regeneration</notice> for commands & API endpoint.
-                You do not need to run this command unless told by the devs.
-                This is done automatically on container startup.
+                    This command force routes <notice>regeneration</notice> for commands & API endpoint.
+                    You do not need to run this command unless told by the devs.
+                    This is done automatically on container startup.
 
-                HELP
+                    HELP,
             );
     }
 
@@ -58,7 +61,7 @@ final class RoutesCommand extends Command
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         if (!$input->getOption('list')) {
-            generateRoutes();
+            generate_routes();
             return self::SUCCESS;
         }
 
@@ -78,12 +81,12 @@ final class RoutesCommand extends Command
                 'Method/s',
                 'Pattern',
                 'Callable',
-            ]
+            ],
         );
 
         $ar = $this->cache->get('routes_http', []);
 
-        $fn = function (mixed $val, $type = 'array'): string {
+        $fn = static function (mixed $val, $type = 'array'): string {
             if (is_string($val)) {
                 return $val;
             }
@@ -100,7 +103,7 @@ final class RoutesCommand extends Command
         array_multisort($hosts, SORT_ASC, $paths, SORT_ASC, $ar);
 
         if ('json' === $input->getOption('output')) {
-            $output->writeln((string)json_encode($ar, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            $output->writeln((string) json_encode($ar, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
             return self::SUCCESS;
         }
 
@@ -122,5 +125,4 @@ final class RoutesCommand extends Command
 
         return self::SUCCESS;
     }
-
 }

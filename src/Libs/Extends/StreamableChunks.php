@@ -18,9 +18,10 @@ class StreamableChunks implements IteratorAggregate
      * @param iStream $stream The stream to be used.
      * @param int $chunkSize The chunk size to be used.
      */
-    public function __construct(private iStream $stream, private int $chunkSize = 1024 * 8)
-    {
-    }
+    public function __construct(
+        private iStream $stream,
+        private int $chunkSize = 1024 * 8,
+    ) {}
 
     /**
      * Get the iterator.

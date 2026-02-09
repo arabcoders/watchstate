@@ -13,9 +13,8 @@ final readonly class Item
         public Target $target,
         public string $attribute,
         public string|array|Closure $callable,
-        public array $data = []
-    ) {
-    }
+        public array $data = [],
+    ) {}
 
     public function getCallable(): string|array|Closure
     {

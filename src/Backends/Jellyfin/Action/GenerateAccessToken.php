@@ -12,6 +12,7 @@ use App\Backends\Common\Response;
 use App\Libs\Config;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Extends\HttpClient;
 use App\Libs\Options;
 use JsonException;
 use Psr\Log\LoggerInterface as iLogger;
@@ -36,12 +37,13 @@ class GenerateAccessToken
     /**
      * Class Constructor.
      *
-     * @param iHttp $http The HTTP client instance.
+     * @param iHttp&HttpClient $http The HTTP client instance.
      * @param iLogger $logger The logger instance.
      */
-    public function __construct(protected readonly iHttp $http, protected readonly iLogger $logger)
-    {
-    }
+    public function __construct(
+        protected readonly iHttp $http,
+        protected readonly iLogger $logger,
+    ) {}
 
     /**
      * Generate Access Token.
@@ -53,12 +55,17 @@ class GenerateAccessToken
      *
      * @return Response The response received.
      */
-    public function __invoke(Context $context, string|int $identifier, string $password, array $opts = []): Response
-    {
+    public function __invoke(
+        Context $context,
+        string|int $identifier,
+        #[\SensitiveParameter]
+        string $password,
+        array $opts = [],
+    ): Response {
         return $this->tryResponse(
             context: $context,
             fn: fn() => $this->generateToken($context, $identifier, $password, $opts),
-            action: $this->action
+            action: $this->action,
         );
     }
 
@@ -77,8 +84,9 @@ class GenerateAccessToken
     private function generateToken(
         Context $context,
         string|int $identifier,
-        #[SensitiveParameter] string $password,
-        array $opts = []
+        #[SensitiveParameter]
+        string $password,
+        array $opts = [],
     ): Response {
         $url = $context->backendUrl->withPath('/Users/AuthenticateByName');
 
@@ -87,28 +95,28 @@ class GenerateAccessToken
             'client' => $context->clientName,
             'backend' => $context->backendName,
             'user' => $context->userContext->name,
-            'url' => (string)$url,
-            'username' => (string)$identifier,
+            'url' => (string) $url,
+            'username' => (string) $identifier,
         ];
 
         $this->logger->debug(
             message: "{action}: Requesting '{client}: {user}@{backend}' to generate access token for '{username}'.",
-            context: $logContext
+            context: $logContext,
         );
 
-        $response = $this->http->request(Method::POST, (string)$url, [
+        $response = $this->http->request(Method::POST, (string) $url, [
             'json' => [
-                'Username' => (string)$identifier,
+                'Username' => (string) $identifier,
                 'Pw' => $password,
             ],
             'headers' => [
                 'Accept' => 'application/json',
                 'Authorization' => r('{Agent} Client="{app}", Device="{os}", DeviceId="{id}", Version="{version}"', [
-                    'Agent' => 'Emby' == $context->clientName ? 'Emby' : 'MediaBrowser',
+                    'Agent' => 'Emby' === $context->clientName ? 'Emby' : 'MediaBrowser',
                     'app' => Config::get('name') . '/' . $context->clientName,
                     'os' => PHP_OS,
                     'id' => md5(Config::get('name') . '/' . $context->clientName),
-                    'version' => getAppVersion(),
+                    'version' => get_app_version(),
                 ]),
             ],
             ...ag($context->options, 'client', []),
@@ -126,7 +134,7 @@ class GenerateAccessToken
                             'body' => $response->getContent(false),
                         ],
                     ],
-                    level: Levels::ERROR
+                    level: Levels::ERROR,
                 ),
             );
         }
@@ -134,7 +142,7 @@ class GenerateAccessToken
         $json = json_decode(
             json: $response->getContent(),
             associative: true,
-            flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+            flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
         );
 
         if ($context->trace) {
@@ -143,7 +151,7 @@ class GenerateAccessToken
                 context: [
                     ...$logContext,
                     'trace' => $json,
-                ]
+                ],
             );
         }
 

@@ -35,9 +35,10 @@ final class GetLibrary
 
     private string $action = 'plex.getLibrary';
 
-    public function __construct(protected iHttp $http, protected iLogger $logger)
-    {
-    }
+    public function __construct(
+        protected iHttp $http,
+        protected iLogger $logger,
+    ) {}
 
     /**
      * Get Library content.
@@ -54,7 +55,7 @@ final class GetLibrary
         return $this->tryResponse(
             context: $context,
             fn: fn() => $this->action($context, $guid, $id, $opts),
-            action: $this->action
+            action: $this->action,
         );
     }
 
@@ -68,7 +69,7 @@ final class GetLibrary
     {
         $libraries = $this->getBackendLibraries($context);
 
-        $deepScan = true === (bool)ag($opts, Options::MISMATCH_DEEP_SCAN);
+        $deepScan = true === (bool) ag($opts, Options::MISMATCH_DEEP_SCAN);
 
         $logContext = [
             'action' => $this->action,
@@ -83,7 +84,7 @@ final class GetLibrary
                 error: new Error(
                     message: "{action}: No library with id '{id}' found in '{client}: {user}@{backend}' response.",
                     context: [...$logContext, 'id' => $id, 'response' => ['body' => $libraries]],
-                    level: Levels::WARNING
+                    level: Levels::WARNING,
                 ),
             );
         }
@@ -99,13 +100,13 @@ final class GetLibrary
             ],
         ]);
 
-        if (true !== in_array(ag($logContext, 'library.type'), [PlexClient::TYPE_MOVIE, PlexClient::TYPE_SHOW])) {
+        if (true !== in_array(ag($logContext, 'library.type'), [PlexClient::TYPE_MOVIE, PlexClient::TYPE_SHOW], true)) {
             return new Response(
                 status: false,
                 error: new Error(
                     message: "{action}: The requested '{client}: {user}@{backend}' library '{library.title}' returned with unsupported type '{library.type}'.",
                     context: $logContext,
-                    level: Levels::WARNING
+                    level: Levels::WARNING,
                 ),
             );
         }
@@ -116,19 +117,20 @@ final class GetLibrary
 
         if (null !== ($limit = ag($opts, Options::LIMIT_RESULTS))) {
             $extraHeaders['headers']['X-Plex-Container-Start'] = 0;
-            $extraHeaders['headers']['X-Plex-Container-Size'] = (int)$limit;
+            $extraHeaders['headers']['X-Plex-Container-Size'] = (int) $limit;
         }
 
-        $url = $context->backendUrl
+        $url = $context
+            ->backendUrl
             ->withPath(r('/library/sections/{library_id}/all', ['library_id' => $id]))
             ->withQuery(
                 http_build_query([
                     'type' => PlexClient::TYPE_MOVIE === ag($logContext, 'library.type') ? 1 : 2,
                     'includeGuids' => 1,
-                ])
+                ]),
             );
 
-        $logContext['library']['url'] = (string)$url;
+        $logContext['library']['url'] = (string) $url;
 
         $this->logger->debug(
             message: "{action}: Requesting '{client}: {user}@{backend}' library '{library.title}' content.",
@@ -137,8 +139,8 @@ final class GetLibrary
 
         $response = $this->http->request(
             method: Method::GET,
-            url: (string)$url,
-            options: array_replace_recursive($context->getHttpOptions(), $extraHeaders)
+            url: (string) $url,
+            options: array_replace_recursive($context->getHttpOptions(), $extraHeaders),
         );
 
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
@@ -147,19 +149,19 @@ final class GetLibrary
                 error: new Error(
                     message: "{action}: Request for '{client}: {user}@{backend}' library '{library.title}' returned with unexpected '{status_code}' status code.",
                     context: [...$logContext, 'status_code' => $response->getStatusCode()],
-                    level: Levels::ERROR
+                    level: Levels::ERROR,
                 ),
             );
         }
 
         $it = Items::fromIterable(
-            iterable: httpClientChunks(stream: $this->http->stream($response)),
+            iterable: http_client_chunks(stream: $this->http->stream($response)),
             options: [
                 'pointer' => '/MediaContainer/Metadata',
                 'decoder' => new ErrorWrappingDecoder(
-                    innerDecoder: new ExtJsonDecoder(assoc: true, options: JSON_INVALID_UTF8_IGNORE)
-                )
-            ]
+                    innerDecoder: new ExtJsonDecoder(assoc: true, options: JSON_INVALID_UTF8_IGNORE),
+                ),
+            ],
         );
 
         $list = $requests = [];
@@ -171,7 +173,7 @@ final class GetLibrary
                     context: [
                         ...$logContext,
                         'error' => ['message' => $entity->getErrorMessage(), 'body' => $entity->getMalformedJson()],
-                    ]
+                    ],
                 );
                 continue;
             }
@@ -180,10 +182,10 @@ final class GetLibrary
                 continue;
             }
 
-            $year = (int)ag($entity, 'year', 0);
+            $year = (int) ag($entity, 'year', 0);
 
             if (0 === $year && null !== ($airDate = ag($entity, 'originallyAvailableAt'))) {
-                $year = (int)makeDate($airDate)->format('Y');
+                $year = (int) make_date($airDate)->format('Y');
             }
 
             $logContext['item'] = [
@@ -198,10 +200,10 @@ final class GetLibrary
             } else {
                 $requests[] = $this->http->request(
                     method: Method::GET,
-                    url: (string)$context->backendUrl->withPath(
-                        r('/library/metadata/{item_id}', ['item_id' => ag($logContext, 'item.id')])
+                    url: (string) $context->backendUrl->withPath(
+                        r('/library/metadata/{item_id}', ['item_id' => ag($logContext, 'item.id')]),
                     ),
-                    options: $context->getHttpOptions() + ['user_data' => ['context' => $logContext]]
+                    options: $context->getHttpOptions() + ['user_data' => ['context' => $logContext]],
                 );
             }
         }
@@ -209,11 +211,11 @@ final class GetLibrary
         if (!empty($requests)) {
             $this->logger->info(
                 message: "{action}: Requesting '{total}' items metadata from '{client}: {user}@{backend}' library '{library.title}'.",
-                context: [...$logContext, 'total' => number_format(count($requests))]
+                context: [...$logContext, 'total' => number_format(count($requests))],
             );
         }
 
-        $noLog = (bool)ag($opts, Options::NO_LOGGING);
+        $noLog = (bool) ag($opts, Options::NO_LOGGING);
 
         foreach ($requests as $response) {
             $requestContext = ag($response->getInfo('user_data'), 'context', []);
@@ -226,8 +228,8 @@ final class GetLibrary
                             context: [
                                 ...$requestContext,
                                 'status_code' => $response->getStatusCode(),
-                                'response' => ['body' => $response->getContent(false)]
-                            ]
+                                'response' => ['body' => $response->getContent(false)],
+                            ],
                         );
                     }
                     continue;
@@ -236,7 +238,7 @@ final class GetLibrary
                 $json = json_decode(
                     json: $response->getContent(),
                     associative: true,
-                    flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                    flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
                 );
 
                 $list[] = $this->process(
@@ -244,7 +246,7 @@ final class GetLibrary
                     $guid,
                     ag($json, 'MediaContainer.Metadata.0', []),
                     $requestContext,
-                    $opts
+                    $opts,
                 );
             } catch (JsonException|HttpExceptionInterface $e) {
                 return new Response(
@@ -268,8 +270,8 @@ final class GetLibrary
                             ],
                         ],
                         level: Levels::WARNING,
-                        previous: $e
-                    )
+                        previous: $e,
+                    ),
                 );
             }
         }
@@ -295,18 +297,18 @@ final class GetLibrary
         iGuid $guid,
         array $item,
         array $logContext = [],
-        array $opts = []
+        array $opts = [],
     ): array|iState {
-        if (true === (bool)ag($opts, Options::TO_ENTITY)) {
+        if (true === (bool) ag($opts, Options::TO_ENTITY)) {
             return $this->createEntity($context, $guid, $item, $opts);
         }
 
         $url = $context->backendUrl->withPath(r('/library/metadata/{item_id}', ['item_id' => ag($item, 'ratingKey')]));
         $possibleTitlesList = ['title', 'originalTitle', 'titleSort'];
 
-        $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
+        $year = (int) ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
         if (0 === $year && null !== ($airDate = ag($item, 'originallyAvailableAt'))) {
-            $year = (int)makeDate($airDate)->format('Y');
+            $year = (int) make_date($airDate)->format('Y');
         }
 
         if ($context->trace) {
@@ -315,22 +317,22 @@ final class GetLibrary
 
         $this->logger->debug(
             message: "{action}: Processing '{client}: {user}@{backend}' {item.type} '{item.title} ({item.year})'.",
-            context: $logContext
+            context: $logContext,
         );
 
         $webUrl = $url->withPath('/web/index.html')->withFragment(
             r('!/server/{backend_id}/details?key={key}&context=external', [
                 'backend_id' => $context->backendId,
-                'key' => urlencode($url->getPath())
-            ])
+                'key' => urlencode($url->getPath()),
+            ]),
         );
 
         $metadata = [
-            iState::COLUMN_ID => (int)ag($item, 'ratingKey'),
+            iState::COLUMN_ID => (int) ag($item, 'ratingKey'),
             iState::COLUMN_TYPE => ucfirst(ag($item, 'type', 'unknown')),
             iState::COLUMN_META_LIBRARY => ag($logContext, 'library.title'),
-            'url' => (string)$url,
-            'webUrl' => (string)$webUrl,
+            'url' => (string) $url,
+            'webUrl' => (string) $webUrl,
             iState::COLUMN_TITLE => ag($item, $possibleTitlesList, '??'),
             iState::COLUMN_YEAR => $year,
             iState::COLUMN_GUIDS => [],
@@ -348,7 +350,7 @@ final class GetLibrary
             $isASCII = mb_detect_encoding($title, 'ASCII', true);
             $title = trim($isASCII ? strtolower($title) : mb_strtolower($title));
 
-            if (true === in_array($title, $metadata['match']['titles'])) {
+            if (true === in_array($title, $metadata['match']['titles'], true)) {
                 continue;
             }
 
@@ -389,8 +391,8 @@ final class GetLibrary
                 throw new RuntimeException(
                     r(
                         text: "{action}: Unexpected item type '{type}' was encountered while parsing '{client}: {user}@{backend}' library '{library.title}'.",
-                        context: [...$logContext, 'type' => ag($item, 'type')]
-                    )
+                        context: [...$logContext, 'type' => ag($item, 'type')],
+                    ),
                 );
         }
 
@@ -402,7 +404,7 @@ final class GetLibrary
             $metadata[iState::COLUMN_GUIDS][] = $externalId;
         }
 
-        if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
+        if (true === (bool) ag($opts, Options::RAW_RESPONSE)) {
             $metadata[Options::RAW_RESPONSE] = $item;
         }
 

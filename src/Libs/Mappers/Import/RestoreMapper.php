@@ -47,7 +47,7 @@ final class RestoreMapper implements iImport
     /**
      * @var UserContext|null The User Context
      */
-    protected UserContext|null $userContext = null;
+    protected ?UserContext $userContext = null;
 
     /**
      * Class constructor.
@@ -57,9 +57,10 @@ final class RestoreMapper implements iImport
      *
      * @return void
      */
-    public function __construct(private iLogger $logger, private Stream|string $file)
-    {
-    }
+    public function __construct(
+        private iLogger $logger,
+        private Stream|string $file,
+    ) {}
 
     /**
      * @inheritdoc
@@ -129,19 +130,18 @@ final class RestoreMapper implements iImport
      * @inheritdoc
      * @throws \JsonMachine\Exception\InvalidArgumentException If unexpected things happen while loading the JSON file.
      */
-    public function loadData(iDate|null $date = null): self
+    public function loadData(?iDate $date = null): self
     {
-        if (false === ($this->file instanceof Stream)) {
+        if (false === $this->file instanceof Stream) {
             if (true === str_ends_with($this->file, '.zip')) {
                 /** @noinspection PhpUnusedLocalVariableInspection */
-                [$stream, $_] = readFileFromArchive($this->file, '*.json');
+                [$stream, $_] = read_file_from_archive($this->file, '*.json');
             } else {
                 $stream = Stream::make($this->file, 'r');
             }
         } else {
             $stream = $this->file;
         }
-
 
         if ($stream->isSeekable()) {
             $stream->rewind();
@@ -150,11 +150,11 @@ final class RestoreMapper implements iImport
         $it = new Items(
             bytesIterator: new StreamableChunks(
                 stream: $stream,
-                chunkSize: (int)ag($this->options, 'chunkSize', 1024 * 8)
+                chunkSize: (int) ag($this->options, 'chunkSize', 1024 * 8),
             ),
             options: [
-                'decoder' => new ErrorWrappingDecoder(new ExtJsonDecoder(true, JSON_INVALID_UTF8_IGNORE))
-            ]
+                'decoder' => new ErrorWrappingDecoder(new ExtJsonDecoder(true, JSON_INVALID_UTF8_IGNORE)),
+            ],
         );
 
         $state = new StateEntity([]);
@@ -206,7 +206,7 @@ final class RestoreMapper implements iImport
     /**
      * @inheritdoc
      */
-    public function get(iState $entity): null|iState
+    public function get(iState $entity): ?iState
     {
         return false === ($pointer = $this->getPointer($entity)) ? null : $this->objects[$pointer];
     }
@@ -343,9 +343,11 @@ final class RestoreMapper implements iImport
     protected function getPointer(iState $entity): int|string|bool
     {
         foreach ($entity->getRelativePointers() as $key) {
-            if (null !== ($this->pointers[$key] ?? null)) {
-                return $this->pointers[$key];
+            if (null === ($this->pointers[$key] ?? null)) {
+                continue;
             }
+
+            return $this->pointers[$key];
         }
 
         foreach ($entity->getPointers() as $key) {

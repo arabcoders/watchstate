@@ -29,8 +29,7 @@ final class Images
         private readonly iImport $mapper,
         private readonly iLogger $logger,
         private readonly iCache $cache,
-    ) {
-    }
+    ) {}
 
     #[Get(self::URL . '/{type:poster|background}[/]', name: 'system.images')]
     public function __invoke(iRequest $request, DBLayer $db, string $type): iResponse
@@ -40,7 +39,7 @@ final class Images
             if (count($uc->config) < 1) {
                 return api_response(Status::NO_CONTENT);
             }
-            $resp = $this->getImage($db, $type, force: (bool)ag($request->getQueryParams(), 'force', false));
+            $resp = $this->getImage($db, $type, force: (bool) ag($request->getQueryParams(), 'force', false));
         } catch (InvalidArgumentException|RuntimeException) {
             return api_response(Status::NO_CONTENT);
         }
@@ -50,9 +49,11 @@ final class Images
         $removeHeaders = ['pragma', 'cache-control', 'expires'];
 
         foreach ($resp->headers as $key => $value) {
-            if (false === in_array(strtolower($key), $removeHeaders)) {
-                $headers[$key] = $value;
+            if (false !== in_array(strtolower($key), $removeHeaders, true)) {
+                continue;
             }
+
+            $headers[$key] = $value;
         }
 
         return api_response($resp->status, $resp->stream, $headers);
@@ -61,12 +62,12 @@ final class Images
     /**
      * @throws InvalidArgumentException
      */
-    public function getImage(DBLayer $db, string $type, int|null $oldId = null, bool $force = false): APIResponse
+    public function getImage(DBLayer $db, string $type, ?int $oldId = null, bool $force = false): APIResponse
     {
         $cacheKey = r('system.images.{type}', ['type' => $type]);
 
         if (null === $oldId && false === $force && $this->cache->has($cacheKey)) {
-            $id = (int)$this->cache->get($cacheKey);
+            $id = (int) $this->cache->get($cacheKey);
         } else {
             $record = $db->query('SELECT id FROM "state" ORDER BY RANDOM() LIMIT 1');
             $id = $record->fetchColumn();
@@ -75,9 +76,9 @@ final class Images
             }
         }
 
-        $id = (int)$id;
+        $id = (int) $id;
 
-        $resp = APIRequest(Method::GET, r('/history/{id}/images/{type}', ['id' => $id, 'type' => $type]));
+        $resp = api_request(Method::GET, r('/history/{id}/images/{type}', ['id' => $id, 'type' => $type]));
 
         if ($resp->status !== Status::OK) {
             if ($id === $oldId) {

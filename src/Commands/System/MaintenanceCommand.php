@@ -23,7 +23,6 @@ final class MaintenanceCommand extends Command
 {
     public const string ROUTE = 'system:db:maintenance';
 
-
     /**
      * Class constructor.
      *
@@ -38,25 +37,24 @@ final class MaintenanceCommand extends Command
         parent::__construct();
     }
 
-
     /**
      * Configure the command.
      */
     protected function configure(): void
     {
-        $this->setName(self::ROUTE)
+        $this
+            ->setName(self::ROUTE)
             ->setDescription('Run maintenance tasks on database.')
             ->setHelp(
                 <<<HELP
 
-                This command runs <notice>maintenance</notice> tasks on database to make sure the database is in optimal state.
-                You do not need to run this command unless told by the team.
-                This is done automatically on container startup.
+                    This command runs <notice>maintenance</notice> tasks on database to make sure the database is in optimal state.
+                    You do not need to run this command unless told by the team.
+                    This is done automatically on container startup.
 
-                HELP
+                    HELP,
             );
     }
-
 
     /**
      * Run a command.
@@ -68,9 +66,9 @@ final class MaintenanceCommand extends Command
      */
     protected function runCommand(iInput $input, iOutput $output): int
     {
-        foreach (getUsersContext(mapper: $this->mapper, logger: $this->logger) as $userContext) {
+        foreach (get_users_context(mapper: $this->mapper, logger: $this->logger) as $userContext) {
             $output->writeln(r("Optimizing user '{user}' database.", [
-                'user' => $userContext->name
+                'user' => $userContext->name,
             ]), iOutput::VERBOSITY_VERBOSE);
 
             $userContext->db->maintenance();
