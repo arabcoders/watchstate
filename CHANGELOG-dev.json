@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260205-740704c2",
-        "date": "2026-02-05T16:23:14+00:00",
+        "tag": "dev-20260209-7e1a5757",
+        "date": "2026-02-09T13:20:08+00:00",
         "commits": [
+            {
+                "sha": "7e1a5757",
+                "message": "fix: sometimes metadata json is null add checks to prevent null deref. close #778",
+                "author": "arabcoders",
+                "date": "2026-02-09T13:20:08+00:00",
+                "full_sha": "7e1a5757f020de6274da81638f2b0592533a82af"
+            },
             {
                 "sha": "740704c2",
                 "message": "refactor: disable jellyfin fix_played by default.",
@@ -1061,7 +1068,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "740704c2ede1318b00d110317025845a5b39bd73"
+        "full_sha": "7e1a5757f020de6274da81638f2b0592533a82af"
     },
     {
         "tag": "dev-20250604-9407bc76",
