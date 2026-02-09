@@ -1,8 +1,22 @@
 [
     {
-        "tag": "dev-20260209-7e1a5757",
-        "date": "2026-02-09T13:20:08+00:00",
+        "tag": "dev-20260209-c3599263",
+        "date": "2026-02-09T18:59:56+00:00",
         "commits": [
+            {
+                "sha": "c3599263",
+                "message": "Feat: make it possible to import specific library.",
+                "author": "arabcoders",
+                "date": "2026-02-09T18:59:56+00:00",
+                "full_sha": "c35992636c9de7d5808cedd10f2f8e386612436f"
+            },
+            {
+                "sha": "6f44acd6",
+                "message": "fix: force import was not working for old dated items.",
+                "author": "arabcoders",
+                "date": "2026-02-09T15:12:09+00:00",
+                "full_sha": "6f44acd6d6e812b43443faa7fa9d997aa3d5b19e"
+            },
             {
                 "sha": "7e1a5757",
                 "message": "fix: sometimes metadata json is null add checks to prevent null deref. close #778",
@@ -1068,7 +1082,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "7e1a5757f020de6274da81638f2b0592533a82af"
+        "full_sha": "c35992636c9de7d5808cedd10f2f8e386612436f"
     },
     {
         "tag": "dev-20250604-9407bc76",
