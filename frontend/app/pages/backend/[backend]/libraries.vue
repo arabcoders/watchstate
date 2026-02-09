@@ -72,15 +72,23 @@
               <input :id="`ignore-${item.id}`" type="checkbox" class="switch is-success" :checked="item.ignored"
                 @change="toggleIgnore(item)">
               <label :for="`ignore-${item.id}`"></label>
-              <span>Ignore content from this library.</span>
+              <span>Ignore library content.</span>
             </div>
             <div class="card-footer-item">
-              <NuxtLink :to="`/backend/${backend}/stale/${item.id}?name=${item.title}`">
-                <span class="icon-text">
-                  <span class="icon"><i class="fas fa-sync"></i></span>
-                  <span>Check Content Staleness</span>
-                </span>
-              </NuxtLink>
+              <div class="control is-fullwidth has-icons-left" v-if="item.supported && !item.ignored">
+                <div class="select is-fullwidth">
+                  <select v-model="selectedCommand" @change="forwardCommand(item)">
+                    <option value="" disabled>Quick operations</option>
+                    <option v-for="(command, index) in usefulCommands" :key="`ql-${item.id}-${index}`" :value="index">
+                      {{ command.id }}. {{ command.title }}
+                    </option>
+                  </select>
+                </div>
+                <div class="icon is-left">
+                  <i class="fas fa-terminal" />
+                </div>
+              </div>
+              <span v-else>-</span>
             </div>
           </div>
         </div>
@@ -103,17 +111,43 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRoute, useHead } from '#app'
+import { useRoute, useHead, navigateTo } from '#app'
 import { useStorage } from '@vueuse/core'
-import { request, notification, parse_api_response } from '~/utils'
+import { request, notification, parse_api_response, makeConsoleCommand, r } from '~/utils'
 import Message from '~/components/Message.vue'
-import type { LibraryItem } from '~/types'
+import type { LibraryItem, JsonObject, JsonValue, UtilityCommand } from '~/types'
 
 const route = useRoute()
 const backend = route.params.backend as string
 const items = ref<Array<LibraryItem>>([])
 const isLoading = ref<boolean>(false)
 const show_page_tips = useStorage('show_page_tips', true)
+const api_user = useStorage('api_user', 'main')
+const selectedCommand = ref<string>('')
+
+type UsefulCommand = UtilityCommand
+
+type UsefulCommands = Record<string, UsefulCommand>
+
+type CommandUtility = {
+  user: string
+  backend: string
+  library_id: string
+  [key: string]: JsonValue | undefined
+}
+
+const usefulCommands: UsefulCommands = {
+  import_library: {
+    id: 1,
+    title: 'Import data from this library.',
+    command: 'state:import -v -u {user} -s {backend} -S {library_id}',
+  },
+  force_import_library: {
+    id: 2,
+    title: 'Force import from this library.',
+    command: 'state:import -f -v -u {user} -s {backend} -S {library_id}',
+  },
+}
 
 useHead({ title: `Backends: ${backend} - Libraries` })
 
@@ -139,6 +173,28 @@ const loadContent = async (): Promise<void> => {
   }
 }
 
+const forwardCommand = async (library: LibraryItem): Promise<void> => {
+  if ('' === selectedCommand.value) {
+    return
+  }
+
+  const index = selectedCommand.value as keyof UsefulCommands
+  selectedCommand.value = ''
+
+  const command = usefulCommands[index]
+  if (!command) {
+    return
+  }
+
+  const util: CommandUtility = {
+    user: api_user.value,
+    backend,
+    library_id: String(library.id),
+  }
+
+  await navigateTo(makeConsoleCommand(r(command.command, util as unknown as JsonObject)))
+}
+
 const toggleIgnore = async (library: LibraryItem): Promise<void> => {
   try {
     const newState = !library.ignored
@@ -152,7 +208,6 @@ const toggleIgnore = async (library: LibraryItem): Promise<void> => {
       return
     }
 
-    notification('success', 'Success', `Library '${library.title}' has been ${newState ? 'ignored' : 'un-ignored'}.`)
     const libraryIndex = items.value.findIndex(b => b.id === library.id)
     if (-1 !== libraryIndex && items.value[libraryIndex]) {
       items.value[libraryIndex].ignored = !library.ignored

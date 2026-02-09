@@ -221,28 +221,38 @@ class Import
 
         $limitLibraryId = ag($opts, Options::ONLY_LIBRARY_ID, null);
 
+        $selectLibraryList = null;
+        $inverseLibrarySelect = true === (bool) ag($context->options, Options::LIBRARY_INVERSE, false);
+        if (null !== ($selectLibraryIds = ag($context->options, Options::LIBRARY_SELECT, null))) {
+            $selectLibraryList = array_map(static fn($value) => (int) $value, $selectLibraryIds);
+        }
+
         $requests = $total = [];
         $ignored = $unsupported = 0;
 
         // -- Get library items count.
         foreach ($listDirs as $section) {
-            $key = (int) ag($section, 'key');
+            $libraryId = (int) ag($section, 'key');
 
-            if (null !== $limitLibraryId && $key !== (int) $limitLibraryId) {
+            if ($limitLibraryId && $libraryId !== (int) $limitLibraryId) {
                 continue;
             }
 
             $logContext = [
                 ...$rContext,
                 'library' => [
-                    'id' => ag($section, 'key'),
+                    'id' => $libraryId,
                     'title' => ag($section, 'title', '??'),
                     'type' => ag($section, 'type', 'unknown'),
                     'agent' => ag($section, 'agent', 'unknown'),
                 ],
             ];
 
-            if (true === in_array($key, $ignoreIds ?? [], true)) {
+            if (true === in_array($libraryId, $ignoreIds ?? [], true)) {
+                continue;
+            }
+
+            if ($selectLibraryList && $inverseLibrarySelect === in_array($libraryId, $selectLibraryList, true)) {
                 continue;
             }
 
@@ -271,7 +281,7 @@ class Import
 
             $url = $context
                 ->backendUrl
-                ->withPath(r('/library/sections/{library_id}/all', ['library_id' => $key]))
+                ->withPath(r('/library/sections/{library_id}/all', ['library_id' => $libraryId]))
                 ->withQuery(
                     http_build_query([
                         'includeGuids' => 1,
@@ -416,7 +426,7 @@ class Import
 
         // -- get paginated tv shows metadata.
         foreach ($listDirs as $section) {
-            $key = (int) ag($section, 'key');
+            $libraryId = (int) ag($section, 'key');
 
             if (PlexClient::TYPE_SHOW !== ag($section, 'type', 'unknown')) {
                 continue;
@@ -426,21 +436,25 @@ class Import
                 continue;
             }
 
-            if (true === in_array($key, $ignoreIds ?? [], true)) {
+            if ($selectLibraryList && $inverseLibrarySelect === in_array($libraryId, $selectLibraryList, true)) {
+                continue;
+            }
+
+            if (true === in_array($libraryId, $ignoreIds ?? [], true)) {
                 continue;
             }
 
             $logContext = [
                 ...$rContext,
                 'library' => [
-                    'id' => $key,
+                    'id' => $libraryId,
                     'title' => ag($section, 'title', '??'),
                     'type' => ag($section, 'type', 'unknown'),
                     'url' => $url,
                 ],
             ];
 
-            if (false === array_key_exists('show_' . $key, $total)) {
+            if (false === array_key_exists('show_' . $libraryId, $total)) {
                 $ignored++;
                 $this->logger->warning(
                     message: "{action}: Ignoring '{client}: {user}@{backend}' - '{library.title}'. No series items count was found.",
@@ -449,9 +463,9 @@ class Import
                 continue;
             }
 
-            $logContext['library']['totalRecords'] = $total['show_' . $key];
+            $logContext['library']['totalRecords'] = $total['show_' . $libraryId];
 
-            $segmentTotal = (int) $total['show_' . $key];
+            $segmentTotal = (int) $total['show_' . $libraryId];
             $segmented = ceil($segmentTotal / $segmentSize);
 
             for ($i = 0; $i < $segmented; $i++) {
@@ -465,7 +479,7 @@ class Import
                     $url = $context
                         ->backendUrl
                         ->withPath(
-                            r('/library/sections/{library_id}/all', ['library_id' => $key]),
+                            r('/library/sections/{library_id}/all', ['library_id' => $libraryId]),
                         )
                         ->withQuery(
                             http_build_query([
@@ -511,25 +525,33 @@ class Import
 
         // -- get paginated movies/episodes.
         foreach ($listDirs as $section) {
-            $key = (int) ag($section, 'key');
+            $libraryId = (int) ag($section, 'key');
 
             $logContext = [
                 ...$rContext,
                 'library' => [
-                    'id' => ag($section, 'key'),
+                    'id' => $libraryId,
                     'title' => ag($section, 'title', '??'),
                     'type' => ag($section, 'type', 'unknown'),
                 ],
             ];
 
-            if (!in_array(ag($section, 'agent'), PlexClient::SUPPORTED_AGENTS, true)) {
+            if (false === in_array(ag($section, 'agent'), PlexClient::SUPPORTED_AGENTS, true)) {
                 continue;
             }
 
-            if (true === in_array($key, $ignoreIds ?? [], true)) {
+            if (true === in_array($libraryId, $ignoreIds ?? [], true)) {
                 $ignored++;
                 $this->logger->info(
                     message: "{action}: Ignoring '{client}: {user}@{backend}' - '{library.title}'. Requested by user.",
+                    context: $logContext,
+                );
+                continue;
+            }
+
+            if ($selectLibraryList && $inverseLibrarySelect === in_array($libraryId, $selectLibraryList, true)) {
+                $this->logger->info(
+                    message: "{action}: Excluding '{client}: {user}@{backend}' - '{library.title}'. Requested by user.",
                     context: $logContext,
                 );
                 continue;
@@ -544,7 +566,7 @@ class Import
                 continue;
             }
 
-            if (false === array_key_exists($key, $total)) {
+            if (false === array_key_exists($libraryId, $total)) {
                 $ignored++;
                 $this->logger->warning(
                     message: "{action}: Ignoring '{client}: {user}@{backend}' - '{library.title}'. No items count was found.",
@@ -553,9 +575,9 @@ class Import
                 continue;
             }
 
-            $logContext['library']['totalRecords'] = $total[$key];
+            $logContext['library']['totalRecords'] = $total[$libraryId];
 
-            $segmentTotal = (int) $total[$key];
+            $segmentTotal = (int) $total[$libraryId];
             $segmented = ceil($segmentTotal / $segmentSize);
 
             for ($i = 0; $i < $segmented; $i++) {
@@ -570,11 +592,7 @@ class Import
 
                     $url = $context
                         ->backendUrl
-                        ->withPath(
-                            r('/library/sections/{library_id}/all', [
-                                'library_id' => $key,
-                            ]),
-                        )
+                        ->withPath(r('/library/sections/{library_id}/all', ['library_id' => $libraryId]))
                         ->withQuery(
                             http_build_query([
                                 'includeGuids' => 1,

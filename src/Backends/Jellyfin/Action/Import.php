@@ -243,6 +243,12 @@ class Import
 
         $limitLibraryId = ag($opts, Options::ONLY_LIBRARY_ID, null);
 
+        $selectLibraryList = null;
+        $inverseLibrarySelect = true === (bool) ag($context->options, Options::LIBRARY_INVERSE, false);
+        if (null !== ($selectLibraryIds = ag($context->options, Options::LIBRARY_SELECT, null))) {
+            $selectLibraryList = array_map(static fn($value) => (string) $value, $selectLibraryIds);
+        }
+
         $requests = $total = [];
         $ignored = $unsupported = 0;
 
@@ -259,11 +265,15 @@ class Import
                 ],
             ];
 
-            if (null !== $limitLibraryId && $libraryId !== (string) $limitLibraryId) {
+            if ($limitLibraryId && $libraryId !== (string) $limitLibraryId) {
                 continue;
             }
 
-            if (true === in_array(ag($logContext, 'library.id'), $ignoreIds ?? [], true)) {
+            if (true === in_array($libraryId, $ignoreIds ?? [], true)) {
+                continue;
+            }
+
+            if ($selectLibraryList && $inverseLibrarySelect === in_array($libraryId, $selectLibraryList, true)) {
                 continue;
             }
 
@@ -280,7 +290,7 @@ class Import
                     http_build_query([
                         'sortBy' => 'DateCreated',
                         'sortOrder' => 'Ascending',
-                        'parentId' => ag($logContext, 'library.id'),
+                        'parentId' => $libraryId,
                         'recursive' => 'true',
                         'collapseBoxSetItems' => 'false',
                         'excludeLocationTypes' => 'Virtual',
@@ -384,10 +394,11 @@ class Import
 
         // -- Episodes Parent external ids.
         foreach ($listDirs as $section) {
+            $libraryId = (string) ag($section, 'Id');
             $logContext = [
                 ...$rContext,
                 'library' => [
-                    'id' => (string) ag($section, 'Id'),
+                    'id' => $libraryId,
                     'title' => ag($section, 'Name', '??'),
                     'type' => ag($section, ['CollectionType', 'Type'], 'unknown'),
                 ],
@@ -397,7 +408,11 @@ class Import
                 ],
             ];
 
-            if (true === in_array(ag($logContext, 'library.id'), $ignoreIds ?? [], true)) {
+            if (true === in_array($libraryId, $ignoreIds ?? [], true)) {
+                continue;
+            }
+
+            if ($selectLibraryList && $inverseLibrarySelect === in_array($libraryId, $selectLibraryList, true)) {
                 continue;
             }
 
@@ -409,8 +424,8 @@ class Import
                 continue;
             }
 
-            if (true === array_key_exists(ag($logContext, 'library.id'), $total)) {
-                $logContext['library']['totalRecords'] = $total[ag($logContext, 'library.id')];
+            if (true === array_key_exists($libraryId, $total)) {
+                $logContext['library']['totalRecords'] = $total[$libraryId];
             }
 
             $url = $context
@@ -422,7 +437,7 @@ class Import
                 )
                 ->withQuery(
                     http_build_query([
-                        'parentId' => ag($logContext, 'library.id'),
+                        'parentId' => $libraryId,
                         'recursive' => 'false',
                         'enableUserData' => 'false',
                         'enableImages' => 'false',
@@ -462,19 +477,28 @@ class Import
 
         // -- get paginated movies/episodes.
         foreach ($listDirs as $section) {
+            $libraryId = (string) ag($section, 'Id');
             $logContext = [
                 ...$rContext,
                 'library' => [
-                    'id' => (string) ag($section, 'Id'),
+                    'id' => $libraryId,
                     'title' => ag($section, 'Name', '??'),
                     'type' => ag($section, ['CollectionType', 'Type'], 'unknown'),
                 ],
             ];
 
-            if (true === in_array(ag($logContext, 'library.id'), $ignoreIds ?? [], true)) {
+            if (true === in_array($libraryId, $ignoreIds ?? [], true)) {
                 $ignored++;
                 $this->logger->info(
                     message: "{action}: Ignoring '{client}: {user}@{backend}' - '{library.title}'. Requested by user.",
+                    context: $logContext,
+                );
+                continue;
+            }
+
+            if ($selectLibraryList && $inverseLibrarySelect === in_array($libraryId, $selectLibraryList, true)) {
+                $this->logger->info(
+                    message: "{action}: Excluding '{client}: {user}@{backend}' - '{library.title}'. Requested by user.",
                     context: $logContext,
                 );
                 continue;
@@ -489,7 +513,7 @@ class Import
                 continue;
             }
 
-            if (false === array_key_exists(ag($logContext, 'library.id'), $total)) {
+            if (false === array_key_exists($libraryId, $total)) {
                 $ignored++;
                 $this->logger->warning(
                     message: "{action}: Ignoring '{client}: {user}@{backend}' - '{library.title}'. No items count was found.",
@@ -498,9 +522,9 @@ class Import
                 continue;
             }
 
-            $logContext['library']['totalRecords'] = $total[ag($logContext, 'library.id')];
+            $logContext['library']['totalRecords'] = $total[$libraryId];
 
-            $segmentTotal = (int) $total[ag($logContext, 'library.id')];
+            $segmentTotal = (int) $total[$libraryId];
             $segmentSize = (int) ag($context->options, Options::LIBRARY_SEGMENT, 1000);
             $segmented = ceil($segmentTotal / $segmentSize);
 

@@ -101,6 +101,18 @@ class ImportCommand extends Command
                 'Inverse --select-backend logic. Exclude selected backends.',
             )
             ->addOption(
+                'select-library',
+                'S',
+                InputOption::VALUE_IS_ARRAY | InputOption::VALUE_OPTIONAL,
+                'Select library ids.',
+            )
+            ->addOption(
+                'exclude-library',
+                'I',
+                InputOption::VALUE_NONE,
+                'Inverse --select-library logic. Exclude selected libraries.',
+            )
+            ->addOption(
                 'metadata-only',
                 null,
                 InputOption::VALUE_NONE,
@@ -192,6 +204,9 @@ class ImportCommand extends Command
 
         $selected = $input->getOption('select-backend');
         $isCustom = !empty($selected) && count($selected) > 0;
+        $selectLibrary = $this->parseLibraryIds($input->getOption('select-library'));
+        $hasLibrarySelect = count($selectLibrary) > 0;
+        $inverseLibrarySelect = true === $input->getOption('exclude-library');
         $supported = Config::get('supported', []);
 
         $totalStartTime = microtime(true);
@@ -318,6 +333,11 @@ class ImportCommand extends Command
             foreach ($list as $name => &$backend) {
                 $metadata = false;
                 $opts = ag($backend, 'options', []);
+
+                if (true === $hasLibrarySelect) {
+                    $opts[Options::LIBRARY_SELECT] = $selectLibrary;
+                    $opts[Options::LIBRARY_INVERSE] = $inverseLibrarySelect;
+                }
 
                 if (true === (bool) ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
                     $opts[Options::IMPORT_METADATA_ONLY] = true;
@@ -492,5 +512,25 @@ class ImportCommand extends Command
     private function in_array(array $list, string $search): bool
     {
         return array_any($list, static fn($item) => str_starts_with($search, $item));
+    }
+
+    /**
+     * @param array|string|null $value
+     *
+     * @return array<string>
+     */
+    private function parseLibraryIds(array|string|null $value): array
+    {
+        if (null === $value) {
+            return [];
+        }
+
+        if (true === is_string($value)) {
+            $value = explode(',', $value);
+        }
+
+        $ids = array_filter(array_map(trim(...), $value), static fn($item) => '' !== $item);
+
+        return array_values(array_unique($ids));
     }
 }
