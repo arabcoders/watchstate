@@ -812,6 +812,10 @@ final class StateEntity implements iState
     private function isEqualValue(string $key, iState $entity): bool
     {
         if (iState::COLUMN_UPDATED === $key || iState::COLUMN_WATCHED === $key) {
+            if (true === $entity->getContext(Options::FORCE_FULL, false)) {
+                return !($entity->watched !== $this->watched);
+            }
+
             return !($entity->updated > $this->updated && $entity->watched !== $this->watched);
         }
 
@@ -836,8 +840,11 @@ final class StateEntity implements iState
     private function updateValue(string $key, iState $remote): void
     {
         if (iState::COLUMN_UPDATED === $key || iState::COLUMN_WATCHED === $key) {
+            // -- Check if we should bypass timestamp check (e.g., during force-full import)
+            $forceUpdate = true === $remote->getContext(Options::FORCE_FULL, false);
+
             // -- Normal logic flow usually this indicates that backend has played_at date column.
-            if ($remote->updated > $this->updated && $remote->isWatched() !== $this->isWatched()) {
+            if ($forceUpdate || $remote->updated > $this->updated && $remote->isWatched() !== $this->isWatched()) {
                 $this->updated = $remote->updated;
                 $this->watched = $remote->watched;
             }

@@ -34,8 +34,8 @@ class DirectMapperTest extends MapperAbstract
         $userContext = $this->createUserContext(
             name: 'test_plex',
             data: [
-                'test_plex.options.' . Options::DISABLE_MARK_UNPLAYED => true
-            ]
+                'test_plex.options.' . Options::DISABLE_MARK_UNPLAYED => true,
+            ],
         );
 
         $mapperWithContext = $this->mapper->withUserContext($userContext);
@@ -49,19 +49,19 @@ class DirectMapperTest extends MapperAbstract
         $this->assertSame(
             1,
             $obj->watched,
-            'With DISABLE_MARK_UNPLAYED flag enabled, item should remain watched'
+            'With DISABLE_MARK_UNPLAYED flag enabled, item should remain watched',
         );
 
         $userContextNoFlag = $this->createUserContext(
             name: 'test_plex_no_flag',
-            data: []
+            data: [],
         );
 
         $this->testMovie[iState::COLUMN_VIA] = 'test_plex_no_flag';
         $this->testMovie = ag_set(
             $this->testMovie,
             'metadata.test_plex_no_flag',
-            $this->testMovie['metadata']['test_plex']
+            $this->testMovie['metadata']['test_plex'],
         );
         unset($this->testMovie['metadata']['test_plex']);
 
@@ -80,7 +80,7 @@ class DirectMapperTest extends MapperAbstract
         $this->assertSame(
             0,
             $obj2->watched,
-            'Without DISABLE_MARK_UNPLAYED flag, item should be marked as unwatched'
+            'Without DISABLE_MARK_UNPLAYED flag, item should be marked as unwatched',
         );
     }
 
@@ -111,16 +111,16 @@ class DirectMapperTest extends MapperAbstract
 
         $this->assertTrue(
             $progressEventCalled,
-            'Progress event callback should be called when progress changes significantly'
+            'Progress event callback should be called when progress changes significantly',
         );
 
         $this->mapper->reset()->loadData();
         $stored = $this->mapper->get($updatedMovie);
-        $storedProgress = (int)ag($stored->getMetadata($testMovie->via), iState::COLUMN_META_DATA_PROGRESS, 0);
+        $storedProgress = (int) ag($stored->getMetadata($testMovie->via), iState::COLUMN_META_DATA_PROGRESS, 0);
         $this->assertSame(
             150,
             $storedProgress,
-            'Progress should be saved to database when progress event is triggered'
+            'Progress should be saved to database when progress event is triggered',
         );
     }
 
@@ -149,23 +149,23 @@ class DirectMapperTest extends MapperAbstract
         $testMovie->setIsTainted(true);
 
         $this->mapper->add($testMovie, [
-            Options::STATE_PROGRESS_EVENT => $progressCallback
+            Options::STATE_PROGRESS_EVENT => $progressCallback,
         ]);
         $this->mapper->commit();
 
         $this->assertSame(
             1,
             $progressEventCallCount,
-            'Progress event should be called exactly once when progress increases significantly'
+            'Progress event should be called exactly once when progress increases significantly',
         );
 
         $this->mapper->reset()->loadData();
         $stored = $this->mapper->get($testMovie);
-        $storedProgress = (int)ag($stored->getMetadata($testMovie->via), iState::COLUMN_META_DATA_PROGRESS, 0);
+        $storedProgress = (int) ag($stored->getMetadata($testMovie->via), iState::COLUMN_META_DATA_PROGRESS, 0);
         $this->assertSame(
             50,
             $storedProgress,
-            'Progress should be saved to database'
+            'Progress should be saved to database',
         );
     }
 
@@ -202,14 +202,14 @@ class DirectMapperTest extends MapperAbstract
         $this->mapper->add($testMovie, [
             'after' => $afterDate,
             Options::STATE_PROGRESS_EVENT => $progressCallback,
-            Options::ON_SKIP_STATE => $skipStateCallback
+            Options::ON_SKIP_STATE => $skipStateCallback,
         ]);
         $this->mapper->commit();
 
         $this->assertSame(
             1,
             $skipStateCallCount,
-            'ON_SKIP_STATE callback should be called exactly once when SKIP_STATE is auto-set by DirectMapper'
+            'ON_SKIP_STATE callback should be called exactly once when SKIP_STATE is auto-set by DirectMapper',
         );
 
         $this->assertNotNull($skipStateEntity, 'Entity should be passed to ON_SKIP_STATE callback');
@@ -219,7 +219,7 @@ class DirectMapperTest extends MapperAbstract
         $this->assertSame(
             0,
             $progressEventCallCount,
-            'Progress event should NOT be called in SKIP_STATE scenario (no progress change + SKIP_STATE blocks events)'
+            'Progress event should NOT be called in SKIP_STATE scenario (no progress change + SKIP_STATE blocks events)',
         );
 
         $this->mapper->reset()->loadData();
@@ -229,19 +229,70 @@ class DirectMapperTest extends MapperAbstract
         $this->assertSame(
             1,
             $stored->watched,
-            'Watch state should remain unchanged (1) because tainted processing only updates metadata'
+            'Watch state should remain unchanged (1) because tainted processing only updates metadata',
         );
 
         $storedMetadata = $stored->getMetadata($testMovie->via);
         $this->assertNotEmpty(
             $storedMetadata,
-            'Metadata should exist for the backend'
+            'Metadata should exist for the backend',
         );
 
         $this->assertArrayHasKey(
             iState::COLUMN_META_DATA_PLAYED_AT,
             $storedMetadata,
-            'PLAYED_AT should be set in metadata during SKIP_STATE scenario'
+            'PLAYED_AT should be set in metadata during SKIP_STATE scenario',
+        );
+    }
+
+    /**
+     * Test force-full mode bypasses timestamp check and updates watch state
+     *
+     * @throws \DateMalformedStringException
+     */
+    public function test_force_full_updates_state_despite_old_timestamp(): void
+    {
+        $currentTime = time();
+        // Local DB has item as unplayed, updated recently
+        $this->testMovie[iState::COLUMN_WATCHED] = 0;
+        $this->testMovie[iState::COLUMN_UPDATED] = $currentTime - 1800; // 30 mins ago
+        $testMovie = new StateEntity($this->testMovie);
+
+        $this->mapper->add($testMovie);
+        $this->mapper->commit();
+        $this->mapper->reset()->loadData();
+
+        // Backend reports item as played, but with OLD timestamp (1 year ago)
+        $testMovie->watched = 1;
+        $testMovie->updated = $currentTime - 31536000; // 1 year ago
+        $metadata = $testMovie->getMetadata();
+        $metadata[$testMovie->via][iState::COLUMN_META_DATA_PLAYED_AT] = $testMovie->updated;
+        $testMovie->metadata = $metadata;
+
+        // Import with FORCE_FULL option (as backend would pass it)
+        $this->mapper->add($testMovie, [Options::FORCE_FULL => true]);
+        $this->mapper->commit();
+
+        $this->mapper->reset()->loadData();
+        $stored = $this->mapper->get($testMovie);
+        $this->assertNotNull($stored, 'Item should be stored in the database');
+
+        $this->assertSame(
+            1,
+            $stored->watched,
+            'Watch state should be updated to 1 (played) in force-full mode despite old remote timestamp',
+        );
+
+        $storedMetadata = $stored->getMetadata($testMovie->via);
+        $this->assertArrayHasKey(
+            iState::COLUMN_META_DATA_PLAYED_AT,
+            $storedMetadata,
+            'PLAYED_AT should be set in metadata',
+        );
+        $this->assertSame(
+            $testMovie->updated,
+            $storedMetadata[iState::COLUMN_META_DATA_PLAYED_AT],
+            'PLAYED_AT should match the remote timestamp',
         );
     }
 
@@ -259,7 +310,8 @@ class DirectMapperTest extends MapperAbstract
         $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_ID] = 121;
         $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_WATCHED] = 1;
         $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_META_DATA_ADDED_AT] = $currentTime;
-        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_META_DATA_PLAYED_AT] = $currentTime - 100;
+        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_META_DATA_PLAYED_AT] =
+            $currentTime - 100;
 
         $testMovie = new StateEntity($this->testMovie);
 
@@ -323,7 +375,8 @@ class DirectMapperTest extends MapperAbstract
         $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_ID] = 121;
         $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_WATCHED] = 1;
         $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_META_DATA_ADDED_AT] = $currentTime;
-        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_META_DATA_PLAYED_AT] = $currentTime - 100;
+        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_META_DATA_PLAYED_AT] =
+            $currentTime - 100;
 
         $testMovie = new StateEntity($this->testMovie);
         $this->mapper->add($testMovie);
@@ -333,8 +386,8 @@ class DirectMapperTest extends MapperAbstract
         $userContext = $this->createUserContext(
             name: 'test_plex',
             data: [
-                'test_plex.options.' . Options::DISABLE_MARK_UNPLAYED => true
-            ]
+                'test_plex.options.' . Options::DISABLE_MARK_UNPLAYED => true,
+            ],
         );
 
         $mapperWithContext = $this->mapper->withUserContext($userContext);
@@ -362,7 +415,7 @@ class DirectMapperTest extends MapperAbstract
         $this->assertSame(
             0,
             $MAUCallCount,
-            'test_mark_as_unplayed callback should NOT be called when DISABLE_MARK_UNPLAYED flag makes shouldMarkAsUnplayed return false'
+            'test_mark_as_unplayed callback should NOT be called when DISABLE_MARK_UNPLAYED flag makes shouldMarkAsUnplayed return false',
         );
 
         $mapperWithContext->reset()->loadData();
@@ -384,8 +437,10 @@ class DirectMapperTest extends MapperAbstract
         $this->testMovie[iState::COLUMN_UPDATED] = $currentTime - 3600;
         $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_ID] = 121;
         $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_WATCHED] = 1;
-        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_META_DATA_ADDED_AT] = $currentTime - 3600;
-        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_META_DATA_PLAYED_AT] = $currentTime - 3600;
+        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_META_DATA_ADDED_AT] =
+            $currentTime - 3600;
+        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_META_DATA_PLAYED_AT] =
+            $currentTime - 3600;
 
         $testMovie = new StateEntity($this->testMovie);
         $this->mapper->add($testMovie);

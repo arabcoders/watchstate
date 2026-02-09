@@ -697,7 +697,7 @@ class DirectMapper implements ImportInterface
             }
 
             $this->logger->notice(
-                "{mapper}: [O] '{user}@{backend}' item '#{id}: {title}' date '{remote_date}' is older than last sync date '{local_date}'. Marking the item as tainted and re-processing.",
+                "[CODE:DM001] {mapper}: [O] '{user}@{backend}' item '#{id}: {title}' [R: {state}] date '{remote_date}' is older than backend last sync date '{local_date}' [L: {local_state}]. Marking the item as tainted and re-processing. Check FAQ.",
                 [
                     'user' => $this->userContext->name ?? 'main',
                     'mapper' => after_last(self::class, '\\'),
@@ -747,6 +747,11 @@ class DirectMapper implements ImportInterface
      */
     public function add(iState $entity, array $opts = []): self
     {
+        // -- Set FORCE_FULL context on entity if flag is present in opts
+        if (true === (bool) ag($opts, Options::FORCE_FULL, false)) {
+            $entity = $entity->setContext(Options::FORCE_FULL, true);
+        }
+
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
             $this->logger->warning(
                 "{mapper}: [A] Ignoring '{user}@{backend}' - '{title}'. No valid/supported external ids.",

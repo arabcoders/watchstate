@@ -337,16 +337,19 @@ class ImportCommand extends Command
                     $opts['client']['timeout'] = (float) $input->getOption('timeout');
                 }
 
+                $after = ag($backend, 'import.lastSync', null);
+
+                $forceFull = true === (bool) ag($opts, Options::FORCE_FULL, false) || true === $input->getOption('force-full');
+
+                if (true === $forceFull) {
+                    $after = null;
+                    $opts[Options::FORCE_FULL] = true;
+                }
+
                 $backend['options'] = $opts;
                 $backend['class'] = make_backend(backend: $backend, name: $name, options: [
                     UserContext::class => $userContext,
                 ]);
-
-                $after = ag($backend, 'import.lastSync', null);
-
-                if (true === (bool) ag($opts, Options::FORCE_FULL, false) || true === $input->getOption('force-full')) {
-                    $after = null;
-                }
 
                 if (null !== $after) {
                     $after = make_date($after);

@@ -84,7 +84,7 @@ class Import
                         mapper: $mapper,
                         item: $item,
                         logContext: $logContext,
-                        opts: $opts + ['after' => $after],
+                        opts: $opts + [Options::AFTER => $after],
                     ),
                     logContext: $logContext,
                 ),
@@ -952,9 +952,10 @@ class Import
             }
 
             $mapper->add(entity: $entity, opts: [
-                'after' => ag($opts, 'after', null),
+                Options::AFTER => ag($opts, Options::AFTER, null),
                 Options::IMPORT_METADATA_ONLY => true === (bool) ag($context->options, Options::IMPORT_METADATA_ONLY),
                 Options::DISABLE_MARK_UNPLAYED => true === (bool) ag($context->options, Options::DISABLE_MARK_UNPLAYED),
+                Options::FORCE_FULL => true === (bool) ag($context->options, Options::FORCE_FULL),
             ]);
         } catch (Throwable $e) {
             $this->logger->error(
