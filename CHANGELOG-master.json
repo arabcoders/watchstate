@@ -1,8 +1,99 @@
 [
     {
-        "tag": "master-20260201-6724fb73",
-        "date": "2026-02-01T15:47:32+00:00",
+        "tag": "master-20260209-9a031e69",
+        "date": "2026-02-09T19:22:28+00:00",
         "commits": [
+            {
+                "sha": "c3599263",
+                "message": "Feat: make it possible to import specific library.",
+                "author": "arabcoders",
+                "date": "2026-02-09T18:59:56+00:00",
+                "full_sha": "c35992636c9de7d5808cedd10f2f8e386612436f"
+            },
+            {
+                "sha": "6f44acd6",
+                "message": "fix: force import was not working for old dated items.",
+                "author": "arabcoders",
+                "date": "2026-02-09T15:12:09+00:00",
+                "full_sha": "6f44acd6d6e812b43443faa7fa9d997aa3d5b19e"
+            },
+            {
+                "sha": "7e1a5757",
+                "message": "fix: sometimes metadata json is null add checks to prevent null deref. close #778",
+                "author": "arabcoders",
+                "date": "2026-02-09T13:20:08+00:00",
+                "full_sha": "7e1a5757f020de6274da81638f2b0592533a82af"
+            },
+            {
+                "sha": "740704c2",
+                "message": "refactor: disable jellyfin fix_played by default.",
+                "author": "arabcoders",
+                "date": "2026-02-05T16:23:14+00:00",
+                "full_sha": "740704c2ede1318b00d110317025845a5b39bd73"
+            },
+            {
+                "sha": "0a48aef1",
+                "message": "refactor: improve directMapper memory usage.",
+                "author": "arabcoders",
+                "date": "2026-02-05T15:30:16+00:00",
+                "full_sha": "0a48aef1f0b095db9df4659be5b586783a0c3b40"
+            },
+            {
+                "sha": "52c26dcd",
+                "message": "chore: add more tests covering backends code",
+                "author": "arabcoders",
+                "date": "2026-02-03T16:31:53+00:00",
+                "full_sha": "52c26dcd60df819639c6325a37fee16542bbf1f5"
+            },
+            {
+                "sha": "d996fe94",
+                "message": "fix: fix github build",
+                "author": "arabcoders",
+                "date": "2026-02-02T20:29:41+00:00",
+                "full_sha": "d996fe942a642573e7508288aed6c54b99f8525e"
+            },
+            {
+                "sha": "3d8d68b4",
+                "message": "fix: attempt #2 at fixing gitea",
+                "author": "arabcoders",
+                "date": "2026-02-02T20:19:35+00:00",
+                "full_sha": "3d8d68b4506f8c973bf595dd187643435d7a00df"
+            },
+            {
+                "sha": "8d8b35bb",
+                "message": "fix: followup fix for gitea #1",
+                "author": "arabcoders",
+                "date": "2026-02-02T20:08:39+00:00",
+                "full_sha": "8d8b35bb8a5ef7d7b4de3842fab492437cacec71"
+            },
+            {
+                "sha": "4e8f15b1",
+                "message": "fix: build using gitea ci",
+                "author": "arabcoders",
+                "date": "2026-02-02T19:12:42+00:00",
+                "full_sha": "4e8f15b1fe2847a50486e79770877d667953ff54"
+            },
+            {
+                "sha": "8e3dada1",
+                "message": "fix: js dont make it easy.",
+                "author": "arabcoders",
+                "date": "2026-02-02T18:35:47+00:00",
+                "full_sha": "8e3dada131e49478074df63f0152e25780db2e54"
+            },
+            {
+                "sha": "30669682",
+                "message": "fix: prep the frontend for testing",
+                "author": "arabcoders",
+                "date": "2026-02-02T18:31:55+00:00",
+                "full_sha": "3066968226ebb52e777729512228ea79b2a7d49a"
+            },
+            {
+                "sha": "ddc5d321",
+                "message": "refactor: lint code with mago",
+                "author": "arabcoders",
+                "date": "2026-02-02T18:27:09+00:00",
+                "full_sha": "ddc5d3219e33815b7853e85ad8089e3a158acfdd"
+            },
             {
                 "sha": "b197b0d8",
                 "message": "chore: update external packages",
@@ -956,7 +1047,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "6724fb736283050bc55fd484e9843cc6e615847b"
+        "full_sha": "9a031e6954baa0dadc8b68f2058c55882847f7d7"
     },
     {
         "tag": "master-20250614-e3307c58",
