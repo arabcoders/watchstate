@@ -29,7 +29,10 @@
                     </button>
                   </div>
                   <p class="has-text-danger">
-                    Once you have run the command, return to this page and to create a new user account.
+                    <ul>
+                      <li>Once you have run the command, return to this page and to create a new user account.</li>
+                      <li>You can also reset the password by removing the <code>.env</code> file found inside the config directory.</li>
+                    </ul>
                   </p>
                   <p class="has-text-info" v-if="polling_timer">
                     <span class="icon"><i class="fas fa-spinner fa-spin" /></span>
@@ -134,7 +137,7 @@ const startPolling = (): void => {
 
   polling_timer.value = setInterval(async (): Promise<void> => {
     try {
-      const hasUser: boolean = await auth.has_user()
+      const hasUser: boolean = await auth.has_user(true)
       if (false === hasUser) {
         stopPolling()
         forgot_password.value = false

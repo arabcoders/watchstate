@@ -1,8 +1,8 @@
-import {defineStore} from 'pinia';
+import { defineStore } from 'pinia';
 import { useStorage } from '@vueuse/core'
 import { reactive, toRefs } from 'vue'
 import { request, parse_api_response } from '~/utils'
-import type {GenericError, GenericResponse} from '~/types'
+import type { GenericError, GenericResponse } from '~/types'
 
 type AuthState = {
     token: string | null;
@@ -28,8 +28,12 @@ export const useAuthStore = defineStore('auth', () => {
         username: null,
     });
 
-    const has_user = async (): Promise<boolean> => {
-        const req = await request('/system/auth/has_user');
+    const has_user = async (no_cache: boolean = false): Promise<boolean> => {
+        let url = '/system/auth/has_user';
+        if (no_cache) {
+            url += '?_=' + new Date().getTime();
+        }
+        const req = await request(url);
         const status = req.status === 200;
         if (req.ok && req) {
             const json = await parse_api_response<HasUserResponse>(req);
