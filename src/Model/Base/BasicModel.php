@@ -95,9 +95,7 @@ abstract class BasicModel implements jsonSerializable
         }
     }
 
-    protected function init(array &$data, bool &$isCustom, array &$options): void
-    {
-    }
+    protected function init(array &$data, bool &$isCustom, array &$options): void {}
 
     abstract public function validate(): bool;
 

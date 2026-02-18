@@ -23,18 +23,14 @@ final readonly class StreamedBody implements StreamInterface
         return new self($func, isReadable: $isReadable);
     }
 
-    public function __destruct()
-    {
-    }
+    public function __destruct() {}
 
     public function __toString(): string
     {
         return $this->getContents();
     }
 
-    public function close(): void
-    {
-    }
+    public function close(): void {}
 
     public function detach(): null
     {
@@ -61,13 +57,9 @@ final readonly class StreamedBody implements StreamInterface
         return false;
     }
 
-    public function seek($offset, $whence = \SEEK_SET): void
-    {
-    }
+    public function seek($offset, $whence = \SEEK_SET): void {}
 
-    public function rewind(): void
-    {
-    }
+    public function rewind(): void {}
 
     public function isWritable(): bool
     {

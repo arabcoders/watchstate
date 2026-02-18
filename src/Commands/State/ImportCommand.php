@@ -210,6 +210,11 @@ class ImportCommand extends Command
         $supported = Config::get('supported', []);
 
         $totalStartTime = microtime(true);
+
+        $this->logger->notice('SYSTEM: Using WatchState {full_version}', [
+            'full_version' => get_full_version(),
+        ]);
+
         $this->logger->notice("SYSTEM: Starting import process for '{total}' users", ['total' => count($users)]);
 
         foreach ($users as $userContext) {
@@ -504,6 +509,10 @@ class ImportCommand extends Command
 
         $this->logger->notice("SYSTEM: Import process completed in '{duration}'s for all users.", [
             'duration' => round(microtime(true) - $totalStartTime, 4),
+        ]);
+
+        $this->logger->notice('SYSTEM: Using WatchState {full_version}', [
+            'full_version' => get_full_version(),
         ]);
 
         return self::SUCCESS;

@@ -181,6 +181,10 @@ class ExportCommand extends Command
             $this->logger->notice('Dry run mode. No changes will be committed to backends.');
         }
 
+        $this->logger->notice('SYSTEM: Using WatchState {full_version}', [
+            'full_version' => get_full_version(),
+        ]);
+
         foreach ($users as $userContext) {
             try {
                 $backends = $export = $push = $entities = [];
@@ -577,6 +581,10 @@ class ExportCommand extends Command
                 $userContext->mapper->reset();
             }
         }
+
+        $this->logger->notice('SYSTEM: Using WatchState {full_version}', [
+            'full_version' => get_full_version(),
+        ]);
 
         return self::SUCCESS;
     }

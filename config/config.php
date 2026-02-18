@@ -19,7 +19,7 @@ use Monolog\Level;
 return (function () {
     $inContainer = in_container();
     $progressTimeCheck = fn(int $v, int $d): int => 0 === $v || $v >= 180 ? $v : $d;
-    $progressToMS = fn(int $v): int => $v < 60 ? ($v * 1000) : 60000;
+    $progressToMS = fn(int $v): int => $v < 60 ? $v * 1000 : 60000;
 
     $config = [
         'name' => 'WatchState',
@@ -32,7 +32,7 @@ return (function () {
         'tz' => env('WS_TZ', env('TZ', 'UTC')),
         'path' => fix_path(env('WS_DATA_PATH', fn() => $inContainer ? '/config' : __DIR__ . '/../var')),
         'logs' => [
-            'context' => (bool)env('WS_LOGS_CONTEXT', false),
+            'context' => (bool) env('WS_LOGS_CONTEXT', false),
             'prune' => [
                 'after' => env('WS_LOGS_PRUNE_AFTER', '-3 DAYS'),
             ],
@@ -40,14 +40,21 @@ return (function () {
         'api' => [
             'prefix' => '/v1/api',
             'key' => env('WS_API_KEY', null),
-            'secure' => (bool)env('WS_SECURE_API_ENDPOINTS', false),
+            'secure' => (bool) env('WS_SECURE_API_ENDPOINTS', false),
             'pattern_match' => [
                 'backend' => '[a-zA-Z0-9_\-]+',
                 'ubackend' => '[a-zA-Z0-9_\-\@]+',
             ],
-            'logInternal' => (bool)env('WS_API_LOG_INTERNAL', false),
+            'logInternal' => (bool) env('WS_API_LOG_INTERNAL', false),
             'response' => [
-                'encode' => JSON_INVALID_UTF8_IGNORE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+                'encode' =>
+                    JSON_INVALID_UTF8_IGNORE
+                    | JSON_HEX_TAG
+                    | JSON_HEX_APOS
+                    | JSON_HEX_AMP
+                    | JSON_HEX_QUOT
+                    | JSON_UNESCAPED_SLASHES
+                    | JSON_UNESCAPED_UNICODE,
                 'headers' => [
                     'Content-Type' => 'application/json',
                     'X-Application-Version' => fn() => get_app_version(),
@@ -63,34 +70,34 @@ return (function () {
         ],
         'library' => [
             // -- this is used to segment backends requests into pages.
-            'segment' => (int)env('WS_LIBRARY_SEGMENT', 1_000),
+            'segment' => (int) env('WS_LIBRARY_SEGMENT', 1_000),
         ],
         'export' => [
             // -- Trigger full export mode if changes exceed X number.
-            'threshold' => (int)env('WS_EXPORT_THRESHOLD', 1_000),
+            'threshold' => (int) env('WS_EXPORT_THRESHOLD', 1_000),
             // -- Extra margin for marking item not found for backend in export mode. Default 3 days.
-            'not_found' => (int)env('WS_EXPORT_NOT_FOUND', 259_200),
+            'not_found' => (int) env('WS_EXPORT_NOT_FOUND', 259_200),
         ],
         'ignore' => [],
         'trust' => [
-            'proxy' => (bool)env('WS_TRUST_PROXY', false),
-            'header' => (string)env('WS_TRUST_HEADER', 'X-Forwarded-For'),
-            'local' => (bool)env('WS_TRUST_LOCAL', false),
+            'proxy' => (bool) env('WS_TRUST_PROXY', false),
+            'header' => (string) env('WS_TRUST_HEADER', 'X-Forwarded-For'),
+            'local' => (bool) env('WS_TRUST_LOCAL', false),
             'local_net' => [
                 '192.168.0.0/16', // RFC-1918 A-block.
                 '127.0.0.1/32', // localhost IPv4
                 '10.0.0.0/8', // RFC-1918 C-block.
                 '::1/128', // localhost IPv6
-                '172.16.0.0/12' // RFC-1918 B-block.
+                '172.16.0.0/12', // RFC-1918 B-block.
             ],
         ],
         'progress' => [
             // -- Allows to sync watch progress for played items.
-            'threshold' => $progressTimeCheck((int)env('WS_PROGRESS_THRESHOLD', 0), 60 * 10),
+            'threshold' => $progressTimeCheck((int) env('WS_PROGRESS_THRESHOLD', 0), 60 * 10),
             // -- Minimum time to consider item as progress sync-able.
             'minThreshold' => 180,
             // -- Minimum time to consider item as progress sync-able in milliseconds.
-            'minimum' => $progressToMS((int)env('WS_PROGRESS_MINIMUM', 60)),
+            'minimum' => $progressToMS((int) env('WS_PROGRESS_MINIMUM', 60)),
         ],
     ];
 
@@ -98,7 +105,7 @@ return (function () {
         'version' => '0.0',
         'file' => fix_path(env('WS_GUID_FILE', ag($config, 'path') . '/config/guid.yaml')),
         'disable' => [
-            'episode' => (bool)env('WS_GUID_DISABLE_EPISODE', false),
+            'episode' => (bool) env('WS_GUID_DISABLE_EPISODE', false),
         ],
     ];
 
@@ -145,13 +152,13 @@ return (function () {
 
     $config['webhook'] = [
         'log' => [
-            'enabled' => (bool)env('WS_WEBHOOK_LOG_ENABLED', true),
+            'enabled' => (bool) env('WS_WEBHOOK_LOG_ENABLED', true),
             'level' => env('WS_WEBHOOK_LOG_LEVEL', Level::Info),
             'file' => ag($config, 'tmpDir') . '/logs/webhook.' . $logDateFormat . '.log',
         ],
-        'dumpRequest' => (bool)env('WS_WEBHOOK_DUMP_REQUEST', false),
-        'tokenLength' => (int)env('WS_WEBHOOK_TOKEN_LENGTH', 16),
-        'file_format' => (string)env('WS_WEBHOOK_LOG_FILE_FORMAT', 'webhook.{backend}.{event}.{id}.json'),
+        'dumpRequest' => (bool) env('WS_WEBHOOK_DUMP_REQUEST', false),
+        'tokenLength' => (int) env('WS_WEBHOOK_TOKEN_LENGTH', 16),
+        'file_format' => (string) env('WS_WEBHOOK_LOG_FILE_FORMAT', 'webhook.{backend}.{event}.{id}.json'),
     ];
 
     $config['mapper'] = [
@@ -163,8 +170,8 @@ return (function () {
 
     $config['http'] = [
         'default' => [
-            'maxRetries' => (int)env('WS_HTTP_MAX_RETRIES', 3),
-            'sync_requests' => (bool)env('WS_HTTP_SYNC_REQUESTS', false),
+            'maxRetries' => (int) env('WS_HTTP_MAX_RETRIES', 3),
+            'sync_requests' => (bool) env('WS_HTTP_SYNC_REQUESTS', false),
             'options' => [
                 'headers' => [
                     'User-Agent' => ag($config, 'name') . '/' . get_app_version(),
@@ -180,11 +187,11 @@ return (function () {
     ];
 
     $config['debug'] = [
-        'enabled' => (bool)env('WS_DEBUG', false),
+        'enabled' => (bool) env('WS_DEBUG', false),
     ];
 
     $config['profiler'] = [
-        'save' => (bool)env('WS_PROFILER_SAVE', true),
+        'save' => (bool) env('WS_PROFILER_SAVE', true),
         'path' => env('WS_PROFILER_PATH', fn() => ag($config, 'tmpDir') . '/profiler'),
         'collector' => env('WS_PROFILER_COLLECTOR', null),
     ];
@@ -198,7 +205,7 @@ return (function () {
     $config['logger'] = [
         'file' => [
             'type' => 'stream',
-            'enabled' => (bool)env('WS_LOGGER_FILE_ENABLE', true),
+            'enabled' => (bool) env('WS_LOGGER_FILE_ENABLE', true),
             'level' => env('WS_LOGGER_FILE_LEVEL', Level::Warning),
             'filename' => ag($config, 'tmpDir') . '/logs/app.' . $logDateFormat . '.log',
         ],
@@ -218,13 +225,13 @@ return (function () {
             'type' => 'syslog',
             'docker' => false,
             'facility' => env('WS_LOGGER_SYSLOG_FACILITY', LOG_USER),
-            'enabled' => (bool)env('WS_LOGGER_SYSLOG_ENABLED', !$inContainer),
+            'enabled' => (bool) env('WS_LOGGER_SYSLOG_ENABLED', !$inContainer),
             'level' => env('WS_LOGGER_SYSLOG_LEVEL', Level::Error),
             'name' => ag($config, 'name'),
         ],
         'remote' => [
             'type' => 'remote',
-            'enabled' => (bool)env('WS_LOGGER_REMOTE_ENABLE', false),
+            'enabled' => (bool) env('WS_LOGGER_REMOTE_ENABLE', false),
             'level' => env('WS_LOGGER_REMOTE_LEVEL', Level::Error),
             'url' => env('WS_LOGGER_REMOTE_URL', null),
         ],
@@ -240,14 +247,14 @@ return (function () {
         strtolower(PlexClient::CLIENT_NAME) => [],
         strtolower(EmbyClient::CLIENT_NAME) => [],
         strtolower(JellyfinClient::CLIENT_NAME) => [
-            'fix_played' => (bool)env('WS_CLIENTS_JELLYFIN_FIX_PLAYED', false),
+            'fix_played' => (bool) env('WS_CLIENTS_JELLYFIN_FIX_PLAYED', false),
         ],
     ];
 
     $config['servers'] = [];
     $config['console'] = [
         'enable' => [
-            'all' => (bool)env('WS_CONSOLE_ENABLE_ALL', false),
+            'all' => (bool) env('WS_CONSOLE_ENABLE_ALL', false),
         ],
     ];
 
@@ -316,48 +323,48 @@ return (function () {
                 'command' => ImportCommand::ROUTE,
                 'name' => ImportCommand::TASK_NAME,
                 'info' => 'Import data from backends.',
-                'enabled' => (bool)env('WS_CRON_IMPORT', false),
-                'timer' => $checkTaskTimer((string)env('WS_CRON_IMPORT_AT', '0 */1 * * *'), '0 */1 * * *'),
+                'enabled' => (bool) env('WS_CRON_IMPORT', false),
+                'timer' => $checkTaskTimer((string) env('WS_CRON_IMPORT_AT', '0 */1 * * *'), '0 */1 * * *'),
                 'args' => env('WS_CRON_IMPORT_ARGS', '-v'),
             ],
             ExportCommand::TASK_NAME => [
                 'command' => ExportCommand::ROUTE,
                 'name' => ExportCommand::TASK_NAME,
                 'info' => 'Export data to backends.',
-                'enabled' => (bool)env('WS_CRON_EXPORT', false),
-                'timer' => $checkTaskTimer((string)env('WS_CRON_EXPORT_AT', '30 */1 * * *'), '30 */1 * * *'),
+                'enabled' => (bool) env('WS_CRON_EXPORT', false),
+                'timer' => $checkTaskTimer((string) env('WS_CRON_EXPORT_AT', '30 */1 * * *'), '30 */1 * * *'),
                 'args' => env('WS_CRON_EXPORT_ARGS', '-v'),
             ],
             BackupCommand::TASK_NAME => [
                 'command' => BackupCommand::ROUTE,
                 'name' => BackupCommand::TASK_NAME,
                 'info' => 'Backup backends play states.',
-                'enabled' => (bool)env('WS_CRON_BACKUP', true),
-                'timer' => $checkTaskTimer((string)env('WS_CRON_BACKUP_AT', '0 6 */3 * *'), '0 6 */3 * *'),
+                'enabled' => (bool) env('WS_CRON_BACKUP', true),
+                'timer' => $checkTaskTimer((string) env('WS_CRON_BACKUP_AT', '0 6 */3 * *'), '0 6 */3 * *'),
                 'args' => env('WS_CRON_BACKUP_ARGS', '-v'),
             ],
             PruneCommand::TASK_NAME => [
                 'command' => PruneCommand::ROUTE,
                 'name' => PruneCommand::TASK_NAME,
                 'info' => 'Delete old logs and backups.',
-                'enabled' => (bool)env('WS_CRON_PRUNE', true),
-                'timer' => $checkTaskTimer((string)env('WS_CRON_PRUNE_AT', '0 */12 * * *'), '0 */12 * * *'),
+                'enabled' => (bool) env('WS_CRON_PRUNE', true),
+                'timer' => $checkTaskTimer((string) env('WS_CRON_PRUNE_AT', '0 */12 * * *'), '0 */12 * * *'),
                 'args' => env('WS_CRON_PRUNE_ARGS', '-v'),
             ],
             IndexCommand::TASK_NAME => [
                 'command' => IndexCommand::ROUTE,
                 'name' => IndexCommand::TASK_NAME,
                 'info' => 'Check database for optimal indexes.',
-                'enabled' => (bool)env('WS_CRON_INDEXES', true),
-                'timer' => $checkTaskTimer((string)env('WS_CRON_INDEXES_AT', '0 3 * * 3'), '0 3 * * 3'),
+                'enabled' => (bool) env('WS_CRON_INDEXES', true),
+                'timer' => $checkTaskTimer((string) env('WS_CRON_INDEXES_AT', '0 3 * * 3'), '0 3 * * 3'),
                 'args' => env('WS_CRON_INDEXES_ARGS', '-v'),
             ],
             ValidateCommand::TASK_NAME => [
                 'command' => ValidateCommand::ROUTE,
                 'name' => ValidateCommand::TASK_NAME,
                 'info' => 'Validate stored backends reference id against the backends. This task is expensive and should only run on demand.',
-                'enabled' => (bool)env('WS_CRON_VALIDATE', false),
-                'timer' => $checkTaskTimer((string)env('WS_CRON_VALIDATE_AT', '0 4 */25 * *'), '0 4 */25 * *'),
+                'enabled' => (bool) env('WS_CRON_VALIDATE', false),
+                'timer' => $checkTaskTimer((string) env('WS_CRON_VALIDATE_AT', '0 4 */25 * *'), '0 4 */25 * *'),
                 'args' => env('WS_CRON_VALIDATE_ARGS', '-v'),
             ],
             DispatchCommand::TASK_NAME => [
@@ -376,7 +383,7 @@ return (function () {
         'logfile' => ag($config, 'tmpDir') . '/logs/events.' . $logDateFormat . '.log',
         'listeners' => [
             'cache' => new DateInterval(env('WS_EVENTS_LISTENERS_CACHE', 'PT1M')),
-            'file' => env('APP_EVENTS_FILE', function () use ($config): string|null {
+            'file' => env('APP_EVENTS_FILE', function () use ($config): ?string {
                 $file = ag($config, 'path') . '/config/events.php';
                 return file_exists($file) ? $file : null;
             }),
@@ -385,7 +392,7 @@ return (function () {
                 __DIR__ . '/../src/Backends/',
                 __DIR__ . '/../src/Commands/',
                 __DIR__ . '/../src/Listeners/',
-            ]
+            ],
         ],
     ];
 

@@ -25,9 +25,7 @@ trait UsesBasicRepository
         }
     }
 
-    private function init(DBLayer $db): void
-    {
-    }
+    private function init(DBLayer $db): void {}
 
     private function _findOne(array $criteria, array $cols = []): mixed
     {
