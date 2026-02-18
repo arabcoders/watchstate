@@ -4,20 +4,20 @@
     "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
     "This file is @generated automatically"
   ],
-  "content-hash": "00d62220219cdd7ea64016b3dd0ac110",
+  "content-hash": "03e08214d2efdd74e5ebda8c897621cc",
   "packages": [
     {
       "name": "brick/math",
-      "version": "0.14.6",
+      "version": "0.14.8",
       "source": {
         "type": "git",
         "url": "https://github.com/brick/math.git",
-        "reference": "32498d5e1897e7642c0b961ace2df6d7dc9a3bc3"
+        "reference": "63422359a44b7f06cae63c3b429b59e8efcc0629"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/brick/math/zipball/32498d5e1897e7642c0b961ace2df6d7dc9a3bc3",
-        "reference": "32498d5e1897e7642c0b961ace2df6d7dc9a3bc3",
+        "url": "https://api.github.com/repos/brick/math/zipball/63422359a44b7f06cae63c3b429b59e8efcc0629",
+        "reference": "63422359a44b7f06cae63c3b429b59e8efcc0629",
         "shasum": ""
       },
       "require": {
@@ -56,7 +56,7 @@
       ],
       "support": {
         "issues": "https://github.com/brick/math/issues",
-        "source": "https://github.com/brick/math/tree/0.14.6"
+        "source": "https://github.com/brick/math/tree/0.14.8"
       },
       "funding": [
         {
@@ -64,7 +64,7 @@
           "type": "github"
         }
       ],
-      "time": "2026-02-05T07:59:58+00:00"
+      "time": "2026-02-10T14:33:43+00:00"
     },
     {
       "name": "dragonmantank/cron-expression",
@@ -132,16 +132,16 @@
     },
     {
       "name": "firebase/php-jwt",
-      "version": "v6.11.1",
+      "version": "v7.0.2",
       "source": {
         "type": "git",
         "url": "https://github.com/firebase/php-jwt.git",
-        "reference": "d1e91ecf8c598d073d0995afa8cd5c75c6e19e66"
+        "reference": "5645b43af647b6947daac1d0f659dd1fbe8d3b65"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/firebase/php-jwt/zipball/d1e91ecf8c598d073d0995afa8cd5c75c6e19e66",
-        "reference": "d1e91ecf8c598d073d0995afa8cd5c75c6e19e66",
+        "url": "https://api.github.com/repos/firebase/php-jwt/zipball/5645b43af647b6947daac1d0f659dd1fbe8d3b65",
+        "reference": "5645b43af647b6947daac1d0f659dd1fbe8d3b65",
         "shasum": ""
       },
       "require": {
@@ -189,9 +189,9 @@
       ],
       "support": {
         "issues": "https://github.com/firebase/php-jwt/issues",
-        "source": "https://github.com/firebase/php-jwt/tree/v6.11.1"
+        "source": "https://github.com/firebase/php-jwt/tree/v7.0.2"
       },
-      "time": "2025-04-09T20:32:01+00:00"
+      "time": "2025-12-16T22:17:28+00:00"
     },
     {
       "name": "halaxa/json-machine",
@@ -2697,16 +2697,16 @@
   "packages-dev": [
     {
       "name": "carthage-software/mago",
-      "version": "1.5.0",
+      "version": "1.9.1",
       "source": {
         "type": "git",
         "url": "https://github.com/carthage-software/mago.git",
-        "reference": "0ce3f5d230f8ae330617b04299700347d3ca6806"
+        "reference": "b50e6aa3e4e6abe144101720deddbf456cb7e0a1"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/carthage-software/mago/zipball/0ce3f5d230f8ae330617b04299700347d3ca6806",
-        "reference": "0ce3f5d230f8ae330617b04299700347d3ca6806",
+        "url": "https://api.github.com/repos/carthage-software/mago/zipball/b50e6aa3e4e6abe144101720deddbf456cb7e0a1",
+        "reference": "b50e6aa3e4e6abe144101720deddbf456cb7e0a1",
         "shasum": ""
       },
       "require": {
@@ -2724,6 +2724,9 @@
         "class": "Mago\\MagoPlugin"
       },
       "autoload": {
+        "files": [
+          "composer/functions.php"
+        ],
         "psr-4": {
           "Mago\\": "composer/"
         }
@@ -2744,7 +2747,7 @@
       ],
       "support": {
         "issues": "https://github.com/carthage-software/mago/issues",
-        "source": "https://github.com/carthage-software/mago/tree/1.5.0"
+        "source": "https://github.com/carthage-software/mago/tree/1.9.1"
       },
       "funding": [
         {
@@ -2752,7 +2755,7 @@
           "type": "github"
         }
       ],
-      "time": "2026-02-04T21:37:39+00:00"
+      "time": "2026-02-18T03:12:50+00:00"
     },
     {
       "name": "myclabs/deep-copy",
@@ -3339,16 +3342,16 @@
     },
     {
       "name": "phpunit/phpunit",
-      "version": "11.5.51",
+      "version": "11.5.55",
       "source": {
         "type": "git",
         "url": "https://github.com/sebastianbergmann/phpunit.git",
-        "reference": "ad14159f92910b0f0e3928c13e9b2077529de091"
+        "reference": "adc7262fccc12de2b30f12a8aa0b33775d814f00"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/ad14159f92910b0f0e3928c13e9b2077529de091",
-        "reference": "ad14159f92910b0f0e3928c13e9b2077529de091",
+        "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/adc7262fccc12de2b30f12a8aa0b33775d814f00",
+        "reference": "adc7262fccc12de2b30f12a8aa0b33775d814f00",
         "shasum": ""
       },
       "require": {
@@ -3421,7 +3424,7 @@
       "support": {
         "issues": "https://github.com/sebastianbergmann/phpunit/issues",
         "security": "https://github.com/sebastianbergmann/phpunit/security/policy",
-        "source": "https://github.com/sebastianbergmann/phpunit/tree/11.5.51"
+        "source": "https://github.com/sebastianbergmann/phpunit/tree/11.5.55"
       },
       "funding": [
         {
@@ -3445,7 +3448,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2026-02-05T07:59:30+00:00"
+      "time": "2026-02-18T12:37:06+00:00"
     },
     {
       "name": "roave/security-advisories",
@@ -3453,12 +3456,12 @@
       "source": {
         "type": "git",
         "url": "https://github.com/Roave/SecurityAdvisories.git",
-        "reference": "258cd5fdcb59c29f421927b2cf77f48de9458a98"
+        "reference": "1476a499c47192447981cb2a9b63f87eca5abc83"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/258cd5fdcb59c29f421927b2cf77f48de9458a98",
-        "reference": "258cd5fdcb59c29f421927b2cf77f48de9458a98",
+        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/1476a499c47192447981cb2a9b63f87eca5abc83",
+        "reference": "1476a499c47192447981cb2a9b63f87eca5abc83",
         "shasum": ""
       },
       "conflict": {
@@ -3489,6 +3492,7 @@
         "amphp/artax": "<1.0.6|>=2,<2.0.6",
         "amphp/http": "<=1.7.2|>=2,<=2.1",
         "amphp/http-client": ">=4,<4.4",
+        "amphp/http-server": ">=2.0.0.0-RC1-dev,<2.1.10|>=3.0.0.0-beta1,<3.4.4",
         "anchorcms/anchor-cms": "<=0.12.7",
         "andreapollastri/cipi": "<=3.1.15",
         "andrewhaine/silverstripe-form-capture": ">=0.2,<=0.2.3|>=1,<1.0.2|>=2,<2.2.5",
@@ -3565,6 +3569,7 @@
         "causal/oidc": "<4",
         "cecil/cecil": "<7.47.1",
         "centreon/centreon": "<22.10.15",
+        "cesargb/laravel-magiclink": ">=2,<2.25.1",
         "cesnet/simplesamlphp-module-proxystatistics": "<3.1",
         "chriskacerguis/codeigniter-restserver": "<=2.7.1",
         "chrome-php/chrome": "<1.14",
@@ -3599,9 +3604,10 @@
         "cosenary/instagram": "<=2.3",
         "couleurcitron/tarteaucitron-wp": "<0.3",
         "cpsit/typo3-mailqueue": "<0.4.3|>=0.5,<0.5.1",
-        "craftcms/cms": "<=4.16.16|>=5,<=5.8.20",
+        "craftcms/cms": "<4.17.0.0-beta1|>=5,<5.9.0.0-beta1",
         "craftcms/commerce": ">=4.0.0.0-RC1-dev,<=4.10|>=5,<=5.5.1",
         "craftcms/composer": ">=4.0.0.0-RC1-dev,<=4.10|>=5.0.0.0-RC1-dev,<=5.5.1",
+        "craftcms/craft": ">=3.5,<=4.16.17|>=5.0.0.0-RC1-dev,<=5.8.21",
         "croogo/croogo": "<=4.0.7",
         "cuyz/valinor": "<0.12",
         "czim/file-handling": "<1.5|>=2,<2.3",
@@ -3623,6 +3629,7 @@
         "devgroup/dotplant": "<2020.09.14-dev",
         "digimix/wp-svg-upload": "<=1",
         "directmailteam/direct-mail": "<6.0.3|>=7,<7.0.3|>=8,<9.5.2",
+        "directorytree/imapengine": "<1.22.3",
         "dl/yag": "<3.0.1",
         "dmk/webkitpdf": "<1.1.4",
         "dnadesign/silverstripe-elemental": "<5.3.12",
@@ -3725,7 +3732,7 @@
         "filegator/filegator": "<7.8",
         "filp/whoops": "<2.1.13",
         "fineuploader/php-traditional-server": "<=1.2.2",
-        "firebase/php-jwt": "<6",
+        "firebase/php-jwt": "<7",
         "fisharebest/webtrees": "<=2.1.18",
         "fixpunkt/fp-masterquiz": "<2.2.1|>=3,<3.5.2",
         "fixpunkt/fp-newsletter": "<1.1.1|>=1.2,<2.1.2|>=2.2,<3.2.6",
@@ -3754,6 +3761,7 @@
         "friendsoftypo3/mediace": ">=7.6.2,<7.6.5",
         "friendsoftypo3/openid": ">=4.5,<4.5.31|>=4.7,<4.7.16|>=6,<6.0.11|>=6.1,<6.1.6",
         "froala/wysiwyg-editor": "<=4.3",
+        "frosh/adminer-platform": "<2.2.1",
         "froxlor/froxlor": "<=2.2.5",
         "frozennode/administrator": "<=5.0.12",
         "fuel/core": "<1.8.1",
@@ -3804,7 +3812,7 @@
         "ibexa/solr": ">=4.5,<4.5.4",
         "ibexa/user": ">=4,<4.4.3|>=5,<5.0.4",
         "icecoder/icecoder": "<=8.1",
-        "idno/known": "<=1.3.1",
+        "idno/known": "<=1.6.2",
         "ilicmiljan/secure-props": ">=1.2,<1.2.2",
         "illuminate/auth": "<5.5.10",
         "illuminate/cookie": ">=4,<=4.0.11|>=4.1,<6.18.31|>=7,<7.22.4",
@@ -3938,7 +3946,7 @@
         "microsoft/microsoft-graph": ">=1.16,<1.109.1|>=2,<2.0.1",
         "microsoft/microsoft-graph-beta": "<2.0.1",
         "microsoft/microsoft-graph-core": "<2.0.2",
-        "microweber/microweber": "<=2.0.19",
+        "microweber/microweber": "<2.0.20",
         "mikehaertl/php-shellcommand": "<1.6.1",
         "mineadmin/mineadmin": "<=3.0.9",
         "miniorange/miniorange-saml": "<1.4.3",
@@ -4058,6 +4066,7 @@
         "phpwhois/phpwhois": "<=4.2.5",
         "phpxmlrpc/extras": "<0.6.1",
         "phpxmlrpc/phpxmlrpc": "<4.9.2",
+        "phraseanet/phraseanet": "==4.0.3",
         "pi/pi": "<=2.5",
         "pimcore/admin-ui-classic-bundle": "<=1.7.15|>=2.0.0.0-RC1-dev,<=2.2.2",
         "pimcore/customer-management-framework-bundle": "<4.2.1",
@@ -4092,7 +4101,7 @@
         "propel/propel": ">=2.0.0.0-alpha1,<=2.0.0.0-alpha7",
         "propel/propel1": ">=1,<=1.7.1",
         "psy/psysh": "<=0.11.22|>=0.12,<=0.12.18",
-        "pterodactyl/panel": "<1.12",
+        "pterodactyl/panel": "<1.12.1",
         "ptheofan/yii2-statemachine": ">=2.0.0.0-RC1-dev,<=2",
         "ptrofimov/beanstalk_console": "<1.7.14",
         "pubnub/pubnub": "<6.1",
@@ -4195,7 +4204,7 @@
         "starcitizentools/short-description": ">=4,<4.0.1",
         "starcitizentools/tabber-neue": ">=1.9.1,<2.7.2|>=3,<3.1.1",
         "starcitizenwiki/embedvideo": "<=4",
-        "statamic/cms": "<=5.22",
+        "statamic/cms": "<5.73.6|>=6,<6.2.5",
         "stormpath/sdk": "<9.9.99",
         "studio-42/elfinder": "<=2.1.64",
         "studiomitte/friendlycaptcha": "<0.1.4",
@@ -4334,7 +4343,7 @@
         "vertexvaar/falsftp": "<0.2.6",
         "villagedefrance/opencart-overclocked": "<=1.11.1",
         "vova07/yii2-fileapi-widget": "<0.1.9",
-        "vrana/adminer": "<=4.8.1",
+        "vrana/adminer": "<5.4.2",
         "vufind/vufind": ">=2,<9.1.1",
         "waldhacker/hcaptcha": "<2.1.2",
         "wallabag/tcpdf": "<6.2.22",
@@ -4464,7 +4473,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2026-02-04T22:06:32+00:00"
+      "time": "2026-02-18T01:37:03+00:00"
     },
     {
       "name": "sebastian/cli-parser",
