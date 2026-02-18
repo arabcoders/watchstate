@@ -1,8 +1,29 @@
 [
     {
-        "tag": "dev-20260209-c3599263",
-        "date": "2026-02-09T18:59:56+00:00",
+        "tag": "dev-20260218-dffe3d38",
+        "date": "2026-02-18T19:27:05+00:00",
         "commits": [
+            {
+                "sha": "dffe3d38",
+                "message": "chore: formatting",
+                "author": "arabcoders",
+                "date": "2026-02-18T19:27:05+00:00",
+                "full_sha": "dffe3d38d1e3ce65f7deccb77d443d3833dd0baa"
+            },
+            {
+                "sha": "afd60b1c",
+                "message": "fix: update firebase/php-jwt to version 7.0 and adjust related dependencies",
+                "author": "arabcoders",
+                "date": "2026-02-18T19:26:24+00:00",
+                "full_sha": "afd60b1cd565085307bb10b7e5d93bd2099ec7eb"
+            },
+            {
+                "sha": "dda6bfc5",
+                "message": "fix: update user account creation instructions and improve has_user function caching",
+                "author": "arabcoders",
+                "date": "2026-02-18T19:26:08+00:00",
+                "full_sha": "dda6bfc524afb264ec76bcfff28cdf84090d59ad"
+            },
             {
                 "sha": "c3599263",
                 "message": "Feat: make it possible to import specific library.",
@@ -1082,7 +1103,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "c35992636c9de7d5808cedd10f2f8e386612436f"
+        "full_sha": "dffe3d38d1e3ce65f7deccb77d443d3833dd0baa"
     },
     {
         "tag": "dev-20250604-9407bc76",
