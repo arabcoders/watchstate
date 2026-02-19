@@ -28,12 +28,12 @@
                       <span class="icon"><i class="fas fa-copy" /></span>
                     </button>
                   </div>
-                  <p class="has-text-danger">
+                  <div class="has-text-danger">
                     <ul>
                       <li>Once you have run the command, return to this page and to create a new user account.</li>
                       <li>You can also reset the password by removing the <code>.env</code> file found inside the config directory.</li>
                     </ul>
-                  </p>
+                  </div>
                   <p class="has-text-info" v-if="polling_timer">
                     <span class="icon"><i class="fas fa-spinner fa-spin" /></span>
                     <span>Checking for reset completion...</span>
