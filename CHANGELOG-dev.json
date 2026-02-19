@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260220-01e6c2c1",
-        "date": "2026-02-19T21:50:39+00:00",
+        "tag": "dev-20260220-57ee7e02",
+        "date": "2026-02-19T22:48:45+00:00",
         "commits": [
+            {
+                "sha": "57ee7e02",
+                "message": "feat: add UsersCommand for viewing Plex users",
+                "author": "arabcoders",
+                "date": "2026-02-19T22:48:45+00:00",
+                "full_sha": "57ee7e02c90699a586dab3437d13322ced1bd40f"
+            },
             {
                 "sha": "01e6c2c1",
                 "message": "refactor: update numeric literals for better readability",
@@ -1131,7 +1138,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "01e6c2c1829b9b406d1dfe02be298bc99def5bf1"
+        "full_sha": "57ee7e02c90699a586dab3437d13322ced1bd40f"
     },
     {
         "tag": "dev-20250604-9407bc76",
