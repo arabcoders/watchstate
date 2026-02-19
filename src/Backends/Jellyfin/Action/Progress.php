@@ -142,6 +142,7 @@ class Progress
                     'id' => $entity->id,
                     'type' => $entity->type,
                     'title' => $entity->getName(),
+                    'progress' => format_duration($entity->getPlayProgress()),
                 ],
             ];
 
