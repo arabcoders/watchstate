@@ -1,8 +1,22 @@
 [
     {
-        "tag": "dev-20260219-6b6057e1",
-        "date": "2026-02-19T18:44:34+00:00",
+        "tag": "dev-20260220-01e6c2c1",
+        "date": "2026-02-19T21:50:39+00:00",
         "commits": [
+            {
+                "sha": "01e6c2c1",
+                "message": "refactor: update numeric literals for better readability",
+                "author": "arabcoders",
+                "date": "2026-02-19T21:50:39+00:00",
+                "full_sha": "01e6c2c1829b9b406d1dfe02be298bc99def5bf1"
+            },
+            {
+                "sha": "62a7f255",
+                "message": "feat: add event statistics component and API integration",
+                "author": "arabcoders",
+                "date": "2026-02-19T21:50:16+00:00",
+                "full_sha": "62a7f255cbd63352402cd3fa01fc2b9664aba956"
+            },
             {
                 "sha": "6b6057e1",
                 "message": "fix: use div instead p tag for ul items.",
@@ -1117,7 +1131,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "6b6057e14baefa687bf6da513d72e616c138f665"
+        "full_sha": "01e6c2c1829b9b406d1dfe02be298bc99def5bf1"
     },
     {
         "tag": "dev-20250604-9407bc76",
