@@ -118,7 +118,7 @@ readonly class Segments
                 @unlink($tmpVidLock);
                 break;
             }
-            usleep(20000);
+            usleep(20_000);
         }
 
         $directPlay = $directPlay && str_ends_with($this->getStream(ag($json, 'streams', []), 0)['codec_name'], '264');
@@ -368,9 +368,9 @@ readonly class Segments
             } else {
                 $response = $response
                     ->withHeader('Pragma', 'public')
-                    ->withHeader('Cache-Control', sprintf('public, max-age=%s', time() + 31536000))
+                    ->withHeader('Cache-Control', sprintf('public, max-age=%s', time() + 31_536_000))
                     ->withHeader('Last-Modified', sprintf('%s GMT', gmdate('D, d M Y H:i:s', time())))
-                    ->withHeader('Expires', sprintf('%s GMT', gmdate('D, d M Y H:i:s', time() + 31536000)));
+                    ->withHeader('Expires', sprintf('%s GMT', gmdate('D, d M Y H:i:s', time() + 31_536_000)));
             }
 
             return $response;

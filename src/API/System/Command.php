@@ -25,7 +25,7 @@ final class Command
 {
     public const string URL = '%{api.prefix}/system/command';
     private const int TIMES_BEFORE_PING = 6;
-    private const int PING_INTERVAL = 200000;
+    private const int PING_INTERVAL = 200_000;
 
     private int $counter = 1;
 

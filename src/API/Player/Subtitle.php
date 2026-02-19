@@ -99,9 +99,9 @@ final readonly class Subtitle
         return api_response(Status::OK, Stream::create(implode("\n", $lines)), [
             'Content-Type' => 'application/x-mpegurl',
             'Pragma' => 'public',
-            'Cache-Control' => sprintf('public, max-age=%s', time() + 31536000),
+            'Cache-Control' => sprintf('public, max-age=%s', time() + 31_536_000),
             'Last-Modified' => sprintf('%s GMT', gmdate('D, d M Y H:i:s', time())),
-            'Expires' => sprintf('%s GMT', gmdate('D, d M Y H:i:s', time() + 31536000)),
+            'Expires' => sprintf('%s GMT', gmdate('D, d M Y H:i:s', time() + 31_536_000)),
             'Access-Control-Max-Age' => 3600 * 24 * 30,
         ]);
     }
@@ -176,9 +176,9 @@ final readonly class Subtitle
             return api_response(Status::from($response->getStatusCode()), $response->getBody(), [
                 'Content-Type' => $response->getHeaderLine('Content-Type'),
                 'Pragma' => 'public',
-                'Cache-Control' => sprintf('public, max-age=%s', time() + 31536000),
+                'Cache-Control' => sprintf('public, max-age=%s', time() + 31_536_000),
                 'Last-Modified' => sprintf('%s GMT', gmdate('D, d M Y H:i:s', time())),
-                'Expires' => sprintf('%s GMT', gmdate('D, d M Y H:i:s', time() + 31536000)),
+                'Expires' => sprintf('%s GMT', gmdate('D, d M Y H:i:s', time() + 31_536_000)),
                 'Access-Control-Max-Age' => 3600 * 24 * 30,
                 'X-Cache' => $response->getHeaderLine('X-Cache'),
             ]);

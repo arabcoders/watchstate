@@ -938,9 +938,9 @@ final class Index
 
         return api_response($response->status, body: $response->stream, headers: [
             'Pragma' => 'public',
-            'Cache-Control' => sprintf('public, max-age=%s', time() + 31536000),
+            'Cache-Control' => sprintf('public, max-age=%s', time() + 31_536_000),
             'Last-Modified' => sprintf('%s GMT', gmdate('D, d M Y H:i:s', time())),
-            'Expires' => sprintf('%s GMT', gmdate('D, d M Y H:i:s', time() + 31536000)),
+            'Expires' => sprintf('%s GMT', gmdate('D, d M Y H:i:s', time() + 31_536_000)),
             'Content-Type' => ag($response->headers, 'content-type', 'image/jpeg'),
             'X-Via' => r('{user}@{backend}', ['user' => $userContext->name, 'backend' => $item->via]),
         ]);

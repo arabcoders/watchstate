@@ -351,7 +351,7 @@ final class Index
     {
         if (empty($line)) {
             return [
-                'id' => md5((string) (hrtime(true) + random_int(1, 10000))),
+                'id' => md5((string) (hrtime(true) + random_int(1, 10_000))),
                 'item_id' => null,
                 'user' => null,
                 'backend' => null,
@@ -367,7 +367,7 @@ final class Index
         $identMatch = preg_match("/'((?P<client>\w+):\s)?(?P<user>\w+)@(?P<backend>\w+)'/i", $line, $identMatches);
 
         $logLine = [
-            'id' => md5($line . (hrtime(true) + random_int(1, 10000))),
+            'id' => md5($line . (hrtime(true) + random_int(1, 10_000))),
             'item_id' => null,
             'user' => null,
             'backend' => null,
