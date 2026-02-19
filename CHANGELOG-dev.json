@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260218-dffe3d38",
-        "date": "2026-02-18T19:27:05+00:00",
+        "tag": "dev-20260219-5646c772",
+        "date": "2026-02-19T18:26:54+00:00",
         "commits": [
+            {
+                "sha": "5646c772",
+                "message": "refactor: move progress tracking to progress module",
+                "author": "arabcoders",
+                "date": "2026-02-19T18:26:54+00:00",
+                "full_sha": "5646c772e62d1d18217211a64f61dcd18d44bd60"
+            },
             {
                 "sha": "dffe3d38",
                 "message": "chore: formatting",
@@ -1103,7 +1110,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "dffe3d38d1e3ce65f7deccb77d443d3833dd0baa"
+        "full_sha": "5646c772e62d1d18217211a64f61dcd18d44bd60"
     },
     {
         "tag": "dev-20250604-9407bc76",
