@@ -130,13 +130,6 @@
               </NuxtLink>
               <hr class="navbar-divider">
 
-              <NuxtLink class="navbar-item" to="/events" @click="(e: Event) => changeRoute(e)">
-                <span class="icon"><i class="fas fa-calendar-alt"/></span>
-                <span>Events</span>
-              </NuxtLink>
-
-              <hr class="navbar-divider">
-
               <NuxtLink class="navbar-item" to="/report" @click="(e: Event) => changeRoute(e)">
                 <span class="icon"><i class="fas fa-flag"/></span>
                 <span>Basic Report</span>
@@ -174,10 +167,12 @@
                 <span>Task Scheduler Status</span>
               </button>
             </div>
+
             <div class="navbar-item">
-              <NuxtLink class="button is-dark" to="/help">
-                <span class="icon"><i class="fas fa-circle-question"/></span>
-                <span>Guides</span>
+              <NuxtLink to="/events" class="button is-dark">
+                <span class="icon"><i class="fas fa-calendar-alt"/></span>
+                <StatusDots :stats="eventsStats.stats.value" v-if="!eventsStats.loading.value" />
+                <span class="icon" v-else><i class="fas fa-spinner fa-spin"/></span>
               </NuxtLink>
             </div>
 
@@ -214,9 +209,12 @@
                 ><i class="fas fa-microchip"/></span>
               </button>
             </div>
+
             <div class="navbar-item">
-              <NuxtLink class="button is-dark" v-tooltip="'Guides'" to="/help">
-                <span class="icon"><i class="fas fa-circle-question"/></span>
+              <NuxtLink to="/events" class="button is-dark" v-tooltip="'Events'">
+                <span class="icon"><i class="fas fa-calendar-alt"/></span>
+                <StatusDots :stats="eventsStats.stats.value" v-if="!eventsStats.loading.value" />
+                <span class="icon" v-else><i class="fas fa-spinner fa-spin"/></span>
               </NuxtLink>
             </div>
 
@@ -318,6 +316,8 @@ import Dialog from '~/components/Dialog.vue'
 import {navigateTo} from '#app'
 import {useDialog} from '~/composables/useDialog.ts'
 import {request, dEvent} from '~/utils'
+import StatusDots from '~/components/StatusDots.vue'
+import useEventsStats from '~/composables/useEventsStats'
 
 const useVersionUpdate = () => {
   const newVersionIsAvailable = ref(false)
@@ -363,6 +363,8 @@ const scheduler = ref<{ status: boolean; message: string; restartable: boolean }
   restartable: false
 })
 const showScheduler = ref<boolean>(false)
+
+const eventsStats = useEventsStats(['pending'])
 
 const applyPreferredColorScheme = (scheme: string): void => {
   if (!scheme || scheme === 'auto') {
@@ -437,6 +439,8 @@ onMounted(async () => {
     applyPreferredColorScheme(selectedTheme.value)
     await getVersion()
     await loadImage()
+    // start events stats polling for header status dots
+    eventsStats.start()
   } catch {
   }
 })

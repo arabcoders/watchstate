@@ -47,3 +47,4 @@ no-else-clause = { enabled = false }
 no-assign-in-condition = { enabled = false }
 no-empty-catch-clause = { enabled = false }
 no-redundant-use = { enabled = false }
+no-isset = { enabled = false }

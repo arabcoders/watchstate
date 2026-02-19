@@ -381,6 +381,22 @@ export interface EventsItem {
 }
 
 /**
+ * Event statistics from /api/system/events/stats endpoint.
+ */
+export interface EventsStats {
+    /** Number of queued (pending) events */
+    pending: number
+    /** Number of currently running events */
+    running: number
+    /** Number of successfully completed events */
+    completed: number
+    /** Number of failed events */
+    failed: number
+    /** Number of cancelled events */
+    cancelled: number
+}
+
+/**
  *  Represents a scheduled task item from the API.
  */
 export interface TaskItem {

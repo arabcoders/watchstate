@@ -715,7 +715,7 @@ final class Index
             return api_error('Failed to get duplicates', Status::INTERNAL_SERVER_ERROR);
         }
 
-        return api_response(Status::OK, $data);
+        return api_response(Status::OK, $data, headers: ['X-No-AccessLog' => '1']);
     }
 
     #[Delete(self::URL . '/{id:\d+}[/]', name: 'history.delete')]
