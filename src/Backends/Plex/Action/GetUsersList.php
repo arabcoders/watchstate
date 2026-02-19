@@ -71,8 +71,14 @@ final class GetUsersList
         $callback = ag($opts, Options::RAW_RESPONSE_CALLBACK, null);
         $this->logRequests = $callback && ag($opts, Options::RAW_RESPONSE, false);
 
+        $opts[Options::LOG_TO_WRITER] = ag($opts, Options::LOG_TO_WRITER, static fn() => static function (string $log) {});
+
         if (true === (bool) ag($opts, Options::PLEX_EXTERNAL_USER, false)) {
             $cls = fn() => $this->getExternalUsers($context, $opts);
+            $opts[Options::LOG_TO_WRITER](r('Reading external user from cache? {state}', [
+                'state' => true === (bool) ag($opts, Options::NO_CACHE) ? 'no' : 'yes',
+            ]));
+
             return true === (bool) ag($opts, Options::NO_CACHE)
                 ? $cls()
                 : $this->tryCache(
@@ -88,6 +94,10 @@ final class GetUsersList
         }
 
         $cls = fn() => $this->getHomeUsers($this->getExternalUsers($context, $opts), $context, $opts);
+
+        $opts[Options::LOG_TO_WRITER](r('Reading data from cache? {state}', [
+            'state' => true === (bool) ag($opts, Options::NO_CACHE) ? 'no' : 'yes',
+        ]));
 
         $data = true === (bool) ag($opts, Options::NO_CACHE)
             ? $cls()
@@ -192,7 +202,7 @@ final class GetUsersList
                 'headers' => [
                     'Accept' => 'application/xml',
                 ],
-            ]), $context, $url);
+            ]), $context, $url, $opts);
 
             if (true !== (bool) ag($opts, Options::GET_TOKENS) || count($users) < 1) {
                 return new Response(status: true, response: $users);
@@ -249,7 +259,7 @@ final class GetUsersList
             );
         }
 
-        return $this->externalUsersTokens($users, $context, $url, $response);
+        return $this->externalUsersTokens($users, $context, $url, $response, $opts);
     }
 
     /**
@@ -258,18 +268,18 @@ final class GetUsersList
      * @param iResponse $response
      * @param Context $context
      * @param iUri $url
+     * @param array $opts The options.
      *
      * @return array Return processed response.
      * @throws iException if an error occurs during the request.
      */
-    private function processExternalUsers(iResponse $response, Context $context, iUri $url): array
+    private function processExternalUsers(iResponse $response, Context $context, iUri $url, array $opts = []): array
     {
         $content = simplexml_load_string($response->getContent(false));
         $data = [];
         foreach ($content->User ?? [] as $_user) {
             $user = [];
             // @INFO: This workaround is needed, for some reason array_map() doesn't work correctly on xml objects.
-            /** @noinspection PhpLoopCanBeConvertedToArrayMapInspection */
             foreach ($_user->attributes() as $k => $v) {
                 $user[$k] = (string) $v;
             }
@@ -296,7 +306,7 @@ final class GetUsersList
         $list = [];
         foreach ($data as $user) {
             $uuidStatus = preg_match('/\/users\/(?<uuid>.+?)\/avatar/', ag($user, 'thumb', ''), $matches);
-            $list[] = [
+            $_user = [
                 'id' => (int) ag($user, 'id'),
                 'uuid' => 1 === $uuidStatus ? ag($matches, 'uuid') : ag($user, 'invited_user'),
                 'name' => ag($user, ['username', 'title', 'email', 'id'], '??'),
@@ -306,6 +316,17 @@ final class GetUsersList
                 'protected' => 1 === (int) ag($user, 'protected'),
                 'updatedAt' => 'external_user',
             ];
+
+            $list[] = $_user;
+
+            $opts[Options::LOG_TO_WRITER](r("Processed external user '{name}' with id '{id}': {data}.", [
+                'name' => $_user['name'],
+                'id' => $_user['id'],
+                'data' => [
+                    'local' => array_to_json($_user),
+                    'remote' => array_to_json($user),
+                ],
+            ]));
         }
 
         return $list;
@@ -318,12 +339,13 @@ final class GetUsersList
      * @param Context $context The context.
      * @param iUri $url The URL.
      * @param iResponse $response The response.
+     * @param array $opts The options.
      *
      * @return Response Return processed response.
      * @throws iException if an error occurs during the request.
      * @throws JsonException if an error occurs during the JSON parsing.
      */
-    private function externalUsersTokens(array $users, Context $context, iUri $url, iResponse $response): Response
+    private function externalUsersTokens(array $users, Context $context, iUri $url, iResponse $response, array $opts = []): Response
     {
         if (count($users) < 1) {
             return new Response(status: true, response: $users);
@@ -356,6 +378,11 @@ final class GetUsersList
 
             foreach ($users as &$user) {
                 if ((int) ag($user, 'id') !== (int) ag($data, 'userID')) {
+                    $opts[Options::LOG_TO_WRITER](r("Skipping token for user '{name}' with id '{id}' because it doesn't match with userID '{userID}' in the response.", [
+                        'name' => ag($user, 'name'),
+                        'id' => ag($user, 'id'),
+                        'userID' => ag($data, 'userID'),
+                    ]));
                     continue;
                 }
                 $user['token'] = ag($data, 'accessToken');
@@ -470,6 +497,12 @@ final class GetUsersList
                     continue;
                 }
 
+                $opts[Options::LOG_TO_WRITER](r("Skipping external user '{name}' with id '{id}' because match a home user with id '{userId}' and name '{userName}'.", [
+                    'name' => ag($extUser, 'name'),
+                    'id' => ag($extUser, 'id'),
+                    'userId' => $user['id'],
+                    'userName' => $user['name'],
+                ]));
                 unset($users[$key]);
             }
         }
