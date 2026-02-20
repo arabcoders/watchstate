@@ -1,8 +1,36 @@
 [
     {
-        "tag": "master-20260220-99c9d936",
-        "date": "2026-02-20T18:50:19+00:00",
+        "tag": "master-20260221-0e2249b2",
+        "date": "2026-02-20T23:41:11+00:00",
         "commits": [
+            {
+                "sha": "01365b7c",
+                "message": "docs: add FAQ entry for missing Plex users and deduplication option",
+                "author": "arabcoders",
+                "date": "2026-02-20T23:36:13+00:00",
+                "full_sha": "01365b7c7f98ee265a6377d8255546c41e43c777"
+            },
+            {
+                "sha": "18a6ef57",
+                "message": "feat: add configuration option to disable de-duplication for Plex clients",
+                "author": "arabcoders",
+                "date": "2026-02-20T23:10:17+00:00",
+                "full_sha": "18a6ef579900676c4af6a7f8108a4920d3fa3fda"
+            },
+            {
+                "sha": "edfd4952",
+                "message": "refactor: normalize user names in GetUsersList",
+                "author": "arabcoders",
+                "date": "2026-02-20T22:26:43+00:00",
+                "full_sha": "edfd49524f5bb759d596179492d7678cdb20625f"
+            },
+            {
+                "sha": "76cdaf6e",
+                "message": "refactor: update de-dup logic.",
+                "author": "arabcoders",
+                "date": "2026-02-20T21:36:47+00:00",
+                "full_sha": "76cdaf6e6da348ba313fcb7f4d387767357aea1e"
+            },
             {
                 "sha": "5258db0b",
                 "message": "fix: building in gitea fails due to old node version",
@@ -1152,7 +1180,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "99c9d936c9a6b9595b11fc11e3393f70b05c5d18"
+        "full_sha": "0e2249b2a0376a990a592bdab0c6dee10e9950df"
     },
     {
         "tag": "master-20250614-e3307c58",
