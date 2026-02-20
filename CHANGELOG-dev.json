@@ -1,8 +1,22 @@
 [
     {
-        "tag": "dev-20260220-57ee7e02",
-        "date": "2026-02-19T22:48:45+00:00",
+        "tag": "dev-20260220-05d8dfaa",
+        "date": "2026-02-20T16:03:37+00:00",
         "commits": [
+            {
+                "sha": "05d8dfaa",
+                "message": "refactor: add type and id for plex users",
+                "author": "arabcoders",
+                "date": "2026-02-20T16:03:37+00:00",
+                "full_sha": "05d8dfaa73237c29433bf291fb5e9be4dad4c415"
+            },
+            {
+                "sha": "d13d9a4c",
+                "message": "refactor: disable duplicate user filtering in plex",
+                "author": "arabcoders",
+                "date": "2026-02-20T16:01:44+00:00",
+                "full_sha": "d13d9a4c75d6ac73299969049fda05dca2584547"
+            },
             {
                 "sha": "57ee7e02",
                 "message": "feat: add UsersCommand for viewing Plex users",
@@ -1138,7 +1152,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "57ee7e02c90699a586dab3437d13322ced1bd40f"
+        "full_sha": "05d8dfaa73237c29433bf291fb5e9be4dad4c415"
     },
     {
         "tag": "dev-20250604-9407bc76",
