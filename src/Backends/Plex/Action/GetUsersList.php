@@ -271,30 +271,29 @@ final class GetUsersList
         ]));
 
         /**
-         * @TODO: Disabled the de-duplication for now.
          * De-duplicate users.
          * Plex in their infinite wisdom sometimes return home users as external users.
          */
-        // foreach ($external as $user) {
-        //     if (
-        //         null !== ($homeUser = array_find(
-        //             $list,
-        //             static fn($u) => (int) $u['id'] === (int) $user['id'] && $u['name'] === $user['name'],
-        //         ))
-        //     ) {
-        //         $opts[Options::LOG_TO_WRITER](r("Skipping external user '{name}' with id '{id}' because match a home user with id '{userId}' and name '{userName}'.", [
-        //             'id' => ag($user, 'id'),
-        //             'name' => ag($user, 'name'),
-        //             'userId' => ag($homeUser, 'id'),
-        //             'userName' => ag($homeUser, 'name'),
-        //         ]));
-        //         continue;
-        //     }
+        foreach ($external as $user) {
+            if (
+                null !== ($homeUser = array_find(
+                    $list,
+                    static fn($u) => (int) $u['id'] === (int) $user['id'] && $u['name'] === $user['name'],
+                ))
+            ) {
+                $opts[Options::LOG_TO_WRITER](r("Skipping external user '{name}' with id '{id}' because match a home user with id '{userId}' and name '{userName}'.", [
+                    'id' => ag($user, 'id'),
+                    'name' => ag($user, 'name'),
+                    'userId' => ag($homeUser, 'id'),
+                    'userName' => ag($homeUser, 'name'),
+                ]));
+                continue;
+            }
 
-        //     $list[] = $user;
-        // }
+            $list[] = $user;
+        }
 
-        array_push($list, ...$external);
+        // array_push($list, ...$external);
 
         return new Response(status: true, response: $list);
     }

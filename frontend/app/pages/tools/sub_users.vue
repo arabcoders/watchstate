@@ -412,7 +412,6 @@ import { computed, nextTick, onMounted, ref, toRaw } from 'vue';
 import { useStorage } from '@vueuse/core';
 import { navigateTo, useRoute } from '#app';
 import moment from 'moment';
-import draggable from 'vuedraggable';
 import { makeConsoleCommand, notification, parse_api_response, request } from '~/utils';
 import Message from '~/components/Message.vue';
 import { useDialog } from '~/composables/useDialog';
