@@ -298,6 +298,8 @@ export interface BackendUser {
     token_error?: string
     /** Optional token */
     token?: string
+    /** Optional user type */
+    type?: string
 }
 
 /**

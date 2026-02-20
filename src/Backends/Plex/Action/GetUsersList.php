@@ -170,7 +170,137 @@ final class GetUsersList
     }
 
     /**
-     * Get Users list.
+     * Process home-users response.
+     *
+     * @param Response $users External users.
+     * @param Context $context The context.
+     * @param iUri $url The URL.
+     * @param iResponse $response The response.
+     * @param array $opts The options.
+     *
+     * @return Response Return processed response.
+     * @throws iException if an error occurs during the request.
+     * @throws JsonException if an error occurs during the JSON parsing.
+     */
+    private function processHomeUsers(
+        Response $users,
+        Context $context,
+        iUri $url,
+        iResponse $response,
+        array $opts,
+    ): Response {
+        $json = json_decode(
+            json: $response->getContent(false),
+            associative: true,
+            flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
+        );
+
+        if ($this->logRequests) {
+            $this->rawRequests[] = [
+                'url' => (string) $url,
+                'headers' => $response->getHeaders(false),
+                'body' => $json,
+            ];
+        }
+
+        if ($context->trace) {
+            $this->logger->debug("Parsing '{user}@{backend}' home users list payload.", [
+                'user' => $context->userContext->name,
+                'backend' => $context->backendName,
+                'url' => (string) $url,
+                'trace' => $json,
+            ]);
+        }
+
+        if ($users->hasError() && $users->error) {
+            $this->logger->log($users->error->level(), $users->error->message, $users->error->context);
+        }
+
+        $external = $users->isSuccessful() ? $users->response : [];
+
+        $list = [];
+
+        foreach (ag($json, 'users', []) as $data) {
+            // -- update external user updatedAt.
+            foreach ($external as &$user) {
+                if ((int) ag($user, 'id') !== (int) ag($data, 'id')) {
+                    continue;
+                }
+                $user['updatedAt'] = isset($data['updatedAt']) ? make_date($data['updatedAt']) : 'Never';
+            }
+
+            $data = [
+                'id' => ag($data, 'id'),
+                'type' => 'H',
+                'uuid' => ag($data, 'uuid'),
+                'name' => ag($data, ['friendlyName', 'username', 'title', 'email', 'id'], '??'),
+                'admin' => (bool) ag($data, 'admin'),
+                'guest' => (bool) ag($data, 'guest'),
+                'restricted' => (bool) ag($data, 'restricted'),
+                'protected' => (bool) ag($data, 'protected'),
+                'updatedAt' => isset($data['updatedAt']) ? make_date($data['updatedAt']) : 'Unknown',
+            ];
+
+            if (true === (bool) ag($opts, Options::GET_TOKENS)) {
+                $tokenRequest = Container::getNew(GetUserToken::class)(
+                    context: $context,
+                    userId: ag($data, 'uuid'),
+                    username: ag($data, 'name'),
+                );
+
+                if ($tokenRequest->hasError() && $tokenRequest->error) {
+                    $this->logger->log(
+                        $tokenRequest->error->level(),
+                        $tokenRequest->error->message,
+                        $tokenRequest->error->context,
+                    );
+                }
+
+                $data['token'] = $tokenRequest->isSuccessful() ? $tokenRequest->response : null;
+                if (true === $tokenRequest->hasError() && $tokenRequest->error) {
+                    $data['token_error'] = ag($tokenRequest->error->extra, 'error', $tokenRequest->error->format());
+                }
+            }
+
+            $list[] = $data;
+        }
+
+        $opts[Options::LOG_TO_WRITER](r("Total '{count}' home users processed. {users}", [
+            'users' => array_to_json($list),
+            'count' => count($list),
+        ]));
+
+        /**
+         * @TODO: Disabled the de-duplication for now.
+         * De-duplicate users.
+         * Plex in their infinite wisdom sometimes return home users as external users.
+         */
+        // foreach ($external as $user) {
+        //     if (
+        //         null !== ($homeUser = array_find(
+        //             $list,
+        //             static fn($u) => (int) $u['id'] === (int) $user['id'] && $u['name'] === $user['name'],
+        //         ))
+        //     ) {
+        //         $opts[Options::LOG_TO_WRITER](r("Skipping external user '{name}' with id '{id}' because match a home user with id '{userId}' and name '{userName}'.", [
+        //             'id' => ag($user, 'id'),
+        //             'name' => ag($user, 'name'),
+        //             'userId' => ag($homeUser, 'id'),
+        //             'userName' => ag($homeUser, 'name'),
+        //         ]));
+        //         continue;
+        //     }
+
+        //     $list[] = $user;
+        // }
+
+        array_push($list, ...$external);
+
+        return new Response(status: true, response: $list);
+    }
+
+    /**
+     * Get Plex External Users.
      *
      * @throws iException
      * @throws JsonException
@@ -308,6 +438,7 @@ final class GetUsersList
             $uuidStatus = preg_match('/\/users\/(?<uuid>.+?)\/avatar/', ag($user, 'thumb', ''), $matches);
             $_user = [
                 'id' => (int) ag($user, 'id'),
+                'type' => 'E',
                 'uuid' => 1 === $uuidStatus ? ag($matches, 'uuid') : ag($user, 'invited_user'),
                 'name' => ag($user, ['username', 'title', 'email', 'id'], '??'),
                 'admin' => false,
@@ -328,6 +459,11 @@ final class GetUsersList
                 ],
             ]));
         }
+
+        $opts[Options::LOG_TO_WRITER](r("Total '{count}' external users processed. {users}", [
+            'users' => array_to_json($list),
+            'count' => count($list),
+        ]));
 
         return $list;
     }
@@ -391,125 +527,6 @@ final class GetUsersList
         }
 
         return new Response(status: true, response: $users);
-    }
-
-    /**
-     * Process home-users response.
-     *
-     * @param Response $users External users.
-     * @param Context $context The context.
-     * @param iUri $url The URL.
-     * @param iResponse $response The response.
-     * @param array $opts The options.
-     *
-     * @return Response Return processed response.
-     * @throws iException if an error occurs during the request.
-     * @throws JsonException if an error occurs during the JSON parsing.
-     */
-    private function processHomeUsers(
-        Response $users,
-        Context $context,
-        iUri $url,
-        iResponse $response,
-        array $opts,
-    ): Response {
-        $json = json_decode(
-            json: $response->getContent(false),
-            associative: true,
-            flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
-        );
-
-        if ($this->logRequests) {
-            $this->rawRequests[] = [
-                'url' => (string) $url,
-                'headers' => $response->getHeaders(false),
-                'body' => $json,
-            ];
-        }
-
-        if ($context->trace) {
-            $this->logger->debug("Parsing '{user}@{backend}' home users list payload.", [
-                'user' => $context->userContext->name,
-                'backend' => $context->backendName,
-                'url' => (string) $url,
-                'trace' => $json,
-            ]);
-        }
-
-        if ($users->hasError() && $users->error) {
-            $this->logger->log($users->error->level(), $users->error->message, $users->error->context);
-        }
-
-        $users = $users->isSuccessful() ? $users->response : [];
-
-        $list = [];
-
-        foreach (ag($json, 'users', []) as $data) {
-            foreach ($users as &$user) {
-                if ((int) ag($user, 'id') !== (int) ag($data, 'id')) {
-                    continue;
-                }
-                $user['updatedAt'] = isset($data['updatedAt']) ? make_date($data['updatedAt']) : 'Never';
-            }
-
-            $data = [
-                'id' => ag($data, 'id'),
-                'uuid' => ag($data, 'uuid'),
-                'name' => ag($data, ['friendlyName', 'username', 'title', 'email', 'id'], '??'),
-                'admin' => (bool) ag($data, 'admin'),
-                'guest' => (bool) ag($data, 'guest'),
-                'restricted' => (bool) ag($data, 'restricted'),
-                'protected' => (bool) ag($data, 'protected'),
-                'updatedAt' => isset($data['updatedAt']) ? make_date($data['updatedAt']) : 'Never',
-            ];
-
-            if (true === (bool) ag($opts, Options::GET_TOKENS)) {
-                $tokenRequest = Container::getNew(GetUserToken::class)(
-                    context: $context,
-                    userId: ag($data, 'uuid'),
-                    username: ag($data, 'name'),
-                );
-
-                if ($tokenRequest->hasError() && $tokenRequest->error) {
-                    $this->logger->log(
-                        $tokenRequest->error->level(),
-                        $tokenRequest->error->message,
-                        $tokenRequest->error->context,
-                    );
-                }
-
-                $data['token'] = $tokenRequest->isSuccessful() ? $tokenRequest->response : null;
-                if (true === $tokenRequest->hasError() && $tokenRequest->error) {
-                    $data['token_error'] = ag($tokenRequest->error->extra, 'error', $tokenRequest->error->format());
-                }
-            }
-
-            $list[] = $data;
-        }
-
-        /**
-         * De-duplicate users.
-         * Plex in their infinite wisdom sometimes return home users as external users.
-         */
-        foreach ($list as $user) {
-            foreach ($users as $key => $extUser) {
-                if (!((int) $user['id'] === (int) $extUser['id'] && $user['name'] === $extUser['name'])) {
-                    continue;
-                }
-
-                $opts[Options::LOG_TO_WRITER](r("Skipping external user '{name}' with id '{id}' because match a home user with id '{userId}' and name '{userName}'.", [
-                    'name' => ag($extUser, 'name'),
-                    'id' => ag($extUser, 'id'),
-                    'userId' => $user['id'],
-                    'userName' => $user['name'],
-                ]));
-                unset($users[$key]);
-            }
-        }
-
-        array_push($list, ...$users);
-
-        return new Response(status: true, response: $list);
     }
 
     /**
