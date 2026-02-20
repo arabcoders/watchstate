@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260220-05d8dfaa",
-        "date": "2026-02-20T16:03:37+00:00",
+        "tag": "dev-20260220-44b63abe",
+        "date": "2026-02-20T18:15:45+00:00",
         "commits": [
+            {
+                "sha": "44b63abe",
+                "message": "refactor: move from pnpm to bun",
+                "author": "arabcoders",
+                "date": "2026-02-20T18:15:45+00:00",
+                "full_sha": "44b63abe588cc85381abed52d5000f7be17b3774"
+            },
             {
                 "sha": "05d8dfaa",
                 "message": "refactor: add type and id for plex users",
@@ -1152,7 +1159,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "05d8dfaa73237c29433bf291fb5e9be4dad4c415"
+        "full_sha": "44b63abe588cc85381abed52d5000f7be17b3774"
     },
     {
         "tag": "dev-20250604-9407bc76",
