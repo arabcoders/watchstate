@@ -48,7 +48,6 @@ env:
   DOCKERHUB_SLUG: arabcoders/watchstate
   GHCR_SLUG: ghcr.io/arabcoders/watchstate
   BUN_VERSION: latest
-  NODE_VERSION: 20
 
 jobs:
   validate-build-config:
@@ -122,17 +121,17 @@ jobs:
       - name: Run PHP tests
         run: composer run test
 
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
       - name: Install bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: bun
-          cache-dependency-path: "frontend/bun.lock"
 
       - name: Install frontend dependencies
         working-directory: frontend
@@ -142,6 +141,7 @@ jobs:
         working-directory: frontend
         env:
           NODE_ENV: development
+          BUN_ENV: development
         run: bun run prepare:test
 
       - name: Run frontend linter
@@ -156,6 +156,7 @@ jobs:
         working-directory: frontend
         env:
           NODE_ENV: production
+          BUN_ENV: production
         run: bun run generate
 
       - name: Set up Python
