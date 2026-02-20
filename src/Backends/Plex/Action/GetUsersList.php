@@ -233,7 +233,7 @@ final class GetUsersList
                 'id' => ag($data, 'id'),
                 'type' => 'H',
                 'uuid' => ag($data, 'uuid'),
-                'name' => ag($data, ['friendlyName', 'username', 'title', 'email', 'id'], '??'),
+                'name' => normalize_name(ag($data, ['friendlyName', 'username', 'title', 'email', 'id'], '??')),
                 'admin' => (bool) ag($data, 'admin'),
                 'guest' => (bool) ag($data, 'guest'),
                 'restricted' => (bool) ag($data, 'restricted'),
@@ -292,8 +292,6 @@ final class GetUsersList
 
             $list[] = $user;
         }
-
-        // array_push($list, ...$external);
 
         return new Response(status: true, response: $list);
     }
@@ -439,7 +437,7 @@ final class GetUsersList
                 'id' => (int) ag($user, 'id'),
                 'type' => 'E',
                 'uuid' => 1 === $uuidStatus ? ag($matches, 'uuid') : ag($user, 'invited_user'),
-                'name' => ag($user, ['username', 'title', 'email', 'id'], '??'),
+                'name' => normalize_name(ag($user, ['username', 'title', 'email', 'id'], '??')),
                 'admin' => false,
                 'guest' => 1 !== (int) ag($user, 'home'),
                 'restricted' => 1 === (int) ag($user, 'restricted'),
