@@ -48,6 +48,7 @@ env:
   DOCKERHUB_SLUG: arabcoders/watchstate
   GHCR_SLUG: ghcr.io/arabcoders/watchstate
   BUN_VERSION: latest
+  NODE_VERSION: 20
 
 jobs:
   validate-build-config:
@@ -127,6 +128,11 @@ jobs:
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-bun-
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Install bun
         uses: oven-sh/setup-bun@v2
