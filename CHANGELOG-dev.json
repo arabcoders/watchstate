@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260221-76cdaf6e",
-        "date": "2026-02-20T21:36:47+00:00",
+        "tag": "dev-20260221-edfd4952",
+        "date": "2026-02-20T22:26:43+00:00",
         "commits": [
+            {
+                "sha": "edfd4952",
+                "message": "refactor: normalize user names in GetUsersList",
+                "author": "arabcoders",
+                "date": "2026-02-20T22:26:43+00:00",
+                "full_sha": "edfd49524f5bb759d596179492d7678cdb20625f"
+            },
             {
                 "sha": "76cdaf6e",
                 "message": "refactor: update de-dup logic.",
@@ -1194,7 +1201,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "76cdaf6e6da348ba313fcb7f4d387767357aea1e"
+        "full_sha": "edfd49524f5bb759d596179492d7678cdb20625f"
     },
     {
         "tag": "dev-20250604-9407bc76",
