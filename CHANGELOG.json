@@ -1,5 +1,117 @@
 [
   {
+    "tag": "Unreleased (99c9d936)",
+    "full_sha": "99c9d936c9a6b9595b11fc11e3393f70b05c5d18",
+    "date": "2026-02-20T18:50:19+00:00",
+    "commits": [
+      {
+        "sha": "5258db0b",
+        "full_sha": "5258db0b79c40d932b7647cc33faaf0ffa6d7444",
+        "message": "fix: building in gitea fails due to old node version",
+        "author": "arabcoders",
+        "date": "2026-02-20T18:42:39+00:00"
+      },
+      {
+        "sha": "36eddb13",
+        "full_sha": "36eddb13d8a63e55c0dffc4fe9bee90451fc0dcc",
+        "message": "refactor: add /local/ to .gitignore",
+        "author": "arabcoders",
+        "date": "2026-02-20T18:25:47+00:00"
+      },
+      {
+        "sha": "e8c05dda",
+        "full_sha": "e8c05ddaedaff1e299baa3c1050b3a4830b84aba",
+        "message": "refactor: remove useless files",
+        "author": "arabcoders",
+        "date": "2026-02-20T18:23:39+00:00"
+      },
+      {
+        "sha": "948dd00d",
+        "full_sha": "948dd00d93ecea059ca2156a8526b5269ab0033e",
+        "message": "refactor: remove Node.js setup and add bun caching in build workflow",
+        "author": "arabcoders",
+        "date": "2026-02-20T18:23:04+00:00"
+      },
+      {
+        "sha": "44b63abe",
+        "full_sha": "44b63abe588cc85381abed52d5000f7be17b3774",
+        "message": "refactor: move from pnpm to bun",
+        "author": "arabcoders",
+        "date": "2026-02-20T18:15:45+00:00"
+      },
+      {
+        "sha": "05d8dfaa",
+        "full_sha": "05d8dfaa73237c29433bf291fb5e9be4dad4c415",
+        "message": "refactor: add type and id for plex users",
+        "author": "arabcoders",
+        "date": "2026-02-20T16:03:37+00:00"
+      },
+      {
+        "sha": "d13d9a4c",
+        "full_sha": "d13d9a4c75d6ac73299969049fda05dca2584547",
+        "message": "refactor: disable duplicate user filtering in plex",
+        "author": "arabcoders",
+        "date": "2026-02-20T16:01:44+00:00"
+      },
+      {
+        "sha": "57ee7e02",
+        "full_sha": "57ee7e02c90699a586dab3437d13322ced1bd40f",
+        "message": "feat: add UsersCommand for viewing Plex users",
+        "author": "arabcoders",
+        "date": "2026-02-19T22:48:45+00:00"
+      },
+      {
+        "sha": "01e6c2c1",
+        "full_sha": "01e6c2c1829b9b406d1dfe02be298bc99def5bf1",
+        "message": "refactor: update numeric literals for better readability",
+        "author": "arabcoders",
+        "date": "2026-02-19T21:50:39+00:00"
+      },
+      {
+        "sha": "62a7f255",
+        "full_sha": "62a7f255cbd63352402cd3fa01fc2b9664aba956",
+        "message": "feat: add event statistics component and API integration",
+        "author": "arabcoders",
+        "date": "2026-02-19T21:50:16+00:00"
+      },
+      {
+        "sha": "6b6057e1",
+        "full_sha": "6b6057e14baefa687bf6da513d72e616c138f665",
+        "message": "fix: use div instead p tag for ul items.",
+        "author": "arabcoders",
+        "date": "2026-02-19T18:44:34+00:00"
+      },
+      {
+        "sha": "5646c772",
+        "full_sha": "5646c772e62d1d18217211a64f61dcd18d44bd60",
+        "message": "refactor: move progress tracking to progress module",
+        "author": "arabcoders",
+        "date": "2026-02-19T18:26:54+00:00"
+      },
+      {
+        "sha": "dffe3d38",
+        "full_sha": "dffe3d38d1e3ce65f7deccb77d443d3833dd0baa",
+        "message": "chore: formatting",
+        "author": "arabcoders",
+        "date": "2026-02-18T19:27:05+00:00"
+      },
+      {
+        "sha": "afd60b1c",
+        "full_sha": "afd60b1cd565085307bb10b7e5d93bd2099ec7eb",
+        "message": "fix: update firebase/php-jwt to version 7.0 and adjust related dependencies",
+        "author": "arabcoders",
+        "date": "2026-02-18T19:26:24+00:00"
+      },
+      {
+        "sha": "dda6bfc5",
+        "full_sha": "dda6bfc524afb264ec76bcfff28cdf84090d59ad",
+        "message": "fix: update user account creation instructions and improve has_user function caching",
+        "author": "arabcoders",
+        "date": "2026-02-18T19:26:08+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v1.0.8",
     "full_sha": "9a031e6954baa0dadc8b68f2058c55882847f7d7",
     "date": "2026-02-09T19:22:28+00:00",
