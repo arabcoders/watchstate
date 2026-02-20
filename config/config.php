@@ -244,7 +244,9 @@ return (function () {
     ];
 
     $config['clients'] = [
-        strtolower(PlexClient::CLIENT_NAME) => [],
+        strtolower(PlexClient::CLIENT_NAME) => [
+            'disable_dedup' => (bool) env('WS_CLIENTS_PLEX_DISABLE_DEDUP', false),
+        ],
         strtolower(EmbyClient::CLIENT_NAME) => [],
         strtolower(JellyfinClient::CLIENT_NAME) => [
             'fix_played' => (bool) env('WS_CLIENTS_JELLYFIN_FIX_PLAYED', false),

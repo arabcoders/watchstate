@@ -260,13 +260,13 @@ return (function () {
                     throw new ValidationException('Invalid progress threshold. Must be a number.');
                 }
 
-                $cmp = (int)$value;
+                $cmp = (int) $value;
 
                 if (0 !== $cmp && $cmp < 180) {
                     throw new ValidationException('Invalid progress threshold. Must be at least 180 seconds.');
                 }
 
-                return (string)$value;
+                return (string) $value;
             },
         ],
         [
@@ -294,7 +294,7 @@ return (function () {
                 if (false === is_valid_url($value)) {
                     throw new ValidationException('Invalid remote logger URL. Must be a valid URL.');
                 }
-                return (string)$value;
+                return (string) $value;
             },
             'mask' => true,
         ],
@@ -316,10 +316,10 @@ return (function () {
 
                 if (false === is_valid_name($value)) {
                     throw new ValidationException(
-                        'Invalid username. Username can only contains [lower case a-z, 0-9 and _].'
+                        'Invalid username. Username can only contains [lower case a-z, 0-9 and _].',
                     );
                 }
-                return (string)$value;
+                return (string) $value;
             },
             'mask' => true,
             'protected' => true,
@@ -337,15 +337,16 @@ return (function () {
                 $prefix = Config::get('password.prefix', 'ws_hash@:');
 
                 if (true === str_starts_with($value, $prefix)) {
-                    return (string)$value;
+                    return (string) $value;
                 }
 
                 try {
-                    return $prefix . password_hash(
-                            $value,
-                            Config::get('password.algo'),
-                            Config::get('password.options', [])
-                        );
+                    return $prefix
+                    . password_hash(
+                        $value,
+                        Config::get('password.algo'),
+                        Config::get('password.options', []),
+                    );
                 } catch (ValueError $e) {
                     throw new ValidationException('Invalid password. Password hashing failed.', $e->getCode(), $e);
                 }
@@ -396,19 +397,25 @@ return (function () {
                     throw new ValidationException('Invalid minimum progress. Must be a number.');
                 }
 
-                $cmp = (int)$value;
+                $cmp = (int) $value;
 
                 if ($cmp < 60) {
                     throw new ValidationException('Invalid minimum progress. Must be at least 60 seconds.');
                 }
 
-                return (string)$value;
+                return (string) $value;
             },
         ],
         [
             'key' => 'WS_CLIENTS_JELLYFIN_FIX_PLAYED',
             'config' => 'clients.jellyfin.fix_played',
             'description' => 'Enable partial fix for Jellyfin marking items as played.',
+            'type' => 'bool',
+        ],
+        [
+            'key' => 'WS_CLIENTS_PLEX_DISABLE_DEDUP',
+            'config' => 'clients.plex.disable_dedup',
+            'description' => 'Disable de-duplication of plex users.',
             'type' => 'bool',
         ],
     ];

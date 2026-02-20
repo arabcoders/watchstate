@@ -9,6 +9,7 @@ use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
+use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
@@ -270,9 +271,14 @@ final class GetUsersList
             'count' => count($list),
         ]));
 
+        if (true === (bool) Config::get('clients.plex.disable_dedup', false)) {
+            array_push($list, ...$external);
+            return new Response(status: true, response: $list);
+        }
+
         /**
          * De-duplicate users.
-         * Plex in their infinite wisdom sometimes return home users as external users.
+         * Plex in their infinite wisdom sometimes return home users as external users and vice versa.
          */
         foreach ($external as $user) {
             if (
