@@ -42,7 +42,7 @@
     "vue": "^3.5.28",
     "vue-router": "^5.0.2",
     "vue-toastification": "^2.0.0-rc.5",
-    "vuedraggable": "^2.24.3",
+    "vuedraggable": "^4.1.0",
     "@nuxt/eslint": "^1.15.1",
     "@nuxt/eslint-config": "^1.15.1"
   },

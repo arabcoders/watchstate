@@ -62,7 +62,7 @@ class GetUsersListTest extends PlexTestCase
         $result = $action($context);
 
         $this->assertTrue($result->isSuccessful());
-        $this->assertSame('Test User', $result->response[0]['name']);
+        $this->assertSame('test_user', $result->response[0]['name'], 'Name normalization failed');
         $this->assertTrue($result->response[0]['admin']);
     }
 

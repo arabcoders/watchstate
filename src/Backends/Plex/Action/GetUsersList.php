@@ -9,6 +9,7 @@ use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
+use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
@@ -233,7 +234,7 @@ final class GetUsersList
                 'id' => ag($data, 'id'),
                 'type' => 'H',
                 'uuid' => ag($data, 'uuid'),
-                'name' => ag($data, ['friendlyName', 'username', 'title', 'email', 'id'], '??'),
+                'name' => normalize_name(ag($data, ['friendlyName', 'username', 'title', 'email', 'id'], '??')),
                 'admin' => (bool) ag($data, 'admin'),
                 'guest' => (bool) ag($data, 'guest'),
                 'restricted' => (bool) ag($data, 'restricted'),
@@ -270,31 +271,33 @@ final class GetUsersList
             'count' => count($list),
         ]));
 
+        if (true === (bool) Config::get('clients.plex.disable_dedup', false)) {
+            array_push($list, ...$external);
+            return new Response(status: true, response: $list);
+        }
+
         /**
-         * @TODO: Disabled the de-duplication for now.
          * De-duplicate users.
-         * Plex in their infinite wisdom sometimes return home users as external users.
+         * Plex in their infinite wisdom sometimes return home users as external users and vice versa.
          */
-        // foreach ($external as $user) {
-        //     if (
-        //         null !== ($homeUser = array_find(
-        //             $list,
-        //             static fn($u) => (int) $u['id'] === (int) $user['id'] && $u['name'] === $user['name'],
-        //         ))
-        //     ) {
-        //         $opts[Options::LOG_TO_WRITER](r("Skipping external user '{name}' with id '{id}' because match a home user with id '{userId}' and name '{userName}'.", [
-        //             'id' => ag($user, 'id'),
-        //             'name' => ag($user, 'name'),
-        //             'userId' => ag($homeUser, 'id'),
-        //             'userName' => ag($homeUser, 'name'),
-        //         ]));
-        //         continue;
-        //     }
+        foreach ($external as $user) {
+            if (
+                null !== ($homeUser = array_find(
+                    $list,
+                    static fn($u) => (int) $u['id'] === (int) $user['id'] && $u['name'] === $user['name'],
+                ))
+            ) {
+                $opts[Options::LOG_TO_WRITER](r("Skipping external user '{name}' with id '{id}' because match a home user with id '{userId}' and name '{userName}'.", [
+                    'id' => ag($user, 'id'),
+                    'name' => ag($user, 'name'),
+                    'userId' => ag($homeUser, 'id'),
+                    'userName' => ag($homeUser, 'name'),
+                ]));
+                continue;
+            }
 
-        //     $list[] = $user;
-        // }
-
-        array_push($list, ...$external);
+            $list[] = $user;
+        }
 
         return new Response(status: true, response: $list);
     }
@@ -440,7 +443,7 @@ final class GetUsersList
                 'id' => (int) ag($user, 'id'),
                 'type' => 'E',
                 'uuid' => 1 === $uuidStatus ? ag($matches, 'uuid') : ag($user, 'invited_user'),
-                'name' => ag($user, ['username', 'title', 'email', 'id'], '??'),
+                'name' => normalize_name(ag($user, ['username', 'title', 'email', 'id'], '??')),
                 'admin' => false,
                 'guest' => 1 !== (int) ag($user, 'home'),
                 'restricted' => 1 === (int) ag($user, 'restricted'),
