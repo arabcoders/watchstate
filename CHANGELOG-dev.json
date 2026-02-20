@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260221-18a6ef57",
-        "date": "2026-02-20T23:10:17+00:00",
+        "tag": "dev-20260221-01365b7c",
+        "date": "2026-02-20T23:36:13+00:00",
         "commits": [
+            {
+                "sha": "01365b7c",
+                "message": "docs: add FAQ entry for missing Plex users and deduplication option",
+                "author": "arabcoders",
+                "date": "2026-02-20T23:36:13+00:00",
+                "full_sha": "01365b7c7f98ee265a6377d8255546c41e43c777"
+            },
             {
                 "sha": "18a6ef57",
                 "message": "feat: add configuration option to disable de-duplication for Plex clients",
@@ -1208,7 +1215,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "18a6ef579900676c4af6a7f8108a4920d3fa3fda"
+        "full_sha": "01365b7c7f98ee265a6377d8255546c41e43c777"
     },
     {
         "tag": "dev-20250604-9407bc76",
