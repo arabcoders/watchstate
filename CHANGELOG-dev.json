@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260221-edfd4952",
-        "date": "2026-02-20T22:26:43+00:00",
+        "tag": "dev-20260221-18a6ef57",
+        "date": "2026-02-20T23:10:17+00:00",
         "commits": [
+            {
+                "sha": "18a6ef57",
+                "message": "feat: add configuration option to disable de-duplication for Plex clients",
+                "author": "arabcoders",
+                "date": "2026-02-20T23:10:17+00:00",
+                "full_sha": "18a6ef579900676c4af6a7f8108a4920d3fa3fda"
+            },
             {
                 "sha": "edfd4952",
                 "message": "refactor: normalize user names in GetUsersList",
@@ -1201,7 +1208,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "edfd49524f5bb759d596179492d7678cdb20625f"
+        "full_sha": "18a6ef579900676c4af6a7f8108a4920d3fa3fda"
     },
     {
         "tag": "dev-20250604-9407bc76",
