@@ -8,3 +8,4 @@
 **.php-cs-fixer.cache
 src/Backends/Plex/PlexJWT.php
 tests/Backends/Plex/PlexJWTTest.php
+/local/
