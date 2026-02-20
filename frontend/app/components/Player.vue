@@ -18,78 +18,99 @@
 </style>
 
 <template>
-  <video ref="video" :poster="posterUrl" :controls="isControls" :title="title" preload="auto" playsinline>
-    <source :src="link" type="application/x-mpegURL"/>
+  <video
+    ref="video"
+    :poster="posterUrl"
+    :controls="isControls"
+    :title="title"
+    preload="auto"
+    playsinline
+  >
+    <source :src="link" type="application/x-mpegURL" />
   </video>
 </template>
 
 <script setup lang="ts">
-import {ref, onMounted, onUpdated, onBeforeUnmount} from 'vue'
-import {request, disableOpacity, enableOpacity, notification} from '~/utils'
-import Hls from 'hls.js'
-import 'plyr/dist/plyr.css'
-import Plyr from 'plyr'
+import { ref, onMounted, onUpdated, onBeforeUnmount } from 'vue';
+import { request, disableOpacity, enableOpacity, notification } from '~/utils';
+import Hls from 'hls.js';
+import 'plyr/dist/plyr.css';
+import Plyr from 'plyr';
 
-const props = withDefaults(defineProps<{
-  /** HLS stream URL */
-  link: string
-  /** Video title */
-  title?: string
-  /** Poster image URL */
-  poster?: string
-  /** Show controls */
-  isControls?: boolean
-  /** Enable debug mode */
-  debug?: boolean
-  /** Reference for parent access (optional, any type) */
-  reference?: unknown
-}>(), {
-  isControls: true,
-  debug: false,
-  title: '',
-  poster: '',
-  reference: undefined,
-})
+const props = withDefaults(
+  defineProps<{
+    /** HLS stream URL */
+    link: string;
+    /** Video title */
+    title?: string;
+    /** Poster image URL */
+    poster?: string;
+    /** Show controls */
+    isControls?: boolean;
+    /** Enable debug mode */
+    debug?: boolean;
+    /** Reference for parent access (optional, any type) */
+    reference?: unknown;
+  }>(),
+  {
+    isControls: true,
+    debug: false,
+    title: '',
+    poster: '',
+    reference: undefined,
+  },
+);
 
-const video = ref<HTMLVideoElement | null>(null)
-const posterUrl = ref<string | undefined>(undefined)
-let player: Plyr | undefined
-let hls: Hls | undefined
+const video = ref<HTMLVideoElement | null>(null);
+const posterUrl = ref<string | undefined>(undefined);
+let player: Plyr | undefined;
+let hls: Hls | undefined;
 
 const destroyPlayer = () => {
   console.debug('Destroying video player');
   if (player) {
-    player.destroy()
+    player.destroy();
   }
   if (hls) {
-    hls.destroy()
+    hls.destroy();
   }
-}
+};
 
 const getPoster = async () => {
   if (props.poster) {
     const cb = props.poster.startsWith('/') ? request : fetch;
-    const response = await cb(props.poster)
+    const response = await cb(props.poster);
 
     if (200 === response.status) {
-      posterUrl.value = URL.createObjectURL(await response.blob())
+      posterUrl.value = URL.createObjectURL(await response.blob());
     }
   }
-}
+};
 
 const prepareVideoPlayer = async () => {
   if (!video.value) {
     console.warn('Video element not found');
-    return
+    return;
   }
   player = new Plyr(video.value, {
     debug: props.debug,
     clickToPlay: true,
     autoplay: true,
     controls: [
-      'play-large', 'play', 'progress', 'current-time', 'duration', 'mute', 'volume', 'captions', 'settings', 'pip', 'airplay', 'fullscreen'
+      'play-large',
+      'play',
+      'progress',
+      'current-time',
+      'duration',
+      'mute',
+      'volume',
+      'captions',
+      'settings',
+      'pip',
+      'airplay',
+      'fullscreen',
     ],
-    keyboard: {focused: true, global: true},
+    keyboard: { focused: true, global: true },
     fullscreen: {
       enabled: true,
       fallback: true,
@@ -97,13 +118,13 @@ const prepareVideoPlayer = async () => {
     },
     storage: {
       enabled: true,
-      key: 'plyr'
+      key: 'plyr',
     },
 
     mediaMetadata: {
-      title: props.title
+      title: props.title,
     },
-    captions: {active: true, update: true, language: 'auto'},
+    captions: { active: true, update: true, language: 'auto' },
   });
 
   hls = new Hls({
@@ -119,25 +140,25 @@ const prepareVideoPlayer = async () => {
     notification('warning', 'HLS.js', `HLs Error: ${data.error ?? 'Unknown error'}`);
   });
 
-  hls.loadSource(props.link)
+  hls.loadSource(props.link);
 
   if (video.value) {
-    hls.attachMedia(video.value)
+    hls.attachMedia(video.value);
   }
-}
+};
 
 onMounted(() => {
-  disableOpacity()
+  disableOpacity();
   if (/(iPhone|iPod|iPad).*AppleWebKit/i.test(navigator.userAgent)) {
     document.documentElement.style.setProperty('--webkit-text-track-display', 'block');
   }
-  Promise.all([getPoster(), prepareVideoPlayer()])
-})
+  Promise.all([getPoster(), prepareVideoPlayer()]);
+});
 
-onUpdated(() => prepareVideoPlayer())
+onUpdated(() => prepareVideoPlayer());
 
 onBeforeUnmount(() => {
-  destroyPlayer()
-  enableOpacity()
-})
+  destroyPlayer();
+  enableOpacity();
+});
 </script>

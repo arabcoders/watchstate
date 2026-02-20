@@ -52,6 +52,8 @@ final readonly class ProcessProgressEvent
 
         $event->stopPropagation();
 
+        $this->queue->reset();
+
         $user = ag($event->getOptions(), Options::CONTEXT_USER, 'main');
 
         try {
@@ -103,6 +105,8 @@ final readonly class ProcessProgressEvent
             ]);
             return $event;
         }
+
+        $progress = format_duration($item->getPlayProgress());
 
         $list = [];
 
@@ -203,8 +207,6 @@ final readonly class ProcessProgressEvent
             return $event;
         }
 
-        $progress = format_duration($item->getPlayProgress());
-
         $writer(Level::Notice, "Processing '{user}@{backend}' - '#{id}: {title}' watch progress '{progress}' event.", [
             'id' => $item->id,
             'backend' => $item->via,
@@ -216,13 +218,17 @@ final readonly class ProcessProgressEvent
         foreach ($this->queue->getQueue() as $response) {
             $context = ag($response->getInfo('user_data'), 'context', []);
             $context['user'] = $userContext->name;
+            $context['id'] = ag($context, 'item.id', $item->id);
+            $context['progress'] = ag($context, 'item.progress', $progress);
 
             try {
+                $statusCode = $response->getStatusCode();
+
                 if (true === (bool) ag($options, 'trace')) {
                     $writer(Level::Debug, "Processing '{user}@{backend}' - '#{id}: {item.title}' response.", [
-                        'id' => $item->id,
+                        'id' => $context['id'],
                         'url' => ag($context, 'remote.url', '??'),
-                        'status_code' => $response->getStatusCode(),
+                        'status_code' => $statusCode,
                         'headers' => $response->getHeaders(false),
                         'response' => $response->getContent(false),
                         ...$context,
@@ -231,7 +237,7 @@ final readonly class ProcessProgressEvent
 
                 if (
                     false === in_array(
-                        Status::tryFrom($response->getStatusCode()),
+                        Status::tryFrom($statusCode),
                         [Status::OK, Status::NO_CONTENT],
                         true,
                     )
@@ -240,9 +246,9 @@ final readonly class ProcessProgressEvent
                         level: Level::Error,
                         message: "Request to change '{user}@{backend}' - '#{id}: {item.title}' watch progress returned with unexpected '{status_code}' status code.",
                         context: [
-                            'id' => $item->id,
-                            'status_code' => $response->getStatusCode(),
                             ...$context,
+                            'id' => $context['id'],
+                            'status_code' => $statusCode,
                         ],
                     );
                     continue;
@@ -253,9 +259,9 @@ final readonly class ProcessProgressEvent
                     message: "Updated '{user}@{backend}' '#{id}: {item.title}' watch progress to '{progress}'.",
                     context: [
                         ...$context,
-                        'id' => $item->id,
-                        'progress' => $progress,
-                        'status_code' => $response->getStatusCode(),
+                        'id' => $context['id'],
+                        'progress' => $context['progress'],
+                        'status_code' => $statusCode,
                     ],
                 );
             } catch (Throwable $ex) {

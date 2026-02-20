@@ -27,11 +27,11 @@
             "echo 'Coverage reports generated in ./var/coverage/'"
         ],
         "lint": "vendor/bin/mago lint",
-        "frontend:update": "pnpm up --dir ./frontend --latest",
-        "frontend:gen": "pnpm run --dir ./frontend generate",
-        "frontend:dev": "pnpm run --dir ./frontend dev",
-        "frontend:tc": "pnpm run --dir ./frontend typecheck",
-        "frontend:prepare": "pnpm run --dir ./frontend prepare --envName=development"
+        "frontend:update": "bun --cwd=./frontend/ update --latest",
+        "frontend:gen": "bun --cwd=./frontend/ generate",
+        "frontend:dev": "bun --cwd=./frontend/ dev",
+        "frontend:tc": "bun --cwd=./frontend/ typecheck",
+        "frontend:prepare": "bun --cwd=./frontend/ run prepare --envName=development"
     },
     "require": {
         "php": "^8.4",
@@ -66,7 +66,7 @@
         "halaxa/json-machine": "^1.2.0",
         "ramsey/uuid": "^4.7.6",
         "perftools/php-profiler": "^1.1.2",
-        "firebase/php-jwt": "^6.11"
+        "firebase/php-jwt": "^7.0"
     },
     "suggest": {
         "ext-sockets": "For UDP communications."

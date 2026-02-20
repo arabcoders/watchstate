@@ -631,7 +631,7 @@ final class StateEntity implements iState
     public function hasPlayProgress(): bool
     {
         $allowUpdate = (int) Config::get('progress.threshold', 0);
-        $minimumProgress = (int) Config::get('progress.minimum', 60000);
+        $minimumProgress = (int) Config::get('progress.minimum', 60_000);
 
         if ($this->isWatched() && $allowUpdate < 1) {
             return false;
@@ -664,7 +664,7 @@ final class StateEntity implements iState
         }
 
         $compare = [];
-        $minimumProgress = (int) Config::get('progress.minimum', 60000);
+        $minimumProgress = (int) Config::get('progress.minimum', 60_000);
 
         foreach ($this->getMetadata() as $backend => $metadata) {
             if (null === $metadata || false === is_array($metadata)) {

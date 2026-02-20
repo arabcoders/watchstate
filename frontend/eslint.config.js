@@ -49,6 +49,6 @@ export default withNuxt(
         }
     },
     {
-        files: ['**/*.vue'],
+        files: ['**/*.vue', '**/*.ts'],
         rules: {}
     })

@@ -71,8 +71,14 @@ final class GetUsersList
         $callback = ag($opts, Options::RAW_RESPONSE_CALLBACK, null);
         $this->logRequests = $callback && ag($opts, Options::RAW_RESPONSE, false);
 
+        $opts[Options::LOG_TO_WRITER] = ag($opts, Options::LOG_TO_WRITER, static fn() => static function (string $log) {});
+
         if (true === (bool) ag($opts, Options::PLEX_EXTERNAL_USER, false)) {
             $cls = fn() => $this->getExternalUsers($context, $opts);
+            $opts[Options::LOG_TO_WRITER](r('Reading external user from cache? {state}', [
+                'state' => true === (bool) ag($opts, Options::NO_CACHE) ? 'no' : 'yes',
+            ]));
+
             return true === (bool) ag($opts, Options::NO_CACHE)
                 ? $cls()
                 : $this->tryCache(
@@ -88,6 +94,10 @@ final class GetUsersList
         }
 
         $cls = fn() => $this->getHomeUsers($this->getExternalUsers($context, $opts), $context, $opts);
+
+        $opts[Options::LOG_TO_WRITER](r('Reading data from cache? {state}', [
+            'state' => true === (bool) ag($opts, Options::NO_CACHE) ? 'no' : 'yes',
+        ]));
 
         $data = true === (bool) ag($opts, Options::NO_CACHE)
             ? $cls()
@@ -160,7 +170,137 @@ final class GetUsersList
     }
 
     /**
-     * Get Users list.
+     * Process home-users response.
+     *
+     * @param Response $users External users.
+     * @param Context $context The context.
+     * @param iUri $url The URL.
+     * @param iResponse $response The response.
+     * @param array $opts The options.
+     *
+     * @return Response Return processed response.
+     * @throws iException if an error occurs during the request.
+     * @throws JsonException if an error occurs during the JSON parsing.
+     */
+    private function processHomeUsers(
+        Response $users,
+        Context $context,
+        iUri $url,
+        iResponse $response,
+        array $opts,
+    ): Response {
+        $json = json_decode(
+            json: $response->getContent(false),
+            associative: true,
+            flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
+        );
+
+        if ($this->logRequests) {
+            $this->rawRequests[] = [
+                'url' => (string) $url,
+                'headers' => $response->getHeaders(false),
+                'body' => $json,
+            ];
+        }
+
+        if ($context->trace) {
+            $this->logger->debug("Parsing '{user}@{backend}' home users list payload.", [
+                'user' => $context->userContext->name,
+                'backend' => $context->backendName,
+                'url' => (string) $url,
+                'trace' => $json,
+            ]);
+        }
+
+        if ($users->hasError() && $users->error) {
+            $this->logger->log($users->error->level(), $users->error->message, $users->error->context);
+        }
+
+        $external = $users->isSuccessful() ? $users->response : [];
+
+        $list = [];
+
+        foreach (ag($json, 'users', []) as $data) {
+            // -- update external user updatedAt.
+            foreach ($external as &$user) {
+                if ((int) ag($user, 'id') !== (int) ag($data, 'id')) {
+                    continue;
+                }
+                $user['updatedAt'] = isset($data['updatedAt']) ? make_date($data['updatedAt']) : 'Never';
+            }
+
+            $data = [
+                'id' => ag($data, 'id'),
+                'type' => 'H',
+                'uuid' => ag($data, 'uuid'),
+                'name' => ag($data, ['friendlyName', 'username', 'title', 'email', 'id'], '??'),
+                'admin' => (bool) ag($data, 'admin'),
+                'guest' => (bool) ag($data, 'guest'),
+                'restricted' => (bool) ag($data, 'restricted'),
+                'protected' => (bool) ag($data, 'protected'),
+                'updatedAt' => isset($data['updatedAt']) ? make_date($data['updatedAt']) : 'Unknown',
+            ];
+
+            if (true === (bool) ag($opts, Options::GET_TOKENS)) {
+                $tokenRequest = Container::getNew(GetUserToken::class)(
+                    context: $context,
+                    userId: ag($data, 'uuid'),
+                    username: ag($data, 'name'),
+                );
+
+                if ($tokenRequest->hasError() && $tokenRequest->error) {
+                    $this->logger->log(
+                        $tokenRequest->error->level(),
+                        $tokenRequest->error->message,
+                        $tokenRequest->error->context,
+                    );
+                }
+
+                $data['token'] = $tokenRequest->isSuccessful() ? $tokenRequest->response : null;
+                if (true === $tokenRequest->hasError() && $tokenRequest->error) {
+                    $data['token_error'] = ag($tokenRequest->error->extra, 'error', $tokenRequest->error->format());
+                }
+            }
+
+            $list[] = $data;
+        }
+
+        $opts[Options::LOG_TO_WRITER](r("Total '{count}' home users processed. {users}", [
+            'users' => array_to_json($list),
+            'count' => count($list),
+        ]));
+
+        /**
+         * @TODO: Disabled the de-duplication for now.
+         * De-duplicate users.
+         * Plex in their infinite wisdom sometimes return home users as external users.
+         */
+        // foreach ($external as $user) {
+        //     if (
+        //         null !== ($homeUser = array_find(
+        //             $list,
+        //             static fn($u) => (int) $u['id'] === (int) $user['id'] && $u['name'] === $user['name'],
+        //         ))
+        //     ) {
+        //         $opts[Options::LOG_TO_WRITER](r("Skipping external user '{name}' with id '{id}' because match a home user with id '{userId}' and name '{userName}'.", [
+        //             'id' => ag($user, 'id'),
+        //             'name' => ag($user, 'name'),
+        //             'userId' => ag($homeUser, 'id'),
+        //             'userName' => ag($homeUser, 'name'),
+        //         ]));
+        //         continue;
+        //     }
+
+        //     $list[] = $user;
+        // }
+
+        array_push($list, ...$external);
+
+        return new Response(status: true, response: $list);
+    }
+
+    /**
+     * Get Plex External Users.
      *
      * @throws iException
      * @throws JsonException
@@ -192,7 +332,7 @@ final class GetUsersList
                 'headers' => [
                     'Accept' => 'application/xml',
                 ],
-            ]), $context, $url);
+            ]), $context, $url, $opts);
 
             if (true !== (bool) ag($opts, Options::GET_TOKENS) || count($users) < 1) {
                 return new Response(status: true, response: $users);
@@ -249,7 +389,7 @@ final class GetUsersList
             );
         }
 
-        return $this->externalUsersTokens($users, $context, $url, $response);
+        return $this->externalUsersTokens($users, $context, $url, $response, $opts);
     }
 
     /**
@@ -258,18 +398,18 @@ final class GetUsersList
      * @param iResponse $response
      * @param Context $context
      * @param iUri $url
+     * @param array $opts The options.
      *
      * @return array Return processed response.
      * @throws iException if an error occurs during the request.
      */
-    private function processExternalUsers(iResponse $response, Context $context, iUri $url): array
+    private function processExternalUsers(iResponse $response, Context $context, iUri $url, array $opts = []): array
     {
         $content = simplexml_load_string($response->getContent(false));
         $data = [];
         foreach ($content->User ?? [] as $_user) {
             $user = [];
             // @INFO: This workaround is needed, for some reason array_map() doesn't work correctly on xml objects.
-            /** @noinspection PhpLoopCanBeConvertedToArrayMapInspection */
             foreach ($_user->attributes() as $k => $v) {
                 $user[$k] = (string) $v;
             }
@@ -296,8 +436,9 @@ final class GetUsersList
         $list = [];
         foreach ($data as $user) {
             $uuidStatus = preg_match('/\/users\/(?<uuid>.+?)\/avatar/', ag($user, 'thumb', ''), $matches);
-            $list[] = [
+            $_user = [
                 'id' => (int) ag($user, 'id'),
+                'type' => 'E',
                 'uuid' => 1 === $uuidStatus ? ag($matches, 'uuid') : ag($user, 'invited_user'),
                 'name' => ag($user, ['username', 'title', 'email', 'id'], '??'),
                 'admin' => false,
@@ -306,7 +447,23 @@ final class GetUsersList
                 'protected' => 1 === (int) ag($user, 'protected'),
                 'updatedAt' => 'external_user',
             ];
+
+            $list[] = $_user;
+
+            $opts[Options::LOG_TO_WRITER](r("Processed external user '{name}' with id '{id}': {data}.", [
+                'name' => $_user['name'],
+                'id' => $_user['id'],
+                'data' => [
+                    'local' => array_to_json($_user),
+                    'remote' => array_to_json($user),
+                ],
+            ]));
         }
+
+        $opts[Options::LOG_TO_WRITER](r("Total '{count}' external users processed. {users}", [
+            'users' => array_to_json($list),
+            'count' => count($list),
+        ]));
 
         return $list;
     }
@@ -318,12 +475,13 @@ final class GetUsersList
      * @param Context $context The context.
      * @param iUri $url The URL.
      * @param iResponse $response The response.
+     * @param array $opts The options.
      *
      * @return Response Return processed response.
      * @throws iException if an error occurs during the request.
      * @throws JsonException if an error occurs during the JSON parsing.
      */
-    private function externalUsersTokens(array $users, Context $context, iUri $url, iResponse $response): Response
+    private function externalUsersTokens(array $users, Context $context, iUri $url, iResponse $response, array $opts = []): Response
     {
         if (count($users) < 1) {
             return new Response(status: true, response: $users);
@@ -356,6 +514,11 @@ final class GetUsersList
 
             foreach ($users as &$user) {
                 if ((int) ag($user, 'id') !== (int) ag($data, 'userID')) {
+                    $opts[Options::LOG_TO_WRITER](r("Skipping token for user '{name}' with id '{id}' because it doesn't match with userID '{userID}' in the response.", [
+                        'name' => ag($user, 'name'),
+                        'id' => ag($user, 'id'),
+                        'userID' => ag($data, 'userID'),
+                    ]));
                     continue;
                 }
                 $user['token'] = ag($data, 'accessToken');
@@ -364,119 +527,6 @@ final class GetUsersList
         }
 
         return new Response(status: true, response: $users);
-    }
-
-    /**
-     * Process home-users response.
-     *
-     * @param Response $users External users.
-     * @param Context $context The context.
-     * @param iUri $url The URL.
-     * @param iResponse $response The response.
-     * @param array $opts The options.
-     *
-     * @return Response Return processed response.
-     * @throws iException if an error occurs during the request.
-     * @throws JsonException if an error occurs during the JSON parsing.
-     */
-    private function processHomeUsers(
-        Response $users,
-        Context $context,
-        iUri $url,
-        iResponse $response,
-        array $opts,
-    ): Response {
-        $json = json_decode(
-            json: $response->getContent(false),
-            associative: true,
-            flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE,
-        );
-
-        if ($this->logRequests) {
-            $this->rawRequests[] = [
-                'url' => (string) $url,
-                'headers' => $response->getHeaders(false),
-                'body' => $json,
-            ];
-        }
-
-        if ($context->trace) {
-            $this->logger->debug("Parsing '{user}@{backend}' home users list payload.", [
-                'user' => $context->userContext->name,
-                'backend' => $context->backendName,
-                'url' => (string) $url,
-                'trace' => $json,
-            ]);
-        }
-
-        if ($users->hasError() && $users->error) {
-            $this->logger->log($users->error->level(), $users->error->message, $users->error->context);
-        }
-
-        $users = $users->isSuccessful() ? $users->response : [];
-
-        $list = [];
-
-        foreach (ag($json, 'users', []) as $data) {
-            foreach ($users as &$user) {
-                if ((int) ag($user, 'id') !== (int) ag($data, 'id')) {
-                    continue;
-                }
-                $user['updatedAt'] = isset($data['updatedAt']) ? make_date($data['updatedAt']) : 'Never';
-            }
-
-            $data = [
-                'id' => ag($data, 'id'),
-                'uuid' => ag($data, 'uuid'),
-                'name' => ag($data, ['friendlyName', 'username', 'title', 'email', 'id'], '??'),
-                'admin' => (bool) ag($data, 'admin'),
-                'guest' => (bool) ag($data, 'guest'),
-                'restricted' => (bool) ag($data, 'restricted'),
-                'protected' => (bool) ag($data, 'protected'),
-                'updatedAt' => isset($data['updatedAt']) ? make_date($data['updatedAt']) : 'Never',
-            ];
-
-            if (true === (bool) ag($opts, Options::GET_TOKENS)) {
-                $tokenRequest = Container::getNew(GetUserToken::class)(
-                    context: $context,
-                    userId: ag($data, 'uuid'),
-                    username: ag($data, 'name'),
-                );
-
-                if ($tokenRequest->hasError() && $tokenRequest->error) {
-                    $this->logger->log(
-                        $tokenRequest->error->level(),
-                        $tokenRequest->error->message,
-                        $tokenRequest->error->context,
-                    );
-                }
-
-                $data['token'] = $tokenRequest->isSuccessful() ? $tokenRequest->response : null;
-                if (true === $tokenRequest->hasError() && $tokenRequest->error) {
-                    $data['token_error'] = ag($tokenRequest->error->extra, 'error', $tokenRequest->error->format());
-                }
-            }
-
-            $list[] = $data;
-        }
-
-        /**
-         * De-duplicate users.
-         * Plex in their infinite wisdom sometimes return home users as external users.
-         */
-        foreach ($list as $user) {
-            foreach ($users as $key => $extUser) {
-                if (!((int) $user['id'] === (int) $extUser['id'] && $user['name'] === $extUser['name'])) {
-                    continue;
-                }
-
-                unset($users[$key]);
-            }
-        }
-
-        array_push($list, ...$users);
-
-        return new Response(status: true, response: $list);
     }
 
     /**

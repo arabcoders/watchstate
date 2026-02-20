@@ -103,4 +103,9 @@ final class EventsRepository
     {
         return $this->_remove($criteria);
     }
+
+    public function countByStatus(EventStatus $status): int
+    {
+        return $this->db->getCount($this->table, [EntityTable::COLUMN_STATUS => $status->value]);
+    }
 }

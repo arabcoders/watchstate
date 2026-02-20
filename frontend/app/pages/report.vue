@@ -9,18 +9,30 @@
         <div class="is-pulled-right" v-if="false === show_report_warning">
           <div class="field is-grouped">
             <p class="control">
-              <button class="button is-info" @click="scrollToTop" v-tooltip.bottom="'Scroll to top'">
-                <span class="icon"><i class="fas fa-arrow-up"/></span>
+              <button
+                class="button is-info"
+                @click="scrollToTop"
+                v-tooltip.bottom="'Scroll to top'"
+              >
+                <span class="icon"><i class="fas fa-arrow-up" /></span>
               </button>
             </p>
             <p class="control">
-              <button class="button is-warning" @click="scrollToBottom" v-tooltip.bottom="'Scroll to bottom'">
-                <span class="icon"><i class="fas fa-arrow-down"/></span>
+              <button
+                class="button is-warning"
+                @click="scrollToBottom"
+                v-tooltip.bottom="'Scroll to bottom'"
+              >
+                <span class="icon"><i class="fas fa-arrow-down" /></span>
               </button>
             </p>
             <p class="control">
-              <button class="button is-primary" @click="copyText(data.join('\n'))" v-tooltip.bottom="'Copy report'">
-                <span class="icon"><i class="fas fa-copy"/></span>
+              <button
+                class="button is-primary"
+                @click="copyText(data.join('\n'))"
+                v-tooltip.bottom="'Copy report'"
+              >
+                <span class="icon"><i class="fas fa-copy" /></span>
               </button>
             </p>
           </div>
@@ -32,11 +44,15 @@
 
       <div class="column is-12">
         <template v-if="show_report_warning">
-          <Message message_class="has-background-warning-80 has-text-dark" title="Warning"
-                   icon="fas fa-exclamation-triangle">
-            While we try to make sure no sensitive information is leaked via the report, it's possible that something
-            might be missed. Please review the report before posting it. If you notice any sensitive information, please
-            report it to the developers. so we can fix it.
+          <Message
+            message_class="has-background-warning-80 has-text-dark"
+            title="Warning"
+            icon="fas fa-exclamation-triangle"
+          >
+            While we try to make sure no sensitive information is leaked via the report, it's
+            possible that something might be missed. Please review the report before posting it. If
+            you notice any sensitive information, please report it to the developers. so we can fix
+            it.
           </Message>
           <div class="mt-4 has-text-centered">
             <NuxtLink class="is-block is-fullwidth is-primary" @click="show_report_warning = false">
@@ -47,11 +63,19 @@
             </NuxtLink>
           </div>
         </template>
-        <Message message_class="has-background-info-90 has-text-dark" v-if="!show_report_warning && data.length < 1"
-                 title="Loading" icon="fas fa-spinner fa-spin" message="Generating the report. Please wait..."/>
+        <Message
+          message_class="has-background-info-90 has-text-dark"
+          v-if="!show_report_warning && data.length < 1"
+          title="Loading"
+          icon="fas fa-spinner fa-spin"
+          message="Generating the report. Please wait..."
+        />
         <template v-if="!show_report_warning && data.length > 0">
-          <pre style="min-height: 60vh;max-height:70vh; overflow-y: scroll" class="is-terminal"
-               ref="data-content"><code><span ref="topMarker"></span><span v-for="(item, index) in data" :key="index"
+          <pre
+            style="min-height: 60vh; max-height: 70vh; overflow-y: scroll"
+            class="is-terminal"
+            ref="data-content"
+          ><code><span ref="topMarker"></span><span v-for="(item, index) in data" :key="index"
                                                                            class="is-block">{{ item }}</span><span
               ref="bottomMarker"></span></code></pre>
         </template>
@@ -61,46 +85,46 @@
 </template>
 
 <script setup lang="ts">
-import {ref, watch} from 'vue'
-import {useHead, useRoute} from '#app'
-import {copyText, parse_api_response, request} from '~/utils'
+import { ref, watch } from 'vue';
+import { useHead, useRoute } from '#app';
+import { copyText, parse_api_response, request } from '~/utils';
 
-useHead({title: `System Report`})
+useHead({ title: `System Report` });
 
-const route = useRoute()
+const route = useRoute();
 
-const data = ref<Array<string>>([])
-const show_report_warning = ref(true)
+const data = ref<Array<string>>([]);
+const show_report_warning = ref(true);
 
-const bottomMarker = ref<HTMLElement | null>(null)
-const topMarker = ref<HTMLElement | null>(null)
+const bottomMarker = ref<HTMLElement | null>(null);
+const topMarker = ref<HTMLElement | null>(null);
 
-watch(show_report_warning, async v => {
+watch(show_report_warning, async (v) => {
   if (false !== v) {
-    return
+    return;
   }
 
-  const response = await request(`/system/report`)
-  const json = await parse_api_response<Array<string>>(response)
+  const response = await request(`/system/report`);
+  const json = await parse_api_response<Array<string>>(response);
   if ('error' in json) {
-    return
+    return;
   }
 
   if (route.name !== 'report') {
-    return
+    return;
   }
 
-  data.value = json
-})
+  data.value = json;
+});
 
 const scrollToTop = () => {
   if (topMarker.value) {
-    topMarker.value.scrollIntoView({behavior: 'smooth'})
+    topMarker.value.scrollIntoView({ behavior: 'smooth' });
   }
-}
+};
 const scrollToBottom = () => {
   if (bottomMarker.value) {
-    bottomMarker.value.scrollIntoView({behavior: 'smooth'})
+    bottomMarker.value.scrollIntoView({ behavior: 'smooth' });
   }
-}
+};
 </script>

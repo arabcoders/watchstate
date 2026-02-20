@@ -1,37 +1,37 @@
-import { ref } from 'vue'
+import { ref } from 'vue';
 
 // Global state to manage popovers
-const activePopover = ref<string | null>(null)
+const activePopover = ref<string | null>(null);
 
 export const usePopoverManager = () => {
   const register = (id: string): boolean => {
     if (activePopover.value && activePopover.value !== id) {
       // Close any existing popover
-      return false
+      return false;
     }
-    activePopover.value = id
-    return true
-  }
+    activePopover.value = id;
+    return true;
+  };
 
   const unregister = (id: string): void => {
     if (activePopover.value === id) {
-      activePopover.value = null
+      activePopover.value = null;
     }
-  }
+  };
 
   const closeAll = (): void => {
-    activePopover.value = null
-  }
+    activePopover.value = null;
+  };
 
   const isActive = (id: string): boolean => {
-    return activePopover.value === id
-  }
+    return activePopover.value === id;
+  };
 
   return {
     register,
     unregister,
     closeAll,
     isActive,
-    activePopover: activePopover.value
-  }
-}
+    activePopover: activePopover.value,
+  };
+};

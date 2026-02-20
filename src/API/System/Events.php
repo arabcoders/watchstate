@@ -13,6 +13,7 @@ use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Options;
 use App\Model\Events\Event as EntityItem;
+use App\Model\Events\Event;
 use App\Model\Events\EventsRepository;
 use App\Model\Events\EventsTable as EntityTable;
 use App\Model\Events\EventStatus;
@@ -83,6 +84,30 @@ final readonly class Events
         }
 
         return api_response(Status::OK, $arr);
+    }
+
+    #[Get(pattern: self::URL . '/stats[/]')]
+    public function stats(iRequest $request): iResponse
+    {
+        $params = DataUtil::fromRequest($request, true);
+        $data = [];
+
+        foreach (EventStatus::cases() as $status) {
+            $data[strtolower($status->name)] = 0;
+        }
+
+        $only = array_map('trim', explode(',', $params->get('only', implode(',', array_keys($data)))));
+        foreach ($only as $type) {
+            if (null === ($status = EventStatus::fromName(strtoupper($type)))) {
+                return api_error("Invalid status '{$type}' was given.", Status::BAD_REQUEST);
+            }
+
+            $data[strtolower($status->name)] = $this->repo->countByStatus($status);
+        }
+
+        return api_response(Status::OK, $data, headers: [
+            'X-No-AccessLog' => '1',
+        ]);
     }
 
     #[Delete(pattern: self::URL . '[/]')]

@@ -831,6 +831,23 @@ if (!function_exists('get_app_version')) {
     }
 }
 
+if (!function_exists('get_full_version')) {
+    /**
+     * Get the current version of the application.
+     *
+     * @return string The application version.
+     */
+    function get_full_version(): string
+    {
+        return r('{version} - branch: {version_branch} build: {version_build} sha: {version_sha}', [
+            'version' => Config::get('version', 'unknown'),
+            'version_branch' => Config::get('version_branch', 'unknown'),
+            'version_sha' => substr(Config::get('version_sha', 'unknown'), 0, 7),
+            'version_build' => Config::get('version_build', 'unknown'),
+        ]);
+    }
+}
+
 if (!function_exists('is_valid_name')) {
     /**
      * Check if the given name is valid.

@@ -640,7 +640,7 @@ final class DBLayer implements LoggerAwareInterface
                 case self::IS_HIGHER_THAN_OR_EQUAL:
                 case self::IS_LOWER_THAN:
                 case self::IS_LOWER_THAN_OR_EQUAL:
-                    $eBindName = '__db_cOp_' . random_int(1, 10000);
+                    $eBindName = '__db_cOp_' . random_int(1, 10_000);
                     $keys[] = str_replace(
                         ['(column)', '(bind)', '(expr)'],
                         [

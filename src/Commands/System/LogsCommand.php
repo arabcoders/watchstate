@@ -222,7 +222,7 @@ final class LogsCommand extends Command
                     fclose($f);
                 }
 
-                usleep(500000); //0.5s
+                usleep(500_000); //0.5s
             }
         }
 
