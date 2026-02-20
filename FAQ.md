@@ -615,3 +615,11 @@ creation failing to load. To fix the issue it's recommended to change the backen
 * For Plex: `Library/Application Support/Plex Media Server/Preferences.xml` key: `ProcessedMachineIdentifier`.
 
 Those values need to be unique per instance.
+
+---
+
+# Some Plex users are not showing up in the user list?
+
+Sometimes, the plex user list may not fully load all users, Please <!--i:fa-cogs--> **Env** page and add the following environment variable:
+`WS_CLIENTS_PLEX_DISABLE_DEDUP` and turn it on. This will disable the deduplication logic for plex users. Once you enable this option please restart watchstate 
+and try again. If the user still doesn't show up, please open a bug report with the relevant logs and we will investigate the issue.
