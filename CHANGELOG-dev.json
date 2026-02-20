@@ -1,8 +1,22 @@
 [
     {
-        "tag": "dev-20260220-44b63abe",
-        "date": "2026-02-20T18:15:45+00:00",
+        "tag": "dev-20260220-e8c05dda",
+        "date": "2026-02-20T18:23:39+00:00",
         "commits": [
+            {
+                "sha": "e8c05dda",
+                "message": "refactor: remove useless files",
+                "author": "arabcoders",
+                "date": "2026-02-20T18:23:39+00:00",
+                "full_sha": "e8c05ddaedaff1e299baa3c1050b3a4830b84aba"
+            },
+            {
+                "sha": "948dd00d",
+                "message": "refactor: remove Node.js setup and add bun caching in build workflow",
+                "author": "arabcoders",
+                "date": "2026-02-20T18:23:04+00:00",
+                "full_sha": "948dd00d93ecea059ca2156a8526b5269ab0033e"
+            },
             {
                 "sha": "44b63abe",
                 "message": "refactor: move from pnpm to bun",
@@ -1159,7 +1173,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "44b63abe588cc85381abed52d5000f7be17b3774"
+        "full_sha": "e8c05ddaedaff1e299baa3c1050b3a4830b84aba"
     },
     {
         "tag": "dev-20250604-9407bc76",
