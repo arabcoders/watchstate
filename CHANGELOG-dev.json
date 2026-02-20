@@ -1,8 +1,22 @@
 [
     {
-        "tag": "dev-20260220-e8c05dda",
-        "date": "2026-02-20T18:23:39+00:00",
+        "tag": "dev-20260220-5258db0b",
+        "date": "2026-02-20T18:42:39+00:00",
         "commits": [
+            {
+                "sha": "5258db0b",
+                "message": "fix: building in gitea fails due to old node version",
+                "author": "arabcoders",
+                "date": "2026-02-20T18:42:39+00:00",
+                "full_sha": "5258db0b79c40d932b7647cc33faaf0ffa6d7444"
+            },
+            {
+                "sha": "36eddb13",
+                "message": "refactor: add /local/ to .gitignore",
+                "author": "arabcoders",
+                "date": "2026-02-20T18:25:47+00:00",
+                "full_sha": "36eddb13d8a63e55c0dffc4fe9bee90451fc0dcc"
+            },
             {
                 "sha": "e8c05dda",
                 "message": "refactor: remove useless files",
@@ -1173,7 +1187,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "e8c05ddaedaff1e299baa3c1050b3a4830b84aba"
+        "full_sha": "5258db0b79c40d932b7647cc33faaf0ffa6d7444"
     },
     {
         "tag": "dev-20250604-9407bc76",
