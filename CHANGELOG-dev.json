@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260220-5258db0b",
-        "date": "2026-02-20T18:42:39+00:00",
+        "tag": "dev-20260221-76cdaf6e",
+        "date": "2026-02-20T21:36:47+00:00",
         "commits": [
+            {
+                "sha": "76cdaf6e",
+                "message": "refactor: update de-dup logic.",
+                "author": "arabcoders",
+                "date": "2026-02-20T21:36:47+00:00",
+                "full_sha": "76cdaf6e6da348ba313fcb7f4d387767357aea1e"
+            },
             {
                 "sha": "5258db0b",
                 "message": "fix: building in gitea fails due to old node version",
@@ -1187,7 +1194,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "5258db0b79c40d932b7647cc33faaf0ffa6d7444"
+        "full_sha": "76cdaf6e6da348ba313fcb7f4d387767357aea1e"
     },
     {
         "tag": "dev-20250604-9407bc76",
