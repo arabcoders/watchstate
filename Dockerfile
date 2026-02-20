@@ -4,9 +4,9 @@ WORKDIR /frontend
 COPY ./frontend ./
 ENV NODE_ENV=production
 RUN if [ ! -d "/frontend/exported" ]; then \
-  npm install -g pnpm && \
-  NODE_ENV=production pnpm install --frozen-lockfile --prod --ignore-scripts && \
-  pnpm run generate; \
+  npm install -g bun && \
+  NODE_ENV=production bun install --frozen-lockfile --production && \
+  bun run generate; \
   else echo "Skipping UI build, already built."; fi
 
 FROM debian:13

@@ -47,7 +47,7 @@ env:
   BUILD_ARM64: ${{ vars.BUILD_ARM64 != 'false' && 'true' || 'false' }}
   DOCKERHUB_SLUG: arabcoders/watchstate
   GHCR_SLUG: ghcr.io/arabcoders/watchstate
-  PNPM_VERSION: 10
+  BUN_VERSION: latest
   NODE_VERSION: 20
 
 jobs:
@@ -122,41 +122,41 @@ jobs:
       - name: Run PHP tests
         run: composer run test
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
+      - name: Install bun
+        uses: oven-sh/setup-bun@v2
         with:
-          version: ${{ env.PNPM_VERSION }}
+          bun-version: ${{ env.BUN_VERSION }}
 
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: "frontend/pnpm-lock.yaml"
+          cache: bun
+          cache-dependency-path: "frontend/bun.lock"
 
       - name: Install frontend dependencies
         working-directory: frontend
-        run: pnpm install --frozen-lockfile --prefer-offline
+        run: bun install --frozen-lockfile --prefer-offline
 
       - name: Run nuxt prepare
         working-directory: frontend
         env:
           NODE_ENV: development
-        run: pnpm run prepare:test
+        run: bun run prepare:test
 
       - name: Run frontend linter
         working-directory: frontend
-        run: pnpm run lint
+        run: bun run lint
 
       - name: Run frontend typecheck
         working-directory: frontend
-        run: pnpm run lint:tsc
+        run: bun run lint:tsc
 
       - name: Build frontend
         working-directory: frontend
         env:
           NODE_ENV: production
-        run: pnpm run generate
+        run: bun run generate
 
       - name: Set up Python
         if: env.REGISTRY == '' && github.event_name != 'pull_request'

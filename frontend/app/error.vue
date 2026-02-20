@@ -3,8 +3,8 @@
     <div class="columns is-multiline">
       <div class="column is-12">
         <h1 class="title is-4">
-
-          {{ props.error.statusCode }}<span v-if="props.error.statusMessage"> - {{ props.error.statusMessage }}</span>
+          {{ props.error.statusCode
+          }}<span v-if="props.error.statusMessage"> - {{ props.error.statusMessage }}</span>
         </h1>
       </div>
     </div>
@@ -42,15 +42,15 @@
 </template>
 
 <script setup lang="ts">
-import {ref} from 'vue'
+import { ref } from 'vue';
 
 const props = defineProps<{
   error: {
-    statusCode?: number
-    statusMessage?: string
-    message?: string
-    stack?: string
-  }
-}>()
-const showStacks = ref(false)
+    statusCode?: number;
+    statusMessage?: string;
+    message?: string;
+    stack?: string;
+  };
+}>();
+const showStacks = ref(false);
 </script>

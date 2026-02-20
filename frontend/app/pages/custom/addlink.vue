@@ -8,15 +8,14 @@
         </span>
         <div class="is-hidden-mobile">
           <span class="subtitle">
-            This page allows you to add a new client GUID link. The client GUID link is used to link the client/backend
-            GUID to the <code>WatchState</code> GUID or your custom GUID.
+            This page allows you to add a new client GUID link. The client GUID link is used to link
+            the client/backend GUID to the <code>WatchState</code> GUID or your custom GUID.
           </span>
         </div>
       </div>
 
       <div class="column is-12">
         <form id="page_form" @submit.prevent="addNewLink">
-
           <div class="field">
             <label class="label is-unselectable" for="form_select_type">Client</label>
             <div class="control has-icons-left">
@@ -41,13 +40,16 @@
           <div class="field">
             <label class="label is-unselectable" for="form_map_from">Link client GUID</label>
             <div class="control has-icons-left">
-              <input class="input" id="form_map_from" type="text" v-model="form.map.from">
+              <input class="input" id="form_map_from" type="text" v-model="form.map.from" />
               <div class="icon is-small is-left"><i class="fas fa-a"></i></div>
             </div>
             <p class="help">
               <span class="icon"><i class="fas fa-info"></i></span>
-              <span>Write the <code>{{ form.type.length > 0 ? ucFirst(form.type) : 'client' }}</code> GUID
-                identifier.</span>
+              <span
+                >Write the
+                <code>{{ form.type.length > 0 ? ucFirst(form.type) : 'client' }}</code> GUID
+                identifier.</span
+              >
             </p>
           </div>
 
@@ -57,7 +59,7 @@
               <div class="select is-fullwidth">
                 <select id="form_map_to" v-model="form.map.to">
                   <option value="" disabled>Select the associated GUID</option>
-                  <option v-for="(g) in guids" :value="g.guid" :key="`guid-${g.guid}`">
+                  <option v-for="g in guids" :value="g.guid" :key="`guid-${g.guid}`">
                     {{ g.guid }}
                   </option>
                 </select>
@@ -70,7 +72,8 @@
               <span class="icon"><i class="fas fa-info"></i></span>
               <span>
                 Select which <code>WatchState</code> GUID should link with this
-                <code>{{ form.type.length > 0 ? ucFirst(form.type) : 'client' }}</code> GUID identifier.
+                <code>{{ form.type.length > 0 ? ucFirst(form.type) : 'client' }}</code> GUID
+                identifier.
               </span>
             </p>
           </div>
@@ -78,7 +81,12 @@
           <div class="field" v-if="'plex' === form.type">
             <label class="label" for="backend_import">Is this a Plex legacy agent GUID?</label>
             <div class="control">
-              <input id="backend_import" type="checkbox" class="switch is-success" v-model="form.options.legacy">
+              <input
+                id="backend_import"
+                type="checkbox"
+                class="switch is-success"
+                v-model="form.options.legacy"
+              />
               <label for="backend_import">Enable</label>
               <p class="help">Plex legacy agents starts with <code>com.plexapp.agents.</code></p>
             </div>
@@ -86,9 +94,15 @@
 
           <template v-if="'plex' === form.type && true === form.options.legacy">
             <div class="field">
-              <label class="label is-clickable is-unselectable" @click="toggleReplace = !toggleReplace">
+              <label
+                class="label is-clickable is-unselectable"
+                @click="toggleReplace = !toggleReplace"
+              >
                 <span class="icon">
-                  <i class="fas" :class="{ 'fa-arrow-up': toggleReplace, 'fa-arrow-down': !toggleReplace }"></i>
+                  <i
+                    class="fas"
+                    :class="{ 'fa-arrow-up': toggleReplace, 'fa-arrow-down': !toggleReplace }"
+                  ></i>
                 </span>
                 Toggle Text replacement.
               </label>
@@ -102,25 +116,34 @@
               <div class="field">
                 <label class="label is-unselectable" for="form_replace_from">Search for</label>
                 <div class="control has-icons-left">
-                  <input class="input" id="form_replace_from" type="text" v-model="form.replace.from">
+                  <input
+                    class="input"
+                    id="form_replace_from"
+                    type="text"
+                    v-model="form.replace.from"
+                  />
                   <div class="icon is-small is-left"><i class="fas fa-passport"></i></div>
                 </div>
                 <p class="help">
                   <span class="icon"><i class="fas fa-info"></i></span>
-                  <span>The text string to replace. Sometimes it's necessary to replace legacy agent GUID into
-                    something else. Leave it empty to ignore it.</span>
+                  <span
+                    >The text string to replace. Sometimes it's necessary to replace legacy agent
+                    GUID into something else. Leave it empty to ignore it.</span
+                  >
                 </p>
               </div>
               <div class="field">
                 <label class="label is-unselectable" for="form_replace_to">Replace with</label>
                 <div class="control has-icons-left">
-                  <input class="input" id="form_replace_to" type="text" v-model="form.replace.to">
+                  <input class="input" id="form_replace_to" type="text" v-model="form.replace.to" />
                   <div class="icon is-small is-left"><i class="fas fa-passport"></i></div>
                 </div>
                 <p class="help">
                   <span class="icon"><i class="fas fa-info"></i></span>
-                  <span>The string replacement. If <code>replace.from</code> is empty this field will be
-                    ignored.</span>
+                  <span
+                    >The string replacement. If <code>replace.from</code> is empty this field will
+                    be ignored.</span
+                  >
                 </p>
               </div>
             </template>
@@ -128,8 +151,12 @@
 
           <div class="field is-grouped">
             <div class="control is-expanded">
-              <button class="button is-fullwidth is-primary" type="submit" :disabled="false === validForm || isSaving"
-                :class="{ 'is-loading': isSaving }">
+              <button
+                class="button is-fullwidth is-primary"
+                type="submit"
+                :disabled="false === validForm || isSaving"
+                :class="{ 'is-loading': isSaving }"
+              >
                 <span class="icon-text">
                   <span class="icon"><i class="fas fa-save"></i></span>
                   <span>Save</span>
@@ -137,7 +164,11 @@
               </button>
             </div>
             <div class="control is-expanded">
-              <button class="button is-fullwidth is-danger" type="button" @click="navigateTo('/custom')">
+              <button
+                class="button is-fullwidth is-danger"
+                type="button"
+                @click="navigateTo('/custom')"
+              >
                 <span class="icon-text">
                   <span class="icon"><i class="fas fa-cancel"></i></span>
                   <span>Cancel</span>
@@ -152,52 +183,51 @@
 </template>
 
 <script setup lang="ts">
-import {ref, computed, onMounted} from 'vue'
-import {useHead, navigateTo} from '#app'
-import {request, notification, parse_api_response, ucFirst} from '~/utils'
-import type {CustomGUID, CustomLink, GenericError, GenericResponse, GuidProvider} from '~/types'
-import '~/assets/css/bulma-switch.css'
-
+import { ref, computed, onMounted } from 'vue';
+import { useHead, navigateTo } from '#app';
+import { request, notification, parse_api_response, ucFirst } from '~/utils';
+import type { CustomGUID, CustomLink, GenericError, GenericResponse, GuidProvider } from '~/types';
+import '~/assets/css/bulma-switch.css';
 
 type CustomLinkForm = {
   /** Client type */
-  type: string
+  type: string;
   /** Client-specific options */
   options: {
     /** Whether this is a Plex legacy agent */
-    legacy: boolean
-  }
+    legacy: boolean;
+  };
   /** GUID mapping */
   map: {
     /** Source client GUID */
-    from: string
+    from: string;
     /** Target WatchState/custom GUID */
-    to: string
-  }
+    to: string;
+  };
   /** Text replacement (for Plex legacy agents) */
   replace: {
     /** Text to search for */
-    from: string
+    from: string;
     /** Text to replace with */
-    to: string
-  }
-}
+    to: string;
+  };
+};
 
-useHead({ title: 'Add new client GUID link' })
+useHead({ title: 'Add new client GUID link' });
 
 const defaultData = (): CustomLinkForm => ({
   type: '',
-  options: { legacy: true, },
+  options: { legacy: true },
   map: { from: '', to: '' },
   replace: { from: '', to: '' },
-})
+});
 
-const form = ref<CustomLinkForm>(defaultData())
-const guids = ref<Array<GuidProvider>>([])
-const supported = ref<Array<string>>([])
-const isSaving = ref<boolean>(false)
-const links = ref<Array<CustomLink>>([])
-const toggleReplace = ref<boolean>(false)
+const form = ref<CustomLinkForm>(defaultData());
+const guids = ref<Array<GuidProvider>>([]);
+const supported = ref<Array<string>>([]);
+const isSaving = ref<boolean>(false);
+const links = ref<Array<CustomLink>>([]);
+const toggleReplace = ref<boolean>(false);
 
 onMounted(async () => {
   try {
@@ -205,65 +235,64 @@ onMounted(async () => {
       request('/system/guids'),
       request('/system/supported'),
       request('/system/guids/custom'),
-    ])
+    ]);
 
-    const guidData = await parse_api_response<Array<GuidProvider>>(responses[0])
-    const supportedData = await parse_api_response<Array<string>>(responses[1])
+    const guidData = await parse_api_response<Array<GuidProvider>>(responses[0]);
+    const supportedData = await parse_api_response<Array<string>>(responses[1]);
     const customData = await parse_api_response<{
-      guids: Record<string, CustomGUID>,
-      links: Record<string, CustomLink>
-    }>(responses[2])
+      guids: Record<string, CustomGUID>;
+      links: Record<string, CustomLink>;
+    }>(responses[2]);
 
     if ('error' in guidData) {
-      notification('error', 'Error', guidData.error.message)
-      return
+      notification('error', 'Error', guidData.error.message);
+      return;
     }
     if ('error' in supportedData) {
-      notification('error', 'Error', supportedData.error.message)
-      return
+      notification('error', 'Error', supportedData.error.message);
+      return;
     }
     if ('error' in customData) {
-      notification('error', 'Error', customData.error.message)
-      return
+      notification('error', 'Error', customData.error.message);
+      return;
     }
 
-    guids.value = guidData
-    supported.value = supportedData
-    links.value = Object.values(customData.links)
-
+    guids.value = guidData;
+    supported.value = supportedData;
+    links.value = Object.values(customData.links);
   } catch (e: any) {
-    notification('error', 'Error', `Request error. ${e.message}`, 5000)
+    notification('error', 'Error', `Request error. ${e.message}`, 5000);
   }
-})
+});
 
 const addNewLink = async (): Promise<void> => {
   if (!validForm.value) {
-    notification('error', 'Error', 'Invalid form data.', 5000)
-    return
+    notification('error', 'Error', 'Invalid form data.', 5000);
+    return;
   }
 
-  const data = form.value
+  const data = form.value;
 
   if (!supported.value.includes(data.type)) {
-    notification('error', 'Error', 'Invalid client type.', 5000)
-    return
+    notification('error', 'Error', 'Invalid client type.', 5000);
+    return;
   }
 
   if (!data.map.from) {
-    notification('error', 'Error', 'map.from must not be empty.', 5000)
-    return
+    notification('error', 'Error', 'map.from must not be empty.', 5000);
+    return;
   }
 
-  if (!guids.value.find(g => g.guid === data.map.to)) {
-    notification('error', 'Error', `Invalid map.to value '${data.map.to}'.`, 5000)
-    return
+  if (!guids.value.find((g) => g.guid === data.map.to)) {
+    notification('error', 'Error', `Invalid map.to value '${data.map.to}'.`, 5000);
+    return;
   }
 
   for (let i = 0; i < links.value.length; i++) {
-    const link = links.value[i]
+    const link = links.value[i];
     if (link && link.type === data.type && link.map.from === data.map.from) {
-      notification('error', 'Error', `Link with map.from '${data.map.from}' already exists.`, 5000)
-      return
+      notification('error', 'Error', `Link with map.from '${data.map.from}' already exists.`, 5000);
+      return;
     }
   }
 
@@ -271,48 +300,50 @@ const addNewLink = async (): Promise<void> => {
     type: data.type,
     map: {
       from: data.map.from,
-      to: data.map.to
-    }
-  }
+      to: data.map.to,
+    },
+  };
 
   if ('plex' === data.type) {
     formData.options = {
       legacy: Boolean(data.options.legacy),
-    }
+    };
 
     if (data.replace.from && data.replace.to) {
       formData.replace = {
         from: data.replace.from,
-        to: data.replace.to
-      }
+        to: data.replace.to,
+      };
     }
   }
 
-  isSaving.value = true
+  isSaving.value = true;
 
   try {
     const response = await request(`/system/guids/custom/${formData.type}`, {
       method: 'PUT',
-      body: JSON.stringify(formData)
-    })
+      body: JSON.stringify(formData),
+    });
 
-    const json = await parse_api_response<GenericResponse>(response)
+    const json = await parse_api_response<GenericResponse>(response);
 
     if ('error' in json) {
-      const errorJson = json as GenericError
-      notification('error', 'Error', `${errorJson.error.code}: ${errorJson.error.message}`, 5000)
-      return
+      const errorJson = json as GenericError;
+      notification('error', 'Error', `${errorJson.error.code}: ${errorJson.error.message}`, 5000);
+      return;
     }
 
-    notification('success', 'Success', 'Successfully added new client link.', 5000)
-    await navigateTo('/custom')
+    notification('success', 'Success', 'Successfully added new client link.', 5000);
+    await navigateTo('/custom');
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unexpected error'
-    notification('error', 'Error', `Request error. ${message}`, 5000)
+    const message = error instanceof Error ? error.message : 'Unexpected error';
+    notification('error', 'Error', `Request error. ${message}`, 5000);
   } finally {
-    isSaving.value = false
+    isSaving.value = false;
   }
-}
+};
 
-const validForm = computed((): boolean => !(!form.value.map.to || !form.value.map.from || !form.value.type))
+const validForm = computed(
+  (): boolean => !(!form.value.map.to || !form.value.map.from || !form.value.type),
+);
 </script>

@@ -3,13 +3,13 @@
     <div class="columns is-multiline">
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4">
-          <span class="icon"><i class="fas fa-hands-helping"/></span>
+          <span class="icon"><i class="fas fa-hands-helping" /></span>
           {{ 'Getting started' }}
         </span>
         <div class="is-hidden-mobile">
           <span class="subtitle">
-            This page contains guides to help you get started with WatchState. This is an early version, we are still
-            working on the guides.
+            This page contains guides to help you get started with WatchState. This is an early
+            version, we are still working on the guides.
           </span>
         </div>
       </div>
@@ -19,15 +19,23 @@
       <div v-for="choice in choices" :key="choice.url" class="column is-6-tablet is-12-mobile">
         <div class="box content" style="height: 100%">
           <h3 class="title is-5">
-            <NuxtLink :to="`${choice.url}?title=${choice.title}`" class="has-text-link" v-if="choice.url">
+            <NuxtLink
+              :to="`${choice.url}?title=${choice.title}`"
+              class="has-text-link"
+              v-if="choice.url"
+            >
               {{ `${choice.number}. ${choice.title}` }}
             </NuxtLink>
             <span v-else>{{ `${choice.number}. ${choice.title}` }}</span>
           </h3>
-          <hr>
-          <Message message_class="has-background-warning-90 has-text-dark" v-if="!choice.url" class="p-1">
+          <hr />
+          <Message
+            message_class="has-background-warning-90 has-text-dark"
+            v-if="!choice.url"
+            class="p-1"
+          >
             <p>
-              <span class="icon"><i class="fas fa-exclamation has-text-danger"/></span>
+              <span class="icon"><i class="fas fa-exclamation has-text-danger" /></span>
               <span>This guide is not available yet.</span>
             </p>
           </Message>
@@ -39,12 +47,12 @@
 </template>
 
 <script setup lang="ts">
-import {useHead} from '#app'
-import Message from '~/components/Message.vue'
+import { useHead } from '#app';
+import Message from '~/components/Message.vue';
 
-useHead({title: 'WatchState Guides'})
+useHead({ title: 'WatchState Guides' });
 
-const choices: Array<{ number: number, title: string, text: string, url: string }> = [
+const choices: Array<{ number: number; title: string; text: string; url: string }> = [
   {
     number: 1,
     title: 'One-way sync',
@@ -87,5 +95,5 @@ const choices: Array<{ number: number, title: string, text: string, url: string 
     text: 'Guide on how to sync a family account with multiple users.',
     url: '/help/three-way-sync',
   },
-]
+];
 </script>

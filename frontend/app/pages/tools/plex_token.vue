@@ -8,7 +8,8 @@
         </span>
         <div class="is-pulled-right"></div>
         <div class="is-hidden-mobile">
-          You can use this page to validate if given token is able to communicates with the plex.tv API.
+          You can use this page to validate if given token is able to communicates with the plex.tv
+          API.
         </div>
       </div>
 
@@ -20,15 +21,27 @@
             </div>
 
             <div class="card-content">
-              <Message v-if="success" message_class="has-background-success-90 has-text-dark" title="Success!"
-                icon="fas fa-check-circle" :useClose="true" @close="() => success = ''">
+              <Message
+                v-if="success"
+                message_class="has-background-success-90 has-text-dark"
+                title="Success!"
+                icon="fas fa-check-circle"
+                :useClose="true"
+                @close="() => (success = '')"
+              >
                 <p>
                   <span class="icon"><i class="fas fa-check" /></span>
                   <span>{{ success }}</span>
                 </p>
               </Message>
-              <Message v-if="error" message_class="has-background-danger-90 has-text-dark" title="Error"
-                icon="fas fa-exclamation-triangle" :useClose="true" @close="() => error = ''">
+              <Message
+                v-if="error"
+                message_class="has-background-danger-90 has-text-dark"
+                title="Error"
+                icon="fas fa-exclamation-triangle"
+                :useClose="true"
+                @close="() => (error = '')"
+              >
                 <p>
                   <span class="icon"><i class="fas fa-exclamation" /></span>
                   <span>{{ error }}</span>
@@ -38,28 +51,43 @@
               <div class="field">
                 <div class="field has-addons">
                   <div class="control is-expanded has-icons-left">
-                    <input class="input" v-model="token" required placeholder="X-Plex-Token"
-                      :type="false === exposeToken ? 'password' : 'text'">
+                    <input
+                      class="input"
+                      v-model="token"
+                      required
+                      placeholder="X-Plex-Token"
+                      :type="false === exposeToken ? 'password' : 'text'"
+                    />
                     <span class="icon is-left"><i class="fas fa-key" /></span>
                   </div>
                   <div class="control">
-                    <button type="button" class="button is-primary" @click="exposeToken = !exposeToken"
-                      v-tooltip="'Show/Hide token'">
+                    <button
+                      type="button"
+                      class="button is-primary"
+                      @click="exposeToken = !exposeToken"
+                      v-tooltip="'Show/Hide token'"
+                    >
                       <span class="icon" v-if="!exposeToken"><i class="fas fa-eye" /></span>
                       <span class="icon" v-else><i class="fas fa-eye-slash" /></span>
                     </button>
                   </div>
                 </div>
                 <p>
-                  Enter the <code>X-Plex-Token</code>. <NuxtLink target="_blank"
-                    to="https://support.plex.tv/articles/204059436">Visit This link</NuxtLink> to learn how to get the
-                  token.
+                  Enter the <code>X-Plex-Token</code>.
+                  <NuxtLink target="_blank" to="https://support.plex.tv/articles/204059436"
+                    >Visit This link</NuxtLink
+                  >
+                  to learn how to get the token.
                 </p>
               </div>
             </div>
             <div class="card-footer">
               <div class="card-footer-item">
-                <button class="button is-fullwidth is-primary" type="submit" :disabled="!token || isLoading">
+                <button
+                  class="button is-fullwidth is-primary"
+                  type="submit"
+                  :disabled="!token || isLoading"
+                >
                   <template v-if="isLoading">
                     <span class="icon"><i class="fas fa-spinner fa-spin"></i></span>
                     <span>Validating...</span>
@@ -79,45 +107,45 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { request, parse_api_response } from '~/utils'
-import type { GenericResponse } from '~/types'
+import { ref } from 'vue';
+import { request, parse_api_response } from '~/utils';
+import type { GenericResponse } from '~/types';
 
-const isLoading = ref<boolean>(false)
-const token = ref<string>('')
-const error = ref<string>('')
-const success = ref<string>('')
-const exposeToken = ref<boolean>(false)
+const isLoading = ref<boolean>(false);
+const token = ref<string>('');
+const error = ref<string>('');
+const success = ref<string>('');
+const exposeToken = ref<boolean>(false);
 
 const validateToken = async (): Promise<void> => {
-  error.value = ''
-  success.value = ''
+  error.value = '';
+  success.value = '';
 
   if (!token.value) {
-    error.value = 'Please enter a valid token.'
-    return
+    error.value = 'Please enter a valid token.';
+    return;
   }
 
   try {
-    isLoading.value = true
+    isLoading.value = true;
 
     const response = await request(`/backends/validate/token/plex`, {
       method: 'POST',
-      body: JSON.stringify({ token: token.value })
-    })
+      body: JSON.stringify({ token: token.value }),
+    });
 
-    const resp = await parse_api_response<GenericResponse>(response)
+    const resp = await parse_api_response<GenericResponse>(response);
 
-    if ("error" in resp) {
-      error.value = resp.error.message
-      return
+    if ('error' in resp) {
+      error.value = resp.error.message;
+      return;
     }
 
-    success.value = resp.info.message
+    success.value = resp.info.message;
   } catch (e: any) {
-    error.value = `An error occurred while validating the token. ${e.message}`
+    error.value = `An error occurred while validating the token. ${e.message}`;
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
-}
+};
 </script>

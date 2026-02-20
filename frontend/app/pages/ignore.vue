@@ -9,16 +9,23 @@
         <div class="is-pulled-right">
           <div class="field is-grouped">
             <p class="control">
-              <button class="button is-primary" v-tooltip.bottom="'Add New Ignore rule'"
-                      @click="toggleForm = !toggleForm">
+              <button
+                class="button is-primary"
+                v-tooltip.bottom="'Add New Ignore rule'"
+                @click="toggleForm = !toggleForm"
+              >
                 <span class="icon">
                   <i class="fas fa-add"></i>
                 </span>
               </button>
             </p>
             <p class="control">
-              <button class="button is-info" @click="loadContent" :disabled="isLoading || toggleForm"
-                      :class="{ 'is-loading': isLoading }">
+              <button
+                class="button is-info"
+                @click="loadContent"
+                :disabled="isLoading || toggleForm"
+                :class="{ 'is-loading': isLoading }"
+              >
                 <span class="icon">
                   <i class="fas fa-sync"></i>
                 </span>
@@ -28,15 +35,26 @@
         </div>
         <div class="is-hidden-mobile">
           <span class="subtitle">
-            This page allow you to ignore specific <code>GUID</code> from being processed by the system.
+            This page allow you to ignore specific <code>GUID</code> from being processed by the
+            system.
           </span>
         </div>
       </div>
 
       <div class="column is-12" v-if="!toggleForm && items.length < 1">
-        <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
-                 icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
-        <Message v-else message_class="has-background-success-90 has-text-dark" title="Information" icon="fas fa-check">
+        <Message
+          v-if="isLoading"
+          message_class="has-background-info-90 has-text-dark"
+          title="Loading"
+          icon="fas fa-spinner fa-spin"
+          message="Loading data. Please wait..."
+        />
+        <Message
+          v-else
+          message_class="has-background-success-90 has-text-dark"
+          title="Information"
+          icon="fas fa-check"
+        >
           There are no ignore rules configured. You can add new ignore rules by clicking on the
           <i @click="toggleForm = true" class="is-clickable fas fa-add"></i> button.
         </Message>
@@ -68,8 +86,10 @@
                 <p class="help">
                   <span class="icon-text">
                     <span class="icon"><i class="fas fa-info"></i></span>
-                    <span>Ignore rules applies to backends, you must select the correct backend you want to ignore the
-                      GUID from</span>
+                    <span
+                      >Ignore rules applies to backends, you must select the correct backend you
+                      want to ignore the GUID from</span
+                    >
                   </span>
                 </p>
               </div>
@@ -98,7 +118,7 @@
               <div class="field">
                 <label class="label is-unselectable" for="form_ignore_id">GUID Value</label>
                 <div class="control has-icons-left">
-                  <input class="input" id="form_ignore_id" type="text" v-model="form.id">
+                  <input class="input" id="form_ignore_id" type="text" v-model="form.id" />
                   <div class="icon is-small is-left"><i class="fas fa-font"></i></div>
                 </div>
                 <p class="help">
@@ -133,7 +153,12 @@
               <div class="field">
                 <label class="label is-unselectable" for="form_scoped">Scope</label>
                 <div class="control has-icons-left">
-                  <input id="form_scoped" type="checkbox" class="switch is-success" v-model="form.scoped">
+                  <input
+                    id="form_scoped"
+                    type="checkbox"
+                    class="switch is-success"
+                    v-model="form.scoped"
+                  />
                   <label for="form_scoped">
                     <template v-if="form.scoped">On (True)</template>
                     <template v-else>Off (False)</template>
@@ -141,8 +166,9 @@
                 </div>
                 <p class="help">
                   <span class="icon"><i class="fas fa-exclamation"></i></span>
-                  <span>By default, Rules are globally applied to all items from the selected backend, you can limit the
-                    scope, by enabling this option.
+                  <span
+                    >By default, Rules are globally applied to all items from the selected backend,
+                    you can limit the scope, by enabling this option.
                   </span>
                 </p>
               </div>
@@ -150,20 +176,25 @@
               <div class="field" v-if="form.scoped">
                 <label class="label is-unselectable" for="form_scoped_to">Scoped To</label>
                 <div class="control has-icons-left">
-                  <input class="input" id="form_scoped_to" type="text" v-model="form.scoped_to">
+                  <input class="input" id="form_scoped_to" type="text" v-model="form.scoped_to" />
                   <div class="icon is-small is-left"><i class="fas fa-font"></i></div>
                   <p class="help">
                     <span class="icon"><i class="fas fa-info"></i></span>
-                    <span>The id to associate this rule with. The value must be the <code>{{ form.type }}</code> id as
-                      being reported by the backend.</span>
+                    <span
+                      >The id to associate this rule with. The value must be the
+                      <code>{{ form.type }}</code> id as being reported by the backend.</span
+                    >
                   </p>
                 </div>
               </div>
-
             </div>
             <div class="card-footer">
               <div class="card-footer-item">
-                <button class="button is-fullwidth is-primary" type="submit" :disabled="false === checkForm">
+                <button
+                  class="button is-fullwidth is-primary"
+                  type="submit"
+                  :disabled="false === checkForm"
+                >
                   <span class="icon-text">
                     <span class="icon"><i class="fas fa-save"></i></span>
                     <span>Save</span>
@@ -196,7 +227,10 @@
                 </p>
                 <span class="card-header-icon">
                   <span class="icon">
-                    <i class="fas" :class="{ 'fa-tv': 'Show' === item.type, 'fa-film': 'Movie' === item.type }"></i>
+                    <i
+                      class="fas"
+                      :class="{ 'fa-tv': 'Show' === item.type, 'fa-film': 'Movie' === item.type }"
+                    ></i>
                   </span>
                 </span>
               </header>
@@ -212,7 +246,9 @@
                   </div>
                   <div class="column is-6 has-text-right">
                     <strong>Scope:&nbsp;</strong>
-                    <NuxtLink :to="makeItemLink(item)" v-if="item.scoped_to">{{ item.scoped_to }}</NuxtLink>
+                    <NuxtLink :to="makeItemLink(item)" v-if="item.scoped_to">{{
+                      item.scoped_to
+                    }}</NuxtLink>
                     <template v-else>Global</template>
                   </div>
 
@@ -230,12 +266,16 @@
                   <div class="column is-6 has-text-right">
                     <span class="icon-text">
                       <span class="icon"><i class="fas fa-calendar"></i></span>
-                      <span class="has-tooltip"
-                            v-tooltip="`Created at: ${moment(item.created).format(TOOLTIP_DATE_FORMAT)}`">
-                        {{ moment(item.created).fromNow() }}</span>
+                      <span
+                        class="has-tooltip"
+                        v-tooltip="
+                          `Created at: ${moment(item.created).format(TOOLTIP_DATE_FORMAT)}`
+                        "
+                      >
+                        {{ moment(item.created).fromNow() }}</span
+                      >
                     </span>
                   </div>
-
                 </div>
               </div>
               <footer class="card-footer">
@@ -262,17 +302,26 @@
       </div>
 
       <div class="column is-12">
-        <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
-                 @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+        <Message
+          message_class="has-background-info-90 has-text-dark"
+          :toggle="show_page_tips"
+          @toggle="show_page_tips = !show_page_tips"
+          :use-toggle="true"
+          title="Tips"
+          icon="fas fa-info-circle"
+        >
           <ul>
-            <li>Ignoring specific GUID sometimes helps in preventing incorrect data being added to WatchState, due to
-              incorrect metadata being provided by backends.
+            <li>
+              Ignoring specific GUID sometimes helps in preventing incorrect data being added to
+              WatchState, due to incorrect metadata being provided by backends.
             </li>
             <li>
-              <code>GUID</code> means in terms of WatchState is the unique identifier for a specific item in the
-              external data source.
+              <code>GUID</code> means in terms of WatchState is the unique identifier for a specific
+              item in the external data source.
             </li>
-            <li>To add a new ignore rule click on the <i @click="toggleForm = true" class="is-clickable fa fa-add"></i>
+            <li>
+              To add a new ignore rule click on the
+              <i @click="toggleForm = true" class="is-clickable fa fa-add"></i>
               button.
             </li>
           </ul>
@@ -283,185 +332,204 @@
 </template>
 
 <script setup lang="ts">
-import '~/assets/css/bulma-switch.css'
-import {ref, computed, watch, onMounted} from 'vue'
-import {useHead, useRoute} from '#app'
-import {useStorage} from '@vueuse/core'
-import moment from 'moment'
-import Message from '~/components/Message.vue'
-import {request, awaitElement, copyText, notification, stringToRegex, TOOLTIP_DATE_FORMAT} from '~/utils'
-import {useDialog} from '~/composables/useDialog'
-import type {IgnoreItem, GuidProvider} from '~/types'
+import '~/assets/css/bulma-switch.css';
+import { ref, computed, watch, onMounted } from 'vue';
+import { useHead, useRoute } from '#app';
+import { useStorage } from '@vueuse/core';
+import moment from 'moment';
+import Message from '~/components/Message.vue';
+import {
+  request,
+  awaitElement,
+  copyText,
+  notification,
+  stringToRegex,
+  TOOLTIP_DATE_FORMAT,
+} from '~/utils';
+import { useDialog } from '~/composables/useDialog';
+import type { IgnoreItem, GuidProvider } from '~/types';
 
-useHead({title: 'Ignored GUIDs'})
+useHead({ title: 'Ignored GUIDs' });
 
-const types = ['show', 'movie', 'episode']
-const empty_form = {id: '', type: '', backend: '', db: '', scoped: false, scoped_to: null}
-const items = ref<Array<IgnoreItem>>([])
-const toggleForm = ref<boolean>(false)
+const types = ['show', 'movie', 'episode'];
+const empty_form = { id: '', type: '', backend: '', db: '', scoped: false, scoped_to: null };
+const items = ref<Array<IgnoreItem>>([]);
+const toggleForm = ref<boolean>(false);
 const form = ref<{
-  id: string,
-  type: string,
-  backend: string,
-  db: string,
-  scoped: boolean,
-  scoped_to: string | null
-}>(JSON.parse(JSON.stringify(empty_form)))
-const show_page_tips = useStorage('show_page_tips', true)
-const isLoading = ref<boolean>(false)
-const guids = ref<Array<GuidProvider>>([])
-const backends = ref<Array<{ name: string, type?: string }>>([])
+  id: string;
+  type: string;
+  backend: string;
+  db: string;
+  scoped: boolean;
+  scoped_to: string | null;
+}>(JSON.parse(JSON.stringify(empty_form)));
+const show_page_tips = useStorage('show_page_tips', true);
+const isLoading = ref<boolean>(false);
+const guids = ref<Array<GuidProvider>>([]);
+const backends = ref<Array<{ name: string; type?: string }>>([]);
 
 const loadContent = async (): Promise<void> => {
-  isLoading.value = true
-  items.value = []
+  isLoading.value = true;
+  items.value = [];
 
   if (0 === guids.value.length) {
-    const guid_request = await request('/system/guids')
-    const guid_response = await guid_request.json()
+    const guid_request = await request('/system/guids');
+    const guid_response = await guid_request.json();
     if ('ignore' !== useRoute().name) {
-      return
+      return;
     }
-    guids.value = guid_response
+    guids.value = guid_response;
   }
 
   if (0 === backends.value.length) {
-    const backends_request = await request('/backends')
-    const backends_response = await backends_request.json()
+    const backends_request = await request('/backends');
+    const backends_response = await backends_request.json();
     if ('ignore' !== useRoute().name) {
-      return
+      return;
     }
-    backends.value = backends_response
+    backends.value = backends_response;
   }
 
-  let response, json
+  let response, json;
 
   try {
-    response = await request(`/ignore`)
+    response = await request(`/ignore`);
   } catch (e: any) {
-    isLoading.value = false
-    notification('error', 'Error', e.message)
-    return
+    isLoading.value = false;
+    notification('error', 'Error', e.message);
+    return;
   }
 
   try {
-    json = await response.json()
+    json = await response.json();
     if ('ignore' !== useRoute().name) {
-      return
+      return;
     }
   } catch {
     json = {
       error: {
         code: response.status,
-        message: response.statusText
-      }
-    }
+        message: response.statusText,
+      },
+    };
   }
 
-  isLoading.value = false
+  isLoading.value = false;
 
   if (!response.ok) {
-    notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
-    return
+    notification('error', 'Error', `${json.error.code}: ${json.error.message}`);
+    return;
   }
 
-  items.value = json
-}
+  items.value = json;
+};
 
-onMounted(() => loadContent())
+onMounted(() => loadContent());
 
 const deleteIgnore = async (item: IgnoreItem): Promise<void> => {
-  const {status: confirmStatus} = await useDialog().confirmDialog({
+  const { status: confirmStatus } = await useDialog().confirmDialog({
     message: `Delete '${item.db}://${item.id}' rule?`,
-    confirmColor: 'is-danger'
-  })
+    confirmColor: 'is-danger',
+  });
 
   if (true !== confirmStatus) {
-    return
+    return;
   }
 
   const response = await request(`/ignore`, {
     method: 'DELETE',
     body: JSON.stringify({
-      rule: item.rule
-    })
-  })
+      rule: item.rule,
+    }),
+  });
 
   if (response.ok) {
-    items.value = items.value.filter(i => i.rule !== item.rule)
-    notification('success', 'Success', `Environment variable '${item.rule}' successfully deleted.`, 5000)
+    items.value = items.value.filter((i) => i.rule !== item.rule);
+    notification(
+      'success',
+      'Success',
+      `Environment variable '${item.rule}' successfully deleted.`,
+      5000,
+    );
   }
-}
+};
 
 const makeItemLink = (item: IgnoreItem): string => {
   if (!item?.scoped_to) {
-    return ''
+    return '';
   }
 
-  const type = 'Show' === item.type ? 'show' : 'id'
+  const type = 'Show' === item.type ? 'show' : 'id';
 
-  const params = new URLSearchParams()
-  params.append('perpage', '50')
-  params.append('page', '1')
-  params.append('q', `${item.backend}.${type}://${item.scoped_to}`)
-  params.append('key', 'metadata')
+  const params = new URLSearchParams();
+  params.append('perpage', '50');
+  params.append('page', '1');
+  params.append('q', `${item.backend}.${type}://${item.scoped_to}`);
+  params.append('key', 'metadata');
 
-  return `/history?${params.toString()}`
-}
+  return `/history?${params.toString()}`;
+};
 
 const addIgnoreRule = async (): Promise<void> => {
-  const val = guids.value.find(g => g.guid === form.value.db)
+  const val = guids.value.find((g) => g.guid === form.value.db);
   if (val && val?.validator && val.validator.pattern) {
     if (!stringToRegex(val.validator.pattern).test(form.value.id)) {
-      notification('error', 'Error', `Invalid GUID value, must match the pattern: '${val.validator.pattern}'. Example ${val.validator.example}`, 5000)
-      return
+      notification(
+        'error',
+        'Error',
+        `Invalid GUID value, must match the pattern: '${val.validator.pattern}'. Example ${val.validator.example}`,
+        5000,
+      );
+      return;
     }
   }
 
   try {
     const response = await request(`/ignore`, {
       method: 'POST',
-      body: JSON.stringify(form.value)
-    })
+      body: JSON.stringify(form.value),
+    });
 
-    const json = await parse_api_response<IgnoreItem>(response)
+    const json = await parse_api_response<IgnoreItem>(response);
 
     if ('error' in json) {
-      notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
-      return
+      notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000);
+      return;
     }
 
-    items.value.push(json)
+    items.value.push(json);
 
-    notification('success', 'Success', 'Successfully added new ignore rule.', 5000)
+    notification('success', 'Success', 'Successfully added new ignore rule.', 5000);
   } catch (e: any) {
-    notification('error', 'Error', `Request error. ${e.message}`, 5000)
-    return
+    notification('error', 'Error', `Request error. ${e.message}`, 5000);
+    return;
   }
 
-  cancelForm()
-}
+  cancelForm();
+};
 
 const cancelForm = (): void => {
-  form.value = JSON.parse(JSON.stringify(empty_form))
-  toggleForm.value = false
-}
+  form.value = JSON.parse(JSON.stringify(empty_form));
+  toggleForm.value = false;
+};
 
 watch(toggleForm, (value: boolean) => {
   if (!value) {
-    cancelForm()
-    return
+    cancelForm();
+    return;
   }
 
-  awaitElement('#page_form', (_, el) => (el as HTMLElement).scrollIntoView({
-    behavior: 'smooth',
-    block: 'start',
-    inline: 'nearest'
-  }))
-})
+  awaitElement('#page_form', (_, el) =>
+    (el as HTMLElement).scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+      inline: 'nearest',
+    }),
+  );
+});
 
 const checkForm = computed<boolean>(() => {
-  const {id, type, backend, db} = form.value
-  return '' !== id && '' !== type && '' !== backend && '' !== db
-})
+  const { id, type, backend, db } = form.value;
+  return '' !== id && '' !== type && '' !== backend && '' !== db;
+});
 </script>

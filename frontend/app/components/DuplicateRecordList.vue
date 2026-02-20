@@ -1,5 +1,5 @@
 <template>
-  <div class="p-3" style="min-width: 260px; max-width: 320px;">
+  <div class="p-3" style="min-width: 260px; max-width: 320px">
     <div v-if="isLoading" class="is-flex is-align-items-center is-size-7 has-text-weight-medium">
       <span class="icon has-text-info mr-2"><i class="fas fa-spinner fa-spin" /></span>
       <span>Loading records...</span>
@@ -52,67 +52,68 @@
   </div>
 </template>
 
-
 <script setup lang="ts">
-import {ref} from 'vue'
-import moment from 'moment'
-import {NuxtLink} from '#components'
-import {makeName, parse_api_response, request} from '~/utils'
-import { useSessionCache } from '~/utils/cache'
-import type {HistoryItem, JsonObject} from '~/types'
+import { ref } from 'vue';
+import moment from 'moment';
+import { NuxtLink } from '#components';
+import { makeName, parse_api_response, request } from '~/utils';
+import { useSessionCache } from '~/utils/cache';
+import type { HistoryItem, JsonObject } from '~/types';
 
-const props = defineProps<{ ids: Array<number> }>()
+const props = defineProps<{ ids: Array<number> }>();
 
-const records = ref<Array<HistoryItem>>([])
-const isLoading = ref<boolean>(true)
-const errorMessage = ref<string>('')
-const cache = useSessionCache()
+const records = ref<Array<HistoryItem>>([]);
+const isLoading = ref<boolean>(true);
+const errorMessage = ref<string>('');
+const cache = useSessionCache();
 
 onMounted(async () => {
-  const unique = new Set<number>()
+  const unique = new Set<number>();
   for (const value of props.ids ?? []) {
     if (!Number.isFinite(value)) {
-      continue
+      continue;
     }
-    unique.add(Number(value))
+    unique.add(Number(value));
   }
 
-  const ids = Array.from(unique)
+  const ids = Array.from(unique);
 
   if (0 === ids.length) {
-    isLoading.value = false
-    return
+    isLoading.value = false;
+    return;
   }
 
   try {
-    const items: Array<HistoryItem> = []
-    const missingIds: Array<number> = []
+    const items: Array<HistoryItem> = [];
+    const missingIds: Array<number> = [];
 
     for (const id of ids) {
-      const cacheKey = `history_${id}`
-      const cachedItem = cache.get<HistoryItem>(cacheKey) ?? null
+      const cacheKey = `history_${id}`;
+      const cachedItem = cache.get<HistoryItem>(cacheKey) ?? null;
       if (null !== cachedItem) {
-        items.push(cachedItem)
-        continue
+        items.push(cachedItem);
+        continue;
       }
-      missingIds.push(id)
+      missingIds.push(id);
     }
 
-    await Promise.all(missingIds.map(async id => {
-      const response = await request(`/history/${id}`)
-      const record = await parse_api_response<HistoryItem>(response)
-      if ('error' in record) {
-        throw new Error(record.error.message || `Unable to load record ${id}`)
-      }
-      cache?.set(`history_${id}`, record, 300)
-      items.push(record)
-    }))
+    await Promise.all(
+      missingIds.map(async (id) => {
+        const response = await request(`/history/${id}`);
+        const record = await parse_api_response<HistoryItem>(response);
+        if ('error' in record) {
+          throw new Error(record.error.message || `Unable to load record ${id}`);
+        }
+        cache?.set(`history_${id}`, record, 300);
+        items.push(record);
+      }),
+    );
 
-    records.value = items
+    records.value = items;
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Failed to load records.'
+    errorMessage.value = error instanceof Error ? error.message : 'Failed to load records.';
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
-})
+});
 </script>
