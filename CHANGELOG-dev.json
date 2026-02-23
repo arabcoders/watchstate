@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260222-42ee16e9",
-        "date": "2026-02-22T17:23:18+00:00",
+        "tag": "dev-20260223-bacacc1d",
+        "date": "2026-02-23T17:15:43+00:00",
         "commits": [
+            {
+                "sha": "bacacc1d",
+                "message": "fix: dont generate tokens for all plex users during edit/add flow.",
+                "author": "arabcoders",
+                "date": "2026-02-23T17:15:43+00:00",
+                "full_sha": "bacacc1dcd9f9776fd2372807ae7fcf189753f7e"
+            },
             {
                 "sha": "42ee16e9",
                 "message": "refactor: improve exception handling in GetUsersList",
@@ -1222,7 +1229,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "42ee16e91d608a1f0da2cf2a0bcc009f353275a7"
+        "full_sha": "bacacc1dcd9f9776fd2372807ae7fcf189753f7e"
     },
     {
         "tag": "dev-20250604-9407bc76",
