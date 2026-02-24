@@ -1,8 +1,22 @@
 [
     {
-        "tag": "master-20260221-0e2249b2",
-        "date": "2026-02-20T23:41:11+00:00",
+        "tag": "master-20260224-ee1c6bc7",
+        "date": "2026-02-24T16:06:35+00:00",
         "commits": [
+            {
+                "sha": "bacacc1d",
+                "message": "fix: dont generate tokens for all plex users during edit/add flow.",
+                "author": "arabcoders",
+                "date": "2026-02-23T17:15:43+00:00",
+                "full_sha": "bacacc1dcd9f9776fd2372807ae7fcf189753f7e"
+            },
+            {
+                "sha": "42ee16e9",
+                "message": "refactor: improve exception handling in GetUsersList",
+                "author": "arabcoders",
+                "date": "2026-02-22T17:23:18+00:00",
+                "full_sha": "42ee16e91d608a1f0da2cf2a0bcc009f353275a7"
+            },
             {
                 "sha": "01365b7c",
                 "message": "docs: add FAQ entry for missing Plex users and deduplication option",
@@ -1180,7 +1194,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "0e2249b2a0376a990a592bdab0c6dee10e9950df"
+        "full_sha": "ee1c6bc7129217a1f37c8a637d27fbd75055b017"
     },
     {
         "tag": "master-20250614-e3307c58",
