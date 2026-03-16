@@ -1,9 +1,16 @@
 [
   {
-    "tag": "Unreleased (ee1c6bc7)",
-    "full_sha": "ee1c6bc7129217a1f37c8a637d27fbd75055b017",
-    "date": "2026-02-24T16:06:35+00:00",
+    "tag": "Unreleased (116be9ad)",
+    "full_sha": "116be9ad62d2eefd3e24fc2448890a27e01acb56",
+    "date": "2026-03-16T20:06:25+00:00",
     "commits": [
+      {
+        "sha": "f7e48b45",
+        "full_sha": "f7e48b45c75c278da7ff1b861274c40e61bd3646",
+        "message": "update support to supports",
+        "author": "Ben Curtis",
+        "date": "2026-03-16T08:46:13+00:00"
+      },
       {
         "sha": "bacacc1d",
         "full_sha": "bacacc1dcd9f9776fd2372807ae7fcf189753f7e",

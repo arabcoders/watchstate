@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260223-bacacc1d",
-        "date": "2026-02-23T17:15:43+00:00",
+        "tag": "dev-20260316-116be9ad",
+        "date": "2026-03-16T20:06:25+00:00",
         "commits": [
+            {
+                "sha": "f7e48b45",
+                "message": "update support to supports",
+                "author": "Ben Curtis",
+                "date": "2026-03-16T08:46:13+00:00",
+                "full_sha": "f7e48b45c75c278da7ff1b861274c40e61bd3646"
+            },
             {
                 "sha": "bacacc1d",
                 "message": "fix: dont generate tokens for all plex users during edit/add flow.",
@@ -1229,7 +1236,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "bacacc1dcd9f9776fd2372807ae7fcf189753f7e"
+        "full_sha": "116be9ad62d2eefd3e24fc2448890a27e01acb56"
     },
     {
         "tag": "dev-20250604-9407bc76",
