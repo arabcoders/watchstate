@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260316-116be9ad",
-        "date": "2026-03-16T20:06:25+00:00",
+        "tag": "dev-20260319-ed8a6990",
+        "date": "2026-03-19T18:25:55+00:00",
         "commits": [
+            {
+                "sha": "ed8a6990",
+                "message": "refactor: upgrade symfony packages to 8.x",
+                "author": "arabcoders",
+                "date": "2026-03-19T18:25:55+00:00",
+                "full_sha": "ed8a69908aaf6f82ae73fd0160c6f22b72e47ea3"
+            },
             {
                 "sha": "f7e48b45",
                 "message": "update support to supports",
@@ -1236,7 +1243,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "116be9ad62d2eefd3e24fc2448890a27e01acb56"
+        "full_sha": "ed8a69908aaf6f82ae73fd0160c6f22b72e47ea3"
     },
     {
         "tag": "dev-20250604-9407bc76",
