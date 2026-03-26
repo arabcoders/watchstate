@@ -1,8 +1,36 @@
 [
     {
-        "tag": "master-20260316-116be9ad",
-        "date": "2026-03-16T20:06:25+00:00",
+        "tag": "master-20260326-3ad2bb6b",
+        "date": "2026-03-26T16:29:18+00:00",
         "commits": [
+            {
+                "sha": "da55d636",
+                "message": "docs: update readme and news",
+                "author": "arabcoders",
+                "date": "2026-03-26T16:06:08+00:00",
+                "full_sha": "da55d636aa842f5b5db2ed9d79c40765a1f47d95"
+            },
+            {
+                "sha": "cc53a254",
+                "message": "chore: update external packages",
+                "author": "arabcoders",
+                "date": "2026-03-26T16:02:38+00:00",
+                "full_sha": "cc53a254e6eab104469c928bd3a7c3c403e862b1"
+            },
+            {
+                "sha": "f4e29c5d",
+                "message": "refactor: plex no longer provides a way to obtain external user token. thus we removed the external user shims. Closes #793",
+                "author": "arabcoders",
+                "date": "2026-03-26T15:56:34+00:00",
+                "full_sha": "f4e29c5d6d4ce36e66b9cbbb4271e9d8dca5dd7d"
+            },
+            {
+                "sha": "ed8a6990",
+                "message": "refactor: upgrade symfony packages to 8.x",
+                "author": "arabcoders",
+                "date": "2026-03-19T18:25:55+00:00",
+                "full_sha": "ed8a69908aaf6f82ae73fd0160c6f22b72e47ea3"
+            },
             {
                 "sha": "f7e48b45",
                 "message": "update support to supports",
@@ -1201,7 +1229,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "116be9ad62d2eefd3e24fc2448890a27e01acb56"
+        "full_sha": "3ad2bb6b0fbcf5189426ee8559b67301b0015305"
     },
     {
         "tag": "master-20250614-e3307c58",
