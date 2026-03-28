@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260328-04f55745",
-        "date": "2026-03-28T16:08:41+00:00",
+        "tag": "dev-20260328-a4077005",
+        "date": "2026-03-28T16:10:59+00:00",
         "commits": [
+            {
+                "sha": "a4077005",
+                "message": "fix: simplify API reference documentation text",
+                "author": "arabcoders",
+                "date": "2026-03-28T16:10:59+00:00",
+                "full_sha": "a40770055df1ad549a8892d8ec60c30a502e1301"
+            },
             {
                 "sha": "04f55745",
                 "message": "feat: add API documentation",
@@ -1271,7 +1278,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "04f55745e0827de6f16478f75790ac22884cf486"
+        "full_sha": "a40770055df1ad549a8892d8ec60c30a502e1301"
     },
     {
         "tag": "dev-20250604-9407bc76",
