@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260326-da55d636",
-        "date": "2026-03-26T16:06:08+00:00",
+        "tag": "dev-20260328-04f55745",
+        "date": "2026-03-28T16:08:41+00:00",
         "commits": [
+            {
+                "sha": "04f55745",
+                "message": "feat: add API documentation",
+                "author": "arabcoders",
+                "date": "2026-03-28T16:08:41+00:00",
+                "full_sha": "04f55745e0827de6f16478f75790ac22884cf486"
+            },
             {
                 "sha": "da55d636",
                 "message": "docs: update readme and news",
@@ -1264,7 +1271,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "da55d636aa842f5b5db2ed9d79c40765a1f47d95"
+        "full_sha": "04f55745e0827de6f16478f75790ac22884cf486"
     },
     {
         "tag": "dev-20250604-9407bc76",
