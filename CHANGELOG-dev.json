@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260328-a4077005",
-        "date": "2026-03-28T16:10:59+00:00",
+        "tag": "dev-20260402-9820ac4a",
+        "date": "2026-04-02T04:40:32+00:00",
         "commits": [
+            {
+                "sha": "9820ac4a",
+                "message": "fix: override vuedraggable version to 4.1.x",
+                "author": "arabcoders",
+                "date": "2026-04-02T04:40:32+00:00",
+                "full_sha": "9820ac4ae045f5a91decbf67be14ffeb7599f7ee"
+            },
             {
                 "sha": "a4077005",
                 "message": "fix: simplify API reference documentation text",
@@ -1278,7 +1285,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "a40770055df1ad549a8892d8ec60c30a502e1301"
+        "full_sha": "9820ac4ae045f5a91decbf67be14ffeb7599f7ee"
     },
     {
         "tag": "dev-20250604-9407bc76",
