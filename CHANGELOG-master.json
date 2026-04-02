@@ -1,8 +1,29 @@
 [
     {
-        "tag": "master-20260326-3ad2bb6b",
-        "date": "2026-03-26T16:29:18+00:00",
+        "tag": "master-20260402-ce3a5cc7",
+        "date": "2026-04-02T07:27:43+00:00",
         "commits": [
+            {
+                "sha": "9820ac4a",
+                "message": "fix: override vuedraggable version to 4.1.x",
+                "author": "arabcoders",
+                "date": "2026-04-02T04:40:32+00:00",
+                "full_sha": "9820ac4ae045f5a91decbf67be14ffeb7599f7ee"
+            },
+            {
+                "sha": "a4077005",
+                "message": "fix: simplify API reference documentation text",
+                "author": "arabcoders",
+                "date": "2026-03-28T16:10:59+00:00",
+                "full_sha": "a40770055df1ad549a8892d8ec60c30a502e1301"
+            },
+            {
+                "sha": "04f55745",
+                "message": "feat: add API documentation",
+                "author": "arabcoders",
+                "date": "2026-03-28T16:08:41+00:00",
+                "full_sha": "04f55745e0827de6f16478f75790ac22884cf486"
+            },
             {
                 "sha": "da55d636",
                 "message": "docs: update readme and news",
@@ -1229,7 +1250,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "3ad2bb6b0fbcf5189426ee8559b67301b0015305"
+        "full_sha": "ce3a5cc73f71af7115ea1aae2d3c208346984b87"
     },
     {
         "tag": "master-20250614-e3307c58",
