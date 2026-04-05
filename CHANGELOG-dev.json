@@ -1,8 +1,22 @@
 [
     {
-        "tag": "dev-20260405-50c5921b",
-        "date": "2026-04-05T15:05:45+00:00",
+        "tag": "dev-20260405-4ef82936",
+        "date": "2026-04-05T19:07:25+00:00",
         "commits": [
+            {
+                "sha": "4ef82936",
+                "message": "chore: update external packages",
+                "author": "arabcoders",
+                "date": "2026-04-05T19:07:25+00:00",
+                "full_sha": "4ef82936c2092b4774a8461faa85f254e87e97a0"
+            },
+            {
+                "sha": "4b7d9f96",
+                "message": "Refactor: use nuxt-ui as frontend",
+                "author": "arabcoders",
+                "date": "2026-04-05T19:05:32+00:00",
+                "full_sha": "4b7d9f96a07bb7196b3945f5267e27fd0661dd40"
+            },
             {
                 "sha": "50c5921b",
                 "message": "fix: ensure temporary tables are dropped before creation in migrations",
@@ -1292,7 +1306,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "50c5921b4f07f8925f2e0e224283fb41af381d83"
+        "full_sha": "4ef82936c2092b4774a8461faa85f254e87e97a0"
     },
     {
         "tag": "dev-20250604-9407bc76",
