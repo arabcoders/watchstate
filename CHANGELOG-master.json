@@ -1,8 +1,29 @@
 [
     {
-        "tag": "master-20260402-ce3a5cc7",
-        "date": "2026-04-02T07:27:43+00:00",
+        "tag": "master-20260405-938ec2bd",
+        "date": "2026-04-05T19:11:59+00:00",
         "commits": [
+            {
+                "sha": "4ef82936",
+                "message": "chore: update external packages",
+                "author": "arabcoders",
+                "date": "2026-04-05T19:07:25+00:00",
+                "full_sha": "4ef82936c2092b4774a8461faa85f254e87e97a0"
+            },
+            {
+                "sha": "4b7d9f96",
+                "message": "Refactor: use nuxt-ui as frontend",
+                "author": "arabcoders",
+                "date": "2026-04-05T19:05:32+00:00",
+                "full_sha": "4b7d9f96a07bb7196b3945f5267e27fd0661dd40"
+            },
+            {
+                "sha": "50c5921b",
+                "message": "fix: ensure temporary tables are dropped before creation in migrations",
+                "author": "arabcoders",
+                "date": "2026-04-05T15:05:45+00:00",
+                "full_sha": "50c5921b4f07f8925f2e0e224283fb41af381d83"
+            },
             {
                 "sha": "9820ac4a",
                 "message": "fix: override vuedraggable version to 4.1.x",
@@ -1250,7 +1271,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "ce3a5cc73f71af7115ea1aae2d3c208346984b87"
+        "full_sha": "938ec2bdbf1bdc2770242bc747d0fe51f5a90dde"
     },
     {
         "tag": "master-20250614-e3307c58",
