@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260405-4ef82936",
-        "date": "2026-04-05T19:07:25+00:00",
+        "tag": "dev-20260405-258ff9d6",
+        "date": "2026-04-05T19:21:34+00:00",
         "commits": [
+            {
+                "sha": "258ff9d6",
+                "message": "fix: display issue for scheduler display",
+                "author": "arabcoders",
+                "date": "2026-04-05T19:21:34+00:00",
+                "full_sha": "258ff9d664492baebb2139804197b3a4c78b4b23"
+            },
             {
                 "sha": "4ef82936",
                 "message": "chore: update external packages",
@@ -1306,7 +1313,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "4ef82936c2092b4774a8461faa85f254e87e97a0"
+        "full_sha": "258ff9d664492baebb2139804197b3a4c78b4b23"
     },
     {
         "tag": "dev-20250604-9407bc76",
