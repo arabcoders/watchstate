@@ -1,9 +1,16 @@
 [
   {
-    "tag": "Unreleased (938ec2bd)",
-    "full_sha": "938ec2bdbf1bdc2770242bc747d0fe51f5a90dde",
-    "date": "2026-04-05T19:11:59+00:00",
+    "tag": "Unreleased (4a1db9e6)",
+    "full_sha": "4a1db9e6928f888879098fd0a9bf9024c06030a1",
+    "date": "2026-04-05T19:45:49+00:00",
     "commits": [
+      {
+        "sha": "258ff9d6",
+        "full_sha": "258ff9d664492baebb2139804197b3a4c78b4b23",
+        "message": "fix: display issue for scheduler display",
+        "author": "arabcoders",
+        "date": "2026-04-05T19:21:34+00:00"
+      },
       {
         "sha": "4ef82936",
         "full_sha": "4ef82936c2092b4774a8461faa85f254e87e97a0",
