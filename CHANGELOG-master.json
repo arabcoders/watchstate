@@ -1,8 +1,22 @@
 [
     {
-        "tag": "master-20260405-4a1db9e6",
-        "date": "2026-04-05T19:45:49+00:00",
+        "tag": "master-20260406-725f2f34",
+        "date": "2026-04-06T20:37:13+00:00",
         "commits": [
+            {
+                "sha": "59ae1290",
+                "message": "fix: revert change to how many recent items shows in home",
+                "author": "arabcoders",
+                "date": "2026-04-06T20:28:42+00:00",
+                "full_sha": "59ae1290918389e3ef784e8445ad1180479f8c1c"
+            },
+            {
+                "sha": "172f9293",
+                "message": "refactor: minor fixes for mobile view",
+                "author": "arabcoders",
+                "date": "2026-04-06T20:26:02+00:00",
+                "full_sha": "172f929353622946a233ce26d5b88c79845c538d"
+            },
             {
                 "sha": "258ff9d6",
                 "message": "fix: display issue for scheduler display",
@@ -1278,7 +1292,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "4a1db9e6928f888879098fd0a9bf9024c06030a1"
+        "full_sha": "725f2f34362fbd60879d330f7cfd93e884ef444b"
     },
     {
         "tag": "master-20250614-e3307c58",

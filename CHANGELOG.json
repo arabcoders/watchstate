@@ -1,9 +1,23 @@
 [
   {
-    "tag": "Unreleased (4a1db9e6)",
-    "full_sha": "4a1db9e6928f888879098fd0a9bf9024c06030a1",
-    "date": "2026-04-05T19:45:49+00:00",
+    "tag": "Unreleased (725f2f34)",
+    "full_sha": "725f2f34362fbd60879d330f7cfd93e884ef444b",
+    "date": "2026-04-06T20:37:13+00:00",
     "commits": [
+      {
+        "sha": "59ae1290",
+        "full_sha": "59ae1290918389e3ef784e8445ad1180479f8c1c",
+        "message": "fix: revert change to how many recent items shows in home",
+        "author": "arabcoders",
+        "date": "2026-04-06T20:28:42+00:00"
+      },
+      {
+        "sha": "172f9293",
+        "full_sha": "172f929353622946a233ce26d5b88c79845c538d",
+        "message": "refactor: minor fixes for mobile view",
+        "author": "arabcoders",
+        "date": "2026-04-06T20:26:02+00:00"
+      },
       {
         "sha": "258ff9d6",
         "full_sha": "258ff9d664492baebb2139804197b3a4c78b4b23",
