@@ -1,8 +1,29 @@
 [
     {
-        "tag": "master-20260406-725f2f34",
-        "date": "2026-04-06T20:37:13+00:00",
+        "tag": "master-20260408-1efe93a9",
+        "date": "2026-04-08T20:26:21+00:00",
         "commits": [
+            {
+                "sha": "5b64d664",
+                "message": "refactor: update how history page renders",
+                "author": "arabcoders",
+                "date": "2026-04-08T19:44:22+00:00",
+                "full_sha": "5b64d6646eb45004cdb809c69086aeb5ff4f06f3"
+            },
+            {
+                "sha": "2e947bdf",
+                "message": "feat: integrate arabcoders/database package and update database configuration",
+                "author": "arabcoders",
+                "date": "2026-04-08T16:55:29+00:00",
+                "full_sha": "2e947bdf735a02f0a3f63479b0cd4d496f5d232c"
+            },
+            {
+                "sha": "2cc3a3bd",
+                "message": "refactor: affix user db file with version",
+                "author": "arabcoders",
+                "date": "2026-04-08T16:13:14+00:00",
+                "full_sha": "2cc3a3bd2dab82067bf5de0e25d0b40cd882c66d"
+            },
             {
                 "sha": "59ae1290",
                 "message": "fix: revert change to how many recent items shows in home",
@@ -1292,7 +1313,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "725f2f34362fbd60879d330f7cfd93e884ef444b"
+        "full_sha": "1efe93a992ae11e2073071b170132977aebe1369"
     },
     {
         "tag": "master-20250614-e3307c58",
