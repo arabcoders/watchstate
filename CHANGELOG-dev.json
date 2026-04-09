@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260408-5b64d664",
-        "date": "2026-04-08T19:44:22+00:00",
+        "tag": "dev-20260409-119bed00",
+        "date": "2026-04-09T15:01:13+00:00",
         "commits": [
+            {
+                "sha": "119bed00",
+                "message": "docs: add contributing guidelines for the project",
+                "author": "arabcoders",
+                "date": "2026-04-09T15:01:13+00:00",
+                "full_sha": "119bed009fc67e5f7e68efa61aceb4e3010861ca"
+            },
             {
                 "sha": "5b64d664",
                 "message": "refactor: update how history page renders",
@@ -1348,7 +1355,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "5b64d6646eb45004cdb809c69086aeb5ff4f06f3"
+        "full_sha": "119bed009fc67e5f7e68efa61aceb4e3010861ca"
     },
     {
         "tag": "dev-20250604-9407bc76",
