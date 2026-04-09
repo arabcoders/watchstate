@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260409-119bed00",
-        "date": "2026-04-09T15:01:13+00:00",
+        "tag": "dev-20260409-73c7bb31",
+        "date": "2026-04-09T17:15:28+00:00",
         "commits": [
+            {
+                "sha": "73c7bb31",
+                "message": "refactor: rename users and sub users to identities to reduce confusion, and convert backends:create to an API endpoint",
+                "author": "arabcoders",
+                "date": "2026-04-09T17:15:28+00:00",
+                "full_sha": "73c7bb31b326cf8498ebd608ab7b1735f42c31c2"
+            },
             {
                 "sha": "119bed00",
                 "message": "docs: add contributing guidelines for the project",
@@ -1355,7 +1362,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "119bed009fc67e5f7e68efa61aceb4e3010861ca"
+        "full_sha": "73c7bb31b326cf8498ebd608ab7b1735f42c31c2"
     },
     {
         "tag": "dev-20250604-9407bc76",
