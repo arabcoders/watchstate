@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260409-0b412570",
-        "date": "2026-04-09T17:37:10+00:00",
+        "tag": "dev-20260412-fc5352ac",
+        "date": "2026-04-12T15:33:47+00:00",
         "commits": [
+            {
+                "sha": "fc5352ac",
+                "message": "refactor: improve history rendering and add raw view to search",
+                "author": "arabcoders",
+                "date": "2026-04-12T15:33:47+00:00",
+                "full_sha": "fc5352acf1e2040b031396bd8ed81e75be4bebef"
+            },
             {
                 "sha": "0b412570",
                 "message": "docs: update README",
@@ -1369,7 +1376,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "0b412570c7c8f0736f2725c07a38e746088a0297"
+        "full_sha": "fc5352acf1e2040b031396bd8ed81e75be4bebef"
     },
     {
         "tag": "dev-20250604-9407bc76",
