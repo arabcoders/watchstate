@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260414-7afc8815",
-        "date": "2026-04-13T22:48:49+00:00",
+        "tag": "dev-20260414-0aed9948",
+        "date": "2026-04-13T23:32:01+00:00",
         "commits": [
+            {
+                "sha": "0aed9948",
+                "message": "refactor(console):  make ping event a comment instead of an event",
+                "author": "arabcoders",
+                "date": "2026-04-13T23:32:01+00:00",
+                "full_sha": "0aed994831330fc073f25a7c6ac9cd9203ea79c1"
+            },
             {
                 "sha": "7afc8815",
                 "message": "fix(console): harden the restore logic",
@@ -1390,7 +1397,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "7afc88150a21833be6a45c64c3f6511b53ba039f"
+        "full_sha": "0aed994831330fc073f25a7c6ac9cd9203ea79c1"
     },
     {
         "tag": "dev-20250604-9407bc76",
