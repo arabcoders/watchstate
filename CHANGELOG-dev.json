@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260412-fc5352ac",
-        "date": "2026-04-12T15:33:47+00:00",
+        "tag": "dev-20260413-fa34ef14",
+        "date": "2026-04-13T17:28:33+00:00",
         "commits": [
+            {
+                "sha": "fa34ef14",
+                "message": "feat(console): gracefully handle command execution restore",
+                "author": "arabcoders",
+                "date": "2026-04-13T17:28:33+00:00",
+                "full_sha": "fa34ef14949db5323a5add7ea5f3941d8862a65a"
+            },
             {
                 "sha": "fc5352ac",
                 "message": "refactor: improve history rendering and add raw view to search",
@@ -1376,7 +1383,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "fc5352acf1e2040b031396bd8ed81e75be4bebef"
+        "full_sha": "fa34ef14949db5323a5add7ea5f3941d8862a65a"
     },
     {
         "tag": "dev-20250604-9407bc76",
