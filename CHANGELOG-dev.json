@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260413-fa34ef14",
-        "date": "2026-04-13T17:28:33+00:00",
+        "tag": "dev-20260414-7afc8815",
+        "date": "2026-04-13T22:48:49+00:00",
         "commits": [
+            {
+                "sha": "7afc8815",
+                "message": "fix(console): harden the restore logic",
+                "author": "arabcoders",
+                "date": "2026-04-13T22:48:49+00:00",
+                "full_sha": "7afc88150a21833be6a45c64c3f6511b53ba039f"
+            },
             {
                 "sha": "fa34ef14",
                 "message": "feat(console): gracefully handle command execution restore",
@@ -1383,7 +1390,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "fa34ef14949db5323a5add7ea5f3941d8862a65a"
+        "full_sha": "7afc88150a21833be6a45c64c3f6511b53ba039f"
     },
     {
         "tag": "dev-20250604-9407bc76",
