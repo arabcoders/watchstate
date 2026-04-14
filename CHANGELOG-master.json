@@ -1,8 +1,36 @@
 [
     {
-        "tag": "master-20260409-6996b568",
-        "date": "2026-04-09T17:39:07+00:00",
+        "tag": "master-20260414-59f6e4ec",
+        "date": "2026-04-14T14:32:34+00:00",
         "commits": [
+            {
+                "sha": "0aed9948",
+                "message": "refactor(console):  make ping event a comment instead of an event",
+                "author": "arabcoders",
+                "date": "2026-04-13T23:32:01+00:00",
+                "full_sha": "0aed994831330fc073f25a7c6ac9cd9203ea79c1"
+            },
+            {
+                "sha": "7afc8815",
+                "message": "fix(console): harden the restore logic",
+                "author": "arabcoders",
+                "date": "2026-04-13T22:48:49+00:00",
+                "full_sha": "7afc88150a21833be6a45c64c3f6511b53ba039f"
+            },
+            {
+                "sha": "fa34ef14",
+                "message": "feat(console): gracefully handle command execution restore",
+                "author": "arabcoders",
+                "date": "2026-04-13T17:28:33+00:00",
+                "full_sha": "fa34ef14949db5323a5add7ea5f3941d8862a65a"
+            },
+            {
+                "sha": "fc5352ac",
+                "message": "refactor: improve history rendering and add raw view to search",
+                "author": "arabcoders",
+                "date": "2026-04-12T15:33:47+00:00",
+                "full_sha": "fc5352acf1e2040b031396bd8ed81e75be4bebef"
+            },
             {
                 "sha": "0b412570",
                 "message": "docs: update README",
@@ -1334,7 +1362,7 @@
                 "full_sha": "ad19e85959005024bcb38dad10b59967ff0d6678"
             }
         ],
-        "full_sha": "6996b568bd2e3d3534167997828f2d02aaa55cea"
+        "full_sha": "59f6e4ec2ce7284aaa3c5cf3341c7065b8dced21"
     },
     {
         "tag": "master-20250614-e3307c58",
