@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260414-0aed9948",
-        "date": "2026-04-13T23:32:01+00:00",
+        "tag": "dev-20260415-7c67e53d",
+        "date": "2026-04-15T14:33:00+00:00",
         "commits": [
+            {
+                "sha": "7c67e53d",
+                "message": "refactor: extend the form guard to route change as well",
+                "author": "arabcoders",
+                "date": "2026-04-15T14:33:00+00:00",
+                "full_sha": "7c67e53d8b582f4f67869b2fbeb0ab78ff6e9b6d"
+            },
             {
                 "sha": "0aed9948",
                 "message": "refactor(console):  make ping event a comment instead of an event",
@@ -1397,7 +1404,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "0aed994831330fc073f25a7c6ac9cd9203ea79c1"
+        "full_sha": "7c67e53d8b582f4f67869b2fbeb0ab78ff6e9b6d"
     },
     {
         "tag": "dev-20250604-9407bc76",
