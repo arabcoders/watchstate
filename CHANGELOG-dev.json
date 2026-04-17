@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260418-4cc6c5ae",
-        "date": "2026-04-17T21:01:24+00:00",
+        "tag": "dev-20260418-30e49e24",
+        "date": "2026-04-17T21:07:03+00:00",
         "commits": [
+            {
+                "sha": "30e49e24",
+                "message": "fix: update tests to target existing file.",
+                "author": "arabcoders",
+                "date": "2026-04-17T21:07:03+00:00",
+                "full_sha": "30e49e24c705716dd5ee2ba893788e79313f6c11"
+            },
             {
                 "sha": "4cc6c5ae",
                 "message": "fix: allow setting theme as system",
@@ -1481,7 +1488,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "4cc6c5ae6f4b00ef62bee84afbabb22e9ad5dc98"
+        "full_sha": "30e49e24c705716dd5ee2ba893788e79313f6c11"
     },
     {
         "tag": "dev-20250604-9407bc76",
