@@ -1,9 +1,100 @@
 [
   {
-    "tag": "Unreleased (59f6e4ec)",
-    "full_sha": "59f6e4ec2ce7284aaa3c5cf3341c7065b8dced21",
-    "date": "2026-04-14T14:32:34+00:00",
+    "tag": "Unreleased (fa063e99)",
+    "full_sha": "fa063e99d63b757cd29c10d6546459f354152fda",
+    "date": "2026-04-17T21:15:07+00:00",
     "commits": [
+      {
+        "sha": "30e49e24",
+        "full_sha": "30e49e24c705716dd5ee2ba893788e79313f6c11",
+        "message": "fix: update tests to target existing file.",
+        "author": "arabcoders",
+        "date": "2026-04-17T21:07:03+00:00"
+      },
+      {
+        "sha": "4cc6c5ae",
+        "full_sha": "4cc6c5ae6f4b00ef62bee84afbabb22e9ad5dc98",
+        "message": "fix: allow setting theme as system",
+        "author": "arabcoders",
+        "date": "2026-04-17T21:01:24+00:00"
+      },
+      {
+        "sha": "0810c0e8",
+        "full_sha": "0810c0e861f88b0477dc883fc496fe39f7ba9617",
+        "message": "feat: enhance static asset serving and restrict static serving to specified dirs",
+        "author": "arabcoders",
+        "date": "2026-04-17T20:56:07+00:00"
+      },
+      {
+        "sha": "c378100e",
+        "full_sha": "c378100e9971b17251fc1fe6a57489194e6c3885",
+        "message": "refactor: limit backup API endpoint to json/zip files",
+        "author": "arabcoders",
+        "date": "2026-04-17T20:24:22+00:00"
+      },
+      {
+        "sha": "de53247c",
+        "full_sha": "de53247cde06e7e8d1882c7b02dfc31241882037",
+        "message": "feat: add TestCommand for API endpoint testing",
+        "author": "arabcoders",
+        "date": "2026-04-17T20:22:56+00:00"
+      },
+      {
+        "sha": "30812b69",
+        "full_sha": "30812b69f8c6edd97ae1dafeb23d7f9e67bc341a",
+        "message": "refactor: drop command auto run in web console",
+        "author": "arabcoders",
+        "date": "2026-04-17T20:03:32+00:00"
+      },
+      {
+        "sha": "79833619",
+        "full_sha": "79833619ed8c2c8fb7d26fbcae8ab248985935ec",
+        "message": "feat: add token refresh to the API",
+        "author": "arabcoders",
+        "date": "2026-04-17T19:53:17+00:00"
+      },
+      {
+        "sha": "3a148189",
+        "full_sha": "3a148189351d506a2e93de9d385b58935de7a055",
+        "message": "refactor: update dialog message handling",
+        "author": "arabcoders",
+        "date": "2026-04-17T18:53:45+00:00"
+      },
+      {
+        "sha": "e70e620f",
+        "full_sha": "e70e620fbe06d3f69e62c62f0b19e4914723a746",
+        "message": "feat: add commands to manage environment keys",
+        "author": "arabcoders",
+        "date": "2026-04-17T18:46:36+00:00"
+      },
+      {
+        "sha": "b4bcdc9b",
+        "full_sha": "b4bcdc9b2e3665a554f61e0d1cc0cdf755f66969",
+        "message": "feat: add Ratelimit middleware",
+        "author": "arabcoders",
+        "date": "2026-04-17T18:32:58+00:00"
+      },
+      {
+        "sha": "137db073",
+        "full_sha": "137db07332e9b6264e5e9eaf89af0309a3eb4adf",
+        "message": "fix: restrict the auth open scope to limited routes",
+        "author": "arabcoders",
+        "date": "2026-04-17T17:25:26+00:00"
+      },
+      {
+        "sha": "de4899a2",
+        "full_sha": "de4899a28387ec4abadd961530e3f7ed8f2ddaf9",
+        "message": "refactor: as player endpoint is public and secured by token it doesnt need the api key.",
+        "author": "arabcoders",
+        "date": "2026-04-17T17:12:35+00:00"
+      },
+      {
+        "sha": "7c67e53d",
+        "full_sha": "7c67e53d8b582f4f67869b2fbeb0ab78ff6e9b6d",
+        "message": "refactor: extend the form guard to route change as well",
+        "author": "arabcoders",
+        "date": "2026-04-15T14:33:00+00:00"
+      },
       {
         "sha": "0aed9948",
         "full_sha": "0aed994831330fc073f25a7c6ac9cd9203ea79c1",
