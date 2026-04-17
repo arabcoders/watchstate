@@ -1,8 +1,85 @@
 [
     {
-        "tag": "dev-20260415-7c67e53d",
-        "date": "2026-04-15T14:33:00+00:00",
+        "tag": "dev-20260418-4cc6c5ae",
+        "date": "2026-04-17T21:01:24+00:00",
         "commits": [
+            {
+                "sha": "4cc6c5ae",
+                "message": "fix: allow setting theme as system",
+                "author": "arabcoders",
+                "date": "2026-04-17T21:01:24+00:00",
+                "full_sha": "4cc6c5ae6f4b00ef62bee84afbabb22e9ad5dc98"
+            },
+            {
+                "sha": "0810c0e8",
+                "message": "feat: enhance static asset serving and restrict static serving to specified dirs",
+                "author": "arabcoders",
+                "date": "2026-04-17T20:56:07+00:00",
+                "full_sha": "0810c0e861f88b0477dc883fc496fe39f7ba9617"
+            },
+            {
+                "sha": "c378100e",
+                "message": "refactor: limit backup API endpoint to json/zip files",
+                "author": "arabcoders",
+                "date": "2026-04-17T20:24:22+00:00",
+                "full_sha": "c378100e9971b17251fc1fe6a57489194e6c3885"
+            },
+            {
+                "sha": "de53247c",
+                "message": "feat: add TestCommand for API endpoint testing",
+                "author": "arabcoders",
+                "date": "2026-04-17T20:22:56+00:00",
+                "full_sha": "de53247cde06e7e8d1882c7b02dfc31241882037"
+            },
+            {
+                "sha": "30812b69",
+                "message": "refactor: drop command auto run in web console",
+                "author": "arabcoders",
+                "date": "2026-04-17T20:03:32+00:00",
+                "full_sha": "30812b69f8c6edd97ae1dafeb23d7f9e67bc341a"
+            },
+            {
+                "sha": "79833619",
+                "message": "feat: add token refresh to the API",
+                "author": "arabcoders",
+                "date": "2026-04-17T19:53:17+00:00",
+                "full_sha": "79833619ed8c2c8fb7d26fbcae8ab248985935ec"
+            },
+            {
+                "sha": "3a148189",
+                "message": "refactor: update dialog message handling",
+                "author": "arabcoders",
+                "date": "2026-04-17T18:53:45+00:00",
+                "full_sha": "3a148189351d506a2e93de9d385b58935de7a055"
+            },
+            {
+                "sha": "e70e620f",
+                "message": "feat: add commands to manage environment keys",
+                "author": "arabcoders",
+                "date": "2026-04-17T18:46:36+00:00",
+                "full_sha": "e70e620fbe06d3f69e62c62f0b19e4914723a746"
+            },
+            {
+                "sha": "b4bcdc9b",
+                "message": "feat: add Ratelimit middleware",
+                "author": "arabcoders",
+                "date": "2026-04-17T18:32:58+00:00",
+                "full_sha": "b4bcdc9b2e3665a554f61e0d1cc0cdf755f66969"
+            },
+            {
+                "sha": "137db073",
+                "message": "fix: restrict the auth open scope to limited routes",
+                "author": "arabcoders",
+                "date": "2026-04-17T17:25:26+00:00",
+                "full_sha": "137db07332e9b6264e5e9eaf89af0309a3eb4adf"
+            },
+            {
+                "sha": "de4899a2",
+                "message": "refactor: as player endpoint is public and secured by token it doesnt need the api key.",
+                "author": "arabcoders",
+                "date": "2026-04-17T17:12:35+00:00",
+                "full_sha": "de4899a28387ec4abadd961530e3f7ed8f2ddaf9"
+            },
             {
                 "sha": "7c67e53d",
                 "message": "refactor: extend the form guard to route change as well",
@@ -1404,7 +1481,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "7c67e53d8b582f4f67869b2fbeb0ab78ff6e9b6d"
+        "full_sha": "4cc6c5ae6f4b00ef62bee84afbabb22e9ad5dc98"
     },
     {
         "tag": "dev-20250604-9407bc76",
