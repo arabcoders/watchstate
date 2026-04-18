@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260418-d0cbd5c8",
-        "date": "2026-04-18T14:51:44+00:00",
+        "tag": "dev-20260418-88876c31",
+        "date": "2026-04-18T16:52:04+00:00",
         "commits": [
+            {
+                "sha": "88876c31",
+                "message": "fix: include complete icons",
+                "author": "arabcoders",
+                "date": "2026-04-18T16:52:04+00:00",
+                "full_sha": "88876c3160a303c60071fe0d16ca30e84d00e405"
+            },
             {
                 "sha": "d0cbd5c8",
                 "message": "fix: do not fallback to remote api for icons.",
@@ -1495,7 +1502,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "d0cbd5c8b062d2cde6c9a234bb62573b8ea1f9f4"
+        "full_sha": "88876c3160a303c60071fe0d16ca30e84d00e405"
     },
     {
         "tag": "dev-20250604-9407bc76",
