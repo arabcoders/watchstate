@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260418-da14aa02",
-        "date": "2026-04-18T19:02:55+00:00",
+        "tag": "dev-20260418-ca452555",
+        "date": "2026-04-18T19:07:43+00:00",
         "commits": [
+            {
+                "sha": "ca452555",
+                "message": "fix: isMobile watch",
+                "author": "arabcoders",
+                "date": "2026-04-18T19:07:43+00:00",
+                "full_sha": "ca45255570a490874ddc9d9df63fc0bba7795964"
+            },
             {
                 "sha": "da14aa02",
                 "message": "refactor: add swipe control for sidebar",
@@ -1516,7 +1523,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "da14aa02999757c61cfa8b516d1c453674068100"
+        "full_sha": "ca45255570a490874ddc9d9df63fc0bba7795964"
     },
     {
         "tag": "dev-20250604-9407bc76",
