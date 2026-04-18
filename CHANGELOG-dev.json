@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260418-88876c31",
-        "date": "2026-04-18T16:52:04+00:00",
+        "tag": "dev-20260418-5fb3acb6",
+        "date": "2026-04-18T18:32:59+00:00",
         "commits": [
+            {
+                "sha": "5fb3acb6",
+                "message": "refactor:  update how we render changelog page",
+                "author": "arabcoders",
+                "date": "2026-04-18T18:32:59+00:00",
+                "full_sha": "5fb3acb6d2b7326d0903bf507139fc24b2e68784"
+            },
             {
                 "sha": "88876c31",
                 "message": "fix: include complete icons",
@@ -1502,7 +1509,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "88876c3160a303c60071fe0d16ca30e84d00e405"
+        "full_sha": "5fb3acb6d2b7326d0903bf507139fc24b2e68784"
     },
     {
         "tag": "dev-20250604-9407bc76",
