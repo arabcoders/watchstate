@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260418-ca452555",
-        "date": "2026-04-18T19:07:43+00:00",
+        "tag": "dev-20260418-57a753cf",
+        "date": "2026-04-18T19:14:49+00:00",
         "commits": [
+            {
+                "sha": "57a753cf",
+                "message": "refactor: rename variable to showSidebar",
+                "author": "arabcoders",
+                "date": "2026-04-18T19:14:49+00:00",
+                "full_sha": "57a753cf25bf9de34646a8f9b276dafbe407ea63"
+            },
             {
                 "sha": "ca452555",
                 "message": "fix: isMobile watch",
@@ -1523,7 +1530,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "ca45255570a490874ddc9d9df63fc0bba7795964"
+        "full_sha": "57a753cf25bf9de34646a8f9b276dafbe407ea63"
     },
     {
         "tag": "dev-20250604-9407bc76",
