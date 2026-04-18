@@ -38,7 +38,13 @@ export default defineNuxtConfig({
     classSuffix: '',
   },
   icon: {
-    serverBundle: 'local',
+    provider: 'none',
+    fallbackToApi: false,
+    clientBundle: {
+      scan: {
+        globInclude: ['app/**/*.{vue,ts,js}'],
+      },
+    },
   },
   app: {
     head: {
