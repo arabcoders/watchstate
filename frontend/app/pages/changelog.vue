@@ -81,11 +81,28 @@
               </UTooltip>
             </div>
 
-            <UBadge v-if="isInstalled(log)" color="success" variant="soft" label="Installed" />
+            <div class="flex items-center gap-2">
+              <UBadge
+                v-if="isInstalled(log)"
+                color="success"
+                variant="soft"
+                icon="i-lucide-badge-check"
+                label="Installed"
+              />
+
+              <UButton
+                color="neutral"
+                variant="outline"
+                size="sm"
+                :icon="isCollapsed(log) ? 'i-lucide-chevron-down' : 'i-lucide-chevron-up'"
+                :label="isCollapsed(log) ? 'Expand' : 'Collapse'"
+                @click="toggleCollapsed(log)"
+              />
+            </div>
           </div>
         </template>
 
-        <div class="space-y-3">
+        <div v-if="!isCollapsed(log)" class="space-y-3">
           <div
             v-for="commit in log.commits"
             :key="commit.sha"
@@ -109,21 +126,36 @@
                 </div>
 
                 <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-toned">
-                  <UBadge color="neutral" variant="outline" size="sm">
+                  <UBadge color="neutral" variant="outline" size="sm" icon="i-lucide-user">
                     {{ commit.author }}
                   </UBadge>
 
                   <UTooltip :text="`${commit.full_sha}`" class="cursor-pointer">
-                    <UBadge color="neutral" variant="outline" size="sm">
+                    <UBadge
+                      color="neutral"
+                      variant="outline"
+                      size="sm"
+                      icon="i-lucide-git-commit-horizontal"
+                    >
                       {{ commit.sha }}
                     </UBadge>
                   </UTooltip>
 
                   <UTooltip :text="`${commit.date}`" class="cursor-pointer">
-                    <UBadge color="neutral" variant="outline" size="sm">
+                    <UBadge color="neutral" variant="outline" size="sm" icon="i-lucide-clock-3">
                       {{ moment(commit.date).fromNow() }}
                     </UBadge>
                   </UTooltip>
+
+                  <UBadge
+                    v-if="isInstalledCommit(commit)"
+                    color="success"
+                    variant="soft"
+                    size="sm"
+                    icon="i-lucide-badge-check"
+                  >
+                    Installed
+                  </UBadge>
                 </div>
               </div>
             </div>
@@ -143,6 +175,7 @@ import moment from 'moment';
 import type { ChangeSet, VersionResponse } from '~/types';
 
 type FilteredChangeSet = ChangeSet;
+type ChangeCommit = ChangeSet['commits'][number];
 
 useHead({ title: 'CHANGELOG' });
 
@@ -160,6 +193,7 @@ const api_version_branch = ref<string>('unknown');
 const isLoading = ref<boolean>(false);
 const query = ref<string>('');
 const showFilter = ref<boolean>(false);
+const collapsedLogs = ref<Record<string, boolean>>({});
 
 const cardUi = {
   header: 'p-4',
@@ -192,15 +226,53 @@ const filteredLogs = computed<Array<FilteredChangeSet>>(() => {
   });
 });
 
-const isInstalled = (log: ChangeSet): boolean => {
-  const installed = String(api_version_sha.value);
+const normalizeSha = (value: string | null | undefined): string => {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase();
+};
 
-  if (log.full_sha.startsWith(installed)) {
+const matchesInstalledSha = (value: string | null | undefined): boolean => {
+  const installed = normalizeSha(api_version_sha.value);
+  const candidate = normalizeSha(value);
+
+  if (!installed || !candidate || 'unknown' === installed) {
+    return false;
+  }
+
+  return (
+    candidate === installed || candidate.startsWith(installed) || installed.startsWith(candidate)
+  );
+};
+
+const isInstalledCommit = (commit: ChangeCommit): boolean => {
+  return matchesInstalledSha(commit.full_sha) || matchesInstalledSha(commit.sha);
+};
+
+const logKey = (log: ChangeSet): string => {
+  return log.full_sha || log.tag;
+};
+
+const isCollapsed = (log: ChangeSet): boolean => {
+  return true === collapsedLogs.value[logKey(log)];
+};
+
+const toggleCollapsed = (log: ChangeSet): void => {
+  const key = logKey(log);
+
+  collapsedLogs.value = {
+    ...collapsedLogs.value,
+    [key]: !isCollapsed(log),
+  };
+};
+
+const isInstalled = (log: ChangeSet): boolean => {
+  if (matchesInstalledSha(log.full_sha)) {
     return true;
   }
 
   for (const commit of log?.commits ?? []) {
-    if (commit.full_sha.startsWith(installed)) {
+    if (isInstalledCommit(commit)) {
       return true;
     }
   }
