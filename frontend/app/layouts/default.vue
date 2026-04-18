@@ -817,8 +817,8 @@ watch(bgEnable, async (value) => {
   }
 });
 
-watch(isMobile, (isMobile) => {
-  if (true === isMobile) {
+watch(isMobile, (v) => {
+  if (true === v) {
     return;
   }
 
