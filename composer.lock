@@ -8,16 +8,16 @@
   "packages": [
     {
       "name": "arabcoders/database",
-      "version": "v1.0.1",
+      "version": "v1.0.2",
       "source": {
         "type": "git",
         "url": "https://github.com/arabcoders/database.git",
-        "reference": "94603b9faf6bdd99412d1c31f56bd2b1c4725df9"
+        "reference": "57d71addfa73bdfcea05a76b2bc860918c7cd0ff"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/arabcoders/database/zipball/94603b9faf6bdd99412d1c31f56bd2b1c4725df9",
-        "reference": "94603b9faf6bdd99412d1c31f56bd2b1c4725df9",
+        "url": "https://api.github.com/repos/arabcoders/database/zipball/57d71addfa73bdfcea05a76b2bc860918c7cd0ff",
+        "reference": "57d71addfa73bdfcea05a76b2bc860918c7cd0ff",
         "shasum": ""
       },
       "require": {
@@ -60,9 +60,9 @@
       ],
       "support": {
         "issues": "https://github.com/arabcoders/database/issues",
-        "source": "https://github.com/arabcoders/database/tree/v1.0.1"
+        "source": "https://github.com/arabcoders/database/tree/v1.0.2"
       },
-      "time": "2026-04-16T14:51:58+00:00"
+      "time": "2026-04-19T15:40:15+00:00"
     },
     {
       "name": "dragonmantank/cron-expression",
@@ -2686,16 +2686,16 @@
   "packages-dev": [
     {
       "name": "carthage-software/mago",
-      "version": "1.22.0",
+      "version": "1.24.0",
       "source": {
         "type": "git",
         "url": "https://github.com/carthage-software/mago.git",
-        "reference": "88c4170fb16e5aa941f035b6a924017505c934ce"
+        "reference": "ff885e99abe97222bb8b84dc346b59bddbe3a307"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/carthage-software/mago/zipball/88c4170fb16e5aa941f035b6a924017505c934ce",
-        "reference": "88c4170fb16e5aa941f035b6a924017505c934ce",
+        "url": "https://api.github.com/repos/carthage-software/mago/zipball/ff885e99abe97222bb8b84dc346b59bddbe3a307",
+        "reference": "ff885e99abe97222bb8b84dc346b59bddbe3a307",
         "shasum": ""
       },
       "require": {
@@ -2730,7 +2730,7 @@
       ],
       "support": {
         "issues": "https://github.com/carthage-software/mago/issues",
-        "source": "https://github.com/carthage-software/mago/tree/1.22.0"
+        "source": "https://github.com/carthage-software/mago/tree/1.24.0"
       },
       "funding": [
         {
@@ -2738,7 +2738,7 @@
           "type": "github"
         }
       ],
-      "time": "2026-04-18T06:49:40+00:00"
+      "time": "2026-04-22T07:00:59+00:00"
     },
     {
       "name": "myclabs/deep-copy",
@@ -2978,16 +2978,16 @@
     },
     {
       "name": "phpunit/php-code-coverage",
-      "version": "14.1.3",
+      "version": "14.1.4",
       "source": {
         "type": "git",
         "url": "https://github.com/sebastianbergmann/php-code-coverage.git",
-        "reference": "24dc6fcf9f2a983de5b3f1199fb01e88d68e7474"
+        "reference": "13dd8d33c6a23da100acec635cd351bfa7ff1a98"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/24dc6fcf9f2a983de5b3f1199fb01e88d68e7474",
-        "reference": "24dc6fcf9f2a983de5b3f1199fb01e88d68e7474",
+        "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/13dd8d33c6a23da100acec635cd351bfa7ff1a98",
+        "reference": "13dd8d33c6a23da100acec635cd351bfa7ff1a98",
         "shasum": ""
       },
       "require": {
@@ -3043,7 +3043,7 @@
       "support": {
         "issues": "https://github.com/sebastianbergmann/php-code-coverage/issues",
         "security": "https://github.com/sebastianbergmann/php-code-coverage/security/policy",
-        "source": "https://github.com/sebastianbergmann/php-code-coverage/tree/14.1.3"
+        "source": "https://github.com/sebastianbergmann/php-code-coverage/tree/14.1.4"
       },
       "funding": [
         {
@@ -3063,7 +3063,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2026-04-18T05:41:54+00:00"
+      "time": "2026-04-23T17:00:20+00:00"
     },
     {
       "name": "phpunit/php-file-iterator",
@@ -3455,12 +3455,12 @@
       "source": {
         "type": "git",
         "url": "https://github.com/Roave/SecurityAdvisories.git",
-        "reference": "7d0034bc560ba3be5d93736256a9a500c907c37a"
+        "reference": "9a1d6c95c513ebdc27e74ab3cd0fed99b7035c2e"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/7d0034bc560ba3be5d93736256a9a500c907c37a",
-        "reference": "7d0034bc560ba3be5d93736256a9a500c907c37a",
+        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/9a1d6c95c513ebdc27e74ab3cd0fed99b7035c2e",
+        "reference": "9a1d6c95c513ebdc27e74ab3cd0fed99b7035c2e",
         "shasum": ""
       },
       "conflict": {
@@ -3574,7 +3574,7 @@
         "cesnet/simplesamlphp-module-proxystatistics": "<3.1",
         "chriskacerguis/codeigniter-restserver": "<=2.7.1",
         "chrome-php/chrome": "<1.14",
-        "ci4-cms-erp/ci4ms": "<=0.31.3",
+        "ci4-cms-erp/ci4ms": "<0.31.5",
         "civicrm/civicrm-core": ">=4.2,<4.2.9|>=4.3,<4.3.3",
         "ckeditor/ckeditor": "<4.25",
         "clickstorm/cs-seo": ">=6,<6.8|>=7,<7.5|>=8,<8.4|>=9,<9.3",
@@ -3742,7 +3742,7 @@
         "fisharebest/webtrees": "<=2.1.18",
         "fixpunkt/fp-masterquiz": "<2.2.1|>=3,<3.5.2",
         "fixpunkt/fp-newsletter": "<1.1.1|>=1.2,<2.1.2|>=2.2,<3.2.6",
-        "flarum/core": "<1.8.10",
+        "flarum/core": "<=1.8.15|>=2.0.0.0-beta1,<=2.0.0.0-beta8",
         "flarum/flarum": "<0.1.0.0-beta8",
         "flarum/framework": "<1.8.10",
         "flarum/mentions": "<1.6.3",
@@ -4018,9 +4018,9 @@
         "nzo/url-encryptor-bundle": ">=4,<4.3.2|>=5,<5.0.1",
         "october/backend": "<1.1.2",
         "october/cms": "<1.0.469|==1.0.469|==1.0.471|==1.1.1",
-        "october/october": "<3.7.5",
+        "october/october": "<3.7.14|>=4,<4.1.10",
         "october/rain": "<=3.7.13|>=4,<=4.1.9",
-        "october/system": "<=3.7.13|>=4,<=4.1.9",
+        "october/system": "<3.7.16|>=4,<4.1.16",
         "oliverklee/phpunit": "<3.5.15",
         "omeka/omeka-s": "<4.0.3",
         "onelogin/php-saml": "<2.21.1|>=3,<3.8.1|>=4,<4.3.1",
@@ -4028,7 +4028,7 @@
         "open-web-analytics/open-web-analytics": "<1.8.1",
         "opencart/opencart": ">=0",
         "openid/php-openid": "<2.3",
-        "openmage/magento-lts": "<20.16.1",
+        "openmage/magento-lts": "<20.17",
         "opensolutions/vimbadmin": "<=3.0.15",
         "opensource-workshop/connect-cms": "<1.41.1|>=2,<2.41.1",
         "orchid/platform": ">=8,<14.43",
@@ -4080,7 +4080,7 @@
         "phpseclib/phpseclib": "<2.0.53|>=3,<3.0.51",
         "phpservermon/phpservermon": "<3.6",
         "phpsysinfo/phpsysinfo": "<3.4.3",
-        "phpunit/phpunit": "<12.5.22|>=13,<13.1.6",
+        "phpunit/phpunit": "<8.5.52|>=9,<9.6.33|>=10,<10.5.62|>=11,<11.5.50|>=12,<12.5.8|>=12.5.21,<12.5.22|>=13.1.5,<13.1.6",
         "phpwhois/phpwhois": "<=4.2.5",
         "phpxmlrpc/extras": "<0.6.1",
         "phpxmlrpc/phpxmlrpc": "<4.9.2",
@@ -4503,7 +4503,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2026-04-18T09:19:46+00:00"
+      "time": "2026-04-22T21:20:32+00:00"
     },
     {
       "name": "sebastian/cli-parser",

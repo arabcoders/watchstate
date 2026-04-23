@@ -510,12 +510,6 @@ return (function () {
             'description' => 'Enable partial fix for Jellyfin marking items as played.',
             'type' => 'bool',
         ],
-        [
-            'key' => 'WS_CLIENTS_PLEX_DISABLE_DEDUP',
-            'config' => 'clients.plex.disable_dedup',
-            'description' => 'Disable de-duplication of plex users.',
-            'type' => 'bool',
-        ],
     ];
 
     $validateCronExpression = function (string $value, array $spec = []): string {

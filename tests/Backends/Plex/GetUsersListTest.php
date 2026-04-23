@@ -12,6 +12,123 @@ use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 class GetUsersListTest extends PlexTestCase
 {
+    public function test_get_users_list_external_tokens(): void
+    {
+        $externalUsersXml = '<MediaContainer><User id="1" username="TestUser" thumb="/users/uuid-1/avatar" home="0" restricted="0" protected="0" /></MediaContainer>';
+        $sharedServersXml = '<MediaContainer><SharedServer userID="1" accessToken="token-1" invitedAt="2024-01-01T00:00:00Z" /><SharedServer userID="2" accessToken="token-2" /></MediaContainer>';
+
+        $http = new \App\Libs\Extends\MockHttpClient(function (string $method, string $url) use ($externalUsersXml, $sharedServersXml) {
+            if (str_contains($url, '/api/servers/')) {
+                return new MockResponse($sharedServersXml, ['http_code' => 200]);
+            }
+
+            return new MockResponse($externalUsersXml, ['http_code' => 200]);
+        });
+
+        $context = $this->makeContext();
+        $action = new GetUsersList($http, $this->logger);
+        $result = $action($context, [Options::PLEX_EXTERNAL_USER => true, Options::GET_TOKENS => true]);
+
+        $this->assertTrue($result->isSuccessful());
+        $this->assertSame('token-1', $result->response[0]['token']);
+    }
+
+    public function test_get_users_list_merges_external_users(): void
+    {
+        $externalUsersXml = '<MediaContainer><User id="2" username="Invited User" thumb="/users/uuid-2/avatar" home="0" restricted="0" protected="0" /></MediaContainer>';
+        $homeUsersJson = json_encode([
+            'users' => [
+                [
+                    'id' => 1,
+                    'uuid' => 'uuid-1',
+                    'friendlyName' => 'Home User',
+                    'admin' => true,
+                    'guest' => false,
+                    'restricted' => false,
+                    'protected' => false,
+                    'updatedAt' => '2024-01-01T00:00:00Z',
+                ],
+            ],
+        ]);
+
+        $http = new \App\Libs\Extends\MockHttpClient(function (string $method, string $url) use ($externalUsersXml, $homeUsersJson) {
+            if (str_contains($url, '/api/v2/home/users/')) {
+                return new MockResponse($homeUsersJson, ['http_code' => 200]);
+            }
+
+            if (str_contains($url, '/api/users/')) {
+                return new MockResponse($externalUsersXml, ['http_code' => 200]);
+            }
+
+            return new MockResponse('not-found', ['http_code' => 404]);
+        });
+
+        $context = $this->makeContext();
+        $action = new GetUsersList($http, $this->logger);
+        $result = $action($context, [Options::NO_CACHE => true]);
+
+        $this->assertTrue($result->isSuccessful());
+        $this->assertCount(2, $result->response);
+        $this->assertSame('H', $result->response[0]['type']);
+        $this->assertSame('E', $result->response[1]['type']);
+        $this->assertSame('invited_user', $result->response[1]['name']);
+        $this->assertTrue($result->response[1]['guest']);
+    }
+
+    public function test_get_users_list_deduplicates_home_and_external_overlap(): void
+    {
+        $externalUsersXml = '<MediaContainer>'
+            . '<User id="3003" username="Invited Guest" thumb="/users/external-uuid-3/avatar" home="0" restricted="0" protected="0" />'
+            . '<User id="2002" username="Shared Member" thumb="/users/shared-uuid-2/avatar" home="1" restricted="1" protected="1" />'
+            . '</MediaContainer>';
+        $homeUsersJson = json_encode([
+            'users' => [
+                [
+                    'id' => 1001,
+                    'uuid' => 'home-uuid-1',
+                    'friendlyName' => 'Owner User',
+                    'admin' => true,
+                    'guest' => false,
+                    'restricted' => false,
+                    'protected' => false,
+                    'updatedAt' => '2025-04-23T21:15:41Z',
+                ],
+                [
+                    'id' => 2002,
+                    'uuid' => 'shared-uuid-2',
+                    'friendlyName' => 'Shared Member',
+                    'admin' => false,
+                    'guest' => false,
+                    'restricted' => true,
+                    'protected' => true,
+                    'updatedAt' => '2026-03-23T14:21:38Z',
+                    'pin' => 'pin-required',
+                ],
+            ],
+        ]);
+
+        $http = new \App\Libs\Extends\MockHttpClient(function (string $method, string $url) use ($externalUsersXml, $homeUsersJson) {
+            if (str_contains($url, '/api/v2/home/users/')) {
+                return new MockResponse($homeUsersJson, ['http_code' => 200]);
+            }
+
+            if (str_contains($url, '/api/users/')) {
+                return new MockResponse($externalUsersXml, ['http_code' => 200]);
+            }
+
+            return new MockResponse('not-found', ['http_code' => 404]);
+        });
+
+        $context = $this->makeContext();
+        $action = new GetUsersList($http, $this->logger);
+        $result = $action($context, [Options::NO_CACHE => true]);
+
+        $this->assertTrue($result->isSuccessful());
+        $this->assertCount(3, $result->response);
+        $this->assertSame(['owner_user', 'shared_member', 'invited_guest'], array_column($result->response, 'name'));
+        $this->assertSame(['H', 'H', 'E'], array_column($result->response, 'type'));
+    }
+
     public function test_get_users_list_home_users(): void
     {
         $homeUsersJson = json_encode([
