@@ -1,8 +1,29 @@
 [
     {
-        "tag": "dev-20260418-57a753cf",
-        "date": "2026-04-18T19:14:49+00:00",
+        "tag": "dev-20260423-df57e671",
+        "date": "2026-04-23T20:46:46+00:00",
         "commits": [
+            {
+                "sha": "df57e671",
+                "message": "feat: Add date format customization for WebUI\n\nCo-authored-by: Copilot <copilot@github.com>",
+                "author": "arabcoders",
+                "date": "2026-04-23T20:46:46+00:00",
+                "full_sha": "df57e671ebda8b7367db1c4f0c2e79e53626cad7"
+            },
+            {
+                "sha": "1a137b26",
+                "message": "feat: add backend TestCommand for backend client actions",
+                "author": "arabcoders",
+                "date": "2026-04-23T20:17:18+00:00",
+                "full_sha": "1a137b2627e64fb5fa22c056a59aaf9b6c56f1c1"
+            },
+            {
+                "sha": "53597130",
+                "message": "refactor: re-enable plex external user support",
+                "author": "arabcoders",
+                "date": "2026-04-23T20:16:01+00:00",
+                "full_sha": "535971305b5d4da9aecbb9755b72df8292663f5d"
+            },
             {
                 "sha": "57a753cf",
                 "message": "refactor: rename variable to showSidebar",
@@ -1530,7 +1551,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "57a753cf25bf9de34646a8f9b276dafbe407ea63"
+        "full_sha": "df57e671ebda8b7367db1c4f0c2e79e53626cad7"
     },
     {
         "tag": "dev-20250604-9407bc76",
