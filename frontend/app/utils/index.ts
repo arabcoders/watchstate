@@ -1,5 +1,5 @@
 import { useStorage } from '@vueuse/core';
-import { toRaw } from 'vue';
+import { computed, toRaw } from 'vue';
 import { navigateTo } from '#app';
 import { useDialog } from '~/composables/useDialog';
 import type { GenericError, JsonObject, JsonValue, PaginationItem, RequestOptions } from '~/types';
@@ -16,7 +16,22 @@ type ToastOptions = {
 
 const AG_SEPARATOR = '.';
 
-const TOOLTIP_DATE_FORMAT = 'YYYY-MM-DD h:mm:ss A';
+const DEFAULT_TOOLTIP_DATE_FORMAT = 'YYYY-MM-DD h:mm:ss A';
+
+const tooltipDateFormatStorage = useStorage<string>(
+  'tooltip_date_format',
+  DEFAULT_TOOLTIP_DATE_FORMAT,
+);
+
+const TOOLTIP_DATE_FORMAT = computed<string>({
+  get: () => {
+    const value = tooltipDateFormatStorage.value.trim();
+    return '' === value ? DEFAULT_TOOLTIP_DATE_FORMAT : value;
+  },
+  set: (value: string) => {
+    tooltipDateFormatStorage.value = value;
+  },
+});
 
 const guid_links = {
   episode: {
@@ -680,6 +695,7 @@ export {
   makeName,
   makePagination,
   TOOLTIP_DATE_FORMAT,
+  DEFAULT_TOOLTIP_DATE_FORMAT,
   makeSecret,
   basename,
   parse_api_response,

@@ -174,7 +174,9 @@
                   <span>Created</span>
                 </span>
 
-                <UTooltip :text="`Created at: ${moment(item.created_at).format('llll')}`">
+                <UTooltip
+                  :text="`Created at: ${moment(item.created_at).format(TOOLTIP_DATE_FORMAT)}`"
+                >
                   <span class="min-w-0 cursor-help text-default sm:ml-auto sm:text-right">
                     {{ moment(item.created_at).fromNow() }}
                   </span>
@@ -209,7 +211,9 @@
                 </template>
 
                 <template v-else>
-                  <UTooltip :text="`Updated at: ${moment(item.updated_at).format('llll')}`">
+                  <UTooltip
+                    :text="`Updated at: ${moment(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`"
+                  >
                     <span class="min-w-0 cursor-help text-default sm:ml-auto sm:text-right">
                       {{ moment(item.updated_at).fromNow() }}
                     </span>
@@ -331,7 +335,14 @@ import Pager from '~/components/Pager.vue';
 import { useDialog } from '~/composables/useDialog';
 import type { EventsItem, GenericError, GenericResponse } from '~/types';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
-import { copyText, makeEventName, notification, parse_api_response, request } from '~/utils';
+import {
+  TOOLTIP_DATE_FORMAT,
+  copyText,
+  makeEventName,
+  notification,
+  parse_api_response,
+  request,
+} from '~/utils';
 
 type EventStatus = {
   code: number;

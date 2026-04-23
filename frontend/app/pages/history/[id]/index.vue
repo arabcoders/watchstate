@@ -1463,6 +1463,8 @@
                                 <NuxtLink
                                   v-if="entry.cell.href"
                                   :to="entry.cell.href"
+                                  :target="entry.cell.target"
+                                  :external="'_blank' === entry.cell.target"
                                   class="block min-w-0 font-medium text-highlighted hover:text-primary"
                                   @click.stop
                                 >
@@ -1657,6 +1659,7 @@ type ComparisonCell = {
   kind: 'text' | 'link' | 'date' | 'tags';
   value?: string;
   href?: string;
+  target?: '_blank';
   tooltip?: string;
   compareValue?: string;
   allowBreakAll?: boolean;
@@ -1821,7 +1824,12 @@ const makeTextCell = (
 const makeLinkCell = (
   value: string | number | null | undefined,
   href: string | null | undefined,
-  options: { allowBreakAll?: boolean; emptyLabel?: string; expandable?: boolean } = {},
+  options: {
+    allowBreakAll?: boolean;
+    emptyLabel?: string;
+    expandable?: boolean;
+    target?: '_blank';
+  } = {},
 ): ComparisonCell => {
   if (value === undefined || value === null || '' === String(value)) {
     return makeTextCell('', { emptyLabel: options.emptyLabel ?? 'None' });
@@ -1831,6 +1839,7 @@ const makeLinkCell = (
     kind: 'link',
     value: String(value),
     href: href ?? undefined,
+    target: options.target,
     compareValue: String(value).trim().toLowerCase(),
     allowBreakAll: options.allowBreakAll,
     expandable: options.expandable,
@@ -1850,7 +1859,7 @@ const makeDateCell = (
   return {
     kind: 'date',
     value: momentValue.fromNow(),
-    tooltip: momentValue.format(TOOLTIP_DATE_FORMAT),
+    tooltip: momentValue.format(TOOLTIP_DATE_FORMAT.value),
     compareValue: String(momentValue.valueOf()),
   };
 };
@@ -1979,6 +1988,7 @@ const comparisonSections = computed<Array<ComparisonSection>>(() => {
           emptyLabel: 'None',
           allowBreakAll: true,
           expandable: true,
+          target: '_blank',
         }),
       { compareDiffs: false },
     ),
@@ -2002,6 +2012,20 @@ const comparisonSections = computed<Array<ComparisonSection>>(() => {
       'i-lucide-tv',
       makeTextCell(data.value.episode, { emptyLabel: 'None' }),
       ({ item }) => makeTextCell(item.episode, { emptyLabel: 'None' }),
+    ),
+    makeComparisonRow(
+      'guids',
+      'GUIDs',
+      'i-lucide-link',
+      makeGuidCell(data.value.guids, data.value.type, dataContext.value),
+      ({ item }) => makeGuidCell(item.guids, item.type, item as unknown as JsonObject),
+    ),
+    makeComparisonRow(
+      'parent-guids',
+      'Series GUIDs',
+      'i-lucide-link',
+      makeGuidCell(data.value.parent, 'series', dataContext.value),
+      ({ item }) => makeGuidCell(item.parent, 'series', item as unknown as JsonObject),
     ),
   ].filter((row): row is ComparisonRow => row !== null);
 
@@ -2031,6 +2055,7 @@ const comparisonSections = computed<Array<ComparisonSection>>(() => {
       'i-lucide-mail',
       makeTextCell(ag(data.value.extra, `${data.value.via}.event`, 'Unknown')),
       ({ key }) => makeTextCell(ag(data.value.extra, `${key}.event`, 'Unknown')),
+      { compareDiffs: false },
     ),
     makeComparisonRow(
       'updated',
@@ -2038,6 +2063,7 @@ const comparisonSections = computed<Array<ComparisonSection>>(() => {
       'i-lucide-calendar',
       makeDateCell(data.value.updated),
       ({ key }) => makeDateCell(ag(data.value.extra, `${key}.received_at`, data.value.updated)),
+      { compareDiffs: false },
     ),
   ].filter((row): row is ComparisonRow => row !== null);
 
@@ -2089,28 +2115,10 @@ const comparisonSections = computed<Array<ComparisonSection>>(() => {
     ),
   ].filter((row): row is ComparisonRow => row !== null);
 
-  const guidRows = [
-    makeComparisonRow(
-      'guids',
-      'GUIDs',
-      'i-lucide-link',
-      makeGuidCell(data.value.guids, data.value.type, dataContext.value),
-      ({ item }) => makeGuidCell(item.guids, item.type, item as unknown as JsonObject),
-    ),
-    makeComparisonRow(
-      'parent-guids',
-      'Series GUIDs',
-      'i-lucide-link',
-      makeGuidCell(data.value.parent, 'series', dataContext.value),
-      ({ item }) => makeGuidCell(item.parent, 'series', item as unknown as JsonObject),
-    ),
-  ].filter((row): row is ComparisonRow => row !== null);
-
   return [
     { key: 'identity', label: 'Identity', rows: identityRows },
     { key: 'playback', label: 'Playback', rows: playbackRows },
     { key: 'content', label: 'Content', rows: contentRows },
-    { key: 'guids', label: 'GUIDs', rows: guidRows },
   ].filter((section) => section.rows.length > 0);
 });
 
