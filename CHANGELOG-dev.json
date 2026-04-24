@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260425-31169295",
-        "date": "2026-04-24T21:06:56+00:00",
+        "tag": "dev-20260425-2550ff2c",
+        "date": "2026-04-24T21:53:10+00:00",
         "commits": [
+            {
+                "sha": "2550ff2c",
+                "message": "refactor: update the history item view page",
+                "author": "arabcoders",
+                "date": "2026-04-24T21:53:10+00:00",
+                "full_sha": "2550ff2c9758142e0bbfef994235617c55a2f106"
+            },
             {
                 "sha": "31169295",
                 "message": "fix: sidebar should be styled like main content",
@@ -1572,7 +1579,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "31169295813604c4d82ba60fb0ceb76fc011e571"
+        "full_sha": "2550ff2c9758142e0bbfef994235617c55a2f106"
     },
     {
         "tag": "dev-20250604-9407bc76",
