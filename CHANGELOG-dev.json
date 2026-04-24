@@ -1,8 +1,22 @@
 [
     {
-        "tag": "dev-20260424-632df7ba",
-        "date": "2026-04-24T20:32:59+00:00",
+        "tag": "dev-20260425-31169295",
+        "date": "2026-04-24T21:06:56+00:00",
         "commits": [
+            {
+                "sha": "31169295",
+                "message": "fix: sidebar should be styled like main content",
+                "author": "arabcoders",
+                "date": "2026-04-24T21:06:56+00:00",
+                "full_sha": "31169295813604c4d82ba60fb0ceb76fc011e571"
+            },
+            {
+                "sha": "7eba9574",
+                "message": "fix(httpClient): Debug logging now preserves named query params",
+                "author": "arabcoders",
+                "date": "2026-04-24T20:47:37+00:00",
+                "full_sha": "7eba9574faadf18b7dbc98a3cd9eb61abcb3d7a8"
+            },
             {
                 "sha": "632df7ba",
                 "message": "fix(ui/sidebar): edge swipe in iOS safari",
@@ -1558,7 +1572,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "632df7ba502acc432522edb6a6be5d09db2a5ea7"
+        "full_sha": "31169295813604c4d82ba60fb0ceb76fc011e571"
     },
     {
         "tag": "dev-20250604-9407bc76",
