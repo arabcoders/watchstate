@@ -240,6 +240,7 @@ import { useAuthStore } from '~/store/auth';
 import { useMediaQuery } from '~/composables/useMediaQuery';
 import { usePageBackground } from '~/composables/usePageBackground';
 import { useDialog } from '~/composables/useDialog';
+import { getSidebarSwipeMode } from '~/utils/sidebarSwipe';
 import {
   getTopLevelNavigationEntries,
   getTopLevelNavigationSections,
@@ -288,7 +289,6 @@ type SearchGroup = {
 type ColorModePreference = 'system' | 'light' | 'dark';
 type MobileSidebarSwipeMode = 'open' | 'close';
 
-const MOBILE_SIDEBAR_EDGE_WIDTH = 32;
 const MOBILE_SIDEBAR_MIN_SWIPE_DISTANCE = 64;
 
 const useVersionUpdate = () => {
@@ -417,12 +417,11 @@ const handleSwipeStart = (event: TouchEvent): void => {
     return;
   }
 
-  const swipeMode: MobileSidebarSwipeMode | null =
-    true === showSidebar.value
-      ? 'close'
-      : touch.clientX <= MOBILE_SIDEBAR_EDGE_WIDTH
-        ? 'open'
-        : null;
+  const swipeMode: MobileSidebarSwipeMode | null = getSidebarSwipeMode(
+    showSidebar.value,
+    touch.clientX,
+    navigator,
+  );
 
   if (!swipeMode) {
     resetSwipe();
