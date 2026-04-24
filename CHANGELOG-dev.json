@@ -33,7 +33,7 @@
             },
             {
                 "sha": "df57e671",
-                "message": "feat: Add date format customization for WebUI\n\nCo-authored-by: Copilot <copilot@github.com>",
+                "message": "feat: Add date format customization for WebUI",
                 "author": "arabcoders",
                 "date": "2026-04-23T20:46:46+00:00",
                 "full_sha": "df57e671ebda8b7367db1c4f0c2e79e53626cad7"
