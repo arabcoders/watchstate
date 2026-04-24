@@ -192,7 +192,7 @@
                 color="primary"
                 :min="0.6"
                 :max="1"
-                :step="0.05"
+                :step="0.01"
               />
             </div>
 

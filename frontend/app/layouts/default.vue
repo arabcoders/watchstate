@@ -1,6 +1,6 @@
 <template>
   <UApp>
-    <div class="ws-shell flex min-h-screen flex-col">
+    <div class="ws-shell ws-shell-surface flex min-h-screen flex-col">
       <UDashboardGroup
         storage="local"
         storage-key="watchstate-shell"
@@ -702,7 +702,7 @@ const pageTitle = computed(() => {
 });
 
 const dashboardSidebarUi = {
-  root: 'border-r border-default bg-default/95 backdrop-blur-sm',
+  root: 'ws-shell-surface border-r border-default bg-default/95 backdrop-blur-sm',
   header: 'border-b border-default px-2.5 py-3',
   body: 'gap-3 px-2.5 py-3',
   footer: 'border-t border-default px-2.5 py-3',

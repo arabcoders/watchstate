@@ -2,147 +2,211 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>WatchState Loading...</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Loading App</title>
     <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #edf2f9;
+        --bg-deep: #dbe5f1;
+        --panel: rgb(255 255 255 / 0.84);
+        --border: rgb(15 23 42 / 0.1);
+        --shadow: rgb(15 23 42 / 0.14);
+        --text: #0f172a;
+        --muted: #5b6b80;
+        --accent: #dc2626;
+        --accent-soft: rgb(220 38 38 / 0.18);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #08111d;
+          --bg-deep: #0f172a;
+          --panel: rgb(15 23 42 / 0.84);
+          --border: rgb(148 163 184 / 0.16);
+          --shadow: rgb(2 6 23 / 0.45);
+          --text: #e7eef9;
+          --muted: #9fb0c7;
+          --accent: #f87171;
+          --accent-soft: rgb(248 113 113 / 0.18);
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
       html,
       body {
+        min-height: 100%;
+      }
+
+      body {
         margin: 0;
-        padding: 0;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background-color: #fff;
-        color: #111;
-        user-select: none;
+        min-height: 100vh;
+        min-height: 100dvh;
+        padding: 1rem;
+        display: grid;
+        place-items: center;
         overflow: hidden;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        transition:
-          background-color 0.3s,
-          color 0.3s;
+        color: var(--text);
+        user-select: none;
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        background:
+          radial-gradient(circle at top left, var(--accent-soft), transparent 24%),
+          linear-gradient(180deg, var(--bg-deep), var(--bg));
       }
 
-      @media (prefers-color-scheme: dark) {
-        html,
-        body {
-          background-color: #121212;
-          color: #eee;
-        }
+      body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background:
+          linear-gradient(rgb(255 255 255 / 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(255 255 255 / 0.035) 1px, transparent 1px);
+        background-size: 2rem 2rem;
+        opacity: 0.32;
       }
 
-      .loader-container {
-        text-align: center;
+      .loading-card {
+        width: min(100%, 29rem);
+        position: relative;
+        padding: 1.65rem;
+        border: 1px solid var(--border);
+        border-radius: 1.1rem;
+        background: var(--panel);
+        box-shadow: 0 1rem 2.5rem var(--shadow);
+        backdrop-filter: blur(16px);
+      }
+
+      .brand {
         display: flex;
-        flex-direction: column;
         align-items: center;
-        justify-content: center;
+        gap: 0.95rem;
       }
 
-      svg.watchstate-loading {
-        width: 520px;
-        height: 110px;
+      .brand img {
+        width: 2.8rem;
+        height: 2.8rem;
+        flex: none;
         display: block;
-        user-select: none;
+        object-fit: contain;
       }
 
-      .watchstate-outline {
-        fill: none;
-        stroke: #06b6d4;
-        stroke-width: 5px;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-        stroke-dasharray: 1200;
-        stroke-dashoffset: 1200;
-        font-family: 'Segoe UI', 'Arial', sans-serif;
-        font-size: 82px;
-        font-weight: 500;
-        letter-spacing: 0.08em;
-        paint-order: stroke fill;
-        animation: stroke-move 6s ease-in-out infinite;
-        opacity: 1;
+      .brand-copy {
+        min-width: 0;
       }
 
-      @media (prefers-color-scheme: dark) {
-        .watchstate-outline {
-          stroke: #38bdf8;
-        }
+      .label {
+        margin: 0;
+        font-size: 0.74rem;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--muted);
       }
 
-      @keyframes stroke-move {
+      h1 {
+        margin: 0.35rem 0 0;
+        font-size: 1.55rem;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        font-weight: 700;
+      }
+
+      .description {
+        margin: 1rem 0 0;
+        color: var(--muted);
+        font-size: 0.96rem;
+        line-height: 1.55;
+      }
+
+      .loader {
+        margin-top: 1.2rem;
+        height: 0.32rem;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgb(148 163 184 / 0.22);
+      }
+
+      .loader::before {
+        content: '';
+        display: block;
+        width: 36%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, transparent, var(--accent), transparent);
+        animation: slide 1.35s ease-in-out infinite;
+      }
+
+      .hint {
+        margin: 0.95rem 0 0;
+        font-size: 0.82rem;
+        color: var(--muted);
+      }
+
+      @keyframes slide {
         0% {
-          stroke-dashoffset: 1200;
+          transform: translateX(-130%);
         }
-        25% {
-          stroke-dashoffset: 0;
-        }
-        /* Forward to fully drawn */
-        50% {
-          stroke-dashoffset: 0;
-        }
-        /* Hold briefly */
+
         100% {
-          stroke-dashoffset: 1200;
-        }
-        /* Backward to start */
-      }
-
-      .spinner {
-        margin: 20px auto 0;
-        width: 64px;
-        height: 64px;
-        border: 8px solid transparent;
-        border-top-color: #06b6d4;
-        border-radius: 50%;
-        animation: spin 1.2s linear infinite;
-        filter: drop-shadow(0 0 6px #06b6d4cc);
-      }
-
-      @media (prefers-color-scheme: dark) {
-        .spinner {
-          border-top-color: #38bdf8;
-          filter: drop-shadow(0 0 8px #38bdf8);
+          transform: translateX(330%);
         }
       }
 
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
+      @media (max-width: 560px) {
+        body {
+          padding-top: calc(1rem + env(safe-area-inset-top));
+          padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+        }
+
+        .loading-card {
+          padding: 1.3rem;
+          transform: translateY(clamp(-2.75rem, -7vh, -1.5rem));
+        }
+
+        .brand {
+          align-items: flex-start;
+        }
+
+        h1 {
+          font-size: 1.35rem;
         }
       }
 
-      .subtitle {
-        margin-top: 14px;
-        font-size: 1rem;
-        color: inherit;
-        opacity: 0.8;
-        user-select: none;
-        font-weight: 600;
-        letter-spacing: 0.1em;
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition: none !important;
+        }
       }
     </style>
   </head>
   <body>
-    <div class="loader-container" role="img" aria-label="Loading WatchState">
-      <svg
-        class="watchstate-loading"
-        viewBox="0 0 540 110"
-        xmlns="http://www.w3.org/2000/svg"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <text
-          x="52%"
-          y="62%"
-          text-anchor="middle"
-          dominant-baseline="middle"
-          class="watchstate-outline"
-        >
-          WatchState
-        </text>
-      </svg>
-      <div class="spinner"></div>
-      <div class="subtitle">Loading, please wait...</div>
-    </div>
+    <main class="loading-card" role="status" aria-live="polite" aria-busy="true">
+      <div class="brand">
+        <img src="/images/logo_nobg.png" alt="" aria-hidden="true" />
+
+        <div class="brand-copy">
+          <p class="label">WatchState</p>
+          <h1>Loading the dashboard</h1>
+        </div>
+      </div>
+
+      <p class="description">Getting the interface ready...</p>
+
+      <div class="loader" aria-hidden="true"></div>
+      <p class="hint">Please wait...</p>
+    </main>
   </body>
 </html>

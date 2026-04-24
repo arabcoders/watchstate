@@ -26,6 +26,20 @@
 }
 
 @layer components {
+  .ws-shell-surface {
+    background:
+      radial-gradient(circle at top left, rgb(99 102 241 / 0.12), transparent 28%),
+      radial-gradient(circle at top right, rgb(245 158 11 / 0.08), transparent 22%),
+      linear-gradient(180deg, rgb(248 250 252 / 0.96), rgb(241 245 249 / 0.98));
+  }
+
+  .dark .ws-shell-surface {
+    background:
+      radial-gradient(circle at top left, rgb(99 102 241 / 0.14), transparent 26%),
+      radial-gradient(circle at top right, rgb(245 158 11 / 0.08), transparent 20%),
+      linear-gradient(180deg, rgb(9 12 18 / 0.98), rgb(17 24 39 / 0.98));
+  }
+
   .ws-shell {
     min-height: 100vh;
     min-height: 100dvh;
