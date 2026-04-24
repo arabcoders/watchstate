@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260423-df57e671",
-        "date": "2026-04-23T20:46:46+00:00",
+        "tag": "dev-20260424-632df7ba",
+        "date": "2026-04-24T20:32:59+00:00",
         "commits": [
+            {
+                "sha": "632df7ba",
+                "message": "fix(ui/sidebar): edge swipe in iOS safari",
+                "author": "arabcoders",
+                "date": "2026-04-24T20:32:59+00:00",
+                "full_sha": "632df7ba502acc432522edb6a6be5d09db2a5ea7"
+            },
             {
                 "sha": "df57e671",
                 "message": "feat: Add date format customization for WebUI\n\nCo-authored-by: Copilot <copilot@github.com>",
@@ -1551,7 +1558,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "df57e671ebda8b7367db1c4f0c2e79e53626cad7"
+        "full_sha": "632df7ba502acc432522edb6a6be5d09db2a5ea7"
     },
     {
         "tag": "dev-20250604-9407bc76",
