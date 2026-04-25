@@ -8,6 +8,7 @@ use App\Backends\Common\ClientInterface as iClient;
 use App\Libs\Config;
 use App\Libs\ConfigFile;
 use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Stream;
 use App\Listeners\ProcessProfileEvent;
 use Closure;
 use DirectoryIterator;
@@ -123,6 +124,13 @@ class Command extends BaseCommand
         $data = ag_delete($data, $removeKeys);
 
         queue_event(ProcessProfileEvent::NAME, $data);
+        if (true === str_starts_with(get_app_version(), 'dev')) {
+            $profileFile = Config::get('tmpDir') . '/profiler/' . $data['meta']['id'] . '.json';
+            $s = new Stream($profileFile, 'w');
+            $s->write(json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE));
+            $s->close();
+            $output->writeln("<info>Profile data saved to '{$profileFile}'.</info>");
+        }
 
         return $status;
     }
