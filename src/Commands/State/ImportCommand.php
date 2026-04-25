@@ -29,6 +29,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
+use Throwable;
 
 /**
  * Class ImportCommand
@@ -419,7 +420,37 @@ class ImportCommand extends Command
                 ],
             ]);
 
-            send_requests(requests: $queue, client: $this->http, sync: $syncRequests, logger: $this->logger);
+            $dbLayer = $userContext->db->getDBLayer();
+            $startedTransaction = false;
+
+            try {
+                if (false === $dbLayer->inTransaction()) {
+                    $startedTransaction = $dbLayer->start();
+                }
+
+                send_requests(requests: $queue, client: $this->http, sync: $syncRequests, logger: $this->logger);
+
+                if (true === $startedTransaction && true === $dbLayer->inTransaction()) {
+                    $dbLayer->commit();
+                }
+            } catch (Throwable $e) {
+                if (true === $startedTransaction && true === $dbLayer->inTransaction()) {
+                    $dbLayer->rollBack();
+                }
+
+                $this->logger->error(
+                    ...lw(
+                        message: "SYSTEM: Import requests for '{user}' backends failed. '{error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
+                        context: [
+                            'user' => $userContext->name,
+                            ...exception_log($e),
+                        ],
+                        e: $e,
+                    ),
+                );
+
+                throw $e;
+            }
 
             $this->logger->notice(
                 "SYSTEM: Completed '{total}' requests in '{duration}'s for '{user}' backends. Parsed '{responses.size}' of data.",
