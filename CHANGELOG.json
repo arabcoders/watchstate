@@ -1,9 +1,135 @@
 [
   {
-    "tag": "Unreleased (fa063e99)",
-    "full_sha": "fa063e99d63b757cd29c10d6546459f354152fda",
-    "date": "2026-04-17T21:15:07+00:00",
+    "tag": "v1.6.0",
+    "full_sha": "5a20f84c4dfe81b3c6b747b3c8be7dca95719f8a",
+    "date": "2026-04-25T19:26:02+00:00",
     "commits": [
+      {
+        "sha": "2c7262d8",
+        "full_sha": "2c7262d8e65bb0ddaef38ec82bb089d15fa21c66",
+        "message": "refactor: Reuse prefetched show metadata during Plex and Jellyfin import",
+        "author": "arabcoders",
+        "date": "2026-04-25T18:56:42+00:00"
+      },
+      {
+        "sha": "04e604cb",
+        "full_sha": "04e604cb8d7373346bfcb5e7a2b8f4d96440eca2",
+        "message": "fix: wrap import call in single transaction to speed up the import proccess",
+        "author": "arabcoders",
+        "date": "2026-04-25T16:54:39+00:00"
+      },
+      {
+        "sha": "53aca786",
+        "full_sha": "53aca786126dbba54fc7ca2b64242f7f42e2fead",
+        "message": "refactor: save profile data to file in dev mode",
+        "author": "arabcoders",
+        "date": "2026-04-25T16:54:05+00:00"
+      },
+      {
+        "sha": "6ed688b1",
+        "full_sha": "6ed688b1bc96ed962ac5548a11f9c0831dffe280",
+        "message": "Refactor: implement real sync-requests for export related write requests",
+        "author": "arabcoders",
+        "date": "2026-04-25T15:12:09+00:00"
+      },
+      {
+        "sha": "2f5b123a",
+        "full_sha": "2f5b123ae1b3bb097f2c1c7332689863e78184e2",
+        "message": "feat: add user-aware db query command",
+        "author": "arabcoders",
+        "date": "2026-04-25T14:22:28+00:00"
+      },
+      {
+        "sha": "2550ff2c",
+        "full_sha": "2550ff2c9758142e0bbfef994235617c55a2f106",
+        "message": "refactor: update the history item view page",
+        "author": "arabcoders",
+        "date": "2026-04-24T21:53:10+00:00"
+      },
+      {
+        "sha": "31169295",
+        "full_sha": "31169295813604c4d82ba60fb0ceb76fc011e571",
+        "message": "fix: sidebar should be styled like main content",
+        "author": "arabcoders",
+        "date": "2026-04-24T21:06:56+00:00"
+      },
+      {
+        "sha": "7eba9574",
+        "full_sha": "7eba9574faadf18b7dbc98a3cd9eb61abcb3d7a8",
+        "message": "fix(httpClient): Debug logging now preserves named query params",
+        "author": "arabcoders",
+        "date": "2026-04-24T20:47:37+00:00"
+      },
+      {
+        "sha": "632df7ba",
+        "full_sha": "632df7ba502acc432522edb6a6be5d09db2a5ea7",
+        "message": "fix(ui/sidebar): edge swipe in iOS safari",
+        "author": "arabcoders",
+        "date": "2026-04-24T20:32:59+00:00"
+      },
+      {
+        "sha": "df57e671",
+        "full_sha": "df57e671ebda8b7367db1c4f0c2e79e53626cad7",
+        "message": "feat: Add date format customization for WebUI",
+        "author": "arabcoders",
+        "date": "2026-04-23T20:46:46+00:00"
+      },
+      {
+        "sha": "1a137b26",
+        "full_sha": "1a137b2627e64fb5fa22c056a59aaf9b6c56f1c1",
+        "message": "feat: add backend TestCommand for backend client actions",
+        "author": "arabcoders",
+        "date": "2026-04-23T20:17:18+00:00"
+      },
+      {
+        "sha": "53597130",
+        "full_sha": "535971305b5d4da9aecbb9755b72df8292663f5d",
+        "message": "refactor: re-enable plex external user support",
+        "author": "arabcoders",
+        "date": "2026-04-23T20:16:01+00:00"
+      },
+      {
+        "sha": "57a753cf",
+        "full_sha": "57a753cf25bf9de34646a8f9b276dafbe407ea63",
+        "message": "refactor: rename variable to showSidebar",
+        "author": "arabcoders",
+        "date": "2026-04-18T19:14:49+00:00"
+      },
+      {
+        "sha": "ca452555",
+        "full_sha": "ca45255570a490874ddc9d9df63fc0bba7795964",
+        "message": "fix: isMobile watch",
+        "author": "arabcoders",
+        "date": "2026-04-18T19:07:43+00:00"
+      },
+      {
+        "sha": "da14aa02",
+        "full_sha": "da14aa02999757c61cfa8b516d1c453674068100",
+        "message": "refactor: add swipe control for sidebar",
+        "author": "arabcoders",
+        "date": "2026-04-18T19:02:55+00:00"
+      },
+      {
+        "sha": "5fb3acb6",
+        "full_sha": "5fb3acb6d2b7326d0903bf507139fc24b2e68784",
+        "message": "refactor:  update how we render changelog page",
+        "author": "arabcoders",
+        "date": "2026-04-18T18:32:59+00:00"
+      },
+      {
+        "sha": "88876c31",
+        "full_sha": "88876c3160a303c60071fe0d16ca30e84d00e405",
+        "message": "fix: include complete icons",
+        "author": "arabcoders",
+        "date": "2026-04-18T16:52:04+00:00"
+      },
+      {
+        "sha": "d0cbd5c8",
+        "full_sha": "d0cbd5c8b062d2cde6c9a234bb62573b8ea1f9f4",
+        "message": "fix: do not fallback to remote api for icons.",
+        "author": "arabcoders",
+        "date": "2026-04-18T14:51:44+00:00"
+      },
       {
         "sha": "30e49e24",
         "full_sha": "30e49e24c705716dd5ee2ba893788e79313f6c11",
