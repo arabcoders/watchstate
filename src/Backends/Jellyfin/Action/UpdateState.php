@@ -6,15 +6,19 @@ namespace App\Backends\Jellyfin\Action;
 
 use App\Backends\Common\CommonTrait;
 use App\Backends\Common\Context;
+use App\Backends\Common\Request;
 use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Method;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Extends\Date;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
+use Symfony\Contracts\HttpClient\ResponseInterface as iResponse;
+use Throwable;
 
 class UpdateState
 {
@@ -41,7 +45,7 @@ class UpdateState
     {
         return $this->tryResponse(
             context: $context,
-            fn: function () use ($context, $entities, $opts, $queue) {
+            fn: function () use ($context, $entities, $queue) {
                 $rContext = [
                     'action' => $this->action,
                     'client' => $context->clientName,
@@ -95,24 +99,78 @@ class UpdateState
                     }
 
                     $queue->add(
-                        $this->http->request(
+                        new Request(
                             method: $entity->isWatched() ? Method::POST : Method::DELETE,
-                            url: (string) $url,
-                            options: array_replace_recursive($context->getHttpOptions(), [
-                                'user_data' => [
-                                    'context' => [
-                                        ...$rContext,
-                                        'play_state' => $entity->isWatched() ? 'played' : 'unplayed',
-                                        'item' => [
-                                            'id' => $itemId,
-                                            'title' => $entity->getName(),
-                                            'type' => $entity->type === iState::TYPE_EPISODE ? 'episode' : 'movie',
-                                            'state' => $entity->isWatched() ? 'played' : 'unplayed',
-                                        ],
-                                        'url' => (string) $url,
+                            url: $url,
+                            options: $context->getHttpOptions(),
+                            success: function (iResponse $response) use ($entity, $itemId, $rContext, $url): array {
+                                $requestContext = [
+                                    ...$rContext,
+                                    'play_state' => $entity->isWatched() ? 'played' : 'unplayed',
+                                    'item' => [
+                                        'id' => $itemId,
+                                        'title' => $entity->getName(),
+                                        'type' => $entity->type === iState::TYPE_EPISODE ? 'episode' : 'movie',
+                                        'state' => $entity->isWatched() ? 'played' : 'unplayed',
                                     ],
+                                    'url' => (string) $url,
+                                ];
+
+                                $statusCode = $response->getStatusCode();
+                                if (Status::OK !== Status::tryFrom($statusCode)) {
+                                    $this->logger->error(
+                                        message: "{action}: Failed to change '{client}: {user}@{backend}' - '{item.title}' play state. Invalid HTTP '{status_code}' status code returned.",
+                                        context: [
+                                            ...$requestContext,
+                                            'status_code' => $statusCode,
+                                        ],
+                                    );
+
+                                    return [];
+                                }
+
+                                $this->logger->notice(
+                                    message: "{action}: Changed '{client}: {user}@{backend}' - '{item.title}' play state to '{play_state}'.",
+                                    context: $requestContext,
+                                );
+
+                                return [];
+                            },
+                            error: function (Throwable $e) use ($context, $entity, $itemId, $rContext): array {
+                                $this->logger->error(
+                                    ...lw(
+                                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' restore play state of {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                                        context: [
+                                            ...$rContext,
+                                            'play_state' => $entity->isWatched() ? 'played' : 'unplayed',
+                                            'item' => [
+                                                'id' => $itemId,
+                                                'title' => $entity->getName(),
+                                                'type' => $entity->type === iState::TYPE_EPISODE ? 'episode' : 'movie',
+                                                'state' => $entity->isWatched() ? 'played' : 'unplayed',
+                                            ],
+                                            ...exception_log($e),
+                                        ],
+                                        e: $e,
+                                    ),
+                                );
+
+                                return [];
+                            },
+                            extras: [
+                                'context' => [
+                                    ...$rContext,
+                                    'play_state' => $entity->isWatched() ? 'played' : 'unplayed',
+                                    'item' => [
+                                        'id' => $itemId,
+                                        'title' => $entity->getName(),
+                                        'type' => $entity->type === iState::TYPE_EPISODE ? 'episode' : 'movie',
+                                        'state' => $entity->isWatched() ? 'played' : 'unplayed',
+                                    ],
+                                    'url' => (string) $url,
                                 ],
-                            ]),
+                                iHttp::class => $this->http,
+                            ],
                         ),
                     );
                 }

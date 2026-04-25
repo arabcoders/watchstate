@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Backends\MediaBrowser;
 
+use App\Backends\Common\Request;
 use App\Backends\Emby\Action\Export as EmbyExport;
 use App\Backends\Emby\EmbyGuid;
 use App\Backends\Jellyfin\Action\Export as JellyfinExport;
@@ -49,7 +50,17 @@ class ExportFlowTest extends MediaBrowserTestCase
                 ['queue' => $queue],
             );
 
-            $this->assertSame(2, $queue->count());
+            $this->assertSame(1, $queue->count());
+            $this->assertContainsOnlyInstancesOf(Request::class, $queue->getQueue());
+
+            $request = $queue->getQueue()[0];
+            $this->assertSame('POST', $request->method->value);
+            $this->assertStringContainsString('/Users/user-1/PlayedItems/item-1', (string) $request->url);
+
+            $followUps = ($request->success)(new MockResponse('', ['http_code' => 200]));
+            $this->assertCount(1, $followUps);
+            $this->assertContainsOnlyInstancesOf(Request::class, $followUps);
+            $this->assertStringContainsString('/Users/user-1/Items/item-1/UserData', (string) $followUps[0]->url);
         }
     }
 
@@ -81,6 +92,7 @@ class ExportFlowTest extends MediaBrowserTestCase
             );
 
             $this->assertSame(1, $queue->count());
+            $this->assertContainsOnlyInstancesOf(Request::class, $queue->getQueue());
         }
     }
 

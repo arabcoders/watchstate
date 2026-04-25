@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Listeners;
 
+use App\Backends\Common\Request;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Config;
 use App\Libs\Container;
@@ -21,6 +22,8 @@ use App\Libs\UserContext;
 use App\Model\Events\EventListener;
 use Monolog\Level;
 use Psr\Log\LoggerInterface as iLogger;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 use Throwable;
 
 #[EventListener(self::NAME)]
@@ -48,6 +51,9 @@ final readonly class ProcessProgressEvent
         $writer = function (Level $level, string $message, array $context = []) use ($event) {
             $event->addLog($level->getName() . ': ' . r($message, $context));
             $this->logger->log($level, $message, $context);
+        };
+        $eventWriter = static function (Level $level, string $message, array $context = []) use ($event): void {
+            $event->addLog($level->getName() . ': ' . r($message, $context));
         };
 
         $event->stopPropagation();
@@ -215,67 +221,89 @@ final readonly class ProcessProgressEvent
             'progress' => $progress,
         ]);
 
-        foreach ($this->queue->getQueue() as $response) {
-            $context = ag($response->getInfo('user_data'), 'context', []);
-            $context['user'] = $userContext->name;
-            $context['id'] = ag($context, 'item.id', $item->id);
-            $context['progress'] = ag($context, 'item.progress', $progress);
+        $http = Container::get(iHttp::class);
+        assert($http instanceof iHttp, 'Expected HTTP client for progress event queue dispatch.');
 
-            try {
-                $statusCode = $response->getStatusCode();
+        send_requests(
+            requests: $this->queue->getQueue(),
+            client: $http,
+            opts: [
+                'ok' => static function (Request $request, ResponseInterface $response) use (
+                    $eventWriter,
+                    $writer,
+                    $options,
+                    $userContext,
+                    $item,
+                    $progress,
+                ): array {
+                    if (true === (bool) ag($request->options, 'user_data.' . Options::NO_LOGGING, false)) {
+                        return [];
+                    }
 
-                if (true === (bool) ag($options, 'trace')) {
-                    $writer(Level::Debug, "Processing '{user}@{backend}' - '#{id}: {item.title}' response.", [
-                        'id' => $context['id'],
-                        'url' => ag($context, 'remote.url', '??'),
-                        'status_code' => $statusCode,
-                        'headers' => $response->getHeaders(false),
-                        'response' => $response->getContent(false),
-                        ...$context,
-                    ]);
-                }
+                    $context = ag($request->extras, 'context', []);
+                    $context['user'] = $userContext->name;
+                    $context['id'] = ag($context, 'item.id', $item->id);
+                    $context['progress'] = ag($context, 'item.progress', $progress);
+                    $statusCode = $response->getStatusCode();
 
-                if (
-                    false === in_array(
-                        Status::tryFrom($statusCode),
-                        [Status::OK, Status::NO_CONTENT],
-                        true,
-                    )
-                ) {
-                    $writer(
-                        level: Level::Error,
-                        message: "Request to change '{user}@{backend}' - '#{id}: {item.title}' watch progress returned with unexpected '{status_code}' status code.",
-                        context: [
-                            ...$context,
+                    if (true === (bool) ag($options, 'trace')) {
+                        $writer(Level::Debug, "Processing '{user}@{backend}' - '#{id}: {item.title}' response.", [
                             'id' => $context['id'],
+                            'url' => ag($context, 'remote.url', '??'),
+                            'status_code' => $statusCode,
+                            'headers' => $response->getHeaders(false),
+                            'response' => $response->getContent(false),
+                            ...$context,
+                        ]);
+                    }
+
+                    if (false === in_array(Status::tryFrom($statusCode), [Status::OK, Status::NO_CONTENT], true)) {
+                        $eventWriter(
+                            Level::Error,
+                            "Request to change '{user}@{backend}' - '#{id}: {item.title}' watch progress returned with unexpected '{status_code}' status code.",
+                            [
+                                ...$context,
+                                'status_code' => $statusCode,
+                            ],
+                        );
+
+                        return [];
+                    }
+
+                    $eventWriter(
+                        Level::Notice,
+                        "Updated '{user}@{backend}' '#{id}: {item.title}' watch progress to '{progress}'.",
+                        [
+                            ...$context,
                             'status_code' => $statusCode,
                         ],
                     );
-                    continue;
-                }
 
-                $writer(
-                    level: Level::Notice,
-                    message: "Updated '{user}@{backend}' '#{id}: {item.title}' watch progress to '{progress}'.",
-                    context: [
-                        ...$context,
-                        'id' => $context['id'],
-                        'progress' => $context['progress'],
-                        'status_code' => $statusCode,
-                    ],
-                );
-            } catch (Throwable $ex) {
-                $writer(
-                    level: Level::Error,
-                    message: "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to change watch progress of {item.type} '#{id}: {item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
-                    context: [
-                        'id' => $item->id,
-                        ...exception_log($ex),
-                        ...$context,
-                    ],
-                );
-            }
-        }
+                    return [];
+                },
+                'error' => static function (Request $request, Throwable $ex) use ($eventWriter, $userContext, $item, $progress): array {
+                    if (true === (bool) ag($request->options, 'user_data.' . Options::NO_LOGGING, false)) {
+                        return [];
+                    }
+
+                    $context = ag($request->extras, 'context', []);
+
+                    $eventWriter(
+                        Level::Error,
+                        "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to change watch progress of {item.type} '#{id}: {item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                        [
+                            ...$context,
+                            'id' => ag($context, 'item.id', $item->id),
+                            'user' => $userContext->name,
+                            'progress' => ag($context, 'item.progress', $progress),
+                            ...exception_log($ex),
+                        ],
+                    );
+
+                    return [];
+                },
+            ],
+        );
 
         return $event;
     }

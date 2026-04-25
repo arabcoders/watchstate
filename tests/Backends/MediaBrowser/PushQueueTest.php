@@ -6,6 +6,7 @@ namespace Tests\Backends\MediaBrowser;
 
 use App\Backends\Emby\Action\Push as EmbyPush;
 use App\Backends\Jellyfin\Action\Push as JellyfinPush;
+use App\Backends\Common\Request;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Extends\HttpClient;
@@ -56,7 +57,17 @@ class PushQueueTest extends MediaBrowserTestCase
             $result = $action($context, [$entity], $queue);
 
             $this->assertTrue($result->isSuccessful());
-            $this->assertSame(2, $queue->count());
+            $this->assertSame(1, $queue->count());
+            $this->assertContainsOnlyInstancesOf(Request::class, $queue->getQueue());
+
+            $request = $queue->getQueue()[0];
+            $this->assertSame('POST', $request->method->value);
+            $this->assertStringContainsString('/Users/user-1/PlayedItems/item-1', (string) $request->url);
+
+            $followUps = ($request->success)(new MockResponse('', ['http_code' => 200]));
+            $this->assertCount(1, $followUps);
+            $this->assertContainsOnlyInstancesOf(Request::class, $followUps);
+            $this->assertStringContainsString('/Users/user-1/Items/item-1/UserData', (string) $followUps[0]->url);
         }
     }
 

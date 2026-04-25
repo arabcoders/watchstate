@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Backends\Plex;
 
+use App\Backends\Common\Request;
 use App\Backends\Plex\Action\UpdateState;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
@@ -44,6 +45,7 @@ class UpdateStateTest extends PlexTestCase
 
         $this->assertTrue($result->isSuccessful());
         $this->assertSame(1, $queue->count());
+        $this->assertContainsOnlyInstancesOf(Request::class, $queue->getQueue());
     }
 
     public function test_update_state_dry_run(): void

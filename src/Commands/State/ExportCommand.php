@@ -11,7 +11,6 @@ use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface;
 use App\Libs\Entity\StateInterface as iState;
-use App\Libs\Enums\Http\Status;
 use App\Libs\Extends\RetryableHttpClient;
 use App\Libs\Extends\StreamLogHandler;
 use App\Libs\LogSuppressor;
@@ -479,56 +478,12 @@ class ExportCommand extends Command
                         'user' => $userContext->name,
                     ]);
 
-                    foreach ($this->queue->getQueue() as $response) {
-                        if (true === (bool) ag($response->getInfo('user_data'), Options::NO_LOGGING, false)) {
-                            try {
-                                $response->getStatusCode();
-                            } catch (Throwable) {
-                            }
-                            continue;
-                        }
-
-                        $context = ag($response->getInfo('user_data'), 'context', []);
-                        $context['user'] = $userContext->name;
-
-                        try {
-                            $statusCode = $response->getStatusCode();
-                            if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
-                                $this->logger->error(
-                                    "Request to change '{user}@{backend}' '{item.title}' play state returned with unexpected '{status_code}' status code.",
-                                    [
-                                        'status_code' => $statusCode,
-                                        ...$context,
-                                    ],
-                                );
-                                continue;
-                            }
-
-                            $this->logger->notice(
-                                "Marked '{user}@{backend}' '{item.title}' as '{play_state}'.",
-                                $context,
-                            );
-                        } catch (Throwable $e) {
-                            $this->logger->error(
-                                message: "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to change play state of {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
-                                context: [
-                                    'error' => [
-                                        'kind' => $e::class,
-                                        'line' => $e->getLine(),
-                                        'message' => $e->getMessage(),
-                                        'file' => after($e->getFile(), ROOT_PATH),
-                                    ],
-                                    ...$context,
-                                    'exception' => [
-                                        'file' => $e->getFile(),
-                                        'line' => $e->getLine(),
-                                        'kind' => get_class($e),
-                                        'message' => $e->getMessage(),
-                                    ],
-                                ],
-                            );
-                        }
-                    }
+                    send_requests(
+                        requests: $this->queue->getQueue(),
+                        client: $this->http,
+                        sync: $syncRequests,
+                        logger: $this->logger,
+                    );
 
                     $this->logger->notice("SYSTEM: Sent '{total}' change play state requests for '{user}'.", [
                         'total' => $total,
