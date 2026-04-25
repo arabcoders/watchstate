@@ -80,8 +80,16 @@ trait APITraits
                 $backend = ag_set($backend, 'import.lastSync', $import ? make_date($import) : null);
             }
 
+            if (null !== ($import = ag($backend, 'import.playlist.lastSync'))) {
+                $backend = ag_set($backend, 'import.playlist.lastSync', $import ? make_date($import) : null);
+            }
+
             if (null !== ($export = ag($backend, 'export.lastSync'))) {
                 $backend = ag_set($backend, 'export.lastSync', $export ? make_date($export) : null);
+            }
+
+            if (null !== ($export = ag($backend, 'export.playlist.lastSync'))) {
+                $backend = ag_set($backend, 'export.playlist.lastSync', $export ? make_date($export) : null);
             }
 
             $webhookUrl = parse_config_value(WebhookURL::URL);

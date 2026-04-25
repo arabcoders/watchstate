@@ -9,6 +9,7 @@ use App\Commands\Events\DispatchCommand;
 use App\Commands\State\BackupCommand;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
+use App\Commands\State\PlaylistCommand;
 use App\Commands\State\ValidateCommand;
 use App\Commands\System\IndexCommand;
 use App\Commands\System\PruneCommand;
@@ -341,6 +342,14 @@ return (function () {
                 'enabled' => (bool) env('WS_CRON_IMPORT', false),
                 'timer' => $checkTaskTimer((string) env('WS_CRON_IMPORT_AT', '0 */1 * * *'), '0 */1 * * *'),
                 'args' => env('WS_CRON_IMPORT_ARGS', '-v'),
+            ],
+            PlaylistCommand::TASK_NAME => [
+                'command' => PlaylistCommand::ROUTE,
+                'name' => PlaylistCommand::TASK_NAME,
+                'info' => 'Sync playlists cross backends. (BETA)',
+                'enabled' => (bool) env('WS_CRON_PLAYLIST', false),
+                'timer' => $checkTaskTimer((string) env('WS_CRON_PLAYLIST_AT', '15 */6 * * *'), '15 */6 * * *'),
+                'args' => env('WS_CRON_PLAYLIST_ARGS', '-v'),
             ],
             ExportCommand::TASK_NAME => [
                 'command' => ExportCommand::ROUTE,

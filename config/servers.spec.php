@@ -79,6 +79,13 @@ return [
         'description' => 'The last time data was exported to the backend.',
     ],
     [
+        'key' => 'export.playlist.lastSync',
+        'type' => 'int',
+        'visible' => true,
+        'nullable' => true,
+        'description' => 'The last time playlists were synced to the backend.',
+    ],
+    [
         'key' => 'import.enabled',
         'type' => 'bool',
         'visible' => true,
@@ -90,6 +97,13 @@ return [
         'visible' => true,
         'nullable' => true,
         'description' => 'The last time data was imported from the backend.',
+    ],
+    [
+        'key' => 'import.playlist.lastSync',
+        'type' => 'int',
+        'visible' => true,
+        'nullable' => true,
+        'description' => 'The last time playlists were synced from the backend.',
     ],
     [
         'key' => 'options',
@@ -111,10 +125,10 @@ return [
         'description' => 'How many items to get per request when syncing.',
         'validate' => function ($value, array $spec = []) {
             $limit = 300;
-            if ((int)$value < $limit) {
+            if ((int) $value < $limit) {
                 throw new ValidationException(r('The value must be greater than {limit} items.', ['limit' => $limit]));
             }
-            return (int)$value;
+            return (int) $value;
         },
     ],
     [
@@ -151,7 +165,7 @@ return [
         'key' => 'options.MAX_EPISODE_RANGE',
         'type' => 'int',
         'visible' => false,
-        'description' => 'The max range a single record/episode can cover. The default is 5.'
+        'description' => 'The max range a single record/episode can cover. The default is 5.',
     ],
     [
         'key' => 'options.client.timeout',

@@ -10,6 +10,8 @@ use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Response;
 use App\Backends\Emby\Action\Backup;
+use App\Backends\Emby\Action\CreatePlaylist;
+use App\Backends\Emby\Action\DeletePlaylist;
 use App\Backends\Emby\Action\Export;
 use App\Backends\Emby\Action\GenerateAccessToken;
 use App\Backends\Emby\Action\GetIdentifier;
@@ -18,6 +20,8 @@ use App\Backends\Emby\Action\GetInfo;
 use App\Backends\Emby\Action\GetLibrariesList;
 use App\Backends\Emby\Action\GetLibrary;
 use App\Backends\Emby\Action\GetMetaData;
+use App\Backends\Emby\Action\GetPlaylist;
+use App\Backends\Emby\Action\GetPlaylistsList;
 use App\Backends\Emby\Action\GetSessions;
 use App\Backends\Emby\Action\GetUsersList;
 use App\Backends\Emby\Action\GetVersion;
@@ -513,6 +517,83 @@ class EmbyClient implements iClient
                 $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
             }
 
+            $this->throwError($response);
+        }
+
+        return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getPlaylistsList(array $opts = []): array
+    {
+        $response = Container::get(GetPlaylistsList::class)(context: $this->context, opts: $opts);
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
+            $this->throwError($response);
+        }
+
+        return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getPlaylist(string|int $id, array $opts = []): array
+    {
+        $response = Container::get(GetPlaylist::class)(context: $this->context, id: $id, opts: $opts);
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
+            $this->throwError($response);
+        }
+
+        return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function createPlaylist(string $title, array $itemIds = [], array $opts = []): array
+    {
+        $response = Container::get(CreatePlaylist::class)(
+            context: $this->context,
+            title: $title,
+            itemIds: $itemIds,
+            opts: $opts,
+        );
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
+            $this->throwError($response);
+        }
+
+        return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function deletePlaylist(string|int $id, array $opts = []): array
+    {
+        $response = Container::get(DeletePlaylist::class)(context: $this->context, id: $id, opts: $opts);
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
             $this->throwError($response);
         }
 

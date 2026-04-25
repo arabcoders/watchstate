@@ -12,6 +12,8 @@ use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Backends\Jellyfin\Action\Backup;
+use App\Backends\Jellyfin\Action\CreatePlaylist;
+use App\Backends\Jellyfin\Action\DeletePlaylist;
 use App\Backends\Jellyfin\Action\Export;
 use App\Backends\Jellyfin\Action\GenerateAccessToken;
 use App\Backends\Jellyfin\Action\GetIdentifier;
@@ -20,6 +22,8 @@ use App\Backends\Jellyfin\Action\GetInfo;
 use App\Backends\Jellyfin\Action\GetLibrariesList;
 use App\Backends\Jellyfin\Action\GetLibrary;
 use App\Backends\Jellyfin\Action\GetMetaData;
+use App\Backends\Jellyfin\Action\GetPlaylist;
+use App\Backends\Jellyfin\Action\GetPlaylistsList;
 use App\Backends\Jellyfin\Action\GetSessions;
 use App\Backends\Jellyfin\Action\GetUsersList;
 use App\Backends\Jellyfin\Action\GetVersion;
@@ -562,6 +566,83 @@ class JellyfinClient implements iClient
                 $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
             }
 
+            $this->throwError($response);
+        }
+
+        return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getPlaylistsList(array $opts = []): array
+    {
+        $response = Container::get(GetPlaylistsList::class)(context: $this->context, opts: $opts);
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
+            $this->throwError($response);
+        }
+
+        return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getPlaylist(string|int $id, array $opts = []): array
+    {
+        $response = Container::get(GetPlaylist::class)(context: $this->context, id: $id, opts: $opts);
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
+            $this->throwError($response);
+        }
+
+        return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function createPlaylist(string $title, array $itemIds = [], array $opts = []): array
+    {
+        $response = Container::get(CreatePlaylist::class)(
+            context: $this->context,
+            title: $title,
+            itemIds: $itemIds,
+            opts: $opts,
+        );
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
+            $this->throwError($response);
+        }
+
+        return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function deletePlaylist(string|int $id, array $opts = []): array
+    {
+        $response = Container::get(DeletePlaylist::class)(context: $this->context, id: $id, opts: $opts);
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
             $this->throwError($response);
         }
 

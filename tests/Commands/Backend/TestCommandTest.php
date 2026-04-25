@@ -32,8 +32,36 @@ final class TestCommandTest extends \PHPUnit\Framework\TestCase
         $actions = array_column($payload['actions'], 'action');
 
         self::assertContains('getUsersList', $actions);
+        self::assertContains('getPlaylistsList', $actions);
         self::assertContains('generateAccessToken', $actions);
         self::assertNotContains('withContext', $actions);
+    }
+
+    public function test_invokes_playlist_action_and_returns_result(): void
+    {
+        $client = $this->makeClientMock();
+        $client
+            ->expects(self::once())
+            ->method('getPlaylistsList')
+            ->with([])
+            ->willReturn([
+                ['id' => 'playlist-1', 'title' => 'Weekend Movies'],
+            ]);
+
+        $tester = $this->makeTester($client);
+        $status = $tester->execute([
+            '--select-backend' => 'demo',
+            '--output' => 'json',
+            'action' => 'getPlaylistsList',
+        ]);
+
+        self::assertSame(TestCommand::SUCCESS, $status);
+
+        $payload = json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertSame('getPlaylistsList', $payload['action']);
+        self::assertSame([
+            ['id' => 'playlist-1', 'title' => 'Weekend Movies'],
+        ], $payload['result']);
     }
 
     public function test_invokes_action_and_routes_extra_params_into_opts(): void

@@ -19,7 +19,7 @@ final class Reset
     public const string URL = '%{api.prefix}/system/reset';
 
     #[Delete(self::URL . '[/]', name: 'system.reset')]
-    public function reset(iRequest $request, Redis $redis, iImport $mapper, iLogger $logger): iResponse
+    public function reset(Redis $redis, iImport $mapper, iLogger $logger): iResponse
     {
         foreach (get_users_context($mapper, $logger) as $userContext) {
             // -- reset database.
@@ -29,6 +29,8 @@ final class Reset
             foreach (array_keys($userContext->config->getAll()) as $name) {
                 $userContext->config->set("{$name}.import.lastSync", null);
                 $userContext->config->set("{$name}.export.lastSync", null);
+                $userContext->config->set("{$name}.export.playlist.lastSync", null);
+                $userContext->config->set("{$name}.import.playlist.lastSync", null);
             }
 
             // -- persist changes.
@@ -45,7 +47,7 @@ final class Reset
     }
 
     #[Post(self::URL . '/opcache[/]', name: 'system.reset.opcache')]
-    public function opcache(iRequest $request, Redis $redis, iImport $mapper, iLogger $logger): iResponse
+    public function opcache(): iResponse
     {
         return api_response(Status::OK, [
             'message' => opcache_reset() ? 'OPCache reset is complete.' : 'OPCache reset failed.',

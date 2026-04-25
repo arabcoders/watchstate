@@ -175,5 +175,59 @@
         }
       }
     ]
+  },
+  "playlists": {
+    "Items": [
+      {
+        "Id": "playlist-1",
+        "Name": "Weekend Movies",
+        "Type": "Playlist",
+        "CollectionType": "playlists",
+        "MediaType": "Video",
+        "CanDelete": true,
+        "DateCreated": "2024-01-03T00:00:00Z"
+      }
+    ]
+  },
+  "playlist_detail_jellyfin": {
+    "Id": "playlist-1",
+    "Name": "Weekend Movies",
+    "MediaType": "Video",
+    "CanEdit": true,
+    "OpenAccess": false,
+    "ItemIds": [
+      "item-1"
+    ],
+    "Shares": []
+  },
+  "playlist_detail_emby": {
+    "Id": "playlist-1",
+    "Name": "Weekend Movies",
+    "Type": "Playlist",
+    "MediaType": "Video",
+    "CanDelete": true
+  },
+  "playlist_items": {
+    "Items": [
+      {
+        "Id": "item-1",
+        "PlaylistItemId": "entry-1",
+        "Name": "Test Movie",
+        "Type": "Movie",
+        "MediaType": "Video",
+        "ProductionYear": 2020,
+        "DateCreated": "2020-01-02T00:00:00Z",
+        "Path": "/media/movies/test-movie/test-movie.mkv",
+        "ProviderIds": {
+          "Imdb": "tt123",
+          "Tmdb": "123"
+        },
+        "UserData": {
+          "Played": false,
+          "PlaybackPositionTicks": 900000000
+        }
+      }
+    ],
+    "TotalRecordCount": 1
   }
 }

@@ -22,7 +22,7 @@ class APITraitsTest extends TestCase
     {
         Container::init();
         Config::init(require __DIR__ . '/../../../config/config.php');
-        foreach ((array)require __DIR__ . '/../../../config/services.php' as $name => $definition) {
+        foreach ((array) require __DIR__ . '/../../../config/services.php' as $name => $definition) {
             Container::add($name, $definition);
         }
         Config::save('backends_file', __DIR__ . '/../../Fixtures/test_servers.yaml');
@@ -64,10 +64,12 @@ class APITraitsTest extends TestCase
         };
 
         $data = $trait->getBackends();
-        $this->assertCount(3, $data, 'getBackends() should return an array with 2 elements');
+        $this->assertCount(4, $data, 'getBackends() should return an array with 4 elements');
 
         $data = $trait->getBackends('test_plex');
         $this->assertCount(1, $data, 'getBackends() When filtering by name, should return an array with 1 element');
+        $this->assertNull(ag($data[0], 'import.playlist.lastSync'));
+        $this->assertNull(ag($data[0], 'export.playlist.lastSync'));
     }
 
     public function test_getBackend()
@@ -83,7 +85,7 @@ class APITraitsTest extends TestCase
 
         $this->assertNull(
             $trait->getBackend('not_set'),
-            'getBackend() should return an empty array when the backend is not found.'
+            'getBackend() should return an empty array when the backend is not found.',
         );
     }
 
