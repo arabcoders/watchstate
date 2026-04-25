@@ -1,8 +1,15 @@
 [
     {
-        "tag": "dev-20260425-2c7262d8",
-        "date": "2026-04-25T18:56:42+00:00",
+        "tag": "dev-20260426-01b64447",
+        "date": "2026-04-25T21:44:28+00:00",
         "commits": [
+            {
+                "sha": "01b64447",
+                "message": "feat: initial code to support playlist sync cross backends",
+                "author": "arabcoders",
+                "date": "2026-04-25T21:44:28+00:00",
+                "full_sha": "01b64447b6e362d059cf215f30deae5bfd7aa8d1"
+            },
             {
                 "sha": "2c7262d8",
                 "message": "refactor: Reuse prefetched show metadata during Plex and Jellyfin import",
@@ -1614,7 +1621,7 @@
                 "full_sha": "10301c6b01293e57611dfc62bda2bca400a7f562"
             }
         ],
-        "full_sha": "2c7262d8e65bb0ddaef38ec82bb089d15fa21c66"
+        "full_sha": "01b64447b6e362d059cf215f30deae5bfd7aa8d1"
     },
     {
         "tag": "dev-20250604-9407bc76",
