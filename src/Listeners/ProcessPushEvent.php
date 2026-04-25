@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Listeners;
 
+use App\Backends\Common\Request;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Config;
 use App\Libs\Container;
@@ -19,6 +20,8 @@ use App\Libs\UserContext;
 use App\Model\Events\EventListener;
 use Monolog\Level;
 use Psr\Log\LoggerInterface as iLogger;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 use Throwable;
 
 #[EventListener(self::NAME)]
@@ -47,8 +50,12 @@ final readonly class ProcessPushEvent
             $e->addLog($level->getName() . ': ' . r($message, $context));
             $this->logger->log($level, $message, $context);
         };
+        $eventWriter = static function (Level $level, string $message, array $context = []) use ($e): void {
+            $e->addLog($level->getName() . ': ' . r($message, $context));
+        };
 
         $e->stopPropagation();
+        $this->queue->reset();
 
         $user = ag($e->getOptions(), Options::CONTEXT_USER, 'main');
 
@@ -186,56 +193,74 @@ final readonly class ProcessPushEvent
             ]),
         ]);
 
-        foreach ($this->queue->getQueue() as $response) {
-            if (true === (bool) ag($response->getInfo('user_data'), Options::NO_LOGGING, false)) {
-                try {
-                    $response->getStatusCode();
-                } catch (Throwable) {
-                }
-                continue;
-            }
-            $context = ag($response->getInfo('user_data'), 'context', []);
-            $context['user'] = $user;
+        $http = Container::get(iHttp::class);
+        assert($http instanceof iHttp, 'Expected HTTP client for push event queue dispatch.');
 
-            try {
-                $context['status_code'] = $response->getStatusCode();
-                if (Status::OK !== Status::from($response->getStatusCode())) {
-                    $writer(
-                        Level::Error,
-                        "Request to change '{user}@{backend}' - '#{item.id}: {item.title}' play state returned with unexpected '{status_code}' status code.",
+        send_requests(
+            requests: $this->queue->getQueue(),
+            client: $http,
+            opts: [
+                'ok' => static function (Request $request, ResponseInterface $response) use ($eventWriter, $user): array {
+                    if (true === (bool) ag($request->options, 'user_data.' . Options::NO_LOGGING, false)) {
+                        return [];
+                    }
+
+                    $context = ag($request->extras, 'context', []);
+                    $context['user'] = $user;
+                    $context['status_code'] = $response->getStatusCode();
+
+                    if (Status::OK !== Status::tryFrom($context['status_code'])) {
+                        $eventWriter(
+                            Level::Error,
+                            "Request to change '{user}@{backend}' - '#{item.id}: {item.title}' play state returned with unexpected '{status_code}' status code.",
+                            $context,
+                        );
+
+                        return [];
+                    }
+
+                    $eventWriter(
+                        Level::Notice,
+                        "Updated '{user}@{backend}' - '#{item.id}: {item.title}' watch state to '{play_state}'.",
                         $context,
                     );
-                    continue;
-                }
 
-                $writer(
-                    Level::Notice,
-                    "Updated '{user}@{backend}' - '#{item.id}: {item.title}' watch state to '{play_state}'.",
-                    $context,
-                );
-            } catch (Throwable $e) {
-                $writer(
-                    Level::Error,
-                    "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to change play state of {item.type} '#{item.id}: {item.title}'. {error.message} at '{error.file}:{error.line}'.",
-                    [
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
+                    return [];
+                },
+                'error' => static function (Request $request, Throwable $ex) use ($eventWriter, $user): array {
+                    if (true === (bool) ag($request->options, 'user_data.' . Options::NO_LOGGING, false)) {
+                        return [];
+                    }
+
+                    $context = ag($request->extras, 'context', []);
+                    $context['user'] = $user;
+
+                    $eventWriter(
+                        Level::Error,
+                        "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to change play state of {item.type} '#{item.id}: {item.title}'. {error.message} at '{error.file}:{error.line}'.",
+                        [
+                            ...$context,
+                            'error' => [
+                                'kind' => $ex::class,
+                                'line' => $ex->getLine(),
+                                'message' => $ex->getMessage(),
+                                'file' => after($ex->getFile(), ROOT_PATH),
+                            ],
+                            'exception' => [
+                                'file' => $ex->getFile(),
+                                'line' => $ex->getLine(),
+                                'kind' => get_class($ex),
+                                'message' => $ex->getMessage(),
+                                'trace' => $ex->getTrace(),
+                            ],
                         ],
-                        ...$context,
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
-                    ],
-                );
-            }
-        }
+                    );
+
+                    return [];
+                },
+            ],
+        );
+
         return $e;
     }
 }

@@ -7,12 +7,14 @@ namespace App\Backends\Emby\Action;
 use App\Backends\Common\CommonTrait;
 use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
+use App\Backends\Common\Request;
 use App\Backends\Common\Response;
 use App\Backends\Emby\EmbyActionTrait;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Method;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Extends\Date;
@@ -21,6 +23,7 @@ use App\Libs\QueueRequests;
 use DateTimeInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 use Throwable;
 
 class Progress
@@ -252,10 +255,15 @@ class Progress
                 );
 
                 if (false === (bool) ag($context->options, Options::DRY_RUN, false)) {
+                    $requestContext = [
+                        ...$logContext,
+                        'progress' => format_duration($entity->getPlayProgress()),
+                    ];
+
                     $queue->add(
-                        $this->http->request(
+                        new Request(
                             method: Method::POST,
-                            url: (string) $url,
+                            url: $url,
                             options: array_replace_recursive($context->getHttpOptions(), [
                                 'headers' => [
                                     'Content-Type' => 'application/json',
@@ -264,11 +272,50 @@ class Progress
                                     'PlaybackPositionTicks' => (string) floor($entity->getPlayProgress() * 1_00_00),
                                     'LastPlayedDate' => make_date($senderDate)->format(Date::ATOM),
                                 ],
-                                'user_data' => [
-                                    'id' => $key,
-                                    'context' => $logContext,
-                                ],
                             ]),
+                            success: function (ResponseInterface $response) use ($requestContext): array {
+                                $statusCode = $response->getStatusCode();
+
+                                if (false === in_array(Status::tryFrom($statusCode), [Status::OK, Status::NO_CONTENT], true)) {
+                                    $this->logger->error(
+                                        message: "{action}: Request to change '{client}: {user}@{backend}' {item.type} '{item.title}' watch progress returned with unexpected '{status_code}' status code.",
+                                        context: [
+                                            ...$requestContext,
+                                            'status_code' => $statusCode,
+                                        ],
+                                    );
+
+                                    return [];
+                                }
+
+                                $this->logger->notice(
+                                    message: "{action}: Updated '{client}: {user}@{backend}' '{item.title}' watch progress to '{progress}'.",
+                                    context: [
+                                        ...$requestContext,
+                                        'status_code' => $statusCode,
+                                    ],
+                                );
+
+                                return [];
+                            },
+                            error: function (Throwable $e) use ($requestContext): array {
+                                $this->logger->error(
+                                    ...lw(
+                                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' request to change watch progress of {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                                        context: [
+                                            ...$requestContext,
+                                            ...exception_log($e),
+                                        ],
+                                        e: $e,
+                                    ),
+                                );
+
+                                return [];
+                            },
+                            extras: [
+                                'context' => $requestContext,
+                                HttpClientInterface::class => $this->http,
+                            ],
                         ),
                     );
                 }

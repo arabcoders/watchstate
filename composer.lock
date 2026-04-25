@@ -8,16 +8,16 @@
   "packages": [
     {
       "name": "arabcoders/database",
-      "version": "v1.0.1",
+      "version": "v1.0.2",
       "source": {
         "type": "git",
         "url": "https://github.com/arabcoders/database.git",
-        "reference": "94603b9faf6bdd99412d1c31f56bd2b1c4725df9"
+        "reference": "57d71addfa73bdfcea05a76b2bc860918c7cd0ff"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/arabcoders/database/zipball/94603b9faf6bdd99412d1c31f56bd2b1c4725df9",
-        "reference": "94603b9faf6bdd99412d1c31f56bd2b1c4725df9",
+        "url": "https://api.github.com/repos/arabcoders/database/zipball/57d71addfa73bdfcea05a76b2bc860918c7cd0ff",
+        "reference": "57d71addfa73bdfcea05a76b2bc860918c7cd0ff",
         "shasum": ""
       },
       "require": {
@@ -60,9 +60,9 @@
       ],
       "support": {
         "issues": "https://github.com/arabcoders/database/issues",
-        "source": "https://github.com/arabcoders/database/tree/v1.0.1"
+        "source": "https://github.com/arabcoders/database/tree/v1.0.2"
       },
-      "time": "2026-04-16T14:51:58+00:00"
+      "time": "2026-04-19T15:40:15+00:00"
     },
     {
       "name": "dragonmantank/cron-expression",
@@ -2686,16 +2686,16 @@
   "packages-dev": [
     {
       "name": "carthage-software/mago",
-      "version": "1.21.1",
+      "version": "1.24.0",
       "source": {
         "type": "git",
         "url": "https://github.com/carthage-software/mago.git",
-        "reference": "7adaaff5121c26afbedcbd0c152340855e2fad20"
+        "reference": "ff885e99abe97222bb8b84dc346b59bddbe3a307"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/carthage-software/mago/zipball/7adaaff5121c26afbedcbd0c152340855e2fad20",
-        "reference": "7adaaff5121c26afbedcbd0c152340855e2fad20",
+        "url": "https://api.github.com/repos/carthage-software/mago/zipball/ff885e99abe97222bb8b84dc346b59bddbe3a307",
+        "reference": "ff885e99abe97222bb8b84dc346b59bddbe3a307",
         "shasum": ""
       },
       "require": {
@@ -2730,7 +2730,7 @@
       ],
       "support": {
         "issues": "https://github.com/carthage-software/mago/issues",
-        "source": "https://github.com/carthage-software/mago/tree/1.21.1"
+        "source": "https://github.com/carthage-software/mago/tree/1.24.0"
       },
       "funding": [
         {
@@ -2738,7 +2738,7 @@
           "type": "github"
         }
       ],
-      "time": "2026-04-17T16:39:59+00:00"
+      "time": "2026-04-22T07:00:59+00:00"
     },
     {
       "name": "myclabs/deep-copy",
@@ -2978,21 +2978,22 @@
     },
     {
       "name": "phpunit/php-code-coverage",
-      "version": "14.1.2",
+      "version": "14.1.6",
       "source": {
         "type": "git",
         "url": "https://github.com/sebastianbergmann/php-code-coverage.git",
-        "reference": "c9023486f88a48dd870361591bd7caef6d2406c3"
+        "reference": "4991e47adce8e31e554aee8fdaabfc3b1d60707d"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/c9023486f88a48dd870361591bd7caef6d2406c3",
-        "reference": "c9023486f88a48dd870361591bd7caef6d2406c3",
+        "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/4991e47adce8e31e554aee8fdaabfc3b1d60707d",
+        "reference": "4991e47adce8e31e554aee8fdaabfc3b1d60707d",
         "shasum": ""
       },
       "require": {
         "ext-dom": "*",
         "ext-libxml": "*",
+        "ext-mbstring": "*",
         "ext-xmlwriter": "*",
         "nikic/php-parser": "^5.7.0",
         "php": ">=8.4",
@@ -3043,7 +3044,7 @@
       "support": {
         "issues": "https://github.com/sebastianbergmann/php-code-coverage/issues",
         "security": "https://github.com/sebastianbergmann/php-code-coverage/security/policy",
-        "source": "https://github.com/sebastianbergmann/php-code-coverage/tree/14.1.2"
+        "source": "https://github.com/sebastianbergmann/php-code-coverage/tree/14.1.6"
       },
       "funding": [
         {
@@ -3063,7 +3064,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2026-04-15T08:27:13+00:00"
+      "time": "2026-04-24T13:10:08+00:00"
     },
     {
       "name": "phpunit/php-file-iterator",
@@ -3360,16 +3361,16 @@
     },
     {
       "name": "phpunit/phpunit",
-      "version": "13.1.6",
+      "version": "13.1.7",
       "source": {
         "type": "git",
         "url": "https://github.com/sebastianbergmann/phpunit.git",
-        "reference": "c3c414ea438e5a37d00697eaea43e6e05e201a42"
+        "reference": "ddd6401641861cdef94b922ef10d484f436e8dcd"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/c3c414ea438e5a37d00697eaea43e6e05e201a42",
-        "reference": "c3c414ea438e5a37d00697eaea43e6e05e201a42",
+        "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/ddd6401641861cdef94b922ef10d484f436e8dcd",
+        "reference": "ddd6401641861cdef94b922ef10d484f436e8dcd",
         "shasum": ""
       },
       "require": {
@@ -3383,7 +3384,7 @@
         "phar-io/manifest": "^2.0.4",
         "phar-io/version": "^3.2.1",
         "php": ">=8.4.1",
-        "phpunit/php-code-coverage": "^14.1.2",
+        "phpunit/php-code-coverage": "^14.1.3",
         "phpunit/php-file-iterator": "^7.0.0",
         "phpunit/php-invoker": "^7.0.0",
         "phpunit/php-text-template": "^6.0.0",
@@ -3439,7 +3440,7 @@
       "support": {
         "issues": "https://github.com/sebastianbergmann/phpunit/issues",
         "security": "https://github.com/sebastianbergmann/phpunit/security/policy",
-        "source": "https://github.com/sebastianbergmann/phpunit/tree/13.1.6"
+        "source": "https://github.com/sebastianbergmann/phpunit/tree/13.1.7"
       },
       "funding": [
         {
@@ -3447,7 +3448,7 @@
           "type": "other"
         }
       ],
-      "time": "2026-04-17T12:52:50+00:00"
+      "time": "2026-04-18T06:14:52+00:00"
     },
     {
       "name": "roave/security-advisories",
@@ -3455,12 +3456,12 @@
       "source": {
         "type": "git",
         "url": "https://github.com/Roave/SecurityAdvisories.git",
-        "reference": "8c0c29399142df9580cedb54dbd76fcab76ee0ae"
+        "reference": "08cd07f04fb07fb4d316e956801d57b700cf7096"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/8c0c29399142df9580cedb54dbd76fcab76ee0ae",
-        "reference": "8c0c29399142df9580cedb54dbd76fcab76ee0ae",
+        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/08cd07f04fb07fb4d316e956801d57b700cf7096",
+        "reference": "08cd07f04fb07fb4d316e956801d57b700cf7096",
         "shasum": ""
       },
       "conflict": {
@@ -3483,6 +3484,7 @@
         "alextselegidis/easyappointments": "<=1.5.2",
         "alexusmai/laravel-file-manager": "<=3.3.1",
         "algolia/algoliasearch-magento-2": "<=3.16.1|>=3.17.0.0-beta1,<=3.17.1",
+        "almirhodzic/nova-toggle-5": "<1.3",
         "alt-design/alt-redirect": "<1.6.4",
         "altcha-org/altcha": "<1.3.1",
         "alterphp/easyadmin-extension-bundle": ">=1.2,<1.2.11|>=1.3,<1.3.1",
@@ -3574,12 +3576,12 @@
         "cesnet/simplesamlphp-module-proxystatistics": "<3.1",
         "chriskacerguis/codeigniter-restserver": "<=2.7.1",
         "chrome-php/chrome": "<1.14",
-        "ci4-cms-erp/ci4ms": "<=0.31.3",
+        "ci4-cms-erp/ci4ms": "<0.31.5",
         "civicrm/civicrm-core": ">=4.2,<4.2.9|>=4.3,<4.3.3",
         "ckeditor/ckeditor": "<4.25",
         "clickstorm/cs-seo": ">=6,<6.8|>=7,<7.5|>=8,<8.4|>=9,<9.3",
         "co-stack/fal_sftp": "<0.2.6",
-        "cockpit-hq/cockpit": "<2.13.5",
+        "cockpit-hq/cockpit": "<2.14",
         "code16/sharp": "<9.20",
         "codeception/codeception": "<3.1.3|>=4,<4.1.22",
         "codeigniter/framework": "<3.1.10",
@@ -3742,7 +3744,7 @@
         "fisharebest/webtrees": "<=2.1.18",
         "fixpunkt/fp-masterquiz": "<2.2.1|>=3,<3.5.2",
         "fixpunkt/fp-newsletter": "<1.1.1|>=1.2,<2.1.2|>=2.2,<3.2.6",
-        "flarum/core": "<1.8.10",
+        "flarum/core": "<=1.8.15|>=2.0.0.0-beta1,<=2.0.0.0-beta8",
         "flarum/flarum": "<0.1.0.0-beta8",
         "flarum/framework": "<1.8.10",
         "flarum/mentions": "<1.6.3",
@@ -3779,7 +3781,7 @@
         "geshi/geshi": "<=1.0.9.1",
         "getformwork/formwork": "<=2.3.3",
         "getgrav/grav": "<1.11.0.0-beta1",
-        "getkirby/cms": "<=5.2.1",
+        "getkirby/cms": "<5.4",
         "getkirby/kirby": "<3.9.8.3-dev|>=3.10,<3.10.1.2-dev|>=4,<4.7.1",
         "getkirby/panel": "<2.5.14",
         "getkirby/starterkit": "<=3.7.0.2",
@@ -3877,7 +3879,7 @@
         "kelvinmo/simplexrd": "<3.1.1",
         "kevinpapst/kimai2": "<1.16.7",
         "khodakhah/nodcms": "<=3.4.1",
-        "kimai/kimai": "<2.53",
+        "kimai/kimai": "<2.54",
         "kitodo/presentation": "<3.2.3|>=3.3,<3.3.4",
         "klaviyo/magento2-extension": ">=1,<3",
         "knplabs/knp-snappy": "<=1.4.2",
@@ -3937,6 +3939,7 @@
         "manogi/nova-tiptap": "<=3.2.6",
         "mantisbt/mantisbt": "<2.28.1",
         "marcwillmann/turn": "<0.3.3",
+        "markhuot/craftql": "<=1.3.7",
         "marshmallow/nova-tiptap": "<5.7",
         "matomo/matomo": "<1.11",
         "matyhtf/framework": "<3.0.6",
@@ -4017,9 +4020,9 @@
         "nzo/url-encryptor-bundle": ">=4,<4.3.2|>=5,<5.0.1",
         "october/backend": "<1.1.2",
         "october/cms": "<1.0.469|==1.0.469|==1.0.471|==1.1.1",
-        "october/october": "<3.7.5",
+        "october/october": "<3.7.14|>=4,<4.1.10",
         "october/rain": "<=3.7.13|>=4,<=4.1.9",
-        "october/system": "<=3.7.13|>=4,<=4.1.9",
+        "october/system": "<3.7.16|>=4,<4.1.16",
         "oliverklee/phpunit": "<3.5.15",
         "omeka/omeka-s": "<4.0.3",
         "onelogin/php-saml": "<2.21.1|>=3,<3.8.1|>=4,<4.3.1",
@@ -4027,7 +4030,7 @@
         "open-web-analytics/open-web-analytics": "<1.8.1",
         "opencart/opencart": ">=0",
         "openid/php-openid": "<2.3",
-        "openmage/magento-lts": "<20.16.1",
+        "openmage/magento-lts": "<20.17",
         "opensolutions/vimbadmin": "<=3.0.15",
         "opensource-workshop/connect-cms": "<1.41.1|>=2,<2.41.1",
         "orchid/platform": ">=8,<14.43",
@@ -4079,7 +4082,7 @@
         "phpseclib/phpseclib": "<2.0.53|>=3,<3.0.51",
         "phpservermon/phpservermon": "<3.6",
         "phpsysinfo/phpsysinfo": "<3.4.3",
-        "phpunit/phpunit": "<8.5.52|>=9,<9.6.33|>=10,<10.5.62|>=11,<11.5.50|>=12,<12.5.8",
+        "phpunit/phpunit": "<8.5.52|>=9,<9.6.33|>=10,<10.5.62|>=11,<11.5.50|>=12,<12.5.8|>=12.5.21,<12.5.22|>=13.1.5,<13.1.6",
         "phpwhois/phpwhois": "<=4.2.5",
         "phpxmlrpc/extras": "<0.6.1",
         "phpxmlrpc/phpxmlrpc": "<4.9.2",
@@ -4228,7 +4231,7 @@
         "starcitizenwiki/embedvideo": "<=4",
         "statamic/cms": "<5.73.20|>=6,<6.13",
         "stormpath/sdk": "<9.9.99",
-        "studio-42/elfinder": "<=2.1.64",
+        "studio-42/elfinder": "<2.1.67",
         "studiomitte/friendlycaptcha": "<0.1.4",
         "subhh/libconnect": "<7.0.8|>=8,<8.1",
         "sukohi/surpass": "<1",
@@ -4320,7 +4323,7 @@
         "twig/twig": "<3.11.2|>=3.12,<3.14.1|>=3.16,<3.19",
         "typicms/core": "<16.1.7",
         "typo3/cms": "<9.5.29|>=10,<10.4.35|>=11,<11.5.23|>=12,<12.2",
-        "typo3/cms-backend": "<4.1.14|>=4.2,<4.2.15|>=4.3,<4.3.7|>=4.4,<4.4.4|>=7,<=7.6.50|>=8,<=8.7.39|>=9,<9.5.55|>=10,<=10.4.54|>=11,<=11.5.48|>=12,<=12.4.40|>=13,<=13.4.22|>=14,<=14.0.1",
+        "typo3/cms-backend": "<4.1.14|>=4.2,<4.2.15|>=4.3,<4.3.7|>=4.4,<4.4.4|>=7,<=7.6.50|>=8,<=8.7.39|>=9,<9.5.55|>=10,<=10.4.54|>=11,<=11.5.48|>=12,<=12.4.40|>=13,<=13.4.22|>=14,<=14.0.1|==14.2",
         "typo3/cms-belog": ">=10,<=10.4.47|>=11,<=11.5.41|>=12,<=12.4.24|>=13,<=13.4.2",
         "typo3/cms-beuser": ">=9,<9.5.55|>=10,<10.4.54|>=11,<11.5.48|>=12,<12.4.37|>=13,<13.4.18",
         "typo3/cms-core": "<=8.7.56|>=9,<9.5.55|>=10,<=10.4.54|>=11,<=11.5.48|>=12,<=12.4.40|>=13,<=13.4.22|>=14,<=14.0.1",
@@ -4407,7 +4410,7 @@
         "xpressengine/xpressengine": "<3.0.15",
         "yab/quarx": "<2.4.5",
         "yansongda/pay": "<=3.7.19",
-        "yeswiki/yeswiki": "<4.6",
+        "yeswiki/yeswiki": "<=4.6",
         "yetiforce/yetiforce-crm": "<6.5",
         "yidashi/yii2cmf": "<=2",
         "yii2mod/yii2-cms": "<1.9.2",
@@ -4502,7 +4505,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2026-04-16T23:17:46+00:00"
+      "time": "2026-04-24T17:22:29+00:00"
     },
     {
       "name": "sebastian/cli-parser",

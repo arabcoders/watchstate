@@ -181,7 +181,7 @@
             <div class="space-y-3 rounded-md border border-default bg-elevated/30 p-4">
               <div class="flex items-center justify-between gap-3">
                 <label class="text-sm font-medium text-default" for="random_bg_opacity">
-                  Background Visibility
+                  Background visibility
                 </label>
                 <code>{{ (1.0 - parseFloat(String(bg_opacity))).toFixed(2) }}</code>
               </div>
@@ -192,8 +192,49 @@
                 color="primary"
                 :min="0.6"
                 :max="1"
-                :step="0.05"
+                :step="0.01"
               />
+            </div>
+
+            <div class="space-y-3 rounded-md border border-default bg-elevated/30 p-4">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p class="font-medium text-default">Date format</p>
+                  <p class="text-sm text-toned">Used to format timestamps across the WebUI.</p>
+                </div>
+
+                <UButton
+                  type="button"
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                  icon="i-lucide-rotate-ccw"
+                  @click="resetTooltipDateFormat"
+                >
+                  Reset
+                </UButton>
+              </div>
+
+              <UFormField label="Format" name="tooltip_date_format">
+                <UInput
+                  id="tooltip_date_format"
+                  v-model="tooltip_date_format"
+                  icon="i-lucide-calendar-clock"
+                  class="w-full"
+                  :placeholder="DEFAULT_TOOLTIP_DATE_FORMAT"
+                />
+              </UFormField>
+
+              <div class="space-y-1 text-sm text-toned">
+                <p>
+                  Default:
+                  <code>{{ DEFAULT_TOOLTIP_DATE_FORMAT }}</code>
+                </p>
+                <p>
+                  Preview:
+                  <code>{{ tooltipDatePreview }}</code>
+                </p>
+              </div>
             </div>
           </div>
         </UCard>
@@ -203,13 +244,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import moment from 'moment';
+import { computed, ref } from 'vue';
 import { navigateTo } from '#app';
 import { useStorage } from '@vueuse/core';
 import { useDialog } from '~/composables/useDialog';
 import { useAuthStore } from '~/store/auth';
 import type { GenericError, GenericResponse } from '~/types';
-import { notification, parse_api_response, request } from '~/utils';
+import {
+  DEFAULT_TOOLTIP_DATE_FORMAT,
+  TOOLTIP_DATE_FORMAT,
+  notification,
+  parse_api_response,
+  request,
+} from '~/utils';
 
 withDefaults(
   defineProps<{
@@ -229,6 +277,9 @@ const { username } = useAuthStore();
 const bg_enable = useStorage<boolean>('bg_enable', true);
 const poster_enable = useStorage<boolean>('poster_enable', true);
 const bg_opacity = useStorage<number>('bg_opacity', 0.95);
+const tooltip_date_format = TOOLTIP_DATE_FORMAT;
+
+const tooltipDatePreview = computed(() => moment().format(tooltip_date_format.value));
 
 const slideoverUi = {
   content: 'ws-settings-panel w-full sm:max-w-2xl',
@@ -253,6 +304,10 @@ const user = ref<{
 }>(defaultValues());
 
 const isLoading = ref<boolean>(false);
+
+const resetTooltipDateFormat = (): void => {
+  tooltip_date_format.value = DEFAULT_TOOLTIP_DATE_FORMAT;
+};
 
 const change_password = async (): Promise<void> => {
   if (

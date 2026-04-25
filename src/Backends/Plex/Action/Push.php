@@ -6,6 +6,7 @@ namespace App\Backends\Plex\Action;
 
 use App\Backends\Common\CommonTrait;
 use App\Backends\Common\Context;
+use App\Backends\Common\Request;
 use App\Backends\Common\Response;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Method;
@@ -16,6 +17,7 @@ use App\Libs\QueueRequests;
 use DateTimeInterface as iDate;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
+use Symfony\Contracts\HttpClient\ResponseInterface as iResponse;
 use Throwable;
 
 final class Push
@@ -24,6 +26,9 @@ final class Push
 
     private string $action = 'plex.push';
 
+    /**
+     * @var iHttp&RetryableHttpClient
+     */
     private iHttp $http;
 
     public function __construct(
@@ -253,25 +258,59 @@ final class Push
                     );
 
                 $logContext['remote']['url'] = $url;
+                $requestContext = $logContext + ['play_state' => $entity->isWatched() ? 'Played' : 'Unplayed'];
 
                 $this->logger->debug(
                     message: "{action}: Queuing request to change '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' play state to '{play_state}'.",
-                    context: [...$logContext, 'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed'],
+                    context: $requestContext,
                 );
 
                 if (false === (bool) ag($context->options, Options::DRY_RUN)) {
                     $queue->add(
-                        $this->http->request(
+                        new Request(
                             method: Method::GET,
-                            url: (string) $url,
-                            options: array_replace_recursive($context->getHttpOptions(), [
-                                'user_data' => [
-                                    'context' => $logContext
-                                        + [
-                                            'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                            url: $url,
+                            options: $context->getHttpOptions(),
+                            success: function (iResponse $response) use ($requestContext): array {
+                                $statusCode = $response->getStatusCode();
+
+                                if (Status::OK !== Status::tryFrom($statusCode)) {
+                                    $this->logger->error(
+                                        message: "{action}: Request to change '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' play state returned with unexpected '{status_code}' status code.",
+                                        context: [
+                                            ...$requestContext,
+                                            'status_code' => $statusCode,
                                         ],
-                                ],
-                            ]),
+                                    );
+
+                                    return [];
+                                }
+
+                                $this->logger->notice(
+                                    message: "{action}: Updated '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' play state to '{play_state}'.",
+                                    context: $requestContext,
+                                );
+
+                                return [];
+                            },
+                            error: function (Throwable $e) use ($requestContext): array {
+                                $this->logger->error(
+                                    ...lw(
+                                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' request to change play state of {item.type} '#{item.id}: {item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                                        context: [
+                                            ...$requestContext,
+                                            ...exception_log($e),
+                                        ],
+                                        e: $e,
+                                    ),
+                                );
+
+                                return [];
+                            },
+                            extras: [
+                                'context' => $requestContext,
+                                iHttp::class => $this->http,
+                            ],
                         ),
                     );
                 }

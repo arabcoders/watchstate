@@ -786,7 +786,9 @@ class Import
             );
         }
 
-        if (!$guid->has(guids: $guids, context: $logContext)) {
+        $showMetadata = $this->cacheShowMetadata(context: $context, guid: $guid, item: $item, logContext: $logContext);
+
+        if ([] === ag($showMetadata, 'guids', [])) {
             $message = "{action}: Ignoring '{client}: {user}@{backend}' - '{item.title}'. {item.type} has no valid/supported external ids.";
 
             if (empty($guids)) {
@@ -800,20 +802,6 @@ class Import
 
             return;
         }
-
-        $gContext = ag_set(
-            $logContext,
-            'item.plex_id',
-            str_starts_with($itemGuid ?? 'None', 'plex://') ? ag($item, 'guid') : 'none',
-        );
-
-        $context->cache->set(
-            PlexClient::TYPE_SHOW . '.' . ag($logContext, 'item.id'),
-            Guid::fromArray(
-                payload: $guid->get(guids: $guids, context: [...$gContext]),
-                context: $logContext,
-            )->getAll(),
-        );
     }
 
     protected function process(

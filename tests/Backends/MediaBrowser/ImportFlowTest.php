@@ -7,11 +7,13 @@ namespace Tests\Backends\MediaBrowser;
 use App\Backends\Emby\Action\Import as EmbyImport;
 use App\Backends\Emby\Action\GetMetaData as EmbyGetMetaData;
 use App\Backends\Emby\EmbyGuid;
+use App\Backends\Common\Request;
 use App\Backends\Jellyfin\Action\Import as JellyfinImport;
 use App\Backends\Jellyfin\Action\GetMetaData as JellyfinGetMetaData;
 use App\Backends\Jellyfin\JellyfinGuid;
 use App\Backends\Common\Response;
 use App\Libs\Container;
+use App\Libs\Options;
 use ReflectionMethod;
 
 class ImportFlowTest extends MediaBrowserTestCase
@@ -170,6 +172,93 @@ class ImportFlowTest extends MediaBrowserTestCase
 
             $this->assertSame(1, $result['episode']['added']);
         }
+    }
+
+    public function test_jellyfin_import_uses_prefetched_show_metadata_for_episode_genres(): void
+    {
+        $context = $this->makeContext('Jellyfin');
+        $mapper = $context->userContext->mapper;
+        $item = $this->fixture('metadata_episode');
+        $item['SeriesId'] = 'series-1';
+        $item['SeriesName'] = 'Test Show';
+        $item['UserData']['Played'] = false;
+        $item['UserData']['PlaybackPositionTicks'] = 0;
+
+        $show = [
+            'Id' => 'series-1',
+            'Name' => 'Test Show',
+            'Type' => 'Series',
+            'ProductionYear' => 2020,
+            'ProviderIds' => ['Imdb' => 'tt123'],
+            'Genres' => ['Drama', 'Sci-Fi'],
+        ];
+
+        $metaAction = new class($show) {
+            public function __construct(private array $payload)
+            {
+            }
+
+            public int $calls = 0;
+
+            public function __invoke(\App\Backends\Common\Context $context, string|int $id, array $opts = []): Response
+            {
+                $this->calls++;
+
+                return new Response(status: true, response: $this->payload);
+            }
+        };
+
+        Container::add(JellyfinGetMetaData::class, fn() => $metaAction);
+
+        $action = new JellyfinImport($this->makeHttpClient(), $this->logger);
+        $guid = (new JellyfinGuid($this->logger))->withContext($context);
+
+        $this->invokeProcessShow($action, $context, $guid, $show, []);
+        $this->invokeProcess(
+            $action,
+            $context,
+            $guid,
+            $mapper,
+            $item,
+            ['library' => ['id' => 'lib-2']],
+            [],
+        );
+
+        $result = $mapper->commit();
+
+        $this->assertSame(1, $result['episode']['added']);
+        $this->assertSame(0, $metaAction->calls);
+    }
+
+    public function test_jellyfin_import_prefetches_series_objects_for_parent_cache(): void
+    {
+        $context = $this->makeContext('Jellyfin', [
+            Options::LIBRARY_SELECT => ['lib-2'],
+        ]);
+
+        $action = new JellyfinImport(
+            $this->makeHttpClient(
+                $this->makeResponse($this->fixture('libraries')),
+                $this->makeResponse(['TotalRecordCount' => 1, 'Items' => []]),
+            ),
+            $this->logger,
+        );
+        $guid = (new JellyfinGuid($this->logger))->withContext($context);
+        $mapper = $context->userContext->mapper;
+
+        $result = $action($context, $guid, $mapper);
+
+        $this->assertTrue($result->isSuccessful());
+
+        $prefetchRequests = array_values(array_filter(
+            $result->response,
+            static fn($request) => $request instanceof Request
+                && str_contains((string) $request->url, 'recursive=false')
+                && str_contains((string) $request->url, 'includeItemTypes=Series'),
+        ));
+
+        $this->assertNotEmpty($prefetchRequests);
+        $this->assertFalse(str_contains((string) $prefetchRequests[0]->url, 'filters=IsNotFolder'));
     }
 
     public function test_import_ignores_invalid_type(): void

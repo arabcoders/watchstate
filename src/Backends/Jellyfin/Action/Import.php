@@ -441,7 +441,7 @@ class Import
                         'recursive' => 'false',
                         'enableUserData' => 'false',
                         'enableImages' => 'false',
-                        'filters' => 'IsNotFolder',
+                        'includeItemTypes' => JFC::TYPE_SHOW,
                         'fields' => implode(',', JFC::EXTRA_FIELDS),
                         'excludeLocationTypes' => 'Virtual',
                     ]),
@@ -779,8 +779,9 @@ class Import
         }
 
         $providersId = (array) ag($item, 'ProviderIds', []);
+        $showMetadata = $this->cacheShowMetadata(context: $context, guid: $guid, item: $item, logContext: $logContext);
 
-        if (false === $guid->has(guids: $providersId, context: $logContext)) {
+        if ([] === ag($showMetadata, 'guids', [])) {
             $message = "{action}: Ignoring '{client}: {user}@{backend}' - '{item.title}'. {item.type} has no valid/supported external ids.";
 
             if (empty($providersId)) {
@@ -794,14 +795,6 @@ class Import
 
             return;
         }
-
-        $context->cache->set(
-            JFC::TYPE_SHOW . '.' . ag($logContext, 'item.id'),
-            Guid::fromArray(
-                payload: $guid->get(guids: $providersId, context: $logContext),
-                context: $logContext,
-            )->getAll(),
-        );
     }
 
     /**

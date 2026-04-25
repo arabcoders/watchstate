@@ -37,6 +37,7 @@ use Psr\SimpleCache\CacheInterface as iCache;
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
+use Symfony\Contracts\HttpClient\ResponseInterface as iHttpResponse;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 
 if (!function_exists('env')) {
@@ -1395,57 +1396,122 @@ if (!function_exists('send_requests')) {
         ?iLogger $logger = null,
         array $opts = [],
     ): void {
+        $ok = $opts['ok'] ?? null;
+        $error = $opts['error'] ?? null;
+
+        $normalize = static function (mixed $result): array {
+            if ($result instanceof Request) {
+                return [$result];
+            }
+
+            if (!is_array($result)) {
+                return [];
+            }
+
+            return array_values(array_filter($result, static fn($item) => $item instanceof Request));
+        };
+
+        $handleSuccess = static function (Request $request, iHttpResponse $response) use ($normalize, $ok): array {
+            $followUps = [];
+
+            if (null !== $request->success) {
+                $followUps = [...$followUps, ...$normalize(($request->success)($response))];
+            }
+
+            if ($ok instanceof Closure) {
+                $followUps = [...$followUps, ...$normalize($ok($request, $response))];
+            }
+
+            return $followUps;
+        };
+
+        $handleError = static function (Request $request, Throwable $e) use ($normalize, $error): array {
+            $followUps = [];
+
+            if (null !== $request->error) {
+                $followUps = [...$followUps, ...$normalize(($request->error)($e))];
+            }
+
+            if ($error instanceof Closure) {
+                $followUps = [...$followUps, ...$normalize($error($request, $e))];
+            }
+
+            return $followUps;
+        };
+
         try {
             if (true === $sync) {
-                $i = 0;
-                $total = count($requests);
-                foreach ($requests as $request) {
+                $position = 0;
+                $queue = array_values($requests);
+                $total = count($queue);
+
+                while (null !== ($request = array_shift($queue))) {
                     try {
-                        $i++;
+                        $position++;
                         $start = microtime(true);
                         $response = ($request->extras[iHttp::class] ?? $client)->request(...$request->toRequest());
-                        ($request->success)($response);
+                        $response->getStatusCode();
+                        $followUps = $handleSuccess($request, $response);
                     } catch (Throwable $e) {
-                        ($request->error)($e);
+                        $followUps = $handleError($request, $e);
                     } finally {
                         $logger?->info("Request '{position}/{total}' completed in '{s}'s.", [
-                            'position' => $i,
+                            'position' => $position,
                             'total' => $total,
                             's' => round(microtime(true) - $start, 3),
                         ]);
+                    }
+
+                    if ([] !== $followUps) {
+                        $total += count($followUps);
+                        array_unshift($queue, ...array_reverse($followUps));
                     }
                 }
 
                 return;
             }
 
-            $queue = [];
+            $queue = array_values($requests);
 
-            foreach ($requests as $request) {
-                $r = $request->toRequest();
-                $r['options'] = array_replace_recursive($r['options'], [
-                    'user_data' => ['ok' => $request->success, 'error' => $request->error],
-                ]);
+            while ([] !== $queue) {
+                $nextQueue = [];
+                $responses = [];
 
-                $queue[] = ($request->extras[iHttp::class] ?? $client)->request(...$r);
-            }
-
-            $i = 0;
-            foreach ($queue as $_key => $response) {
-                $i++;
-
-                $requestData = $response->getInfo('user_data');
-
-                try {
-                    $requestData['ok']($response);
-                } catch (Throwable $e) {
-                    $requestData['error']($e);
+                foreach ($queue as $request) {
+                    try {
+                        $responses[] = [
+                            'request' => $request,
+                            'response' => ($request->extras[iHttp::class] ?? $client)->request(...$request->toRequest()),
+                        ];
+                    } catch (Throwable $e) {
+                        $nextQueue = [...$nextQueue, ...$handleError($request, $e)];
+                    }
                 }
 
-                $queue[$_key] = null;
+                $queue = [];
+                $i = 0;
 
-                if (0 === ($i % 50)) {
-                    $i = 0;
+                foreach ($responses as $entry) {
+                    $i++;
+
+                    try {
+                        $entry['response']->getStatusCode();
+                        $queue = [...$queue, ...$handleSuccess($entry['request'], $entry['response'])];
+                    } catch (Throwable $e) {
+                        $queue = [...$queue, ...$handleError($entry['request'], $e)];
+                    }
+
+                    if (0 === ($i % 50)) {
+                        $i = 0;
+                        gc_collect_cycles();
+                    }
+                }
+
+                if ([] !== $nextQueue) {
+                    $queue = [...$nextQueue, ...$queue];
+                }
+
+                if (count($queue) >= 50) {
                     gc_collect_cycles();
                 }
             }

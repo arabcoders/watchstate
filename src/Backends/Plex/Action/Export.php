@@ -6,15 +6,19 @@ namespace App\Backends\Plex\Action;
 
 use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
+use App\Backends\Common\Request;
 use App\Backends\Plex\PlexClient;
 use App\Libs\Container;
 use App\Libs\Enums\Http\Method;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use DateTimeInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
+use Symfony\Contracts\HttpClient\ResponseInterface as iResponse;
 use Throwable;
 
 final class Export extends Import
@@ -203,23 +207,61 @@ final class Export extends Import
 
             Message::increment("{$context->userContext->name}.{$context->backendName}.export");
 
+            $requestContext = $logContext + ['play_state' => $entity->isWatched() ? 'Played' : 'Unplayed'];
+
             if (true === (bool) ag($context->options, Options::DRY_RUN, false)) {
                 $this->logger->notice(
                     message: "{action}: Queuing request to change '{client}: {user}@{backend}' {item.type} '{item.title}' play state to '{play_state}'.",
-                    context: [...$logContext, 'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed'],
+                    context: $requestContext,
                 );
                 return;
             }
 
             $queue->add(
-                $this->http->request(
+                new Request(
                     method: Method::GET,
-                    url: (string) $url,
-                    options: array_replace_recursive($context->getHttpOptions(), [
-                        'user_data' => [
-                            'context' => $logContext + ['play_state' => $entity->isWatched() ? 'Played' : 'Unplayed'],
-                        ],
-                    ]),
+                    url: $url,
+                    options: $context->getHttpOptions(),
+                    success: function (iResponse $response) use ($requestContext): array {
+                        $statusCode = $response->getStatusCode();
+
+                        if (Status::OK !== Status::tryFrom($statusCode)) {
+                            $this->logger->error(
+                                message: "{action}: Request to change '{client}: {user}@{backend}' {item.type} '{item.title}' play state returned with unexpected '{status_code}' status code.",
+                                context: [
+                                    ...$requestContext,
+                                    'status_code' => $statusCode,
+                                ],
+                            );
+
+                            return [];
+                        }
+
+                        $this->logger->notice(
+                            message: "{action}: Updated '{client}: {user}@{backend}' {item.type} '{item.title}' play state to '{play_state}'.",
+                            context: $requestContext,
+                        );
+
+                        return [];
+                    },
+                    error: function (Throwable $e) use ($requestContext): array {
+                        $this->logger->error(
+                            ...lw(
+                                message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' request to change play state of {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                                context: [
+                                    ...$requestContext,
+                                    ...exception_log($e),
+                                ],
+                                e: $e,
+                            ),
+                        );
+
+                        return [];
+                    },
+                    extras: [
+                        'context' => $requestContext,
+                        iHttp::class => $this->http,
+                    ],
                 ),
             );
         } catch (Throwable $e) {

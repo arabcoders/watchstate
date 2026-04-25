@@ -6,6 +6,7 @@ namespace Tests\Backends\MediaBrowser;
 
 use App\Backends\Emby\Action\UpdateState as EmbyUpdateState;
 use App\Backends\Jellyfin\Action\UpdateState as JellyfinUpdateState;
+use App\Backends\Common\Request;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Extends\HttpClient;
@@ -48,6 +49,7 @@ class UpdateStateQueueTest extends MediaBrowserTestCase
 
             $this->assertTrue($result->isSuccessful());
             $this->assertSame(1, $queue->count());
+            $this->assertContainsOnlyInstancesOf(Request::class, $queue->getQueue());
         }
     }
 

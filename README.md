@@ -10,10 +10,10 @@ box, this tool supports `Jellyfin`, `Plex` and `Emby` media servers.
 
 # Updates
 
-### 2026-03-26
+### 2026-04-23
 
-Unfortunately, due to changes from plex regarding their API, we can no longer generate access tokens for external users i.e. `invited users`, thus we had to disable and remove
-support from WatchState. This change only effects external users, home/managed users are not affected. Please see [this issue](https://github.com/arabcoders/watchstate/issues/793) for more details.
+Plex appears to have backtracked on the API change that broke external `invited users`, so WatchState supports them again for now.
+Support may change again if Plex reverses course or make it harder to access invited users tokens.
 
 Please refer to [NEWS](/NEWS.md) for the latest updates and changes.
 

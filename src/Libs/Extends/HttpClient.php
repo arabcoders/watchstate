@@ -72,12 +72,15 @@ class HttpClient implements iHttp, iLoggerAware, iReset
             if (!empty($query)) {
                 parse_str($query, $params);
                 if (!empty($params)) {
-                    $params = array_map(
-                        fn($value, $key) => in_array($key, $this->blacklisted, true) ? '**hidden**' : $value,
-                        $params,
-                        array_keys($params),
-                    );
-                    $rUrl = $rUrl->withQuery(http_build_query($params));
+                    $maskedParams = [];
+
+                    foreach ($params as $key => $value) {
+                        $maskedParams[$key] = in_array(strtolower((string) $key), $this->blacklisted, true)
+                            ? '**hidden**'
+                            : $value;
+                    }
+
+                    $rUrl = $rUrl->withQuery(http_build_query($maskedParams));
                 }
             }
 

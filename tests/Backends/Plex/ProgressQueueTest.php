@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Backends\Plex;
 
 use App\Backends\Common\Response;
+use App\Backends\Common\Request;
 use App\Backends\Plex\Action\GetMetaData;
 use App\Backends\Plex\Action\GetSessions;
 use App\Backends\Plex\Action\Progress;
@@ -94,5 +95,6 @@ class ProgressQueueTest extends PlexTestCase
         $message = $result->error?->format() ?? '';
         $this->assertTrue($result->isSuccessful(), $message);
         $this->assertSame(1, $queue->count());
+        $this->assertContainsOnlyInstancesOf(Request::class, $queue->getQueue());
     }
 }

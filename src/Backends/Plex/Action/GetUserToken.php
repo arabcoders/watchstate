@@ -48,9 +48,15 @@ final class GetUserToken
      */
     public function __invoke(Context $context, int|string $userId, string $username, array $opts = []): Response
     {
+        if (true === (bool) ag($opts, Options::PLEX_EXTERNAL_USER, false)) {
+            $fn = fn() => $this->GetExternalUserToken($context, $userId, $username);
+        } else {
+            $fn = fn() => $this->getUserToken($context, $userId, $username, $opts);
+        }
+
         return $this->tryResponse(
             context: $context,
-            fn: fn() => $this->getUserToken($context, $userId, $username, $opts),
+            fn: $fn,
             action: $this->action,
         );
     }
@@ -234,6 +240,55 @@ final class GetUserToken
                 ),
             );
         }
+    }
+
+    /**
+     * Get external user access-token.
+     *
+     * @param Context $context
+     * @param int|string $userId
+     * @param string $username
+     *
+     * @return Response
+     */
+    private function GetExternalUserToken(Context $context, int|string $userId, string $username): Response
+    {
+        $class = Container::get(GetUsersList::class);
+        $response = $class(context: $context, opts: [
+            Options::PLEX_EXTERNAL_USER => true,
+            Options::GET_TOKENS => true,
+        ]);
+
+        if ($response->hasError()) {
+            return $response;
+        }
+
+        foreach ($response->response as $user) {
+            if (
+                $userId !== ag($user, 'id')
+                && $username !== ag($user, 'name')
+                && $username !== ag($user, 'username')
+                && $userId !== ag($user, 'uuid')
+            ) {
+                continue;
+            }
+
+            return new Response(status: true, response: ag($user, 'token'));
+        }
+
+        return new Response(
+            status: false,
+            error: new Error(
+                message: "Failed to generate '{user}@{backend}'. '{userId}:{username}' access-token.",
+                context: [
+                    'user' => $context->userContext->name,
+                    'backend' => $context->backendName,
+                    'userId' => $userId,
+                    'username' => $username,
+                ],
+                level: Levels::ERROR,
+            ),
+        );
     }
 
     /**

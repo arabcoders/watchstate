@@ -6,17 +6,20 @@ namespace App\Backends\Jellyfin\Action;
 
 use App\Backends\Common\CommonTrait;
 use App\Backends\Common\Context;
+use App\Backends\Common\Request;
 use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinClient as JFC;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Extends\Date;
+use App\Libs\Extends\HttpClient;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use DateTimeInterface;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 use Throwable;
 
 /**
@@ -36,7 +39,7 @@ class Push
     /**
      * Class constructor.
      *
-     * @param iHttp $http The HTTP client.
+     * @param iHttp&HttpClient $http The HTTP client.
      * @param iLogger $logger The logger.
      */
     public function __construct(
@@ -274,53 +277,90 @@ class Push
                 }
 
                 $logContext['remote']['url'] = (string) $url;
+                $playState = $entity->isWatched() ? 'Played' : 'Unplayed';
+                $requestContext = $logContext + ['play_state' => $playState];
 
                 $this->logger->debug(
                     message: "{action}: Queuing request to change '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' play state to '{play_state}'.",
-                    context: [...$logContext, 'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed'],
+                    context: $requestContext,
                 );
 
                 if (false === (bool) ag($context->options, Options::DRY_RUN, false)) {
                     $queue->add(
-                        $this->http->request(
+                        new Request(
                             method: $entity->isWatched() ? Method::POST : Method::DELETE,
-                            url: (string) $url,
-                            options: array_replace_recursive($context->getHttpOptions(), [
-                                'user_data' => [
-                                    'context' => $logContext
-                                        + [
-                                            'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                            url: $url,
+                            options: $context->getHttpOptions(),
+                            success: function (ResponseInterface $response) use (
+                                $context,
+                                $entity,
+                                $json,
+                                $lastPlayed,
+                                $requestContext,
+                            ): array {
+                                $statusCode = $response->getStatusCode();
+
+                                if (Status::OK !== Status::tryFrom($statusCode)) {
+                                    $this->logger->error(
+                                        message: "{action}: Request to change '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' play state returned with unexpected '{status_code}' status code.",
+                                        context: [
+                                            ...$requestContext,
+                                            'status_code' => $statusCode,
                                         ],
-                                ],
-                            ]),
+                                    );
+
+                                    return [];
+                                }
+
+                                $this->logger->notice(
+                                    message: "{action}: Updated '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' play state to '{play_state}'.",
+                                    context: $requestContext,
+                                );
+
+                                if (true !== $entity->isWatched()) {
+                                    return [];
+                                }
+
+                                return [
+                                    new Request(
+                                        method: Method::POST,
+                                        url: $context->backendUrl->withPath(r('/Users/{user}/Items/{id}/UserData', [
+                                            'user' => $context->backendUser,
+                                            'id' => ag($json, 'Id'),
+                                        ])),
+                                        options: $context->getHttpOptions()
+                                        + [
+                                            'json' => [
+                                                'Played' => true,
+                                                'PlaybackPositionTicks' => 0,
+                                                'LastPlayedDate' => $lastPlayed,
+                                            ],
+                                            'user_data' => [Options::NO_LOGGING => true],
+                                        ],
+                                        extras: [iHttp::class => $this->http],
+                                    ),
+                                ];
+                            },
+                            error: function (Throwable $e) use ($requestContext): array {
+                                $this->logger->error(
+                                    ...lw(
+                                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' request to change play state of {item.type} '#{item.id}: {item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                                        context: [
+                                            ...$requestContext,
+                                            ...exception_log($e),
+                                        ],
+                                        e: $e,
+                                    ),
+                                );
+
+                                return [];
+                            },
+                            extras: [
+                                'context' => $requestContext,
+                                iHttp::class => $this->http,
+                            ],
                         ),
                     );
-
-                    /**
-                     * A workaround for some API limitations,
-                     * Jellyfin: sometimes doesn't reset the `PlaybackPositionTicks`.
-                     * Emby: Doesn't support sending `LastPlayedDate` in the initial request.
-                     */
-                    if (true === $entity->isWatched()) {
-                        $queue->add(
-                            $this->http->request(
-                                method: Method::POST,
-                                url: (string) $context->backendUrl->withPath(r('/Users/{user}/Items/{id}/UserData', [
-                                    'user' => $context->backendUser,
-                                    'id' => ag($json, 'Id'),
-                                ])),
-                                options: $context->getHttpOptions()
-                                + [
-                                    'json' => [
-                                        'Played' => true,
-                                        'PlaybackPositionTicks' => 0,
-                                        'LastPlayedDate' => $lastPlayed,
-                                    ],
-                                    'user_data' => [Options::NO_LOGGING => true],
-                                ],
-                            ),
-                        );
-                    }
                 }
             } catch (Throwable $e) {
                 $this->logger->error(

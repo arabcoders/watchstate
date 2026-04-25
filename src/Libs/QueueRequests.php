@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Libs;
 
+use App\Backends\Common\Request;
 use Countable;
 use Iterator;
-use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
  * Class QueueRequests
@@ -18,18 +18,18 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 final class QueueRequests implements Countable, Iterator
 {
     /**
-     * @var array<ResponseInterface> Queued requests.
+     * @var array<Request> Queued requests.
      */
     private array $queue = [];
 
     /**
-     * Adds a response to the queue.
+     * Adds a request to the queue.
      *
-     * @param ResponseInterface $request The response to be added to the queue.
+     * @param Request $request The request to be added to the queue.
      *
      * @return self Returns the current instance.
      */
-    public function add(ResponseInterface $request): self
+    public function add(Request $request): self
     {
         $this->queue[] = $request;
 
@@ -39,7 +39,7 @@ final class QueueRequests implements Countable, Iterator
     /**
      * Gets the queue.
      *
-     * @return array<ResponseInterface> The current queue.
+     * @return array<Request> The current queue.
      */
     public function getQueue(): array
     {
@@ -71,9 +71,9 @@ final class QueueRequests implements Countable, Iterator
     /**
      * Returns the current element in the queue.
      *
-     * @return ResponseInterface|bool The current element in the queue, or false if the queue is empty.
+     * @return Request|bool The current element in the queue, or false if the queue is empty.
      */
-    public function current(): ResponseInterface|bool
+    public function current(): Request|bool
     {
         return current($this->queue);
     }

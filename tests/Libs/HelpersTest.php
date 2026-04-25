@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Libs;
 
+use App\Backends\Common\Request;
 use App\Backends\Plex\PlexClient;
 use App\Libs\Config;
 use App\Libs\Container;
@@ -607,6 +608,31 @@ class HelpersTest extends TestCase
             $this->assertSame(['foo' => $x], $chunk);
             $x++;
         }
+    }
+
+    public function test_send_requests_processes_follow_up_requests(): void
+    {
+        $calls = [];
+        $client = new MockHttpClient(function (string $method, string $url) use (&$calls) {
+            $calls[] = [$method, $url];
+            return new MockResponse('', ['http_code' => 200]);
+        });
+
+        send_requests(
+            requests: [
+                new Request(
+                    method: Method::POST,
+                    url: 'http://example.test/played',
+                    success: static fn() => [new Request(Method::POST, 'http://example.test/reset')],
+                ),
+            ],
+            client: $client,
+        );
+
+        $this->assertSame([
+            ['POST', 'http://example.test/played'],
+            ['POST', 'http://example.test/reset'],
+        ], $calls);
     }
 
     public function test_afterLast(): void

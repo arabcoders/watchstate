@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Libs;
 
+use App\Backends\Common\Request;
+use App\Libs\Enums\Http\Method;
 use App\Libs\QueueRequests;
 use App\Libs\TestCase;
-use Symfony\Component\HttpClient\Response\JsonMockResponse;
-use Symfony\Component\HttpClient\Response\MockResponse;
 
 class QueueRequestsTest extends TestCase
 {
@@ -22,13 +22,13 @@ class QueueRequestsTest extends TestCase
     public function test_message_init_count(): void
     {
         $this->assertCount(0, $this->queue, 'When queue empty count on object is 0');
-        $this->queue->add(new JsonMockResponse(['test' => 'foo']));
+        $this->queue->add(new Request(Method::GET, 'http://example.test/1'));
         $this->assertCount(1, $this->queue, 'When queue has 1 item count on object is 1');
     }
 
     public function test_message_add(): void
     {
-        $obj = new JsonMockResponse(['test' => 'foo']);
+        $obj = new Request(Method::GET, 'http://example.test/1');
         $this->queue->add($obj);
         $this->assertSame([$obj],
             $this->queue->getQueue(),
@@ -38,7 +38,7 @@ class QueueRequestsTest extends TestCase
 
     public function test_message_reset(): void
     {
-        $obj = new JsonMockResponse(['test' => 'foo']);
+        $obj = new Request(Method::GET, 'http://example.test/1');
         $this->queue->add($obj);
         $this->assertCount(1, $this->queue, 'When queue has 1 item count on object is 1');
         $this->queue->reset();
@@ -48,8 +48,8 @@ class QueueRequestsTest extends TestCase
     public function test_message_iterator(): void
     {
         $objs = [
-            new JsonMockResponse(['test' => 'foo']),
-            new MockResponse(['test' => 'foo2']),
+            new Request(Method::GET, 'http://example.test/1'),
+            new Request(Method::POST, 'http://example.test/2'),
         ];
 
         foreach ($objs as $obj) {

@@ -19,8 +19,10 @@ try {
   }
 } catch {}
 
+const isProd = 'production' === process.env.NODE_ENV;
 export default defineNuxtConfig({
   ssr: false,
+  sourcemap: isProd ? false : true,
   devtools: { enabled: true },
   devServer: {
     port: 8082,
@@ -38,7 +40,14 @@ export default defineNuxtConfig({
     classSuffix: '',
   },
   icon: {
-    serverBundle: 'local',
+    provider: 'none',
+    fallbackToApi: false,
+    clientBundle: {
+      scan: {
+        globInclude: ['app/**/*.{vue,ts,js}', 'node_modules/@nuxt/ui/dist/shared/ui*.mjs'],
+        globExclude: ['dist', 'build', 'coverage', 'test', 'tests', '.*'],
+      },
+    },
   },
   app: {
     head: {
@@ -51,25 +60,20 @@ export default defineNuxtConfig({
     buildAssetsDir: 'assets',
     pageTransition: { name: 'page', mode: 'out-in' },
   },
-
   router: {
     options: {
       linkActiveClass: 'is-selected',
     },
   },
-
   modules: ['@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', '@nuxt/eslint'],
-
   nitro: {
+    sourceMap: isProd ? false : true,
     output: {
-      publicDir:
-        'production' === process.env.NODE_ENV ? __dirname + '/exported' : __dirname + '/dist',
+      publicDir: isProd ? __dirname + '/exported' : __dirname + '/dist',
     },
     ...extraNitro,
   },
-
   css: ['~/assets/css/tailwind.css'],
-
   telemetry: false,
   compatibilityDate: '2025-08-02',
   experimental: {
@@ -99,6 +103,15 @@ export default defineNuxtConfig({
     },
     build: {
       chunkSizeWarningLimit: 2000,
+      rollupOptions: {
+        onwarn(warning, warn) {
+          if ('SOURCEMAP_BROKEN' === warning.code) {
+            return;
+          }
+
+          warn(warning);
+        },
+      },
     },
   },
 });

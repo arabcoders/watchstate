@@ -1,6 +1,6 @@
 <template>
   <UApp>
-    <div class="ws-shell flex min-h-screen flex-col">
+    <div class="ws-shell ws-shell-surface flex min-h-screen flex-col">
       <UDashboardGroup
         storage="local"
         storage-key="watchstate-shell"
@@ -8,6 +8,7 @@
         :ui="{ base: 'relative flex min-h-screen overflow-visible' }"
       >
         <UDashboardSidebar
+          v-model:open="showSidebar"
           side="left"
           collapsible
           resizable
@@ -232,12 +233,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, readonly, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, readonly, ref, watch } from 'vue';
 import { useBreakpoints, useStorage } from '@vueuse/core';
 import { navigateTo } from '#app';
 import { useAuthStore } from '~/store/auth';
+import { useMediaQuery } from '~/composables/useMediaQuery';
 import { usePageBackground } from '~/composables/usePageBackground';
 import { useDialog } from '~/composables/useDialog';
+import { getSidebarSwipeMode } from '~/utils/sidebarSwipe';
 import {
   getTopLevelNavigationEntries,
   getTopLevelNavigationSections,
@@ -284,6 +287,9 @@ type SearchGroup = {
 };
 
 type ColorModePreference = 'system' | 'light' | 'dark';
+type MobileSidebarSwipeMode = 'open' | 'close';
+
+const MOBILE_SIDEBAR_MIN_SWIPE_DISTANCE = 64;
 
 const useVersionUpdate = () => {
   const newVersionIsAvailable = ref(false);
@@ -311,12 +317,23 @@ const { pageBackgroundOverride, requestPageBackgroundReload } = usePageBackgroun
 const bgEnable = useStorage<boolean>('bg_enable', true);
 const bgOpacity = useStorage<number>('bg_opacity', 0.95);
 const apiUser = useStorage<string>('api_user', 'main');
+const isMobile = useMediaQuery({ query: '(max-width: 1023px)' });
 
 const showIdentitySelection = ref(false);
 const showSettings = ref(false);
 const inContainer = ref(false);
 const showScheduler = ref(false);
 const showRouteSearch = ref(false);
+const showSidebar = ref(false);
+
+const swipeState = {
+  mode: null as MobileSidebarSwipeMode | null,
+  tracking: false,
+  startX: 0,
+  startY: 0,
+  endX: 0,
+  endY: 0,
+};
 
 const colorModePreferences: Array<ColorModePreference> = ['system', 'light', 'dark'];
 
@@ -367,6 +384,100 @@ const colorModeButtonAriaLabel = computed(() => {
 
 const cycleColorMode = (): void => {
   colorMode.preference = nextColorModePreference.value;
+};
+
+const resetSwipe = (): void => {
+  swipeState.mode = null;
+  swipeState.tracking = false;
+  swipeState.startX = 0;
+  swipeState.startY = 0;
+  swipeState.endX = 0;
+  swipeState.endY = 0;
+};
+
+const updateSwipePosition = (touch?: Touch): void => {
+  if (!touch) {
+    return;
+  }
+
+  swipeState.endX = touch.clientX;
+  swipeState.endY = touch.clientY;
+};
+
+const handleSwipeStart = (event: TouchEvent): void => {
+  if (false === isMobile.value || 1 !== event.touches.length) {
+    resetSwipe();
+    return;
+  }
+
+  const touch = event.touches[0];
+
+  if (!touch) {
+    resetSwipe();
+    return;
+  }
+
+  const swipeMode: MobileSidebarSwipeMode | null = getSidebarSwipeMode(
+    showSidebar.value,
+    touch.clientX,
+    navigator,
+  );
+
+  if (!swipeMode) {
+    resetSwipe();
+    return;
+  }
+
+  swipeState.mode = swipeMode;
+  swipeState.tracking = true;
+  swipeState.startX = touch.clientX;
+  swipeState.startY = touch.clientY;
+  updateSwipePosition(touch);
+};
+
+const handleSwipeMove = (event: TouchEvent): void => {
+  if (false === swipeState.tracking || 1 !== event.touches.length) {
+    return;
+  }
+
+  updateSwipePosition(event.touches[0]);
+};
+
+const completeSwipe = (): void => {
+  if (false === swipeState.tracking) {
+    return;
+  }
+
+  const swipeMode = swipeState.mode;
+  const deltaX = swipeState.endX - swipeState.startX;
+  const deltaY = swipeState.endY - swipeState.startY;
+  const isHorizontalOpenSwipe =
+    'open' === swipeMode &&
+    deltaX >= MOBILE_SIDEBAR_MIN_SWIPE_DISTANCE &&
+    deltaX > Math.abs(deltaY);
+  const isHorizontalCloseSwipe =
+    'close' === swipeMode &&
+    deltaX <= -MOBILE_SIDEBAR_MIN_SWIPE_DISTANCE &&
+    Math.abs(deltaX) > Math.abs(deltaY);
+
+  resetSwipe();
+
+  if (true === isHorizontalOpenSwipe) {
+    showSidebar.value = true;
+  }
+
+  if (true === isHorizontalCloseSwipe) {
+    showSidebar.value = false;
+  }
+};
+
+const handleSwipeEnd = (event: TouchEvent): void => {
+  updateSwipePosition(event.changedTouches[0]);
+  completeSwipe();
+};
+
+const handleSwipeCancel = (): void => {
+  resetSwipe();
 };
 
 const identitySelectionModalUi = {
@@ -591,7 +702,7 @@ const pageTitle = computed(() => {
 });
 
 const dashboardSidebarUi = {
-  root: 'border-r border-default bg-default/95 backdrop-blur-sm',
+  root: 'ws-shell-surface border-r border-default bg-default/95 backdrop-blur-sm',
   header: 'border-b border-default px-2.5 py-3',
   body: 'gap-3 px-2.5 py-3',
   footer: 'border-t border-default px-2.5 py-3',
@@ -705,6 +816,15 @@ watch(bgEnable, async (value) => {
   }
 });
 
+watch(isMobile, (v) => {
+  if (true === v) {
+    return;
+  }
+
+  showSidebar.value = false;
+  resetSwipe();
+});
+
 const forceBackgroundReload = async (): Promise<void> => {
   if (pageBackgroundOverride.value?.id) {
     requestPageBackgroundReload(pageBackgroundOverride.value.id);
@@ -769,8 +889,31 @@ const logout = async (): Promise<boolean> => {
 };
 
 onMounted(async () => {
+  document.addEventListener('touchstart', handleSwipeStart, {
+    passive: true,
+    capture: true,
+  });
+  document.addEventListener('touchmove', handleSwipeMove, {
+    passive: true,
+    capture: true,
+  });
+  document.addEventListener('touchend', handleSwipeEnd, {
+    passive: true,
+    capture: true,
+  });
+  document.addEventListener('touchcancel', handleSwipeCancel, {
+    passive: true,
+    capture: true,
+  });
   await getVersion();
   await loadImage();
   eventsStats.start();
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('touchstart', handleSwipeStart, true);
+  document.removeEventListener('touchmove', handleSwipeMove, true);
+  document.removeEventListener('touchend', handleSwipeEnd, true);
+  document.removeEventListener('touchcancel', handleSwipeCancel, true);
 });
 </script>

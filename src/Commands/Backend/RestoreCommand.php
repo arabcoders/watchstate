@@ -8,7 +8,6 @@ use App\Command;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\RetryableHttpClient;
 use App\Libs\Extends\StreamLogHandler;
@@ -332,51 +331,12 @@ class RestoreCommand extends Command
             return self::SUCCESS;
         }
 
-        foreach ($this->queue->getQueue() as $response) {
-            if (true === (bool) ag($response->getInfo('user_data'), Options::NO_LOGGING, false)) {
-                try {
-                    $response->getStatusCode();
-                } catch (Throwable) {
-                }
-                continue;
-            }
-
-            $context = ag($response->getInfo('user_data'), 'context', []);
-            $context['backend'] = $name;
-            $context['user'] = $userContext->name;
-            $context['client'] = $backend->getContext()->clientName;
-
-            try {
-                if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
-                    $this->logger->error(
-                        "Failed to change '{client}: {user}@{backend}' - '{item.title}' play state. Invalid HTTP '{status_code}' status code returned.",
-                        $context,
-                    );
-                    continue;
-                }
-
-                $this->logger->notice(
-                    "Changed '{client}: {user}@{backend}' - '{{item.title}}' play state to '{play_state}'.",
-                    $context,
-                );
-            } catch (Throwable $e) {
-                $this->logger->error(
-                    message: "Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' restore play state of {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
-                    context: [
-                        'backend' => $name,
-                        'client' => $backend->getContext()->clientName,
-                        'user' => $userContext->name,
-                        ...$context,
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                        ],
-                    ],
-                );
-            }
-        }
+        send_requests(
+            requests: $this->queue->getQueue(),
+            client: $this->http,
+            sync: $syncRequests,
+            logger: $this->logger,
+        );
 
         $this->logger->notice(
             "SYSTEM: Sent '{total}' change play state requests to '{client}: {user}@{backend}' in '{duration}'s.",

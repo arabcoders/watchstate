@@ -126,6 +126,79 @@ class ImportFlowTest extends PlexTestCase
         $this->assertSame(1, $result['episode']['added']);
     }
 
+    public function test_import_uses_prefetched_show_metadata_for_episode_genres(): void
+    {
+        $context = $this->makeContext();
+        $mapper = $context->userContext->mapper;
+
+        $item = [
+            'ratingKey' => '11',
+            'type' => 'episode',
+            'title' => 'Pilot',
+            'grandparentTitle' => 'Test Show',
+            'parentIndex' => 1,
+            'index' => 1,
+            'addedAt' => 1000,
+            'Guid' => [
+                ['id' => 'imdb://tt123'],
+            ],
+            'grandparentRatingKey' => 'show-1',
+        ];
+
+        $show = [
+            'ratingKey' => 'show-1',
+            'type' => 'show',
+            'title' => 'Test Show',
+            'Guid' => [
+                ['id' => 'imdb://tt123'],
+            ],
+            'guid' => 'imdb://tt123',
+            'Genre' => [
+                ['tag' => 'Drama'],
+                ['tag' => 'Sci-Fi'],
+            ],
+        ];
+
+        $metaAction = new class($show) {
+            public function __construct(private array $payload)
+            {
+            }
+
+            public int $calls = 0;
+
+            public function __invoke(\App\Backends\Common\Context $context, string|int $id, array $opts = []): Response
+            {
+                $this->calls++;
+
+                return new Response(
+                    status: true,
+                    response: ['MediaContainer' => ['Metadata' => [$this->payload]]],
+                );
+            }
+        };
+
+        Container::add(GetMetaData::class, fn() => $metaAction);
+
+        $action = new Import($this->makeHttpClient(), $this->logger);
+        $guid = (new PlexGuid($this->logger))->withContext($context);
+
+        $this->invokeProcessShow($action, $context, $guid, $show, []);
+        $this->invokeProcess(
+            $action,
+            $context,
+            $guid,
+            $mapper,
+            $item,
+            ['library' => ['id' => 1]],
+            [],
+        );
+
+        $result = $mapper->commit();
+
+        $this->assertSame(1, $result['episode']['added']);
+        $this->assertSame(0, $metaAction->calls);
+    }
+
     public function test_import_ignores_no_supported_guids(): void
     {
         $context = $this->makeContext();
@@ -163,5 +236,16 @@ class ImportFlowTest extends PlexTestCase
     ): void {
         $method = new ReflectionMethod($action, 'process');
         $method->invoke($action, $context, $guid, $mapper, $item, $logContext, $opts);
+    }
+
+    private function invokeProcessShow(
+        object $action,
+        \App\Backends\Common\Context $context,
+        \App\Backends\Common\GuidInterface $guid,
+        array $item,
+        array $logContext,
+    ): void {
+        $method = new ReflectionMethod($action, 'processShow');
+        $method->invoke($action, $context, $guid, $item, $logContext);
     }
 }

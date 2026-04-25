@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Backends\Plex;
 
+use App\Backends\Common\Request;
 use App\Backends\Plex\Action\Export;
 use App\Backends\Plex\PlexGuid;
 use App\Libs\Entity\StateEntity;
@@ -41,6 +42,7 @@ class ExportFlowTest extends PlexTestCase
         );
 
         $this->assertSame(1, $queue->count());
+        $this->assertContainsOnlyInstancesOf(Request::class, $queue->getQueue());
     }
 
     public function test_export_ignores_state_unchanged(): void

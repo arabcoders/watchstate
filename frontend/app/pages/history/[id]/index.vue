@@ -1,125 +1,161 @@
 <template>
   <main class="w-full min-w-0 max-w-full space-y-4">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-      <div class="min-w-0 space-y-2">
-        <div
-          class="flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-        >
-          <UIcon :name="pageShell.icon" class="size-4" />
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
-          <NuxtLink to="/history" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
-          <span>/</span>
-          <span class="truncate text-highlighted normal-case tracking-normal">{{
-            headerTitle
-          }}</span>
+    <div class="space-y-3">
+      <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+        <div class="min-w-0 flex-1 space-y-2">
+          <div
+            class="flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
+          >
+            <UIcon :name="pageShell.icon" class="size-4" />
+            <span>{{ pageShell.sectionLabel }}</span>
+            <span>/</span>
+            <NuxtLink to="/history" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
+            <span>/</span>
+            <span class="truncate text-highlighted normal-case tracking-normal">{{
+              headerTitle
+            }}</span>
+          </div>
         </div>
 
-        <div v-if="data?.via && (data?.content_title || data?.content_overview)" class="space-y-2">
-          <div
-            v-if="data.content_title"
-            class="flex items-center gap-2 text-lg font-semibold text-highlighted"
+        <div v-if="data?.via" class="flex flex-wrap items-center justify-end gap-2">
+          <UTooltip
+            v-if="data?.files?.length > 0"
+            :text="`${data.content_exists ? 'Play media' : 'Media is inaccessible'}`"
           >
-            <UIcon
-              :name="'episode' === data.type ? 'i-lucide-tv' : 'i-lucide-film'"
-              class="size-4 text-toned"
-            />
-            <span class="truncate">{{ data.content_title }}</span>
-          </div>
-
-          <p
-            v-if="data.content_overview"
-            class="max-w-4xl cursor-pointer text-sm text-toned"
-            :class="{ 'overflow-hidden text-ellipsis whitespace-nowrap': !expandOverview }"
-            @click="expandOverview = !expandOverview"
-          >
-            {{ data.content_overview }}
-          </p>
-
-          <div
-            v-if="data.content_genres && data.content_genres.length > 0"
-            class="flex flex-wrap gap-2"
-          >
-            <UBadge
-              v-for="(genre, genreIndex) in data.content_genres"
-              :key="`head-genre-${genreIndex}`"
-              color="info"
-              variant="soft"
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-play"
+              :disabled="!data.content_exists"
+              @click="navigateTo(`/play/${data.id}`)"
             >
-              <span class="inline-flex items-center gap-1">
-                <UIcon name="i-lucide-tag" class="size-3.5" />
-                <span class="capitalize">{{ genre }}</span>
-              </span>
-            </UBadge>
-          </div>
+              Play
+            </UButton>
+          </UTooltip>
+
+          <UTooltip text="Toggle watch state">
+            <UButton
+              color="neutral"
+              :variant="data.watched ? 'soft' : 'outline'"
+              size="sm"
+              :icon="data.watched ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+              @click="toggleWatched"
+            >
+              {{ data.watched ? 'Unwatched' : 'Watched' }}
+            </UButton>
+          </UTooltip>
+
+          <UTooltip text="View raw record payload">
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-bug"
+              @click="showRawData = true"
+            >
+              Raw Data
+            </UButton>
+          </UTooltip>
+
+          <UTooltip text="Delete the record">
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-trash-2"
+              :disabled="isDeleting || isLoading"
+              :loading="isDeleting"
+              @click="deleteItem"
+            >
+              Delete
+            </UButton>
+          </UTooltip>
+
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-refresh-cw"
+            :loading="isLoading"
+            @click="() => void loadContent(id)"
+          >
+            Reload
+          </UButton>
         </div>
       </div>
 
-      <div v-if="data?.via" class="flex flex-wrap items-center justify-end gap-2">
-        <UTooltip
-          v-if="data?.files?.length > 0"
-          :text="`${data.content_exists ? 'Play media' : 'Media is inaccessible'}`"
+      <div
+        v-if="
+          data?.via &&
+          (data?.content_title ||
+            data?.content_overview ||
+            summaryBadges.length > 0 ||
+            (data?.content_genres && data.content_genres.length > 0))
+        "
+        class="w-full space-y-3 rounded-md border border-default bg-elevated/30 p-4 shadow-sm"
+      >
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div class="min-w-0 space-y-2">
+            <div
+              v-if="data.content_title"
+              class="flex min-w-0 items-center gap-2 text-lg font-semibold text-highlighted"
+            >
+              <UIcon
+                :name="'episode' === data.type ? 'i-lucide-tv' : 'i-lucide-film'"
+                class="size-4 shrink-0 text-toned"
+              />
+              <span class="truncate">{{ data.content_title }}</span>
+            </div>
+
+            <p
+              v-if="data.content_overview"
+              class="text-sm leading-6 text-default"
+              :class="expandableBlockClass(headerOverviewExpanded)"
+            >
+              {{ data.content_overview }}
+            </p>
+          </div>
+
+          <UButton
+            v-if="data.content_overview"
+            color="neutral"
+            :variant="headerOverviewExpanded ? 'soft' : 'outline'"
+            size="sm"
+            :icon="headerOverviewExpanded ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+            class="shrink-0 self-start"
+            @click="headerOverviewExpanded = !headerOverviewExpanded"
+          >
+            {{ headerOverviewExpanded ? 'Show Less' : 'Show More' }}
+          </UButton>
+        </div>
+
+        <div
+          v-if="summaryBadges.length > 0 || (data.content_genres && data.content_genres.length > 0)"
+          class="flex flex-wrap items-center gap-2"
         >
-          <UButton
+          <UBadge
+            v-for="badge in summaryBadges"
+            :key="`${badge.icon}-${badge.label}`"
             color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-play"
-            :disabled="!data.content_exists"
-            @click="navigateTo(`/play/${data.id}`)"
+            :variant="badge.variant ?? 'outline'"
+            class="gap-1"
           >
-            Play
-          </UButton>
-        </UTooltip>
+            <UIcon :name="badge.icon" class="size-3" />
+            <span>{{ badge.label }}</span>
+          </UBadge>
 
-        <UTooltip text="Toggle watch state">
-          <UButton
+          <UBadge
+            v-for="(genre, genreIndex) in data.content_genres"
+            :key="`head-genre-${genreIndex}`"
             color="neutral"
-            :variant="data.watched ? 'soft' : 'outline'"
-            size="sm"
-            :icon="data.watched ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-            @click="toggleWatched"
+            variant="soft"
+            class="gap-1"
           >
-            {{ data.watched ? 'Unwatched' : 'Watched' }}
-          </UButton>
-        </UTooltip>
-
-        <UTooltip text="View raw record payload">
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-bug"
-            @click="showRawData = true"
-          >
-            Raw Data
-          </UButton>
-        </UTooltip>
-
-        <UTooltip text="Delete the record">
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-trash-2"
-            :disabled="isDeleting || isLoading"
-            :loading="isDeleting"
-            @click="deleteItem"
-          >
-            Delete
-          </UButton>
-        </UTooltip>
-
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="sm"
-          icon="i-lucide-refresh-cw"
-          :loading="isLoading"
-          @click="() => void loadContent(id)"
-        >
-          Reload
-        </UButton>
+            <UIcon name="i-lucide-tag" class="size-3" />
+            <span class="capitalize">{{ genre }}</span>
+          </UBadge>
+        </div>
       </div>
     </div>
 
@@ -305,51 +341,6 @@
                     <span
                       class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
                     >
-                      <UIcon name="i-lucide-clock-3" class="size-4 shrink-0" />
-                      <span>Progress</span>
-                    </span>
-                    <span class="min-w-0 font-medium text-highlighted sm:ml-auto sm:text-right">
-                      {{
-                        Number(data.progress) > 0
-                          ? formatDuration(Number(data.progress ?? 0))
-                          : 'None'
-                      }}
-                    </span>
-                  </div>
-                </div>
-
-                <div
-                  class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-                >
-                  <div
-                    class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-                  >
-                    <span
-                      class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-                    >
-                      <UIcon
-                        :name="'episode' === data.type ? 'i-lucide-tv' : 'i-lucide-film'"
-                        class="size-4 shrink-0"
-                      />
-                      <span>Type</span>
-                    </span>
-                    <NuxtLink
-                      :to="makeSearchLink('type', data.type)"
-                      class="block min-w-0 font-medium text-highlighted hover:text-primary sm:ml-auto sm:text-right"
-                      >{{ ucFirst(data.type) }}</NuxtLink
-                    >
-                  </div>
-                </div>
-
-                <div
-                  class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-                >
-                  <div
-                    class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-                  >
-                    <span
-                      class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-                    >
                       <UIcon name="i-lucide-calendar" class="size-4 shrink-0" />
                       <span>Source Updated</span>
                     </span>
@@ -363,50 +354,6 @@
                         }}</span>
                       </UTooltip>
                     </div>
-                  </div>
-                </div>
-
-                <div
-                  v-if="'episode' === data.type"
-                  class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-                >
-                  <div
-                    class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-                  >
-                    <span
-                      class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-                    >
-                      <UIcon name="i-lucide-tv" class="size-4 shrink-0" />
-                      <span>Season</span>
-                    </span>
-                    <NuxtLink
-                      :to="makeSearchLink('season', String(data.season ?? ''))"
-                      class="block min-w-0 font-medium text-highlighted hover:text-primary sm:ml-auto sm:text-right"
-                    >
-                      {{ data.season }}
-                    </NuxtLink>
-                  </div>
-                </div>
-
-                <div
-                  v-if="'episode' === data.type"
-                  class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-                >
-                  <div
-                    class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-                  >
-                    <span
-                      class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-                    >
-                      <UIcon name="i-lucide-tv" class="size-4 shrink-0" />
-                      <span>Episode</span>
-                    </span>
-                    <NuxtLink
-                      :to="makeSearchLink('episode', String(data.episode ?? ''))"
-                      class="block min-w-0 font-medium text-highlighted hover:text-primary sm:ml-auto sm:text-right"
-                    >
-                      {{ data.episode }}
-                    </NuxtLink>
                   </div>
                 </div>
 
@@ -463,15 +410,7 @@
                 </div>
               </div>
 
-              <div
-                v-if="
-                  data?.content_title ||
-                  data?.content_path ||
-                  (data?.content_genres && data.content_genres.length > 0) ||
-                  data?.content_overview
-                "
-                class="space-y-3"
-              >
+              <div v-if="data?.content_title || data?.content_path" class="space-y-3">
                 <div class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
                   <UIcon name="i-lucide-clapperboard" class="size-4 text-toned" />
                   <span>Content</span>
@@ -480,8 +419,8 @@
                 <div class="grid gap-3 xl:grid-cols-2">
                   <div
                     v-if="data?.content_title"
-                    class="rounded-md border border-default bg-elevated/40 px-3 py-3 xl:order-1"
-                    :class="data?.content_overview ? '' : 'xl:col-span-2'"
+                    class="rounded-md border border-default bg-elevated/40 px-3 py-3"
+                    :class="data?.content_path ? '' : 'xl:col-span-2'"
                   >
                     <div class="mb-2 flex items-center justify-between gap-3">
                       <button
@@ -522,30 +461,9 @@
                   </div>
 
                   <div
-                    v-if="data?.content_overview"
-                    class="rounded-md border border-default bg-elevated/40 px-3 py-3 xl:order-2"
-                    :class="data?.content_title ? '' : 'xl:col-span-2'"
-                  >
-                    <button
-                      type="button"
-                      class="mb-2 inline-flex items-center gap-2 text-left text-xs font-medium text-toned"
-                      @click="expandOverview = !expandOverview"
-                    >
-                      <UIcon name="i-lucide-message-square" class="size-4" />
-                      <span>Content Summary</span>
-                    </button>
-                    <div
-                      class="cursor-pointer text-default"
-                      :class="expandableBlockClass(expandOverview)"
-                      @click="expandOverview = !expandOverview"
-                    >
-                      {{ data.content_overview }}
-                    </div>
-                  </div>
-
-                  <div
                     v-if="data?.content_path"
-                    class="rounded-md border border-default bg-elevated/40 px-3 py-3 xl:order-3 xl:col-span-2"
+                    class="rounded-md border border-default bg-elevated/40 px-3 py-3"
+                    :class="data?.content_title ? '' : 'xl:col-span-2'"
                   >
                     <div class="mb-2 flex items-center justify-between gap-3">
                       <button
@@ -582,26 +500,6 @@
                       >
                         {{ data.content_path }}
                       </NuxtLink>
-                    </div>
-                  </div>
-
-                  <div
-                    v-if="data?.content_genres && data.content_genres.length > 0"
-                    class="rounded-md border border-default bg-elevated/40 px-3 py-3 xl:order-4 xl:col-span-2"
-                  >
-                    <div class="mb-2 inline-flex items-center gap-2 text-xs font-medium text-toned">
-                      <UIcon name="i-lucide-tag" class="size-4" />
-                      <span>Genres</span>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                      <UBadge
-                        v-for="genre in data.content_genres"
-                        :key="`latest-${genre}`"
-                        color="info"
-                        variant="soft"
-                      >
-                        <span class="capitalize">{{ genre }}</span>
-                      </UBadge>
                     </div>
                   </div>
                 </div>
@@ -1463,6 +1361,8 @@
                                 <NuxtLink
                                   v-if="entry.cell.href"
                                   :to="entry.cell.href"
+                                  :target="entry.cell.target"
+                                  :external="'_blank' === entry.cell.target"
                                   class="block min-w-0 font-medium text-highlighted hover:text-primary"
                                   @click.stop
                                 >
@@ -1653,10 +1553,17 @@ type ComparisonTag = {
   target?: '_blank';
 };
 
+type SummaryBadge = {
+  icon: string;
+  label: string;
+  variant?: 'outline' | 'soft';
+};
+
 type ComparisonCell = {
   kind: 'text' | 'link' | 'date' | 'tags';
   value?: string;
   href?: string;
+  target?: '_blank';
   tooltip?: string;
   compareValue?: string;
   allowBreakAll?: boolean;
@@ -1730,7 +1637,7 @@ const loadedImages = ref<Record<'poster' | 'background', string | null>>({
   poster: null,
   background: null,
 });
-const expandOverview = ref(false);
+const headerOverviewExpanded = ref(false);
 
 const data = ref<HistoryViewItem>({
   id,
@@ -1821,7 +1728,12 @@ const makeTextCell = (
 const makeLinkCell = (
   value: string | number | null | undefined,
   href: string | null | undefined,
-  options: { allowBreakAll?: boolean; emptyLabel?: string; expandable?: boolean } = {},
+  options: {
+    allowBreakAll?: boolean;
+    emptyLabel?: string;
+    expandable?: boolean;
+    target?: '_blank';
+  } = {},
 ): ComparisonCell => {
   if (value === undefined || value === null || '' === String(value)) {
     return makeTextCell('', { emptyLabel: options.emptyLabel ?? 'None' });
@@ -1831,6 +1743,7 @@ const makeLinkCell = (
     kind: 'link',
     value: String(value),
     href: href ?? undefined,
+    target: options.target,
     compareValue: String(value).trim().toLowerCase(),
     allowBreakAll: options.allowBreakAll,
     expandable: options.expandable,
@@ -1850,7 +1763,7 @@ const makeDateCell = (
   return {
     kind: 'date',
     value: momentValue.fromNow(),
-    tooltip: momentValue.format(TOOLTIP_DATE_FORMAT),
+    tooltip: momentValue.format(TOOLTIP_DATE_FORMAT.value),
     compareValue: String(momentValue.valueOf()),
   };
 };
@@ -1979,6 +1892,7 @@ const comparisonSections = computed<Array<ComparisonSection>>(() => {
           emptyLabel: 'None',
           allowBreakAll: true,
           expandable: true,
+          target: '_blank',
         }),
       { compareDiffs: false },
     ),
@@ -2002,6 +1916,20 @@ const comparisonSections = computed<Array<ComparisonSection>>(() => {
       'i-lucide-tv',
       makeTextCell(data.value.episode, { emptyLabel: 'None' }),
       ({ item }) => makeTextCell(item.episode, { emptyLabel: 'None' }),
+    ),
+    makeComparisonRow(
+      'guids',
+      'GUIDs',
+      'i-lucide-link',
+      makeGuidCell(data.value.guids, data.value.type, dataContext.value),
+      ({ item }) => makeGuidCell(item.guids, item.type, item as unknown as JsonObject),
+    ),
+    makeComparisonRow(
+      'parent-guids',
+      'Series GUIDs',
+      'i-lucide-link',
+      makeGuidCell(data.value.parent, 'series', dataContext.value),
+      ({ item }) => makeGuidCell(item.parent, 'series', item as unknown as JsonObject),
     ),
   ].filter((row): row is ComparisonRow => row !== null);
 
@@ -2031,6 +1959,7 @@ const comparisonSections = computed<Array<ComparisonSection>>(() => {
       'i-lucide-mail',
       makeTextCell(ag(data.value.extra, `${data.value.via}.event`, 'Unknown')),
       ({ key }) => makeTextCell(ag(data.value.extra, `${key}.event`, 'Unknown')),
+      { compareDiffs: false },
     ),
     makeComparisonRow(
       'updated',
@@ -2038,6 +1967,7 @@ const comparisonSections = computed<Array<ComparisonSection>>(() => {
       'i-lucide-calendar',
       makeDateCell(data.value.updated),
       ({ key }) => makeDateCell(ag(data.value.extra, `${key}.received_at`, data.value.updated)),
+      { compareDiffs: false },
     ),
   ].filter((row): row is ComparisonRow => row !== null);
 
@@ -2089,28 +2019,10 @@ const comparisonSections = computed<Array<ComparisonSection>>(() => {
     ),
   ].filter((row): row is ComparisonRow => row !== null);
 
-  const guidRows = [
-    makeComparisonRow(
-      'guids',
-      'GUIDs',
-      'i-lucide-link',
-      makeGuidCell(data.value.guids, data.value.type, dataContext.value),
-      ({ item }) => makeGuidCell(item.guids, item.type, item as unknown as JsonObject),
-    ),
-    makeComparisonRow(
-      'parent-guids',
-      'Series GUIDs',
-      'i-lucide-link',
-      makeGuidCell(data.value.parent, 'series', dataContext.value),
-      ({ item }) => makeGuidCell(item.parent, 'series', item as unknown as JsonObject),
-    ),
-  ].filter((row): row is ComparisonRow => row !== null);
-
   return [
     { key: 'identity', label: 'Identity', rows: identityRows },
     { key: 'playback', label: 'Playback', rows: playbackRows },
     { key: 'content', label: 'Content', rows: contentRows },
-    { key: 'guids', label: 'GUIDs', rows: guidRows },
   ].filter((section) => section.rows.length > 0);
 });
 
@@ -2130,6 +2042,54 @@ const historyTitle = computed<string>(() => {
     return `${baseTitle} (${data.value.year})`;
   }
   return baseTitle;
+});
+
+const contentDateLabel = computed<string | null>(() => {
+  const contentDate = ag(data.value.metadata, `${data.value.via}.extra.date`, '');
+  if ('string' !== typeof contentDate || '' === contentDate.trim()) {
+    return null;
+  }
+
+  return contentDate.trim();
+});
+
+const summaryBadges = computed<Array<SummaryBadge>>(() => {
+  const badges: Array<SummaryBadge> = [];
+
+  if (contentDateLabel.value) {
+    badges.push({
+      icon: 'i-lucide-calendar',
+      label: contentDateLabel.value,
+    });
+  } else if (data.value.year !== undefined) {
+    badges.push({
+      icon: 'i-lucide-calendar',
+      label: String(data.value.year),
+    });
+  }
+
+  if ('episode' === data.value.type && data.value.season !== undefined) {
+    badges.push({
+      icon: 'i-lucide-tv',
+      label: `Season ${data.value.season}`,
+    });
+  }
+
+  if ('episode' === data.value.type && data.value.episode !== undefined) {
+    badges.push({
+      icon: 'i-lucide-clapperboard',
+      label: `Episode ${data.value.episode}`,
+    });
+  }
+
+  if (Number(data.value.progress) > 0) {
+    badges.push({
+      icon: 'i-lucide-clock-3',
+      label: formatDuration(Number(data.value.progress ?? 0)),
+    });
+  }
+
+  return badges;
 });
 
 const rawData = computed<string>(() => {

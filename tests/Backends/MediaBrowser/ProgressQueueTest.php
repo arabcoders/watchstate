@@ -8,6 +8,7 @@ use App\Backends\Emby\Action\GetMetaData as EmbyGetMetaData;
 use App\Backends\Emby\Action\GetSessions as EmbyGetSessions;
 use App\Backends\Emby\Action\Progress as EmbyProgress;
 use App\Backends\Emby\EmbyGuid;
+use App\Backends\Common\Request;
 use App\Backends\Jellyfin\Action\GetMetaData as JellyfinGetMetaData;
 use App\Backends\Jellyfin\Action\GetSessions as JellyfinGetSessions;
 use App\Backends\Jellyfin\Action\Progress as JellyfinProgress;
@@ -90,6 +91,7 @@ class ProgressQueueTest extends MediaBrowserTestCase
 
             $this->assertTrue($result->isSuccessful());
             $this->assertSame(1, $queue->count());
+            $this->assertContainsOnlyInstancesOf(Request::class, $queue->getQueue());
         }
     }
 
