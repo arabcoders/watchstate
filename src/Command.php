@@ -129,7 +129,9 @@ class Command extends BaseCommand
             $s = new Stream($profileFile, 'w');
             $s->write(json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE));
             $s->close();
-            $output->writeln("<info>Profile data saved to '{$profileFile}'.</info>");
+            $output->writeln(r("<info>Profile data saved to '{profileFile}'.</info>", [
+                'profileFile' => realpath($profileFile),
+            ]));
         }
 
         return $status;

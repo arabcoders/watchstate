@@ -26,6 +26,10 @@ use Psr\SimpleCache\CacheInterface as iCache;
  */
 trait JellyfinActionTrait
 {
+    private const string SHOW_CACHE_KEY_PREFIX = JellyfinClient::TYPE_SHOW . '.';
+    private const string SHOW_CACHE_KEY_GUIDS = 'guids';
+    private const string SHOW_CACHE_KEY_GENRES = 'genres';
+
     /**
      * Create {@see iState} Object based on given data.
      *
@@ -158,9 +162,21 @@ trait JellyfinActionTrait
                 $metadata[iState::COLUMN_PARENT] = $builder[iState::COLUMN_PARENT];
 
                 if (count($metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES]) < 1) {
-                    $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = array_map(
-                        strtolower(...),
-                        ag($this->getItemDetails(context: $context, id: $parentId, opts: $opts), 'Genres', []),
+                    $showMetadata = $this->getCachedShowMetadata(context: $context, id: $parentId);
+
+                    if ([] === $showMetadata || false === array_key_exists(self::SHOW_CACHE_KEY_GENRES, $showMetadata)) {
+                        $showMetadata = $this->cacheShowMetadata(
+                            context: $context,
+                            guid: $guid,
+                            item: $this->getItemDetails(context: $context, id: $parentId, opts: $opts),
+                            logContext: $logContext,
+                        );
+                    }
+
+                    $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = ag(
+                        $showMetadata,
+                        self::SHOW_CACHE_KEY_GENRES,
+                        [],
                     );
                 }
             }
@@ -278,24 +294,27 @@ trait JellyfinActionTrait
         array $logContext = [],
         array $opts = [],
     ): array {
-        $cacheKey = JellyfinClient::TYPE_SHOW . '.' . $id;
+        $cacheKey = $this->getShowCacheKey($id);
         $globalCacheKey = null;
 
         if (true === ($isGeneric = ag($opts, Options::IS_GENERIC, false) && ag_exists($opts, iCache::class))) {
             $globalCacheKey = $cacheKey . '.' . $context->backendId;
             if (null !== ($cached = $opts[iCache::class]->get($globalCacheKey))) {
-                return $cached;
+                return ag($cached, self::SHOW_CACHE_KEY_GUIDS, is_array($cached) ? $cached : []);
             }
         }
 
         if (null !== ($cached = $context->cache->get($cacheKey))) {
+            $cachedGuids = ag($cached, self::SHOW_CACHE_KEY_GUIDS, is_array($cached) ? $cached : []);
+
             if (true === $isGeneric) {
-                $opts[iCache::class]->set($globalCacheKey, $cached);
+                $opts[iCache::class]->set($globalCacheKey, $cachedGuids);
             }
-            return $cached;
+
+            return $cachedGuids;
         }
 
-        $json = ag($this->getItemDetails(context: $context, id: $id), []);
+        $json = ag($this->getItemDetails(context: $context, id: $id, opts: $opts), []);
 
         $logContext['item'] = [
             'id' => ag($json, 'Id'),
@@ -312,24 +331,104 @@ trait JellyfinActionTrait
             return [];
         }
 
-        $providersId = (array) ag($json, 'ProviderIds', []);
+        $cached = $this->cacheShowMetadata(context: $context, guid: $guid, item: $json, logContext: $logContext);
 
-        if (false === $guid->has(guids: $providersId, context: $logContext)) {
-            $context->cache->set($cacheKey, []);
+        if ([] === ag($cached, self::SHOW_CACHE_KEY_GUIDS, [])) {
+            if (true === $isGeneric) {
+                $opts[iCache::class]->set($globalCacheKey, []);
+            }
+
             return [];
         }
 
-        $data = Guid::fromArray(
-            payload: $guid->get(guids: $providersId, context: $logContext),
-            context: ['backend' => $context->backendName, ...$logContext],
-        )->getAll();
+        $data = ag($cached, self::SHOW_CACHE_KEY_GUIDS, []);
 
-        $context->cache->set($cacheKey, $data);
         if (true === $isGeneric) {
             $opts[iCache::class]->set($globalCacheKey, $data);
         }
 
         return $data;
+    }
+
+    /**
+     * Cache show metadata needed by episode imports.
+     *
+     * @param Context $context
+     * @param iGuid $guid
+     * @param array $item
+     * @param array $logContext
+     *
+     * @return array{guids: array, genres: array<string>}
+     */
+    protected function cacheShowMetadata(Context $context, iGuid $guid, array $item, array $logContext = []): array
+    {
+        $cacheKey = $this->getShowCacheKey(ag($item, 'Id'));
+        $providersId = (array) ag($item, 'ProviderIds', []);
+        $genres = array_map(strtolower(...), ag($item, 'Genres', []));
+
+        if (false === $guid->has(guids: $providersId, context: $logContext)) {
+            $payload = [
+                self::SHOW_CACHE_KEY_GUIDS => [],
+                self::SHOW_CACHE_KEY_GENRES => $genres,
+            ];
+
+            $context->cache->set($cacheKey, $payload);
+
+            return $payload;
+        }
+
+        $payload = [
+            self::SHOW_CACHE_KEY_GUIDS => Guid::fromArray(
+                payload: $guid->get(guids: $providersId, context: $logContext),
+                context: ['backend' => $context->backendName, ...$logContext],
+            )->getAll(),
+            self::SHOW_CACHE_KEY_GENRES => $genres,
+        ];
+
+        $context->cache->set($cacheKey, $payload);
+
+        return $payload;
+    }
+
+    /**
+     * Read cached show metadata when available.
+     *
+     * @param Context $context
+     * @param string|int|null $id
+     *
+     * @return array
+     */
+    protected function getCachedShowMetadata(Context $context, string|int|null $id): array
+    {
+        if (null === $id) {
+            return [];
+        }
+
+        $cached = $context->cache->get($this->getShowCacheKey($id), []);
+
+        if (!is_array($cached)) {
+            return [];
+        }
+
+        if (false === array_key_exists(self::SHOW_CACHE_KEY_GUIDS, $cached)) {
+            return [
+                self::SHOW_CACHE_KEY_GUIDS => $cached,
+            ];
+        }
+
+        return $cached;
+    }
+
+    /**
+     * Build the cache key used for show metadata.
+     *
+     * @param string|int|null $id
+     *
+     * @return string
+     */
+    protected function getShowCacheKey(string|int|null $id): string
+    {
+        return self::SHOW_CACHE_KEY_PREFIX . (string) $id;
     }
 
     /**

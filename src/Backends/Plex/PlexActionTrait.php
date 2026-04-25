@@ -22,6 +22,10 @@ use Psr\SimpleCache\CacheInterface as iCache;
 
 trait PlexActionTrait
 {
+    private const string SHOW_CACHE_KEY_PREFIX = PlexClient::TYPE_SHOW . '.';
+    private const string SHOW_CACHE_KEY_GUIDS = 'guids';
+    private const string SHOW_CACHE_KEY_GENRES = 'genres';
+
     private array $typeMapper = [
         PlexClient::TYPE_SHOW => iState::TYPE_SHOW,
         PlexClient::TYPE_MOVIE => iState::TYPE_MOVIE,
@@ -167,13 +171,25 @@ trait PlexActionTrait
                 $metadata[iState::COLUMN_PARENT] = $builder[iState::COLUMN_PARENT];
 
                 if (count($metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES]) < 1) {
-                    $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = array_map(
-                        static fn($i) => strtolower((string) ag($i, 'tag', '??')),
-                        ag(
-                            $this->getItemDetails(context: $context, id: $parentId, opts: $opts),
-                            'MediaContainer.Metadata.0.Genre',
-                            [],
-                        ),
+                    $showMetadata = $this->getCachedShowMetadata(context: $context, id: $parentId);
+
+                    if ([] === $showMetadata || false === array_key_exists(self::SHOW_CACHE_KEY_GENRES, $showMetadata)) {
+                        $showMetadata = $this->cacheShowMetadata(
+                            context: $context,
+                            guid: $guid,
+                            item: ag(
+                                $this->getItemDetails(context: $context, id: $parentId, opts: $opts),
+                                'MediaContainer.Metadata.0',
+                                [],
+                            ),
+                            logContext: $logContext,
+                        );
+                    }
+
+                    $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = ag(
+                        $showMetadata,
+                        self::SHOW_CACHE_KEY_GENRES,
+                        [],
                     );
                 }
             }
@@ -286,24 +302,27 @@ trait PlexActionTrait
         array $logContext = [],
         array $opts = [],
     ): array {
-        $cacheKey = PlexClient::TYPE_SHOW . '.' . $id;
+        $cacheKey = $this->getShowCacheKey($id);
         $globalCacheKey = null;
 
         if (true === ($isGeneric = ag($opts, Options::IS_GENERIC, false) && ag_exists($opts, iCache::class))) {
             $globalCacheKey = $cacheKey . '.' . $context->backendId;
             if (null !== ($cached = $opts[iCache::class]->get($globalCacheKey))) {
-                return $cached;
+                return ag($cached, self::SHOW_CACHE_KEY_GUIDS, is_array($cached) ? $cached : []);
             }
         }
 
         if (null !== ($cached = $context->cache->get($cacheKey))) {
+            $cachedGuids = ag($cached, self::SHOW_CACHE_KEY_GUIDS, is_array($cached) ? $cached : []);
+
             if (true === $isGeneric) {
-                $opts[iCache::class]->set($globalCacheKey, $cached);
+                $opts[iCache::class]->set($globalCacheKey, $cachedGuids);
             }
-            return $cached;
+
+            return $cachedGuids;
         }
 
-        $json = ag($this->getItemDetails(context: $context, id: $id), 'MediaContainer.Metadata.0', []);
+        $json = ag($this->getItemDetails(context: $context, id: $id, opts: $opts), 'MediaContainer.Metadata.0', []);
 
         $year = (int) ag($json, ['grandParentYear', 'parentYear', 'year'], 0);
         if (0 === $year && null !== ($airDate = ag($json, 'originallyAvailableAt'))) {
@@ -331,29 +350,119 @@ trait PlexActionTrait
             $json['Guid'][] = ['id' => $json['guid']];
         }
 
-        if (false === $guid->has(guids: $json['Guid'], context: $logContext)) {
-            $context->cache->set($cacheKey, []);
+        $cached = $this->cacheShowMetadata(context: $context, guid: $guid, item: $json, logContext: $logContext);
+
+        if ([] === ag($cached, self::SHOW_CACHE_KEY_GUIDS, [])) {
+            if (true === $isGeneric) {
+                $opts[iCache::class]->set($globalCacheKey, []);
+            }
+
             return [];
         }
 
-        $gContext = ag_set(
-            $logContext,
-            'item.plex_id',
-            str_starts_with(ag($json, 'guid', ''), 'plex://') ? ag($json, 'guid') : 'none',
-        );
-
-        $data = Guid::fromArray(
-            payload: $guid->get(guids: $json['Guid'], context: [...$gContext]),
-            context: ['backend' => $context->backendName, ...$logContext],
-        )->getAll();
-
-        $context->cache->set($cacheKey, $data);
+        $data = ag($cached, self::SHOW_CACHE_KEY_GUIDS, []);
 
         if (true === $isGeneric) {
             $opts[iCache::class]->set($globalCacheKey, $data);
         }
 
         return $data;
+    }
+
+    /**
+     * Cache show metadata needed by episode imports.
+     *
+     * @param Context $context
+     * @param iGuid $guid
+     * @param array $item
+     * @param array $logContext
+     *
+     * @return array{guids: array, genres: array<string>}
+     */
+    protected function cacheShowMetadata(Context $context, iGuid $guid, array $item, array $logContext = []): array
+    {
+        $cacheKey = $this->getShowCacheKey(ag($item, 'ratingKey'));
+
+        if (null === ($item['Guid'] ?? null)) {
+            $item['Guid'] = [['id' => ag($item, 'guid')]];
+        } else {
+            $item['Guid'][] = ['id' => ag($item, 'guid')];
+        }
+
+        $genres = array_map(
+            static fn($genre) => strtolower((string) ag($genre, 'tag', '??')),
+            ag($item, 'Genre', []),
+        );
+
+        if (false === $guid->has(guids: $item['Guid'], context: $logContext)) {
+            $payload = [
+                self::SHOW_CACHE_KEY_GUIDS => [],
+                self::SHOW_CACHE_KEY_GENRES => $genres,
+            ];
+
+            $context->cache->set($cacheKey, $payload);
+
+            return $payload;
+        }
+
+        $gContext = ag_set(
+            $logContext,
+            'item.plex_id',
+            str_starts_with(ag($item, 'guid', ''), 'plex://') ? ag($item, 'guid') : 'none',
+        );
+
+        $payload = [
+            self::SHOW_CACHE_KEY_GUIDS => Guid::fromArray(
+                payload: $guid->get(guids: $item['Guid'], context: [...$gContext]),
+                context: ['backend' => $context->backendName, ...$logContext],
+            )->getAll(),
+            self::SHOW_CACHE_KEY_GENRES => $genres,
+        ];
+
+        $context->cache->set($cacheKey, $payload);
+
+        return $payload;
+    }
+
+    /**
+     * Read cached show metadata when available.
+     *
+     * @param Context $context
+     * @param string|int|null $id
+     *
+     * @return array
+     */
+    protected function getCachedShowMetadata(Context $context, string|int|null $id): array
+    {
+        if (null === $id) {
+            return [];
+        }
+
+        $cached = $context->cache->get($this->getShowCacheKey($id), []);
+
+        if (!is_array($cached)) {
+            return [];
+        }
+
+        if (false === array_key_exists(self::SHOW_CACHE_KEY_GUIDS, $cached)) {
+            return [
+                self::SHOW_CACHE_KEY_GUIDS => $cached,
+            ];
+        }
+
+        return $cached;
+    }
+
+    /**
+     * Build the cache key used for show metadata.
+     *
+     * @param string|int|null $id
+     *
+     * @return string
+     */
+    protected function getShowCacheKey(string|int|null $id): string
+    {
+        return self::SHOW_CACHE_KEY_PREFIX . (string) $id;
     }
 
     /**
