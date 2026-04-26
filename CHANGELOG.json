@@ -1,5 +1,19 @@
 [
   {
+    "tag": "Unmerged (dev branch)",
+    "full_sha": "01b64447b6e362d059cf215f30deae5bfd7aa8d1",
+    "date": "2026-04-25T21:44:28+00:00",
+    "commits": [
+      {
+        "sha": "01b64447",
+        "full_sha": "01b64447b6e362d059cf215f30deae5bfd7aa8d1",
+        "message": "feat: initial code to support playlist sync cross backends",
+        "author": "arabcoders",
+        "date": "2026-04-25T21:44:28+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v1.6.0",
     "full_sha": "5a20f84c4dfe81b3c6b747b3c8be7dca95719f8a",
     "date": "2026-04-25T19:26:02+00:00",
