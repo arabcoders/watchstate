@@ -1,9 +1,16 @@
 [
   {
-    "tag": "Unmerged (dev branch)",
-    "full_sha": "01b64447b6e362d059cf215f30deae5bfd7aa8d1",
-    "date": "2026-04-25T21:44:28+00:00",
+    "tag": "Unreleased (master)",
+    "full_sha": "ac1b9dfd79178a9f648fc486a6f7108897e6c8c6",
+    "date": "2026-04-26T15:26:28+00:00",
     "commits": [
+      {
+        "sha": "63279a19",
+        "full_sha": "63279a19ba11228d070cd0c25a1ef136af3a25c7",
+        "message": "refactor: add more logging to playlist sync and switch to more relaxing sync mode",
+        "author": "arabcoders",
+        "date": "2026-04-26T15:03:22+00:00"
+      },
       {
         "sha": "01b64447",
         "full_sha": "01b64447b6e362d059cf215f30deae5bfd7aa8d1",
