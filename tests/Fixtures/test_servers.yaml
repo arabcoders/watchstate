@@ -45,3 +45,17 @@ test_emby:
     enabled: true
     lastSync: null
   options: { }
+
+test_disabled:
+  type: plex
+  url: 'https://disabled.example.invalid'
+  token: t000000000000000000000000000000d
+  user: 99999999
+  uuid: s00000000000000000000000000000000000000d
+  export:
+    enabled: false
+    lastSync: null
+  import:
+    enabled: false
+    lastSync: null
+  options: { }

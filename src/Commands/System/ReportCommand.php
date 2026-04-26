@@ -241,6 +241,17 @@ final class ReportCommand extends Command
                                 ),
                         ]),
                     );
+
+                    $this->filter(
+                        r('Time since last playlist export? <flag>{answer}</flag>', [
+                            'answer' => null === ag($backend, 'export.playlist.lastSync')
+                                ? 'Never'
+                                : gmdate(
+                                    Date::ATOM,
+                                    ag($backend, 'export.playlist.lastSync'),
+                                ),
+                        ]),
+                    );
                 }
 
                 $this->filter(
@@ -263,6 +274,17 @@ final class ReportCommand extends Command
                                 : gmdate(
                                     Date::ATOM,
                                     ag($backend, 'import.lastSync'),
+                                ),
+                        ]),
+                    );
+
+                    $this->filter(
+                        r('Time since last playlist import? <flag>{answer}</flag>', [
+                            'answer' => null === ag($backend, 'import.playlist.lastSync')
+                                ? 'Never'
+                                : gmdate(
+                                    Date::ATOM,
+                                    ag($backend, 'import.playlist.lastSync'),
                                 ),
                         ]),
                     );

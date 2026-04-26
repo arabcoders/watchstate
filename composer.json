@@ -13,11 +13,11 @@
         }
     },
     "scripts": {
-        "test": "vendor/bin/phpunit",
-        "tests": "vendor/bin/phpunit",
+        "test": "vendor/bin/phpunit --display-all-issues",
+        "tests": "vendor/bin/phpunit --display-all-issues",
         "format": "vendor/bin/mago format",
         "format:ci": "vendor/bin/mago format --check",
-        "test:all": "php -d display_errors=1 -d display_startup_errors=1 -d error_reporting=E_ALL vendor/bin/phpunit",
+        "test:all": "php -d display_errors=1 -d display_startup_errors=1 -d error_reporting=E_ALL vendor/bin/phpunit --display-all-issues",
         "test:coverage": [
             "mkdir -p var/coverage",
             "php -d zend_extension=xdebug -d xdebug.mode=coverage -d xdebug.start_with_request=no vendor/bin/phpunit --coverage-filter src/ --coverage-clover var/coverage/clover.xml --coverage-xml var/coverage/xml --coverage-text",

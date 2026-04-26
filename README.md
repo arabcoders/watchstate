@@ -10,6 +10,14 @@ box, this tool supports `Jellyfin`, `Plex` and `Emby` media servers.
 
 # Updates
 
+### 2026-04-26
+
+Cross-backend sync for playlists is now available as a **beta** feature. This is still early work, so expect some rough edges, 
+backend-specific issues, and possible breaking changes as it matures. 
+
+Because playlist behavior differs across backends, the feature may change over time, and if it proves too unreliable to support consistently, 
+it may be reworked or removed. To enable it, simply go to Tasks and enable the `Playlist` task.
+
 ### 2026-04-23
 
 Plex appears to have backtracked on the API change that broke external `invited users`, so WatchState supports them again for now.

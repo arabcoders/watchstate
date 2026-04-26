@@ -354,6 +354,22 @@ final class TestCommand extends Command
             return true;
         });
 
+        $this->assert(function () use ($client) {
+            $playlists = $client->getPlaylistsList([Options::RAW_RESPONSE => true]);
+            $this->assert(true, 'GetPlaylistsList');
+
+            $playlist = current($playlists);
+            if (false === is_array($playlist) || '' === trim((string) ag($playlist, 'id', ''))) {
+                $this->assert(null, 'GetPlaylist');
+                return true;
+            }
+
+            $client->getPlaylist((string) ag($playlist, 'id'), [Options::RAW_RESPONSE => true]);
+            $this->assert(true, 'GetPlaylist');
+
+            return true;
+        });
+
         if (false === $this->runExtended) {
             return;
         }
@@ -534,6 +550,22 @@ final class TestCommand extends Command
                     'error' => $searchQuery->hasError() ? $searchQuery->error->format() : '',
                 ]), iOutput::VERBOSITY_VERBOSE);
             }
+
+            return true;
+        });
+
+        $this->assert(function () use ($client) {
+            $playlists = $client->getPlaylistsList([Options::RAW_RESPONSE => true]);
+            $this->assert(true, 'GetPlaylistsList');
+
+            $playlist = current($playlists);
+            if (false === is_array($playlist) || '' === trim((string) ag($playlist, 'id', ''))) {
+                $this->assert(null, 'GetPlaylist');
+                return true;
+            }
+
+            $client->getPlaylist((string) ag($playlist, 'id'), [Options::RAW_RESPONSE => true]);
+            $this->assert(true, 'GetPlaylist');
 
             return true;
         });

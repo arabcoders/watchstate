@@ -607,5 +607,106 @@
                 "error": "server error"
             }
         }
+    },
+    "playlists_list_get_200": {
+        "response": {
+            "http_code": 200,
+            "headers": {
+                "Content-Type": "application/json"
+            },
+            "body": {
+                "MediaContainer": {
+                    "Metadata": [
+                        {
+                            "ratingKey": "9001",
+                            "title": "Weekend Movies",
+                            "playlistType": "video",
+                            "summary": "Manual movie picks",
+                            "key": "/playlists/9001/items",
+                            "leafCount": 1,
+                            "smart": false,
+                            "readOnly": false,
+                            "updatedAt": 1710000000
+                        },
+                        {
+                            "ratingKey": "9002",
+                            "title": "Smart Queue",
+                            "playlistType": "video",
+                            "summary": "Generated list",
+                            "key": "/playlists/9002/items",
+                            "leafCount": 1,
+                            "smart": true,
+                            "readOnly": false,
+                            "updatedAt": 1710001000
+                        }
+                    ]
+                }
+            }
+        }
+    },
+    "playlist_get_200": {
+        "response": {
+            "http_code": 200,
+            "headers": {
+                "Content-Type": "application/json"
+            },
+            "body": {
+                "MediaContainer": {
+                    "Metadata": [
+                        {
+                            "ratingKey": "9001",
+                            "title": "Weekend Movies",
+                            "playlistType": "video",
+                            "summary": "Manual movie picks",
+                            "leafCount": 1,
+                            "smart": false,
+                            "readOnly": false,
+                            "updatedAt": 1710000000
+                        }
+                    ]
+                }
+            }
+        }
+    },
+    "playlist_items_get_200": {
+        "response": {
+            "http_code": 200,
+            "headers": {
+                "Content-Type": "application/json"
+            },
+            "body": {
+                "MediaContainer": {
+                    "Metadata": [
+                        {
+                            "ratingKey": "1",
+                            "type": "movie",
+                            "title": "Ferengi Rules of Acquisition",
+                            "year": 2000,
+                            "guid": "plex://movie/1",
+                            "Guid": [
+                                {
+                                    "id": "imdb://tt0000001"
+                                },
+                                {
+                                    "id": "tmdb://1"
+                                }
+                            ],
+                            "addedAt": 1710000000,
+                            "updatedAt": 1710000000,
+                            "playlistItemID": 1,
+                            "Media": [
+                                {
+                                    "Part": [
+                                        {
+                                            "file": "/storage/media/movies/Ferengi Rules of Acquisition (2000)/Ferengi Rules of Acquisition (2000).mp4"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        }
     }
 }

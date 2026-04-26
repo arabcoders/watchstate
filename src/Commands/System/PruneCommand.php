@@ -215,5 +215,16 @@ final class PruneCommand extends Command
         if ($count > 1) {
             $this->logger->info("Pruned '{count}' events.", ['count' => $count]);
         }
+
+        $playlistBefore = strtotime('-90 DAYS');
+        $playlistStmt = $this->db->query(
+            'DELETE FROM playlists WHERE deleted_at IS NOT NULL AND deleted_at < :before',
+            ['before' => $playlistBefore],
+        );
+
+        $playlistCount = $playlistStmt->rowCount();
+        if ($playlistCount > 0) {
+            $this->logger->info("Pruned '{count}' deleted playlist snapshots.", ['count' => $playlistCount]);
+        }
     }
 }

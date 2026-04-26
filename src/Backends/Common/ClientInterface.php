@@ -236,6 +236,46 @@ interface ClientInterface
     public function getUsersList(array $opts = []): array;
 
     /**
+     * Return list of editable playlists.
+     *
+     * @param array $opts options.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public function getPlaylistsList(array $opts = []): array;
+
+    /**
+     * Return playlist details.
+     *
+     * @param string|int $id playlist id.
+     * @param array $opts options.
+     *
+     * @return array<string,mixed>
+     */
+    public function getPlaylist(string|int $id, array $opts = []): array;
+
+    /**
+     * Create playlist.
+     *
+     * @param string $title playlist title.
+     * @param array<int,string> $itemIds playlist item ids.
+     * @param array $opts options.
+     *
+     * @return array<string,mixed>
+     */
+    public function createPlaylist(string $title, array $itemIds = [], array $opts = []): array;
+
+    /**
+     * Delete playlist.
+     *
+     * @param string|int $id playlist id.
+     * @param array $opts options.
+     *
+     * @return array<string,mixed>
+     */
+    public function deletePlaylist(string|int $id, array $opts = []): array;
+
+    /**
      * Return list of backend libraries.
      *
      * @param array $opts options.
