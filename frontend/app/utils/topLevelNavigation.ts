@@ -32,6 +32,7 @@ type TopLevelEntryId =
   | 'reset'
   | 'help'
   | 'api'
+  | 'openapi'
   | 'readme'
   | 'faq'
   | 'news'
@@ -59,6 +60,8 @@ type TopLevelNavigationDefinition = {
   href?: string;
   target?: string;
   matchPath?: string;
+  exactMatch?: boolean;
+  excludeMatchPaths?: Array<string>;
   visible?: (context: TopLevelNavigationContext) => boolean;
 };
 
@@ -306,6 +309,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     icon: 'i-lucide-circle-help',
     to: '/help',
     matchPath: '/help',
+    excludeMatchPaths: ['/help/api', '/help/openapi', '/help/readme', '/help/faq', '/help/news'],
   },
   {
     id: 'api',
@@ -316,6 +320,16 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     icon: 'i-lucide-book-open',
     to: '/help/api',
     matchPath: '/help/api',
+  },
+  {
+    id: 'openapi',
+    section: 'help',
+    label: 'OpenAPI',
+    pageLabel: 'OpenAPI',
+    breadcrumbSectionLabel: 'Help',
+    icon: 'i-lucide-braces',
+    to: '/help/openapi',
+    matchPath: '/help/openapi',
   },
   {
     id: 'readme',

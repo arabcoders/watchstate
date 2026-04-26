@@ -113,5 +113,11 @@ const choices: Array<{ number: number; title: string; text: string; url: string 
     text: 'API documentation current version.',
     url: '/help/api',
   },
+  {
+    number: 9,
+    title: 'Backend OpenAPI',
+    text: 'Browse the bundled Plex, Jellyfin, and Emby upstream routes.',
+    url: '/help/openapi',
+  },
 ];
 </script>

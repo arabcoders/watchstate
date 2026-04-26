@@ -80,6 +80,14 @@ class ServeStaticTest extends TestCase
             exceptionCode: Status::BAD_REQUEST->value,
         );
 
+        $this->checkException(
+            closure: fn() => new ServeStatic()->serve($this->createRequest('GET', '/guides/openapi/../../../README.md')),
+            reason: 'OpenAPI guide routes should not resolve outside the explicit spec aliases.',
+            exception: \League\Route\Http\Exception\NotFoundException::class,
+            exceptionMessage: 'not found',
+            exceptionCode: Status::NOT_FOUND->value,
+        );
+
         // -- Check for invalid root static path.
         $this->checkException(
             closure: fn() => new ServeStatic('/nonexistent')->serve($this->createRequest('GET', '/test.html')),
@@ -118,6 +126,19 @@ class ServeStaticTest extends TestCase
         $this->assertEquals(Status::OK->value, $response->getStatusCode());
         $this->assertEquals('text/markdown; charset=utf-8', $response->getHeaderLine('Content-Type'));
         $this->assertEquals(file_get_contents(__DIR__ . '/../../guides/identities.md'), (string)$response->getBody());
+
+        $response = new ServeStatic()->serve($this->createRequest('GET', '/guides/openapi/plex.json'));
+        $this->assertEquals(Status::OK->value, $response->getStatusCode());
+        $this->assertEquals('application/json; charset=utf-8', $response->getHeaderLine('Content-Type'));
+        $this->assertEquals(
+            file_get_contents(__DIR__ . '/../../src/Backends/Plex/plex-openai-stable.json'),
+            (string) $response->getBody()
+        );
+
+        $response = new ServeStatic()->serve($this->createRequest('HEAD', '/guides/openapi/jellyfin.json'));
+        $this->assertEquals(Status::OK->value, $response->getStatusCode());
+        $this->assertEquals('application/json; charset=utf-8', $response->getHeaderLine('Content-Type'));
+        $this->assertSame('', (string) $response->getBody());
 
         // -- test screenshots serving, as screenshots path is not in public directory and not subject
         // -- to same path restrictions as other files.

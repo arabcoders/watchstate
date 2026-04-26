@@ -1228,3 +1228,147 @@ export interface FileDiffResult {
   /** Reference path segments showing common vs different parts */
   referenceSegments: Array<FileDiffPathSegment>;
 }
+
+/**
+ * OpenAPI local reference.
+ */
+export interface OpenAPIReference {
+  $ref: string;
+}
+
+/**
+ * OpenAPI example payload.
+ */
+export interface OpenAPIExample {
+  summary?: string;
+  description?: string;
+  value?: JsonValue | string;
+}
+
+/**
+ * OpenAPI schema object used by the help route browser.
+ */
+export interface OpenAPISchema {
+  title?: string;
+  type?: string;
+  format?: string;
+  description?: string;
+  nullable?: boolean;
+  enum?: Array<JsonPrimitive>;
+  properties?: Record<string, OpenAPISchema | OpenAPIReference>;
+  required?: Array<string>;
+  items?: OpenAPISchema | OpenAPIReference;
+  allOf?: Array<OpenAPISchema | OpenAPIReference>;
+  oneOf?: Array<OpenAPISchema | OpenAPIReference>;
+  anyOf?: Array<OpenAPISchema | OpenAPIReference>;
+  additionalProperties?: boolean | OpenAPISchema | OpenAPIReference;
+  example?: JsonValue | string;
+}
+
+/**
+ * OpenAPI media content definition.
+ */
+export interface OpenAPIMediaType {
+  schema?: OpenAPISchema | OpenAPIReference;
+  example?: JsonValue | string;
+  examples?: Record<string, OpenAPIExample>;
+}
+
+/**
+ * OpenAPI parameter definition.
+ */
+export interface OpenAPIParameter {
+  name?: string;
+  in?: string;
+  description?: string;
+  required?: boolean;
+  deprecated?: boolean;
+  schema?: OpenAPISchema | OpenAPIReference;
+  style?: string;
+  explode?: boolean;
+  example?: JsonValue | string;
+  examples?: Record<string, OpenAPIExample>;
+}
+
+/**
+ * OpenAPI request body definition.
+ */
+export interface OpenAPIRequestBody {
+  description?: string;
+  required?: boolean;
+  content?: Record<string, OpenAPIMediaType>;
+}
+
+/**
+ * OpenAPI header definition.
+ */
+export interface OpenAPIHeader {
+  description?: string;
+  required?: boolean;
+  schema?: OpenAPISchema | OpenAPIReference;
+}
+
+/**
+ * OpenAPI response definition.
+ */
+export interface OpenAPIResponse {
+  description?: string;
+  headers?: Record<string, OpenAPIHeader | OpenAPIReference>;
+  content?: Record<string, OpenAPIMediaType>;
+}
+
+/**
+ * OpenAPI components used by the local spec browser.
+ */
+export interface OpenAPIComponents {
+  schemas?: Record<string, OpenAPISchema>;
+  responses?: Record<string, OpenAPIResponse | OpenAPIReference>;
+  parameters?: Record<string, OpenAPIParameter | OpenAPIReference>;
+  requestBodies?: Record<string, OpenAPIRequestBody | OpenAPIReference>;
+  headers?: Record<string, OpenAPIHeader | OpenAPIReference>;
+}
+
+/**
+ * OpenAPI document used by the help route browser.
+ */
+export interface OpenAPIDocument {
+  openapi: string;
+  info: {
+    title: string;
+    version?: string;
+    description?: string;
+  };
+  paths?: Record<string, OpenAPIPathItem>;
+  components?: OpenAPIComponents;
+}
+
+/**
+ * OpenAPI operation shape used for listing backend routes.
+ */
+export interface OpenAPIOperation {
+  summary?: string;
+  description?: string;
+  operationId?: string;
+  tags?: Array<string>;
+  deprecated?: boolean;
+  parameters?: Array<OpenAPIParameter | OpenAPIReference>;
+  requestBody?: OpenAPIRequestBody | OpenAPIReference;
+  responses?: Record<string, OpenAPIResponse | OpenAPIReference>;
+}
+
+/**
+ * OpenAPI path item shape used for listing methods per route.
+ */
+export interface OpenAPIPathItem {
+  summary?: string;
+  description?: string;
+  parameters?: Array<OpenAPIParameter | OpenAPIReference>;
+  get?: OpenAPIOperation;
+  put?: OpenAPIOperation;
+  post?: OpenAPIOperation;
+  delete?: OpenAPIOperation;
+  options?: OpenAPIOperation;
+  head?: OpenAPIOperation;
+  patch?: OpenAPIOperation;
+  trace?: OpenAPIOperation;
+}

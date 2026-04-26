@@ -35,16 +35,17 @@ final class ServeStatic implements LoggerAwareInterface
      * @var array<string, string> These files are served from outside the public directory.
      */
     private const array FILES = [
-        '/CHANGELOG.json' => __DIR__ . '/../../frontend/exported/CHANGELOG.json',
         '/API.md' => __DIR__ . '/../../API.md',
         '/README.md' => __DIR__ . '/../../README.md',
         '/NEWS.md' => __DIR__ . '/../../NEWS.md',
         '/FAQ.md' => __DIR__ . '/../../FAQ.md',
-        '/CHANGELOG.md' => __DIR__ . '/../../CHANGELOG.md',
         '/guides/API.md' => __DIR__ . '/../../API.md',
         '/guides/README.md' => __DIR__ . '/../../README.md',
         '/guides/NEWS.md' => __DIR__ . '/../../NEWS.md',
         '/guides/FAQ.md' => __DIR__ . '/../../FAQ.md',
+        '/guides/openapi/plex.json' => __DIR__ . '/../Backends/Plex/plex-openai-stable.json',
+        '/guides/openapi/jellyfin.json' => __DIR__ . '/../Backends/Jellyfin/jellyfin-openapi-stable.json',
+        '/guides/openapi/emby.json' => __DIR__ . '/../Backends/Emby/emby-openapi-stable.json',
     ];
 
     private const array MD_IMAGES = [
