@@ -49,6 +49,10 @@ final class PlaylistSyncPlanner
         $candidates = [];
 
         foreach ($collapsed as $playlist) {
+            if (true !== $this->canWin($playlist)) {
+                continue;
+            }
+
             if (null !== ($playlist['deleted_at'] ?? null)) {
                 $candidates[] = $playlist;
                 continue;
@@ -103,6 +107,17 @@ final class PlaylistSyncPlanner
     public function isEligible(array $playlist): bool
     {
         return true === (bool) ag($playlist, 'metadata.sync.eligible', true);
+    }
+
+    /**
+     * @param array<string,mixed> $playlist
+     */
+    public function canWin(array $playlist): bool
+    {
+        return !(
+            true === (bool) ag($playlist, 'metadata.sync.partial', false)
+            && true === (bool) ag($playlist, 'metadata.sync.generated_by_sync', false)
+        );
     }
 
     /**

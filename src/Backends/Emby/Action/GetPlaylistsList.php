@@ -6,9 +6,10 @@ namespace App\Backends\Emby\Action;
 
 use App\Backends\Common\Context;
 use App\Backends\Emby\EmbyClient;
+use App\Backends\Jellyfin\Action\GetPlaylistsList as BaseGetPlaylistsList;
 use Psr\Http\Message\UriInterface as iUri;
 
-final class GetPlaylistsList extends \App\Backends\Jellyfin\Action\GetPlaylistsList
+final class GetPlaylistsList extends BaseGetPlaylistsList
 {
     protected string $action = 'emby.getPlaylistsList';
 

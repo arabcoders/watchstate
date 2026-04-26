@@ -9,6 +9,7 @@ use App\Commands\State\PlaylistCommand;
 use App\Libs\ConfigFile;
 use App\Libs\Database\DBLayer;
 use App\Libs\Database\PDO\PDOAdapter;
+use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Playlists\PlaylistSyncService;
 use App\Libs\UserContext;
@@ -19,6 +20,7 @@ use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Tester\CommandTester;
 use App\Libs\TestCase;
 
@@ -128,6 +130,36 @@ final class PlaylistCommandTest extends TestCase
         self::assertSame(PlaylistCommand::SUCCESS, $status);
     }
 
+    public function test_logfile_writes_playlist_lifecycle_logs(): void
+    {
+        $service = $this->makeServiceMock();
+        $service
+            ->expects(self::once())
+            ->method('sync')
+            ->willReturn([]);
+
+        $client = $this->createStub(iClient::class);
+        $client->method('getName')->willReturn('test_plex');
+        $client->method('getType')->willReturn('plex');
+
+        $logfile = tempnam(sys_get_temp_dir(), 'playlist-log-');
+        self::assertNotFalse($logfile);
+
+        try {
+            $tester = $this->makeTester($service, $client);
+            $status = $tester->execute(['--logfile' => $logfile], ['verbosity' => OutputInterface::VERBOSITY_VERBOSE]);
+
+            self::assertSame(PlaylistCommand::SUCCESS, $status);
+
+            $contents = file_get_contents($logfile);
+            self::assertIsString($contents);
+            self::assertStringContainsString('Starting playlist sync process', $contents);
+            self::assertStringContainsString('Playlist sync process completed', $contents);
+        } finally {
+            @unlink($logfile);
+        }
+    }
+
     /**
      * @return PlaylistSyncService&MockObject
      */
@@ -174,7 +206,12 @@ final class PlaylistCommandTest extends TestCase
                 private readonly iClient $client,
                 private readonly string $backendName,
             ) {
-                parent::__construct($service, new DirectMapper($logger, $this->userContext->db, $this->userContext->cache), $logger);
+                parent::__construct(
+                    $service,
+                    new DirectMapper($logger, $this->userContext->db, $this->userContext->cache),
+                    $logger,
+                    new LogSuppressor([]),
+                );
             }
 
             protected function getClients(

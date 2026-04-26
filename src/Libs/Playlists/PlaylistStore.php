@@ -244,6 +244,26 @@ final class PlaylistStore
     }
 
     /**
+     * Update playlist metadata in place.
+     *
+     * @param int $playlistId
+     * @param array<string,mixed> $metadata
+     *
+     * @return void
+     */
+    public function updateMetadata(int $playlistId, array $metadata): void
+    {
+        $this->db->update(
+            'playlists',
+            [
+                'metadata' => $this->encodeJson($metadata),
+                'updated_at' => time(),
+            ],
+            ['id' => $playlistId],
+        );
+    }
+
+    /**
      * Return one playlist snapshot by backend item id.
      *
      * @param string $backend

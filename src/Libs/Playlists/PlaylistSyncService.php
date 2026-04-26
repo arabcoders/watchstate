@@ -29,6 +29,7 @@ class PlaylistSyncService
      */
     public function sync(UserContext $userContext, array $clients, array $opts = []): array
     {
+        $syncStart = microtime(true);
         $store = new PlaylistStore($userContext->db->getDBLayer());
         $planner = new PlaylistSyncPlanner();
         $dryRun = true === (bool) ($opts[Options::DRY_RUN] ?? false);
@@ -39,6 +40,19 @@ class PlaylistSyncService
         $targetBackends = array_values(array_unique(array_map('strval', $opts['target_backends'] ?? [])));
         $syncStats = [];
         $fetchedBackends = [];
+        $fetchTotals = $this->makeFetchStats();
+
+        $this->logger->notice("PLAYLIST: Starting playlist reconciliation for '{user}' across '{total}' backend clients.", [
+            'user' => $userContext->name,
+            'total' => count($clients),
+            'dry_run' => $dryRun,
+            'force_full' => $forceFull,
+            'source_backends' => $sourceBackends,
+            'target_backends' => $targetBackends,
+            'memory' => $this->getMemoryContext(),
+        ]);
+
+        $fetchStart = microtime(true);
 
         foreach ($clients as $backendName => $client) {
             $snapshot = $this->fetchBackendPlaylists(
@@ -48,8 +62,11 @@ class PlaylistSyncService
                 opts: [
                     Options::FORCE_FULL => true === $dryRun || true === $forceFull,
                     'last_sync' => $this->getPlaylistImportLastSync($userContext, $backendName),
+                    'phase' => 'import',
+                    'direction' => $this->resolveBackendDirection($backendName, $sourceBackends, $targetBackends),
                 ],
             );
+            $fetchTotals = $this->mergeFetchStats($fetchTotals, $snapshot['stats']);
             $results[$backendName] = $this->makeSummary($snapshot['playlists']);
 
             if (false === $snapshot['ok']) {
@@ -81,8 +98,28 @@ class PlaylistSyncService
             static fn(string $backendName): bool => true === isset($fetchedBackends[$backendName]),
         ));
 
+        $this->logger->notice("PLAYLIST: Completed playlist snapshot fetch phase for '{user}' in '{duration}'s.", [
+            'user' => $userContext->name,
+            'duration' => round(microtime(true) - $fetchStart, 4),
+            'fetched_backends' => array_keys($fetchedBackends),
+            'source_backends' => $sourceBackends,
+            'target_backends' => $targetBackends,
+            'stats' => $fetchTotals,
+            'memory' => $this->getMemoryContext(),
+        ]);
+
         if (true === $dryRun || [] === $targetBackends || [] === $sourceBackends) {
-            return $this->summarizeBackends($clients, $store, $results, $syncStats, $dryRun);
+            $summary = $this->summarizeBackends($clients, $store, $results, $syncStats, $dryRun);
+
+            $this->logger->notice("PLAYLIST: Playlist reconciliation for '{user}' stopped after fetch phase.", [
+                'user' => $userContext->name,
+                'reason' => $this->resolveEarlyStopReason($dryRun, $sourceBackends, $targetBackends),
+                'results' => $this->summarizeResultTotals($summary),
+                'duration' => round(microtime(true) - $syncStart, 4),
+                'memory' => $this->getMemoryContext(),
+            ]);
+
+            return $summary;
         }
 
         $operations = $this->planSyncOperations(
@@ -93,18 +130,53 @@ class PlaylistSyncService
             targetBackends: $targetBackends,
         );
 
+        $operationSummary = $this->summarizeOperations($operations);
+        $applyStart = microtime(true);
+
+        $this->logger->notice("PLAYLIST: Applying '{total}' planned playlist operations for '{user}'.", [
+            'user' => $userContext->name,
+            'total' => count($operations),
+            'actions' => $operationSummary['actions'],
+            'backends' => $operationSummary['backends'],
+            'memory' => $this->getMemoryContext(),
+        ]);
+
         $applied = $this->applySyncOperations($clients, $store, $operations);
 
         foreach ($applied['stats'] as $backendName => $stats) {
             $syncStats[$backendName] = array_replace($syncStats[$backendName] ?? [], $stats);
         }
 
+        $exportSyncedBackends = [];
         foreach ($targetBackends as $backendName) {
             if (true === isset($applied['failed_backends'][$backendName])) {
                 continue;
             }
 
             $this->setPlaylistExportLastSync($userContext, $backendName, time());
+            $exportSyncedBackends[] = $backendName;
+        }
+
+        $this->logger->notice("PLAYLIST: Applied playlist operations for '{user}' in '{duration}'s.", [
+            'user' => $userContext->name,
+            'duration' => round(microtime(true) - $applyStart, 4),
+            'stats' => $this->summarizeSyncStats($applied['stats']),
+            'touched_backends' => $applied['touched_backends'],
+            'failed_backends' => array_keys($applied['failed_backends']),
+            'export_synced_backends' => $exportSyncedBackends,
+            'memory' => $this->getMemoryContext(),
+        ]);
+
+        $refreshTotals = $this->makeFetchStats();
+        $refreshStart = microtime(true);
+
+        if ([] !== $applied['touched_backends']) {
+            $this->logger->notice("PLAYLIST: Refreshing '{total}' touched playlist backends for '{user}'.", [
+                'user' => $userContext->name,
+                'total' => count($applied['touched_backends']),
+                'backends' => $applied['touched_backends'],
+                'memory' => $this->getMemoryContext(),
+            ]);
         }
 
         foreach ($applied['touched_backends'] as $backendName) {
@@ -115,9 +187,12 @@ class PlaylistSyncService
                 opts: [
                     Options::FORCE_FULL => true,
                     'force_ids' => array_keys($applied['refresh_sync_ids'][$backendName] ?? []),
+                    'phase' => 'refresh',
+                    'direction' => $this->resolveBackendDirection($backendName, $sourceBackends, $targetBackends),
                     'sync_id_overrides' => $applied['refresh_sync_ids'][$backendName] ?? [],
                 ],
             );
+            $refreshTotals = $this->mergeFetchStats($refreshTotals, $refresh['stats']);
 
             if (false === $refresh['ok']) {
                 continue;
@@ -127,7 +202,26 @@ class PlaylistSyncService
             $this->setPlaylistImportLastSync($userContext, $backendName, time());
         }
 
-        return $this->summarizeBackends($clients, $store, $results, $syncStats, false);
+        if ([] !== $applied['touched_backends']) {
+            $this->logger->notice("PLAYLIST: Refreshed touched playlist backends for '{user}' in '{duration}'s.", [
+                'user' => $userContext->name,
+                'duration' => round(microtime(true) - $refreshStart, 4),
+                'backends' => $applied['touched_backends'],
+                'stats' => $refreshTotals,
+                'memory' => $this->getMemoryContext(),
+            ]);
+        }
+
+        $summary = $this->summarizeBackends($clients, $store, $results, $syncStats, false);
+
+        $this->logger->notice("PLAYLIST: Playlist reconciliation for '{user}' completed in '{duration}'s.", [
+            'user' => $userContext->name,
+            'duration' => round(microtime(true) - $syncStart, 4),
+            'results' => $this->summarizeResultTotals($summary),
+            'memory' => $this->getMemoryContext(),
+        ]);
+
+        return $summary;
     }
 
     /**
@@ -135,10 +229,28 @@ class PlaylistSyncService
      *   FORCE_FULL?:bool,
      *   force_ids?:array<int,string>,
      *   last_sync?:int|null,
+     *   phase?:string,
+     *   direction?:string,
      *   sync_id_overrides?:array<string,string>
      * } $opts
      *
-     * @return array{ok:bool,playlists:array<int,array<string,mixed>>,seen_backend_ids:array<int,string>}
+     * @return array{
+     *   ok:bool,
+     *   playlists:array<int,array<string,mixed>>,
+     *   seen_backend_ids:array<int,string>,
+     *   stats:array{
+     *     summaries:int,
+     *     details:int,
+     *     snapshots:int,
+     *     items:int,
+     *     eligible:int,
+     *     ineligible:int,
+     *     skipped_unchanged:int,
+     *     detail_failures:int,
+     *     list_failures:int,
+     *     forced_ids:int
+     *   }
+     * }
      */
     private function fetchBackendPlaylists(
         iClient $client,
@@ -146,28 +258,50 @@ class PlaylistSyncService
         PlaylistStore $store,
         array $opts = [],
     ): array {
+        $backendName = $client->getContext()->backendName;
+        $phase = (string) ($opts['phase'] ?? 'import');
+        $direction = (string) ($opts['direction'] ?? 'unknown');
+        $forceFull = true === (bool) ($opts[Options::FORCE_FULL] ?? false);
+        $lastSync = is_numeric($opts['last_sync'] ?? null) ? (int) $opts['last_sync'] : null;
+        $syncIdOverrides = $opts['sync_id_overrides'] ?? [];
+        $forceIds = [];
+        $stats = $this->makeFetchStats();
+        $start = microtime(true);
+
+        foreach ($opts['force_ids'] ?? [] as $playlistId) {
+            $forceIds[(string) $playlistId] = true;
+        }
+
+        $stats['forced_ids'] = count($forceIds);
+
+        $this->logger->notice("PLAYLIST: Starting '{phase}' fetch for '{user}@{backend}' playlists ({mode}, {direction}).", [
+            'phase' => $phase,
+            'user' => $userContext->name,
+            'backend' => $backendName,
+            'mode' => true === $forceFull ? 'full' : 'incremental',
+            'direction' => $direction,
+            'last_sync' => null === $lastSync ? 'Beginning' : (string) make_date($lastSync),
+            'forced_ids' => array_keys($forceIds),
+            'memory' => $this->getMemoryContext(),
+        ]);
+
         try {
             $playlistSummaries = $client->getPlaylistsList([Options::RAW_RESPONSE => true]);
         } catch (Throwable $e) {
-            $this->logBackendThrowable($e, $client->getContext()->backendName, 'get playlists list');
+            $stats['list_failures'] = 1;
+            $this->logBackendThrowable($e, $backendName, 'get playlists list');
 
             return [
                 'ok' => false,
                 'playlists' => [],
                 'seen_backend_ids' => [],
+                'stats' => $stats,
             ];
         }
 
         $playlists = [];
         $seenBackendIds = [];
-        $forceFull = true === (bool) ($opts[Options::FORCE_FULL] ?? false);
-        $lastSync = is_numeric($opts['last_sync'] ?? null) ? (int) $opts['last_sync'] : null;
-        $syncIdOverrides = $opts['sync_id_overrides'] ?? [];
-        $forceIds = [];
-
-        foreach ($opts['force_ids'] ?? [] as $playlistId) {
-            $forceIds[(string) $playlistId] = true;
-        }
+        $stats['summaries'] = count($playlistSummaries);
 
         foreach ($playlistSummaries as $playlistSummary) {
             $playlistId = trim((string) ag($playlistSummary, 'id'));
@@ -189,13 +323,17 @@ class PlaylistSyncService
                     forceFetch: true === isset($forceIds[$playlistId]),
                 )
             ) {
+                $stats['skipped_unchanged']++;
                 continue;
             }
+
+            $stats['details']++;
 
             try {
                 $playlist = $client->getPlaylist($playlistId, [Options::RAW_RESPONSE => true]);
             } catch (Throwable $e) {
-                $this->logBackendThrowable($e, $client->getContext()->backendName, 'get playlist');
+                $stats['detail_failures']++;
+                $this->logBackendThrowable($e, $backendName, 'get playlist');
                 continue;
             }
 
@@ -207,14 +345,40 @@ class PlaylistSyncService
             );
 
             if (null !== $snapshot) {
+                $snapshot = $this->preserveGeneratedPartialState(
+                    store: $store,
+                    backendName: $backendName,
+                    snapshot: $snapshot,
+                );
+
+                $stats['snapshots']++;
+                $stats['items'] += count($snapshot['items'] ?? []);
+                if (true === (bool) ag($snapshot, 'metadata.sync.eligible', true)) {
+                    $stats['eligible']++;
+                } else {
+                    $stats['ineligible']++;
+                }
+
                 $playlists[] = $snapshot;
             }
         }
+
+        $this->logger->info("PLAYLIST: Completed '{phase}' fetch for '{user}@{backend}' playlists in '{duration}'s.", [
+            'phase' => $phase,
+            'user' => $userContext->name,
+            'backend' => $backendName,
+            'duration' => round(microtime(true) - $start, 4),
+            'direction' => $direction,
+            'mode' => true === $forceFull ? 'full' : 'incremental',
+            'stats' => $stats,
+            'memory' => $this->getMemoryContext(),
+        ]);
 
         return [
             'ok' => true,
             'playlists' => $playlists,
             'seen_backend_ids' => array_values(array_unique($seenBackendIds)),
+            'stats' => $stats,
         ];
     }
 
@@ -368,13 +532,37 @@ class PlaylistSyncService
         array $sourceBackends,
         array $targetBackends,
     ): array {
+        $start = microtime(true);
         $operations = [];
+        $groups = $store->getSyncGroups();
+        $planned = [
+            'create' => 0,
+            'replace' => 0,
+            'delete' => 0,
+        ];
+        $perBackend = [];
+        $skipped = [
+            'no_source' => 0,
+            'no_winner' => 0,
+            'up_to_date' => 0,
+            'unresolved_items' => 0,
+            'partial_waiting' => 0,
+            'zero_available' => 0,
+        ];
 
         if ([] === $targetBackends) {
             return $operations;
         }
 
-        foreach ($store->getSyncGroups() as $syncId => $group) {
+        $this->logger->notice("PLAYLIST: Planning playlist sync operations for '{user}' across '{total}' sync groups.", [
+            'user' => $userContext->name,
+            'total' => count($groups),
+            'source_backends' => $sourceBackends,
+            'target_backends' => $targetBackends,
+            'memory' => $this->getMemoryContext(),
+        ]);
+
+        foreach ($groups as $syncId => $group) {
             $collapsed = $planner->collapseGroup($group);
             $sourceCandidates = array_filter(
                 $collapsed,
@@ -382,12 +570,14 @@ class PlaylistSyncService
             );
 
             if ([] === $sourceCandidates) {
+                $skipped['no_source']++;
                 continue;
             }
 
             $winner = $planner->selectWinner($sourceCandidates);
 
             if (null === $winner) {
+                $skipped['no_winner']++;
                 continue;
             }
 
@@ -397,11 +587,18 @@ class PlaylistSyncService
                 }
 
                 $target = $collapsed[$backendName] ?? null;
+                if (null !== $target) {
+                    $target = $this->clearSatisfiedPartialTargetState($store, $target, $winner);
+                }
+
                 if (false === $planner->shouldSync($target, $winner)) {
+                    $skipped['up_to_date']++;
                     continue;
                 }
 
                 if (null !== ($winner['deleted_at'] ?? null)) {
+                    $planned['delete']++;
+                    $perBackend[$backendName]['delete'] = ($perBackend[$backendName]['delete'] ?? 0) + 1;
                     $operations[] = [
                         'action' => 'delete',
                         'backend' => $backendName,
@@ -412,21 +609,87 @@ class PlaylistSyncService
                     continue;
                 }
 
-                $items = $this->resolveTargetItemsForBackend($userContext, $backendName, $winner);
-                if (null === $items) {
+                $resolution = $this->resolveTargetItemsForBackend($userContext, $backendName, $winner);
+                if (0 === $resolution['available_count']) {
+                    $skipped['unresolved_items']++;
+                    $skipped['zero_available']++;
+
+                    $this->logger->info(
+                        "PLAYLIST: Waiting to sync '{backend}' playlist '{title}'. No winner items are available on target backend yet.",
+                        [
+                            'backend' => $backendName,
+                            'title' => ag($winner, 'title', 'unknown'),
+                            'winner_backend' => ag($winner, 'backend', 'unknown'),
+                            'total' => $resolution['total_count'],
+                            'missing_titles' => $resolution['missing_titles'],
+                        ],
+                    );
+
                     continue;
                 }
 
+                if (
+                    null !== $target
+                    && true === $this->isGeneratedPartialPlaylist($target)
+                    && true === $this->shouldWaitForPartialTarget($target, $winner, $resolution)
+                ) {
+                    $skipped['partial_waiting']++;
+
+                    $this->logger->info(
+                        "PLAYLIST: Waiting to complete '{backend}' playlist '{title}'. '{available}' of '{total}' items are currently available on target backend.",
+                        [
+                            'backend' => $backendName,
+                            'title' => ag($winner, 'title', 'unknown'),
+                            'available' => $resolution['available_count'],
+                            'total' => $resolution['total_count'],
+                            'missing_titles' => $resolution['missing_titles'],
+                        ],
+                    );
+
+                    continue;
+                }
+
+                $action = null === $target || null !== ($target['deleted_at'] ?? null) ? 'create' : 'replace';
+                $planned[$action]++;
+                $perBackend[$backendName][$action] = ($perBackend[$backendName][$action] ?? 0) + 1;
+
+                if ($resolution['missing_count'] > 0) {
+                    $perBackend[$backendName]['partial'] = ($perBackend[$backendName]['partial'] ?? 0) + 1;
+
+                    $this->logger->info(
+                        "PLAYLIST: Planning partial '{action}' for '{backend}' playlist '{title}'. '{available}' of '{total}' items are available on target backend.",
+                        [
+                            'action' => $action,
+                            'backend' => $backendName,
+                            'title' => ag($winner, 'title', 'unknown'),
+                            'available' => $resolution['available_count'],
+                            'total' => $resolution['total_count'],
+                            'missing_titles' => $resolution['missing_titles'],
+                        ],
+                    );
+                }
+
                 $operations[] = [
-                    'action' => null === $target || null !== ($target['deleted_at'] ?? null) ? 'create' : 'replace',
+                    'action' => $action,
                     'backend' => $backendName,
                     'sync_id' => $syncId,
                     'winner' => $winner,
                     'target' => $target,
-                    'items' => $items,
+                    'items' => $resolution['items'],
+                    'sync_metadata' => $this->makeTargetSyncMetadata($winner, $resolution),
                 ];
             }
         }
+
+        $this->logger->info("PLAYLIST: Planned '{total}' playlist sync operations for '{user}' in '{duration}'s.", [
+            'user' => $userContext->name,
+            'total' => count($operations),
+            'duration' => round(microtime(true) - $start, 4),
+            'actions' => $planned,
+            'backends' => $perBackend,
+            'skipped' => $skipped,
+            'memory' => $this->getMemoryContext(),
+        ]);
 
         return $operations;
     }
@@ -524,6 +787,7 @@ class PlaylistSyncService
                 syncId: (string) $operation['sync_id'],
                 winner: $winner,
                 items: $operation['items'] ?? [],
+                syncMetadata: $operation['sync_metadata'] ?? [],
             ));
         }
 
@@ -576,6 +840,7 @@ class PlaylistSyncService
     /**
      * @param array<string,mixed> $winner
      * @param array<int,array<string,mixed>> $items
+     * @param array<string,mixed> $syncMetadata
      *
      * @return array<string,mixed>
      */
@@ -585,6 +850,7 @@ class PlaylistSyncService
         string $syncId,
         array $winner,
         array $items,
+        array $syncMetadata = [],
     ): array {
         return [
             'id' => $backendId,
@@ -599,10 +865,10 @@ class PlaylistSyncService
             'metadata' => [
                 'backend' => $backend,
                 'remote_item_count' => count($items),
-                'sync' => [
+                'sync' => array_replace([
                     'eligible' => true,
                     'reason' => null,
-                ],
+                ], $syncMetadata),
             ],
             'items' => $items,
         ];
@@ -611,16 +877,27 @@ class PlaylistSyncService
     /**
      * @param array<string,mixed> $winner
      *
-     * @return array<int,array<string,mixed>>|null
+     * @return array{
+     *   items:array<int,array<string,mixed>>,
+     *   total_count:int,
+     *   available_count:int,
+     *   missing_count:int,
+     *   missing_state_ids:array<int,int>,
+     *   missing_titles:array<int,string>,
+     *   content_hash:string
+     * }
      */
-    private function resolveTargetItemsForBackend(UserContext $userContext, string $backend, array $winner): ?array
+    private function resolveTargetItemsForBackend(UserContext $userContext, string $backend, array $winner): array
     {
         $items = [];
+        $missingStateIds = [];
+        $missingTitles = [];
 
         foreach (array_values($winner['items'] ?? []) as $position => $item) {
             $stateId = $item['state_id'] ?? null;
             if (null === $stateId) {
-                return null;
+                $missingTitles[] = (string) ($item['title'] ?? 'Unknown item');
+                continue;
             }
 
             $entity = $this->getLocalStateById($userContext, (int) $stateId);
@@ -633,7 +910,9 @@ class PlaylistSyncService
                         'state_id' => $stateId,
                     ],
                 );
-                return null;
+                $missingStateIds[] = (int) $stateId;
+                $missingTitles[] = (string) ($item['title'] ?? 'Unknown item');
+                continue;
             }
 
             $backendId = trim((string) ag($entity->getMetadata($backend), iState::COLUMN_ID, ''));
@@ -646,7 +925,9 @@ class PlaylistSyncService
                         'item' => $entity->getName(),
                     ],
                 );
-                return null;
+                $missingStateIds[] = (int) $stateId;
+                $missingTitles[] = $entity->getName();
+                continue;
             }
 
             $items[] = [
@@ -660,7 +941,19 @@ class PlaylistSyncService
             ];
         }
 
-        return $items;
+        return [
+            'items' => $items,
+            'total_count' => count($winner['items'] ?? []),
+            'available_count' => count($items),
+            'missing_count' => count($missingTitles),
+            'missing_state_ids' => array_values(array_unique($missingStateIds)),
+            'missing_titles' => array_values(array_unique($missingTitles)),
+            'content_hash' => $this->makePlaylistContentHash([
+                'title' => (string) ($winner['title'] ?? ''),
+                'type' => (string) ($winner['type'] ?? 'video'),
+                'items' => $items,
+            ]),
+        ];
     }
 
     private function getLocalStateById(UserContext $userContext, int $stateId): ?iState
@@ -721,6 +1014,406 @@ class PlaylistSyncService
         }
 
         return $results;
+    }
+
+    /**
+     * @param array<string,mixed> $winner
+     * @param array{
+     *   items:array<int,array<string,mixed>>,
+     *   total_count:int,
+     *   available_count:int,
+     *   missing_count:int,
+     *   missing_state_ids:array<int,int>,
+     *   missing_titles:array<int,string>,
+     *   content_hash:string
+     * } $resolution
+     *
+     * @return array<string,mixed>
+     */
+    private function makeTargetSyncMetadata(array $winner, array $resolution): array
+    {
+        if (0 === $resolution['missing_count']) {
+            return [];
+        }
+
+        return [
+            'partial' => true,
+            'generated_by_sync' => true,
+            'partial_reason' => 'missing_target_items',
+            'source_backend' => (string) ($winner['backend'] ?? 'unknown'),
+            'expected_item_count' => $resolution['total_count'],
+            'available_item_count' => $resolution['available_count'],
+            'missing_state_ids' => $resolution['missing_state_ids'],
+            'missing_titles' => $resolution['missing_titles'],
+            'desired_content_hash' => (string) ($winner['content_hash'] ?? $this->makePlaylistContentHash($winner)),
+        ];
+    }
+
+    /**
+     * @param array<string,mixed> $snapshot
+     *
+     * @return array<string,mixed>
+     */
+    private function preserveGeneratedPartialState(PlaylistStore $store, string $backendName, array $snapshot): array
+    {
+        $backendId = trim((string) ($snapshot['id'] ?? ''));
+        if ('' === $backendId) {
+            return $snapshot;
+        }
+
+        $stored = $store->getByBackendId($backendName, $backendId);
+        if (null === $stored || true !== $this->isGeneratedPartialPlaylist($stored)) {
+            return $snapshot;
+        }
+
+        $storedSync = $this->getSyncMetadata($stored);
+        $desiredHash = (string) ($storedSync['desired_content_hash'] ?? '');
+        $currentHash = $this->makePlaylistContentHash($snapshot);
+
+        if ('' !== $desiredHash && $desiredHash === $currentHash) {
+            return $this->clearGeneratedPartialSyncMetadata($snapshot);
+        }
+
+        $snapshot['metadata']['sync'] = array_replace(
+            ag($snapshot, 'metadata.sync', []),
+            $storedSync,
+            [
+                'eligible' => true === (bool) ag($snapshot, 'metadata.sync.eligible', true),
+                'reason' => ag($snapshot, 'metadata.sync.reason'),
+                'available_item_count' => count($snapshot['items'] ?? []),
+            ],
+        );
+
+        return $snapshot;
+    }
+
+    /**
+     * @param array<string,mixed> $target
+     * @param array<string,mixed> $winner
+     *
+     * @return array<string,mixed>
+     */
+    private function clearSatisfiedPartialTargetState(PlaylistStore $store, array $target, array $winner): array
+    {
+        if (true !== $this->isGeneratedPartialPlaylist($target)) {
+            return $target;
+        }
+
+        $currentHash = (string) ($target['content_hash'] ?? '');
+        $desiredHash = (string) ag($target, 'metadata.sync.desired_content_hash', '');
+        $winnerHash = (string) ($winner['content_hash'] ?? '');
+
+        if ('' === $currentHash || $currentHash !== $desiredHash && $currentHash !== $winnerHash) {
+            return $target;
+        }
+
+        $cleared = $this->clearGeneratedPartialSyncMetadata($target);
+        $store->updateMetadata((int) $target['id'], $cleared['metadata'] ?? []);
+
+        $this->logger->info(
+            "PLAYLIST: Clearing partial sync marker for '{backend}' playlist '{title}'. Target playlist now matches the current desired state.",
+            [
+                'backend' => ag($target, 'backend', 'unknown'),
+                'title' => ag($target, 'title', 'unknown'),
+            ],
+        );
+
+        return array_replace($target, [
+            'metadata' => $cleared['metadata'] ?? [],
+        ]);
+    }
+
+    /**
+     * @param array<string,mixed> $target
+     * @param array<string,mixed> $winner
+     * @param array{
+     *   items:array<int,array<string,mixed>>,
+     *   total_count:int,
+     *   available_count:int,
+     *   missing_count:int,
+     *   missing_state_ids:array<int,int>,
+     *   missing_titles:array<int,string>,
+     *   content_hash:string
+     * } $resolution
+     */
+    private function shouldWaitForPartialTarget(array $target, array $winner, array $resolution): bool
+    {
+        if (0 === $resolution['missing_count']) {
+            return false;
+        }
+
+        return (
+            (string) ag($target, 'metadata.sync.desired_content_hash', '') === (string) ($winner['content_hash'] ?? '')
+            && (string) ($target['content_hash'] ?? '') === $resolution['content_hash']
+        );
+    }
+
+    /**
+     * @param array<string,mixed>|null $playlist
+     */
+    private function isGeneratedPartialPlaylist(?array $playlist): bool
+    {
+        if (null === $playlist) {
+            return false;
+        }
+
+        return (
+            true === (bool) ag($playlist, 'metadata.sync.partial', false)
+            && true === (bool) ag($playlist, 'metadata.sync.generated_by_sync', false)
+        );
+    }
+
+    /**
+     * @param array<string,mixed> $playlist
+     *
+     * @return array<string,mixed>
+     */
+    private function clearGeneratedPartialSyncMetadata(array $playlist): array
+    {
+        $sync = $this->getSyncMetadata($playlist);
+
+        unset(
+            $sync['partial'],
+            $sync['generated_by_sync'],
+            $sync['partial_reason'],
+            $sync['source_backend'],
+            $sync['expected_item_count'],
+            $sync['available_item_count'],
+            $sync['missing_state_ids'],
+            $sync['missing_titles'],
+            $sync['desired_content_hash'],
+        );
+
+        $playlist['metadata']['sync'] = $sync;
+
+        return $playlist;
+    }
+
+    /**
+     * @param array<string,mixed> $playlist
+     *
+     * @return array<string,mixed>
+     */
+    private function getSyncMetadata(array $playlist): array
+    {
+        $sync = ag($playlist, 'metadata.sync', []);
+
+        return true === is_array($sync) ? $sync : [];
+    }
+
+    /**
+     * @param array<string,mixed> $playlist
+     */
+    private function makePlaylistContentHash(array $playlist): string
+    {
+        $itemKeys = [];
+
+        foreach (array_values($playlist['items'] ?? []) as $index => $item) {
+            $stateId = null !== ($item['state_id'] ?? null) ? (int) $item['state_id'] : null;
+
+            $itemKeys[] = [
+                'position' => (int) ($item['position'] ?? $index),
+                'state_id' => $stateId,
+                'backend_item_id' => null === $stateId ? (string) ($item['backend_item_id'] ?? '') : '',
+                'item_type' => (string) ($item['item_type'] ?? ''),
+                'title' => (string) ($item['title'] ?? ''),
+            ];
+        }
+
+        $payload = json_encode(
+            [
+                'title' => (string) ($playlist['title'] ?? ''),
+                'type' => strtolower((string) ($playlist['type'] ?? 'video')),
+                'items' => $itemKeys,
+            ],
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE,
+        );
+
+        return hash('sha256', false !== $payload ? $payload : '{}');
+    }
+
+    /**
+     * @return array{
+     *   summaries:int,
+     *   details:int,
+     *   snapshots:int,
+     *   items:int,
+     *   eligible:int,
+     *   ineligible:int,
+     *   skipped_unchanged:int,
+     *   detail_failures:int,
+     *   list_failures:int,
+     *   forced_ids:int
+     * }
+     */
+    private function makeFetchStats(): array
+    {
+        return [
+            'summaries' => 0,
+            'details' => 0,
+            'snapshots' => 0,
+            'items' => 0,
+            'eligible' => 0,
+            'ineligible' => 0,
+            'skipped_unchanged' => 0,
+            'detail_failures' => 0,
+            'list_failures' => 0,
+            'forced_ids' => 0,
+        ];
+    }
+
+    /**
+     * @param array<string,int> $left
+     * @param array<string,int> $right
+     *
+     * @return array<string,int>
+     */
+    private function mergeFetchStats(array $left, array $right): array
+    {
+        foreach ($right as $key => $value) {
+            $left[$key] = (int) ($left[$key] ?? 0) + (int) $value;
+        }
+
+        return $left;
+    }
+
+    /**
+     * @param array<int,string> $sourceBackends
+     * @param array<int,string> $targetBackends
+     */
+    private function resolveBackendDirection(string $backendName, array $sourceBackends, array $targetBackends): string
+    {
+        $isSource = true === in_array($backendName, $sourceBackends, true);
+        $isTarget = true === in_array($backendName, $targetBackends, true);
+
+        if (true === $isSource && true === $isTarget) {
+            return 'both';
+        }
+
+        if (true === $isSource) {
+            return 'source';
+        }
+
+        if (true === $isTarget) {
+            return 'target';
+        }
+
+        return 'passive';
+    }
+
+    /**
+     * @param array<int,string> $sourceBackends
+     * @param array<int,string> $targetBackends
+     */
+    private function resolveEarlyStopReason(bool $dryRun, array $sourceBackends, array $targetBackends): string
+    {
+        if (true === $dryRun) {
+            return 'dry-run';
+        }
+
+        if ([] === $sourceBackends && [] === $targetBackends) {
+            return 'no-source-or-target-backends';
+        }
+
+        if ([] === $sourceBackends) {
+            return 'no-source-backends';
+        }
+
+        if ([] === $targetBackends) {
+            return 'no-target-backends';
+        }
+
+        return 'fetch-only';
+    }
+
+    /**
+     * @param array<int,array<string,mixed>> $operations
+     *
+     * @return array{actions:array{create:int,replace:int,delete:int},backends:array<string,array<string,int>>}
+     */
+    private function summarizeOperations(array $operations): array
+    {
+        $summary = [
+            'actions' => [
+                'create' => 0,
+                'replace' => 0,
+                'delete' => 0,
+            ],
+            'backends' => [],
+        ];
+
+        foreach ($operations as $operation) {
+            $action = (string) ($operation['action'] ?? '');
+            $backend = (string) ($operation['backend'] ?? '');
+
+            if ('' === $action || '' === $backend) {
+                continue;
+            }
+
+            $summary['actions'][$action] = (int) ($summary['actions'][$action] ?? 0) + 1;
+            $summary['backends'][$backend][$action] = (int) ($summary['backends'][$backend][$action] ?? 0) + 1;
+        }
+
+        return $summary;
+    }
+
+    /**
+     * @param array<string,array{added:int,updated:int,removed:int}> $stats
+     *
+     * @return array{added:int,updated:int,removed:int}
+     */
+    private function summarizeSyncStats(array $stats): array
+    {
+        $summary = [
+            'added' => 0,
+            'updated' => 0,
+            'removed' => 0,
+        ];
+
+        foreach ($stats as $backendStats) {
+            $summary['added'] += (int) ($backendStats['added'] ?? 0);
+            $summary['updated'] += (int) ($backendStats['updated'] ?? 0);
+            $summary['removed'] += (int) ($backendStats['removed'] ?? 0);
+        }
+
+        return $summary;
+    }
+
+    /**
+     * @param array<string,array{playlists:int,items:int,added:int,updated:int,removed:int}> $results
+     *
+     * @return array{playlists:int,items:int,added:int,updated:int,removed:int}
+     */
+    private function summarizeResultTotals(array $results): array
+    {
+        $summary = [
+            'playlists' => 0,
+            'items' => 0,
+            'added' => 0,
+            'updated' => 0,
+            'removed' => 0,
+        ];
+
+        foreach ($results as $backendStats) {
+            $summary['playlists'] += (int) ($backendStats['playlists'] ?? 0);
+            $summary['items'] += (int) ($backendStats['items'] ?? 0);
+            $summary['added'] += (int) ($backendStats['added'] ?? 0);
+            $summary['updated'] += (int) ($backendStats['updated'] ?? 0);
+            $summary['removed'] += (int) ($backendStats['removed'] ?? 0);
+        }
+
+        return $summary;
+    }
+
+    /**
+     * @return array{now:string,peak:string}
+     */
+    private function getMemoryContext(): array
+    {
+        return [
+            'now' => get_memory_usage(),
+            'peak' => get_peak_memory_usage(),
+        ];
     }
 
     private function getPlaylistImportLastSync(UserContext $userContext, string $backendName): ?int

@@ -9,8 +9,9 @@ use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Playlists\PlaylistStore;
 use Monolog\Logger;
 use PDO;
+use PHPUnit\Framework\TestCase;
 
-final class PlaylistStoreTest extends \PHPUnit\Framework\TestCase
+final class PlaylistStoreTest extends TestCase
 {
     public function test_replace_backend_playlists(): void
     {

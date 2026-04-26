@@ -15,6 +15,7 @@ use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
 use Psr\SimpleCache\InvalidArgumentException;
+use SensitiveParameter;
 use SplFileInfo;
 use Throwable;
 
@@ -32,7 +33,7 @@ readonly class Playlist
      * @throws InvalidArgumentException
      */
     #[Get(pattern: self::URL . '/{token}[/[{fake:.*}[/]]]')]
-    public function __invoke(iRequest $request, #[\SensitiveParameter] string $token): iResponse
+    public function __invoke(iRequest $request, #[SensitiveParameter] string $token): iResponse
     {
         if (null === ($data = $this->cache->get($token, null))) {
             return api_error('Token is expired or invalid.', Status::BAD_REQUEST);
