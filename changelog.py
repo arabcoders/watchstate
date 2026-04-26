@@ -140,10 +140,15 @@ def generate_changelog(repo_path, changelog_path):
                 repo, tags[0].commit.hexsha, head_commit.hexsha
             )
             if commits:
+                unreleased_label = (
+                    f"Unreleased ({head_branch})"
+                    if head_branch
+                    else f"Unreleased ({head_commit.hexsha[:8]})"
+                )
                 changelog.insert(
                     0,
                     {
-                        "tag": f"Unreleased ({head_commit.hexsha[:8]})",
+                        "tag": unreleased_label,
                         "full_sha": head_commit.hexsha,
                         "date": head_commit.committed_datetime.astimezone(
                             UTC
