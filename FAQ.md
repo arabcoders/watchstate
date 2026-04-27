@@ -258,21 +258,23 @@ If there are no errors, the database has been repaired successfully. And you can
 
 # Which Providers id `GUIDs` supported by for PlexClient?
 
-* tvdb://(id) `New plex agent`
-* imdb://(id) `New plex agent`
-* tmdb://(id) `New plex agent`
-* com.plexapp.agents.imdb://(id)?lang=en `(Legacy plex agent)`
-* com.plexapp.agents.tmdb://(id)?lang=en `(Legacy plex agent)`
-* com.plexapp.agents.themoviedb://(id)?lang=en `(Legacy plex agent)`
-* com.plexapp.agents.thetvdb://(seriesId)?lang=en `(Legacy plex agent)`
-* com.plexapp.agents.xbmcnfo://(id)?lang=en `(XBMC NFO Movies agent)`
-* com.plexapp.agents.xbmcnfotv://(id)?lang=en `(XBMC NFO TV agent)`
+* tvdb://(id)
+* imdb://(id)
+* tmdb://(id)
+* tv.plex.agents.nfo.movie://movie/(provider)_(id) `Where the provider one of supported providers`
+* tv.plex.agents.nfo.series://(show|episode)/(provider)_(id) `Where the provider one of supported providers`
+  
+## Legacy Plex Agents
+
+* com.plexapp.agents.imdb://(id)?lang=en
+* com.plexapp.agents.tmdb://(id)?lang=en
+* com.plexapp.agents.themoviedb://(id)?lang=en
+* com.plexapp.agents.thetvdb://(seriesId)?lang=en
+* com.plexapp.agents.xbmcnfo://(id)?lang=en `(XBMC NFO Movies agent) -> imdb|tmdb://(movieId)?lang=en`
+* com.plexapp.agents.xbmcnfotv://(id)?lang=en `(XBMC NFO TV agent) -> tvdb://(serisId)?lang=en`
 * com.plexapp.agents.hama://(db)\d?-(id)?lang=en `(HAMA multi source db agent mainly for anime)`
-* com.plexapp.agents.ytinforeader://(id)
-  ?lang=en [ytinforeader.bundle](https://github.com/arabcoders/plex-ytdlp-info-reader-agent)
-  With [jp_scanner.py](https://github.com/arabcoders/plex-daily-scanner) as scanner.
-* com.plexapp.agents.cmdb://(id)
-  ?lang=en [cmdb.bundle](https://github.com/arabcoders/cmdb.bundle) `(User custom metadata database)`.
+* com.plexapp.agents.ytinforeader://(id)?lang=en [ytinforeader.bundle](https://github.com/arabcoders/plex-ytdlp-info-reader-agent) With [jp_scanner.py](https://github.com/arabcoders/plex-daily-scanner) as scanner.
+* com.plexapp.agents.cmdb://(id)?lang=en [cmdb.bundle](https://github.com/arabcoders/cmdb.bundle) `(User custom metadata database)`.
 
 ---
 

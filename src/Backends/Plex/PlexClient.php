@@ -105,6 +105,8 @@ class PlexClient implements iClient
         'com.plexapp.agents.cmdb',
         'tv.plex.agents.movie',
         'tv.plex.agents.series',
+        'tv.plex.agents.nfo.movie',
+        'tv.plex.agents.nfo.series',
     ];
 
     /**

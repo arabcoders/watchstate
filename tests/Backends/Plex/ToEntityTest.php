@@ -77,4 +77,72 @@ class ToEntityTest extends PlexTestCase
         $this->assertInstanceOf(StateInterface::class, $result->response);
         $this->assertNotEmpty($result->response->parent);
     }
+
+    public function test_to_entity_uses_top_level_typed_nfo_guid(): void
+    {
+        $context = $this->makeContext();
+        $item = [
+            'ratingKey' => '42',
+            'type' => 'movie',
+            'title' => 'NFO Movie',
+            'addedAt' => 1000,
+            'guid' => 'tv.plex.agents.nfo.movie://movie/tmdb_383498',
+        ];
+
+        $action = new ToEntity(new PlexGuid($this->logger));
+        $result = $action($context, $item);
+
+        $this->assertTrue($result->isSuccessful());
+        $this->assertInstanceOf(StateInterface::class, $result->response);
+        $this->assertSame('383498', $result->response->guids['guid_tmdb'] ?? null);
+    }
+
+    public function test_to_entity_episode_uses_show_level_typed_nfo_guid_when_parent_has_no_guid_list(): void
+    {
+        $context = $this->makeContext();
+        $item = [
+            'ratingKey' => '11',
+            'type' => 'episode',
+            'title' => 'Pilot',
+            'grandparentTitle' => 'Test Show',
+            'parentIndex' => 1,
+            'index' => 1,
+            'addedAt' => 1000,
+            'Guid' => [
+                ['id' => 'tvdb://84871'],
+            ],
+            'grandparentRatingKey' => 'show-1',
+        ];
+
+        $showPayload = [
+            'MediaContainer' => [
+                'Metadata' => [
+                    [
+                        'ratingKey' => 'show-1',
+                        'type' => 'show',
+                        'title' => 'Test Show',
+                        'guid' => 'tv.plex.agents.nfo.series://show/tvdb_72408',
+                    ],
+                ],
+            ],
+        ];
+
+        Container::add(GetMetaData::class, fn() => new class($showPayload) {
+            public function __construct(private array $payload)
+            {
+            }
+
+            public function __invoke(\App\Backends\Common\Context $context, string|int $id, array $opts = []): Response
+            {
+                return new Response(status: true, response: $this->payload);
+            }
+        });
+
+        $action = new ToEntity(new PlexGuid($this->logger));
+        $result = $action($context, $item);
+
+        $this->assertTrue($result->isSuccessful());
+        $this->assertInstanceOf(StateInterface::class, $result->response);
+        $this->assertSame('72408', $result->response->parent['guid_tvdb'] ?? null);
+    }
 }

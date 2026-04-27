@@ -46,6 +46,14 @@ final class PlexGuid implements iGuid
     ];
 
     /**
+     * @var array<array-key,string> List of native plex NFO agents.
+     */
+    private array $guidNfo = [
+        'tv.plex.agents.nfo.movie',
+        'tv.plex.agents.nfo.series',
+    ];
+
+    /**
      * @var array<array-key,string> List of local plex agents.
      */
     private array $guidLocal = [
@@ -359,6 +367,10 @@ final class PlexGuid implements iGuid
                     $val = $this->parseLegacyAgent(guid: $val, context: $context, log: $log);
                 }
 
+                if (true === str_starts_with($val, 'tv.plex.agents.nfo.')) {
+                    $val = $this->parseNfoAgent(guid: $val, context: $context, log: $log);
+                }
+
                 if (false === str_contains($val, '://')) {
                     if (true === $log) {
                         $this->logger->info("PlexGuid: Unable to parse '{backend}: {agent}' identifier.", [
@@ -398,6 +410,10 @@ final class PlexGuid implements iGuid
 
                 // -- Plex in their infinite wisdom, sometimes report two keys for same data source.
                 if (null !== ($guid[$this->guidMapper[$key]] ?? null)) {
+                    if ($guid[$this->guidMapper[$key]] === $value) {
+                        continue;
+                    }
+
                     if (true === $log) {
                         $this->logger->warning(
                             "PlexGuid: '{client}: {backend}' reported multiple ids for same data source '{key}: {ids}' for {item.type} '{item.id}: {item.title}'.",
@@ -515,6 +531,74 @@ final class PlexGuid implements iGuid
     }
 
     /**
+     * Parse native Plex NFO agents.
+     *
+     * Typed NFO GUIDs include the source in the last path segment, such as
+     * `tv.plex.agents.nfo.movie://movie/tmdb_383498`. We normalize those to the
+     * same `<source>://<id>` format the rest of the parser already understands.
+     * Fallback NFO ids like `...://movie/858024` do not identify the source and
+     * are intentionally left untouched.
+     *
+     * @param string $guid Guid to parse.
+     * @param array $context Context data.
+     * @param bool $log Log errors. default true.
+     *
+     * @return string The parsed GUID.
+     */
+    private function parseNfoAgent(string $guid, array $context = [], bool $log = true): string
+    {
+        if (false === in_array(before($guid, '://'), $this->guidNfo, true)) {
+            return $guid;
+        }
+
+        try {
+            $payload = after($guid, '://');
+            $token = trim((string) basename($payload));
+
+            if ('' === $token || false === str_contains($token, '_')) {
+                return $guid;
+            }
+
+            [$source, $sourceId] = explode('_', $token, 2);
+            $source = strtolower(trim($source));
+            $sourceId = trim($sourceId);
+
+            if ('' === $source || '' === $sourceId || null === ($this->guidMapper[$source] ?? null)) {
+                return $guid;
+            }
+
+            return $source . '://' . before($sourceId, '?');
+        } catch (Throwable $e) {
+            if (true === $log) {
+                $this->logger->error(
+                    message: "PlexGuid: Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' parsing NFO agent '{agent}' identifier. Error '{error.message}' at '{error.file}:{error.line}.",
+                    context: [
+                        'backend' => $this->context->backendName,
+                        'client' => $this->context->clientName,
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
+                        'agent' => $guid,
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                            'trace' => $e->getTrace(),
+                        ],
+                        ...$context,
+                    ],
+                );
+            }
+
+            return $guid;
+        }
+    }
+
+    /**
      * Get the Plex Guid configuration.
      *
      * @return array
@@ -524,6 +608,7 @@ final class PlexGuid implements iGuid
         return [
             'guidMapper' => $this->guidMapper,
             'guidLegacy' => $this->guidLegacy,
+            'guidNfo' => $this->guidNfo,
             'guidLocal' => $this->guidLocal,
             'guidReplacer' => $this->guidReplacer,
         ];

@@ -351,6 +351,11 @@ class PlexGuidTest extends TestCase
             $this->getClass()->isLocal('com.plexapp.agents.imdb://123456/1/1'),
             'Assert that the GUID is not local.'
         );
+
+        $this->assertFalse(
+            $this->getClass()->isLocal('tv.plex.agents.nfo.movie://movie/tmdb_383498'),
+            'Assert that typed NFO GUIDs are treated as non-local external ids.'
+        );
     }
 
     public function test_has()
@@ -392,10 +397,23 @@ class PlexGuidTest extends TestCase
             ], $context),
             'Assert that the GUID exists.');
 
+        $this->assertEquals([
+            Guid::GUID_IMDB => 'tt1234567',
+            Guid::GUID_TMDB => '383498',
+            Guid::GUID_TVDB => '121361',
+        ],
+            $this->getClass()->parse([
+                ['id' => 'tv.plex.agents.nfo.movie://movie/tmdb_383498'],
+                ['id' => 'tv.plex.agents.nfo.movie://movie/imdb_tt1234567'],
+                ['id' => 'tv.plex.agents.nfo.series://show/tvdb_121361'],
+            ], $context),
+            'Assert that typed NFO GUIDs are normalized into supported external ids.');
+
         $this->assertEquals([], $this->getClass()->parse([
             ['id' => ''],
             ['id' => 'com.plexapp.agents.none://123456'],
             ['id' => 'com.plexapp.agents.imdb'],
+            ['id' => 'tv.plex.agents.nfo.movie://movie/858024'],
         ], $context), 'Assert that the GUID does not exist. for invalid GUIDs.');
     }
 
@@ -433,6 +451,16 @@ class PlexGuidTest extends TestCase
             ['id' => 'com.plexapp.agents.imdb://1'],
             ['id' => 'com.plexapp.agents.imdb://2'],
         ], $context), 'Assert only the the oldest ID is returned for numeric GUIDs.');
+
+        $this->assertEquals([Guid::GUID_TVDB => '84871'], $this->getClass()->get([
+            ['id' => 'tvdb://84871'],
+            ['id' => 'tv.plex.agents.nfo.series://episode/tvdb_84871'],
+        ], $context), 'Assert typed NFO GUIDs do not conflict with identical canonical GUIDs.');
+
+        $this->assertFalse(
+            $this->logged(Level::Warning, 'reported multiple ids', true),
+            'Assert identical canonical and NFO GUIDs do not raise duplicate warnings.'
+        );
 
         // -- as we cache the ignore list for each user now,
         // -- and no longer rely on config.ignore key, we needed a workaround to update the ignore list
