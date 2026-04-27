@@ -38,6 +38,48 @@ def sanitize_commit_message(message):
     return "\n".join(lines).strip()
 
 
+def get_preferred_ref(repo, *names):
+    """Return the first matching ref by name."""
+    refs_by_name = {ref.name: ref for ref in repo.refs}
+    for name in names:
+        ref = refs_by_name.get(name)
+        if ref is not None:
+            return ref
+    return None
+
+
+def add_commits_by_sha(target, commits):
+    """Store commits by SHA so overlapping refs only appear once."""
+    for commit in commits:
+        target[commit.hexsha] = commit
+
+
+def build_untagged_entry(commits_by_sha):
+    """Create one entry for commits that are not part of a tag yet."""
+    if not commits_by_sha:
+        return None
+
+    commits = sorted(
+        commits_by_sha.values(), key=lambda c: c.committed_datetime, reverse=True
+    )
+    latest_commit = commits[0]
+    return {
+        "tag": "Untagged",
+        "full_sha": latest_commit.hexsha,
+        "date": latest_commit.committed_datetime.astimezone(UTC).isoformat(),
+        "commits": [
+            {
+                "sha": c.hexsha[:8],
+                "full_sha": c.hexsha,
+                "message": sanitize_commit_message(c.message),
+                "author": c.author.name,
+                "date": c.committed_datetime.astimezone(UTC).isoformat(),
+            }
+            for c in commits
+        ],
+    }
+
+
 def generate_changelog(repo_path, changelog_path):
     repo = git.Repo(repo_path)
     tags = get_sorted_tags(repo)
@@ -45,46 +87,27 @@ def generate_changelog(repo_path, changelog_path):
 
     head_commit = repo.head.commit
     head_branch = None
+    untagged_commits = {}
     try:
         head_branch = repo.active_branch.name
     except TypeError:
         pass  # Detached HEAD
 
-    # 🔼 If HEAD is not on 'dev', include unmerged commits from dev
-    if "dev" in repo.heads and head_branch != "dev":
+    # Collect dev commits not yet in main so they share one untagged bucket.
+    if head_branch != "dev":
         try:
-            dev_branch = repo.heads["dev"]
-            main_branch_name = "main" if "main" in repo.heads else "master"
-            main_branch = repo.heads[main_branch_name]
-
-            unmerged_commits = list(
-                repo.iter_commits(
-                    f"{main_branch.name}..{dev_branch.name}", no_merges=True
-                )
+            dev_branch = get_preferred_ref(repo, "origin/dev", "dev")
+            main_branch = get_preferred_ref(
+                repo, "origin/main", "origin/master", "main", "master"
             )
-            if unmerged_commits:
-                changelog.insert(
-                    0,
-                    {
-                        "tag": f"Unmerged ({dev_branch.name} branch)",
-                        "full_sha": dev_branch.commit.hexsha,
-                        "date": dev_branch.commit.committed_datetime.astimezone(
-                            UTC
-                        ).isoformat(),
-                        "commits": [
-                            {
-                                "sha": c.hexsha[:8],
-                                "full_sha": c.hexsha,
-                                "message": sanitize_commit_message(c.message),
-                                "author": c.author.name,
-                                "date": c.committed_datetime.astimezone(
-                                    UTC
-                                ).isoformat(),
-                            }
-                            for c in unmerged_commits
-                        ],
-                    },
+
+            if dev_branch is not None and main_branch is not None:
+                unmerged_commits = list(
+                    repo.iter_commits(
+                        f"{main_branch.name}..{dev_branch.name}", no_merges=True
+                    )
                 )
+                add_commits_by_sha(untagged_commits, unmerged_commits)
         except Exception as e:
             print(f"[WARN] Could not get unmerged dev commits: {e}", file=sys.stderr)
 
@@ -134,39 +157,17 @@ def generate_changelog(repo_path, changelog_path):
                 }
             )
 
-        # Unreleased changes after latest tag
+        # Collect commits after the latest tag into the same untagged bucket.
         if head_commit.hexsha != tags[0].commit.hexsha:
             commits = get_commits_between(
                 repo, tags[0].commit.hexsha, head_commit.hexsha
             )
             if commits:
-                unreleased_label = (
-                    f"Unreleased ({head_branch})"
-                    if head_branch
-                    else f"Unreleased ({head_commit.hexsha[:8]})"
-                )
-                changelog.insert(
-                    0,
-                    {
-                        "tag": unreleased_label,
-                        "full_sha": head_commit.hexsha,
-                        "date": head_commit.committed_datetime.astimezone(
-                            UTC
-                        ).isoformat(),
-                        "commits": [
-                            {
-                                "sha": c.hexsha[:8],
-                                "full_sha": c.hexsha,
-                                "message": sanitize_commit_message(c.message),
-                                "author": c.author.name,
-                                "date": c.committed_datetime.astimezone(
-                                    UTC
-                                ).isoformat(),
-                            }
-                            for c in commits
-                        ],
-                    },
-                )
+                add_commits_by_sha(untagged_commits, commits)
+
+        untagged_entry = build_untagged_entry(untagged_commits)
+        if untagged_entry:
+            changelog.insert(0, untagged_entry)
 
     with open(changelog_path, "w", encoding="utf-8") as f:
         json.dump(changelog, f, indent=2)
