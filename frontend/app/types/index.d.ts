@@ -390,7 +390,7 @@ export interface EventsItem {
   /** Event data payload (optional) */
   event_data?: JsonObject;
   /** Event logs array (optional) */
-  logs?: Array<string>;
+  logs?: Array<LogEntry>;
   /** Event options (optional) */
   options?: JsonObject;
   /** Display toggle for event data (UI state) */

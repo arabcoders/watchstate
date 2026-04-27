@@ -346,8 +346,14 @@ final class Index
      * @return array
      * @throws RandomException
      */
-    public static function formatLog(string $line, array $users = []): array
+    public static function formatLog(mixed $line, array $users = []): array
     {
+        if (!is_string($line)) {
+            $line = json_encode($line);
+        }
+
+        $line ??= '';
+
         if (empty($line)) {
             return [
                 'id' => md5((string) (hrtime(true) + random_int(1, 10_000))),
@@ -378,7 +384,7 @@ final class Index
             $logLine['item_id'] = $idMatches['item_id'];
         }
 
-        if (1 === $identMatch && in_array($identMatches['user'], $users, true)) {
+        if (1 === $identMatch && ([] === $users || in_array($identMatches['user'], $users, true))) {
             $logLine['user'] = $identMatches['user'];
             $logLine['backend'] = $identMatches['backend'];
         }

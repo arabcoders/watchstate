@@ -684,6 +684,15 @@
                               : 'text-error',
                         ]"
                       />
+                      <UTooltip :text="Number(item.watched) ? 'Played' : 'Unplayed'">
+                        <UIcon
+                          :name="Number(item.watched) ? 'i-lucide-eye' : 'i-lucide-eye-off'"
+                          :class="[
+                            'size-4 shrink-0',
+                            Number(item.watched) ? 'text-success' : 'text-toned',
+                          ]"
+                        />
+                      </UTooltip>
                       <span>Metadata via</span>
                       <NuxtLink
                         :to="`/backend/${key}`"

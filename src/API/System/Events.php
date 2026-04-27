@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\API\System;
 
+use App\API\Logs\Index as LogsIndex;
 use App\Libs\Attributes\Route\Delete;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Attributes\Route\Patch;
@@ -234,6 +235,10 @@ final readonly class Events
     {
         $data = $entity->getAll();
         $data['status_name'] = $entity->getStatusText();
+
+        if (is_array($entity->logs) && count($entity->logs) > 0) {
+            $data['logs'] = array_map(LogsIndex::formatLog(...), $entity->logs);
+        }
 
         if ($delay = ag($entity->options, Options::DELAY_BY)) {
             $data['delay_by'] = $delay;
