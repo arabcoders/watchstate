@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Commands\State;
 
+use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Common\Request;
 use App\Command;
 use App\Libs\Attributes\DI\Inject;
@@ -191,9 +192,7 @@ class ImportCommand extends Command
 
         $this->mapper->setOptions($mapperOpts);
 
-        $users = get_users_context(mapper: $this->mapper, logger: $this->logger, opts: [
-            DatabaseInterface::class => $dbOpts,
-        ]);
+        $users = $this->getUsers($dbOpts);
 
         if (null !== ($user = $input->getOption('user'))) {
             $users = array_filter($users, static fn($k) => $k === $user, mode: ARRAY_FILTER_USE_KEY);
@@ -373,9 +372,7 @@ class ImportCommand extends Command
                 }
 
                 $backend['options'] = $opts;
-                $backend['class'] = make_backend(backend: $backend, name: $name, options: [
-                    UserContext::class => $userContext,
-                ]);
+                $backend['class'] = $this->makeBackend($backend, $name, $userContext);
 
                 if (null !== $after) {
                     $after = make_date($after);
@@ -420,24 +417,11 @@ class ImportCommand extends Command
                 ],
             ]);
 
-            $dbLayer = $userContext->db->getDBLayer();
-            $startedTransaction = false;
-
             try {
-                if (false === $dbLayer->inTransaction()) {
-                    $startedTransaction = $dbLayer->start();
-                }
-
-                send_requests(requests: $queue, client: $this->http, sync: $syncRequests, logger: $this->logger);
-
-                if (true === $startedTransaction && true === $dbLayer->inTransaction()) {
-                    $dbLayer->commit();
-                }
+                $userContext->db->transactional(function () use ($queue, $syncRequests): void {
+                    $this->sendRequests($queue, $syncRequests);
+                });
             } catch (Throwable $e) {
-                if (true === $startedTransaction && true === $dbLayer->inTransaction()) {
-                    $dbLayer->rollBack();
-                }
-
                 $this->logger->error(
                     ...lw(
                         message: "SYSTEM: Import requests for '{user}' backends failed. '{error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
@@ -547,6 +531,36 @@ class ImportCommand extends Command
         ]);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * @param array<string,mixed> $dbOpts
+     *
+     * @return array<string,UserContext>
+     */
+    protected function getUsers(array $dbOpts = []): array
+    {
+        return get_users_context(mapper: $this->mapper, logger: $this->logger, opts: [
+            DatabaseInterface::class => $dbOpts,
+        ]);
+    }
+
+    /**
+     * @param array<string,mixed> $backend
+     */
+    protected function makeBackend(array $backend, string $name, UserContext $userContext): iClient
+    {
+        return make_backend(backend: $backend, name: $name, options: [
+            UserContext::class => $userContext,
+        ]);
+    }
+
+    /**
+     * @param array<int,Request> $queue
+     */
+    protected function sendRequests(array $queue, bool $syncRequests): void
+    {
+        send_requests(requests: $queue, client: $this->http, sync: $syncRequests, logger: $this->logger);
     }
 
     private function in_array(array $list, string $search): bool

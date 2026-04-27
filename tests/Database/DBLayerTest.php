@@ -129,6 +129,50 @@ class DBLayerTest extends TestCase
         );
     }
 
+    public function test_query_with_prepared_statement_reuse(): void
+    {
+        $this->db->insert('test', [
+            'name' => 'test',
+            'watched' => 1,
+            'added_at' => 1,
+            'updated_at' => 2,
+            'json_data' => json_encode(['id' => 1]),
+            'nullable' => null,
+        ]);
+
+        $stmt = $this->db->prepare(
+            'UPDATE test SET name = :name, nullable = :nullable, json_data = :json_data WHERE id = :id'
+        );
+
+        $this->assertSame(
+            1,
+            $this->db->query($stmt, [
+                'name' => 'first',
+                'nullable' => null,
+                'json_data' => json_encode(['id' => 2]),
+                'id' => 1,
+            ])->rowCount(),
+            'Prepared statements should execute correctly with null-bound values.'
+        );
+
+        $this->assertSame(
+            1,
+            $this->db->query($stmt, [
+                'name' => 'second',
+                'nullable' => 'set',
+                'json_data' => json_encode(['id' => 3]),
+                'id' => 1,
+            ])->rowCount(),
+            'Prepared statements should be reusable across multiple executions.'
+        );
+
+        $row = $this->db->select('test', [], ['id' => 1])->fetch(PDO::FETCH_ASSOC);
+
+        $this->assertSame('second', $row['name'], 'Prepared statement reuse should persist the latest scalar value.');
+        $this->assertSame('set', $row['nullable'], 'Prepared statement reuse should persist updated nullable values.');
+        $this->assertSame('{"id":3}', $row['json_data'], 'Prepared statement reuse should persist updated JSON payloads.');
+    }
+
     public function test_transactions_operations()
     {
         $this->db->start();
