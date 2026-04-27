@@ -1,9 +1,44 @@
 [
   {
     "tag": "Unreleased (master)",
-    "full_sha": "ac1b9dfd79178a9f648fc486a6f7108897e6c8c6",
-    "date": "2026-04-26T15:26:28+00:00",
+    "full_sha": "ce3a4d7be92e5aabaa90c13b03e2d5d7825260ad",
+    "date": "2026-04-27T19:23:52+00:00",
     "commits": [
+      {
+        "sha": "18f3bafc",
+        "full_sha": "18f3bafcb9938a92bf17c80ebed768647caf0943",
+        "message": "feat: add support for plex new nfo agent",
+        "author": "arabcoders",
+        "date": "2026-04-27T19:17:17+00:00"
+      },
+      {
+        "sha": "cbf5f822",
+        "full_sha": "cbf5f82208880b71fc513d1d66bff907b03cf971",
+        "message": "refactor: minor UI updates to logs rendering",
+        "author": "arabcoders",
+        "date": "2026-04-27T17:00:23+00:00"
+      },
+      {
+        "sha": "5c81df1b",
+        "full_sha": "5c81df1bba5f1016d1efeb245f32239ad3047cbd",
+        "message": "fix: sqlite 21 bad parameter or other API misuse triggered sometimes due to different scaler type",
+        "author": "arabcoders",
+        "date": "2026-04-27T15:41:49+00:00"
+      },
+      {
+        "sha": "cf669fbf",
+        "full_sha": "cf669fbf23ff41bbe1b3ce560eb9c26d33048d57",
+        "message": "fix: fix an edge case where due to global transaction some inserts would fail and the failed prepared statement will carry over.",
+        "author": "arabcoders",
+        "date": "2026-04-27T15:31:05+00:00"
+      },
+      {
+        "sha": "22d61743",
+        "full_sha": "22d6174394c01d7f0829e939bcf7ec965a5dc1ff",
+        "message": "docs: add openapi viewer",
+        "author": "arabcoders",
+        "date": "2026-04-26T16:42:16+00:00"
+      },
       {
         "sha": "63279a19",
         "full_sha": "63279a19ba11228d070cd0c25a1ef136af3a25c7",
