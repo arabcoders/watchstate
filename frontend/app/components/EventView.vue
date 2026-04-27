@@ -210,14 +210,37 @@
         <div v-if="toggleLogs" class="relative">
           <code
             class="ws-terminal ws-terminal-panel ws-terminal-panel-lg"
-            :class="wrapLines ? 'whitespace-pre-wrap' : 'whitespace-pre'"
+            :class="wrapLines ? 'ws-wrap-anywhere whitespace-pre-wrap' : 'whitespace-pre'"
           >
             <span
               v-for="(logLine, index) in filteredRows"
-              :key="`log_line-${index}`"
-              class="block pt-1"
-              v-text="logLine"
-            />
+              :key="`${logLine.id}-${index}`"
+              class="block"
+              ><span
+                v-if="logLine?.date || logLine?.item_id"
+                class="mr-[1ch] inline-flex items-baseline whitespace-normal"
+              >
+                <template v-if="logLine?.date"
+                  >[<UTooltip :text="`${moment(logLine.date).format(TOOLTIP_DATE_FORMAT)}`">
+                    <span class="cursor-help">{{
+                      moment(logLine.date).format('HH:mm:ss')
+                    }}</span> </UTooltip
+                  >]</template
+                >
+                <button
+                  v-if="logLine?.item_id"
+                  type="button"
+                  :class="[
+                    'cursor-pointer font-[inherit] leading-[inherit] text-primary underline-offset-2 hover:underline',
+                    logLine?.date ? 'ml-[1ch]' : '',
+                  ]"
+                  @click="goto_history_item(logLine)"
+                >
+                  View
+                </button>
+              </span>
+              <span>{{ String(logLine.text).trim() }}</span>
+            </span>
           </code>
           <UTooltip text="Copy logs">
             <UButton
@@ -226,7 +249,9 @@
               size="sm"
               icon="i-lucide-copy"
               class="absolute right-3 top-3"
-              @click="() => copyText(filteredRows.join('\n'))"
+              @click="
+                () => copyText(filteredRows.map((logLine) => formatLogLine(logLine)).join('\n'))
+              "
             />
           </UTooltip>
         </div>
@@ -280,10 +305,11 @@ import { createError, useHead } from '#app';
 import moment from 'moment';
 import { useStorage } from '@vueuse/core';
 import { useDialog } from '~/composables/useDialog';
-import type { EventsItem, GenericError } from '~/types';
+import type { EventsItem, GenericError, LogEntry } from '~/types';
 import {
   copyText,
   getEventStatusClass,
+  goto_history_item,
   makeEventName,
   notification,
   parse_api_response,
@@ -320,13 +346,23 @@ watch(toggleFilter, () => {
   }
 });
 
-const filteredRows = computed<Array<string>>(() => {
+const filteredRows = computed<Array<LogEntry>>(() => {
+  const rows = item.value.logs ?? [];
+
   if (!query.value) {
-    return item.value.logs ?? [];
+    return rows;
   }
 
-  return item.value.logs?.filter((m) => m.toLowerCase().includes(query.value.toLowerCase())) ?? [];
+  const queryValue = query.value.toLowerCase();
+
+  return rows.filter((logLine) => logLine.text.toLowerCase().includes(queryValue));
 });
+
+const formatLogLine = (logLine: LogEntry): string => {
+  const prefix = logLine.date ? `[${logLine.date}] ` : '';
+
+  return `${prefix}${String(logLine.text).trim()}`;
+};
 
 const getEventStatusColor = (status: number) => {
   const value = getEventStatusClass(status);

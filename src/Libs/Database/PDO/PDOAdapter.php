@@ -207,13 +207,12 @@ final class PDOAdapter implements iDB
             }
 
             $this->db->query($this->stmt['insert'], $data, options: [
-                'on_failure' => function (Throwable $e) use ($entity) {
-                    if (false === str_contains($e->getMessage(), '21 bad parameter or other API misuse')) {
-                        throw $e;
-                    }
-                    $this->stmt['insert'] = null;
-                    return $this->insert($entity);
-                },
+                'on_failure' => fn(Throwable $e) => $this->retryPreparedWrite(
+                    key: 'insert',
+                    sql: $this->pdoInsert('state', iState::ENTITY_KEYS),
+                    data: $data,
+                    e: $e,
+                ),
             ]);
 
             $entity->id = (int) $this->db->lastInsertId();
@@ -432,13 +431,12 @@ final class PDOAdapter implements iDB
             }
 
             $this->db->query($this->stmt['update'], $data, options: [
-                'on_failure' => function (Throwable $e) use ($entity) {
-                    if (false === str_contains($e->getMessage(), '21 bad parameter or other API misuse')) {
-                        throw $e;
-                    }
-                    $this->stmt['update'] = null;
-                    return $this->update($entity);
-                },
+                'on_failure' => fn(Throwable $e) => $this->retryPreparedWrite(
+                    key: 'update',
+                    sql: $this->pdoUpdate('state', iState::ENTITY_KEYS),
+                    data: $data,
+                    e: $e,
+                ),
             ]);
         } catch (PDOException $e) {
             $this->stmt['update'] = null;
@@ -808,6 +806,26 @@ final class PDOAdapter implements iDB
         }
 
         return trim(str_replace('{place} = {holder}', implode(', ', $placeholders), $queryString));
+    }
+
+    /**
+     * Retry a cached write statement once when sqlite reports prepared statement misuse.
+     *
+     * @param string $key Cached statement key.
+     * @param string $sql SQL statement to prepare.
+     * @param array $data Bound statement values.
+     * @param Throwable $e Triggering exception.
+     */
+    private function retryPreparedWrite(string $key, string $sql, array $data, Throwable $e): PDOStatement
+    {
+        if (false === str_contains($e->getMessage(), '21 bad parameter or other API misuse')) {
+            throw $e;
+        }
+
+        $statement = $this->db->prepare($sql);
+        $this->stmt[$key] = $statement;
+
+        return $this->db->query($statement, $data);
     }
 
     /**

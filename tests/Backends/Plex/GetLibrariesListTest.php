@@ -152,4 +152,37 @@ class GetLibrariesListTest extends TestCase
         $this->assertNull($response->response);
         $this->assertTrue($response->error->hasException());
     }
+
+    public function test_nfo_agents_are_supported(): void
+    {
+        $payload = [
+            'MediaContainer' => [
+                'Directory' => [
+                    [
+                        'key' => '1',
+                        'title' => 'NFO Movies',
+                        'type' => 'movie',
+                        'agent' => 'tv.plex.agents.nfo.movie',
+                        'scanner' => 'Plex Movie Scanner',
+                    ],
+                    [
+                        'key' => '2',
+                        'title' => 'NFO Shows',
+                        'type' => 'show',
+                        'agent' => 'tv.plex.agents.nfo.series',
+                        'scanner' => 'Plex TV Series',
+                    ],
+                ],
+            ],
+        ];
+
+        $resp = new MockResponse(json_encode($payload), ['http_code' => 200]);
+        $client = new MockHttpClient($resp);
+        $response = new GetLibrariesList($client, $this->logger)($this->context);
+
+        $this->assertTrue($response->status);
+        $this->assertCount(2, $response->response);
+        $this->assertTrue((bool) $response->response[0]['supported']);
+        $this->assertTrue((bool) $response->response[1]['supported']);
+    }
 }

@@ -137,12 +137,21 @@ final class DBLayer implements LoggerAwareInterface
 
             $stmt = $isStatement ? $sql : $db->prepare($sql);
 
+            if (true === $isStatement) {
+                $stmt->execute($bind);
+                return $stmt;
+            }
+
             if (!empty($bind)) {
-                array_map(
-                    static fn($k, $v) => $stmt->bindValue($k, $v, is_int($v) ? PDO::PARAM_INT : PDO::PARAM_STR),
-                    array_keys($bind),
-                    $bind,
-                );
+                foreach ($bind as $key => $value) {
+                    $type = match (true) {
+                        null === $value => PDO::PARAM_NULL,
+                        is_int($value) => PDO::PARAM_INT,
+                        default => PDO::PARAM_STR,
+                    };
+
+                    $stmt->bindValue($key, $value, $type);
+                }
             }
 
             $stmt->execute();

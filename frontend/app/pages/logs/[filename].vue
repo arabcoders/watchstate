@@ -171,7 +171,10 @@
 
         <div v-else ref="logContainer" class="logbox" @scroll.passive="handleScroll">
           <code id="logView" class="logline block">
-            <span v-for="item in filterItems" :key="item.id" class="log-entry block"
+            <span
+              v-for="item in filterItems"
+              :key="item.id"
+              :class="['log-entry block', wrapLines ? '' : 'whitespace-nowrap']"
               ><template v-if="item.date"
                 >[<span class="cursor-help" :title="item.date">{{ formatDate(item.date) }}</span
                 >]:&nbsp;</template

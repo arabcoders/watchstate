@@ -25,6 +25,7 @@
         ],
         "lint": "vendor/bin/mago lint",
         "frontend:update": "bun --cwd=./frontend/ update --latest",
+        "frontend:format": "bun --cwd=./frontend/ format",
         "frontend:gen": "bun --cwd=./frontend/ generate",
         "frontend:dev": "bun --cwd=./frontend/ dev",
         "frontend:tc": "bun --cwd=./frontend/ typecheck",

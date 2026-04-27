@@ -266,25 +266,29 @@
                   v-for="(item, index) in log.lines"
                   :key="`${log.filename}-${index}`"
                   class="block"
-                  ><template v-if="item?.date"
-                    >[<UTooltip :text="`${moment(item.date).format(TOOLTIP_DATE_FORMAT)}`">
-                      <span class="cursor-help">{{
-                        moment(item.date).format('HH:mm:ss')
-                      }}</span> </UTooltip
-                    >]
-                  </template>
-
-                  <template v-if="item?.item_id">
+                  ><span
+                    v-if="item?.date || item?.item_id"
+                    class="mr-[1ch] inline-flex items-baseline whitespace-normal"
+                  >
+                    <template v-if="item?.date"
+                      >[<UTooltip :text="`${moment(item.date).format(TOOLTIP_DATE_FORMAT)}`">
+                        <span class="cursor-help">{{
+                          moment(item.date).format('HH:mm:ss')
+                        }}</span> </UTooltip
+                      >]</template
+                    >
                     <button
+                      v-if="item?.item_id"
                       type="button"
-                      class="inline-flex cursor-pointer items-center gap-1 text-inherit"
+                      :class="[
+                        'cursor-pointer font-[inherit] leading-[inherit] text-primary underline-offset-2 hover:underline',
+                        item?.date ? 'ml-[1ch]' : '',
+                      ]"
                       @click="goto_history_item(item)"
                     >
-                      <UIcon name="i-lucide-history" class="size-4" />
-                      <span>View</span></button
-                    >&nbsp;
-                  </template>
-
+                      View
+                    </button>
+                  </span>
                   <span>{{ String(item.text).trim() }}</span>
                 </span>
               </code>

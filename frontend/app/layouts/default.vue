@@ -259,6 +259,8 @@ type NavEntry = {
   label: string;
   icon: string;
   matchPath?: string;
+  exactMatch?: boolean;
+  excludeMatchPaths?: Array<string>;
   to?: string;
   href?: string;
   target?: string;
@@ -531,6 +533,25 @@ const isPathActive = (matchPath?: string) => {
   return current === target || current.startsWith(`${target}/`);
 };
 
+const isNavigationEntryActive = (entry: NavEntry) => {
+  if (!entry.matchPath) {
+    return false;
+  }
+
+  const current = normalizePath(route.path);
+  const target = normalizePath(entry.matchPath);
+
+  if (entry.excludeMatchPaths?.some((path) => isPathActive(path))) {
+    return false;
+  }
+
+  if (true === entry.exactMatch) {
+    return current === target;
+  }
+
+  return isPathActive(entry.matchPath);
+};
+
 const topLevelNavigationEntries = computed(() =>
   getTopLevelNavigationEntries({
     apiUser: apiUser.value,
@@ -547,6 +568,8 @@ const topLevelNavEntries = computed<Array<NavEntry>>(() =>
     href: entry.href,
     target: entry.target,
     matchPath: entry.matchPath,
+    exactMatch: entry.exactMatch,
+    excludeMatchPaths: entry.excludeMatchPaths,
     onSelect:
       'history' === entry.id
         ? () => dEvent('history_main_link_clicked', { clear: true })
@@ -579,7 +602,7 @@ const makeNavigationItem = (entry: NavEntry) => ({
   to: entry.to,
   href: entry.href,
   target: entry.target,
-  active: isPathActive(entry.matchPath),
+  active: isNavigationEntryActive(entry),
   onSelect: entry.onSelect,
 });
 
@@ -693,7 +716,7 @@ const routeSearchGroups = computed<Array<SearchGroup>>(() => {
 
 const pageTitle = computed(() => {
   const match = allNavEntries.value
-    .filter((entry) => isPathActive(entry.matchPath))
+    .filter((entry) => isNavigationEntryActive(entry))
     .sort(
       (left, right) => normalizePath(right.matchPath).length - normalizePath(left.matchPath).length,
     )[0];

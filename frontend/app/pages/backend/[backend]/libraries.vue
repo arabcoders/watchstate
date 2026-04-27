@@ -374,11 +374,28 @@ const forwardCommand = async (library: LibraryItem): Promise<void> => {
   await navigateTo(makeConsoleCommand(r(command.command, util as unknown as JsonObject)));
 };
 
+const getIgnoreIds = (targetLibrary: LibraryItem, nextIgnoredState: boolean): Array<string> => {
+  const targetId = String(targetLibrary.id);
+  const ignoreIds = items.value
+    .filter((item) => (String(item.id) === targetId ? nextIgnoredState : item.ignored))
+    .map((item) => String(item.id));
+
+  return Array.from(new Set(ignoreIds));
+};
+
 const toggleIgnore = async (library: LibraryItem): Promise<void> => {
   try {
     const newState = !library.ignored;
-    const response = await request(`/backend/${backend}/library/${library.id}`, {
-      method: newState ? 'POST' : 'DELETE',
+    const ignoreIds = getIgnoreIds(library, newState);
+
+    const response = await request(`/backend/${backend}`, {
+      method: 'PATCH',
+      body: JSON.stringify([
+        {
+          key: 'options.ignore',
+          value: ignoreIds.join(','),
+        },
+      ]),
     });
     const data = await parse_api_response<any>(response);
 

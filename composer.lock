@@ -2126,7 +2126,7 @@
     },
     {
       "name": "symfony/polyfill-uuid",
-      "version": "v1.36.0",
+      "version": "v1.37.0",
       "source": {
         "type": "git",
         "url": "https://github.com/symfony/polyfill-uuid.git",
@@ -2185,7 +2185,7 @@
         "uuid"
       ],
       "support": {
-        "source": "https://github.com/symfony/polyfill-uuid/tree/v1.36.0"
+        "source": "https://github.com/symfony/polyfill-uuid/tree/v1.37.0"
       },
       "funding": [
         {

@@ -98,4 +98,43 @@ class ImportTest extends PlexTestCase
         $this->assertTrue($result->isSuccessful());
         $this->assertSame([], $result->response);
     }
+
+    public function test_import_nfo_library_select_includes_selected(): void
+    {
+        $sections = [
+            'MediaContainer' => [
+                'Directory' => [
+                    [
+                        'key' => '5',
+                        'title' => 'NFO Movies',
+                        'type' => 'movie',
+                        'agent' => 'tv.plex.agents.nfo.movie',
+                    ],
+                ],
+            ],
+        ];
+
+        $http = $this->makeHttpClient(
+            $this->makeResponse($sections),
+            new MockResponse('', [
+                'http_code' => 200,
+                'response_headers' => ['X-Plex-Container-Total-Size' => '1'],
+            ]),
+        );
+        $context = $this->makeContext([Options::LIBRARY_SELECT => ['5']]);
+        $action = new Import($http, $this->logger);
+
+        $result = $action(
+            $context,
+            new PlexGuid($this->logger),
+            $context->userContext->mapper,
+            null,
+            [],
+        );
+
+        $this->assertTrue($result->isSuccessful());
+        $this->assertCount(1, $result->response);
+        $logContext = $result->response[0]->extras['logContext'] ?? [];
+        $this->assertSame(5, (int) ag($logContext, 'library.id'));
+    }
 }
