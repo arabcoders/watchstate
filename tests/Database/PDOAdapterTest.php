@@ -21,7 +21,10 @@ use Error;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use PDO;
+use PDOException;
+use PDOStatement;
 use Psr\SimpleCache\CacheInterface;
+use ReflectionMethod;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\NullOutput;
@@ -343,6 +346,65 @@ class PDOAdapterTest extends TestCase
         $this->assertNull(
             ag($item->getMetadata($item->via), iState::COLUMN_META_DATA_PLAYED_AT),
             'When watched flag is set to 0, played_at metadata should be null.'
+        );
+    }
+
+    public function test_retryPreparedWrite_returns_statement_for_bad_parameter_retry(): void
+    {
+        assert($this->db instanceof PDOAdapter);
+
+        $item = $this->db->insert(new StateEntity($this->testEpisode));
+        $item->title = 'Retried Title';
+
+        $data = $item->getAll();
+        $data[iState::COLUMN_UPDATED_AT] = time();
+
+        foreach (iState::ENTITY_ARRAY_KEYS as $key) {
+            if (!(null !== ($data[$key] ?? null) && true === is_array($data[$key]))) {
+                continue;
+            }
+
+            ksort($data[$key]);
+            $data[$key] = json_encode($data[$key], flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        }
+
+        $pdoUpdate = new ReflectionMethod($this->db, 'pdoUpdate');
+        $sql = $pdoUpdate->invoke($this->db, 'state', iState::ENTITY_KEYS);
+
+        $retryPreparedWrite = new ReflectionMethod($this->db, 'retryPreparedWrite');
+        $stmt = $retryPreparedWrite->invoke(
+            $this->db,
+            'update',
+            $sql,
+            $data,
+            new PDOException('21 bad parameter or other API misuse'),
+        );
+
+        $this->assertInstanceOf(PDOStatement::class, $stmt, 'Retry path should return a PDO statement, not an entity.');
+        $this->assertSame(
+            'Retried Title',
+            $this->db->get($item)->title,
+            'Retry path should execute the rebuilt update statement successfully.'
+        );
+    }
+
+    public function test_retryPreparedWrite_rethrows_unrelated_errors(): void
+    {
+        assert($this->db instanceof PDOAdapter);
+
+        $retryPreparedWrite = new ReflectionMethod($this->db, 'retryPreparedWrite');
+
+        $this->checkException(
+            closure: fn() => $retryPreparedWrite->invoke(
+                $this->db,
+                'update',
+                'UPDATE state SET title = :title WHERE id = :id',
+                ['title' => 'Ignored', 'id' => 1],
+                new PDOException('some other database problem'),
+            ),
+            reason: 'Retry helper should only intercept sqlite API misuse errors.',
+            exception: PDOException::class,
+            exceptionMessage: 'some other database problem',
         );
     }
 
