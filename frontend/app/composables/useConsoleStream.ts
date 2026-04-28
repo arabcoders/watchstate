@@ -2,7 +2,7 @@ import { computed, ref } from 'vue';
 import { useStorage } from '@vueuse/core';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { request, parse_api_response } from '~/utils';
-import type { GenericError, GenericResponse } from '~/types';
+import type { ConsoleSessionItem, GenericError, GenericResponse, PaginatedResponse } from '~/types';
 
 type ConsoleEventMessage = {
   id: string;
@@ -16,6 +16,17 @@ type PersistedConsoleSession = {
   displayCommand: string;
   lastSequence: number;
   resumeSequence: number;
+};
+
+type ConsoleHistoryItem = {
+  token: string;
+  command: string;
+  displayCommand: string;
+  status: 'queued' | 'running' | 'completed';
+  exitCode: number | null;
+  createdAt: string | null;
+  finishedAt: string | null;
+  availableUntil: string | null;
 };
 
 type PersistedConsoleView = {
@@ -48,6 +59,7 @@ const RESTORE_EXPIRED = '__restore_expired__';
 const isExpiredStreamStatus = (status: number): boolean => [400, 404].includes(status);
 const ACTIVE_SESSION_STORAGE_KEY = 'consoleActiveSession';
 const ACTIVE_VIEW_STORAGE_KEY = 'consoleActiveView';
+const DISMISSED_RUNS_STORAGE_KEY = 'dismissedCommandRuns';
 
 class FatalConsoleStreamError extends Error {}
 
@@ -190,13 +202,12 @@ const appendChunk = (state: ConsoleStreamState, value: string): void => {
 
 let streamController: AbortController | null = null;
 
-const rememberCommand = (history: Array<string>, command: string): Array<string> => {
-  if (!command.trim()) {
-    return history;
-  }
-
-  const next = history.filter((item) => item !== command);
-  next.push(command);
+const rememberRun = (
+  runs: Array<ConsoleHistoryItem>,
+  item: ConsoleHistoryItem,
+): Array<ConsoleHistoryItem> => {
+  const next = runs.filter((entry) => entry.token !== item.token);
+  next.push(item);
 
   if (next.length > 30) {
     next.splice(0, next.length - 30);
@@ -215,7 +226,8 @@ const normalizeSequence = (value: string): number => {
 
 export function useConsoleStream() {
   const token = useStorage<string>('token', '');
-  const commandHistory = useStorage<Array<string>>('executedCommands', []);
+  const dismissedRuns = useStorage<Array<string>>(DISMISSED_RUNS_STORAGE_KEY, []);
+  const recentRuns = ref<Array<ConsoleHistoryItem>>([]);
   const activeSession = ref<PersistedConsoleSession | null>(null);
   const persistedView = ref<PersistedConsoleView | null>(null);
   const state = ref<ConsoleStreamState>(makeInitialState());
@@ -243,6 +255,37 @@ export function useConsoleStream() {
     writeConsoleStorage(ACTIVE_VIEW_STORAGE_KEY, view);
   };
 
+  const normalizeDismissedRuns = (): Array<string> => {
+    return dismissedRuns.value
+      .filter((item): item is string => 'string' === typeof item)
+      .map((item) => item.trim())
+      .filter((item) => '' !== item);
+  };
+
+  const setDismissedRuns = (items: Array<string>): void => {
+    dismissedRuns.value = Array.from(new Set(items));
+  };
+
+  const isRunDismissed = (tokenValue: string): boolean => {
+    return normalizeDismissedRuns().includes(tokenValue);
+  };
+
+  const setRecentRuns = (items: Array<ConsoleHistoryItem>): void => {
+    recentRuns.value = items.filter((item) => !isRunDismissed(item.token));
+  };
+
+  const getRecentRun = (tokenValue: string): ConsoleHistoryItem | null => {
+    return recentRuns.value.find((item) => item.token === tokenValue) ?? null;
+  };
+
+  const upsertRecentRun = (item: ConsoleHistoryItem): void => {
+    if (isRunDismissed(item.token)) {
+      return;
+    }
+
+    setRecentRuns(rememberRun(recentRuns.value, item));
+  };
+
   const hydratePersistedState = (): void => {
     setPersistedSession(
       normalizePersistedConsoleSession(readConsoleStorage(ACTIVE_SESSION_STORAGE_KEY)),
@@ -256,6 +299,20 @@ export function useConsoleStream() {
 
   const clearPersistedView = (): void => {
     setPersistedView(null);
+  };
+
+  const removeRecentRun = (tokenValue: string): void => {
+    if ('' === tokenValue.trim()) {
+      return;
+    }
+
+    setDismissedRuns([...normalizeDismissedRuns(), tokenValue]);
+    setRecentRuns(recentRuns.value.filter((item) => item.token !== tokenValue));
+  };
+
+  const clearRecentRuns = (): void => {
+    setDismissedRuns([...normalizeDismissedRuns(), ...recentRuns.value.map((item) => item.token)]);
+    setRecentRuns([]);
   };
 
   const syncPersistedView = (): void => {
@@ -297,6 +354,21 @@ export function useConsoleStream() {
   };
 
   const finalizeRun = (): void => {
+    if (activeSession.value) {
+      const existing = getRecentRun(activeSession.value.token);
+
+      upsertRecentRun({
+        token: activeSession.value.token,
+        command: state.value.command,
+        displayCommand: state.value.displayCommand,
+        status: 'completed',
+        exitCode: state.value.exitCode,
+        createdAt: existing?.createdAt ?? null,
+        finishedAt: existing?.finishedAt ?? new Date().toISOString(),
+        availableUntil: existing?.availableUntil ?? null,
+      });
+    }
+
     clearPersistedSession();
     clearPersistedView();
     state.value.status = 'idle';
@@ -304,6 +376,8 @@ export function useConsoleStream() {
     state.value.error = '';
     state.value.completedAt = Date.now();
     streamController = null;
+
+    void fetchRecentRuns();
   };
 
   const syncSequence = (sequence: number): void => {
@@ -340,6 +414,40 @@ export function useConsoleStream() {
     syncPersistedView();
   };
 
+  const fetchRecentRuns = async (): Promise<void> => {
+    try {
+      const response = await request('/system/command');
+      const json = await parse_api_response<
+        PaginatedResponse<ConsoleSessionItem> | { items: Array<ConsoleSessionItem> }
+      >(response);
+
+      if (!response.ok || 'error' in json || !('items' in json) || !Array.isArray(json.items)) {
+        return;
+      }
+
+      const next = json.items.map(
+        (item) =>
+          ({
+            token: item.token,
+            command: item.command,
+            displayCommand:
+              item.command.startsWith('$') || item.command.startsWith('console')
+                ? item.command
+                : `console ${item.command}`,
+            status: item.status,
+            exitCode: item.exit_code,
+            createdAt: item.created_at,
+            finishedAt: item.finished_at,
+            availableUntil: item.available_until,
+          }) satisfies ConsoleHistoryItem,
+      );
+
+      setRecentRuns(next);
+    } catch {
+      return;
+    }
+  };
+
   const bufferedChunks = computed<Array<string>>(() => state.value.chunks.slice());
 
   const appendOutput = (value: string): void => {
@@ -356,10 +464,7 @@ export function useConsoleStream() {
     state.value.completedAt = 0;
   };
 
-  const connectToStream = async (
-    mode: 'start' | 'restore',
-    historyCommand: string = '',
-  ): Promise<ConsoleStreamRunResult> => {
+  const connectToStream = async (mode: 'start' | 'restore'): Promise<ConsoleStreamRunResult> => {
     const session = activeSession.value;
     if (!session) {
       const message = 'Command session is missing.';
@@ -382,7 +487,6 @@ export function useConsoleStream() {
 
     streamController = controller;
     let didReceiveClose = false;
-    let didRememberHistory = false;
 
     void fetchEventSource(`/v1/api/system/command/${session.token}`, {
       signal: controller.signal,
@@ -397,10 +501,18 @@ export function useConsoleStream() {
           state.value.error = '';
           state.value.token = session.token;
 
-          if ('start' === mode && !didRememberHistory) {
-            commandHistory.value = rememberCommand(commandHistory.value, historyCommand);
-            didRememberHistory = true;
-          }
+          const existing = getRecentRun(session.token);
+
+          upsertRecentRun({
+            token: session.token,
+            command: session.command,
+            displayCommand: session.displayCommand,
+            status: existing?.status === 'completed' ? 'completed' : 'running',
+            exitCode: existing?.exitCode ?? null,
+            createdAt: existing?.createdAt ?? null,
+            finishedAt: existing?.finishedAt ?? null,
+            availableUntil: existing?.availableUntil ?? null,
+          });
 
           return;
         }
@@ -416,6 +528,7 @@ export function useConsoleStream() {
         }
 
         if ('restore' === mode && isExpiredStreamStatus(response.status)) {
+          removeRecentRun(session.token);
           clearPersistedSession();
           clearPersistedView();
           state.value.status = 'idle';
@@ -444,6 +557,21 @@ export function useConsoleStream() {
             const exitCode = Number.parseInt(evt.data, 10);
             state.value.exitCode = Number.isNaN(exitCode) ? 0 : exitCode;
             syncPersistedView();
+
+            if (activeSession.value) {
+              const existing = getRecentRun(activeSession.value.token);
+
+              upsertRecentRun({
+                token: activeSession.value.token,
+                command: state.value.command,
+                displayCommand: state.value.displayCommand,
+                status: 'completed',
+                exitCode: state.value.exitCode,
+                createdAt: existing?.createdAt ?? null,
+                finishedAt: existing?.finishedAt ?? new Date().toISOString(),
+                availableUntil: existing?.availableUntil ?? null,
+              });
+            }
             break;
           }
           case 'close':
@@ -517,7 +645,6 @@ export function useConsoleStream() {
   const startRun = async (
     command: string,
     displayCommand: string,
-    historyCommand: string = '',
   ): Promise<ConsoleStreamRunResult> => {
     stopStream();
     clearPersistedSession();
@@ -559,9 +686,20 @@ export function useConsoleStream() {
         resumeSequence: 0,
       });
 
+      upsertRecentRun({
+        token: json.token,
+        command,
+        displayCommand,
+        status: 'queued',
+        exitCode: null,
+        createdAt: new Date().toISOString(),
+        finishedAt: null,
+        availableUntil: null,
+      });
+
       state.value.token = json.token;
       syncPersistedView();
-      return await connectToStream('start', historyCommand);
+      return await connectToStream('start');
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error occurred';
       setFatalError(message);
@@ -613,6 +751,7 @@ export function useConsoleStream() {
         setFatalError(message, false);
 
         if (404 === response.status) {
+          removeRecentRun(activeSession.value.token);
           finalizeRun();
         }
       }
@@ -622,14 +761,48 @@ export function useConsoleStream() {
     }
   };
 
+  const replayRun = async (item: ConsoleHistoryItem): Promise<ConsoleStreamRunResult> => {
+    stopStream();
+
+    state.value.status = 'reconnecting';
+    state.value.command = item.command;
+    state.value.displayCommand = item.displayCommand;
+    state.value.exitCode = item.exitCode ?? 0;
+    state.value.error = '';
+    state.value.lastSequence = 0;
+    state.value.completedAt = 0;
+    state.value.token = item.token;
+    state.value.chunks = [];
+
+    setPersistedSession({
+      token: item.token,
+      command: item.command,
+      displayCommand: item.displayCommand,
+      lastSequence: 0,
+      resumeSequence: 0,
+    });
+    syncPersistedView();
+
+    const result = await connectToStream('restore');
+    if ('error' === result.status) {
+      removeRecentRun(item.token);
+    }
+
+    return result;
+  };
+
   return {
-    commandHistory,
+    recentRuns,
     state,
     bufferedChunks,
     appendOutput,
     isActive,
     clearOutput,
     closeStreamView,
+    fetchRecentRuns,
+    clearRecentRuns,
+    replayRun,
+    removeRecentRun,
     restoreRun,
     startRun,
     stopCommand,

@@ -22,6 +22,22 @@ export interface GenericResponse {
   };
 }
 
+export interface ConsoleSessionItem {
+  token: string;
+  command: string;
+  status: 'queued' | 'running' | 'completed';
+  cwd: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  expires_at: string | null;
+  available_until: string | null;
+  exit_code: number | null;
+  last_sequence: number;
+  connections: number;
+}
+
 export interface AuthUserResponse {
   username: string;
   created_at: string;

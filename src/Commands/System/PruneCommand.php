@@ -8,6 +8,7 @@ use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Database\DBLayer;
+use App\Libs\Extends\Date;
 use App\Model\Events\EventsTable;
 use DirectoryIterator;
 use Psr\Log\LoggerInterface as iLogger;
@@ -196,11 +197,11 @@ final class PruneCommand extends Command
             }
         }
 
-        $this->cleanUp();
+        $this->cleanUp((bool) $inDryRunMode);
         return self::SUCCESS;
     }
 
-    private function cleanUp(): void
+    private function cleanUp(bool $inDryRunMode): void
     {
         $before = make_date(strtotime('-7 DAYS'));
 
@@ -226,5 +227,165 @@ final class PruneCommand extends Command
         if ($playlistCount > 0) {
             $this->logger->info("Pruned '{count}' deleted playlist snapshots.", ['count' => $playlistCount]);
         }
+
+        $this->pruneConsoleSessions($inDryRunMode);
+    }
+
+    private function pruneConsoleSessions(bool $inDryRunMode): void
+    {
+        $path = fix_path(Config::get('tmpDir')) . '/console';
+        if (!is_dir($path)) {
+            return;
+        }
+
+        $before = time() - 86_400;
+
+        foreach (new DirectoryIterator($path) as $item) {
+            if ($item->isDot() || false === $item->isDir()) {
+                continue;
+            }
+
+            $sessionPath = $item->getRealPath();
+            if (false === $sessionPath) {
+                continue;
+            }
+
+            $statePath = $sessionPath . '/state.json';
+            if (!is_readable($statePath)) {
+                $this->logger->debug("console_remover: Session '{file}' has no readable state file.", [
+                    'file' => after($sessionPath, Config::get('tmpDir') . '/'),
+                ]);
+                continue;
+            }
+
+            $state = json_decode((string) file_get_contents($statePath), true);
+            if (!is_array($state)) {
+                $this->logger->debug("console_remover: Session '{file}' has invalid state payload.", [
+                    'file' => after($sessionPath, Config::get('tmpDir') . '/'),
+                ]);
+                continue;
+            }
+
+            if ('completed' !== ag($state, 'status')) {
+                continue;
+            }
+
+            if (0 !== (int) ag($state, 'connections', 0)) {
+                continue;
+            }
+
+            $finishedAt = ag($state, 'finished_at');
+            if (!is_string($finishedAt) || '' === trim($finishedAt)) {
+                continue;
+            }
+
+            $finishedAtUnix = strtotime($finishedAt);
+            if (false === $finishedAtUnix || $finishedAtUnix > $before) {
+                continue;
+            }
+
+            $this->logger->notice("console_remover: Removing '{file}'. expired retention window.", [
+                'file' => after($sessionPath, Config::get('tmpDir') . '/'),
+                'finished_at' => make_date($finishedAtUnix)->format(Date::ATOM),
+            ]);
+
+            if (true === $inDryRunMode) {
+                continue;
+            }
+
+            if (false === $this->removeConsoleSessionDirectory($sessionPath)) {
+                $this->logger->debug("console_remover: Session '{file}' is busy, skipping removal.", [
+                    'file' => after($sessionPath, Config::get('tmpDir') . '/'),
+                ]);
+            }
+        }
+    }
+
+    private function removeConsoleSessionDirectory(string $path): bool
+    {
+        if (!is_dir($path)) {
+            return false;
+        }
+
+        $locks = $this->acquireConsoleCleanupLocks($path);
+        if ([] === $locks) {
+            return false;
+        }
+
+        try {
+            $this->removeDirectory($path);
+        } finally {
+            $this->releaseConsoleCleanupLocks($locks);
+        }
+
+        return !is_dir($path);
+    }
+
+    /**
+     * @return array<int,mixed>
+     */
+    private function acquireConsoleCleanupLocks(string $path): array
+    {
+        $handles = [];
+
+        foreach (['state.lock', 'writer.lock'] as $file) {
+            $handle = @fopen($path . '/' . $file, 'c+');
+            if (false === $handle) {
+                $this->releaseConsoleCleanupLocks($handles);
+                return [];
+            }
+
+            if (false === flock($handle, LOCK_EX | LOCK_NB)) {
+                fclose($handle);
+                $this->releaseConsoleCleanupLocks($handles);
+                return [];
+            }
+
+            $handles[] = $handle;
+        }
+
+        return $handles;
+    }
+
+    /**
+     * @param array<int,mixed> $handles
+     */
+    private function releaseConsoleCleanupLocks(array $handles): void
+    {
+        foreach ($handles as $handle) {
+            if (!is_resource($handle)) {
+                continue;
+            }
+
+            flock($handle, LOCK_UN);
+            fclose($handle);
+        }
+    }
+
+    private function removeDirectory(string $path): void
+    {
+        if (!is_dir($path)) {
+            return;
+        }
+
+        foreach (new DirectoryIterator($path) as $item) {
+            if ($item->isDot()) {
+                continue;
+            }
+
+            $itemPath = $item->getRealPath();
+            if (false === $itemPath) {
+                continue;
+            }
+
+            if ($item->isDir()) {
+                $this->removeDirectory($itemPath);
+                continue;
+            }
+
+            @unlink($itemPath);
+        }
+
+        @rmdir($path);
     }
 }

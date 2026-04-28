@@ -148,59 +148,113 @@
                   <div class="flex flex-wrap items-center justify-between gap-3">
                     <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
                       <UIcon name="i-lucide-history" class="size-4 text-toned" />
-                      <span>Command history</span>
+                      <span>Recent runs</span>
                     </div>
 
-                    <UButton
-                      color="neutral"
-                      variant="outline"
-                      size="sm"
-                      icon="i-lucide-trash"
-                      :disabled="historyEntries.length < 1"
-                      @click="clearHistory"
-                    >
-                      Clear history
-                    </UButton>
+                    <div class="flex flex-wrap items-center justify-end gap-2">
+                      <UButton
+                        color="neutral"
+                        variant="outline"
+                        size="sm"
+                        icon="i-lucide-eye-off"
+                        :disabled="recentRunEntries.length < 1"
+                        @click="hideRecentRuns"
+                      >
+                        Hide recent runs
+                      </UButton>
+                    </div>
                   </div>
 
                   <UAlert
-                    v-if="historyEntries.length < 1"
+                    v-if="recentRunEntries.length < 1"
                     color="info"
                     variant="soft"
                     icon="i-lucide-clock-3"
-                    title="Command history is empty"
+                    title="No recent console sessions"
                   />
 
-                  <div
-                    v-else
-                    class="max-h-96 overflow-auto rounded-lg border border-default bg-default"
-                  >
-                    <table class="w-full text-sm">
-                      <tbody class="divide-y divide-default">
-                        <tr v-for="item in historyEntries" :key="item" class="hover:bg-muted/20">
-                          <td class="px-3 py-3 align-middle">
-                            <button
-                              type="button"
-                              class="block w-full text-left font-mono text-xs text-default hover:text-highlighted"
-                              @click="loadCommand(item)"
-                            >
-                              {{ item }}
-                            </button>
-                          </td>
+                  <div v-else class="space-y-4">
+                    <div
+                      v-if="recentRunEntries.length > 0"
+                      class="max-h-80 overflow-auto rounded-lg border border-default bg-default"
+                    >
+                      <table class="w-full text-sm">
+                        <tbody class="divide-y divide-default">
+                          <tr
+                            v-for="item in recentRunEntries"
+                            :key="item.token"
+                            class="hover:bg-muted/20"
+                          >
+                            <td class="px-3 py-3 align-middle">
+                              <div class="space-y-2">
+                                <button
+                                  type="button"
+                                  class="block w-full text-left font-mono text-xs text-default hover:text-highlighted"
+                                  @click="replayHistoryItem(item)"
+                                >
+                                  {{ item.displayCommand }}
+                                </button>
 
-                          <td class="w-12 px-3 py-3 text-center align-middle whitespace-nowrap">
-                            <UButton
-                              color="neutral"
-                              variant="ghost"
-                              size="xs"
-                              icon="i-lucide-x"
-                              square
-                              @click="removeFromHistory(item)"
-                            />
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
+                                <div
+                                  class="flex flex-wrap items-center gap-2 text-[11px] text-toned"
+                                >
+                                  <UBadge
+                                    :color="recentRunStatusColor(item)"
+                                    variant="soft"
+                                    size="sm"
+                                  >
+                                    <span
+                                      v-if="recentRunStatusSpinning(item)"
+                                      class="inline-flex items-center gap-1.5"
+                                    >
+                                      <UIcon
+                                        :name="recentRunStatusIcon(item)"
+                                        class="size-3.5 animate-spin"
+                                      />
+                                      <span>{{ recentRunStatusLabel(item) }}</span>
+                                    </span>
+                                    <span v-else class="inline-flex items-center gap-1.5">
+                                      <UIcon :name="recentRunStatusIcon(item)" class="size-3.5" />
+                                      <span>{{ recentRunStatusLabel(item) }}</span>
+                                    </span>
+                                  </UBadge>
+                                  <UTooltip
+                                    v-if="item.finishedAt"
+                                    :text="`Completed at: ${moment(item.finishedAt).format(TOOLTIP_DATE_FORMAT)}`"
+                                  >
+                                    <span class="cursor-help">{{
+                                      moment(item.finishedAt).fromNow()
+                                    }}</span>
+                                  </UTooltip>
+                                </div>
+                              </div>
+                            </td>
+
+                            <td class="w-24 px-3 py-3 text-center align-middle whitespace-nowrap">
+                              <div class="flex items-center justify-end gap-1">
+                                <UButton
+                                  color="neutral"
+                                  variant="ghost"
+                                  size="xs"
+                                  icon="i-lucide-terminal"
+                                  @click="loadCommand(item.command)"
+                                >
+                                  Fill
+                                </UButton>
+                                <UButton
+                                  color="neutral"
+                                  variant="ghost"
+                                  size="xs"
+                                  icon="i-lucide-x"
+                                  square
+                                  @click="removeRecentRun(item.token)"
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </UCard>
               </template>
@@ -253,12 +307,20 @@
 
 <script setup lang="ts">
 import '@xterm/xterm/css/xterm.css';
+import moment from 'moment';
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useHead, useRoute, useRouter } from '#app';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
-import { request, disableOpacity, enableOpacity, notification, parse_api_response } from '~/utils';
+import {
+  request,
+  disableOpacity,
+  enableOpacity,
+  notification,
+  parse_api_response,
+  TOOLTIP_DATE_FORMAT,
+} from '~/utils';
 import type { EnvVar } from '~/types';
 import { useDialog } from '~/composables/useDialog';
 import { useConsoleStream } from '~/composables/useConsoleStream';
@@ -275,6 +337,12 @@ type ConsoleInputRef = {
   inputRef?: HTMLInputElement | null;
 };
 
+type RecentRunStatus = 'queued' | 'running' | 'completed';
+type RecentRunState = {
+  status: RecentRunStatus;
+  exitCode: number | null;
+};
+
 let flushFrame: number | null = null;
 let fitFrame: number | null = null;
 let terminalResizeObserver: ResizeObserver | null = null;
@@ -286,11 +354,15 @@ const command = ref<string>(fromCommand);
 const outputConsole = ref<HTMLElement | null>(null);
 const commandInput = ref<ConsoleInputRef | null>(null);
 const {
-  commandHistory,
+  recentRuns,
   state: streamState,
   bufferedChunks,
   appendOutput,
+  clearRecentRuns,
   clearOutput: clearStreamOutput,
+  fetchRecentRuns,
+  replayRun,
+  removeRecentRun,
   restoreRun,
   startRun,
   stopCommand,
@@ -346,7 +418,7 @@ const streamStatusSpinning = computed(() => {
   return ['starting', 'streaming', 'reconnecting'].includes(streamState.value.status);
 });
 
-const historyEntries = computed(() => commandHistory.value.slice().reverse());
+const recentRunEntries = computed(() => recentRuns.value.slice().reverse());
 
 const hasPrefix = computed(
   () => command.value.startsWith('console') || command.value.startsWith('docker'),
@@ -361,6 +433,57 @@ const historyCardUi = {
 
 const focusCommandInput = (): void => {
   commandInput.value?.inputRef?.focus({ preventScroll: true });
+};
+
+const isRecentRunFailed = (item: RecentRunState): boolean => {
+  return 'completed' === item.status && null !== item.exitCode && 0 !== item.exitCode;
+};
+
+const recentRunStatusLabel = (item: RecentRunState): string => {
+  if (isRecentRunFailed(item)) {
+    return 'Failed';
+  }
+
+  switch (item.status) {
+    case 'queued':
+      return 'Queued';
+    case 'running':
+      return 'Running';
+    default:
+      return 'Completed';
+  }
+};
+
+const recentRunStatusColor = (item: RecentRunState): 'error' | 'info' | 'neutral' => {
+  if (isRecentRunFailed(item)) {
+    return 'error';
+  }
+
+  switch (item.status) {
+    case 'queued':
+    case 'running':
+      return 'info';
+    default:
+      return 'neutral';
+  }
+};
+
+const recentRunStatusIcon = (item: RecentRunState): string => {
+  if (isRecentRunFailed(item)) {
+    return 'i-lucide-triangle-alert';
+  }
+
+  switch (item.status) {
+    case 'queued':
+    case 'running':
+      return 'i-lucide-loader-circle';
+    default:
+      return 'i-lucide-circle-dot';
+  }
+};
+
+const recentRunStatusSpinning = (item: RecentRunState): boolean => {
+  return ['queued', 'running'].includes(item.status);
 };
 
 const scheduleTerminalFit = (): void => {
@@ -468,7 +591,6 @@ const writeFooter = (): void => {
 
 const RunCommand = async (): Promise<void> => {
   let userCommand: string = command.value;
-  const historyCommand = userCommand;
 
   if (userCommand.startsWith('console') || userCommand.startsWith('docker')) {
     notification('info', 'Warning', 'Removing leading prefix command from the input.', 2000);
@@ -496,7 +618,7 @@ const RunCommand = async (): Promise<void> => {
   }
 
   if ('clear_ac' === userCommand) {
-    commandHistory.value = [];
+    clearRecentRuns();
     command.value = '';
     return;
   }
@@ -516,7 +638,7 @@ const RunCommand = async (): Promise<void> => {
 
   writePrompt(userCommand);
 
-  const result = await startRun(commandBody.command, userCommand, historyCommand);
+  const result = await startRun(commandBody.command, userCommand);
 
   if ('error' === result.status) {
     notification('error', 'Error', result.message, 5000);
@@ -569,20 +691,35 @@ const closeOutput = async (): Promise<void> => {
   focusCommandInput();
 };
 
+const replayHistoryItem = async (item: (typeof recentRuns.value)[number]): Promise<void> => {
+  const result = await replayRun(item);
+
+  if ('error' === result.status) {
+    notification('error', 'Error', result.message, 5000);
+    focusCommandInput();
+    return;
+  }
+
+  command.value = item.command;
+  await nextTick();
+  focusCommandInput();
+};
+
 const loadCommand = async (value: string): Promise<void> => {
   command.value = value;
   await nextTick();
   focusCommandInput();
 };
 
-const clearHistory = async (): Promise<void> => {
-  if (historyEntries.value.length < 1) {
+const hideRecentRuns = async (): Promise<void> => {
+  if (recentRunEntries.value.length < 1) {
     return;
   }
 
   const { status } = await useDialog().confirmDialog({
     title: 'Confirm Action',
-    message: 'Clear saved command history?',
+    message: 'Hide the current recent runs from this browser?',
+    confirmText: 'Hide runs',
     confirmColor: 'error',
   });
 
@@ -590,12 +727,8 @@ const clearHistory = async (): Promise<void> => {
     return;
   }
 
-  commandHistory.value = [];
+  clearRecentRuns();
   focusCommandInput();
-};
-
-const removeFromHistory = (value: string): void => {
-  commandHistory.value = commandHistory.value.filter((item) => item !== value);
 };
 
 const handlePageLeave = (): void => {
@@ -664,6 +797,8 @@ onMounted(async () => {
     await nextTick();
     restoreBufferedTerminalOutput();
   }
+
+  await fetchRecentRuns();
 
   try {
     const response = await request('/system/env/WS_CONSOLE_ENABLE_ALL');

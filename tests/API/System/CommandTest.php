@@ -68,7 +68,7 @@ final class CommandTest extends TestCase
         $this->assertSame(0, ag($state, 'connections'));
     }
 
-    public function test_stream_rejects_completed_session_and_cleans_it_up(): void
+    public function test_stream_rejects_expired_completed_session_and_leaves_it_for_prune(): void
     {
         $handler = new Command();
         $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
@@ -81,12 +81,40 @@ final class CommandTest extends TestCase
         $state = json_decode((string) file_get_contents($statePath), true);
         $state['status'] = 'completed';
         $state['connections'] = 0;
+        $state['finished_at'] = make_date(strtotime('-2 days'))->format(DATE_ATOM);
 
         file_put_contents($statePath, json_encode($state, JSON_PRETTY_PRINT | JSON_INVALID_UTF8_IGNORE));
 
         $streamResponse = $handler->stream($this->getRequest(), $token);
 
         $this->assertSame(Status::NOT_FOUND->value, $streamResponse->getStatusCode());
+        $this->assertTrue(is_dir($sessionPath));
+    }
+
+    public function test_cleanup_session_skips_removal_while_writer_lock_is_held(): void
+    {
+        $handler = new Command();
+        $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
+
+        $payload = json_decode((string) $response->getBody(), true);
+        $token = (string) ag($payload, 'token');
+        $sessionPath = $this->tmpDir . '/console/' . $token;
+        $writerLockPath = $sessionPath . '/writer.lock';
+
+        $lockHandle = fopen($writerLockPath, 'c+');
+        $this->assertIsResource($lockHandle);
+        $this->assertTrue(flock($lockHandle, LOCK_EX | LOCK_NB));
+
+        $cleanup = new \ReflectionMethod($handler, 'cleanupSession');
+        $cleanup->invoke($handler, $sessionPath);
+
+        $this->assertTrue(is_dir($sessionPath));
+
+        flock($lockHandle, LOCK_UN);
+        fclose($lockHandle);
+
+        $cleanup->invoke($handler, $sessionPath);
+
         $this->assertFalse(is_dir($sessionPath));
     }
 
@@ -111,6 +139,38 @@ final class CommandTest extends TestCase
 
         $this->assertSame(Status::OK->value, $streamResponse->getStatusCode());
         $this->assertTrue(is_dir($sessionPath));
+    }
+
+    public function test_list_returns_recent_command_sessions(): void
+    {
+        $handler = new Command();
+        $first = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
+        $second = $handler->queue($this->getRequest(post: ['command' => 'system:index']));
+
+        $firstToken = (string) ag(json_decode((string) $first->getBody(), true), 'token');
+        $secondToken = (string) ag(json_decode((string) $second->getBody(), true), 'token');
+
+        $firstStatePath = $this->tmpDir . '/console/' . $firstToken . '/state.json';
+        $firstState = json_decode((string) file_get_contents($firstStatePath), true);
+        $firstState['status'] = 'completed';
+        $firstState['connections'] = 0;
+        $firstState['exit_code'] = 0;
+        $firstState['finished_at'] = make_date(strtotime('-2 hours'))->format(DATE_ATOM);
+        $firstState['updated_at'] = make_date(strtotime('-2 hours'))->format(DATE_ATOM);
+        file_put_contents($firstStatePath, json_encode($firstState, JSON_PRETTY_PRINT | JSON_INVALID_UTF8_IGNORE));
+
+        $response = $handler->list();
+        $payload = json_decode((string) $response->getBody(), true);
+        $items = ag($payload, 'items', []);
+
+        $this->assertSame(Status::OK->value, $response->getStatusCode());
+        $this->assertCount(2, $items);
+        $this->assertSame($secondToken, ag($items[0], 'token'));
+        $this->assertSame($firstToken, ag($items[1], 'token'));
+        $this->assertSame('system:tasks', ag($items[1], 'command'));
+        $this->assertSame('completed', ag($items[1], 'status'));
+        $this->assertSame(0, ag($items[1], 'exit_code'));
+        $this->assertNotNull(ag($items[1], 'available_until'));
     }
 
     public function test_stream_keeps_recently_completed_session_during_reconnect_gap(): void

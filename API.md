@@ -98,6 +98,7 @@ WatchState HTTP API reference. Examples use the default `/v1/api` prefix.
       - [DELETE /v1/api/system/events/{id}](#delete-v1apisystemeventsid)
       - [DELETE /v1/api/system/events](#delete-v1apisystemevents)
       - [POST /v1/api/system/command](#post-v1apisystemcommand)
+      - [GET /v1/api/system/command](#get-v1apisystemcommand)
       - [GET /v1/api/system/command/{token}](#get-v1apisystemcommandtoken)
       - [DELETE /v1/api/system/command/{token}](#delete-v1apisystemcommandtoken)
       - [GET /v1/api/system/scheduler](#get-v1apisystemscheduler)
@@ -2547,8 +2548,41 @@ Queues a one-time command for execution.
 
 ---
 
+#### GET /v1/api/system/command
+Lists recent command sessions that are still available for attach or replay.
+
+**Response**:
+```json
+{
+  "items": [
+    {
+      "token": "sha256-token",
+      "command": "system:index",
+      "status": "completed",
+      "cwd": "/home/coders/apps/watchstate",
+      "created_at": "2026-03-28T12:00:00+00:00",
+      "updated_at": "2026-03-28T12:02:00+00:00",
+      "started_at": "2026-03-28T12:00:01+00:00",
+      "finished_at": "2026-03-28T12:02:00+00:00",
+      "expires_at": "2026-03-28T12:05:00+00:00",
+      "available_until": "2026-03-29T12:02:00+00:00",
+      "exit_code": 0,
+      "last_sequence": 42,
+      "connections": 0
+    }
+  ]
+}
+```
+
+**Notes**:
+- Queued and running sessions use `expires_at` as their availability window.
+- Completed sessions remain replayable for about 24 hours after `finished_at`.
+- Expired completed sessions are eventually automatically pruned.
+
+---
+
 #### GET /v1/api/system/command/{token}
-Attaches to an active queued/running command session and streams output.
+Attaches to an available command session and streams or replays its output.
 
 **Path**:
 - `token`: Command token returned by `POST /v1/api/system/command`.
@@ -2573,12 +2607,12 @@ Attaches to an active queued/running command session and streams output.
 ```
 
 **Errors**:
-- `404 Not Found` if the token is invalid/expired or the session has already been cleaned up.
+- `404 Not Found` if the token is invalid, the queued request expired, or the completed session exceeded its replay window.
 
 **Notes**:
 - Sessions are resumable while the command is still active.
 - Use `Last-Event-ID` or `?since=` to resume from a known event sequence.
-- Completed sessions are cleaned up shortly after the final reader disconnects.
+- Completed sessions remain replayable for about 24 hours after `finished_at`.
 
 ---
 
@@ -2601,6 +2635,7 @@ Requests cancellation for a queued or running command.
 **Notes**:
 - Queued sessions are removed immediately.
 - Running sessions are marked for cancellation and stop as soon as the worker loop observes the cancel request.
+- Completed sessions return `202 Accepted` with `Command has already completed.`
 
 ---
 
