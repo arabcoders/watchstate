@@ -1,5 +1,26 @@
 [
   {
+    "tag": "Untagged",
+    "full_sha": "f28211bdae61b18c028802e692ca67190be919b8",
+    "date": "2026-04-28T22:27:32+00:00",
+    "commits": [
+      {
+        "sha": "f28211bd",
+        "full_sha": "f28211bdae61b18c028802e692ca67190be919b8",
+        "message": "refactor: improve the console history.",
+        "author": "arabcoders",
+        "date": "2026-04-28T22:27:32+00:00"
+      },
+      {
+        "sha": "fca37d91",
+        "full_sha": "fca37d91f9a38431ef627a1a108a9f733377c096",
+        "message": "fix: prevent infinite loop when StreamBody used in wrong way.",
+        "author": "arabcoders",
+        "date": "2026-04-28T22:00:50+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v1.7.0",
     "full_sha": "ce3a4d7be92e5aabaa90c13b03e2d5d7825260ad",
     "date": "2026-04-27T19:23:52+00:00",
