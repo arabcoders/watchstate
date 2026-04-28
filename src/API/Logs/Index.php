@@ -310,7 +310,7 @@ final class Index
             return '';
         };
 
-        return api_response(Status::OK, StreamedBody::create($callable, runOnce: true), headers: [
+        return api_response(Status::OK, StreamedBody::create($callable), headers: [
             'Content-Type' => 'text/event-stream; charset=UTF-8',
             'Cache-Control' => 'no-cache',
             'Connection' => 'keep-alive',
