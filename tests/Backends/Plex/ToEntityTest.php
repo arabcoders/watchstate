@@ -78,7 +78,7 @@ class ToEntityTest extends PlexTestCase
         $this->assertNotEmpty($result->response->parent);
     }
 
-    public function test_to_entity_uses_top_level_typed_nfo_guid(): void
+    public function test_to_entity_toplevel_nfo(): void
     {
         $context = $this->makeContext();
         $item = [
@@ -97,7 +97,7 @@ class ToEntityTest extends PlexTestCase
         $this->assertSame('383498', $result->response->guids['guid_tmdb'] ?? null);
     }
 
-    public function test_to_entity_episode_uses_show_level_typed_nfo_guid_when_parent_has_no_guid_list(): void
+    public function test_to_entity_showlevel_nfo(): void
     {
         $context = $this->makeContext();
         $item = [

@@ -9,7 +9,7 @@ use App\Backends\Jellyfin\Action\GetPlaylist as JellyfinGetPlaylist;
 
 final class GetPlaylistTest extends MediaBrowserTestCase
 {
-    public function test_get_playlist_for_supported_backends(): void
+    public function test_get_playlist_supported(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $detailFixture]) {
             $http = $this->makeHttpClient(
@@ -28,7 +28,7 @@ final class GetPlaylistTest extends MediaBrowserTestCase
         }
     }
 
-    public function test_emby_playlist_with_supports_sync_is_treated_as_editable(): void
+    public function test_emby_playlist_editable(): void
     {
         $http = $this->makeHttpClient(
             $this->makeResponse([

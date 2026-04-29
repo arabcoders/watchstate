@@ -19,8 +19,9 @@ final class IdentityProvisionServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->initTempDir();
 
-        $this->tempDir = sys_get_temp_dir() . '/watchstate-identities-' . bin2hex(random_bytes(8));
+        $this->tempDir = self::$tmpPath . '/identities';
         $configDir = $this->tempDir . '/config';
         $usersDir = $this->tempDir . '/users/alice';
 
@@ -130,14 +131,13 @@ final class IdentityProvisionServiceTest extends TestCase
 
     protected function tearDown(): void
     {
-        $this->deletePath($this->tempDir);
         Config::reset();
         Container::reset();
 
         parent::tearDown();
     }
 
-    public function test_syncBackendsDryRunDoesNotPersistChanges(): void
+    public function test_syncBackends_dry_run(): void
     {
         $service = $this->makeService();
         $identityConfigPath = $this->tempDir . '/users/alice/servers.yaml';
@@ -150,7 +150,7 @@ final class IdentityProvisionServiceTest extends TestCase
         $this->assertSame($before, file_get_contents($identityConfigPath), 'Dry run must not persist any identity config changes.');
     }
 
-    public function test_syncBackendsUpdatesSharedFieldsAndPreservesIdentitySpecificFields(): void
+    public function test_syncBackends_preserves(): void
     {
         $service = $this->makeService();
 
@@ -203,27 +203,5 @@ final class IdentityProvisionServiceTest extends TestCase
             mapper: Container::get(\App\Libs\Mappers\ImportInterface::class),
             logger: Container::get(iLogger::class),
         );
-    }
-
-    private function deletePath(string $path): void
-    {
-        if ('' === $path || false === file_exists($path)) {
-            return;
-        }
-
-        if (is_file($path) || is_link($path)) {
-            @unlink($path);
-            return;
-        }
-
-        foreach (scandir($path) ?: [] as $entry) {
-            if ('.' === $entry || '..' === $entry) {
-                continue;
-            }
-
-            $this->deletePath($path . '/' . $entry);
-        }
-
-        @rmdir($path);
     }
 }

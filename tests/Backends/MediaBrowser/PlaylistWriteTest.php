@@ -13,7 +13,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class PlaylistWriteTest extends MediaBrowserTestCase
 {
-    public function test_jellyfin_create_playlist_uses_json_body_and_returns_id(): void
+    public function test_jellyfin_create_json(): void
     {
         $requests = [];
         $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$requests) {
@@ -38,7 +38,7 @@ final class PlaylistWriteTest extends MediaBrowserTestCase
         ], json_decode((string) ($requests[0]['options']['body'] ?? ''), true, flags: JSON_THROW_ON_ERROR));
     }
 
-    public function test_emby_create_playlist_uses_query_shape_and_delete_uses_items_endpoint(): void
+    public function test_emby_create_delete(): void
     {
         $requests = [];
         $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$requests) {
@@ -72,7 +72,7 @@ final class PlaylistWriteTest extends MediaBrowserTestCase
         self::assertStringEndsWith('/Items/playlist-emby-new', $requests[1]['url']);
     }
 
-    public function test_jellyfin_delete_playlist_uses_items_endpoint(): void
+    public function test_jellyfin_delete_items(): void
     {
         $requests = [];
         $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$requests) {

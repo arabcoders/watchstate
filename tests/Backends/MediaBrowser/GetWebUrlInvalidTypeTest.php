@@ -9,7 +9,7 @@ use App\Backends\Jellyfin\Action\GetWebUrl as JellyfinGetWebUrl;
 
 class GetWebUrlInvalidTypeTest extends MediaBrowserTestCase
 {
-    public function test_get_web_url_rejects_invalid_type(): void
+    public function test_web_url_invalid_type(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass]) {
             $context = $this->makeContext($clientName);

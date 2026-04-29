@@ -13,7 +13,7 @@ use App\Libs\Options;
 
 class GetUsersListLimitedTokenTest extends MediaBrowserTestCase
 {
-    public function test_get_users_list_limited_token_uses_get_user(): void
+    public function test_limited_token_uses_getUser(): void
     {
         Container::add(GetUser::class, fn() => new class() {
             public function __invoke(): Response

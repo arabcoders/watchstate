@@ -355,7 +355,9 @@ final readonly class Path
      */
     public function owner(): string
     {
-        return posix_getpwuid(fileowner($this->path))['name'];
+        $uid = fileowner($this->path);
+        $info = posix_getpwuid($uid);
+        return false === $info ? (string) $uid : $info['name'];
     }
 
     /**
@@ -365,7 +367,9 @@ final readonly class Path
      */
     public function group(): string
     {
-        return posix_getgrgid(filegroup($this->path))['name'];
+        $gid = filegroup($this->path);
+        $info = posix_getgrgid($gid);
+        return false === $info ? (string) $gid : $info['name'];
     }
 
     /**

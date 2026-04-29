@@ -40,6 +40,7 @@ class HelpersTest extends TestCase
     {
         $_ENV['ONLY_ENV'] = false;
         parent::setUp();
+        $this->initTempDir();
         $this->cache = new class implements CacheInterface {
             public array $cache = [];
             public bool $throw = false;
@@ -640,7 +641,7 @@ class HelpersTest extends TestCase
         }
     }
 
-    public function test_send_requests_processes_follow_up_requests(): void
+    public function test_send_requests_followup(): void
     {
         $calls = [];
         $client = new MockHttpClient(function (string $method, string $url) use (&$calls) {
@@ -1199,17 +1200,12 @@ class HelpersTest extends TestCase
             $this->assertSame($value, $info[$key], "It should have correct value for {$key} key.");
         }
 
-        if (is_writeable(sys_get_temp_dir())) {
-            try {
-                $fileName = tempnam(sys_get_temp_dir(), 'meminfo');
-                $none = get_system_memory_info($fileName);
-                $this->assertIsArray($none, 'It should return array.');
-                $this->assertSame([], $none, 'When mem-file is empty it should return empty array.');
-            } finally {
-                if (file_exists($fileName)) {
-                    unlink($fileName);
-                }
-            }
+        if (is_writeable(self::$tmpPath)) {
+            $fileName = self::$tmpPath . '/meminfo_' . uniqid();
+            touch($fileName);
+            $none = get_system_memory_info($fileName);
+            $this->assertIsArray($none, 'It should return array.');
+            $this->assertSame([], $none, 'When mem-file is empty it should return empty array.');
         } else {
             $this->markTestSkipped('Temp directory is not writable.');
         }
@@ -1470,31 +1466,19 @@ class HelpersTest extends TestCase
         $d = is_scheduler_running(pidFile: __DIR__ . '/../Fixtures/worker.pid', ignoreContainer: true);
         $this->assertFalse($d['status'], 'When pid file is not found, it should return false.');
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'worker');
-        try {
-            file_put_contents($tmpFile, getmypid());
-            $d = is_scheduler_running(pidFile: $tmpFile, ignoreContainer: true);
-            $this->assertTrue($d['status'], 'When pid file is found, and process exists it should return true.');
-        } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
-        }
+        $tmpFile = self::$tmpPath . '/worker_' . uniqid();
+        file_put_contents($tmpFile, getmypid());
+        $d = is_scheduler_running(pidFile: $tmpFile, ignoreContainer: true);
+        $this->assertTrue($d['status'], 'When pid file is found, and process exists it should return true.');
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'worker');
-        try {
-            /** @noinspection PhpUnhandledExceptionInspection */
-            file_put_contents($tmpFile, random_int(1, 9999) . getmypid());
-            $d = is_scheduler_running(pidFile: $tmpFile, ignoreContainer: true);
-            $this->assertFalse(
-                $d['status'],
-                'When pid file is found, and process does not exists it should return false.'
-            );
-        } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
-        }
+        $tmpFile = self::$tmpPath . '/worker_' . uniqid();
+        /** @noinspection PhpUnhandledExceptionInspection */
+        file_put_contents($tmpFile, random_int(1, 9999) . getmypid());
+        $d = is_scheduler_running(pidFile: $tmpFile, ignoreContainer: true);
+        $this->assertFalse(
+            $d['status'],
+            'When pid file is found, and process does not exists it should return false.'
+        );
     }
 
     public function test_findSideCarFiles()
@@ -1507,7 +1491,7 @@ class HelpersTest extends TestCase
         );
     }
 
-    public function test_array_change_key_case_recursive()
+    public function test_array_key_case_recursive()
     {
         $array = [
             'foo' => 'bar',

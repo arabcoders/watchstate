@@ -54,7 +54,7 @@ class JellyfinClientTest extends MediaBrowserTestCase
         $this->assertSame('fresh-id', $client->getIdentifier(true));
     }
 
-    public function test_process_request_and_parse_webhook(): void
+    public function test_process_parse_webhook(): void
     {
         $context = $this->makeContext('Jellyfin');
         $client = $this->makeClient($context);
@@ -120,7 +120,7 @@ class JellyfinClientTest extends MediaBrowserTestCase
         $this->assertSame('Test Movie', $client->toEntity(['id' => 1])->title);
     }
 
-    public function test_import_export_push_progress_update_state(): void
+    public function test_import_export_push_update(): void
     {
         $context = $this->makeContext('Jellyfin');
         $client = $this->makeClient($context);

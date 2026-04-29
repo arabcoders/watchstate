@@ -25,7 +25,7 @@ class DBLayerTest extends TestCase
     private DBLayer|null $db = null;
     protected TestHandler|null $handler = null;
 
-    private function createDB(PDO $pdo): void
+    protected function initTestSchema(PDO $pdo): void
     {
         $pdo->exec('DROP TABLE IF EXISTS "test"');
         $pdo->exec(
@@ -59,7 +59,7 @@ class DBLayerTest extends TestCase
         }
 
         $this->db = new DBLayer(new PDO(dsn: 'sqlite::memory:', options: Config::get('database.options', [])));
-        $this->createDB($this->db->getBackend());
+        $this->initTestSchema($this->db->getBackend());
 
         foreach (Config::get('database.exec.sqlite', []) as $cmd) {
             $this->db->exec($cmd);
@@ -129,7 +129,7 @@ class DBLayerTest extends TestCase
         );
     }
 
-    public function test_query_with_prepared_statement_reuse(): void
+    public function test_query_prepared_reuse(): void
     {
         $this->db->insert('test', [
             'name' => 'test',

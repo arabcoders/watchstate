@@ -13,7 +13,7 @@ use Nyholm\Psr7\Stream;
 
 class InspectRequestTest extends TestCase
 {
-    public function test_parses_json_body_and_sets_attributes(): void
+    public function test_parses_json_attrs(): void
     {
         $payload = [
             'ServerId' => 'server-1',
@@ -47,7 +47,7 @@ class InspectRequestTest extends TestCase
         $this->assertSame('item-1', $parsed->getAttribute('item')['id']);
     }
 
-    public function test_rejects_non_jellyfin_user_agent(): void
+    public function test_rejects_non_jellyfin_ua(): void
     {
         $request = new ServerRequest('POST', new Uri('http://mediabrowser.test'));
         $request = $request->withHeader('User-Agent', 'OtherClient/1.0');

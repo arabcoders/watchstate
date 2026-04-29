@@ -14,7 +14,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class HttpClientTest extends TestCase
 {
-    public function test_logger_preserves_query_parameter_names(): void
+    public function test_logger_query_params(): void
     {
         $handler = new TestHandler();
         $logger = new Logger('test', [$handler]);

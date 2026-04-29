@@ -7,8 +7,7 @@ namespace Tests\Backends\Common;
 use App\Backends\Common\Cache;
 use App\Backends\Common\Error;
 use App\Libs\ConfigFile;
-use App\Libs\Database\DBLayer;
-use App\Libs\Database\PDO\PDOAdapter;
+
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\TestCase;
@@ -16,7 +15,7 @@ use App\Libs\Uri;
 use App\Libs\UserContext;
 use Monolog\Handler\NullHandler;
 use Monolog\Logger;
-use PDO;
+
 use Symfony\Component\Cache\Adapter\NullAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 
@@ -68,8 +67,7 @@ class ResponseTest extends TestCase
     {
         $logger = new Logger('test', [new NullHandler()]);
         $cache = new Cache($logger, new Psr16Cache(new NullAdapter()));
-        $db = new PDOAdapter($logger, new DBLayer(new PDO('sqlite::memory:')));
-        $db->migrations('up');
+        $db = $this->createDb($logger);
 
         $context = new \App\Backends\Common\Context(
             clientName: 'test',

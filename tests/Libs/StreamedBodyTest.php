@@ -82,7 +82,7 @@ class StreamedBodyTest extends TestCase
         );
     }
 
-    public function test_streamed_body_executes_callback_once(): void
+    public function test_streamed_executes_once(): void
     {
         $calls = 0;
         $stream = new StreamedBody(function () use (&$calls): string {
@@ -98,7 +98,7 @@ class StreamedBodyTest extends TestCase
         $this->assertSame(1, $calls);
     }
 
-    public function test_empty_callback_executes_before_eof(): void
+    public function test_empty_callback_before_eof(): void
     {
         $calls = 0;
         $stream = new StreamedBody(function () use (&$calls): string {

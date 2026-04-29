@@ -13,7 +13,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 class GetUserTokenTest extends PlexTestCase
 {
-    public function test_get_user_token_external_user(): void
+    public function test_get_token_external(): void
     {
         Container::add(GetUsersList::class, fn() => new class() {
             public function __invoke(\App\Backends\Common\Context $context, array $opts = []): Response
@@ -32,7 +32,7 @@ class GetUserTokenTest extends PlexTestCase
         $this->assertSame('token-1', $result->response);
     }
 
-    public function test_get_user_token_external_user_missing(): void
+    public function test_get_token_external_missing(): void
     {
         Container::add(GetUsersList::class, fn() => new class() {
             public function __invoke(\App\Backends\Common\Context $context, array $opts = []): Response
@@ -70,7 +70,7 @@ class GetUserTokenTest extends PlexTestCase
         $this->assertSame('perm-token', $result->response);
     }
 
-    public function test_get_user_token_missing_server(): void
+    public function test_get_token_missing_server(): void
     {
         $http = new \App\Libs\Extends\MockHttpClient([
             new MockResponse(json_encode(['authToken' => 'temp-token']), ['http_code' => 201]),
@@ -91,7 +91,7 @@ class GetUserTokenTest extends PlexTestCase
         $this->assertNotNull($result->error);
     }
 
-    public function test_get_user_token_request_error(): void
+    public function test_get_token_request_error(): void
     {
         $http = new \App\Libs\Extends\MockHttpClient([
             new MockResponse(json_encode(['error' => 'nope']), ['http_code' => 500]),

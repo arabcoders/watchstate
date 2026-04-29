@@ -6,10 +6,9 @@ namespace Tests\Commands\Database;
 
 use App\Commands\Database\QueryCommand;
 use App\Libs\ConfigFile;
-use App\Libs\Database\DBLayer;
-use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Mappers\Import\DirectMapper;
+use App\Libs\TestCase;
 use App\Libs\UserContext;
 use Monolog\Logger;
 use PDO;
@@ -19,9 +18,9 @@ use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Tester\CommandTester;
 
-final class QueryCommandTest extends \PHPUnit\Framework\TestCase
+final class QueryCommandTest extends TestCase
 {
-    public function test_select_query_reads_from_main_user_database_by_default(): void
+    public function test_select_default_db(): void
     {
         $main = $this->makeUserContext('main');
         $other = $this->makeUserContext('alice');
@@ -53,7 +52,7 @@ final class QueryCommandTest extends \PHPUnit\Framework\TestCase
         ], json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR));
     }
 
-    public function test_write_query_reports_affected_rows(): void
+    public function test_write_affected_rows(): void
     {
         $main = $this->makeUserContext('main');
         $this->seedTable($main, [[
@@ -79,7 +78,7 @@ final class QueryCommandTest extends \PHPUnit\Framework\TestCase
         ], $result);
     }
 
-    public function test_user_option_routes_query_to_selected_user_database(): void
+    public function test_user_routes_db(): void
     {
         $main = $this->makeUserContext('main');
         $other = $this->makeUserContext('alice');
@@ -112,7 +111,7 @@ final class QueryCommandTest extends \PHPUnit\Framework\TestCase
         ], json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR));
     }
 
-    public function test_named_parameters_bind_into_prepared_statement(): void
+    public function test_named_params_bind(): void
     {
         $main = $this->makeUserContext('main');
         $this->seedTable($main, [
@@ -144,7 +143,7 @@ final class QueryCommandTest extends \PHPUnit\Framework\TestCase
         ], json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR));
     }
 
-    public function test_named_parameters_require_key_value_input(): void
+    public function test_named_params_kv(): void
     {
         $main = $this->makeUserContext('main');
         $this->seedTable($main, [
@@ -166,7 +165,7 @@ final class QueryCommandTest extends \PHPUnit\Framework\TestCase
         self::assertStringContainsString("Invalid named SQL parameter 'beta'. Expected key=value.", $tester->getDisplay());
     }
 
-    public function test_positional_parameters_bind_into_prepared_statement(): void
+    public function test_positional_params_bind(): void
     {
         $main = $this->makeUserContext('main');
         $this->seedTable($main, [
@@ -198,7 +197,7 @@ final class QueryCommandTest extends \PHPUnit\Framework\TestCase
         ], json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR));
     }
 
-    public function test_positional_parameters_treat_equals_as_literal_value(): void
+    public function test_positional_equals_literal(): void
     {
         $main = $this->makeUserContext('main');
         $this->seedTable($main, [
@@ -230,7 +229,7 @@ final class QueryCommandTest extends \PHPUnit\Framework\TestCase
         ], json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR));
     }
 
-    public function test_mixed_placeholder_styles_are_rejected(): void
+    public function test_mixed_placeholders_rejected(): void
     {
         $main = $this->makeUserContext('main');
         $this->seedTable($main, [
@@ -252,7 +251,7 @@ final class QueryCommandTest extends \PHPUnit\Framework\TestCase
         self::assertStringContainsString('Mixed named and positional SQL placeholders are not supported.', $tester->getDisplay());
     }
 
-    public function test_scalar_parameter_values_are_coerced_before_binding(): void
+    public function test_scalar_params_coerced(): void
     {
         $main = $this->makeUserContext('main');
         $db = $main->db->getDBLayer();
@@ -349,8 +348,7 @@ final class QueryCommandTest extends \PHPUnit\Framework\TestCase
     private function makeUserContext(string $name): UserContext
     {
         $logger = new Logger('test');
-        $db = new PDOAdapter($logger, new DBLayer(new PDO('sqlite::memory:')));
-        $db->migrations('up');
+        $db = $this->createDb($logger);
         $cache = new Psr16Cache(new ArrayAdapter());
 
         return new UserContext(

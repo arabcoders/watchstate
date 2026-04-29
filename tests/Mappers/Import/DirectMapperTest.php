@@ -21,7 +21,7 @@ class DirectMapperTest extends MapperAbstract
         return $mapper;
     }
 
-    public function test_mapper_with_disable_mark_unplayed_option(): void
+    public function test_mapper_disable_unplayed(): void
     {
         $testMovie = new StateEntity($this->testMovie);
         $this->mapper->add($testMovie);
@@ -84,7 +84,7 @@ class DirectMapperTest extends MapperAbstract
         );
     }
 
-    public function test_skip_state_prevents_progress_events(): void
+    public function test_skip_state_no_progress(): void
     {
         $this->testMovie[iState::COLUMN_WATCHED] = 0;
         $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_META_DATA_PROGRESS] = 100;
@@ -124,7 +124,7 @@ class DirectMapperTest extends MapperAbstract
         );
     }
 
-    public function test_progress_event_triggered_with_tainted_update(): void
+    public function test_progress_tainted_update(): void
     {
         $currentTime = time();
         $this->testMovie[iState::COLUMN_WATCHED] = 0;
@@ -172,7 +172,7 @@ class DirectMapperTest extends MapperAbstract
     /**
      * @throws \DateMalformedStringException
      */
-    public function test_skip_state_scenario_with_watch_state_conflict(): void
+    public function test_skip_state_conflict(): void
     {
         $currentTime = time();
         $this->testMovie[iState::COLUMN_WATCHED] = 1;
@@ -250,7 +250,7 @@ class DirectMapperTest extends MapperAbstract
      *
      * @throws \DateMalformedStringException
      */
-    public function test_force_full_updates_state_despite_old_timestamp(): void
+    public function test_force_full_old_ts(): void
     {
         $currentTime = time();
         // Local DB has item as unplayed, updated recently
@@ -301,7 +301,7 @@ class DirectMapperTest extends MapperAbstract
      *
      * Flow: add() -> handleUntaintedEntity() -> shouldMarkAsUnplayed() -> markAsUnplayed()
      */
-    public function test_add_flows_to_handleUntaintedEntity_shouldMarkAsUnplayed_true(): void
+    public function test_add_untainted_unplayed(): void
     {
         $currentTime = time();
 
@@ -366,7 +366,7 @@ class DirectMapperTest extends MapperAbstract
      * Test that add() flows to handleUntaintedEntity() but shouldMarkAsUnplayed() returns false
      * when DISABLE_MARK_UNPLAYED flag is set, preventing STATE_UPDATE_EVENT from being called.
      */
-    public function test_add_flows_to_handleUntaintedEntity_but_shouldMarkAsUnplayed_blocked_by_disable_flag(): void
+    public function test_add_untainted_blocked(): void
     {
         $currentTime = time();
 
@@ -428,7 +428,7 @@ class DirectMapperTest extends MapperAbstract
      * is newer than entity.updated. This is a control test to show path differentiation.
      * @throws \DateMalformedStringException
      */
-    public function test_add_routes_to_handleOldEntity_not_handleUntaintedEntity_when_old_date(): void
+    public function test_add_routes_old(): void
     {
         $currentTime = time();
 

@@ -11,7 +11,7 @@ use App\Libs\Uri;
 
 class GetUserMissingBackendTest extends TestCase
 {
-    public function test_get_user_requires_backend_user(): void
+    public function test_requires_backend_user(): void
     {
         $http = new \App\Libs\Extends\MockHttpClient();
         $logger = new \Monolog\Logger('test');

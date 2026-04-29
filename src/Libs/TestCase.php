@@ -15,6 +15,8 @@ use Monolog\Logger;
 use PDO;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 use Throwable;
@@ -22,6 +24,46 @@ use Throwable;
 class TestCase extends \PHPUnit\Framework\TestCase
 {
     protected ?TestHandler $handler = null;
+    protected static ?string $tmpPath = null;
+
+    protected function tearDown(): void
+    {
+        parent::tearDown();
+
+        if (null === self::$tmpPath) {
+            return;
+        }
+
+        $dir = self::$tmpPath;
+        self::$tmpPath = null;
+
+        if (!is_dir($dir)) {
+            return;
+        }
+
+        $this->forceChmodRecursive($dir);
+        $this->forceRemoveRecursive($dir);
+    }
+
+    protected function initTempDir(): void
+    {
+        if (null !== self::$tmpPath) {
+            return;
+        }
+
+        self::$tmpPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'ws-tests' . DIRECTORY_SEPARATOR . uniqid();
+        if (!is_dir(self::$tmpPath) && !mkdir(self::$tmpPath, 0o777, true) && !is_dir(self::$tmpPath)) {
+            throw new \RuntimeException(sprintf('Directory "%s" was not created', self::$tmpPath));
+        }
+    }
+
+    protected function createDb(?LoggerInterface $logger = null): PDOAdapter
+    {
+        $logger ??= new Logger('test', [new NullHandler()]);
+        $db = new PDOAdapter($logger, new DBLayer(new PDO('sqlite::memory:')));
+        $db->migrations('up');
+        return $db;
+    }
 
     /**
      * Checks if the given closure throws an exception.
@@ -89,10 +131,7 @@ class TestCase extends \PHPUnit\Framework\TestCase
 
         $logger ??= new Logger('test', [new NullHandler()]);
         $cache ??= new Psr16Cache(new ArrayAdapter());
-        if (null === $db) {
-            $db = new PDOAdapter($logger, new DBLayer(new PDO('sqlite::memory:')));
-            $db->migrations('up');
-        }
+        $db ??= $this->createDb($logger);
 
         $filePath = TESTS_PATH . '/Fixtures/test_servers.yaml';
         $instances[$name] = new UserContext(
@@ -105,5 +144,50 @@ class TestCase extends \PHPUnit\Framework\TestCase
         );
 
         return $instances[$name];
+    }
+
+    private function forceChmodRecursive(string $path): void
+    {
+        @chmod($path, 0o777);
+
+        if (!is_dir($path)) {
+            return;
+        }
+
+        if (false === ($items = @scandir($path))) {
+            return;
+        }
+
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+
+            $full = $path . DIRECTORY_SEPARATOR . $item;
+
+            if (is_dir($full)) {
+                $this->forceChmodRecursive($full);
+            } else {
+                @chmod($full, 0o666);
+            }
+        }
+    }
+
+    private function forceRemoveRecursive(string $dir): void
+    {
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST,
+        );
+
+        foreach ($iterator as $file) {
+            if ($file->isDir()) {
+                rmdir($file->getPathname());
+            } else {
+                unlink($file->getPathname());
+            }
+        }
+
+        rmdir($dir);
     }
 }

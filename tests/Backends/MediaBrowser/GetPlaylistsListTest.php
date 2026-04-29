@@ -11,7 +11,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class GetPlaylistsListTest extends MediaBrowserTestCase
 {
-    public function test_get_playlists_list_for_supported_backends(): void
+    public function test_get_playlists_supported(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass]) {
             $http = $this->makeHttpClient($this->makeResponse($this->fixture('playlists')));
@@ -36,7 +36,7 @@ final class GetPlaylistsListTest extends MediaBrowserTestCase
         ];
     }
 
-    public function test_emby_get_playlists_list_omits_media_types_and_filters_non_playlist_items(): void
+    public function test_emby_playlists_filters(): void
     {
         $requestUrl = null;
         $http = new MockHttpClient(function (string $method, string $url) use (&$requestUrl) {

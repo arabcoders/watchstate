@@ -7,14 +7,11 @@ namespace Tests\Commands\State;
 use App\Backends\Common\ClientInterface as iClient;
 use App\Commands\State\PlaylistCommand;
 use App\Libs\ConfigFile;
-use App\Libs\Database\DBLayer;
-use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Playlists\PlaylistSyncService;
 use App\Libs\UserContext;
 use Monolog\Logger;
-use PDO;
 use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
@@ -69,7 +66,7 @@ final class PlaylistCommandTest extends TestCase
         self::assertStringContainsString('Playlists', $tester->getDisplay());
     }
 
-    public function test_skips_backend_when_import_and_export_are_disabled(): void
+    public function test_skips_disabled_backend(): void
     {
         $service = $this->makeServiceMock();
         $service
@@ -98,7 +95,7 @@ final class PlaylistCommandTest extends TestCase
         self::assertStringContainsString('No matching backends produced syncable playlists.', $tester->getDisplay());
     }
 
-    public function test_selected_disabled_backend_is_still_passed_with_direction_sets_empty(): void
+    public function test_disabled_passed_empty(): void
     {
         $service = $this->makeServiceMock();
         $service
@@ -130,8 +127,10 @@ final class PlaylistCommandTest extends TestCase
         self::assertSame(PlaylistCommand::SUCCESS, $status);
     }
 
-    public function test_logfile_writes_playlist_lifecycle_logs(): void
+    public function test_logfile_lifecycle(): void
     {
+        $this->initTempDir();
+
         $service = $this->makeServiceMock();
         $service
             ->expects(self::once())
@@ -142,22 +141,18 @@ final class PlaylistCommandTest extends TestCase
         $client->method('getName')->willReturn('test_plex');
         $client->method('getType')->willReturn('plex');
 
-        $logfile = tempnam(sys_get_temp_dir(), 'playlist-log-');
-        self::assertNotFalse($logfile);
+        $logfile = self::$tmpPath . '/playlist-log.txt';
+        touch($logfile);
 
-        try {
-            $tester = $this->makeTester($service, $client);
-            $status = $tester->execute(['--logfile' => $logfile], ['verbosity' => OutputInterface::VERBOSITY_VERBOSE]);
+        $tester = $this->makeTester($service, $client);
+        $status = $tester->execute(['--logfile' => $logfile], ['verbosity' => OutputInterface::VERBOSITY_VERBOSE]);
 
-            self::assertSame(PlaylistCommand::SUCCESS, $status);
+        self::assertSame(PlaylistCommand::SUCCESS, $status);
 
-            $contents = file_get_contents($logfile);
-            self::assertIsString($contents);
-            self::assertStringContainsString('Starting playlist sync process', $contents);
-            self::assertStringContainsString('Playlist sync process completed', $contents);
-        } finally {
-            @unlink($logfile);
-        }
+        $contents = file_get_contents($logfile);
+        self::assertIsString($contents);
+        self::assertStringContainsString('Starting playlist sync process', $contents);
+        self::assertStringContainsString('Playlist sync process completed', $contents);
     }
 
     /**
@@ -181,8 +176,7 @@ final class PlaylistCommandTest extends TestCase
     private function makeCommand(PlaylistSyncService $service, iClient $client, string $backendName = 'test_plex'): PlaylistCommand
     {
         $logger = new Logger('test');
-        $db = new PDOAdapter($logger, new DBLayer(new PDO('sqlite::memory:')));
-        $db->migrations('up');
+        $db = $this->createDb($logger);
         $cache = new Psr16Cache(new ArrayAdapter());
 
         $userContext = new UserContext(

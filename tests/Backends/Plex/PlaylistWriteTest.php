@@ -11,7 +11,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class PlaylistWriteTest extends PlexTestCase
 {
-    public function test_create_playlist_uses_proven_query_shape(): void
+    public function test_create_playlist_query(): void
     {
         $requests = [];
         $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$requests) {
@@ -40,7 +40,7 @@ final class PlaylistWriteTest extends PlexTestCase
         self::assertStringContainsString('uri=server%3A%2F%2Fplex-server-1%2Fcom.plexapp.plugins.library%2Flibrary%2Fmetadata%2F11%2C22', $requests[0]['url']);
     }
 
-    public function test_delete_playlist_uses_playlist_delete_endpoint(): void
+    public function test_delete_playlist_endpoint(): void
     {
         $requests = [];
         $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$requests) {

@@ -10,7 +10,6 @@ use App\Libs\Enums\Http\Status;
 use App\Libs\Attributes\Route\Post;
 use App\Libs\Middlewares\SignatureMiddleware;
 use App\Libs\TestCase;
-use DirectoryIterator;
 use Tests\Support\RequestResponseTrait;
 
 final class CommandTest extends TestCase
@@ -24,19 +23,17 @@ final class CommandTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->initTempDir();
 
         $this->previousTmpDir = Config::get('tmpDir', null);
-        $this->tmpDir = sys_get_temp_dir() . '/watchstate_command_test_' . uniqid('', true);
+        $this->tmpDir = self::$tmpPath;
 
-        mkdir($this->tmpDir, 0o755, true);
         mkdir($this->tmpDir . '/console', 0o755, true);
         Config::save('tmpDir', $this->tmpDir);
     }
 
     protected function tearDown(): void
     {
-        $this->removeDirectory($this->tmpDir);
-
         if (null === $this->previousTmpDir) {
             Config::remove('tmpDir');
         } else {
@@ -341,33 +338,6 @@ final class CommandTest extends TestCase
 
         $this->assertFalse($isActive->invoke($handler, $sessionPath, 1));
         $this->assertTrue($isActive->invoke($handler, $sessionPath, 2));
-    }
-
-    private function removeDirectory(string $path): void
-    {
-        if (false === is_dir($path)) {
-            return;
-        }
-
-        foreach (new DirectoryIterator($path) as $item) {
-            if ($item->isDot()) {
-                continue;
-            }
-
-            $itemPath = $item->getRealPath();
-            if (false === $itemPath) {
-                continue;
-            }
-
-            if ($item->isDir()) {
-                $this->removeDirectory($itemPath);
-                continue;
-            }
-
-            unlink($itemPath);
-        }
-
-        rmdir($path);
     }
 
     public function test_route_sign(): void

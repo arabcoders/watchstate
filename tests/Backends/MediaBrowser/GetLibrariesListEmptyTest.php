@@ -10,7 +10,7 @@ use App\Libs\Extends\MockHttpClient;
 
 class GetLibrariesListEmptyTest extends MediaBrowserTestCase
 {
-    public function test_get_libraries_list_empty_response(): void
+    public function test_libraries_list_empty(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass]) {
             $response = $this->makeResponse($this->fixture('libraries_empty'));

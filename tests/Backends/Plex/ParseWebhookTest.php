@@ -67,7 +67,7 @@ class ParseWebhookTest extends PlexTestCase
         $this->assertSame(200, $result->extra['http_code']);
     }
 
-    public function test_parse_webhook_rejects_invalid_event(): void
+    public function test_webhook_rejects_event(): void
     {
         $payload = [
             'event' => 'unknown.event',

@@ -8,16 +8,16 @@
   "packages": [
     {
       "name": "arabcoders/database",
-      "version": "v1.0.2",
+      "version": "v1.0.3",
       "source": {
         "type": "git",
         "url": "https://github.com/arabcoders/database.git",
-        "reference": "57d71addfa73bdfcea05a76b2bc860918c7cd0ff"
+        "reference": "235c583936494a095bd9f4838a384a927f9e07d3"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/arabcoders/database/zipball/57d71addfa73bdfcea05a76b2bc860918c7cd0ff",
-        "reference": "57d71addfa73bdfcea05a76b2bc860918c7cd0ff",
+        "url": "https://api.github.com/repos/arabcoders/database/zipball/235c583936494a095bd9f4838a384a927f9e07d3",
+        "reference": "235c583936494a095bd9f4838a384a927f9e07d3",
         "shasum": ""
       },
       "require": {
@@ -60,9 +60,9 @@
       ],
       "support": {
         "issues": "https://github.com/arabcoders/database/issues",
-        "source": "https://github.com/arabcoders/database/tree/v1.0.2"
+        "source": "https://github.com/arabcoders/database/tree/v1.0.3"
       },
-      "time": "2026-04-19T15:40:15+00:00"
+      "time": "2026-04-28T21:40:38+00:00"
     },
     {
       "name": "dragonmantank/cron-expression",
@@ -256,16 +256,16 @@
     },
     {
       "name": "laravel/serializable-closure",
-      "version": "v2.0.12",
+      "version": "v2.0.13",
       "source": {
         "type": "git",
         "url": "https://github.com/laravel/serializable-closure.git",
-        "reference": "a6abb4e54f6fcd3138120b9ad497f0bd146f9919"
+        "reference": "b566ee0dd251f3c4078bed003a7ce015f5ea6dce"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/laravel/serializable-closure/zipball/a6abb4e54f6fcd3138120b9ad497f0bd146f9919",
-        "reference": "a6abb4e54f6fcd3138120b9ad497f0bd146f9919",
+        "url": "https://api.github.com/repos/laravel/serializable-closure/zipball/b566ee0dd251f3c4078bed003a7ce015f5ea6dce",
+        "reference": "b566ee0dd251f3c4078bed003a7ce015f5ea6dce",
         "shasum": ""
       },
       "require": {
@@ -313,7 +313,7 @@
         "issues": "https://github.com/laravel/serializable-closure/issues",
         "source": "https://github.com/laravel/serializable-closure"
       },
-      "time": "2026-04-14T13:33:34+00:00"
+      "time": "2026-04-16T14:03:50+00:00"
     },
     {
       "name": "league/container",
@@ -3456,12 +3456,12 @@
       "source": {
         "type": "git",
         "url": "https://github.com/Roave/SecurityAdvisories.git",
-        "reference": "08cd07f04fb07fb4d316e956801d57b700cf7096"
+        "reference": "87a281378fdad8f5926efe259f6ca72e7a395e68"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/08cd07f04fb07fb4d316e956801d57b700cf7096",
-        "reference": "08cd07f04fb07fb4d316e956801d57b700cf7096",
+        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/87a281378fdad8f5926efe259f6ca72e7a395e68",
+        "reference": "87a281378fdad8f5926efe259f6ca72e7a395e68",
         "shasum": ""
       },
       "conflict": {
@@ -4077,7 +4077,7 @@
         "phpoffice/common": "<0.2.9",
         "phpoffice/math": "<=0.2",
         "phpoffice/phpexcel": "<=1.8.2",
-        "phpoffice/phpspreadsheet": "<1.30|>=2,<2.1.12|>=2.2,<2.4|>=3,<3.10|>=4,<5",
+        "phpoffice/phpspreadsheet": "<=1.30.3|>=2,<=2.1.15|>=2.2,<=2.4.4|>=3,<=3.10.4|>=4,<=5.6",
         "phppgadmin/phppgadmin": "<=7.13",
         "phpseclib/phpseclib": "<2.0.53|>=3,<3.0.51",
         "phpservermon/phpservermon": "<3.6",
@@ -4505,7 +4505,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2026-04-24T17:22:29+00:00"
+      "time": "2026-04-28T23:21:55+00:00"
     },
     {
       "name": "sebastian/cli-parser",
@@ -5758,5 +5758,5 @@
     "ext-zip": "*"
   },
   "platform-dev": {},
-  "plugin-api-version": "2.6.0"
+  "plugin-api-version": "2.9.0"
 }

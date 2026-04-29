@@ -120,7 +120,7 @@ class EmitterTest extends TestCase
         $this->assertSame('test', $this->body, 'Body is not set correctly.');
     }
 
-    public function test_emitter_body_streamable_executes_once(): void
+    public function test_emitter_streamable_once(): void
     {
         $calls = 0;
         $response = new Response(Status::OK, body: StreamedBody::create(function () use (&$calls): string {
@@ -134,7 +134,7 @@ class EmitterTest extends TestCase
         $this->assertSame(1, $calls, 'Streamed bodies must execute exactly once.');
     }
 
-    public function test_emitter_stops_on_empty_readable_chunk(): void
+    public function test_emitter_stops_empty(): void
     {
         $stream = $this->createStub(StreamInterface::class);
         $stream->method('isSeekable')->willReturn(false);

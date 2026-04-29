@@ -7,7 +7,6 @@ namespace Tests\Backends\MediaBrowser;
 use App\Backends\Common\Cache;
 use App\Backends\Common\Context;
 use App\Libs\ConfigFile;
-use App\Libs\Database\DBLayer;
 use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Extends\HttpClient;
 use App\Libs\Extends\LogMessageProcessor;
@@ -20,7 +19,6 @@ use App\Libs\Uri;
 use App\Libs\UserContext;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
-use PDO;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
@@ -48,8 +46,7 @@ abstract class MediaBrowserTestCase extends TestCase
     protected function makeContext(string $clientName, array $opts = []): Context
     {
         $cache = new Cache($this->logger, new Psr16Cache(new ArrayAdapter()));
-        $db = new PDOAdapter($this->logger, new DBLayer(new PDO('sqlite::memory:')));
-        $db->migrations('up');
+        $db = $this->createDb($this->logger);
 
         $userContext = new UserContext(
             name: $clientName,

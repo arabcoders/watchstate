@@ -48,6 +48,7 @@ class GuidTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->initTempDir();
 
         $this->handler = new TestHandler();
         $this->logger = new Logger('logger', processors: [new LogMessageProcessor()]);
@@ -148,218 +149,183 @@ class GuidTest extends TestCase
             exceptionMessage: 'does not exist'
         );
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
-        try {
-            $this->checkException(
-                closure: function () use ($tmpFile) {
-                    file_put_contents($tmpFile, 'fff: {_]');
-                    Guid::parseGUIDFile($tmpFile);
-                },
-                reason: "Failed to throw exception when the GUID file is invalid.",
-                exception: InvalidArgumentException::class,
-                exceptionMessage: 'Failed to parse GUIDs file'
-            );
-        } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
-        }
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
+        $this->checkException(
+            closure: function () use ($tmpFile) {
+                file_put_contents($tmpFile, 'fff: {_]');
+                Guid::parseGUIDFile($tmpFile);
+            },
+            reason: "Failed to throw exception when the GUID file is invalid.",
+            exception: InvalidArgumentException::class,
+            exceptionMessage: 'Failed to parse GUIDs file'
+        );
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
-        try {
-            $this->checkException(
-                closure: function () use ($tmpFile) {
-                    file_put_contents($tmpFile, 'invalid');
-                    Guid::parseGUIDFile($tmpFile);
-                },
-                reason: "Failed to throw exception when the GUID file is invalid.",
-                exception: InvalidArgumentException::class,
-                exceptionMessage: 'is not an array'
-            );
-        } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
-        }
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
+        $this->checkException(
+            closure: function () use ($tmpFile) {
+                file_put_contents($tmpFile, 'invalid');
+                Guid::parseGUIDFile($tmpFile);
+            },
+            reason: "Failed to throw exception when the GUID file is invalid.",
+            exception: InvalidArgumentException::class,
+            exceptionMessage: 'is not an array'
+        );
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
-        try {
-            $this->checkException(
-                closure: function () use ($tmpFile) {
-                    file_put_contents($tmpFile, 'version: 2.0');
-                    Guid::parseGUIDFile($tmpFile);
-                },
-                reason: "Failed to throw exception when the GUID file version is not supported.",
-                exception: InvalidArgumentException::class,
-                exceptionMessage: 'Unsupported file version'
-            );
-        } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
-        }
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
+        $this->checkException(
+            closure: function () use ($tmpFile) {
+                file_put_contents($tmpFile, 'version: 2.0');
+                Guid::parseGUIDFile($tmpFile);
+            },
+            reason: "Failed to throw exception when the GUID file version is not supported.",
+            exception: InvalidArgumentException::class,
+            exceptionMessage: 'Unsupported file version'
+        );
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
-        try {
-            Guid::parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Info, 'is empty', true),
-                "Failed to assert that the GUID file is empty."
-            );
-        } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
-        }
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
+        touch($tmpFile);
+        Guid::parseGUIDFile($tmpFile);
+        $this->assertTrue(
+            $this->logged(Level::Info, 'is empty', true),
+            "Failed to assert that the GUID file is empty."
+        );
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
-        try {
-            $this->checkException(
-                closure: function () use ($tmpFile) {
-                    file_put_contents($tmpFile, Yaml::dump(['guids' => []]));
-                    Guid::parseGUIDFile($tmpFile);
-                },
-                reason: "Should throw an exception when there are no GUIDs mapping.",
-                exception: InvalidArgumentException::class,
-                exceptionMessage: 'does not contain any GUIDs mapping'
-            );
-        } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
-        }
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
+        $this->checkException(
+            closure: function () use ($tmpFile) {
+                file_put_contents($tmpFile, Yaml::dump(['guids' => []]));
+                Guid::parseGUIDFile($tmpFile);
+            },
+            reason: "Should throw an exception when there are no GUIDs mapping.",
+            exception: InvalidArgumentException::class,
+            exceptionMessage: 'does not contain any GUIDs mapping'
+        );
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
-        try {
-            file_put_contents($tmpFile, Yaml::dump(['guids' => ['guid_imdb' => 'tt1234567']]));
-            Guid::parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'Value must be an object', true),
-                'Assert that GUID key is an array.'
-            );
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
+        file_put_contents($tmpFile, Yaml::dump(['guids' => ['guid_imdb' => 'tt1234567']]));
+        Guid::parseGUIDFile($tmpFile);
+        $this->assertTrue(
+            $this->logged(Level::Warning, 'Value must be an object', true),
+            'Assert that GUID key is an array.'
+        );
 
-            file_put_contents($tmpFile, Yaml::dump(['guids' => [['name' => 'imdb']]]));
-            Guid::parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, "name must start with 'guid_'", true),
-                'Assert that GUID name starts with guid_'
-            );
+        file_put_contents($tmpFile, Yaml::dump(['guids' => [['name' => 'imdb']]]));
+        Guid::parseGUIDFile($tmpFile);
+        $this->assertTrue(
+            $this->logged(Level::Warning, "name must start with 'guid_'", true),
+            'Assert that GUID name starts with guid_'
+        );
 
-            file_put_contents($tmpFile, Yaml::dump(['guids' => [['name' => 'guid_imdb', 'type' => INF]]]));
-            Guid::parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'type must be a string', true),
-                'Assert guid type is string.'
-            );
+        file_put_contents($tmpFile, Yaml::dump(['guids' => [['name' => 'guid_imdb', 'type' => INF]]]));
+        Guid::parseGUIDFile($tmpFile);
+        $this->assertTrue(
+            $this->logged(Level::Warning, 'type must be a string', true),
+            'Assert guid type is string.'
+        );
 
-            $yaml = [
-                'guids' => [
-                    [
-                        'name' => 'guid_foobar',
-                        'type' => 'string',
-                        'validator' => []
-                    ]
+        $yaml = [
+            'guids' => [
+                [
+                    'name' => 'guid_foobar',
+                    'type' => 'string',
+                    'validator' => []
                 ]
-            ];
+            ]
+        ];
 
-            file_put_contents($tmpFile, Yaml::dump($yaml));
+        file_put_contents($tmpFile, Yaml::dump($yaml));
 
-            Guid::parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'validator key must be an object', true),
-                'Assert validator key is an object.'
-            );
+        Guid::parseGUIDFile($tmpFile);
+        $this->assertTrue(
+            $this->logged(Level::Warning, 'validator key must be an object', true),
+            'Assert validator key is an object.'
+        );
 
-            $yaml = ag_set($yaml, 'guids.0.validator', ['pattern' => '\d']);
-            file_put_contents($tmpFile, Yaml::dump($yaml));
-            Guid::parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'validator.pattern is empty or invalid', true),
-                'Assert a message is logged when the pattern is invalid.'
-            );
+        $yaml = ag_set($yaml, 'guids.0.validator', ['pattern' => '\d']);
+        file_put_contents($tmpFile, Yaml::dump($yaml));
+        Guid::parseGUIDFile($tmpFile);
+        $this->assertTrue(
+            $this->logged(Level::Warning, 'validator.pattern is empty or invalid', true),
+            'Assert a message is logged when the pattern is invalid.'
+        );
 
-            $yaml = ag_set($yaml, 'guids.0.validator', ['pattern' => '/^\d+$/']);
-            file_put_contents($tmpFile, Yaml::dump($yaml));
-            Guid::parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'validator.example is empty or not a string', true),
-                'Assert a message is logged when the example is empty or not a string.'
-            );
+        $yaml = ag_set($yaml, 'guids.0.validator', ['pattern' => '/^\d+$/']);
+        file_put_contents($tmpFile, Yaml::dump($yaml));
+        Guid::parseGUIDFile($tmpFile);
+        $this->assertTrue(
+            $this->logged(Level::Warning, 'validator.example is empty or not a string', true),
+            'Assert a message is logged when the example is empty or not a string.'
+        );
 
-            $yaml = ag_set($yaml, 'guids.0.validator', ['pattern' => '/^\d+$/', 'example' => '(number)']);
-            file_put_contents($tmpFile, Yaml::dump($yaml));
-            Guid::parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'validator.tests key must be an object', true),
-                'Assert a message is logged when the test key is not an object.'
-            );
+        $yaml = ag_set($yaml, 'guids.0.validator', ['pattern' => '/^\d+$/', 'example' => '(number)']);
+        file_put_contents($tmpFile, Yaml::dump($yaml));
+        Guid::parseGUIDFile($tmpFile);
+        $this->assertTrue(
+            $this->logged(Level::Warning, 'validator.tests key must be an object', true),
+            'Assert a message is logged when the test key is not an object.'
+        );
 
-            $yaml = ag_set($yaml, 'guids.0.validator.tests', ['valid' => 'foo']);
-            file_put_contents($tmpFile, Yaml::dump($yaml));
-            Guid::parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'validator.tests.valid key must be an array', true),
-                'Assert a message is logged when the test key is not an object.'
-            );
+        $yaml = ag_set($yaml, 'guids.0.validator.tests', ['valid' => 'foo']);
+        file_put_contents($tmpFile, Yaml::dump($yaml));
+        Guid::parseGUIDFile($tmpFile);
+        $this->assertTrue(
+            $this->logged(Level::Warning, 'validator.tests.valid key must be an array', true),
+            'Assert a message is logged when the test key is not an object.'
+        );
 
-            $yaml = ag_set($yaml, 'guids.0.validator.tests.valid', ['d12345678']);
-            file_put_contents($tmpFile, Yaml::dump($yaml));
-            Guid::parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'does not match pattern', true),
-                'Assert a message is logged when valid test does not match the pattern.'
-            );
+        $yaml = ag_set($yaml, 'guids.0.validator.tests.valid', ['d12345678']);
+        file_put_contents($tmpFile, Yaml::dump($yaml));
+        Guid::parseGUIDFile($tmpFile);
+        $this->assertTrue(
+            $this->logged(Level::Warning, 'does not match pattern', true),
+            'Assert a message is logged when valid test does not match the pattern.'
+        );
 
-            $yaml = ag_set($yaml, 'guids.0.validator.tests', [
-                'valid' => ['12345678'],
-                'invalid' => 'foo',
-            ]);
-            file_put_contents($tmpFile, Yaml::dump($yaml));
-            Guid::parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'validator.tests.invalid key must be an array', true),
-                'Assert a message is logged when invalid test is not an array.'
-            );
+        $yaml = ag_set($yaml, 'guids.0.validator.tests', [
+            'valid' => ['12345678'],
+            'invalid' => 'foo',
+        ]);
+        file_put_contents($tmpFile, Yaml::dump($yaml));
+        Guid::parseGUIDFile($tmpFile);
+        $this->assertTrue(
+            $this->logged(Level::Warning, 'validator.tests.invalid key must be an array', true),
+            'Assert a message is logged when invalid test is not an array.'
+        );
 
-            $yaml = ag_set($yaml, 'guids.0.validator.tests', [
-                'valid' => ['12345678'],
-                'invalid' => ['12345678'],
-            ]);
-            file_put_contents($tmpFile, Yaml::dump($yaml));
-            Guid::parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'validator.tests.invalid value', true),
-                'Assert a message is logged when invalid test match the pattern.'
-            );
+        $yaml = ag_set($yaml, 'guids.0.validator.tests', [
+            'valid' => ['12345678'],
+            'invalid' => ['12345678'],
+        ]);
+        file_put_contents($tmpFile, Yaml::dump($yaml));
+        Guid::parseGUIDFile($tmpFile);
+        $this->assertTrue(
+            $this->logged(Level::Warning, 'validator.tests.invalid value', true),
+            'Assert a message is logged when invalid test match the pattern.'
+        );
 
-            $yaml = ag_set($yaml, 'guids.0.validator.tests', [
-                'valid' => ['12345678'],
-                'invalid' => ['d12345678'],
-            ]);
+        $yaml = ag_set($yaml, 'guids.0.validator.tests', [
+            'valid' => ['12345678'],
+            'invalid' => ['d12345678'],
+        ]);
 
-            file_put_contents($tmpFile, Yaml::dump($yaml));
-            Guid::parseGUIDFile($tmpFile);
+        file_put_contents($tmpFile, Yaml::dump($yaml));
+        Guid::parseGUIDFile($tmpFile);
 
-            $this->assertArrayHasKey(
-                'guid_foobar',
-                Guid::getValidators(),
-                'Assert that the GUID is added to the validators.'
-            );
-            $this->assertArrayHasKey(
-                'guid_foobar',
-                Guid::getSupported(),
-                'Assert that the GUID is added to the supported GUIDs.'
-            );
-        } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
-        }
+        $this->assertArrayHasKey(
+            'guid_foobar',
+            Guid::getValidators(),
+            'Assert that the GUID is added to the validators.'
+        );
+        $this->assertArrayHasKey(
+            'guid_foobar',
+            Guid::getSupported(),
+            'Assert that the GUID is added to the supported GUIDs.'
+        );
     }
 
     public function test_reparse()
     {
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
         $oldGuidFile = Config::get('guid.file');
         try {
             file_put_contents($tmpFile, "{'foo' => 'too' }");
@@ -372,9 +338,6 @@ class GuidTest extends TestCase
                 "Failed to assert that the GUID file is empty."
             );
         } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
             Config::save('guid.file', $oldGuidFile);
         }
     }
@@ -391,7 +354,7 @@ class GuidTest extends TestCase
 
     public function test_getValidators()
     {
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
         $oldGuidFile = Config::get('guid.file');
 
         $yaml = [
@@ -421,9 +384,6 @@ class GuidTest extends TestCase
                 'Assert that the GUID is added to the validators.'
             );
         } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
             Config::save('guid.file', $oldGuidFile);
         }
     }

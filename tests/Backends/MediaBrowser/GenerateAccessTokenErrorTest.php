@@ -9,7 +9,7 @@ use App\Backends\Jellyfin\Action\GenerateAccessToken as JellyfinGenerateAccessTo
 
 class GenerateAccessTokenErrorTest extends MediaBrowserTestCase
 {
-    public function test_generate_access_token_error_status(): void
+    public function test_access_token_error(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass]) {
             $response = $this->makeResponse(['error' => 'nope'], 401);

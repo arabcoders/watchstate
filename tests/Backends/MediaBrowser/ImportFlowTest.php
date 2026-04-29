@@ -73,7 +73,7 @@ class ImportFlowTest extends MediaBrowserTestCase
         }
     }
 
-    public function test_import_process_show_caches_guid(): void
+    public function test_import_show_caches(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass]) {
             $context = $this->makeContext($clientName);
@@ -97,7 +97,7 @@ class ImportFlowTest extends MediaBrowserTestCase
         }
     }
 
-    public function test_import_ignores_no_supported_guids(): void
+    public function test_import_ignores_no_guids(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass]) {
             $context = $this->makeContext($clientName);
@@ -125,7 +125,7 @@ class ImportFlowTest extends MediaBrowserTestCase
         }
     }
 
-    public function test_import_process_episode_adds_item(): void
+    public function test_import_episode_adds(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass, $metaClass]) {
             $context = $this->makeContext($clientName);
@@ -174,7 +174,7 @@ class ImportFlowTest extends MediaBrowserTestCase
         }
     }
 
-    public function test_jellyfin_import_uses_prefetched_show_metadata_for_episode_genres(): void
+    public function test_jellyfin_prefetched_genres(): void
     {
         $context = $this->makeContext('Jellyfin');
         $mapper = $context->userContext->mapper;
@@ -230,7 +230,7 @@ class ImportFlowTest extends MediaBrowserTestCase
         $this->assertSame(0, $metaAction->calls);
     }
 
-    public function test_jellyfin_import_prefetches_series_objects_for_parent_cache(): void
+    public function test_jellyfin_prefetches_parent(): void
     {
         $context = $this->makeContext('Jellyfin', [
             Options::LIBRARY_SELECT => ['lib-2'],

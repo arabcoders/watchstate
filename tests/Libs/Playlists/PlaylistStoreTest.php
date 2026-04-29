@@ -4,19 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Libs\Playlists;
 
-use App\Libs\Database\DBLayer;
-use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Playlists\PlaylistStore;
-use Monolog\Logger;
-use PDO;
-use PHPUnit\Framework\TestCase;
+use App\Libs\TestCase;
 
 final class PlaylistStoreTest extends TestCase
 {
     public function test_replace_backend_playlists(): void
     {
-        $db = new PDOAdapter(new Logger('test'), new DBLayer(new PDO('sqlite::memory:')));
-        $db->migrations('up');
+        $db = $this->createDb();
 
         $store = new PlaylistStore($db->getDBLayer());
 
@@ -74,10 +69,9 @@ final class PlaylistStoreTest extends TestCase
         self::assertCount(0, $updated[0]['items']);
     }
 
-    public function test_replace_backend_playlists_marks_missing_rows_deleted_and_preserves_sync_id_on_recreate(): void
+    public function test_replace_preserves_syncid(): void
     {
-        $db = new PDOAdapter(new Logger('test'), new DBLayer(new PDO('sqlite::memory:')));
-        $db->migrations('up');
+        $db = $this->createDb();
 
         $store = new PlaylistStore($db->getDBLayer());
 
@@ -144,10 +138,9 @@ final class PlaylistStoreTest extends TestCase
         self::assertSame(1, $current[0]['item_count']);
     }
 
-    public function test_content_hash_ignores_backend_item_id_when_state_id_exists(): void
+    public function test_hash_ignores_item_id(): void
     {
-        $db = new PDOAdapter(new Logger('test'), new DBLayer(new PDO('sqlite::memory:')));
-        $db->migrations('up');
+        $db = $this->createDb();
 
         $store = new PlaylistStore($db->getDBLayer());
 

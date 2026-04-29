@@ -8,15 +8,12 @@ use App\Backends\Common\ClientInterface as iClient;
 use App\Commands\State\ImportCommand;
 use App\Libs\Config;
 use App\Libs\ConfigFile;
-use App\Libs\Database\DBLayer;
-use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Entity\StateEntity;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\TestCase;
 use App\Libs\UserContext;
 use Monolog\Logger;
-use PDO;
 use PDOException;
 use PHPUnit\Framework\Assert;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -28,13 +25,12 @@ use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 final class ImportCommandTest extends TestCase
 {
-    public function test_request_phase_runs_inside_adapter_transaction_and_rolls_back_db_failures(): void
+    public function test_request_phase_rollback(): void
     {
         Config::init(require __DIR__ . '/../../../config/config.php');
 
         $logger = new Logger('test');
-        $db = new PDOAdapter($logger, new DBLayer(new PDO('sqlite::memory:')));
-        $db->migrations('up');
+        $db = $this->createDb($logger);
         $db->setOptions(['class' => new StateEntity([])]);
         $cache = new Psr16Cache(new ArrayAdapter());
         $entity = $db->insert(new StateEntity(require __DIR__ . '/../../Fixtures/EpisodeEntity.php'));

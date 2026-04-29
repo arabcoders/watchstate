@@ -14,7 +14,7 @@ use App\Libs\Options;
 
 class GetLibraryTest extends PlexTestCase
 {
-    public function test_get_library_success_to_entity(): void
+    public function test_get_library_to_entity(): void
     {
         $section = [
             'key' => '1',

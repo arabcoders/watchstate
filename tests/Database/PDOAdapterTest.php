@@ -53,13 +53,12 @@ class PDOAdapterTest extends TestCase
         $logger->pushHandler($this->handler);
         Guid::setLogger($logger);
 
-        $this->db = new PDOAdapter($logger, new DBLayer(new PDO('sqlite::memory:')));
+        $this->db = $this->createDb($logger);
         $this->db->setOptions([
             Options::DEBUG_TRACE => true,
             'class' => new StateEntity([]),
         ]);
         $this->db->setLogger($logger);
-        $this->db->migrations('up');
     }
 
     private function makeCacheStub(): CacheInterface
@@ -156,7 +155,7 @@ class PDOAdapterTest extends TestCase
         return [$episode, $movie, $altEpisodeEntity];
     }
 
-    public function test_insert_throw_exception_if_has_id(): void
+    public function test_insert_existing_throws(): void
     {
         $this->checkException(
             closure: function () {
@@ -251,7 +250,7 @@ class PDOAdapterTest extends TestCase
         );
     }
 
-    public function test_getAll_call_without_initialized_container(): void
+    public function test_getAll_no_container(): void
     {
         $this->db->setOptions(['class' => null]);
         Container::reset();
@@ -349,7 +348,7 @@ class PDOAdapterTest extends TestCase
         );
     }
 
-    public function test_retryPreparedWrite_returns_statement_for_bad_parameter_retry(): void
+    public function test_retryWrite_bad_param(): void
     {
         assert($this->db instanceof PDOAdapter);
 
@@ -547,7 +546,7 @@ class PDOAdapterTest extends TestCase
         );
     }
 
-    public function test_migrations_call_with_wrong_direction_exception(): void
+    public function test_migrations_wrong_dir(): void
     {
         $this->checkException(
             closure: fn() => $this->db->migrations('not_dd'),

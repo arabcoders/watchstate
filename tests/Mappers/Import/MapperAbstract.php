@@ -6,8 +6,6 @@ namespace Tests\Mappers\Import;
 
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
-use App\Libs\Database\DBLayer;
-use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\DBAdapterException;
@@ -20,7 +18,6 @@ use App\Libs\TestCase;
 use App\Model\Events\EventsRepository;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
-use PDO;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
@@ -54,8 +51,7 @@ abstract class MapperAbstract extends TestCase
         $this->logger->pushHandler($this->handler);
         Guid::setLogger($this->logger);
 
-        $this->db = new PDOAdapter($this->logger, new DBLayer(new PDO('sqlite::memory:')));
-        $this->db->migrations('up');
+        $this->db = $this->createDb($this->logger);
         Container::reset();
         Container::init();
         Container::add(EventsRepository::class, new EventsRepository($this->db->getDBLayer()));
@@ -247,7 +243,7 @@ abstract class MapperAbstract extends TestCase
     /**
      * @throws \Exception
      */
-    public function test_update_unwatch_conflict_no_metadata(): void
+    public function test_unwatch_conflict_no_meta(): void
     {
         $this->mapper->add(new StateEntity($this->testMovie));
         $this->mapper->commit();
@@ -287,7 +283,7 @@ abstract class MapperAbstract extends TestCase
     /**
      * @throws \Exception
      */
-    public function test_update_unwatch_conflict_no_date(): void
+    public function test_unwatch_conflict_no_date(): void
     {
         $testData = $this->testMovie;
         $timeNow = time();
@@ -523,7 +519,7 @@ abstract class MapperAbstract extends TestCase
 
     /**
      */
-    public function test_commit_with_no_episode_number(): void
+    public function test_commit_no_episode(): void
     {
         $testEpisode = new StateEntity($this->testEpisode);
         $testEpisode->episode = 0;
@@ -533,7 +529,7 @@ abstract class MapperAbstract extends TestCase
 
     /**
      */
-    public function test_insert_with_no_episode_number(): void
+    public function test_insert_no_episode(): void
     {
         $testEpisode = new StateEntity($this->testEpisode);
         $testEpisode->episode = 0;
@@ -543,7 +539,7 @@ abstract class MapperAbstract extends TestCase
 
     /**
      */
-    public function test_update_with_no_episode_number(): void
+    public function test_update_no_episode(): void
     {
         $testEpisode = new StateEntity($this->testEpisode);
         $testEpisode->episode = 0;
@@ -551,7 +547,7 @@ abstract class MapperAbstract extends TestCase
         $this->db->update($testEpisode);
     }
 
-    public function test_mapper_add_with_no_episode_number(): void
+    public function test_mapper_add_no_episode(): void
     {
         $testEpisode = new StateEntity($this->testEpisode);
         $testEpisode->episode = 0;
@@ -610,7 +606,7 @@ abstract class MapperAbstract extends TestCase
             'getOptions() should return the options we have set.');
     }
 
-    public function test_update_unwatch_with_disable_mark_unplayed(): void
+    public function test_unwatch_disable_unplayed(): void
     {
         // -- Setup: Add a watched movie to the database
         $testMovie = new StateEntity($this->testMovie);

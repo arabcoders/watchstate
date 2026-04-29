@@ -12,7 +12,7 @@ use App\Libs\Options;
 
 class ImportTest extends MediaBrowserTestCase
 {
-    public function test_import_library_select_includes_only_selected(): void
+    public function test_import_select_includes(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass]) {
             $http = $this->makeHttpClient(
@@ -42,7 +42,7 @@ class ImportTest extends MediaBrowserTestCase
         }
     }
 
-    public function test_import_library_select_inverse_excludes_selected(): void
+    public function test_import_select_excludes(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass]) {
             $http = $this->makeHttpClient(

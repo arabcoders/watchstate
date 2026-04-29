@@ -39,7 +39,7 @@ final class RateLimitMiddlewareTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_repeated_failures_apply_temporary_ban_to_the_same_endpoint(): void
+    public function test_failures_temp_ban(): void
     {
         $calls = 0;
         $middleware = new RateLimitMiddleware($this->cache);
@@ -71,7 +71,7 @@ final class RateLimitMiddlewareTest extends TestCase
         $this->assertSame(2, $calls, 'Banned requests should not reach the auth handler.');
     }
 
-    public function test_successful_response_resets_failure_counter(): void
+    public function test_success_resets_counter(): void
     {
         $calls = 0;
         $middleware = new RateLimitMiddleware($this->cache);
@@ -104,7 +104,7 @@ final class RateLimitMiddlewareTest extends TestCase
         $this->assertSame(Status::OK->value, $third->getStatusCode());
     }
 
-    public function test_failures_are_scoped_per_endpoint_fingerprint(): void
+    public function test_failures_per_endpoint(): void
     {
         $middleware = new RateLimitMiddleware($this->cache);
         $callsA = 0;
@@ -139,7 +139,7 @@ final class RateLimitMiddlewareTest extends TestCase
         $this->assertSame(1, $callsB);
     }
 
-    public function test_identifier_uses_application_client_ip_resolution(): void
+    public function test_identifier_client_ip(): void
     {
         Config::save('trust.proxy', true);
         Config::save('trust.header', 'X-Forwarded-For');

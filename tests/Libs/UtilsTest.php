@@ -55,7 +55,7 @@ class UtilsTest extends TestCase
         $this->assertSame($expected, $result, 'Nested array should be flattened with dot notation');
     }
 
-    public function test_flatArray_with_deeply_nested_array(): void
+    public function test_flatArray_deeply_nested(): void
     {
         $input = [
             'company' => [
@@ -76,7 +76,7 @@ class UtilsTest extends TestCase
         $this->assertSame($expected, $result, 'Deeply nested array should be flattened');
     }
 
-    public function test_flatArray_with_empty_nested_array(): void
+    public function test_flatArray_empty_nested(): void
     {
         $input = [
             'user' => [],
@@ -180,7 +180,7 @@ class UtilsTest extends TestCase
         $this->assertSame($expected, $result, 'Custom prefix should be prepended');
     }
 
-    public function test_flatArray_with_prefix_and_nested(): void
+    public function test_flatArray_prefix_nested(): void
     {
         $input = [
             'profile' => [
@@ -199,7 +199,7 @@ class UtilsTest extends TestCase
         $this->assertSame($expected, $result, 'Prefix should be combined with nested keys');
     }
 
-    public function test_flatArray_with_multiple_nested_levels(): void
+    public function test_flatArray_multi_nested(): void
     {
         $input = [
             'level1' => [
@@ -224,7 +224,7 @@ class UtilsTest extends TestCase
         $this->assertSame($expected, $result, 'Multiple nested levels should be flattened correctly');
     }
 
-    public function test_flatArray_with_array_containing_empty_object(): void
+    public function test_flatArray_empty_object(): void
     {
         $input = [
             'user' => new \stdClass(),
@@ -318,7 +318,7 @@ class UtilsTest extends TestCase
         $this->assertSame($expected, $result, 'Numeric keys should be included in flattened keys');
     }
 
-    public function test_flatArray_with_special_characters_in_keys(): void
+    public function test_flatArray_special_keys(): void
     {
         $input = [
             'user_name' => 'John',
@@ -339,7 +339,7 @@ class UtilsTest extends TestCase
         $this->assertSame($expected, $result, 'Special characters in keys should be preserved');
     }
 
-    public function test_flatArray_with_array_values_in_nested(): void
+    public function test_flatArray_nested_arrays(): void
     {
         $input = [
             'config' => [
@@ -380,7 +380,7 @@ class UtilsTest extends TestCase
         $this->assertSame($expected, $result, 'Custom separator should be used instead of dot');
     }
 
-    public function test_flatArray_with_separator_and_prefix(): void
+    public function test_flatArray_sep_prefix(): void
     {
         $input = [
             'profile' => [
@@ -416,7 +416,7 @@ class UtilsTest extends TestCase
         $this->assertSame($expected, $result, 'Hyphen separator should work');
     }
 
-    public function test_flatArray_with_double_colon_separator(): void
+    public function test_flatArray_colon_sep(): void
     {
         $input = [
             'app' => [
@@ -435,7 +435,7 @@ class UtilsTest extends TestCase
         $this->assertSame($expected, $result, 'Multi-character separator should work');
     }
 
-    public function test_flatArray_with_separator_deeply_nested(): void
+    public function test_flatArray_sep_deep(): void
     {
         $input = [
             'level1' => [
@@ -456,7 +456,7 @@ class UtilsTest extends TestCase
         $this->assertSame($expected, $result, 'Separator should be used at all nesting levels');
     }
 
-    public function test_flatArray_default_separator_is_dot(): void
+    public function test_flatArray_dot_default(): void
     {
         $input = [
             'user' => [
@@ -470,7 +470,7 @@ class UtilsTest extends TestCase
         $this->assertSame('John', $result['user.name']);
     }
 
-    public function test_flatArray_with_empty_string_separator(): void
+    public function test_flatArray_empty_sep(): void
     {
         $input = [
             'a' => [
@@ -487,7 +487,7 @@ class UtilsTest extends TestCase
         $this->assertSame($expected, $result, 'Empty string separator should concatenate keys');
     }
 
-    public function test_flatArray_separator_with_mixed_types(): void
+    public function test_flatArray_sep_mixed(): void
     {
         $input = [
             'string' => 'text',
@@ -512,7 +512,7 @@ class UtilsTest extends TestCase
         $this->assertSame($expected, $result, 'Separator should work with mixed types');
     }
 
-    public function test_flatArray_separator_with_numeric_keys(): void
+    public function test_flatArray_sep_numeric(): void
     {
         $input = [
             'items' => [
@@ -531,7 +531,7 @@ class UtilsTest extends TestCase
         $this->assertSame($expected, $result, 'Separator should work with numeric keys');
     }
 
-    public function test_flatArray_separator_with_prefix_and_nested(): void
+    public function test_flatArray_sep_prefix_nested(): void
     {
         $input = [
             'config' => [
@@ -552,7 +552,7 @@ class UtilsTest extends TestCase
 
     // ==================== validateServersData() Tests ====================
 
-    public function test_validateServersData_with_valid_configuration(): void
+    public function test_validate_valid_config(): void
     {
         $data = [
             'plex_main' => [
@@ -577,7 +577,7 @@ class UtilsTest extends TestCase
         $this->assertArrayNotHasKey('errors', $result, 'Valid configuration should not have errors');
     }
 
-    public function test_validateServersData_with_multiple_backends(): void
+    public function test_validate_multi_backends(): void
     {
         $data = [
             'plex_server' => [
@@ -605,7 +605,7 @@ class UtilsTest extends TestCase
         $this->assertTrue($result['valid'], 'Multiple valid backends should pass validation');
     }
 
-    public function test_validateServersData_with_invalid_backend_name(): void
+    public function test_validate_invalid_name(): void
     {
         $data = [
             'Invalid Name!' => [
@@ -627,7 +627,7 @@ class UtilsTest extends TestCase
         );
     }
 
-    public function test_validateServersData_with_invalid_backend_type(): void
+    public function test_validate_invalid_type(): void
     {
         $data = [
             'my_backend' => [
@@ -648,7 +648,7 @@ class UtilsTest extends TestCase
         );
     }
 
-    public function test_validateServersData_with_unknown_field(): void
+    public function test_validate_unknown_field(): void
     {
         $data = [
             'my_backend' => [
@@ -670,7 +670,7 @@ class UtilsTest extends TestCase
         );
     }
 
-    public function test_validateServersData_with_custom_validation_failure(): void
+    public function test_validate_custom_fail(): void
     {
         $data = [
             'my_plex' => [
@@ -694,7 +694,7 @@ class UtilsTest extends TestCase
         $this->assertStringContainsString('300', $result['errors'][0], 'Error should mention minimum value');
     }
 
-    public function test_validateServersData_with_custom_validation_success(): void
+    public function test_validate_custom_pass(): void
     {
         $data = [
             'my_plex' => [
@@ -711,7 +711,7 @@ class UtilsTest extends TestCase
         $this->assertTrue($result['valid'], 'LIBRARY_SEGMENT >= 300 should pass validation');
     }
 
-    public function test_validateServersData_with_nested_options(): void
+    public function test_validate_nested_opts(): void
     {
         $data = [
             'my_backend' => [
@@ -734,7 +734,7 @@ class UtilsTest extends TestCase
         $this->assertTrue($result['valid'], 'Nested options should pass validation');
     }
 
-    public function test_validateServersData_with_type_coercion_boolean(): void
+    public function test_validate_coerce_bool(): void
     {
         $data = [
             'my_backend' => [
@@ -749,7 +749,7 @@ class UtilsTest extends TestCase
         $this->assertTrue($result['valid'], 'Int 1 should be coerced to boolean true');
     }
 
-    public function test_validateServersData_with_type_coercion_integer(): void
+    public function test_validate_coerce_int(): void
     {
         $data = [
             'my_backend' => [
@@ -764,7 +764,7 @@ class UtilsTest extends TestCase
         $this->assertTrue($result['valid'], 'Numeric string should be coerced to integer');
     }
 
-    public function test_validateServersData_with_invalid_boolean_type(): void
+    public function test_validate_invalid_bool(): void
     {
         $data = [
             'my_backend' => [
@@ -780,7 +780,7 @@ class UtilsTest extends TestCase
         $this->assertStringContainsString('boolean', $result['errors'][0], 'Error should mention boolean type');
     }
 
-    public function test_validateServersData_with_invalid_integer_type(): void
+    public function test_validate_invalid_int(): void
     {
         $data = [
             'my_backend' => [
@@ -796,7 +796,7 @@ class UtilsTest extends TestCase
         $this->assertStringContainsString('integer', $result['errors'][0], 'Error should mention integer type');
     }
 
-    public function test_validateServersData_with_non_array_backend_data(): void
+    public function test_validate_non_array(): void
     {
         $data = [
             'my_backend' => 'not_an_array'
@@ -813,7 +813,7 @@ class UtilsTest extends TestCase
         );
     }
 
-    public function test_validateServersData_with_empty_data(): void
+    public function test_validate_empty_data(): void
     {
         $data = [];
 
@@ -822,7 +822,7 @@ class UtilsTest extends TestCase
         $this->assertTrue($result['valid'], 'Empty data should be considered valid');
     }
 
-    public function test_validateServersData_with_multiple_errors(): void
+    public function test_validate_multi_errors(): void
     {
         $data = [
             'Invalid Backend!' => [  // Invalid name
@@ -842,7 +842,7 @@ class UtilsTest extends TestCase
         $this->assertGreaterThan(0, count($result['errors']), 'Should have at least one error');
     }
 
-    public function test_validateServersData_with_webhook_configuration(): void
+    public function test_validate_webhook(): void
     {
         $data = [
             'my_plex' => [
@@ -862,7 +862,7 @@ class UtilsTest extends TestCase
         $this->assertTrue($result['valid'], 'Valid backend configuration should pass validation');
     }
 
-    public function test_validateServersData_with_complex_nested_structure(): void
+    public function test_validate_complex_nested(): void
     {
         $data = [
             'complex_backend' => [
@@ -897,7 +897,7 @@ class UtilsTest extends TestCase
         $this->assertTrue($result['valid'], 'Complex nested structure should pass validation');
     }
 
-    public function test_validateServersData_accumulates_all_errors(): void
+    public function test_validate_all_errors(): void
     {
         $data = [
             'backend1' => [
@@ -919,7 +919,7 @@ class UtilsTest extends TestCase
         $this->assertGreaterThanOrEqual(2, count($result['errors']), 'Should accumulate errors from multiple backends');
     }
 
-    public function test_validateServersData_with_minimal_valid_configuration(): void
+    public function test_validate_minimal(): void
     {
         $data = [
             'minimal' => [
@@ -935,7 +935,7 @@ class UtilsTest extends TestCase
         $this->assertTrue($result['valid'], 'Minimal valid configuration should pass validation');
     }
 
-    public function test_validateServersData_returns_array_structure(): void
+    public function test_validate_array_struct(): void
     {
         $data = [
             'test_backend' => [
@@ -969,7 +969,7 @@ class UtilsTest extends TestCase
         $this->assertIsString($result['errors'][0], 'Each error should be a string');
     }
 
-    public function test_validateServersData_with_nullable_field_null_value(): void
+    public function test_validate_nullable_null(): void
     {
         $data = [
             'test_backend' => [
@@ -987,7 +987,7 @@ class UtilsTest extends TestCase
         $this->assertTrue($result['valid'], 'Nullable field with null value should pass validation');
     }
 
-    public function test_validateServersData_with_nullable_field_valid_value(): void
+    public function test_validate_nullable_valid(): void
     {
         $data = [
             'test_backend' => [
@@ -1005,7 +1005,7 @@ class UtilsTest extends TestCase
         $this->assertTrue($result['valid'], 'Nullable field with valid value should pass validation');
     }
 
-    public function test_validateServersData_with_nullable_field_invalid_type(): void
+    public function test_validate_nullable_invalid(): void
     {
         $data = [
             'test_backend' => [
@@ -1026,7 +1026,7 @@ class UtilsTest extends TestCase
         $this->assertStringContainsString('integer', $result['errors'][0], 'Error should mention expected type');
     }
 
-    public function test_validateServersData_with_multiple_nullable_fields(): void
+    public function test_validate_nullable_multi(): void
     {
         $data = [
             'test_backend' => [
@@ -1048,7 +1048,7 @@ class UtilsTest extends TestCase
         $this->assertTrue($result['valid'], 'Multiple nullable fields with null values should pass validation');
     }
 
-    public function test_validateServersData_nullable_field_mixed_with_non_nullable(): void
+    public function test_validate_nullable_mixed(): void
     {
         $data = [
             'test_backend' => [
@@ -1072,7 +1072,7 @@ class UtilsTest extends TestCase
         $this->assertTrue($result['valid'], 'Mix of nullable and non-nullable fields should work correctly');
     }
 
-    public function test_urlsafe_b64encode_with_simple_string(): void
+    public function test_b64encode_simple(): void
     {
         $input = 'Hello World';
         $result = urlsafe_b64encode($input);
@@ -1084,7 +1084,7 @@ class UtilsTest extends TestCase
         $this->assertSame($expected, $result, 'Simple string should be encoded without padding');
     }
 
-    public function test_urlsafe_b64encode_removes_padding(): void
+    public function test_b64encode_no_padding(): void
     {
         // Test strings that would have different padding lengths
         $tests = [
@@ -1100,7 +1100,7 @@ class UtilsTest extends TestCase
         }
     }
 
-    public function test_urlsafe_b64encode_replaces_special_characters(): void
+    public function test_b64encode_replaces(): void
     {
         // Create input that will produce + and / in standard base64
         // Using binary data that specifically generates these characters
@@ -1112,7 +1112,7 @@ class UtilsTest extends TestCase
         $this->assertStringContainsString('-', $result, 'Result should contain - instead of +');
     }
 
-    public function test_urlsafe_b64encode_with_binary_data(): void
+    public function test_b64encode_binary(): void
     {
         // Test with actual binary data (like encryption keys)
         $input = random_bytes(32);
@@ -1125,13 +1125,13 @@ class UtilsTest extends TestCase
         $this->assertMatchesRegularExpression('/^[A-Za-z0-9_-]+$/', $result, 'Should only contain URL-safe characters');
     }
 
-    public function test_urlsafe_b64encode_with_empty_string(): void
+    public function test_b64encode_empty(): void
     {
         $result = urlsafe_b64encode('');
         $this->assertSame('', $result, 'Empty string should return empty string');
     }
 
-    public function test_urlsafe_b64encode_with_special_characters(): void
+    public function test_b64encode_special(): void
     {
         $input = '{"user":"admin","token":"xyz123"}';
         $result = urlsafe_b64encode($input);
@@ -1140,7 +1140,7 @@ class UtilsTest extends TestCase
         $this->assertMatchesRegularExpression('/^[A-Za-z0-9_-]+$/', $result, 'Should be URL-safe');
     }
 
-    public function test_urlsafe_b64decode_with_simple_string(): void
+    public function test_b64decode_simple(): void
     {
         $encoded = 'SGVsbG8gV29ybGQ';
         $result = urlsafe_b64decode($encoded);
@@ -1148,7 +1148,7 @@ class UtilsTest extends TestCase
         $this->assertSame('Hello World', $result, 'Should decode back to original string');
     }
 
-    public function test_urlsafe_b64decode_adds_padding_correctly(): void
+    public function test_b64decode_adds_padding(): void
     {
         // Test strings with different padding requirements
         $tests = [
@@ -1163,7 +1163,7 @@ class UtilsTest extends TestCase
         }
     }
 
-    public function test_urlsafe_b64decode_handles_url_safe_characters(): void
+    public function test_b64decode_urlsafe(): void
     {
         // Encode with standard base64 then convert to URL-safe manually
         $original = "\xff\xef\xfe";
@@ -1173,7 +1173,7 @@ class UtilsTest extends TestCase
         $this->assertSame($original, $decoded, 'Should correctly decode URL-safe characters');
     }
 
-    public function test_urlsafe_b64decode_with_binary_data(): void
+    public function test_b64decode_binary(): void
     {
         $original = random_bytes(64);
         $encoded = urlsafe_b64encode($original);
@@ -1182,13 +1182,13 @@ class UtilsTest extends TestCase
         $this->assertSame($original, $decoded, 'Should correctly encode and decode binary data');
     }
 
-    public function test_urlsafe_b64decode_with_empty_string(): void
+    public function test_b64decode_empty(): void
     {
         $result = urlsafe_b64decode('');
         $this->assertSame('', $result, 'Empty string should return empty string');
     }
 
-    public function test_urlsafe_b64_roundtrip_with_various_lengths(): void
+    public function test_b64_roundtrip_lengths(): void
     {
         // Test with different string lengths to ensure padding works correctly
         for ($length = 1; $length <= 100; $length++) {
@@ -1204,7 +1204,7 @@ class UtilsTest extends TestCase
         }
     }
 
-    public function test_urlsafe_b64_roundtrip_with_utf8_strings(): void
+    public function test_b64_roundtrip_utf8(): void
     {
         $tests = [
             'Hello World',
@@ -1222,7 +1222,7 @@ class UtilsTest extends TestCase
         }
     }
 
-    public function test_urlsafe_b64encode_output_is_url_safe(): void
+    public function test_b64encode_urlsafe(): void
     {
         // Generate various inputs and ensure output is always URL-safe
         for ($i = 0; $i < 100; $i++) {
@@ -1245,7 +1245,7 @@ class UtilsTest extends TestCase
         }
     }
 
-    public function test_urlsafe_b64_compatibility_with_jwt_standard(): void
+    public function test_b64_jwt_compat(): void
     {
         // JWT uses URL-safe base64 without padding
         // Test that our implementation matches JWT requirements
@@ -1263,7 +1263,7 @@ class UtilsTest extends TestCase
         $this->assertSame($payload, $decoded);
     }
 
-    public function test_urlsafe_b64_with_plex_jwt_keys(): void
+    public function test_b64_plex_jwt(): void
     {
         // Test with Ed25519 key sizes (as used in PlexJWT)
         $privateKey = random_bytes(32); // 32-byte seed
@@ -1281,7 +1281,7 @@ class UtilsTest extends TestCase
         $this->assertEquals(32, strlen($decodedPublic), 'Decoded key should be 32 bytes');
     }
 
-    public function test_urlsafe_b64decode_handles_standard_padding(): void
+    public function test_b64decode_std_padding(): void
     {
         // Test that decoder can handle input with padding (in case someone passes it)
         $original = 'test';
@@ -1293,7 +1293,7 @@ class UtilsTest extends TestCase
         $this->assertSame($original, $decoded, 'Should handle input with padding');
     }
 
-    public function test_urlsafe_b64_performance_with_large_data(): void
+    public function test_b64_large_data(): void
     {
         // Test with larger data (1MB)
         $largeData = random_bytes(1024 * 1024);

@@ -170,7 +170,7 @@ class CacheTest extends TestCase
         );
     }
 
-    public function test_backend_cache_withData_exception_handling(): void
+    public function test_cache_withData_exceptions(): void
     {
         $c = new Cache(
             logger: $this->logger,

@@ -65,13 +65,13 @@ class ShlexTest extends TestCase
         $this->assertSame(['hello', 'world foo', 'bar'], $result);
     }
 
-    public function test_nested_quotes_single_in_double(): void
+    public function test_nested_single_double(): void
     {
         $result = Shlex::split('"hello \'world\' foo"');
         $this->assertSame(["hello 'world' foo"], $result);
     }
 
-    public function test_nested_quotes_double_in_single(): void
+    public function test_nested_double_single(): void
     {
         $result = Shlex::split('\'hello "world" foo\'');
         $this->assertSame(['hello "world" foo'], $result);
@@ -97,7 +97,7 @@ class ShlexTest extends TestCase
         $this->assertSame(['hello world'], $result);
     }
 
-    public function test_escaped_quote_in_double_quotes(): void
+    public function test_escaped_double_quote(): void
     {
         $result = Shlex::split('"hello \\"world\\" foo"');
         $this->assertSame(['hello "world" foo'], $result);
@@ -189,7 +189,7 @@ class ShlexTest extends TestCase
         $this->assertSame(['state:export', '--backend=plex', '--dry-run', '--force'], $result);
     }
 
-    public function test_console_command_with_quoted_value(): void
+    public function test_command_quoted(): void
     {
         $result = Shlex::split('state:export --backend="my backend" --option=value');
         $this->assertSame(['state:export', '--backend=my backend', '--option=value'], $result);
@@ -213,7 +213,7 @@ class ShlexTest extends TestCase
         $this->assertSame(['state:export', '--match=*.mkv', '--exclude=*.nfo'], $result);
     }
 
-    public function test_console_command_with_special_chars_quoted(): void
+    public function test_command_special_quoted(): void
     {
         $result = Shlex::split('state:export --title="Movie (2024) - Part 1 & 2"');
         $this->assertSame(['state:export', '--title=Movie (2024) - Part 1 & 2'], $result);
@@ -284,7 +284,7 @@ class ShlexTest extends TestCase
         $this->assertSame("'hello world'", $result);
     }
 
-    public function test_shlex_quote_with_single_quote(): void
+    public function test_shlex_quote_single(): void
     {
         $result = Shlex::quote("hello'world");
         $this->assertSame("'hello'\"'\"'world'", $result);
@@ -308,7 +308,7 @@ class ShlexTest extends TestCase
         $this->assertSame("hello world 'foo bar'", $result);
     }
 
-    public function test_shlex_join_with_special_chars(): void
+    public function test_shlex_join_special(): void
     {
         $result = Shlex::join(['cmd', '--option=value', 'arg with spaces', 'test;injection']);
         $this->assertSame("cmd --option=value 'arg with spaces' 'test;injection'", $result);
