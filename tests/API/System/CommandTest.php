@@ -44,7 +44,7 @@ final class CommandTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_queue_creates_session_files(): void
+    public function test_queue(): void
     {
         $handler = new Command();
         $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
@@ -68,7 +68,7 @@ final class CommandTest extends TestCase
         $this->assertSame(0, ag($state, 'connections'));
     }
 
-    public function test_stream_rejects_expired_completed_session_and_leaves_it_for_prune(): void
+    public function test_stream_done_old(): void
     {
         $handler = new Command();
         $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
@@ -91,7 +91,28 @@ final class CommandTest extends TestCase
         $this->assertTrue(is_dir($sessionPath));
     }
 
-    public function test_cleanup_session_skips_removal_while_writer_lock_is_held(): void
+    public function test_stream_queue_old(): void
+    {
+        $handler = new Command();
+        $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
+
+        $payload = json_decode((string) $response->getBody(), true);
+        $token = (string) ag($payload, 'token');
+        $sessionPath = $this->tmpDir . '/console/' . $token;
+        $statePath = $sessionPath . '/state.json';
+
+        $state = json_decode((string) file_get_contents($statePath), true);
+        $state['expires_at'] = make_date(strtotime('-10 minutes'))->format(DATE_ATOM);
+
+        file_put_contents($statePath, json_encode($state, JSON_PRETTY_PRINT | JSON_INVALID_UTF8_IGNORE));
+
+        $streamResponse = $handler->stream($this->getRequest(), $token);
+
+        $this->assertSame(Status::NOT_FOUND->value, $streamResponse->getStatusCode());
+        $this->assertTrue(is_dir($sessionPath));
+    }
+
+    public function test_cleanup_lock(): void
     {
         $handler = new Command();
         $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
@@ -118,7 +139,7 @@ final class CommandTest extends TestCase
         $this->assertFalse(is_dir($sessionPath));
     }
 
-    public function test_stream_allows_completed_session_drain_while_connection_is_still_attached(): void
+    public function test_stream_done_live(): void
     {
         $handler = new Command();
         $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
@@ -141,7 +162,7 @@ final class CommandTest extends TestCase
         $this->assertTrue(is_dir($sessionPath));
     }
 
-    public function test_list_returns_recent_command_sessions(): void
+    public function test_list(): void
     {
         $handler = new Command();
         $first = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
@@ -173,7 +194,7 @@ final class CommandTest extends TestCase
         $this->assertNotNull(ag($items[1], 'available_until'));
     }
 
-    public function test_stream_keeps_recently_completed_session_during_reconnect_gap(): void
+    public function test_stream_done_gap(): void
     {
         $handler = new Command();
         $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
@@ -196,7 +217,51 @@ final class CommandTest extends TestCase
         $this->assertTrue(is_dir($sessionPath));
     }
 
-    public function test_cancel_removes_queued_session(): void
+    public function test_cancel_done_old(): void
+    {
+        $handler = new Command();
+        $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
+
+        $payload = json_decode((string) $response->getBody(), true);
+        $token = (string) ag($payload, 'token');
+        $sessionPath = $this->tmpDir . '/console/' . $token;
+        $statePath = $sessionPath . '/state.json';
+
+        $state = json_decode((string) file_get_contents($statePath), true);
+        $state['status'] = 'completed';
+        $state['connections'] = 0;
+        $state['finished_at'] = make_date(strtotime('-2 days'))->format(DATE_ATOM);
+
+        file_put_contents($statePath, json_encode($state, JSON_PRETTY_PRINT | JSON_INVALID_UTF8_IGNORE));
+
+        $cancelResponse = $handler->cancel($token);
+
+        $this->assertSame(Status::NOT_FOUND->value, $cancelResponse->getStatusCode());
+        $this->assertTrue(is_dir($sessionPath));
+    }
+
+    public function test_cancel_queue_old(): void
+    {
+        $handler = new Command();
+        $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
+
+        $payload = json_decode((string) $response->getBody(), true);
+        $token = (string) ag($payload, 'token');
+        $sessionPath = $this->tmpDir . '/console/' . $token;
+        $statePath = $sessionPath . '/state.json';
+
+        $state = json_decode((string) file_get_contents($statePath), true);
+        $state['expires_at'] = make_date(strtotime('-10 minutes'))->format(DATE_ATOM);
+
+        file_put_contents($statePath, json_encode($state, JSON_PRETTY_PRINT | JSON_INVALID_UTF8_IGNORE));
+
+        $cancelResponse = $handler->cancel($token);
+
+        $this->assertSame(Status::NOT_FOUND->value, $cancelResponse->getStatusCode());
+        $this->assertTrue(is_dir($sessionPath));
+    }
+
+    public function test_cancel_queue(): void
     {
         $handler = new Command();
         $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
@@ -213,7 +278,7 @@ final class CommandTest extends TestCase
         $this->assertFalse(is_dir($sessionPath));
     }
 
-    public function test_cancel_marks_running_session_for_stop(): void
+    public function test_cancel_run(): void
     {
         $handler = new Command();
         $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
@@ -236,7 +301,7 @@ final class CommandTest extends TestCase
         $this->assertFileExists($sessionPath . '/cancel.flag');
     }
 
-    public function test_attach_session_promotes_newest_connection_as_active(): void
+    public function test_attach_latest(): void
     {
         $handler = new Command();
         $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
@@ -258,7 +323,7 @@ final class CommandTest extends TestCase
         $this->assertSame(2, ag($state, 'connections'));
     }
 
-    public function test_is_active_connection_rejects_stale_connection_ids(): void
+    public function test_active_stale(): void
     {
         $handler = new Command();
         $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));

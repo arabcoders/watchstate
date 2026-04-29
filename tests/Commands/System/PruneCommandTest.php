@@ -5,146 +5,383 @@ declare(strict_types=1);
 namespace Tests\Commands\System;
 
 use App\Commands\System\PruneCommand;
-use App\Libs\Config;
-use App\Libs\Database\DBLayer;
+use App\Libs\Attributes\Scanner\Item;
+use App\Libs\Attributes\Scanner\Target;
+use App\Libs\Container;
 use App\Libs\TestCase;
 use Monolog\Logger;
-use PDO;
-use Symfony\Component\Console\Application;
-use Symfony\Component\Console\Tester\CommandTester;
+use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Output\BufferedOutput;
+use Tests\fixtures\Commands\System\FixturePruneCommand;
+use Tests\fixtures\Commands\System\TestablePruneCommand;
 
 final class PruneCommandTest extends TestCase
 {
-    private string $tmpDir;
+    public static array $calls = [];
+
+    /**
+     * @return array<string, array{name:string,cron:?string,desc:?string,enabled:bool,callable:mixed,item:Item,target:Target}>
+     */
+    public static function prunersFixture(): array
+    {
+        return [
+            'always_pruner' => [
+                'name' => 'always_pruner',
+                'cron' => null,
+                'desc' => 'Runs on every execute.',
+                'enabled' => true,
+                'callable' => static function (bool $execute): void {
+                    self::$calls[] = ['always_pruner', $execute];
+                },
+                'item' => new Item(
+                    Target::IS_CLASS,
+                    'App\\Libs\\Attributes\\Cli\\Prune',
+                    static function (bool $execute): void {
+                        self::$calls[] = ['always_pruner', $execute];
+                    },
+                    ['name' => 'always_pruner', 'desc' => 'Runs on every execute.', 'enabled' => true],
+                ),
+                'target' => Target::IS_CLASS,
+            ],
+            'events_remover' => [
+                'name' => 'events_remover',
+                'cron' => '0 5 * * *',
+                'desc' => 'Remove old events.',
+                'enabled' => true,
+                'callable' => static function (bool $execute): void {
+                    self::$calls[] = ['events_remover', $execute];
+                },
+                'item' => new Item(
+                    Target::IS_CLASS,
+                    'App\\Libs\\Attributes\\Cli\\Prune',
+                    static function (bool $execute): void {
+                        self::$calls[] = ['events_remover', $execute];
+                    },
+                    ['name' => 'events_remover', 'cron' => '0 5 * * *', 'desc' => 'Remove old events.', 'enabled' => true],
+                ),
+                'target' => Target::IS_CLASS,
+            ],
+            'logs_remover' => [
+                'name' => 'logs_remover',
+                'cron' => '*/5 * * * *',
+                'desc' => 'Remove old logs.',
+                'enabled' => true,
+                'callable' => static function (bool $execute): void {
+                    self::$calls[] = ['logs_remover', $execute];
+                },
+                'item' => new Item(
+                    Target::IS_CLASS,
+                    'App\\Libs\\Attributes\\Cli\\Prune',
+                    static function (bool $execute): void {
+                        self::$calls[] = ['logs_remover', $execute];
+                    },
+                    ['name' => 'logs_remover', 'cron' => '*/5 * * * *', 'desc' => 'Remove old logs.', 'enabled' => true],
+                ),
+                'target' => Target::IS_CLASS,
+            ],
+        ];
+    }
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->tmpDir = sys_get_temp_dir() . '/watchstate_prune_test_' . uniqid('', true);
-        mkdir($this->tmpDir, 0o755, true);
-        mkdir($this->tmpDir . '/console', 0o755, true);
+        Container::reset();
+        Container::init();
+        foreach ((array) require ROOT_PATH . '/config/services.php' as $name => $definition) {
+            Container::add($name, $definition);
+        }
 
-        Config::init([
-            'tmpDir' => $this->tmpDir,
-            'path' => $this->tmpDir,
-        ]);
+        self::$calls = [];
+        TestablePruneCommand::$due = [];
+        TestablePruneCommand::$forced = false;
+        TestablePruneCommand::$paths = [];
     }
 
     protected function tearDown(): void
     {
-        $this->removeDirectory($this->tmpDir);
-        Config::reset();
+        Container::reset();
         parent::tearDown();
     }
 
-    public function test_prune_removes_completed_console_sessions_older_than_retention(): void
+    public function test_sig(): void
     {
-        $expired = $this->createConsoleSession('expired', [
-            'status' => 'completed',
-            'connections' => 0,
-            'finished_at' => make_date(strtotime('-2 days'))->format(DATE_ATOM),
-        ]);
-        $recent = $this->createConsoleSession('recent', [
-            'status' => 'completed',
-            'connections' => 0,
-            'finished_at' => make_date(strtotime('-2 hours'))->format(DATE_ATOM),
-        ]);
-        $running = $this->createConsoleSession('running', [
-            'status' => 'running',
-            'connections' => 1,
-            'finished_at' => null,
-        ]);
+        $cmd = new PruneCommand(new Logger('test'));
 
-        $tester = $this->makeTester();
-        $status = $tester->execute([]);
-
-        self::assertSame(PruneCommand::SUCCESS, $status);
-        self::assertFalse(is_dir($expired));
-        self::assertTrue(is_dir($recent));
-        self::assertTrue(is_dir($running));
+        $this->assertSame('system:prune', $cmd->getName());
+        $this->assertTrue($cmd->getDefinition()->hasOption('run'));
+        $this->assertTrue($cmd->getDefinition()->hasOption('prune'));
+        $this->assertTrue($cmd->getDefinition()->hasOption('no-cache'));
+        $this->assertTrue($cmd->getDefinition()->hasOption('refresh-cache'));
+        $this->assertTrue($cmd->getDefinition()->hasOption('execute'));
+        $this->assertFalse($cmd->getDefinition()->hasOption('scheduled'));
     }
 
-    public function test_prune_dry_run_keeps_completed_console_sessions_older_than_retention(): void
+    public function test_list(): void
     {
-        $expired = $this->createConsoleSession('expired', [
-            'status' => 'completed',
-            'connections' => 0,
-            'finished_at' => make_date(strtotime('-2 days'))->format(DATE_ATOM),
-        ]);
+        TestablePruneCommand::$paths = [ROOT_PATH . '/tests/fixtures/Prune'];
+        $cmd = new TestablePruneCommand();
 
-        $tester = $this->makeTester();
-        $status = $tester->execute(['--dry-run' => true]);
+        $output = new BufferedOutput();
+        $status = $cmd->run(new ArrayInput([]), $output);
 
-        self::assertSame(PruneCommand::SUCCESS, $status);
-        self::assertTrue(is_dir($expired));
-    }
+        $this->assertSame(PruneCommand::SUCCESS, $status);
 
-    private function makeTester(): CommandTester
-    {
-        $application = new Application();
-        $db = new DBLayer(new PDO('sqlite::memory:'));
-        $db->exec('CREATE TABLE events (id INTEGER PRIMARY KEY, created_at TEXT)');
-        $db->exec('CREATE TABLE playlists (id INTEGER PRIMARY KEY, deleted_at INTEGER NULL)');
-        $application->addCommand(new PruneCommand(new Logger('test'), $db));
-
-        return new CommandTester($application->find(PruneCommand::ROUTE));
-    }
-
-    private function createConsoleSession(string $name, array $state): string
-    {
-        $path = $this->tmpDir . '/console/' . $name;
-        mkdir($path, 0o755, true);
-
-        file_put_contents($path . '/request.json', json_encode([
-            'command' => 'system:tasks',
-        ], JSON_PRETTY_PRINT | JSON_INVALID_UTF8_IGNORE));
-
-        file_put_contents($path . '/state.json', json_encode(array_replace([
-            'status' => 'queued',
-            'command' => 'system:tasks',
-            'cwd' => null,
-            'created_at' => make_date()->format(DATE_ATOM),
-            'expires_at' => make_date()->format(DATE_ATOM),
-            'updated_at' => null,
-            'started_at' => null,
-            'finished_at' => null,
-            'exit_code' => null,
-            'last_sequence' => 0,
-            'connection_seq' => 0,
-            'active_connection' => 0,
-            'connections' => 0,
-        ], $state), JSON_PRETTY_PRINT | JSON_INVALID_UTF8_IGNORE));
-
-        touch($path . '/stream.log');
-
-        return $path;
-    }
-
-    private function removeDirectory(string $path): void
-    {
-        if (!is_dir($path)) {
-            return;
+        $payload = json_decode($output->fetch(), true, flags: JSON_THROW_ON_ERROR);
+        $byName = [];
+        foreach ($payload as $row) {
+            $byName[$row['name']] = $row;
         }
 
-        foreach (new \DirectoryIterator($path) as $item) {
-            if ($item->isDot()) {
-                continue;
-            }
+        $this->assertGreaterThanOrEqual(3, count($payload));
+        $this->assertSame('0 5 * * *', $byName['another_pruner']['cron']);
+        $this->assertSame('Another test pruner.', $byName['another_pruner']['description']);
+        $this->assertSame('* * * * *', $byName['fake_pruner']['cron']);
+        $this->assertArrayHasKey('next', $byName['fake_pruner']);
+        $this->assertSame('*/15 * * * *', $byName['method_pruner']['cron']);
+    }
 
-            $itemPath = $item->getRealPath();
-            if (false === $itemPath) {
-                continue;
-            }
+    public function test_list_nocache(): void
+    {
+        TestablePruneCommand::$paths = [ROOT_PATH . '/tests/fixtures/Prune'];
+        $cmd = new TestablePruneCommand();
 
-            if ($item->isDir()) {
-                $this->removeDirectory($itemPath);
-                continue;
-            }
+        $status = $cmd->run(new ArrayInput([
+            '--no-cache' => true,
+        ]), new BufferedOutput());
 
-            @unlink($itemPath);
-        }
+        $this->assertSame(PruneCommand::SUCCESS, $status);
+        $this->assertTrue(TestablePruneCommand::$forced);
+    }
 
-        @rmdir($path);
+    public function test_run_refresh(): void
+    {
+        TestablePruneCommand::$paths = [ROOT_PATH . '/tests/fixtures/Prune'];
+        $cmd = new TestablePruneCommand();
+
+        $status = $cmd->run(new ArrayInput([
+            '--run' => true,
+            '--refresh-cache' => true,
+        ]), new BufferedOutput());
+
+        $this->assertSame(PruneCommand::SUCCESS, $status);
+        $this->assertTrue(TestablePruneCommand::$forced);
+    }
+
+    public function test_run_due(): void
+    {
+        TestablePruneCommand::$due = [
+            'events_remover' => true,
+            'logs_remover' => false,
+        ];
+        $cmd = new TestablePruneCommand(self::prunersFixture());
+
+        $status = $cmd->run(new ArrayInput([
+            '--run' => true,
+        ]), new BufferedOutput());
+
+        $this->assertSame(PruneCommand::SUCCESS, $status);
+        $this->assertSame(
+            [
+                ['always_pruner', false],
+                ['events_remover', false],
+            ],
+            self::$calls,
+        );
+    }
+
+    public function test_run_exec(): void
+    {
+        TestablePruneCommand::$due = [
+            'events_remover' => false,
+            'logs_remover' => true,
+        ];
+        $cmd = new TestablePruneCommand(self::prunersFixture());
+
+        $status = $cmd->run(new ArrayInput([
+            '--run' => true,
+            '--execute' => true,
+        ]), new BufferedOutput());
+
+        $this->assertSame(PruneCommand::SUCCESS, $status);
+        $this->assertSame(
+            [
+                ['always_pruner', true],
+                ['logs_remover', true],
+            ],
+            self::$calls,
+        );
+    }
+
+    public function test_run_one(): void
+    {
+        TestablePruneCommand::$due = [
+            'always_pruner' => false,
+            'events_remover' => false,
+            'logs_remover' => false,
+        ];
+        $cmd = new TestablePruneCommand(self::prunersFixture());
+
+        $status = $cmd->run(new ArrayInput([
+            '--run' => true,
+            '--prune' => 'events_remover',
+        ]), new BufferedOutput());
+
+        $this->assertSame(PruneCommand::SUCCESS, $status);
+        $this->assertSame(
+            [
+                ['events_remover', false],
+            ],
+            self::$calls,
+        );
+    }
+
+    public function test_run_name(): void
+    {
+        TestablePruneCommand::$due = [
+            'always_pruner' => false,
+            'events_remover' => false,
+            'logs_remover' => false,
+        ];
+        $cmd = new TestablePruneCommand(self::prunersFixture());
+
+        $status = $cmd->run(new ArrayInput([
+            '--run' => true,
+            '--prune' => 'Events Remover',
+        ]), new BufferedOutput());
+
+        $this->assertSame(PruneCommand::SUCCESS, $status);
+        $this->assertSame(
+            [
+                ['events_remover', false],
+            ],
+            self::$calls,
+        );
+    }
+
+    public function test_run_missing(): void
+    {
+        $cmd = new TestablePruneCommand(self::prunersFixture());
+        $output = new BufferedOutput();
+
+        $status = $cmd->run(new ArrayInput([
+            '--run' => true,
+            '--prune' => 'missing_pruner',
+        ]), $output);
+
+        $this->assertSame(PruneCommand::FAILURE, $status);
+        $this->assertStringContainsString('There are no pruner named', $output->fetch());
+    }
+
+    public function test_run_broken(): void
+    {
+        $broken = new Item(
+            Target::IS_CLASS,
+            'App\\Libs\\Attributes\\Cli\\Prune',
+            static function (): void {
+                throw new \RuntimeException('broken pruner');
+            },
+            ['name' => 'broken_pruner', 'enabled' => true],
+        );
+
+        $ok = new Item(
+            Target::IS_CLASS,
+            'App\\Libs\\Attributes\\Cli\\Prune',
+            static function (bool $execute): void {
+                self::$calls[] = ['ok_pruner', $execute];
+            },
+            ['name' => 'ok_pruner', 'enabled' => true],
+        );
+
+        $cmd = new TestablePruneCommand([
+            'broken_pruner' => [
+                'name' => 'broken_pruner',
+                'cron' => null,
+                'desc' => 'Broken',
+                'enabled' => true,
+                'callable' => $broken->getCallable(),
+                'item' => $broken,
+                'target' => $broken->getTarget(),
+            ],
+            'ok_pruner' => [
+                'name' => 'ok_pruner',
+                'cron' => null,
+                'desc' => 'Ok',
+                'enabled' => true,
+                'callable' => $ok->getCallable(),
+                'item' => $ok,
+                'target' => $ok->getTarget(),
+            ],
+        ]);
+
+        $output = new BufferedOutput();
+        $status = $cmd->run(new ArrayInput([
+            '--run' => true,
+        ]), $output);
+
+        $this->assertSame(PruneCommand::SUCCESS, $status);
+        $this->assertSame(
+            [
+                ['ok_pruner', false],
+            ],
+            self::$calls,
+        );
+        $this->assertStringContainsString('Skipping pruner', $output->fetch());
+    }
+
+    public function test_run_cron(): void
+    {
+        $bad = new Item(
+            Target::IS_CLASS,
+            'App\\Libs\\Attributes\\Cli\\Prune',
+            static function (bool $execute): void {
+                self::$calls[] = ['bad_pruner', $execute];
+            },
+            ['name' => 'bad_pruner', 'cron' => 'not-a-cron', 'enabled' => true],
+        );
+
+        $ok = new Item(
+            Target::IS_CLASS,
+            'App\\Libs\\Attributes\\Cli\\Prune',
+            static function (bool $execute): void {
+                self::$calls[] = ['ok_pruner', $execute];
+            },
+            ['name' => 'ok_pruner', 'enabled' => true],
+        );
+
+        $cmd = new FixturePruneCommand([
+            'bad_pruner' => [
+                'name' => 'bad_pruner',
+                'cron' => 'not-a-cron',
+                'desc' => 'Bad cron',
+                'enabled' => true,
+                'callable' => $bad->getCallable(),
+                'item' => $bad,
+                'target' => $bad->getTarget(),
+            ],
+            'ok_pruner' => [
+                'name' => 'ok_pruner',
+                'cron' => null,
+                'desc' => 'Always run',
+                'enabled' => true,
+                'callable' => $ok->getCallable(),
+                'item' => $ok,
+                'target' => $ok->getTarget(),
+            ],
+        ]);
+
+        $output = new BufferedOutput();
+        $status = $cmd->run(new ArrayInput([
+            '--run' => true,
+        ]), $output);
+
+        $this->assertSame(PruneCommand::SUCCESS, $status);
+        $this->assertSame(
+            [
+                ['ok_pruner', false],
+            ],
+            self::$calls,
+        );
+        $this->assertStringContainsString('Skipping pruner', $output->fetch());
     }
 }

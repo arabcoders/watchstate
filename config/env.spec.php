@@ -154,8 +154,28 @@ return (function () {
         [
             'key' => 'WS_LOGS_PRUNE_AFTER',
             'config' => 'logs.prune.after',
-            'description' => 'Prune logs after this many days.',
-            'type' => 'int',
+            'description' => 'Prune logs after this past relative time expression. For example, "-7 DAYS".',
+            'type' => 'string',
+            'validate' => function (mixed $value, array $spec = []): string {
+                if (!is_string($value) || '' === trim($value)) {
+                    throw new ValidationException('Invalid prune time. Empty value.');
+                }
+
+                $now = time();
+                $parsed = strtotime($value, $now);
+
+                if (false === $parsed) {
+                    throw new ValidationException(r('Invalid prune time expression. {value}', [
+                        'value' => $value,
+                    ]));
+                }
+
+                if ($parsed >= $now) {
+                    throw new ValidationException('Invalid prune time expression. It must resolve to a time in the past.');
+                }
+
+                return $value;
+            },
         ],
         [
             'key' => 'WS_EXPORT_THRESHOLD',

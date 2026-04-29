@@ -434,7 +434,7 @@ class HelpersTest extends TestCase
         );
     }
 
-    public function test_saveWebhookPayload(): void
+    public function test_webhook(): void
     {
         $movieData = require __DIR__ . '/../Fixtures/MovieEntity.php';
         $entity = new StateEntity($movieData);
@@ -455,11 +455,26 @@ class HelpersTest extends TestCase
             'saveWebhookPayload() should save webhook payload into given stream if it is provided otherwise it should save it into default stream.'
         );
 
-        $this->expectException(RuntimeException::class);
-        save_webhook_payload(entity: $entity, request: $request);
+        $hasTmpDir = Config::has('tmpDir');
+        $previousTmpDir = Config::get('tmpDir');
+        Config::save('tmpDir', ROOT_PATH . '/var/tmp/helpers_missing_' . uniqid('', true));
+
+        try {
+            $this->checkException(
+                closure: static fn() => save_webhook_payload(entity: $entity, request: $request),
+                reason: 'saveWebhookPayload() should throw when the default target path is unavailable.',
+                exception: RuntimeException::class,
+            );
+        } finally {
+            if ($hasTmpDir) {
+                Config::save('tmpDir', $previousTmpDir);
+            } else {
+                Config::remove('tmpDir');
+            }
+        }
     }
 
-    public function test_saveRequestPayload(): void
+    public function test_request(): void
     {
         $movieData = require __DIR__ . '/../Fixtures/MovieEntity.php';
 
@@ -493,8 +508,23 @@ class HelpersTest extends TestCase
         $this->assertSame($request->getAttributes(), $fromFile->getAttributes());
         $this->assertSame($request->getParsedBody(), $fromFile->getParsedBody());
 
-        $this->expectException(RuntimeException::class);
-        save_request_payload(request: $request);
+        $hasTmpDir = Config::has('tmpDir');
+        $previousTmpDir = Config::get('tmpDir');
+        Config::save('tmpDir', ROOT_PATH . '/var/tmp/helpers_missing_' . uniqid('', true));
+
+        try {
+            $this->checkException(
+                closure: static fn() => save_request_payload(request: $request),
+                reason: 'saveRequestPayload() should throw when the default target path is unavailable.',
+                exception: RuntimeException::class,
+            );
+        } finally {
+            if ($hasTmpDir) {
+                Config::save('tmpDir', $previousTmpDir);
+            } else {
+                Config::remove('tmpDir');
+            }
+        }
     }
 
     public function test_api_response(): void

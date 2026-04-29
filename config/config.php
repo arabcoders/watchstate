@@ -23,6 +23,11 @@ return (function () {
     $progressToMS = fn(int $v): int => $v < 60 ? $v * 1000 : 60000;
     $tokenExpiry = max(1, (int) env('WS_AUTH_TOKEN_EXPIRY', 2 * 24 * 60 * 60));
     $defaultRefreshWindow = max(60, min(24 * 60 * 60, max(60, intdiv($tokenExpiry, 4))));
+    $logsPruneAfter = (string) env('WS_LOGS_PRUNE_AFTER', '-7 DAYS');
+    $logsPruneAfterUnix = strtotime($logsPruneAfter);
+    if ('' === trim($logsPruneAfter) || false === $logsPruneAfterUnix || $logsPruneAfterUnix >= time()) {
+        $logsPruneAfter = '-7 DAYS';
+    }
 
     $config = [
         'name' => 'WatchState',
@@ -37,7 +42,7 @@ return (function () {
         'logs' => [
             'context' => (bool) env('WS_LOGS_CONTEXT', false),
             'prune' => [
-                'after' => env('WS_LOGS_PRUNE_AFTER', '-3 DAYS'),
+                'after' => $logsPruneAfter,
             ],
         ],
         'api' => [
@@ -218,6 +223,15 @@ return (function () {
         'path' => env('WS_CACHE_PATH', fn() => ag($config, 'tmpDir') . '/cache'),
     ];
 
+    $config['prune'] = [
+        'paths' => [
+            __DIR__ . '/../src/Libs/Prune',
+        ],
+        'cache' => [
+            'time' => 3600 * 6,
+        ],
+    ];
+
     $config['logger'] = [
         'file' => [
             'type' => 'stream',
@@ -370,10 +384,11 @@ return (function () {
             PruneCommand::TASK_NAME => [
                 'command' => PruneCommand::ROUTE,
                 'name' => PruneCommand::TASK_NAME,
-                'info' => 'Delete old logs and backups.',
-                'enabled' => (bool) env('WS_CRON_PRUNE', true),
-                'timer' => $checkTaskTimer((string) env('WS_CRON_PRUNE_AT', '0 */12 * * *'), '0 */12 * * *'),
-                'args' => env('WS_CRON_PRUNE_ARGS', '-v'),
+                'info' => 'Run prune handlers.',
+                'enabled' => true,
+                'timer' => '*/5 * * * *',
+                'args' => env('WS_CRON_PRUNE_ARGS', '--run --execute -v'),
+                'hide' => true,
             ],
             IndexCommand::TASK_NAME => [
                 'command' => IndexCommand::ROUTE,
