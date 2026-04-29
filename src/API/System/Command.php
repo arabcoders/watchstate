@@ -11,6 +11,7 @@ use App\Libs\Config;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Extends\Date;
+use App\Libs\Middlewares\SignatureMiddleware;
 use App\Libs\Shlex;
 use App\Libs\StreamedBody;
 use DateInterval;
@@ -45,7 +46,7 @@ final class Command
     /**
      * @throws RandomException
      */
-    #[Post(self::URL . '[/]', name: 'system.command.queue')]
+    #[Post(self::URL . '[/]', middleware: [SignatureMiddleware::class], name: 'system.command.queue')]
     public function queue(iRequest $request): iResponse
     {
         $params = DataUtil::fromRequest($request);
@@ -67,7 +68,6 @@ final class Command
         $expires = make_date()->add($ttl);
 
         try {
-            $this->cleanupExpiredSessions();
             $this->createSession($code, $params->getAll(), $expires->format(Date::ATOM));
         } catch (Throwable $e) {
             return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);
@@ -95,7 +95,6 @@ final class Command
         }
 
         if ($this->isQueuedAndExpired($state)) {
-            $this->cleanupSession($sessionPath);
             return api_error('Token is invalid or has expired.', Status::NOT_FOUND);
         }
 
@@ -150,6 +149,14 @@ final class Command
             return api_error('Token is invalid or has expired.', Status::NOT_FOUND);
         }
 
+        if ($this->isCompletedAndExpired($state)) {
+            return api_error('Token is invalid or has expired.', Status::NOT_FOUND);
+        }
+
+        if ($this->isQueuedAndExpired($state)) {
+            return api_error('Token is invalid or has expired.', Status::NOT_FOUND);
+        }
+
         if (self::STATUS_QUEUED === ag($state, 'status')) {
             $this->cleanupSession($sessionPath);
 
@@ -185,7 +192,7 @@ final class Command
         $command = ag($params, 'command');
         $pty = false !== ag($params, 'pty', true);
 
-        if (!is_array($params) || !is_string($command) || '' === trim($command)) {
+        if (!is_array($params) || !is_string($command) || null === trim($command)) {
             $this->failSession($sessionPath, 'No command was given.');
             return;
         }
@@ -550,30 +557,6 @@ final class Command
         }
 
         return $handle;
-    }
-
-    private function cleanupExpiredSessions(): void
-    {
-        $root = $this->getSessionsRoot();
-        if (false === is_dir($root)) {
-            return;
-        }
-
-        foreach (new DirectoryIterator($root) as $item) {
-            if ($item->isDot() || false === $item->isDir()) {
-                continue;
-            }
-
-            $sessionPath = $item->getRealPath();
-            if (false === $sessionPath) {
-                continue;
-            }
-
-            $state = $this->readState($sessionPath);
-            if (null === $state || $this->isQueuedAndExpired($state)) {
-                $this->cleanupSession($sessionPath);
-            }
-        }
     }
 
     /**

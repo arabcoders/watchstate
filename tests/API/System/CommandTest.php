@@ -7,6 +7,8 @@ namespace Tests\API\System;
 use App\API\System\Command;
 use App\Libs\Config;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Attributes\Route\Post;
+use App\Libs\Middlewares\SignatureMiddleware;
 use App\Libs\TestCase;
 use DirectoryIterator;
 use Tests\Support\RequestResponseTrait;
@@ -366,5 +368,15 @@ final class CommandTest extends TestCase
         }
 
         rmdir($path);
+    }
+
+    public function test_route_sign(): void
+    {
+        $reflection = new \ReflectionMethod(Command::class, 'queue');
+        $attrs = $reflection->getAttributes(Post::class);
+
+        self::assertCount(1, $attrs);
+        $attr = $attrs[0]->newInstance();
+        self::assertSame([SignatureMiddleware::class], $attr->middleware);
     }
 }

@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue';
 import { useStorage } from '@vueuse/core';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
-import { request, parse_api_response } from '~/utils';
+import { request, signBody, formatCommandEcho, parse_api_response } from '~/utils';
 import type { ConsoleSessionItem, GenericError, GenericResponse, PaginatedResponse } from '~/types';
 
 type ConsoleEventMessage = {
@@ -659,9 +659,23 @@ export function useConsoleStream() {
     state.value.completedAt = 0;
 
     try {
+      const body = JSON.stringify({ command });
+      const signingSecret = token.value.trim();
+
+      if (!signingSecret) {
+        const message = 'Missing credentials required to sign the command request.';
+        setFatalError(message);
+        return { status: 'error', message };
+      }
+
+      const signature = await signBody(body, signingSecret);
       const response = await request('/system/command', {
         method: 'POST',
-        body: JSON.stringify({ command }),
+        body,
+        headers: {
+          'X-Sign-With': 'token',
+          'X-Signature': signature,
+        },
       });
 
       const json = await parse_api_response<{ token: string }>(response);
@@ -773,6 +787,7 @@ export function useConsoleStream() {
     state.value.completedAt = 0;
     state.value.token = item.token;
     state.value.chunks = [];
+    appendStateChunk(formatCommandEcho(undefined, state.value.exitCode, item.displayCommand));
 
     setPersistedSession({
       token: item.token,

@@ -315,6 +315,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import {
   request,
+  formatCommandEcho,
   disableOpacity,
   enableOpacity,
   notification,
@@ -511,7 +512,7 @@ const restoreBufferedTerminalOutput = (): void => {
     return;
   }
 
-  terminal.value.clear();
+  terminal.value.reset();
   renderedChunkCount = 0;
 
   if (streamState.value.chunks.length < 1) {
@@ -582,7 +583,9 @@ const scheduleFlush = (): void => {
 };
 
 const writePrompt = (value: string): void => {
-  appendOutput(`(${streamState.value.exitCode}) ~ ${value}\n`);
+  appendOutput(
+    formatCommandEcho(streamState.value.chunks.at(-1), streamState.value.exitCode, value),
+  );
 };
 
 const writeFooter = (): void => {
@@ -670,10 +673,8 @@ const reSizeTerminal = (): void => {
 };
 
 const clearOutput = async (): Promise<void> => {
-  if (terminal.value) {
-    terminal.value.clear();
-  }
   clearStreamOutput();
+  restoreBufferedTerminalOutput();
   focusCommandInput();
 };
 

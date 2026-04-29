@@ -81,7 +81,7 @@ class TestCase extends \PHPUnit\Framework\TestCase
         ?ImportInterface $mapper = null,
         array $data = [],
     ): UserContext {
-        static $instances = null;
+        static $instances = [];
 
         if (null !== ($instances[$name] ?? null)) {
             return $instances[$name];

@@ -2524,6 +2524,17 @@ Deletes all non-pending events.
 #### POST /v1/api/system/command
 Queues a one-time command for execution.
 
+**Headers**:
+- Standard API auth is still required.
+- `X-Signature: sha256=<hmac>`
+- `X-Sign-With: token|api`
+
+`X-Sign-With` selects which presented credential is used to verify the HMAC over the raw JSON body:
+- `token`: verify against the authenticated user token
+- `api`: verify against the presented API key
+
+If `X-Sign-With` is omitted, WatchState defaults to `api`.
+
 **Body**:
 ```json
 {
@@ -2545,6 +2556,8 @@ Queues a one-time command for execution.
 
 **Errors**:
 - `400 Bad Request` if the body is empty or `command` is missing/invalid.
+- `400 Bad Request` if the request signature is missing, malformed, or uses an unsupported verifier/algorithm.
+- `403 Forbidden` if the signature does not match the selected credential.
 
 ---
 
@@ -2577,7 +2590,7 @@ Lists recent command sessions that are still available for attach or replay.
 **Notes**:
 - Queued and running sessions use `expires_at` as their availability window.
 - Completed sessions remain replayable for about 24 hours after `finished_at`.
-- Expired completed sessions are eventually automatically pruned.
+- Expired queued and completed sessions are eventually automatically pruned.
 
 ---
 
@@ -2634,6 +2647,7 @@ Requests cancellation for a queued or running command.
 
 **Notes**:
 - Queued sessions are removed immediately.
+- Expired queued or completed sessions return `404 Not Found` until prune removes the session directory.
 - Running sessions are marked for cancellation and stop as soon as the worker loop observes the cancel request.
 - Completed sessions return `202 Accepted` with `Command has already completed.`
 
