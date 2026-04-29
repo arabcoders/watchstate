@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "f28211bdae61b18c028802e692ca67190be919b8",
-    "date": "2026-04-28T22:27:32+00:00",
+    "full_sha": "8a8f04553ea568f258080c9ee3edcf5e84cf1e6a",
+    "date": "2026-04-29T05:50:26+00:00",
     "commits": [
+      {
+        "sha": "8a8f0455",
+        "full_sha": "8a8f04553ea568f258080c9ee3edcf5e84cf1e6a",
+        "message": "feat: implement HMAC signature verification for command requests.",
+        "author": "arabcoders",
+        "date": "2026-04-29T05:50:26+00:00"
+      },
+      {
+        "sha": "6731b4c1",
+        "full_sha": "6731b4c124509e5b0a9d8f223740a77eeafb912d",
+        "message": "refactor: how we handle and discover prune handlers",
+        "author": "arabcoders",
+        "date": "2026-04-29T04:30:22+00:00"
+      },
       {
         "sha": "f28211bd",
         "full_sha": "f28211bdae61b18c028802e692ca67190be919b8",
