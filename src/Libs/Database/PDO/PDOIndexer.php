@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Libs\Database\PDO;
 
-use App\Libs\Config;
 use App\Libs\Database\DBLayer;
-use App\Libs\Entity\StateInterface as iState;
-use App\Libs\Guid;
+use App\Libs\Database\ExternalIndexDiff;
+use App\Libs\Database\StateIndexSchema;
 use App\Libs\Options;
 use App\Libs\UserContext;
+use arabcoders\database\Connection;
+use PDO;
 use Psr\Log\LoggerInterface as iLogger;
 
 /**
@@ -19,37 +20,28 @@ use Psr\Log\LoggerInterface as iLogger;
  */
 final class PDOIndexer
 {
-    /**
-     * @var array<string> An array of column names to be ignored in the index.
-     */
-    private const array INDEX_IGNORE_ON = [
-        iState::COLUMN_ID,
-        iState::COLUMN_PARENT,
-        iState::COLUMN_GUIDS,
-        iState::COLUMN_EXTRA,
-        iState::COLUMN_META_DATA,
-    ];
-
-    /**
-     * @var array<string> Extra indexes for backend sub columns.
-     */
-    private const array BACKEND_INDEXES = [
-        iState::COLUMN_ID,
-        iState::COLUMN_META_SHOW,
-        iState::COLUMN_META_LIBRARY,
-        iState::COLUMN_META_MULTI,
-    ];
+    private readonly PDO $pdo;
 
     /**
      * Class constructor.
      *
-     * @param DBLayer $db The PDO object used for database connections and queries.
+     * @param DBLayer|Connection|PDO $db The database layer or package connection used for index operations.
      * @param iLogger $logger The logger object used for logging information.
      */
     public function __construct(
-        private DBLayer $db,
+        DBLayer|Connection|PDO $db,
         private iLogger $logger,
-    ) {}
+        private ?StateIndexSchema $schema = null,
+        private ?ExternalIndexDiff $diff = null,
+    ) {
+        if ($db instanceof DBLayer) {
+            $this->pdo = $db->getBackend();
+        } else if ($db instanceof Connection) {
+            $this->pdo = $db->pdo;
+        } else {
+            $this->pdo = $db;
+        }
+    }
 
     /**
      * Ensures the existence of required indexes in the "state" table.
@@ -63,110 +55,16 @@ final class PDOIndexer
      */
     public function ensureIndex(array $opts = []): bool
     {
-        $queries = [];
-
-        $drop = 'DROP INDEX IF EXISTS "${name}"';
-        $insert = 'CREATE INDEX IF NOT EXISTS "${name}" ON "state" (${expr});';
-
         $reindex = (bool) ag($opts, 'force-reindex');
         $inDryRunMode = (bool) ag($opts, Options::DRY_RUN);
 
-        if (true === $reindex) {
-            $this->logger->debug('PDOIndexer: Force reindex is called.');
-            $sql = "select name FROM sqlite_master WHERE tbl_name = 'state' AND type = 'index';";
-
-            foreach ($this->db->query($sql) as $row) {
-                $name = ag($row, 'name');
-                $query = r(
-                    text: $drop,
-                    context: ['name' => $name],
-                    opts: ['tag_left' => '${', 'tag_right' => '}'],
-                );
-
-                $this->logger->info("PDOIndexer: Dropping Index '{index}'.", [
-                    'index' => $name,
-                    'query' => $query,
-                ]);
-
-                $queries[] = $query;
-            }
-        }
-
-        foreach (iState::ENTITY_KEYS as $column) {
-            if (true === in_array($column, self::INDEX_IGNORE_ON, true)) {
-                continue;
-            }
-
-            $query = r(
-                text: $insert,
-                context: [
-                    'name' => sprintf('state_%s', $column),
-                    'expr' => sprintf('"%s"', $column),
-                ],
-                opts: [
-                    'tag_left' => '${',
-                    'tag_right' => '}',
-                ],
-            );
-
-            $this->logger->info("PDOIndexer: Generating index on '{column}'.", [
-                'column' => $column,
-                'query' => $query,
-            ]);
-
-            $queries[] = $query;
-        }
-
-        // -- Ensure main parent/guids sub keys are indexed.
-        foreach (array_keys(Guid::getSupported()) as $subKey) {
-            foreach ([iState::COLUMN_PARENT, iState::COLUMN_GUIDS] as $column) {
-                $query = r(
-                    text: $insert,
-                    context: [
-                        'name' => sprintf('state_%s_%s', $column, $subKey),
-                        'expr' => sprintf("JSON_EXTRACT(%s,'$.%s')", $column, $subKey),
-                    ],
-                    opts: ['tag_left' => '${', 'tag_right' => '}'],
-                );
-
-                $this->logger->debug("PDOIndexer: Generating index on '{column}' column '{key}' key.", [
-                    'column' => $column,
-                    'key' => $subKey,
-                    'query' => $query,
-                ]);
-
-                $queries[] = $query;
-            }
-        }
-
         if (null !== ($userContext = $opts[UserContext::class] ?? null)) {
             assert($userContext instanceof UserContext, 'Expected UserContext for indexer options.');
-            $servers = $userContext->config->getAll();
-        } else {
-            $servers = Config::get('servers', []);
         }
 
-        // -- Ensure backends metadata.id,metadata.show are indexed
-        foreach (array_keys($servers) as $backend) {
-            foreach (self::BACKEND_INDEXES as $subKey) {
-                $query = r(
-                    text: $insert,
-                    context: [
-                        'name' => sprintf('state_%s_%s_%s', iState::COLUMN_META_DATA, $backend, $subKey),
-                        'expr' => sprintf("JSON_EXTRACT(%s,'$.%s.%s')", iState::COLUMN_META_DATA, $backend, $subKey),
-                    ],
-                    opts: ['tag_left' => '${', 'tag_right' => '}'],
-                );
-
-                $this->logger->info("PDOIndexer: Generating index on '{backend}' metadata column '{key}' key.", [
-                    'backend' => $backend,
-                    'key' => $subKey,
-                    'query' => $query,
-                ]);
-
-                $queries[] = $query;
-            }
-        }
+        $queries = true === $reindex
+            ? $this->diff()->rebuildSql($this->pdo, $this->schema(), $userContext ?? null)
+            : $this->diff()->upsertSql($this->pdo, $this->schema(), $userContext ?? null);
 
         if (true === $inDryRunMode) {
             return false;
@@ -174,9 +72,9 @@ final class PDOIndexer
 
         $startedTransaction = false;
 
-        if (!$this->db->inTransaction()) {
+        if (!$this->pdo->inTransaction()) {
             $startedTransaction = true;
-            $this->db->start();
+            $this->pdo->beginTransaction();
         }
 
         foreach ($queries as $query) {
@@ -184,17 +82,27 @@ final class PDOIndexer
                 'query' => $query,
                 'start' => make_date(),
             ]);
-            $this->db->query($query);
+            $this->pdo->exec($query);
         }
 
-        if ($startedTransaction && $this->db->inTransaction()) {
-            $this->db->commit();
+        if ($startedTransaction && $this->pdo->inTransaction()) {
+            $this->pdo->commit();
         }
 
         if (true === $reindex) {
-            $this->db->query('VACUUM;');
+            $this->pdo->exec('VACUUM;');
         }
 
         return true;
+    }
+
+    private function diff(): ExternalIndexDiff
+    {
+        return $this->diff ??= new ExternalIndexDiff();
+    }
+
+    private function schema(): StateIndexSchema
+    {
+        return $this->schema ??= new StateIndexSchema();
     }
 }

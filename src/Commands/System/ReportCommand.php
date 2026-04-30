@@ -8,7 +8,8 @@ use App\API\Backends\Index;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Database\PackageMigrationFactory;
+use App\Libs\Database\PdoFactory;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Extends\Date;
@@ -51,14 +52,13 @@ final class ReportCommand extends Command
     /**
      * Class Constructor.
      *
-     * @param iDB $db An instance of the iDB class used for database operations.
-     *
      * @return void
      */
     public function __construct(
-        private readonly iDB $db,
         private readonly iImport $mapper,
         private readonly iLogger $logger,
+        private readonly PdoFactory $pdoFactory,
+        private readonly PackageMigrationFactory $migrations,
     ) {
         parent::__construct();
     }
@@ -117,7 +117,13 @@ final class ReportCommand extends Command
         $this->filter(r('Data path: <flag>{answer}</flag>', ['answer' => Config::get('path')]));
         $this->filter(r('Temp path: <flag>{answer}</flag>', ['answer' => Config::get('tmpDir')]));
         $this->filter(
-            r('Database migrated?: <flag>{answer}</flag>', ['answer' => $this->db->isMigrated() ? 'Yes' : 'No']),
+            r('Database migrated?: <flag>{answer}</flag>', [
+                'answer' => $this->migrations->isMigrated(
+                    $this->pdoFactory->createForFile((string) Config::get('database.file')),
+                )
+                    ? 'Yes'
+                    : 'No',
+            ]),
         );
         $this->filter(
             r("Does the '.env' file exists? <flag>{answer}</flag>", [

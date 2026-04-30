@@ -6,13 +6,14 @@ use App\Backends\Emby\EmbyClient;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Backends\Plex\PlexClient;
 use App\Commands\Events\DispatchCommand;
+use App\Commands\Database\IndexCommand;
 use App\Commands\State\BackupCommand;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
 use App\Commands\State\PlaylistCommand;
 use App\Commands\State\ValidateCommand;
-use App\Commands\System\IndexCommand;
 use App\Commands\System\PruneCommand;
+use App\Libs\Database\PdoFactory;
 use App\Libs\Mappers\Import\DirectMapper;
 use Cron\CronExpression;
 use Monolog\Level;
@@ -74,7 +75,7 @@ return (function () {
             'path' => fix_path(env('WS_WEBUI_PATH', __DIR__ . '/../public/exported')),
         ],
         'database' => [
-            'version' => 'v01',
+            'version' => 'v02',
         ],
         'library' => [
             // -- this is used to segment backends requests into pages.
@@ -138,7 +139,7 @@ return (function () {
 
     $config['tmpDir'] = fix_path(env('WS_TMP_DIR', ag($config, 'path')));
 
-    $dbFile = ag($config, 'path') . '/db/watchstate_' . ag($config, 'database.version') . '.db';
+    $dbFile = ag($config, 'path') . '/db/' . PdoFactory::DB_FILE;
 
     $config['api']['logfile'] = ag($config, 'tmpDir') . '/logs/access.' . $logDateFormat . '.log';
 

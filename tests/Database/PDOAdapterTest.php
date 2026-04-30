@@ -8,6 +8,7 @@ use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Database\DBLayer;
+use App\Libs\Database\PackageMigrationFactory;
 use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
@@ -562,17 +563,6 @@ class PDOAdapterTest extends TestCase
         );
     }
 
-    public function test_migrations_wrong_dir(): void
-    {
-        $this->checkException(
-            closure: fn() => $this->db->migrations('not_dd'),
-            reason: 'When calling migrations with wrong direction, an exception should be thrown.',
-            exception: DBException::class,
-            exceptionMessage: 'Unknown migration direction',
-            exceptionCode: 91,
-        );
-    }
-
     public function test_commit_transaction_on__destruct(): void
     {
         $started = $this->db->getDBLayer()->start();
@@ -642,27 +632,54 @@ class PDOAdapterTest extends TestCase
         $this->assertCount(0, $item2_db->apply($item2)->diff(), 'When item is found, it should be returned.');
     }
 
-    public function test_ensureIndex()
+    public function test_indexer()
     {
-        $this->assertTrue($this->db->ensureIndex(), 'When ensureIndex is called, it should return true.');
-    }
+        $logger = new Logger('logger');
 
-    public function test_migrateData()
-    {
-        Config::init(require __DIR__ . '/../../config/config.php');
-        $this->assertFalse(
-            $this->db->migrateData(Config::get('database.version')),
-            'At this point we are starting with new database, so migration should be false.'
-        );
-    }
-
-    public function test_maintenance()
-    {
-        Config::init(require __DIR__ . '/../../config/config.php');
         $this->assertTrue(
-            0 === $this->db->maintenance(),
-            'At this point we are starting with new database, so maintenance should be false.'
+            ensure_indexes($this->db->getDBLayer(), $logger),
+            'When ensureIndex is called, it should return true.'
         );
+    }
+
+    public function test_indexer_manages_external_indexes(): void
+    {
+        $originalConfig = Config::getAll();
+        Config::init(require ROOT_PATH . '/config/config.php');
+        Config::save('servers', [
+            'test_plex' => [],
+            'test_jellyfin' => [],
+        ]);
+
+        $pdo = new PDO('sqlite::memory:');
+        $db = new PDOAdapter(new Logger('logger'), new DBLayer($this->createConnection($pdo)));
+        $migrations = new PackageMigrationFactory();
+        $expected = $this->expectedManagedIndexes(['test_plex', 'test_jellyfin']);
+
+        try {
+            if (false === $migrations->isMigrated($pdo)) {
+                $migrations->migrate($pdo, dryRun: false);
+            }
+
+            self::assertSame([], $this->stateManagedIndexes($pdo));
+            $logger = new Logger('logger');
+
+            self::assertTrue(ensure_indexes($db->getDBLayer(), $logger));
+            self::assertSame($expected, $this->stateManagedIndexes($pdo));
+
+            self::assertTrue(ensure_indexes($db->getDBLayer(), $logger));
+            self::assertSame($expected, $this->stateManagedIndexes($pdo));
+
+            self::assertTrue(ensure_indexes($db->getDBLayer(), $logger, ['force-reindex' => true]));
+            self::assertSame($expected, $this->stateManagedIndexes($pdo));
+        } finally {
+            Config::init($originalConfig);
+        }
+    }
+
+    public function test_maintenance_db_layer()
+    {
+        $this->assertInstanceOf(PDOStatement::class, $this->db->getDBLayer()->query('VACUUM'), 'When maintenance is run, sqlite vacuum should succeed.');
     }
 
     public function test_reset()
@@ -700,21 +717,53 @@ class PDOAdapterTest extends TestCase
         );
     }
 
-    public function test_isMigrated()
+    /**
+     * @param array<int,string> $backends
+     *
+     * @return array<int,string>
+     */
+    private function expectedManagedIndexes(array $backends): array
     {
-        Config::init(require __DIR__ . '/../../config/config.php');
-        $db = new PDOAdapter(new Logger('logger'), new DBLayer(new PDO('sqlite::memory:')));
-        $this->assertFalse(
-            $db->isMigrated(),
-            'At this point we are starting with new database, so migration should be false.'
-        );
-        $this->assertTrue(
-            0 === $db->migrations('up'),
-            'When migrations are run, it should return true.'
-        );
-        $this->assertTrue(
-            $db->isMigrated(),
-            'When migrations are run, it should return true.'
-        );
+        $indexes = [];
+
+        foreach (array_keys(Guid::getSupported()) as $subKey) {
+            foreach ([iState::COLUMN_PARENT, iState::COLUMN_GUIDS] as $column) {
+                $indexes[] = sprintf('state_%s_%s', $column, $subKey);
+            }
+        }
+
+        foreach ($backends as $backend) {
+            foreach ([iState::COLUMN_ID, iState::COLUMN_META_SHOW, iState::COLUMN_META_LIBRARY, iState::COLUMN_META_MULTI] as $subKey) {
+                $indexes[] = sprintf('state_%s_%s_%s', iState::COLUMN_META_DATA, $backend, $subKey);
+            }
+        }
+
+        sort($indexes);
+
+        return $indexes;
     }
+
+    /**
+     * @return array<int,string>
+     */
+    private function stateManagedIndexes(PDO $pdo): array
+    {
+        $indexes = $pdo->query(
+            "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'state' ORDER BY name"
+        )?->fetchAll(PDO::FETCH_COLUMN);
+
+        $managed = array_values(array_filter(
+            false === is_array($indexes) ? [] : $indexes,
+            fn(mixed $name): bool => true === is_string($name) && (
+                str_starts_with($name, 'state_parent_')
+                || str_starts_with($name, 'state_guids_')
+                || str_starts_with($name, 'state_metadata_')
+            ),
+        ));
+
+        sort($managed);
+
+        return $managed;
+    }
+
 }

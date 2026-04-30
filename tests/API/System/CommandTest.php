@@ -165,7 +165,7 @@ final class CommandTest extends TestCase
     {
         $handler = new Command();
         $first = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
-        $second = $handler->queue($this->getRequest(post: ['command' => 'system:index']));
+        $second = $handler->queue($this->getRequest(post: ['command' => 'db:index']));
 
         $firstToken = (string) ag(json_decode((string) $first->getBody(), true), 'token');
         $secondToken = (string) ag(json_decode((string) $second->getBody(), true), 'token');

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Commands\System;
+namespace App\Commands\Database;
 
 use App\Command;
 use App\Libs\Attributes\DI\Inject;
@@ -21,7 +21,7 @@ use Symfony\Component\Console\Output\OutputInterface as iOutput;
 #[Cli(command: self::ROUTE)]
 final class MaintenanceCommand extends Command
 {
-    public const string ROUTE = 'system:db:maintenance';
+    public const string ROUTE = 'db:maintenance';
 
     /**
      * Class constructor.
@@ -71,7 +71,7 @@ final class MaintenanceCommand extends Command
                 'user' => $userContext->name,
             ]), iOutput::VERBOSITY_VERBOSE);
 
-            $userContext->db->maintenance();
+            $userContext->db->getDBLayer()->query('VACUUM');
         }
 
         return self::SUCCESS;

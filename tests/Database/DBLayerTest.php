@@ -7,7 +7,6 @@ namespace Tests\Database;
 
 use App\Libs\Config;
 use App\Libs\Database\DBLayer;
-use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Exceptions\DBLayerException;
 use App\Libs\Exceptions\ErrorException;
 use App\Libs\Exceptions\RuntimeException;
@@ -58,7 +57,9 @@ class DBLayerTest extends TestCase
             ]);
         }
 
-        $this->db = new DBLayer(new PDO(dsn: 'sqlite::memory:', options: Config::get('database.options', [])));
+        $this->db = new DBLayer(
+            $this->createConnection(new PDO(dsn: 'sqlite::memory:', options: Config::get('database.options', [])))
+        );
         $this->initTestSchema($this->db->getBackend());
 
         foreach (Config::get('database.exec.sqlite', []) as $cmd) {
@@ -113,13 +114,15 @@ class DBLayerTest extends TestCase
                 $options[PDO::ATTR_ERRMODE] = PDO::ERRMODE_SILENT;
 
                 $pdo = new PDO(dsn: 'sqlite::memory:', options: $options);
-                $db = new DBLayer($pdo);
+                $connection = $this->createConnection($pdo);
+                $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_SILENT);
+                $db = new DBLayer($connection);
 
                 foreach (Config::get('database.exec.sqlite', []) as $cmd) {
-                    $this->db->exec($cmd);
+                    $db->exec($cmd);
                 }
 
-                new PDOAdapter(new Logger('test'), $this->db)->migrations('up');
+                $this->initTestSchema($pdo);
 
                 return $db->query(sql: 'SELECT * FROM test WHERE zid = :id');
             },

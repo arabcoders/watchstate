@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Libs;
 
 use App\Libs\Database\DBLayer;
+use App\Libs\Database\PackageMigrationFactory;
 use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface;
+use arabcoders\database\Connection as DatabaseConnection;
+use arabcoders\database\Dialect\DialectFactory;
 use Closure;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\TestHandler;
@@ -60,9 +63,22 @@ class TestCase extends \PHPUnit\Framework\TestCase
     protected function createDb(?LoggerInterface $logger = null): PDOAdapter
     {
         $logger ??= new Logger('test', [new NullHandler()]);
-        $db = new PDOAdapter($logger, new DBLayer(new PDO('sqlite::memory:')));
-        $db->migrations('up');
+        $pdo = new PDO('sqlite::memory:');
+        $db = new PDOAdapter($logger, new DBLayer($this->createConnection($pdo)));
+
+        $migrations = new PackageMigrationFactory();
+        if (false === $migrations->isMigrated($pdo)) {
+            $migrations->migrate($pdo, dryRun: false);
+        }
+
+        ensure_indexes($pdo, $logger);
+
         return $db;
+    }
+
+    protected function createConnection(PDO $pdo): DatabaseConnection
+    {
+        return new DatabaseConnection($pdo, DialectFactory::fromPdo($pdo));
     }
 
     /**

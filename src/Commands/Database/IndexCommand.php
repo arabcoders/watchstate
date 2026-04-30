@@ -2,11 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Commands\System;
+namespace App\Commands\Database;
 
 use App\Command;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
+use App\Libs\Config;
+use App\Libs\Container;
+use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
@@ -24,7 +28,7 @@ use Symfony\Component\Console\Output\OutputInterface as iOutput;
 #[Cli(command: self::ROUTE)]
 final class IndexCommand extends Command
 {
-    public const string ROUTE = 'system:index';
+    public const string ROUTE = 'db:index';
 
     public const string TASK_NAME = 'indexes';
 
@@ -52,6 +56,7 @@ final class IndexCommand extends Command
         $this
             ->setName(self::ROUTE)
             ->setDescription('Ensure database has correct indexes.')
+            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select a single user database. Use main for the main DB.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes.')
             ->addOption('force-reindex', 'f', InputOption::VALUE_NONE, 'Drop existing indexes, and re-create them.')
             ->setHelp(
@@ -90,12 +95,28 @@ final class IndexCommand extends Command
      */
     protected function runCommand(iInput $input, iOutput $output): int
     {
-        foreach (get_users_context(mapper: $this->mapper, logger: $this->logger) as $userContext) {
+        try {
+            $users = select_users($input->getOption('user'));
+        } catch (RuntimeException $e) {
+            $output->writeln(r('<error>{message}</error>', [
+                'message' => $e->getMessage(),
+            ]));
+
+            return self::FAILURE;
+        }
+
+        foreach ($users as $user) {
+            $userContext = 'main' === $user
+                ? Container::get(UserContext::class)
+                : $this->makeUserContext($user);
+
+            $db = $this->ensureDatabase($userContext);
+
             $output->writeln(r("Ensuring user '{user}' database has correct indexes.", [
                 'user' => $userContext->name,
             ]), iOutput::VERBOSITY_VERBOSE);
 
-            $userContext->db->ensureIndex([
+            ensure_indexes($db->getDBLayer(), $this->logger, [
                 UserContext::class => $userContext,
                 Options::DRY_RUN => (bool) $input->getOption('dry-run'),
                 'force-reindex' => (bool) $input->getOption('force-reindex'),
@@ -109,5 +130,33 @@ final class IndexCommand extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    private function makeUserContext(string $name): UserContext
+    {
+        $cache = per_user_cache_adapter($name);
+        $db = per_user_db($name);
+        $mapper = $this->mapper
+            ->withDB($db)
+            ->withCache($cache)
+            ->withLogger($this->logger)
+            ->withOptions(array_replace_recursive($this->mapper->getOptions(), [Options::ALT_NAME => $name]));
+
+        return new UserContext(
+            name: $name,
+            config: per_user_config($name),
+            mapper: $mapper,
+            cache: $cache,
+            db: $db,
+        );
+    }
+
+    private function ensureDatabase(UserContext $userContext): iDB
+    {
+        if ('main' === $userContext->name) {
+            return ensure_migration((string) Config::get('database.file'));
+        }
+
+        return ensure_migration(get_user_db($userContext->name));
     }
 }

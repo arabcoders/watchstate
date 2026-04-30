@@ -6,9 +6,12 @@ namespace Tests\Libs\Identities;
 
 use App\Libs\Config;
 use App\Libs\Container;
+use App\Libs\Database\PdoFactory;
+use App\Libs\Identities\IdentityProvisionRequest;
 use App\Libs\Identities\IdentityProvisionService;
 use App\Libs\Options;
 use App\Libs\TestCase;
+use PDO;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Yaml\Yaml;
 
@@ -41,6 +44,8 @@ final class IdentityProvisionServiceTest extends TestCase
         Config::save('cache.path', $this->tempDir . '/cache');
         Config::save('backends_file', $configDir . '/servers.yaml');
         Config::save('mapper_file', $configDir . '/mapper.yaml');
+        Config::save('database.file', $this->tempDir . '/db/' . PdoFactory::DB_FILE);
+        Config::save('database.dsn', 'sqlite:' . $this->tempDir . '/db/' . PdoFactory::DB_FILE);
 
         file_put_contents(
             Config::get('backends_file'),
@@ -195,6 +200,43 @@ final class IdentityProvisionServiceTest extends TestCase
 
         $this->assertSame('https://manual.example.com', ag($data, 'manual_backend.url'), 'Unlinked backends must remain untouched.');
         $this->assertSame('manual-token', ag($data, 'manual_backend.token'));
+    }
+
+    public function test_createIdentities_initializes_new_identity_db(): void
+    {
+        $service = $this->makeService();
+        $request = new IdentityProvisionRequest(mode: 'create');
+
+        $service->createIdentities($request, [[
+            'name' => 'bob',
+            'backends' => [[
+                'uuid' => 'plex-bob-uuid',
+                'client_data' => [
+                    'backendName' => 'plex_bob',
+                    'type' => 'plex',
+                    'name' => 'plex_main',
+                    'url' => 'https://new-plex.example.com',
+                    'token' => 'plex-bob-token',
+                    'user' => 'plex-bob-user',
+                    'options' => [
+                        Options::ADMIN_TOKEN => 'plex-admin-token-new',
+                    ],
+                ],
+            ]],
+        ]]);
+
+        $dbFile = $this->tempDir . '/users/bob/' . PdoFactory::DB_FILE;
+        self::assertFileExists($dbFile);
+
+        $pdo = new PDO('sqlite:' . $dbFile);
+        $tables = $pdo->query("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")?->fetchAll(PDO::FETCH_COLUMN);
+
+        self::assertContains('migration_version', $tables);
+        self::assertContains('state', $tables);
+        self::assertFalse(file_exists($this->tempDir . '/db/' . PdoFactory::DB_FILE));
+
+        $config = Yaml::parseFile($this->tempDir . '/users/bob/servers.yaml');
+        self::assertSame('https://new-plex.example.com', ag($config, 'plex_bob.url'));
     }
 
     private function makeService(): IdentityProvisionService

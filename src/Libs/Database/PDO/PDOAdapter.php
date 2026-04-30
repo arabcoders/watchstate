@@ -566,62 +566,6 @@ final class PDOAdapter implements iDB
 
     /**
      * @inheritdoc
-     */
-    public function migrations(string $dir, array $opts = []): mixed
-    {
-        $class = new PDOMigrations($this->db, $this->logger);
-
-        return match (strtolower($dir)) {
-            iDB::MIGRATE_UP => $class->up(),
-            iDB::MIGRATE_DOWN => $class->down(),
-            default => throw new DBException(r("PDOAdapter: Unknown migration direction '{dir}' was given.", [
-                'name' => $dir,
-            ]), 91),
-        };
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function ensureIndex(array $opts = []): mixed
-    {
-        return new PDOIndexer($this->db, $this->logger)->ensureIndex($opts);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function migrateData(string $version, ?iLogger $logger = null): mixed
-    {
-        return new PDODataMigration($this->db, $logger ?? $this->logger)->automatic();
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function isMigrated(): bool
-    {
-        return new PDOMigrations($this->db, $this->logger)->isMigrated();
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function makeMigration(string $name, array $opts = []): mixed
-    {
-        return new PDOMigrations($this->db, $this->logger)->make($name);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function maintenance(array $opts = []): mixed
-    {
-        return new PDOMigrations($this->db, $this->logger)->runMaintenance();
-    }
-
-    /**
-     * @inheritdoc
      * @noinspection SqlWithoutWhere
      */
     public function reset(): bool

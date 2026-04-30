@@ -2538,7 +2538,7 @@ If `X-Sign-With` is omitted, WatchState defaults to `api`.
 **Body**:
 ```json
 {
-  "command": "system:index",
+  "command": "db:index",
   "cwd": "/home/coders/apps/watchstate",
   "timeout": 120,
   "force_color": true
@@ -2570,7 +2570,7 @@ Lists recent command sessions that are still available for attach or replay.
   "items": [
     {
       "token": "sha256-token",
-      "command": "system:index",
+      "command": "db:index",
       "status": "completed",
       "cwd": "/home/coders/apps/watchstate",
       "created_at": "2026-03-28T12:00:00+00:00",
@@ -3283,7 +3283,7 @@ Lists scheduled tasks and shows which ones are queued.
       "timer": "*/30 * * * *",
       "next_run": "2026-03-28T12:30:00+00:00",
       "prev_run": "2026-03-28T12:00:00+00:00",
-      "command": "system:index",
+      "command": "db:index",
       "args": [],
       "hide": false,
       "allow_disable": true,
@@ -3314,7 +3314,7 @@ Returns a task definition.
   "timer": "*/30 * * * *",
   "next_run": "2026-03-28T12:30:00+00:00",
   "prev_run": "2026-03-28T12:00:00+00:00",
-  "command": "system:index",
+  "command": "db:index",
   "args": [],
   "hide": false,
   "allow_disable": true,

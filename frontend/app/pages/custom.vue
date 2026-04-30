@@ -277,12 +277,12 @@
           <li>
             If you added or removed a custom GUID, you should run
             <NuxtLink
-              :to="makeConsoleCommand('system:index --force-reindex')"
+              :to="makeConsoleCommand('db:index --force-reindex')"
               class="text-primary hover:underline"
             >
               <span class="inline-flex items-center gap-1">
                 <UIcon name="i-lucide-terminal" class="size-4" />
-                <span>system:index --force-reindex</span>
+                <span>db:index --force-reindex</span>
               </span>
             </NuxtLink>
             to rebuild the database indexes.
