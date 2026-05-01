@@ -25,8 +25,15 @@ final class IndexCommandTest extends TestCase
 
         $this->initTempDir();
 
+        $configDir = self::$tmpPath . '/config';
+        mkdir($configDir, 0o755, true);
+
         Config::init(require __DIR__ . '/../../../config/config.php');
         Config::save('path', self::$tmpPath);
+        Config::save('tmpDir', self::$tmpPath);
+        Config::save('cache.path', self::$tmpPath . '/cache');
+        Config::save('backends_file', $configDir . '/servers.yaml');
+        Config::save('mapper_file', $configDir . '/mapper.yaml');
         Config::save('database.file', self::$tmpPath . '/db/' . PdoFactory::DB_FILE);
         Config::save('database.dsn', 'sqlite:' . self::$tmpPath . '/db/' . PdoFactory::DB_FILE);
 
