@@ -217,7 +217,7 @@ final class PDOAdapter implements iDB
 
             $entity->id = (int) $this->db->lastInsertId();
         } catch (PDOException $e) {
-            $this->stmt['insert'] = null;
+            $this->resetPreparedWrites();
             if (false === $this->viaTransaction) {
                 $this->logger->error(
                     message: "PDOAdapter: Exception '{error.kind}' was thrown unhandled. '{error.message}' at '{error.file}:{error.line}'.",
@@ -439,7 +439,7 @@ final class PDOAdapter implements iDB
                 ),
             ]);
         } catch (PDOException $e) {
-            $this->stmt['update'] = null;
+            $this->resetPreparedWrites();
             if (false === $this->viaTransaction) {
                 $this->logger->error(
                     message: "PDOAdapter: Exception '{error.kind}' was thrown unhandled. '{error.message}' at '{error.file}:{error.line}'.",
@@ -748,7 +748,7 @@ final class PDOAdapter implements iDB
             $this->db->commit();
         }
 
-        $this->stmt = [];
+        $this->resetPreparedWrites();
     }
 
     /**
@@ -822,10 +822,20 @@ final class PDOAdapter implements iDB
             throw $e;
         }
 
+        $this->resetPreparedWrites();
+
         $statement = $this->db->prepare($sql);
         $this->stmt[$key] = $statement;
 
         return $this->db->query($statement, $data);
+    }
+
+    private function resetPreparedWrites(): void
+    {
+        $this->stmt = [
+            'insert' => null,
+            'update' => null,
+        ];
     }
 
     /**

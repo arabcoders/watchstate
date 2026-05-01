@@ -138,6 +138,7 @@ final class DBLayer implements LoggerAwareInterface
             $stmt = $isStatement ? $sql : $db->prepare($sql);
 
             if (true === $isStatement) {
+                $stmt->closeCursor();
                 $stmt->execute($bind);
                 return $stmt;
             }
@@ -948,7 +949,6 @@ final class DBLayer implements LoggerAwareInterface
      */
     private function wrap(Closure $callback, array $options = []): mixed
     {
-        static $lastFailure = [];
         $on_lock = ag($options, 'on_lock', null);
         $errorHandler = ag($options, 'on_failure', null);
         $exception = null;
@@ -983,12 +983,7 @@ final class DBLayer implements LoggerAwareInterface
                 return $this->wrap($callback, $options);
             } else {
                 $exception = $e;
-                if (null !== $errorHandler && ag($lastFailure, 'message') !== $e->getMessage()) {
-                    $lastFailure = [
-                        'code' => $e->getCode(),
-                        'message' => $e->getMessage(),
-                        'time' => time(),
-                    ];
+                if (null !== $errorHandler) {
                     return $errorHandler($e, $callback, $options);
                 }
 
@@ -1000,10 +995,6 @@ final class DBLayer implements LoggerAwareInterface
                     ->setInfo($this->last['sql'], $this->last['bind'], $e->errorInfo ?? [], $e->getCode())
                     ->setFile($e->getFile())
                     ->setLine($e->getLine());
-            }
-        } finally {
-            if (null === $exception) {
-                $lastFailure = [];
             }
         }
     }

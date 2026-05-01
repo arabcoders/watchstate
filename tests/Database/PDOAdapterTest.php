@@ -24,6 +24,7 @@ use PDO;
 use PDOException;
 use PDOStatement;
 use Psr\SimpleCache\CacheInterface;
+use ReflectionProperty;
 use ReflectionMethod;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
@@ -370,6 +371,12 @@ class PDOAdapterTest extends TestCase
         $pdoUpdate = new ReflectionMethod($this->db, 'pdoUpdate');
         $sql = $pdoUpdate->invoke($this->db, 'state', iState::ENTITY_KEYS);
 
+        $stmtProperty = new ReflectionProperty($this->db, 'stmt');
+        $stmtProperty->setValue($this->db, [
+            'insert' => $this->db->getDBLayer()->prepare('SELECT 1'),
+            'update' => $this->db->getDBLayer()->prepare('SELECT 2'),
+        ]);
+
         $retryPreparedWrite = new ReflectionMethod($this->db, 'retryPreparedWrite');
         $stmt = $retryPreparedWrite->invoke(
             $this->db,
@@ -385,6 +392,15 @@ class PDOAdapterTest extends TestCase
             $this->db->get($item)->title,
             'Retry path should execute the rebuilt update statement successfully.'
         );
+
+        $second = $this->testMovie;
+        foreach ($second[iState::COLUMN_META_DATA] as $backend => $metadata) {
+            $second[iState::COLUMN_META_DATA][$backend][iState::COLUMN_ID] = ($metadata[iState::COLUMN_ID] ?? 0) + 1000;
+        }
+
+        $inserted = $this->db->insert(new StateEntity($second));
+
+        $this->assertNotNull($inserted->id, 'Retrying one write should flush tainted cached statements so later inserts can reprepare cleanly.');
     }
 
     public function test_retryPreparedWrite_rethrows_unrelated_errors(): void

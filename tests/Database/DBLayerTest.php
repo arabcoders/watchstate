@@ -173,6 +173,24 @@ class DBLayerTest extends TestCase
         $this->assertSame('{"id":3}', $row['json_data'], 'Prepared statement reuse should persist updated JSON payloads.');
     }
 
+    public function test_query_on_failure_retries_same_message(): void
+    {
+        $calls = 0;
+
+        $fallback = function () use (&$calls) {
+            $calls++;
+
+            return $this->db->query('SELECT 1');
+        };
+
+        $first = $this->db->query('SELECT * FROM movies', options: ['on_failure' => $fallback]);
+        $second = $this->db->query('SELECT * FROM movies', options: ['on_failure' => $fallback]);
+
+        $this->assertSame('1', (string) $first->fetchColumn(), 'First repeated failure should recover through on_failure.');
+        $this->assertSame('1', (string) $second->fetchColumn(), 'Second identical failure should also recover through on_failure.');
+        $this->assertSame(2, $calls, 'on_failure should run for each repeated identical failure.');
+    }
+
     public function test_transactions_operations()
     {
         $this->db->start();
