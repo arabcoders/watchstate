@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "9308e8757541ef8dc32bf71817bab99b5383e2d4",
-    "date": "2026-05-01T15:07:34+00:00",
+    "full_sha": "4b03386eb5061e7b308722e0550d1c130642c59d",
+    "date": "2026-05-01T22:21:06+00:00",
     "commits": [
+      {
+        "sha": "4b03386e",
+        "full_sha": "4b03386eb5061e7b308722e0550d1c130642c59d",
+        "message": "refactor: move migrations and db operations over to new package.",
+        "author": "arabcoders",
+        "date": "2026-05-01T22:21:06+00:00"
+      },
       {
         "sha": "9308e875",
         "full_sha": "9308e8757541ef8dc32bf71817bab99b5383e2d4",
