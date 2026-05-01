@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "2f0cefe306ff1d781a8b51655fd8cd622dd7ceb2",
-    "date": "2026-04-29T19:28:24+00:00",
+    "full_sha": "9308e8757541ef8dc32bf71817bab99b5383e2d4",
+    "date": "2026-05-01T15:07:34+00:00",
     "commits": [
+      {
+        "sha": "9308e875",
+        "full_sha": "9308e8757541ef8dc32bf71817bab99b5383e2d4",
+        "message": "fix: another attempt at fixing sqlite 21 bad parameter or other API misuse error",
+        "author": "arabcoders",
+        "date": "2026-05-01T15:07:34+00:00"
+      },
       {
         "sha": "2f0cefe3",
         "full_sha": "2f0cefe306ff1d781a8b51655fd8cd622dd7ceb2",
