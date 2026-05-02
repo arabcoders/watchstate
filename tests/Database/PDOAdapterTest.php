@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Tests\Database;
 
 use App\Libs\Config;
-use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Database\DBLayer;
+use App\Libs\Database\PackageMigrationFactory;
 use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
@@ -17,18 +17,9 @@ use App\Libs\Options;
 use App\Libs\TestCase;
 use DateInterval;
 use DateTimeImmutable;
-use Error;
-use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use PDO;
-use PDOException;
-use PDOStatement;
 use Psr\SimpleCache\CacheInterface;
-use ReflectionMethod;
-use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\NullOutput;
-use Symfony\Component\Console\Output\OutputInterface;
 
 class PDOAdapterTest extends TestCase
 {
@@ -36,30 +27,21 @@ class PDOAdapterTest extends TestCase
     private array $testEpisode = [];
 
     private iDB|null $db = null;
-    protected TestHandler|null $handler = null;
-    protected OutputInterface|null $output = null;
-    protected InputInterface|null $input = null;
 
     public function setUp(): void
     {
-        $this->output = new NullOutput();
-        $this->input = new ArrayInput([]);
-
         $this->testMovie = require __DIR__ . '/../Fixtures/MovieEntity.php';
         $this->testEpisode = require __DIR__ . '/../Fixtures/EpisodeEntity.php';
 
-        $this->handler = new TestHandler();
         $logger = new Logger('logger');
-        $logger->pushHandler($this->handler);
         Guid::setLogger($logger);
 
-        $this->db = new PDOAdapter($logger, new DBLayer(new PDO('sqlite::memory:')));
+        $this->db = $this->createDb($logger);
         $this->db->setOptions([
             Options::DEBUG_TRACE => true,
             'class' => new StateEntity([]),
         ]);
         $this->db->setLogger($logger);
-        $this->db->migrations('up');
     }
 
     private function makeCacheStub(): CacheInterface
@@ -156,7 +138,7 @@ class PDOAdapterTest extends TestCase
         return [$episode, $movie, $altEpisodeEntity];
     }
 
-    public function test_insert_throw_exception_if_has_id(): void
+    public function test_insert_existing_throws(): void
     {
         $this->checkException(
             closure: function () {
@@ -251,18 +233,6 @@ class PDOAdapterTest extends TestCase
         );
     }
 
-    public function test_getAll_call_without_initialized_container(): void
-    {
-        $this->db->setOptions(['class' => null]);
-        Container::reset();
-        $this->checkException(
-            closure: fn() => $this->db->getAll(),
-            reason: 'When calling getAll without initialized container, an exception should be thrown.',
-            exception: Error::class,
-            exceptionMessage: 'Call to a member function',
-        );
-    }
-
     public function test_getAll_conditions(): void
     {
         $item = new StateEntity($this->testEpisode);
@@ -346,65 +316,6 @@ class PDOAdapterTest extends TestCase
         $this->assertNull(
             ag($item->getMetadata($item->via), iState::COLUMN_META_DATA_PLAYED_AT),
             'When watched flag is set to 0, played_at metadata should be null.'
-        );
-    }
-
-    public function test_retryPreparedWrite_returns_statement_for_bad_parameter_retry(): void
-    {
-        assert($this->db instanceof PDOAdapter);
-
-        $item = $this->db->insert(new StateEntity($this->testEpisode));
-        $item->title = 'Retried Title';
-
-        $data = $item->getAll();
-        $data[iState::COLUMN_UPDATED_AT] = time();
-
-        foreach (iState::ENTITY_ARRAY_KEYS as $key) {
-            if (!(null !== ($data[$key] ?? null) && true === is_array($data[$key]))) {
-                continue;
-            }
-
-            ksort($data[$key]);
-            $data[$key] = json_encode($data[$key], flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        }
-
-        $pdoUpdate = new ReflectionMethod($this->db, 'pdoUpdate');
-        $sql = $pdoUpdate->invoke($this->db, 'state', iState::ENTITY_KEYS);
-
-        $retryPreparedWrite = new ReflectionMethod($this->db, 'retryPreparedWrite');
-        $stmt = $retryPreparedWrite->invoke(
-            $this->db,
-            'update',
-            $sql,
-            $data,
-            new PDOException('21 bad parameter or other API misuse'),
-        );
-
-        $this->assertInstanceOf(PDOStatement::class, $stmt, 'Retry path should return a PDO statement, not an entity.');
-        $this->assertSame(
-            'Retried Title',
-            $this->db->get($item)->title,
-            'Retry path should execute the rebuilt update statement successfully.'
-        );
-    }
-
-    public function test_retryPreparedWrite_rethrows_unrelated_errors(): void
-    {
-        assert($this->db instanceof PDOAdapter);
-
-        $retryPreparedWrite = new ReflectionMethod($this->db, 'retryPreparedWrite');
-
-        $this->checkException(
-            closure: fn() => $retryPreparedWrite->invoke(
-                $this->db,
-                'update',
-                'UPDATE state SET title = :title WHERE id = :id',
-                ['title' => 'Ignored', 'id' => 1],
-                new PDOException('some other database problem'),
-            ),
-            reason: 'Retry helper should only intercept sqlite API misuse errors.',
-            exception: PDOException::class,
-            exceptionMessage: 'some other database problem',
         );
     }
 
@@ -547,39 +458,6 @@ class PDOAdapterTest extends TestCase
         );
     }
 
-    public function test_migrations_call_with_wrong_direction_exception(): void
-    {
-        $this->checkException(
-            closure: fn() => $this->db->migrations('not_dd'),
-            reason: 'When calling migrations with wrong direction, an exception should be thrown.',
-            exception: DBException::class,
-            exceptionMessage: 'Unknown migration direction',
-            exceptionCode: 91,
-        );
-    }
-
-    public function test_commit_transaction_on__destruct(): void
-    {
-        $started = $this->db->getDBLayer()->start();
-        $this->assertTrue($started, 'Transaction should be started.');
-
-        $this->db->getDBLayer()->transactional(function () {
-            $this->db->insert(new StateEntity($this->testEpisode));
-            $this->db->insert(new StateEntity($this->testMovie));
-        }, auto: false);
-
-        $this->assertTrue($this->db->getDBLayer()->inTransaction(), 'Transaction should be still open.');
-        assert($this->db instanceof PDOAdapter);
-        $this->db->__destruct();
-        $this->assertFalse($this->db->getDBLayer()->inTransaction(), 'Transaction should be closed.');
-
-        $this->assertCount(
-            2,
-            $this->db->getAll(),
-            'When transaction is committed, records should be found in db.'
-        );
-    }
-
     public function test_find(): void
     {
         $item1 = new StateEntity($this->testEpisode);
@@ -596,10 +474,8 @@ class PDOAdapterTest extends TestCase
 
     public function test_findByBackendId(): void
     {
-        Container::init();
-        Container::add(iState::class, new StateEntity([]));
+        $this->db->setOptions(['class' => new StateEntity([])]);
 
-        $this->db->setOptions(['class' => null]);
         $item1 = new StateEntity($this->testEpisode);
         $item2 = new StateEntity($this->testMovie);
         $this->db->insert($item1);
@@ -617,42 +493,60 @@ class PDOAdapterTest extends TestCase
             'When item is not found, null should be returned.'
         );
 
-        $this->db->setOptions(['class' => new StateEntity([])]);
-
         $item2_db = $this->db->findByBackendId(
             $item2->via,
             ag($item2->getMetadata($item2->via), iState::COLUMN_ID),
             $item2->type,
         );
+
         $this->assertCount(0, $item2_db->apply($item2)->diff(), 'When item is found, it should be returned.');
     }
 
-    public function test_ensureIndex()
+    public function test_indexer_manages_external_indexes(): void
     {
-        $this->assertTrue($this->db->ensureIndex(), 'When ensureIndex is called, it should return true.');
+        $originalConfig = Config::getAll();
+        Config::init(require ROOT_PATH . '/config/config.php');
+        Config::save('servers', [
+            'test_plex' => [],
+            'test_jellyfin' => [],
+        ]);
+
+        $pdo = new PDO('sqlite::memory:');
+        $db = new PDOAdapter(new Logger('logger'), new DBLayer($this->createConnection($pdo)));
+        $migrations = new PackageMigrationFactory();
+        $expected = $this->expectedManagedIndexes(['test_plex', 'test_jellyfin']);
+
+        try {
+            if (false === $migrations->isMigrated($pdo)) {
+                $migrations->migrate($pdo, dryRun: false);
+            }
+
+            self::assertSame([], $this->stateManagedIndexes($pdo));
+            $logger = new Logger('logger');
+
+            self::assertTrue(ensure_indexes($db->getDBLayer(), $logger));
+            self::assertSame($expected, $this->stateManagedIndexes($pdo));
+
+            self::assertTrue(ensure_indexes($db->getDBLayer(), $logger));
+            self::assertSame($expected, $this->stateManagedIndexes($pdo));
+
+            self::assertTrue(ensure_indexes($db->getDBLayer(), $logger, ['force-reindex' => true]));
+            self::assertSame($expected, $this->stateManagedIndexes($pdo));
+        } finally {
+            Config::init($originalConfig);
+        }
     }
 
-    public function test_migrateData()
+    public function test_reset_clears_rows_sequence(): void
     {
-        Config::init(require __DIR__ . '/../../config/config.php');
-        $this->assertFalse(
-            $this->db->migrateData(Config::get('database.version')),
-            'At this point we are starting with new database, so migration should be false.'
-        );
-    }
+        $this->seedEntities();
 
-    public function test_maintenance()
-    {
-        Config::init(require __DIR__ . '/../../config/config.php');
-        $this->assertTrue(
-            0 === $this->db->maintenance(),
-            'At this point we are starting with new database, so maintenance should be false.'
-        );
-    }
+        $this->assertTrue($this->db->reset(), 'Reset should succeed for a migrated sqlite database.');
+        $this->assertSame(0, $this->db->getTotal(), 'Reset should remove every row from the state table.');
 
-    public function test_reset()
-    {
-        $this->assertTrue($this->db->reset(), 'When reset is called, it should return true. and reset the db.');
+        $inserted = $this->db->insert(new StateEntity($this->testEpisode));
+
+        $this->assertSame(1, $inserted->id, 'Reset should also clear the sqlite autoincrement sequence.');
     }
 
     public function test_transaction()
@@ -685,21 +579,53 @@ class PDOAdapterTest extends TestCase
         );
     }
 
-    public function test_isMigrated()
+    /**
+     * @param array<int,string> $backends
+     *
+     * @return array<int,string>
+     */
+    private function expectedManagedIndexes(array $backends): array
     {
-        Config::init(require __DIR__ . '/../../config/config.php');
-        $db = new PDOAdapter(new Logger('logger'), new DBLayer(new PDO('sqlite::memory:')));
-        $this->assertFalse(
-            $db->isMigrated(),
-            'At this point we are starting with new database, so migration should be false.'
-        );
-        $this->assertTrue(
-            0 === $db->migrations('up'),
-            'When migrations are run, it should return true.'
-        );
-        $this->assertTrue(
-            $db->isMigrated(),
-            'When migrations are run, it should return true.'
-        );
+        $indexes = [];
+
+        foreach (array_keys(Guid::getSupported()) as $subKey) {
+            foreach ([iState::COLUMN_PARENT, iState::COLUMN_GUIDS] as $column) {
+                $indexes[] = sprintf('state_%s_%s', $column, $subKey);
+            }
+        }
+
+        foreach ($backends as $backend) {
+            foreach ([iState::COLUMN_ID, iState::COLUMN_META_SHOW, iState::COLUMN_META_LIBRARY, iState::COLUMN_META_MULTI] as $subKey) {
+                $indexes[] = sprintf('state_%s_%s_%s', iState::COLUMN_META_DATA, $backend, $subKey);
+            }
+        }
+
+        sort($indexes);
+
+        return $indexes;
     }
+
+    /**
+     * @return array<int,string>
+     */
+    private function stateManagedIndexes(PDO $pdo): array
+    {
+        $indexes = $pdo->query(
+            "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'state' ORDER BY name"
+        )?->fetchAll(PDO::FETCH_COLUMN);
+
+        $managed = array_values(array_filter(
+            false === is_array($indexes) ? [] : $indexes,
+            fn(mixed $name): bool => true === is_string($name) && (
+                str_starts_with($name, 'state_parent_')
+                || str_starts_with($name, 'state_guids_')
+                || str_starts_with($name, 'state_metadata_')
+            ),
+        ));
+
+        sort($managed);
+
+        return $managed;
+    }
+
 }

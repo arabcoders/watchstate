@@ -9,7 +9,7 @@ use App\Command;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\Database\DatabaseInterface;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\StreamLogHandler;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
@@ -52,7 +52,7 @@ class PlaylistCommand extends Command
         $this
             ->setName(self::ROUTE)
             ->setDescription('Sync playlists cross backends.')
-            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select sub user. Default all users.')
+            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select user. Default is all users.')
             ->addOption(
                 'select-backend',
                 's',
@@ -99,15 +99,27 @@ class PlaylistCommand extends Command
         ));
         $exclude = true === (bool) $input->getOption('exclude');
 
-        $users = $this->getUsers($dbOpts);
+        try {
+            $selectedUsers = select_users($input->getOption('user'));
+        } catch (RuntimeException $e) {
+            $output->writeln(r('<error>{message}</error>', [
+                'message' => $e->getMessage(),
+            ]));
 
-        if (null !== ($user = $input->getOption('user'))) {
-            $users = array_filter($users, static fn($key) => $key === $user, ARRAY_FILTER_USE_KEY);
+            return self::FAILURE;
+        }
 
-            if ([] === $users) {
-                $output->writeln(r("<error>User '{user}' not found.</error>", ['user' => $user]));
-                return self::FAILURE;
+        $users = array_map(
+            fn(string $user): UserContext => get_user_context($user, $this->mapper, $this->logger),
+            $selectedUsers,
+        );
+
+        foreach ($users as $userContext) {
+            if ([] === $dbOpts) {
+                continue;
             }
+
+            $userContext->db->setOptions($dbOpts);
         }
 
         if (true === $dryRun) {
@@ -261,16 +273,6 @@ class PlaylistCommand extends Command
         ]);
 
         return self::SUCCESS;
-    }
-
-    /**
-     * @return array<string,UserContext>
-     */
-    protected function getUsers(array $dbOpts = []): array
-    {
-        return get_users_context(mapper: $this->mapper, logger: $this->logger, opts: [
-            DatabaseInterface::class => $dbOpts,
-        ]);
     }
 
     /**

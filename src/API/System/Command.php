@@ -11,6 +11,7 @@ use App\Libs\Config;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Extends\Date;
+use App\Libs\Middlewares\SignatureMiddleware;
 use App\Libs\Shlex;
 use App\Libs\StreamedBody;
 use DateInterval;
@@ -28,7 +29,7 @@ final class Command
 
     private const int TIMES_BEFORE_PING = 6;
     private const int PING_INTERVAL = 200_000;
-    private const int COMPLETED_RECONNECT_GRACE_SECONDS = 3;
+    private const int COMPLETED_SESSION_RETENTION_SECONDS = 86_400;
 
     private const string STATUS_QUEUED = 'queued';
     private const string STATUS_RUNNING = 'running';
@@ -45,7 +46,7 @@ final class Command
     /**
      * @throws RandomException
      */
-    #[Post(self::URL . '[/]', name: 'system.command.queue')]
+    #[Post(self::URL . '[/]', middleware: [SignatureMiddleware::class], name: 'system.command.queue')]
     public function queue(iRequest $request): iResponse
     {
         $params = DataUtil::fromRequest($request);
@@ -67,7 +68,6 @@ final class Command
         $expires = make_date()->add($ttl);
 
         try {
-            $this->cleanupExpiredSessions();
             $this->createSession($code, $params->getAll(), $expires->format(Date::ATOM));
         } catch (Throwable $e) {
             return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);
@@ -91,14 +91,10 @@ final class Command
         }
 
         if ($this->isCompletedAndExpired($state)) {
-            if (0 === (int) ag($state, 'connections', 0)) {
-                $this->cleanupSession($sessionPath);
-                return api_error('Token is invalid or has expired.', Status::NOT_FOUND);
-            }
+            return api_error('Token is invalid or has expired.', Status::NOT_FOUND);
         }
 
         if ($this->isQueuedAndExpired($state)) {
-            $this->cleanupSession($sessionPath);
             return api_error('Token is invalid or has expired.', Status::NOT_FOUND);
         }
 
@@ -134,7 +130,7 @@ final class Command
             }
         };
 
-        return api_response(Status::OK, body: StreamedBody::create($callable, runOnce: true), headers: [
+        return api_response(Status::OK, body: StreamedBody::create($callable), headers: [
             'Content-Type' => 'text/event-stream; charset=UTF-8',
             'Cache-Control' => 'no-cache',
             'Connection' => 'keep-alive',
@@ -150,6 +146,14 @@ final class Command
         $state = $this->readState($sessionPath);
 
         if (null === $state) {
+            return api_error('Token is invalid or has expired.', Status::NOT_FOUND);
+        }
+
+        if ($this->isCompletedAndExpired($state)) {
+            return api_error('Token is invalid or has expired.', Status::NOT_FOUND);
+        }
+
+        if ($this->isQueuedAndExpired($state)) {
             return api_error('Token is invalid or has expired.', Status::NOT_FOUND);
         }
 
@@ -174,13 +178,21 @@ final class Command
         ]);
     }
 
+    #[Get(self::URL . '[/]', name: 'system.command.list')]
+    public function list(): iResponse
+    {
+        return api_response(Status::OK, [
+            'items' => $this->getRecentSessions(),
+        ]);
+    }
+
     private function runWriter(string $sessionPath, int $connectionId): void
     {
         $params = $this->readRequest($sessionPath);
         $command = ag($params, 'command');
         $pty = false !== ag($params, 'pty', true);
 
-        if (!is_array($params) || !is_string($command) || '' === trim($command)) {
+        if (!is_array($params) || !is_string($command) || null === trim($command)) {
             $this->failSession($sessionPath, 'No command was given.');
             return;
         }
@@ -403,20 +415,11 @@ final class Command
 
     private function detachSession(string $sessionPath): void
     {
-        $state = $this->mutateState($sessionPath, static function (array $state): array {
+        $this->mutateState($sessionPath, static function (array $state): array {
             $state['connections'] = max(0, (int) ag($state, 'connections', 0) - 1);
             $state['updated_at'] = make_date()->format(Date::ATOM);
             return $state;
         });
-
-        if (null !== $state && $this->isCompleted($state) && 0 === (int) ag($state, 'connections', 0)) {
-            $finishedAt = ag($state, 'finished_at');
-            if (is_string($finishedAt) && (strtotime($finishedAt) + self::COMPLETED_RECONNECT_GRACE_SECONDS) > time()) {
-                return;
-            }
-
-            $this->cleanupSession($sessionPath);
-        }
     }
 
     private function currentConnectionId(array $state): int
@@ -556,12 +559,17 @@ final class Command
         return $handle;
     }
 
-    private function cleanupExpiredSessions(): void
+    /**
+     * @return array<int,array<string,int|string|null>>
+     */
+    private function getRecentSessions(): array
     {
         $root = $this->getSessionsRoot();
         if (false === is_dir($root)) {
-            return;
+            return [];
         }
+
+        $items = [];
 
         foreach (new DirectoryIterator($root) as $item) {
             if ($item->isDot() || false === $item->isDir()) {
@@ -575,9 +583,70 @@ final class Command
 
             $state = $this->readState($sessionPath);
             if (null === $state || $this->isQueuedAndExpired($state) || $this->isCompletedAndExpired($state)) {
-                $this->cleanupSession($sessionPath);
+                continue;
             }
+
+            $request = $this->readRequest($sessionPath) ?? [];
+            $token = $item->getFilename();
+            $command = ag($request, 'command', ag($state, 'command', ''));
+
+            if (!is_string($command) || '' === trim($command)) {
+                continue;
+            }
+
+            $items[] = [
+                'token' => $token,
+                'command' => $command,
+                'status' => (string) ag($state, 'status', self::STATUS_QUEUED),
+                'cwd' => is_string(ag($state, 'cwd')) ? ag($state, 'cwd') : null,
+                'created_at' => $this->normalizeIsoDate(ag($state, 'created_at')),
+                'updated_at' => $this->normalizeIsoDate(ag($state, 'updated_at')),
+                'started_at' => $this->normalizeIsoDate(ag($state, 'started_at')),
+                'finished_at' => $this->normalizeIsoDate(ag($state, 'finished_at')),
+                'expires_at' => $this->normalizeIsoDate(ag($state, 'expires_at')),
+                'available_until' => $this->getAvailableUntil($state),
+                'exit_code' => is_numeric(ag($state, 'exit_code')) ? (int) ag($state, 'exit_code') : null,
+                'last_sequence' => max(0, (int) ag($state, 'last_sequence', 0)),
+                'connections' => max(0, (int) ag($state, 'connections', 0)),
+            ];
         }
+
+        usort($items, static function (array $left, array $right): int {
+            $leftTime = strtotime((string) ($left['updated_at'] ?? $left['created_at'] ?? ''));
+            $rightTime = strtotime((string) ($right['updated_at'] ?? $right['created_at'] ?? ''));
+
+            $leftTime = false === $leftTime ? 0 : $leftTime;
+            $rightTime = false === $rightTime ? 0 : $rightTime;
+
+            return $rightTime <=> $leftTime;
+        });
+
+        return $items;
+    }
+
+    private function getAvailableUntil(array $state): ?string
+    {
+        if ($this->isCompleted($state)) {
+            $finishedAt = ag($state, 'finished_at');
+            if (!is_string($finishedAt) || '' === trim($finishedAt)) {
+                return null;
+            }
+
+            $finishedAtUnix = strtotime($finishedAt);
+            if (false === $finishedAtUnix) {
+                return null;
+            }
+
+            return make_date($finishedAtUnix + self::COMPLETED_SESSION_RETENTION_SECONDS)->format(Date::ATOM);
+        }
+
+        $expiresAt = ag($state, 'expires_at');
+        return is_string($expiresAt) && '' !== trim($expiresAt) ? $expiresAt : null;
+    }
+
+    private function normalizeIsoDate(mixed $value): ?string
+    {
+        return is_string($value) && '' !== trim($value) ? $value : null;
     }
 
     private function cleanupSession(string $sessionPath): void
@@ -586,23 +655,64 @@ final class Command
             return;
         }
 
-        $files = [
-            self::REQUEST_FILE,
-            self::STATE_FILE,
-            self::STATE_LOCK_FILE,
-            self::STREAM_FILE,
-            self::WRITER_LOCK_FILE,
-            self::CANCEL_FILE,
-        ];
-
-        foreach ($files as $file) {
-            $path = $sessionPath . '/' . $file;
-            if (file_exists($path)) {
-                @unlink($path);
-            }
+        $stateLock = $this->acquireCleanupLock($sessionPath . '/' . self::STATE_LOCK_FILE);
+        if (null === $stateLock) {
+            return;
         }
 
-        @rmdir($sessionPath);
+        $writerLock = $this->acquireCleanupLock($sessionPath . '/' . self::WRITER_LOCK_FILE);
+        if (null === $writerLock) {
+            $this->releaseCleanupLock($stateLock);
+            return;
+        }
+
+        try {
+            $files = [
+                self::REQUEST_FILE,
+                self::STATE_FILE,
+                self::STATE_LOCK_FILE,
+                self::STREAM_FILE,
+                self::WRITER_LOCK_FILE,
+                self::CANCEL_FILE,
+            ];
+
+            foreach ($files as $file) {
+                $path = $sessionPath . '/' . $file;
+                if (file_exists($path)) {
+                    @unlink($path);
+                }
+            }
+
+            @rmdir($sessionPath);
+        } finally {
+            $this->releaseCleanupLock($writerLock);
+            $this->releaseCleanupLock($stateLock);
+        }
+    }
+
+    private function acquireCleanupLock(string $path): mixed
+    {
+        $handle = @fopen($path, 'c+');
+        if (false === $handle) {
+            return null;
+        }
+
+        if (false === flock($handle, LOCK_EX | LOCK_NB)) {
+            fclose($handle);
+            return null;
+        }
+
+        return $handle;
+    }
+
+    private function releaseCleanupLock(mixed $handle): void
+    {
+        if (!is_resource($handle)) {
+            return;
+        }
+
+        flock($handle, LOCK_UN);
+        fclose($handle);
     }
 
     private function getCommandEnv(array $params, bool $pty, string $cwd): array
@@ -748,7 +858,7 @@ final class Command
             return true;
         }
 
-        return (strtotime($finishedAt) + self::COMPLETED_RECONNECT_GRACE_SECONDS) <= time();
+        return (strtotime($finishedAt) + self::COMPLETED_SESSION_RETENTION_SECONDS) <= time();
     }
 
     private function requestCancel(string $sessionPath): void

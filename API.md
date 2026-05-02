@@ -98,6 +98,7 @@ WatchState HTTP API reference. Examples use the default `/v1/api` prefix.
       - [DELETE /v1/api/system/events/{id}](#delete-v1apisystemeventsid)
       - [DELETE /v1/api/system/events](#delete-v1apisystemevents)
       - [POST /v1/api/system/command](#post-v1apisystemcommand)
+      - [GET /v1/api/system/command](#get-v1apisystemcommand)
       - [GET /v1/api/system/command/{token}](#get-v1apisystemcommandtoken)
       - [DELETE /v1/api/system/command/{token}](#delete-v1apisystemcommandtoken)
       - [GET /v1/api/system/scheduler](#get-v1apisystemscheduler)
@@ -2523,10 +2524,21 @@ Deletes all non-pending events.
 #### POST /v1/api/system/command
 Queues a one-time command for execution.
 
+**Headers**:
+- Standard API auth is still required.
+- `X-Signature: sha256=<hmac>`
+- `X-Sign-With: token|api`
+
+`X-Sign-With` selects which presented credential is used to verify the HMAC over the raw JSON body:
+- `token`: verify against the authenticated user token
+- `api`: verify against the presented API key
+
+If `X-Sign-With` is omitted, WatchState defaults to `api`.
+
 **Body**:
 ```json
 {
-  "command": "system:index",
+  "command": "db:index",
   "cwd": "/home/coders/apps/watchstate",
   "timeout": 120,
   "force_color": true
@@ -2544,11 +2556,46 @@ Queues a one-time command for execution.
 
 **Errors**:
 - `400 Bad Request` if the body is empty or `command` is missing/invalid.
+- `400 Bad Request` if the request signature is missing, malformed, or uses an unsupported verifier/algorithm.
+- `403 Forbidden` if the signature does not match the selected credential.
+
+---
+
+#### GET /v1/api/system/command
+Lists recent command sessions that are still available for attach or replay.
+
+**Response**:
+```json
+{
+  "items": [
+    {
+      "token": "sha256-token",
+      "command": "db:index",
+      "status": "completed",
+      "cwd": "/home/coders/apps/watchstate",
+      "created_at": "2026-03-28T12:00:00+00:00",
+      "updated_at": "2026-03-28T12:02:00+00:00",
+      "started_at": "2026-03-28T12:00:01+00:00",
+      "finished_at": "2026-03-28T12:02:00+00:00",
+      "expires_at": "2026-03-28T12:05:00+00:00",
+      "available_until": "2026-03-29T12:02:00+00:00",
+      "exit_code": 0,
+      "last_sequence": 42,
+      "connections": 0
+    }
+  ]
+}
+```
+
+**Notes**:
+- Queued and running sessions use `expires_at` as their availability window.
+- Completed sessions remain replayable for about 24 hours after `finished_at`.
+- Expired queued and completed sessions are eventually automatically pruned.
 
 ---
 
 #### GET /v1/api/system/command/{token}
-Attaches to an active queued/running command session and streams output.
+Attaches to an available command session and streams or replays its output.
 
 **Path**:
 - `token`: Command token returned by `POST /v1/api/system/command`.
@@ -2573,12 +2620,12 @@ Attaches to an active queued/running command session and streams output.
 ```
 
 **Errors**:
-- `404 Not Found` if the token is invalid/expired or the session has already been cleaned up.
+- `404 Not Found` if the token is invalid, the queued request expired, or the completed session exceeded its replay window.
 
 **Notes**:
 - Sessions are resumable while the command is still active.
 - Use `Last-Event-ID` or `?since=` to resume from a known event sequence.
-- Completed sessions are cleaned up shortly after the final reader disconnects.
+- Completed sessions remain replayable for about 24 hours after `finished_at`.
 
 ---
 
@@ -2600,7 +2647,9 @@ Requests cancellation for a queued or running command.
 
 **Notes**:
 - Queued sessions are removed immediately.
+- Expired queued or completed sessions return `404 Not Found` until prune removes the session directory.
 - Running sessions are marked for cancellation and stop as soon as the worker loop observes the cancel request.
+- Completed sessions return `202 Accepted` with `Command has already completed.`
 
 ---
 
@@ -3234,7 +3283,7 @@ Lists scheduled tasks and shows which ones are queued.
       "timer": "*/30 * * * *",
       "next_run": "2026-03-28T12:30:00+00:00",
       "prev_run": "2026-03-28T12:00:00+00:00",
-      "command": "system:index",
+      "command": "db:index",
       "args": [],
       "hide": false,
       "allow_disable": true,
@@ -3265,7 +3314,7 @@ Returns a task definition.
   "timer": "*/30 * * * *",
   "next_run": "2026-03-28T12:30:00+00:00",
   "prev_run": "2026-03-28T12:00:00+00:00",
-  "command": "system:index",
+  "command": "db:index",
   "args": [],
   "hide": false,
   "allow_disable": true,

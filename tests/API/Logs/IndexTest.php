@@ -9,7 +9,7 @@ use App\Libs\TestCase;
 
 final class IndexTest extends TestCase
 {
-    public function test_formatLog_extracts_context_without_user_whitelist(): void
+    public function test_formatLog_no_whitelist(): void
     {
         $line = "[2026-04-27T10:17:56+03:00] NOTICE: Processing 'main@office_emby' - '#123: IppSec' item.";
 
@@ -26,7 +26,7 @@ final class IndexTest extends TestCase
         );
     }
 
-    public function test_formatLog_stringifies_non_string_payloads(): void
+    public function test_formatLog_stringifies(): void
     {
         $parsed = Index::formatLog(['message' => 'boom', 'code' => 1]);
 

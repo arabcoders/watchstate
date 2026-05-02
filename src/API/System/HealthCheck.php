@@ -14,7 +14,7 @@ final class HealthCheck
     public const string URL = '%{api.prefix}/system/healthcheck';
 
     #[Get(self::URL . '[/]', name: 'system.healthcheck')]
-    public function __invoke(iRequest $request): iResponse
+    public function __invoke(): iResponse
     {
         return api_response(
             Status::OK,

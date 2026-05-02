@@ -121,7 +121,7 @@ class AuthorizationMiddlewareTest extends TestCase
         Config::reset();
     }
 
-    public function test_expired_user_token_is_rejected(): void
+    public function test_expired_token_rejected(): void
     {
         Config::save('api.prefix', '/v1/api');
         Config::save('system.user', 'admin');
@@ -145,7 +145,7 @@ class AuthorizationMiddlewareTest extends TestCase
         Config::reset();
     }
 
-    public function test_legacy_user_token_without_exp_uses_configured_expiry(): void
+    public function test_legacy_token_expiry(): void
     {
         Config::save('api.prefix', '/v1/api');
         Config::save('system.user', 'admin');

@@ -12,7 +12,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 class GetUsersListTest extends PlexTestCase
 {
-    public function test_get_users_list_external_tokens(): void
+    public function test_users_list_external(): void
     {
         $externalUsersXml = '<MediaContainer><User id="1" username="TestUser" thumb="/users/uuid-1/avatar" home="0" restricted="0" protected="0" /></MediaContainer>';
         $sharedServersXml = '<MediaContainer><SharedServer userID="1" accessToken="token-1" invitedAt="2024-01-01T00:00:00Z" /><SharedServer userID="2" accessToken="token-2" /></MediaContainer>';
@@ -33,7 +33,7 @@ class GetUsersListTest extends PlexTestCase
         $this->assertSame('token-1', $result->response[0]['token']);
     }
 
-    public function test_get_users_list_merges_external_users(): void
+    public function test_users_list_merges(): void
     {
         $externalUsersXml = '<MediaContainer><User id="2" username="Invited User" thumb="/users/uuid-2/avatar" home="0" restricted="0" protected="0" /></MediaContainer>';
         $homeUsersJson = json_encode([
@@ -75,7 +75,7 @@ class GetUsersListTest extends PlexTestCase
         $this->assertTrue($result->response[1]['guest']);
     }
 
-    public function test_get_users_list_deduplicates_home_and_external_overlap(): void
+    public function test_users_list_dedup(): void
     {
         $externalUsersXml = '<MediaContainer>'
             . '<User id="3003" username="Invited Guest" thumb="/users/external-uuid-3/avatar" home="0" restricted="0" protected="0" />'
@@ -129,7 +129,7 @@ class GetUsersListTest extends PlexTestCase
         $this->assertSame(['H', 'H', 'E'], array_column($result->response, 'type'));
     }
 
-    public function test_get_users_list_home_users(): void
+    public function test_users_list_home(): void
     {
         $homeUsersJson = json_encode([
             'users' => [
@@ -163,7 +163,7 @@ class GetUsersListTest extends PlexTestCase
         $this->assertTrue($result->response[0]['admin']);
     }
 
-    public function test_get_users_list_target_token(): void
+    public function test_users_list_target(): void
     {
         $homeUsersJson = json_encode([
             'users' => [
@@ -240,7 +240,7 @@ class GetUsersListTest extends PlexTestCase
         );
     }
 
-    public function test_get_users_list_error_status(): void
+    public function test_users_list_error(): void
     {
         $http = new \App\Libs\Extends\MockHttpClient([
             new MockResponse('error', ['http_code' => 500]),

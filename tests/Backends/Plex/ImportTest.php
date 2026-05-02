@@ -11,7 +11,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 class ImportTest extends PlexTestCase
 {
-    public function test_import_library_select_includes_only_selected(): void
+    public function test_import_select_includes(): void
     {
         $sections = ag($this->fixture('sections_get_200'), 'response.body');
         $sections['MediaContainer']['Directory'][1]['agent'] = 'tv.plex.agents.series';
@@ -46,7 +46,7 @@ class ImportTest extends PlexTestCase
         }
     }
 
-    public function test_import_library_select_inverse_excludes_selected(): void
+    public function test_import_select_excludes(): void
     {
         $sections = ag($this->fixture('sections_get_200'), 'response.body');
         $sections['MediaContainer']['Directory'][1]['agent'] = 'tv.plex.agents.series';
@@ -99,7 +99,7 @@ class ImportTest extends PlexTestCase
         $this->assertSame([], $result->response);
     }
 
-    public function test_import_nfo_library_select_includes_selected(): void
+    public function test_import_nfo_select(): void
     {
         $sections = [
             'MediaContainer' => [

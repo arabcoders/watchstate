@@ -26,7 +26,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 class ProgressSkipTest extends MediaBrowserTestCase
 {
-    public function test_progress_skips_same_backend_origin(): void
+    public function test_progress_skips_origin(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass, $metaClass, $sessionsClass]) {
             $context = $this->makeContext($clientName);
@@ -82,7 +82,7 @@ class ProgressSkipTest extends MediaBrowserTestCase
         }
     }
 
-    public function test_progress_skips_missing_sender_date(): void
+    public function test_progress_skips_sender_date(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass, $metaClass, $sessionsClass]) {
             $context = $this->makeContext($clientName);
@@ -110,7 +110,7 @@ class ProgressSkipTest extends MediaBrowserTestCase
         }
     }
 
-    public function test_progress_skips_local_date_newer(): void
+    public function test_progress_skips_local_newer(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass, $metaClass, $sessionsClass]) {
             $context = $this->makeContext($clientName);

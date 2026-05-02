@@ -74,14 +74,17 @@ echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Caching tool routes."
 echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Caching events listeners."
 /opt/bin/console events:cache
 
+echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Migrating legacy database if needed."
+/opt/bin/console db:legacy --execute
+
 echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Running database migrations."
-/opt/bin/console system:db:migrations
+/opt/bin/console db:migrate --execute
 
 echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Running database maintenance tasks."
-/opt/bin/console system:db:maintenance
+/opt/bin/console db:maintenance
 
 echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Ensuring state table has correct indexes."
-/opt/bin/console system:index
+/opt/bin/console db:index
 
 /opt/bin/console system:apikey -q
 

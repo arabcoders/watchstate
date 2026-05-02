@@ -72,6 +72,7 @@ class PlexGuidTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->initTempDir();
 
         $this->handler = new TestHandler();
         $this->logger = new Logger('logger', processors: [new LogMessageProcessor()]);
@@ -84,7 +85,7 @@ class PlexGuidTest extends TestCase
     {
         $oldGuidFile = Config::get('guid.file');
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
         try {
             file_put_contents($tmpFile, "{'foo' => 'too' }");
             Config::save('guid.file', $tmpFile);
@@ -94,9 +95,6 @@ class PlexGuidTest extends TestCase
                 "Assert message logged when the value type does not match the expected type."
             );
         } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
             Config::save('guid.file', $oldGuidFile);
         }
     }
@@ -105,8 +103,7 @@ class PlexGuidTest extends TestCase
     {
         Config::save('guid.file', null);
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
-        try {
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
             $this->checkException(
                 closure: function () use ($tmpFile) {
                     file_put_contents($tmpFile, 'version: 99.0');
@@ -116,11 +113,7 @@ class PlexGuidTest extends TestCase
                 exception: InvalidArgumentException::class,
                 exceptionMessage: 'Unsupported file version'
             );
-        } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
-        }
+
 
         $this->checkException(
             closure: fn() => $this->getClass()->parseGUIDFile('not_set.yml'),
@@ -129,8 +122,7 @@ class PlexGuidTest extends TestCase
             exceptionMessage: 'does not exist'
         );
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
-        try {
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
             $this->checkException(
                 closure: function () use ($tmpFile) {
                     file_put_contents($tmpFile, 'fff: {_]');
@@ -140,14 +132,9 @@ class PlexGuidTest extends TestCase
                 exception: InvalidArgumentException::class,
                 exceptionMessage: 'Failed to parse GUIDs file'
             );
-        } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
-        }
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
-        try {
+
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
             $this->checkException(
                 closure: function () use ($tmpFile) {
                     file_put_contents($tmpFile, 'invalid');
@@ -157,27 +144,18 @@ class PlexGuidTest extends TestCase
                 exception: InvalidArgumentException::class,
                 exceptionMessage: 'is not an array'
             );
-        } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
-        }
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
-        try {
+
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
+        touch($tmpFile);
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
                 $this->logged(Level::Info, 'is empty', true),
                 "Failed to assert that the GUID file is empty."
             );
-        } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
-        }
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
-        try {
+
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
             $this->checkException(
                 closure: function () use ($tmpFile) {
                     file_put_contents($tmpFile, Yaml::dump(['links' => 'foo']));
@@ -187,14 +165,9 @@ class PlexGuidTest extends TestCase
                 exception: InvalidArgumentException::class,
                 exceptionMessage: 'links sub key is not an array'
             );
-        } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
-        }
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
-        try {
+
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
             $this->handler->clear();
             $yaml = ['links' => [['type' => 'plex']]];
             file_put_contents($tmpFile, Yaml::dump($yaml));
@@ -238,16 +211,11 @@ class PlexGuidTest extends TestCase
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertCount(0, $this->handler->getRecords(), "There should be no error messages logged.");
-        } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
-        }
+
 
         $this->handler->clear();
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
-        try {
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
             $yaml = ag_set(['links' => [['type' => 'plex']]], 'links.0.map', 'foo');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
@@ -334,11 +302,7 @@ class PlexGuidTest extends TestCase
                 ag($class->getConfig(), 'guidMapper', []),
                 'Assert that the GUID mapping has been added.'
             );
-        } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
-        }
+
     }
 
     public function test_isLocal()

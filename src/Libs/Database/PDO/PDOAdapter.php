@@ -217,7 +217,7 @@ final class PDOAdapter implements iDB
 
             $entity->id = (int) $this->db->lastInsertId();
         } catch (PDOException $e) {
-            $this->stmt['insert'] = null;
+            $this->resetPreparedWrites();
             if (false === $this->viaTransaction) {
                 $this->logger->error(
                     message: "PDOAdapter: Exception '{error.kind}' was thrown unhandled. '{error.message}' at '{error.file}:{error.line}'.",
@@ -439,7 +439,7 @@ final class PDOAdapter implements iDB
                 ),
             ]);
         } catch (PDOException $e) {
-            $this->stmt['update'] = null;
+            $this->resetPreparedWrites();
             if (false === $this->viaTransaction) {
                 $this->logger->error(
                     message: "PDOAdapter: Exception '{error.kind}' was thrown unhandled. '{error.message}' at '{error.file}:{error.line}'.",
@@ -562,62 +562,6 @@ final class PDOAdapter implements iDB
 
             return $actions;
         });
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function migrations(string $dir, array $opts = []): mixed
-    {
-        $class = new PDOMigrations($this->db, $this->logger);
-
-        return match (strtolower($dir)) {
-            iDB::MIGRATE_UP => $class->up(),
-            iDB::MIGRATE_DOWN => $class->down(),
-            default => throw new DBException(r("PDOAdapter: Unknown migration direction '{dir}' was given.", [
-                'name' => $dir,
-            ]), 91),
-        };
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function ensureIndex(array $opts = []): mixed
-    {
-        return new PDOIndexer($this->db, $this->logger)->ensureIndex($opts);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function migrateData(string $version, ?iLogger $logger = null): mixed
-    {
-        return new PDODataMigration($this->db, $logger ?? $this->logger)->automatic();
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function isMigrated(): bool
-    {
-        return new PDOMigrations($this->db, $this->logger)->isMigrated();
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function makeMigration(string $name, array $opts = []): mixed
-    {
-        return new PDOMigrations($this->db, $this->logger)->make($name);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function maintenance(array $opts = []): mixed
-    {
-        return new PDOMigrations($this->db, $this->logger)->runMaintenance();
     }
 
     /**
@@ -748,7 +692,7 @@ final class PDOAdapter implements iDB
             $this->db->commit();
         }
 
-        $this->stmt = [];
+        $this->resetPreparedWrites();
     }
 
     /**
@@ -822,10 +766,20 @@ final class PDOAdapter implements iDB
             throw $e;
         }
 
+        $this->resetPreparedWrites();
+
         $statement = $this->db->prepare($sql);
         $this->stmt[$key] = $statement;
 
         return $this->db->query($statement, $data);
+    }
+
+    private function resetPreparedWrites(): void
+    {
+        $this->stmt = [
+            'insert' => null,
+            'update' => null,
+        ];
     }
 
     /**

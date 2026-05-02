@@ -8,9 +8,12 @@ use App\Backends\Common\Cache as BackendCache;
 use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Common\Context;
 use App\Backends\Common\Request;
+use App\Libs\Attributes\Cli\Prune;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\Attributes\Scanner\Attributes as AttributesScanner;
+use App\Libs\Attributes\Scanner\Item as ScannerItem;
+use App\Libs\Attributes\Scanner\Target;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Debug;
@@ -1171,6 +1174,57 @@ if (!function_exists('generate_routes')) {
     }
 }
 
+if (!function_exists('normalize_pruner_name')) {
+    function normalize_pruner_name(string $name): string
+    {
+        $name = trim($name);
+        if ('' === $name) {
+            return '';
+        }
+
+        return strtolower((string) preg_replace('#\s+#', '_', $name));
+    }
+}
+
+if (!function_exists('discover_pruners')) {
+    /**
+     * @param array<string> $paths
+     *
+     * @return array<string, array{name:string,cron:?string,desc:?string,enabled:bool,callable:string|array|Closure,item:ScannerItem,target:Target}>
+     */
+    function discover_pruners(array $paths = []): array
+    {
+        $paths = [] !== $paths ? $paths : (array) Config::get('prune.paths', [__DIR__ . '/../Commands/Prune']);
+
+        $pruners = [];
+
+        foreach (AttributesScanner::scan($paths, allowNonInvokable: true)->for(Prune::class) as $item) {
+            $data = $item->getData();
+            $name = normalize_pruner_name((string) ag($data, 'name', ''));
+            if ('' === $name) {
+                continue;
+            }
+
+            $cron = trim((string) ag($data, 'cron', ''));
+            $desc = trim((string) ag($data, 'desc', ''));
+
+            $pruners[$name] = [
+                'name' => $name,
+                'cron' => '' !== $cron ? $cron : null,
+                'desc' => '' !== $desc ? $desc : null,
+                'enabled' => (bool) ag($data, 'enabled', true),
+                'callable' => $item->getCallable(),
+                'item' => $item,
+                'target' => $item->getTarget(),
+            ];
+        }
+
+        ksort($pruners);
+
+        return $pruners;
+    }
+}
+
 if (!function_exists('get_client_ip')) {
     /**
      * Get the client IP address.
@@ -1446,9 +1500,9 @@ if (!function_exists('send_requests')) {
                 $total = count($queue);
 
                 while (null !== ($request = array_shift($queue))) {
+                    $start = microtime(true);
                     try {
                         $position++;
-                        $start = microtime(true);
                         $response = ($request->extras[iHttp::class] ?? $client)->request(...$request->toRequest());
                         $response->getStatusCode();
                         $followUps = $handleSuccess($request, $response);

@@ -10,7 +10,7 @@ use App\Libs\QueueRequests;
 
 class UpdateStateTest extends MediaBrowserTestCase
 {
-    public function test_update_state_handles_empty_entities(): void
+    public function test_update_empty_entities(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass]) {
             $http = $this->makeHttpClient();

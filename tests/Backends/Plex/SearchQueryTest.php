@@ -6,9 +6,7 @@ namespace Tests\Backends\Plex;
 
 use App\Backends\Plex\Action\SearchQuery;
 use App\Backends\Plex\PlexGuid;
-use App\Libs\Database\DBLayer;
-use App\Libs\Database\PDO\PDOAdapter;
-use PDO;
+
 
 class SearchQueryTest extends PlexTestCase
 {
@@ -36,8 +34,7 @@ class SearchQueryTest extends PlexTestCase
         $http = $this->makeHttpClient($response);
         $context = $this->makeContext();
 
-        $db = new PDOAdapter($this->logger, new DBLayer(new PDO('sqlite::memory:')));
-        $db->migrations('up');
+        $db = $this->createDb($this->logger);
 
         $action = new SearchQuery($http, $this->logger, $db, new PlexGuid($this->logger));
         $result = $action($context, 'Ferengi');
@@ -53,8 +50,7 @@ class SearchQueryTest extends PlexTestCase
         $http = $this->makeHttpClient($response);
         $context = $this->makeContext();
 
-        $db = new PDOAdapter($this->logger, new DBLayer(new PDO('sqlite::memory:')));
-        $db->migrations('up');
+        $db = $this->createDb($this->logger);
 
         $action = new SearchQuery($http, $this->logger, $db, new PlexGuid($this->logger));
         $result = $action($context, 'Ferengi');

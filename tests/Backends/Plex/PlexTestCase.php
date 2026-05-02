@@ -8,24 +8,22 @@ use App\Backends\Common\Cache;
 use App\Backends\Common\Context;
 use App\Libs\ConfigFile;
 use App\Libs\Container;
-use App\Libs\Database\DBLayer;
-use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\HttpClient;
 use App\Libs\Extends\MockHttpClient;
+use App\Libs\TestCase;
 use App\Libs\Uri;
 use App\Libs\UserContext;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
-use PDO;
 use Psr\Log\LoggerInterface;
 use Psr\Http\Message\UriInterface;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
-abstract class PlexTestCase extends \PHPUnit\Framework\TestCase
+abstract class PlexTestCase extends TestCase
 {
     protected TestHandler|null $handler = null;
     protected Logger|null $logger = null;
@@ -48,8 +46,7 @@ abstract class PlexTestCase extends \PHPUnit\Framework\TestCase
     protected function makeContext(array $options = []): Context
     {
         $cache = new Cache($this->logger, new Psr16Cache(new ArrayAdapter()));
-        $db = new PDOAdapter($this->logger, new DBLayer(new PDO('sqlite::memory:')));
-        $db->migrations('up');
+        $db = $this->createDb($this->logger);
 
         $userContext = new UserContext(
             name: 'Plex',

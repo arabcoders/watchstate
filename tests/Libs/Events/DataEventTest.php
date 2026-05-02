@@ -35,15 +35,7 @@ class DataEventTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Container::init();
-        foreach ((array)require __DIR__ . '/../../../config/services.php' as $name => $definition) {
-            Container::add($name, $definition);
-        }
-    }
-
-    public function __destruct()
-    {
-        Container::reset();
+        $this->initContainer();
     }
 
     public function test_initial_state()

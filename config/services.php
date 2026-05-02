@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 use App\Libs\Config;
 use App\Libs\ConfigFile;
-use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Database\DBLayer;
 use App\Libs\Database\PDO\PDOAdapter;
+use App\Libs\Database\PdoFactory;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Exceptions\RuntimeException;
@@ -208,46 +208,10 @@ return (function (): array {
         ],
 
         PDO::class => [
-            'class' => function (): PDO {
-                $inTestMode = true === (defined('IN_TEST_MODE') && true === IN_TEST_MODE);
-                $dsn = $inTestMode ? 'sqlite::memory:' : Config::get('database.dsn');
-
-                if (false === $inTestMode) {
-                    $dbFile = Config::get('database.file');
-                    $changePerm = !file_exists($dbFile);
-                }
-
-                $args = [
-                    'dsn' => $dsn,
-                ];
-                if (null !== ($username = Config::get('database.username'))) {
-                    $args['username'] = $username;
-                }
-                if (null !== ($password = Config::get('database.password'))) {
-                    $args['password'] = $password;
-                }
-
-                $args['options'] = Config::get('database.options', []);
-
-                $pdo = new PDO(...$args);
-
-                if (str_starts_with($dsn, 'sqlite:') && false === $inTestMode) {
-                    $dir = dirname($dbFile);
-                    if (!is_dir($dir)) {
-                        mkdir($dir, 0755, true);
-                    }
-
-                    if (!$inTestMode && $changePerm && in_container() && 777 !== (int) decoct(fileperms($dbFile) & 0777)) {
-                        @chmod($dbFile, 0777);
-                    }
-                }
-
-                foreach (Config::get('database.exec.' . $pdo->getAttribute(PDO::ATTR_DRIVER_NAME), []) as $cmd) {
-                    $pdo->exec($cmd);
-                }
-
-                return $pdo;
+            'class' => function (PdoFactory $factory): PDO {
+                return $factory->createMain();
             },
+            'args' => [PdoFactory::class],
         ],
 
         DialectInterface::class => [
@@ -286,27 +250,14 @@ return (function (): array {
         ],
 
         DBLayer::class => [
-            'class' => fn(PDO $pdo): DBLayer => new DBLayer($pdo),
+            'class' => fn(DatabaseConnection $connection): DBLayer => new DBLayer($connection),
             'args' => [
-                PDO::class,
+                DatabaseConnection::class,
             ],
         ],
 
         iDB::class => [
-            'class' => function (iLogger $logger, DBLayer $pdo): iDB {
-                $adapter = new PDOAdapter($logger, $pdo);
-
-                if (true !== $adapter->isMigrated()) {
-                    $adapter->migrations(iDB::MIGRATE_UP);
-                    $adapter->ensureIndex();
-                    $adapter->migrateData(
-                        Config::get('database.version'),
-                        Container::get(iLogger::class),
-                    );
-                }
-
-                return $adapter;
-            },
+            'class' => fn(iLogger $logger, DBLayer $db): iDB => new PDOAdapter($logger, $db),
             'args' => [
                 iLogger::class,
                 DBLayer::class,

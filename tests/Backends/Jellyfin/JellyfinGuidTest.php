@@ -72,6 +72,7 @@ class JellyfinGuidTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->initTempDir();
 
         $this->handler = new TestHandler();
         $this->logger = new Logger('logger', processors: [new LogMessageProcessor()]);
@@ -84,7 +85,7 @@ class JellyfinGuidTest extends TestCase
     {
         $oldGuidFile = Config::get('guid.file');
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
         try {
             file_put_contents($tmpFile, "{'foo' => 'too' }");
             Config::save('guid.file', $tmpFile);
@@ -94,9 +95,6 @@ class JellyfinGuidTest extends TestCase
                 "Assert message logged when the value type does not match the expected type."
             );
         } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
             Config::save('guid.file', $oldGuidFile);
         }
     }
@@ -105,8 +103,7 @@ class JellyfinGuidTest extends TestCase
     {
         Config::save('guid.file', null);
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
-        try {
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
             $this->checkException(
                 closure: function () use ($tmpFile) {
                     file_put_contents($tmpFile, 'version: 2.0');
@@ -116,11 +113,7 @@ class JellyfinGuidTest extends TestCase
                 exception: InvalidArgumentException::class,
                 exceptionMessage: 'Unsupported file version'
             );
-        } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
-        }
+
 
         $this->checkException(
             closure: fn() => $this->getClass()->parseGUIDFile('not_set.yml'),
@@ -129,8 +122,7 @@ class JellyfinGuidTest extends TestCase
             exceptionMessage: 'does not exist'
         );
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
-        try {
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
             $this->checkException(
                 closure: function () use ($tmpFile) {
                     file_put_contents($tmpFile, 'fff: {_]');
@@ -140,14 +132,9 @@ class JellyfinGuidTest extends TestCase
                 exception: InvalidArgumentException::class,
                 exceptionMessage: 'Failed to parse GUIDs file'
             );
-        } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
-        }
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
-        try {
+
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
             $this->checkException(
                 closure: function () use ($tmpFile) {
                     file_put_contents($tmpFile, 'invalid');
@@ -157,27 +144,18 @@ class JellyfinGuidTest extends TestCase
                 exception: InvalidArgumentException::class,
                 exceptionMessage: 'is not an array'
             );
-        } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
-        }
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
-        try {
+
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
+        touch($tmpFile);
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
                 $this->logged(Level::Info, 'is empty', true),
                 "Failed to assert that the GUID file is empty."
             );
-        } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
-        }
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
-        try {
+
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
             $this->checkException(
                 closure: function () use ($tmpFile) {
                     file_put_contents($tmpFile, Yaml::dump(['links' => 'foo']));
@@ -187,14 +165,9 @@ class JellyfinGuidTest extends TestCase
                 exception: InvalidArgumentException::class,
                 exceptionMessage: 'links sub key is not an array'
             );
-        } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
-        }
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
-        try {
+
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
             $this->handler->clear();
             $yaml = ['links' => []];
             file_put_contents($tmpFile, Yaml::dump($yaml));
@@ -208,16 +181,11 @@ class JellyfinGuidTest extends TestCase
                 $this->logged(Level::Warning, 'Value must be an object.', true),
                 'Assert replace key is an object.'
             );
-        } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
-        }
+
 
         $this->handler->clear();
 
-        $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
-        try {
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
             $yaml = ag_set(['links' => [0 => ['type' => 'jellyfin']]], 'links.0.map', 'foo');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
@@ -287,11 +255,7 @@ class JellyfinGuidTest extends TestCase
                 ag($class->getConfig(), 'guidMapper', []),
                 'Assert that the GUID mapping has been added.'
             );
-        } finally {
-            if (file_exists($tmpFile)) {
-                unlink($tmpFile);
-            }
-        }
+
     }
 
     public function test_isLocal()

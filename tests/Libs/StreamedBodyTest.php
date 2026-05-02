@@ -20,11 +20,14 @@ class StreamedBodyTest extends TestCase
     public function test_expectations()
     {
         $fn = fn() => 'test';
+        $stream = StreamedBody::create($fn);
+
         $this->assertSame(
             'test',
-            StreamedBody::create($fn)->getContents(),
+            $stream->getContents(),
             'getContents(): Must return the same value as the callback'
         );
+        $this->assertSame('', $stream->getContents());
 
         $this->assertSame('test', $this->getStream()->__toString(), 'Must implement __toString');
         $this->assertSame('test', (string)$this->getStream(), 'Must implement __toString');
@@ -38,13 +41,20 @@ class StreamedBodyTest extends TestCase
         );
 
         $this->assertSame(
-            'test',
+            't',
             $this->getStream()->read(1),
-            'read(): Must return the same value as the callback regardless of the read length'
+            'read(): Must return only the requested buffered chunk length'
         );
 
-        $this->assertSame(0, $this->getStream()->tell(), 'tell(): Must return 0 as closure does not have a position');
-        $this->assertFalse($this->getStream()->eof(), 'eof(): Must return false as closure does not have an end');
+        $stream = $this->getStream();
+        $this->assertSame('t', $stream->read(1));
+        $this->assertSame(1, $stream->tell(), 'tell(): Must advance as the buffered body is consumed');
+        $this->assertFalse($stream->eof(), 'eof(): Must remain false until the buffered body is consumed');
+        $this->assertSame('est', $stream->getContents());
+        $this->assertTrue($stream->eof(), 'eof(): Must become true after the buffered body is consumed');
+
+        $this->assertSame(0, $this->getStream()->tell(), 'tell(): Must return 0 before the stream is consumed');
+        $this->assertFalse($this->getStream()->eof(), 'eof(): Must return false before the callback executes');
         $this->assertTrue($this->getStream()->isReadable(), 'isReadable(): Must return true as closure is readable');
         $this->assertFalse(
             $this->getStream()->isWritable(),
@@ -72,19 +82,33 @@ class StreamedBodyTest extends TestCase
         );
     }
 
-    public function test_run_once_mode_executes_callback_once(): void
+    public function test_streamed_executes_once(): void
     {
         $calls = 0;
         $stream = new StreamedBody(function () use (&$calls): string {
             $calls++;
             return 'streamed';
-        }, runOnce: true);
+        });
 
         $this->assertFalse($stream->eof());
         $this->assertSame('streamed', $stream->read(8192));
         $this->assertTrue($stream->eof());
         $this->assertSame('', $stream->read(8192));
         $this->assertSame('', $stream->getContents());
+        $this->assertSame(1, $calls);
+    }
+
+    public function test_empty_callback_before_eof(): void
+    {
+        $calls = 0;
+        $stream = new StreamedBody(function () use (&$calls): string {
+            $calls++;
+            return '';
+        });
+
+        $this->assertFalse($stream->eof());
+        $this->assertSame('', $stream->read(8192));
+        $this->assertTrue($stream->eof());
         $this->assertSame(1, $calls);
     }
 }

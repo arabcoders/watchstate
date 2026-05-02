@@ -7,224 +7,266 @@ namespace App\Commands\System;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\Database\DBLayer;
-use App\Model\Events\EventsTable;
-use DirectoryIterator;
+use Cron\CronExpression;
+use DateTimeZone;
 use Psr\Log\LoggerInterface as iLogger;
-use SplFileInfo;
+use Psr\SimpleCache\CacheInterface as iCache;
+use Symfony\Component\Console\Completion\CompletionInput;
+use Symfony\Component\Console\Completion\CompletionSuggestions;
+use Symfony\Component\Console\Completion\Suggestion;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Throwable;
 
-/**
- * Class PruneCommand
- *
- * This command removes automatically generated files like logs and backups.
- * It provides an option to run in dry-run mode to see what files will be removed without actually removing them.
- */
 #[Cli(command: self::ROUTE)]
-final class PruneCommand extends Command
+class PruneCommand extends Command
 {
     public const string ROUTE = 'system:prune';
-
     public const string TASK_NAME = 'prune';
 
-    /**
-     * Class Constructor.
-     *
-     * @param iLogger $logger The logger implementation used for logging.
-     */
     public function __construct(
         private readonly iLogger $logger,
-        private readonly DBLayer $db,
     ) {
         parent::__construct();
     }
 
-    /**
-     * Configure the command.
-     */
     protected function configure(): void
     {
         $this
             ->setName(self::ROUTE)
-            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not perform any actions on files.')
-            ->setDescription('Remove automatically generated files.')
-            ->setHelp(
-                r(
-                    <<<HELP
+            ->addOption('run', 'r', InputOption::VALUE_NONE, 'Run due prune handlers.')
+            ->addOption('prune', 'p', InputOption::VALUE_REQUIRED, 'Run the specified pruner only.')
+            ->addOption('no-cache', 'c', InputOption::VALUE_NONE, 'Do not use cached prune discovery.')
+            ->addOption('refresh-cache', null, InputOption::VALUE_NONE, 'Refresh cached prune discovery before using it.')
+            ->addOption('execute', 'x', InputOption::VALUE_NONE, 'Perform the pruning operation.')
+            ->setDescription('List and run prune handlers.')
+            ->setHelp('List prune handlers or run them.');
+    }
 
-                        This command remove automatically generated files. like logs and backups.
+    protected function runCommand(InputInterface $input, OutputInterface $output): int
+    {
+        if (false === (bool) $input->getOption('run')) {
+            $this->listPruners($input, $output);
+            return self::SUCCESS;
+        }
 
-                        to see what files will be removed without actually removing them. run the following command.
-
-                        {cmd} <cmd>{route}</cmd> <flag>--dry-run</flag> <flag>-vvv</flag>
-
-                        HELP,
-                    [
-                        'cmd' => trim(command_context()),
-                        'route' => self::ROUTE,
-                    ],
-                ),
-            );
+        return $this->runPruners($input, $output);
     }
 
     /**
-     * Executes the command.
-     *
-     * @param InputInterface $input The input interface.
-     * @param OutputInterface $output The output interface.
-     *
-     * @return int The exit status code.
+     * @return array<string, array{name:string,cron:?string,desc:?string,enabled:bool,callable:string|array|\Closure,item:mixed,target:mixed}>
      */
-    protected function runCommand(InputInterface $input, OutputInterface $output): int
+    protected function getPruners(): array
     {
-        $time = time();
+        return $this->loadPruners();
+    }
 
-        $directories = [
-            [
-                'name' => 'logs_remover',
-                'path' => Config::get('tmpDir') . '/logs',
-                'base' => Config::get('tmpDir'),
-                'filter' => '/\.log$/',
-                'time' => strtotime('-7 DAYS', $time),
-            ],
-            [
-                'name' => 'webhooks_remover',
-                'path' => Config::get('tmpDir') . '/webhooks',
-                'base' => Config::get('tmpDir'),
-                'filter' => '/\.json$/',
-                'time' => strtotime('-3 DAYS', $time),
-            ],
-            [
-                'name' => 'profiler_remover',
-                'path' => Config::get('tmpDir') . '/profiler',
-                'base' => Config::get('tmpDir'),
-                'filter' => '/\.json$/',
-                'time' => strtotime('-3 DAYS', $time),
-            ],
-            [
-                'name' => 'debug_remover',
-                'path' => Config::get('tmpDir') . '/debug',
-                'base' => Config::get('tmpDir'),
-                'filter' => '/\.json$/',
-                'time' => strtotime('-3 DAYS', $time),
-            ],
-            [
-                'name' => 'backup_remover',
-                'path' => Config::get('path') . '/backup',
-                'base' => Config::get('path'),
-                'filter' => '/\.json$|\.json.zip$/',
-                'validate' => static fn(SplFileInfo $f): bool => 1
-                === @preg_match(
-                    '/^(\w+\.)?\w+\.\d{8}\.json(\.zip)?$/i',
-                    $f->getBasename(),
-                ),
-                'time' => strtotime('-90 DAYS', $time),
-            ],
-        ];
+    protected function shouldForcePrunerDiscovery(InputInterface $input): bool
+    {
+        return (bool) $input->getOption('no-cache') || (bool) $input->getOption('refresh-cache');
+    }
 
-        $inDryRunMode = $input->getOption('dry-run');
+    /**
+     * @return array<string, array{name:string,cron:?string,desc:?string,enabled:bool,callable:string|array|\Closure,item:mixed,target:mixed}>
+     */
+    protected function resolvePruners(InputInterface $input): array
+    {
+        if (false === $this->shouldForcePrunerDiscovery($input)) {
+            return $this->getPruners();
+        }
 
-        foreach ($directories as $item) {
-            $name = ag($item, 'name');
-            $path = ag($item, 'path');
-            $filter = ag($item, 'filter');
+        return $this->loadPruners(refresh: true);
+    }
 
-            if (null === ($expiresAt = ag($item, 'time'))) {
-                $this->logger->warning("No expected time to live was found for '{name}' - '{path}'.", [
-                    'name' => $name,
-                    'path' => $path,
-                ]);
-                continue;
+    /**
+     * @param array<string> $paths
+     *
+     * @return array<string, array{name:string,cron:?string,desc:?string,enabled:bool,callable:string|array|\Closure,item:mixed,target:mixed}>
+     */
+    protected function loadPruners(bool $refresh = false, array $paths = []): array
+    {
+        $paths = [] !== $paths ? $paths : (array) Config::get('prune.paths', [__DIR__ . '/../Prune']);
+        $paths = array_values(array_filter($paths, static fn(mixed $path): bool => is_scalar($path) || $path instanceof \Stringable));
+        $paths = array_values(array_unique(array_filter(array_map(
+            static fn(mixed $path): string => trim((string) $path),
+            $paths,
+        ))));
+
+        $cacheTime = (int) Config::get('prune.cache.time', 0);
+        if (0 === $cacheTime) {
+            return discover_pruners($paths);
+        }
+
+        $cacheName = 'pruners';
+        if ([] !== $paths) {
+            $cacheName .= '.' . hash('sha256', implode('|', $paths));
+        }
+
+        $cache = \App\Libs\Container::get(iCache::class);
+
+        try {
+            if (false === $refresh && $cache->has($cacheName)) {
+                return $cache->get($cacheName, []);
+            }
+        } catch (\Psr\SimpleCache\InvalidArgumentException) {
+        }
+
+        $pruners = discover_pruners($paths);
+
+        try {
+            $cache->set($cacheName, $pruners, $cacheTime);
+        } catch (\Psr\SimpleCache\InvalidArgumentException) {
+        }
+
+        return $pruners;
+    }
+
+    protected function runPruners(InputInterface $input, OutputInterface $output): int
+    {
+        $execute = (bool) $input->getOption('execute');
+        $run = [];
+        $pruners = $this->resolvePruners($input);
+
+        if (null !== ($prunerName = $input->getOption('prune'))) {
+            $prunerName = normalize_pruner_name((string) $prunerName);
+
+            if (false === ag_exists($pruners, $prunerName)) {
+                $output->writeln(r('<error>There are no pruner named [{pruner}].</error>', [
+                    'pruner' => $prunerName,
+                ]));
+
+                return self::FAILURE;
             }
 
-            if (null === $path || !is_dir($path)) {
-                if (true === (bool) ag($item, 'report', true)) {
-                    $this->logger->warning("{name}: Path '{path}' not found or is inaccessible.", [
-                        'name' => $name,
-                        'path' => $path,
-                    ]);
-                }
-                continue;
-            }
-
-            $validate = ag($item, 'validate', null);
-
-            foreach (new DirectoryIterator($path) as $file) {
-                if ($file->isDot() || $file->isDir() || false === $file->isFile() || $file->isLink()) {
+            $run[$prunerName] = ag($pruners, $prunerName);
+        } else {
+            foreach ($pruners as $name => $pruner) {
+                if (false === (bool) ag($pruner, 'enabled', true)) {
                     continue;
                 }
 
-                $file = new SplFileInfo($file->getRealPath());
+                try {
+                    if (false === $this->isPrunerDue($pruner)) {
+                        continue;
+                    }
 
-                $fileName = $file->getBasename();
-
-                if (null !== $filter && false === @preg_match($filter, $fileName)) {
-                    $this->logger->debug("{name}: File '{file}' did not pass filter checks.", [
-                        'name' => $name,
-                        'file' => after($file->getRealPath(), ag($item, 'base') . '/'),
-                    ]);
-                    continue;
-                }
-
-                if (null !== $validate && false === $validate($file)) {
-                    $this->logger->debug("{name}: File '{file}' did not pass validation checks.", [
-                        'name' => $name,
-                        'file' => after($file->getRealPath(), ag($item, 'base') . '/'),
-                    ]);
-                    continue;
-                }
-
-                if ($file->getMTime() > $expiresAt) {
-                    $this->logger->debug("{name}: File '{file}' Not yet expired. '{ttl}' seconds left.", [
-                        'name' => $name,
-                        'file' => after($file->getRealPath(), ag($item, 'base') . '/'),
-                        'ttl' => number_format($file->getMTime() - $expiresAt),
-                    ]);
-                    continue;
-                }
-
-                $this->logger->notice("{name}: Removing '{file}'. expired TTL.", [
-                    'name' => $name,
-                    'file' => after($file->getRealPath(), ag($item, 'base') . '/'),
-                ]);
-
-                if (false === $inDryRunMode) {
-                    unlink($file->getRealPath());
+                    $run[$name] = $pruner;
+                } catch (Throwable $e) {
+                    $this->reportPrunerError($pruner, $e, $output);
                 }
             }
         }
 
-        $this->cleanUp();
+        if (count($run) < 1) {
+            $output->writeln(r('<info>[{datetime}] No pruners scheduled to run at this time.</info>', [
+                'datetime' => make_date(),
+            ]), OutputInterface::VERBOSITY_VERBOSE);
+        }
+
+        foreach ($run as $pruner) {
+            try {
+                ag($pruner, 'item')->call($execute);
+            } catch (Throwable $e) {
+                $this->reportPrunerError($pruner, $e, $output);
+            }
+        }
+
         return self::SUCCESS;
     }
 
-    private function cleanUp(): void
+    protected function listPruners(InputInterface $input, OutputInterface $output): void
     {
-        $before = make_date(strtotime('-7 DAYS'));
+        $list = [];
+        $mode = $input->hasOption('output') ? (string) $input->getOption('output') : 'json';
 
-        $sql = 'DELETE FROM
-                ' . EventsTable::TABLE_NAME . '
-                WHERE
-                ' . EventsTable::COLUMN_CREATED_AT . ' < datetime(:before)
-        ';
-        $stmt = $this->db->query($sql, ['before' => $before->format('Y-m-d')]);
-
-        $count = $stmt->rowCount();
-        if ($count > 1) {
-            $this->logger->info("Pruned '{count}' events.", ['count' => $count]);
+        foreach ($this->resolvePruners($input) as $pruner) {
+            $list[] = [
+                'name' => ag($pruner, 'name'),
+                'callable' => $this->stringifyCallable(ag($pruner, 'callable')),
+                'cron' => ag($pruner, 'cron', 'every run'),
+                'description' => ag($pruner, 'desc'),
+                'enabled' => true === (bool) ag($pruner, 'enabled', true) ? 'yes' : 'no',
+                'next' => $this->nextRunFor($pruner),
+            ];
         }
 
-        $playlistBefore = strtotime('-90 DAYS');
-        $playlistStmt = $this->db->query(
-            'DELETE FROM playlists WHERE deleted_at IS NOT NULL AND deleted_at < :before',
-            ['before' => $playlistBefore],
-        );
+        $this->displayContent($list, $output, $mode);
+    }
 
-        $playlistCount = $playlistStmt->rowCount();
-        if ($playlistCount > 0) {
-            $this->logger->info("Pruned '{count}' deleted playlist snapshots.", ['count' => $playlistCount]);
+    protected function isPrunerDue(array $pruner): bool
+    {
+        if (null === ($cron = ag($pruner, 'cron'))) {
+            return true;
+        }
+
+        return new CronExpression((string) $cron)->isDue('now');
+    }
+
+    protected function nextRunFor(array $pruner): ?string
+    {
+        if (null === ($cron = ag($pruner, 'cron'))) {
+            return null;
+        }
+
+        $displayTZ = new DateTimeZone((string) Config::get('tz', 'UTC'));
+
+        return new CronExpression((string) $cron)
+            ->getNextRunDate('now')
+            ->setTimezone($displayTZ)
+            ->format('Y-m-d H:i:s T');
+    }
+
+    protected function stringifyCallable(mixed $callable): string
+    {
+        if (is_string($callable)) {
+            return $callable;
+        }
+
+        if (is_array($callable)) {
+            return implode('::', array_map(static fn(mixed $part): string => is_object($part) ? $part::class : (string) $part, $callable));
+        }
+
+        if ($callable instanceof \Closure) {
+            return 'Closure';
+        }
+
+        return serialize($callable);
+    }
+
+    protected function reportPrunerError(array $pruner, Throwable $e, OutputInterface $output): void
+    {
+        $this->logger->error("Skipping pruner '{name}'. {message}", [
+            'name' => ag($pruner, 'name', 'unknown'),
+            'message' => $e->getMessage(),
+            'exception' => $e::class,
+            'trace' => $e->getTrace(),
+        ]);
+
+        $output->writeln(r("<error>Skipping pruner '{name}'. {message}</error>", [
+            'name' => ag($pruner, 'name', 'unknown'),
+            'message' => $e->getMessage(),
+        ]), OutputInterface::OUTPUT_NORMAL);
+    }
+
+    public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
+    {
+        parent::complete($input, $suggestions);
+
+        if ($input->mustSuggestOptionValuesFor('prune')) {
+            $currentValue = $input->getCompletionValue();
+            $suggest = [];
+
+            foreach ($this->getPruners() as $name => $pruner) {
+                $prunerName = (string) ag($pruner, 'name', $name);
+                if (!(empty($currentValue) || str_starts_with($prunerName, $currentValue))) {
+                    continue;
+                }
+
+                $suggest[] = new Suggestion($prunerName);
+            }
+
+            $suggestions->suggestValues($suggest);
         }
     }
 }

@@ -62,7 +62,7 @@ class ImportFlowTest extends PlexTestCase
         $this->assertSame(0, $result['movie']['added']);
     }
 
-    public function test_import_process_episode_adds_item(): void
+    public function test_import_episode_adds(): void
     {
         $context = $this->makeContext();
         $mapper = $context->userContext->mapper;
@@ -126,7 +126,7 @@ class ImportFlowTest extends PlexTestCase
         $this->assertSame(1, $result['episode']['added']);
     }
 
-    public function test_import_uses_prefetched_show_metadata_for_episode_genres(): void
+    public function test_import_prefetched_genres(): void
     {
         $context = $this->makeContext();
         $mapper = $context->userContext->mapper;
@@ -199,7 +199,7 @@ class ImportFlowTest extends PlexTestCase
         $this->assertSame(0, $metaAction->calls);
     }
 
-    public function test_import_ignores_no_supported_guids(): void
+    public function test_import_ignores_no_guids(): void
     {
         $context = $this->makeContext();
         $mapper = $context->userContext->mapper;

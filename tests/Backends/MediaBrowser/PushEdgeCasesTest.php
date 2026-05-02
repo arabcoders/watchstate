@@ -76,7 +76,7 @@ class PushEdgeCasesTest extends MediaBrowserTestCase
         }
     }
 
-    public function test_push_skips_backend_date_newer(): void
+    public function test_push_skips_newer(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass]) {
             $context = $this->makeContext($clientName);
@@ -95,7 +95,7 @@ class PushEdgeCasesTest extends MediaBrowserTestCase
         }
     }
 
-    public function test_push_skips_not_found_metadata(): void
+    public function test_push_skips_not_found(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass]) {
             $context = $this->makeContext($clientName);

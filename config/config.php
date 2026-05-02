@@ -5,14 +5,15 @@ declare(strict_types=1);
 use App\Backends\Emby\EmbyClient;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Backends\Plex\PlexClient;
+use App\Commands\Database\IndexCommand;
 use App\Commands\Events\DispatchCommand;
 use App\Commands\State\BackupCommand;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
 use App\Commands\State\PlaylistCommand;
 use App\Commands\State\ValidateCommand;
-use App\Commands\System\IndexCommand;
 use App\Commands\System\PruneCommand;
+use App\Libs\Database\PdoFactory;
 use App\Libs\Mappers\Import\DirectMapper;
 use Cron\CronExpression;
 use Monolog\Level;
@@ -23,6 +24,11 @@ return (function () {
     $progressToMS = fn(int $v): int => $v < 60 ? $v * 1000 : 60000;
     $tokenExpiry = max(1, (int) env('WS_AUTH_TOKEN_EXPIRY', 2 * 24 * 60 * 60));
     $defaultRefreshWindow = max(60, min(24 * 60 * 60, max(60, intdiv($tokenExpiry, 4))));
+    $logsPruneAfter = (string) env('WS_LOGS_PRUNE_AFTER', '-7 DAYS');
+    $logsPruneAfterUnix = strtotime($logsPruneAfter);
+    if ('' === trim($logsPruneAfter) || false === $logsPruneAfterUnix || $logsPruneAfterUnix >= time()) {
+        $logsPruneAfter = '-7 DAYS';
+    }
 
     $config = [
         'name' => 'WatchState',
@@ -37,7 +43,7 @@ return (function () {
         'logs' => [
             'context' => (bool) env('WS_LOGS_CONTEXT', false),
             'prune' => [
-                'after' => env('WS_LOGS_PRUNE_AFTER', '-3 DAYS'),
+                'after' => $logsPruneAfter,
             ],
         ],
         'api' => [
@@ -69,7 +75,7 @@ return (function () {
             'path' => fix_path(env('WS_WEBUI_PATH', __DIR__ . '/../public/exported')),
         ],
         'database' => [
-            'version' => 'v01',
+            'version' => 'v02',
         ],
         'library' => [
             // -- this is used to segment backends requests into pages.
@@ -133,21 +139,16 @@ return (function () {
 
     $config['tmpDir'] = fix_path(env('WS_TMP_DIR', ag($config, 'path')));
 
-    $dbFile = ag($config, 'path') . '/db/watchstate_' . ag($config, 'database.version') . '.db';
+    $dbFile = ag($config, 'path') . '/db/' . PdoFactory::DB_FILE;
 
     $config['api']['logfile'] = ag($config, 'tmpDir') . '/logs/access.' . $logDateFormat . '.log';
 
-    if ('MEMORY' === env('WS_DB_MODE', 'WAL')) {
-        $pragma = [
-            'PRAGMA journal_mode=MEMORY',
-            'PRAGMA synchronous=OFF',
-        ];
-    } else {
-        $pragma = [
-            'PRAGMA journal_mode=WAL',
-            'PRAGMA synchronous=NORMAL',
-        ];
-    }
+    $isMemory = 'MEMORY' === env('WS_DB_MODE', 'WAL');
+    $pragma = [
+        'PRAGMA busy_timeout=5000',
+        'PRAGMA journal_mode=' . ($isMemory ? 'MEMORY' : 'WAL'),
+        'PRAGMA synchronous=' . ($isMemory ? 'OFF' : 'NORMAL'),
+    ];
 
     $config['database'] += [
         'file' => $dbFile,
@@ -161,8 +162,7 @@ return (function () {
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         ],
         'exec' => [
-            'PRAGMA busy_timeout=5000',
-            ...$pragma,
+            'sqlite' => $pragma,
         ],
     ];
 
@@ -216,6 +216,15 @@ return (function () {
         'prefix' => env('WS_CACHE_PREFIX', null),
         'url' => env('WS_CACHE_URL', 'redis://127.0.0.1:6379'),
         'path' => env('WS_CACHE_PATH', fn() => ag($config, 'tmpDir') . '/cache'),
+    ];
+
+    $config['prune'] = [
+        'paths' => [
+            __DIR__ . '/../src/Libs/Prune',
+        ],
+        'cache' => [
+            'time' => 3600 * 6,
+        ],
     ];
 
     $config['logger'] = [
@@ -370,10 +379,11 @@ return (function () {
             PruneCommand::TASK_NAME => [
                 'command' => PruneCommand::ROUTE,
                 'name' => PruneCommand::TASK_NAME,
-                'info' => 'Delete old logs and backups.',
-                'enabled' => (bool) env('WS_CRON_PRUNE', true),
-                'timer' => $checkTaskTimer((string) env('WS_CRON_PRUNE_AT', '0 */12 * * *'), '0 */12 * * *'),
-                'args' => env('WS_CRON_PRUNE_ARGS', '-v'),
+                'info' => 'Run prune handlers.',
+                'enabled' => true,
+                'timer' => '*/5 * * * *',
+                'args' => env('WS_CRON_PRUNE_ARGS', '--run --execute -v'),
+                'hide' => true,
             ],
             IndexCommand::TASK_NAME => [
                 'command' => IndexCommand::ROUTE,

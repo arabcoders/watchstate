@@ -151,7 +151,12 @@ final readonly class Emitter
         while (false === $body->eof()) {
             $iterations++;
 
-            $this->write($body->read($maxBuffer));
+            $chunk = $body->read($maxBuffer);
+            if ('' === $chunk) {
+                break;
+            }
+
+            $this->write($chunk);
 
             if (($iterations % 5) === 0 && CONNECTION_NORMAL !== connection_status()) {
                 break;
@@ -190,6 +195,10 @@ final readonly class Emitter
 
         while ($remaining >= $maxBuffer && !$body->eof()) {
             $contents = $body->read($maxBuffer);
+            if ('' === $contents) {
+                break;
+            }
+
             $remaining -= strlen($contents);
 
             $this->write($contents);

@@ -10,13 +10,13 @@ use RuntimeException;
 final class StreamedBody implements StreamInterface
 {
     private mixed $func;
-    private bool $hasRun = false;
+    private bool $executed = false;
     private string $buffer = '';
+    private int $position = 0;
 
     public function __construct(
         callable $func,
         private bool $isReadable = true,
-        private bool $runOnce = false,
     ) {
         $this->func = $func;
     }
@@ -24,9 +24,8 @@ final class StreamedBody implements StreamInterface
     public static function create(
         callable $func,
         bool $isReadable = true,
-        bool $runOnce = false,
     ): StreamInterface {
-        return new self($func, isReadable: $isReadable, runOnce: $runOnce);
+        return new self($func, isReadable: $isReadable);
     }
 
     public function __destruct() {}
@@ -50,16 +49,12 @@ final class StreamedBody implements StreamInterface
 
     public function tell(): int
     {
-        return 0;
+        return $this->position;
     }
 
     public function eof(): bool
     {
-        if (true === $this->runOnce) {
-            return $this->hasRun;
-        }
-
-        return false;
+        return true === $this->executed && $this->position >= strlen($this->buffer);
     }
 
     public function isSeekable(): bool
@@ -88,27 +83,43 @@ final class StreamedBody implements StreamInterface
 
     public function read($length): string
     {
-        if (true === $this->runOnce && true === $this->hasRun) {
+        if (!is_int($length) || 1 > $length) {
             return '';
         }
 
-        return $this->getContents();
+        $this->execute();
+
+        if (true === $this->eof()) {
+            return '';
+        }
+
+        $chunk = substr($this->buffer, $this->position, $length);
+        $this->position += strlen($chunk);
+        return $chunk;
     }
 
     public function getContents(): string
     {
-        if (true === $this->runOnce && true === $this->hasRun) {
+        $this->execute();
+
+        if (true === $this->eof()) {
             return '';
         }
 
-        if (true === $this->runOnce) {
-            $this->hasRun = true;
-            $result = ($this->func)();
-            $this->buffer = is_string($result) ? $result : '';
-            return $this->buffer;
+        $chunk = substr($this->buffer, $this->position);
+        $this->position = strlen($this->buffer);
+        return $chunk;
+    }
+
+    private function execute(): void
+    {
+        if (true === $this->executed) {
+            return;
         }
 
-        return ($this->func)();
+        $result = ($this->func)();
+        $this->buffer = is_string($result) ? $result : '';
+        $this->executed = true;
     }
 
     public function getMetadata($key = null): null

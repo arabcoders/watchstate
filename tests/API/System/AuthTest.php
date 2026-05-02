@@ -23,7 +23,7 @@ final class AuthTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_refresh_reissues_token_when_it_is_near_expiry(): void
+    public function test_refresh_near_expiry(): void
     {
         Config::save('system.user', 'admin');
         Config::save('system.password', TokenUtil::generateSecret(32));
@@ -54,7 +54,7 @@ final class AuthTest extends TestCase
         $this->assertNotSame($token, ag($payload, 'token'));
     }
 
-    public function test_refresh_returns_existing_token_when_it_is_not_near_expiry(): void
+    public function test_refresh_not_near_expiry(): void
     {
         Config::save('system.user', 'admin');
         Config::save('system.password', TokenUtil::generateSecret(32));

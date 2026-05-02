@@ -14,7 +14,7 @@ use Symfony\Component\Console\Tester\CommandTester;
 
 final class TestCommandTest extends \PHPUnit\Framework\TestCase
 {
-    public function test_lists_available_actions_from_client_interface(): void
+    public function test_lists_client_actions(): void
     {
         $client = $this->createStub(iClient::class);
         $client->method('getName')->willReturn('demo');
@@ -37,7 +37,7 @@ final class TestCommandTest extends \PHPUnit\Framework\TestCase
         self::assertNotContains('withContext', $actions);
     }
 
-    public function test_invokes_playlist_action_and_returns_result(): void
+    public function test_invokes_playlist(): void
     {
         $client = $this->makeClientMock();
         $client
@@ -64,7 +64,7 @@ final class TestCommandTest extends \PHPUnit\Framework\TestCase
         ], $payload['result']);
     }
 
-    public function test_invokes_action_and_routes_extra_params_into_opts(): void
+    public function test_invokes_routes_opts(): void
     {
         $client = $this->makeClientMock();
         $client
@@ -92,7 +92,7 @@ final class TestCommandTest extends \PHPUnit\Framework\TestCase
         ], $payload['result']);
     }
 
-    public function test_normalizes_action_name_and_passes_named_and_opts_params(): void
+    public function test_normalizes_named_opts(): void
     {
         $client = $this->makeClientMock();
         $client
@@ -124,7 +124,7 @@ final class TestCommandTest extends \PHPUnit\Framework\TestCase
         self::assertSame('token-123', $payload['result']);
     }
 
-    public function test_inspects_action_and_shows_required_params(): void
+    public function test_inspects_required(): void
     {
         $client = $this->createStub(iClient::class);
         $client->method('getName')->willReturn('demo');

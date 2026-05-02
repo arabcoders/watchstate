@@ -73,7 +73,7 @@ class ExportFlowTest extends PlexTestCase
         $this->assertSame(0, $queue->count());
     }
 
-    public function test_export_ignores_date_is_newer(): void
+    public function test_export_ignores_newer(): void
     {
         $context = $this->makeContext();
         $queue = new QueueRequests();
@@ -101,7 +101,7 @@ class ExportFlowTest extends PlexTestCase
         $this->assertSame(0, $queue->count());
     }
 
-    public function test_export_ignores_not_found_in_db(): void
+    public function test_export_ignores_not_found(): void
     {
         $context = $this->makeContext([Options::IGNORE_DATE => true]);
         $queue = new QueueRequests();
@@ -125,7 +125,7 @@ class ExportFlowTest extends PlexTestCase
         $this->assertSame(0, $queue->count());
     }
 
-    public function test_export_ignores_no_supported_guids(): void
+    public function test_export_ignores_no_guids(): void
     {
         $context = $this->makeContext([Options::IGNORE_DATE => true]);
         $queue = new QueueRequests();

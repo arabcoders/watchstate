@@ -19,7 +19,7 @@ class GetWebUrlTest extends PlexTestCase
         $this->assertStringContainsString('!/server/plex-server-1/details?key=%2Flibrary%2Fmetadata%2F1', (string) $result->response);
     }
 
-    public function test_get_web_url_invalid_type(): void
+    public function test_web_url_invalid_type(): void
     {
         $context = $this->makeContext();
         $action = new GetWebUrl();

@@ -12,7 +12,7 @@ use Nyholm\Psr7\ServerRequest;
 
 class InspectRequestTest extends TestCase
 {
-    public function test_parses_payload_and_sets_attributes(): void
+    public function test_parses_payload_attrs(): void
     {
         $payload = [
             'Server' => ['Id' => 'server-1', 'Name' => 'Emby', 'Version' => '4.8.1.0'],

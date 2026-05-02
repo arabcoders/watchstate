@@ -13,6 +13,10 @@ use App\Libs\ConfigFile;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Database\DBLayer;
+use App\Libs\Database\PackageMigrationFactory;
+use App\Libs\Database\PDO\PDOAdapter;
+use App\Libs\Database\PDO\PDOIndexer;
+use App\Libs\Database\PdoFactory;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Method;
@@ -35,6 +39,8 @@ use App\Model\Events\EventListener;
 use App\Model\Events\EventsRepository;
 use App\Model\Events\EventsTable;
 use App\Model\Events\EventStatus;
+use arabcoders\database\Connection as DatabaseConnection;
+use arabcoders\database\Dialect\DialectFactory;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7Server\ServerRequestCreator;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -1384,18 +1390,48 @@ if (!function_exists('get_user_db')) {
             }
         }
 
-        $dbFileOld = fix_path(r('{path}/user.db', ['path' => $path]));
-        $dbFile = fix_path(r('{path}/user_{version}.db', ['path' => $path, 'version' => Config::get('database.version')]));
-        if (file_exists($dbFileOld)) {
-            if (false === @rename($dbFileOld, $dbFile)) {
-                throw new RuntimeException(r("Unable to rename '{old}' to '{new}'.", [
-                    'old' => $dbFileOld,
-                    'new' => $dbFile,
-                ]));
-            }
+        return fix_path(r('{path}/' . PdoFactory::DB_FILE, ['path' => $path]));
+    }
+}
+
+if (!function_exists('per_user_db')) {
+    /**
+     * Create a runtime DB adapter for the given PDO handle.
+     */
+    function make_db_adapter(PDO $pdo): iDB
+    {
+        $connection = new DatabaseConnection($pdo, DialectFactory::fromPdo($pdo));
+        $db = new DBLayer($connection);
+
+        return new PDOAdapter(Container::get(iLogger::class), $db);
+    }
+}
+
+if (!function_exists('ensure_migration')) {
+    /**
+     * Ensure the provided database file is migrated.
+     */
+    function ensure_migration(string $file): iDB
+    {
+        $pdo = Container::get(PdoFactory::class)->createForFile($file);
+        $db = make_db_adapter($pdo);
+        $migrations = Container::get(PackageMigrationFactory::class);
+
+        if (false === $migrations->isMigrated($pdo)) {
+            $migrations->migrate($pdo, dryRun: false);
         }
 
-        return $dbFile;
+        return $db;
+    }
+}
+
+if (!function_exists('ensure_indexes')) {
+    /**
+     * Ensure managed indexes exist for the given DB layer or package connection.
+     */
+    function ensure_indexes(DBLayer|DatabaseConnection|PDO $db, iLogger $logger, array $opts = []): bool
+    {
+        return new PDOIndexer($db, $logger)->ensureIndex($opts);
     }
 }
 
@@ -1409,34 +1445,9 @@ if (!function_exists('per_user_db')) {
      */
     function per_user_db(string $user): iDB
     {
-        $dbFile = get_user_db($user);
+        $pdo = Container::get(PdoFactory::class)->createForFile(get_user_db($user));
 
-        $inTestMode = true === (defined('IN_TEST_MODE') && true === IN_TEST_MODE);
-        $dsn = r('sqlite:{src}', ['src' => $inTestMode ? ':memory:' : $dbFile]);
-
-        if (false === $inTestMode) {
-            $changePerm = !file_exists($dbFile);
-        }
-
-        $pdo = new PDO(dsn: $dsn, options: Config::get('database.options', []));
-
-        if (!$inTestMode && $changePerm && in_container() && 644 !== (int) decoct(fileperms($dbFile) & 0o644)) {
-            @chmod($dbFile, 0o644);
-        }
-
-        foreach (Config::get('database.exec.' . $pdo->getAttribute(PDO::ATTR_DRIVER_NAME), []) as $cmd) {
-            $pdo->exec($cmd);
-        }
-
-        $db = Container::get(iDB::class)->with(db: Container::get(DBLayer::class)->withPDO($pdo));
-
-        if (false === $db->isMigrated()) {
-            $db->migrations(iDB::MIGRATE_UP);
-            $db->ensureIndex();
-            $db->migrateData(Config::get('database.version'), Container::get(iLogger::class));
-        }
-
-        return $db;
+        return make_db_adapter($pdo);
     }
 }
 
@@ -1532,6 +1543,44 @@ if (!function_exists('delete_user_config')) {
 
 if (!function_exists('get_users_context')) {
     /**
+     * @return array<int,string>
+     */
+    function get_users(bool $includeMain = true): array
+    {
+        $users = true === $includeMain ? ['main'] : [];
+        $usersDir = Config::get('path') . '/users';
+
+        if (false === is_dir($usersDir)) {
+            return $users;
+        }
+
+        if (false === is_readable($usersDir)) {
+            throw new RuntimeException(r("Unable to read '{path}' directory.", [
+                'path' => $usersDir,
+            ]));
+        }
+
+        foreach (new DirectoryIterator($usersDir) as $path) {
+            if ($path->isDot() || false === $path->isDir()) {
+                continue;
+            }
+
+            $userName = $path->getBasename();
+            if (true === in_array($userName, $users, true)) {
+                throw new RuntimeException(r("Duplicate user name '{user}' found.", [
+                    'user' => $userName,
+                ]));
+            }
+
+            $users[] = $userName;
+        }
+
+        return $users;
+    }
+}
+
+if (!function_exists('get_users_context')) {
+    /**
      * Retrieves users configuration and related classes.
      *
      * @param iImport $mapper Import mapper instance.
@@ -1545,73 +1594,46 @@ if (!function_exists('get_users_context')) {
     {
         $dbOpts = ag($opts, iDB::class, []);
 
-        $configs = [
-            'main' => new UserContext(
-                name: 'main',
-                config: ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true),
-                mapper: $mapper,
-                cache: Container::get(iCache::class),
-                db: Container::get(iDB::class)->setOptions($dbOpts),
-            ),
-        ];
+        $configs = [];
+        $users = get_users(includeMain: true !== (bool) ag($opts, 'no_main_user', false));
 
         if (true === (bool) ag($opts, 'main_user_only', false)) {
-            return $configs;
+            $users = ['main'];
         }
 
-        if (true === (bool) ag($opts, 'no_main_user', false)) {
-            $configs = [];
-        }
+        foreach ($users as $userName) {
+            $configs[$userName] = get_user_context($userName, $mapper, $logger);
 
-        $usersDir = Config::get('path') . '/users';
-
-        if (false === is_dir($usersDir)) {
-            return $configs;
-        }
-
-        if (false === is_readable($usersDir)) {
-            throw new RuntimeException(r("Unable to read '{path}' directory.", [
-                'path' => $usersDir,
-            ]));
-        }
-
-        foreach (new DirectoryIterator(Config::get('path') . '/users') as $path) {
-            if ($path->isDot() || false === $path->isDir()) {
-                continue;
-            }
-
-            if (true === array_key_exists($path->getBasename(), $configs)) {
-                throw new RuntimeException(r("Duplicate user name '{user}' found.", [
-                    'user' => $path->getBasename(),
-                ]));
-            }
-
-            $config = per_user_config($path->getBasename());
-
-            $userName = $path->getBasename();
-            $perUserCache = per_user_cache_adapter($userName);
-            $db = per_user_db($userName);
             if (count($dbOpts) > 0) {
-                $db->setOptions($dbOpts);
+                $configs[$userName]->db->setOptions($dbOpts);
             }
-
-            $mapper = $mapper
-                ->withDB($db)
-                ->withCache($perUserCache)
-                ->withLogger($logger)
-                ->withOptions(array_replace_recursive($mapper->getOptions(), [Options::ALT_NAME => $userName]));
-            assert($mapper instanceof iImport, 'Expected import mapper for user context.');
-
-            $configs[$userName] = new UserContext(
-                name: $userName,
-                config: $config,
-                mapper: $mapper,
-                cache: $perUserCache,
-                db: $db,
-            );
         }
 
         return $configs;
+    }
+}
+
+if (!function_exists('select_users')) {
+    /**
+     * @return array<int,string>
+     */
+    function select_users(mixed $selectedUser, bool $includeMain = true): array
+    {
+        if (true === is_string($selectedUser) && '' !== trim($selectedUser)) {
+            $user = trim($selectedUser);
+
+            if ('main' === $user) {
+                return ['main'];
+            }
+
+            if (false === in_array($user, get_users(includeMain: false), true)) {
+                throw new RuntimeException(r("User '{user}' not found.", ['user' => $user]));
+            }
+
+            return [$user];
+        }
+
+        return get_users($includeMain);
     }
 }
 
@@ -1628,16 +1650,43 @@ if (!function_exists('get_user_context')) {
      */
     function get_user_context(string $user, iImport $mapper, iLogger $logger): UserContext
     {
-        $users = get_users_context($mapper, $logger);
-        if (false === in_array($user, array_keys($users), true)) {
+        $users = get_users(includeMain: true);
+        if (false === in_array($user, $users, true)) {
             $logger->error("User '{user}' not found.", [
                 'user' => $user,
-                'users' => array_keys($users),
+                'users' => $users,
             ]);
             throw new RuntimeException(r("User '{user}' not found.", ['user' => $user]), 1001);
         }
 
-        return ag($users, $user);
+        if ('main' === $user) {
+            return new UserContext(
+                name: 'main',
+                config: ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true),
+                mapper: $mapper,
+                cache: Container::get(iCache::class),
+                db: Container::get(iDB::class),
+            );
+        }
+
+        $config = per_user_config($user);
+        $cache = per_user_cache_adapter($user);
+        $db = per_user_db($user);
+
+        $mapper = $mapper
+            ->withDB($db)
+            ->withCache($cache)
+            ->withLogger($logger)
+            ->withOptions(array_replace_recursive($mapper->getOptions(), [Options::ALT_NAME => $user]));
+        assert($mapper instanceof iImport, 'Expected import mapper for user context.');
+
+        return new UserContext(
+            name: $user,
+            config: $config,
+            mapper: $mapper,
+            cache: $cache,
+            db: $db,
+        );
     }
 }
 

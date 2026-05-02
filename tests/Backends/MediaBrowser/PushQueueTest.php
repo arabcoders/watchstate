@@ -16,7 +16,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 class PushQueueTest extends MediaBrowserTestCase
 {
-    public function test_push_queues_play_state_updates(): void
+    public function test_push_queues_updates(): void
     {
         $payload = [
             'Id' => 'item-1',

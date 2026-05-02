@@ -13,6 +13,7 @@ use App\Libs\ConfigFile;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
+use App\Libs\UserContext;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\InvalidArgumentException;
 use Throwable;
@@ -712,7 +713,24 @@ final class IdentityProvisionService
 
             if (false === $request->dryRun) {
                 if (false === file_exists($dbFile)) {
-                    per_user_db($identityName);
+                    $db = ensure_migration($dbFile);
+                    $cache = per_user_cache_adapter($identityName);
+                    $mapper = $this->mapper
+                        ->withDB($db)
+                        ->withCache($cache)
+                        ->withLogger($this->logger)
+                        ->withOptions(array_replace_recursive($this->mapper->getOptions(), [Options::ALT_NAME => $identityName]));
+                    $userContext = new UserContext(
+                        name: $identityName,
+                        config: $perIdentity,
+                        mapper: $mapper,
+                        cache: $cache,
+                        db: $db,
+                    );
+
+                    ensure_indexes($db->getDBLayer()->getBackend(), $this->logger, [
+                        UserContext::class => $userContext,
+                    ]);
                 }
 
                 $perIdentity

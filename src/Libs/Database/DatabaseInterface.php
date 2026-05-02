@@ -14,10 +14,6 @@ use Psr\SimpleCache\CacheInterface as iCache;
 
 interface DatabaseInterface
 {
-    public const string MIGRATE_UP = 'up';
-
-    public const string MIGRATE_DOWN = 'down';
-
     /**
      * Create new instance.
      * @param iLogger|null $logger Logger to use, if null use default.
@@ -131,61 +127,6 @@ interface DatabaseInterface
      * @return array{added: int, updated: int, failed: int} Return array with count for each operation.
      */
     public function commit(array $entities, array $opts = []): array;
-
-    /**
-     * Run database migrations.
-     *
-     * @param string $dir Migration direction (up|down).
-     * @param array $opts (Optional) options.
-     *
-     * @return mixed Return value depends on the driver.
-     */
-    public function migrations(string $dir, array $opts = []): mixed;
-
-    /**
-     * Ensure database has correct indexes.
-     *
-     * @param array $opts (Optional) options.
-     *
-     * @return mixed Return value depends on the driver.
-     */
-    public function ensureIndex(array $opts = []): mixed;
-
-    /**
-     * Migrate data from old database schema to new one.
-     *
-     * @param string $version Version to migrate to.
-     * @param iLogger|null $logger Logger to use.
-     *
-     * @return mixed Return value depends on the driver.
-     */
-    public function migrateData(string $version, ?iLogger $logger = null): mixed;
-
-    /**
-     * Is the database up to date with migrations?
-     *
-     * @return bool
-     */
-    public function isMigrated(): bool;
-
-    /**
-     * Run maintenance tasks on database.
-     *
-     * @param array $opts (Optional) options.
-     *
-     * @return mixed Return value depends on the driver.
-     */
-    public function maintenance(array $opts = []): mixed;
-
-    /**
-     * Make migration.
-     *
-     * @param string $name
-     * @param array $opts
-     *
-     * @return mixed can return migration filename in supported cases.
-     */
-    public function makeMigration(string $name, array $opts = []): mixed;
 
     /**
      * Reset database to initial state.

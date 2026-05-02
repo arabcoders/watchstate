@@ -22,7 +22,7 @@ use RuntimeException;
 
 final class TransformersTest extends TestCase
 {
-    public function test_json_transformer_encode_decode_assoc(): void
+    public function test_json_encode_assoc(): void
     {
         $transformer = new JSONTransformer(isAssoc: true);
         $data = ['name' => 'watchstate', 'count' => 3];
@@ -42,7 +42,7 @@ final class TransformersTest extends TestCase
         $this->assertNull($transformer(TransformType::ENCODE, null));
     }
 
-    public function test_json_transformer_nullable_requires_flag(): void
+    public function test_json_nullable_flag(): void
     {
         $transformer = new JSONTransformer();
 
@@ -88,13 +88,13 @@ final class TransformersTest extends TestCase
         $this->assertInstanceOf(DateTimeInterface::class, $decoded);
     }
 
-    public function test_date_transformer_nullable_allows_null(): void
+    public function test_date_nullable_null(): void
     {
         $transformer = new DateTransformer(nullable: true);
         $this->assertNull($transformer(TransformType::ENCODE, null));
     }
 
-    public function test_date_transformer_rejects_invalid_type(): void
+    public function test_date_rejects_type(): void
     {
         $transformer = new DateTransformer();
 
@@ -117,7 +117,7 @@ final class TransformersTest extends TestCase
         $this->assertInstanceOf(DateTimeInterface::class, $decoded);
     }
 
-    public function test_timestamp_transformer_nullable_allows_null(): void
+    public function test_timestamp_nullable_null(): void
     {
         $transformer = new TimestampTransformer(nullable: true);
         $this->assertNull($transformer(TransformType::ENCODE, null));

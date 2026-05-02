@@ -6,15 +6,11 @@ namespace Tests\Commands\State;
 
 use App\Backends\Common\ClientInterface as iClient;
 use App\Commands\State\PlaylistCommand;
-use App\Libs\ConfigFile;
-use App\Libs\Database\DBLayer;
-use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Playlists\PlaylistSyncService;
 use App\Libs\UserContext;
 use Monolog\Logger;
-use PDO;
 use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
@@ -26,7 +22,7 @@ use App\Libs\TestCase;
 
 final class PlaylistCommandTest extends TestCase
 {
-    public function test_renders_playlist_sync_summary(): void
+    public function test_summary(): void
     {
         $service = $this->makeServiceMock();
         $service
@@ -69,7 +65,7 @@ final class PlaylistCommandTest extends TestCase
         self::assertStringContainsString('Playlists', $tester->getDisplay());
     }
 
-    public function test_skips_backend_when_import_and_export_are_disabled(): void
+    public function test_skips_disabled_backend(): void
     {
         $service = $this->makeServiceMock();
         $service
@@ -98,7 +94,7 @@ final class PlaylistCommandTest extends TestCase
         self::assertStringContainsString('No matching backends produced syncable playlists.', $tester->getDisplay());
     }
 
-    public function test_selected_disabled_backend_is_still_passed_with_direction_sets_empty(): void
+    public function test_disabled_passed_empty(): void
     {
         $service = $this->makeServiceMock();
         $service
@@ -130,8 +126,10 @@ final class PlaylistCommandTest extends TestCase
         self::assertSame(PlaylistCommand::SUCCESS, $status);
     }
 
-    public function test_logfile_writes_playlist_lifecycle_logs(): void
+    public function test_logfile_lifecycle(): void
     {
+        $this->initTempDir();
+
         $service = $this->makeServiceMock();
         $service
             ->expects(self::once())
@@ -142,22 +140,57 @@ final class PlaylistCommandTest extends TestCase
         $client->method('getName')->willReturn('test_plex');
         $client->method('getType')->willReturn('plex');
 
-        $logfile = tempnam(sys_get_temp_dir(), 'playlist-log-');
-        self::assertNotFalse($logfile);
+        $logfile = self::$tmpPath . '/playlist-log.txt';
+        touch($logfile);
 
-        try {
-            $tester = $this->makeTester($service, $client);
-            $status = $tester->execute(['--logfile' => $logfile], ['verbosity' => OutputInterface::VERBOSITY_VERBOSE]);
+        $tester = $this->makeTester($service, $client);
+        $status = $tester->execute(['--logfile' => $logfile], ['verbosity' => OutputInterface::VERBOSITY_VERBOSE]);
 
-            self::assertSame(PlaylistCommand::SUCCESS, $status);
+        self::assertSame(PlaylistCommand::SUCCESS, $status);
 
-            $contents = file_get_contents($logfile);
-            self::assertIsString($contents);
-            self::assertStringContainsString('Starting playlist sync process', $contents);
-            self::assertStringContainsString('Playlist sync process completed', $contents);
-        } finally {
-            @unlink($logfile);
-        }
+        $contents = file_get_contents($logfile);
+        self::assertIsString($contents);
+        self::assertStringContainsString('Starting playlist sync process', $contents);
+        self::assertStringContainsString('Playlist sync process completed', $contents);
+    }
+
+    public function test_selected_user_only(): void
+    {
+        $service = $this->makeServiceMock();
+        $service
+            ->expects(self::once())
+            ->method('sync')
+            ->with(
+                self::callback(static fn(UserContext $userContext): bool => 'alice' === $userContext->name),
+                self::isArray(),
+                self::isArray(),
+            )
+            ->willReturn([]);
+
+        $client = $this->createStub(iClient::class);
+        $client->method('getName')->willReturn('test_plex');
+        $client->method('getType')->willReturn('plex');
+
+        $tester = $this->makeTester($service, $client, 'test_plex', ['main', 'alice']);
+        $status = $tester->execute([
+            '--user' => 'alice',
+        ]);
+
+        self::assertSame(PlaylistCommand::SUCCESS, $status);
+    }
+
+    public function test_invalid_user(): void
+    {
+        $service = $this->makeServiceMock();
+        $service->expects(self::never())->method('sync');
+
+        $tester = $this->makeTester($service, $this->createStub(iClient::class));
+        $status = $tester->execute([
+            '--user' => 'ghost',
+        ]);
+
+        self::assertSame(PlaylistCommand::FAILURE, $status);
+        self::assertStringContainsString("User 'ghost' not found.", $tester->getDisplay());
     }
 
     /**
@@ -168,47 +201,53 @@ final class PlaylistCommandTest extends TestCase
         return $this->createMock(PlaylistSyncService::class);
     }
 
-    private function makeTester(PlaylistSyncService $service, iClient $client, string $backendName = 'test_plex'): CommandTester
+    private function makeTester(
+        PlaylistSyncService $service,
+        iClient $client,
+        string $backendName = 'test_plex',
+        array $userNames = ['main'],
+    ): CommandTester
     {
         $application = new Application();
         $application->getDefinition()->addOption(new InputOption('output', 'o', InputOption::VALUE_REQUIRED, '', 'table'));
         $application->getDefinition()->addOption(new InputOption('trace', null, InputOption::VALUE_NONE));
-        $application->addCommand($this->makeCommand($service, $client, $backendName));
+        $application->addCommand($this->makeCommand($service, $client, $backendName, $userNames));
 
         return new CommandTester($application->find(PlaylistCommand::ROUTE));
     }
 
-    private function makeCommand(PlaylistSyncService $service, iClient $client, string $backendName = 'test_plex'): PlaylistCommand
+    private function makeCommand(
+        PlaylistSyncService $service,
+        iClient $client,
+        string $backendName = 'test_plex',
+        array $userNames = ['main'],
+    ): PlaylistCommand
     {
+        $this->initTempApp();
+        $this->seedTestServersConfig();
+
+        foreach ($userNames as $name) {
+            if ('main' === $name) {
+                continue;
+            }
+
+            $this->seedTestServersConfig($name);
+        }
+
         $logger = new Logger('test');
-        $db = new PDOAdapter($logger, new DBLayer(new PDO('sqlite::memory:')));
-        $db->migrations('up');
-        $cache = new Psr16Cache(new ArrayAdapter());
+        $mapper = new DirectMapper($logger, $this->createDb($logger), new Psr16Cache(new ArrayAdapter()));
 
-        $userContext = new UserContext(
-            name: 'main',
-            config: new ConfigFile(
-                file: __DIR__ . '/../../Fixtures/test_servers.yaml',
-                autoSave: false,
-                autoCreate: false,
-                autoBackup: false,
-            ),
-            mapper: new DirectMapper(logger: $logger, db: $db, cache: $cache),
-            cache: $cache,
-            db: $db,
-        );
-
-        return new class($service, $userContext, $logger, $client, $backendName) extends PlaylistCommand {
+        return new class($service, $mapper, $logger, $client, $backendName) extends PlaylistCommand {
             public function __construct(
                 PlaylistSyncService $service,
-                private readonly UserContext $userContext,
+                DirectMapper $mapper,
                 Logger $logger,
                 private readonly iClient $client,
                 private readonly string $backendName,
             ) {
                 parent::__construct(
                     $service,
-                    new DirectMapper($logger, $this->userContext->db, $this->userContext->cache),
+                    $mapper,
                     $logger,
                     new LogSuppressor([]),
                 );
@@ -227,11 +266,6 @@ final class PlaylistCommandTest extends TestCase
                 }
 
                 return [$this->backendName => $this->client];
-            }
-
-            protected function getUsers(array $dbOpts = []): array
-            {
-                return ['main' => $this->userContext];
             }
         };
     }

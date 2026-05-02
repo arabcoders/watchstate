@@ -8,9 +8,8 @@ use App\Backends\Plex\Action\GetMetaData;
 use App\Backends\Plex\Action\SearchId;
 use App\Backends\Plex\PlexGuid;
 use App\Libs\Container;
-use App\Libs\Database\DBLayer;
-use App\Libs\Database\PDO\PDOAdapter;
-use PDO;
+
+
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 
@@ -26,8 +25,7 @@ class SearchIdTest extends PlexTestCase
         });
 
         $context = $this->makeContext();
-        $db = new PDOAdapter($this->logger, new DBLayer(new PDO('sqlite::memory:')));
-        $db->migrations('up');
+        $db = $this->createDb($this->logger);
 
         $action = new SearchId($this->makeHttpClient(), $this->logger, $db, new PlexGuid($this->logger));
         $result = $action($context, '1');

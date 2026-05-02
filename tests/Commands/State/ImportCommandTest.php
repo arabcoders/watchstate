@@ -7,20 +7,18 @@ namespace Tests\Commands\State;
 use App\Backends\Common\ClientInterface as iClient;
 use App\Commands\State\ImportCommand;
 use App\Libs\Config;
-use App\Libs\ConfigFile;
-use App\Libs\Database\DBLayer;
-use App\Libs\Database\PDO\PDOAdapter;
+use App\Libs\Container;
+use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Database\PackageMigrationFactory;
 use App\Libs\Entity\StateEntity;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\TestCase;
-use App\Libs\UserContext;
 use Monolog\Logger;
 use PDO;
 use PDOException;
 use PHPUnit\Framework\Assert;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
-use Symfony\Component\Cache\Psr16Cache;
+use Psr\SimpleCache\CacheInterface as iCache;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -28,62 +26,49 @@ use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 final class ImportCommandTest extends TestCase
 {
-    public function test_request_phase_runs_inside_adapter_transaction_and_rolls_back_db_failures(): void
+    public function test_request_phase_rollback(): void
     {
-        Config::init(require __DIR__ . '/../../../config/config.php');
+        $this->initTempApp();
+        Config::save('backends_file', __DIR__ . '/../../Fixtures/test_servers.yaml');
 
         $logger = new Logger('test');
-        $db = new PDOAdapter($logger, new DBLayer(new PDO('sqlite::memory:')));
-        $db->migrations('up');
-        $db->setOptions(['class' => new StateEntity([])]);
-        $cache = new Psr16Cache(new ArrayAdapter());
-        $entity = $db->insert(new StateEntity(require __DIR__ . '/../../Fixtures/EpisodeEntity.php'));
+        $pdo = Container::get(PDO::class);
+        $migrations = new PackageMigrationFactory();
+        if (false === $migrations->isMigrated($pdo)) {
+            $migrations->migrate($pdo, dryRun: false);
+        }
+        ensure_indexes($pdo, $logger);
 
-        $userContext = new UserContext(
-            name: 'main',
-            config: new ConfigFile(
-                file: __DIR__ . '/../../Fixtures/test_servers.yaml',
-                autoSave: false,
-                autoCreate: false,
-                autoBackup: false,
-            ),
-            mapper: new DirectMapper(logger: $logger, db: $db, cache: $cache),
-            cache: $cache,
-            db: $db,
-        );
+        $db = Container::get(iDB::class);
+        $db->setOptions(['class' => new StateEntity([])]);
+        $cache = Container::get(iCache::class);
+        $entity = $db->insert(new StateEntity(require __DIR__ . '/../../Fixtures/EpisodeEntity.php'));
 
         $client = $this->createStub(iClient::class);
         $client->method('pull')->willReturn([]);
 
         $http = $this->createStub(iHttp::class);
 
-        $command = new class($userContext, $logger, $client, $http, $entity) extends ImportCommand {
+        $command = new class($db, $cache, $logger, $client, $http, $entity) extends ImportCommand {
             public bool $sendRequestsCalled = false;
 
             public function __construct(
-                private readonly UserContext $userContext,
+                private readonly iDB $db,
+                private readonly iCache $cache,
                 Logger $logger,
                 private readonly iClient $client,
                 iHttp $http,
                 private readonly StateEntity $entity,
             ) {
                 parent::__construct(
-                    mapper: $this->userContext->mapper,
+                    mapper: new DirectMapper(logger: $logger, db: $this->db, cache: $this->cache),
                     logger: $logger,
                     suppressor: new LogSuppressor([]),
                     http: $http,
                 );
             }
 
-            /**
-             * @return array<string,UserContext>
-             */
-            protected function getUsers(array $dbOpts = []): array
-            {
-                return ['main' => $this->userContext];
-            }
-
-            protected function makeBackend(array $backend, string $name, UserContext $userContext): iClient
+            protected function makeBackend(array $backend, string $name, \App\Libs\UserContext $userContext): iClient
             {
                 return $this->client;
             }
@@ -91,14 +76,14 @@ final class ImportCommandTest extends TestCase
             protected function sendRequests(array $queue, bool $syncRequests): void
             {
                 Assert::assertTrue(
-                    $this->userContext->db->getDBLayer()->inTransaction(),
+                    $this->db->getDBLayer()->inTransaction(),
                     'Import request phase should run inside a single adapter-managed DB transaction.'
                 );
 
                 $this->sendRequestsCalled = true;
 
-                $this->userContext->db->getDBLayer()->exec('DROP TABLE state');
-                $this->userContext->db->update(clone $this->entity);
+                $this->db->getDBLayer()->exec('DROP TABLE state');
+                $this->db->update(clone $this->entity);
             }
         };
 

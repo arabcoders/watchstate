@@ -6,9 +6,12 @@ namespace Tests\Libs\Identities;
 
 use App\Libs\Config;
 use App\Libs\Container;
+use App\Libs\Database\PdoFactory;
+use App\Libs\Identities\IdentityProvisionRequest;
 use App\Libs\Identities\IdentityProvisionService;
 use App\Libs\Options;
 use App\Libs\TestCase;
+use PDO;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Yaml\Yaml;
 
@@ -19,27 +22,14 @@ final class IdentityProvisionServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->initTempDir();
 
-        $this->tempDir = sys_get_temp_dir() . '/watchstate-identities-' . bin2hex(random_bytes(8));
-        $configDir = $this->tempDir . '/config';
+        $this->tempDir = self::$tmpPath . '/identities';
         $usersDir = $this->tempDir . '/users/alice';
 
-        mkdir($configDir, 0o755, true);
         mkdir($usersDir, 0o755, true);
 
-        Container::reset();
-        Container::init();
-        Config::init(require ROOT_PATH . '/config/config.php');
-
-        foreach ((array) require ROOT_PATH . '/config/services.php' as $name => $definition) {
-            Container::add($name, $definition);
-        }
-
-        Config::save('path', $this->tempDir);
-        Config::save('tmpDir', $this->tempDir);
-        Config::save('cache.path', $this->tempDir . '/cache');
-        Config::save('backends_file', $configDir . '/servers.yaml');
-        Config::save('mapper_file', $configDir . '/mapper.yaml');
+        $configDir = $this->initTempApp($this->tempDir);
 
         file_put_contents(
             Config::get('backends_file'),
@@ -130,14 +120,10 @@ final class IdentityProvisionServiceTest extends TestCase
 
     protected function tearDown(): void
     {
-        $this->deletePath($this->tempDir);
-        Config::reset();
-        Container::reset();
-
         parent::tearDown();
     }
 
-    public function test_syncBackendsDryRunDoesNotPersistChanges(): void
+    public function test_syncBackends_dry_run(): void
     {
         $service = $this->makeService();
         $identityConfigPath = $this->tempDir . '/users/alice/servers.yaml';
@@ -150,7 +136,7 @@ final class IdentityProvisionServiceTest extends TestCase
         $this->assertSame($before, file_get_contents($identityConfigPath), 'Dry run must not persist any identity config changes.');
     }
 
-    public function test_syncBackendsUpdatesSharedFieldsAndPreservesIdentitySpecificFields(): void
+    public function test_syncBackends_preserves(): void
     {
         $service = $this->makeService();
 
@@ -197,33 +183,48 @@ final class IdentityProvisionServiceTest extends TestCase
         $this->assertSame('manual-token', ag($data, 'manual_backend.token'));
     }
 
+    public function test_createIdentities_initializes_new_identity_db(): void
+    {
+        $service = $this->makeService();
+        $request = new IdentityProvisionRequest(mode: 'create');
+
+        $service->createIdentities($request, [[
+            'name' => 'bob',
+            'backends' => [[
+                'uuid' => 'plex-bob-uuid',
+                'client_data' => [
+                    'backendName' => 'plex_bob',
+                    'type' => 'plex',
+                    'name' => 'plex_main',
+                    'url' => 'https://new-plex.example.com',
+                    'token' => 'plex-bob-token',
+                    'user' => 'plex-bob-user',
+                    'options' => [
+                        Options::ADMIN_TOKEN => 'plex-admin-token-new',
+                    ],
+                ],
+            ]],
+        ]]);
+
+        $dbFile = $this->tempDir . '/users/bob/' . PdoFactory::DB_FILE;
+        self::assertFileExists($dbFile);
+
+        $pdo = new PDO('sqlite:' . $dbFile);
+        $tables = $pdo->query("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")?->fetchAll(PDO::FETCH_COLUMN);
+
+        self::assertContains('migration_version', $tables);
+        self::assertContains('state', $tables);
+        self::assertFalse(file_exists($this->tempDir . '/db/' . PdoFactory::DB_FILE));
+
+        $config = Yaml::parseFile($this->tempDir . '/users/bob/servers.yaml');
+        self::assertSame('https://new-plex.example.com', ag($config, 'plex_bob.url'));
+    }
+
     private function makeService(): IdentityProvisionService
     {
         return new IdentityProvisionService(
             mapper: Container::get(\App\Libs\Mappers\ImportInterface::class),
             logger: Container::get(iLogger::class),
         );
-    }
-
-    private function deletePath(string $path): void
-    {
-        if ('' === $path || false === file_exists($path)) {
-            return;
-        }
-
-        if (is_file($path) || is_link($path)) {
-            @unlink($path);
-            return;
-        }
-
-        foreach (scandir($path) ?: [] as $entry) {
-            if ('.' === $entry || '..' === $entry) {
-                continue;
-            }
-
-            $this->deletePath($path . '/' . $entry);
-        }
-
-        @rmdir($path);
     }
 }

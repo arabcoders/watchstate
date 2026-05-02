@@ -9,7 +9,6 @@ use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Common\Context;
 use App\Libs\ConfigFile;
 use App\Libs\Container;
-use App\Libs\Database\DBLayer;
 use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
@@ -22,21 +21,13 @@ use App\Libs\Uri;
 use App\Libs\UserContext;
 use Monolog\Handler\NullHandler;
 use Monolog\Logger;
-use PDO;
 use stdClass;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 
 final class PlaylistSyncServiceTest extends TestCase
 {
-    protected function tearDown(): void
-    {
-        Container::reset();
-
-        parent::tearDown();
-    }
-
-    public function test_partial_target_sync_waits_then_completes_without_promoting_generated_partial(): void
+    public function test_partial_sync_no_promote(): void
     {
         $logger = new Logger('test', [new NullHandler()]);
         $userContext = $this->makeUserContext($logger);
@@ -173,7 +164,7 @@ final class PlaylistSyncServiceTest extends TestCase
         self::assertNull(ag($targetRows[0], 'metadata.sync.desired_content_hash'));
     }
 
-    public function test_sync_skips_empty_target_partial_create(): void
+    public function test_sync_skips_empty(): void
     {
         $logger = new Logger('test', [new NullHandler()]);
         $userContext = $this->makeUserContext($logger);
@@ -264,8 +255,7 @@ final class PlaylistSyncServiceTest extends TestCase
     private function makeUserContext(Logger $logger): UserContext
     {
         $cache = new Psr16Cache(new ArrayAdapter());
-        $db = new PDOAdapter($logger, new DBLayer(new PDO('sqlite::memory:')));
-        $db->migrations('up');
+        $db = $this->createDb($logger);
 
         return new UserContext(
             name: 'main',

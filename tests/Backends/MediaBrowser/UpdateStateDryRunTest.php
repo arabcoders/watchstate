@@ -13,7 +13,7 @@ use App\Libs\QueueRequests;
 
 class UpdateStateDryRunTest extends MediaBrowserTestCase
 {
-    public function test_update_state_dry_run_no_queue(): void
+    public function test_update_dry_no_queue(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass]) {
             $http = $this->makeHttpClient();

@@ -1,6 +1,5 @@
 import { useStorage } from '@vueuse/core';
 import { computed, toRaw } from 'vue';
-import { navigateTo } from '#app';
 import { useDialog } from '~/composables/useDialog';
 import type { GenericError, JsonObject, JsonValue, PaginationItem, RequestOptions } from '~/types';
 
@@ -15,7 +14,6 @@ type ToastOptions = {
 };
 
 const AG_SEPARATOR = '.';
-
 const DEFAULT_TOOLTIP_DATE_FORMAT = 'YYYY-MM-DD h:mm:ss A';
 
 const tooltipDateFormatStorage = useStorage<string>(
@@ -503,6 +501,8 @@ const goto_history_item = async (item: HistoryLogItem): Promise<void> => {
     return;
   }
 
+  const { navigateTo } = await import('#app');
+
   const api_user = useStorage('api_user', 'main');
 
   const log_user = item?.user ?? api_user.value;
@@ -677,6 +677,38 @@ const getEventStatusClass = (status: number): string => {
   }
 };
 
+const signBody = async (body: string, secret: string): Promise<string> => {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(body));
+  const hash = Array.from(new Uint8Array(signature))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+
+  return `sha256=${hash}`;
+};
+
+const formatCommandEcho = (
+  lastChunk: string | undefined,
+  exitCode: number,
+  command: string,
+): string => {
+  const prompt = `(${exitCode}) ~ `;
+
+  if (lastChunk?.endsWith(prompt)) {
+    return `${command}\n`;
+  }
+
+  return `${prompt}${command}\n`;
+};
+
 export {
   r,
   ag,
@@ -707,4 +739,6 @@ export {
   awaiter,
   makeEventName,
   getEventStatusClass,
+  formatCommandEcho,
+  signBody,
 };

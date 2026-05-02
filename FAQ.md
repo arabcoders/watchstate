@@ -518,7 +518,7 @@ Note: the tip about adding the group_add came from the user `binarypancakes` in 
 
 Visit the `Configuration > Custom GUIDs` page, where you can add custom GUIDs to the parser using the add form.
 
-If you added or removed a guid from the `guid.yaml` file, you should run `system:index --force-reindex` command to
+If you added or removed a guid from the `guid.yaml` file, you should run `db:index --force-reindex` command to
 update the database indexes with the new guids.
 
 ---

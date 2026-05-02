@@ -8,10 +8,9 @@ use App\Backends\Emby\Action\SearchQuery as EmbySearchQuery;
 use App\Backends\Emby\EmbyGuid;
 use App\Backends\Jellyfin\Action\SearchQuery as JellyfinSearchQuery;
 use App\Backends\Jellyfin\JellyfinGuid;
-use App\Libs\Database\DBLayer;
-use App\Libs\Database\PDO\PDOAdapter;
+
 use App\Libs\Extends\MockHttpClient;
-use PDO;
+
 
 class SearchQueryErrorTest extends MediaBrowserTestCase
 {
@@ -22,8 +21,7 @@ class SearchQueryErrorTest extends MediaBrowserTestCase
             $http = new MockHttpClient($response);
             $context = $this->makeContext($clientName);
 
-            $db = new PDOAdapter($this->logger, new DBLayer(new PDO('sqlite::memory:')));
-            $db->migrations('up');
+            $db = $this->createDb($this->logger);
 
             $guid = new $guidClass($this->logger);
             $action = new $actionClass($http, $this->logger, $guid, $db);

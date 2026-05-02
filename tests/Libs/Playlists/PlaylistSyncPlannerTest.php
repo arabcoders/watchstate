@@ -9,7 +9,7 @@ use PHPUnit\Framework\TestCase;
 
 final class PlaylistSyncPlannerTest extends TestCase
 {
-    public function test_select_winner_prefers_latest_remote_timestamp(): void
+    public function test_winner_latest_remote(): void
     {
         $planner = new PlaylistSyncPlanner();
 
@@ -34,7 +34,7 @@ final class PlaylistSyncPlannerTest extends TestCase
         self::assertSame('jellyfin', $winner['backend']);
     }
 
-    public function test_deleted_winner_beats_same_timestamp_live_row(): void
+    public function test_deleted_winner_beats(): void
     {
         $planner = new PlaylistSyncPlanner();
 
@@ -60,7 +60,7 @@ final class PlaylistSyncPlannerTest extends TestCase
         self::assertSame(200, $winner['deleted_at']);
     }
 
-    public function test_should_sync_uses_content_hash_for_live_targets(): void
+    public function test_should_sync_hash(): void
     {
         $planner = new PlaylistSyncPlanner();
 
@@ -86,7 +86,7 @@ final class PlaylistSyncPlannerTest extends TestCase
         ], $winner));
     }
 
-    public function test_select_winner_ignores_sync_generated_partial_candidate(): void
+    public function test_winner_ignores_partial(): void
     {
         $planner = new PlaylistSyncPlanner();
 
@@ -115,7 +115,7 @@ final class PlaylistSyncPlannerTest extends TestCase
         self::assertSame('source', $winner['backend']);
     }
 
-    public function test_select_winner_allows_non_generated_partial_candidate_if_newest(): void
+    public function test_winner_allows_newest(): void
     {
         $planner = new PlaylistSyncPlanner();
 

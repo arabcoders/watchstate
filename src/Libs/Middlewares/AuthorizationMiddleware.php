@@ -69,7 +69,7 @@ final class AuthorizationMiddleware implements MiddlewareInterface
             }
         }
 
-        $tokens = $this->parseTokens($request);
+        $tokens = self::parseAuthTokens($request);
 
         if (count($tokens) < 1) {
             return api_error('Authorization is required to access the API.', Status::BAD_REQUEST);
@@ -171,7 +171,7 @@ final class AuthorizationMiddleware implements MiddlewareInterface
         );
     }
 
-    private function parseTokens(iRequest $request): array
+    public static function parseAuthTokens(iRequest $request): array
     {
         $tokens = [];
 

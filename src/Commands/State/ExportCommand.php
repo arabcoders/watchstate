@@ -11,6 +11,7 @@ use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\RetryableHttpClient;
 use App\Libs\Extends\StreamLogHandler;
 use App\Libs\LogSuppressor;
@@ -89,7 +90,7 @@ class ExportCommand extends Command
                 'Send all requests at once. note: Faster but less reliable. Default.',
             )
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
-            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Export to this specific user. Default all users.')
+            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select user. Default is all users.')
             ->addOption(
                 'select-backend',
                 's',
@@ -152,16 +153,25 @@ class ExportCommand extends Command
             $this->mapper->setOptions(options: $mapperOpts);
         }
 
-        $users = get_users_context(mapper: $this->mapper, logger: $this->logger, opts: [
-            DatabaseInterface::class => $dbOpts,
-        ]);
+        try {
+            $users = array_map(
+                fn(string $user): UserContext => get_user_context($user, $this->mapper, $this->logger),
+                select_users($input->getOption('user')),
+            );
+        } catch (RuntimeException $e) {
+            $output->writeln(r('<error>{message}</error>', [
+                'message' => $e->getMessage(),
+            ]));
 
-        if (null !== ($user = $input->getOption('user'))) {
-            $users = array_filter($users, static fn($k) => $k === $user, mode: ARRAY_FILTER_USE_KEY);
-            if (empty($users)) {
-                $output->writeln(r("<error>User '{user}' not found.</error>", ['user' => $user]));
-                return self::FAILURE;
+            return self::FAILURE;
+        }
+
+        foreach ($users as $userContext) {
+            if ([] === $dbOpts) {
+                continue;
             }
+
+            $userContext->db->setOptions($dbOpts);
         }
 
         if (false === ($syncRequests = $input->getOption('sync-requests'))) {

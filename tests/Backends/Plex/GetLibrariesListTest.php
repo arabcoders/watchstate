@@ -9,8 +9,7 @@ use App\Backends\Common\Context;
 use App\Backends\Plex\Action\GetLibrariesList;
 use App\Backends\Plex\PlexClient;
 use App\Libs\ConfigFile;
-use App\Libs\Database\DBLayer;
-use App\Libs\Database\PDO\PDOAdapter;
+
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\Extends\MockHttpClient;
 use App\Libs\Mappers\Import\DirectMapper;
@@ -21,7 +20,6 @@ use App\Libs\Uri;
 use App\Libs\UserContext;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
-use PDO;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
@@ -44,8 +42,7 @@ class GetLibrariesListTest extends TestCase
         );
 
         $cache = new Cache($this->logger, new Psr16Cache(new ArrayAdapter()));
-        $db = new PDOAdapter($this->logger, new DBLayer(new PDO('sqlite::memory:')));
-        $db->migrations('up');
+        $db = $this->createDb($this->logger);
 
         $this->context = new Context(
             clientName: PlexClient::CLIENT_NAME,
@@ -129,7 +126,7 @@ class GetLibrariesListTest extends TestCase
         }
     }
 
-    public function test_401_response_with_invalid_token(): void
+    public function test_401_invalid_token(): void
     {
         $json = ag($this->data, 'sections_get_401');
 

@@ -7,6 +7,7 @@ namespace App\Libs\Database;
 
 use App\Libs\Exceptions\DBLayerException;
 use App\Libs\Exceptions\RuntimeException;
+use arabcoders\database\Connection;
 use Closure;
 use PDO;
 use PDOException;
@@ -55,30 +56,34 @@ final class DBLayer implements LoggerAwareInterface
     public const string IS_JSON_EXTRACT = 'JSON_EXTRACT';
     public const string IS_JSON_SEARCH = 'JSON_SEARCH';
 
+    private readonly PDO $pdo;
+
     public function __construct(
-        private readonly PDO $pdo,
+        private readonly Connection $connection,
         private array $options = [],
     ) {
-        $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $this->pdo = $this->connection->pdo;
+
+        $driver = $this->connection->dialect()->name();
 
         if (is_string($driver)) {
-            $this->driver = $driver;
+            $this->driver = strtolower($driver);
         }
 
         $this->retry = ag($this->options, 'retry', self::LOCK_RETRY);
     }
 
     /**
-     * Create a new instance with the given PDO object and options.
+     * Create a new instance with the given database connection and options.
      *
-     * @param PDO $pdo The PDO object.
+     * @param Connection $connection The database connection.
      * @param array|null $options The options to be passed to the new instance, or null to use the current options.
      *
      * @return self The new instance.
      */
-    public function withPDO(PDO $pdo, ?array $options = null): self
+    public function withConnection(Connection $connection, ?array $options = null): self
     {
-        return new self($pdo, $options ?? $this->options);
+        return new self($connection, $options ?? $this->options);
     }
 
     /**
@@ -138,6 +143,7 @@ final class DBLayer implements LoggerAwareInterface
             $stmt = $isStatement ? $sql : $db->prepare($sql);
 
             if (true === $isStatement) {
+                $stmt->closeCursor();
                 $stmt->execute($bind);
                 return $stmt;
             }
@@ -167,11 +173,13 @@ final class DBLayer implements LoggerAwareInterface
      */
     public function start(): bool
     {
-        if (true === $this->pdo->inTransaction()) {
+        if (true === $this->connection->inTransaction()) {
             return false;
         }
 
-        return $this->pdo->beginTransaction();
+        $this->connection->beginTransaction();
+
+        return true;
     }
 
     /**
@@ -181,7 +189,13 @@ final class DBLayer implements LoggerAwareInterface
      */
     public function commit(): bool
     {
-        return $this->pdo->commit();
+        if (false === $this->connection->inTransaction()) {
+            return false;
+        }
+
+        $this->connection->commit();
+
+        return true;
     }
 
     /**
@@ -191,7 +205,13 @@ final class DBLayer implements LoggerAwareInterface
      */
     public function rollBack(): bool
     {
-        return $this->pdo->rollBack();
+        if (false === $this->connection->inTransaction()) {
+            return false;
+        }
+
+        $this->connection->rollBack();
+
+        return true;
     }
 
     /**
@@ -201,7 +221,7 @@ final class DBLayer implements LoggerAwareInterface
      */
     public function inTransaction(): bool
     {
-        return $this->pdo->inTransaction();
+        return $this->connection->inTransaction();
     }
 
     /**
@@ -948,7 +968,6 @@ final class DBLayer implements LoggerAwareInterface
      */
     private function wrap(Closure $callback, array $options = []): mixed
     {
-        static $lastFailure = [];
         $on_lock = ag($options, 'on_lock', null);
         $errorHandler = ag($options, 'on_failure', null);
         $exception = null;
@@ -983,12 +1002,7 @@ final class DBLayer implements LoggerAwareInterface
                 return $this->wrap($callback, $options);
             } else {
                 $exception = $e;
-                if (null !== $errorHandler && ag($lastFailure, 'message') !== $e->getMessage()) {
-                    $lastFailure = [
-                        'code' => $e->getCode(),
-                        'message' => $e->getMessage(),
-                        'time' => time(),
-                    ];
+                if (null !== $errorHandler) {
                     return $errorHandler($e, $callback, $options);
                 }
 
@@ -1000,10 +1014,6 @@ final class DBLayer implements LoggerAwareInterface
                     ->setInfo($this->last['sql'], $this->last['bind'], $e->errorInfo ?? [], $e->getCode())
                     ->setFile($e->getFile())
                     ->setLine($e->getLine());
-            }
-        } finally {
-            if (null === $exception) {
-                $lastFailure = [];
             }
         }
     }

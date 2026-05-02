@@ -10,12 +10,11 @@ use App\Backends\Jellyfin\Action\GetMetaData;
 use App\Backends\Jellyfin\Action\SearchId as JellyfinSearchId;
 use App\Backends\Jellyfin\JellyfinGuid;
 use App\Libs\Container;
-use App\Libs\Database\DBLayer;
-use App\Libs\Database\PDO\PDOAdapter;
+
 use App\Libs\Extends\MockHttpClient;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
-use PDO;
+
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
@@ -29,8 +28,7 @@ class SearchIdTest extends MediaBrowserTestCase
 
             $context = $this->makeContext($clientName);
             $http = new MockHttpClient();
-            $db = new PDOAdapter($this->logger, new DBLayer(new PDO('sqlite::memory:')));
-            $db->migrations('up');
+            $db = $this->createDb($this->logger);
 
             $guid = new $guidClass($this->logger);
             $action = new $actionClass($http, $this->logger, $guid, $db);
