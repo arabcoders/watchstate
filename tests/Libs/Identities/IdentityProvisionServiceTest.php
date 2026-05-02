@@ -25,27 +25,11 @@ final class IdentityProvisionServiceTest extends TestCase
         $this->initTempDir();
 
         $this->tempDir = self::$tmpPath . '/identities';
-        $configDir = $this->tempDir . '/config';
         $usersDir = $this->tempDir . '/users/alice';
 
-        mkdir($configDir, 0o755, true);
         mkdir($usersDir, 0o755, true);
 
-        Container::reset();
-        Container::init();
-        Config::init(require ROOT_PATH . '/config/config.php');
-
-        foreach ((array) require ROOT_PATH . '/config/services.php' as $name => $definition) {
-            Container::add($name, $definition);
-        }
-
-        Config::save('path', $this->tempDir);
-        Config::save('tmpDir', $this->tempDir);
-        Config::save('cache.path', $this->tempDir . '/cache');
-        Config::save('backends_file', $configDir . '/servers.yaml');
-        Config::save('mapper_file', $configDir . '/mapper.yaml');
-        Config::save('database.file', $this->tempDir . '/db/' . PdoFactory::DB_FILE);
-        Config::save('database.dsn', 'sqlite:' . $this->tempDir . '/db/' . PdoFactory::DB_FILE);
+        $configDir = $this->initTempApp($this->tempDir);
 
         file_put_contents(
             Config::get('backends_file'),
@@ -136,9 +120,6 @@ final class IdentityProvisionServiceTest extends TestCase
 
     protected function tearDown(): void
     {
-        Config::reset();
-        Container::reset();
-
         parent::tearDown();
     }
 

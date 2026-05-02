@@ -9,6 +9,7 @@ use App\Command;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\RetryableHttpClient;
 use App\Libs\Extends\StreamLogHandler;
 use App\Libs\LogSuppressor;
@@ -64,7 +65,7 @@ class BackupCommand extends Command
         $this
             ->setName(self::ROUTE)
             ->setDescription('Backup backends play state.')
-            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select user. Default is all users')
+            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select user. Default is all users.')
             ->addOption(
                 'keep',
                 'k',
@@ -225,15 +226,13 @@ class BackupCommand extends Command
             $this->mapper->setOptions(options: $mapperOpts);
         }
 
-        $user = $input->getOption('user');
-        $users = get_users_context($this->mapper, $this->logger);
-        if (!empty($user)) {
-            $users = array_filter($users, static fn($u) => $u === $user, ARRAY_FILTER_USE_KEY);
-        }
-
-        if (empty($users)) {
-            $message = $user ? r("Invalid user '{user}' selected.", ['user' => $user]) : 'No users were found.';
-            $this->logger->error($message);
+        try {
+            $users = array_map(
+                fn(string $user): UserContext => get_user_context($user, $this->mapper, $this->logger),
+                select_users($input->getOption('user')),
+            );
+        } catch (RuntimeException $e) {
+            $this->logger->error($e->getMessage());
             return self::FAILURE;
         }
 

@@ -6,7 +6,7 @@ namespace Tests\Commands\State;
 
 use App\Backends\Common\ClientInterface as iClient;
 use App\Commands\State\PlaylistCommand;
-use App\Libs\ConfigFile;
+use App\Libs\Config;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Playlists\PlaylistSyncService;
@@ -155,6 +155,45 @@ final class PlaylistCommandTest extends TestCase
         self::assertStringContainsString('Playlist sync process completed', $contents);
     }
 
+    public function test_selected_user_only(): void
+    {
+        $service = $this->makeServiceMock();
+        $service
+            ->expects(self::once())
+            ->method('sync')
+            ->with(
+                self::callback(static fn(UserContext $userContext): bool => 'alice' === $userContext->name),
+                self::isArray(),
+                self::isArray(),
+            )
+            ->willReturn([]);
+
+        $client = $this->createStub(iClient::class);
+        $client->method('getName')->willReturn('test_plex');
+        $client->method('getType')->willReturn('plex');
+
+        $tester = $this->makeTester($service, $client, 'test_plex', ['main', 'alice']);
+        $status = $tester->execute([
+            '--user' => 'alice',
+        ]);
+
+        self::assertSame(PlaylistCommand::SUCCESS, $status);
+    }
+
+    public function test_invalid_user_returns_failure(): void
+    {
+        $service = $this->makeServiceMock();
+        $service->expects(self::never())->method('sync');
+
+        $tester = $this->makeTester($service, $this->createStub(iClient::class));
+        $status = $tester->execute([
+            '--user' => 'ghost',
+        ]);
+
+        self::assertSame(PlaylistCommand::FAILURE, $status);
+        self::assertStringContainsString("User 'ghost' not found.", $tester->getDisplay());
+    }
+
     /**
      * @return PlaylistSyncService&MockObject
      */
@@ -163,46 +202,63 @@ final class PlaylistCommandTest extends TestCase
         return $this->createMock(PlaylistSyncService::class);
     }
 
-    private function makeTester(PlaylistSyncService $service, iClient $client, string $backendName = 'test_plex'): CommandTester
+    private function makeTester(
+        PlaylistSyncService $service,
+        iClient $client,
+        string $backendName = 'test_plex',
+        array $userNames = ['main'],
+    ): CommandTester
     {
         $application = new Application();
         $application->getDefinition()->addOption(new InputOption('output', 'o', InputOption::VALUE_REQUIRED, '', 'table'));
         $application->getDefinition()->addOption(new InputOption('trace', null, InputOption::VALUE_NONE));
-        $application->addCommand($this->makeCommand($service, $client, $backendName));
+        $application->addCommand($this->makeCommand($service, $client, $backendName, $userNames));
 
         return new CommandTester($application->find(PlaylistCommand::ROUTE));
     }
 
-    private function makeCommand(PlaylistSyncService $service, iClient $client, string $backendName = 'test_plex'): PlaylistCommand
+    private function makeCommand(
+        PlaylistSyncService $service,
+        iClient $client,
+        string $backendName = 'test_plex',
+        array $userNames = ['main'],
+    ): PlaylistCommand
     {
+        $this->initTempApp();
+
+        $fixtureFile = __DIR__ . '/../../Fixtures/test_servers.yaml';
+        $fixture = file_get_contents($fixtureFile);
+        assert(false !== $fixture, 'Expected playlist fixture config.');
+
+        file_put_contents((string) Config::get('backends_file'), $fixture);
+
+        foreach ($userNames as $name) {
+            if ('main' === $name) {
+                continue;
+            }
+
+            $userDir = self::$tmpPath . '/users/' . $name;
+            if (!is_dir($userDir)) {
+                mkdir($userDir, 0o755, true);
+            }
+
+            file_put_contents($userDir . '/servers.yaml', $fixture);
+        }
+
         $logger = new Logger('test');
-        $db = $this->createDb($logger);
-        $cache = new Psr16Cache(new ArrayAdapter());
+        $mapper = new DirectMapper($logger, $this->createDb($logger), new Psr16Cache(new ArrayAdapter()));
 
-        $userContext = new UserContext(
-            name: 'main',
-            config: new ConfigFile(
-                file: __DIR__ . '/../../Fixtures/test_servers.yaml',
-                autoSave: false,
-                autoCreate: false,
-                autoBackup: false,
-            ),
-            mapper: new DirectMapper(logger: $logger, db: $db, cache: $cache),
-            cache: $cache,
-            db: $db,
-        );
-
-        return new class($service, $userContext, $logger, $client, $backendName) extends PlaylistCommand {
+        return new class($service, $mapper, $logger, $client, $backendName) extends PlaylistCommand {
             public function __construct(
                 PlaylistSyncService $service,
-                private readonly UserContext $userContext,
+                DirectMapper $mapper,
                 Logger $logger,
                 private readonly iClient $client,
                 private readonly string $backendName,
             ) {
                 parent::__construct(
                     $service,
-                    new DirectMapper($logger, $this->userContext->db, $this->userContext->cache),
+                    $mapper,
                     $logger,
                     new LogSuppressor([]),
                 );
@@ -221,11 +277,6 @@ final class PlaylistCommandTest extends TestCase
                 }
 
                 return [$this->backendName => $this->client];
-            }
-
-            protected function getUsers(array $dbOpts = []): array
-            {
-                return ['main' => $this->userContext];
             }
         };
     }

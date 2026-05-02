@@ -7,7 +7,6 @@ namespace Tests\Libs\Traits;
 use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Plex\PlexClient;
 use App\Libs\Config;
-use App\Libs\Container;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\InvalidArgumentException;
@@ -20,21 +19,10 @@ class APITraitsTest extends TestCase
 {
     protected function setUp(): void
     {
-        Container::init();
-        Config::init(require __DIR__ . '/../../../config/config.php');
-        foreach ((array) require __DIR__ . '/../../../config/services.php' as $name => $definition) {
-            Container::add($name, $definition);
-        }
+        parent::setUp();
+        $this->initTempApp();
         Config::save('backends_file', __DIR__ . '/../../Fixtures/test_servers.yaml');
         Config::save('api.secure', true);
-
-        parent::setUp();
-    }
-
-    public function __destruct()
-    {
-        Config::reset();
-        Container::reset();
     }
 
     public function test_getClient()

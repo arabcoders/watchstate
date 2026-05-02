@@ -7,10 +7,12 @@ namespace App\Commands\Database;
 use App\Command;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Input\InputInterface as iInput;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
 
 /**
@@ -45,6 +47,7 @@ final class MaintenanceCommand extends Command
         $this
             ->setName(self::ROUTE)
             ->setDescription('Run maintenance tasks on database.')
+            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select user. Default is all users.')
             ->setHelp(
                 <<<HELP
 
@@ -66,7 +69,19 @@ final class MaintenanceCommand extends Command
      */
     protected function runCommand(iInput $input, iOutput $output): int
     {
-        foreach (get_users_context(mapper: $this->mapper, logger: $this->logger) as $userContext) {
+        try {
+            $users = select_users($input->getOption('user'));
+        } catch (RuntimeException $e) {
+            $output->writeln(r('<error>{message}</error>', [
+                'message' => $e->getMessage(),
+            ]));
+
+            return self::FAILURE;
+        }
+
+        foreach ($users as $user) {
+            $userContext = get_user_context($user, $this->mapper, $this->logger);
+
             $output->writeln(r("Optimizing user '{user}' database.", [
                 'user' => $userContext->name,
             ]), iOutput::VERBOSITY_VERBOSE);

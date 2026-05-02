@@ -24,6 +24,7 @@
             "echo 'Coverage reports generated in ./var/coverage/'"
         ],
         "lint": "vendor/bin/mago lint",
+        "lint:fix": "vendor/bin/mago lint --fix --format-after-fix",
         "frontend:update": "bun --cwd=./frontend/ update --latest",
         "frontend:format": "bun --cwd=./frontend/ format",
         "frontend:gen": "bun --cwd=./frontend/ generate",

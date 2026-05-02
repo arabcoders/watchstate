@@ -9,7 +9,6 @@ use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
-use App\Libs\UserContext;
 use PDO;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Input\InputArgument;
@@ -60,7 +59,7 @@ class QueryCommand extends Command
                 throw new \InvalidArgumentException('SQL statement cannot be empty.');
             }
 
-            $userContext = $this->getUserContext((string) $input->getOption('user'));
+            $userContext = get_user_context((string) $input->getOption('user'), $this->mapper, $this->logger);
             $statement = $userContext->db->getDBLayer()->prepare($sql);
             $statement->execute($this->parseParameters($sql, (array) $input->getOption('param')));
 
@@ -89,11 +88,6 @@ class QueryCommand extends Command
 
             return self::FAILURE;
         }
-    }
-
-    protected function getUserContext(string $user): UserContext
-    {
-        return get_user_context(user: $user, mapper: $this->mapper, logger: $this->logger);
     }
 
     /**

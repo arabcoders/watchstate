@@ -36,7 +36,7 @@ final class MigrateCommand extends Command
         $this
             ->setName(self::ROUTE)
             ->setDescription('Run package database migrations for main and per-user databases.')
-            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select user. Default all users.')
+            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select user. Default is all users.')
             ->addOption('force', null, InputOption::VALUE_NONE, 'Force migration run and bypass safety checks/locks')
             ->addOption('repair', null, InputOption::VALUE_NONE, 'Repair stored migration checksums before running')
             ->addOption('execute', 'x', InputOption::VALUE_NONE, 'Execute migrations')

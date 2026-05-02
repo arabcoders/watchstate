@@ -7,6 +7,7 @@ namespace App\Libs;
 use App\Libs\Database\DBLayer;
 use App\Libs\Database\PackageMigrationFactory;
 use App\Libs\Database\PDO\PDOAdapter;
+use App\Libs\Database\PdoFactory;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface;
 use arabcoders\database\Connection as DatabaseConnection;
@@ -31,6 +32,9 @@ class TestCase extends \PHPUnit\Framework\TestCase
 
     protected function tearDown(): void
     {
+        Config::reset();
+        Container::reset();
+
         parent::tearDown();
 
         if (null === self::$tmpPath) {
@@ -58,6 +62,36 @@ class TestCase extends \PHPUnit\Framework\TestCase
         if (!is_dir(self::$tmpPath) && !mkdir(self::$tmpPath, 0o777, true) && !is_dir(self::$tmpPath)) {
             throw new \RuntimeException(sprintf('Directory "%s" was not created', self::$tmpPath));
         }
+    }
+
+    protected function initTempApp(?string $path = null): string
+    {
+        $this->initTempDir();
+
+        $path ??= self::$tmpPath;
+
+        $configDir = $path . '/config';
+        if (!is_dir($configDir) && !mkdir($configDir, 0o755, true) && !is_dir($configDir)) {
+            throw new \RuntimeException(sprintf('Directory "%s" was not created', $configDir));
+        }
+
+        Config::init(require ROOT_PATH . '/config/config.php');
+        Config::save('path', $path);
+        Config::save('tmpDir', $path);
+        Config::save('cache.path', $path . '/cache');
+        Config::save('backends_file', $configDir . '/servers.yaml');
+        Config::save('mapper_file', $configDir . '/mapper.yaml');
+        Config::save('database.file', $path . '/db/' . PdoFactory::DB_FILE);
+        Config::save('database.dsn', 'sqlite:' . $path . '/db/' . PdoFactory::DB_FILE);
+
+        Container::reset();
+        Container::init();
+
+        foreach ((array) require ROOT_PATH . '/config/services.php' as $name => $definition) {
+            Container::add($name, $definition);
+        }
+
+        return $configDir;
     }
 
     protected function createDb(?LoggerInterface $logger = null): PDOAdapter

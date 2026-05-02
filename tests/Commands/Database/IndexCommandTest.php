@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Commands\Database;
 
 use App\Commands\Database\IndexCommand;
-use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Database\PdoFactory;
 use App\Libs\Entity\StateEntity;
@@ -23,26 +22,7 @@ final class IndexCommandTest extends TestCase
     {
         parent::setUp();
 
-        $this->initTempDir();
-
-        $configDir = self::$tmpPath . '/config';
-        mkdir($configDir, 0o755, true);
-
-        Config::init(require __DIR__ . '/../../../config/config.php');
-        Config::save('path', self::$tmpPath);
-        Config::save('tmpDir', self::$tmpPath);
-        Config::save('cache.path', self::$tmpPath . '/cache');
-        Config::save('backends_file', $configDir . '/servers.yaml');
-        Config::save('mapper_file', $configDir . '/mapper.yaml');
-        Config::save('database.file', self::$tmpPath . '/db/' . PdoFactory::DB_FILE);
-        Config::save('database.dsn', 'sqlite:' . self::$tmpPath . '/db/' . PdoFactory::DB_FILE);
-
-        Container::reset();
-        Container::init();
-
-        foreach ((array) require __DIR__ . '/../../../config/services.php' as $name => $definition) {
-            Container::add($name, $definition);
-        }
+        $this->initTempApp();
 
         mkdir(self::$tmpPath . '/users/alice', 0o755, true);
         mkdir(self::$tmpPath . '/users/bob', 0o755, true);

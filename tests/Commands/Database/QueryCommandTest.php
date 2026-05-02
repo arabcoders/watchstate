@@ -5,21 +5,29 @@ declare(strict_types=1);
 namespace Tests\Commands\Database;
 
 use App\Commands\Database\QueryCommand;
-use App\Libs\ConfigFile;
-use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Config;
+use App\Libs\Container;
+use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\TestCase;
 use App\Libs\UserContext;
 use Monolog\Logger;
 use PDO;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
-use Symfony\Component\Cache\Psr16Cache;
+use Psr\SimpleCache\CacheInterface as iCache;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Tester\CommandTester;
 
 final class QueryCommandTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->initTempApp();
+        copy(__DIR__ . '/../../Fixtures/test_servers.yaml', (string) Config::get('backends_file'));
+    }
+
     public function test_select_default_db(): void
     {
         $main = $this->makeUserContext('main');
@@ -306,63 +314,33 @@ final class QueryCommandTest extends TestCase
         $application = new Application();
         $application->getDefinition()->addOption(new InputOption('output', 'o', InputOption::VALUE_REQUIRED, '', 'table'));
         $application->getDefinition()->addOption(new InputOption('param', 'p', InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED));
-        $application->addCommand($this->makeCommand($contexts));
+        $bootstrapContext = $contexts['main'] ?? array_values($contexts)[0];
+        assert($bootstrapContext instanceof UserContext, 'Expected bootstrap query user context.');
+
+        $application->addCommand(new QueryCommand($bootstrapContext->mapper, new Logger('test')));
 
         return new CommandTester($application->find(QueryCommand::ROUTE));
     }
 
-    /**
-     * @param array<string,UserContext> $contexts
-     */
-    private function makeCommand(array $contexts): QueryCommand
-    {
-        $bootstrapContext = array_values($contexts)[0];
-
-        return new class($contexts, $bootstrapContext) extends QueryCommand {
-            /**
-             * @param array<string,UserContext> $contexts
-             */
-            public function __construct(
-                private readonly array $contexts,
-                UserContext $bootstrapContext,
-            ) {
-                $logger = new Logger('test');
-
-                parent::__construct(
-                    new DirectMapper(logger: $logger, db: $bootstrapContext->db, cache: $bootstrapContext->cache),
-                    $logger,
-                );
-            }
-
-            protected function getUserContext(string $user): UserContext
-            {
-                if (false === array_key_exists($user, $this->contexts)) {
-                    throw new RuntimeException(sprintf("User '%s' not found.", $user), 1001);
-                }
-
-                return $this->contexts[$user];
-            }
-        };
-    }
-
     private function makeUserContext(string $name): UserContext
     {
-        $logger = new Logger('test');
-        $db = $this->createDb($logger);
-        $cache = new Psr16Cache(new ArrayAdapter());
+        if ('main' !== $name) {
+            $userDir = self::$tmpPath . '/users/' . $name;
+            if (!is_dir($userDir)) {
+                mkdir($userDir, 0o755, true);
+            }
 
-        return new UserContext(
-            name: $name,
-            config: new ConfigFile(
-                file: __DIR__ . '/../../Fixtures/test_servers.yaml',
-                autoSave: false,
-                autoCreate: false,
-                autoBackup: false,
-            ),
-            mapper: new DirectMapper(logger: $logger, db: $db, cache: $cache),
-            cache: $cache,
-            db: $db,
+            copy(__DIR__ . '/../../Fixtures/test_servers.yaml', $userDir . '/servers.yaml');
+        }
+
+        $logger = new Logger('test');
+        $mapper = new DirectMapper(
+            logger: $logger,
+            db: Container::get(iDB::class),
+            cache: Container::get(iCache::class),
         );
+
+        return get_user_context($name, $mapper, $logger);
     }
 
     /**

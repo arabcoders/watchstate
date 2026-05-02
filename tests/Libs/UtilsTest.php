@@ -5,10 +5,27 @@ declare(strict_types=1);
 
 namespace Tests\Libs;
 
+use App\Libs\Container;
+use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Database\PdoFactory;
+use App\Libs\Entity\StateEntity;
+use App\Libs\Mappers\Import\DirectMapper;
+use App\Libs\Options;
 use App\Libs\TestCase;
+use Monolog\Logger;
 
 class UtilsTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->initTempApp();
+
+        mkdir(self::$tmpPath . '/users/alice', 0o755, true);
+        mkdir(self::$tmpPath . '/users/bob', 0o755, true);
+    }
+
     public function test_flatArray_with_empty_array(): void
     {
         $result = flat_array([]);
@@ -1313,6 +1330,54 @@ class UtilsTest extends TestCase
         $this->assertLessThan(1.0, $encodeTime, 'Encoding 1MB should take less than 1 second');
         $this->assertLessThan(1.0, $decodeTime, 'Decoding 1MB should take less than 1 second');
     }
+
+    public function test_get_user_context_targets_one_user(): void
+    {
+        $logger = new Logger('test');
+        $db = $this->createDb($logger);
+        $db->setOptions([
+            Options::DEBUG_TRACE => true,
+            'class' => new StateEntity([]),
+        ]);
+
+        $mapper = new DirectMapper(
+            logger: $logger,
+            db: $db,
+            cache: Container::get(\Psr\SimpleCache\CacheInterface::class),
+        );
+
+        $userContext = get_user_context('alice', $mapper, $logger);
+
+        self::assertSame('alice', $userContext->name);
+        self::assertFileExists(self::$tmpPath . '/users/alice/' . PdoFactory::DB_FILE);
+        self::assertFileDoesNotExist(self::$tmpPath . '/users/bob/' . PdoFactory::DB_FILE);
+        self::assertFileDoesNotExist(self::$tmpPath . '/db/' . PdoFactory::DB_FILE);
+        self::assertSame('alice', $userContext->mapper->getOptions()[Options::ALT_NAME]);
+    }
+
+    public function test_get_users_context_preserves_db_options(): void
+    {
+        $logger = new Logger('test');
+        $db = $this->createDb($logger);
+        $db->setOptions([
+            Options::DEBUG_TRACE => true,
+            'class' => new StateEntity([]),
+        ]);
+
+        $mapper = new DirectMapper(
+            logger: $logger,
+            db: $db,
+            cache: Container::get(\Psr\SimpleCache\CacheInterface::class),
+        );
+
+        $users = get_users_context($mapper, $logger, [
+            iDB::class => [Options::DEBUG_TRACE => true],
+        ]);
+
+        self::assertSame(get_users(), array_keys($users));
+        self::assertSame('alice', $users['alice']->mapper->getOptions()[Options::ALT_NAME]);
+        self::assertSame('bob', $users['bob']->mapper->getOptions()[Options::ALT_NAME]);
+        self::assertFileExists(self::$tmpPath . '/users/alice/' . PdoFactory::DB_FILE);
+        self::assertFileExists(self::$tmpPath . '/users/bob/' . PdoFactory::DB_FILE);
+    }
 }
-
-

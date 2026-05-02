@@ -8,6 +8,7 @@ use App\Command;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\StreamLogHandler;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
@@ -84,7 +85,7 @@ class ValidateCommand extends Command
         $this
             ->setName(self::ROUTE)
             ->setDescription('Validate stored backends reference id against the backends.')
-            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select user. Default all users.')
+            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select user. Default is all users.')
             ->addOption(
                 'logfile',
                 null,
@@ -126,14 +127,17 @@ class ValidateCommand extends Command
             $io = new SymfonyStyle($input, $output->section());
         }
 
-        $users = get_users_context(mapper: $this->mapper, logger: $this->logger);
+        try {
+            $users = array_map(
+                fn(string $user): UserContext => get_user_context($user, $this->mapper, $this->logger),
+                select_users($input->getOption('user')),
+            );
+        } catch (RuntimeException $e) {
+            $output->writeln(r('<error>{message}</error>', [
+                'message' => $e->getMessage(),
+            ]));
 
-        if (null !== ($user = $input->getOption('user'))) {
-            $users = array_filter($users, static fn($k) => $k === $user, mode: ARRAY_FILTER_USE_KEY);
-            if (empty($users)) {
-                $output->writeln(r("<error>User '{user}' not found.</error>", ['user' => $user]));
-                return self::FAILURE;
-            }
+            return self::FAILURE;
         }
 
         $start_time = microtime(true);

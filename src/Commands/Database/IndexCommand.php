@@ -8,7 +8,6 @@ use App\Command;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Mappers\Import\DirectMapper;
@@ -56,7 +55,7 @@ final class IndexCommand extends Command
         $this
             ->setName(self::ROUTE)
             ->setDescription('Ensure database has correct indexes.')
-            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select a single user database. Use main for the main DB.')
+            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select user. Default is all users.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes.')
             ->addOption('force-reindex', 'f', InputOption::VALUE_NONE, 'Drop existing indexes, and re-create them.')
             ->setHelp(
@@ -106,9 +105,7 @@ final class IndexCommand extends Command
         }
 
         foreach ($users as $user) {
-            $userContext = 'main' === $user
-                ? Container::get(UserContext::class)
-                : $this->makeUserContext($user);
+            $userContext = get_user_context($user, $this->mapper, $this->logger);
 
             $db = $this->ensureDatabase($userContext);
 
@@ -130,25 +127,6 @@ final class IndexCommand extends Command
         }
 
         return self::SUCCESS;
-    }
-
-    private function makeUserContext(string $name): UserContext
-    {
-        $cache = per_user_cache_adapter($name);
-        $db = per_user_db($name);
-        $mapper = $this->mapper
-            ->withDB($db)
-            ->withCache($cache)
-            ->withLogger($this->logger)
-            ->withOptions(array_replace_recursive($this->mapper->getOptions(), [Options::ALT_NAME => $name]));
-
-        return new UserContext(
-            name: $name,
-            config: per_user_config($name),
-            mapper: $mapper,
-            cache: $cache,
-            db: $db,
-        );
     }
 
     private function ensureDatabase(UserContext $userContext): iDB

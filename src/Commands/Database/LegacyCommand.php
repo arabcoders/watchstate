@@ -42,10 +42,10 @@ final class LegacyCommand extends Command
         $this
             ->setName(self::ROUTE)
             ->setDescription('Import legacy databases into the current database format.')
-            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select user. Default all users.')
-            ->addOption('force', null, InputOption::VALUE_NONE, 'Replace non-empty db instead of skipping them')
-            ->addOption('remove', null, InputOption::VALUE_NONE, 'Remove previously renamed legacy backups (*.migrated)')
-            ->addOption('execute', 'x', InputOption::VALUE_NONE, 'Execute migration or backup removal');
+            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select user. Default is all users.')
+            ->addOption('force', null, InputOption::VALUE_NONE, 'Replace non-empty db instead of skipping them.')
+            ->addOption('remove', null, InputOption::VALUE_NONE, 'Remove previously renamed legacy backups. (*.migrated)')
+            ->addOption('execute', 'x', InputOption::VALUE_NONE, 'Execute migration or backup removal.');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int

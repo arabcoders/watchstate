@@ -1602,39 +1602,11 @@ if (!function_exists('get_users_context')) {
         }
 
         foreach ($users as $userName) {
-            if ('main' === $userName) {
-                $configs['main'] = new UserContext(
-                    name: 'main',
-                    config: ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true),
-                    mapper: $mapper,
-                    cache: Container::get(iCache::class),
-                    db: Container::get(iDB::class)->setOptions($dbOpts),
-                );
+            $configs[$userName] = get_user_context($userName, $mapper, $logger);
 
-                continue;
-            }
-
-            $config = per_user_config($userName);
-            $perUserCache = per_user_cache_adapter($userName);
-            $db = per_user_db($userName);
             if (count($dbOpts) > 0) {
-                $db->setOptions($dbOpts);
+                $configs[$userName]->db->setOptions($dbOpts);
             }
-
-            $mapper = $mapper
-                ->withDB($db)
-                ->withCache($perUserCache)
-                ->withLogger($logger)
-                ->withOptions(array_replace_recursive($mapper->getOptions(), [Options::ALT_NAME => $userName]));
-            assert($mapper instanceof iImport, 'Expected import mapper for user context.');
-
-            $configs[$userName] = new UserContext(
-                name: $userName,
-                config: $config,
-                mapper: $mapper,
-                cache: $perUserCache,
-                db: $db,
-            );
         }
 
         return $configs;
@@ -1678,16 +1650,43 @@ if (!function_exists('get_user_context')) {
      */
     function get_user_context(string $user, iImport $mapper, iLogger $logger): UserContext
     {
-        $users = get_users_context($mapper, $logger);
-        if (false === in_array($user, array_keys($users), true)) {
+        $users = get_users(includeMain: true);
+        if (false === in_array($user, $users, true)) {
             $logger->error("User '{user}' not found.", [
                 'user' => $user,
-                'users' => array_keys($users),
+                'users' => $users,
             ]);
             throw new RuntimeException(r("User '{user}' not found.", ['user' => $user]), 1001);
         }
 
-        return ag($users, $user);
+        if ('main' === $user) {
+            return new UserContext(
+                name: 'main',
+                config: ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true),
+                mapper: $mapper,
+                cache: Container::get(iCache::class),
+                db: Container::get(iDB::class),
+            );
+        }
+
+        $config = per_user_config($user);
+        $cache = per_user_cache_adapter($user);
+        $db = per_user_db($user);
+
+        $mapper = $mapper
+            ->withDB($db)
+            ->withCache($cache)
+            ->withLogger($logger)
+            ->withOptions(array_replace_recursive($mapper->getOptions(), [Options::ALT_NAME => $user]));
+        assert($mapper instanceof iImport, 'Expected import mapper for user context.');
+
+        return new UserContext(
+            name: $user,
+            config: $config,
+            mapper: $mapper,
+            cache: $cache,
+            db: $db,
+        );
     }
 }
 
