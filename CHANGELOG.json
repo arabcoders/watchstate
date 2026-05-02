@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "61724f8e28248cdd17816ad9c0414a76e31fc30b",
-    "date": "2026-05-02T15:57:57+00:00",
+    "full_sha": "5775d347bb5c610505c81bea413b82fcf9391660",
+    "date": "2026-05-02T19:04:35+00:00",
     "commits": [
+      {
+        "sha": "5775d347",
+        "full_sha": "5775d347bb5c610505c81bea413b82fcf9391660",
+        "message": "chore: delete useless tests and standardize tests support utils",
+        "author": "arabcoders",
+        "date": "2026-05-02T19:04:35+00:00"
+      },
       {
         "sha": "61724f8e",
         "full_sha": "61724f8e28248cdd17816ad9c0414a76e31fc30b",
