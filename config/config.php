@@ -5,8 +5,8 @@ declare(strict_types=1);
 use App\Backends\Emby\EmbyClient;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Backends\Plex\PlexClient;
-use App\Commands\Events\DispatchCommand;
 use App\Commands\Database\IndexCommand;
+use App\Commands\Events\DispatchCommand;
 use App\Commands\State\BackupCommand;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
@@ -143,17 +143,12 @@ return (function () {
 
     $config['api']['logfile'] = ag($config, 'tmpDir') . '/logs/access.' . $logDateFormat . '.log';
 
-    if ('MEMORY' === env('WS_DB_MODE', 'WAL')) {
-        $pragma = [
-            'PRAGMA journal_mode=MEMORY',
-            'PRAGMA synchronous=OFF',
-        ];
-    } else {
-        $pragma = [
-            'PRAGMA journal_mode=WAL',
-            'PRAGMA synchronous=NORMAL',
-        ];
-    }
+    $isMemory = 'MEMORY' === env('WS_DB_MODE', 'WAL');
+    $pragma = [
+        'PRAGMA busy_timeout=5000',
+        'PRAGMA journal_mode=' . ($isMemory ? 'MEMORY' : 'WAL'),
+        'PRAGMA synchronous=' . ($isMemory ? 'OFF' : 'NORMAL'),
+    ];
 
     $config['database'] += [
         'file' => $dbFile,
@@ -167,8 +162,7 @@ return (function () {
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         ],
         'exec' => [
-            'PRAGMA busy_timeout=5000',
-            ...$pragma,
+            'sqlite' => $pragma,
         ],
     ];
 
