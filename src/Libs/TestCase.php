@@ -84,14 +84,38 @@ class TestCase extends \PHPUnit\Framework\TestCase
         Config::save('database.file', $path . '/db/' . PdoFactory::DB_FILE);
         Config::save('database.dsn', 'sqlite:' . $path . '/db/' . PdoFactory::DB_FILE);
 
+        $this->initContainer();
+
+        return $configDir;
+    }
+
+    protected function initContainer(): void
+    {
         Container::reset();
         Container::init();
 
         foreach ((array) require ROOT_PATH . '/config/services.php' as $name => $definition) {
             Container::add($name, $definition);
         }
+    }
 
-        return $configDir;
+    protected function seedTestServersConfig(?string $user = null): void
+    {
+        $target = (string) Config::get('backends_file');
+
+        if (null !== $user) {
+            $userDir = self::$tmpPath . '/users/' . $user;
+            if (!is_dir($userDir) && !mkdir($userDir, 0o755, true) && !is_dir($userDir)) {
+                throw new \RuntimeException(sprintf('Directory "%s" was not created', $userDir));
+            }
+
+            $target = $userDir . '/servers.yaml';
+        }
+
+        $fixture = file_get_contents(TESTS_PATH . '/Fixtures/test_servers.yaml');
+        assert(false !== $fixture, 'Expected test backend fixture config.');
+
+        file_put_contents($target, $fixture);
     }
 
     protected function createDb(?LoggerInterface $logger = null): PDOAdapter

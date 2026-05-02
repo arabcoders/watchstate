@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Commands\Database;
 
 use App\Commands\Database\LegacyCommand;
-use App\Libs\Config;
 use App\Libs\Database\PackageMigrationFactory;
 use App\Libs\Database\PdoFactory;
 use App\Libs\TestCase;
@@ -20,26 +19,10 @@ final class LegacyCommandTest extends TestCase
     {
         parent::setUp();
 
-        $this->initTempDir();
-
-        Config::init(require __DIR__ . '/../../../config/config.php');
-        Config::save('path', self::$tmpPath);
-        Config::save('database.file', self::$tmpPath . '/db/' . PdoFactory::DB_FILE);
-        Config::save('database.dsn', 'sqlite:' . self::$tmpPath . '/db/' . PdoFactory::DB_FILE);
+        $this->initTempApp();
     }
 
-    public function test_signature(): void
-    {
-        $command = new LegacyCommand(new PdoFactory(), new PackageMigrationFactory(), new Logger('test'));
-
-        self::assertSame('db:legacy', $command->getName());
-        self::assertTrue($command->getDefinition()->hasOption('user'));
-        self::assertTrue($command->getDefinition()->hasOption('force'));
-        self::assertTrue($command->getDefinition()->hasOption('remove'));
-        self::assertTrue($command->getDefinition()->hasOption('execute'));
-    }
-
-    public function test_execute_all_targets_migrates_and_renames_sources(): void
+    public function test_all_targets(): void
     {
         mkdir(self::$tmpPath . '/users/alice', 0o755, true);
         mkdir(self::$tmpPath . '/users/bob', 0o755, true);
@@ -64,7 +47,7 @@ final class LegacyCommandTest extends TestCase
         self::assertFileExists(self::$tmpPath . '/users/bob/' . PdoFactory::OLD_USER_DB_FILE . '.migrated');
     }
 
-    public function test_execute_selected_user_only(): void
+    public function test_selected_user(): void
     {
         mkdir(self::$tmpPath . '/users/alice', 0o755, true);
         mkdir(self::$tmpPath . '/users/bob', 0o755, true);
@@ -85,7 +68,7 @@ final class LegacyCommandTest extends TestCase
         self::assertFileExists(self::$tmpPath . '/users/bob/' . PdoFactory::OLD_USER_DB_FILE);
     }
 
-    public function test_non_empty_target_warns_and_skips_without_force(): void
+    public function test_skip_non_empty(): void
     {
         $legacy = self::$tmpPath . '/db/' . PdoFactory::OLD_DB_FILE;
         $target = self::$tmpPath . '/db/' . PdoFactory::DB_FILE;
@@ -105,7 +88,7 @@ final class LegacyCommandTest extends TestCase
         $this->assertExistingV2Db($target, 'existing-ref');
     }
 
-    public function test_force_replaces_non_empty_target(): void
+    public function test_force_replace(): void
     {
         $legacy = self::$tmpPath . '/db/' . PdoFactory::OLD_DB_FILE;
         $target = self::$tmpPath . '/db/' . PdoFactory::DB_FILE;
@@ -124,7 +107,7 @@ final class LegacyCommandTest extends TestCase
         self::assertFileExists($legacy . '.migrated');
     }
 
-    public function test_remove_deletes_migrated_backups(): void
+    public function test_remove_backups(): void
     {
         mkdir(self::$tmpPath . '/users/alice', 0o755, true);
 

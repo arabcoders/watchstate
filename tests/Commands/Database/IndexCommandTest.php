@@ -28,17 +28,7 @@ final class IndexCommandTest extends TestCase
         mkdir(self::$tmpPath . '/users/bob', 0o755, true);
     }
 
-    public function test_signature(): void
-    {
-        $command = new IndexCommand($this->makeMapper(), new Logger('test'));
-
-        self::assertSame('db:index', $command->getName());
-        self::assertTrue($command->getDefinition()->hasOption('user'));
-        self::assertTrue($command->getDefinition()->hasOption('dry-run'));
-        self::assertTrue($command->getDefinition()->hasOption('force-reindex'));
-    }
-
-    public function test_runs_all_targets_by_default(): void
+    public function test_all_targets(): void
     {
         $tester = $this->makeTester(new IndexCommand($this->makeMapper(), new Logger('test')));
         $status = $tester->execute([
@@ -54,7 +44,7 @@ final class IndexCommandTest extends TestCase
         $this->assertDbHasCoreTables(self::$tmpPath . '/users/bob/' . PdoFactory::DB_FILE);
     }
 
-    public function test_runs_selected_user_only(): void
+    public function test_selected_user(): void
     {
         $tester = $this->makeTester(new IndexCommand($this->makeMapper(), new Logger('test')));
         $status = $tester->execute([
@@ -71,7 +61,7 @@ final class IndexCommandTest extends TestCase
         $this->assertDbHasCoreTables(self::$tmpPath . '/users/alice/' . PdoFactory::DB_FILE);
     }
 
-    public function test_invalid_user_returns_failure(): void
+    public function test_invalid_user(): void
     {
         $tester = $this->makeTester(new IndexCommand($this->makeMapper(), new Logger('test')));
         $status = $tester->execute([

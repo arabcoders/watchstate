@@ -6,7 +6,6 @@ namespace Tests\Commands\State;
 
 use App\Backends\Common\ClientInterface as iClient;
 use App\Commands\State\PlaylistCommand;
-use App\Libs\Config;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Playlists\PlaylistSyncService;
@@ -23,7 +22,7 @@ use App\Libs\TestCase;
 
 final class PlaylistCommandTest extends TestCase
 {
-    public function test_renders_playlist_sync_summary(): void
+    public function test_summary(): void
     {
         $service = $this->makeServiceMock();
         $service
@@ -180,7 +179,7 @@ final class PlaylistCommandTest extends TestCase
         self::assertSame(PlaylistCommand::SUCCESS, $status);
     }
 
-    public function test_invalid_user_returns_failure(): void
+    public function test_invalid_user(): void
     {
         $service = $this->makeServiceMock();
         $service->expects(self::never())->method('sync');
@@ -225,24 +224,14 @@ final class PlaylistCommandTest extends TestCase
     ): PlaylistCommand
     {
         $this->initTempApp();
-
-        $fixtureFile = __DIR__ . '/../../Fixtures/test_servers.yaml';
-        $fixture = file_get_contents($fixtureFile);
-        assert(false !== $fixture, 'Expected playlist fixture config.');
-
-        file_put_contents((string) Config::get('backends_file'), $fixture);
+        $this->seedTestServersConfig();
 
         foreach ($userNames as $name) {
             if ('main' === $name) {
                 continue;
             }
 
-            $userDir = self::$tmpPath . '/users/' . $name;
-            if (!is_dir($userDir)) {
-                mkdir($userDir, 0o755, true);
-            }
-
-            file_put_contents($userDir . '/servers.yaml', $fixture);
+            $this->seedTestServersConfig($name);
         }
 
         $logger = new Logger('test');

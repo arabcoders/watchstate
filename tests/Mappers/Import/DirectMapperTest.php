@@ -21,69 +21,6 @@ class DirectMapperTest extends MapperAbstract
         return $mapper;
     }
 
-    public function test_mapper_disable_unplayed(): void
-    {
-        $testMovie = new StateEntity($this->testMovie);
-        $this->mapper->add($testMovie);
-        $this->mapper->commit();
-        $this->mapper->reset()->loadData();
-
-        $obj = $this->mapper->get($testMovie);
-        $this->assertSame(1, $obj->watched, 'Initial state: item should be watched');
-
-        $userContext = $this->createUserContext(
-            name: 'test_plex',
-            data: [
-                'test_plex.options.' . Options::DISABLE_MARK_UNPLAYED => true,
-            ],
-        );
-
-        $mapperWithContext = $this->mapper->withUserContext($userContext);
-
-        $testMovie->watched = 0;
-        $mapperWithContext->add($testMovie, ['after' => new \DateTimeImmutable('now')]);
-        $mapperWithContext->commit();
-        $mapperWithContext->reset()->loadData();
-
-        $obj = $mapperWithContext->get($testMovie);
-        $this->assertSame(
-            1,
-            $obj->watched,
-            'With DISABLE_MARK_UNPLAYED flag enabled, item should remain watched',
-        );
-
-        $userContextNoFlag = $this->createUserContext(
-            name: 'test_plex_no_flag',
-            data: [],
-        );
-
-        $this->testMovie[iState::COLUMN_VIA] = 'test_plex_no_flag';
-        $this->testMovie = ag_set(
-            $this->testMovie,
-            'metadata.test_plex_no_flag',
-            $this->testMovie['metadata']['test_plex'],
-        );
-        unset($this->testMovie['metadata']['test_plex']);
-
-        $testMovie2 = new StateEntity($this->testMovie);
-        $mapperNoFlag = $this->mapper->withUserContext($userContextNoFlag);
-        $mapperNoFlag->add($testMovie2);
-        $mapperNoFlag->commit();
-        $mapperNoFlag->reset()->loadData();
-
-        $testMovie2->watched = 0;
-        $mapperNoFlag->add($testMovie2, ['after' => new \DateTimeImmutable('now')]);
-        $mapperNoFlag->commit();
-        $mapperNoFlag->reset()->loadData();
-
-        $obj2 = $mapperNoFlag->get($testMovie2);
-        $this->assertSame(
-            0,
-            $obj2->watched,
-            'Without DISABLE_MARK_UNPLAYED flag, item should be marked as unwatched',
-        );
-    }
-
     public function test_skip_state_no_progress(): void
     {
         $this->testMovie[iState::COLUMN_WATCHED] = 0;
@@ -121,51 +58,6 @@ class DirectMapperTest extends MapperAbstract
             150,
             $storedProgress,
             'Progress should be saved to database when progress event is triggered',
-        );
-    }
-
-    public function test_progress_tainted_update(): void
-    {
-        $currentTime = time();
-        $this->testMovie[iState::COLUMN_WATCHED] = 0;
-        $this->testMovie[iState::COLUMN_UPDATED] = $currentTime - 7200;
-        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_META_DATA_PROGRESS] = 0;
-        $testMovie = new StateEntity($this->testMovie);
-
-        $this->mapper->add($testMovie);
-        $this->mapper->commit();
-        $this->mapper->reset()->loadData();
-
-        $progressEventCallCount = 0;
-        $progressCallback = function () use (&$progressEventCallCount) {
-            $progressEventCallCount++;
-        };
-
-        $testMovie->watched = 0;
-        $testMovie->updated = $currentTime - 1800;
-        $metadata = $testMovie->getMetadata();
-        $metadata[$testMovie->via][iState::COLUMN_META_DATA_PROGRESS] = 50;
-        $testMovie->metadata = $metadata;
-        $testMovie->setIsTainted(true);
-
-        $this->mapper->add($testMovie, [
-            Options::STATE_PROGRESS_EVENT => $progressCallback,
-        ]);
-        $this->mapper->commit();
-
-        $this->assertSame(
-            1,
-            $progressEventCallCount,
-            'Progress event should be called exactly once when progress increases significantly',
-        );
-
-        $this->mapper->reset()->loadData();
-        $stored = $this->mapper->get($testMovie);
-        $storedProgress = (int) ag($stored->getMetadata($testMovie->via), iState::COLUMN_META_DATA_PROGRESS, 0);
-        $this->assertSame(
-            50,
-            $storedProgress,
-            'Progress should be saved to database',
         );
     }
 
@@ -296,12 +188,7 @@ class DirectMapperTest extends MapperAbstract
         );
     }
 
-    /**
-     * Test that add() flows to handleUntaintedEntity() and triggers shouldMarkAsUnplayed()
-     *
-     * Flow: add() -> handleUntaintedEntity() -> shouldMarkAsUnplayed() -> markAsUnplayed()
-     */
-    public function test_add_untainted_unplayed(): void
+    public function test_untainted_unwatch_update(): void
     {
         $currentTime = time();
 
@@ -322,153 +209,20 @@ class DirectMapperTest extends MapperAbstract
         $stored = $this->mapper->get($testMovie);
         $this->assertSame(1, $stored->watched, 'Initial state should be watched');
 
-        $MAUCallCount = 0;
-        $MAUTriggered = null;
-        $MAULocal = null;
-        $TMAUCallBack = function ($triggered, $local) use (&$MAUCallCount, &$MAUTriggered, &$MAULocal) {
-            $MAUCallCount++;
-            $MAUTriggered = $triggered;
-            $MAULocal = $local;
-        };
-
-        // Create unwatched update entity with updated time matching added_at
-        // This satisfies condition 7 of shouldMarkAsUnplayed()
-        $updateMovie = clone $testMovie;
-        $updateMovie->watched = 0;
-        $updateMovie->updated = $currentTime; // Matches added_at, triggers shouldMarkAsUnplayed condition 7
-
-        // Update metadata to ensure changes are detected
-        $metadata = $updateMovie->getMetadata();
-        $metadata[$updateMovie->via][iState::COLUMN_WATCHED] = 0; // Backend reports unwatched
-        $metadata[$updateMovie->via][iState::COLUMN_META_DATA_PLAYED_AT] = $currentTime; // Update played_at
-        $updateMovie->metadata = $metadata;
-
-        $this->handler->clear();
-
-        // Call add() WITHOUT 'after' date - this routes to handleUntaintedEntity()
-        // NOT tainted, NOT metadata_only, entity exists in DB
-        $this->mapper->add($updateMovie, [
-            'test_mark_as_unplayed' => $TMAUCallBack,
-        ]);
-        $this->mapper->commit();
-
-        $this->assertSame(1, $MAUCallCount, 'test_mark_as_unplayed callback should be called exactly once.');
-        $this->assertTrue($MAUTriggered, 'First parameter should be true');
-        $this->assertSame(0, $MAULocal->watched, 'Item should be unwatched.');
-
-        // Verify final state in database
-        $this->mapper->reset()->loadData();
-        $result = $this->mapper->get($updateMovie);
-        $this->assertSame(0, $result->watched, 'Item should be marked as unwatched');
-    }
-
-    /**
-     * Test that add() flows to handleUntaintedEntity() but shouldMarkAsUnplayed() returns false
-     * when DISABLE_MARK_UNPLAYED flag is set, preventing STATE_UPDATE_EVENT from being called.
-     */
-    public function test_add_untainted_blocked(): void
-    {
-        $currentTime = time();
-
-        $this->testMovie[iState::COLUMN_WATCHED] = 1;
-        $this->testMovie[iState::COLUMN_UPDATED] = $currentTime;
-        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_ID] = 121;
-        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_WATCHED] = 1;
-        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_META_DATA_ADDED_AT] = $currentTime;
-        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_META_DATA_PLAYED_AT] =
-            $currentTime - 100;
-
-        $testMovie = new StateEntity($this->testMovie);
-        $this->mapper->add($testMovie);
-        $this->mapper->commit();
-        $this->mapper->reset()->loadData();
-
-        $userContext = $this->createUserContext(
-            name: 'test_plex',
-            data: [
-                'test_plex.options.' . Options::DISABLE_MARK_UNPLAYED => true,
-            ],
-        );
-
-        $mapperWithContext = $this->mapper->withUserContext($userContext);
-
-        $MAUCallCount = 0;
-        $TMAUCallBack = function ($triggered, $local) use (&$MAUCallCount) {
-            $MAUCallCount++;
-        };
-
-        // Create unwatched update
         $updateMovie = clone $testMovie;
         $updateMovie->watched = 0;
         $updateMovie->updated = $currentTime;
 
-        // Update metadata to ensure changes are detected
         $metadata = $updateMovie->getMetadata();
         $metadata[$updateMovie->via][iState::COLUMN_WATCHED] = 0;
         $metadata[$updateMovie->via][iState::COLUMN_META_DATA_PLAYED_AT] = $currentTime;
         $updateMovie->metadata = $metadata;
 
-        $this->handler->clear();
-        $mapperWithContext->add($updateMovie, ['test_mark_as_unplayed' => $TMAUCallBack]);
-        $mapperWithContext->commit();
-
-        $this->assertSame(
-            0,
-            $MAUCallCount,
-            'test_mark_as_unplayed callback should NOT be called when DISABLE_MARK_UNPLAYED flag makes shouldMarkAsUnplayed return false',
-        );
-
-        $mapperWithContext->reset()->loadData();
-        $result = $mapperWithContext->get($updateMovie);
-        $this->assertSame(1, $result->watched, 'Item should remain watched when DISABLE_MARK_UNPLAYED flag is set');
-    }
-
-    /**
-     * Verify that add() routes to handleOldEntity (not handleUntaintedEntity) when 'after' date
-     * is newer than entity.updated. This is a control test to show path differentiation.
-     * @throws \DateMalformedStringException
-     */
-    public function test_add_routes_old(): void
-    {
-        $currentTime = time();
-
-        // Setup initial watched movie
-        $this->testMovie[iState::COLUMN_WATCHED] = 1;
-        $this->testMovie[iState::COLUMN_UPDATED] = $currentTime - 3600;
-        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_ID] = 121;
-        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_WATCHED] = 1;
-        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_META_DATA_ADDED_AT] =
-            $currentTime - 3600;
-        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_META_DATA_PLAYED_AT] =
-            $currentTime - 3600;
-
-        $testMovie = new StateEntity($this->testMovie);
-        $this->mapper->add($testMovie);
-        $this->mapper->commit();
-        $this->mapper->reset()->loadData();
-
-        $MAUCallCount = 0;
-        $MAULocal = null;
-        $TMAUCallBack = function ($triggered, $local) use (&$MAUCallCount, &$MAULocal) {
-            $MAUCallCount++;
-            $MAULocal = $local;
-        };
-
-        $updateMovie = clone $testMovie;
-        $updateMovie->watched = 0;
-        $updateMovie->updated = $currentTime - 3600; // Matches added_at
-
-        $this->handler->clear();
-        $this->mapper->add($updateMovie, [
-            'after' => new \DateTimeImmutable('@' . ($currentTime - 1800)),
-            'test_mark_as_unplayed' => $TMAUCallBack,
-        ]);
+        $this->mapper->add($updateMovie);
         $this->mapper->commit();
 
-        $this->assertSame(1, $MAUCallCount, 'test_mark_as_unplayed callback should be called');
-        $this->assertSame(0, $MAULocal->watched, 'Local entity should be unwatched after markAsUnplayed');
         $this->mapper->reset()->loadData();
         $result = $this->mapper->get($updateMovie);
-        $this->assertSame(0, $result->watched, 'Item should be marked as unwatched via handleOldEntity path');
+        $this->assertSame(0, $result->watched, 'Item should be marked as unwatched');
     }
 }

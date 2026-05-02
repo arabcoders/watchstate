@@ -9,85 +9,57 @@ use App\Libs\TestCase;
 
 class MessageTest extends TestCase
 {
-    public function test_message_add(): void
+    protected function setUp(): void
     {
+        parent::setUp();
         Message::reset();
-        Message::add('tester', 'foo');
-        $this->assertSame(
-            'foo',
-            Message::get('tester'),
-            'When message is added, it can be retrieved by key'
-        );
     }
 
-    public function test_message_get_conditions(): void
+    protected function tearDown(): void
     {
         Message::reset();
-        Message::add('tester', 'foo');
-        $this->assertSame(
-            'foo',
-            Message::get('tester'),
-            'When key is set, value is returned'
-        );
-        $this->assertSame(
-            'not_set',
-            Message::get('non_set', 'not_set'),
-            'When key is not set, default value is returned'
-        );
-        $this->assertSame(
-            'not_set',
-            Message::get('non_set', fn() => 'not_set'),
-            'When key is not set, and default value is closure, it is called and result is returned'
-        );
-        $this->assertSame(
-            null,
-            Message::get('non_set'),
-            'When key is not set, null is returned'
-        );
+        parent::tearDown();
     }
 
-    public function test_message_getAll(): void
+    public function test_message_store_defaults(): void
     {
-        Message::reset();
-        $this->assertSame([],
+        Message::add('tester.foo', 'bar');
+        $this->assertSame(
+            'bar',
+            Message::get('tester.foo'),
+            'When message is added, nested lookup returns the stored value.'
+        );
+        $this->assertSame(
+            'fallback',
+            Message::get('missing', 'fallback'),
+            'When key is not set, scalar defaults are returned.'
+        );
+        $this->assertSame(
+            'computed',
+            Message::get('missing', fn() => 'computed'),
+            'When key is not set, closure defaults are resolved.'
+        );
+        $this->assertNull(Message::get('missing'), 'When key is not set, null is returned by default.');
+        $this->assertSame(
+            ['tester' => ['foo' => 'bar']],
             Message::getAll(),
-            'When no message is set, getAll() returns empty array'
-        );
-        Message::add('tester', 'foo');
-        $this->assertSame(['tester' => 'foo'],
-            Message::getAll(),
-            'When message is set, getAll() returns all messages'
+            'Stored messages preserve their nested structure.'
         );
     }
 
-    public function test_message_increment(): void
+    public function test_message_increment_reset(): void
     {
-        Message::reset();
-        Message::increment('up', 2);
-        $this->assertSame(
-            2,
-            Message::get('up'),
-            'When message is incremented using custom increment value, the incremented value returned by same key'
-        );
-        Message::increment('up');
-        $this->assertSame(
-            3,
-            Message::get('up'),
-            'When message is incremented using default increment value, the incremented value returned by same key'
-        );
-    }
-
-    public function test_message_reset(): void
-    {
-        Message::reset();
+        Message::increment('up.foo', 2);
         Message::increment('up.foo');
-        $this->assertSame(['up' => ['foo' => 1]],
-            Message::getAll(),
-            'When message is incremented, it is stored in store');
-        Message::reset();
-        $this->assertSame([],
-            Message::getAll(),
-            'When message is reset, store is empty');
-    }
 
+        $this->assertSame(
+            ['up' => ['foo' => 3]],
+            Message::getAll(),
+            'Increment accumulates values at the requested nested key.'
+        );
+
+        Message::reset();
+
+        $this->assertSame([], Message::getAll(), 'Reset clears the message store.');
+    }
 }

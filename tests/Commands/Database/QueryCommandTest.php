@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Commands\Database;
 
 use App\Commands\Database\QueryCommand;
-use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Mappers\Import\DirectMapper;
@@ -25,7 +24,7 @@ final class QueryCommandTest extends TestCase
         parent::setUp();
 
         $this->initTempApp();
-        copy(__DIR__ . '/../../Fixtures/test_servers.yaml', (string) Config::get('backends_file'));
+        $this->seedTestServersConfig();
     }
 
     public function test_select_default_db(): void
@@ -286,7 +285,7 @@ final class QueryCommandTest extends TestCase
         ], $result);
     }
 
-    public function test_unknown_user_returns_failure(): void
+    public function test_unknown_user(): void
     {
         $main = $this->makeUserContext('main');
         $this->seedTable($main, [[
@@ -325,12 +324,7 @@ final class QueryCommandTest extends TestCase
     private function makeUserContext(string $name): UserContext
     {
         if ('main' !== $name) {
-            $userDir = self::$tmpPath . '/users/' . $name;
-            if (!is_dir($userDir)) {
-                mkdir($userDir, 0o755, true);
-            }
-
-            copy(__DIR__ . '/../../Fixtures/test_servers.yaml', $userDir . '/servers.yaml');
+            $this->seedTestServersConfig($name);
         }
 
         $logger = new Logger('test');

@@ -15,65 +15,46 @@ class QueueRequestsTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->queue = new QueueRequests();
         parent::setUp();
+        $this->queue = new QueueRequests();
     }
 
-    public function test_message_init_count(): void
+    public function test_queue_add_iterate(): void
     {
-        $this->assertCount(0, $this->queue, 'When queue empty count on object is 0');
-        $this->queue->add(new Request(Method::GET, 'http://example.test/1'));
-        $this->assertCount(1, $this->queue, 'When queue has 1 item count on object is 1');
-    }
-
-    public function test_message_add(): void
-    {
-        $obj = new Request(Method::GET, 'http://example.test/1');
-        $this->queue->add($obj);
-        $this->assertSame([$obj],
-            $this->queue->getQueue(),
-            'When message is added, it can be retrieved with getQueue() in same order it was added in'
-        );
-    }
-
-    public function test_message_reset(): void
-    {
-        $obj = new Request(Method::GET, 'http://example.test/1');
-        $this->queue->add($obj);
-        $this->assertCount(1, $this->queue, 'When queue has 1 item count on object is 1');
-        $this->queue->reset();
-        $this->assertCount(0, $this->queue, 'When queue is reset count on object is 0');
-    }
-
-    public function test_message_iterator(): void
-    {
-        $objs = [
+        $requests = [
             new Request(Method::GET, 'http://example.test/1'),
             new Request(Method::POST, 'http://example.test/2'),
         ];
 
-        foreach ($objs as $obj) {
-            $this->queue->add($obj);
+        foreach ($requests as $request) {
+            $this->queue->add($request);
         }
 
         $this->assertCount(
-            count($objs),
+            count($requests),
             $this->queue,
-            'When running count on queue it should return the correct number of queued items.'
+            'Count reflects the number of queued requests.'
         );
 
-        $x = 0;
-        foreach ($this->queue as $obj) {
-            $this->assertSame(
-                $objs[$x],
-                $obj,
-                'When iterating over queue it should return the correct item in same order it was added in.'
-            );
-            $x++;
-        }
+        $this->assertSame(
+            $requests,
+            $this->queue->getQueue(),
+            'getQueue exposes the queued requests in insertion order.'
+        );
+        $this->assertSame(
+            $requests,
+            iterator_to_array($this->queue),
+            'Iteration yields queued requests in insertion order.'
+        );
+    }
+
+    public function test_queue_reset(): void
+    {
+        $this->queue->add(new Request(Method::GET, 'http://example.test/1'));
 
         $this->queue->reset();
 
-        $this->assertCount(0, $this->queue, 'When queue is reset count on object is 0');
+        $this->assertCount(0, $this->queue, 'Reset clears the queue count.');
+        $this->assertSame([], $this->queue->getQueue(), 'Reset clears queued requests.');
     }
 }

@@ -5,15 +5,12 @@ declare(strict_types=1);
 namespace Tests\Libs;
 
 use App\Libs\Config;
-use App\Libs\Container;
 use App\Libs\TestCase;
 use Tests\fixtures\Prune\FakePruner;
 use Tests\fixtures\Prune\MethodPruner;
 
 final class PruneHelpersTest extends TestCase
 {
-    private array $originalConfig = [];
-
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
@@ -27,31 +24,12 @@ final class PruneHelpersTest extends TestCase
     {
         parent::setUp();
 
-        $this->originalConfig = Config::getAll();
-        Container::reset();
-        Container::init();
-        foreach ((array) require ROOT_PATH . '/config/services.php' as $name => $definition) {
-            Container::add($name, $definition);
-        }
-
-        Config::init(array_replace_recursive(require ROOT_PATH . '/config/config.php', [
-            'prune' => [
-                'paths' => [ROOT_PATH . '/tests/fixtures/Prune'],
-                'cache' => [
-                    'time' => 0,
-                ],
-            ],
-        ]));
+        $this->initTempApp();
+        Config::save('prune.paths', [ROOT_PATH . '/tests/fixtures/Prune']);
+        Config::save('prune.cache.time', 0);
 
         FakePruner::$calls = [];
         MethodPruner::$calls = [];
-    }
-
-    protected function tearDown(): void
-    {
-        Config::init($this->originalConfig);
-        Container::reset();
-        parent::tearDown();
     }
 
     public function test_discover(): void
@@ -87,14 +65,8 @@ final class PruneHelpersTest extends TestCase
 
     public function test_paths(): void
     {
-        Config::init(array_replace_recursive(require ROOT_PATH . '/config/config.php', [
-            'prune' => [
-                'paths' => [ROOT_PATH . '/src/Commands/Prune'],
-                'cache' => [
-                    'time' => 0,
-                ],
-            ],
-        ]));
+        Config::save('prune.paths', [ROOT_PATH . '/src/Commands/Prune']);
+        Config::save('prune.cache.time', 0);
 
         $pruners = discover_pruners([ROOT_PATH . '/tests/fixtures/Prune']);
 

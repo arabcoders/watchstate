@@ -9,33 +9,98 @@ use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\TestCase;
 use Monolog\Logger;
-use Psr\SimpleCache\CacheInterface as iCache;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Tester\CommandTester;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
-use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
+use Tests\Support\FakeBackendClient;
+use Tests\Support\StateCommandTestSupport;
 
 final class BackupCommandTest extends TestCase
 {
-    public function test_signature(): void
-    {
-        $command = new BackupCommand(new DirectMapper(new Logger('test'), $this->createDb(), $this->createCache()), new Logger('test'), new LogSuppressor([]), $this->createStub(iHttp::class));
+    use StateCommandTestSupport;
 
-        self::assertSame('state:backup', $command->getName());
-        self::assertTrue($command->getDefinition()->hasOption('user'));
+    public function test_selected_user_backup_file(): void
+    {
+        $logger = $this->initFakeBackendApp(
+            mainBackends: $this->fakeBackendConfig('fake_backup'),
+            userBackends: [
+                'alice' => $this->fakeBackendConfig('fake_backup'),
+            ],
+        );
+        $this->makeUserContext('alice', $logger);
+
+        $backupDir = self::$tmpPath . '/backup';
+        if (false === is_dir($backupDir)) {
+            mkdir($backupDir, 0o755, true);
+        }
+
+        $command = new BackupCommand(
+            $this->createRuntimeMapper($logger),
+            $logger,
+            new LogSuppressor([]),
+            $this->createStub(iHttp::class),
+        );
+        $tester = $this->makeTester($command);
+        $status = $tester->execute([
+            '--user' => 'alice',
+            '--file' => 'custom.{user}.{backend}.json',
+            '--no-compress' => true,
+        ]);
+
+        self::assertSame(BackupCommand::SUCCESS, $status);
+        self::assertSame([
+            [
+                'backend' => 'fake_backup',
+                'user' => 'alice',
+                'dry_run' => false,
+                'no_enhance' => false,
+            ],
+        ], FakeBackendClient::getCalls('backup'));
+
+        $aliceFile = self::$tmpPath . '/backup/custom.alice.fake_backup.json';
+        self::assertFileExists($aliceFile);
+        self::assertStringContainsString('"user":"alice"', (string) file_get_contents($aliceFile));
+        self::assertFileDoesNotExist(self::$tmpPath . '/backup/custom.main.fake_backup.json');
     }
 
     public function test_invalid_user_returns_failure(): void
     {
-        $command = new BackupCommand(new DirectMapper(new Logger('test'), $this->createDb(), $this->createCache()), new Logger('test'), new LogSuppressor([]), $this->createStub(iHttp::class));
+        $logger = new Logger('test');
+        $command = new BackupCommand(
+            new DirectMapper($logger, $this->createDb($logger), $this->createArrayCache()),
+            $logger,
+            new LogSuppressor([]),
+            $this->createStub(iHttp::class),
+        );
         $tester = $this->makeTester($command);
         $status = $tester->execute([
             '--user' => 'ghost',
         ]);
 
         self::assertSame(BackupCommand::FAILURE, $status);
+    }
+
+    public function test_selected_backend_no_backup(): void
+    {
+        $logger = $this->initFakeBackendApp($this->fakeBackendConfig('fake_backup'));
+        $this->migrateMainDb($logger);
+
+        $command = new BackupCommand(
+            $this->createRuntimeMapper($logger),
+            $logger,
+            new LogSuppressor([]),
+            $this->createStub(iHttp::class),
+        );
+        $tester = $this->makeTester($command);
+        $status = $tester->execute([
+            '--select-backend' => ['ghost'],
+            '--no-compress' => true,
+        ]);
+
+        self::assertSame(BackupCommand::SUCCESS, $status);
+        self::assertSame([], FakeBackendClient::getCalls('backup'));
+        self::assertDirectoryDoesNotExist(self::$tmpPath . '/backup');
     }
 
     private function makeTester(BackupCommand $command): CommandTester
@@ -45,10 +110,5 @@ final class BackupCommandTest extends TestCase
         $application->addCommand($command);
 
         return new CommandTester($application->find(BackupCommand::ROUTE));
-    }
-
-    private function createCache(): iCache
-    {
-        return new Psr16Cache(new ArrayAdapter());
     }
 }

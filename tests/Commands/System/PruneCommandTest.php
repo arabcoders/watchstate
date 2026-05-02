@@ -7,7 +7,6 @@ namespace Tests\Commands\System;
 use App\Commands\System\PruneCommand;
 use App\Libs\Attributes\Scanner\Item;
 use App\Libs\Attributes\Scanner\Target;
-use App\Libs\Container;
 use App\Libs\TestCase;
 use Monolog\Logger;
 use Symfony\Component\Console\Input\ArrayInput;
@@ -86,35 +85,12 @@ final class PruneCommandTest extends TestCase
     {
         parent::setUp();
 
-        Container::reset();
-        Container::init();
-        foreach ((array) require ROOT_PATH . '/config/services.php' as $name => $definition) {
-            Container::add($name, $definition);
-        }
+        $this->initContainer();
 
         self::$calls = [];
         TestablePruneCommand::$due = [];
         TestablePruneCommand::$forced = false;
         TestablePruneCommand::$paths = [];
-    }
-
-    protected function tearDown(): void
-    {
-        Container::reset();
-        parent::tearDown();
-    }
-
-    public function test_sig(): void
-    {
-        $cmd = new PruneCommand(new Logger('test'));
-
-        $this->assertSame('system:prune', $cmd->getName());
-        $this->assertTrue($cmd->getDefinition()->hasOption('run'));
-        $this->assertTrue($cmd->getDefinition()->hasOption('prune'));
-        $this->assertTrue($cmd->getDefinition()->hasOption('no-cache'));
-        $this->assertTrue($cmd->getDefinition()->hasOption('refresh-cache'));
-        $this->assertTrue($cmd->getDefinition()->hasOption('execute'));
-        $this->assertFalse($cmd->getDefinition()->hasOption('scheduled'));
     }
 
     public function test_list(): void

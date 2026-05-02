@@ -27,13 +27,6 @@ use Symfony\Component\Cache\Psr16Cache;
 
 final class PlaylistSyncServiceTest extends TestCase
 {
-    protected function tearDown(): void
-    {
-        Container::reset();
-
-        parent::tearDown();
-    }
-
     public function test_partial_sync_no_promote(): void
     {
         $logger = new Logger('test', [new NullHandler()]);

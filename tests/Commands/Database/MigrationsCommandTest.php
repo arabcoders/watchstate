@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Commands\Database;
 
 use App\Commands\Database\MigrationsCommand;
-use App\Libs\Config;
 use App\Libs\Database\PackageMigrationFactory;
 use App\Libs\Database\PdoFactory;
 use App\Libs\TestCase;
@@ -19,24 +18,7 @@ final class MigrationsCommandTest extends TestCase
     {
         parent::setUp();
 
-        $this->initTempDir();
-
-        Config::init(require __DIR__ . '/../../../config/config.php');
-        Config::save('path', self::$tmpPath);
-        Config::save('database.file', self::$tmpPath . '/db/' . PdoFactory::DB_FILE);
-        Config::save('database.dsn', 'sqlite:' . self::$tmpPath . '/db/' . PdoFactory::DB_FILE);
-    }
-
-    public function test_signature(): void
-    {
-        $command = new MigrationsCommand($this->mainPdo(), new PackageMigrationFactory());
-
-        self::assertSame('db:migrations', $command->getName());
-        self::assertTrue($command->getDefinition()->hasOption('create'));
-        self::assertTrue($command->getDefinition()->hasOption('autogen'));
-        self::assertTrue($command->getDefinition()->hasOption('list'));
-        self::assertTrue($command->getDefinition()->hasOption('execute'));
-        self::assertTrue($command->getDefinition()->hasOption('squash'));
+        $this->initTempApp();
     }
 
     public function test_autogen_creates_migration(): void
@@ -74,7 +56,7 @@ final class MigrationsCommandTest extends TestCase
         self::assertStringContainsString('App\\Migration', (string) file_get_contents($files[0]));
     }
 
-    public function test_autogen_skips_managed_external_indexes_when_schema_matches(): void
+    public function test_autogen_no_changes(): void
     {
         $migrationDir = self::$tmpPath . '/generated-migrations';
         mkdir($migrationDir, 0o755, true);

@@ -10,6 +10,12 @@ box, this tool supports `Jellyfin`, `Plex` and `Emby` media servers.
 
 # Updates
 
+### 2026-04-30
+
+WatchState now uses the new versioned `v02` database schema. On first boot after updating, startup may take a bit longer than usual while legacy databases are imported, migrations are applied, and indexes are rebuilt.
+
+During that upgrade, the old database files are kept as `.migrated` safety copies. Once the first boot finishes and you have confirmed everything looks good, you can delete those `.migrated` files if you want to reclaim the space.
+
 ### 2026-04-26
 
 Cross-backend sync for playlists is now available as a **beta** feature. This is still early work, so expect some rough edges, 
@@ -17,11 +23,6 @@ backend-specific issues, and possible breaking changes as it matures.
 
 Because playlist behavior differs across backends, the feature may change over time, and if it proves too unreliable to support consistently, 
 it may be reworked or removed. To enable it, simply go to Tasks and enable the `Playlist` task.
-
-### 2026-04-23
-
-Plex appears to have backtracked on the API change that broke external `invited users`, so WatchState supports them again for now.
-Support may change again if Plex reverses course or make it harder to access invited users tokens.
 
 Please refer to [NEWS](/NEWS.md) for the latest updates and changes.
 

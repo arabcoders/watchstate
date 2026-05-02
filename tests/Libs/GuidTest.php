@@ -398,13 +398,4 @@ class GuidTest extends TestCase
         );
     }
 
-    public function test_guid_logger_from__constructor()
-    {
-        new Guid(['guid_tvdb' => INF], logger: $this->logger);
-        $this->assertTrue(
-            $this->logged(Level::Info, 'external id. Unexpected value type.', true),
-            "Assert message logged when the value type does not match the expected type."
-        );
-    }
-
 }

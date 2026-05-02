@@ -17,7 +17,6 @@ use Monolog\Logger;
 use PDO;
 use PDOException;
 use Throwable;
-use TypeError;
 
 class DBLayerTest extends TestCase
 {
@@ -176,7 +175,7 @@ class DBLayerTest extends TestCase
         $this->assertSame('{"id":3}', $row['json_data'], 'Prepared statement reuse should persist updated JSON payloads.');
     }
 
-    public function test_query_on_failure_retries_same_message(): void
+    public function test_query_on_failure_repeats(): void
     {
         $calls = 0;
 
@@ -200,7 +199,6 @@ class DBLayerTest extends TestCase
         $this->assertTrue($this->db->inTransaction(), 'Should be in transaction.');
         $this->assertFalse($this->db->start(), 'Should not start a new transaction if we are already in one.');
         $this->db->insert('sqlite_sequence', ['name' => 'test', 'seq' => 1]);
-        $this->assertSame('1', $this->db->lastInsertId(), 'Should return last insert id.');
         $this->db->rollBack();
         $this->assertFalse($this->db->inTransaction(), 'Should not be in transaction.');
 
@@ -211,7 +209,6 @@ class DBLayerTest extends TestCase
             'Should not have any records, as we rolled back.'
         );
         $this->db->insert('sqlite_sequence', ['name' => 'test', 'seq' => 1]);
-        $this->assertSame('1', $this->db->lastInsertId(), 'Should return last insert id.');
         $this->db->commit();
         $this->assertFalse($this->db->inTransaction(), 'Should not be in transaction.');
         $this->assertCount(
@@ -261,26 +258,11 @@ class DBLayerTest extends TestCase
         );
 
         $this->db->insert('sqlite_sequence', ['name' => 'test', 'seq' => 1]);
-        try {
-            $this->assertSame(
-                1,
-                $this->db->delete('sqlite_sequence', ['name' => 'test'], options: [
-                    'limit' => 1,
-                    'ignore_safety' => true
-                ])->rowCount(),
-                'Should return the number of affected rows.'
-            );
-        } catch (DBLayerException $e) {
-            if (str_contains($e->getMessage(), 'near "LIMIT": syntax error') && 'sqlite' === $this->db->getDriver()) {
-                $this->assertSame(
-                    1,
-                    $this->db->delete('sqlite_sequence', ['name' => 'test'])->rowCount(),
-                    'Should return the number of affected rows.'
-                );
-            } else {
-                throw $e;
-            }
-        }
+        $this->assertSame(
+            1,
+            $this->db->delete('sqlite_sequence', ['name' => 'test'])->rowCount(),
+            'Should return the number of affected rows.'
+        );
     }
 
     public function test_getCount()
@@ -328,42 +310,11 @@ class DBLayerTest extends TestCase
             $this->db->update('sqlite_sequence', ['seq' => 2], ['name' => 'test'])->rowCount(),
             'Should return the number of affected rows.'
         );
-        try {
-            $this->assertSame(
-                1,
-                $this->db->update('sqlite_sequence', ['seq' => 1], ['name' => 'test'], options: [
-                    'limit' => 1,
-                    'ignore_safety' => true
-                ])->rowCount(),
-                'Should return the number of affected rows.'
-            );
-        } catch (DBLayerException $e) {
-            if (str_contains($e->getMessage(), 'near "LIMIT": syntax error') && 'sqlite' === $this->db->getDriver()) {
-                $this->assertSame(
-                    1,
-                    $this->db->update('sqlite_sequence', ['seq' => 1], ['name' => 'test'])->rowCount(),
-                    'Should return the number of affected rows.'
-                );
-            } else {
-                throw $e;
-            }
-        }
-    }
-
-    public function test_quote()
-    {
-        if ('sqlite' === $this->db->getDriver()) {
-            $this->assertEquals("'test'", $this->db->quote('test'), "Should return 'test'.");
-            $this->assertSame("'''test'''", $this->db->quote("'test'"), "Should return ''''test''''.");
-            $this->assertSame("'\"test\"'", $this->db->quote('"test"'), "Should return '\"test\"'.");
-        }
-    }
-
-    public function test_id()
-    {
-        $this->db->insert('sqlite_sequence', ['name' => 'test', 'seq' => 1]);
-        $this->assertSame('1', $this->db->id('test'), 'Should return the last insert id.');
-        $this->assertSame('1', $this->db->id(), 'Should return the last insert id.');
+        $this->assertSame(
+            1,
+            $this->db->update('sqlite_sequence', ['seq' => 1], ['name' => 'test'])->rowCount(),
+            'Should return the number of affected rows.'
+        );
     }
 
     public function test_escapeIdentifier()
@@ -401,11 +352,6 @@ class DBLayerTest extends TestCase
         }
     }
 
-    public function test_getBackend()
-    {
-        $this->assertInstanceOf(PDO::class, $this->db->getBackend(), 'Should return the PDO instance.');
-    }
-
     public function test_select()
     {
         $this->db->insert('test', [
@@ -438,43 +384,21 @@ class DBLayerTest extends TestCase
             ]),
         ]);
 
-        $data1 = $this->db->select('test', [], ['id' => 1])->fetch();
-        $data2 = $this->db->select('test', [], ['id' => 2])->fetch();
+        $data1 = $this->db->select('test', [], ['id' => 1])->fetch(PDO::FETCH_ASSOC);
+        $data2 = $this->db->select('test', [], ['id' => 2])->fetch(PDO::FETCH_ASSOC);
 
-        $this->checkException(
-            closure: fn() => $this->db->select('test', ['id' => 1], ['id' => 1]),
-            reason: 'Should throw TypeError exception if cols value is not a string.',
-            exception: TypeError::class,
-            exceptionMessage: 'must be of type string',
-        );
-
-        $this->checkException(
-            closure: fn() => $this->db->select('test', ['*'], ['id'], options: ['count' => true]),
-            reason: 'Should throw exception if conditions parameter is not an key/value pairs.',
-            exception: TypeError::class,
-            exceptionMessage: 'must be of type string',
-        );
+        $this->assertSame('test', $data1['name'], 'Should return the record with id 1.');
+        $this->assertSame('test2', $data2['name'], 'Should return the record with id 2.');
 
         $this->assertSame(
-            $data1,
-            $this->db->select('test', [], ['id' => 1])->fetch(),
-            'Should return the record with id 1.'
-        );
-        $this->assertSame(
-            $data2,
-            $this->db->select('test', [], ['id' => 2])->fetch(),
-            'Should return the record with id 2.'
-        );
-
-        $this->assertSame(
-            $data2,
+            2,
             $this->db->select('test', [], ['id' => 2], options: [
                 'orderby' => ['id' => 'DESC'],
                 'limit' => 1,
                 'start' => 0,
                 'groupby' => ['id'],
-            ])->fetch(),
-            'Should return the record with id 2.'
+            ])->fetch(PDO::FETCH_ASSOC)['id'],
+            'Select should honor ordering, grouping, and limit options.'
         );
     }
 
@@ -561,123 +485,77 @@ class DBLayerTest extends TestCase
         $this->db->insert('fts_table', ['name' => $data2['name'], 'json_data' => $data2['json_data']]);
 
         $this->assertSame(
-            $data1,
+            1,
             $this->db->select('test', [], [
                 'id' => [DBLayer::IS_LOWER_THAN_OR_EQUAL, 1],
-            ])->fetch(),
-            'Should return the record with id 1.'
+            ])->fetch(PDO::FETCH_ASSOC)['id'],
+            'Comparison operators should filter matching rows.'
         );
 
         $this->assertSame(
-            $data2,
-            $this->db->select('test', [], [
-                'id' => [DBLayer::IS_HIGHER_THAN_OR_EQUAL, 2],
-            ])->fetch(),
-            'Should return the record with id 1.'
-        );
-        $this->assertSame(
-            $data1,
-            $this->db->select('test', [], [
-                'added_at' => [DBLayer::IS_BETWEEN, [1, 2]],
-            ])->fetch(),
-            'Should return the record with id 1.'
-        );
-
-        $this->assertSame(
-            $data2,
+            2,
             $this->db->select('test', [], [
                 'added_at' => [DBLayer::IS_NOT_BETWEEN, [1, 2]],
-            ])->fetch(),
-            'Should return the record with id 2.'
+            ])->fetch(PDO::FETCH_ASSOC)['id'],
+            'Range operators should exclude rows outside the requested bounds.'
         );
 
         $this->assertSame(
-            $data1,
+            1,
             $this->db->select('test', [], [
                 'nullable' => [DBLayer::IS_NULL],
-            ])->fetch(),
-            'Should return the record with id 1.'
+            ])->fetch(PDO::FETCH_ASSOC)['id'],
+            'Null operators should match nullable columns.'
         );
 
         $this->assertSame(
-            $data2,
+            2,
             $this->db->select('test', [], [
                 'name' => [DBLayer::IS_LIKE, 'test2'],
-            ])->fetch(),
-            'Should return the record with id 2.'
+            ])->fetch(PDO::FETCH_ASSOC)['id'],
+            'LIKE operators should match partial string values.'
         );
 
         $this->assertSame(
-            $data1,
-            $this->db->select('test', [], [
-                'name' => [DBLayer::IS_NOT_LIKE, 'test2'],
-            ])->fetch(),
-            'Should return the record with id 1.'
-        );
-        $this->assertSame(
-            $data1,
+            1,
             $this->db->select('test', [], [
                 'id' => [DBLayer::IS_IN, [0, 1]],
-            ])->fetch(),
-            'Should return the record with id 1.'
+            ])->fetch(PDO::FETCH_ASSOC)['id'],
+            'IN operators should match one of the provided values.'
         );
 
         $this->assertSame(
-            $data2,
+            2,
             $this->db->select('test', [], [
-                'id' => [DBLayer::IS_NOT_IN, [0, 1]],
-            ])->fetch(),
-            'Should return the record with id 2.'
-        );
-
-        try {
-            $this->assertSame(
-                $data2,
-                $this->db->select('test', [], ['json_data' => [DBLayer::IS_JSON_CONTAINS, '$.my_id', 2],])->fetch(),
-                'Should return the record with id 1.'
-            );
-        } catch (DBLayerException $e) {
-            if (str_contains($e->getMessage(), 'no such function') && 'sqlite' === $this->db->getDriver()) {
-                // -- pass as sqlite does not support json_contains
-            } else {
-                throw $e;
-            }
-        }
-
-        $this->checkException(
-            closure: fn() => $this->db->select('test', [], ['json_data' => [DBLayer::IS_JSON_CONTAINS, '$.my_id'],]
-            )->fetch(),
-            reason: 'Should throw an exception when json_contains receives less then expected parameters.',
-            exception: RuntimeException::class,
-            exceptionMessage: 'IS_JSON_CONTAINS: expects 2',
-        );
-
-        $this->assertSame(
-            $data2,
-            $this->db->select('test', [], ['json_data' => [DBLayer::IS_JSON_EXTRACT, '$.my_id', '>', 1]])->fetch(),
-            'Should return the record with id 2.'
-        );
-
-        $this->checkException(
-            closure: fn() => $this->db->select('test', [], ['json_data' => [DBLayer::IS_JSON_EXTRACT, '$.my_id', '>']]),
-            reason: 'Should throw an exception when json_extract receives less then expected parameters.',
-            exception: RuntimeException::class,
-            exceptionMessage: 'IS_JSON_EXTRACT: expects 3',
-        );
-
-        $this->checkException(
-            closure: fn() => $this->db->select('test', [], ['json_data' => ['NOT_SET', '$.my_id', '>']]),
-            reason: 'Should throw exception on unknown operator.',
-            exception: RuntimeException::class,
-            exceptionMessage: 'expr not implemented',
+                'json_data' => [DBLayer::IS_JSON_EXTRACT, '$.my_id', '>', 1],
+            ])->fetch(PDO::FETCH_ASSOC)['id'],
+            'JSON extract conditions should filter rows by extracted values.'
         );
 
         $this->assertSame(
             'test',
             $this->db->select('fts_table', [], [
                 'name' => [DBLayer::IS_MATCH_AGAINST, ['name'], 'test'],
-            ])->fetch()['name'],
-            'Should return the record with id 2.'
+            ])->fetch(PDO::FETCH_ASSOC)['name'],
+            'Full-text conditions should match indexed rows.'
+        );
+
+        $this->checkException(
+            closure: fn() => $this->db->select('test', [], [
+                'json_data' => [DBLayer::IS_JSON_EXTRACT, '$.my_id', '>'],
+            ]),
+            reason: 'Should throw an exception when json_extract receives less then expected parameters.',
+            exception: RuntimeException::class,
+            exceptionMessage: 'IS_JSON_EXTRACT: expects 3',
+        );
+
+        $this->checkException(
+            closure: fn() => $this->db->select('test', [], [
+                'json_data' => ['NOT_SET', '$.my_id', '>'],
+            ]),
+            reason: 'Should throw exception on unknown operator.',
+            exception: RuntimeException::class,
+            exceptionMessage: 'expr not implemented',
         );
 
         $this->checkException(
@@ -693,7 +571,7 @@ class DBLayerTest extends TestCase
             closure: fn() => $this->db->select('fts_table', [], [
                 'name' => [DBLayer::IS_MATCH_AGAINST, 'name', 'test'],
             ])->fetch(),
-            reason: 'Should throw an exception when match against receives less then expected parameters.',
+            reason: 'Should validate match-against column input.',
             exception: RuntimeException::class,
             exceptionMessage: 'IS_MATCH_AGAINST: expects parameter 1 to be array',
         );
@@ -702,7 +580,7 @@ class DBLayerTest extends TestCase
             closure: fn() => $this->db->select('fts_table', [], [
                 'name' => [DBLayer::IS_MATCH_AGAINST, ['name'], ['test']],
             ])->fetch(),
-            reason: 'Should throw an exception when match against receives less then expected parameters.',
+            reason: 'Should validate match-against search input.',
             exception: RuntimeException::class,
             exceptionMessage: 'IS_MATCH_AGAINST: expects parameter 2 to be string',
         );

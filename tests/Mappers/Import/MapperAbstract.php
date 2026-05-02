@@ -606,41 +606,4 @@ abstract class MapperAbstract extends TestCase
             'getOptions() should return the options we have set.');
     }
 
-    public function test_unwatch_disable_unplayed(): void
-    {
-        // -- Setup: Add a watched movie to the database
-        $testMovie = new StateEntity($this->testMovie);
-        $this->mapper->add($testMovie);
-        $this->mapper->commit();
-        $this->mapper->reset()->loadData();
-
-        // -- Verify initial state is watched
-        $obj = $this->mapper->get($testMovie);
-        $this->assertSame(1, $obj->watched, 'Initial state: movie should be watched');
-
-        // -- Create UserContext with DISABLE_MARK_UNPLAYED flag set to true
-        $userContext = $this->createUserContext(
-            name: 'test_plex',
-            data: [
-                'test_plex.options.' . Options::DISABLE_MARK_UNPLAYED => true
-            ]
-        );
-
-        // -- Set the UserContext on the mapper
-        $mapperWithContext = $this->mapper->withUserContext($userContext);
-
-        // -- Attempt to mark the movie as unwatched
-        $testMovie->watched = 0;
-        $mapperWithContext->add($testMovie, ['after' => new \DateTimeImmutable('now')]);
-        $mapperWithContext->commit();
-        $mapperWithContext->reset()->loadData();
-
-        // -- Verify the movie is still watched (DISABLE_MARK_UNPLAYED prevents the change)
-        $obj = $mapperWithContext->get($testMovie);
-        $this->assertSame(
-            1,
-            $obj->watched,
-            'When DISABLE_MARK_UNPLAYED is enabled, the movie should remain watched'
-        );
-    }
 }

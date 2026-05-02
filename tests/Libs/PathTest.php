@@ -15,908 +15,334 @@ class PathTest extends TestCase
         $this->initTempDir();
     }
 
-    public function test_MakeAndToString(): void
+    public function test_make_join_and_string(): void
     {
-        $path = Path::make(self::$tmpPath);
-        $this->assertSame(self::$tmpPath, (string)$path, 'Path::make should return correct string');
+        $path = Path::make(self::$tmpPath)->joinPath('foo', 'bar');
+
+        $this->assertStringEndsWith('foo' . DIRECTORY_SEPARATOR . 'bar', (string) $path);
     }
 
-    public function test_join(): void
-    {
-        $path = Path::make(self::$tmpPath);
-        $joined = $path->joinPath('foo', 'bar');
-        $this->assertStringEndsWith(
-            'foo' . DIRECTORY_SEPARATOR . 'bar',
-            (string)$joined,
-            'joinPath should join segments'
-        );
-    }
-
-    public function testJoinVariants(): void
-    {
-        $path = Path::make(self::$tmpPath);
-        $joined1 = $path->joinPath('foo', 'bar');
-        $joined2 = $path->joinPath('foo', 'bar');
-        $this->assertSame((string)$joined1, (string)$joined2, 'joinPath variants should be consistent');
-    }
-
-    public function test_ExistsIsDirIsFile(): void
+    public function test_exists_dir_and_file(): void
     {
         $dir = Path::make(self::$tmpPath);
-        $this->assertTrue($dir->exists(), 'Directory should exist');
-        $this->assertTrue($dir->isDir(), 'Should be a directory');
-        $this->assertFalse($dir->isFile(), 'Should not be a file');
-
-        $filePath = $dir->joinPath('file.txt');
-        file_put_contents((string)$filePath, 'data');
-        $file = Path::make((string)$filePath);
-        $this->assertTrue($file->exists(), 'File should exist');
-        $this->assertTrue($file->isFile(), 'Should be a file');
-        $this->assertFalse($file->isDir(), 'Should not be a directory');
-    }
-
-    public function testIsDirIsFileVariants(): void
-    {
-        $dir = Path::make(self::$tmpPath);
-        $file = $dir->joinPath('file.txt');
+        $file = $this->path('file.txt');
         $file->write('data');
-        $file2 = $dir->joinPath('file2.txt');
-        $file2->write('data');
-        $this->assertTrue($dir->isDir(), 'Should be a directory');
-        $this->assertTrue($dir->isDir(), 'Should be a directory (repeat)');
-        $this->assertTrue($file->isFile(), 'Should be a file');
-        $this->assertTrue($file->isFile(), 'Should be a file (repeat)');
-        $this->assertTrue($file2->isFile(), 'Should be a file2');
-        $this->assertTrue($file2->isFile(), 'Should be a file2 (repeat)');
+
+        $this->assertTrue($dir->exists());
+        $this->assertTrue($dir->isDir());
+        $this->assertFalse($dir->isFile());
+        $this->assertTrue($file->exists());
+        $this->assertTrue($file->isFile());
+        $this->assertFalse($file->isDir());
     }
 
-    public function test_MkdirAndRmdir(): void
+    public function test_mkdir_and_rmdir(): void
     {
-        $sub_dir = Path::make(self::$tmpPath)->joinPath('sub_dir');
-        $sub_dir->mkdir();
-        $this->assertTrue($sub_dir->exists(), 'Subdir should exist after mkdir');
-        $this->assertTrue($sub_dir->isDir(), 'Subdir should be a directory');
-        $sub_dir->rmdir();
-        $this->assertFalse($sub_dir->exists(), 'Subdir should be removed');
+        $dir = $this->path('sub_dir');
+
+        $dir->mkdir();
+        $this->assertTrue($dir->isDir());
+
+        $dir->rmdir();
+        $this->assertFalse($dir->exists());
     }
 
-    public function test_MkdirExistOk(): void
+    public function test_mkdir_recursive_and_exist_ok(): void
     {
-        $sub_dir = Path::make(self::$tmpPath)->joinPath('sub_dir');
-        $sub_dir->mkdir();
-        $sub_dir->mkdir(0777, false, true); // Should not throw
-        $this->assertTrue($sub_dir->exists(), 'Subdir should still exist');
+        $dir = $this->path('foo', 'bar');
+
+        $dir->mkdir(0o777, true);
+        $dir->mkdir(0o777, false, true);
+
+        $this->assertTrue($dir->isDir());
     }
 
-    public function test_MkdirThrowsIfExists(): void
+    public function test_mkdir_throws_when_exists(): void
     {
-        $sub_dir = Path::make(self::$tmpPath)->joinPath('sub_dir');
-        $sub_dir->mkdir();
+        $dir = $this->path('sub_dir');
+        $dir->mkdir();
+
         $this->expectException(RuntimeException::class);
-        $sub_dir->mkdir();
+        $dir->mkdir();
     }
 
-    public function test_Unlink(): void
+    public function test_read_write_and_unlink(): void
     {
-        $file = Path::make(self::$tmpPath)->joinPath('file.txt');
-        $file->write('abc');
-        $this->assertTrue($file->isFile(), 'File should exist before unlink');
+        $file = $this->path('file.txt');
+
+        $file->write('hello');
+        $this->assertSame('hello', $file->read());
+
         $file->unlink();
-        $this->assertFalse($file->exists(), 'File should be removed');
+        $this->assertFalse($file->exists());
     }
 
-    public function test_UnlinkThrowsIfNotFile(): void
+    public function test_read_throws_for_directory(): void
     {
-        $dir = Path::make(self::$tmpPath);
         $this->expectException(RuntimeException::class);
-        $dir->unlink();
+        Path::make(self::$tmpPath)->read();
     }
 
-    public function test_ReadWriteText(): void
+    public function test_unlink_throws_for_directory(): void
     {
-        $file = Path::make(self::$tmpPath)->joinPath('file.txt');
-        $file->write('hello');
-        $this->assertSame('hello', $file->read(), 'Read should return written text');
-    }
-
-    public function testReadWriteVariants(): void
-    {
-        $file = Path::make(self::$tmpPath)->joinPath('file.txt');
-        $file->write('abc');
-        $this->assertSame('abc', $file->read(), 'Read should return written text');
-        $file2 = Path::make(self::$tmpPath)->joinPath('file2.txt');
-        $file2->write('def');
-        $this->assertSame('def', $file2->read(), 'Read should return written text for file2');
-    }
-
-    public function test_ReadTextThrowsIfNotFile(): void
-    {
-        $dir = Path::make(self::$tmpPath);
         $this->expectException(RuntimeException::class);
-        $dir->read();
+        Path::make(self::$tmpPath)->unlink();
     }
 
-    public function testWriteTextAndReadText(): void
+    public function test_rmdir_throws_for_file(): void
     {
-        $file = Path::make(self::$tmpPath)->joinPath('file.txt');
-        $file->write('hello');
-        $this->assertSame('hello', $file->read(), 'Read should return written text');
+        $file = $this->path('file.txt');
+        $file->write('data');
+
+        $this->expectException(RuntimeException::class);
+        $file->rmdir();
     }
 
-    public function test_Absolute(): void
+    public function test_absolute_and_path_parts(): void
     {
-        $file = Path::make(self::$tmpPath)->joinPath('file.txt');
+        $file = $this->path('foo.bar.txt');
         $file->write('abc');
-        $abs = $file->absolute();
-        $this->assertTrue(is_string((string)$abs), 'Absolute should return string');
-        $this->assertTrue($abs->exists(), 'Absolute path should exist');
+        $absolute = $file->absolute();
+
+        $this->assertTrue($absolute->exists());
+        $this->assertSame('foo.bar.txt', $file->name());
+        $this->assertSame('foo.bar', $file->stem());
+        $this->assertSame('txt', $file->suffix());
+        $this->assertSame(self::$tmpPath, (string) $file->parent());
+        $this->assertStringEndsWith('bar.txt', (string) $file->withName('bar.txt'));
+        $this->assertStringEndsWith('.md', (string) $file->withSuffix('.md'));
     }
 
-    public function test_NameSuffixStem(): void
+    public function test_glob_and_iterdir(): void
     {
-        $file = Path::make(self::$tmpPath)->joinPath('foo.bar.txt');
-        $this->assertSame('foo.bar.txt', $file->name(), 'Name should return filename');
-        $this->assertSame('txt', $file->suffix(), 'Suffix should return extension');
-        $this->assertSame('foo.bar', $file->stem(), 'Stem should return filename without extension');
-    }
+        $this->path('b.txt')->write('2');
+        $this->path('a.txt')->write('1');
 
-    public function test_Parent(): void
-    {
-        $file = Path::make(self::$tmpPath)->joinPath('foo.txt');
-        $parent = $file->parent();
-        $this->assertSame(self::$tmpPath, (string)$parent, 'Parent should return parent directory');
-    }
-
-    public function test_WithName(): void
-    {
-        $file = Path::make(self::$tmpPath)->joinPath('foo.txt');
-        $newFile = $file->withName('bar.txt');
-        $this->assertStringEndsWith('bar.txt', (string)$newFile, 'withName should change filename');
-    }
-
-    public function test_WithSuffix(): void
-    {
-        $file = Path::make(self::$tmpPath)->joinPath('foo.txt');
-        $newFile = $file->withSuffix('.md');
-        $this->assertStringEndsWith('.md', (string)$newFile, 'withSuffix should change extension');
-    }
-
-    public function test_with_name(): void
-    {
-        $file = Path::make(self::$tmpPath)->joinPath('foo.txt');
-        $newFile = $file->withName('bar.txt');
-        $this->assertStringEndsWith('bar.txt', (string)$newFile, 'withName should change filename');
-    }
-
-    public function test_with_suffix(): void
-    {
-        $file = Path::make(self::$tmpPath)->joinPath('foo.txt');
-        $newFile = $file->withSuffix('.md');
-        $this->assertStringEndsWith('.md', (string)$newFile, 'withSuffix should change extension');
-    }
-
-    public function test_Glob(): void
-    {
-        $file1 = Path::make(self::$tmpPath)->joinPath('a.txt');
-        $file2 = Path::make(self::$tmpPath)->joinPath('b.txt');
-        $file1->write('1');
-        $file2->write('2');
         $dir = Path::make(self::$tmpPath);
-        $matches = $dir->glob('*.txt');
-        $this->assertCount(2, $matches, 'glob should find both files');
-        // Verify that glob returns Path objects
-        $this->assertContainsOnlyInstancesOf(Path::class, $matches, 'glob should return Path objects');
-    }
-
-    public function testGlobVariants(): void
-    {
-        $file1 = Path::make(self::$tmpPath)->joinPath('a.txt');
-        $file2 = Path::make(self::$tmpPath)->joinPath('b.txt');
-        $file1->write('1');
-        $file2->write('2');
-        $dir = Path::make(self::$tmpPath);
-        $matches1 = $dir->glob('*.txt');
-        $matches2 = $dir->glob('a.*');
-
-        // glob() now returns Path objects, so convert to strings for comparison
-        $paths1 = array_map(fn($p) => (string)$p, $matches1);
-        $paths2 = array_map(fn($p) => (string)$p, $matches2);
-
-        $this->assertContains((string)$file1, $paths1, 'glob should contain a.txt');
-        $this->assertContains((string)$file2, $paths1, 'glob should contain b.txt');
-        $this->assertContains((string)$file1, $paths2, 'glob should contain a.txt for a.*');
-    }
-
-    public function test_iterDir(): void
-    {
-        $file1 = Path::make(self::$tmpPath)->joinPath('a.txt');
-        $file2 = Path::make(self::$tmpPath)->joinPath('b.txt');
-        $file1->write('1');
-        $file2->write('2');
-        $dir = Path::make(self::$tmpPath);
+        $glob = $dir->glob('*.txt');
         $items = $dir->iterDir();
-        $this->assertCount(2, $items, 'iterDir should return both files');
-        foreach ($items as $item) {
-            $this->assertInstanceOf(Path::class, $item, 'iterDir should return Path objects');
-        }
+
+        $this->assertCount(2, $glob);
+        $this->assertContainsOnlyInstancesOf(Path::class, $glob);
+        $this->assertCount(2, $items);
+        $this->assertContainsOnlyInstancesOf(Path::class, $items);
+
+        $names = array_map(static fn(Path $path): string => $path->name, $items);
+        sort($names);
+        $this->assertSame(['a.txt', 'b.txt'], $names);
     }
 
-    public function testIterDirVariants(): void
+    public function test_iterdir_throws_for_file(): void
     {
-        $file1 = Path::make(self::$tmpPath)->joinPath('a.txt');
-        $file2 = Path::make(self::$tmpPath)->joinPath('b.txt');
-        $file1->write('1');
-        $file2->write('2');
-        $dir = Path::make(self::$tmpPath);
-        $items1 = $dir->iterDir();
-        $items2 = $dir->iterdir();
-        $this->assertCount(2, $items1, 'iterDir should return both files');
-        $this->assertCount(2, $items2, 'iterdir should return both files');
-        foreach ($items1 as $item) {
-            $this->assertInstanceOf(Path::class, $item, 'iterDir should return Path objects');
-        }
-        foreach ($items2 as $item) {
-            $this->assertInstanceOf(Path::class, $item, 'iterdir should return Path objects');
-        }
-    }
-
-    public function test_IterDirThrowsIfNotDir(): void
-    {
-        $file = Path::make(self::$tmpPath)->joinPath('file.txt');
+        $file = $this->path('file.txt');
         $file->write('abc');
+
         $this->expectException(RuntimeException::class);
         $file->iterDir();
     }
 
-    public function testIterDirThrows(): void
+    public function test_chmod_and_stat(): void
     {
-        $file = Path::make(self::$tmpPath)->joinPath('file.txt');
+        $file = $this->path('file.txt');
         $file->write('abc');
+        $file->chmod(0o644);
+
+        $this->assertSame(3, $file->stat()['size']);
+    }
+
+    public function test_chmod_throws_for_missing_path(): void
+    {
         $this->expectException(RuntimeException::class);
-        $file->iterDir();
+        Path::make('/nonexistent/path')->chmod(0o644);
     }
 
-    public function test_Chmod(): void
-    {
-        $file = Path::make(self::$tmpPath)->joinPath('file.txt');
-        $file->write('abc');
-        $file->chmod(0644);
-        $this->assertTrue($file->exists(), 'chmod should not remove file');
-    }
-
-    public function test_OwnerGroup(): void
+    public function test_owner_and_group(): void
     {
         if (false === extension_loaded('posix')) {
             $this->markTestSkipped('POSIX extension is not available.');
         }
 
-        $file = Path::make(self::$tmpPath)->joinPath('file.txt');
+        $file = $this->path('file.txt');
         $file->write('abc');
-        $this->assertIsString($file->owner(), 'owner should return string');
-        $this->assertIsString($file->group(), 'group should return string');
+
+        $this->assertIsString($file->owner());
+        $this->assertIsString($file->group());
     }
 
-    public function testOwnerGroupVariants(): void
+    public function test_absolute_relative_and_same_file(): void
     {
-        if (!function_exists('posix_getpwuid') || !function_exists('posix_getgrgid')) {
-            $this->markTestSkipped('POSIX extension is not available.');
-        }
-
-        $file = Path::make(self::$tmpPath)->joinPath('file.txt');
+        $file = $this->path('file.txt');
+        $other = $this->path('other.txt');
         $file->write('abc');
-        $this->assertIsString($file->owner(), 'owner should return string');
-        $this->assertIsString($file->group(), 'group should return string');
-        $this->assertIsString($file->owner(), 'owner should return string (repeat)');
-        $this->assertIsString($file->group(), 'group should return string (repeat)');
+        $other->write('def');
+
+        $this->assertTrue($file->isAbsolute());
+        $this->assertFalse(Path::make('file.txt')->isAbsolute());
+        $this->assertTrue(Path::make('file.txt')->isRelative());
+        $this->assertTrue($file->sameFile($this->path('file.txt')));
+        $this->assertFalse($file->sameFile($other));
     }
 
-    public function test_IsAbsolute(): void
+    public function test_normalize_paths(): void
     {
-        $absPath = Path::make(DIRECTORY_SEPARATOR . 'foo');
-        $relPath = Path::make('foo');
-        $this->assertTrue($absPath->isAbsolute(), 'Should be absolute path');
-        $this->assertFalse($relPath->isAbsolute(), 'Should be relative path');
+        $unix = Path::make('/foo/bar/../baz/./qux')->normalize('/foo/bar/../baz/./qux', '/');
+        $windows = Path::make('C:\\foo\\bar\\..\\baz\\.\\qux')
+            ->normalize('C:\\foo\\bar\\..\\baz\\.\\qux', '\\');
+        $unc = Path::make('\\\\server\\share\\dir1\\dir2\\..\\..\\file')
+            ->normalize('\\\\server\\share\\dir1\\dir2\\..\\..\\file', '\\');
+
+        $this->assertSame('/foo/baz/qux', (string) $unix);
+        $this->assertSame('C:\\foo\\baz\\qux', (string) $windows);
+        $this->assertSame('\\\\server\\share\\file', (string) $unc);
     }
 
-    public function testUnlinkThrowsOnDir(): void
-    {
-        $dir = Path::make(self::$tmpPath);
-        $this->expectException(RuntimeException::class);
-        $dir->unlink();
-    }
-
-    public function testRmdirThrowsOnFile(): void
-    {
-        $file = Path::make(self::$tmpPath)->joinPath('file.txt');
-        $file->write('abc');
-        $this->expectException(RuntimeException::class);
-        $file->rmdir();
-    }
-
-    public function testChmodThrows(): void
-    {
-        $path = Path::make('/nonexistent/path');
-        $this->expectException(RuntimeException::class);
-        $path->chmod(0644);
-    }
-
-    public function test_EmptyPath(): void
-    {
-        $path = Path::make("");
-        $this->assertFalse($path->exists(), 'Empty path should not exist');
-        $this->assertFalse($path->isDir(), 'Empty path should not be a directory');
-        $this->assertFalse($path->isFile(), 'Empty path should not be a file');
-        $this->assertSame('', $path->name(), 'Empty path name should be empty string');
-        $this->assertSame('', $path->suffix(), 'Empty path suffix should be empty string');
-        $this->assertSame('', $path->stem(), 'Empty path stem should be empty string');
-    }
-
-    public function test_RecursiveMkdir(): void
-    {
-        $subdir = Path::make(self::$tmpPath)->joinPath('foo', 'bar');
-        $subdir->mkdir(0777, true);
-        $this->assertTrue($subdir->exists(), 'Recursive mkdir should create subdir');
-        $this->assertTrue($subdir->isDir(), 'Subdir should be a directory');
-    }
-
-    public function test_ParentAndAbsolute(): void
-    {
-        $file = Path::make(self::$tmpPath)->joinPath('foo.txt');
-        $parent = $file->parent();
-        $this->assertSame(self::$tmpPath, (string)$parent, 'Parent should return parent directory');
-        $file->write('abc');
-        $abs = $file->absolute();
-        $this->assertTrue($abs->exists(), 'Absolute path should exist');
-    }
-
-    public function test_is_relative(): void
-    {
-        $base = Path::make(self::$tmpPath);
-        $file = $base->joinPath('file.txt');
-        $file->write('abc');
-        $this->assertFalse($file->isRelative(), "Assert that path is relative and not absolute. {$file->path}");
-
-        $cwd = getcwd();
-        chdir(self::$tmpPath);
-
-        $base = Path::make('foo.txt');
-        $base->write('abc');
-        chdir($cwd);
-        $this->assertTrue($base->isRelative(), 'Assert that path is relative');
-    }
-
-    public function test_sameFile(): void
-    {
-        $file1 = Path::make(self::$tmpPath)->joinPath('file.txt');
-        $file2 = Path::make(self::$tmpPath)->joinPath('file.txt');
-        $file1->write('abc');
-        $this->assertTrue($file1->sameFile($file2), 'Should be same file');
-        $file3 = Path::make(self::$tmpPath)->joinPath('other.txt');
-        $file3->write('def');
-        $this->assertFalse($file1->sameFile($file3), 'Should not be same file');
-    }
-
-    public function test_symlinkTo_and_resolve(): void
+    public function test_symlink_helpers(): void
     {
         if (str_starts_with(PHP_OS, 'WIN')) {
             $this->markTestSkipped('Symlink creation is not supported or requires admin privileges on Windows.');
         }
 
-        $target = Path::make(self::$tmpPath)->joinPath('target.txt');
+        $target = $this->path('target.txt');
         $target->write('abc');
-        $link = Path::make(self::$tmpPath)->joinPath('link.txt');
+        $link = $this->path('link.txt');
         $link->symlinkTo($target);
-        $this->assertTrue(is_link((string)$link), 'Should create symlink');
-        $resolved = $link->resolve();
-        $this->assertSame((string)$target, (string)$resolved, 'resolve should return target');
+
+        $this->assertTrue($link->isSymlink());
+        $this->assertSame((string) $target, (string) $link->resolve());
+        $this->assertTrue($link->sameFile($target));
     }
 
-    public function test_relativeTo(): void
+    public function test_symlink_to_throws_on_failure(): void
     {
-        $base = Path::make(self::$tmpPath);
-        $file = $base->joinPath('foo.txt');
-        $file->write('abc');
-        $rel = $file->relativeTo($base);
-        $this->assertSame('foo.txt', (string)$rel, 'relativeTo should return relative path');
-        $this->expectException(RuntimeException::class);
-        $file->relativeTo('/nonexistent');
-    }
-
-    public function test_match(): void
-    {
-        $file = Path::make(self::$tmpPath)->joinPath('foo.txt');
-        $file->write('abc');
-        $this->assertTrue($file->match('*.txt'), 'Should match *.txt');
-        $this->assertFalse($file->match('*.md'), 'Should not match *.md');
-    }
-
-    public function test_stat(): void
-    {
-        $file = Path::make(self::$tmpPath)->joinPath('foo.txt');
-        $file->write('abc');
-        $stat = $file->stat();
-        $this->assertIsArray($stat, 'stat should return array');
-        $this->assertArrayHasKey('size', $stat, 'stat array should have size key');
-    }
-
-    public function test_rename(): void
-    {
-        $file = Path::make(self::$tmpPath)->joinPath('foo.txt');
-        $file->write('abc');
-        $newFile = Path::make(self::$tmpPath)->joinPath('bar.txt');
-        $file->rename($newFile);
-        $this->assertFalse($file->exists(), 'File should not exist after rename');
-        $this->assertTrue($newFile->exists(), 'New file should exist after rename');
-    }
-
-    public function test_virtual_properties(): void
-    {
-        $file = Path::make(self::$tmpPath)->joinPath('foo.bar.txt');
-        $file->write('abc');
-        $this->assertSame($file->name(), $file->name, 'Virtual property name should match method');
-        $this->assertSame($file->stem(), $file->stem, 'Virtual property stem should match method');
-        $this->assertSame($file->suffix(), $file->suffix, 'Virtual property suffix should match method');
-        $this->assertInstanceOf(Path::class, $file->parent, 'Virtual property parent should be Path');
-        $this->assertInstanceOf(Path::class, $file->absolute, 'Virtual property absolute should be Path');
-        $this->assertSame(
-            (string)$file->absolute(),
-            (string)$file->absolute,
-            'Virtual property absolute should match method'
-        );
-    }
-
-    public function test_virtual_property_exception(): void
-    {
-        $file = Path::make(self::$tmpPath)->joinPath('foo.txt');
-        $this->expectException(RuntimeException::class);
-        /** @noinspection PhpUndefinedFieldInspection */
-        $file->unknown_property;
-    }
-
-    public function test_normalizePath_public_unix(): void
-    {
-        $path = Path::make('/foo/bar/../baz/./qux');
-        $normalized = $path->normalize('/foo/bar/../baz/./qux', '/');
-        $this->assertSame(
-            '/foo/baz/qux',
-            (string)$normalized,
-            'Public normalize should normalize Unix path correctly'
-        );
-    }
-
-    public function test_normalizePath_public_windows(): void
-    {
-        // Regular Windows path
-        $winPath = Path::make('C:\foo\bar\..\baz\.\qux');
-        $normalized = $winPath->normalize('C:\foo\bar\..\baz\.\qux', '\\');
-        $this->assertSame(
-            'C:\foo\baz\qux',
-            (string)$normalized,
-            'Public normalize should normalize Windows path correctly'
-        );
-
-        // UNC path with ..
-        $unc1 = Path::make('\\\\server\\share\\folder\\..\\file.txt');
-        $normalized1 = $unc1->normalize('\\\\server\\share\\folder\\..\\file.txt', '\\');
-        $this->assertSame(
-            '\\\\server\\share\\file.txt',
-            (string)$normalized1,
-            'Normalize should correctly handle UNC path with ..'
-        );
-
-        // UNC path with .
-        $unc2 = Path::make('\\\\server\\share\\.\\dir\\file.txt');
-        $normalized2 = $unc2->normalize('\\\\server\\share\\.\\dir\\file.txt', '\\');
-        $this->assertSame(
-            '\\\\server\\share\\dir\\file.txt',
-            (string)$normalized2,
-            'Normalize should correctly handle UNC path with .'
-        );
-
-        // UNC path with multiple .. going up
-        $unc3 = Path::make('\\\\server\\share\\dir1\\dir2\\..\\..\\file');
-        $normalized3 = $unc3->normalize('\\\\server\\share\\dir1\\dir2\\..\\..\\file', '\\');
-        $this->assertSame(
-            '\\\\server\\share\\file',
-            (string)$normalized3,
-            'Normalize should handle multiple .. correctly in UNC path'
-        );
-
-        // UNC path with redundant slashes
-        $unc4 = Path::make('\\\\server\\share\\\\nested\\\\\\dir\\\\');
-        $normalized4 = $unc4->normalize('\\\\server\\share\\\\nested\\\\\\dir\\\\', '\\');
-        $this->assertSame(
-            '\\\\server\\share\\nested\\dir',
-            (string)$normalized4,
-            'Normalize should collapse redundant slashes in UNC path'
-        );
-    }
-
-    public function test_isSymlink()
-    {
-        if (str_starts_with(PHP_OS, 'WIN')) {
-            $this->markTestSkipped('Symlink checks are not reliable on Windows.');
-        }
-
-        $target = Path::make(self::$tmpPath)->joinPath('target.txt');
-        $target->write('abc');
-        $link = Path::make(self::$tmpPath)->joinPath('link.txt');
-        $link->symlinkTo($target);
-        $this->assertTrue($link->isSymlink(), 'Should be a symlink');
-        $this->assertFalse($target->isSymlink(), 'Target should not be a symlink');
-    }
-
-    public function test_Touch()
-    {
-        $file = Path::make(self::$tmpPath)->joinPath('file.txt');
-        $file->touch();
-        $this->assertTrue($file->exists(), 'File should exist after touch');
-        $this->assertTrue($file->isFile(), 'Should be a file after touch');
-        $this->assertSame('', $file->read(), 'File should be empty after touch');
-    }
-
-    public function test_FindSideCarFiles_NoSidecars(): void
-    {
-        $mainFile = Path::make(self::$tmpPath)->joinPath('movie.mkv');
-        $mainFile->write('video data');
-
-        $sidecars = $mainFile->childrenFiles();
-
-        $this->assertIsArray($sidecars, 'Should return an array');
-        $this->assertEmpty($sidecars, 'Should have no sidecar files');
-    }
-
-    public function test_FindSideCarFiles_SingleExtension(): void
-    {
-        $mainFile = Path::make(self::$tmpPath)->joinPath('movie.mkv');
-        $mainFile->write('video data');
-
-        $srtFile = Path::make(self::$tmpPath)->joinPath('movie.srt');
-        $srtFile->write('subtitle data');
-
-        $nfoFile = Path::make(self::$tmpPath)->joinPath('movie.nfo');
-        $nfoFile->write('metadata');
-
-        $sidecars = $mainFile->childrenFiles();
-
-        $this->assertCount(2, $sidecars, 'Should find 2 sidecar files');
-
-        $names = array_map(fn($p) => $p->name, $sidecars);
-        $this->assertContains('movie.srt', $names, 'Should include .srt file');
-        $this->assertContains('movie.nfo', $names, 'Should include .nfo file');
-        $this->assertNotContains('movie.mkv', $names, 'Should not include the main file');
-    }
-
-    public function test_FindSideCarFiles_DoubleExtension(): void
-    {
-        $mainFile = Path::make(self::$tmpPath)->joinPath('movie.mkv');
-        $mainFile->write('video data');
-
-        $enSub = Path::make(self::$tmpPath)->joinPath('movie.en.ass');
-        $enSub->write('english subtitles');
-
-        $frSub = Path::make(self::$tmpPath)->joinPath('movie.fr.srt');
-        $frSub->write('french subtitles');
-
-        $sidecars = $mainFile->childrenFiles();
-
-        $this->assertCount(2, $sidecars, 'Should find 2 sidecar files');
-
-        $names = array_map(fn($p) => $p->name, $sidecars);
-        $this->assertContains('movie.en.ass', $names, 'Should include .en.ass file');
-        $this->assertContains('movie.fr.srt', $names, 'Should include .fr.srt file');
-    }
-
-    public function test_FindSideCarFiles_TripleExtension(): void
-    {
-        $mainFile = Path::make(self::$tmpPath)->joinPath('movie.mkv');
-        $mainFile->write('video data');
-
-        $forcedSub = Path::make(self::$tmpPath)->joinPath('movie.eng.forced.srt');
-        $forcedSub->write('forced subtitles');
-
-        $sdh = Path::make(self::$tmpPath)->joinPath('movie.en.sdh.srt');
-        $sdh->write('sdh subtitles');
-
-        $sidecars = $mainFile->childrenFiles();
-
-        $this->assertCount(2, $sidecars, 'Should find 2 sidecar files');
-
-        $names = array_map(fn($p) => $p->name, $sidecars);
-        $this->assertContains('movie.eng.forced.srt', $names, 'Should include .eng.forced.srt file');
-        $this->assertContains('movie.en.sdh.srt', $names, 'Should include .en.sdh.srt file');
-    }
-
-    public function test_FindSideCarFiles_MixedExtensions(): void
-    {
-        $mainFile = Path::make(self::$tmpPath)->joinPath('my.movie.title.mp4');
-        $mainFile->write('video data');
-
-        // Single extension
-        $srt = Path::make(self::$tmpPath)->joinPath('my.movie.title.srt');
-        $srt->write('subtitles');
-
-        // Double extension
-        $enAss = Path::make(self::$tmpPath)->joinPath('my.movie.title.en.ass');
-        $enAss->write('english subtitles');
-
-        // Triple extension
-        $forced = Path::make(self::$tmpPath)->joinPath('my.movie.title.eng.forced.srt');
-        $forced->write('forced subtitles');
-
-        // Metadata
-        $nfo = Path::make(self::$tmpPath)->joinPath('my.movie.title.nfo');
-        $nfo->write('metadata');
-
-        $sidecars = $mainFile->childrenFiles();
-
-        $this->assertCount(4, $sidecars, 'Should find 4 sidecar files');
-
-        $names = array_map(fn($p) => $p->name, $sidecars);
-        $this->assertContains('my.movie.title.srt', $names);
-        $this->assertContains('my.movie.title.en.ass', $names);
-        $this->assertContains('my.movie.title.eng.forced.srt', $names);
-        $this->assertContains('my.movie.title.nfo', $names);
-        $this->assertNotContains('my.movie.title.mp4', $names, 'Should not include main file');
-    }
-
-    public function test_FindSideCarFiles_SpecialCharacters(): void
-    {
-        // Test with special characters in filename
-        $mainFile = Path::make(self::$tmpPath)->joinPath('movie[2020].mkv');
-        $mainFile->write('video data');
-
-        $srt = Path::make(self::$tmpPath)->joinPath('movie[2020].srt');
-        $srt->write('subtitles');
-
-        $sidecars = $mainFile->childrenFiles();
-
-        $this->assertCount(1, $sidecars, 'Should find 1 sidecar file with special chars');
-        $this->assertSame('movie[2020].srt', $sidecars[0]->name, 'Should handle special characters');
-    }
-
-    public function test_FindSideCarFiles_WildcardCharacters(): void
-    {
-        // Test with glob wildcard characters in filename
-        $mainFile = Path::make(self::$tmpPath)->joinPath('movie*.mkv');
-        $mainFile->write('video data');
-
-        $srt = Path::make(self::$tmpPath)->joinPath('movie*.srt');
-        $srt->write('subtitles');
-
-        $sidecars = $mainFile->childrenFiles();
-
-        $this->assertCount(1, $sidecars, 'Should find 1 sidecar file with wildcard chars');
-        $this->assertSame('movie*.srt', $sidecars[0]->name, 'Should handle wildcard characters');
-    }
-
-    public function test_FindSideCarFiles_NFOStyle_NoPosterOrFanart(): void
-    {
-        $mainFile = Path::make(self::$tmpPath)->joinPath('movie.mkv');
-        $mainFile->write('video data');
-
-        $srt = Path::make(self::$tmpPath)->joinPath('movie.srt');
-        $srt->write('subtitles');
-
-        $sidecars = $mainFile->childrenFiles(true);
-
-        $this->assertCount(1, $sidecars, 'Should only find regular sidecar files');
-        $this->assertSame('movie.srt', $sidecars[0]->name);
-    }
-
-    public function test_FindSideCarFiles_NFOStyle_WithPoster(): void
-    {
-        $mainFile = Path::make(self::$tmpPath)->joinPath('movie.mkv');
-        $mainFile->write('video data');
-
-        $poster = Path::make(self::$tmpPath)->joinPath('poster.jpg');
-        $poster->write('poster image');
-
-        $srt = Path::make(self::$tmpPath)->joinPath('movie.srt');
-        $srt->write('subtitles');
-
-        $sidecars = $mainFile->childrenFiles(true);
-
-        $this->assertCount(2, $sidecars, 'Should find poster and srt file');
-
-        $names = array_map(fn($p) => $p->name, $sidecars);
-        $this->assertContains('poster.jpg', $names, 'Should include poster.jpg');
-        $this->assertContains('movie.srt', $names, 'Should include movie.srt');
-    }
-
-    public function test_FindSideCarFiles_NFOStyle_WithFanart(): void
-    {
-        $mainFile = Path::make(self::$tmpPath)->joinPath('movie.mkv');
-        $mainFile->write('video data');
-
-        $fanart = Path::make(self::$tmpPath)->joinPath('fanart.png');
-        $fanart->write('fanart image');
-
-        $sidecars = $mainFile->childrenFiles(true);
-
-        $this->assertCount(1, $sidecars, 'Should find fanart file');
-        $this->assertSame('fanart.png', $sidecars[0]->name, 'Should include fanart.png');
-    }
-
-    public function test_FindSideCarFiles_NFOStyle_WithPosterAndFanart(): void
-    {
-        $mainFile = Path::make(self::$tmpPath)->joinPath('movie.mkv');
-        $mainFile->write('video data');
-
-        $poster = Path::make(self::$tmpPath)->joinPath('poster.jpg');
-        $poster->write('poster image');
-
-        $fanart = Path::make(self::$tmpPath)->joinPath('fanart.jpeg');
-        $fanart->write('fanart image');
-
-        $srt = Path::make(self::$tmpPath)->joinPath('movie.srt');
-        $srt->write('subtitles');
-
-        $sidecars = $mainFile->childrenFiles(true);
-
-        $this->assertCount(3, $sidecars, 'Should find poster, fanart, and srt');
-
-        $names = array_map(fn($p) => $p->name, $sidecars);
-        $this->assertContains('poster.jpg', $names, 'Should include poster.jpg');
-        $this->assertContains('fanart.jpeg', $names, 'Should include fanart.jpeg');
-        $this->assertContains('movie.srt', $names, 'Should include movie.srt');
-    }
-
-    public function test_FindSideCarFiles_NFOStyle_MultiplePosterFormats(): void
-    {
-        $mainFile = Path::make(self::$tmpPath)->joinPath('movie.mkv');
-        $mainFile->write('video data');
-
-        // Create poster in multiple formats - only first found will be included
-        $posterJpg = Path::make(self::$tmpPath)->joinPath('poster.jpg');
-        $posterJpg->write('poster jpg');
-
-        $posterPng = Path::make(self::$tmpPath)->joinPath('poster.png');
-        $posterPng->write('poster png');
-
-        $sidecars = $mainFile->childrenFiles(true);
-
-        // Both should be found since we check each extension
-        $this->assertGreaterThanOrEqual(1, count($sidecars), 'Should find at least one poster');
-
-        $names = array_map(fn($p) => $p->name, $sidecars);
-        $hasPoster = in_array('poster.jpg', $names) || in_array('poster.png', $names);
-        $this->assertTrue($hasPoster, 'Should include at least one poster format');
-    }
-
-    public function test_FindSideCarFiles_OnlyFilesNotDirectories(): void
-    {
-        $mainFile = Path::make(self::$tmpPath)->joinPath('movie.mkv');
-        $mainFile->write('video data');
-
-        // Create a directory with the same basename pattern
-        $subDir = Path::make(self::$tmpPath)->joinPath('movie.extras');
-        $subDir->mkdir();
-
-        $srt = Path::make(self::$tmpPath)->joinPath('movie.srt');
-        $srt->write('subtitles');
-
-        $sidecars = $mainFile->childrenFiles();
-
-        $this->assertCount(1, $sidecars, 'Should only find files, not directories');
-        $this->assertSame('movie.srt', $sidecars[0]->name);
-    }
-
-    public function test_FindSideCarFiles_ReturnsPathObjects(): void
-    {
-        $mainFile = Path::make(self::$tmpPath)->joinPath('movie.mkv');
-        $mainFile->write('video data');
-
-        $srt = Path::make(self::$tmpPath)->joinPath('movie.srt');
-        $srt->write('subtitles');
-
-        $sidecars = $mainFile->childrenFiles();
-
-        $this->assertCount(1, $sidecars);
-        $this->assertInstanceOf(Path::class, $sidecars[0], 'Should return Path objects');
-        $this->assertTrue($sidecars[0]->isFile(), 'Returned Path should be a file');
-    }
-
-    public function test_SymlinkTo_ThrowsOnFailure(): void
-    {
-        // Try to create a symlink in a read-only filesystem location
-        // /sys is read-only even for root, so this should always fail
-        $link = Path::make('/sys/impossible_link_' . uniqid());
-        $target = Path::make(self::$tmpPath)->joinPath('target.txt');
-        $target->write('target content');
+        $link = Path::make('/sys/impossible_link_' . uniqid('', true));
+        $target = $this->path('target.txt');
+        $target->write('target');
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Could not create symlink');
         $link->symlinkTo($target);
     }
 
-    public function test_Replace(): void
+    public function test_relative_to_and_match(): void
     {
-        $source = Path::make(self::$tmpPath)->joinPath('source.txt');
+        $base = Path::make(self::$tmpPath);
+        $file = $this->path('foo.txt');
+        $file->write('abc');
+
+        $this->assertSame('foo.txt', (string) $file->relativeTo($base));
+        $this->assertTrue($file->match('*.txt'));
+        $this->assertFalse($file->match('*.md'));
+
+        $this->expectException(RuntimeException::class);
+        $file->relativeTo('/nonexistent');
+    }
+
+    public function test_rename_replace_and_touch(): void
+    {
+        $source = $this->path('source.txt');
         $source->write('source content');
 
-        $target = Path::make(self::$tmpPath)->joinPath('target.txt');
+        $renamed = $this->path('renamed.txt');
+        $source->rename($renamed);
+        $this->assertFalse($source->exists());
+        $this->assertSame('source content', $renamed->read());
 
-        $source->replace($target);
+        $replacement = $this->path('replacement.txt');
+        $replacement->write('replacement');
+        $renamed->replace($replacement);
+        $this->assertFalse($renamed->exists());
+        $this->assertSame('source content', $replacement->read());
 
-        $this->assertFalse($source->exists(), 'Source should not exist after replace');
-        $this->assertTrue($target->exists(), 'Target should exist after replace');
-        $this->assertSame('source content', $target->read(), 'Target should have source content');
+        $touched = $this->path('touched.txt');
+        $touched->touch();
+        $this->assertTrue($touched->isFile());
+        $this->assertSame('', $touched->read());
     }
 
-    public function test_Replace_OverwritesExisting(): void
+    public function test_virtual_properties(): void
     {
-        $source = Path::make(self::$tmpPath)->joinPath('source.txt');
-        $source->write('new content');
+        $file = $this->path('foo.bar.txt');
+        $file->write('abc');
 
-        $target = Path::make(self::$tmpPath)->joinPath('target.txt');
-        $target->write('old content');
-
-        $source->replace($target);
-
-        $this->assertFalse($source->exists(), 'Source should not exist after replace');
-        $this->assertTrue($target->exists(), 'Target should exist after replace');
-        $this->assertSame('new content', $target->read(), 'Target should have new content');
+        $this->assertSame($file->name(), $file->name);
+        $this->assertSame($file->stem(), $file->stem);
+        $this->assertSame($file->suffix(), $file->suffix);
+        $this->assertInstanceOf(Path::class, $file->parent);
+        $this->assertSame((string) $file->absolute(), (string) $file->absolute);
     }
 
-    public function test_IsAbsolute_Windows(): void
+    public function test_unknown_virtual_property_throws(): void
     {
-        // Test Windows-style paths
-        $winPath1 = new Path('C:\\Users\\test\\file.txt');
-        $winPath2 = new Path('D:/Program Files/test.exe');
-        $winPath3 = new Path('\\\\server\\share\\file.txt');
-        $relativePath = new Path('relative\\path\\file.txt');
+        $file = $this->path('foo.txt');
 
-        // On Windows systems, these should be absolute
-        // On Unix systems, the PHP_OS check will make them return based on Unix logic
-        if (str_starts_with(PHP_OS, 'WIN')) {
-            $this->assertTrue($winPath1->isAbsolute(), 'C:\\ path should be absolute on Windows');
-            $this->assertTrue($winPath2->isAbsolute(), 'D:/ path should be absolute on Windows');
-            $this->assertTrue($winPath3->isAbsolute(), 'UNC path should be absolute on Windows');
-            $this->assertFalse($relativePath->isAbsolute(), 'Relative path should not be absolute');
-        } else {
-            // On Unix, Windows paths without leading / are considered relative
-            $this->assertFalse($winPath1->isAbsolute(), 'Windows path should be relative on Unix');
-            $this->assertFalse($relativePath->isAbsolute(), 'Relative path should not be absolute on Unix');
-        }
+        $this->expectException(RuntimeException::class);
+        /** @noinspection PhpUndefinedFieldInspection */
+        $file->unknown_property;
     }
 
-    public function test_Glob_ReturnsFalseOnInvalidPattern(): void
+    public function test_empty_path(): void
     {
-        // Create a directory and try to glob with a pattern that might fail
-        $dir = Path::make(self::$tmpPath);
+        $path = Path::make('');
 
-        // Most systems will return empty array rather than false, but we test the code path
-        // by using an extremely long pattern or invalid pattern
-        // Note: glob() rarely returns false, but when it does, our code handles it
-        $result = $dir->glob('*.txt');
-
-        $this->assertIsArray($result, 'glob should always return an array');
-        $this->assertEmpty($result, 'glob should return empty array when no matches');
+        $this->assertFalse($path->exists());
+        $this->assertFalse($path->isDir());
+        $this->assertFalse($path->isFile());
+        $this->assertSame('', $path->name());
+        $this->assertSame('', $path->stem());
+        $this->assertSame('', $path->suffix());
     }
 
-    public function test_Glob_HandlesEmptyResult(): void
+    public function test_children_files_match_sidecars(): void
     {
-        $dir = Path::make(self::$tmpPath);
+        $main = $this->path('my.movie.title.mp4');
+        $main->write('video');
+        $this->path('my.movie.title.srt')->write('subtitles');
+        $this->path('my.movie.title.en.ass')->write('english subtitles');
+        $this->path('my.movie.title.eng.forced.srt')->write('forced subtitles');
+        $this->path('my.movie.title.nfo')->write('metadata');
+        $this->path('my.movie.title.extras')->mkdir();
 
-        // Search for files that don't exist
-        $result = $dir->glob('nonexistent_*.xyz');
+        $sidecars = $main->childrenFiles();
+        $names = array_map(static fn(Path $path): string => $path->name, $sidecars);
+        sort($names);
 
-        $this->assertIsArray($result, 'glob should return an array');
-        $this->assertEmpty($result, 'glob should return empty array when no files match');
+        $this->assertContainsOnlyInstancesOf(Path::class, $sidecars);
+        $this->assertSame(
+            ['my.movie.title.en.ass', 'my.movie.title.eng.forced.srt', 'my.movie.title.nfo', 'my.movie.title.srt'],
+            $names
+        );
     }
 
-    public function test_ChildrenFiles_WithGlobFailure(): void
+    public function test_children_files_escape_glob_characters(): void
     {
-        // Test that childrenFiles handles glob returning false gracefully
-        // This is hard to trigger in normal circumstances, but the code handles it
-        $mainFile = Path::make(self::$tmpPath)->joinPath('movie.mkv');
-        $mainFile->write('video data');
+        $main = $this->path('movie?[2020]*.mkv');
+        $main->write('video');
+        $this->path('movie?[2020]*.srt')->write('subtitles');
+        $this->path('moviex2020y.srt')->write('other subtitles');
 
-        // Even with special characters that might cause issues, it should handle gracefully
-        $result = $mainFile->childrenFiles();
+        $sidecars = $main->childrenFiles();
 
-        $this->assertIsArray($result, 'childrenFiles should always return an array');
+        $this->assertCount(1, $sidecars);
+        $this->assertSame('movie?[2020]*.srt', $sidecars[0]->name);
     }
 
+    public function test_children_files_nfo_style_artwork(): void
+    {
+        $main = $this->path('movie.mkv');
+        $main->write('video');
+        $this->path('poster.jpg')->write('poster');
+        $this->path('fanart.jpeg')->write('fanart');
+        $this->path('movie.srt')->write('subtitles');
+
+        $sidecars = $main->childrenFiles(true);
+        $names = array_map(static fn(Path $path): string => $path->name, $sidecars);
+        sort($names);
+
+        $this->assertSame(['fanart.jpeg', 'movie.srt', 'poster.jpg'], $names);
+    }
+
+    private function path(string ...$segments): Path
+    {
+        return Path::make(self::$tmpPath)->joinPath(...$segments);
+    }
 }

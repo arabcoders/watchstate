@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\API\System;
 
 use App\API\System\Env;
-use App\Libs\Config;
 use App\Libs\Enums\Http\Status;
 use App\Libs\TestCase;
 use Tests\Support\RequestResponseTrait;
@@ -14,28 +13,11 @@ final class EnvTest extends TestCase
 {
     use RequestResponseTrait;
 
-    private array $originalConfig = [];
-    private string $dataPath;
-
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->originalConfig = Config::getAll();
-        $this->dataPath = ROOT_PATH . '/var/tmp/watchstate_env_' . uniqid('', true);
-        @mkdir($this->dataPath . '/config', 0o755, true);
-
-        Config::init(array_replace_recursive(require ROOT_PATH . '/config/config.php', [
-            'path' => $this->dataPath,
-            'tmpDir' => $this->dataPath,
-        ]));
-    }
-
-    protected function tearDown(): void
-    {
-        $this->removeDirectory($this->dataPath);
-        Config::init($this->originalConfig);
-        parent::tearDown();
+        $this->initTempApp();
     }
 
     public function test_logs_invalid(): void
@@ -76,32 +58,5 @@ final class EnvTest extends TestCase
             'It must resolve to a time in the past.',
             (string) $response->getBody(),
         );
-    }
-
-    private function removeDirectory(string $path): void
-    {
-        if (!is_dir($path)) {
-            return;
-        }
-
-        foreach (new \DirectoryIterator($path) as $item) {
-            if ($item->isDot()) {
-                continue;
-            }
-
-            $itemPath = $item->getRealPath();
-            if (false === $itemPath) {
-                continue;
-            }
-
-            if ($item->isDir()) {
-                $this->removeDirectory($itemPath);
-                continue;
-            }
-
-            @unlink($itemPath);
-        }
-
-        @rmdir($path);
     }
 }

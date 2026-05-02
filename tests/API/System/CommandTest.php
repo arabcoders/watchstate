@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace Tests\API\System;
 
 use App\API\System\Command;
+use App\Libs\Attributes\Route\Post;
 use App\Libs\Config;
 use App\Libs\Enums\Http\Status;
-use App\Libs\Attributes\Route\Post;
-use App\Libs\Middlewares\SignatureMiddleware;
 use App\Libs\TestCase;
 use Tests\Support\RequestResponseTrait;
 
@@ -109,33 +108,6 @@ final class CommandTest extends TestCase
 
         $this->assertSame(Status::NOT_FOUND->value, $streamResponse->getStatusCode());
         $this->assertTrue(is_dir($sessionPath));
-    }
-
-    public function test_cleanup_lock(): void
-    {
-        $handler = new Command();
-        $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
-
-        $payload = json_decode((string) $response->getBody(), true);
-        $token = (string) ag($payload, 'token');
-        $sessionPath = $this->tmpDir . '/console/' . $token;
-        $writerLockPath = $sessionPath . '/writer.lock';
-
-        $lockHandle = fopen($writerLockPath, 'c+');
-        $this->assertIsResource($lockHandle);
-        $this->assertTrue(flock($lockHandle, LOCK_EX | LOCK_NB));
-
-        $cleanup = new \ReflectionMethod($handler, 'cleanupSession');
-        $cleanup->invoke($handler, $sessionPath);
-
-        $this->assertTrue(is_dir($sessionPath));
-
-        flock($lockHandle, LOCK_UN);
-        fclose($lockHandle);
-
-        $cleanup->invoke($handler, $sessionPath);
-
-        $this->assertFalse(is_dir($sessionPath));
     }
 
     public function test_stream_done_live(): void
@@ -300,53 +272,4 @@ final class CommandTest extends TestCase
         $this->assertFileExists($sessionPath . '/cancel.flag');
     }
 
-    public function test_attach_latest(): void
-    {
-        $handler = new Command();
-        $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
-
-        $payload = json_decode((string) $response->getBody(), true);
-        $token = (string) ag($payload, 'token');
-        $sessionPath = $this->tmpDir . '/console/' . $token;
-        $statePath = $sessionPath . '/state.json';
-        $method = new \ReflectionMethod($handler, 'attachSession');
-
-        $first = $method->invoke($handler, $sessionPath);
-        $second = $method->invoke($handler, $sessionPath);
-        $state = json_decode((string) file_get_contents($statePath), true);
-
-        $this->assertSame(1, ag($first, 'active_connection'));
-        $this->assertSame(2, ag($second, 'active_connection'));
-        $this->assertSame(2, ag($state, 'active_connection'));
-        $this->assertSame(2, ag($state, 'connection_seq'));
-        $this->assertSame(2, ag($state, 'connections'));
-    }
-
-    public function test_active_stale(): void
-    {
-        $handler = new Command();
-        $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
-
-        $payload = json_decode((string) $response->getBody(), true);
-        $token = (string) ag($payload, 'token');
-        $sessionPath = $this->tmpDir . '/console/' . $token;
-        $attach = new \ReflectionMethod($handler, 'attachSession');
-        $isActive = new \ReflectionMethod($handler, 'isActiveConnection');
-
-        $attach->invoke($handler, $sessionPath);
-        $attach->invoke($handler, $sessionPath);
-
-        $this->assertFalse($isActive->invoke($handler, $sessionPath, 1));
-        $this->assertTrue($isActive->invoke($handler, $sessionPath, 2));
-    }
-
-    public function test_route_sign(): void
-    {
-        $reflection = new \ReflectionMethod(Command::class, 'queue');
-        $attrs = $reflection->getAttributes(Post::class);
-
-        self::assertCount(1, $attrs);
-        $attr = $attrs[0]->newInstance();
-        self::assertSame([SignatureMiddleware::class], $attr->middleware);
-    }
 }

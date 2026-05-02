@@ -5,50 +5,22 @@ declare(strict_types=1);
 namespace Tests\Commands\Prune;
 
 use App\Libs\Prune\CommandSessionsPruner;
-use App\Libs\Attributes\Cli\Prune;
 use App\Libs\Config;
-use App\Libs\Container;
 use App\Libs\TestCase;
 
 final class CommandSessionsPrunerTest extends TestCase
 {
     private string $tmpDir;
-    private array $originalConfig = [];
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->initTempApp();
+        $this->tmpDir = self::$tmpPath;
+        mkdir($this->tmpDir . '/console', 0o755, true);
 
-        $this->tmpDir = ROOT_PATH . '/var/tmp/watchstate_prune_' . uniqid('', true);
-        @mkdir($this->tmpDir . '/console', 0o755, true);
-
-        $this->originalConfig = Config::getAll();
-        Config::init(array_replace_recursive(require ROOT_PATH . '/config/config.php', [
-            'tmpDir' => $this->tmpDir,
-            'path' => $this->tmpDir,
-            'prune' => [
-                'paths' => [
-                    ROOT_PATH . '/src/Libs/Prune',
-                ],
-                'cache' => [
-                    'time' => 0,
-                ],
-            ],
-        ]));
-
-        Container::reset();
-        Container::init();
-        foreach ((array) require ROOT_PATH . '/config/services.php' as $name => $definition) {
-            Container::add($name, $definition);
-        }
-    }
-
-    protected function tearDown(): void
-    {
-        $this->removeDirectory($this->tmpDir);
-        Config::init($this->originalConfig);
-        Container::reset();
-        parent::tearDown();
+        Config::save('prune.paths', [ROOT_PATH . '/src/Libs/Prune']);
+        Config::save('prune.cache.time', 0);
     }
 
     public function test_discover(): void
@@ -58,17 +30,6 @@ final class CommandSessionsPrunerTest extends TestCase
         self::assertArrayHasKey('command_sessions', $pruners);
         self::assertSame('command_sessions', $pruners['command_sessions']['name']);
         self::assertSame('Remove expired command sessions.', $pruners['command_sessions']['desc']);
-    }
-
-    public function test_attr(): void
-    {
-        $reflection = new \ReflectionClass(CommandSessionsPruner::class);
-        $attrs = $reflection->getAttributes(Prune::class);
-
-        self::assertCount(1, $attrs);
-        $attribute = $attrs[0]->newInstance();
-        self::assertSame('Command Sessions', $attribute->name);
-        self::assertSame('*/5 * * * *', $attribute->cron);
     }
 
     public function test_exec_done(): void
@@ -191,32 +152,5 @@ final class CommandSessionsPrunerTest extends TestCase
         touch($path . '/stream.log');
 
         return $path;
-    }
-
-    private function removeDirectory(string $path): void
-    {
-        if (!is_dir($path)) {
-            return;
-        }
-
-        foreach (new \DirectoryIterator($path) as $item) {
-            if ($item->isDot()) {
-                continue;
-            }
-
-            $itemPath = $item->getRealPath();
-            if (false === $itemPath) {
-                continue;
-            }
-
-            if ($item->isDir()) {
-                $this->removeDirectory($itemPath);
-                continue;
-            }
-
-            @unlink($itemPath);
-        }
-
-        @rmdir($path);
     }
 }

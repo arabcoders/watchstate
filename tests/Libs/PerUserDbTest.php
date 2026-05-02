@@ -66,7 +66,7 @@ final class PerUserDbTest extends TestCase
         self::assertSame('sqlite', $dbLayer->getDriver());
     }
 
-    public function test_per_user_db_does_not_bootstrap_main_db(): void
+    public function test_per_user_db_skips_main_bootstrap(): void
     {
         self::assertFalse(file_exists(self::$tmpPath . '/db/' . PdoFactory::DB_FILE));
 
@@ -81,7 +81,7 @@ final class PerUserDbTest extends TestCase
         self::assertContains('state', $tables);
     }
 
-    public function test_per_user_db_does_not_resolve_main_db_service(): void
+    public function test_per_user_db_skips_main_service(): void
     {
         Container::add(iDB::class, [
             'class' => static function (): iDB {

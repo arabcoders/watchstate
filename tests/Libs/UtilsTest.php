@@ -6,13 +6,14 @@ declare(strict_types=1);
 namespace Tests\Libs;
 
 use App\Libs\Container;
-use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Database\PdoFactory;
 use App\Libs\Entity\StateEntity;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Options;
 use App\Libs\TestCase;
 use Monolog\Logger;
+use Psr\SimpleCache\CacheInterface;
 
 class UtilsTest extends TestCase
 {
@@ -26,1358 +27,296 @@ class UtilsTest extends TestCase
         mkdir(self::$tmpPath . '/users/bob', 0o755, true);
     }
 
-    public function test_flatArray_with_empty_array(): void
+    public function test_flat_array_empty(): void
     {
-        $result = flat_array([]);
-        $this->assertSame([], $result, 'Empty array should return empty array');
+        self::assertSame([], flat_array([]));
     }
 
-    public function test_flatArray_with_simple_array(): void
+    public function test_flat_array_nested(): void
     {
         $input = [
-            'name' => 'John',
-            'age' => 30,
-            'active' => true,
-        ];
-
-        $result = flat_array($input);
-
-        $expected = [
-            'name' => 'John',
-            'age' => 30,
-            'active' => true,
-        ];
-
-        $this->assertSame($expected, $result, 'Simple flat array should remain unchanged');
-    }
-
-    public function test_flatArray_with_nested_array(): void
-    {
-        $input = [
-            'user' => [
+            'user' => (object) [
                 'name' => 'John',
-                'age' => 30,
+                'address' => (object) ['city' => 'New York'],
             ],
-            'active' => true,
+            'items' => ['first', 'second'],
         ];
 
-        $result = flat_array($input);
-
-        $expected = [
-            'user.name' => 'John',
-            'user.age' => 30,
-            'active' => true,
-        ];
-
-        $this->assertSame($expected, $result, 'Nested array should be flattened with dot notation');
-    }
-
-    public function test_flatArray_deeply_nested(): void
-    {
-        $input = [
-            'company' => [
-                'department' => [
-                    'team' => [
-                        'lead' => 'Alice',
-                    ],
-                ],
-            ],
-        ];
-
-        $result = flat_array($input);
-
-        $expected = [
-            'company.department.team.lead' => 'Alice',
-        ];
-
-        $this->assertSame($expected, $result, 'Deeply nested array should be flattened');
-    }
-
-    public function test_flatArray_empty_nested(): void
-    {
-        $input = [
-            'user' => [],
-            'name' => 'John',
-        ];
-
-        $result = flat_array($input);
-
-        $expected = [
-            'user' => [],
-            'name' => 'John',
-        ];
-
-        $this->assertSame($expected, $result, 'Empty nested array should be included as-is');
-    }
-
-    public function test_flatArray_with_mixed_types(): void
-    {
-        $input = [
-            'string' => 'value',
-            'int' => 42,
-            'float' => 3.14,
-            'bool' => true,
-            'null' => null,
-            'array' => [
-                'nested' => 'data',
-            ],
-        ];
-
-        $result = flat_array($input);
-
-        $expected = [
-            'string' => 'value',
-            'int' => 42,
-            'float' => 3.14,
-            'bool' => true,
-            'null' => null,
-            'array.nested' => 'data',
-        ];
-
-        $this->assertSame($expected, $result, 'Mixed types should be handled correctly');
-    }
-
-    public function test_flatArray_with_object(): void
-    {
-        $obj = new \stdClass();
-        $obj->name = 'John';
-        $obj->age = 30;
-
-        $input = [
-            'user' => $obj,
-        ];
-
-        $result = flat_array($input);
-
-        $expected = [
-            'user.name' => 'John',
-            'user.age' => 30,
-        ];
-
-        $this->assertSame($expected, $result, 'Object should be flattened like array');
-    }
-
-    public function test_flatArray_with_nested_objects(): void
-    {
-        $innerObj = new \stdClass();
-        $innerObj->city = 'New York';
-
-        $userObj = new \stdClass();
-        $userObj->name = 'John';
-        $userObj->address = $innerObj;
-
-        $input = [
-            'user' => $userObj,
-        ];
-
-        $result = flat_array($input);
-
-        $expected = [
+        self::assertSame([
             'user.name' => 'John',
             'user.address.city' => 'New York',
-        ];
-
-        $this->assertSame($expected, $result, 'Nested objects should be flattened');
-    }
-
-    public function test_flatArray_with_custom_prefix(): void
-    {
-        $input = [
-            'name' => 'John',
-            'email' => 'john@example.com',
-        ];
-
-        $result = flat_array($input, 'user');
-
-        $expected = [
-            'user.name' => 'John',
-            'user.email' => 'john@example.com',
-        ];
-
-        $this->assertSame($expected, $result, 'Custom prefix should be prepended');
-    }
-
-    public function test_flatArray_prefix_nested(): void
-    {
-        $input = [
-            'profile' => [
-                'name' => 'John',
-                'age' => 30,
-            ],
-        ];
-
-        $result = flat_array($input, 'user');
-
-        $expected = [
-            'user.profile.name' => 'John',
-            'user.profile.age' => 30,
-        ];
-
-        $this->assertSame($expected, $result, 'Prefix should be combined with nested keys');
-    }
-
-    public function test_flatArray_multi_nested(): void
-    {
-        $input = [
-            'level1' => [
-                'level2' => [
-                    'level3' => [
-                        'value' => 'deep',
-                    ],
-                ],
-                'other' => 'sibling',
-            ],
-            'top' => 'level',
-        ];
-
-        $result = flat_array($input);
-
-        $expected = [
-            'level1.level2.level3.value' => 'deep',
-            'level1.other' => 'sibling',
-            'top' => 'level',
-        ];
-
-        $this->assertSame($expected, $result, 'Multiple nested levels should be flattened correctly');
-    }
-
-    public function test_flatArray_empty_object(): void
-    {
-        $input = [
-            'user' => new \stdClass(),
-            'name' => 'John',
-        ];
-
-        $result = flat_array($input);
-
-        $this->assertArrayHasKey('user', $result, 'Empty object should be included');
-        $this->assertInstanceOf(\stdClass::class, $result['user'], 'Empty object should remain as object');
-        $this->assertSame('John', $result['name'], 'Name should be in result');
-    }
-
-    public function test_flatArray_with_zero_values(): void
-    {
-        $input = [
-            'count' => 0,
-            'ratio' => 0.0,
-            'nested' => [
-                'zero' => 0,
-            ],
-        ];
-
-        $result = flat_array($input);
-
-        $expected = [
-            'count' => 0,
-            'ratio' => 0.0,
-            'nested.zero' => 0,
-        ];
-
-        $this->assertSame($expected, $result, 'Zero values should be preserved');
-    }
-
-    public function test_flatArray_with_false_values(): void
-    {
-        $input = [
-            'active' => false,
-            'settings' => [
-                'enabled' => false,
-            ],
-        ];
-
-        $result = flat_array($input);
-
-        $expected = [
-            'active' => false,
-            'settings.enabled' => false,
-        ];
-
-        $this->assertSame($expected, $result, 'False values should be preserved');
-    }
-
-    public function test_flatArray_with_empty_strings(): void
-    {
-        $input = [
-            'name' => '',
-            'details' => [
-                'description' => '',
-            ],
-        ];
-
-        $result = flat_array($input);
-
-        $expected = [
-            'name' => '',
-            'details.description' => '',
-        ];
-
-        $this->assertSame($expected, $result, 'Empty strings should be preserved');
-    }
-
-    public function test_flatArray_with_numeric_keys(): void
-    {
-        $input = [
-            'items' => [
-                0 => 'first',
-                1 => 'second',
-                2 => 'third',
-            ],
-        ];
-
-        $result = flat_array($input);
-
-        $expected = [
             'items.0' => 'first',
             'items.1' => 'second',
-            'items.2' => 'third',
-        ];
-
-        $this->assertSame($expected, $result, 'Numeric keys should be included in flattened keys');
+        ], flat_array($input));
     }
 
-    public function test_flatArray_special_keys(): void
+    public function test_flat_array_prefix(): void
     {
+        $emptyObject = new \stdClass();
+
         $input = [
-            'user_name' => 'John',
-            'user-email' => 'john@example.com',
-            'nested' => [
-                'key_with_underscore' => 'value',
+            'profile' => ['name' => 'John'],
+            'settings' => [
+                'enabled' => false,
+                'count' => 0,
+                'tags' => [],
             ],
+            'empty' => $emptyObject,
         ];
 
-        $result = flat_array($input);
-
-        $expected = [
-            'user_name' => 'John',
-            'user-email' => 'john@example.com',
-            'nested.key_with_underscore' => 'value',
-        ];
-
-        $this->assertSame($expected, $result, 'Special characters in keys should be preserved');
+        self::assertSame([
+            'app::profile::name' => 'John',
+            'app::settings::enabled' => false,
+            'app::settings::count' => 0,
+            'app::settings::tags' => [],
+            'app::empty' => $emptyObject,
+        ], flat_array($input, 'app', '::'));
     }
 
-    public function test_flatArray_nested_arrays(): void
+    public function test_validate_servers_valid(): void
     {
-        $input = [
-            'config' => [
-                'tags' => ['tag1', 'tag2'],
-                'name' => 'test',
-            ],
-        ];
-
-        $result = flat_array($input);
-
-        $expected = [
-            'config.tags.0' => 'tag1',
-            'config.tags.1' => 'tag2',
-            'config.name' => 'test',
-        ];
-
-        $this->assertSame($expected, $result, 'Array values should also be flattened');
-    }
-
-    public function test_flatArray_with_custom_separator(): void
-    {
-        $input = [
-            'user' => [
-                'name' => 'John',
-                'age' => 30,
-            ],
-            'active' => true,
-        ];
-
-        $result = flat_array($input, '', '_');
-
-        $expected = [
-            'user_name' => 'John',
-            'user_age' => 30,
-            'active' => true,
-        ];
-
-        $this->assertSame($expected, $result, 'Custom separator should be used instead of dot');
-    }
-
-    public function test_flatArray_sep_prefix(): void
-    {
-        $input = [
-            'profile' => [
-                'name' => 'John',
-            ],
-        ];
-
-        $result = flat_array($input, 'user', '_');
-
-        $expected = [
-            'user_profile_name' => 'John',
-        ];
-
-        $this->assertSame($expected, $result, 'Separator should work with prefix');
-    }
-
-    public function test_flatArray_with_hyphen_separator(): void
-    {
-        $input = [
-            'company' => [
-                'department' => [
-                    'team' => 'engineering',
-                ],
-            ],
-        ];
-
-        $result = flat_array($input, '', '-');
-
-        $expected = [
-            'company-department-team' => 'engineering',
-        ];
-
-        $this->assertSame($expected, $result, 'Hyphen separator should work');
-    }
-
-    public function test_flatArray_colon_sep(): void
-    {
-        $input = [
-            'app' => [
-                'config' => [
-                    'debug' => true,
-                ],
-            ],
-        ];
-
-        $result = flat_array($input, '', '::');
-
-        $expected = [
-            'app::config::debug' => true,
-        ];
-
-        $this->assertSame($expected, $result, 'Multi-character separator should work');
-    }
-
-    public function test_flatArray_sep_deep(): void
-    {
-        $input = [
-            'level1' => [
-                'level2' => [
-                    'level3' => [
-                        'value' => 'deep',
-                    ],
-                ],
-            ],
-        ];
-
-        $result = flat_array($input, '', '|');
-
-        $expected = [
-            'level1|level2|level3|value' => 'deep',
-        ];
-
-        $this->assertSame($expected, $result, 'Separator should be used at all nesting levels');
-    }
-
-    public function test_flatArray_dot_default(): void
-    {
-        $input = [
-            'user' => [
-                'name' => 'John',
-            ],
-        ];
-
-        $result = flat_array($input);
-
-        $this->assertArrayHasKey('user.name', $result, 'Default separator should be dot');
-        $this->assertSame('John', $result['user.name']);
-    }
-
-    public function test_flatArray_empty_sep(): void
-    {
-        $input = [
-            'a' => [
-                'b' => 'value',
-            ],
-        ];
-
-        $result = flat_array($input, '', '');
-
-        $expected = [
-            'ab' => 'value',
-        ];
-
-        $this->assertSame($expected, $result, 'Empty string separator should concatenate keys');
-    }
-
-    public function test_flatArray_sep_mixed(): void
-    {
-        $input = [
-            'string' => 'text',
-            'nested' => [
-                'int' => 42,
-                'bool' => false,
-                'deep' => [
-                    'null' => null,
-                ],
-            ],
-        ];
-
-        $result = flat_array($input, '', '/');
-
-        $expected = [
-            'string' => 'text',
-            'nested/int' => 42,
-            'nested/bool' => false,
-            'nested/deep/null' => null,
-        ];
-
-        $this->assertSame($expected, $result, 'Separator should work with mixed types');
-    }
-
-    public function test_flatArray_sep_numeric(): void
-    {
-        $input = [
-            'items' => [
-                0 => 'first',
-                1 => 'second',
-            ],
-        ];
-
-        $result = flat_array($input, '', '-');
-
-        $expected = [
-            'items-0' => 'first',
-            'items-1' => 'second',
-        ];
-
-        $this->assertSame($expected, $result, 'Separator should work with numeric keys');
-    }
-
-    public function test_flatArray_sep_prefix_nested(): void
-    {
-        $input = [
-            'config' => [
-                'database' => [
-                    'host' => 'localhost',
-                ],
-            ],
-        ];
-
-        $result = flat_array($input, 'app', '::');
-
-        $expected = [
-            'app::config::database::host' => 'localhost',
-        ];
-
-        $this->assertSame($expected, $result, 'Separator should work with both prefix and nesting');
-    }
-
-    // ==================== validateServersData() Tests ====================
-
-    public function test_validate_valid_config(): void
-    {
-        $data = [
-            'plex_main' => [
-                'name' => 'plex_main',
-                'type' => 'plex',
-                'url' => 'http://localhost:32400',
-                'token' => 'abc123',
-                'uuid' => 'server-uuid',
-                'user' => '1',
-                'export' => ['enabled' => true, 'lastSync' => 1234567890],
-                'import' => ['enabled' => true, 'lastSync' => 1234567890],
+        $result = validate_servers_data([
+            'plex_main' => $this->backendConfig('plex_main', [
+                'export' => ['enabled' => 1, 'lastSync' => null],
+                'import' => ['enabled' => true, 'lastSync' => '1234567890'],
                 'options' => [
                     'LIBRARY_SEGMENT' => 500,
-                    'ignore' => 'Library1,Library2'
-                ]
-            ]
-        ];
-
-        $result = validate_servers_data($data);
-
-        $this->assertTrue($result['valid'], 'Valid configuration should pass validation');
-        $this->assertArrayNotHasKey('errors', $result, 'Valid configuration should not have errors');
-    }
-
-    public function test_validate_multi_backends(): void
-    {
-        $data = [
-            'plex_server' => [
-                'name' => 'plex_server',
-                'type' => 'plex',
-                'url' => 'http://plex:32400',
-                'token' => 'token1'
-            ],
-            'jellyfin_server' => [
-                'name' => 'jellyfin_server',
-                'type' => 'jellyfin',
-                'url' => 'http://jellyfin:8096',
-                'token' => 'token2'
-            ],
-            'emby_server' => [
-                'name' => 'emby_server',
-                'type' => 'emby',
-                'url' => 'http://emby:8096',
-                'token' => 'token3'
-            ]
-        ];
-
-        $result = validate_servers_data($data);
-
-        $this->assertTrue($result['valid'], 'Multiple valid backends should pass validation');
-    }
-
-    public function test_validate_invalid_name(): void
-    {
-        $data = [
-            'Invalid Name!' => [
-                'name' => 'test',
-                'type' => 'plex',
-            ]
-        ];
-
-        $result = validate_servers_data($data);
-
-        $this->assertFalse($result['valid'], 'Invalid backend name should fail validation');
-        $this->assertArrayHasKey('errors', $result, 'Should return errors array');
-        $this->assertCount(1, $result['errors'], 'Should have exactly one error');
-        $this->assertStringContainsString('Invalid Name!', $result['errors'][0], 'Error should mention invalid name');
-        $this->assertStringContainsString(
-            'lowercase a-z, 0-9, _',
-            $result['errors'][0],
-            'Error should explain valid format'
-        );
-    }
-
-    public function test_validate_invalid_type(): void
-    {
-        $data = [
-            'my_backend' => [
-                'name' => 'my_backend',
-                'type' => 'kodi',
-            ]
-        ];
-
-        $result = validate_servers_data($data);
-
-        $this->assertFalse($result['valid'], 'Invalid backend type should fail validation');
-        $this->assertArrayHasKey('errors', $result, 'Should return errors array');
-        $this->assertStringContainsString('type', $result['errors'][0], 'Error should mention type field');
-        $this->assertStringContainsString(
-            'plex, emby, jellyfin',
-            $result['errors'][0],
-            'Error should list valid types'
-        );
-    }
-
-    public function test_validate_unknown_field(): void
-    {
-        $data = [
-            'my_backend' => [
-                'name' => 'my_backend',
-                'type' => 'plex',
-                'unknown_field' => 'value'
-            ]
-        ];
-
-        $result = validate_servers_data($data);
-
-        $this->assertFalse($result['valid'], 'Unknown field should fail validation');
-        $this->assertArrayHasKey('errors', $result, 'Should return errors array');
-        $this->assertStringContainsString('unknown_field', $result['errors'][0], 'Error should mention unknown field');
-        $this->assertStringContainsString(
-            'Unknown field',
-            $result['errors'][0],
-            'Error should indicate field is unknown'
-        );
-    }
-
-    public function test_validate_custom_fail(): void
-    {
-        $data = [
-            'my_plex' => [
-                'name' => 'my_plex',
-                'type' => 'plex',
-                'options' => [
-                    'LIBRARY_SEGMENT' => 250  // Should fail (< 300)
-                ]
-            ]
-        ];
-
-        $result = validate_servers_data($data);
-
-        $this->assertFalse($result['valid'], 'LIBRARY_SEGMENT below 300 should fail validation');
-        $this->assertArrayHasKey('errors', $result, 'Should return errors array');
-        $this->assertStringContainsString(
-            'LIBRARY_SEGMENT',
-            $result['errors'][0],
-            'Error should mention LIBRARY_SEGMENT'
-        );
-        $this->assertStringContainsString('300', $result['errors'][0], 'Error should mention minimum value');
-    }
-
-    public function test_validate_custom_pass(): void
-    {
-        $data = [
-            'my_plex' => [
-                'name' => 'my_plex',
-                'type' => 'plex',
-                'options' => [
-                    'LIBRARY_SEGMENT' => 500  // Should pass (>= 300)
-                ]
-            ]
-        ];
-
-        $result = validate_servers_data($data);
-
-        $this->assertTrue($result['valid'], 'LIBRARY_SEGMENT >= 300 should pass validation');
-    }
-
-    public function test_validate_nested_opts(): void
-    {
-        $data = [
-            'my_backend' => [
-                'name' => 'my_backend',
-                'type' => 'jellyfin',
-                'url' => 'http://localhost:8096',
-                'token' => 'test_token',
-                'options' => [
+                    'ignore' => 'Library1,Library2',
                     'client' => [
                         'timeout' => 30,
                         'http_version' => 2.0,
-                        'verify_host' => true
-                    ]
-                ]
-            ]
-        ];
+                        'verify_host' => true,
+                    ],
+                ],
+            ]),
+        ]);
 
-        $result = validate_servers_data($data);
-
-        $this->assertTrue($result['valid'], 'Nested options should pass validation');
+        self::assertTrue($result['valid']);
+        self::assertArrayNotHasKey('errors', $result);
     }
 
-    public function test_validate_coerce_bool(): void
+    public function test_validate_servers_non_array(): void
     {
-        $data = [
-            'my_backend' => [
-                'name' => 'my_backend',
-                'type' => 'plex',
-                'export' => ['enabled' => 1],  // Int instead of bool
-            ]
-        ];
+        $result = validate_servers_data(['plex_main' => 'not-an-array']);
 
-        $result = validate_servers_data($data);
-
-        $this->assertTrue($result['valid'], 'Int 1 should be coerced to boolean true');
+        self::assertFalse($result['valid']);
+        self::assertStringContainsString('must be an array', $result['errors'][0]);
     }
 
-    public function test_validate_coerce_int(): void
+    public function test_validate_servers_name(): void
     {
-        $data = [
-            'my_backend' => [
-                'name' => 'my_backend',
-                'type' => 'plex',
-                'import' => ['lastSync' => '1234567890'],  // String number
-            ]
-        ];
+        $result = validate_servers_data([
+            'Invalid Name!' => $this->backendConfig('Invalid Name!'),
+        ]);
 
-        $result = validate_servers_data($data);
-
-        $this->assertTrue($result['valid'], 'Numeric string should be coerced to integer');
+        self::assertFalse($result['valid']);
+        self::assertStringContainsString('Invalid Name!', $result['errors'][0]);
+        self::assertStringContainsString('lowercase a-z, 0-9, _', $result['errors'][0]);
     }
 
-    public function test_validate_invalid_bool(): void
+    public function test_validate_servers_fields(): void
     {
-        $data = [
-            'my_backend' => [
-                'name' => 'my_backend',
-                'type' => 'plex',
-                'export' => ['enabled' => 'not_a_boolean'],
-            ]
-        ];
+        $result = validate_servers_data([
+            'plex_main' => $this->backendConfig('plex_main', [
+                'webhook' => 'http://example.com',
+                'unknown_field' => 'value',
+            ]),
+        ]);
 
-        $result = validate_servers_data($data);
+        $errors = implode("\n", $result['errors']);
 
-        $this->assertFalse($result['valid'], 'Invalid boolean value should fail validation');
-        $this->assertStringContainsString('boolean', $result['errors'][0], 'Error should mention boolean type');
+        self::assertFalse($result['valid']);
+        self::assertStringContainsString('webhook', $errors);
+        self::assertStringContainsString('no longer supported', $errors);
+        self::assertStringContainsString('unknown_field', $errors);
+        self::assertStringContainsString('Unknown field', $errors);
     }
 
-    public function test_validate_invalid_int(): void
+    public function test_validate_servers_type(): void
     {
-        $data = [
-            'my_backend' => [
-                'name' => 'my_backend',
-                'type' => 'plex',
+        $result = validate_servers_data([
+            'plex_main' => $this->backendConfig('plex_main', ['type' => 'kodi']),
+        ]);
+
+        $errors = implode("\n", $result['errors']);
+
+        self::assertFalse($result['valid']);
+        self::assertStringContainsString("Field 'type'", $errors);
+        self::assertStringContainsString('plex, emby, jellyfin', $errors);
+    }
+
+    public function test_validate_servers_custom(): void
+    {
+        $result = validate_servers_data([
+            'plex_main' => $this->backendConfig('plex_main', [
+                'options' => ['LIBRARY_SEGMENT' => 250],
+            ]),
+        ]);
+
+        $errors = implode("\n", $result['errors']);
+
+        self::assertFalse($result['valid']);
+        self::assertStringContainsString('LIBRARY_SEGMENT', $errors);
+        self::assertStringContainsString('300', $errors);
+    }
+
+    public function test_validate_servers_scalars(): void
+    {
+        $result = validate_servers_data([
+            'plex_main' => $this->backendConfig('plex_main', [
+                'export' => ['enabled' => 'nope'],
                 'import' => ['lastSync' => 'not_a_number'],
-            ]
+            ]),
+        ]);
+
+        $errors = implode("\n", $result['errors']);
+
+        self::assertFalse($result['valid']);
+        self::assertStringContainsString('export.enabled', $errors);
+        self::assertStringContainsString('boolean', $errors);
+        self::assertStringContainsString('import.lastSync', $errors);
+        self::assertStringContainsString('integer', $errors);
+    }
+
+    public function test_validate_servers_immutable(): void
+    {
+        $result = validate_servers_data([
+            'plex_main' => $this->backendConfig('plex_main'),
+        ], ['validate_immutable' => true]);
+
+        $errors = implode("\n", $result['errors']);
+
+        self::assertFalse($result['valid']);
+        self::assertStringContainsString("Field 'name' is immutable", $errors);
+        self::assertStringContainsString("Field 'type' is immutable", $errors);
+    }
+
+    public function test_b64encode_urlsafe(): void
+    {
+        $cases = [
+            'a' => 'YQ',
+            'ab' => 'YWI',
+            "\xff\xef" => '_-8',
         ];
 
-        $result = validate_servers_data($data);
+        foreach ($cases as $input => $expected) {
+            $encoded = urlsafe_b64encode($input);
 
-        $this->assertFalse($result['valid'], 'Invalid integer value should fail validation');
-        $this->assertStringContainsString('integer', $result['errors'][0], 'Error should mention integer type');
-    }
-
-    public function test_validate_non_array(): void
-    {
-        $data = [
-            'my_backend' => 'not_an_array'
-        ];
-
-        $result = validate_servers_data($data);
-
-        $this->assertFalse($result['valid'], 'Non-array backend data should fail validation');
-        $this->assertArrayHasKey('errors', $result, 'Should return errors array');
-        $this->assertStringContainsString(
-            'must be an array',
-            $result['errors'][0],
-            'Error should indicate array is required'
-        );
-    }
-
-    public function test_validate_empty_data(): void
-    {
-        $data = [];
-
-        $result = validate_servers_data($data);
-
-        $this->assertTrue($result['valid'], 'Empty data should be considered valid');
-    }
-
-    public function test_validate_multi_errors(): void
-    {
-        $data = [
-            'Invalid Backend!' => [  // Invalid name
-                'name' => 'test',
-                'type' => 'kodi',  // Invalid type
-                'options' => [
-                    'LIBRARY_SEGMENT' => 100,  // Too small
-                    'unknown_option' => 'value'  // Unknown field
-                ]
-            ]
-        ];
-
-        $result = validate_servers_data($data);
-
-        $this->assertFalse($result['valid'], 'Multiple errors should fail validation');
-        $this->assertArrayHasKey('errors', $result, 'Should return errors array');
-        $this->assertGreaterThan(0, count($result['errors']), 'Should have at least one error');
-    }
-
-    public function test_validate_webhook(): void
-    {
-        $data = [
-            'my_plex' => [
-                'name' => 'my_plex',
-                'type' => 'plex',
-                'url' => 'http://localhost:32400',
-                'token' => 'token',
-                'uuid' => 'test-uuid',
-                'user' => '1',
-                'export' => ['enabled' => true],
-                'import' => ['enabled' => true],
-            ]
-        ];
-
-        $result = validate_servers_data($data);
-
-        $this->assertTrue($result['valid'], 'Valid backend configuration should pass validation');
-    }
-
-    public function test_validate_complex_nested(): void
-    {
-        $data = [
-            'complex_backend' => [
-                'name' => 'complex_backend',
-                'type' => 'emby',
-                'url' => 'http://emby:8096',
-                'token' => 'token',
-                'uuid' => 'emby-uuid',
-                'user' => '1',
-                'export' => [
-                    'enabled' => true,
-                    'lastSync' => 1234567890
-                ],
-                'import' => [
-                    'enabled' => true,
-                    'lastSync' => 1234567890
-                ],
-                'options' => [
-                    'ignore' => 'Library1,Library2,Library3',
-                    'LIBRARY_SEGMENT' => 1000,
-                    'client' => [
-                        'timeout' => 60,
-                        'http_version' => 1.1,
-                        'verify_host' => false
-                    ]
-                ]
-            ]
-        ];
-
-        $result = validate_servers_data($data);
-
-        $this->assertTrue($result['valid'], 'Complex nested structure should pass validation');
-    }
-
-    public function test_validate_all_errors(): void
-    {
-        $data = [
-            'backend1' => [
-                'name' => 'backend1',
-                'type' => 'invalid_type',
-                'unknown_field1' => 'value1'
-            ],
-            'backend2' => [
-                'name' => 'backend2',
-                'type' => 'another_invalid',
-                'unknown_field2' => 'value2'
-            ]
-        ];
-
-        $result = validate_servers_data($data);
-
-        $this->assertFalse($result['valid'], 'Multiple backend errors should fail validation');
-        $this->assertArrayHasKey('errors', $result, 'Should return errors array');
-        $this->assertGreaterThanOrEqual(2, count($result['errors']), 'Should accumulate errors from multiple backends');
-    }
-
-    public function test_validate_minimal(): void
-    {
-        $data = [
-            'minimal' => [
-                'name' => 'minimal',
-                'type' => 'plex',
-                'url' => 'http://localhost:32400',
-                'token' => 'token'
-            ]
-        ];
-
-        $result = validate_servers_data($data);
-
-        $this->assertTrue($result['valid'], 'Minimal valid configuration should pass validation');
-    }
-
-    public function test_validate_array_struct(): void
-    {
-        $data = [
-            'test_backend' => [
-                'name' => 'test_backend',
-                'type' => 'plex'
-            ]
-        ];
-
-        $result = validate_servers_data($data);
-
-        $this->assertIsArray($result, 'Should return an array');
-        $this->assertArrayHasKey('valid', $result, 'Should have valid key');
-        $this->assertIsBool($result['valid'], 'Valid key should be boolean');
-    }
-
-    public function test_validateServersData_error_structure(): void
-    {
-        $data = [
-            'Invalid!' => [
-                'name' => 'test',
-                'type' => 'plex'
-            ]
-        ];
-
-        $result = validate_servers_data($data);
-
-        $this->assertFalse($result['valid'], 'Invalid data should fail');
-        $this->assertArrayHasKey('errors', $result, 'Should have errors key');
-        $this->assertIsArray($result['errors'], 'Errors should be an array');
-        $this->assertNotEmpty($result['errors'], 'Errors array should not be empty');
-        $this->assertIsString($result['errors'][0], 'Each error should be a string');
-    }
-
-    public function test_validate_nullable_null(): void
-    {
-        $data = [
-            'test_backend' => [
-                'name' => 'test_backend',
-                'type' => 'plex',
-                'export' => [
-                    'enabled' => true,
-                    'lastSync' => null  // nullable field with null value
-                ]
-            ]
-        ];
-
-        $result = validate_servers_data($data);
-
-        $this->assertTrue($result['valid'], 'Nullable field with null value should pass validation');
-    }
-
-    public function test_validate_nullable_valid(): void
-    {
-        $data = [
-            'test_backend' => [
-                'name' => 'test_backend',
-                'type' => 'plex',
-                'export' => [
-                    'enabled' => true,
-                    'lastSync' => 1234567890  // nullable field with valid value
-                ]
-            ]
-        ];
-
-        $result = validate_servers_data($data);
-
-        $this->assertTrue($result['valid'], 'Nullable field with valid value should pass validation');
-    }
-
-    public function test_validate_nullable_invalid(): void
-    {
-        $data = [
-            'test_backend' => [
-                'name' => 'test_backend',
-                'type' => 'plex',
-                'export' => [
-                    'enabled' => true,
-                    'lastSync' => 'invalid_string'  // nullable int field with string value
-                ]
-            ]
-        ];
-
-        $result = validate_servers_data($data);
-
-        $this->assertFalse($result['valid'], 'Nullable field with invalid type should fail validation');
-        $this->assertArrayHasKey('errors', $result, 'Should have errors');
-        $this->assertStringContainsString('lastSync', $result['errors'][0], 'Error should mention the field');
-        $this->assertStringContainsString('integer', $result['errors'][0], 'Error should mention expected type');
-    }
-
-    public function test_validate_nullable_multi(): void
-    {
-        $data = [
-            'test_backend' => [
-                'name' => 'test_backend',
-                'type' => 'jellyfin',
-                'export' => [
-                    'enabled' => false,
-                    'lastSync' => null
-                ],
-                'import' => [
-                    'enabled' => true,
-                    'lastSync' => null
-                ]
-            ]
-        ];
-
-        $result = validate_servers_data($data);
-
-        $this->assertTrue($result['valid'], 'Multiple nullable fields with null values should pass validation');
-    }
-
-    public function test_validate_nullable_mixed(): void
-    {
-        $data = [
-            'test_backend' => [
-                'name' => 'test_backend',
-                'type' => 'plex',
-                'url' => 'http://localhost:32400',  // non-nullable
-                'token' => 'test_token',  // non-nullable
-                'export' => [
-                    'enabled' => true,  // non-nullable
-                    'lastSync' => null  // nullable
-                ],
-                'import' => [
-                    'enabled' => false,  // non-nullable
-                    'lastSync' => 1234567890  // nullable with value
-                ]
-            ]
-        ];
-
-        $result = validate_servers_data($data);
-
-        $this->assertTrue($result['valid'], 'Mix of nullable and non-nullable fields should work correctly');
-    }
-
-    public function test_b64encode_simple(): void
-    {
-        $input = 'Hello World';
-        $result = urlsafe_b64encode($input);
-
-        // Standard base64 would be: SGVsbG8gV29ybGQ=
-        // URL-safe removes padding and replaces +/ with -_
-        $expected = 'SGVsbG8gV29ybGQ';
-
-        $this->assertSame($expected, $result, 'Simple string should be encoded without padding');
-    }
-
-    public function test_b64encode_no_padding(): void
-    {
-        // Test strings that would have different padding lengths
-        $tests = [
-            'a' => 'YQ',      // Would be 'YQ==' in standard base64
-            'ab' => 'YWI',    // Would be 'YWI=' in standard base64
-            'abc' => 'YWJj',  // Would be 'YWJj' in standard base64 (no padding)
-        ];
-
-        foreach ($tests as $input => $expected) {
-            $result = urlsafe_b64encode($input);
-            $this->assertSame($expected, $result, "Input '$input' should have padding removed");
-            $this->assertStringNotContainsString('=', $result, 'Result should not contain padding characters');
-        }
-    }
-
-    public function test_b64encode_replaces(): void
-    {
-        // Create input that will produce + and / in standard base64
-        // Using binary data that specifically generates these characters
-        $input = "\xff\xef"; // This creates '+' in base64
-        $result = urlsafe_b64encode($input);
-
-        $this->assertStringNotContainsString('+', $result, 'Result should not contain + character');
-        $this->assertStringNotContainsString('/', $result, 'Result should not contain / character');
-        $this->assertStringContainsString('-', $result, 'Result should contain - instead of +');
-    }
-
-    public function test_b64encode_binary(): void
-    {
-        // Test with actual binary data (like encryption keys)
-        $input = random_bytes(32);
-        $result = urlsafe_b64encode($input);
-
-        $this->assertIsString($result, 'Should return a string');
-        $this->assertStringNotContainsString('=', $result, 'Should not contain padding');
-        $this->assertStringNotContainsString('+', $result, 'Should not contain +');
-        $this->assertStringNotContainsString('/', $result, 'Should not contain /');
-        $this->assertMatchesRegularExpression('/^[A-Za-z0-9_-]+$/', $result, 'Should only contain URL-safe characters');
-    }
-
-    public function test_b64encode_empty(): void
-    {
-        $result = urlsafe_b64encode('');
-        $this->assertSame('', $result, 'Empty string should return empty string');
-    }
-
-    public function test_b64encode_special(): void
-    {
-        $input = '{"user":"admin","token":"xyz123"}';
-        $result = urlsafe_b64encode($input);
-
-        $this->assertIsString($result, 'Should encode JSON string');
-        $this->assertMatchesRegularExpression('/^[A-Za-z0-9_-]+$/', $result, 'Should be URL-safe');
-    }
-
-    public function test_b64decode_simple(): void
-    {
-        $encoded = 'SGVsbG8gV29ybGQ';
-        $result = urlsafe_b64decode($encoded);
-
-        $this->assertSame('Hello World', $result, 'Should decode back to original string');
-    }
-
-    public function test_b64decode_adds_padding(): void
-    {
-        // Test strings with different padding requirements
-        $tests = [
-            'YQ' => 'a',      // Needs 2 padding chars (==)
-            'YWI' => 'ab',    // Needs 1 padding char (=)
-            'YWJj' => 'abc',  // Needs 0 padding chars
-        ];
-
-        foreach ($tests as $encoded => $expected) {
-            $result = urlsafe_b64decode($encoded);
-            $this->assertSame($expected, $result, "Encoded '$encoded' should decode to '$expected'");
+            self::assertSame($expected, $encoded);
+            self::assertStringNotContainsString('=', $encoded);
+            self::assertStringNotContainsString('+', $encoded);
+            self::assertStringNotContainsString('/', $encoded);
         }
     }
 
     public function test_b64decode_urlsafe(): void
     {
-        // Encode with standard base64 then convert to URL-safe manually
-        $original = "\xff\xef\xfe";
-        $encoded = urlsafe_b64encode($original);
-        $decoded = urlsafe_b64decode($encoded);
-
-        $this->assertSame($original, $decoded, 'Should correctly decode URL-safe characters');
-    }
-
-    public function test_b64decode_binary(): void
-    {
-        $original = random_bytes(64);
-        $encoded = urlsafe_b64encode($original);
-        $decoded = urlsafe_b64decode($encoded);
-
-        $this->assertSame($original, $decoded, 'Should correctly encode and decode binary data');
-    }
-
-    public function test_b64decode_empty(): void
-    {
-        $result = urlsafe_b64decode('');
-        $this->assertSame('', $result, 'Empty string should return empty string');
-    }
-
-    public function test_b64_roundtrip_lengths(): void
-    {
-        // Test with different string lengths to ensure padding works correctly
-        for ($length = 1; $length <= 100; $length++) {
-            $original = random_bytes($length);
-            $encoded = urlsafe_b64encode($original);
-            $decoded = urlsafe_b64decode($encoded);
-
-            $this->assertSame(
-                $original,
-                $decoded,
-                "Roundtrip should work for $length byte input"
-            );
-        }
-    }
-
-    public function test_b64_roundtrip_utf8(): void
-    {
-        $tests = [
-            'Hello World',
-            'UTF-8: こんにちは',
-            'Emoji: 🚀🎉💻',
-            'Mixed: Hello 世界 🌍',
-            'Special chars: @#$%^&*()',
+        $cases = [
+            'YQ' => 'a',
+            'YWI' => 'ab',
+            'YWJj' => 'abc',
+            strtr(base64_encode('test'), '+/', '-_') => 'test',
         ];
 
-        foreach ($tests as $original) {
+        foreach ($cases as $encoded => $expected) {
+            self::assertSame($expected, urlsafe_b64decode($encoded));
+        }
+    }
+
+    public function test_b64_roundtrip(): void
+    {
+        $cases = [
+            'Hello World',
+            'state:export --dry-run',
+            "\x00\x7f\xffbinary",
+        ];
+
+        foreach ($cases as $original) {
             $encoded = urlsafe_b64encode($original);
-            $decoded = urlsafe_b64decode($encoded);
 
-            $this->assertSame($original, $decoded, "Roundtrip should work for: $original");
+            self::assertMatchesRegularExpression('/^[A-Za-z0-9_-]*$/', $encoded);
+            self::assertSame($original, urlsafe_b64decode($encoded));
         }
     }
 
-    public function test_b64encode_urlsafe(): void
+    public function test_select_users(): void
     {
-        // Generate various inputs and ensure output is always URL-safe
-        for ($i = 0; $i < 100; $i++) {
-            $input = random_bytes(rand(1, 100));
-            $encoded = urlsafe_b64encode($input);
-
-            // Check that it only contains URL-safe characters
-            $this->assertMatchesRegularExpression(
-                '/^[A-Za-z0-9_-]*$/',
-                $encoded,
-                'Encoded output must only contain URL-safe characters'
-            );
-
-            // Verify no padding
-            $this->assertStringNotContainsString('=', $encoded, 'Should not contain padding');
-
-            // Verify no standard base64 special chars
-            $this->assertStringNotContainsString('+', $encoded, 'Should not contain +');
-            $this->assertStringNotContainsString('/', $encoded, 'Should not contain /');
-        }
+        self::assertSame(['main'], select_users('main'));
+        self::assertSame(['alice'], select_users('alice'));
+        self::assertEqualsCanonicalizing(['main', 'alice', 'bob'], select_users(null));
     }
 
-    public function test_b64_jwt_compat(): void
+    public function test_select_users_unknown(): void
     {
-        // JWT uses URL-safe base64 without padding
-        // Test that our implementation matches JWT requirements
-        $payload = '{"sub":"1234567890","name":"John Doe","iat":1516239022}';
-        $encoded = urlsafe_b64encode($payload);
-
-        // Verify it's URL-safe
-        $this->assertMatchesRegularExpression('/^[A-Za-z0-9_-]+$/', $encoded);
-
-        // Verify no padding
-        $this->assertStringNotContainsString('=', $encoded);
-
-        // Verify roundtrip
-        $decoded = urlsafe_b64decode($encoded);
-        $this->assertSame($payload, $decoded);
+        $this->expectException(RuntimeException::class);
+        select_users('carol');
     }
 
-    public function test_b64_plex_jwt(): void
-    {
-        // Test with Ed25519 key sizes (as used in PlexJWT)
-        $privateKey = random_bytes(32); // 32-byte seed
-        $publicKey = random_bytes(32);  // 32-byte public key
-
-        // Encode public key (as PlexJWT does for JWK)
-        $encodedPublic = urlsafe_b64encode($publicKey);
-
-        // Should be URL-safe
-        $this->assertMatchesRegularExpression('/^[A-Za-z0-9_-]+$/', $encodedPublic);
-
-        // Should decode correctly
-        $decodedPublic = urlsafe_b64decode($encodedPublic);
-        $this->assertSame($publicKey, $decodedPublic);
-        $this->assertEquals(32, strlen($decodedPublic), 'Decoded key should be 32 bytes');
-    }
-
-    public function test_b64decode_std_padding(): void
-    {
-        // Test that decoder can handle input with padding (in case someone passes it)
-        $original = 'test';
-        $standardBase64 = base64_encode($original);  // Will have padding
-        $urlSafe = strtr($standardBase64, '+/', '-_'); // Convert to URL-safe chars but keep padding
-
-        // Our decoder should handle this gracefully
-        $decoded = urlsafe_b64decode($urlSafe);
-        $this->assertSame($original, $decoded, 'Should handle input with padding');
-    }
-
-    public function test_b64_large_data(): void
-    {
-        // Test with larger data (1MB)
-        $largeData = random_bytes(1024 * 1024);
-
-        $startEncode = microtime(true);
-        $encoded = urlsafe_b64encode($largeData);
-        $encodeTime = microtime(true) - $startEncode;
-
-        $startDecode = microtime(true);
-        $decoded = urlsafe_b64decode($encoded);
-        $decodeTime = microtime(true) - $startDecode;
-
-        // Verify correctness
-        $this->assertSame($largeData, $decoded, 'Should handle large data correctly');
-
-        // Verify reasonable performance (should complete in under 1 second each)
-        $this->assertLessThan(1.0, $encodeTime, 'Encoding 1MB should take less than 1 second');
-        $this->assertLessThan(1.0, $decodeTime, 'Decoding 1MB should take less than 1 second');
-    }
-
-    public function test_get_user_context_targets_one_user(): void
+    public function test_get_user_context(): void
     {
         $logger = new Logger('test');
-        $db = $this->createDb($logger);
-        $db->setOptions([
-            Options::DEBUG_TRACE => true,
-            'class' => new StateEntity([]),
-        ]);
-
-        $mapper = new DirectMapper(
-            logger: $logger,
-            db: $db,
-            cache: Container::get(\Psr\SimpleCache\CacheInterface::class),
-        );
+        $mapper = $this->createMapper($logger);
 
         $userContext = get_user_context('alice', $mapper, $logger);
 
         self::assertSame('alice', $userContext->name);
+        self::assertSame('alice', $userContext->mapper->getOptions()[Options::ALT_NAME]);
         self::assertFileExists(self::$tmpPath . '/users/alice/' . PdoFactory::DB_FILE);
         self::assertFileDoesNotExist(self::$tmpPath . '/users/bob/' . PdoFactory::DB_FILE);
         self::assertFileDoesNotExist(self::$tmpPath . '/db/' . PdoFactory::DB_FILE);
-        self::assertSame('alice', $userContext->mapper->getOptions()[Options::ALT_NAME]);
     }
 
-    public function test_get_users_context_preserves_db_options(): void
+    public function test_get_users_context(): void
     {
         $logger = new Logger('test');
+        $mapper = $this->createMapper($logger);
+
+        $users = get_users_context($mapper, $logger, ['no_main_user' => true]);
+
+        self::assertEqualsCanonicalizing(['alice', 'bob'], array_keys($users));
+        self::assertSame('alice', $users['alice']->mapper->getOptions()[Options::ALT_NAME]);
+        self::assertSame('bob', $users['bob']->mapper->getOptions()[Options::ALT_NAME]);
+        self::assertFileExists(self::$tmpPath . '/users/alice/' . PdoFactory::DB_FILE);
+        self::assertFileExists(self::$tmpPath . '/users/bob/' . PdoFactory::DB_FILE);
+    }
+
+    public function test_get_users_main_only(): void
+    {
+        $logger = new Logger('test');
+        $mapper = $this->createMapper($logger);
+
+        $users = get_users_context($mapper, $logger, ['main_user_only' => true]);
+
+        self::assertSame(['main'], array_keys($users));
+        self::assertSame('main', $users['main']->name);
+    }
+
+    private function createMapper(Logger $logger): DirectMapper
+    {
         $db = $this->createDb($logger);
         $db->setOptions([
             Options::DEBUG_TRACE => true,
             'class' => new StateEntity([]),
         ]);
 
-        $mapper = new DirectMapper(
+        return new DirectMapper(
             logger: $logger,
             db: $db,
-            cache: Container::get(\Psr\SimpleCache\CacheInterface::class),
+            cache: Container::get(CacheInterface::class),
         );
+    }
 
-        $users = get_users_context($mapper, $logger, [
-            iDB::class => [Options::DEBUG_TRACE => true],
-        ]);
-
-        self::assertSame(get_users(), array_keys($users));
-        self::assertSame('alice', $users['alice']->mapper->getOptions()[Options::ALT_NAME]);
-        self::assertSame('bob', $users['bob']->mapper->getOptions()[Options::ALT_NAME]);
-        self::assertFileExists(self::$tmpPath . '/users/alice/' . PdoFactory::DB_FILE);
-        self::assertFileExists(self::$tmpPath . '/users/bob/' . PdoFactory::DB_FILE);
+    private function backendConfig(string $name, array $overrides = []): array
+    {
+        return array_replace_recursive([
+            'name' => $name,
+            'type' => 'plex',
+            'url' => 'http://localhost:32400',
+            'token' => 'token',
+            'uuid' => 'server-uuid',
+            'user' => '1',
+            'export' => ['enabled' => true, 'lastSync' => null],
+            'import' => ['enabled' => true, 'lastSync' => null],
+        ], $overrides);
     }
 }

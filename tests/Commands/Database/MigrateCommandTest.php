@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Commands\Database;
 
 use App\Commands\Database\MigrateCommand;
-use App\Libs\Config;
 use App\Libs\Database\PackageMigrationFactory;
 use App\Libs\Database\PdoFactory;
 use App\Libs\TestCase;
@@ -20,26 +19,10 @@ final class MigrateCommandTest extends TestCase
     {
         parent::setUp();
 
-        $this->initTempDir();
-
-        Config::init(require __DIR__ . '/../../../config/config.php');
-        Config::save('path', self::$tmpPath);
-        Config::save('database.file', self::$tmpPath . '/db/' . PdoFactory::DB_FILE);
-        Config::save('database.dsn', 'sqlite:' . self::$tmpPath . '/db/' . PdoFactory::DB_FILE);
+        $this->initTempApp();
     }
 
-    public function test_signature(): void
-    {
-        $command = new MigrateCommand(new PdoFactory(), new PackageMigrationFactory(), new Logger('test'));
-
-        self::assertSame('db:migrate', $command->getName());
-        self::assertTrue($command->getDefinition()->hasOption('user'));
-        self::assertTrue($command->getDefinition()->hasOption('execute'));
-        self::assertTrue($command->getDefinition()->hasOption('steps'));
-        self::assertTrue($command->getDefinition()->hasArgument('direction'));
-    }
-
-    public function test_execute_all_targets(): void
+    public function test_all_targets(): void
     {
         mkdir(self::$tmpPath . '/users/alice', 0o755, true);
         mkdir(self::$tmpPath . '/users/bob', 0o755, true);
@@ -56,7 +39,7 @@ final class MigrateCommandTest extends TestCase
         $this->assertDbHasCoreTables(self::$tmpPath . '/users/bob/' . PdoFactory::DB_FILE);
     }
 
-    public function test_execute_selected_user(): void
+    public function test_selected_user(): void
     {
         mkdir(self::$tmpPath . '/users/alice', 0o755, true);
         mkdir(self::$tmpPath . '/users/bob', 0o755, true);

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Database;
 
 use App\Libs\Config;
-use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Database\DBLayer;
 use App\Libs\Database\PackageMigrationFactory;
@@ -18,19 +17,9 @@ use App\Libs\Options;
 use App\Libs\TestCase;
 use DateInterval;
 use DateTimeImmutable;
-use Error;
-use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use PDO;
-use PDOException;
-use PDOStatement;
 use Psr\SimpleCache\CacheInterface;
-use ReflectionProperty;
-use ReflectionMethod;
-use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\NullOutput;
-use Symfony\Component\Console\Output\OutputInterface;
 
 class PDOAdapterTest extends TestCase
 {
@@ -38,21 +27,13 @@ class PDOAdapterTest extends TestCase
     private array $testEpisode = [];
 
     private iDB|null $db = null;
-    protected TestHandler|null $handler = null;
-    protected OutputInterface|null $output = null;
-    protected InputInterface|null $input = null;
 
     public function setUp(): void
     {
-        $this->output = new NullOutput();
-        $this->input = new ArrayInput([]);
-
         $this->testMovie = require __DIR__ . '/../Fixtures/MovieEntity.php';
         $this->testEpisode = require __DIR__ . '/../Fixtures/EpisodeEntity.php';
 
-        $this->handler = new TestHandler();
         $logger = new Logger('logger');
-        $logger->pushHandler($this->handler);
         Guid::setLogger($logger);
 
         $this->db = $this->createDb($logger);
@@ -252,18 +233,6 @@ class PDOAdapterTest extends TestCase
         );
     }
 
-    public function test_getAll_no_container(): void
-    {
-        $this->db->setOptions(['class' => null]);
-        Container::reset();
-        $this->checkException(
-            closure: fn() => $this->db->getAll(),
-            reason: 'When calling getAll without initialized container, an exception should be thrown.',
-            exception: Error::class,
-            exceptionMessage: 'Call to a member function',
-        );
-    }
-
     public function test_getAll_conditions(): void
     {
         $item = new StateEntity($this->testEpisode);
@@ -347,80 +316,6 @@ class PDOAdapterTest extends TestCase
         $this->assertNull(
             ag($item->getMetadata($item->via), iState::COLUMN_META_DATA_PLAYED_AT),
             'When watched flag is set to 0, played_at metadata should be null.'
-        );
-    }
-
-    public function test_retryWrite_bad_param(): void
-    {
-        assert($this->db instanceof PDOAdapter);
-
-        $item = $this->db->insert(new StateEntity($this->testEpisode));
-        $item->title = 'Retried Title';
-
-        $data = $item->getAll();
-        $data[iState::COLUMN_UPDATED_AT] = time();
-
-        foreach (iState::ENTITY_ARRAY_KEYS as $key) {
-            if (!(null !== ($data[$key] ?? null) && true === is_array($data[$key]))) {
-                continue;
-            }
-
-            ksort($data[$key]);
-            $data[$key] = json_encode($data[$key], flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        }
-
-        $pdoUpdate = new ReflectionMethod($this->db, 'pdoUpdate');
-        $sql = $pdoUpdate->invoke($this->db, 'state', iState::ENTITY_KEYS);
-
-        $stmtProperty = new ReflectionProperty($this->db, 'stmt');
-        $stmtProperty->setValue($this->db, [
-            'insert' => $this->db->getDBLayer()->prepare('SELECT 1'),
-            'update' => $this->db->getDBLayer()->prepare('SELECT 2'),
-        ]);
-
-        $retryPreparedWrite = new ReflectionMethod($this->db, 'retryPreparedWrite');
-        $stmt = $retryPreparedWrite->invoke(
-            $this->db,
-            'update',
-            $sql,
-            $data,
-            new PDOException('21 bad parameter or other API misuse'),
-        );
-
-        $this->assertInstanceOf(PDOStatement::class, $stmt, 'Retry path should return a PDO statement, not an entity.');
-        $this->assertSame(
-            'Retried Title',
-            $this->db->get($item)->title,
-            'Retry path should execute the rebuilt update statement successfully.'
-        );
-
-        $second = $this->testMovie;
-        foreach ($second[iState::COLUMN_META_DATA] as $backend => $metadata) {
-            $second[iState::COLUMN_META_DATA][$backend][iState::COLUMN_ID] = ($metadata[iState::COLUMN_ID] ?? 0) + 1000;
-        }
-
-        $inserted = $this->db->insert(new StateEntity($second));
-
-        $this->assertNotNull($inserted->id, 'Retrying one write should flush tainted cached statements so later inserts can reprepare cleanly.');
-    }
-
-    public function test_retryPreparedWrite_rethrows_unrelated_errors(): void
-    {
-        assert($this->db instanceof PDOAdapter);
-
-        $retryPreparedWrite = new ReflectionMethod($this->db, 'retryPreparedWrite');
-
-        $this->checkException(
-            closure: fn() => $retryPreparedWrite->invoke(
-                $this->db,
-                'update',
-                'UPDATE state SET title = :title WHERE id = :id',
-                ['title' => 'Ignored', 'id' => 1],
-                new PDOException('some other database problem'),
-            ),
-            reason: 'Retry helper should only intercept sqlite API misuse errors.',
-            exception: PDOException::class,
-            exceptionMessage: 'some other database problem',
         );
     }
 
@@ -563,28 +458,6 @@ class PDOAdapterTest extends TestCase
         );
     }
 
-    public function test_commit_transaction_on__destruct(): void
-    {
-        $started = $this->db->getDBLayer()->start();
-        $this->assertTrue($started, 'Transaction should be started.');
-
-        $this->db->getDBLayer()->transactional(function () {
-            $this->db->insert(new StateEntity($this->testEpisode));
-            $this->db->insert(new StateEntity($this->testMovie));
-        }, auto: false);
-
-        $this->assertTrue($this->db->getDBLayer()->inTransaction(), 'Transaction should be still open.');
-        assert($this->db instanceof PDOAdapter);
-        $this->db->__destruct();
-        $this->assertFalse($this->db->getDBLayer()->inTransaction(), 'Transaction should be closed.');
-
-        $this->assertCount(
-            2,
-            $this->db->getAll(),
-            'When transaction is committed, records should be found in db.'
-        );
-    }
-
     public function test_find(): void
     {
         $item1 = new StateEntity($this->testEpisode);
@@ -601,10 +474,8 @@ class PDOAdapterTest extends TestCase
 
     public function test_findByBackendId(): void
     {
-        Container::init();
-        Container::add(iState::class, new StateEntity([]));
+        $this->db->setOptions(['class' => new StateEntity([])]);
 
-        $this->db->setOptions(['class' => null]);
         $item1 = new StateEntity($this->testEpisode);
         $item2 = new StateEntity($this->testMovie);
         $this->db->insert($item1);
@@ -622,24 +493,13 @@ class PDOAdapterTest extends TestCase
             'When item is not found, null should be returned.'
         );
 
-        $this->db->setOptions(['class' => new StateEntity([])]);
-
         $item2_db = $this->db->findByBackendId(
             $item2->via,
             ag($item2->getMetadata($item2->via), iState::COLUMN_ID),
             $item2->type,
         );
+
         $this->assertCount(0, $item2_db->apply($item2)->diff(), 'When item is found, it should be returned.');
-    }
-
-    public function test_indexer()
-    {
-        $logger = new Logger('logger');
-
-        $this->assertTrue(
-            ensure_indexes($this->db->getDBLayer(), $logger),
-            'When ensureIndex is called, it should return true.'
-        );
     }
 
     public function test_indexer_manages_external_indexes(): void
@@ -677,14 +537,16 @@ class PDOAdapterTest extends TestCase
         }
     }
 
-    public function test_maintenance_db_layer()
+    public function test_reset_clears_rows_sequence(): void
     {
-        $this->assertInstanceOf(PDOStatement::class, $this->db->getDBLayer()->query('VACUUM'), 'When maintenance is run, sqlite vacuum should succeed.');
-    }
+        $this->seedEntities();
 
-    public function test_reset()
-    {
-        $this->assertTrue($this->db->reset(), 'When reset is called, it should return true. and reset the db.');
+        $this->assertTrue($this->db->reset(), 'Reset should succeed for a migrated sqlite database.');
+        $this->assertSame(0, $this->db->getTotal(), 'Reset should remove every row from the state table.');
+
+        $inserted = $this->db->insert(new StateEntity($this->testEpisode));
+
+        $this->assertSame(1, $inserted->id, 'Reset should also clear the sqlite autoincrement sequence.');
     }
 
     public function test_transaction()

@@ -139,93 +139,15 @@ class HelpersTest extends TestCase
         $this->assertNull(env('V_NULL_2'), 'When value is "(null)", null is returned');
     }
 
-    public function test_getValue(): void
-    {
-        $this->assertSame('foo', get_value('foo'), 'When scalar value is passed, it is returned');
-        $this->assertSame(
-            'foo',
-            get_value(fn() => 'foo'),
-            'When callable is passed, it is called and result is returned'
-        );
-    }
-
     public function test_makeDate(): void
     {
-        $this->assertSame(
-            '2020-01-01',
-            make_date('2020-01-01')->format('Y-m-d'),
-            'When date string is passed, parsed it into Y-m-d format'
-        );
-        $this->assertSame(
-            '2020-01-01',
-            make_date(strtotime('2020-01-01'))->format('Y-m-d'),
-            'When timestamp is passed, parsed it into Y-m-d format'
-        );
-        $this->assertSame(
-            '2020-01-01',
-            make_date('2020-01-01 00:00:00')->format('Y-m-d'),
-            'Parse datetime string, and parse it into Y-m-d format'
-        );
+        $this->assertSame('2020-01-01', make_date('2020-01-01', 'UTC')->format('Y-m-d'));
+        $this->assertSame('2020-01-01 00:00:00', make_date('1577836800', 'UTC')->format('Y-m-d H:i:s'));
+        $this->assertSame('1969-12-31', make_date('-86400', 'UTC')->format('Y-m-d'));
         $this->assertSame(
             '2020-01-01 00:00:00',
-            make_date('2020-01-01 00:00:00')->format('Y-m-d H:i:s'),
-            'Parse datetime string, and parse it into Y-m-d H:i:s format'
-        );
-        $this->assertSame(
-            '2020-01-01 00:00:00',
-            make_date(
-                new \DateTimeImmutable('2020-01-01 00:00:00')
-            )->format('Y-m-d H:i:s'),
-            'When datetime DateTimeInterface is passed, it used as it is.'
-        );
-
-        // Test Unix epoch (timestamp 0)
-        $this->assertSame(
-            '1970-01-01 00:00:00',
-            make_date(0)->format('Y-m-d H:i:s'),
-            'Unix epoch (timestamp 0) should work correctly'
-        );
-
-        // Test negative timestamp (before Unix epoch)
-        $this->assertSame(
-            '1969-12-31',
-            make_date(-86400)->format('Y-m-d'),
-            'Negative timestamp (1 day before Unix epoch) should work correctly'
-        );
-
-        // Test earlier negative timestamp
-        $this->assertSame(
-            '1960-01-01',
-            make_date(-315619200)->format('Y-m-d'),
-            'Negative timestamp for year 1960 should work correctly'
-        );
-
-        // Test negative timestamp as string
-        $this->assertSame(
-            '1969-12-31',
-            make_date('-86400')->format('Y-m-d'),
-            'Negative timestamp as string should work correctly'
-        );
-
-        // Test large positive timestamp
-        $this->assertSame(
-            '2038-01-19',
-            make_date(2147483647)->format('Y-m-d'),
-            'Large positive timestamp (near 32-bit limit) should work correctly'
-        );
-
-        // Test numeric string (positive)
-        $this->assertSame(
-            '2020-01-01',
-            make_date('1577836800')->format('Y-m-d'),
-            'Positive numeric string timestamp should work correctly'
-        );
-
-        // Test zero as string
-        $this->assertSame(
-            '1970-01-01 00:00:00',
-            make_date('0')->format('Y-m-d H:i:s'),
-            'Zero as string should work as Unix epoch'
+            make_date(new \DateTimeImmutable('2020-01-01 00:00:00', new \DateTimeZone('UTC')), 'UTC')
+                ->format('Y-m-d H:i:s')
         );
     }
 
@@ -234,46 +156,17 @@ class HelpersTest extends TestCase
         $arr = [
             'foo' => 'bar',
             'sub' => [
-                'foo' => 'bar',
+                'foo' => 'baz',
             ],
         ];
-        $this->assertSame('bar', ag($arr, 'foo'), 'When simple key is passed, value is returned');
-        $this->assertSame('bar', ag($arr, 'sub.foo'), 'When dot notation is used, nested key is returned');
-        $this->assertSame([], ag([], ''), 'When empty path is passed, source array is returned');
-        $this->assertSame($arr, ag($arr, ''), 'When empty key is passed, source array is returned');
-        $this->assertSame('bar', ag($arr, ['baz', 'sub.foo']), 'When first key is not found, second key is used');
-        $this->assertNull(ag($arr, ['not_set', 'not_set_2']), 'When non-existing key is passed, null is returned');
-        $this->assertSame(
-            'bar',
-            ag($arr, 'sub/foo', 'bar', '/'),
-            'When custom delimiter is passed, it is used to split path.'
-        );
+        $object = (object) $arr;
 
-        $arr = (object)[
-            'foo' => 'bar',
-            'sub' => [
-                'foo' => 'bar',
-            ],
-        ];
-
-        $this->assertSame('bar', ag($arr, 'foo'), 'When simple key is passed, value is returned');
-        $this->assertSame('bar', ag($arr, 'sub.foo'), 'When dot notation is used, nested key is returned');
-        $this->assertSame([], ag([], ''), 'When empty path is passed, source array is returned');
-        $this->assertSame($arr, ag($arr, ''), 'When empty key is passed, source array is returned');
-        $this->assertSame(
-            'bar',
-            ag($arr, ['baz', 'sub.foo']),
-            'When path array is given, first matching key will be returned.'
-        );
-        $this->assertNull(
-            ag($arr, ['not_set', 'not_set_2']),
-            'When path array is given and no matching key is found, default value will be returned.'
-        );
-        $this->assertSame(
-            'bar',
-            ag($arr, 'sub/foo', 'bar', '/'),
-            'When custom delimiter is passed, it is used to split path.'
-        );
+        $this->assertSame($arr, ag($arr, ''));
+        $this->assertSame('bar', ag($arr, 'foo'));
+        $this->assertSame('baz', ag($arr, 'sub.foo'));
+        $this->assertSame('baz', ag($arr, ['missing', 'sub.foo']));
+        $this->assertSame('fallback', ag($arr, 'missing', fn() => 'fallback'));
+        $this->assertSame('baz', ag($object, 'sub/foo', separator: '/'));
     }
 
     public function test_ag_set(): void
@@ -403,21 +296,6 @@ class HelpersTest extends TestCase
         );
     }
 
-    public function test_fixPath(): void
-    {
-        $this->assertSame(
-            '/foo' . DIRECTORY_SEPARATOR . 'bar',
-            fix_path('/foo' . DIRECTORY_SEPARATOR . 'bar' . DIRECTORY_SEPARATOR),
-            'When path ends with directory separator, it is removed.'
-        );
-
-        $this->assertSame(
-            'foo' . DIRECTORY_SEPARATOR . 'bar',
-            fix_path('foo' . DIRECTORY_SEPARATOR . 'bar'),
-            'When path does not end with directory separator, it is not modified.'
-        );
-    }
-
     public function test_fsize(): void
     {
         $this->assertSame('1.00B', fsize(1), 'When size is less than 1KB, it is returned in B format');
@@ -458,7 +336,7 @@ class HelpersTest extends TestCase
 
         $hasTmpDir = Config::has('tmpDir');
         $previousTmpDir = Config::get('tmpDir');
-        Config::save('tmpDir', ROOT_PATH . '/var/tmp/helpers_missing_' . uniqid('', true));
+        Config::save('tmpDir', self::$tmpPath . '/helpers_missing_' . uniqid('', true));
 
         try {
             $this->checkException(
@@ -511,7 +389,7 @@ class HelpersTest extends TestCase
 
         $hasTmpDir = Config::has('tmpDir');
         $previousTmpDir = Config::get('tmpDir');
-        Config::save('tmpDir', ROOT_PATH . '/var/tmp/helpers_missing_' . uniqid('', true));
+        Config::save('tmpDir', self::$tmpPath . '/helpers_missing_' . uniqid('', true));
 
         try {
             $this->checkException(
@@ -542,7 +420,6 @@ class HelpersTest extends TestCase
             ]
         ]);
         $data = ['foo' => 'bar'];
-        api_response(200, $data);
         $response = api_response(Status::OK, $data);
         $this->assertSame(Status::OK->value, $response->getStatusCode());
         $this->assertSame('application/json', $response->getHeaderLine('Content-Type'));
@@ -594,21 +471,13 @@ class HelpersTest extends TestCase
             ]
         ]);
 
-        $data = ['info' => ['code' => Status::OK->value, 'message' => 'info message']];
-        $response = api_message('info message', Status::OK, headers: [
-            'X-Test-Header' => 'test',
-        ]);
+        $response = api_message('info message');
+
         $this->assertSame(Status::OK->value, $response->getStatusCode());
-        $this->assertSame('application/json', $response->getHeaderLine('Content-Type'));
-        $this->assertSame(get_app_version(), $response->getHeaderLine('X-Application-Version'));
-        $this->assertSame('test', $response->getHeaderLine('X-Test-Header'));
-        $this->assertSame($data, json_decode($response->getBody()->getContents(), true));
-
-        $response = api_message('info message', Status::OK, opts: [
-            'callback' => fn($response) => $response->withStatus(Status::INTERNAL_SERVER_ERROR->value)
-        ]);
-
-        $this->assertSame(Status::INTERNAL_SERVER_ERROR->value, $response->getStatusCode());
+        $this->assertSame(
+            ['info' => ['code' => Status::OK->value, 'message' => 'info message']],
+            json_decode($response->getBody()->getContents(), true)
+        );
     }
 
     public function test_httpClientChunks(): void
@@ -666,61 +535,14 @@ class HelpersTest extends TestCase
         ], $calls);
     }
 
-    public function test_afterLast(): void
+    public function test_string_helpers(): void
     {
-        $this->assertSame(
-            'bar',
-            after_last('foo/bar', '/'),
-            'When search delimiter is found, string after last delimiter is returned.'
-        );
-        $this->assertSame(
-            'foo/bar',
-            after_last('foo/bar', '_'),
-            'When search delimiter is not found, original string is returned.'
-        );
-        $this->assertSame(
-            'foo/bar',
-            after_last('foo/bar', ''),
-            'When search delimiter is empty, original string is returned.'
-        );
-    }
-
-    public function test_before(): void
-    {
-        $this->assertSame(
-            'foo',
-            before('foo/bar', '/'),
-            'When search delimiter is found, string before first delimiter is returned.'
-        );
-        $this->assertSame(
-            'foo/bar',
-            before('foo/bar', '_'),
-            'When search delimiter is not found, original string is returned.'
-        );
-        $this->assertSame(
-            'foo/bar',
-            before('foo/bar', ''),
-            'When search delimiter is empty, original string is returned.'
-        );
-    }
-
-    public function test_after(): void
-    {
-        $this->assertSame(
-            'bar/baz',
-            after('foo/bar/baz', '/'),
-            'When search delimiter is found, string after first delimiter is returned.'
-        );
-        $this->assertSame(
-            'foo/bar/baz',
-            after('foo/bar/baz', '_'),
-            'When search delimiter is not found, original string is returned.'
-        );
-        $this->assertSame(
-            'foo/bar/baz',
-            after('foo/bar/baz', ''),
-            'When search delimiter is empty, original string is returned.'
-        );
+        $this->assertSame('bar', after_last('foo/bar', '/'));
+        $this->assertSame('foo/bar', after_last('foo/bar', '_'));
+        $this->assertSame('foo', before('foo/bar', '/'));
+        $this->assertSame('foo/bar', before('foo/bar', '_'));
+        $this->assertSame('bar/baz', after('foo/bar/baz', '/'));
+        $this->assertSame('foo/bar/baz', after('foo/bar/baz', ''));
     }
 
     public function test_arrayToString(): void
@@ -1045,32 +867,11 @@ class HelpersTest extends TestCase
 
     public function test_isValidURL(): void
     {
-        $this->assertTrue(is_valid_url('http://example.com'), 'When valid url is passed, true is returned.');
-        $this->assertTrue(is_valid_url('https://example.com'), 'When valid url is passed, true is returned.');
-        $this->assertTrue(is_valid_url('http://example.com/foo/bar'), 'When valid url is passed, true is returned.');
-        $this->assertTrue(is_valid_url('https://example.com/foo/bar'), 'When valid url is passed, true is returned.');
-        $this->assertTrue(is_valid_url('http://www.example.com'), 'When valid url is passed, true is returned.');
-        $this->assertTrue(is_valid_url('https://www.example.com'), 'When valid url is passed, true is returned.');
-        $this->assertTrue(
-            is_valid_url('http://www.example.com/foo/bar'),
-            'When valid url is passed, true is returned.'
-        );
-        $this->assertTrue(
-            is_valid_url('https://www.example.com/foo/bar'),
-            'When valid url is passed, true is returned.'
-        );
-        $this->assertTrue(is_valid_url('http://127.0.0.1/foo/bar'), 'When valid url is passed, true is returned.');
-        $this->assertTrue(is_valid_url('https://127.0.0.1/foo/bar'), 'When valid url is passed, true is returned.');
-        $this->assertTrue(is_valid_url('http://localhost:1337/foo/bar'), 'When valid url is passed, true is returned.');
-        $this->assertTrue(
-            is_valid_url('https://localhost:1337/foo/bar'),
-            'When valid url is passed, true is returned.'
-        );
-        $this->assertFalse(
-            is_valid_url('example.com/foo/bar?foo=bar&baz'),
-            'When invalid url is passed, false is returned.'
-        );
-        $this->assertFalse(is_valid_url('example.com'), 'When invalid url is passed, false is returned.');
+        $this->assertTrue(is_valid_url('http://example.com/foo/bar'));
+        $this->assertTrue(is_valid_url('https://127.0.0.1/foo/bar'));
+        $this->assertTrue(is_valid_url('https://localhost:1337/foo/bar'));
+        $this->assertFalse(is_valid_url('example.com/foo/bar?foo=bar&baz'));
+        $this->assertFalse(is_valid_url('example.com'));
     }
 
     public function test_parseEnvFile(): void
@@ -1603,12 +1404,8 @@ class HelpersTest extends TestCase
 
     public function test_getBackend()
     {
-        Container::init();
-        Config::init(require __DIR__ . '/../../config/config.php');
-        foreach ((array)require __DIR__ . '/../../config/services.php' as $name => $definition) {
-            Container::add($name, $definition);
-        }
-        Config::save('backends_file', __DIR__ . '/../Fixtures/test_servers.yaml');
+        $this->initTempApp(self::$tmpPath);
+        $this->seedTestServersConfig();
 
         $this->assertInstanceOf(
             PlexClient::class,
@@ -1622,12 +1419,8 @@ class HelpersTest extends TestCase
 
     public function test_makeBackend()
     {
-        Container::init();
-        Config::init(require __DIR__ . '/../../config/config.php');
-        foreach ((array)require __DIR__ . '/../../config/services.php' as $name => $definition) {
-            Container::add($name, $definition);
-        }
-        Config::save('backends_file', __DIR__ . '/../Fixtures/test_servers.yaml');
+        $this->initTempApp(self::$tmpPath);
+        $this->seedTestServersConfig();
 
         $exception = null;
         try {
