@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "17049a1b030891e61f901f57843e771dd41cc18b",
-    "date": "2026-05-01T23:52:45+00:00",
+    "full_sha": "61724f8e28248cdd17816ad9c0414a76e31fc30b",
+    "date": "2026-05-02T15:57:57+00:00",
     "commits": [
+      {
+        "sha": "61724f8e",
+        "full_sha": "61724f8e28248cdd17816ad9c0414a76e31fc30b",
+        "message": "refactor: standardize user selection cross commands",
+        "author": "arabcoders",
+        "date": "2026-05-02T15:57:57+00:00"
+      },
+      {
+        "sha": "b0b26832",
+        "full_sha": "b0b268320463a74da53c23c20d9775bd1bdb99f9",
+        "message": "refactor: fix sqlite pragma loading",
+        "author": "arabcoders",
+        "date": "2026-05-02T14:27:22+00:00"
+      },
       {
         "sha": "17049a1b",
         "full_sha": "17049a1b030891e61f901f57843e771dd41cc18b",
