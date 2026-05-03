@@ -62,6 +62,7 @@ final class Options
     public const string DISABLE_MARK_UNPLAYED = 'DISABLE_MARK_UNPLAYED';
     public const string SKIP_STATE = 'SKIP_STATE';
     public const string ON_SKIP_STATE = 'ON_SKIP_STATE';
+    public const string FAIL_FAST_ON_LOCK = 'FAIL_FAST_ON_LOCK';
 
     private function __construct() {}
 }

@@ -399,6 +399,7 @@ final class Index
                 Options::IS_GENERIC => $isGeneric,
             ],
             Options::CONTEXT_USER => $userContext->name,
+            Options::FAIL_FAST_ON_LOCK => true,
         ]);
 
         $this->write(

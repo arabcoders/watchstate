@@ -1400,10 +1400,7 @@ if (!function_exists('per_user_db')) {
      */
     function make_db_adapter(PDO $pdo): iDB
     {
-        $connection = new DatabaseConnection($pdo, DialectFactory::fromPdo($pdo));
-        $db = new DBLayer($connection);
-
-        return new PDOAdapter(Container::get(iLogger::class), $db);
+        return new PDOAdapter(Container::get(iLogger::class), new DBLayer($pdo));
     }
 }
 

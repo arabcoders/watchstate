@@ -512,7 +512,7 @@ class PDOAdapterTest extends TestCase
         ]);
 
         $pdo = new PDO('sqlite::memory:');
-        $db = new PDOAdapter(new Logger('logger'), new DBLayer($this->createConnection($pdo)));
+        $db = new PDOAdapter(new Logger('logger'), new DBLayer($pdo));
         $migrations = new PackageMigrationFactory();
         $expected = $this->expectedManagedIndexes(['test_plex', 'test_jellyfin']);
 
