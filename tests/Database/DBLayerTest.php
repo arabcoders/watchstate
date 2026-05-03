@@ -11,7 +11,9 @@ use App\Libs\Exceptions\DBLayerException;
 use App\Libs\Exceptions\ErrorException;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Guid;
+use App\Libs\Options;
 use App\Libs\TestCase;
+use Monolog\Level;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use PDO;
@@ -58,6 +60,7 @@ class DBLayerTest extends TestCase
 
         $pdo = new PDO(dsn: 'sqlite::memory:', options: Config::get('database.options.sqlite', []));
         $this->db = new DBLayer($pdo);
+        $this->db->setLogger($logger);
         $this->initTestSchema($pdo);
 
         foreach (Config::get('database.exec.sqlite', []) as $cmd) {
@@ -420,10 +423,12 @@ class DBLayerTest extends TestCase
         /** @noinspection PhpUnhandledExceptionInspection */
         $random = random_int(1, 100);
 
+        $this->handler?->clear();
+
         $this->db->transactional(
             function (DBLayer $db, array $options = []) use ($random) {
                 // -- trigger database lock exception
-                if ((int) ag($options, 'attempts', 0) < 1) {
+                if ((int) ag($options, 'attempts', 0) < 4) {
                     throw new PDOException('database is locked');
                 }
 
@@ -435,6 +440,19 @@ class DBLayerTest extends TestCase
         );
 
         $this->assertSame(1, $this->db->getCount('sqlite_sequence', ['name' => 'test-' . $random]));
+
+        $records = array_values(array_filter(
+            $this->handler?->getRecords() ?? [],
+            static fn($record): bool => str_contains($record->message, 'Database is locked'),
+        ));
+
+        $this->assertSame(
+            [Level::Info->value, Level::Info->value, Level::Info->value, Level::Warning->value],
+            array_map(static fn($record): int => $record->level->value, $records),
+            'Lock retries should stay at info until the last retry before failure, which should warn.',
+        );
+
+        $this->handler?->clear();
 
         $this->checkException(
             closure: function () use ($random) {
@@ -458,6 +476,22 @@ class DBLayerTest extends TestCase
             reason: 'Should throw an exception when the maximum number of attempts is reached.',
             exception: DBLayerException::class,
             exceptionMessage: 'on_lock called',
+        );
+
+        $this->checkException(
+            closure: function () {
+                $this->db->transactional(
+                    fn() => throw new PDOException('database is locked'),
+                    options: [
+                        'max_sleep' => 0,
+                        Options::FAIL_FAST_ON_LOCK => true,
+                        'on_lock' => fn() => throw new DBLayerException('on_lock called'),
+                    ],
+                );
+            },
+            reason: 'Should bypass lock retries when fail-fast is requested.',
+            exception: DBLayerException::class,
+            exceptionMessage: 'database is locked',
         );
     }
 

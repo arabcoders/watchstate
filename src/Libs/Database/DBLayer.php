@@ -7,10 +7,13 @@ namespace App\Libs\Database;
 
 use App\Libs\Exceptions\DBLayerException;
 use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Options;
 use Closure;
+use Monolog\Level;
 use PDO;
 use PDOException;
 use PDOStatement;
+use PHPUnit\Framework\TestStatus\Warning;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 
@@ -209,7 +212,7 @@ final class DBLayer implements LoggerAwareInterface
     /**
      * This method wraps db operations in a single transaction.
      *
-     * @param Closure<DBLayer> $callback The callback function to be executed.
+     * @param Closure(DBLayer, array): mixed $callback The callback function to be executed.
      * @param bool $auto (Optional) Whether to automatically start and commit the transaction.
      * @param array $options (Optional) An optional array of options to be passed the wrapper.
      *
@@ -941,7 +944,7 @@ final class DBLayer implements LoggerAwareInterface
     /**
      * Wraps the given callback function with a retry mechanism to handle database locks.
      *
-     * @param Closure{DBLayer,array} $callback The callback function to be executed.
+     * @param Closure(DBLayer, array): mixed $callback The callback function to be executed.
      * @param array $options An optional array of options to be passed to the callback function.
      *
      * @return mixed The result of the callback function.
@@ -952,7 +955,7 @@ final class DBLayer implements LoggerAwareInterface
     {
         $on_lock = ag($options, 'on_lock', null);
         $errorHandler = ag($options, 'on_failure', null);
-        $exception = null;
+        $failFast = true === (bool) ag($options, Options::FAIL_FAST_ON_LOCK, false);
         if (false === ag_exists($options, 'attempt')) {
             $options['attempt'] = 0;
         }
@@ -962,17 +965,22 @@ final class DBLayer implements LoggerAwareInterface
         } catch (PDOException $e) {
             $attempts = (int) ag($options, 'attempts', 0);
             if (true === str_contains(strtolower($e->getMessage()), 'database is locked')) {
-                if ($attempts >= $this->retry) {
+                if ($failFast || $attempts >= $this->retry) {
                     throw new DBLayerException($e->getMessage(), (int) $e->getCode(), $e)
+                        ->setInfo($this->last['sql'], $this->last['bind'], $e->errorInfo ?? [], $e->getCode())
                         ->setFile($e->getFile())
                         ->setLine($e->getLine());
                 }
 
                 $sleep = (int) ag($options, 'max_sleep', rand(1, 4));
 
-                $this->logger?->warning("PDOAdapter: Database is locked. sleeping for '{sleep}s'.", [
-                    'sleep' => $sleep,
-                ]);
+                $this->logger?->log(
+                    ($attempts + 1) >= $this->retry ? Level::Warning : Level::Info,
+                    "PDOAdapter: Database is locked. sleeping for '{sleep}s'.",
+                    [
+                        'sleep' => $sleep,
+                    ],
+                );
 
                 $options['attempts'] = $attempts + 1;
                 if (null !== $on_lock) {
@@ -983,7 +991,6 @@ final class DBLayer implements LoggerAwareInterface
 
                 return $this->wrap($callback, $options);
             } else {
-                $exception = $e;
                 if (null !== $errorHandler) {
                     return $errorHandler($e, $callback, $options);
                 }
