@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "5775d347bb5c610505c81bea413b82fcf9391660",
-    "date": "2026-05-02T19:04:35+00:00",
+    "full_sha": "07711866fa721414ee93ca640c2f88411e7b2aa4",
+    "date": "2026-05-03T17:47:57+00:00",
     "commits": [
+      {
+        "sha": "07711866",
+        "full_sha": "07711866fa721414ee93ca640c2f88411e7b2aa4",
+        "message": "fix: webhook failing sometimes during long import operations.",
+        "author": "arabcoders",
+        "date": "2026-05-03T17:47:57+00:00"
+      },
+      {
+        "sha": "88d3b85f",
+        "full_sha": "88d3b85f5df05d6aac24525badb9e8abe00a07fb",
+        "message": "refactor: decouple old dblayer from new package connection",
+        "author": "arabcoders",
+        "date": "2026-05-03T16:09:27+00:00"
+      },
       {
         "sha": "5775d347",
         "full_sha": "5775d347bb5c610505c81bea413b82fcf9391660",
