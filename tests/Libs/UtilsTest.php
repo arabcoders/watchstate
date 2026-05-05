@@ -386,6 +386,7 @@ class UtilsTest extends TestCase
             self::assertSame(['ok' => true], $queued->event_data);
             self::assertSame(DataEvent::class, $queued->options['class']);
             self::assertSame('alice', $queued->options[Options::CONTEXT_USER]);
+            self::assertTrue($queued->options[Options::FAIL_FAST_ON_LOCK]);
         }
 
         $events = $cache->get('events', []);

@@ -9,9 +9,12 @@ use App\Backends\Emby\EmbyClient;
 use App\Libs\TestCase;
 use App\Libs\Uri;
 use Nyholm\Psr7\ServerRequest;
+use Tests\Support\MediaBrowserContextTestSupport;
 
 class InspectRequestTest extends TestCase
 {
+    use MediaBrowserContextTestSupport;
+
     public function test_parses_payload_attrs(): void
     {
         $payload = [
@@ -24,7 +27,7 @@ class InspectRequestTest extends TestCase
         $request = new ServerRequest('POST', new Uri('http://mediabrowser.test'));
         $request = $request->withParsedBody($payload);
 
-        $context = $this->createContext();
+        $context = $this->createContext(EmbyClient::CLIENT_NAME);
         $action = new InspectRequest();
         $response = $action($context, $request);
 
@@ -48,7 +51,7 @@ class InspectRequestTest extends TestCase
         $request = new ServerRequest('POST', new Uri('http://mediabrowser.test'));
         $request = $request->withParsedBody($payload);
 
-        $context = $this->createContext();
+        $context = $this->createContext(EmbyClient::CLIENT_NAME);
         $action = new InspectRequest();
         $response = $action($context, $request);
 
@@ -68,24 +71,11 @@ class InspectRequestTest extends TestCase
         $request = new ServerRequest('POST', new Uri('http://mediabrowser.test'));
         $request = $request->withParsedBody($payload);
 
-        $context = $this->createContext();
+        $context = $this->createContext(EmbyClient::CLIENT_NAME);
         $action = new InspectRequest();
         $response = $action($context, $request);
 
         $this->assertFalse($response->isSuccessful());
     }
 
-    private function createContext(): \App\Backends\Common\Context
-    {
-        $cache = new \App\Backends\Common\Cache(new \Monolog\Logger('test'), new \Symfony\Component\Cache\Psr16Cache(new \Symfony\Component\Cache\Adapter\ArrayAdapter()));
-        $userContext = $this->createUserContext(EmbyClient::CLIENT_NAME);
-
-        return new \App\Backends\Common\Context(
-            clientName: EmbyClient::CLIENT_NAME,
-            backendName: EmbyClient::CLIENT_NAME,
-            backendUrl: new Uri('http://mediabrowser.test'),
-            cache: $cache,
-            userContext: $userContext,
-        );
-    }
 }

@@ -10,10 +10,12 @@ use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use App\Libs\TestCase;
 use App\Libs\TokenUtil;
+use Tests\Support\AuthTokenTestSupport;
 use Tests\Support\RequestResponseTrait;
 
 final class AuthTest extends TestCase
 {
+    use AuthTokenTestSupport;
     use RequestResponseTrait;
 
     protected function tearDown(): void
@@ -83,13 +85,5 @@ final class AuthTest extends TestCase
         $this->assertSame(Status::OK->value, $response->getStatusCode());
         $this->assertSame(false, ag($payload, 'refreshed'));
         $this->assertSame($token, ag($payload, 'token'));
-    }
-
-    private function makeUserToken(array $payload): string
-    {
-        $json = json_encode($payload);
-        $this->assertNotFalse($json, 'User token payload JSON encoding should succeed in tests.');
-
-        return TokenUtil::encode(TokenUtil::sign($json) . '.' . $json);
     }
 }
