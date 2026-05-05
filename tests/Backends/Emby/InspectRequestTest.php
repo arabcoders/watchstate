@@ -59,6 +59,39 @@ class InspectRequestTest extends TestCase
         $this->assertSame('server-1', $response->response->getAttribute('backend')['id']);
     }
 
+    public function test_handles_json_payload_wrapper(): void
+    {
+        $payload = [
+            'Server' => ['Id' => 'server-1', 'Name' => 'Emby', 'Version' => '4.9.2.6'],
+            'User' => ['Id' => 'user-1', 'Name' => 'Test User'],
+            'Item' => ['Id' => 'item-1', 'Type' => EmbyClient::TYPE_MOVIE],
+            'Event' => 'playback.start',
+        ];
+
+        $request = new ServerRequest('POST', new Uri('http://mediabrowser.test'));
+        $request = $request->withParsedBody(['data' => json_encode($payload, JSON_THROW_ON_ERROR)]);
+
+        $context = $this->createContext(EmbyClient::CLIENT_NAME);
+        $action = new InspectRequest();
+        $response = $action($context, $request);
+
+        $this->assertTrue($response->isSuccessful());
+        $this->assertSame('server-1', $response->response->getAttribute('backend')['id']);
+        $this->assertSame($payload, $response->response->getParsedBody());
+    }
+
+    public function test_rejects_invalid_json_payload_wrapper(): void
+    {
+        $request = new ServerRequest('POST', new Uri('http://mediabrowser.test'));
+        $request = $request->withParsedBody(['data' => '{']);
+
+        $context = $this->createContext(EmbyClient::CLIENT_NAME);
+        $action = new InspectRequest();
+        $response = $action($context, $request);
+
+        $this->assertFalse($response->isSuccessful());
+    }
+
     public function test_rejects_invalid_server_version(): void
     {
         $payload = [

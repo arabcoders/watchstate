@@ -160,6 +160,21 @@ final class Index
             return api_error($message, Status::BAD_REQUEST);
         }
 
+        if (true === (bool) ag($request->getAttributes(), 'webhook.noop', false)) {
+            $message = "Request from '{client}' treated as noop. No processing will be done.";
+            $this->write(
+                $request,
+                Level::Info,
+                $message,
+                context: [
+                    'client' => $client->getName(),
+                    'headers' => $request->getHeaders(),
+                ],
+                forceContext: false,
+            );
+            return api_response(Status::OK);
+        }
+
         $mainBackend = $backends[0];
         try {
             if (1 === count($backends)) {
