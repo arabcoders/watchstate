@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "6884835d925984a4d0d32f2019ed0c50828a3462",
-    "date": "2026-05-05T06:24:43+00:00",
+    "full_sha": "233230aabd84e8a524ace5c0f40dc11e7b7cb8be",
+    "date": "2026-05-05T20:49:45+00:00",
     "commits": [
+      {
+        "sha": "233230aa",
+        "full_sha": "233230aabd84e8a524ace5c0f40dc11e7b7cb8be",
+        "message": "refactor: handle emby multipart request and test events.",
+        "author": "arabcoders",
+        "date": "2026-05-05T20:49:45+00:00"
+      },
       {
         "sha": "6884835d",
         "full_sha": "6884835d925984a4d0d32f2019ed0c50828a3462",
