@@ -82,11 +82,7 @@ final class DBLayer implements LoggerAwareInterface
      */
     public function exec(string $sql, array $options = []): int|false
     {
-        $opts = [];
-
-        if (true === ag_exists($options, 'on_failure')) {
-            $opts['on_failure'] = $options['on_failure'];
-        }
+        $opts = $this->getWrapOptions($options);
 
         return $this->wrap(function (DBLayer $db) use ($sql) {
             $queryString = $sql;
@@ -111,10 +107,7 @@ final class DBLayer implements LoggerAwareInterface
      */
     public function query(PDOStatement|string $sql, array $bind = [], array $options = []): PDOStatement
     {
-        $opts = [];
-        if (true === ag_exists($options, 'on_failure')) {
-            $opts['on_failure'] = $options['on_failure'];
-        }
+        $opts = $this->getWrapOptions($options);
 
         return $this->wrap(function (DBLayer $db) use ($sql, $bind) {
             $isStatement = $sql instanceof PDOStatement;
@@ -1005,5 +998,20 @@ final class DBLayer implements LoggerAwareInterface
                     ->setLine($e->getLine());
             }
         }
+    }
+
+    private function getWrapOptions(array $options = []): array
+    {
+        $opts = [];
+
+        foreach (['on_failure', 'on_lock', 'max_sleep', 'attempts', Options::FAIL_FAST_ON_LOCK] as $key) {
+            if (true !== ag_exists($options, $key)) {
+                continue;
+            }
+
+            $opts[$key] = $options[$key];
+        }
+
+        return $opts;
     }
 }

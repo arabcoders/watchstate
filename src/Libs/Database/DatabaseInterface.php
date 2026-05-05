@@ -49,7 +49,7 @@ interface DatabaseInterface
      *
      * @return iState Return given entity with valid primary key.
      */
-    public function insert(iState $entity): iState;
+    public function insert(iState $entity, array $opts = []): iState;
 
     /**
      * Find duplicate entities.
@@ -107,7 +107,7 @@ interface DatabaseInterface
      *
      * @return iState Return the updated entity.
      */
-    public function update(iState $entity): iState;
+    public function update(iState $entity, array $opts = []): iState;
 
     /**
      * Remove entity.

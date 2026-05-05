@@ -852,6 +852,9 @@ if (!function_exists('queue_event')) {
             if (ag_exists($opts, Options::DELAY_BY) && !empty($opts[Options::DELAY_BY])) {
                 $item->options[Options::DELAY_BY] = $opts[Options::DELAY_BY];
             }
+            if (true === (bool) ag($opts, Options::FAIL_FAST_ON_LOCK, false)) {
+                $item->options[Options::FAIL_FAST_ON_LOCK] = true;
+            }
 
             if ($reference) {
                 $item->reference = $reference;
@@ -885,6 +888,9 @@ if (!function_exists('queue_event')) {
                 }
                 if (ag_exists($opts, Options::DELAY_BY) && !empty($opts[Options::DELAY_BY])) {
                     $item->options[Options::DELAY_BY] = $opts[Options::DELAY_BY];
+                }
+                if (true === (bool) ag($opts, Options::FAIL_FAST_ON_LOCK, false)) {
+                    $item->options[Options::FAIL_FAST_ON_LOCK] = true;
                 }
 
                 if (null !== ($reference = ag($opts, EventsTable::COLUMN_REFERENCE))) {

@@ -8,6 +8,7 @@ use App\Libs\Attributes\DI\Inject;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
 use App\libs\Events\DataEvent;
+use App\Libs\Exceptions\DBLayerException;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\LoggerProxy;
 use App\Libs\Extends\ProxyHandler;
@@ -16,6 +17,7 @@ use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\UserContext;
 use App\Model\Events\EventListener;
+use App\Model\Events\EventStatus;
 use Monolog\Level;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface as iLogger;
@@ -118,6 +120,7 @@ final readonly class ProcessRequestEvent
         $opts = [
             Options::IMPORT_METADATA_ONLY => (bool) ag($e->getOptions(), Options::IMPORT_METADATA_ONLY),
             Options::DISABLE_MARK_UNPLAYED => (bool) ag($e->getOptions(), Options::DISABLE_MARK_UNPLAYED),
+            Options::FAIL_FAST_ON_LOCK => (bool) ag($e->getOptions(), Options::FAIL_FAST_ON_LOCK, false),
             Options::STATE_UPDATE_EVENT => static fn(iState $state) => queue_push(
                 entity: $state,
                 userContext: $userContext,
@@ -130,9 +133,26 @@ final readonly class ProcessRequestEvent
             $opts[Options::DEBUG_TRACE] = true;
         }
 
-        $mapper->add($entity, $opts);
+        try {
+            $mapper->add($entity, $opts);
+            $mapper->commit();
+        } catch (DBLayerException $ex) {
+            if (
+                true !== (bool) ag($opts, Options::FAIL_FAST_ON_LOCK, false)
+                || false === str_contains(strtolower($ex->getMessage()), 'database is locked')
+            ) {
+                throw $ex;
+            }
 
-        $mapper->commit();
+            $writer(Level::Info, "Database is locked while processing '{user}@{backend}' request '{title}'. Re-queuing event.", [
+                'user' => $userContext->name,
+                'backend' => $entity->via,
+                'title' => $entity->getName(),
+            ]);
+
+            $e->setStatus(EventStatus::PENDING);
+        }
+
         $handler->close();
 
         return $e;
