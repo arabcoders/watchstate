@@ -1,9 +1,30 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "07711866fa721414ee93ca640c2f88411e7b2aa4",
-    "date": "2026-05-03T17:47:57+00:00",
+    "full_sha": "6884835d925984a4d0d32f2019ed0c50828a3462",
+    "date": "2026-05-05T06:24:43+00:00",
     "commits": [
+      {
+        "sha": "6884835d",
+        "full_sha": "6884835d925984a4d0d32f2019ed0c50828a3462",
+        "message": "refactor: tests",
+        "author": "arabcoders",
+        "date": "2026-05-05T06:24:43+00:00"
+      },
+      {
+        "sha": "d493cde5",
+        "full_sha": "d493cde540428af8e5466e216701220aa6705290",
+        "message": "feat: handle more locking cases in processing db.",
+        "author": "arabcoders",
+        "date": "2026-05-05T06:24:17+00:00"
+      },
+      {
+        "sha": "e253dd08",
+        "full_sha": "e253dd083c6be94897999451653d60b35390d58b",
+        "message": "feat: add CLI view for history view",
+        "author": "arabcoders",
+        "date": "2026-05-05T06:05:31+00:00"
+      },
       {
         "sha": "07711866",
         "full_sha": "07711866fa721414ee93ca640c2f88411e7b2aa4",
