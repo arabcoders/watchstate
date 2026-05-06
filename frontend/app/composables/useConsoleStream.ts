@@ -1,7 +1,8 @@
 import { computed, ref } from 'vue';
 import { useStorage } from '@vueuse/core';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
-import { request, signBody, formatCommandEcho, parse_api_response } from '~/utils';
+import { request, formatCommandEcho, parse_api_response } from '~/utils';
+import { signBody } from '~/utils/signBody';
 import type { ConsoleSessionItem, GenericError, GenericResponse, PaginatedResponse } from '~/types';
 
 type ConsoleEventMessage = {

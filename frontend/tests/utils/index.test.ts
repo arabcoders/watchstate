@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 
-import { signBody } from '~/utils/index';
+import { signBody } from '~/utils/signBody';
 
 describe('signature', () => {
   it('signs request bodies with sha256 hmac', async () => {

@@ -1,4 +1,5 @@
 import { useStorage } from '@vueuse/core';
+import { useRuntimeConfig } from '#app';
 import { computed, toRaw } from 'vue';
 import { useDialog } from '~/composables/useDialog';
 import type { GenericError, JsonObject, JsonValue, PaginationItem, RequestOptions } from '~/types';
@@ -13,8 +14,13 @@ type ToastOptions = {
   [key: string]: ToastOptionValue | undefined;
 };
 
+type ToastCtl = {
+  add: (toast: Record<string, unknown>) => unknown;
+};
+
 const AG_SEPARATOR = '.';
 const DEFAULT_TOOLTIP_DATE_FORMAT = 'YYYY-MM-DD h:mm:ss A';
+let toastCtl: ToastCtl | null = null;
 
 const tooltipDateFormatStorage = useStorage<string>(
   'tooltip_date_format',
@@ -61,6 +67,10 @@ const guid_links = {
 const YT_CH = new RegExp('(UC|HC)[a-zA-Z0-9\\-_]{22}');
 const YT_PL = new RegExp('PL[^\\[\\]]{32}|PL[^\\[\\]]{16}|(UU|FL|LP|RD)[^\\[\\]]{22}');
 
+const setToast = (controller: ToastCtl | null): void => {
+  toastCtl = controller;
+};
+
 /**
  * Get value from object or function
  */
@@ -99,6 +109,7 @@ const ag = <T = JsonValue>(obj: JsonObject, path: string, defaultValue: T = null
  * @returns {Promise<Response>}
  */
 const request = async (url: string, options: RequestOptions = {}): Promise<Response> => {
+  const runtimeConfig = useRuntimeConfig();
   const token = useStorage('token', '');
   const api_user = useStorage('api_user', 'main');
 
@@ -127,7 +138,22 @@ const request = async (url: string, options: RequestOptions = {}): Promise<Respo
     options.headers['X-User'] = api_user.value;
   }
 
-  return fetch(no_prefix ? url : `/v1/api${url}`, options);
+  const target = no_prefix
+    ? (() => {
+        if (!url.startsWith('/')) {
+          return url;
+        }
+
+        const domain = String(runtimeConfig.public.domain || '').trim();
+        if (!domain || '/' === domain) {
+          return url;
+        }
+
+        return `${domain.replace(/\/$/, '')}${url}`;
+      })()
+    : `/v1/api${url}`;
+
+  return fetch(target, options);
 };
 
 /**
@@ -215,9 +241,17 @@ const notification = (
 
   const onClose = options.onClose;
   const description = text || title;
-  const toast = useToast();
 
-  toast.add({
+  if (!toastCtl) {
+    console.warn('Notification dropped because toast controller is not ready.', {
+      type,
+      title,
+      text,
+    });
+    return;
+  }
+
+  toastCtl.add({
     title,
     description,
     color: method,
@@ -477,6 +511,50 @@ const basename = (path: string, ext: string = ''): string => {
   return base;
 };
 
+const encodePath = (item: string | null | undefined): string | null | undefined => {
+  if (!item) {
+    return item;
+  }
+
+  return item
+    .split('/')
+    .map((segment) => {
+      try {
+        const decoded = decodeURIComponent(segment);
+        const reEncoded = encodeURIComponent(decoded);
+
+        if (reEncoded === segment) {
+          return segment;
+        }
+      } catch {
+        // -- keep partially encoded segments stable while encoding the rest.
+      }
+
+      const placeholders: Array<string> = [];
+      const prefix = `_WSP${Math.random().toString(36).substring(2, 8).toUpperCase()}_`;
+      const suffix = `_WSP${Math.random().toString(36).substring(2, 8).toUpperCase()}_`;
+
+      let processed = segment.replace(/%[0-9A-Fa-f]{2}/g, (match) => {
+        const index = placeholders.length;
+        placeholders.push(match);
+        return `${prefix}${index}${suffix}`;
+      });
+
+      processed = encodeURIComponent(processed);
+
+      const placeholderRegex = new RegExp(
+        `${prefix.replace(/_/g, '_')}(\\d+)${suffix.replace(/_/g, '_')}`,
+        'g',
+      );
+
+      return processed.replace(
+        placeholderRegex,
+        (_match, index: string) => placeholders[parseInt(index, 10)] || '',
+      );
+    })
+    .join('/');
+};
+
 /**
  * Parse API response with generic type support
  * @template T The expected response type for successful requests
@@ -677,24 +755,6 @@ const getEventStatusClass = (status: number): string => {
   }
 };
 
-const signBody = async (body: string, secret: string): Promise<string> => {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-
-  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(body));
-  const hash = Array.from(new Uint8Array(signature))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('');
-
-  return `sha256=${hash}`;
-};
-
 const formatCommandEcho = (
   lastChunk: string | undefined,
   exitCode: number,
@@ -717,6 +777,7 @@ export {
   awaitElement,
   ucFirst,
   notification,
+  setToast as registerToastController,
   makeGUIDLink,
   formatDuration,
   copyText,
@@ -728,8 +789,8 @@ export {
   makePagination,
   TOOLTIP_DATE_FORMAT,
   DEFAULT_TOOLTIP_DATE_FORMAT,
-  makeSecret,
   basename,
+  encodePath,
   parse_api_response,
   goto_history_item,
   queue_event,
@@ -740,5 +801,4 @@ export {
   makeEventName,
   getEventStatusClass,
   formatCommandEcho,
-  signBody,
 };

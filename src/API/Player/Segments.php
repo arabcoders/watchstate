@@ -101,6 +101,10 @@ readonly class Segments
             return api_error(r("VAAPI device '{device}' not found.", ['device' => $vaapi_device]), Status::BAD_REQUEST);
         }
 
+        if (null !== $external && false === Subs::has($path, $external)) {
+            return api_error('Subtitle not found.', Status::BAD_REQUEST);
+        }
+
         if (null !== $external && false === file_exists($external)) {
             return api_error(r("External subtitle '{path}' not found.", ['path' => $external]), Status::NOT_FOUND);
         }

@@ -16,7 +16,6 @@ use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
 use Psr\SimpleCache\InvalidArgumentException;
 use SensitiveParameter;
-use SplFileInfo;
 use Throwable;
 
 readonly class Playlist
@@ -42,6 +41,11 @@ readonly class Playlist
         $params = DataUtil::fromRequest($request);
 
         $sConfig = (array) ag($data, 'config', []);
+        $subtitleMode = strtolower((string) ag($sConfig, 'subtitle_mode', ''));
+        $browserSubs = (bool) ag($sConfig, 'browser_subtitles', false);
+        $hasIntSub = ag_exists($sConfig, 'subtitle') && null !== ag($sConfig, 'subtitle');
+        $hasExtSub = ag_exists($sConfig, 'external') && null !== ag($sConfig, 'external');
+        $hasBurnedSubs = 'soft' !== $subtitleMode && ($hasIntSub || $hasExtSub);
 
         if (null === ($path = ag($data, 'path', null))) {
             return api_error('Path is empty.', Status::BAD_REQUEST);
@@ -55,8 +59,6 @@ readonly class Playlist
 
         $lc = require __DIR__ . '/../../../config/languageCodes.php';
 
-        $hasSelectedSubs = !empty(ag($sConfig, ['subtitle', 'external'], null));
-
         try {
             $ffprobe = ffprobe_file($path, $this->cache);
 
@@ -65,31 +67,9 @@ readonly class Playlist
             }
 
             $sConfig['duration'] = $duration;
-            $sConfig['externals'] = [];
+            $sConfig['externals'] = Subs::list($path);
             $sConfig['segment_size'] = number_format((float) $params->get('sd', self::SEGMENT_DUR), 6);
-
-            if (false === $hasSelectedSubs) {
-                // -- Include sidecar subtitles in the playlist.
-                foreach (find_side_car_files(new SplFileInfo($path)) as $sideFile) {
-                    $extension = get_extension($sideFile);
-
-                    if (false === in_array($extension, array_keys(Subtitle::FORMATS), true)) {
-                        continue;
-                    }
-
-                    preg_match('#\.(\w{2,3})\.\w{3}$#', $sideFile, $lang);
-                    $sConfig['externals'][] = [
-                        'path' => $sideFile,
-                        'title' => 'External',
-                        'language' => strtolower($lang[1] ?? 'und'),
-                        'forced' => false,
-                        'codec' => [
-                            'short' => after_last($sideFile, '.'),
-                            'long' => 'text/' . after_last($sideFile, '.'),
-                        ],
-                    ];
-                }
-            }
+            unset($sConfig['direct_play']);
 
             if (!ag_exists($sConfig, 'audio')) {
                 foreach (ag($ffprobe, 'streams', []) as $id => $stream) {
@@ -130,10 +110,12 @@ readonly class Playlist
 
             $lines = [];
             $lines[] = '#EXTM3U';
+            $hasSoftSubs = false;
+            $emitSoftSubs = false === $browserSubs && false === $hasBurnedSubs;
 
             $subtitleUrl = parse_config_value(Subtitle::URL);
 
-            if (false === $hasSelectedSubs) {
+            if ($emitSoftSubs) {
                 foreach (ag($sConfig, 'externals', []) as $id => $x) {
                     $ext = get_extension(ag($x, 'path'));
                     $file = ag($x, 'path');
@@ -173,6 +155,7 @@ readonly class Playlist
                             'index' => $id,
                         ],
                     );
+                    $hasSoftSubs = true;
                 }
 
                 foreach (ag($ffprobe, 'streams', []) as $id => $x) {
@@ -211,11 +194,12 @@ readonly class Playlist
                             'index' => $id,
                         ],
                     );
+                    $hasSoftSubs = true;
                 }
             }
 
             $lines[] = r('#EXT-X-STREAM-INF:PROGRAM-ID=1{subs}', [
-                'subs' => !empty(ag($sConfig, 'externals')) ? ',SUBTITLES="subs"' : '',
+                'subs' => true === $hasSoftSubs ? ',SUBTITLES="subs"' : '',
             ]);
 
             $lines[] = r('{api_url}/{token}/segments.m3u8', [

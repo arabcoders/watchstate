@@ -160,6 +160,26 @@ export interface RequestOptions extends Omit<RequestInit, 'headers'> {
   headers?: Record<string, string>;
 }
 
+export type PlayerSubtitleRenderer = 'native' | 'assjs';
+
+export type PlayerSubtitleDeliveryFormat = 'vtt' | 'ass';
+
+export type PlayerSubtitleDeliveryMode = 'burned' | 'soft';
+
+export interface PlayerSubtitleTrack {
+  id: string;
+  source: string;
+  kind: 'internal' | 'external';
+  label: string;
+  name: string;
+  lang: string;
+  renderer: PlayerSubtitleRenderer;
+  delivery_format: PlayerSubtitleDeliveryFormat;
+  url: string;
+  isText: boolean;
+  isBitmap: boolean;
+}
+
 /**
  * Version response structure from /api/version endpoint.
  */

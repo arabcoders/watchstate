@@ -25,12 +25,14 @@ final readonly class Subtitle
         'vtt' => 'text/vtt',
         'webvtt' => 'text/vtt',
         'srt' => 'text/srt',
-        'ass' => 'text/ass',
+        'ass' => 'text/x-ssa',
+        'ssa' => 'text/x-ssa',
     ];
 
     public const array INTERNAL_NAMING = [
         'subrip',
         'ass',
+        'ssa',
         'vtt',
     ];
 
@@ -50,6 +52,7 @@ final readonly class Subtitle
         iRequest $request,
         #[\SensitiveParameter]
         string $token,
+        string $type,
         string $source,
         string $index,
     ): iResponse {
@@ -57,22 +60,18 @@ final readonly class Subtitle
             return api_error('Token is expired or invalid.', Status::BAD_REQUEST);
         }
 
+        if (null === ($type = $this->normType($type))) {
+            return api_error('Unsupported subtitle output type.', Status::BAD_REQUEST);
+        }
+
         if ($request->hasHeader('if-modified-since')) {
             return api_response(Status::NOT_MODIFIED, headers: ['Cache-Control' => 'public, max-age=25920000']);
         }
 
         if ('x' === $source) {
-            $subtitles = ag($data, 'config.externals', []);
-            if (empty($subtitles)) {
-                return api_error('No external subtitles found.', Status::BAD_REQUEST);
-            }
-
-            $subtitle = array_filter($subtitles, static fn($s) => $s === (int) $index, ARRAY_FILTER_USE_KEY);
-            if (empty($subtitle)) {
+            if (null === $this->getExt($data, $index)) {
                 return api_error('Subtitle not found.', Status::BAD_REQUEST);
             }
-
-            $subtitle = array_shift($subtitle);
         }
 
         $subtitleUrl = parse_config_value(Subtitle::URL);
@@ -85,11 +84,12 @@ final readonly class Subtitle
         $lines[] = '#EXT-X-MEDIA-SEQUENCE:0';
 
         $lines[] = '#EXTINF:' . ag($data, 'config.duration') . ',';
-        $lines[] = r('{api_url}/{token}/{source}{index}.webvtt', [
+        $lines[] = r('{api_url}/{token}/{source}{index}.{type}', [
             'api_url' => $subtitleUrl,
             'token' => $token,
             'source' => $source,
             'index' => $index,
+            'type' => $type,
         ]);
         $lines[] = '#EXT-X-ENDLIST';
 
@@ -106,16 +106,21 @@ final readonly class Subtitle
     /**
      * @throws InvalidArgumentException
      */
-    #[Get(pattern: self::URL . '/{token}/{source:\w{1}}{index:\d{1}}.{ext:\w{3,10}}')]
+    #[Get(pattern: self::URL . '/{token}/{source:\w{1}}{index:number}.{ext:\w{3,10}}')]
     public function convert(
         iRequest $request,
         #[\SensitiveParameter]
         string $token,
         string $source,
         string $index,
+        string $ext,
     ): iResponse {
         if (null === ($data = $this->cache->get($token, null))) {
             return api_error('Token is expired or invalid.', Status::BAD_REQUEST);
+        }
+
+        if (null === ($type = $this->normType($ext))) {
+            return api_error('Unsupported subtitle output type.', Status::BAD_REQUEST);
         }
 
         if ($request->hasHeader('if-modified-since')) {
@@ -126,18 +131,9 @@ final readonly class Subtitle
 
         switch ($source) {
             case self::EXTERNAL:
-                $subtitles = ag($data, 'config.externals', []);
-                if (empty($subtitles)) {
-                    return api_error('No external subtitles found.', Status::BAD_REQUEST);
-                }
-
-                $subtitle = array_filter($subtitles, static fn($s) => $s === (int) $index, ARRAY_FILTER_USE_KEY);
-
-                if (empty($subtitle)) {
+                if (null === ($subtitle = $this->getExt($data, $index))) {
                     return api_error('Subtitle not found.', Status::BAD_REQUEST);
                 }
-
-                $subtitle = array_shift($subtitle);
 
                 if (null === ($path = ag($subtitle, 'path'))) {
                     return api_error('Subtitle path not found.', Status::BAD_REQUEST);
@@ -161,6 +157,7 @@ final readonly class Subtitle
         $response = $this->make(
             $path,
             $stream,
+            $type,
             (bool) ag($data, 'config.debug', false),
             (bool) ag($request->getQueryParams(), 'reload', false),
         );
@@ -188,8 +185,13 @@ final readonly class Subtitle
     /**
      * @throws InvalidArgumentException
      */
-    private function make(string $file, ?int $stream = null, bool $debug = false, bool $noCache = false): iResponse
-    {
+    private function make(
+        string $file,
+        ?int $stream = null,
+        string $type = 'webvtt',
+        bool $debug = false,
+        bool $noCache = false,
+    ): iResponse {
         if (false === file_exists($file)) {
             return api_error(r("Path '{path}' is not found.", ['path' => $file]), Status::NOT_FOUND);
         }
@@ -198,17 +200,16 @@ final readonly class Subtitle
             return api_error(r("Path '{path}' is not a file.", ['path' => $file]), Status::BAD_REQUEST);
         }
 
-        $type = 'webvtt';
         $size = filesize($file);
         $kStream = '';
         if (null !== $stream) {
             $kStream = ":{$stream}";
         }
 
-        $cacheKey = md5("{$file}{$kStream}:{$size}");
+        $cacheKey = md5("{$file}{$kStream}:{$size}:{$type}");
         if (false === $noCache && $this->cache->has($cacheKey)) {
             return api_response(Status::OK, Stream::create($this->cache->get($cacheKey)), [
-                'Content-Type' => 'text/vtt',
+                'Content-Type' => self::FORMATS[$type],
                 'X-Accel-Buffering' => 'no',
                 'Access-Control-Allow-Origin' => '*',
                 'Access-Control-Max-Age' => 300,
@@ -216,11 +217,11 @@ final readonly class Subtitle
             ]);
         }
 
-        if (null === $stream && !array_key_exists(get_extension($file), self::FORMATS)) {
+        if (null === $stream && !array_key_exists(strtolower((string) get_extension($file)), self::FORMATS)) {
             return api_error('Unsupported subtitle file.', Status::BAD_REQUEST);
         }
 
-        $tmpFile = sys_get_temp_dir() . '/ffmpeg_' . $cacheKey . '.' . $type;
+        $tmpFile = sys_get_temp_dir() . '/ffmpeg_' . $cacheKey . '.' . strtolower((string) get_extension($file));
         if (!file_exists($tmpFile)) {
             symlink($file, $tmpFile);
         }
@@ -288,23 +289,25 @@ final readonly class Subtitle
 
             $body = $process->getOutput();
 
-            try {
-                $vtt = VttConverter::parse($body);
-                if (!empty($vtt) && count($vtt) > 2) {
-                    $firstKey = array_key_first($vtt);
-                    $lastKey = array_key_last($vtt);
+            if ('webvtt' === $type) {
+                try {
+                    $vtt = VttConverter::parse($body);
+                    if (!empty($vtt) && count($vtt) > 2) {
+                        $firstKey = array_key_first($vtt);
+                        $lastKey = array_key_last($vtt);
 
-                    if (null !== $firstKey && null !== $lastKey && $firstKey !== $lastKey) {
-                        $firstEndTime = $vtt[$firstKey]['end'];
-                        $lastEndTime = $vtt[$lastKey]['end'];
-                        if ($firstEndTime === $lastEndTime) {
-                            unset($vtt[$firstKey]);
-                            $body = VttConverter::export($vtt);
+                        if (null !== $firstKey && null !== $lastKey && $firstKey !== $lastKey) {
+                            $firstEndTime = $vtt[$firstKey]['end'];
+                            $lastEndTime = $vtt[$lastKey]['end'];
+                            if ($firstEndTime === $lastEndTime) {
+                                unset($vtt[$firstKey]);
+                                $body = VttConverter::export($vtt);
+                            }
                         }
                     }
+                } catch (Throwable) {
+                    // -- pass subtitles as it is.
                 }
-            } catch (Throwable) {
-                // -- pass subtitles as it is.
             }
 
             $this->cache->set($cacheKey, $body);
@@ -320,6 +323,33 @@ final readonly class Subtitle
                 unlink($tmpFile);
             }
         }
+    }
+
+    private function getExt(array $data, string $index): ?array
+    {
+        $path = ag($data, 'path');
+
+        if (!is_string($path) || '' === $path) {
+            return null;
+        }
+
+        $subtitles = Subs::list(rawurldecode($path));
+        $subtitle = array_filter($subtitles, static fn($s) => $s === (int) $index, ARRAY_FILTER_USE_KEY);
+        if (empty($subtitle)) {
+            return null;
+        }
+
+        $item = array_shift($subtitle);
+        return is_array($item) ? $item : null;
+    }
+
+    private function normType(string $type): ?string
+    {
+        return match (strtolower($type)) {
+            'vtt', 'webvtt' => 'webvtt',
+            'ass', 'ssa' => 'ass',
+            default => null,
+        };
     }
 
     private function getStream(array $streams, int $index): array

@@ -245,7 +245,7 @@ import {
   getTopLevelNavigationEntries,
   getTopLevelNavigationSections,
 } from '~/utils/topLevelNavigation';
-import { dEvent, request, syncOpacity } from '~/utils';
+import { dEvent, registerToastController, request, syncOpacity } from '~/utils';
 import TaskScheduler from '~/components/TaskScheduler.vue';
 import NewVersion from '~/components/NewVersion.vue';
 import Dialog from '~/components/Dialog.vue';
@@ -310,6 +310,7 @@ const useVersionUpdate = () => {
 
 const route = useRoute();
 const colorMode = useColorMode();
+registerToastController(useToast());
 const { newVersionIsAvailable } = useVersionUpdate();
 const auth = useAuthStore();
 const breakpoints = useBreakpoints({ mobile: 0, desktop: 640 });
