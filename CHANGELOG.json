@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "cc554fc52906c16d4d77f788eb40b4ea399145ac",
-    "date": "2026-05-07T04:28:54+00:00",
+    "full_sha": "1fe729019fe30e0e09a2600dcbf814966ae9344b",
+    "date": "2026-05-07T15:30:28+00:00",
     "commits": [
+      {
+        "sha": "1fe72901",
+        "full_sha": "1fe729019fe30e0e09a2600dcbf814966ae9344b",
+        "message": "feat: link task prev run to event id",
+        "author": "arabcoders",
+        "date": "2026-05-07T15:30:28+00:00"
+      },
+      {
+        "sha": "00b6f975",
+        "full_sha": "00b6f975dfc610c364d2892a856b781f47f89357",
+        "message": "fix: add compat for v1.7.0 migrations",
+        "author": "arabcoders",
+        "date": "2026-05-07T14:15:41+00:00"
+      },
       {
         "sha": "cc554fc5",
         "full_sha": "cc554fc52906c16d4d77f788eb40b4ea399145ac",
