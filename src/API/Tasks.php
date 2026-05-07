@@ -7,6 +7,7 @@ namespace App\API;
 use App\Commands\System\TasksCommand;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Attributes\Route\Route;
+use App\Libs\Database\DBLayer;
 use App\Libs\Enums\Http\Status;
 use App\Model\Events\Event;
 use App\Model\Events\EventsRepository;
@@ -15,6 +16,7 @@ use App\Model\Events\EventStatus;
 use Cron\CronExpression;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Throwable;
 
 final class Tasks
 {
@@ -30,7 +32,7 @@ final class Tasks
         $tasks = [];
 
         foreach (TasksCommand::getTasks() as $task) {
-            $task = self::formatTask($task);
+            $task = $this->formatTask($task);
             if (true === (bool) ag($task, 'hide', false)) {
                 continue;
             }
@@ -107,7 +109,7 @@ final class Tasks
             return api_error('Task not found.', Status::NOT_FOUND);
         }
 
-        $data = Tasks::formatTask($task);
+        $data = $this->formatTask($task);
         $data['queued'] = null !== $this->isQueued(ag($task, 'name'));
 
         return api_response(Status::OK, $data);
@@ -116,6 +118,7 @@ final class Tasks
     private function formatTask(array $task): array
     {
         $isEnabled = (bool) ag($task, 'enabled', false);
+        $lastRun = $this->lastRun((string) ag($task, 'name'));
 
         $timer = ag($task, 'timer');
         assert($timer instanceof CronExpression, 'Expected CronExpression for task timer.');
@@ -126,7 +129,8 @@ final class Tasks
             'enabled' => true === $isEnabled,
             'timer' => $timer->getExpression(),
             'next_run' => null,
-            'prev_run' => null,
+            'prev_run' => null !== $lastRun ? $lastRun['time'] : null,
+            'prev_run_event_id' => null !== $lastRun ? $lastRun['id'] : null,
             'command' => ag($task, 'command'),
             'args' => ag($task, 'args'),
             'hide' => (bool) ag($task, 'hide', false),
@@ -139,17 +143,73 @@ final class Tasks
         $ff = get_env_spec('WS_CRON_' . strtoupper(ag($task, 'name')));
         $item['allow_disable'] = !empty($ff);
 
-        if (true === $isEnabled) {
-            try {
+        try {
+            if (true === $isEnabled) {
                 $item['next_run'] = make_date($timer->getNextRunDate());
-                $item['prev_run'] = make_date($timer->getPreviousRunDate());
-            } catch (\Exception) {
-                $item['next_run'] = null;
-                $item['prev_run'] = null;
             }
+        } catch (Throwable) {
+            $item['next_run'] = null;
         }
 
         return $item;
+    }
+
+    /**
+     * @return array{id:string,time:string}|null
+     */
+    private function lastRun(string $id): ?array
+    {
+        $criteria = [
+            EventsTable::COLUMN_STATUS => [
+                DBLayer::IS_IN,
+                [
+                    EventStatus::SUCCESS->value,
+                    EventStatus::FAILED->value,
+                ],
+            ],
+        ];
+
+        $getLast = function (array $query) use ($criteria): ?array {
+            $items = (clone $this->eventsRepo)
+                ->setPerpage(1)
+                ->setStart(0)
+                ->setDescendingOrder()
+                ->setSort(EventsTable::COLUMN_UPDATED_AT)
+                ->findAll([...$criteria, ...$query]);
+
+            if (!isset($items[0]) || !$items[0] instanceof Event) {
+                return null;
+            }
+
+            $event = $items[0];
+            $date = null !== $event->updated_at ? $event->updated_at : $event->created_at;
+
+            return [
+                'id' => (string) $event->id,
+                'time' => (string) $date,
+                'ts' => $date->getTimestamp(),
+            ];
+        };
+
+        $runs = array_values(array_filter([
+            $getLast([
+                EventsTable::COLUMN_EVENT => TasksCommand::NAME . '.' . $id,
+            ]),
+            $getLast([
+                EventsTable::COLUMN_EVENT => TasksCommand::NAME,
+                EventsTable::COLUMN_REFERENCE => r('task://{name}', ['name' => $id]),
+            ]),
+        ]));
+
+        if ([] === $runs) {
+            return null;
+        }
+
+        usort($runs, static fn(array $a, array $b): int => $b['ts'] <=> $a['ts']);
+
+        unset($runs[0]['ts']);
+
+        return $runs[0];
     }
 
     private function isQueued(string $id): ?Event

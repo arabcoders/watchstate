@@ -469,8 +469,10 @@ export interface TaskItem {
   enabled: boolean;
   /** Whether the task can be disabled */
   allow_disable: boolean;
-  /** Last run time (ISO string or null) */
+  /** Last actual task run time (ISO string or null) */
   prev_run: string | null;
+  /** Event id for the last actual task run */
+  prev_run_event_id?: string | null;
   /** Next run time (ISO string or null) */
   next_run: string | null;
   /** Whether the task is currently queued */

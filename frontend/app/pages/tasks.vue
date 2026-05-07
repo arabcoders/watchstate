@@ -211,16 +211,21 @@
               </div>
 
               <div class="min-w-0 sm:ml-auto sm:text-right">
-                <template v-if="task.enabled">
-                  <UTooltip
-                    v-if="task.prev_run"
-                    :text="`Last run was at: ${moment(task.prev_run).format(TOOLTIP_DATE_FORMAT)}`"
+                <UTooltip
+                  v-if="task.prev_run"
+                  :text="`Last run was at: ${moment(task.prev_run).format(TOOLTIP_DATE_FORMAT)}`"
+                >
+                  <button
+                    v-if="task.prev_run_event_id"
+                    type="button"
+                    class="cursor-help text-primary underline underline-offset-2"
+                    @click="selectedEventId = task.prev_run_event_id"
                   >
-                    <span class="cursor-help">{{ moment(task.prev_run).fromNow() }}</span>
-                  </UTooltip>
-                  <span v-else>Unknown</span>
-                </template>
-                <span v-else class="text-toned">Disabled</span>
+                    {{ moment(task.prev_run).fromNow() }}
+                  </button>
+                  <span v-else class="cursor-help">{{ moment(task.prev_run).fromNow() }}</span>
+                </UTooltip>
+                <span v-else>-</span>
               </div>
             </div>
           </div>
@@ -315,22 +320,38 @@
           <span><UIcon name="i-lucide-settings-2" class="inline size-4 align-text-bottom" /></span>
           <strong>Env</strong> page to edit the related environment variable.
         </li>
+        <li>
+          Clicking on <strong>Prev Run</strong> time will open the event details if the previous run
+          is available.
+        </li>
       </ul>
     </UCard>
+
+    <UModal v-model:open="eventViewOpen" :title="eventViewTitle" :ui="eventViewModalUi">
+      <template #body>
+        <EventView
+          v-if="selectedEventId"
+          :id="selectedEventId"
+          @delete="() => void closeEventView()"
+        />
+      </template>
+    </UModal>
   </main>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { navigateTo, useHead, useRoute } from '#app';
 import { useStorage } from '@vueuse/core';
 import cronstrue from 'cronstrue';
 import moment from 'moment';
+import EventView from '~/components/EventView.vue';
 import { useDialog } from '~/composables/useDialog';
 import type { GenericError, GenericResponse, TaskItem } from '~/types';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import {
   awaitElement,
+  makeEventName,
   makeConsoleCommand,
   notification,
   parse_api_response,
@@ -347,6 +368,7 @@ const dialog = useDialog();
 const tasks = ref<Array<TaskItem>>([]);
 const queued = ref<Array<string>>([]);
 const isLoading = ref<boolean>(false);
+const selectedEventId = ref<string | null>(null);
 const show_page_tips = useStorage<boolean>('show_page_tips', true);
 
 const taskCardUi = {
@@ -364,6 +386,24 @@ const tipsCardUi = {
   header: 'p-4',
   body: 'px-4 pb-4 pt-0',
 };
+
+const eventViewModalUi = {
+  content: 'max-w-5xl',
+  body: 'p-4 sm:p-5',
+};
+
+const eventViewOpen = computed({
+  get: () => null !== selectedEventId.value,
+  set: (value: boolean) => {
+    if (false === value) {
+      selectedEventId.value = null;
+    }
+  },
+});
+
+const eventViewTitle = computed(() =>
+  null === selectedEventId.value ? 'Event' : `#${makeEventName(selectedEventId.value)}`,
+);
 
 const loadContent = async (): Promise<void> => {
   isLoading.value = true;
@@ -505,5 +545,10 @@ const makeEnvLink = (key: string, val: string | null = null): string => {
 
 const toConsoleCmd = async (task: TaskItem): Promise<void> => {
   await navigateTo(makeConsoleCommand(`${task.command} ${task.args || ''}`));
+};
+
+const closeEventView = async (): Promise<void> => {
+  selectedEventId.value = null;
+  await loadContent();
 };
 </script>
