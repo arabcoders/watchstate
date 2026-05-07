@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\API\Webhook;
 
 use App\Backends\Common\ClientInterface as iClient;
+use App\Commands\System\TasksCommand;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\Config;
@@ -21,12 +22,14 @@ use App\Libs\Uri;
 use App\Libs\UserContext;
 use App\Listeners\ProcessRequestEvent;
 use App\Model\Events\EventsTable;
+use DateInterval;
 use Monolog\Handler\StreamHandler;
 use Monolog\Level;
 use Monolog\Logger;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Log\LoggerInterface as iLogger;
+use Psr\SimpleCache\CacheInterface as iCache;
 use Psr\SimpleCache\InvalidArgumentException;
 use Throwable;
 
@@ -42,6 +45,7 @@ final class Index
         #[Inject(DirectMapper::class)]
         private readonly iImport $mapper,
         private readonly iLogger $logger,
+        private readonly iCache $cache,
         LogSuppressor $suppressor,
     ) {
         $this->logfile = new Logger(name: 'webhook', processors: [new LogMessageProcessor()]);
@@ -158,6 +162,21 @@ final class Index
                 forceContext: true,
             );
             return api_error($message, Status::BAD_REQUEST);
+        }
+
+        if (true === (bool) ag($request->getAttributes(), 'webhook.noop', false)) {
+            $message = "Request from '{client}' treated as noop. No processing will be done.";
+            $this->write(
+                $request,
+                Level::Info,
+                $message,
+                context: [
+                    'client' => $client->getName(),
+                    'headers' => $request->getHeaders(),
+                ],
+                forceContext: false,
+            );
+            return api_response(Status::OK);
         }
 
         $mainBackend = $backends[0];
@@ -388,7 +407,7 @@ final class Index
             'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
         ]);
 
-        queue_event(ProcessRequestEvent::NAME, $entity->getAll(), [
+        $opts = [
             'unique' => true,
             EventsTable::COLUMN_REFERENCE => $itemId,
             EventsTable::COLUMN_OPTIONS => [
@@ -399,8 +418,52 @@ final class Index
                 Options::IS_GENERIC => $isGeneric,
             ],
             Options::CONTEXT_USER => $userContext->name,
-        ]);
+            Options::FAIL_FAST_ON_LOCK => true,
+        ];
+        $cacheTime = new DateInterval('PT6H');
 
+        $queue = false;
+        $payload = $entity->getAll();
+
+        if (true === (bool) $this->cache->get(TasksCommand::CACHE_NAME, false)) {
+            $queue = true;
+            $events = $this->cache->get('events', []);
+            $opts[EventsTable::COLUMN_CREATED_AT] = make_date();
+            $opts['cached'] = true;
+            $cachedEvent = [
+                'event' => ProcessRequestEvent::NAME,
+                'data' => $payload,
+                'opts' => $opts,
+            ];
+
+            foreach ($events as $index => $queued) {
+                if ($itemId !== ag($queued, 'opts.' . EventsTable::COLUMN_REFERENCE)) {
+                    continue;
+                }
+
+                $events[$index] = $cachedEvent;
+                $this->cache->set('events', $events, $cacheTime);
+                return $this->writeResponse($request, $userContext, $entity, $itemId, $isGeneric, $queue);
+            }
+
+            $events[] = $cachedEvent;
+            $this->cache->set('events', $events, $cacheTime);
+            return $this->writeResponse($request, $userContext, $entity, $itemId, $isGeneric, $queue);
+        }
+
+        queue_event(ProcessRequestEvent::NAME, $payload, $opts);
+
+        return $this->writeResponse($request, $userContext, $entity, $itemId, $isGeneric, $queue);
+    }
+
+    private function writeResponse(
+        iRequest $request,
+        UserContext $userContext,
+        iState $entity,
+        string $itemId,
+        bool $isGeneric,
+        bool $queue,
+    ): iResponse {
         $this->write(
             request: $request,
             level: Level::Info,
@@ -421,6 +484,7 @@ final class Index
                     'queue_id' => $itemId,
                     'progress' => $entity->hasPlayProgress() ? $entity->getPlayProgress() : null,
                     'generic' => $isGeneric,
+                    'live' => false === $queue,
                 ]),
             ],
         );

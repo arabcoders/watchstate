@@ -12,9 +12,12 @@ use App\Libs\Uri;
 use Monolog\Handler\NullHandler;
 use Monolog\Logger;
 use Nyholm\Psr7\ServerRequest;
+use Tests\Support\MediaBrowserContextTestSupport;
 
 class ParseWebhookTest extends TestCase
 {
+    use MediaBrowserContextTestSupport;
+
     public function test_rejects_unsupported_type(): void
     {
         $payload = [
@@ -23,7 +26,7 @@ class ParseWebhookTest extends TestCase
         ];
 
         $request = (new ServerRequest('POST', new Uri('http://mediabrowser.test')))->withParsedBody($payload);
-        $context = $this->createContext();
+        $context = $this->createContext(EmbyClient::CLIENT_NAME);
         $logger = new Logger('test', [new NullHandler()]);
 
         $action = new ParseWebhook($logger);
@@ -41,7 +44,7 @@ class ParseWebhookTest extends TestCase
         ];
 
         $request = (new ServerRequest('POST', new Uri('http://mediabrowser.test')))->withParsedBody($payload);
-        $context = $this->createContext();
+        $context = $this->createContext(EmbyClient::CLIENT_NAME);
         $logger = new Logger('test', [new NullHandler()]);
 
         $action = new ParseWebhook($logger);
@@ -51,17 +54,4 @@ class ParseWebhookTest extends TestCase
         $this->assertSame(200, $response->extra['http_code']);
     }
 
-    private function createContext(): \App\Backends\Common\Context
-    {
-        $cache = new \App\Backends\Common\Cache(new \Monolog\Logger('test'), new \Symfony\Component\Cache\Psr16Cache(new \Symfony\Component\Cache\Adapter\ArrayAdapter()));
-        $userContext = $this->createUserContext(EmbyClient::CLIENT_NAME);
-
-        return new \App\Backends\Common\Context(
-            clientName: EmbyClient::CLIENT_NAME,
-            backendName: EmbyClient::CLIENT_NAME,
-            backendUrl: new Uri('http://mediabrowser.test'),
-            cache: $cache,
-            userContext: $userContext,
-        );
-    }
 }

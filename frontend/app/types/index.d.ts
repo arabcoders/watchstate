@@ -160,6 +160,26 @@ export interface RequestOptions extends Omit<RequestInit, 'headers'> {
   headers?: Record<string, string>;
 }
 
+export type PlayerSubtitleRenderer = 'native' | 'assjs';
+
+export type PlayerSubtitleDeliveryFormat = 'vtt' | 'ass';
+
+export type PlayerSubtitleDeliveryMode = 'burned' | 'soft';
+
+export interface PlayerSubtitleTrack {
+  id: string;
+  source: string;
+  kind: 'internal' | 'external';
+  label: string;
+  name: string;
+  lang: string;
+  renderer: PlayerSubtitleRenderer;
+  delivery_format: PlayerSubtitleDeliveryFormat;
+  url: string;
+  isText: boolean;
+  isBitmap: boolean;
+}
+
 /**
  * Version response structure from /api/version endpoint.
  */
@@ -449,8 +469,10 @@ export interface TaskItem {
   enabled: boolean;
   /** Whether the task can be disabled */
   allow_disable: boolean;
-  /** Last run time (ISO string or null) */
+  /** Last actual task run time (ISO string or null) */
   prev_run: string | null;
+  /** Event id for the last actual task run */
+  prev_run_event_id?: string | null;
   /** Next run time (ISO string or null) */
   next_run: string | null;
   /** Whether the task is currently queued */

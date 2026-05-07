@@ -145,6 +145,9 @@ return (function () {
 
     $isMemory = 'MEMORY' === env('WS_DB_MODE', 'WAL');
     $pragma = [
+        // -- To allow rollback to v1.7.0.
+        'PRAGMA user_version=1761320000',
+        // -- End
         'PRAGMA busy_timeout=5000',
         'PRAGMA journal_mode=' . ($isMemory ? 'MEMORY' : 'WAL'),
         'PRAGMA synchronous=' . ($isMemory ? 'OFF' : 'NORMAL'),

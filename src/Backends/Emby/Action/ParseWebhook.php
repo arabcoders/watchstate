@@ -71,7 +71,12 @@ final class ParseWebhook
     /**
      * @var array<string> Generic events that may not contain user id.
      */
-    public const array WEBHOOK_GENERIC_EVENTS = ['library.new'];
+    public const array WEBHOOK_GENERIC_EVENTS = ['library.new', 'system.notificationtest'];
+
+    /**
+     * @var array<string> Events that should be accepted and ignored.
+     */
+    public const array WEBHOOK_NOOP_EVENTS = ['system.notificationtest'];
 
     public function __construct(
         private iLogger $logger,

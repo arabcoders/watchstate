@@ -705,12 +705,12 @@ class MemoryMapper implements ImportInterface
 
                     if (null === $entity->id) {
                         if (false === $inDryRunMode) {
-                            $db->insert($entity);
+                            $db->insert($entity, $this->options);
                         }
                         $list[$entity->type]['added']++;
                     } else {
                         if (false === $inDryRunMode) {
-                            $db->update($entity);
+                            $db->update($entity, $this->options);
                         }
                         $list[$entity->type]['updated']++;
                     }

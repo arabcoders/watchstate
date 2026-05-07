@@ -12,12 +12,14 @@ use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Options;
 use App\Libs\TestCase;
 use Monolog\Logger;
-use PDO;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
+use Tests\Support\DatabaseAssertionTrait;
 
 final class IndexCommandTest extends TestCase
 {
+    use DatabaseAssertionTrait;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -94,19 +96,5 @@ final class IndexCommandTest extends TestCase
         $application->addCommand($command);
 
         return new CommandTester($application->find(IndexCommand::ROUTE));
-    }
-
-    private function assertDbHasCoreTables(string $file): void
-    {
-        self::assertFileExists($file);
-
-        $pdo = new PDO('sqlite:' . $file);
-        $tables = $pdo->query("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")?->fetchAll(PDO::FETCH_COLUMN);
-
-        self::assertContains('events', $tables);
-        self::assertContains('migration_version', $tables);
-        self::assertContains('playlist_items', $tables);
-        self::assertContains('playlists', $tables);
-        self::assertContains('state', $tables);
     }
 }

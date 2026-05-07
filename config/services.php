@@ -250,9 +250,9 @@ return (function (): array {
         ],
 
         DBLayer::class => [
-            'class' => fn(DatabaseConnection $connection): DBLayer => new DBLayer($connection),
+            'class' => fn(PDO $pdo): DBLayer => new DBLayer($pdo),
             'args' => [
-                DatabaseConnection::class,
+                PDO::class,
             ],
         ],
 

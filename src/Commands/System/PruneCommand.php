@@ -161,7 +161,7 @@ class PruneCommand extends Command
         if (count($run) < 1) {
             $output->writeln(r('<info>[{datetime}] No pruners scheduled to run at this time.</info>', [
                 'datetime' => make_date(),
-            ]), OutputInterface::VERBOSITY_VERBOSE);
+            ]), OutputInterface::VERBOSITY_DEBUG);
         }
 
         foreach ($run as $pruner) {

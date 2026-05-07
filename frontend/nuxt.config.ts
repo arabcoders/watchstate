@@ -91,7 +91,7 @@ export default defineNuxtConfig({
         '@vue/devtools-core',
         '@vue/devtools-kit',
         'hls.js',
-        'plyr',
+        'assjs',
         'marked',
         'marked-base-url',
         'marked-alert',

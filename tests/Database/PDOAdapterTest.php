@@ -12,6 +12,7 @@ use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\DBAdapterException as DBException;
+use App\Libs\Exceptions\DBLayerException;
 use App\Libs\Guid;
 use App\Libs\Options;
 use App\Libs\TestCase;
@@ -20,9 +21,12 @@ use DateTimeImmutable;
 use Monolog\Logger;
 use PDO;
 use Psr\SimpleCache\CacheInterface;
+use Tests\Support\SQLiteDbTestSupport;
 
 class PDOAdapterTest extends TestCase
 {
+    use SQLiteDbTestSupport;
+
     private array $testMovie = [];
     private array $testEpisode = [];
 
@@ -319,6 +323,63 @@ class PDOAdapterTest extends TestCase
         );
     }
 
+    public function test_insert_lock_fast(): void
+    {
+        $logger = new Logger('logger');
+        $this->initTempDir();
+        [$db, , $path] = $this->createFileDb($logger, self::$tmpPath . '/lock-insert.db');
+        $db->setOptions([
+            Options::DEBUG_TRACE => true,
+            'class' => new StateEntity([]),
+        ]);
+        $db->setLogger($logger);
+
+        $lock = $this->openSqliteFile($path);
+        $lock->exec('BEGIN EXCLUSIVE');
+
+        try {
+            $this->checkException(
+                closure: fn() => $db->insert(new StateEntity($this->testEpisode), [Options::FAIL_FAST_ON_LOCK => true]),
+                reason: 'Fail-fast lock errors should bubble out of insert.',
+                exception: DBLayerException::class,
+                exceptionMessage: 'database is locked',
+            );
+        } finally {
+            if (true === $lock->inTransaction()) {
+                $lock->rollBack();
+            }
+        }
+    }
+
+    public function test_update_lock_fast(): void
+    {
+        $logger = new Logger('logger');
+        $this->initTempDir();
+        [$db, , $path] = $this->createFileDb($logger, self::$tmpPath . '/lock-update.db');
+        $db->setOptions([
+            Options::DEBUG_TRACE => true,
+            'class' => new StateEntity([]),
+        ]);
+        $db->setLogger($logger);
+
+        $item = $db->insert(new StateEntity($this->testEpisode));
+        $lock = $this->openSqliteFile($path);
+        $lock->exec('BEGIN EXCLUSIVE');
+
+        try {
+            $this->checkException(
+                closure: fn() => $db->update($item, [Options::FAIL_FAST_ON_LOCK => true]),
+                reason: 'Fail-fast lock errors should bubble out of update.',
+                exception: DBLayerException::class,
+                exceptionMessage: 'database is locked',
+            );
+        } finally {
+            if (true === $lock->inTransaction()) {
+                $lock->rollBack();
+            }
+        }
+    }
+
     public function test_duplicates_uses_cache(): void
     {
         $cache = $this->makeCacheStub();
@@ -512,7 +573,7 @@ class PDOAdapterTest extends TestCase
         ]);
 
         $pdo = new PDO('sqlite::memory:');
-        $db = new PDOAdapter(new Logger('logger'), new DBLayer($this->createConnection($pdo)));
+        $db = new PDOAdapter(new Logger('logger'), new DBLayer($pdo));
         $migrations = new PackageMigrationFactory();
         $expected = $this->expectedManagedIndexes(['test_plex', 'test_jellyfin']);
 

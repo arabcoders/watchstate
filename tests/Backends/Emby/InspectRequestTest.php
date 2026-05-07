@@ -9,9 +9,12 @@ use App\Backends\Emby\EmbyClient;
 use App\Libs\TestCase;
 use App\Libs\Uri;
 use Nyholm\Psr7\ServerRequest;
+use Tests\Support\MediaBrowserContextTestSupport;
 
 class InspectRequestTest extends TestCase
 {
+    use MediaBrowserContextTestSupport;
+
     public function test_parses_payload_attrs(): void
     {
         $payload = [
@@ -24,7 +27,7 @@ class InspectRequestTest extends TestCase
         $request = new ServerRequest('POST', new Uri('http://mediabrowser.test'));
         $request = $request->withParsedBody($payload);
 
-        $context = $this->createContext();
+        $context = $this->createContext(EmbyClient::CLIENT_NAME);
         $action = new InspectRequest();
         $response = $action($context, $request);
 
@@ -48,12 +51,45 @@ class InspectRequestTest extends TestCase
         $request = new ServerRequest('POST', new Uri('http://mediabrowser.test'));
         $request = $request->withParsedBody($payload);
 
-        $context = $this->createContext();
+        $context = $this->createContext(EmbyClient::CLIENT_NAME);
         $action = new InspectRequest();
         $response = $action($context, $request);
 
         $this->assertTrue($response->isSuccessful());
         $this->assertSame('server-1', $response->response->getAttribute('backend')['id']);
+    }
+
+    public function test_handles_json_payload_wrapper(): void
+    {
+        $payload = [
+            'Server' => ['Id' => 'server-1', 'Name' => 'Emby', 'Version' => '4.9.2.6'],
+            'User' => ['Id' => 'user-1', 'Name' => 'Test User'],
+            'Item' => ['Id' => 'item-1', 'Type' => EmbyClient::TYPE_MOVIE],
+            'Event' => 'playback.start',
+        ];
+
+        $request = new ServerRequest('POST', new Uri('http://mediabrowser.test'));
+        $request = $request->withParsedBody(['data' => json_encode($payload, JSON_THROW_ON_ERROR)]);
+
+        $context = $this->createContext(EmbyClient::CLIENT_NAME);
+        $action = new InspectRequest();
+        $response = $action($context, $request);
+
+        $this->assertTrue($response->isSuccessful());
+        $this->assertSame('server-1', $response->response->getAttribute('backend')['id']);
+        $this->assertSame($payload, $response->response->getParsedBody());
+    }
+
+    public function test_rejects_invalid_json_payload_wrapper(): void
+    {
+        $request = new ServerRequest('POST', new Uri('http://mediabrowser.test'));
+        $request = $request->withParsedBody(['data' => '{']);
+
+        $context = $this->createContext(EmbyClient::CLIENT_NAME);
+        $action = new InspectRequest();
+        $response = $action($context, $request);
+
+        $this->assertFalse($response->isSuccessful());
     }
 
     public function test_rejects_invalid_server_version(): void
@@ -68,24 +104,11 @@ class InspectRequestTest extends TestCase
         $request = new ServerRequest('POST', new Uri('http://mediabrowser.test'));
         $request = $request->withParsedBody($payload);
 
-        $context = $this->createContext();
+        $context = $this->createContext(EmbyClient::CLIENT_NAME);
         $action = new InspectRequest();
         $response = $action($context, $request);
 
         $this->assertFalse($response->isSuccessful());
     }
 
-    private function createContext(): \App\Backends\Common\Context
-    {
-        $cache = new \App\Backends\Common\Cache(new \Monolog\Logger('test'), new \Symfony\Component\Cache\Psr16Cache(new \Symfony\Component\Cache\Adapter\ArrayAdapter()));
-        $userContext = $this->createUserContext(EmbyClient::CLIENT_NAME);
-
-        return new \App\Backends\Common\Context(
-            clientName: EmbyClient::CLIENT_NAME,
-            backendName: EmbyClient::CLIENT_NAME,
-            backendUrl: new Uri('http://mediabrowser.test'),
-            cache: $cache,
-            userContext: $userContext,
-        );
-    }
 }

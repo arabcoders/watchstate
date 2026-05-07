@@ -17,7 +17,10 @@ use App\Model\Events\EventsRepository;
 use App\Model\Events\EventStatus;
 use Closure;
 use Cron\CronExpression;
+use DateInterval;
 use Exception;
+use Psr\Log\LoggerInterface as iLogger;
+use Psr\SimpleCache\CacheInterface as iCache;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\ArrayInput;
@@ -41,6 +44,9 @@ final class TasksCommand extends Command
     public const string CNAME = 'run_console';
     public const string ROUTE = 'system:tasks';
 
+    public const string CACHE_NAME = 'tasks.running';
+    public const string CACHE_TIME = 'PT6H';
+
     private array $logs = [];
     private array $taskOutput = [];
 
@@ -57,6 +63,8 @@ final class TasksCommand extends Command
     public function __construct(
         private readonly EventsRepository $eventsRepo,
         private readonly LogSuppressor $suppressor,
+        private readonly iCache $cache,
+        private readonly iLogger $logger,
     ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
@@ -295,6 +303,7 @@ final class TasksCommand extends Command
      */
     private function runTasks(iInput $input, iOutput $output): int
     {
+        $cacheTTL = new DateInterval(self::CACHE_TIME);
         $run = [];
         $tasks = self::getTasks();
 
@@ -326,10 +335,18 @@ final class TasksCommand extends Command
             $output->writeln(r('<info>[{datetime}] No task scheduled to run at this time.</info>', [
                 'datetime' => make_date(),
             ]), iOutput::VERBOSITY_VERBOSE);
+
+            return self::SUCCESS;
         }
 
-        foreach ($run as $task) {
-            $this->runTask($task, $input, $output);
+        $this->cache->set(self::CACHE_NAME, true, $cacheTTL);
+
+        try {
+            foreach ($run as $task) {
+                $this->runTask($task, $input, $output);
+            }
+        } finally {
+            $this->cache->delete(self::CACHE_NAME);
         }
 
         if ($input->getOption('save-log') && count($this->logs) >= 1) {

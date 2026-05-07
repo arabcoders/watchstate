@@ -122,7 +122,7 @@ class TestCase extends \PHPUnit\Framework\TestCase
     {
         $logger ??= new Logger('test', [new NullHandler()]);
         $pdo = new PDO('sqlite::memory:');
-        $db = new PDOAdapter($logger, new DBLayer($this->createConnection($pdo)));
+        $db = new PDOAdapter($logger, new DBLayer($pdo));
 
         $migrations = new PackageMigrationFactory();
         if (false === $migrations->isMigrated($pdo)) {

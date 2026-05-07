@@ -10,9 +10,12 @@ use App\Libs\TestCase;
 use App\Libs\Uri;
 use Nyholm\Psr7\ServerRequest;
 use Nyholm\Psr7\Stream;
+use Tests\Support\MediaBrowserContextTestSupport;
 
 class InspectRequestTest extends TestCase
 {
+    use MediaBrowserContextTestSupport;
+
     public function test_parses_json_attrs(): void
     {
         $payload = [
@@ -36,7 +39,7 @@ class InspectRequestTest extends TestCase
         );
         $request = $request->withBody(Stream::create(json_encode($payload)));
 
-        $context = $this->createContext();
+        $context = $this->createContext(JellyfinClient::CLIENT_NAME);
         $action = new InspectRequest();
         $response = $action($context, $request);
 
@@ -52,24 +55,11 @@ class InspectRequestTest extends TestCase
         $request = new ServerRequest('POST', new Uri('http://mediabrowser.test'));
         $request = $request->withHeader('User-Agent', 'OtherClient/1.0');
 
-        $context = $this->createContext();
+        $context = $this->createContext(JellyfinClient::CLIENT_NAME);
         $action = new InspectRequest();
         $response = $action($context, $request);
 
         $this->assertFalse($response->isSuccessful());
     }
 
-    private function createContext(): \App\Backends\Common\Context
-    {
-        $cache = new \App\Backends\Common\Cache(new \Monolog\Logger('test'), new \Symfony\Component\Cache\Psr16Cache(new \Symfony\Component\Cache\Adapter\ArrayAdapter()));
-        $userContext = $this->createUserContext(JellyfinClient::CLIENT_NAME);
-
-        return new \App\Backends\Common\Context(
-            clientName: JellyfinClient::CLIENT_NAME,
-            backendName: JellyfinClient::CLIENT_NAME,
-            backendUrl: new Uri('http://mediabrowser.test'),
-            cache: $cache,
-            userContext: $userContext,
-        );
-    }
 }

@@ -810,62 +810,96 @@ if (!function_exists('queue_event')) {
         $repo = ag($opts, EventsRepository::class, fn() => Container::get(EventsRepository::class));
         assert($repo instanceof EventsRepository, 'Expected EventsRepository for queue event.');
 
-        $item = null;
-        if (null !== ($reference = ag($opts, EventsTable::COLUMN_REFERENCE))) {
-            $criteria = [];
-            $isUnique = (bool) ag($opts, 'unique', false);
-
-            if (false === $isUnique) {
-                $criteria[EventsTable::COLUMN_STATUS] = EventStatus::PENDING->value;
-            }
-
-            if (null !== ($refItem = $repo->findByReference($reference, $criteria)) && true === $isUnique) {
-                $repo->remove($refItem);
-            } else {
-                $item = $refItem;
-            }
-
-            unset($refItem);
-        }
-
-        $item ??= $repo->getObject([]);
-        $item->event = $event;
-        $item->status = EventStatus::PENDING;
-        $item->event_data = $data;
-        if (ag_exists($opts, EventsTable::COLUMN_CREATED_AT)) {
-            $item->created_at = $opts[EventsTable::COLUMN_CREATED_AT];
-        } else {
-            $item->created_at = make_date();
-        }
-
-        $item->options = [
-            'class' => ag($opts, 'class', DataEvent::class),
-        ];
-
-        if (ag_exists($opts, EventsTable::COLUMN_OPTIONS) && is_array($opts[EventsTable::COLUMN_OPTIONS])) {
-            $item->options = array_replace_recursive($opts[EventsTable::COLUMN_OPTIONS], $item->options);
-        }
-
-        if (ag_exists($opts, Options::CONTEXT_USER) && !empty($opts[Options::CONTEXT_USER])) {
-            $item->options[Options::CONTEXT_USER] = $opts[Options::CONTEXT_USER];
-        }
-        if (ag_exists($opts, Options::DELAY_BY) && !empty($opts[Options::DELAY_BY])) {
-            $item->options[Options::DELAY_BY] = $opts[Options::DELAY_BY];
-        }
-
-        if ($reference) {
-            $item->reference = $reference;
-        }
-
+        $item = $repo->getObject([]);
         try {
-            $id = $repo->save($item);
+            if (null !== ($reference = ag($opts, EventsTable::COLUMN_REFERENCE))) {
+                $criteria = [];
+                $isUnique = (bool) ag($opts, 'unique', false);
+
+                if (false === $isUnique) {
+                    $criteria[EventsTable::COLUMN_STATUS] = EventStatus::PENDING->value;
+                }
+
+                if (null !== ($refItem = $repo->findByReference($reference, $criteria, $opts)) && true === $isUnique) {
+                    $repo->remove($refItem, $opts);
+                } else {
+                    $item = $refItem ?? $item;
+                }
+
+                unset($refItem);
+            }
+
+            $item->event = $event;
+            $item->status = EventStatus::PENDING;
+            $item->event_data = $data;
+            if (ag_exists($opts, EventsTable::COLUMN_CREATED_AT)) {
+                $item->created_at = $opts[EventsTable::COLUMN_CREATED_AT];
+            } else {
+                $item->created_at = make_date();
+            }
+
+            $item->options = [
+                'class' => ag($opts, 'class', DataEvent::class),
+            ];
+
+            if (ag_exists($opts, EventsTable::COLUMN_OPTIONS) && is_array($opts[EventsTable::COLUMN_OPTIONS])) {
+                $item->options = array_replace_recursive($opts[EventsTable::COLUMN_OPTIONS], $item->options);
+            }
+
+            if (ag_exists($opts, Options::CONTEXT_USER) && !empty($opts[Options::CONTEXT_USER])) {
+                $item->options[Options::CONTEXT_USER] = $opts[Options::CONTEXT_USER];
+            }
+            if (ag_exists($opts, Options::DELAY_BY) && !empty($opts[Options::DELAY_BY])) {
+                $item->options[Options::DELAY_BY] = $opts[Options::DELAY_BY];
+            }
+            if (true === (bool) ag($opts, Options::FAIL_FAST_ON_LOCK, false)) {
+                $item->options[Options::FAIL_FAST_ON_LOCK] = true;
+            }
+
+            if ($reference) {
+                $item->reference = $reference;
+            }
+
+            $id = $repo->save($item, $opts);
             $item->id = $id;
         } catch (PDOException $e) {
             // sometimes our sqlite db get locked due to multiple writes.
             // and the db retry logic will time out, to save the event we fall back to cache store.
             if (false === ag_exists($opts, 'cached') && false !== stripos($e->getMessage(), 'database is locked')) {
+                $item->event = $event;
+                $item->status = EventStatus::PENDING;
+                $item->event_data = $data;
+                if (ag_exists($opts, EventsTable::COLUMN_CREATED_AT)) {
+                    $item->created_at = $opts[EventsTable::COLUMN_CREATED_AT];
+                } else {
+                    $item->created_at = make_date();
+                }
+
+                $item->options = [
+                    'class' => ag($opts, 'class', DataEvent::class),
+                ];
+
+                if (ag_exists($opts, EventsTable::COLUMN_OPTIONS) && is_array($opts[EventsTable::COLUMN_OPTIONS])) {
+                    $item->options = array_replace_recursive($opts[EventsTable::COLUMN_OPTIONS], $item->options);
+                }
+
+                if (ag_exists($opts, Options::CONTEXT_USER) && !empty($opts[Options::CONTEXT_USER])) {
+                    $item->options[Options::CONTEXT_USER] = $opts[Options::CONTEXT_USER];
+                }
+                if (ag_exists($opts, Options::DELAY_BY) && !empty($opts[Options::DELAY_BY])) {
+                    $item->options[Options::DELAY_BY] = $opts[Options::DELAY_BY];
+                }
+                if (true === (bool) ag($opts, Options::FAIL_FAST_ON_LOCK, false)) {
+                    $item->options[Options::FAIL_FAST_ON_LOCK] = true;
+                }
+
+                if (null !== ($reference = ag($opts, EventsTable::COLUMN_REFERENCE))) {
+                    $item->reference = $reference;
+                }
+
                 $cache = Container::get(iCache::class);
                 $events = $cache->get('events', []);
+                unset($opts[EventsRepository::class]);
                 $opts[EventsTable::COLUMN_CREATED_AT] = make_date();
                 $opts['cached'] = true;
                 $events[] = ['event' => $event, 'data' => $data, 'opts' => $opts];
@@ -1400,10 +1434,7 @@ if (!function_exists('per_user_db')) {
      */
     function make_db_adapter(PDO $pdo): iDB
     {
-        $connection = new DatabaseConnection($pdo, DialectFactory::fromPdo($pdo));
-        $db = new DBLayer($connection);
-
-        return new PDOAdapter(Container::get(iLogger::class), $db);
+        return new PDOAdapter(Container::get(iLogger::class), new DBLayer($pdo));
     }
 }
 

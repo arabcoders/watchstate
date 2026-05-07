@@ -12,10 +12,12 @@ use App\Libs\Enums\Http\Status;
 use App\Libs\Middlewares\AuthorizationMiddleware;
 use App\Libs\TokenUtil;
 use App\Libs\TestCase;
+use Tests\Support\AuthTokenTestSupport;
 use Tests\Support\RequestResponseTrait;
 
 class AuthorizationMiddlewareTest extends TestCase
 {
+    use AuthTokenTestSupport;
     use RequestResponseTrait;
 
     public function __destruct()
@@ -167,13 +169,4 @@ class AuthorizationMiddlewareTest extends TestCase
 
         Config::reset();
     }
-
-    private function makeUserToken(array $payload): string
-    {
-        $json = json_encode($payload);
-        $this->assertNotFalse($json, 'User token payload JSON encoding should succeed in tests.');
-
-        return TokenUtil::encode(TokenUtil::sign($json) . '.' . $json);
-    }
-
 }

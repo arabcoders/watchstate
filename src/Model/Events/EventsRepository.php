@@ -8,7 +8,7 @@ use App\Model\Base\Traits\UsesBasicRepository;
 use App\Model\Events\Event as EntityItem;
 use App\Model\Events\EventsTable as EntityTable;
 
-final class EventsRepository
+class EventsRepository
 {
     use UsesBasicRepository;
 
@@ -35,10 +35,11 @@ final class EventsRepository
      *
      * @param string|int $reference Reference to search by.
      * @param array $criteria Criteria to search by.
+     * @param array $opts Query options.
      *
      * @return EntityItem|null The event or null if not found.
      */
-    public function findByReference(string|int $reference, array $criteria = []): ?EntityItem
+    public function findByReference(string|int $reference, array $criteria = [], array $opts = []): ?EntityItem
     {
         $criteria[EntityTable::COLUMN_REFERENCE] = $reference;
 
@@ -47,7 +48,7 @@ final class EventsRepository
             ->setStart(0)
             ->setDescendingOrder()
             ->setSort(EntityTable::COLUMN_CREATED_AT)
-            ->findAll($criteria);
+            ->findAll($criteria, opts: $opts);
 
         return $items[0] ?? null;
     }
@@ -79,14 +80,14 @@ final class EventsRepository
      * @param array $cols Columns to select.
      * @return array<EntityItem> empty array if no match found.
      */
-    public function findAll(array $criteria = [], array $cols = []): array
+    public function findAll(array $criteria = [], array $cols = [], array $opts = []): array
     {
-        return $this->_findAll($criteria, $cols);
+        return $this->_findAll($criteria, $cols, $opts);
     }
 
-    public function save(EntityItem $object): string
+    public function save(EntityItem $object, array $opts = []): string
     {
-        return $this->_save($object, useUUID: true);
+        return $this->_save($object, useUUID: true, opts: $opts);
     }
 
     /**
@@ -99,9 +100,9 @@ final class EventsRepository
         return $this->_saveAll($items, useUUID: true);
     }
 
-    public function remove(EntityItem|array $criteria): bool
+    public function remove(EntityItem|array $criteria, array $opts = []): bool
     {
-        return $this->_remove($criteria);
+        return $this->_remove($criteria, $opts);
     }
 
     public function countByStatus(EventStatus $status): int

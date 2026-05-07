@@ -28,7 +28,7 @@
               size="sm"
               icon="i-lucide-play"
               :disabled="!data.content_exists"
-              @click="navigateTo(`/play/${data.id}`)"
+              @click="openPlaybackModal"
             >
               Play
             </UButton>
@@ -160,6 +160,16 @@
     </div>
 
     <TextModal v-model:open="showRawData" :title="historyTitle" :text="rawData" />
+
+    <UModal v-model:open="playbackModalOpen" :title="historyTitle" :ui="playbackModalUi">
+      <template #body>
+        <PlaybackSelection
+          v-if="playbackModalOpen"
+          :id="data.id"
+          @watched-change="handlePlaybackWatchedChange"
+        />
+      </template>
+    </UModal>
 
     <div class="space-y-4">
       <UAlert
@@ -1471,6 +1481,7 @@ import { NuxtLink } from '#components';
 import { useBreakpoints, useStorage } from '@vueuse/core';
 import moment from 'moment';
 import DuplicateRecordList from '~/components/DuplicateRecordList.vue';
+import PlaybackSelection from '~/components/PlaybackSelection.vue';
 import Popover from '~/components/Popover.vue';
 import TextModal from '~/components/TextModal.vue';
 import { useDialog } from '~/composables/useDialog';
@@ -1634,8 +1645,16 @@ const tipsCardUi = {
   body: 'px-4 pb-4 pt-0',
 };
 
+const playbackModalUi = {
+  content: 'max-w-6xl overflow-visible',
+  header: 'border-b border-default px-4 py-4 sm:px-5 pe-14 sm:pe-16',
+  title: 'pr-2 wrap-break-word',
+  body: 'p-0',
+} as const;
+
 const isLoading = ref(true);
 const showRawData = ref(false);
+const playbackModalOpen = ref(false);
 const isDeleting = ref(false);
 const showComparison = ref(true);
 const comparisonExpanded = ref<Record<string, boolean>>({});
@@ -2235,6 +2254,15 @@ const deleteItem = async () => {
   } finally {
     isDeleting.value = false;
   }
+};
+
+const openPlaybackModal = (): void => {
+  playbackModalOpen.value = true;
+};
+
+const handlePlaybackWatchedChange = async (watched: boolean): Promise<void> => {
+  data.value.watched = watched;
+  await loadContent(id);
 };
 
 const toggleWatched = async () => {

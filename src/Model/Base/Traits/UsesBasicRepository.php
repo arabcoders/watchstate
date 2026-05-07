@@ -46,16 +46,16 @@ trait UsesBasicRepository
         return $isCustom || $item->validate() ? $item : null;
     }
 
-    private function _findAll(array $criteria = [], array $cols = []): array
+    private function _findAll(array $criteria = [], array $cols = [], array $opts = []): array
     {
         $arr = [];
 
-        $q = $this->db->select($this->table, $cols, $criteria, [
+        $q = $this->db->select($this->table, $cols, $criteria, array_replace_recursive($opts, [
             'count' => true,
             'start' => $this->getStart(),
             'limit' => $this->getPerpage(),
             'orderby' => [$this->getSort() => $this->getOrder()],
-        ]);
+        ]));
 
         $isCustom = !empty($cols);
 
@@ -99,30 +99,29 @@ trait UsesBasicRepository
 
         if ($object->hasPrimaryKey()) {
             if ($arr = $object->diff(transform: true)) {
-                $this->db->transactional(function (DBLayer $db) use ($arr, $object) {
-                    $db->update($this->table, $arr, [$object->getPrimaryKey() => $object->getPrimaryId()]);
+                $this->db->transactional(function (DBLayer $db) use ($arr, $object, $opts) {
+                    $db->update($this->table, $arr, [$object->getPrimaryKey() => $object->getPrimaryId()], $opts);
                     $object->updatePrimaryData();
-                });
+                }, options: $opts);
             }
             return $object->getPrimaryId();
         }
 
         if (true === ($isCustomID = is_a($this, IDInterface::class))) {
+            /** @var IDInterface $this */
             $object->{$object->getPrimaryKey()} = $this->makeId($object);
         } elseif ($useUUID) {
             $object->{$object->getPrimaryKey()} = generate_uuid();
         }
 
-        $this->db->transactional(function (DBLayer $db) use (&$object, $isCustomID, $useUUID) {
-            $obj = $object->getAll(transform: true);
-            $db->insert($this->table, $obj);
+        $obj = $object->getAll(transform: true);
+        $this->db->insert($this->table, $obj, $opts);
 
-            if (!$isCustomID && !$useUUID) {
-                $object->{$object->getPrimaryKey()} = (int) $db->id();
-            }
+        if (!$isCustomID && !$useUUID) {
+            $object->{$object->getPrimaryKey()} = (int) $this->db->id();
+        }
 
-            $object->updatePrimaryData();
-        });
+        $object->updatePrimaryData();
 
         return $object->getPrimaryId();
     }
@@ -153,7 +152,7 @@ trait UsesBasicRepository
                 }
 
                 if (true === $isCustomID) {
-                    /** @noinspection PhpUndefinedMethodInspection */
+                    /** @var IDInterface $this */
                     $object->{$object->getPrimaryKey()} = $this->makeId($object);
                 } elseif ($useUUID) {
                     $object->{$object->getPrimaryKey()} = generate_uuid();
@@ -176,7 +175,7 @@ trait UsesBasicRepository
         });
     }
 
-    private function _remove(BasicModel|array $criteria): bool
+    private function _remove(BasicModel|array $criteria, array $opts = []): bool
     {
         if ($criteria instanceof BasicModel) {
             if (!$criteria->hasPrimaryKey()) {
@@ -191,16 +190,17 @@ trait UsesBasicRepository
 
         $count = 0;
 
-        $this->db->transactional(function (DBLayer $db) use (&$count, $criteria) {
-            $count = $db->delete($this->table, $criteria);
-        });
+        $stmt = $this->db->delete($this->table, $criteria, $opts);
+        if ($stmt) {
+            $count = $stmt->rowCount();
+        }
 
         return (bool) $count;
     }
 
     private function _removeById(string|int $id, string $columnName = 'id'): bool
     {
-        $this->db->transactional(fn(DBLayer $db) => $db->delete($this->table, [$columnName => $id]));
+        $this->db->delete($this->table, [$columnName => $id]);
         return true;
     }
 

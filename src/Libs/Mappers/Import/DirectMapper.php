@@ -276,7 +276,7 @@ class DirectMapper implements ImportInterface
             if (true === $inDryRunMode) {
                 $entity->id = random_int((int) (PHP_INT_MAX / 2), PHP_INT_MAX);
             } else {
-                $entity = $this->db->insert($entity);
+                $entity = $this->db->insert($entity, $opts);
                 $onStateUpdate = ag($opts, Options::STATE_UPDATE_EVENT, null);
                 if (null !== $onStateUpdate && true === $entity->isWatched()) {
                     $onStateUpdate($entity);
@@ -314,6 +314,10 @@ class DirectMapper implements ImportInterface
                 }
             }
         } catch (PDOException|Throwable $e) {
+            if (true === $this->rethrowLock($e, $opts)) {
+                throw $e;
+            }
+
             $this->actions[$entity->type]['failed']++;
             Message::increment("{$entity->via}.{$entity->type}.failed");
             $this->logger->error(
@@ -392,7 +396,7 @@ class DirectMapper implements ImportInterface
                 }
 
                 if (false === $inDryRunMode) {
-                    $this->db->update($local);
+                    $this->db->update($local, $opts);
                     if (true === $progressChange) {
                         $itemId = r('{type}://{id}:{tainted}@{backend}', [
                             'type' => $entity->type,
@@ -414,6 +418,10 @@ class DirectMapper implements ImportInterface
 
                 $this->changed[$local->id] = $this->objects[$local->id] = $local->id;
             } catch (PDOException $e) {
+                if (true === $this->rethrowLock($e, $opts)) {
+                    throw $e;
+                }
+
                 $this->actions[$local->type]['failed']++;
                 Message::increment("{$entity->via}.{$local->type}.failed");
                 $this->logger->error(
@@ -524,7 +532,7 @@ class DirectMapper implements ImportInterface
                 }
 
                 if (false === $inDryRunMode) {
-                    $this->db->update($local);
+                    $this->db->update($local, $opts);
                     if (null !== ($onStateUpdate = ag($opts, Options::STATE_UPDATE_EVENT, null))) {
                         $onStateUpdate($local);
                     }
@@ -546,6 +554,10 @@ class DirectMapper implements ImportInterface
 
                 $this->changed[$local->id] = $this->objects[$local->id] = $local->id;
             } catch (PDOException $e) {
+                if (true === $this->rethrowLock($e, $opts)) {
+                    throw $e;
+                }
+
                 $this->actions[$local->type]['failed']++;
                 Message::increment("{$entity->via}.{$local->type}.failed");
                 $this->logger->error(
@@ -615,7 +627,7 @@ class DirectMapper implements ImportInterface
                     }
 
                     if (false === $inDryRunMode) {
-                        $this->db->update($local);
+                        $this->db->update($local, $opts);
                         if (true === $progressChange) {
                             $itemId = r('{type}://{id}:{tainted}@{backend}', [
                                 'type' => $entity->type,
@@ -637,6 +649,10 @@ class DirectMapper implements ImportInterface
 
                     $this->changed[$local->id] = $this->objects[$local->id] = $local->id;
                 } catch (PDOException $e) {
+                    if (true === $this->rethrowLock($e, $opts)) {
+                        throw $e;
+                    }
+
                     $this->actions[$local->type]['failed']++;
                     Message::increment("{$entity->via}.{$local->type}.failed");
                     $this->logger->error(
@@ -941,7 +957,7 @@ class DirectMapper implements ImportInterface
             }
 
             if (false === $inDryRunMode) {
-                $this->db->update($local);
+                $this->db->update($local, $opts);
                 if (null !== ($onStateUpdate = ag($opts, Options::STATE_UPDATE_EVENT, null))) {
                     $onStateUpdate($local);
                 }
@@ -966,6 +982,10 @@ class DirectMapper implements ImportInterface
 
             $this->changed[$local->id] = $this->objects[$local->id] = $local->id;
         } catch (PDOException $e) {
+            if (true === $this->rethrowLock($e, $opts)) {
+                throw $e;
+            }
+
             $this->actions[$local->type]['failed']++;
             Message::increment("{$entity->via}.{$local->type}.failed");
             $this->logger->error(
@@ -1425,5 +1445,10 @@ class DirectMapper implements ImportInterface
         }
 
         return [$this->progressThreshold, $this->progressMinThreshold];
+    }
+
+    private function rethrowLock(Throwable $e, array $opts = []): bool
+    {
+        return true === (bool) ag($opts, Options::FAIL_FAST_ON_LOCK, false) && false !== stripos($e->getMessage(), 'database is locked');
     }
 }

@@ -610,10 +610,10 @@ final class Index
                     'path' => $file,
                     'source' => [$backend],
                     'ffprobe' => $data,
-                    'subtitles' => array_filter(
+                    'subtitles' => array_values(array_filter(
                         find_side_car_files(new SplFileInfo($file)),
                         static fn($sideCar) => isset(Subtitle::FORMATS[get_extension($sideCar)]),
-                    ),
+                    )),
                 ];
             }
 

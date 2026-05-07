@@ -129,7 +129,7 @@ final class PDOAdapter implements iDB
     /**
      * @inheritdoc
      */
-    public function insert(iState $entity): iState
+    public function insert(iState $entity, array $opts = []): iState
     {
         try {
             if (null !== ($entity->id ?? null)) {
@@ -206,19 +206,26 @@ final class PDOAdapter implements iDB
                 );
             }
 
-            $this->db->query($this->stmt['insert'], $data, options: [
+            $queryOptions = array_replace_recursive($this->options, $opts, [
                 'on_failure' => fn(Throwable $e) => $this->retryPreparedWrite(
                     key: 'insert',
                     sql: $this->pdoInsert('state', iState::ENTITY_KEYS),
                     data: $data,
+                    opts: $opts,
                     e: $e,
                 ),
             ]);
 
+            $this->db->query($this->stmt['insert'], $data, options: $queryOptions);
+
             $entity->id = (int) $this->db->lastInsertId();
         } catch (PDOException $e) {
             $this->resetPreparedWrites();
+            $failFast = true === (bool) ($opts[Options::FAIL_FAST_ON_LOCK] ?? $this->options[Options::FAIL_FAST_ON_LOCK] ?? false);
             if (false === $this->viaTransaction) {
+                if (true === $failFast) {
+                    throw $e;
+                }
                 $this->logger->error(
                     message: "PDOAdapter: Exception '{error.kind}' was thrown unhandled. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [
@@ -380,7 +387,7 @@ final class PDOAdapter implements iDB
     /**
      * @inheritdoc
      */
-    public function update(iState $entity): iState
+    public function update(iState $entity, array $opts = []): iState
     {
         try {
             if (null === ($entity->id ?? null)) {
@@ -430,17 +437,24 @@ final class PDOAdapter implements iDB
                 $this->stmt['update'] = $this->db->prepare($this->pdoUpdate('state', iState::ENTITY_KEYS));
             }
 
-            $this->db->query($this->stmt['update'], $data, options: [
+            $queryOptions = array_replace_recursive($this->options, $opts, [
                 'on_failure' => fn(Throwable $e) => $this->retryPreparedWrite(
                     key: 'update',
                     sql: $this->pdoUpdate('state', iState::ENTITY_KEYS),
                     data: $data,
+                    opts: $opts,
                     e: $e,
                 ),
             ]);
+
+            $this->db->query($this->stmt['update'], $data, options: $queryOptions);
         } catch (PDOException $e) {
             $this->resetPreparedWrites();
+            $failFast = true === (bool) ($opts[Options::FAIL_FAST_ON_LOCK] ?? $this->options[Options::FAIL_FAST_ON_LOCK] ?? false);
             if (false === $this->viaTransaction) {
+                if (true === $failFast) {
+                    throw $e;
+                }
                 $this->logger->error(
                     message: "PDOAdapter: Exception '{error.kind}' was thrown unhandled. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [
@@ -760,7 +774,7 @@ final class PDOAdapter implements iDB
      * @param array $data Bound statement values.
      * @param Throwable $e Triggering exception.
      */
-    private function retryPreparedWrite(string $key, string $sql, array $data, Throwable $e): PDOStatement
+    private function retryPreparedWrite(string $key, string $sql, array $data, array $opts, Throwable $e): PDOStatement
     {
         if (false === str_contains($e->getMessage(), '21 bad parameter or other API misuse')) {
             throw $e;
@@ -771,7 +785,7 @@ final class PDOAdapter implements iDB
         $statement = $this->db->prepare($sql);
         $this->stmt[$key] = $statement;
 
-        return $this->db->query($statement, $data);
+        return $this->db->query($statement, $data, array_replace_recursive($this->options, $opts));
     }
 
     private function resetPreparedWrites(): void

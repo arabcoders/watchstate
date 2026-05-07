@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\API\System;
 
+use App\API\Player\Subs;
 use App\Libs\Attributes\Route\Post;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
@@ -41,6 +42,13 @@ final readonly class Sign
             return api_error('Path not found.', Status::NOT_FOUND);
         }
 
+        $cfg = (array) $params->get('config', []);
+        $cfg['externals'] = Subs::list($path);
+
+        if (ag_exists($cfg, 'external') && false === Subs::has($path, ag($cfg, 'external'))) {
+            return api_error('Subtitle not found.', Status::BAD_REQUEST);
+        }
+
         $entity = $this->db->get(Container::get(iState::class)::fromArray([iState::COLUMN_ID => $id]));
 
         if (null === $entity) {
@@ -55,7 +63,7 @@ final readonly class Sign
                 'id' => $id,
                 'path' => $path,
                 'time' => $time,
-                'config' => $params->get('config'),
+                'config' => $cfg,
                 'version' => get_app_version(),
             ],
             $expires,

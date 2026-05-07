@@ -10,10 +10,12 @@ use App\Libs\Middlewares\SignatureMiddleware;
 use App\Libs\TokenUtil;
 use App\Libs\TestCase;
 use Nyholm\Psr7\Stream;
+use Tests\Support\AuthTokenTestSupport;
 use Tests\Support\RequestResponseTrait;
 
 final class SignatureMiddlewareTest extends TestCase
 {
+    use AuthTokenTestSupport;
     use RequestResponseTrait;
 
     protected function tearDown(): void
@@ -69,7 +71,7 @@ final class SignatureMiddlewareTest extends TestCase
         Config::save('system.secret', TokenUtil::generateSecret(32));
         Config::save('auth.token_expiry', 3600);
 
-        $token = $this->makeUserToken();
+        $token = $this->makeSignedUserToken();
         $result = new SignatureMiddleware()->process(
             request: $this->requestWithBody(headers: [
                 'Authorization' => 'Token ' . $token,
@@ -115,15 +117,13 @@ final class SignatureMiddlewareTest extends TestCase
         return 'sha256=' . hash_hmac('sha256', $body, $secret);
     }
 
-    private function makeUserToken(): string
+    private function makeSignedUserToken(): string
     {
-        $json = json_encode([
+        return $this->makeUserToken([
             'username' => 'admin',
             'iat' => time(),
             'exp' => time() + 3600,
             'version' => get_app_version(),
-        ], JSON_THROW_ON_ERROR);
-
-        return TokenUtil::encode(TokenUtil::sign($json) . '.' . $json);
+        ]);
     }
 }

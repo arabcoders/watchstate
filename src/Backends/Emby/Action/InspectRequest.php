@@ -46,6 +46,23 @@ class InspectRequest
                     if (empty($payload)) {
                         return new Response(status: false, response: $request);
                     }
+
+                    if (is_string($payload)) {
+                        if (false === json_validate($payload)) {
+                            return new Response(status: false, response: $request);
+                        }
+
+                        $payload = json_decode(
+                            json: $payload,
+                            associative: true,
+                            flags: JSON_INVALID_UTF8_IGNORE | JSON_THROW_ON_ERROR,
+                        );
+                    }
+
+                    if (false === is_array($payload)) {
+                        return new Response(status: false, response: $request);
+                    }
+
                     $request = $request->withParsedBody($payload);
                     $json = $payload;
                 }
@@ -75,6 +92,7 @@ class InspectRequest
                     'webhook' => [
                         'event' => ag($json, 'Event'),
                         'generic' => in_array(ag($json, 'Event'), ParseWebhook::WEBHOOK_GENERIC_EVENTS, true),
+                        'noop' => in_array(ag($json, 'Event'), ParseWebhook::WEBHOOK_NOOP_EVENTS, true),
                     ],
                 ];
 
