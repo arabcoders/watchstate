@@ -1,5 +1,19 @@
 [
   {
+    "tag": "Untagged",
+    "full_sha": "a83098e8ac7153fee1fc727e71b27d195b09e1e7",
+    "date": "2026-05-08T14:11:34+00:00",
+    "commits": [
+      {
+        "sha": "a83098e8",
+        "full_sha": "a83098e8ac7153fee1fc727e71b27d195b09e1e7",
+        "message": "fix: allow legacy db migration command to skip tables that dont exists. Fixes #819",
+        "author": "arabcoders",
+        "date": "2026-05-08T14:11:34+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v1.8.0",
     "full_sha": "d857a5e0229c40993318d57e362b9670bb6c636e",
     "date": "2026-05-07T15:44:11+00:00",
