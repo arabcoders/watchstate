@@ -225,6 +225,10 @@ final class LegacyCommand extends Command
             $pdo->beginTransaction();
 
             foreach (self::APP_TABLES as $table) {
+                if (false === $this->tableExists($pdo, $table, 'legacy')) {
+                    continue;
+                }
+
                 $pdo->exec(sprintf('INSERT INTO "%1$s" SELECT * FROM legacy."%1$s"', $table));
             }
 
@@ -309,9 +313,17 @@ final class LegacyCommand extends Command
         return true;
     }
 
-    private function tableExists(PDO $pdo, string $table): bool
+    private function tableExists(PDO $pdo, string $table, string $schema = 'main'): bool
     {
-        $stmt = $pdo->prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = :name LIMIT 1");
+        $masterTable = match ($schema) {
+            'main' => 'sqlite_master',
+            'legacy' => 'legacy.sqlite_master',
+            default => throw new RuntimeException(r("Unsupported sqlite schema '{schema}'.", [
+                'schema' => $schema,
+            ])),
+        };
+
+        $stmt = $pdo->prepare("SELECT 1 FROM {$masterTable} WHERE type = 'table' AND name = :name LIMIT 1");
         $stmt->execute(['name' => $table]);
 
         return false !== $stmt->fetchColumn();
