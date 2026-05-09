@@ -1,5 +1,19 @@
 [
   {
+    "tag": "Untagged",
+    "full_sha": "1392e4ca01a3e860d653939868a2698cff297cb2",
+    "date": "2026-05-09T16:53:31+00:00",
+    "commits": [
+      {
+        "sha": "1392e4ca",
+        "full_sha": "1392e4ca01a3e860d653939868a2698cff297cb2",
+        "message": "refactor: move transaction handling to DBLayer directly.",
+        "author": "arabcoders",
+        "date": "2026-05-09T16:53:31+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v1.8.1",
     "full_sha": "436c39dff390ed4b1c5fa7c5a4ee5670e3efc6b6",
     "date": "2026-05-08T14:18:31+00:00",
