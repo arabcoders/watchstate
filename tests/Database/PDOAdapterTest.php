@@ -612,22 +612,19 @@ class PDOAdapterTest extends TestCase
 
     public function test_transaction()
     {
-        $this->db->getDBLayer()->start();
-        $this->checkException(
-            closure: function () {
-                return $this->db->transactional(fn() => throw new \PDOException('test', 11));
-            },
-            reason: 'If we started transaction from outside the db, it shouldn\'t swallow the exception.',
-            exception: \PDOException::class,
-            exceptionMessage: 'test',
-            exceptionCode: 11,
-        );
-        $this->db->getDBLayer()->rollback();
+        $this->db->getDBLayer()->transactional(function () {
+            $this->checkException(
+                closure: function () {
+                    return $this->db->transactional(fn() => throw new \PDOException('test', 11));
+                },
+                reason: 'If we started transaction from outside the db, it shouldn\'t swallow the exception.',
+                exception: DBLayerException::class,
+                exceptionMessage: 'test',
+                exceptionCode: 11,
+            );
+        });
 
-
-        $this->db->getDBLayer()->start();
         $this->db->transactional(fn($db) => $db->insert(new StateEntity($this->testEpisode)));
-        $this->db->getDBLayer()->commit();
 
         $this->checkException(
             closure: function () {
@@ -637,6 +634,36 @@ class PDOAdapterTest extends TestCase
             exception: \PDOException::class,
             exceptionMessage: 'test',
             exceptionCode: 11,
+        );
+    }
+
+    public function test_destruct_no_commit(): void
+    {
+        $logger = new Logger('logger');
+        [$db, , $path] = $this->createFileDb($logger);
+        $db->setOptions([
+            Options::DEBUG_TRACE => true,
+            'class' => new StateEntity([]),
+        ]);
+        $db->setLogger($logger);
+
+        $db->getDBLayer()->getBackend()->beginTransaction();
+        $db->insert(new StateEntity($this->testEpisode));
+
+        $verify = $this->openSqliteFile($path);
+
+        self::assertSame(
+            0,
+            (int) $verify->query('SELECT COUNT(*) FROM state')->fetchColumn(),
+            'Uncommitted adapter writes should not be visible to another connection.'
+        );
+
+        unset($db);
+
+        self::assertSame(
+            0,
+            (int) $verify->query('SELECT COUNT(*) FROM state')->fetchColumn(),
+            'Destroying adapter should not auto-commit an open transaction.'
         );
     }
 

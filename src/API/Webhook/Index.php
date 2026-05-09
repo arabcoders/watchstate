@@ -516,7 +516,7 @@ final class Index
             parse_str($uri->getQuery(), $query);
             if (true === ag_exists($query, 'apikey')) {
                 // @mago-expect lint:no-literal-password
-                $query['apikey'] = 'api_key_removed';
+                $query['apikey'] = '....';
                 $uri = $uri->withQuery(http_build_query($query));
             }
         }

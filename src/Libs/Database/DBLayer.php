@@ -13,7 +13,6 @@ use Monolog\Level;
 use PDO;
 use PDOException;
 use PDOStatement;
-use PHPUnit\Framework\TestStatus\Warning;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 
@@ -149,7 +148,7 @@ final class DBLayer implements LoggerAwareInterface
      *
      * @return bool Returns true on success, false on failure.
      */
-    public function start(): bool
+    private function start(): bool
     {
         if (true === $this->pdo->inTransaction()) {
             return false;
@@ -165,7 +164,7 @@ final class DBLayer implements LoggerAwareInterface
      *
      * @return bool Returns true on success, false on failure.
      */
-    public function commit(): bool
+    private function commit(): bool
     {
         if (false === $this->pdo->inTransaction()) {
             return false;
@@ -181,7 +180,7 @@ final class DBLayer implements LoggerAwareInterface
      *
      * @return bool Returns true on success, false on failure.
      */
-    public function rollBack(): bool
+    private function rollBack(): bool
     {
         if (false === $this->pdo->inTransaction()) {
             return false;
@@ -197,7 +196,7 @@ final class DBLayer implements LoggerAwareInterface
      *
      * @return bool Returns true if a transaction is currently active, false otherwise.
      */
-    public function inTransaction(): bool
+    private function inTransaction(): bool
     {
         return $this->pdo->inTransaction();
     }

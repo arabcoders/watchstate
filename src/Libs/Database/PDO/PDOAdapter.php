@@ -621,29 +621,15 @@ final class PDOAdapter implements iDB
      */
     public function transactional(Closure $callback): mixed
     {
-        if (true === $this->db->inTransaction()) {
+        return $this->db->transactional(function () use ($callback) {
             $this->viaTransaction = true;
-            $result = $callback($this);
-            $this->viaTransaction = false;
-            return $result;
-        }
 
-        try {
-            $this->db->start();
-
-            $this->viaTransaction = true;
-            $result = $callback($this);
-            $this->viaTransaction = false;
-
-            $this->db->commit();
-
-            return $result;
-        } catch (PDOException $e) {
-            $this->db->rollBack();
-            throw $e;
-        } finally {
-            $this->viaTransaction = false;
-        }
+            try {
+                return $callback($this);
+            } finally {
+                $this->viaTransaction = false;
+            }
+        });
     }
 
     /**
@@ -695,17 +681,12 @@ final class PDOAdapter implements iDB
     /**
      * Class Destructor
      *
-     * This method is called when the object is destroyed. It checks if a transaction is in progress and commits it
-     * if necessary. It also clears the statement list array.
+     * This method is called when the object is destroyed. It clears cached prepared statements only.
      *
      * @return void
      */
     public function __destruct()
     {
-        if (true === $this->db->inTransaction()) {
-            $this->db->commit();
-        }
-
         $this->resetPreparedWrites();
     }
 
