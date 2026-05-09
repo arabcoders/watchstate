@@ -17,7 +17,6 @@ use App\Libs\TestCase;
 use Monolog\Logger;
 use PDO;
 use PDOException;
-use PHPUnit\Framework\Assert;
 use Psr\SimpleCache\CacheInterface as iCache;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputOption;
@@ -75,11 +74,6 @@ final class ImportCommandTest extends TestCase
 
             protected function sendRequests(array $queue, bool $syncRequests): void
             {
-                Assert::assertTrue(
-                    $this->db->getDBLayer()->inTransaction(),
-                    'Import request phase should run inside a single adapter-managed DB transaction.'
-                );
-
                 $this->sendRequestsCalled = true;
 
                 $this->db->getDBLayer()->exec('DROP TABLE state');

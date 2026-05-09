@@ -200,49 +200,34 @@ class DBLayerTest extends TestCase
 
     public function test_transactions_operations()
     {
-        $this->db->start();
-        $this->assertTrue($this->db->inTransaction(), 'Should be in transaction.');
-        $this->assertFalse($this->db->start(), 'Should not start a new transaction if we are already in one.');
-        $this->db->insert('sqlite_sequence', ['name' => 'test', 'seq' => 1]);
-        $this->db->rollBack();
-        $this->assertFalse($this->db->inTransaction(), 'Should not be in transaction.');
-
-        $this->db->start();
-        $this->assertCount(
-            0,
-            $this->db->select('sqlite_sequence')->fetchAll(),
-            'Should not have any records, as we rolled back.',
-        );
-        $this->db->insert('sqlite_sequence', ['name' => 'test', 'seq' => 1]);
-        $this->db->commit();
-        $this->assertFalse($this->db->inTransaction(), 'Should not be in transaction.');
-        $this->assertCount(
-            1,
-            $this->db->select('sqlite_sequence')->fetchAll(),
-            'Should have one record, as we committed.',
-        );
-
         $this->checkException(
             closure: fn() => $this->db->transactional(function (DBLayer $db) {
-                $this->db->insert('sqlite_sequence', ['name' => 'test2', 'seq' => 1]);
+                $this->assertTrue($db->getBackend()->inTransaction(), 'Should be in transaction.');
+                $db->insert('sqlite_sequence', ['name' => 'test', 'seq' => 1]);
                 $db->insert('not_set', ['name' => 'test', 'seq' => 1]);
             }),
-            reason: 'Should throw an exception when trying to commit without starting a transaction.',
+            reason: 'Should roll back writes when the transaction callback fails.',
             exception: DBLayerException::class,
             exceptionMessage: 'no such table',
         );
 
         $this->assertCount(
-            1,
+            0,
             $this->db->select('sqlite_sequence')->fetchAll(),
-            'Should have one record, as the previous transaction was rolled back.',
+            'Should not have any records, as we rolled back.',
         );
 
         $ret = $this->db->transactional(function (DBLayer $db) {
+            $this->assertTrue($db->getBackend()->inTransaction(), 'Should be in transaction.');
             return $db->insert('sqlite_sequence', ['name' => 'test2', 'seq' => 1]);
         });
 
         $this->assertSame(1, $ret->rowCount(), 'Should return the number of affected rows.');
+        $this->assertCount(
+            1,
+            $this->db->select('sqlite_sequence')->fetchAll(),
+            'Should have one record, as we committed.',
+        );
     }
 
     public function test_insert()

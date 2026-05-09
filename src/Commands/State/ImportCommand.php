@@ -431,9 +431,7 @@ class ImportCommand extends Command
             ]);
 
             try {
-                $userContext->db->transactional(function () use ($queue, $syncRequests): void {
-                    $this->sendRequests($queue, $syncRequests);
-                });
+                $userContext->db->transactional(fn() => $this->sendRequests($queue, $syncRequests));
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
