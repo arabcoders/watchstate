@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "1392e4ca01a3e860d653939868a2698cff297cb2",
-    "date": "2026-05-09T16:53:31+00:00",
+    "full_sha": "2fb37a168d24ccfb2d9dedd2282a480caac532a5",
+    "date": "2026-05-10T05:04:08+00:00",
     "commits": [
+      {
+        "sha": "2fb37a16",
+        "full_sha": "2fb37a168d24ccfb2d9dedd2282a480caac532a5",
+        "message": "fix: sqlite pragma exec was closing active sqlite transaction",
+        "author": "arabcoders",
+        "date": "2026-05-10T05:04:08+00:00"
+      },
       {
         "sha": "1392e4ca",
         "full_sha": "1392e4ca01a3e860d653939868a2698cff297cb2",
