@@ -51,9 +51,7 @@ trait APITraits
         $default['name'] = $name;
 
         if (null !== $userContext) {
-            $opts[BackendCache::class] = Container::get(BackendCache::class)->with(
-                adapter: $userContext->cache,
-            );
+            $opts[UserContext::class] = $userContext;
         }
 
         return make_backend(array_replace_recursive($default, $config), $name, options: $opts);
