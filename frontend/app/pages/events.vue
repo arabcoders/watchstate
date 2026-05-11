@@ -13,16 +13,12 @@
       </div>
 
       <div class="flex flex-wrap items-center justify-end gap-2">
-        <form
-          v-if="toggleFilter || query"
-          class="w-full sm:w-72"
-          @submit.prevent="void loadContent(1)"
-        >
+        <form v-if="showDisplayFilter" class="w-full sm:w-72" @submit.prevent="void loadContent(1)">
           <UInput
-            id="filter"
-            v-model="query"
+            id="display-filter"
+            v-model.lazy="displayFilter"
             type="search"
-            placeholder="Search and filter"
+            placeholder="Filter displayed results"
             icon="i-lucide-filter"
             size="sm"
             class="w-full"
@@ -31,21 +27,31 @@
 
         <UButton
           color="neutral"
-          :variant="toggleFilter ? 'soft' : 'outline'"
+          :variant="showDisplayFilter ? 'soft' : 'outline'"
           size="sm"
           icon="i-lucide-filter"
-          @click="toggleFilter = !toggleFilter"
+          @click="toggleDisplayFilter"
           label="Filter"
         />
-        <UTooltip v-if="items.length > 0" text="Remove all non-pending events.">
+
+        <UButton
+          color="neutral"
+          :variant="showSearchPanel ? 'soft' : 'outline'"
+          size="sm"
+          icon="i-lucide-search"
+          @click="showSearchPanel = !showSearchPanel"
+          label="Search"
+        />
+
+        <UTooltip v-if="items.length > 0" text="Delete events.">
           <UButton
             color="neutral"
             variant="outline"
             size="sm"
             icon="i-lucide-trash-2"
             :disabled="isLoading"
-            @click="deleteAll"
-            label="Delete All"
+            @click="openDeleteModal"
+            label="Delete"
           />
         </UTooltip>
 
@@ -61,6 +67,106 @@
         />
       </div>
     </div>
+
+    <UCard v-if="showSearchPanel" class="border border-default/70 shadow-sm" :ui="searchCardUi">
+      <template #header>
+        <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
+          <UIcon name="i-lucide-search" class="size-4 text-toned" />
+          <span>Search Events</span>
+        </div>
+      </template>
+
+      <form class="space-y-4" @submit.prevent="void submitSearch()">
+        <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          <UFormField label="Status" name="event_status">
+            <USelect
+              v-model="search.status"
+              :items="statusItems"
+              value-key="value"
+              label-key="label"
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-filter"
+              class="w-full"
+              :disabled="isLoading"
+            />
+          </UFormField>
+
+          <UFormField label="Event name" name="event_name">
+            <UInput
+              v-model="search.event"
+              type="search"
+              placeholder="Search event name"
+              icon="i-lucide-tag"
+              size="sm"
+              class="w-full"
+              :disabled="isLoading"
+            />
+          </UFormField>
+
+          <UFormField label="Reference" name="event_reference">
+            <UInput
+              v-model="search.reference"
+              type="search"
+              placeholder="Search reference"
+              icon="i-lucide-link"
+              size="sm"
+              class="w-full"
+              :disabled="isLoading"
+            />
+          </UFormField>
+
+          <UFormField label="Created after" name="event_after">
+            <UInput
+              v-model="search.after"
+              type="text"
+              placeholder="e.g. 2 hours ago or 2026-05-11 10:00"
+              icon="i-lucide-calendar-range"
+              size="sm"
+              class="w-full"
+              :disabled="isLoading"
+            />
+          </UFormField>
+
+          <UFormField label="Created before" name="event_before">
+            <UInput
+              v-model="search.before"
+              type="text"
+              placeholder="e.g. now, yesterday, or 2026-05-12 10:00"
+              icon="i-lucide-calendar-clock"
+              size="sm"
+              class="w-full"
+              :disabled="isLoading"
+            />
+          </UFormField>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-end gap-2">
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-x"
+            type="button"
+            :disabled="isLoading"
+            @click="resetSearch"
+          >
+            Reset
+          </UButton>
+
+          <UButton
+            color="primary"
+            size="sm"
+            icon="i-lucide-search"
+            type="submit"
+            :loading="isLoading"
+          >
+            Search
+          </UButton>
+        </div>
+      </form>
+    </UCard>
 
     <div v-if="total && last_page > 1" class="flex flex-wrap items-center justify-between gap-3">
       <Pager :page="page" :last_page="last_page" :is-loading="isLoading" @navigate="navigatePage" />
@@ -87,8 +193,11 @@
       <template #description>
         <div class="space-y-2 text-sm text-default">
           <p>No items found.</p>
-          <p v-if="query">
-            Search for <strong>{{ query }}</strong> returned no results.
+          <p v-if="hasActiveServerFilters">
+            Search filters: <code>{{ activeServerFilterSummary }}</code>
+          </p>
+          <p v-if="displayFilter">
+            Displayed-results filter: <code>{{ displayFilter }}</code>
           </p>
         </div>
       </template>
@@ -137,17 +246,6 @@
                   <span>{{ getStatusName(item) }}</span>
                 </span>
               </UBadge>
-
-              <UButton
-                v-if="Object.keys(item.event_data || {}).length > 0"
-                color="neutral"
-                variant="ghost"
-                size="sm"
-                square
-                :icon="item._display ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-                :aria-label="item._display ? 'Hide event data' : 'Show event data'"
-                @click="item._display = !item._display"
-              />
             </div>
           </div>
         </template>
@@ -193,12 +291,12 @@
                 >
                   <UIcon
                     :name="
-                      0 === item.status && !item.updated_at
+                      1 === item.status && !item.updated_at
                         ? 'i-lucide-loader-circle'
                         : 'i-lucide-calendar-days'
                     "
                     :class="
-                      0 === item.status && !item.updated_at ? 'size-4 animate-spin' : 'size-4'
+                      1 === item.status && !item.updated_at ? 'size-4 animate-spin' : 'size-4'
                     "
                   />
                   <span>Updated</span>
@@ -206,7 +304,7 @@
 
                 <template v-if="!item.updated_at">
                   <span class="min-w-0 text-default sm:ml-auto sm:text-right">
-                    {{ 0 === item.status ? 'Pending' : 'None' }}
+                    {{ 1 === item.status ? 'Running' : 0 === item.status ? 'Pending' : 'None' }}
                   </span>
                 </template>
 
@@ -222,26 +320,6 @@
               </div>
             </div>
           </div>
-
-          <div
-            v-if="item._display && Object.keys(item.event_data || {}).length > 0"
-            class="relative overflow-hidden rounded-md border border-default bg-elevated/60"
-          >
-            <code class="ws-terminal ws-terminal-panel ws-terminal-panel-sm whitespace-pre-wrap">
-              {{ JSON.stringify(item.event_data, null, 2) }}
-            </code>
-
-            <UTooltip text="Copy event data">
-              <UButton
-                color="neutral"
-                variant="soft"
-                size="sm"
-                icon="i-lucide-copy"
-                class="absolute right-6 top-3"
-                @click="() => copyText(JSON.stringify(item.event_data, null, 2), false)"
-              />
-            </UTooltip>
-          </div>
         </div>
 
         <template #footer>
@@ -254,25 +332,41 @@
             </UBadge>
 
             <div class="flex flex-wrap items-center justify-end gap-2">
-              <UButton
-                color="neutral"
-                variant="outline"
-                size="sm"
-                icon="i-lucide-rotate-ccw"
-                @click="resetEvent(item, 0 === item.status ? 4 : 0)"
+              <UTooltip
+                :text="
+                  1 === item.status
+                    ? 'Running events cannot be reset or cancelled.'
+                    : 0 === item.status
+                      ? 'Cancel event'
+                      : 'Reset event'
+                "
               >
-                {{ 0 === item.status ? 'Stop' : 'Reset' }}
-              </UButton>
+                <UButton
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                  icon="i-lucide-rotate-ccw"
+                  :disabled="1 === item.status"
+                  @click="resetEvent(item, 0 === item.status ? 4 : 0)"
+                >
+                  {{ 0 === item.status ? 'Cancel' : 'Reset' }}
+                </UButton>
+              </UTooltip>
 
-              <UButton
-                color="neutral"
-                variant="outline"
-                size="sm"
-                icon="i-lucide-trash-2"
-                @click="deleteItem(item)"
+              <UTooltip
+                :text="1 === item.status ? 'Running events cannot be deleted.' : 'Delete event'"
               >
-                Delete
-              </UButton>
+                <UButton
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                  icon="i-lucide-trash-2"
+                  :disabled="1 === item.status"
+                  @click="deleteItem(item)"
+                >
+                  Delete
+                </UButton>
+              </UTooltip>
             </div>
           </div>
         </template>
@@ -302,16 +396,23 @@
 
       <div v-if="show_page_tips" class="text-sm leading-6 text-default">
         <ul class="list-disc space-y-2 pl-5">
-          <li>Resetting an event will return it to the queue to be dispatched again.</li>
-          <li>Stopping an event will prevent it from being dispatched.</li>
+          <li>Resetting an event will return it to pending so it can be dispatched again.</li>
           <li>
-            Events with status of <UBadge color="warning" variant="soft" size="sm">Running</UBadge>
-            cannot be cancelled or stopped.
+            Cancelling a pending event marks it as cancelled and stops it from being dispatched.
           </li>
           <li>
-            The <UIcon name="i-lucide-filter" class="inline size-4 align-text-bottom" /> filter
-            button on top can be used for both filtering the displayed results and, on submit,
-            searching the backend for the given event name.
+            Events with status of <UBadge color="warning" variant="soft" size="sm">Running</UBadge>
+            cannot be reset, cancelled, or deleted.
+          </li>
+          <li>
+            Bulk delete removes events matching the current search filters. Pending events are only
+            included when you opt in during confirmation.
+          </li>
+          <li>
+            The top <UIcon name="i-lucide-filter" class="inline size-4 align-text-bottom" /> filter
+            only narrows the currently displayed cards. Use
+            <UIcon name="i-lucide-search" class="inline size-4 align-text-bottom" /> search to query
+            the backend.
           </li>
         </ul>
       </div>
@@ -320,6 +421,50 @@
     <UModal v-model:open="quickViewOpen" :title="quickViewTitle" :ui="quickViewModalUi">
       <template #body>
         <EventView v-if="quick_view" :id="quick_view" @delete="(item) => deleteItem(item)" />
+      </template>
+    </UModal>
+
+    <UModal v-model:open="deleteModalOpen" title="Delete events" :ui="deleteModalUi">
+      <template #body>
+        <div class="space-y-4">
+          <div
+            class="rounded-md border border-default bg-elevated/20 px-4 py-3 text-sm text-default"
+          >
+            <p>Delete the matching events.</p>
+          </div>
+
+          <label
+            class="flex items-start gap-3 rounded-md border border-default bg-default px-4 py-3 text-sm text-default"
+          >
+            <UCheckbox v-model="deleteIncludePending" color="warning" />
+            <span class="font-medium text-highlighted">Also delete pending events</span>
+          </label>
+        </div>
+      </template>
+
+      <template #footer>
+        <div class="flex w-full flex-wrap items-center justify-end gap-2">
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            :disabled="deleteSubmitting"
+            @click="deleteModalOpen = false"
+          >
+            Cancel
+          </UButton>
+
+          <UButton
+            color="error"
+            size="sm"
+            icon="i-lucide-trash-2"
+            :loading="deleteSubmitting"
+            :disabled="deleteSubmitting"
+            @click="confirmDeleteAll"
+          >
+            Delete events
+          </UButton>
+        </div>
       </template>
     </UModal>
   </main>
@@ -337,7 +482,7 @@ import type { EventsItem, GenericError, GenericResponse } from '~/types';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import {
   TOOLTIP_DATE_FORMAT,
-  copyText,
+  awaitElement,
   makeEventName,
   notification,
   parse_api_response,
@@ -345,15 +490,38 @@ import {
 } from '~/utils';
 
 type EventStatus = {
-  code: number;
+  id: number;
   name: string;
+};
+
+type EventsFilter = {
+  filter: string;
+  status: string;
+  event: string;
+  reference: string;
+  before: string;
+  after: string;
+  sort: string;
+  direction: string;
+  all: boolean;
 };
 
 type EventsResponse = {
   items: Array<EventsItem>;
   statuses: Array<EventStatus>;
   paging: { page: number; perpage: number; total: number };
+  filter: EventsFilter;
 };
+
+type SearchState = {
+  status: string;
+  event: string;
+  reference: string;
+  before: string;
+  after: string;
+};
+
+const ANY_STATUS = '__any__';
 
 const pageShell = requireTopLevelPageShell('events');
 
@@ -376,16 +544,47 @@ const toPositiveInt = (value: string, fallback: number): number => {
   return Number.isNaN(parsed) || parsed < 1 ? fallback : parsed;
 };
 
+const parseStatusScope = (value: string): string => {
+  const normalized = value.trim();
+  return '' === normalized || ANY_STATUS === normalized ? ANY_STATUS : normalized;
+};
+
+const defaultSearchState = (): SearchState => ({
+  status: ANY_STATUS,
+  event: '',
+  reference: '',
+  before: '',
+  after: '',
+});
+
+const createSearchState = (query: typeof route.query): SearchState => ({
+  status: parseStatusScope(getRouteQueryValue(query.status, ANY_STATUS)),
+  event: getRouteQueryValue(query.event, ''),
+  reference: getRouteQueryValue(query.reference, ''),
+  before: getRouteQueryValue(query.before, ''),
+  after: getRouteQueryValue(query.after, ''),
+});
+
 const total = ref<number>(0);
 const page = ref<number>(toPositiveInt(getRouteQueryValue(route.query.page, '1'), 1));
 const perpage = ref<number>(toPositiveInt(getRouteQueryValue(route.query.perpage, '26'), 26));
 const isLoading = ref<boolean>(false);
+const deleteSubmitting = ref<boolean>(false);
 const items = ref<Array<EventsItem>>([]);
 const statuses = ref<Array<EventStatus>>([]);
-const query = ref<string>(getRouteQueryValue(route.query.filter, ''));
-const toggleFilter = ref<boolean>(false);
+const displayFilter = ref<string>(getRouteQueryValue(route.query.filter, ''));
+const showDisplayFilter = ref<boolean>(!!displayFilter.value);
+const showSearchPanel = ref<boolean>(
+  ['status', 'event', 'reference', 'before', 'after'].some((key) => {
+    const value = route.query[key];
+    return Array.isArray(value) ? !!value[0] : !!value;
+  }),
+);
+const search = ref<SearchState>(createSearchState(route.query));
 const quick_view = ref<string | null>(null);
 const show_page_tips = useStorage<boolean>('show_page_tips', true);
+const deleteModalOpen = ref<boolean>(false);
+const deleteIncludePending = ref<boolean>(false);
 
 const quickViewOpen = computed({
   get: () => null !== quick_view.value,
@@ -418,25 +617,81 @@ const quickViewModalUi = {
   body: 'p-4 sm:p-5',
 };
 
+const searchCardUi = {
+  header: 'p-4',
+  body: 'px-4 pb-4 pt-0',
+};
+
+const deleteModalUi = {
+  content: 'max-w-2xl',
+  body: 'p-4 sm:p-5',
+  footer: 'border-t border-default/70 px-4 py-4 sm:px-5',
+};
+
 const statusLookup = computed<Record<number, string>>(() =>
   statuses.value.reduce((map: Record<number, string>, item) => {
-    map[item.code] = item.name;
+    map[item.id] = item.name;
     return map;
   }, {}),
 );
 
-watch(toggleFilter, () => {
-  if (!toggleFilter.value) {
-    query.value = '';
+const statusItems = computed<Array<{ label: string; value: string }>>(() => [
+  { label: 'Any status', value: ANY_STATUS },
+  ...statuses.value.map((status) => ({
+    label: status.name,
+    value: String(status.id),
+  })),
+]);
+
+const hasActiveServerFilters = computed<boolean>(() => {
+  return ['status', 'event', 'reference', 'before', 'after'].some((key) => {
+    const value = search.value[key as keyof SearchState];
+    return 'string' === typeof value && '' !== value.trim();
+  });
+});
+
+const activeServerFilterSummary = computed<string>(() => {
+  const parts: Array<string> = [];
+
+  if (ANY_STATUS !== search.value.status) {
+    const matched = statusItems.value.find((item) => item.value === search.value.status);
+    parts.push(`status: ${matched?.label || search.value.status}`);
   }
+
+  if (search.value.event.trim()) {
+    parts.push(`event: ${search.value.event.trim()}`);
+  }
+
+  if (search.value.reference.trim()) {
+    parts.push(`reference: ${search.value.reference.trim()}`);
+  }
+
+  if (search.value.after.trim()) {
+    parts.push(`after: ${search.value.after.trim()}`);
+  }
+
+  if (search.value.before.trim()) {
+    parts.push(`before: ${search.value.before.trim()}`);
+  }
+
+  return parts.join(' | ');
+});
+
+watch(showDisplayFilter, () => {
+  if (!showDisplayFilter.value) {
+    displayFilter.value = '';
+    return;
+  }
+
+  awaitElement('#display-filter', (_, element) => (element as HTMLInputElement).focus());
 });
 
 const filteredRows = computed<Array<EventsItem>>(() => {
-  if (!query.value) {
+  if (!displayFilter.value) {
     return items.value;
   }
 
-  const toLower = query.value.toLowerCase();
+  const toLower = displayFilter.value.toLowerCase();
 
   return items.value.filter((item) => {
     return Object.keys(item).some((key) => {
@@ -494,6 +749,54 @@ const getEventStatusIconClass = (status: number): string => {
   return 1 === status ? 'size-3.5 animate-spin' : 'size-3.5';
 };
 
+const buildServerQuery = (pageNumber: number, requestedPerPage: number): URLSearchParams => {
+  const queryParams = new URLSearchParams();
+  queryParams.append('page', pageNumber.toString());
+  queryParams.append('perpage', requestedPerPage.toString());
+  queryParams.append('all', '1');
+
+  for (const [key, value] of Object.entries(search.value)) {
+    if ('status' === key && ANY_STATUS === value) {
+      continue;
+    }
+
+    const normalized = value.trim();
+    if (normalized) {
+      queryParams.append(key, normalized);
+    }
+  }
+
+  return queryParams;
+};
+
+const buildRouteQuery = (
+  pageNumber: number,
+  requestedPerPage: number,
+): Record<string, string | number | undefined> => {
+  const historyQuery: Record<string, string | number | undefined> = {
+    perpage: requestedPerPage,
+    page: pageNumber,
+  };
+
+  if (displayFilter.value) {
+    historyQuery.filter = displayFilter.value;
+  }
+
+  for (const [key, value] of Object.entries(search.value)) {
+    if ('status' === key && ANY_STATUS === value) {
+      continue;
+    }
+
+    if (!value.trim()) {
+      continue;
+    }
+
+    historyQuery[key] = value.trim();
+  }
+
+  return historyQuery;
+};
+
 const navigatePage = async (nextPage: number): Promise<void> => {
   await loadContent(nextPage);
 };
@@ -505,13 +808,7 @@ const loadContent = async (
   try {
     pageNumber = toPositiveInt(pageNumber.toString(), 1);
     const requestedPerPage = toPositiveInt(perpage.value.toString(), 25);
-
-    const queryParams = new URLSearchParams();
-    queryParams.append('page', pageNumber.toString());
-    queryParams.append('perpage', requestedPerPage.toString());
-    if (query.value) {
-      queryParams.append('filter', query.value);
-    }
+    const queryParams = buildServerQuery(pageNumber, requestedPerPage);
 
     isLoading.value = true;
     items.value = [];
@@ -528,28 +825,23 @@ const loadContent = async (
       return;
     }
 
-    useHead({ title: `Events - Page #${pageNumber}` });
+    const titleParts = [`Events - Page #${pageNumber}`];
+    if (hasActiveServerFilters.value) {
+      titleParts.push(activeServerFilterSummary.value);
+    }
+    if (displayFilter.value) {
+      titleParts.push(`display filter: ${displayFilter.value}`);
+    }
+    useHead({ title: titleParts.join(' | ') });
 
     if (true === updateHistory) {
-      const history_query: Record<string, string | number> = {
-        perpage: requestedPerPage,
-        page: pageNumber,
-      };
-
-      if (query.value) {
-        history_query.filter = query.value;
-      }
-
-      await router.push({ path: '/events', query: history_query });
+      await router.push({ path: '/events', query: buildRouteQuery(pageNumber, requestedPerPage) });
     }
 
     page.value = json.paging.page;
     perpage.value = json.paging.perpage;
     total.value = json.paging.total;
-    items.value = (json.items ?? []).map((item) => ({
-      ...item,
-      _display: item._display ?? false,
-    }));
+    items.value = (json.items ?? []).map((item) => ({ ...item }));
     statuses.value = json.statuses ?? [];
   } catch (e: unknown) {
     console.error(e);
@@ -563,6 +855,17 @@ const loadContent = async (
   }
 };
 
+const submitSearch = async (): Promise<void> => {
+  showSearchPanel.value = true;
+  await loadContent(1);
+};
+
+const resetSearch = (): void => {
+  search.value = defaultSearchState();
+  showSearchPanel.value = false;
+  void loadContent(1);
+};
+
 onMounted(async () => {
   await loadContent(page.value);
   window.addEventListener('popstate', handlePopState);
@@ -571,12 +874,15 @@ onMounted(async () => {
 onUnmounted(() => window.removeEventListener('popstate', handlePopState));
 
 const handlePopState = async (): Promise<void> => {
-  const currentPage = toPositiveInt(getRouteQueryValue(route.query.page, '1'), 1);
-  const currentPerPage = toPositiveInt(getRouteQueryValue(route.query.perpage, '26'), 26);
-
-  page.value = currentPage;
-  perpage.value = currentPerPage;
-  query.value = getRouteQueryValue(route.query.filter, '');
+  page.value = toPositiveInt(getRouteQueryValue(route.query.page, '1'), 1);
+  perpage.value = toPositiveInt(getRouteQueryValue(route.query.perpage, '26'), 26);
+  displayFilter.value = getRouteQueryValue(route.query.filter, '');
+  showDisplayFilter.value = !!displayFilter.value;
+  search.value = createSearchState(route.query);
+  showSearchPanel.value = ['status', 'event', 'reference', 'before', 'after'].some((key) => {
+    const value = route.query[key];
+    return Array.isArray(value) ? !!value[0] : !!value;
+  });
 
   await loadContent(page.value, false);
 };
@@ -591,6 +897,11 @@ const deletedItem = (id: string): void => {
 };
 
 const deleteItem = async (item: EventsItem): Promise<void> => {
+  if (1 === item.status) {
+    notification('warning', 'Unavailable', 'Running events cannot be deleted.');
+    return;
+  }
+
   const { status: confirmStatus } = await useDialog().confirmDialog({
     message: `Delete '${makeEventName(item.id)}'?`,
     confirmColor: 'error',
@@ -631,8 +942,14 @@ const deleteItem = async (item: EventsItem): Promise<void> => {
 };
 
 const resetEvent = async (item: EventsItem, status: number = 0): Promise<void> => {
+  if (1 === item.status) {
+    notification('warning', 'Unavailable', 'Running events cannot be reset or cancelled.');
+    return;
+  }
+
+  const action = 4 === status ? 'Cancel' : 'Reset';
   const { status: confirmStatus } = await useDialog().confirmDialog({
-    message: `Reset '${makeEventName(item.id)}'?`,
+    message: `${action} '${makeEventName(item.id)}'?`,
     confirmColor: 'warning',
   });
 
@@ -671,10 +988,7 @@ const resetEvent = async (item: EventsItem, status: number = 0): Promise<void> =
       return;
     }
 
-    items.value[index] = {
-      ...json,
-      _display: items.value[index]?._display ?? false,
-    };
+    items.value[index] = { ...json };
   } catch (e: unknown) {
     console.error(e);
     notification(
@@ -685,46 +999,82 @@ const resetEvent = async (item: EventsItem, status: number = 0): Promise<void> =
   }
 };
 
-const deleteAll = async (): Promise<void> => {
-  const { status: confirmStatus } = await useDialog().confirmDialog({
-    message: 'Delete all non pending events?',
-    confirmColor: 'error',
-  });
+const buildDeleteQuery = (): URLSearchParams => {
+  const queryParams = new URLSearchParams();
 
-  if (true !== confirmStatus) {
-    return;
+  if (deleteIncludePending.value) {
+    queryParams.append('include_pending', '1');
   }
 
+  for (const [key, value] of Object.entries(search.value)) {
+    if ('all' === key) {
+      continue;
+    }
+
+    if ('status' === key && ANY_STATUS === value) {
+      continue;
+    }
+
+    const normalized = value.trim();
+    if (!normalized) {
+      continue;
+    }
+
+    queryParams.append(key, normalized);
+  }
+
+  return queryParams;
+};
+
+const openDeleteModal = (): void => {
+  deleteIncludePending.value = false;
+  deleteModalOpen.value = true;
+};
+
+const confirmDeleteAll = async (): Promise<void> => {
   try {
-    const response = await request('/system/events/', { method: 'DELETE' });
-    if (200 !== response.status) {
-      const json = await parse_api_response<GenericResponse>(response);
-      if ('error' in json) {
-        const errorJson = json as GenericError;
-        notification(
-          'error',
-          'Error',
-          `Failed to delete events. ${errorJson.error.code}: ${errorJson.error.message}`,
-        );
-      } else {
-        notification('error', 'Error', 'Failed to delete events.');
-      }
+    deleteSubmitting.value = true;
+
+    const response = await request(`/system/events/?${buildDeleteQuery().toString()}`, {
+      method: 'DELETE',
+    });
+
+    const json = await parse_api_response<{ deleted: number; matched: number }>(response);
+
+    if ('error' in json) {
+      notification(
+        'error',
+        'Error',
+        `Failed to delete events. ${json.error.code}: ${json.error.message}`,
+      );
       return;
     }
 
+    deleteModalOpen.value = false;
     quick_view.value = null;
+    notification(
+      'success',
+      'Success',
+      `Deleted ${json.deleted} event(s) from ${json.matched} match(es).`,
+    );
     await loadContent(page.value);
   } catch (e: unknown) {
     console.error(e);
     notification(
       'crit',
       'Error',
-      `Events view patch Request failure. ${e instanceof Error ? e.message : String(e)}`,
+      `Events delete Request failure. ${e instanceof Error ? e.message : String(e)}`,
     );
+  } finally {
+    deleteSubmitting.value = false;
   }
 };
 
-watch(query, (value: string) => {
+const toggleDisplayFilter = (): void => {
+  showDisplayFilter.value = !showDisplayFilter.value;
+};
+
+watch(displayFilter, (value: string) => {
   if (!value) {
     if (!route.query.filter) {
       return;
