@@ -4,123 +4,106 @@ declare(strict_types=1);
 
 namespace Tests\API\Webhook;
 
-use App\API\Webhook\Index;
-use App\Backends\Common\ClientInterface as iClient;
-use App\Libs\Config;
+use App\API\Webhook;
+use App\Commands\System\TasksCommand;
 use App\Libs\Container;
-use App\Libs\Entity\StateEntity;
+use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Enums\Http\Method;
-use App\Libs\Mappers\ImportInterface as iImport;
+use App\Libs\Events\EventQueue;
 use App\Libs\Options;
 use App\Libs\TestCase;
-use Monolog\Logger;
+use App\Listeners\ProcessWebhookEvent;
+use App\Model\Events\EventsRepository;
+use App\Model\Events\EventsTable;
+use Nyholm\Psr7\Factory\Psr17Factory;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\SimpleCache\CacheInterface;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
-use Symfony\Component\Cache\Psr16Cache;
 use Tests\Support\RequestResponseTrait;
 
 final class IndexTest extends TestCase
 {
     use RequestResponseTrait;
 
+    private EventsRepository $repo;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->initTempApp();
-        $this->seedTestServersConfig();
+        $cache = Container::get(CacheInterface::class);
+        $db = $this->createDb();
 
-        Container::add(iClient::class, function () {
-            $client = $this->createStub(iClient::class);
-            $client->method('withContext')->willReturnSelf();
-            $client->method('setLogger')->willReturnSelf();
-            $client->method('getName')->willReturn('test_plex');
-            $client->method('getType')->willReturn('plex');
-            $client
-                ->method('processRequest')
-                ->willReturnCallback(
-                    static fn(iRequest $request): iRequest => $request
-                        ->withAttribute('backend', [
-                            'id' => 's00000000000000000000000000000000000000p',
-                            'name' => 'test_plex',
-                        ])
-                        ->withAttribute('user', [
-                            'id' => '11111111',
-                            'name' => 'main',
-                        ]),
-                );
-            $client
-                ->method('parseWebhook')
-                ->willReturn(
-                    StateEntity::fromArray(require TESTS_PATH . '/Fixtures/MovieEntity.php'),
-                );
-
-            return $client;
-        });
-
-        Config::save('supported.plex', iClient::class);
-        Config::save('supported.jellyfin', iClient::class);
-        Config::save('supported.emby', iClient::class);
+        Container::add(iDB::class, $db);
+        Container::add(EventsRepository::class, $this->repo = new EventsRepository($db->getDBLayer()));
+        Container::add(EventQueue::class, new EventQueue($cache, $this->repo));
     }
 
-    public function test_cache_webhook_during_tasks(): void
+    public function test_ready(): void
     {
-        $cache = new Psr16Cache(new ArrayAdapter());
-        $cache->set('tasks.running', true, new \DateInterval('PT6H'));
+        $cache = Container::get(CacheInterface::class);
+        $response = (new WebHook($cache))($this->getRequest(method: Method::GET, uri: '/v1/api/webhook'));
 
-        $handler = $this->makeHandler($cache);
+        self::assertSame(200, $response->getStatusCode());
+    }
 
-        $response = $handler($this->getWebhookRequest('req-1'));
+    public function test_queue(): void
+    {
+        $cache = Container::get(CacheInterface::class);
+
+        $response = (new Webhook($cache))($this->getWebhookRequest('req-1'));
+
+        self::assertSame(200, $response->getStatusCode());
+
+        $events = $this->repo->findAll([EventsTable::COLUMN_EVENT => ProcessWebhookEvent::NAME]);
+
+        self::assertCount(1, $events);
+        self::assertSame(['keep' => '1'], $events[0]->event_data['get']);
+        self::assertSame(['payload' => 'ok'], $events[0]->event_data['post']);
+        self::assertSame('raw-body', $events[0]->event_data['body']);
+        self::assertSame('req-1', $events[0]->event_data['server']['X_REQUEST_ID']);
+        self::assertArrayNotHasKey('HTTP_AUTHORIZATION', $events[0]->event_data['server']);
+        self::assertStringNotContainsString('apikey', $events[0]->event_data['server']['REQUEST_URI']);
+        self::assertStringNotContainsString('ws_token', $events[0]->event_data['server']['REQUEST_URI']);
+        self::assertSame('keep=1', $events[0]->event_data['server']['QUERY_STRING']);
+        self::assertSame([], $cache->get('events', []));
+    }
+
+    public function test_cache_during_tasks(): void
+    {
+        $cache = Container::get(CacheInterface::class);
+        $cache->set(TasksCommand::CACHE_NAME, true, new \DateInterval('PT6H'));
+
+        $response = (new WebHook($cache))($this->getWebhookRequest('req-1'));
 
         self::assertSame(200, $response->getStatusCode());
 
         $events = $cache->get('events', []);
 
         self::assertCount(1, $events);
-        self::assertSame('process_request', $events[0]['event']);
-        self::assertSame('movie://121:untainted@test_plex/main', $events[0]['opts']['reference']);
+        self::assertSame(ProcessWebhookEvent::NAME, $events[0]['event']);
         self::assertTrue($events[0]['opts']['cached']);
-        self::assertTrue($events[0]['opts'][Options::FAIL_FAST_ON_LOCK]);
-        self::assertSame('main', $events[0]['opts'][Options::CONTEXT_USER]);
-    }
-
-    public function test_cache_webhook_upsert(): void
-    {
-        $cache = new Psr16Cache(new ArrayAdapter());
-        $cache->set('tasks.running', true, new \DateInterval('PT6H'));
-
-        $handler = $this->makeHandler($cache);
-
-        $handler($this->getWebhookRequest('req-1'));
-        $handler($this->getWebhookRequest('req-2'));
-
-        $events = $cache->get('events', []);
-
-        self::assertCount(1, $events);
-        self::assertSame('req-2', $events[0]['opts']['options'][Options::REQUEST_ID]);
-    }
-
-    private function makeHandler(CacheInterface $cache): Index
-    {
-        Container::add(CacheInterface::class, $cache);
-
-        return new Index(
-            $this->createStub(iImport::class),
-            new Logger('test'),
-            $cache,
-            Container::get(\App\Libs\LogSuppressor::class),
-        );
+        self::assertArrayNotHasKey(Options::CACHE_ONLY, $events[0]['opts']);
+        self::assertSame([], $this->repo->findAll([EventsTable::COLUMN_EVENT => ProcessWebhookEvent::NAME]));
     }
 
     private function getWebhookRequest(string $requestId): iRequest
     {
         return $this->getRequest(
             method: Method::POST,
-            uri: '/v1/api/webhook',
+            uri: '/v1/api/webhook?apikey=secret&ws_token=token&keep=1',
+            post: ['payload' => 'ok'],
+            query: [
+                'apikey' => 'secret',
+                'ws_token' => 'token',
+                'keep' => '1',
+            ],
             server: [
                 'X_REQUEST_ID' => $requestId,
+                'HTTP_AUTHORIZATION' => 'Bearer secret',
+                'QUERY_STRING' => 'apikey=secret&ws_token=token&keep=1',
             ],
+            body: new Psr17Factory()->createStream('raw-body'),
         );
     }
 }

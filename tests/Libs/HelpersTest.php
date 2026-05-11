@@ -953,6 +953,14 @@ class HelpersTest extends TestCase
             'It should return cli routes when called with cli type.'
         );
 
+        $eventView = array_values(array_filter(
+            $routes,
+            static fn(array $route): bool => 'events:view' === ag($route, 'path'),
+        ));
+
+        $this->assertCount(1, $eventView);
+        $this->assertSame(['events:show'], ag($eventView[0], 'opts.aliases', []));
+
         $this->cache->reset();
 
         $this->assertSame(

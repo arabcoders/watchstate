@@ -2,83 +2,117 @@
 
 declare(strict_types=1);
 
-namespace App\API\Webhook;
+namespace App\Listeners;
 
 use App\Backends\Common\ClientInterface as iClient;
-use App\Commands\System\TasksCommand;
 use App\Libs\Attributes\DI\Inject;
-use App\Libs\Attributes\Route\Route;
 use App\Libs\Config;
+use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
-use App\Libs\Enums\Http\Status;
+use App\Libs\Events\DataEvent;
+use App\Libs\Exceptions\DBLayerException;
 use App\Libs\Exceptions\HttpException;
-use App\Libs\Extends\LogMessageProcessor;
-use App\Libs\LogSuppressor;
+use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Extends\LoggerProxy;
+use App\Libs\Extends\ProxyHandler;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use App\Libs\Uri;
 use App\Libs\UserContext;
-use App\Listeners\ProcessRequestEvent;
-use App\Model\Events\EventsTable;
-use DateInterval;
-use Monolog\Handler\StreamHandler;
+use App\Model\Events\EventListener;
+use App\Model\Events\EventStatus;
+use Closure;
 use Monolog\Level;
 use Monolog\Logger;
-use Psr\Http\Message\ResponseInterface as iResponse;
+use Nyholm\Psr7\Factory\Psr17Factory;
+use Nyholm\Psr7Server\ServerRequestCreator;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Log\LoggerInterface as iLogger;
-use Psr\SimpleCache\CacheInterface as iCache;
-use Psr\SimpleCache\InvalidArgumentException;
 use Throwable;
 
-final class Index
+#[EventListener(self::NAME)]
+#[EventListener(self::REQUEST_NAME)]
+final class ProcessWebhookEvent
 {
-    public const string URL = '%{api.prefix}/webhook';
+    public const string NAME = 'on_webhook';
+    public const string REQUEST_NAME = 'process_request';
 
     use APITraits;
 
-    private Logger $logfile;
+    private ?DataEvent $event = null;
+    private ?Closure $writer = null;
 
+    /**
+     * Class constructor.
+     *
+     * @param iImport $mapper Import mapper.
+     * @param iLogger $logger Application logger.
+     */
     public function __construct(
         #[Inject(DirectMapper::class)]
         private readonly iImport $mapper,
         private readonly iLogger $logger,
-        private readonly iCache $cache,
-        LogSuppressor $suppressor,
     ) {
-        $this->logfile = new Logger(name: 'webhook', processors: [new LogMessageProcessor()]);
-
-        $logfile = Config::get('webhook.log.file');
-        $enabled = (bool) Config::get('webhook.log.enabled', true);
-        $level = Config::get('webhook.debug') ? Level::Debug : Config::get('webhook.log.level', Level::Info);
-
-        if (true === $enabled && null !== $logfile) {
-            $this->logfile->pushHandler(
-                $suppressor->withHandler(new StreamHandler($logfile, $level, true)),
-            );
-        }
-
-        if (true === in_container()) {
-            $this->logfile->pushHandler($suppressor->withHandler(new StreamHandler('php://stderr', $level, true)));
-        }
+        set_time_limit(0);
+        ini_set('memory_limit', '-1');
     }
 
     /**
-     * Receive a webhook request from a backend.
+     * Process queued webhook request data.
      *
-     * @param iRequest $request The incoming request object.
+     * @param DataEvent $event Queued event.
      *
-     * @return iResponse The response object.
+     * @return DataEvent Processed event.
      */
-    #[Route(['POST', 'PUT'], Index::URL . '[/]', name: 'webhook.receive')]
-    public function __invoke(iRequest $request): iResponse
+    public function __invoke(DataEvent $event): DataEvent
     {
-        if (true === Config::get('webhook.dumpRequest')) {
-            save_request_payload(clone $request);
+        $event->stopPropagation();
+        $this->event = $event;
+
+        $this->writer = function (Level $level, string $message, array $context = []) use ($event): void {
+            $event->addLog($level->getName() . ': ' . r($message, $context));
+            $this->logger->log($level, $message, $context);
+        };
+
+        try {
+            if (self::REQUEST_NAME === $event->getEvent()->event) {
+                return $this->processState($event, $event->getData(), $event->getOptions());
+            }
+
+            $this->process($this->request($event->getData()));
+        } finally {
+            $this->event = null;
         }
 
+        return $event;
+    }
+
+    private function request(array $data): iRequest
+    {
+        $factory = new Psr17Factory();
+        $creator = new ServerRequestCreator($factory, $factory, $factory, $factory);
+        $post = ag($data, 'post');
+
+        $request = $creator->fromArrays(
+            server: ag($data, 'server', []),
+            get: ag($data, 'get', []),
+            post: true === is_array($post) ? $post : [],
+            cookie: ag($data, 'cookie', []),
+            files: ag($data, 'files', []),
+            body: (string) ag($data, 'body', ''),
+        );
+
+        if (null !== $post) {
+            $request = $request->withParsedBody($post);
+        }
+
+        return $request;
+    }
+
+    private function process(iRequest $request): void
+    {
         $client = null;
         $usersContext = get_users_context(mapper: $this->mapper, logger: $this->logger);
 
@@ -95,18 +129,17 @@ final class Index
         }
 
         if (null === $client) {
-            $message = 'No backend client were able to parse the the request.';
             $this->write(
                 $request,
                 Level::Info,
-                $message,
+                'No backend client were able to parse the the request.',
                 context: [
                     'headers' => $request->getHeaders(),
                     'payload' => $request->getParsedBody(),
                 ],
                 forceContext: true,
             );
-            return api_error($message, Status::BAD_REQUEST);
+            return;
         }
 
         $attr = $request->getAttributes();
@@ -115,15 +148,13 @@ final class Index
         $uuid = ag($attr, 'backend.id');
 
         if (null === $uuid) {
-            $message = "Request payload didn't contain a backend unique id.";
-            $this->write($request, Level::Info, $message);
-            return api_error($message, Status::BAD_REQUEST);
+            $this->write($request, Level::Info, "Request payload didn't contain a backend unique id.");
+            return;
         }
 
         if (false === $isGeneric && null === $userId) {
-            $message = "Request payload didn't contain a user id.";
-            $this->write($request, Level::Info, $message);
-            return api_error($message, Status::BAD_REQUEST);
+            $this->write($request, Level::Info, "Request payload didn't contain a user id.");
+            return;
         }
 
         $backends = [];
@@ -149,11 +180,10 @@ final class Index
         }
 
         if (count($backends) < 1) {
-            $message = "Request from '{client}' didn't match any user/backend.";
             $this->write(
                 $request,
                 Level::Info,
-                $message,
+                "Request from '{client}' didn't match any user/backend.",
                 context: [
                     'client' => $client->getName(),
                     'headers' => $request->getHeaders(),
@@ -161,34 +191,34 @@ final class Index
                 ],
                 forceContext: true,
             );
-            return api_error($message, Status::BAD_REQUEST);
+            return;
         }
 
         if (true === (bool) ag($request->getAttributes(), 'webhook.noop', false)) {
-            $message = "Request from '{client}' treated as noop. No processing will be done.";
             $this->write(
                 $request,
                 Level::Info,
-                $message,
+                "Request from '{client}' treated as noop. No processing will be done.",
                 context: [
                     'client' => $client->getName(),
                     'headers' => $request->getHeaders(),
                 ],
                 forceContext: false,
             );
-            return api_response(Status::OK);
+            return;
         }
 
         $mainBackend = $backends[0];
         try {
             if (1 === count($backends)) {
-                return $this->create_item(
+                $this->create_item(
                     userContext: $mainBackend['userContext'],
                     backendName: $mainBackend['backendName'],
                     client: $mainBackend['client'],
                     request: $request,
                     isGeneric: $isGeneric,
                 );
+                return;
             }
 
             $client = $mainBackend['client'];
@@ -206,7 +236,7 @@ final class Index
                     ...exception_log($e),
                 ],
             );
-            return api_response(Status::NOT_MODIFIED);
+            return;
         }
 
         if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
@@ -223,7 +253,7 @@ final class Index
                     ],
                 ],
             );
-            return api_response(Status::NOT_MODIFIED);
+            return;
         }
 
         if ((0 === (int) $entity->episode || null === $entity->season) && true === $entity->isEpisode()) {
@@ -243,7 +273,7 @@ final class Index
                 ],
             );
 
-            return api_response(Status::NOT_MODIFIED);
+            return;
         }
 
         foreach ($backends as $target) {
@@ -256,7 +286,7 @@ final class Index
                 ]),
             )->withAttribute(
                 'user',
-                ag_sets(ag($request->getAttributes(), 'backend', []), [
+                ag_sets(ag($request->getAttributes(), 'user', []), [
                     'id' => ag($backend, 'user'),
                     'name' => $target['userContext']->name,
                 ]),
@@ -289,20 +319,15 @@ final class Index
                 );
             }
         }
-
-        return api_response(Status::OK);
     }
 
-    /**
-     * @throws InvalidArgumentException
-     */
     private function create_item(
         UserContext $userContext,
         string $backendName,
         iClient $client,
         iRequest $request,
         bool $isGeneric = false,
-    ): iResponse {
+    ): void {
         $backend = $userContext->config->get($backendName);
 
         $debugTrace = true === (bool) ag($backend, 'options.' . Options::DEBUG_TRACE);
@@ -317,23 +342,20 @@ final class Index
         $metadataOnly = true === (bool) ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
 
         if (true !== $metadataOnly && true !== $importEnabled) {
-            $response = api_response(Status::NOT_ACCEPTABLE);
-            if (true === $isGeneric) {
-                return $response;
+            if (false === $isGeneric) {
+                $this->write(
+                    $request,
+                    Level::Warning,
+                    "Import are disabled for '{user}@{backend}'.",
+                    context: [
+                        'user' => $userContext->name,
+                        'backend' => $client->getName(),
+                    ],
+                    forceContext: true,
+                );
             }
 
-            $this->write(
-                $request,
-                Level::Warning,
-                "Import are disabled for '{user}@{backend}'.",
-                context: [
-                    'user' => $userContext->name,
-                    'backend' => $client->getName(),
-                ],
-                forceContext: true,
-            );
-
-            return $response;
+            return;
         }
 
         try {
@@ -342,7 +364,7 @@ final class Index
             $entity = $client->parseWebhook($request, [Options::IS_GENERIC => $isGeneric]);
         } catch (HttpException $e) {
             if (true === $isGeneric) {
-                return api_response(Status::NOT_MODIFIED);
+                return;
             }
             throw $e;
         }
@@ -352,51 +374,45 @@ final class Index
         }
 
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-            $response = api_response(Status::NOT_MODIFIED);
-            if (true === $isGeneric) {
-                return $response;
+            if (false === $isGeneric) {
+                $this->write(
+                    request: $request,
+                    level: Level::Info,
+                    message: "Ignoring '{user}@{backend}' {item.type} '{item.title}'. No valid/supported external ids.",
+                    context: [
+                        'user' => $userContext->name,
+                        'backend' => $entity->via,
+                        'item' => [
+                            'title' => $entity->getName(),
+                            'type' => $entity->type,
+                        ],
+                    ],
+                );
             }
 
-            $this->write(
-                request: $request,
-                level: Level::Info,
-                message: "Ignoring '{user}@{backend}' {item.type} '{item.title}'. No valid/supported external ids.",
-                context: [
-                    'user' => $userContext->name,
-                    'backend' => $entity->via,
-                    'item' => [
-                        'title' => $entity->getName(),
-                        'type' => $entity->type,
-                    ],
-                ],
-            );
-
-            return $response;
+            return;
         }
 
         if ((0 === (int) $entity->episode || null === $entity->season) && $entity->isEpisode()) {
-            $response = api_response(Status::NOT_MODIFIED);
-            if (true === $isGeneric) {
-                return $response;
+            if (false === $isGeneric) {
+                $this->write(
+                    request: $request,
+                    level: Level::Notice,
+                    message: "Ignoring '{user}@{backend}' {item.type} '{item.title}'. No episode/season number present.",
+                    context: [
+                        'user' => $userContext->name,
+                        'backend' => $entity->via,
+                        'item' => [
+                            'title' => $entity->getName(),
+                            'type' => $entity->type,
+                            'season' => (string) ($entity->season ?? 'None'),
+                            'episode' => (string) ($entity->episode ?? 'None'),
+                        ],
+                    ],
+                );
             }
 
-            $this->write(
-                request: $request,
-                level: Level::Notice,
-                message: "Ignoring '{user}@{backend}' {item.type} '{item.title}'. No episode/season number present.",
-                context: [
-                    'user' => $userContext->name,
-                    'backend' => $entity->via,
-                    'item' => [
-                        'title' => $entity->getName(),
-                        'type' => $entity->type,
-                        'season' => (string) ($entity->season ?? 'None'),
-                        'episode' => (string) ($entity->episode ?? 'None'),
-                    ],
-                ],
-            );
-
-            return $response;
+            return;
         }
 
         $itemId = r('{type}://{id}:{tainted}@{backend}/{user}', [
@@ -408,62 +424,21 @@ final class Index
         ]);
 
         $opts = [
-            'unique' => true,
-            EventsTable::COLUMN_REFERENCE => $itemId,
-            EventsTable::COLUMN_OPTIONS => [
-                'tainted' => $entity->isTainted(),
-                Options::IMPORT_METADATA_ONLY => $metadataOnly,
-                Options::REQUEST_ID => ag($request->getServerParams(), 'X_REQUEST_ID'),
-                Options::DEBUG_TRACE => $debugTrace,
-                Options::IS_GENERIC => $isGeneric,
-            ],
+            'tainted' => $entity->isTainted(),
+            Options::IMPORT_METADATA_ONLY => $metadataOnly,
+            Options::REQUEST_ID => ag($request->getServerParams(), 'X_REQUEST_ID'),
+            Options::DEBUG_TRACE => $debugTrace,
+            Options::IS_GENERIC => $isGeneric,
             Options::CONTEXT_USER => $userContext->name,
             Options::FAIL_FAST_ON_LOCK => true,
         ];
-        $cacheTime = new DateInterval('PT6H');
 
-        $queue = false;
-        $payload = $entity->getAll();
-
-        if (true === (bool) $this->cache->get(TasksCommand::CACHE_NAME, false)) {
-            $queue = true;
-            $events = $this->cache->get('events', []);
-            $opts[EventsTable::COLUMN_CREATED_AT] = make_date();
-            $opts['cached'] = true;
-            $cachedEvent = [
-                'event' => ProcessRequestEvent::NAME,
-                'data' => $payload,
-                'opts' => $opts,
-            ];
-
-            foreach ($events as $index => $queued) {
-                if ($itemId !== ag($queued, 'opts.' . EventsTable::COLUMN_REFERENCE)) {
-                    continue;
-                }
-
-                $events[$index] = $cachedEvent;
-                $this->cache->set('events', $events, $cacheTime);
-                return $this->writeResponse($request, $userContext, $entity, $itemId, $isGeneric, $queue);
-            }
-
-            $events[] = $cachedEvent;
-            $this->cache->set('events', $events, $cacheTime);
-            return $this->writeResponse($request, $userContext, $entity, $itemId, $isGeneric, $queue);
+        if (null === $this->event) {
+            return;
         }
 
-        queue_event(ProcessRequestEvent::NAME, $payload, $opts);
+        $this->processState($this->event, $entity->getAll(), $opts);
 
-        return $this->writeResponse($request, $userContext, $entity, $itemId, $isGeneric, $queue);
-    }
-
-    private function writeResponse(
-        iRequest $request,
-        UserContext $userContext,
-        iState $entity,
-        string $itemId,
-        bool $isGeneric,
-        bool $queue,
-    ): iResponse {
         $this->write(
             request: $request,
             level: Level::Info,
@@ -484,16 +459,101 @@ final class Index
                     'queue_id' => $itemId,
                     'progress' => $entity->hasPlayProgress() ? $entity->getPlayProgress() : null,
                     'generic' => $isGeneric,
-                    'live' => false === $queue,
                 ]),
             ],
         );
+    }
 
-        return api_response(Status::OK);
+    private function processState(DataEvent $event, array $data, array $options): DataEvent
+    {
+        $user = ag($options, Options::CONTEXT_USER, 'main');
+        $isGeneric = true === (bool) ag($options, Options::IS_GENERIC, false);
+
+        try {
+            $userContext = get_user_context(user: $user, mapper: $this->mapper, logger: $this->logger);
+        } catch (RuntimeException $ex) {
+            ($this->writer)(Level::Error, $ex->getMessage());
+            return $event;
+        }
+
+        $entity = Container::get(iState::class)::fromArray($data)
+            ->setIsTainted((bool) ag($options, 'tainted', false));
+
+        $backend = make_backend(backend: $userContext->config->get($entity->via), name: $entity->via, options: [
+            iLogger::class => LoggerProxy::create($this->writer),
+            UserContext::class => $userContext,
+        ]);
+
+        // -- revalidate the metadata based on user context.
+        if (true === $isGeneric) {
+            try {
+                $backend->getMetadata(ag($entity->getMetadata($entity->via), iState::COLUMN_ID));
+            } catch (Throwable $ex) {
+                ($this->writer)(Level::Info, $ex->getMessage());
+                return $event;
+            }
+        }
+
+        if (null !== ($lastSync = ag($userContext->get($entity->via, []), 'import.lastSync'))) {
+            $lastSync = make_date($lastSync);
+        }
+
+        ($this->writer)(Level::Notice, r("Processing '{user}@{backend}' {tainted} request '{title}'. {data}", [
+            'backend' => $entity->via,
+            'title' => $entity->getName(),
+            'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
+            'lastSync' => $lastSync,
+            'user' => $userContext->name,
+            'data' => array_to_string([
+                'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, '??'),
+                'state' => $entity->isWatched() ? 'played' : 'unplayed',
+                'progress' => $entity->hasPlayProgress() ? 'Yes' : 'No',
+                'request_id' => ag($options, Options::REQUEST_ID, '-'),
+            ]),
+        ]));
+
+        $isDebug = (bool) ag($options, Options::DEBUG_TRACE, false);
+        if (true === (bool) ag($backend->getContext()->options, Options::DEBUG_TRACE, false)) {
+            $isDebug = true;
+        }
+
+        $mapper = $userContext->mapper;
+
+        if (true === $isDebug) {
+            ($this->writer)(Level::Notice, 'Debug mode enabled.');
+            $mapper = $mapper->setOptions(ag_set($mapper->getOptions(), Options::DEBUG_TRACE, true));
+        }
+
+        $logger = clone $this->logger;
+        assert($logger instanceof Logger, 'Expected logger instance for request processing.');
+
+        $handler = ProxyHandler::create($event->addLog(...), Level::Info);
+        $logger->pushHandler($handler);
+        $mapper->setLogger($logger);
+        $opts = [
+            Options::IMPORT_METADATA_ONLY => (bool) ag($options, Options::IMPORT_METADATA_ONLY),
+            Options::DISABLE_MARK_UNPLAYED => (bool) ag($options, Options::DISABLE_MARK_UNPLAYED),
+            Options::FAIL_FAST_ON_LOCK => (bool) ag($options, Options::FAIL_FAST_ON_LOCK, false),
+            Options::STATE_UPDATE_EVENT => static fn(iState $state) => queue_push(
+                entity: $state,
+                userContext: $userContext,
+            ),
+            Options::LOG_TO_WRITER => $this->writer,
+            Options::AFTER => $lastSync,
+        ];
+
+        if (true === $isDebug) {
+            $opts[Options::DEBUG_TRACE] = true;
+        }
+
+        $mapper->add($entity, $opts)->commit();
+        $handler->close();
+
+        return $event;
     }
 
     /**
-     * Write a log entry to the access log.
+     * Write a log entry to the event log.
      *
      * @param iRequest $request The incoming request object.
      * @param int|string|Level $level The log level or priority.
@@ -535,12 +595,13 @@ final class Index
             $context['attributes'] = $attributes;
         }
 
-        $message = "[G] {$message}";
+        $levelName = $level instanceof Level ? $level->getName() : (string) $level;
+        $this->event?->addLog($levelName . ': ' . r($message, $context));
 
         if (true === (Config::get('logs.context') || $forceContext)) {
-            $this->logfile->log($level, $message, $context);
+            $this->logger->log($level, $message, $context);
         } else {
-            $this->logfile->log($level, r($message, $context));
+            $this->logger->log($level, r($message, $context));
         }
     }
 }

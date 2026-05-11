@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Commands\System;
 
 use App\Command;
+use App\Commands\Events\DispatchCommand;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Container;
@@ -43,6 +44,8 @@ final class TasksCommand extends Command
     public const string NAME = 'run_task';
     public const string CNAME = 'run_console';
     public const string ROUTE = 'system:tasks';
+
+    public const array NO_EVENTS = [DispatchCommand::TASK_NAME, PruneCommand::TASK_NAME];
 
     public const string CACHE_NAME = 'tasks.running';
     public const string CACHE_TIME = 'PT6H';
@@ -453,7 +456,7 @@ final class TasksCommand extends Command
 
         $ended = make_date();
 
-        if (false === $this->viaEvent && ($task['name'] !== 'dispatch' || count($this->taskOutput) > 0)) {
+        if (false === $this->viaEvent && (!in_array($task['name'], self::NO_EVENTS, true) || count($this->taskOutput) > 0)) {
             $event = $this->eventsRepo->getObject([]);
             $event->status = 0 === $process->getExitCode() ? EventStatus::SUCCESS : EventStatus::FAILED;
             $event->event = self::NAME . '.' . $task['name'];

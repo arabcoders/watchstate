@@ -202,7 +202,7 @@ export interface VersionResponse {
 export interface LogItem {
   /** The log file name */
   filename: string;
-  /** The log type (e.g., 'app', 'task', 'access', 'webhook') */
+  /** The log type (e.g., 'app', 'task', 'access') */
   type: string;
   /** The log date in YYYYMMDD format */
   date: string;

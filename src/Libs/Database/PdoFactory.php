@@ -92,7 +92,7 @@ final class PdoFactory
         $pdo = new PDO(...$args);
 
         foreach (Config::get('database.exec.' . $pdo->getAttribute(PDO::ATTR_DRIVER_NAME), []) as $cmd) {
-            $pdo->exec($cmd);
+            $this->pragmaExec($pdo, $cmd);
         }
 
         if (
@@ -111,5 +111,102 @@ final class PdoFactory
     private function inTestMode(): bool
     {
         return true === (defined('IN_TEST_MODE') && true === IN_TEST_MODE);
+    }
+
+    private function pragmaExec(PDO $pdo, string $cmd): void
+    {
+        if ('' === ($cmd = trim(rtrim($cmd, ';')))) {
+            return;
+        }
+
+        if (null === ($pragma = $this->parsePragmaAssignment($cmd))) {
+            $pdo->exec($cmd);
+            return;
+        }
+
+        $name = $pragma['name'];
+        $expected = $pragma['expected'];
+
+        if (false === ($stmt = $pdo->query("PRAGMA {$name}"))) {
+            $pdo->exec($cmd);
+            return;
+        }
+
+        $actual = $stmt->fetchColumn();
+        $stmt->closeCursor();
+
+        if (false === $actual) {
+            $pdo->exec($cmd);
+            return;
+        }
+
+        $actual = $this->normalizeValue($name, (string) $actual);
+        $expected = $this->normalizeValue($name, $expected);
+
+        if ($actual === $expected) {
+            return;
+        }
+
+        if (true === is_numeric($actual) && true === is_numeric($expected) && (float) $actual === (float) $expected) {
+            return;
+        }
+
+        $pdo->exec($cmd);
+    }
+
+    /**
+     * @return array{name: string, expected: string}|null
+     */
+    private function parsePragmaAssignment(string $cmd): ?array
+    {
+        if (false === str_starts_with(strtoupper($cmd), 'PRAGMA ')) {
+            return null;
+        }
+
+        $body = trim(substr($cmd, 7));
+
+        if (false === str_contains($body, '=')) {
+            return null;
+        }
+
+        [$name, $expected] = explode('=', $body, 2);
+
+        $name = trim($name);
+        $expected = trim($expected);
+
+        if ('' === $name || '' === $expected) {
+            return null;
+        }
+
+        return [
+            'name' => $name,
+            'expected' => $expected,
+        ];
+    }
+
+    private function normalizeValue(string $name, string $value): string
+    {
+        $name = strtolower(trim($name));
+        $value = trim($value, " \t\n\r\0\x0B'\"");
+        $upper = strtoupper($value);
+
+        if (true === in_array($upper, ['OFF', 'NO', 'FALSE'], true)) {
+            return '0';
+        }
+
+        if (true === in_array($upper, ['ON', 'YES', 'TRUE'], true)) {
+            return '1';
+        }
+
+        if ('synchronous' === $name) {
+            return match ($upper) {
+                'NORMAL' => '1',
+                'FULL' => '2',
+                'EXTRA' => '3',
+                default => strtolower($value),
+            };
+        }
+
+        return strtolower($value);
     }
 }

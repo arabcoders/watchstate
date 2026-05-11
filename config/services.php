@@ -10,6 +10,7 @@ use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Database\PdoFactory;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
+use App\Libs\Events\EventQueue;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Extends\HttpClient;
@@ -22,6 +23,7 @@ use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\QueueRequests;
 use App\Libs\Uri;
 use App\Libs\UserContext;
+use App\Model\Events\EventsRepository;
 use arabcoders\database\Connection as DatabaseConnection;
 use arabcoders\database\ConnectionManager;
 use arabcoders\database\Dialect\DialectFactory;
@@ -101,6 +103,14 @@ return (function (): array {
 
         QueueRequests::class => [
             'class' => fn() => new QueueRequests(),
+        ],
+
+        EventQueue::class => [
+            'class' => fn(iCache $cache, EventsRepository $repo): EventQueue => new EventQueue($cache, $repo),
+            'args' => [
+                iCache::class,
+                EventsRepository::class,
+            ],
         ],
 
         Redis::class => [

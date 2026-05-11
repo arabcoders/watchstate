@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs\Traits;
 
-use App\API\Webhook\Index as WebhookURL;
+use App\API\WebHook as WebhookURL;
 use App\Backends\Common\Cache as BackendCache;
 use App\Backends\Common\ClientInterface;
 use App\Backends\Common\ClientInterface as iClient;
@@ -51,9 +51,7 @@ trait APITraits
         $default['name'] = $name;
 
         if (null !== $userContext) {
-            $opts[BackendCache::class] = Container::get(BackendCache::class)->with(
-                adapter: $userContext->cache,
-            );
+            $opts[UserContext::class] = $userContext;
         }
 
         return make_backend(array_replace_recursive($default, $config), $name, options: $opts);

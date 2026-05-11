@@ -34,7 +34,6 @@ final class LogsCommand extends Command
         'app',
         'access',
         'task',
-        'webhook',
     ];
 
     /**

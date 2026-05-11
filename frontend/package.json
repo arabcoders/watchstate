@@ -23,6 +23,7 @@
     "dependencies": {
         "@iconify-json/lucide": "^1.2.104",
         "@microsoft/fetch-event-source": "^2.0.1",
+        "@noble/hashes": "^2.2.0",
         "@nuxt/eslint": "^1.15.2",
         "@nuxt/eslint-config": "^1.15.2",
         "@nuxt/ui": "^4.7.1",

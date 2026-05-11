@@ -8,6 +8,7 @@ use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Events\EventQueue;
 use App\Libs\Exceptions\DBAdapterException;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\Guid;
@@ -19,10 +20,12 @@ use App\Model\Events\EventsRepository;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Cache\Adapter\NullAdapter;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\NullOutput;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Cache\Psr16Cache;
 
 abstract class MapperAbstract extends TestCase
 {
@@ -54,7 +57,12 @@ abstract class MapperAbstract extends TestCase
         $this->db = $this->createDb($this->logger);
         Container::reset();
         Container::init();
+        Container::add(CacheInterface::class, new Psr16Cache(new NullAdapter()));
         Container::add(EventsRepository::class, new EventsRepository($this->db->getDBLayer()));
+        Container::add(EventQueue::class, new EventQueue(
+            Container::get(CacheInterface::class),
+            Container::get(EventsRepository::class),
+        ));
 
         $this->mapper = $this->setupMapper();
 

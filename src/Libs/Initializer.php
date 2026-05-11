@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Libs;
 
 use App\Cli;
+use App\Cli\CommandLoader;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Exceptions\HttpException;
@@ -27,7 +28,6 @@ use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface;
-use Symfony\Component\Console\CommandLoader\ContainerCommandLoader;
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 use Throwable;
@@ -183,13 +183,18 @@ final class Initializer
             $cache = Container::get(CacheInterface::class);
 
             $routes = [];
+            $aliases = [];
             $loader = false === $cache->has('routes_cli') ? generate_routes() : $cache->get('routes_cli', []);
 
             foreach ($loader as $route) {
                 $routes[ag($route, 'path')] = ag($route, 'callable');
+                $aliases[ag($route, 'path')] = array_values(array_filter(
+                    (array) ag($route, 'opts.aliases', []),
+                    static fn(mixed $value): bool => is_string($value) && '' !== trim($value),
+                ));
             }
 
-            $this->cli->setCommandLoader(new ContainerCommandLoader(Container::getContainer(), $routes));
+            $this->cli->setCommandLoader(new CommandLoader(Container::getContainer(), $routes, $aliases));
 
             $this->cli->run(output: $this->cliOutput);
         } catch (Throwable $e) {

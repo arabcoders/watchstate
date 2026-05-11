@@ -170,11 +170,6 @@ return (function () {
     ];
 
     $config['webhook'] = [
-        'log' => [
-            'enabled' => (bool) env('WS_WEBHOOK_LOG_ENABLED', true),
-            'level' => env('WS_WEBHOOK_LOG_LEVEL', Level::Info),
-            'file' => ag($config, 'tmpDir') . '/logs/webhook.' . $logDateFormat . '.log',
-        ],
         'dumpRequest' => (bool) env('WS_WEBHOOK_DUMP_REQUEST', false),
         'tokenLength' => (int) env('WS_WEBHOOK_TOKEN_LENGTH', 16),
         'file_format' => (string) env('WS_WEBHOOK_LOG_FILE_FORMAT', 'webhook.{backend}.{event}.{id}.json'),

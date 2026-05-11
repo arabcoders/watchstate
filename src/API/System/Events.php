@@ -14,10 +14,10 @@ use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Options;
 use App\Model\Events\Event as EntityItem;
-use App\Model\Events\Event;
 use App\Model\Events\EventsRepository;
 use App\Model\Events\EventsTable as EntityTable;
 use App\Model\Events\EventStatus;
+use InvalidArgumentException;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 
@@ -37,22 +37,45 @@ final readonly class Events
         $params = DataUtil::fromRequest($request, true);
         [$page, $perpage, $start] = get_pagination($request, 1, self::PERPAGE);
 
-        $arrParams = [];
-
-        if (null !== ($filter = $params->get('filter'))) {
-            $arrParams['event'] = [DBLayer::IS_LIKE, $filter];
+        try {
+            $arrParams = $this->buildListCriteria($params);
+        } catch (InvalidArgumentException $e) {
+            return api_error($e->getMessage(), Status::BAD_REQUEST);
         }
+
+        $sortField = trim((string) $params->get('sort', EntityTable::COLUMN_CREATED_AT));
+        $sortField = in_array(
+            $sortField,
+            [
+                EntityTable::COLUMN_CREATED_AT,
+                EntityTable::COLUMN_UPDATED_AT,
+                EntityTable::COLUMN_EVENT,
+                EntityTable::COLUMN_STATUS,
+                EntityTable::COLUMN_REFERENCE,
+                EntityTable::COLUMN_ATTEMPTS,
+            ],
+            true,
+        )
+            ? $sortField
+            : EntityTable::COLUMN_CREATED_AT;
+        $direction = 'asc' === strtolower(trim((string) $params->get('direction', 'desc'))) ? 'asc' : 'desc';
 
         $this->repo
             ->setPerpage($perpage)
             ->setStart($start)
-            ->setDescendingOrder();
+            ->setSort($sortField);
+
+        if ('asc' === $direction) {
+            $this->repo->setAscendingOrder();
+        } else {
+            $this->repo->setDescendingOrder();
+        }
 
         $entities = $this->repo->findAll($arrParams, [
             EntityTable::COLUMN_ID,
             EntityTable::COLUMN_EVENT,
+            EntityTable::COLUMN_REFERENCE,
             EntityTable::COLUMN_STATUS,
-            EntityTable::COLUMN_EVENT_DATA,
             EntityTable::COLUMN_OPTIONS,
             EntityTable::COLUMN_ATTEMPTS,
             EntityTable::COLUMN_CREATED_AT,
@@ -68,6 +91,17 @@ final readonly class Events
                 'perpage' => $perpage,
                 'next' => $page < @ceil($total / $perpage) ? $page + 1 : null,
                 'previous' => !empty($entities) && $page > 1 ? $page - 1 : null,
+            ],
+            'filter' => [
+                'filter' => trim((string) $params->get('filter', '')),
+                'status' => trim((string) $params->get('status', '')),
+                'event' => trim((string) $params->get('event', '')),
+                'reference' => trim((string) $params->get('reference', '')),
+                'before' => trim((string) $params->get('before', '')),
+                'after' => trim((string) $params->get('after', '')),
+                'sort' => $sortField,
+                'direction' => $direction,
+                'all' => true === (bool) $params->get('all', false),
             ],
             'items' => [],
             'statuses' => [],
@@ -112,13 +146,48 @@ final readonly class Events
     }
 
     #[Delete(pattern: self::URL . '[/]')]
-    public function removeAll(): iResponse
+    public function removeAll(iRequest $request): iResponse
     {
-        $this->repo->remove([
-            EntityTable::COLUMN_STATUS => [DBLayer::IS_NOT_EQUAL, EventStatus::PENDING->value],
-        ]);
+        $params = DataUtil::fromRequest($request, true);
 
-        return api_response(Status::OK);
+        try {
+            $criteria = $this->buildDeleteCriteria($params);
+        } catch (InvalidArgumentException $e) {
+            return api_error($e->getMessage(), Status::BAD_REQUEST);
+        }
+
+        $limit = null;
+        if (null !== ($limitValue = $params->get('limit')) && '' !== trim((string) $limitValue)) {
+            if (1 !== preg_match('/^\d+$/', trim((string) $limitValue)) || (int) $limitValue < 1) {
+                return api_error('limit parameter must be a positive integer.', Status::BAD_REQUEST);
+            }
+
+            $limit = (int) $limitValue;
+        }
+
+        $items = (clone $this->repo)
+            ->setPerpage(null === $limit ? PHP_INT_MAX : $limit)
+            ->setStart(0)
+            ->setSort(EntityTable::COLUMN_CREATED_AT)
+            ->setAscendingOrder()
+            ->findAll($criteria);
+
+        $deleted = 0;
+
+        foreach ($items as $event) {
+            if (!$this->repo->remove($event)) {
+                continue;
+            }
+
+            $deleted++;
+        }
+
+        return api_response(Status::OK, [
+            'deleted' => $deleted,
+            'matched' => count($items),
+            'include_pending' => true === (bool) $params->get('include_pending', false),
+            'limit' => $limit,
+        ]);
     }
 
     #[Post(pattern: self::URL . '[/]')]
@@ -194,8 +263,8 @@ final readonly class Events
         }
 
         $params = DataUtil::fromRequest($request);
+        $status = null;
 
-        // -- Update State.
         if (null !== ($status = $params->get(EntityTable::COLUMN_STATUS))) {
             if (false === is_int($status) && false === ctype_digit($status)) {
                 return api_error('status parameter must be a number.', Status::BAD_REQUEST);
@@ -204,7 +273,12 @@ final readonly class Events
             if (null === ($status = EventStatus::tryFrom((int) $status))) {
                 return api_error('Invalid status parameter was given.', Status::BAD_REQUEST);
             }
+        }
 
+        if (null !== $status) {
+            if (EventStatus::CANCELLED === $status && EventStatus::PENDING !== $entity->status) {
+                return api_error('Only events in pending state can be cancelled.', Status::BAD_REQUEST);
+            }
             $entity->status = $status;
         }
 
@@ -212,8 +286,8 @@ final readonly class Events
             $entity->event = $event;
         }
 
-        if (null !== ($event_data = $params->get(EntityTable::COLUMN_EVENT_DATA))) {
-            $entity->event_data = $event_data;
+        if (null !== ($eventData = $params->get(EntityTable::COLUMN_EVENT_DATA))) {
+            $entity->event_data = $eventData;
         }
 
         if (true === (bool) $params->get('reset_logs', false)) {
@@ -235,6 +309,7 @@ final readonly class Events
     {
         $data = $entity->getAll();
         $data['status_name'] = $entity->getStatusText();
+        $data['display_id'] = substr(str_replace('-', '', (string) $entity->id), 0, 12);
 
         if (is_array($entity->logs) && count($entity->logs) > 0) {
             $data['logs'] = array_map(LogsIndex::formatLog(...), $entity->logs);
@@ -245,5 +320,138 @@ final readonly class Events
         }
 
         return $data;
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function buildListCriteria(DataUtil $params): array
+    {
+        $criteria = [];
+        $status = trim((string) $params->get('status', ''));
+        $event = trim((string) $params->get('event', ''));
+        $reference = trim((string) $params->get('reference', ''));
+        $filter = trim((string) $params->get('filter', ''));
+        $before = trim((string) $params->get('before', ''));
+        $after = trim((string) $params->get('after', ''));
+        $all = true === (bool) $params->get('all', false);
+
+        if ('' !== $status) {
+            $criteria[EntityTable::COLUMN_STATUS] = $this->normalizeStatus($status)->value;
+        } elseif (false === $all) {
+            $criteria[EntityTable::COLUMN_STATUS] = [
+                DBLayer::IS_IN,
+                [
+                    EventStatus::PENDING->value,
+                    EventStatus::FAILED->value,
+                    EventStatus::CANCELLED->value,
+                ],
+            ];
+        }
+
+        if ('' !== $event) {
+            $criteria[EntityTable::COLUMN_EVENT] = [DBLayer::IS_LIKE, $event];
+        }
+
+        if ('' !== $reference) {
+            $criteria[EntityTable::COLUMN_REFERENCE] = [DBLayer::IS_LIKE, $reference];
+        }
+
+        if ('' !== $filter) {
+            $criteria[EntityTable::COLUMN_EVENT] = [DBLayer::IS_LIKE, $filter];
+        }
+
+        $range = $this->makeDateRange($before, $after);
+        if (null !== $range) {
+            $criteria[EntityTable::COLUMN_CREATED_AT] = $range;
+        }
+
+        return $criteria;
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function buildDeleteCriteria(DataUtil $params): array
+    {
+        $criteria = $this->buildListCriteria($params);
+        $allowed = [
+            EventStatus::SUCCESS->value,
+            EventStatus::FAILED->value,
+            EventStatus::CANCELLED->value,
+        ];
+
+        if (true === (bool) $params->get('include_pending', false)) {
+            $allowed[] = EventStatus::PENDING->value;
+        }
+
+        if (isset($criteria[EntityTable::COLUMN_STATUS]) && !is_array($criteria[EntityTable::COLUMN_STATUS])) {
+            $criteria[EntityTable::COLUMN_STATUS] = in_array((int) $criteria[EntityTable::COLUMN_STATUS], $allowed, true)
+                ? (int) $criteria[EntityTable::COLUMN_STATUS]
+                : [DBLayer::IS_IN, [-1]];
+
+            return $criteria;
+        }
+
+        $criteria[EntityTable::COLUMN_STATUS] = [DBLayer::IS_IN, $allowed];
+
+        return $criteria;
+    }
+
+    private function normalizeStatus(string $value): EventStatus
+    {
+        $value = trim($value);
+
+        if (ctype_digit($value) && null !== ($status = EventStatus::tryFrom((int) $value))) {
+            return $status;
+        }
+
+        if (null !== ($status = EventStatus::fromName($value))) {
+            return $status;
+        }
+
+        throw new InvalidArgumentException(r("Invalid status '{status}' was given.", ['status' => $value]));
+    }
+
+    /**
+     * @return array<int,mixed>|null
+     */
+    private function makeDateRange(string $before, string $after): ?array
+    {
+        if ('' !== $before) {
+            $before = $this->normalizeDate($before);
+        }
+
+        if ('' !== $after) {
+            $after = $this->normalizeDate($after);
+        }
+
+        if ('' !== $before && '' !== $after) {
+            return [DBLayer::IS_BETWEEN, [$after, $before]];
+        }
+
+        if ('' !== $before) {
+            return [DBLayer::IS_LOWER_THAN, $before];
+        }
+
+        if ('' !== $after) {
+            return [DBLayer::IS_HIGHER_THAN_OR_EQUAL, $after];
+        }
+
+        return null;
+    }
+
+    private function normalizeDate(string $value): string
+    {
+        $timestamp = strtotime($value);
+
+        if (false === $timestamp) {
+            throw new InvalidArgumentException(r(
+                "Unable to parse time expression '{value}'. Use formats that PHP strtotime() accepts, such as '1min ago', '15 minutes ago', '2 hours ago', 'now', 'yesterday', or '2026-05-12 10:00'.",
+                ['value' => $value],
+            ));
+        }
+
+        return make_date($timestamp)->format('Y-m-d H:i:s');
     }
 }
