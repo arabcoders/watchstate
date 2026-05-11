@@ -82,18 +82,6 @@ return (function () {
             'type' => 'string',
         ],
         [
-            'key' => 'WS_WEBHOOK_LOG_ENABLED',
-            'config' => 'webhook.log.enabled',
-            'description' => 'Enable Webhook logging to file. Default: true.',
-            'type' => 'bool',
-        ],
-        [
-            'key' => 'WS_WEBHOOK_LOG_LEVEL',
-            'config' => 'webhook.log.level',
-            'description' => 'Set the log level for the webhook logger. Default: INFO.',
-            'type' => 'string',
-        ],
-        [
             'key' => 'WS_WEBHOOK_DUMP_REQUEST',
             'config' => 'webhook.dumpRequest',
             'description' => 'Dump all requests to webhook endpoint to a json file.',

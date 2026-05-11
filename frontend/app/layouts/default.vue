@@ -32,7 +32,7 @@
 
               <div v-if="!collapsed" class="min-w-0">
                 <p class="truncate text-sm font-semibold text-highlighted">WatchState</p>
-                <p class="truncate text-xs text-toned">Control Panel Dashboard</p>
+                <p class="truncate text-xs text-toned">Control Panel</p>
               </div>
             </div>
           </template>

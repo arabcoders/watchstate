@@ -186,8 +186,6 @@ const getLogTypeIcon = (type: string): string => {
       return 'i-lucide-list-checks';
     case 'app':
       return 'i-lucide-bug';
-    case 'webhook':
-      return 'i-lucide-book-open';
     case 'request':
       return 'i-lucide-globe';
     default:

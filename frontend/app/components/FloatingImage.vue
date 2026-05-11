@@ -61,7 +61,21 @@ const popoverMode = computed<'click' | 'hover'>(() =>
   'mobile' === breakpoints.active().value ? 'click' : 'hover',
 );
 
+const isAborted = (error: unknown, controller: AbortController): boolean => {
+  if (true === controller.signal.aborted) {
+    return true;
+  }
+
+  if ('not_needed' === error) {
+    return true;
+  }
+
+  return error instanceof Error && 'AbortError' === error.name;
+};
+
 const defaultLoader = async (): Promise<void> => {
+  const controller = new AbortController();
+
   try {
     if (props.image && cache.has(props.image)) {
       url.value = cache.get(props.image) as string;
@@ -72,11 +86,11 @@ const defaultLoader = async (): Promise<void> => {
       return;
     }
 
-    cancelRequest = new AbortController();
+    cancelRequest = controller;
     isPreloading.value = true;
 
     const cb = props.image.startsWith('/') ? request : fetch;
-    const response = await cb(props.image, { signal: cancelRequest.signal });
+    const response = await cb(props.image, { signal: controller.signal });
 
     if (!response.ok) {
       return;
@@ -86,7 +100,7 @@ const defaultLoader = async (): Promise<void> => {
     cache.set(props.image, objUrl);
     url.value = objUrl;
   } catch (e: unknown) {
-    if ('not_needed' === e) {
+    if (true === isAborted(e, controller)) {
       return;
     }
 
