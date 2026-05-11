@@ -17,6 +17,7 @@ class Route
     public readonly ?string $name;
     public readonly ?string $scheme;
     public readonly string|int|null $port;
+    public readonly array $opts;
 
     /**
      * Generate Dynamic Route.
@@ -46,6 +47,7 @@ class Route
         $this->port = null !== $port ? parse_config_value($port) : $port;
         $this->scheme = null !== $scheme ? parse_config_value($scheme) : $scheme;
         $this->host = null !== $host ? parse_config_value($host, static fn($v) => parse_url($v, PHP_URL_HOST)) : $host;
+        $this->opts = $opts;
 
         $this->isCli = true === (bool) ag($opts, 'cli', false);
     }

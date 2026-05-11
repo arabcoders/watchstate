@@ -15,7 +15,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-#[Cli(command: self::ROUTE)]
+#[Cli(command: self::ROUTE, aliases: ['events:show'])]
 final class ViewCommand extends AbstractEventCommand
 {
     public const string ROUTE = 'events:view';

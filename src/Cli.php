@@ -8,6 +8,7 @@ use App\Libs\Config;
 use App\Libs\Extends\PSRContainer;
 use Composer\InstalledVersions;
 use Symfony\Component\Console\Application;
+use Symfony\Component\Console\Command\Command as BaseCommand;
 use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Input\InputOption;
 
@@ -32,6 +33,24 @@ class Cli extends Application
     public static function getAppName(): string
     {
         return Config::get('name');
+    }
+
+    /**
+     * @return array<string, BaseCommand>
+     */
+    public function all(?string $namespace = null): array
+    {
+        $commands = parent::all($namespace);
+
+        if (null === $namespace) {
+            return $commands;
+        }
+
+        return array_filter(
+            $commands,
+            static fn(BaseCommand $command, string $name): bool => $command->getName() === $name,
+            ARRAY_FILTER_USE_BOTH,
+        );
     }
 
     /**

@@ -1144,6 +1144,7 @@ if (!function_exists('generate_routes')) {
                     'name' => ag($item->data, 'name'),
                     'port' => ag($item->data, 'port'),
                     'scheme' => ag($item->data, 'scheme'),
+                    'opts' => ag($item->data, 'opts', []),
                 ];
             }
 
