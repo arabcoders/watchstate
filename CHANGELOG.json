@@ -1,9 +1,44 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "2fb37a168d24ccfb2d9dedd2282a480caac532a5",
-    "date": "2026-05-10T05:04:08+00:00",
+    "full_sha": "9d0b002a4fbcd3a4fbb6b47d73e25775afcaf016",
+    "date": "2026-05-11T15:45:23+00:00",
     "commits": [
+      {
+        "sha": "9d0b002a",
+        "full_sha": "9d0b002a4fbcd3a4fbb6b47d73e25775afcaf016",
+        "message": "feat: add command alias",
+        "author": "arabcoders",
+        "date": "2026-05-11T15:45:23+00:00"
+      },
+      {
+        "sha": "516e961a",
+        "full_sha": "516e961ae515419b30a442969e9df5f700c238a8",
+        "message": "feat: add events management interface for cli",
+        "author": "arabcoders",
+        "date": "2026-05-11T15:36:38+00:00"
+      },
+      {
+        "sha": "5cec9852",
+        "full_sha": "5cec98525796ae9986d72b3b376f909f28405011",
+        "message": "fix: fallback to userland implementation for hmac signing in non https",
+        "author": "arabcoders",
+        "date": "2026-05-11T14:39:56+00:00"
+      },
+      {
+        "sha": "275da73a",
+        "full_sha": "275da73a8880cd9455c92f61b028cb8c05121814",
+        "message": "Refactor: move webhook processing to be an event",
+        "author": "arabcoders",
+        "date": "2026-05-11T14:12:39+00:00"
+      },
+      {
+        "sha": "98b61ae9",
+        "full_sha": "98b61ae9b77bc4be1cb2b363102c293e155f7f12",
+        "message": "refactor: move queue_event to be class based",
+        "author": "arabcoders",
+        "date": "2026-05-11T14:11:38+00:00"
+      },
       {
         "sha": "2fb37a16",
         "full_sha": "2fb37a168d24ccfb2d9dedd2282a480caac532a5",
