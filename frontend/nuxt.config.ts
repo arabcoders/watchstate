@@ -96,6 +96,8 @@ export default defineNuxtConfig({
         'marked-base-url',
         'marked-alert',
         'marked-gfm-heading-id',
+        '@noble/hashes/hmac.js',
+        '@noble/hashes/sha2.js',
       ],
     },
     server: {
