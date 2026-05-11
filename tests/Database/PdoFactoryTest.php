@@ -11,9 +11,9 @@ use PDO;
 final class PdoFactoryTest extends TestCase
 {
     /**
-     * This is a regression test for the production `database is locked` failure seen during `state:import`.
+     * This is a regression test for long `state:import` run which sometimes triggers the `database is locked`.
      *
-     * The bug was not the UPDATE itself. It was the sequence below:
+     * The sequence on how the error can occur is as follows:
      *
      * 1. The import process opens a long SQLite transaction.
      * 2. The transaction performs reads first, which establishes a read snapshot.
