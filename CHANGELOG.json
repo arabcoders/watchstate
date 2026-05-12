@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "9d0b002a4fbcd3a4fbb6b47d73e25775afcaf016",
-    "date": "2026-05-11T15:45:23+00:00",
+    "full_sha": "70bab8cd0d68959471abc0a1c4f5af0454e6c87b",
+    "date": "2026-05-12T08:09:51+00:00",
     "commits": [
+      {
+        "sha": "70bab8cd",
+        "full_sha": "70bab8cd0d68959471abc0a1c4f5af0454e6c87b",
+        "message": "refactor: update webhook logs",
+        "author": "arabcoders",
+        "date": "2026-05-12T08:09:51+00:00"
+      },
+      {
+        "sha": "26dc6572",
+        "full_sha": "26dc6572efb94f99e9c918bd9859fcddf4497e8e",
+        "message": "refactor: rename buttons",
+        "author": "arabcoders",
+        "date": "2026-05-11T16:13:19+00:00"
+      },
       {
         "sha": "9d0b002a",
         "full_sha": "9d0b002a4fbcd3a4fbb6b47d73e25775afcaf016",
