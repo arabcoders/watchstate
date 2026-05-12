@@ -9,8 +9,8 @@ use App\Libs\Attributes\DI\Inject;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Events\DataEvent;
-use App\Libs\Exceptions\DBLayerException;
 use App\Libs\Exceptions\HttpException;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\LoggerProxy;
@@ -22,7 +22,6 @@ use App\Libs\Traits\APITraits;
 use App\Libs\Uri;
 use App\Libs\UserContext;
 use App\Model\Events\EventListener;
-use App\Model\Events\EventStatus;
 use Closure;
 use Monolog\Level;
 use Monolog\Logger;
@@ -227,7 +226,7 @@ final class ProcessWebhookEvent
         } catch (Throwable $e) {
             $this->write(
                 request: $request,
-                level: Level::Error,
+                level: $this->level($e),
                 message: "Failed to process webhook for '{user}@{backend}'. {msg}.",
                 context: [
                     'user' => $mainBackend['userContext']->name,
@@ -315,7 +314,7 @@ final class ProcessWebhookEvent
             } catch (Throwable $e) {
                 $this->write(
                     request: $perUserRequest,
-                    level: Level::Error,
+                    level: $this->level($e),
                     message: "Failed to process '{user}@{backend}' {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'. {trace}",
                     context: [
                         'user' => $target['userContext']->name,
@@ -331,6 +330,15 @@ final class ProcessWebhookEvent
                 );
             }
         }
+    }
+
+    private function level(Throwable $e): Level
+    {
+        if ($e instanceof HttpException && Status::OK->value === $e->getCode()) {
+            return Level::Info;
+        }
+
+        return Level::Error;
     }
 
     private function create_item(
