@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "70bab8cd0d68959471abc0a1c4f5af0454e6c87b",
-    "date": "2026-05-12T08:09:51+00:00",
+    "full_sha": "c8b65377acd288c0fc6e04ac14a071621aa70f0b",
+    "date": "2026-05-12T10:11:48+00:00",
     "commits": [
+      {
+        "sha": "c8b65377",
+        "full_sha": "c8b65377acd288c0fc6e04ac14a071621aa70f0b",
+        "message": "refactor: improve error logging levels in ProcessWebhookEvent",
+        "author": "arabcoders",
+        "date": "2026-05-12T10:11:48+00:00"
+      },
       {
         "sha": "70bab8cd",
         "full_sha": "70bab8cd0d68959471abc0a1c4f5af0454e6c87b",
