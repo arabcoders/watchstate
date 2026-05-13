@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "3ebdfef282575cf3c7763422664ebe9dd8e2decf",
-    "date": "2026-05-13T05:08:33+00:00",
+    "full_sha": "1511830906d5453899b59afd2ef922a1e3406987",
+    "date": "2026-05-13T19:40:47+00:00",
     "commits": [
+      {
+        "sha": "15118309",
+        "full_sha": "1511830906d5453899b59afd2ef922a1e3406987",
+        "message": "refactor: added retry attempts for unloading cached events.",
+        "author": "arabcoders",
+        "date": "2026-05-13T19:40:47+00:00"
+      },
       {
         "sha": "3ebdfef2",
         "full_sha": "3ebdfef282575cf3c7763422664ebe9dd8e2decf",
