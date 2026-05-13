@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "c8b65377acd288c0fc6e04ac14a071621aa70f0b",
-    "date": "2026-05-12T10:11:48+00:00",
+    "full_sha": "3ebdfef282575cf3c7763422664ebe9dd8e2decf",
+    "date": "2026-05-13T05:08:33+00:00",
     "commits": [
+      {
+        "sha": "3ebdfef2",
+        "full_sha": "3ebdfef282575cf3c7763422664ebe9dd8e2decf",
+        "message": "refactor: move progress/push to use current logger instead of global one.",
+        "author": "arabcoders",
+        "date": "2026-05-13T05:08:33+00:00"
+      },
       {
         "sha": "c8b65377",
         "full_sha": "c8b65377acd288c0fc6e04ac14a071621aa70f0b",
