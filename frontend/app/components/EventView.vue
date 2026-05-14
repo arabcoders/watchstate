@@ -63,7 +63,7 @@
             icon="i-lucide-wrap-text"
             @click="wrapLines = !wrapLines"
           >
-            <span class="hidden sm:inline">Wrap Lines</span>
+            <span class="hidden sm:inline">Wrap</span>
           </UButton>
         </UTooltip>
 
@@ -76,7 +76,7 @@
             :disabled="isLoading"
             @click="() => copyText(JSON.stringify(item, null, 2))"
           >
-            <span class="hidden sm:inline">Copy Event</span>
+            <span class="hidden sm:inline">Copy</span>
           </UButton>
         </UTooltip>
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\API\Webhook;
 
-use App\API\Webhook;
+use App\API\WebHook;
 use App\Commands\System\TasksCommand;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
@@ -60,13 +60,30 @@ final class IndexTest extends TestCase
         self::assertCount(1, $events);
         self::assertSame(['keep' => '1'], $events[0]->event_data['get']);
         self::assertSame(['payload' => 'ok'], $events[0]->event_data['post']);
-        self::assertSame('raw-body', $events[0]->event_data['body']);
+        self::assertSame('', $events[0]->event_data['body']);
         self::assertSame('req-1', $events[0]->event_data['server']['X_REQUEST_ID']);
         self::assertArrayNotHasKey('HTTP_AUTHORIZATION', $events[0]->event_data['server']);
+        self::assertArrayNotHasKey('WS_API_KEY', $events[0]->event_data['server']);
+        self::assertArrayNotHasKey('WS_BACKENDS_FILE', $events[0]->event_data['server']);
         self::assertStringNotContainsString('apikey', $events[0]->event_data['server']['REQUEST_URI']);
         self::assertStringNotContainsString('ws_token', $events[0]->event_data['server']['REQUEST_URI']);
         self::assertSame('keep=1', $events[0]->event_data['server']['QUERY_STRING']);
         self::assertSame([], $cache->get('events', []));
+    }
+
+    public function test_raw_queue(): void
+    {
+        $cache = Container::get(CacheInterface::class);
+
+        $response = (new WebHook($cache))($this->getWebhookRequest('req-1')->withParsedBody(null));
+
+        self::assertSame(200, $response->getStatusCode());
+
+        $events = $this->repo->findAll([EventsTable::COLUMN_EVENT => ProcessWebhookEvent::NAME]);
+
+        self::assertCount(1, $events);
+        self::assertArrayNotHasKey('post', $events[0]->event_data);
+        self::assertSame('raw-body', $events[0]->event_data['body']);
     }
 
     public function test_cache_during_tasks(): void
@@ -82,6 +99,9 @@ final class IndexTest extends TestCase
 
         self::assertCount(1, $events);
         self::assertSame(ProcessWebhookEvent::NAME, $events[0]['event']);
+        self::assertSame(['payload' => 'ok'], $events[0]['data']['post']);
+        self::assertSame('', $events[0]['data']['body']);
+        self::assertArrayNotHasKey('WS_API_KEY', $events[0]['data']['server']);
         self::assertTrue($events[0]['opts']['cached']);
         self::assertArrayNotHasKey(Options::CACHE_ONLY, $events[0]['opts']);
         self::assertSame([], $this->repo->findAll([EventsTable::COLUMN_EVENT => ProcessWebhookEvent::NAME]));
@@ -102,6 +122,8 @@ final class IndexTest extends TestCase
                 'X_REQUEST_ID' => $requestId,
                 'HTTP_AUTHORIZATION' => 'Bearer secret',
                 'QUERY_STRING' => 'apikey=secret&ws_token=token&keep=1',
+                'WS_API_KEY' => 'secret',
+                'WS_BACKENDS_FILE' => '/config/servers.yaml',
             ],
             body: new Psr17Factory()->createStream('raw-body'),
         );

@@ -66,7 +66,6 @@ final class ProcessWebhookEventTest extends TestCase
 
         self::assertSame([], $events);
         self::assertSame(EventStatus::RUNNING, $event->getStatus());
-        self::assertStringContainsString('Processing', implode("\n", $event->getLogs()));
     }
 
     public function test_tasks_processes(): void
@@ -94,8 +93,32 @@ final class ProcessWebhookEventTest extends TestCase
 
         self::assertSame([], $events);
         self::assertSame(EventStatus::RUNNING, $event->getStatus());
-        self::assertStringContainsString('Processing', implode("\n", $event->getLogs()));
-        self::assertStringNotContainsString('live: false', implode("\n", $event->getLogs()));
+    }
+
+    public function test_raw_body(): void
+    {
+        $cache = Container::get(CacheInterface::class);
+        $logger = new Logger('test');
+
+        $client = $this->createMock(iClient::class);
+        $client->expects($this->once())->method('processRequest')->willReturnCallback(function (iRequest $request): iRequest {
+            self::assertNull($request->getParsedBody());
+            self::assertSame('raw-body', (string) $request->getBody());
+
+            return $this->inspect($request);
+        });
+        $client->expects($this->once())->method('parseWebhook')->willReturn($this->movie());
+        $client->method('withContext')->willReturnSelf();
+        $client->method('setLogger')->willReturnSelf();
+        $client->method('getName')->willReturn('test_plex');
+        $client->method('getType')->willReturn('plex');
+
+        Container::add(iClient::class, $client);
+
+        $listener = new ProcessWebhookEvent(new DirectMapper($logger, Container::get(iDB::class), $cache), $logger);
+        $event = $this->event('req-1', null, 'raw-body');
+
+        $listener($event);
     }
 
     private function inspect(iRequest $request): iRequest
@@ -111,13 +134,13 @@ final class ProcessWebhookEventTest extends TestCase
             ]);
     }
 
-    private function event(string $requestId): DataEvent
+    private function event(string $requestId, ?array $post = [], string $body = ''): DataEvent
     {
         return new DataEvent(new Event([
             EventsTable::COLUMN_ID => generate_uuid(),
             EventsTable::COLUMN_STATUS => EventStatus::RUNNING->value,
             EventsTable::COLUMN_EVENT => ProcessWebhookEvent::NAME,
-            EventsTable::COLUMN_EVENT_DATA => json_encode($this->data($requestId)),
+            EventsTable::COLUMN_EVENT_DATA => json_encode($this->data($requestId, $post, $body)),
             EventsTable::COLUMN_OPTIONS => json_encode([]),
             EventsTable::COLUMN_ATTEMPTS => 1,
             EventsTable::COLUMN_LOGS => json_encode([]),
@@ -126,7 +149,7 @@ final class ProcessWebhookEventTest extends TestCase
         ]));
     }
 
-    private function data(string $requestId): array
+    private function data(string $requestId, ?array $post, string $body): array
     {
         $request = $this->getRequest(
             method: Method::POST,
@@ -136,14 +159,19 @@ final class ProcessWebhookEventTest extends TestCase
             ],
         );
 
-        return [
+        $data = [
             'server' => $request->getServerParams(),
             'get' => $request->getQueryParams(),
-            'post' => $request->getParsedBody(),
             'cookie' => $request->getCookieParams(),
             'files' => [],
-            'body' => (string) $request->getBody(),
+            'body' => $body,
         ];
+
+        if (null !== $post) {
+            $data['post'] = $post;
+        }
+
+        return $data;
     }
 
     private function movie(): StateEntity

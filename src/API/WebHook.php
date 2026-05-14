@@ -55,24 +55,26 @@ final class WebHook
             $opts[Options::CACHE_TTL] = new DateInterval('PT6H');
         }
 
-        queue_event(
-            event: ProcessWebhookEvent::NAME,
-            data: [
-                'server' => $this->filter($request->getServerParams(), $query),
-                'get' => $query,
-                'post' => $request->getParsedBody(),
-                'cookie' => $request->getCookieParams(),
-                'files' => [],
-                'body' => (string) $request->getBody(),
-            ],
-            opts: $opts,
-        );
+        $post = $request->getParsedBody();
+        $data = [
+            'server' => $this->filter($request->getServerParams(), $query),
+            'get' => $query,
+            'cookie' => $request->getCookieParams(),
+            'files' => [],
+            'body' => null === $post ? (string) $request->getBody() : '',
+        ];
+
+        if (null !== $post) {
+            $data['post'] = $post;
+        }
+
+        queue_event(ProcessWebhookEvent::NAME, $data, $opts);
 
         return api_response(Status::OK);
     }
 
     /**
-     * Remove authorization-only fields from queued server data.
+     * Remove fields from server data.
      *
      * @param array $server Server parameters.
      * @param array $query Sanitized query parameters.
@@ -82,6 +84,14 @@ final class WebHook
     private function filter(array $server, array $query): array
     {
         unset($server['HTTP_AUTHORIZATION']);
+
+        foreach (array_keys($server) as $key) {
+            if (false === is_string($key) || false === str_starts_with($key, 'WS_')) {
+                continue;
+            }
+
+            unset($server[$key]);
+        }
 
         if (true === array_key_exists('QUERY_STRING', $server)) {
             $server['QUERY_STRING'] = http_build_query($query);

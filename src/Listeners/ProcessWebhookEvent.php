@@ -9,8 +9,8 @@ use App\Libs\Attributes\DI\Inject;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Events\DataEvent;
-use App\Libs\Exceptions\DBLayerException;
 use App\Libs\Exceptions\HttpException;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\LoggerProxy;
@@ -22,7 +22,6 @@ use App\Libs\Traits\APITraits;
 use App\Libs\Uri;
 use App\Libs\UserContext;
 use App\Model\Events\EventListener;
-use App\Model\Events\EventStatus;
 use Closure;
 use Monolog\Level;
 use Monolog\Logger;
@@ -98,7 +97,7 @@ final class ProcessWebhookEvent
         $request = $creator->fromArrays(
             server: ag($data, 'server', []),
             get: ag($data, 'get', []),
-            post: true === is_array($post) ? $post : [],
+            post: true === is_array($post) ? $post : null,
             cookie: ag($data, 'cookie', []),
             files: ag($data, 'files', []),
             body: (string) ag($data, 'body', ''),
@@ -131,7 +130,7 @@ final class ProcessWebhookEvent
         if (null === $client) {
             $this->write(
                 $request,
-                Level::Info,
+                Level::Warning,
                 'No backend client were able to parse the the request.',
                 context: [
                     'headers' => $request->getHeaders(),
@@ -148,12 +147,12 @@ final class ProcessWebhookEvent
         $uuid = ag($attr, 'backend.id');
 
         if (null === $uuid) {
-            $this->write($request, Level::Info, "Request payload didn't contain a backend unique id.");
+            $this->write($request, Level::Notice, "Request payload didn't contain a backend unique id.");
             return;
         }
 
         if (false === $isGeneric && null === $userId) {
-            $this->write($request, Level::Info, "Request payload didn't contain a user id.");
+            $this->write($request, Level::Warning, "Request payload didn't contain a user id.");
             return;
         }
 
@@ -227,7 +226,7 @@ final class ProcessWebhookEvent
         } catch (Throwable $e) {
             $this->write(
                 request: $request,
-                level: Level::Error,
+                level: $this->level($e),
                 message: "Failed to process webhook for '{user}@{backend}'. {msg}.",
                 context: [
                     'user' => $mainBackend['userContext']->name,
@@ -242,7 +241,7 @@ final class ProcessWebhookEvent
         if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
             $this->write(
                 request: $request,
-                level: Level::Info,
+                level: Level::Warning,
                 message: "Ignoring '{user}@{backend}' {item.type} '{item.title}'. No valid/supported external ids.",
                 context: [
                     'user' => $mainBackend['userContext']->name,
@@ -276,6 +275,18 @@ final class ProcessWebhookEvent
             return;
         }
 
+        if (count($backends) > 1) {
+            $this->write(
+                request: $request,
+                level: Level::Info,
+                message: "Request from '{client}' matched '{count}' user/backends.",
+                context: [
+                    'client' => $client->getName(),
+                    'count' => count($backends),
+                ],
+            );
+        }
+
         foreach ($backends as $target) {
             $backend = $target['userContext']->config->get($target['backendName']);
             $perUserRequest = $request->withAttribute(
@@ -303,7 +314,7 @@ final class ProcessWebhookEvent
             } catch (Throwable $e) {
                 $this->write(
                     request: $perUserRequest,
-                    level: Level::Error,
+                    level: $this->level($e),
                     message: "Failed to process '{user}@{backend}' {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'. {trace}",
                     context: [
                         'user' => $target['userContext']->name,
@@ -319,6 +330,15 @@ final class ProcessWebhookEvent
                 );
             }
         }
+    }
+
+    private function level(Throwable $e): Level
+    {
+        if ($e instanceof HttpException && Status::OK->value === $e->getCode()) {
+            return Level::Info;
+        }
+
+        return Level::Error;
     }
 
     private function create_item(
@@ -377,7 +397,7 @@ final class ProcessWebhookEvent
             if (false === $isGeneric) {
                 $this->write(
                     request: $request,
-                    level: Level::Info,
+                    level: Level::Warning,
                     message: "Ignoring '{user}@{backend}' {item.type} '{item.title}'. No valid/supported external ids.",
                     context: [
                         'user' => $userContext->name,
@@ -415,14 +435,6 @@ final class ProcessWebhookEvent
             return;
         }
 
-        $itemId = r('{type}://{id}:{tainted}@{backend}/{user}', [
-            'user' => $userContext->name,
-            'type' => $entity->type,
-            'backend' => $entity->via,
-            'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
-            'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
-        ]);
-
         $opts = [
             'tainted' => $entity->isTainted(),
             Options::IMPORT_METADATA_ONLY => $metadataOnly,
@@ -438,30 +450,6 @@ final class ProcessWebhookEvent
         }
 
         $this->processState($this->event, $entity->getAll(), $opts);
-
-        $this->write(
-            request: $request,
-            level: Level::Info,
-            message: "Queuing '{user}@{backend}' {tainted} request for {item.type} '{item.title}'. {data}.",
-            context: [
-                'user' => $userContext->name,
-                'backend' => $entity->via,
-                'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
-                'item' => [
-                    'type' => $entity->type,
-                    'title' => $entity->getName(),
-                ],
-                'data' => array_to_string([
-                    'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, '?'),
-                    'played' => $entity->isWatched(),
-                    'has_progress' => $entity->hasPlayProgress(),
-                    'request_id' => ag($request->getServerParams(), 'X_REQUEST_ID', '-'),
-                    'queue_id' => $itemId,
-                    'progress' => $entity->hasPlayProgress() ? $entity->getPlayProgress() : null,
-                    'generic' => $isGeneric,
-                ]),
-            ],
-        );
     }
 
     private function processState(DataEvent $event, array $data, array $options): DataEvent

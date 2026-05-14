@@ -308,7 +308,10 @@ class EmbyClient implements iClient
      */
     public function push(array $entities, QueueRequests $queue, ?iDate $after = null): array
     {
-        $response = Container::get(Push::class)(
+        $http = Container::get(iHttp::class);
+        assert($http instanceof iHttp, 'Expected HTTP client for push request preparation.');
+
+        $response = (new Push($http, $this->logger))(
             context: $this->context,
             entities: $entities,
             queue: $queue,
@@ -331,7 +334,10 @@ class EmbyClient implements iClient
      */
     public function progress(array $entities, QueueRequests $queue, ?iDate $after = null): array
     {
-        $response = Container::get(Progress::class)(
+        $http = Container::get(iHttp::class);
+        assert($http instanceof iHttp, 'Expected HTTP client for progress request preparation.');
+
+        $response = (new Progress($http, $this->logger))(
             context: $this->context,
             guid: $this->guid,
             entities: $entities,

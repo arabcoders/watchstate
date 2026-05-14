@@ -29,6 +29,18 @@ final class DispatchCommand extends Command
 
     public const string ROUTE = 'events:dispatch';
 
+    private const string CACHE_KEY = 'events';
+
+    private const string CACHE_UNLOAD_ATTEMPTS = 'unload_attempts';
+
+    private const int MAX_UNLOAD_ATTEMPTS = 5;
+
+    /**
+     * @param iDispatcher&EventDispatcher $dispatcher
+     * @param EventsRepository $repo
+     * @param iCache $cache
+     * @param iLogger $logger
+     */
     public function __construct(
         private readonly iDispatcher $dispatcher,
         private readonly EventsRepository $repo,
@@ -194,30 +206,50 @@ final class DispatchCommand extends Command
     /**
      * This method will re-queue events that we failed to save, due to database lock issues
      * which is quite common issue as we mainly use sqlite as our database.
-     *
-     * This method will only attempt to re-queue once, if that fails, it will be lost. and we will log it.
-     * @return void
      */
     private function unloadEvents(): void
     {
         try {
-            $events = $this->cache->get('events', []);
+            $events = $this->cache->get(self::CACHE_KEY, []);
             if (count($events) < 1) {
                 return;
             }
+
+            $remaining = [];
+
             foreach ($events as $eventData) {
+                $payload = [
+                    'event' => (string) ag($eventData, 'event', ''),
+                    'data' => (array) ag($eventData, 'data', []),
+                    'opts' => (array) ag($eventData, 'opts', []),
+                ];
+
                 try {
-                    queue_event(...$eventData);
-                    $this->logger->info(
-                        "Queued '{event}' event. it was saved to cache due to failure to persist it.",
-                        $eventData,
-                    );
+                    queue_event($payload['event'], $payload['data'], $payload['opts']);
+                    $this->logger->info("Queued '{event}' event. it was saved to cache due to failure to persist it.", $payload);
                 } catch (Throwable) {
-                    $this->logger->error("Failed to re-queue '{event}' event.", $eventData);
+                    $attempts = max(0, (int) ag($payload, 'opts.' . self::CACHE_UNLOAD_ATTEMPTS, 0)) + 1;
+                    $payload['opts'][self::CACHE_UNLOAD_ATTEMPTS] = $attempts;
+
+                    if ($attempts < self::MAX_UNLOAD_ATTEMPTS) {
+                        $remaining[] = $payload;
+                        $this->logger->error("Failed to re-queue '{event}' event.", $payload);
+                        continue;
+                    }
+
+                    $this->logger->error(
+                        "Failed to re-queue '{event}' event after '{attempts}' unload attempts. Dropping cached event.",
+                        array_replace($payload, ['attempts' => $attempts]),
+                    );
                 }
             }
 
-            $this->cache->delete('events');
+            if (count($remaining) > 0) {
+                $this->cache->set(self::CACHE_KEY, $remaining);
+                return;
+            }
+
+            $this->cache->delete(self::CACHE_KEY);
         } catch (Throwable) {
         }
     }

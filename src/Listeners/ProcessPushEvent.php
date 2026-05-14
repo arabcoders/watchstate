@@ -12,6 +12,7 @@ use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
 use App\libs\Events\DataEvent;
 use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Extends\LoggerProxy;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
@@ -130,6 +131,7 @@ final readonly class ProcessPushEvent
         foreach ($list as $name => &$backend) {
             try {
                 $opts = ag($backend, 'options', []);
+                $backendLogger = LoggerProxy::create($eventWriter);
 
                 if (ag($options, Options::IGNORE_DATE)) {
                     $opts[Options::IGNORE_DATE] = true;
@@ -145,8 +147,9 @@ final readonly class ProcessPushEvent
 
                 $backend['options'] = $opts;
                 $backend['class'] = make_backend(backend: $backend, name: $name, options: [
+                    iLogger::class => $backendLogger,
                     UserContext::class => $userContext,
-                ]);
+                ])->setLogger($backendLogger);
                 $backend['class']->push(entities: [$item->id => $item], queue: $this->queue);
             } catch (Throwable $e) {
                 $writer(
