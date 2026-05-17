@@ -267,7 +267,7 @@
                   :key="`${log.filename}-${index}`"
                   class="block"
                   ><span
-                    v-if="item?.date || item?.item_id"
+                    v-if="item?.date || hasLinks(item)"
                     class="mr-[1ch] inline-flex items-baseline whitespace-normal"
                   >
                     <template v-if="item?.date"
@@ -277,17 +277,9 @@
                         }}</span> </UTooltip
                       >]</template
                     >
-                    <button
-                      v-if="item?.item_id"
-                      type="button"
-                      :class="[
-                        'cursor-pointer font-[inherit] leading-[inherit] text-primary underline-offset-2 hover:underline',
-                        item?.date ? 'ml-[1ch]' : '',
-                      ]"
-                      @click="goto_history_item(item)"
-                    >
-                      View
-                    </button>
+                    <span v-if="hasLinks(item)" :class="item?.date ? 'ml-[1ch]' : ''">
+                      <LogLineLinks :item="item" :open-event="openEvent" />
+                    </span>
                   </span>
                   <span>{{ String(item.text).trim() }}</span>
                 </span>
@@ -297,28 +289,36 @@
         </UCard>
       </div>
     </section>
+
+    <UModal v-model:open="eventViewOpen" :title="eventViewTitle" :ui="eventViewModalUi">
+      <template #body>
+        <EventView v-if="selectedEventId" :id="selectedEventId" />
+      </template>
+    </UModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, onUpdated, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, onUpdated, ref, watch } from 'vue';
 import { useHead, useRoute } from '#app';
 import { useBreakpoints, useStorage } from '@vueuse/core';
 import { NuxtLink } from '#components';
 import moment from 'moment';
+import EventView from '~/components/EventView.vue';
 import FloatingImage from '~/components/FloatingImage.vue';
+import LogLineLinks from '~/components/LogLineLinks.vue';
 import Popover from '~/components/Popover.vue';
 import DuplicateRecordList from '~/components/DuplicateRecordList.vue';
 import {
   formatDuration,
-  goto_history_item,
+  makeEventName,
   makeName,
   parse_api_response,
   request,
   ucFirst,
   TOOLTIP_DATE_FORMAT,
 } from '~/utils';
-import type { HistoryItem, JsonObject } from '~/types';
+import type { HistoryItem, JsonObject, LogEntry } from '~/types';
 
 type IndexLogFile = {
   type: string;
@@ -326,14 +326,7 @@ type IndexLogFile = {
   date: number;
   size: number;
   modified: string;
-  lines: Array<{
-    id?: string;
-    item_id?: number;
-    user?: string;
-    backend?: string;
-    date?: string;
-    text: string;
-  }>;
+  lines: Array<LogEntry>;
 };
 
 useHead({ title: 'Index' });
@@ -349,8 +342,35 @@ const logs = ref<Array<IndexLogFile>>([]);
 const reloadingLogs = ref<boolean>(false);
 const historyLoading = ref<boolean>(true);
 const logReloadInterval = ref<ReturnType<typeof setInterval> | null>(null);
+const selectedEventId = ref<string | null>(null);
 const logReloadFrequency = 10000;
 let historyLoadToken = 0;
+
+const eventViewModalUi = {
+  content: 'max-w-5xl',
+  body: 'p-4 sm:p-5',
+};
+
+const eventViewOpen = computed({
+  get: () => null !== selectedEventId.value,
+  set: (value: boolean) => {
+    if (false === value) {
+      selectedEventId.value = null;
+    }
+  },
+});
+
+const eventViewTitle = computed(() =>
+  null === selectedEventId.value ? 'Event' : `#${makeEventName(selectedEventId.value)}`,
+);
+
+const hasLinks = (item: LogEntry): boolean => {
+  return Boolean(item.item_id || item.event_id || item.backend);
+};
+
+const openEvent = (id: string): void => {
+  selectedEventId.value = id;
+};
 
 const duplicatePopoverTrigger = computed<'click' | 'hover'>(() =>
   'mobile' === breakpoints.active().value ? 'click' : 'hover',
