@@ -1,5 +1,19 @@
 [
   {
+    "tag": "Untagged",
+    "full_sha": "c3cd1b725ee3ca649882918782172d3360bd5644",
+    "date": "2026-05-17T06:05:51+00:00",
+    "commits": [
+      {
+        "sha": "c3cd1b72",
+        "full_sha": "c3cd1b725ee3ca649882918782172d3360bd5644",
+        "message": "refactor: add event id to dispatch logs",
+        "author": "arabcoders",
+        "date": "2026-05-17T06:05:51+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v1.8.2",
     "full_sha": "1b8d3fd2cbbd13f520cfea45a73b8c41e43c4810",
     "date": "2026-05-14T09:05:21+00:00",
