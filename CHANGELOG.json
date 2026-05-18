@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "c649ca117f5d24a7fa0fc2f6fd13325bd49bde5b",
-    "date": "2026-05-18T05:20:44+00:00",
+    "full_sha": "f85dfa794e725dcd1a4faaa5588da94f122df674",
+    "date": "2026-05-18T09:18:50+00:00",
     "commits": [
+      {
+        "sha": "f85dfa79",
+        "full_sha": "f85dfa794e725dcd1a4faaa5588da94f122df674",
+        "message": "fix: db reset was also resetting the migrations tables which causes startup issues. Fixes #825",
+        "author": "arabcoders",
+        "date": "2026-05-18T09:18:50+00:00"
+      },
       {
         "sha": "c649ca11",
         "full_sha": "c649ca117f5d24a7fa0fc2f6fd13325bd49bde5b",
