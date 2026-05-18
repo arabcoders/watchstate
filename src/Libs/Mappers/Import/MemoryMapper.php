@@ -290,10 +290,10 @@ class MemoryMapper implements ImportInterface
             $reasons = [];
 
             if (true === $entity->isTainted()) {
-                $reasons[] = 'event marked as tainted';
+                $reasons[] = 'metadata-only event';
             }
             if (true === (bool) ag($opts, Options::IMPORT_METADATA_ONLY)) {
-                $reasons[] = 'mapper is in metadata only mode';
+                $reasons[] = 'mapper is in metadata-only mode';
             }
 
             if (count($reasons) < 1) {
@@ -301,7 +301,7 @@ class MemoryMapper implements ImportInterface
             }
 
             $this->logger->notice(
-                "{mapper}: [T] Item '{user}@{backend}' - '#{id}: {title}' is marked as '{state}' vs local '{local_state}', However due to the following reasons '{reasons}' it was not considered as valid state.",
+                "{mapper}: [T] Item '{user}@{backend}' - '#{id}: {title}' reported '{state}' vs local '{local_state}', but the state change was ignored due to '{reasons}'.",
                 [
                     'user' => $this->userContext->name ?? 'main',
                     'mapper' => after_last(self::class, '\\'),
@@ -548,9 +548,9 @@ class MemoryMapper implements ImportInterface
             $hasDate = $entity->updated === ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PLAYED_AT);
 
             if (false === $hasMeta) {
-                $message .= ' No metadata. Marking the item as tainted and re-processing.';
+                $message .= ' No metadata. Queueing item for re-processing.';
             } elseif (true === $hasDate) {
-                $message .= ' db.metadata.played_at is equal to entity.updated. Marking the item as tainted and re-processing.';
+                $message .= ' db.metadata.played_at matches entity.updated. Queueing item for re-processing.';
             }
 
             $this->logger->warning($message, [
