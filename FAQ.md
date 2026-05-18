@@ -74,8 +74,8 @@ movie or episode. Specifically, it means:
 - There is no metadata indicating that the item was previously imported from that backend to make it possible to mark it
   as unplayed.
 
-In this case, the system prioritizes preserving your local play state. The item is marked as **tainted** and will be
-re-processed accordingly. To resolve this conflict and sync the backend with your local state:
+In this case, the system prioritizes preserving your local play state. The item is queued for a follow-up pass instead
+of applying the backend state directly. To resolve this conflict and sync the backend with your local state:
 
 - Go to the `Backends`.
 - Under the relevant backend, find the **Quick operations** list.
@@ -432,9 +432,10 @@ the issue. Please enable webhooks for your jellyfin backend to avoid this issue.
 
 We have added an experimental workaround for this issue in the `state:import` command. To enable it, add the env `WS_CLIENTS_JELLYFIN_FIX_PLAYED` via the `Configuration > Environment` page. It's turned off by default as it may cause some issues as it's untested in production, so please use it with caution and report any issues you find.
 
-## CODE: DM001 - Marking the item as tainted and re-processing.
+## CODE: DM001 - Item queued for re-processing.
 
-This warning appears when there is a mismatch between the local database and a backend regarding the item. This error mostly occurs in some edge cases. which can be fixed by forced state export to the backend.
+This warning appears when the backend reports an older item state than the last recorded sync point. This usually
+shows up in edge cases and can often be resolved by forcing a state export to the backend.
 
 ---
 

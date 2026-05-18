@@ -217,7 +217,7 @@
               :key="`${logLine.id}-${index}`"
               class="block"
               ><span
-                v-if="logLine?.date || logLine?.item_id"
+                v-if="logLine?.date || hasLinks(logLine)"
                 class="mr-[1ch] inline-flex items-baseline whitespace-normal"
               >
                 <template v-if="logLine?.date"
@@ -227,17 +227,9 @@
                     }}</span> </UTooltip
                   >]</template
                 >
-                <button
-                  v-if="logLine?.item_id"
-                  type="button"
-                  :class="[
-                    'cursor-pointer font-[inherit] leading-[inherit] text-primary underline-offset-2 hover:underline',
-                    logLine?.date ? 'ml-[1ch]' : '',
-                  ]"
-                  @click="goto_history_item(logLine)"
-                >
-                  View
-                </button>
+                <span v-if="hasLinks(logLine)" :class="logLine?.date ? 'ml-[1ch]' : ''">
+                  <LogLineLinks :item="logLine" />
+                </span>
               </span>
               <span>{{ String(logLine.text).trim() }}</span>
             </span>
@@ -304,12 +296,12 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { createError, useHead } from '#app';
 import moment from 'moment';
 import { useStorage } from '@vueuse/core';
+import LogLineLinks from '~/components/LogLineLinks.vue';
 import { useDialog } from '~/composables/useDialog';
 import type { EventsItem, GenericError, LogEntry } from '~/types';
 import {
   copyText,
   getEventStatusClass,
-  goto_history_item,
   makeEventName,
   notification,
   parse_api_response,
@@ -362,6 +354,10 @@ const formatLogLine = (logLine: LogEntry): string => {
   const prefix = logLine.date ? `[${logLine.date}] ` : '';
 
   return `${prefix}${String(logLine.text).trim()}`;
+};
+
+const hasLinks = (logLine: LogEntry): boolean => {
+  return Boolean(logLine.item_id || logLine.backend);
 };
 
 const getEventStatusColor = (status: number) => {

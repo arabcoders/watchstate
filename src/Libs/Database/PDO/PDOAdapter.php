@@ -587,7 +587,17 @@ final class PDOAdapter implements iDB
         $this->db->transactional(static function (DBLayer $db) {
             /** @noinspection SqlResolve */
             $tables = $db->query(
-                'SELECT name FROM sqlite_master WHERE "type" = "table" AND "name" NOT LIKE "sqlite_%"',
+                'SELECT
+                    "name"
+                FROM
+                    sqlite_master
+                WHERE
+                    "type" = "table"
+                AND
+                    "name" NOT LIKE "sqlite_%"
+                AND
+                    "name" NOT LIKE "migration_%"
+                    ',
             );
 
             foreach ($tables->fetchAll(PDO::FETCH_COLUMN) as $table) {

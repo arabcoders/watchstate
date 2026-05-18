@@ -426,7 +426,7 @@ class DirectMapper implements ImportInterface
                 Message::increment("{$entity->via}.{$local->type}.failed");
                 $this->logger->error(
                     ...lw(
-                        message: "{mapper}: [T] Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' - '{title}' handle tainted. {error.message} at '{error.file}:{error.line}'.",
+                        message: "{mapper}: [T] Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' - '{title}' metadata-only handling. {error.message} at '{error.file}:{error.line}'.",
                         context: [
                             'user' => $this->userContext->name ?? 'main',
                             'mapper' => after_last(self::class, '\\'),
@@ -467,7 +467,7 @@ class DirectMapper implements ImportInterface
             $reasons = [];
 
             if (true === $entity->isTainted()) {
-                $reasons[] = 'event marked as tainted';
+                $reasons[] = 'metadata-only event';
             }
 
             if (count($reasons) < 1) {
@@ -475,7 +475,7 @@ class DirectMapper implements ImportInterface
             }
 
             $this->logger->notice(
-                "{mapper}: [T] '{user}@{backend}' item '#{id}: {title}' is marked as '{state}' vs local '{local_state}', However due to the following reason '{reasons}' it was not considered as valid state.",
+                "{mapper}: [T] '{user}@{backend}' item '#{id}: {title}' reported '{state}' vs local '{local_state}', but the state change was ignored due to '{reasons}'.",
                 [
                     'user' => $this->userContext->name ?? 'main',
                     'mapper' => after_last(self::class, '\\'),
@@ -713,7 +713,7 @@ class DirectMapper implements ImportInterface
             }
 
             $this->logger->notice(
-                "[CODE:DM001] {mapper}: [O] '{user}@{backend}' item '#{id}: {title}' [R: {state}] date '{remote_date}' is older than backend last sync date '{local_date}' [L: {local_state}]. Marking the item as tainted and re-processing. Check FAQ.",
+                "[CODE:DM001] {mapper}: [O] '{user}@{backend}' item '#{id}: {title}' [R: {state}] date '{remote_date}' is older than backend last sync date '{local_date}' [L: {local_state}]. Queueing item for re-processing. Check FAQ.",
                 [
                     'user' => $this->userContext->name ?? 'main',
                     'mapper' => after_last(self::class, '\\'),
@@ -834,11 +834,11 @@ class DirectMapper implements ImportInterface
             $hasDate = $entity->updated === ag($local->getMetadata($entity->via), iState::COLUMN_META_DATA_PLAYED_AT);
 
             if (false === $hasMeta) {
-                $message .= ' No metadata. Marking the item as tainted and re-processing.';
+                $message .= ' No metadata. Queueing item for re-processing.';
             }
 
             if (true === $hasMeta && true === $hasDate) {
-                $message .= ' db.metadata.played_at is equal to entity.updated. Marking the item as tainted and re-processing.';
+                $message .= ' db.metadata.played_at matches entity.updated. Queueing item for re-processing.';
             }
 
             $this->logger->warning($message, [

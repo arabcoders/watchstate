@@ -175,19 +175,19 @@
               v-for="item in filterItems"
               :key="item.id"
               :class="['log-entry block', wrapLines ? '' : 'whitespace-nowrap']"
-              ><template v-if="item.date"
-                >[<span class="cursor-help" :title="item.date">{{ formatDate(item.date) }}</span
-                >]:&nbsp;</template
-              ><template v-if="item.item_id"
-                ><button
-                  type="button"
-                  class="mr-2 inline-flex items-center gap-1 text-primary hover:underline"
-                  @click="goto_history_item(item)"
-                >
-                  <UIcon name="i-lucide-history" class="size-4" />
-                  <span>View</span></button
-                >&nbsp;</template
               ><span
+                v-if="item.date || hasLinks(item)"
+                class="mr-[1ch] inline-flex items-baseline whitespace-normal"
+              >
+                <template v-if="item.date"
+                  >[<span class="cursor-help" :title="item.date">{{ formatDate(item.date) }}</span
+                  >]</template
+                >
+                <span v-if="hasLinks(item)" :class="item.date ? 'ml-[1ch]' : ''">
+                  <LogLineLinks :item="item" :open-event="openEvent" />
+                </span>
+              </span>
+              <span
                 :class="wrapLines ? 'whitespace-pre-wrap ws-wrap-anywhere' : 'whitespace-pre'"
                 >{{ String(item.text).trimStart() }}</span
               ></span
@@ -195,6 +195,12 @@
           </code>
         </div>
       </UCard>
+
+      <UModal v-model:open="eventViewOpen" :title="eventViewTitle" :ui="eventViewModalUi">
+        <template #body>
+          <EventView v-if="selectedEventId" :id="selectedEventId" />
+        </template>
+      </UModal>
     </template>
   </main>
 </template>
@@ -244,6 +250,8 @@ import { useHead, useRoute, useRouter } from '#app';
 import { useStorage } from '@vueuse/core';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import moment from 'moment';
+import EventView from '~/components/EventView.vue';
+import LogLineLinks from '~/components/LogLineLinks.vue';
 import { useDialog } from '~/composables/useDialog';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import type { GenericResponse, LogEntry } from '~/types';
@@ -251,7 +259,7 @@ import {
   copyText,
   disableOpacity,
   enableOpacity,
-  goto_history_item,
+  makeEventName,
   notification,
   parse_api_response,
   request,
@@ -282,7 +290,26 @@ const contentType = ref<'log' | 'json'>('log');
 const stream = ref<boolean>(false);
 const logContainer = ref<HTMLElement | null>(null);
 const streamController = ref<AbortController | null>(null);
+const selectedEventId = ref<string | null>(null);
 const isTodayLog = computed<boolean>(() => filename.includes(moment().format('YYYYMMDD')));
+
+const eventViewModalUi = {
+  content: 'max-w-5xl',
+  body: 'p-4 sm:p-5',
+};
+
+const eventViewOpen = computed({
+  get: () => null !== selectedEventId.value,
+  set: (value: boolean) => {
+    if (false === value) {
+      selectedEventId.value = null;
+    }
+  },
+});
+
+const eventViewTitle = computed(() =>
+  null === selectedEventId.value ? 'Event' : `#${makeEventName(selectedEventId.value)}`,
+);
 
 let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -322,6 +349,14 @@ const filterItems = computed<Array<LogEntry>>(() => {
 
   return data.value.filter((item) => item.text.toLowerCase().includes(query.value.toLowerCase()));
 });
+
+const hasLinks = (item: LogEntry): boolean => {
+  return Boolean(item.item_id || item.event_id || item.backend);
+};
+
+const openEvent = (id: string): void => {
+  selectedEventId.value = id;
+};
 
 const loadContent = async (): Promise<void> => {
   try {

@@ -125,17 +125,11 @@ final class LegacyCommand extends Command
         foreach ($targets as $target) {
             if (false === file_exists($target['source'])) {
                 if (true === file_exists($target['backup'])) {
-                    $output->writeln(r('<comment>{target}: Legacy source already renamed to {backup}. Skipping.</comment>', [
+                    $output->writeln(r('<comment>{target}: Legacy source db already renamed to {backup}. Skipping.</comment>', [
                         'target' => $target['name'],
                         'backup' => $target['backup'],
                     ]));
-                    continue;
                 }
-
-                $output->writeln(r('<comment>{target}: No legacy source found at {source}. Skipping.</comment>', [
-                    'target' => $target['name'],
-                    'source' => $target['source'],
-                ]));
                 continue;
             }
 
@@ -254,10 +248,6 @@ final class LegacyCommand extends Command
     {
         foreach ($targets as $target) {
             if (false === file_exists($target['backup'])) {
-                $output->writeln(r('<comment>{target}: No legacy backup found at {backup}. Skipping.</comment>', [
-                    'target' => $target['name'],
-                    'backup' => $target['backup'],
-                ]));
                 continue;
             }
 

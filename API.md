@@ -3750,7 +3750,6 @@ Receives backend webhook payloads, matches them to configured users/backends, an
   - items without supported GUIDs
   - episode events without season/episode numbers
   - generic requests that the backend parser cannot fully resolve
-- When a request is queued, WatchState creates a unique event reference based on item type, backend, user, and tainted state.
 
 ---
 

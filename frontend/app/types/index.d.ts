@@ -220,12 +220,16 @@ export interface LogEntry {
   id: string;
   /** Associated item ID if available */
   item_id: string | null;
+  /** Associated event ID if available */
+  event_id: string | null;
   /** User associated with the log entry */
   user: string | null;
   /** Backend associated with the log entry */
   backend: string | null;
   /** Timestamp of the log entry */
   date: string | null;
+  /** Parsed log level if available */
+  level: string | null;
   /** The log message text */
   text: string;
 }

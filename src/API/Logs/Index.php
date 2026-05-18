@@ -358,26 +358,39 @@ final class Index
             return [
                 'id' => md5((string) (hrtime(true) + random_int(1, 10_000))),
                 'item_id' => null,
+                'event_id' => null,
                 'user' => null,
                 'backend' => null,
                 'date' => null,
+                'level' => null,
                 'text' => $line,
             ];
         }
 
         $dateRegex = '/^\[([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?[+-][0-9]{2}:[0-9]{2})]/i';
+        $eventRegex = '/\[event:(?<event_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})]\s*/i';
+        $levelRegex = '/^(?:[a-z0-9_.-]+\.)?(?<level>EMERGENCY|ALERT|CRITICAL|ERROR|WARNING|NOTICE|INFO|DEBUG):\s*/i';
 
         $dateMatch = preg_match($dateRegex, $line, $matches);
         $idMatch = preg_match("/'#(?P<item_id>\d+):/", $line, $idMatches);
+        $eventMatch = preg_match($eventRegex, $line, $eventMatches);
         $identMatch = preg_match("/'((?P<client>\w+):\s)?(?P<user>\w+)@(?P<backend>\w+)'/i", $line, $identMatches);
+        $text = 1 === $dateMatch ? trim(preg_replace($dateRegex, '', $line)) : $line;
+        $levelMatch = preg_match($levelRegex, $text, $levelMatches);
+
+        if (1 === $eventMatch) {
+            $text = trim(preg_replace($eventRegex, '', $text, 1));
+        }
 
         $logLine = [
             'id' => md5($line . (hrtime(true) + random_int(1, 10_000))),
             'item_id' => null,
+            'event_id' => 1 === $eventMatch ? $eventMatches['event_id'] : null,
             'user' => null,
             'backend' => null,
             'date' => 1 === $dateMatch ? $matches[1] : null,
-            'text' => 1 === $dateMatch ? trim(preg_replace($dateRegex, '', $line)) : $line,
+            'level' => 1 === $levelMatch ? strtolower($levelMatches['level']) : null,
+            'text' => $text,
         ];
 
         if (1 === $idMatch) {

@@ -486,10 +486,10 @@ final class ProcessWebhookEvent
             $lastSync = make_date($lastSync);
         }
 
-        ($this->writer)(Level::Notice, r("Processing '{user}@{backend}' {tainted} request '{title}'. {data}", [
+        ($this->writer)(Level::Notice, r("{prefix}Processing '{user}@{backend}' request '{title}'. {data}", [
             'backend' => $entity->via,
             'title' => $entity->getName(),
-            'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
+            'prefix' => true === $entity->isTainted() ? '[T] ' : '',
             'lastSync' => $lastSync,
             'user' => $userContext->name,
             'data' => array_to_string([

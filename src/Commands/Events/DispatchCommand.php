@@ -8,11 +8,16 @@ use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Events\DataEvent;
+use App\Libs\Extends\ProxyHandler;
 use App\Libs\Options;
 use App\Model\Events\Event;
 use App\Model\Events\EventsRepository;
 use App\Model\Events\EventsTable;
 use App\Model\Events\EventStatus as Status;
+use Monolog\Handler\HandlerInterface;
+use Monolog\Level;
+use Monolog\Logger as MonologLogger;
+use Monolog\LogRecord;
 use Psr\EventDispatcher\EventDispatcherInterface as iDispatcher;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
@@ -66,6 +71,7 @@ final class DispatchCommand extends Command
         register_events();
 
         $debug = $input->getOption('debug') || Config::get('debug.enabled');
+        $visibleLevel = true === (bool) $input->getOption('debug') ? Level::Debug : $this->toLevel($output);
 
         if (null !== ($id = $input->getOption('id'))) {
             if (null === ($event = $this->repo->findById($id))) {
@@ -77,15 +83,15 @@ final class DispatchCommand extends Command
                 $event->logs = [];
             }
 
-            $this->runEvent($event, debug: $debug);
+            $this->runEvent($event, visibleLevel: $visibleLevel, debug: $debug);
 
             return self::SUCCESS;
         }
 
-        return $this->runEvents(debug: $debug);
+        return $this->runEvents(visibleLevel: $visibleLevel, debug: $debug);
     }
 
-    protected function runEvents(bool $debug = false): int
+    protected function runEvents(Level $visibleLevel, bool $debug = false): int
     {
         $repo = $this->repo
             ->setSort(EventsTable::COLUMN_CREATED_AT)
@@ -143,17 +149,21 @@ final class DispatchCommand extends Command
                 continue;
             }
 
-            $this->runEvent($event);
+            $this->runEvent($event, visibleLevel: $visibleLevel, debug: $debug);
         }
 
         return self::SUCCESS;
     }
 
-    private function runEvent(Event $event, bool $debug = false): void
+    private function runEvent(Event $event, Level $visibleLevel, bool $debug = false): void
     {
+        $capturedRecords = [];
+        $capturedHandlers = null;
+
         try {
-            $message = "Dispatching Event: '{event}' queued at '{date}'.";
+            $message = "[event:{id}] Dispatching Event: '{event}' queued at '{date}'.";
             $log_data = [
+                'id' => $event->id,
                 'event' => $event->event,
                 'date' => make_date($event->created_at),
             ];
@@ -163,9 +173,6 @@ final class DispatchCommand extends Command
             if (count($event->event_data) > 0) {
                 $log_data['data'] = $event->event_data;
             }
-
-            $this->logger->info($message, $log_data);
-
             $event->status = Status::RUNNING;
             $event->updated_at = (string) make_date();
             $event->attempts += 1;
@@ -174,8 +181,15 @@ final class DispatchCommand extends Command
             }
             $this->repo->save($event);
 
+            $logCount = count($event->logs);
             $ref = new DataEvent($event);
-            $this->dispatcher->dispatch($ref, $event->event);
+            $capturedHandlers = $this->captureLogger($capturedRecords);
+
+            try {
+                $this->dispatcher->dispatch($ref, $event->event);
+            } finally {
+                $this->restoreLogger($capturedHandlers);
+            }
 
             if (Status::RUNNING !== $ref->getStatus()) {
                 $event->status = $ref->getStatus();
@@ -184,10 +198,20 @@ final class DispatchCommand extends Command
             }
 
             $event->updated_at = (string) make_date();
+
+            if ($this->isVisible(array_slice($event->logs, $logCount), $visibleLevel)) {
+                $this->logger->notice($message, $log_data);
+            }
+
+            $this->replayRecords($capturedHandlers, $capturedRecords);
+
             $event->logs[] = r("Event '{event}' was dispatched.", ['event' => $event->event]);
 
             $this->repo->save($event);
         } catch (Throwable $e) {
+            $this->restoreLogger($capturedHandlers);
+            $this->replayRecords($capturedHandlers, $capturedRecords);
+
             $errorLog = r("Failed to dispatch event: '{event}'. {error}", [
                 'event' => ag($event, 'event'),
                 'error' => $e->getMessage(),
@@ -199,7 +223,110 @@ final class DispatchCommand extends Command
             $event->updated_at = (string) make_date();
             $this->repo->save($event);
 
-            $this->logger->error($errorLog, ['trace' => $e->getTrace()]);
+            $this->logger->error('[event:{id}] {message}', [
+                'id' => $event->id,
+                'message' => $errorLog,
+                'trace' => $e->getTrace(),
+            ]);
+        }
+    }
+
+    private function captureLogger(array &$records): ?array
+    {
+        if (false === $this->logger instanceof MonologLogger) {
+            return null;
+        }
+
+        $handlers = $this->logger->getHandlers();
+        $this->logger->setHandlers([
+            ProxyHandler::create(static function (string $_message, mixed $record) use (&$records): void {
+                if ($record instanceof LogRecord) {
+                    $records[] = $record;
+                }
+            }, Level::Debug),
+        ]);
+
+        return $handlers;
+    }
+
+    private function restoreLogger(?array $handlers): void
+    {
+        if (null === $handlers || false === $this->logger instanceof MonologLogger) {
+            return;
+        }
+
+        $this->logger->setHandlers($handlers);
+    }
+
+    private function replayRecords(?array $handlers, array $records): void
+    {
+        if (null === $handlers) {
+            return;
+        }
+
+        foreach ($records as $record) {
+            if (false === $record instanceof LogRecord) {
+                continue;
+            }
+
+            foreach ($handlers as $handler) {
+                if (false === $handler instanceof HandlerInterface) {
+                    continue;
+                }
+
+                if (true === $handler->handle($record)) {
+                    break;
+                }
+            }
+        }
+    }
+
+    private function toLevel(OutputInterface $output): Level
+    {
+        return match ($output->getVerbosity()) {
+            OutputInterface::VERBOSITY_QUIET => Level::Error,
+            OutputInterface::VERBOSITY_NORMAL => Level::Warning,
+            OutputInterface::VERBOSITY_VERBOSE => Level::Notice,
+            OutputInterface::VERBOSITY_VERY_VERBOSE => Level::Info,
+            default => Level::Debug,
+        };
+    }
+
+    private function isVisible(array $logs, Level $visibleLevel): bool
+    {
+        $count = 0;
+
+        foreach ($logs as $log) {
+            $level = $this->eventLevel($log);
+
+            if (null === $level) {
+                continue;
+            }
+
+            if ($level->value >= $visibleLevel->value) {
+                $count++;
+            }
+        }
+
+        return $count > 0;
+    }
+
+    private function eventLevel(mixed $log): ?Level
+    {
+        if (false === is_string($log)) {
+            return null;
+        }
+
+        $levelRegex = '/^(?:\[[^\]]+]\s*)?(?:[a-z0-9_.-]+\.)?(?<level>EMERGENCY|ALERT|CRITICAL|ERROR|WARNING|NOTICE|INFO|DEBUG):\s*/i';
+
+        if (1 !== preg_match($levelRegex, trim($log), $matches)) {
+            return null;
+        }
+
+        try {
+            return MonologLogger::toMonologLevel(strtoupper($matches['level']));
+        } catch (Throwable) {
+            return null;
         }
     }
 
