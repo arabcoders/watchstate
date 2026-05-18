@@ -610,6 +610,20 @@ class PDOAdapterTest extends TestCase
         $this->assertSame(1, $inserted->id, 'Reset should also clear the sqlite autoincrement sequence.');
     }
 
+    public function test_reset_keeps_migration_metadata(): void
+    {
+        $this->seedEntities();
+
+        $this->assertTrue($this->db->reset(), 'Reset should succeed for a migrated sqlite database.');
+
+        $pdo = $this->db->getDBLayer()->getBackend();
+        $migrations = new PackageMigrationFactory();
+
+        self::assertTrue($migrations->isMigrated($pdo), 'Reset should preserve package migration state.');
+        self::assertSame('1', (string) $pdo->query('SELECT COUNT(*) FROM migration_version')?->fetchColumn());
+        self::assertSame('0', (string) $pdo->query('SELECT COUNT(*) FROM migration_lock')?->fetchColumn());
+    }
+
     public function test_transaction()
     {
         $this->db->getDBLayer()->transactional(function () {
