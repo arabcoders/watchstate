@@ -79,7 +79,7 @@ class ImportCommand extends Command
                 'force-metadata-change',
                 'F',
                 InputOption::VALUE_NONE,
-                'Force imported backend metadata to replace locally stored backend metadata.',
+                'Replace existing metadata with data from backend even if there is no change.',
             )
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
             ->addOption(

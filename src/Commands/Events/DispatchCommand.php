@@ -61,6 +61,7 @@ final class DispatchCommand extends Command
             ->setName(self::ROUTE)
             ->addOption('id', 'i', InputOption::VALUE_REQUIRED, 'Force run this event.')
             ->addOption('reset', 'r', InputOption::VALUE_NONE, 'Reset event logs.')
+            ->addOption('limit', 'L', InputOption::VALUE_REQUIRED, 'How many events to run at per run.', 15)
             ->setDescription('Run queued events.');
     }
 
@@ -88,14 +89,15 @@ final class DispatchCommand extends Command
             return self::SUCCESS;
         }
 
-        return $this->runEvents(visibleLevel: $visibleLevel, debug: $debug);
+        return $this->runEvents(visibleLevel: $visibleLevel, limit: (int) $input->getOption('limit'), debug: $debug);
     }
 
-    protected function runEvents(Level $visibleLevel, bool $debug = false): int
+    protected function runEvents(Level $visibleLevel, int $limit, bool $debug = false): int
     {
         $repo = $this->repo
             ->setSort(EventsTable::COLUMN_CREATED_AT)
             ->setAscendingOrder()
+            ->setPerpage($limit)
             ->findAll([EventsTable::COLUMN_STATUS => Status::PENDING->value]);
 
         $events = [];
