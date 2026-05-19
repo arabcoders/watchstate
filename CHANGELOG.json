@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "8a03e826f0e3d2c37e10b6c84c92c5a7b491efab",
-    "date": "2026-05-19T18:03:52+00:00",
+    "full_sha": "a7ca9279263b73b9d22e3d1d98062d08d9491c34",
+    "date": "2026-05-19T19:15:52+00:00",
     "commits": [
+      {
+        "sha": "a7ca9279",
+        "full_sha": "a7ca9279263b73b9d22e3d1d98062d08d9491c34",
+        "message": "refactor: rename --force-metadata-change to --force-replace-metadata",
+        "author": "arabcoders",
+        "date": "2026-05-19T19:15:52+00:00"
+      },
       {
         "sha": "8a03e826",
         "full_sha": "8a03e826f0e3d2c37e10b6c84c92c5a7b491efab",
