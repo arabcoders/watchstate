@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "719fecfbd2eb535ed35047661216b3f529ca0af0",
-    "date": "2026-05-19T08:17:45+00:00",
+    "full_sha": "8a03e826f0e3d2c37e10b6c84c92c5a7b491efab",
+    "date": "2026-05-19T18:03:52+00:00",
     "commits": [
+      {
+        "sha": "8a03e826",
+        "full_sha": "8a03e826f0e3d2c37e10b6c84c92c5a7b491efab",
+        "message": "refactor: make events dispatch limit configurable.",
+        "author": "arabcoders",
+        "date": "2026-05-19T18:03:52+00:00"
+      },
       {
         "sha": "719fecfb",
         "full_sha": "719fecfbd2eb535ed35047661216b3f529ca0af0",
