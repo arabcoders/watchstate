@@ -354,25 +354,33 @@ class DirectMapper implements ImportInterface
         $inDryRunMode = $this->inDryRunMode();
         $writer = ag($opts, Options::LOG_TO_WRITER, null);
         $keys = [iState::COLUMN_META_DATA];
+        $cloned = clone $local;
 
         $progressChange = $this->shouldProgressUpdate($local, $entity, $opts);
+        $forceChange = $this->shouldForceChange($local, $entity, $opts);
 
-        if (true === $progressChange || true === (clone $local)->apply($entity, fields: $keys)->isChanged($keys)) {
+        if (true === $progressChange || true === $forceChange || true === (clone $local)->apply($entity, fields: $keys)->isChanged($keys)) {
             try {
                 $local = $local->apply(
                     entity: $entity,
                     fields: array_merge($keys, [iState::COLUMN_EXTRA]),
                 );
+                if (true === $forceChange) {
+                    $local = $this->applyMetaChange($local, $entity);
+                }
 
-                $changes = $local->diff(fields: $keys);
+                $changes = true === $forceChange ? $this->getMetaChanges($cloned, $entity) : $local->diff(fields: $keys);
 
-                if (true === $progressChange || count($changes) >= 1) {
+                if (true === $progressChange || true === $forceChange || count($changes) >= 1) {
                     $_keys = array_merge($keys, [iState::COLUMN_EXTRA]);
                     if (true === $progressChange) {
                         $_keys[] = iState::COLUMN_VIA;
                     }
 
                     $local = $local->apply($entity, fields: $_keys);
+                    if (true === $forceChange) {
+                        $local = $this->applyMetaChange($local, $entity);
+                    }
 
                     $changeLog = $changes;
                     if (true === $progressChange) {
@@ -404,6 +412,11 @@ class DirectMapper implements ImportInterface
                             'tainted' => 'untainted',
                             'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                         ]);
+                        if (true === (bool) ag($opts, Options::FORCE_METADATA_CHANGE, false)) {
+                            $local = $local
+                                ->setContext(Options::FORCE_METADATA_CHANGE, true)
+                                ->setContext(Options::STATE_PROGRESS_VALUE, $this->getProgressValue($entity));
+                        }
                         $this->progressItems[$itemId] = $local;
                         if (null !== ($onProgressUpdate = ag($opts, Options::STATE_PROGRESS_EVENT, null))) {
                             $onProgressUpdate($local);
@@ -584,27 +597,39 @@ class DirectMapper implements ImportInterface
         }
 
         $progressChange = $this->shouldProgressUpdate($local, $entity, $opts);
+        $forceChange = $this->shouldForceChange($local, $entity, $opts);
 
         $updateMeta = true === (bool) ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META);
         $hasMeta = count($cloned->getMetadata($entity->via)) >= 1;
 
         // -- this sometimes leads to never ending updates as data from backends conflicts.
-        if (false === $hasMeta || true === $progressChange || true === $updateMeta) {
-            if (false === $hasMeta || $progressChange || (clone $cloned)->apply($entity, $keys)->isChanged($keys)) {
+        if (false === $hasMeta || true === $progressChange || true === $forceChange || true === $updateMeta) {
+            if (
+                false === $hasMeta
+                || $progressChange
+                || true === $forceChange
+                || (clone $cloned)->apply($entity, $keys)->isChanged($keys)
+            ) {
                 try {
                     $local = $local->apply(
                         entity: $entity,
                         fields: array_merge($keys, [iState::COLUMN_EXTRA]),
                     );
+                    if (true === $forceChange) {
+                        $local = $this->applyMetaChange($local, $entity);
+                    }
 
-                    $changes = $local->diff(fields: $keys);
+                    $changes = true === $forceChange ? $this->getMetaChanges($cloned, $entity) : $local->diff(fields: $keys);
 
-                    if (true === $progressChange || false === $hasMeta || count($changes) >= 1) {
+                    if (true === $progressChange || true === $forceChange || false === $hasMeta || count($changes) >= 1) {
                         $_keys = array_merge($keys, [iState::COLUMN_EXTRA]);
                         if (true === $progressChange) {
                             $_keys[] = iState::COLUMN_VIA;
                         }
                         $local = $local->apply($entity, fields: $_keys);
+                        if (true === $forceChange) {
+                            $local = $this->applyMetaChange($local, $entity);
+                        }
 
                         $changeLog = $changes;
                         if (true === $progressChange) {
@@ -635,6 +660,11 @@ class DirectMapper implements ImportInterface
                                 'tainted' => 'untainted',
                                 'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                             ]);
+                            if (true === (bool) ag($opts, Options::FORCE_METADATA_CHANGE, false)) {
+                                $local = $local
+                                    ->setContext(Options::FORCE_METADATA_CHANGE, true)
+                                    ->setContext(Options::STATE_PROGRESS_VALUE, $this->getProgressValue($entity));
+                            }
                             $this->progressItems[$itemId] = $local;
                             if (null !== ($onProgressUpdate = ag($opts, Options::STATE_PROGRESS_EVENT, null))) {
                                 $onProgressUpdate($local);
@@ -768,6 +798,12 @@ class DirectMapper implements ImportInterface
             $entity = $entity->setContext(Options::FORCE_FULL, true);
         }
 
+        if (true === (bool) ag($opts, Options::FORCE_METADATA_CHANGE, false)) {
+            $entity = $entity
+                ->setContext(Options::FORCE_METADATA_CHANGE, true)
+                ->setContext(Options::STATE_PROGRESS_VALUE, $this->getProgressValue($entity));
+        }
+
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
             $this->logger->warning(
                 "{mapper}: [A] Ignoring '{user}@{backend}' - '{title}'. No valid/supported external ids.",
@@ -874,6 +910,7 @@ class DirectMapper implements ImportInterface
         $cloned = clone $local;
 
         $progressChange = $this->shouldProgressUpdate($local, $entity, $opts);
+        $forceChange = $this->shouldForceChange($local, $entity, $opts);
         $keys = $opts['diff_keys'] ?? $this->getDefaultDiffKeys();
 
         $shouldMark = $cloned->shouldMarkAsUnplayed($entity, $this->userContext);
@@ -883,7 +920,11 @@ class DirectMapper implements ImportInterface
         }
 
         $local = $local->apply(entity: $entity, fields: $_keys);
-        $changedKeys = $local->diff(fields: $keys);
+        if (true === $forceChange) {
+            $local = $this->applyMetaChange($local, $entity);
+        }
+
+        $changedKeys = true === $forceChange ? $this->getMetaChanges($cloned, $entity) : $local->diff(fields: $keys);
 
         if (false === $progressChange && false === $shouldMark && count($changedKeys) < 1) {
             $msg = "{mapper}: [U] Ignoring '{user}@{backend}' - '#{id}: {title}'. Metadata & play state are identical.";
@@ -926,7 +967,7 @@ class DirectMapper implements ImportInterface
                 }
             }
 
-            $changes = $local->diff(fields: $_keys);
+            $changes = true === $forceChange ? $this->getMetaChanges($cloned, $entity) : $local->diff(fields: $_keys);
             $pointerChanges = $local->diff(fields: array_keys($this->pointerChangeKeys));
             if (true === $this->hasPointerChanges($pointerChanges)) {
                 $this->removePointers($cloned)->addPointers($local, $local->id);
@@ -968,6 +1009,11 @@ class DirectMapper implements ImportInterface
                         'tainted' => 'untainted',
                         'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                     ]);
+                    if (true === (bool) ag($opts, Options::FORCE_METADATA_CHANGE, false)) {
+                        $local = $local
+                            ->setContext(Options::FORCE_METADATA_CHANGE, true)
+                            ->setContext(Options::STATE_PROGRESS_VALUE, $this->getProgressValue($entity));
+                    }
                     $this->progressItems[$itemId] = $local;
                     if (null !== ($onProgressUpdate = ag($opts, Options::STATE_PROGRESS_EVENT, null))) {
                         $onProgressUpdate($local);
@@ -1066,12 +1112,24 @@ class DirectMapper implements ImportInterface
                 }
 
                 foreach ($this->progressItems as $entity) {
-                    $opts[EventsTable::COLUMN_REFERENCE] = r($name, [
+                    $_opts = $opts;
+                    $_opts[EventsTable::COLUMN_REFERENCE] = r($name, [
                         'type' => $entity->type,
                         'backend' => $entity->via,
                         'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                     ]);
-                    queue_event(ProcessProgressEvent::NAME, [iState::COLUMN_ID => $entity->id], $opts);
+
+                    if (true === (bool) $entity->getContext(Options::FORCE_METADATA_CHANGE, false)) {
+                        $_opts[EventsTable::COLUMN_OPTIONS] = array_replace_recursive(
+                            (array) ag($_opts, EventsTable::COLUMN_OPTIONS, []),
+                            [
+                                Options::FORCE_METADATA_CHANGE => true,
+                                Options::STATE_PROGRESS_VALUE => $entity->getContext(Options::STATE_PROGRESS_VALUE, 0),
+                            ],
+                        );
+                    }
+
+                    queue_event(ProcessProgressEvent::NAME, [iState::COLUMN_ID => $entity->id], $_opts);
                 }
             } catch (CacheInvalidArgumentException $e) {
                 $this->logger->error(
@@ -1374,6 +1432,13 @@ class DirectMapper implements ImportInterface
             return false;
         }
 
+        if (
+            true === (bool) ag($opts, Options::FORCE_METADATA_CHANGE, false)
+            && $this->getProgressValue($old, $new->via) !== $this->getProgressValue($new)
+        ) {
+            return true;
+        }
+
         $newPlayProgress = (int) ag($new->getMetadata($new->via), iState::COLUMN_META_DATA_PROGRESS);
         $oldPlayProgress = (int) ag($old->getMetadata($new->via), iState::COLUMN_META_DATA_PROGRESS);
         $playChanged = $newPlayProgress > ($oldPlayProgress + 10);
@@ -1388,6 +1453,48 @@ class DirectMapper implements ImportInterface
         }
 
         return $playChanged;
+    }
+
+    private function shouldForceChange(iState $old, iState $new, array $opts = []): bool
+    {
+        if (true !== (bool) ag($opts, Options::FORCE_METADATA_CHANGE, false)) {
+            return false;
+        }
+
+        return $old->getMetadata($new->via) !== $new->getMetadata($new->via);
+    }
+
+    private function applyMetaChange(iState $local, iState $entity): iState
+    {
+        $metadata = $local->getMetadata();
+        $metadata[$entity->via] = $entity->getMetadata($entity->via);
+        $local->metadata = $metadata;
+
+        return $local;
+    }
+
+    private function getMetaChanges(iState $old, iState $new): array
+    {
+        $oldMetadata = $old->getMetadata($new->via);
+        $newMetadata = $new->getMetadata($new->via);
+
+        if ($oldMetadata === $newMetadata) {
+            return [];
+        }
+
+        return [
+            iState::COLUMN_META_DATA => [
+                $new->via => [
+                    'old' => $oldMetadata,
+                    'new' => $newMetadata,
+                ],
+            ],
+        ];
+    }
+
+    private function getProgressValue(iState $entity, ?string $via = null): int
+    {
+        return (int) ag($entity->getMetadata($via ?? $entity->via), iState::COLUMN_META_DATA_PROGRESS, 0);
     }
 
     /**

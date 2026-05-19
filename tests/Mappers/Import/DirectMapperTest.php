@@ -225,4 +225,150 @@ class DirectMapperTest extends MapperAbstract
         $result = $this->mapper->get($updateMovie);
         $this->assertSame(0, $result->watched, 'Item should be marked as unwatched');
     }
+
+    public function test_force_metadata_change(): void
+    {
+        $this->testMovie[iState::COLUMN_WATCHED] = 0;
+        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_WATCHED] = 0;
+        $this->testMovie[iState::COLUMN_META_DATA]['test_jellyfin'] = [
+            iState::COLUMN_ID => 777,
+            iState::COLUMN_TYPE => iState::TYPE_MOVIE,
+            iState::COLUMN_WATCHED => 0,
+            iState::COLUMN_META_DATA_PROGRESS => 65000,
+        ];
+
+        $testMovie = new StateEntity($this->testMovie);
+        $this->mapper->add($testMovie);
+        $this->mapper->commit();
+        $this->mapper->reset()->loadData();
+
+        $updatedMovie = clone $testMovie;
+        $metadata = $updatedMovie->getMetadata();
+        unset($metadata[$updatedMovie->via][iState::COLUMN_META_DATA_PROGRESS]);
+        unset($metadata[$updatedMovie->via][iState::COLUMN_YEAR]);
+        $updatedMovie->metadata = $metadata;
+
+        $progressEventCalled = false;
+        $progressValue = null;
+        $progressCallback = function (iState $entity) use (&$progressEventCalled, &$progressValue) {
+            $progressEventCalled = true;
+            $progressValue = $entity->getContext(Options::STATE_PROGRESS_VALUE);
+        };
+
+        $this->mapper->add($updatedMovie, [
+            Options::FORCE_METADATA_CHANGE => true,
+            Options::STATE_PROGRESS_EVENT => $progressCallback,
+        ]);
+        $this->mapper->commit();
+
+        $this->assertTrue($progressEventCalled, 'Progress reset should queue progress event');
+        $this->assertSame(0, $progressValue, 'Progress reset should export zero progress');
+
+        $this->mapper->reset()->loadData();
+        $stored = $this->mapper->get($updatedMovie);
+        $storedMetadata = $stored->getMetadata($updatedMovie->via);
+
+        $this->assertArrayNotHasKey(iState::COLUMN_META_DATA_PROGRESS, $storedMetadata);
+        $this->assertArrayNotHasKey(iState::COLUMN_YEAR, $storedMetadata);
+        $this->assertSame(65000, ag($stored->getMetadata('test_jellyfin'), iState::COLUMN_META_DATA_PROGRESS));
+    }
+
+    public function test_force_progress_change(): void
+    {
+        $this->testMovie[iState::COLUMN_WATCHED] = 0;
+        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_WATCHED] = 0;
+
+        $testMovie = new StateEntity($this->testMovie);
+        $this->mapper->add($testMovie);
+        $this->mapper->commit();
+        $this->mapper->reset()->loadData();
+
+        $updatedMovie = clone $testMovie;
+        $metadata = $updatedMovie->getMetadata();
+        $metadata[$updatedMovie->via][iState::COLUMN_META_DATA_PROGRESS] = 50000;
+        $updatedMovie->metadata = $metadata;
+
+        $progressEventCalled = false;
+        $progressValue = null;
+        $progressCallback = function (iState $entity) use (&$progressEventCalled, &$progressValue) {
+            $progressEventCalled = true;
+            $progressValue = $entity->getContext(Options::STATE_PROGRESS_VALUE);
+        };
+
+        $this->mapper->add($updatedMovie, [
+            Options::FORCE_METADATA_CHANGE => true,
+            Options::STATE_PROGRESS_EVENT => $progressCallback,
+        ]);
+        $this->mapper->commit();
+
+        $this->assertTrue($progressEventCalled, 'Forced progress change should queue progress event');
+        $this->assertSame(50000, $progressValue, 'Forced progress change should export source progress');
+
+        $this->mapper->reset()->loadData();
+        $stored = $this->mapper->get($updatedMovie);
+
+        $this->assertSame(50000, ag($stored->getMetadata($updatedMovie->via), iState::COLUMN_META_DATA_PROGRESS));
+    }
+
+    public function test_force_progress_same(): void
+    {
+        $this->testMovie[iState::COLUMN_WATCHED] = 0;
+        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_WATCHED] = 0;
+        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_META_DATA_PROGRESS] = 0;
+
+        $testMovie = new StateEntity($this->testMovie);
+        $this->mapper->add($testMovie);
+        $this->mapper->commit();
+        $this->mapper->reset()->loadData();
+
+        $updatedMovie = clone $testMovie;
+        $metadata = $updatedMovie->getMetadata();
+        unset($metadata[$updatedMovie->via][iState::COLUMN_YEAR]);
+        $updatedMovie->metadata = $metadata;
+
+        $progressEventCalled = false;
+        $progressCallback = function () use (&$progressEventCalled) {
+            $progressEventCalled = true;
+        };
+
+        $this->mapper->add($updatedMovie, [
+            Options::FORCE_METADATA_CHANGE => true,
+            Options::STATE_PROGRESS_EVENT => $progressCallback,
+        ]);
+        $this->mapper->commit();
+
+        $this->assertFalse($progressEventCalled, 'Unchanged zero progress should not queue progress event');
+
+        $this->mapper->reset()->loadData();
+        $stored = $this->mapper->get($updatedMovie);
+
+        $this->assertArrayNotHasKey(iState::COLUMN_YEAR, $stored->getMetadata($updatedMovie->via));
+    }
+
+    public function test_no_force_metadata_change(): void
+    {
+        $this->testMovie[iState::COLUMN_WATCHED] = 0;
+        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_WATCHED] = 0;
+
+        $testMovie = new StateEntity($this->testMovie);
+        $this->mapper->add($testMovie);
+        $this->mapper->commit();
+        $this->mapper->reset()->loadData();
+
+        $updatedMovie = clone $testMovie;
+        $metadata = $updatedMovie->getMetadata();
+        unset($metadata[$updatedMovie->via][iState::COLUMN_META_DATA_PROGRESS]);
+        unset($metadata[$updatedMovie->via][iState::COLUMN_YEAR]);
+        $updatedMovie->metadata = $metadata;
+
+        $this->mapper->add($updatedMovie);
+        $this->mapper->commit();
+
+        $this->mapper->reset()->loadData();
+        $stored = $this->mapper->get($updatedMovie);
+        $storedMetadata = $stored->getMetadata($updatedMovie->via);
+
+        $this->assertArrayHasKey(iState::COLUMN_META_DATA_PROGRESS, $storedMetadata);
+        $this->assertArrayHasKey(iState::COLUMN_YEAR, $storedMetadata);
+    }
 }

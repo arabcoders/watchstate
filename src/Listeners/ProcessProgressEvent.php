@@ -71,6 +71,8 @@ final readonly class ProcessProgressEvent
         }
 
         $options = $event->getOptions();
+        $forceMetadataChange = true === (bool) ag($options, Options::FORCE_METADATA_CHANGE, false);
+        $hasProgressValue = ag_exists($options, Options::STATE_PROGRESS_VALUE);
 
         if (null === ($item = $userContext->db->get(Container::get(iState::class)::fromArray($event->getData())))) {
             $writer(Level::Error, "'{user}' item '{id}' is not referenced locally yet.", [
@@ -104,7 +106,7 @@ final readonly class ProcessProgressEvent
             }
         }
 
-        if (false === $item->hasPlayProgress()) {
+        if (false === $hasProgressValue && false === $item->hasPlayProgress()) {
             $writer(Level::Info, "'{user}' item '#{id}: {title}' has no watch progress to export.", [
                 'id' => $item->id,
                 'title' => $item->title,
@@ -113,7 +115,10 @@ final readonly class ProcessProgressEvent
             return $event;
         }
 
-        $progress = format_duration($item->getPlayProgress());
+        $progressValue = true === $hasProgressValue
+            ? (int) ag($options, Options::STATE_PROGRESS_VALUE, 0)
+            : $item->getPlayProgress();
+        $progress = format_duration($progressValue);
 
         $list = [];
 
@@ -176,6 +181,14 @@ final readonly class ProcessProgressEvent
 
                 if (ag($options, Options::DEBUG_TRACE)) {
                     $opts[Options::DEBUG_TRACE] = true;
+                }
+
+                if (true === $forceMetadataChange) {
+                    $opts[Options::FORCE_METADATA_CHANGE] = true;
+                }
+
+                if (true === $hasProgressValue) {
+                    $opts[Options::STATE_PROGRESS_VALUE] = $progressValue;
                 }
 
                 $backend['options'] = $opts;

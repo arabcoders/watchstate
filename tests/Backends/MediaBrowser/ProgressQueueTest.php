@@ -95,6 +95,142 @@ class ProgressQueueTest extends MediaBrowserTestCase
         }
     }
 
+    public function test_progress_force_reset(): void
+    {
+        foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass, $metaClass, $sessionsClass]) {
+            $context = $this->makeContext($clientName, [
+                Options::IGNORE_DATE => true,
+                Options::FORCE_METADATA_CHANGE => true,
+                Options::STATE_PROGRESS_VALUE => 0,
+            ]);
+            $cache = new Psr16Cache(new ArrayAdapter());
+
+            Container::add($sessionsClass, fn() => new class() {
+                public function __invoke(): Response
+                {
+                    return new Response(status: true, response: ['sessions' => []]);
+                }
+            });
+
+            $metaResponse = new MockResponse(
+                json_encode($this->fixture('metadata')),
+                ['http_code' => 200],
+            );
+            $metaHttp = new HttpClient(new MockHttpClient($metaResponse));
+            Container::add($metaClass, fn() => new $metaClass($metaHttp, $this->logger, $cache));
+
+            $http = new HttpClient(new MockHttpClient(new MockResponse('ok', ['http_code' => 200])));
+
+            $entity = StateEntity::fromArray([
+                iState::COLUMN_ID => 10,
+                iState::COLUMN_TYPE => iState::TYPE_MOVIE,
+                iState::COLUMN_UPDATED => 2000,
+                iState::COLUMN_WATCHED => 0,
+                iState::COLUMN_VIA => 'Other',
+                iState::COLUMN_TITLE => 'Test Movie',
+                iState::COLUMN_META_DATA => [
+                    $context->backendName => [
+                        iState::COLUMN_ID => 'item-1',
+                        iState::COLUMN_TYPE => iState::TYPE_MOVIE,
+                        iState::COLUMN_WATCHED => '0',
+                        iState::COLUMN_TITLE => 'Test Movie',
+                    ],
+                    'Other' => [
+                        iState::COLUMN_WATCHED => '0',
+                    ],
+                ],
+                iState::COLUMN_EXTRA => [
+                    $context->backendName => [
+                        iState::COLUMN_EXTRA_DATE => '2024-01-02T00:00:00Z',
+                    ],
+                    'Other' => [
+                        iState::COLUMN_EXTRA_DATE => '2024-01-01T00:00:00Z',
+                    ],
+                ],
+            ]);
+
+            $queue = new QueueRequests();
+            $action = new $actionClass($http, $this->logger);
+            $guid = (new $guidClass($this->logger))->withContext($context);
+            $result = $action($context, $guid, [$entity], $queue);
+
+            $this->assertTrue($result->isSuccessful());
+            $this->assertSame(1, $queue->count());
+
+            $request = $queue->getQueue()[0];
+            $this->assertSame('0', ag($request->options, 'json.PlaybackPositionTicks'));
+            $this->assertFalse(ag_exists(ag($request->options, 'json', []), 'LastPlayedDate'));
+        }
+    }
+
+    public function test_progress_force_value(): void
+    {
+        foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass, $metaClass, $sessionsClass]) {
+            $context = $this->makeContext($clientName, [
+                Options::IGNORE_DATE => true,
+                Options::FORCE_METADATA_CHANGE => true,
+                Options::STATE_PROGRESS_VALUE => 30000,
+            ]);
+            $cache = new Psr16Cache(new ArrayAdapter());
+
+            Container::add($sessionsClass, fn() => new class() {
+                public function __invoke(): Response
+                {
+                    return new Response(status: true, response: ['sessions' => []]);
+                }
+            });
+
+            $metaResponse = new MockResponse(
+                json_encode($this->fixture('metadata')),
+                ['http_code' => 200],
+            );
+            $metaHttp = new HttpClient(new MockHttpClient($metaResponse));
+            Container::add($metaClass, fn() => new $metaClass($metaHttp, $this->logger, $cache));
+
+            $http = new HttpClient(new MockHttpClient(new MockResponse('ok', ['http_code' => 200])));
+
+            $entity = StateEntity::fromArray([
+                iState::COLUMN_ID => 10,
+                iState::COLUMN_TYPE => iState::TYPE_MOVIE,
+                iState::COLUMN_UPDATED => 2000,
+                iState::COLUMN_WATCHED => 0,
+                iState::COLUMN_VIA => 'Other',
+                iState::COLUMN_TITLE => 'Test Movie',
+                iState::COLUMN_META_DATA => [
+                    $context->backendName => [
+                        iState::COLUMN_ID => 'item-1',
+                        iState::COLUMN_TYPE => iState::TYPE_MOVIE,
+                        iState::COLUMN_WATCHED => '0',
+                        iState::COLUMN_TITLE => 'Test Movie',
+                    ],
+                    'Other' => [
+                        iState::COLUMN_WATCHED => '0',
+                    ],
+                ],
+                iState::COLUMN_EXTRA => [
+                    $context->backendName => [
+                        iState::COLUMN_EXTRA_DATE => '2024-01-02T00:00:00Z',
+                    ],
+                    'Other' => [
+                        iState::COLUMN_EXTRA_DATE => '2024-01-01T00:00:00Z',
+                    ],
+                ],
+            ]);
+
+            $queue = new QueueRequests();
+            $action = new $actionClass($http, $this->logger);
+            $guid = (new $guidClass($this->logger))->withContext($context);
+            $result = $action($context, $guid, [$entity], $queue);
+
+            $this->assertTrue($result->isSuccessful());
+            $this->assertSame(1, $queue->count());
+
+            $request = $queue->getQueue()[0];
+            $this->assertSame('300000000', ag($request->options, 'json.PlaybackPositionTicks'));
+            $this->assertTrue(ag_exists(ag($request->options, 'json', []), 'LastPlayedDate'));
+        }
+    }
+
     private function provideBackends(): array
     {
         return [

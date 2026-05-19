@@ -15,6 +15,7 @@ final class Options
     public const string NO_CACHE = 'NO_CACHE';
     public const string CACHE_TTL = 'CACHE_TTL';
     public const string FORCE_FULL = 'FORCE_FULL';
+    public const string FORCE_METADATA_CHANGE = 'FORCE_METADATA_CHANGE';
     public const string DEBUG_TRACE = 'DEBUG_TRACE';
     public const string IGNORE_DATE = 'IGNORE_DATE';
     public const string EXPORT_ALLOWED_TIME_DIFF = 'EXPORT_TIME_DIFF';
@@ -26,6 +27,7 @@ final class Options
     public const string LIBRARY_SEGMENT = 'LIBRARY_SEGMENT';
     public const string STATE_UPDATE_EVENT = 'STATE_UPDATE_EVENT';
     public const string STATE_PROGRESS_EVENT = 'STATE_PROGRESS_EVENT';
+    public const string STATE_PROGRESS_VALUE = 'STATE_PROGRESS_VALUE';
     public const string LOG_TO_WRITER = 'LOG_TO_WRITER';
     public const string DUMP_PAYLOAD = 'DUMP_PAYLOAD';
     public const string ADMIN_TOKEN = 'ADMIN_TOKEN';

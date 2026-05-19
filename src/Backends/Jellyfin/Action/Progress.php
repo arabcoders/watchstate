@@ -135,6 +135,11 @@ class Progress
             }
 
             $metadata = $entity->getMetadata($context->backendName);
+            $forceChange = true === (bool) ag($context->options, Options::FORCE_METADATA_CHANGE, false);
+            $hasProgress = ag_exists($context->options, Options::STATE_PROGRESS_VALUE);
+            $progressValue = true === $hasProgress
+                ? (int) ag($context->options, Options::STATE_PROGRESS_VALUE, 0)
+                : $entity->getPlayProgress();
 
             $logContext = [
                 'action' => $this->action,
@@ -145,7 +150,7 @@ class Progress
                     'id' => $entity->id,
                     'type' => $entity->type,
                     'title' => $entity->getName(),
-                    'progress' => format_duration($entity->getPlayProgress()),
+                    'progress' => format_duration($progressValue),
                 ],
             ];
 
@@ -271,21 +276,25 @@ class Progress
                     message: "{action}: Updating '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' watch progress to '{progress}'.",
                     context: [
                         ...$logContext,
-                        'progress' => $entity->hasPlayProgress()
-                            ? format_duration(
-                                $entity->getPlayProgress(),
-                            )
-                            : '0:0:0',
+                        'progress' => format_duration($progressValue),
                         // -- convert secs to ms for jellyfin/emby to understand it.
-                        'time' => floor($entity->getPlayProgress() * 1_00_00),
+                        'time' => floor($progressValue * 1_00_00),
                     ],
                 );
 
                 if (false === (bool) ag($context->options, Options::DRY_RUN, false)) {
                     $requestContext = [
                         ...$logContext,
-                        'progress' => format_duration($entity->getPlayProgress()),
+                        'progress' => format_duration($progressValue),
                     ];
+
+                    $json = [
+                        'PlaybackPositionTicks' => (string) floor($progressValue * 1_00_00),
+                    ];
+
+                    if (false === ($forceChange && true === $hasProgress && $progressValue < 1)) {
+                        $json['LastPlayedDate'] = make_date($senderDate)->format(Date::ATOM);
+                    }
 
                     $queue->add(
                         new Request(
@@ -295,10 +304,7 @@ class Progress
                                 'headers' => [
                                     'Content-Type' => 'application/json',
                                 ],
-                                'json' => [
-                                    'PlaybackPositionTicks' => (string) floor($entity->getPlayProgress() * 1_00_00),
-                                    'LastPlayedDate' => make_date($senderDate)->format(Date::ATOM),
-                                ],
+                                'json' => $json,
                             ]),
                             success: function (ResponseInterface $response) use ($requestContext): array {
                                 $statusCode = $response->getStatusCode();

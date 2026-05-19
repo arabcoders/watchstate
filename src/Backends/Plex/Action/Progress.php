@@ -117,6 +117,9 @@ class Progress
             }
 
             $metadata = $entity->getMetadata($context->backendName);
+            $progressValue = ag_exists($context->options, Options::STATE_PROGRESS_VALUE)
+                ? (int) ag($context->options, Options::STATE_PROGRESS_VALUE, 0)
+                : $entity->getPlayProgress();
 
             $logContext = [
                 'action' => $this->action,
@@ -127,7 +130,7 @@ class Progress
                     'id' => $entity->id,
                     'type' => $entity->type,
                     'title' => $entity->getName(),
-                    'progress' => format_duration($entity->getPlayProgress()),
+                    'progress' => format_duration($progressValue),
                 ],
             ];
 
@@ -256,7 +259,7 @@ class Progress
                             'key' => '/library/metadata/' . $logContext['remote']['id'],
                             'identifier' => 'com.plexapp.plugins.library',
                             'state' => 'stopped',
-                            'time' => $entity->getPlayProgress(),
+                            'time' => $progressValue,
                             // -- Without duration & client identifier plex ignore watch progress update.
                             'duration' => ag($remoteData, 'duration', 0),
                             'X-Plex-Client-Identifier' => $context->backendId,
@@ -269,15 +272,15 @@ class Progress
                     message: "{action}: Updating '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' watch progress to '{progress}'.",
                     context: [
                         ...$logContext,
-                        'progress' => format_duration($entity->getPlayProgress()),
-                        'time' => $entity->getPlayProgress(),
+                        'progress' => format_duration($progressValue),
+                        'time' => $progressValue,
                     ],
                 );
 
                 if (false === (bool) ag($context->options, Options::DRY_RUN, false)) {
                     $requestContext = [
                         ...$logContext,
-                        'progress' => format_duration($entity->getPlayProgress()),
+                        'progress' => format_duration($progressValue),
                     ];
 
                     $queue->add(
