@@ -76,7 +76,7 @@ class ImportCommand extends Command
             ->setDescription('Import play state and metadata from backends.')
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full import. Ignore last sync date.')
             ->addOption(
-                'force-metadata-change',
+                'force-replace-metadata',
                 'F',
                 InputOption::VALUE_NONE,
                 'Replace existing metadata with data from backend even if there is no change.',
@@ -188,8 +188,8 @@ class ImportCommand extends Command
             $mapperOpts[Options::MAPPER_ALWAYS_UPDATE_META] = true;
         }
 
-        if ($input->getOption('force-metadata-change')) {
-            $mapperOpts[Options::FORCE_METADATA_CHANGE] = true;
+        if ($input->getOption('force-replace-metadata')) {
+            $mapperOpts[Options::FORCE_REPLACE_METADATA] = true;
         }
 
         if (false === ($syncRequests = $input->getOption('sync-requests'))) {
@@ -377,8 +377,8 @@ class ImportCommand extends Command
                     $metadata = true;
                 }
 
-                if (true === $input->getOption('force-metadata-change')) {
-                    $opts[Options::FORCE_METADATA_CHANGE] = true;
+                if (true === $input->getOption('force-replace-metadata')) {
+                    $opts[Options::FORCE_REPLACE_METADATA] = true;
                 }
 
                 if ($input->getOption('trace')) {

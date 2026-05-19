@@ -256,7 +256,7 @@ class DirectMapperTest extends MapperAbstract
         };
 
         $this->mapper->add($updatedMovie, [
-            Options::FORCE_METADATA_CHANGE => true,
+            Options::FORCE_REPLACE_METADATA => true,
             Options::STATE_PROGRESS_EVENT => $progressCallback,
         ]);
         $this->mapper->commit();
@@ -296,7 +296,7 @@ class DirectMapperTest extends MapperAbstract
         };
 
         $this->mapper->add($updatedMovie, [
-            Options::FORCE_METADATA_CHANGE => true,
+            Options::FORCE_REPLACE_METADATA => true,
             Options::STATE_PROGRESS_EVENT => $progressCallback,
         ]);
         $this->mapper->commit();
@@ -332,7 +332,7 @@ class DirectMapperTest extends MapperAbstract
         };
 
         $this->mapper->add($updatedMovie, [
-            Options::FORCE_METADATA_CHANGE => true,
+            Options::FORCE_REPLACE_METADATA => true,
             Options::STATE_PROGRESS_EVENT => $progressCallback,
         ]);
         $this->mapper->commit();

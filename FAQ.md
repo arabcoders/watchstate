@@ -133,13 +133,18 @@ By default, `state:import` is conservative, if a backend stops reporting a metad
 the locally stored value instead of assuming the missing field should be removed. This avoids accidental data loss from
 partial or inconsistent backend API responses.
 
-If you know want a specific backend to be authoritative, run import with `--force-metadata-change`.
+If you want a specific backend to be authoritative, run import with `--force-replace-metadata`.
 This makes the imported backend replace its own local metadata block with exactly what the backend reports.
+
+This is flag is a bit different from `--always-update-metadata`:
+
+* `--always-update-metadata` updates metadata by merging backend data into the existing local metadata.
+* `--force-replace-metadata` replaces the selected backend metadata block, so omitted keys are removed locally.
 
 For example, to make `plex_main` authoritative for metadata and progress:
 
 ```bash
-bin/console state:import --select-backend plex_main --force-full --force-metadata-change
+$ bin/console state:import -vv --force-full --force-replace-metadata -s plex_main 
 ```
 
 When this flag is used:
@@ -149,11 +154,11 @@ When this flag is used:
 
 > [!WARNING]
 > Use `--select-backend` with this flag unless you intentionally want all imported backends to compete. If you import
-> multiple backends with `--force-metadata-change`, the final result depends on backend processing order and the last
+> multiple backends with `--force-replace-metadata`, the final result depends on backend processing order and the last
 > backend that updates an item can win.
 
 This flag does not make import ignore every play-state guard. If you also need to ignore the last import timestamp and
-scan the full backend, combine it with `--force-full`.
+scan the full backend, combine it with `-f, --force-full`.
 
 ----
 

@@ -108,7 +108,7 @@ class Progress
             }
 
             $metadata = $entity->getMetadata($context->backendName);
-            $forceChange = true === (bool) ag($context->options, Options::FORCE_METADATA_CHANGE, false);
+            $forceChange = true === (bool) ag($context->options, Options::FORCE_REPLACE_METADATA, false);
             $hasProgress = ag_exists($context->options, Options::STATE_PROGRESS_VALUE);
             $progressValue = true === $hasProgress
                 ? (int) ag($context->options, Options::STATE_PROGRESS_VALUE, 0)

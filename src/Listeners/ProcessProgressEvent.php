@@ -71,7 +71,7 @@ final readonly class ProcessProgressEvent
         }
 
         $options = $event->getOptions();
-        $forceMetadataChange = true === (bool) ag($options, Options::FORCE_METADATA_CHANGE, false);
+        $forceMetadataChange = true === (bool) ag($options, Options::FORCE_REPLACE_METADATA, false);
         $hasProgressValue = ag_exists($options, Options::STATE_PROGRESS_VALUE);
 
         if (null === ($item = $userContext->db->get(Container::get(iState::class)::fromArray($event->getData())))) {
@@ -184,7 +184,7 @@ final readonly class ProcessProgressEvent
                 }
 
                 if (true === $forceMetadataChange) {
-                    $opts[Options::FORCE_METADATA_CHANGE] = true;
+                    $opts[Options::FORCE_REPLACE_METADATA] = true;
                 }
 
                 if (true === $hasProgressValue) {

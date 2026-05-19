@@ -412,9 +412,9 @@ class DirectMapper implements ImportInterface
                             'tainted' => 'untainted',
                             'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                         ]);
-                        if (true === (bool) ag($opts, Options::FORCE_METADATA_CHANGE, false)) {
+                        if (true === (bool) ag($opts, Options::FORCE_REPLACE_METADATA, false)) {
                             $local = $local
-                                ->setContext(Options::FORCE_METADATA_CHANGE, true)
+                                ->setContext(Options::FORCE_REPLACE_METADATA, true)
                                 ->setContext(Options::STATE_PROGRESS_VALUE, $this->getProgressValue($entity));
                         }
                         $this->progressItems[$itemId] = $local;
@@ -660,9 +660,9 @@ class DirectMapper implements ImportInterface
                                 'tainted' => 'untainted',
                                 'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                             ]);
-                            if (true === (bool) ag($opts, Options::FORCE_METADATA_CHANGE, false)) {
+                            if (true === (bool) ag($opts, Options::FORCE_REPLACE_METADATA, false)) {
                                 $local = $local
-                                    ->setContext(Options::FORCE_METADATA_CHANGE, true)
+                                    ->setContext(Options::FORCE_REPLACE_METADATA, true)
                                     ->setContext(Options::STATE_PROGRESS_VALUE, $this->getProgressValue($entity));
                             }
                             $this->progressItems[$itemId] = $local;
@@ -798,9 +798,9 @@ class DirectMapper implements ImportInterface
             $entity = $entity->setContext(Options::FORCE_FULL, true);
         }
 
-        if (true === (bool) ag($opts, Options::FORCE_METADATA_CHANGE, false)) {
+        if (true === (bool) ag($opts, Options::FORCE_REPLACE_METADATA, false)) {
             $entity = $entity
-                ->setContext(Options::FORCE_METADATA_CHANGE, true)
+                ->setContext(Options::FORCE_REPLACE_METADATA, true)
                 ->setContext(Options::STATE_PROGRESS_VALUE, $this->getProgressValue($entity));
         }
 
@@ -1009,9 +1009,9 @@ class DirectMapper implements ImportInterface
                         'tainted' => 'untainted',
                         'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                     ]);
-                    if (true === (bool) ag($opts, Options::FORCE_METADATA_CHANGE, false)) {
+                    if (true === (bool) ag($opts, Options::FORCE_REPLACE_METADATA, false)) {
                         $local = $local
-                            ->setContext(Options::FORCE_METADATA_CHANGE, true)
+                            ->setContext(Options::FORCE_REPLACE_METADATA, true)
                             ->setContext(Options::STATE_PROGRESS_VALUE, $this->getProgressValue($entity));
                     }
                     $this->progressItems[$itemId] = $local;
@@ -1119,11 +1119,11 @@ class DirectMapper implements ImportInterface
                         'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                     ]);
 
-                    if (true === (bool) $entity->getContext(Options::FORCE_METADATA_CHANGE, false)) {
+                    if (true === (bool) $entity->getContext(Options::FORCE_REPLACE_METADATA, false)) {
                         $_opts[EventsTable::COLUMN_OPTIONS] = array_replace_recursive(
                             (array) ag($_opts, EventsTable::COLUMN_OPTIONS, []),
                             [
-                                Options::FORCE_METADATA_CHANGE => true,
+                                Options::FORCE_REPLACE_METADATA => true,
                                 Options::STATE_PROGRESS_VALUE => $entity->getContext(Options::STATE_PROGRESS_VALUE, 0),
                             ],
                         );
@@ -1433,7 +1433,7 @@ class DirectMapper implements ImportInterface
         }
 
         if (
-            true === (bool) ag($opts, Options::FORCE_METADATA_CHANGE, false)
+            true === (bool) ag($opts, Options::FORCE_REPLACE_METADATA, false)
             && $this->getProgressValue($old, $new->via) !== $this->getProgressValue($new)
         ) {
             return true;
@@ -1457,7 +1457,7 @@ class DirectMapper implements ImportInterface
 
     private function shouldForceChange(iState $old, iState $new, array $opts = []): bool
     {
-        if (true !== (bool) ag($opts, Options::FORCE_METADATA_CHANGE, false)) {
+        if (true !== (bool) ag($opts, Options::FORCE_REPLACE_METADATA, false)) {
             return false;
         }
 

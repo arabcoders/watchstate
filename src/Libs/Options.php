@@ -15,7 +15,7 @@ final class Options
     public const string NO_CACHE = 'NO_CACHE';
     public const string CACHE_TTL = 'CACHE_TTL';
     public const string FORCE_FULL = 'FORCE_FULL';
-    public const string FORCE_METADATA_CHANGE = 'FORCE_METADATA_CHANGE';
+    public const string FORCE_REPLACE_METADATA = 'FORCE_REPLACE_METADATA';
     public const string DEBUG_TRACE = 'DEBUG_TRACE';
     public const string IGNORE_DATE = 'IGNORE_DATE';
     public const string EXPORT_ALLOWED_TIME_DIFF = 'EXPORT_TIME_DIFF';

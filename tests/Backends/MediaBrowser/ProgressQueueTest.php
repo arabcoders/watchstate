@@ -100,7 +100,7 @@ class ProgressQueueTest extends MediaBrowserTestCase
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass, $metaClass, $sessionsClass]) {
             $context = $this->makeContext($clientName, [
                 Options::IGNORE_DATE => true,
-                Options::FORCE_METADATA_CHANGE => true,
+                Options::FORCE_REPLACE_METADATA => true,
                 Options::STATE_PROGRESS_VALUE => 0,
             ]);
             $cache = new Psr16Cache(new ArrayAdapter());
@@ -168,7 +168,7 @@ class ProgressQueueTest extends MediaBrowserTestCase
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass, $metaClass, $sessionsClass]) {
             $context = $this->makeContext($clientName, [
                 Options::IGNORE_DATE => true,
-                Options::FORCE_METADATA_CHANGE => true,
+                Options::FORCE_REPLACE_METADATA => true,
                 Options::STATE_PROGRESS_VALUE => 30000,
             ]);
             $cache = new Psr16Cache(new ArrayAdapter());
