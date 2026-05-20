@@ -39,7 +39,7 @@ final class Index
         $this->logsDir = [
             [
                 'path' => fix_path(Config::get('tmpDir') . '/logs'),
-                'type' => ['*.*.jsonl'],
+                'type' => ['*.*.jsonl', '*.*.log'],
             ],
             [
                 'path' => fix_path(Config::get('tmpDir') . '/webhooks'),

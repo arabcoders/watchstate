@@ -12,7 +12,6 @@ use App\Libs\Exceptions\HttpException;
 use App\Libs\Extends\ConsoleHandler;
 use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Extends\JsonlFileHandler;
-use App\Libs\Extends\JsonlFormatter;
 use App\Libs\Extends\RemoteHandler;
 use App\Libs\Extends\RouterStrategy;
 use Closure;
@@ -20,6 +19,7 @@ use ErrorException;
 use League\Route\Http\Exception as RouterHttpException;
 use League\Route\RouteGroup;
 use League\Route\Router as APIRouter;
+use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogHandler;
 use Monolog\Level;
@@ -465,7 +465,11 @@ final class Initializer
 
             if (true === $inContainer) {
                 $handler = new StreamHandler('php://stderr', Level::Info, true);
-                $handler->setFormatter(new JsonlFormatter());
+                $handler->setFormatter(new LineFormatter(
+                    format: '%message%' . PHP_EOL,
+                    allowInlineLineBreaks: true,
+                    ignoreEmptyContextAndExtra: true,
+                ));
 
                 assert($this->accessLog instanceof Logger, 'Expected logger instance for access log.');
                 $this->accessLog->pushHandler($wrap->withHandler($handler));
