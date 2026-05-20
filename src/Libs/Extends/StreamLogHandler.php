@@ -42,6 +42,11 @@ class StreamLogHandler extends ConsoleHandler
      */
     protected function write(LogRecord|array $record): void
     {
+        if ((true === $this->isJsonlOutput() || 'jsonl' === Config::get('console.output')) && true === $record instanceof LogRecord) {
+            $this->stream->write(new JsonlFormatter()->format($record));
+            return;
+        }
+
         if (true === $record instanceof LogRecord) {
             $record = $record->toArray();
         }

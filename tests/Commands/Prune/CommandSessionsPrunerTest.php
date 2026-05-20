@@ -149,7 +149,7 @@ final class CommandSessionsPrunerTest extends TestCase
             'connections' => 0,
         ], $state), JSON_PRETTY_PRINT | JSON_INVALID_UTF8_IGNORE));
 
-        touch($path . '/stream.log');
+        touch($path . '/stream.jsonl');
 
         return $path;
     }

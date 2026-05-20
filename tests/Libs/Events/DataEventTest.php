@@ -6,6 +6,7 @@ namespace Tests\Libs\Events;
 
 use App\Libs\Container;
 use App\Libs\Events\DataEvent;
+use App\Libs\Extends\JsonlFormatter;
 use App\Libs\TestCase;
 use App\Model\Events\Event;
 use App\Model\Events\EventsTable;
@@ -38,7 +39,7 @@ class DataEventTest extends TestCase
         $this->initContainer();
     }
 
-    public function test_initial_state()
+    public function test_initial_state(): void
     {
         $dataEvent = $this->getDataEvent();
 
@@ -52,21 +53,60 @@ class DataEventTest extends TestCase
             'getOptions() does not return the expected value');
     }
 
-    public function test_logs_mutation()
+    public function test_logs_mutation(): void
     {
         $dataEvent = $this->getDataEvent();
 
         $this->assertSame(['test entry'], $dataEvent->getLogs(), 'getLogs() does not return the expected value');
         $dataEvent->addLog('new entry');
 
-        $this->assertSame(['test entry', 'new entry'],
-            $dataEvent->getLogs(),
-            'addLog() does not return the expected value');
+        $logs = $dataEvent->getLogs();
+
+        $this->assertCount(2, $logs, 'addLog() should append a new entry.');
+        $this->assertSame('test entry', $logs[0], 'Existing legacy entries should remain unchanged.');
+        $this->assertTrue(JsonlFormatter::isJsonlRecord($logs[1]), 'New log entries should be normalized to JSONL.');
 
         for ($i = 0; $i < 203; $i++) {
             $dataEvent->addLog('new entry');
         }
 
         $this->assertCount(200, $dataEvent->getLogs(), 'addLog() Logs should not exceed 200 entries per event.');
+    }
+
+    public function test_addLog_normalizes_jsonl(): void
+    {
+        $dataEvent = $this->getDataEvent();
+        $dataEvent->clearLogs();
+
+        $dataEvent->addLog('NOTICE: Listener visible');
+
+        $logs = $dataEvent->getLogs();
+
+        $this->assertCount(1, $logs);
+        $this->assertTrue(JsonlFormatter::isJsonlRecord($logs[0]));
+
+        $record = json_decode(trim($logs[0]), true, flags: JSON_THROW_ON_ERROR);
+
+        $this->assertSame('notice', ag($record, 'level'));
+        $this->assertSame('NOTICE: Listener visible', ag($record, 'message'));
+        $this->assertSame((string) $dataEvent->getEvent()->id, ag($record, 'fields.event_id'));
+        $this->assertSame($dataEvent->getEvent()->event, ag($record, 'fields.event'));
+    }
+
+    public function test_addLog_keeps_jsonl(): void
+    {
+        $dataEvent = $this->getDataEvent();
+        $dataEvent->clearLogs();
+
+        $line = (new JsonlFormatter())->formatValues(
+            channel: 'event',
+            level: \Monolog\Level::Info,
+            message: 'already structured',
+            context: ['event_id' => (string) $dataEvent->getEvent()->id],
+        );
+
+        $dataEvent->addLog($line);
+
+        $this->assertSame($line, $dataEvent->getLogs()[0]);
     }
 }

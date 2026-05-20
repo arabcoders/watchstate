@@ -400,6 +400,9 @@ const downloadFile = async (item: BackItemWithUI): Promise<void> => {
     URL.revokeObjectURL(fileURL);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unexpected error';
+    if (message.includes('aborted')) {
+      return;
+    }
     notification('error', 'Error', `Failed to download backup. ${message}`);
   } finally {
     item.isDownloading = false;

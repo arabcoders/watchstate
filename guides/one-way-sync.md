@@ -36,7 +36,7 @@ The import process may take some time, depending on the size of your library. To
 the <!--i:i-lucide-server--> **Backends** page and check the `last import date` for the backend. If it shows the current time,
 the import is finished.
 
-Alternatively, visit the **Operations** > <!--i:i-lucide-scroll-text--> **Logs** page and look at the `task.YYYYMMDD.log` file, or go to
+Alternatively, visit the **Operations** > <!--i:i-lucide-scroll-text--> **Logs** page and look at the `task.YYYYMMDD.jsonl` file, or go to
 the **Activity** > <!--i:i-lucide-calendar-days--> **Events** page and look for the *`run_console`*
 events. The logs page is updated more frequently, so we recommend using it. Once the import is complete, you should see
 a message like this:

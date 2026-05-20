@@ -11,6 +11,8 @@ use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Exceptions\HttpException;
 use App\Libs\Extends\ConsoleHandler;
 use App\Libs\Extends\ConsoleOutput;
+use App\Libs\Extends\JsonlFileHandler;
+use App\Libs\Extends\JsonlFormatter;
 use App\Libs\Extends\RemoteHandler;
 use App\Libs\Extends\RouterStrategy;
 use Closure;
@@ -196,6 +198,7 @@ final class Initializer
 
             $this->cli->setCommandLoader(new CommandLoader(Container::getContainer(), $routes, $aliases));
 
+            $this->cliOutput->syncJsonlMode();
             $this->cli->run(output: $this->cliOutput);
         } catch (Throwable $e) {
             $this->cli->renderThrowable($e, $this->cliOutput);
@@ -458,11 +461,14 @@ final class Initializer
         if (null !== ($logfile = Config::get('api.logfile'))) {
             $this->accessLog = $logger
                 ->withName(name: 'http')
-                ->pushHandler($wrap->withHandler(new StreamHandler($logfile, Level::Info, true)));
+                ->pushHandler($wrap->withHandler(new JsonlFileHandler($logfile, Level::Info, true)));
 
             if (true === $inContainer) {
+                $handler = new StreamHandler('php://stderr', Level::Info, true);
+                $handler->setFormatter(new JsonlFormatter());
+
                 assert($this->accessLog instanceof Logger, 'Expected logger instance for access log.');
-                $this->accessLog->pushHandler($wrap->withHandler(new StreamHandler('php://stderr', Level::Info, true)));
+                $this->accessLog->pushHandler($wrap->withHandler($handler));
             }
         }
 
@@ -488,14 +494,20 @@ final class Initializer
 
             switch (ag($context, 'type')) {
                 case 'stream':
+                    $handler = 'jsonl' === ag($context, 'format')
+                        ? new JsonlFileHandler(
+                            ag($context, 'filename'),
+                            ag($context, 'level', Level::Info),
+                            (bool) ag($context, 'bubble', true),
+                        )
+                        : new StreamHandler(
+                            ag($context, 'filename'),
+                            ag($context, 'level', Level::Info),
+                            (bool) ag($context, 'bubble', true),
+                        );
+
                     $logger->pushHandler(
-                        $wrap->withHandler(
-                            new StreamHandler(
-                                ag($context, 'filename'),
-                                ag($context, 'level', Level::Info),
-                                (bool) ag($context, 'bubble', true),
-                            ),
-                        ),
+                        $wrap->withHandler($handler),
                     );
                     break;
                 case 'remote':
@@ -549,7 +561,6 @@ final class Initializer
         int|string|Level $level,
         string $message,
         array $context = [],
-        bool $forceContext = false,
     ): void {
         if (null === $this->accessLog) {
             return;
@@ -586,11 +597,7 @@ final class Initializer
             $context['attributes'] = $attributes;
         }
 
-        if (true === (Config::get('logs.context') || $forceContext)) {
-            $this->accessLog->log($level, $message, $context);
-        } else {
-            $this->accessLog->log($level, r($message, $context));
-        }
+        $this->accessLog->log($level, $message, $context);
     }
 
     private function formatLog(iRequest $request, iResponse $response, ?string $message = null): string

@@ -118,7 +118,7 @@
     </UAlert>
 
     <UAlert
-      v-else-if="isLoading && 0 === data.length"
+      v-else-if="isLoading && 0 === rawLines.length"
       color="info"
       variant="soft"
       icon="i-lucide-loader-circle"
@@ -165,34 +165,95 @@
             class="logline block"
             :class="wrapLines ? 'whitespace-pre-wrap ws-wrap-anywhere' : 'whitespace-pre'"
           >
-            {{ renderJson(data) }}
+            {{ renderJson(rawLines) }}
           </code>
         </div>
 
-        <div v-else ref="logContainer" class="logbox" @scroll.passive="handleScroll">
-          <code id="logView" class="logline block">
-            <span
-              v-for="item in filterItems"
-              :key="item.id"
-              :class="['log-entry block', wrapLines ? '' : 'whitespace-nowrap']"
-              ><span
-                v-if="item.date || hasLinks(item)"
-                class="mr-[1ch] inline-flex items-baseline whitespace-normal"
-              >
-                <template v-if="item.date"
-                  >[<span class="cursor-help" :title="item.date">{{ formatDate(item.date) }}</span
-                  >]</template
-                >
-                <span v-if="hasLinks(item)" :class="item.date ? 'ml-[1ch]' : ''">
-                  <LogLineLinks :item="item" :open-event="openEvent" />
-                </span>
-              </span>
-              <span
-                :class="wrapLines ? 'whitespace-pre-wrap ws-wrap-anywhere' : 'whitespace-pre'"
-                >{{ String(item.text).trimStart() }}</span
-              ></span
+        <div
+          v-else
+          ref="logContainer"
+          class="overflow-auto"
+          @scroll.passive="handleScroll"
+          :style="logContainerStyle"
+        >
+          <template v-if="structuredRows.length > 0">
+            <article
+              v-for="(entry, index) in structuredRows"
+              :key="entry.key"
+              :class="structuredRowClass(entry, index)"
             >
-          </code>
+              <div
+                :class="[
+                  'flex min-w-0 flex-1 items-start gap-[0.65rem] px-3 py-[0.65rem] leading-[1.6]',
+                  wrapLines ? 'w-full' : 'w-max min-w-full',
+                ]"
+              >
+                <p :class="structuredLineClass">
+                  <span
+                    class="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 align-middle"
+                  >
+                    <UTooltip :text="lineTitle(entry.log)">
+                      <span class="inline cursor-pointer text-[11px] font-semibold text-toned">
+                        {{ timestampLabel(entry.log) }}
+                      </span>
+                    </UTooltip>
+
+                    <LogDetailsChip
+                      :item="entry.log"
+                      :open-details="openLogDetails"
+                      :open-event="openEvent"
+                    />
+
+                    <span
+                      :class="logLevelBadgeClass(entry.level)"
+                      @click="openLogDetails(entry.log)"
+                    >
+                      <UIcon :name="LOG_LEVEL_ICON[entry.level]" class="size-3" />
+                      {{ entry.level }}
+                    </span>
+
+                    <span
+                      v-if="entry.log.logger"
+                      :title="entry.log.logger"
+                      class="inline-block max-w-[46vw] truncate align-middle text-[11px] font-semibold text-toned sm:max-w-104"
+                    >
+                      [{{ entry.log.logger }}]
+                    </span>
+                  </span>
+
+                  <span class="ml-2">{{ logMessage(entry.log) }}</span>
+
+                  <span v-if="entry.log.exception_message" class="ml-1 text-error/90">
+                    : {{ entry.log.exception_message }}
+                  </span>
+                </p>
+              </div>
+            </article>
+          </template>
+
+          <div
+            v-else
+            class="flex min-h-[55vh] flex-col items-center justify-center gap-3 px-6 py-8 text-center"
+          >
+            <UIcon
+              :name="query ? 'i-lucide-filter-x' : 'i-lucide-circle-off'"
+              class="size-6 text-toned"
+            />
+
+            <div class="space-y-1">
+              <p class="text-sm font-medium text-default">
+                {{ query ? 'No logs match this query' : 'No log lines available' }}
+              </p>
+
+              <p class="text-sm text-toned">
+                {{
+                  query
+                    ? 'Adjust the filter or load more lines.'
+                    : 'This file has no visible log lines yet.'
+                }}
+              </p>
+            </div>
+          </div>
         </div>
       </UCard>
 
@@ -201,25 +262,13 @@
           <EventView v-if="selectedEventId" :id="selectedEventId" />
         </template>
       </UModal>
+
+      <LogDetailsModal :log="selectedLog" v-model:open="detailsOpen" />
     </template>
   </main>
 </template>
 
 <style scoped>
-#logView {
-  min-height: 72vh;
-  min-width: inherit;
-  max-width: 100%;
-}
-
-.log-entry:nth-child(even) {
-  color: #ffc9d4;
-}
-
-.log-entry:nth-child(odd) {
-  color: #e3c981;
-}
-
 code {
   background-color: unset;
 }
@@ -228,8 +277,6 @@ code {
   background-color: #1f2229;
   min-width: 100%;
   max-height: 73vh;
-  overflow-y: auto;
-  overflow-x: auto;
 }
 
 div.logbox pre {
@@ -237,10 +284,7 @@ div.logbox pre {
 }
 
 .logline {
-  word-break: break-all;
-  line-height: 2.3em;
-  padding: 1em;
-  color: #fff1b8;
+  line-height: 1.8em;
 }
 </style>
 
@@ -251,19 +295,21 @@ import { useStorage } from '@vueuse/core';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import moment from 'moment';
 import EventView from '~/components/EventView.vue';
-import LogLineLinks from '~/components/LogLineLinks.vue';
+import LogDetailsChip from '~/components/LogDetailsChip.vue';
+import LogDetailsModal from '~/components/LogDetailsModal.vue';
 import { useDialog } from '~/composables/useDialog';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
-import type { GenericResponse, LogEntry } from '~/types';
+import type { GenericResponse, LogEntry, LogResponse } from '~/types';
+import { copyText, makeEventName, notification, parse_api_response, request } from '~/utils';
 import {
-  copyText,
-  disableOpacity,
-  enableOpacity,
-  makeEventName,
-  notification,
-  parse_api_response,
-  request,
-} from '~/utils';
+  getLogLevel,
+  logMessageText,
+  logSearchText,
+  logTimestampLabel,
+  logTimestampTitle,
+  parseLogLine,
+  parseLogLines,
+} from '~/utils/logs';
 
 const router = useRouter();
 const route = useRoute();
@@ -278,6 +324,7 @@ useHead({ title: `Logs : ${filename}` });
 
 const query = ref<string>('');
 const data = ref<Array<LogEntry>>([]);
+const rawLines = ref<Array<string>>([]);
 const error = ref<string>('');
 const wrapLines = useStorage('logs_wrap_lines', false);
 const isDownloading = ref<boolean>(false);
@@ -291,12 +338,33 @@ const stream = ref<boolean>(false);
 const logContainer = ref<HTMLElement | null>(null);
 const streamController = ref<AbortController | null>(null);
 const selectedEventId = ref<string | null>(null);
+const selectedLog = ref<LogEntry | null>(null);
 const isTodayLog = computed<boolean>(() => filename.includes(moment().format('YYYYMMDD')));
+
+type LogLevel = 'debug' | 'info' | 'warning' | 'error';
+
+type StructuredLogRow = {
+  key: string;
+  log: LogEntry;
+  level: LogLevel;
+};
+
+const LOG_LEVEL_ICON: Record<LogLevel, string> = {
+  debug: 'i-lucide-terminal',
+  info: 'i-lucide-info',
+  warning: 'i-lucide-triangle-alert',
+  error: 'i-lucide-circle-x',
+};
 
 const eventViewModalUi = {
   content: 'max-w-5xl',
   body: 'p-4 sm:p-5',
 };
+
+const logContainerStyle = {
+  minHeight: '70vh',
+  maxHeight: '70vh',
+} as const;
 
 const eventViewOpen = computed({
   get: () => null !== selectedEventId.value,
@@ -310,6 +378,15 @@ const eventViewOpen = computed({
 const eventViewTitle = computed(() =>
   null === selectedEventId.value ? 'Event' : `#${makeEventName(selectedEventId.value)}`,
 );
+
+const detailsOpen = computed({
+  get: () => null !== selectedLog.value,
+  set: (value: boolean) => {
+    if (false === value) {
+      selectedLog.value = null;
+    }
+  },
+});
 
 let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -347,29 +424,30 @@ const filterItems = computed<Array<LogEntry>>(() => {
     return data.value;
   }
 
-  return data.value.filter((item) => item.text.toLowerCase().includes(query.value.toLowerCase()));
+  return data.value.filter((item) => logSearchText(item).includes(query.value.toLowerCase()));
 });
 
-const hasLinks = (item: LogEntry): boolean => {
-  return Boolean(item.item_id || item.event_id || item.backend);
-};
+const structuredRows = computed<Array<StructuredLogRow>>(() => {
+  return filterItems.value.map((log, index) => ({
+    key: `${log.id}:${index}`,
+    log,
+    level: getLogLevel(log.level),
+  }));
+});
 
 const openEvent = (id: string): void => {
   selectedEventId.value = id;
+};
+
+const openLogDetails = (log: LogEntry): void => {
+  selectedLog.value = log;
 };
 
 const loadContent = async (): Promise<void> => {
   try {
     isLoading.value = true;
     const response = await request(`/log/${filename}?offset=${offset.value}`);
-    const json = await parse_api_response<{
-      filename: string;
-      offset: number;
-      next: number | null;
-      max: number;
-      type: 'log' | 'json';
-      lines: Array<LogEntry>;
-    }>(response);
+    const json = await parse_api_response<LogResponse>(response);
 
     if (200 !== response.status) {
       if ('error' in json) {
@@ -390,7 +468,11 @@ const loadContent = async (): Promise<void> => {
     contentType.value = json.type ?? 'log';
 
     if (0 < json.lines.length) {
-      data.value.unshift(...json.lines);
+      rawLines.value.unshift(...json.lines);
+
+      if ('log' === contentType.value) {
+        data.value.unshift(...parseLogLines(json.lines));
+      }
     }
 
     offset.value = json.next ?? offset.value;
@@ -444,7 +526,6 @@ const scrollToBottom = (): void => {
 
 onMounted(async () => {
   await loadContent();
-  await nextTick(() => disableOpacity());
 });
 
 onBeforeUnmount(() => closeStream());
@@ -455,7 +536,6 @@ onUnmounted(async () => {
     clearTimeout(scrollTimeout);
     scrollTimeout = null;
   }
-  await nextTick(() => enableOpacity());
 });
 
 const watchLog = (): void => {
@@ -473,25 +553,27 @@ const watchLog = (): void => {
         return;
       }
 
-      const lines = evt.data.split(/\n/g);
+      try {
+        const payload = JSON.parse(evt.data) as { data?: string };
+        const line = typeof payload.data === 'string' ? payload.data.trim() : '';
 
-      for (let index = 0; index < lines.length; index++) {
-        try {
-          const line = String(lines[index]);
-          if (!line.trim()) {
-            continue;
-          }
-
-          data.value.push(JSON.parse(line) as LogEntry);
-
-          await nextTick(() => {
-            if (autoScroll.value) {
-              scrollLogContainerToBottom('smooth');
-            }
-          });
-        } catch (streamError) {
-          console.error(streamError);
+        if (!line) {
+          return;
         }
+
+        rawLines.value.push(line);
+
+        if ('log' === contentType.value) {
+          data.value.push(parseLogLine(line));
+        }
+
+        await nextTick(() => {
+          if (autoScroll.value) {
+            scrollLogContainerToBottom('smooth');
+          }
+        });
+      } catch (streamError) {
+        console.error(streamError);
       }
     },
     onclose: () => {
@@ -551,6 +633,9 @@ const downloadFile = async (): Promise<void> => {
     URL.revokeObjectURL(fileURL);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    if (message.includes('aborted')) {
+      return;
+    }
     notification('error', 'Error', `Failed to download the file. ${message}`);
   } finally {
     isDownloading.value = false;
@@ -596,17 +681,52 @@ const deleteFile = async (): Promise<void> => {
   }
 };
 
-const formatDate = (dt: string): string => moment(dt).format('DD/MM HH:mm:ss');
+const lineTitle = (item: LogEntry): string => logTimestampTitle(item.datetime ?? item.date);
 
-const renderJson = (lines: Array<LogEntry>): string =>
-  JSON.stringify(JSON.parse(lines.map((entry) => entry.text).join('')), null, 4);
+const timestampLabel = (item: LogEntry): string => logTimestampLabel(item.datetime ?? item.date);
+
+const logMessage = (item: LogEntry): string => logMessageText(item);
+
+const structuredLineClass = computed<Array<string>>(() => [
+  'flex-1',
+  wrapLines.value ? 'min-w-0 whitespace-pre-wrap wrap-break-word' : 'min-w-max whitespace-pre',
+  'text-default',
+]);
+
+const structuredRowClass = (_entry: StructuredLogRow, index: number): Array<string> => {
+  const classes = [
+    'flex min-w-0 border-b border-default/40 bg-transparent transition-colors duration-150 last:border-b-0 hover:bg-elevated/70',
+  ];
+
+  if (index % 2 === 1) {
+    classes.push('bg-elevated/40');
+  }
+
+  return classes;
+};
+
+const logLevelBadgeClass = (level: LogLevel): Array<string> => [
+  'inline-flex cursor-pointer items-center gap-1.5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+  'debug' === level ? 'bg-muted/40 text-muted' : '',
+  'info' === level ? 'bg-info/10 text-info' : '',
+  'warning' === level ? 'bg-warning/10 text-warning' : '',
+  'error' === level ? 'bg-error/10 text-error' : '',
+];
+
+const renderJson = (lines: Array<string>): string => {
+  try {
+    return JSON.stringify(JSON.parse(lines.join('')), null, 4);
+  } catch {
+    return lines.join('\n');
+  }
+};
 
 const copyData = (): void => {
   if ('json' === contentType.value) {
-    copyText(renderJson(data.value));
+    copyText(renderJson(rawLines.value));
     return;
   }
 
-  copyText(filterItems.value.map((item) => item.text).join('\n'));
+  copyText(filterItems.value.map((item) => item.raw).join('\n'));
 };
 </script>

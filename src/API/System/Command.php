@@ -39,7 +39,7 @@ final class Command
     private const string REQUEST_FILE = 'request.json';
     private const string STATE_FILE = 'state.json';
     private const string STATE_LOCK_FILE = 'state.lock';
-    private const string STREAM_FILE = 'stream.log';
+    private const string STREAM_FILE = 'stream.jsonl';
     private const string WRITER_LOCK_FILE = 'writer.lock';
     private const string CANCEL_FILE = 'cancel.flag';
 

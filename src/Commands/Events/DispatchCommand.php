@@ -8,6 +8,7 @@ use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Events\DataEvent;
+use App\Libs\Extends\JsonlFormatter;
 use App\Libs\Extends\ProxyHandler;
 use App\Libs\Options;
 use App\Model\Events\Event;
@@ -163,14 +164,22 @@ final class DispatchCommand extends Command
         $capturedHandlers = null;
 
         try {
-            $message = "[event:{id}] Dispatching Event: '{event}' queued at '{date}'.";
+            $message = "Dispatching Event: '{event}' queued at '{date}'.";
             $log_data = [
                 'id' => $event->id,
                 'event' => $event->event,
                 'date' => make_date($event->created_at),
             ];
 
-            $event->logs[] = r($message, $log_data);
+            $event->logs[] = new JsonlFormatter()->formatValues(
+                channel: 'event',
+                level: Level::Notice,
+                message: r($message, $log_data),
+                context: [
+                    'event_id' => (string) $event->id,
+                    'event' => $event->event,
+                ],
+            );
 
             if (count($event->event_data) > 0) {
                 $log_data['data'] = $event->event_data;
@@ -207,7 +216,15 @@ final class DispatchCommand extends Command
 
             $this->replayRecords($capturedHandlers, $capturedRecords);
 
-            $event->logs[] = r("Event '{event}' was dispatched.", ['event' => $event->event]);
+            $event->logs[] = new JsonlFormatter()->formatValues(
+                channel: 'event',
+                level: Level::Notice,
+                message: r("Event '{event}' was dispatched.", ['event' => $event->event]),
+                context: [
+                    'event_id' => (string) $event->id,
+                    'event' => $event->event,
+                ],
+            );
 
             $this->repo->save($event);
         } catch (Throwable $e) {
@@ -219,8 +236,17 @@ final class DispatchCommand extends Command
                 'error' => $e->getMessage(),
             ]);
 
-            $event->logs[] = $errorLog;
-            array_push($event->logs, ...$e->getTrace());
+            $event->logs[] = new JsonlFormatter()->formatValues(
+                channel: 'event',
+                level: Level::Error,
+                message: $errorLog,
+                context: [
+                    'event_id' => (string) $event->id,
+                    'event' => $event->event,
+                    'exception' => $e,
+                    'trace' => $e->getTrace(),
+                ],
+            );
             $event->status = Status::FAILED;
             $event->updated_at = (string) make_date();
             $this->repo->save($event);
@@ -319,9 +345,33 @@ final class DispatchCommand extends Command
             return null;
         }
 
+        $log = trim($log);
+
+        if ('' === $log) {
+            return null;
+        }
+
+        if (true === JsonlFormatter::isJsonlRecord($log)) {
+            $payload = json_decode($log, true);
+
+            if (true === is_array($payload)) {
+                $level = trim(strtoupper((string) ag($payload, 'level', '')));
+
+                if ('' === $level) {
+                    return null;
+                }
+
+                try {
+                    return MonologLogger::toMonologLevel($level);
+                } catch (Throwable) {
+                    return null;
+                }
+            }
+        }
+
         $levelRegex = '/^(?:\[[^\]]+]\s*)?(?:[a-z0-9_.-]+\.)?(?<level>EMERGENCY|ALERT|CRITICAL|ERROR|WARNING|NOTICE|INFO|DEBUG):\s*/i';
 
-        if (1 !== preg_match($levelRegex, trim($log), $matches)) {
+        if (1 !== preg_match($levelRegex, $log, $matches)) {
             return null;
         }
 

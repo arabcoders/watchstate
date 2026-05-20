@@ -57,7 +57,7 @@ Now that you have added the all users, simply go to the <!--i:i-lucide-list-chec
 start importing playstate. To bring all existing playstate into WatchState.
 
 The task will take some time depending on your library size. Monitor progress at the <!--i:i-lucide-globe--> **Logs** page by
-checking the `task.YYYYMMDD.log` file. Once the task completed you should see something like
+checking the `task.YYYYMMDD.jsonl` file. Once the task completed you should see something like
 
 ```
 [DD/MM HH:MM:SS]: SYSTEM: Import process completed in 'XXX's for all users.

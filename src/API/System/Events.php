@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\API\System;
 
-use App\API\Logs\Index as LogsIndex;
 use App\Libs\Attributes\Route\Delete;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Attributes\Route\Patch;
@@ -12,12 +11,14 @@ use App\Libs\Attributes\Route\Post;
 use App\Libs\Database\DBLayer;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Extends\JsonlFormatter;
 use App\Libs\Options;
 use App\Model\Events\Event as EntityItem;
 use App\Model\Events\EventsRepository;
 use App\Model\Events\EventsTable as EntityTable;
 use App\Model\Events\EventStatus;
 use InvalidArgumentException;
+use Monolog\Level;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 
@@ -298,7 +299,15 @@ final readonly class Events
 
         if ($changed) {
             $entity->updated_at = (string) make_date();
-            $entity->logs[] = 'Event was manually updated';
+            $entity->logs[] = new JsonlFormatter()->formatValues(
+                channel: 'event',
+                level: Level::Info,
+                message: 'Event was manually updated',
+                context: [
+                    'event_id' => (string) $entity->id,
+                    'event' => $entity->event,
+                ],
+            );
             $this->repo->save($entity);
         }
 
@@ -310,10 +319,6 @@ final readonly class Events
         $data = $entity->getAll();
         $data['status_name'] = $entity->getStatusText();
         $data['display_id'] = substr(str_replace('-', '', (string) $entity->id), 0, 12);
-
-        if (is_array($entity->logs) && count($entity->logs) > 0) {
-            $data['logs'] = array_map(LogsIndex::formatLog(...), $entity->logs);
-        }
 
         if ($delay = ag($entity->options, Options::DELAY_BY)) {
             $data['delay_by'] = $delay;

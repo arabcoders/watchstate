@@ -74,7 +74,7 @@
             size="sm"
             icon="i-lucide-copy"
             :disabled="isLoading"
-            @click="() => copyText(JSON.stringify(item, null, 2))"
+            @click="copyItem"
           >
             <span class="hidden sm:inline">Copy</span>
           </UButton>
@@ -182,7 +182,7 @@
               size="sm"
               icon="i-lucide-copy"
               class="absolute right-3 top-3"
-              @click="() => copyText(JSON.stringify(item.event_data, null, 2))"
+              @click="copyEventData"
             />
           </UTooltip>
         </div>
@@ -207,45 +207,106 @@
           </button>
         </template>
 
-        <div v-if="toggleLogs" class="relative">
-          <code
-            class="ws-terminal ws-terminal-panel ws-terminal-panel-lg"
-            :class="wrapLines ? 'ws-wrap-anywhere whitespace-pre-wrap' : 'whitespace-pre'"
-          >
-            <span
-              v-for="(logLine, index) in filteredRows"
-              :key="`${logLine.id}-${index}`"
-              class="block"
-              ><span
-                v-if="logLine?.date || hasLinks(logLine)"
-                class="mr-[1ch] inline-flex items-baseline whitespace-normal"
-              >
-                <template v-if="logLine?.date"
-                  >[<UTooltip :text="`${moment(logLine.date).format(TOOLTIP_DATE_FORMAT)}`">
-                    <span class="cursor-help">{{
-                      moment(logLine.date).format('HH:mm:ss')
-                    }}</span> </UTooltip
-                  >]</template
-                >
-                <span v-if="hasLinks(logLine)" :class="logLine?.date ? 'ml-[1ch]' : ''">
-                  <LogLineLinks :item="logLine" />
-                </span>
-              </span>
-              <span>{{ String(logLine.text).trim() }}</span>
+        <div v-if="toggleLogs" class="space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-toned">
+            <span>
+              {{ filteredRows.length }} of {{ logRows.length }} line{{
+                1 === logRows.length ? '' : 's'
+              }}
+              {{ query ? 'visible' : 'loaded' }}
             </span>
-          </code>
-          <UTooltip text="Copy logs">
+
             <UButton
               color="neutral"
-              variant="soft"
-              size="sm"
+              variant="outline"
+              size="xs"
               icon="i-lucide-copy"
-              class="absolute right-3 top-3"
-              @click="
-                () => copyText(filteredRows.map((logLine) => formatLogLine(logLine)).join('\n'))
-              "
-            />
-          </UTooltip>
+              @click="copyLogs"
+            >
+              Copy logs
+            </UButton>
+          </div>
+
+          <div class="max-h-[60vh] overflow-auto border border-default bg-elevated/30 shadow-sm">
+            <template v-if="structuredRows.length > 0">
+              <article
+                v-for="(entry, index) in structuredRows"
+                :key="entry.key"
+                :class="structuredRowClass(index)"
+              >
+                <div
+                  :class="[
+                    'flex min-w-0 flex-1 items-start gap-[0.65rem] px-3 py-[0.65rem] leading-[1.6]',
+                    wrapLines ? 'w-full' : 'w-max min-w-full',
+                  ]"
+                >
+                  <p :class="structuredLineClass">
+                    <span
+                      class="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 align-middle"
+                    >
+                      <UTooltip :text="lineTitle(entry.log)">
+                        <span class="inline cursor-pointer text-[11px] font-semibold text-toned">
+                          {{ timestampLabel(entry.log) }}
+                        </span>
+                      </UTooltip>
+
+                      <LogDetailsChip
+                        :item="entry.log"
+                        :open-details="openLogDetails"
+                        :open-event="openEvent"
+                      />
+
+                      <span
+                        :class="logLevelBadgeClass(entry.level)"
+                        @click="openLogDetails(entry.log)"
+                      >
+                        <UIcon :name="LOG_LEVEL_ICON[entry.level]" class="size-3" />
+                        {{ entry.level }}
+                      </span>
+
+                      <span
+                        v-if="entry.log.logger"
+                        :title="entry.log.logger"
+                        class="inline-block max-w-[46vw] truncate align-middle text-[11px] font-semibold text-toned sm:max-w-104"
+                      >
+                        [{{ entry.log.logger }}]
+                      </span>
+                    </span>
+
+                    <span class="ml-2">{{ logMessage(entry.log) }}</span>
+
+                    <span v-if="entry.log.exception_message" class="ml-1 text-error/90">
+                      : {{ entry.log.exception_message }}
+                    </span>
+                  </p>
+                </div>
+              </article>
+            </template>
+
+            <div
+              v-else
+              class="flex min-h-40 flex-col items-center justify-center gap-3 px-6 py-8 text-center"
+            >
+              <UIcon
+                :name="query ? 'i-lucide-filter-x' : 'i-lucide-circle-off'"
+                class="size-6 text-toned"
+              />
+
+              <div class="space-y-1">
+                <p class="text-sm font-medium text-default">
+                  {{ query ? 'No logs match this query' : 'No log lines available' }}
+                </p>
+
+                <p class="text-sm text-toned">
+                  {{
+                    query
+                      ? 'Adjust the filter to inspect more event output.'
+                      : 'This event has no visible log lines.'
+                  }}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </UCard>
 
@@ -282,21 +343,35 @@
               size="sm"
               icon="i-lucide-copy"
               class="absolute right-3 top-3"
-              @click="() => copyText(JSON.stringify(item.options, null, 2))"
+              @click="copyOptions"
             />
           </UTooltip>
         </div>
       </UCard>
     </template>
+
+    <UModal v-model:open="eventViewOpen" :title="eventViewTitle" :ui="eventViewModalUi">
+      <template #body>
+        <EventView
+          v-if="selectedEventId"
+          :id="selectedEventId"
+          @delete="(eventItem) => emit('delete', eventItem)"
+        />
+      </template>
+    </UModal>
+
+    <LogDetailsModal :log="selectedLog" v-model:open="detailsOpen" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { createError, useHead } from '#app';
 import moment from 'moment';
 import { useStorage } from '@vueuse/core';
-import LogLineLinks from '~/components/LogLineLinks.vue';
+import EventView from '~/components/EventView.vue';
+import LogDetailsChip from '~/components/LogDetailsChip.vue';
+import LogDetailsModal from '~/components/LogDetailsModal.vue';
 import { useDialog } from '~/composables/useDialog';
 import type { EventsItem, GenericError, LogEntry } from '~/types';
 import {
@@ -308,6 +383,14 @@ import {
   request,
   TOOLTIP_DATE_FORMAT,
 } from '~/utils';
+import {
+  getLogLevel,
+  logMessageText,
+  logSearchText,
+  logTimestampLabel,
+  logTimestampTitle,
+  parseLogLines,
+} from '~/utils/logs';
 
 const emit = defineEmits<{
   closeOverlay: [];
@@ -326,11 +409,82 @@ const toggleLogs = useStorage<boolean>('events_toggle_logs', true);
 const toggleData = useStorage<boolean>('events_toggle_data', true);
 const toggleOptions = useStorage<boolean>('events_toggle_options', true);
 const wrapLines = useStorage<boolean>('logs_wrap_lines', false);
+const selectedEventId = ref<string | null>(null);
+const selectedLog = ref<LogEntry | null>(null);
+
+type LogLevel = 'debug' | 'info' | 'warning' | 'error';
+type StructuredLogRow = {
+  key: string;
+  log: LogEntry;
+  level: LogLevel;
+};
+
+const LOG_LEVEL_ICON: Record<LogLevel, string> = {
+  debug: 'i-lucide-terminal',
+  info: 'i-lucide-info',
+  warning: 'i-lucide-triangle-alert',
+  error: 'i-lucide-circle-x',
+};
 
 const cardUi = {
   header: 'p-4',
   body: 'px-4 pb-4 pt-0',
 };
+
+const eventViewModalUi = {
+  content: 'max-w-5xl',
+  body: 'p-4 sm:p-5',
+};
+
+const eventViewOpen = computed({
+  get: () => null !== selectedEventId.value,
+  set: (value: boolean) => {
+    if (false === value) {
+      selectedEventId.value = null;
+    }
+  },
+});
+
+const eventViewTitle = computed(() =>
+  null === selectedEventId.value ? 'Event' : `#${makeEventName(selectedEventId.value)}`,
+);
+
+const detailsOpen = computed({
+  get: () => null !== selectedLog.value,
+  set: (value: boolean) => {
+    if (false === value) {
+      selectedLog.value = null;
+    }
+  },
+});
+
+const dialog = useDialog();
+
+const logRows = computed<Array<LogEntry>>(() => parseLogLines(item.value.logs ?? []));
+
+const filteredRows = computed<Array<LogEntry>>(() => {
+  if (!query.value) {
+    return logRows.value;
+  }
+
+  const queryValue = query.value.toLowerCase();
+
+  return logRows.value.filter((logLine) => logSearchText(logLine).includes(queryValue));
+});
+
+const structuredRows = computed<Array<StructuredLogRow>>(() => {
+  return filteredRows.value.map((log, index) => ({
+    key: `${log.id}:${index}`,
+    log,
+    level: getLogLevel(log.level),
+  }));
+});
+
+const structuredLineClass = computed<Array<string>>(() => [
+  'flex-1',
+  wrapLines.value ? 'min-w-0 whitespace-pre-wrap wrap-break-word' : 'min-w-max whitespace-pre',
+  'text-default',
+]);
 
 watch(toggleFilter, () => {
   if (!toggleFilter.value) {
@@ -338,27 +492,42 @@ watch(toggleFilter, () => {
   }
 });
 
-const filteredRows = computed<Array<LogEntry>>(() => {
-  const rows = item.value.logs ?? [];
+watch(
+  () => props.id,
+  (value, oldValue) => {
+    if (!value || value === oldValue) {
+      return;
+    }
 
-  if (!query.value) {
-    return rows;
+    if (timer.value) {
+      clearInterval(timer.value);
+      timer.value = null;
+    }
+
+    selectedLog.value = null;
+    selectedEventId.value = null;
+    query.value = '';
+    void loadContent();
+  },
+);
+
+onMounted(async () => {
+  if (!props.id) {
+    throw createError({
+      statusCode: 404,
+      message: 'Error ID not provided.',
+    });
   }
 
-  const queryValue = query.value.toLowerCase();
-
-  return rows.filter((logLine) => logLine.text.toLowerCase().includes(queryValue));
+  await loadContent();
 });
 
-const formatLogLine = (logLine: LogEntry): string => {
-  const prefix = logLine.date ? `[${logLine.date}] ` : '';
-
-  return `${prefix}${String(logLine.text).trim()}`;
-};
-
-const hasLinks = (logLine: LogEntry): boolean => {
-  return Boolean(logLine.item_id || logLine.backend);
-};
+onUnmounted(() => {
+  if (timer.value) {
+    clearInterval(timer.value);
+    timer.value = null;
+  }
+});
 
 const getEventStatusColor = (status: number) => {
   const value = getEventStatusClass(status);
@@ -403,16 +572,6 @@ const getEventStatusIconClass = (status: number): string => {
   return 1 === status ? 'size-3.5 animate-spin' : 'size-3.5';
 };
 
-onMounted(async () => {
-  if (!props.id) {
-    throw createError({
-      statusCode: 404,
-      message: 'Error ID not provided.',
-    });
-  }
-  return await loadContent();
-});
-
 const loadContent = async (): Promise<void> => {
   try {
     isLoading.value = true;
@@ -436,7 +595,9 @@ const loadContent = async (): Promise<void> => {
 
     if (1 === json.status) {
       if (!timer.value) {
-        timer.value = setInterval(async () => await loadContent(), 5000);
+        timer.value = setInterval(() => {
+          void loadContent();
+        }, 5000);
       }
     } else if (timer.value) {
       clearInterval(timer.value);
@@ -458,7 +619,7 @@ const loadContent = async (): Promise<void> => {
 const deleteItem = async (): Promise<void> => emit('delete', item.value);
 
 const resetEvent = async (status: number = 0): Promise<void> => {
-  const { status: confirmStatus } = await useDialog().confirmDialog({
+  const { status: confirmStatus } = await dialog.confirmDialog({
     message: `Reset '${makeEventName(item.value.id)}'?`,
     confirmColor: 'warning',
   });
@@ -488,9 +649,77 @@ const resetEvent = async (status: number = 0): Promise<void> => {
     }
 
     item.value = json;
-  } catch (e: any) {
-    console.error(e);
-    notification('crit', 'Error', `Events view patch Request failure. ${e.message}`);
+  } catch (error: unknown) {
+    console.error(error);
+    notification(
+      'crit',
+      'Error',
+      `Events view patch Request failure. ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
+};
+
+const openEvent = (id: string): void => {
+  if (id === item.value.id) {
+    return;
+  }
+
+  selectedEventId.value = id;
+};
+
+const openLogDetails = (log: LogEntry): void => {
+  selectedLog.value = log;
+};
+
+const lineTitle = (logLine: LogEntry): string =>
+  logTimestampTitle(logLine.datetime ?? logLine.date);
+
+const timestampLabel = (logLine: LogEntry): string =>
+  logTimestampLabel(logLine.datetime ?? logLine.date);
+
+const logMessage = (logLine: LogEntry): string => logMessageText(logLine);
+
+const structuredRowClass = (index: number): Array<string> => {
+  const classes = [
+    'flex min-w-0 border-b border-default/40 bg-transparent transition-colors duration-150 last:border-b-0 hover:bg-elevated/70',
+  ];
+
+  if (index % 2 === 1) {
+    classes.push('bg-elevated/40');
+  }
+
+  return classes;
+};
+
+const logLevelBadgeClass = (level: LogLevel): Array<string> => [
+  'inline-flex cursor-pointer items-center gap-1.5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+  'debug' === level ? 'bg-muted/40 text-muted' : '',
+  'info' === level ? 'bg-info/10 text-info' : '',
+  'warning' === level ? 'bg-warning/10 text-warning' : '',
+  'error' === level ? 'bg-error/10 text-error' : '',
+];
+
+const copyItem = (): void => {
+  copyText(JSON.stringify(item.value, null, 2));
+};
+
+const copyEventData = (): void => {
+  if (!item.value.event_data) {
+    return;
+  }
+
+  copyText(JSON.stringify(item.value.event_data, null, 2));
+};
+
+const copyOptions = (): void => {
+  if (!item.value.options) {
+    return;
+  }
+
+  copyText(JSON.stringify(item.value.options, null, 2));
+};
+
+const copyLogs = (): void => {
+  copyText(filteredRows.value.map((logLine) => logLine.raw).join('\n'));
 };
 </script>

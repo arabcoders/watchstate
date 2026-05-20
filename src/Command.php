@@ -71,6 +71,12 @@ class Command extends BaseCommand
             Config::save('logs.context', true);
         }
 
+        if ($input->hasOption('jsonl') && true === $input->getOption('jsonl')) {
+            Config::save('console.output', 'jsonl');
+        } else {
+            Config::remove('console.output');
+        }
+
         if (!$input->hasOption('profile') || !$input->getOption('profile')) {
             return $this->runCommand($input, $output);
         }

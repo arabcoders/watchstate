@@ -141,7 +141,7 @@ return (function () {
 
     $dbFile = ag($config, 'path') . '/db/' . PdoFactory::DB_FILE;
 
-    $config['api']['logfile'] = ag($config, 'tmpDir') . '/logs/access.' . $logDateFormat . '.log';
+    $config['api']['logfile'] = ag($config, 'tmpDir') . '/logs/access.' . $logDateFormat . '.jsonl';
 
     $isMemory = 'MEMORY' === env('WS_DB_MODE', 'WAL');
     $pragma = [
@@ -230,7 +230,8 @@ return (function () {
             'type' => 'stream',
             'enabled' => (bool) env('WS_LOGGER_FILE_ENABLE', true),
             'level' => env('WS_LOGGER_FILE_LEVEL', Level::Warning),
-            'filename' => ag($config, 'tmpDir') . '/logs/app.' . $logDateFormat . '.log',
+            'filename' => ag($config, 'tmpDir') . '/logs/app.' . $logDateFormat . '.jsonl',
+            'format' => 'jsonl',
         ],
         'stderr' => [
             'type' => 'stream',
@@ -340,7 +341,7 @@ return (function () {
     };
 
     $config['tasks'] = [
-        'logfile' => ag($config, 'tmpDir') . '/logs/task.' . $logDateFormat . '.log',
+        'logfile' => ag($config, 'tmpDir') . '/logs/task.' . $logDateFormat . '.jsonl',
         'list' => [
             ImportCommand::TASK_NAME => [
                 'command' => ImportCommand::ROUTE,
@@ -412,7 +413,7 @@ return (function () {
     ];
 
     $config['events'] = [
-        'logfile' => ag($config, 'tmpDir') . '/logs/events.' . $logDateFormat . '.log',
+        'logfile' => ag($config, 'tmpDir') . '/logs/events.' . $logDateFormat . '.jsonl',
         'listeners' => [
             'cache' => new DateInterval(env('WS_EVENTS_LISTENERS_CACHE', 'PT1M')),
             'file' => env('APP_EVENTS_FILE', function () use ($config): ?string {

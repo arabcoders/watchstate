@@ -6,6 +6,7 @@ namespace Tests\Commands\Events;
 
 use App\Commands\Events\DispatchCommand;
 use App\Libs\Events\DataEvent;
+use App\Libs\Extends\JsonlFormatter;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\TestCase;
 use App\Model\Events\Event;
@@ -24,6 +25,18 @@ final class DispatchCommandTest extends TestCase
     {
         $method = new ReflectionMethod(DispatchCommand::class, 'isVisible');
         $command = $this->makeCommand();
+        $jsonlNotice = (new JsonlFormatter())->formatValues(
+            channel: 'event',
+            level: Level::Notice,
+            message: 'JSONL visible',
+            context: ['event_id' => '550e8400-e29b-41d4-a716-446655440000'],
+        );
+        $jsonlInfo = (new JsonlFormatter())->formatValues(
+            channel: 'event',
+            level: Level::Info,
+            message: 'JSONL hidden',
+            context: ['event_id' => '550e8400-e29b-41d4-a716-446655440000'],
+        );
 
         self::assertTrue($method->invoke(
             $command,
@@ -31,6 +44,7 @@ final class DispatchCommandTest extends TestCase
                 'INFO: hidden',
                 'NOTICE: visible',
                 '[2026-04-27T10:17:56+03:00] WARNING: visible',
+                $jsonlNotice,
                 'plain text',
             ],
             Level::Notice,
@@ -42,6 +56,7 @@ final class DispatchCommandTest extends TestCase
                 'INFO: visible',
                 'NOTICE: visible',
                 'WARNING: visible',
+                $jsonlInfo,
                 'event.DEBUG: hidden',
             ],
             Level::Info,
@@ -82,9 +97,10 @@ final class DispatchCommandTest extends TestCase
 
         $records = $handler->getRecords();
         self::assertSame(
-            "[event:550e8400-e29b-41d4-a716-446655440000] Dispatching Event: 'on_push' queued at '2026-05-17T08:25:02+00:00'.",
+            "Dispatching Event: 'on_push' queued at '2026-05-17T08:25:02+00:00'.",
             $records[0]->message,
         );
+        self::assertSame('550e8400-e29b-41d4-a716-446655440000', $records[0]->context['id']);
         self::assertSame('Listener visible.', $records[1]->message);
     }
 

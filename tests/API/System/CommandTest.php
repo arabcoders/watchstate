@@ -57,7 +57,7 @@ final class CommandTest extends TestCase
         $this->assertNotSame('', $token);
         $this->assertFileExists($sessionPath . '/request.json');
         $this->assertFileExists($sessionPath . '/state.json');
-        $this->assertFileExists($sessionPath . '/stream.log');
+        $this->assertFileExists($sessionPath . '/stream.jsonl');
 
         $state = json_decode((string) file_get_contents($sessionPath . '/state.json'), true);
 

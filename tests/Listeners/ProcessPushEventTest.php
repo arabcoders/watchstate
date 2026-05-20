@@ -10,6 +10,7 @@ use App\Libs\Database\PackageMigrationFactory;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Events\DataEvent;
+use App\Libs\Extends\JsonlFormatter;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\QueueRequests;
 use App\Libs\TestCase;
@@ -66,15 +67,25 @@ final class ProcessPushEventTest extends TestCase
         $listener($event);
 
         self::assertSame(EventStatus::RUNNING, $event->getStatus());
-        self::assertContains(
-            r(
-                "WARNING: jellyfin.push: Ignoring '#{id}: {title}' for 'Jellyfin: main@test_jellyfin'. No metadata was found.",
-                [
-                    'id' => $entity->id,
-                    'title' => $entity->getName(),
-                ],
+        self::assertNotEmpty(
+            array_filter(
+                $event->getLogs(),
+                static function (string $log) use ($entity): bool {
+                    if (false === JsonlFormatter::isJsonlRecord($log)) {
+                        return false;
+                    }
+
+                    $payload = json_decode(trim($log), true);
+
+                    if (!is_array($payload)) {
+                        return false;
+                    }
+
+                    return 'warning' === ($payload['level'] ?? null)
+                        && str_contains((string) ($payload['message'] ?? ''), "Ignoring '#{$entity->id}: {$entity->getName()}'")
+                        && str_contains((string) ($payload['message'] ?? ''), 'No metadata was found.');
+                },
             ),
-            $event->getLogs(),
         );
         self::assertFalse($handler->hasWarningRecords());
     }

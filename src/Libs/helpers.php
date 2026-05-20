@@ -82,6 +82,100 @@ if (!function_exists('get_value')) {
     }
 }
 
+if (!function_exists('get_log_server_params')) {
+    /**
+     * Return only server params that are safe enough to include in structured logs.
+     *
+     * @param array<string,mixed> $server
+     * @return array<string,mixed>
+     */
+    function get_log_server_params(array $server): array
+    {
+        $allowed = [];
+        $whitelist = [
+            'REQUEST_' => 'starts_with',
+            'SERVER_' => 'starts_with',
+            'REMOTE_' => 'starts_with',
+            'HTTP_' => 'starts_with',
+            'CONTENT_' => 'starts_with',
+            'APP_VERSION' => 'exact',
+            'PHP_VERSION' => 'exact',
+            'PHP_VERSION_ID' => 'exact',
+            'PHP_OS' => 'exact',
+            'DOCUMENT_ROOT' => 'exact',
+            'SCRIPT_NAME' => 'exact',
+            'PHP_SELF' => 'exact',
+            'HTTPS' => 'exact',
+            'SYSTEM' => 'exact',
+            'argc' => 'exact',
+        ];
+        $deny = [
+            'AUTHORIZATION',
+            'COOKIE',
+            'TOKEN',
+            'PASSWORD',
+            'PASSWD',
+            'SECRET',
+            'APIKEY',
+            'API_KEY',
+            'ACCESSKEY',
+            'PRIVATEKEY',
+            'SESSION',
+            'PHP_AUTH',
+        ];
+
+        foreach ($server as $key => $value) {
+            $normalized = strtoupper((string) $key);
+            $normalizedCompact = str_replace(['-', '_'], '', $normalized);
+
+            $denied = false;
+            foreach ($deny as $field) {
+                if (false === str_contains($normalizedCompact, str_replace('_', '', $field))) {
+                    continue;
+                }
+
+                $denied = true;
+                break;
+            }
+
+            if (true === $denied) {
+                continue;
+            }
+
+            $matched = false;
+            foreach ($whitelist as $field => $mode) {
+                $field = strtoupper((string) $field);
+
+                if ('' === $field) {
+                    continue;
+                }
+
+                $matched = match ($mode) {
+                    'contains' => str_contains($normalized, $field),
+                    'ends_with' => str_ends_with($normalized, $field),
+                    'exact' => $normalized === $field,
+                    'starts_with' => str_starts_with($normalized, $field),
+                    default => false,
+                };
+
+                if (true === $matched) {
+                    break;
+                }
+            }
+
+            if (false === $matched) {
+                continue;
+            }
+
+            if (is_scalar($value) || null === $value) {
+                $allowed[$key] = $value;
+            }
+        }
+
+        return $allowed;
+    }
+}
+
 if (!function_exists('make_date')) {
     /**
      * Make date time object.

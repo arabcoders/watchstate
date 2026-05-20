@@ -25,7 +25,7 @@ final class FilePruner
                 'name' => 'logs_remover',
                 'path' => Config::get('tmpDir') . '/logs',
                 'base' => Config::get('tmpDir'),
-                'filter' => '/\.log$/',
+                'filter' => '/\.(jsonl|log)$/',
                 'time' => strtotime((string) Config::get('logs.prune.after', '-7 DAYS'), $time),
             ],
             [
@@ -46,7 +46,7 @@ final class FilePruner
                 'name' => 'debug_remover',
                 'path' => Config::get('tmpDir') . '/debug',
                 'base' => Config::get('tmpDir'),
-                'filter' => '/\.json$/',
+                'filter' => '/\.(json|txt)$/',
                 'time' => strtotime('-3 DAYS', $time),
             ],
             [

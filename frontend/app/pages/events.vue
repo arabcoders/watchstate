@@ -581,7 +581,7 @@ const showSearchPanel = ref<boolean>(
   }),
 );
 const search = ref<SearchState>(createSearchState(route.query));
-const quick_view = ref<string | null>(null);
+const quick_view = ref<string | null>(getRouteQueryValue(route.query.view, '') || null);
 const show_page_tips = useStorage<boolean>('show_page_tips', true);
 const deleteModalOpen = ref<boolean>(false);
 const deleteIncludePending = ref<boolean>(false);
@@ -778,6 +778,10 @@ const buildRouteQuery = (
     page: pageNumber,
   };
 
+  if (quick_view.value) {
+    historyQuery.view = quick_view.value;
+  }
+
   if (displayFilter.value) {
     historyQuery.filter = displayFilter.value;
   }
@@ -879,6 +883,7 @@ const handlePopState = async (): Promise<void> => {
   displayFilter.value = getRouteQueryValue(route.query.filter, '');
   showDisplayFilter.value = !!displayFilter.value;
   search.value = createSearchState(route.query);
+  quick_view.value = getRouteQueryValue(route.query.view, '') || null;
   showSearchPanel.value = ['status', 'event', 'reference', 'before', 'after'].some((key) => {
     const value = route.query[key];
     return Array.isArray(value) ? !!value[0] : !!value;
@@ -1073,6 +1078,35 @@ const confirmDeleteAll = async (): Promise<void> => {
 const toggleDisplayFilter = (): void => {
   showDisplayFilter.value = !showDisplayFilter.value;
 };
+
+watch(quick_view, (value: string | null) => {
+  const currentView = getRouteQueryValue(route.query.view, '') || null;
+
+  if (currentView === value) {
+    return;
+  }
+
+  void router.push({
+    path: '/events',
+    query: {
+      ...route.query,
+      view: value ?? undefined,
+    },
+  });
+});
+
+watch(
+  () => route.query.view,
+  (value) => {
+    const nextValue = getRouteQueryValue(value, '') || null;
+
+    if (nextValue === quick_view.value) {
+      return;
+    }
+
+    quick_view.value = nextValue;
+  },
+);
 
 watch(displayFilter, (value: string) => {
   if (!value) {

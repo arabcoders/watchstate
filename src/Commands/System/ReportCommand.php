@@ -433,7 +433,7 @@ final class ReportCommand extends Command
      */
     private function handleLog(string $type, string|int $date, int|string $limit): void
     {
-        $logFile = Config::get('tmpDir') . '/logs/' . r('{type}.{date}.log', ['type' => $type, 'date' => $date]);
+        $logFile = Config::get('tmpDir') . '/logs/' . r('{type}.{date}.jsonl', ['type' => $type, 'date' => $date]);
 
         $this->filter(r('[ <value>{logFile}</value> ]' . PHP_EOL, [
             'logFile' => after($logFile, Config::get('tmpDir')),

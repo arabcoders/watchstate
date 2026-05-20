@@ -1587,7 +1587,7 @@ Lists log, webhook dump, and debug files under WatchState's temp directories.
 ```json
 [
   {
-    "filename": "access.20260328.log",
+    "filename": "access.20260328.jsonl",
     "type": "access",
     "date": "20260328",
     "size": 12345,
@@ -1599,7 +1599,7 @@ Lists log, webhook dump, and debug files under WatchState's temp directories.
 ---
 
 #### GET /v1/api/logs/recent
-Returns the most recent lines from today's `.log` files.
+Returns the most recent raw lines from today's `.jsonl` log files.
 
 **Query**:
 - `limit` (optional) - Defaults to `50`.
@@ -1608,20 +1608,13 @@ Returns the most recent lines from today's `.log` files.
 ```json
 [
   {
-    "filename": "access.20260328.log",
+    "filename": "access.20260328.jsonl",
     "type": "access",
     "date": "20260328",
     "size": 12345,
     "modified": "2026-03-28T12:00:00+00:00",
     "lines": [
-      {
-        "id": "...",
-        "item_id": "101",
-        "user": "main",
-        "backend": "plex_main",
-        "date": "2026-03-28T12:00:00+00:00",
-        "text": "Queuing main@plex_main request ..."
-      }
+      "{\"id\":\"...\",\"datetime\":\"2026-03-28T12:00:00+00:00\",\"level\":\"info\",\"logger\":\"access\",\"message\":\"Queuing main@plex_main request ...\"}"
     ]
   }
 ]
@@ -1631,7 +1624,7 @@ Returns the most recent lines from today's `.log` files.
 - `500 Internal Server Error` if the log path is not configured.
 
 **Notes**:
-- Only today's `.log` files are returned, not older logs or JSON dump files.
+- Only today's `.jsonl` log files are returned, not older logs or JSON dump files.
 
 ---
 
@@ -1649,20 +1642,13 @@ Reads, downloads, streams, or deletes a single log, debug, or webhook file.
 **Normal GET Response**:
 ```json
 {
-  "filename": "access.20260328.log",
+  "filename": "access.20260328.jsonl",
   "offset": 100,
   "next": 200,
   "max": 500,
   "type": "log",
   "lines": [
-    {
-      "id": "...",
-      "item_id": null,
-      "user": "main",
-      "backend": "plex_main",
-      "date": "2026-03-28T12:00:00+00:00",
-      "text": "Some log line"
-    }
+    "{\"id\":\"...\",\"datetime\":\"2026-03-28T12:00:00+00:00\",\"level\":\"info\",\"logger\":\"access\",\"message\":\"Some log line\"}"
   ]
 }
 ```
@@ -1670,7 +1656,7 @@ Reads, downloads, streams, or deletes a single log, debug, or webhook file.
 **Stream Response**:
 - `Content-Type: text/event-stream; charset=UTF-8`
 - Emits:
-  - `data` events containing JSON formatted log lines
+  - `data` events containing `{"data":"<raw line>"}` payloads
   - `ping` keepalive events
 
 **DELETE Response**:

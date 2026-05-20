@@ -41,7 +41,7 @@ final class Index
         $this->logsDir = [
             [
                 'path' => fix_path(Config::get('tmpDir') . '/logs'),
-                'type' => '*.*.log',
+                'type' => ['*.*.jsonl'],
             ],
             [
                 'path' => fix_path(Config::get('tmpDir') . '/webhooks'),
@@ -66,23 +66,29 @@ final class Index
 
         foreach ($this->logsDir as $pathInfo) {
             $path = ag($pathInfo, 'path');
-            $type = ag($pathInfo, 'type', '*.*.log');
-            foreach (glob($path . '/' . $type) as $file) {
-                preg_match('/(\w+)\.(.+?)\.(log|json)/i', basename($file), $matches);
-                $date = $matches[2] ?? null;
-                if (null !== $date && !is_numeric($date)) {
-                    $date = null;
+            foreach ((array) ag($pathInfo, 'type', '*.*.jsonl') as $type) {
+                $files = glob($path . '/' . $type);
+                if (false === $files) {
+                    continue;
                 }
 
-                $builder = [
-                    'filename' => basename($file),
-                    'type' => $matches[1] ?? '??',
-                    'date' => $date,
-                    'size' => filesize($file),
-                    'modified' => make_date(filemtime($file)),
-                ];
+                foreach ($files as $file) {
+                    preg_match('/(\w+)\.(.+?)\.(jsonl|json)/i', basename($file), $matches);
+                    $date = $matches[2] ?? null;
+                    if (null !== $date && !is_numeric($date)) {
+                        $date = null;
+                    }
 
-                $list[] = $builder;
+                    $builder = [
+                        'filename' => basename($file),
+                        'type' => $matches[1] ?? '??',
+                        'date' => $date,
+                        'size' => filesize($file),
+                        'modified' => make_date(filemtime($file)),
+                    ];
+
+                    $list[] = $builder;
+                }
             }
         }
 
@@ -96,8 +102,8 @@ final class Index
     public function recent(iRequest $request): iResponse
     {
         $path = $this->logsDir[0]['path'] ?? null;
-        $type = $this->logsDir[0]['type'] ?? null;
-        if (null === $path || null === $type) {
+        $types = $this->logsDir[0]['type'] ?? null;
+        if (null === $path || null === $types) {
             return api_error('Log path not configured.', Status::INTERNAL_SERVER_ERROR);
         }
 
@@ -109,41 +115,48 @@ final class Index
         $limit = (int) $params->get('limit', 50);
         $limit = $limit < 1 ? 50 : $limit;
 
-        foreach (glob($path . '/' . $type) as $file) {
-            preg_match('/(\w+)\.(\w+)\.log/i', basename($file), $matches);
-
-            $logDate = $matches[2] ?? null;
-
-            if (!$logDate || $logDate !== $today) {
+        foreach ((array) $types as $type) {
+            $files = glob($path . '/' . $type);
+            if (false === $files) {
                 continue;
             }
 
-            $builder = [
-                'filename' => basename($file),
-                'type' => $matches[1] ?? '??',
-                'date' => $matches[2] ?? '??',
-                'size' => filesize($file),
-                'modified' => make_date(filemtime($file)),
-                'lines' => [],
-            ];
+            foreach ($files as $file) {
+                preg_match('/(\w+)\.(\w+)\.(jsonl)/i', basename($file), $matches);
 
-            $file = new SplFileObject($file, 'r');
+                $logDate = $matches[2] ?? null;
 
-            if ($file->getSize() > 1) {
-                $file->seek(PHP_INT_MAX);
-                $lastLine = $file->key();
-                $it = new LimitIterator($file, max(0, $lastLine - $limit), $lastLine);
-                foreach ($it as $line) {
-                    $line = trim((string) $line);
-                    if (empty($line)) {
-                        continue;
-                    }
-
-                    $builder['lines'][] = self::formatLog($line, $this->users);
+                if (!$logDate || $logDate !== $today) {
+                    continue;
                 }
-            }
 
-            $list[] = $builder;
+                $builder = [
+                    'filename' => basename($file),
+                    'type' => $matches[1] ?? '??',
+                    'date' => $matches[2] ?? '??',
+                    'size' => filesize($file),
+                    'modified' => make_date(filemtime($file)),
+                    'lines' => [],
+                ];
+
+                $file = new SplFileObject($file, 'r');
+
+                if ($file->getSize() > 1) {
+                    $file->seek(PHP_INT_MAX);
+                    $lastLine = $file->key();
+                    $it = new LimitIterator($file, max(0, $lastLine - $limit), $lastLine);
+                    foreach ($it as $line) {
+                        $line = trim((string) $line);
+                        if (empty($line)) {
+                            continue;
+                        }
+
+                        $builder['lines'][] = $line;
+                    }
+                }
+
+                $list[] = $builder;
+            }
         }
 
         return api_response(Status::OK, $list, headers: [
@@ -210,7 +223,7 @@ final class Index
             'next' => null,
             'max' => $lastLine,
             'lines' => [],
-            'type' => $contentType,
+            'type' => 'json' === $contentType ? 'json' : 'log',
         ];
 
         if ($offset <= $lastLine) {
@@ -218,7 +231,13 @@ final class Index
             $it = new LimitIterator($file, $start, 'json' === $contentType ? PHP_INT_MAX : self::MAX_LIMIT);
 
             foreach ($it as $line) {
-                $data['lines'][] = self::formatLog(trim((string) $line), $this->users);
+                $line = trim((string) $line);
+
+                if ('' === $line) {
+                    continue;
+                }
+
+                $data['lines'][] = $line;
             }
 
             $hasMore = $lastLine > $offset;
@@ -258,11 +277,17 @@ final class Index
                         implode(
                             PHP_EOL,
                             array_map(
-                                function ($data) {
+                                static function ($data) {
                                     if (!is_string($data)) {
                                         return null;
                                     }
-                                    return 'data: ' . json_encode(self::formatLog(trim($data), $this->users));
+
+                                    $data = trim($data);
+                                    if ('' === $data) {
+                                        return null;
+                                    }
+
+                                    return 'data: ' . json_encode(['data' => $data]);
                                 },
                                 (array) preg_split("/\R/", $data),
                             ),
@@ -340,16 +365,27 @@ final class Index
     /**
      * Format log line.
      *
-     * @param string $line
+     * @param mixed $line
      * @param array $users
      *
      * @return array
      * @throws RandomException
      */
-    public static function formatLog(mixed $line, array $users = []): array
+    public static function formatLog(mixed $line, array $users = [], bool $allowStructured = true): array
     {
+        if (true === $allowStructured && is_array($line)) {
+            if (true === self::isJsonlLog($line)) {
+                return self::formatJsonlLog($line, $users);
+            }
+
+            if (1 === (int) ag($line, 'schema', 0)) {
+                return self::formatSchemaLog($line, $users);
+            }
+        }
+
         if (!is_string($line)) {
-            $line = json_encode($line);
+            $encoded = json_encode($line);
+            $line = false === $encoded ? '' : $encoded;
         }
 
         $line ??= '';
@@ -362,11 +398,122 @@ final class Index
                 'user' => null,
                 'backend' => null,
                 'date' => null,
+                'datetime' => null,
                 'level' => null,
+                'logger' => null,
                 'text' => $line,
+                'message' => null,
+                'fields' => [],
             ];
         }
 
+        $json = json_decode($line, true);
+        if (true === $allowStructured && is_array($json)) {
+            if (true === self::isJsonlLog($json)) {
+                return self::formatJsonlLog($json, $users);
+            }
+
+            if (1 === (int) ag($json, 'schema', 0)) {
+                return self::formatSchemaLog($json, $users);
+            }
+        }
+
+        return self::formatLegacyLog($line, $users);
+    }
+
+    private static function isJsonlLog(array $line): bool
+    {
+        foreach (['id', 'datetime', 'level', 'message'] as $key) {
+            if (false === array_key_exists($key, $line)) {
+                return false;
+            }
+        }
+
+        return array_key_exists('logger', $line) || array_key_exists('channel', $line);
+    }
+
+    /**
+     * @throws RandomException
+     */
+    private static function formatJsonlLog(array $line, array $users): array
+    {
+        $fields = ag($line, 'fields', []);
+        if (false === is_array($fields)) {
+            $fields = [];
+        }
+
+        $text = (string) ag($line, 'message', '');
+        $legacy = self::formatLegacyLog($text, $users);
+
+        $eventId = ag($fields, ['event_id', 'event.id', 'attributes.event.id'], ag($legacy, 'event_id'));
+        $itemId = ag($fields, ['item_id', 'item.id', 'attributes.item.id'], ag($legacy, 'item_id'));
+        $user = ag($fields, ['user', 'user.name', 'attributes.user.name'], ag($legacy, 'user'));
+        $backend = ag($fields, ['backend', 'backend.name', 'attributes.backend.name', 'via'], ag($legacy, 'backend'));
+
+        $fallbackId = static fn() => md5((string) json_encode($line) . (hrtime(true) + random_int(1, 10_000)));
+
+        return [
+            'id' => (string) ag($line, 'id', $fallbackId),
+            'item_id' => null === $itemId ? null : (string) $itemId,
+            'event_id' => null === $eventId ? null : (string) $eventId,
+            'user' => null === $user ? null : (string) $user,
+            'backend' => null === $backend ? null : (string) $backend,
+            'date' => ag($line, 'datetime'),
+            'datetime' => ag($line, 'datetime'),
+            'level' => ag($line, 'level'),
+            'logger' => ag($line, ['logger', 'channel']),
+            'text' => $text,
+            'message' => $text,
+            'fields' => $fields,
+            'source' => ag($line, 'source', []),
+        ];
+    }
+
+    /**
+     * @throws RandomException
+     */
+    private static function formatSchemaLog(array $line, array $users): array
+    {
+        $context = ag($line, 'context', []);
+        if (false === is_array($context)) {
+            $context = [];
+        }
+
+        $extras = ag($line, 'extras', []);
+        if (false === is_array($extras)) {
+            $extras = [];
+        }
+
+        $text = (string) ag($line, 'text', ag($line, 'message', ''));
+        $legacy = self::formatLegacyLog($text, $users);
+        $fallbackId = static fn() => md5((string) json_encode($line) . (hrtime(true) + random_int(1, 10_000)));
+        $itemId = ag($extras, 'item_id', ag($legacy, 'item_id'));
+        $eventId = ag($extras, 'event_id', ag($legacy, 'event_id'));
+        $user = ag($extras, 'user', ag($legacy, 'user'));
+        $backend = ag($extras, 'backend', ag($legacy, 'backend'));
+
+        return [
+            'id' => (string) ag($line, 'id', $fallbackId),
+            'item_id' => null === $itemId ? null : (string) $itemId,
+            'event_id' => null === $eventId ? null : (string) $eventId,
+            'user' => null === $user ? null : (string) $user,
+            'backend' => null === $backend ? null : (string) $backend,
+            'date' => ag($line, 'datetime'),
+            'datetime' => ag($line, 'datetime'),
+            'level' => ag($line, 'level'),
+            'logger' => ag($line, ['logger', 'channel']),
+            'text' => $text,
+            'message' => ag($line, 'message'),
+            'fields' => array_replace($context, $extras),
+            'source' => ag($extras, 'source'),
+        ];
+    }
+
+    /**
+     * @throws RandomException
+     */
+    private static function formatLegacyLog(string $line, array $users): array
+    {
         $dateRegex = '/^\[([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?[+-][0-9]{2}:[0-9]{2})]/i';
         $eventRegex = '/\[event:(?<event_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})]\s*/i';
         $levelRegex = '/^(?:[a-z0-9_.-]+\.)?(?<level>EMERGENCY|ALERT|CRITICAL|ERROR|WARNING|NOTICE|INFO|DEBUG):\s*/i';
@@ -389,8 +536,12 @@ final class Index
             'user' => null,
             'backend' => null,
             'date' => 1 === $dateMatch ? $matches[1] : null,
+            'datetime' => 1 === $dateMatch ? $matches[1] : null,
             'level' => 1 === $levelMatch ? strtolower($levelMatches['level']) : null,
+            'logger' => null,
             'text' => $text,
+            'message' => null,
+            'fields' => [],
         ];
 
         if (1 === $idMatch) {

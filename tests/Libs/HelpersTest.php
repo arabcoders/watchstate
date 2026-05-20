@@ -109,6 +109,35 @@ class HelpersTest extends TestCase
         };
     }
 
+    public function test_log_server_params(): void
+    {
+        $server = get_log_server_params([
+            'REQUEST_METHOD' => Method::GET->value,
+            'REQUEST_URI' => '/v1/api?x=1',
+            'SERVER_NAME' => 'watchstate.test',
+            'REMOTE_ADDR' => '127.0.0.1',
+            'HTTP_ACCEPT' => 'application/json',
+            'HTTP_AUTHORIZATION' => 'Token secret',
+            'HTTP_COOKIE' => 'session=secret',
+            'WS_API_KEY' => 'secret',
+            'SAFE' => 'removed',
+            'PHP_AUTH_USER' => 'removed',
+            'APP_VERSION' => '1.0.0',
+        ]);
+
+        self::assertSame(Method::GET->value, $server['REQUEST_METHOD']);
+        self::assertSame('/v1/api?x=1', $server['REQUEST_URI']);
+        self::assertSame('watchstate.test', $server['SERVER_NAME']);
+        self::assertSame('127.0.0.1', $server['REMOTE_ADDR']);
+        self::assertSame('application/json', $server['HTTP_ACCEPT']);
+        self::assertSame('1.0.0', $server['APP_VERSION']);
+        self::assertArrayNotHasKey('HTTP_AUTHORIZATION', $server);
+        self::assertArrayNotHasKey('HTTP_COOKIE', $server);
+        self::assertArrayNotHasKey('WS_API_KEY', $server);
+        self::assertArrayNotHasKey('SAFE', $server);
+        self::assertArrayNotHasKey('PHP_AUTH_USER', $server);
+    }
+
     public function test_env_conditions(): void
     {
         $values = [

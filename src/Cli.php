@@ -88,6 +88,15 @@ class Cli extends Application
 
         $definition->addOption(
             new InputOption(
+                'jsonl',
+                null,
+                InputOption::VALUE_NONE,
+                'Emit console output as JSONL. <comment>Not all commands support this option.</comment>',
+            ),
+        );
+
+        $definition->addOption(
+            new InputOption(
                 'output',
                 'o',
                 InputOption::VALUE_REQUIRED,

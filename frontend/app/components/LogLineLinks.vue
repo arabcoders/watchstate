@@ -1,6 +1,19 @@
 <template>
-  <span v-if="items.length > 0" class="inline-flex items-center align-middle">
+  <span v-if="items.length > 0" class="inline-flex max-w-full items-center gap-1 align-middle">
+    <button
+      v-for="entry in visibleItems"
+      :key="entry.key"
+      type="button"
+      :title="entry.label"
+      class="inline-flex h-5 items-center gap-1 rounded px-1.5 text-[11px] font-medium text-primary transition hover:bg-primary/10 hover:text-primary"
+      @click="void entry.action()"
+    >
+      <UIcon :name="entry.icon" class="size-3.5 shrink-0" />
+      <span v-if="!compact" class="truncate">{{ entry.shortLabel ?? entry.label }}</span>
+    </button>
+
     <Popover
+      v-if="!compact && overflowItems.length > 0"
       placement="bottom-start"
       trigger="click"
       :offset="6"
@@ -14,9 +27,9 @@
           color="neutral"
           variant="ghost"
           size="xs"
-          icon="i-lucide-link-2"
-          aria-label="Open related links"
-          title="Open related links"
+          icon="i-lucide-ellipsis"
+          aria-label="Open more related links"
+          title="Open more related links"
           class="h-5 cursor-pointer rounded px-1.5 text-primary hover:bg-primary/10 hover:text-primary"
           :ui="{
             base: 'min-h-0 min-w-0',
@@ -28,7 +41,7 @@
       <template #content="{ hide }">
         <div class="space-y-1">
           <button
-            v-for="entry in items"
+            v-for="entry in overflowItems"
             :key="entry.key"
             type="button"
             class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-default hover:bg-elevated hover:text-highlighted"
@@ -55,6 +68,7 @@ import { goto_history_item, makeEventName } from '~/utils';
 type LinkItem = {
   key: string;
   label: string;
+  shortLabel?: string;
   icon: string;
   action: () => Promise<void>;
 };
@@ -62,6 +76,7 @@ type LinkItem = {
 const props = defineProps<{
   item: Pick<LogEntry, 'item_id' | 'event_id' | 'user' | 'backend'>;
   openEvent?: (id: string) => void;
+  compact?: boolean;
 }>();
 
 const dialog = useDialog();
@@ -105,13 +120,22 @@ const switchIdentity = async (identity: string): Promise<boolean> => {
 const items = computed<Array<LinkItem>>(() => {
   const list: Array<LinkItem> = [];
 
-  if (eventId.value && props.openEvent) {
+  if (eventId.value) {
     list.push({
       key: `event:${eventId.value}`,
       label: `Event #${makeEventName(eventId.value)}`,
+      shortLabel: `#${makeEventName(eventId.value)}`,
       icon: 'i-lucide-activity',
       action: async () => {
-        props.openEvent?.(eventId.value as string);
+        if (props.openEvent) {
+          props.openEvent(eventId.value as string);
+          return;
+        }
+
+        await navigateTo({
+          path: '/events',
+          query: { view: eventId.value },
+        });
       },
     });
   }
@@ -120,6 +144,7 @@ const items = computed<Array<LinkItem>>(() => {
     list.push({
       key: `item:${itemId.value}`,
       label: `History #${itemId.value}`,
+      shortLabel: `#${itemId.value}`,
       icon: 'i-lucide-history',
       action: async () => {
         await goto_history_item({ item_id: itemId.value, user: user.value });
@@ -131,6 +156,7 @@ const items = computed<Array<LinkItem>>(() => {
     list.push({
       key: `backend:${backend.value}`,
       label: `Backend ${backend.value}`,
+      shortLabel: backend.value,
       icon: 'i-lucide-server',
       action: async () => {
         const identity = user.value;
@@ -143,7 +169,33 @@ const items = computed<Array<LinkItem>>(() => {
     });
   }
 
+  if (user.value) {
+    list.push({
+      key: `identity:${user.value}`,
+      label: `Use identity ${user.value}`,
+      shortLabel: user.value,
+      icon: 'i-lucide-user-round',
+      action: async () => {
+        await switchIdentity(user.value as string);
+      },
+    });
+  }
+
   return list;
+});
+
+const compact = computed<boolean>(() => true === props.compact);
+
+const visibleItems = computed<Array<LinkItem>>(() => {
+  return items.value.slice(0, compact.value ? 0 : items.value.length);
+});
+
+const overflowItems = computed<Array<LinkItem>>(() => {
+  if (!compact.value) {
+    return [];
+  }
+
+  return items.value.slice(3);
 });
 
 const onSelect = async (entry: LinkItem, hide: () => void): Promise<void> => {

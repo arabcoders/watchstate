@@ -228,10 +228,32 @@ export interface LogEntry {
   backend: string | null;
   /** Timestamp of the log entry */
   date: string | null;
+  /** Structured timestamp of the log entry */
+  datetime?: string | null;
   /** Parsed log level if available */
   level: string | null;
+  /** Structured logger/channel name */
+  logger?: string | null;
   /** The log message text */
   text: string;
+  /** Original structured message */
+  message?: string | null;
+  /** Structured flattened fields */
+  fields?: JsonObject;
+  /** Source metadata for structured logs */
+  source?: JsonObject;
+  /** Process metadata for structured logs */
+  process?: JsonObject;
+  /** Thread metadata for structured logs */
+  thread?: JsonObject;
+  /** Structured exception payload */
+  exception?: string | null;
+  /** Structured exception summary */
+  exception_message?: string | null;
+  /** Structured stack payload */
+  stack?: string | null;
+  /** Original raw line from the API */
+  raw: string;
 }
 
 /**
@@ -246,8 +268,18 @@ export interface LogResponse {
   next: number | null;
   /** Maximum number of lines in the file */
   max: number;
-  /** Array of log entries */
-  lines: Array<LogEntry>;
+  /** Content type of the file */
+  type: 'log' | 'json';
+  /** Raw lines returned by the API */
+  lines: Array<string>;
+}
+
+/**
+ * Recent log file response from /api/logs/recent endpoint.
+ */
+export interface RecentLogFile extends LogItem {
+  /** Raw log lines returned by the API */
+  lines: Array<string>;
 }
 
 /**
@@ -429,8 +461,8 @@ export interface EventsItem {
   updated_at?: string;
   /** Event data payload (optional) */
   event_data?: JsonObject;
-  /** Event logs array (optional) */
-  logs?: Array<LogEntry>;
+  /** Raw event log lines (optional) */
+  logs?: Array<string>;
   /** Event options (optional) */
   options?: JsonObject;
   /** Display toggle for event data (UI state) */

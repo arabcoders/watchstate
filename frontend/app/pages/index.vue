@@ -257,33 +257,72 @@
           </template>
 
           <div class="space-y-3">
-            <div class="overflow-hidden border border-default bg-default/60">
-              <code
-                class="ws-terminal ws-terminal-panel ws-terminal-panel-dashboard"
-                :class="wrapLines ? 'ws-wrap-anywhere whitespace-pre-wrap' : 'whitespace-pre'"
-              >
-                <span
-                  v-for="(item, index) in log.lines"
-                  :key="`${log.filename}-${index}`"
-                  class="block"
-                  ><span
-                    v-if="item?.date || hasLinks(item)"
-                    class="mr-[1ch] inline-flex items-baseline whitespace-normal"
+            <div
+              class="overflow-auto border border-default bg-elevated/30 shadow-sm"
+              :style="miniLogStyle"
+              data-dashboard-log-scroll="1"
+            >
+              <template v-if="log.entries.length > 0">
+                <article
+                  v-for="(item, index) in log.entries"
+                  :key="`${log.filename}-${index}-${item.id}`"
+                  :class="structuredRowClass(index)"
+                >
+                  <div
+                    :class="[
+                      'flex min-w-0 flex-1 items-start gap-[0.65rem] px-3 py-[0.65rem] leading-[1.6]',
+                      wrapLines ? 'w-full' : 'w-max min-w-full',
+                    ]"
                   >
-                    <template v-if="item?.date"
-                      >[<UTooltip :text="`${moment(item.date).format(TOOLTIP_DATE_FORMAT)}`">
-                        <span class="cursor-help">{{
-                          moment(item.date).format('HH:mm:ss')
-                        }}</span> </UTooltip
-                      >]</template
-                    >
-                    <span v-if="hasLinks(item)" :class="item?.date ? 'ml-[1ch]' : ''">
-                      <LogLineLinks :item="item" :open-event="openEvent" />
-                    </span>
-                  </span>
-                  <span>{{ String(item.text).trim() }}</span>
-                </span>
-              </code>
+                    <p :class="structuredLineClass">
+                      <span
+                        class="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 align-middle"
+                      >
+                        <UTooltip :text="lineTitle(item)">
+                          <span class="inline cursor-pointer text-[11px] font-semibold text-toned">
+                            {{ timestampLabel(item) }}
+                          </span>
+                        </UTooltip>
+
+                        <LogDetailsChip
+                          :item="item"
+                          :open-details="openLogDetails"
+                          :open-event="openEvent"
+                        />
+
+                        <span
+                          :class="logLevelBadgeClass(getLogLevel(item.level))"
+                          @click="openLogDetails(item)"
+                        >
+                          <UIcon :name="LOG_LEVEL_ICON[getLogLevel(item.level)]" class="size-3" />
+                          {{ getLogLevel(item.level) }}
+                        </span>
+
+                        <span
+                          v-if="item.logger"
+                          :title="item.logger"
+                          class="inline-block max-w-[46vw] truncate align-middle text-[11px] font-semibold text-toned sm:max-w-104"
+                        >
+                          [{{ item.logger }}]
+                        </span>
+                      </span>
+
+                      <span class="ml-2">{{ logMessage(item) }}</span>
+
+                      <span v-if="item.exception_message" class="ml-1 text-error/90">
+                        : {{ item.exception_message }}
+                      </span>
+                    </p>
+                  </div>
+                </article>
+              </template>
+
+              <div
+                v-else
+                class="flex min-h-28 items-center justify-center px-6 py-8 text-sm text-toned"
+              >
+                No log lines available.
+              </div>
             </div>
           </div>
         </UCard>
@@ -295,6 +334,8 @@
         <EventView v-if="selectedEventId" :id="selectedEventId" />
       </template>
     </UModal>
+
+    <LogDetailsModal :log="selectedLog" v-model:open="detailsOpen" />
   </div>
 </template>
 
@@ -306,7 +347,8 @@ import { NuxtLink } from '#components';
 import moment from 'moment';
 import EventView from '~/components/EventView.vue';
 import FloatingImage from '~/components/FloatingImage.vue';
-import LogLineLinks from '~/components/LogLineLinks.vue';
+import LogDetailsChip from '~/components/LogDetailsChip.vue';
+import LogDetailsModal from '~/components/LogDetailsModal.vue';
 import Popover from '~/components/Popover.vue';
 import DuplicateRecordList from '~/components/DuplicateRecordList.vue';
 import {
@@ -318,15 +360,17 @@ import {
   ucFirst,
   TOOLTIP_DATE_FORMAT,
 } from '~/utils';
-import type { HistoryItem, JsonObject, LogEntry } from '~/types';
+import {
+  getLogLevel,
+  logMessageText,
+  logTimestampLabel,
+  logTimestampTitle,
+  parseLogLines,
+} from '~/utils/logs';
+import type { HistoryItem, JsonObject, LogEntry, RecentLogFile } from '~/types';
 
-type IndexLogFile = {
-  type: string;
-  filename: string;
-  date: number;
-  size: number;
-  modified: string;
-  lines: Array<LogEntry>;
+type IndexLogFile = RecentLogFile & {
+  entries: Array<LogEntry>;
 };
 
 useHead({ title: 'Index' });
@@ -343,8 +387,18 @@ const reloadingLogs = ref<boolean>(false);
 const historyLoading = ref<boolean>(true);
 const logReloadInterval = ref<ReturnType<typeof setInterval> | null>(null);
 const selectedEventId = ref<string | null>(null);
+const selectedLog = ref<LogEntry | null>(null);
 const logReloadFrequency = 10000;
 let historyLoadToken = 0;
+
+type LogLevel = 'debug' | 'info' | 'warning' | 'error';
+
+const LOG_LEVEL_ICON: Record<LogLevel, string> = {
+  debug: 'i-lucide-terminal',
+  info: 'i-lucide-info',
+  warning: 'i-lucide-triangle-alert',
+  error: 'i-lucide-circle-x',
+};
 
 const eventViewModalUi = {
   content: 'max-w-5xl',
@@ -364,13 +418,59 @@ const eventViewTitle = computed(() =>
   null === selectedEventId.value ? 'Event' : `#${makeEventName(selectedEventId.value)}`,
 );
 
-const hasLinks = (item: LogEntry): boolean => {
-  return Boolean(item.item_id || item.event_id || item.backend);
-};
+const detailsOpen = computed({
+  get: () => null !== selectedLog.value,
+  set: (value: boolean) => {
+    if (false === value) {
+      selectedLog.value = null;
+    }
+  },
+});
 
 const openEvent = (id: string): void => {
   selectedEventId.value = id;
 };
+
+const openLogDetails = (item: LogEntry): void => {
+  selectedLog.value = item;
+};
+
+const lineTitle = (item: LogEntry): string => logTimestampTitle(item.datetime ?? item.date);
+
+const timestampLabel = (item: LogEntry): string => logTimestampLabel(item.datetime ?? item.date);
+
+const logMessage = (item: LogEntry): string => logMessageText(item);
+
+const structuredLineClass = computed<Array<string>>(() => [
+  'flex-1',
+  wrapLines.value ? 'min-w-0 whitespace-pre-wrap wrap-break-word' : 'min-w-max whitespace-pre',
+  'text-default',
+]);
+
+const miniLogStyle = {
+  minHeight: '12rem',
+  maxHeight: '26rem',
+} as const;
+
+const structuredRowClass = (index: number): Array<string> => {
+  const classes = [
+    'flex min-w-0 border-b border-default/40 bg-transparent transition-colors duration-150 last:border-b-0 hover:bg-elevated/70',
+  ];
+
+  if (index % 2 === 1) {
+    classes.push('bg-elevated/40');
+  }
+
+  return classes;
+};
+
+const logLevelBadgeClass = (level: LogLevel): Array<string> => [
+  'inline-flex cursor-pointer items-center gap-1.5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+  'debug' === level ? 'bg-muted/40 text-muted' : '',
+  'info' === level ? 'bg-info/10 text-info' : '',
+  'warning' === level ? 'bg-warning/10 text-warning' : '',
+  'error' === level ? 'bg-error/10 text-error' : '',
+];
 
 const duplicatePopoverTrigger = computed<'click' | 'hover'>(() =>
   'mobile' === breakpoints.active().value ? 'click' : 'hover',
@@ -492,12 +592,15 @@ const reloadLogs = async (): Promise<void> => {
       return;
     }
 
-    const logsResponse = await parse_api_response<Array<IndexLogFile>>(response);
+    const logsResponse = await parse_api_response<Array<RecentLogFile>>(response);
     if ('error' in logsResponse || 'index' !== route.name) {
       return;
     }
 
-    logs.value = logsResponse;
+    logs.value = logsResponse.map((item) => ({
+      ...item,
+      entries: parseLogLines(item.lines),
+    }));
   } catch {
   } finally {
     reloadingLogs.value = false;
@@ -541,7 +644,7 @@ onMounted(async () => {
 });
 
 onUpdated(() => {
-  document.querySelectorAll('.ws-terminal-panel-dashboard').forEach((element) => {
+  document.querySelectorAll('[data-dashboard-log-scroll="1"]').forEach((element) => {
     element.scrollTop = element.scrollHeight;
   });
 });

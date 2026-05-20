@@ -47,14 +47,13 @@ final class RemoteHandler extends AbstractProcessingHandler
 
     protected function write(LogRecord $record): void
     {
-        $server = $_SERVER ?? [];
+        $structured = ag($record->context, 'structured', []);
+        if (false === is_array($structured)) {
+            $structured = [];
+        }
 
-        foreach ($server as $key => $value) {
-            if (!(is_string($key) && str_starts_with(strtoupper($key), 'WS_'))) {
-                continue;
-            }
-
-            $server[$key] = '***';
+        if (is_array($structured['server'] ?? null)) {
+            $structured['server'] = get_log_server_params($structured['server']);
         }
 
         try {
@@ -64,10 +63,14 @@ final class RemoteHandler extends AbstractProcessingHandler
                     'id' => generate_uuid(),
                     'message' => $record->message,
                     'trace' => ag($record->context, 'trace', []),
-                    'structured' => ag($record->context, 'structured', []),
+                    'structured' => $structured,
                     'server' => ag($_SERVER ?? [], ['HTTP_HOST', 'SERVER_NAME'], 'watchstate.cli'),
-                    'context' => $server,
-                    'raw' => $record->toArray(),
+                    'context' => get_log_server_params($_SERVER ?? []),
+                    'raw' => [
+                        'datetime' => $record->datetime->format(DATE_ATOM),
+                        'level' => strtolower((string) $record->level->getName()),
+                        'channel' => $record->channel,
+                    ],
                 ],
             ]);
         } catch (Throwable $e) {

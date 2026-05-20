@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Commands\System;
 
+use App\API\Logs\Index as LogsIndex;
 use App\Command;
 use App\Commands\Events\DispatchCommand;
 use App\Libs\Attributes\Route\Cli;
@@ -11,6 +12,7 @@ use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Events\DataEvent;
 use App\Libs\Extends\ConsoleOutput;
+use App\Libs\Extends\JsonlFormatter;
 use App\Libs\LogSuppressor;
 use App\Libs\Stream;
 use App\Model\Events\EventListener;
@@ -20,6 +22,7 @@ use Closure;
 use Cron\CronExpression;
 use DateInterval;
 use Exception;
+use Monolog\Level;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
 use Symfony\Component\Console\Completion\CompletionInput;
@@ -52,6 +55,7 @@ final class TasksCommand extends Command
 
     private array $logs = [];
     private array $taskOutput = [];
+    private array $logContext = [];
 
     private ?Closure $writer = null;
     private ?Closure $clear = null;
@@ -253,7 +257,7 @@ final class TasksCommand extends Command
                     $lastSave = $timeNow;
                 }
 
-                $event->addLog($msg);
+                $event->addLog(rtrim((string) $msg, "\r\n"));
 
                 if ($timeNow >= $lastSave) {
                     ($this->save)();
@@ -355,7 +359,7 @@ final class TasksCommand extends Command
         if ($input->getOption('save-log') && count($this->logs) >= 1) {
             try {
                 $stream = new Stream(Config::get('tasks.logfile'), 'a');
-                $stream->write(preg_replace('#\R+#', PHP_EOL, implode(PHP_EOL, $this->logs)) . PHP_EOL . PHP_EOL);
+                $stream->write(implode('', $this->logs));
                 $stream->close();
             } catch (Throwable $e) {
                 $this->write(
@@ -376,9 +380,20 @@ final class TasksCommand extends Command
 
     private function runTask(array $task, iInput $input, iOutput $output): int
     {
+        $this->logContext = [
+            'task_id' => (string) ag($task, 'name', ''),
+            'command' => (string) ag($task, 'command', ''),
+            'source' => 'task',
+        ];
+
         $cmd = [];
 
         $cmd[] = ROOT_PATH . '/bin/console';
+
+        if (true === $this->shouldUseJsonlChild($input)) {
+            $cmd[] = '--jsonl';
+        }
+
         $cmd[] = ag($task, 'command');
 
         if (null !== ($args = ag($task, 'args'))) {
@@ -395,33 +410,7 @@ final class TasksCommand extends Command
 
         $process->start(function ($std, $out) use ($input, $output) {
             assert($output instanceof ConsoleOutputInterface, 'Expected console output interface.');
-            $out = trim((string) $out);
-
-            if (empty($out)) {
-                return;
-            }
-
-            foreach (explode(PHP_EOL, $out) as $line) {
-                if (empty($line)) {
-                    continue;
-                }
-
-                $this->taskOutput[] = $line;
-            }
-
-            if (null !== $this->writer && false === $this->suppressor->isSuppressed($out)) {
-                try {
-                    ($this->writer)($out);
-                } catch (Throwable) {
-                    // Do nothing
-                }
-            }
-
-            if (!$input->hasOption('live') && $input->getOption('live')) {
-                return;
-            }
-
-            ('err' === $std ? $output->getErrorOutput() : $output)->writeln($out);
+            $this->captureProcessOutput($std, (string) $out, $input, $output);
         });
 
         if ($process->isRunning()) {
@@ -462,28 +451,72 @@ final class TasksCommand extends Command
             $event->event = self::NAME . '.' . $task['name'];
             $event->created_at = $started;
             $event->updated_at = $ended;
-            $event->logs[] = '--------------------------';
-            $event->logs[] = r('Task: {name} (Started: {start_date})', [
-                'name' => $task['name'],
-                'start_date' => $started->format('D, H:i:s T'),
-            ]);
-            $event->logs[] = r('Command: {cmd}', ['cmd' => $process->getCommandLine()]);
-            $event->logs[] = r('Exit Code: {code}:{status} (Ended: {end_date}) - Took {duration}s', [
-                'status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
-                'code' => $process->getExitCode() ?? self::INVALID,
-                'end_date' => $ended->format('D, H:i:s T'),
-                'duration' => $ended->getTimestamp() - $started->getTimestamp(),
-            ]);
-            $event->logs[] = '--------------------------';
+            $event->logs[] = new JsonlFormatter()->formatValues(
+                channel: 'task',
+                level: Level::Info,
+                message: r('run_task.{name}: {cmd} (Started: {start_date})', [
+                    'name' => $task['name'],
+                    'cmd' => $process->getCommandLine(),
+                    'start_date' => $started->format('D, H:i:s T'),
+                ]),
+                context: [
+                    'event_id' => (string) $event->id,
+                    'event' => $event->event,
+                    'task_id' => (string) $task['name'],
+                    'command' => (string) ag($task, 'command', ''),
+                    'source' => 'task',
+                ],
+            );
+
             if (count($this->taskOutput) < 1) {
                 if (0 === $process->getExitCode()) {
-                    $event->logs[] = 'Task completed successfully. And did not produce any output.';
+                    $event->logs[] = new JsonlFormatter()->formatValues(
+                        channel: 'task',
+                        level: Level::Info,
+                        message: 'Task completed successfully. And did not produce any output.',
+                        context: [
+                            'event_id' => (string) $event->id,
+                            'event' => $event->event,
+                            'task_id' => (string) $task['name'],
+                            'command' => (string) ag($task, 'command', ''),
+                            'source' => 'task',
+                        ],
+                    );
                 } else {
-                    $event->logs[] = 'Task failed to complete. And did not produce any output.';
+                    $event->logs[] = new JsonlFormatter()->formatValues(
+                        channel: 'task',
+                        level: Level::Error,
+                        message: 'Task failed to complete. And did not produce any output.',
+                        context: [
+                            'event_id' => (string) $event->id,
+                            'event' => $event->event,
+                            'task_id' => (string) $task['name'],
+                            'command' => (string) ag($task, 'command', ''),
+                            'source' => 'task',
+                        ],
+                    );
                 }
             } else {
                 $event->logs = array_merge($event->logs, array_slice($this->taskOutput, -200));
             }
+            $event->logs[] = new JsonlFormatter()->formatValues(
+                channel: 'task',
+                level: 0 === $process->getExitCode() ? Level::Info : Level::Error,
+                message: r('run_task.{name} ExitCode: {code}:{status} (Ended: {end_date}) - Took {duration}s', [
+                    'name' => $task['name'],
+                    'status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
+                    'code' => $process->getExitCode() ?? self::INVALID,
+                    'end_date' => $ended->format('D, H:i:s T'),
+                    'duration' => $ended->getTimestamp() - $started->getTimestamp(),
+                ]),
+                context: [
+                    'event_id' => (string) $event->id,
+                    'event' => $event->event,
+                    'task_id' => (string) $task['name'],
+                    'command' => (string) ag($task, 'command', ''),
+                    'source' => 'task',
+                ],
+            );
             $this->eventsRepo->save($event);
         }
 
@@ -499,18 +532,21 @@ final class TasksCommand extends Command
             }
         }
 
-        $this->write('--------------------------', $input, $output);
         $this->write(
-            r('Task: {name} (Started: {startDate})', [
+            r('run_task.{name}: {cmd} (Started: {startDate})', [
                 'name' => $task['name'],
+                'cmd' => $process->getCommandLine(),
                 'startDate' => $started->format('D, H:i:s T'),
             ]),
             $input,
             $output,
         );
-        $this->write(r('Command: {cmd}', ['cmd' => $process->getCommandLine()]), $input, $output);
+        foreach ($this->taskOutput as $line) {
+            $this->write($line, $input, $output);
+        }
         $this->write(
-            r('Exit Code: {code}:{status} (Ended: {end_date}) - Took {duration}s', [
+            r('run_task.{name}: ExitCode: {code}:{status} (Ended: {end_date}) - Took {duration}s', [
+                'name' => $task['name'],
                 'status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
                 'code' => $process->getExitCode() ?? self::INVALID,
                 'end_date' => $ended->format('D, H:i:s T'),
@@ -519,12 +555,6 @@ final class TasksCommand extends Command
             $input,
             $output,
         );
-        $this->write('--------------------------', $input, $output);
-        $this->write(' ' . PHP_EOL, $input, $output);
-
-        foreach ($this->taskOutput as $line) {
-            $this->write($line, $input, $output);
-        }
 
         $this->taskOutput = [];
 
@@ -533,9 +563,20 @@ final class TasksCommand extends Command
 
     private function run_command(string $command, array $args, iInput $input, iOutput $output): int
     {
+        $this->logContext = [
+            'task_id' => self::CNAME,
+            'command' => $command,
+            'source' => 'task',
+        ];
+
         $cmd = [];
 
         $cmd[] = ROOT_PATH . '/bin/console';
+
+        if (true === $this->shouldUseJsonlChild($input)) {
+            $cmd[] = '--jsonl';
+        }
+
         $cmd[] = $command;
 
         if (count($args) > 0) {
@@ -553,33 +594,7 @@ final class TasksCommand extends Command
 
         $process->start(function ($std, $out) use ($input, $output) {
             assert($output instanceof ConsoleOutputInterface, 'Expected console output interface.');
-            $out = trim((string) $out);
-
-            if (empty($out)) {
-                return;
-            }
-
-            foreach (explode(PHP_EOL, $out) as $line) {
-                if (empty($line)) {
-                    continue;
-                }
-
-                $this->taskOutput[] = $line;
-            }
-
-            if (null !== $this->writer && false === $this->suppressor->isSuppressed($out)) {
-                try {
-                    ($this->writer)($out);
-                } catch (Throwable) {
-                    // Do nothing
-                }
-            }
-
-            if (!$input->hasOption('live') && $input->getOption('live')) {
-                return;
-            }
-
-            ('err' === $std ? $output->getErrorOutput() : $output)->writeln($out);
+            $this->captureProcessOutput($std, (string) $out, $input, $output);
         });
 
         if ($process->isRunning()) {
@@ -673,17 +688,119 @@ final class TasksCommand extends Command
     private function write(string $text, iInput $input, iOutput $output, int $level = iOutput::OUTPUT_NORMAL): void
     {
         assert($output instanceof ConsoleOutput, 'Expected console output for task runner.');
-        $output->writeln($text, $level);
+        $output->writeln($this->formatTaskOutputLine($text), $level);
 
-        $message = $output->getLastMessage();
+        $stored = $this->formatTaskLogLine($text);
 
         if (null !== $this->writer) {
-            ($this->writer)($message);
+            ($this->writer)($stored);
         }
 
         if ($input->hasOption('save-log') && $input->getOption('save-log')) {
-            $this->logs[] = $message;
+            $this->logs[] = $stored;
         }
+    }
+
+    private function shouldUseJsonlChild(iInput $input): bool
+    {
+        if (true === $this->viaEvent) {
+            return true;
+        }
+
+        if ($input->hasOption('save-log') && true === (bool) $input->getOption('save-log')) {
+            return true;
+        }
+
+        return $input->hasOption('jsonl') && true === (bool) $input->getOption('jsonl');
+    }
+
+    private function captureProcessOutput(string $std, string $out, iInput $input, ConsoleOutputInterface $output): void
+    {
+        $out = trim($out);
+
+        if ('' === $out) {
+            return;
+        }
+
+        $lines = preg_split('/\R/', $out);
+        if (false === $lines) {
+            $lines = [];
+        }
+
+        foreach ($lines as $line) {
+            $line = trim((string) $line);
+
+            if ('' === $line) {
+                continue;
+            }
+
+            $this->taskOutput[] = $line;
+
+            if (null !== $this->writer && false === $this->suppressor->isSuppressed($line)) {
+                try {
+                    ($this->writer)($this->formatTaskLogLine($line));
+                } catch (Throwable) {
+                    // Do nothing
+                }
+            }
+
+            if (!$input->hasOption('live') || false === $input->getOption('live')) {
+                continue;
+            }
+
+            ('err' === $std ? $output->getErrorOutput() : $output)->writeln($this->formatTaskOutputLine($line));
+        }
+    }
+
+    private function formatTaskLogLine(string $line): string
+    {
+        if (true === JsonlFormatter::isJsonlRecord($line)) {
+            return rtrim($line, "\r\n") . PHP_EOL;
+        }
+
+        return new JsonlFormatter()->formatValues(
+            channel: 'task',
+            level: Level::Info,
+            message: $this->normalizeTaskMessage($line),
+            context: $this->logContext,
+        );
+    }
+
+    private function formatTaskOutputLine(string $line): string
+    {
+        if ('jsonl' === Config::get('console.output')) {
+            return $this->formatTaskLogLine($line);
+        }
+
+        if (false === JsonlFormatter::isJsonlRecord($line)) {
+            return $line;
+        }
+
+        $entry = LogsIndex::formatLog($line);
+        $parts = [];
+
+        if (null !== ($date = ag($entry, ['datetime', 'date']))) {
+            $parts[] = '[' . $date . ']';
+        }
+
+        if (null !== ($logger = ag($entry, 'logger')) && null !== ($entryLevel = ag($entry, 'level'))) {
+            $parts[] = $logger . '.' . strtoupper((string) $entryLevel) . ':';
+        } elseif (null !== ($logger = ag($entry, 'logger'))) {
+            $parts[] = $logger . ':';
+        } elseif (null !== ($entryLevel = ag($entry, 'level'))) {
+            $parts[] = strtoupper((string) $entryLevel) . ':';
+        }
+
+        $parts[] = (string) ag($entry, 'text', $line);
+
+        return implode(' ', array_values(array_filter($parts, static fn(mixed $value): bool => is_string($value) && '' !== trim($value))));
+    }
+
+    private function normalizeTaskMessage(string $line): string
+    {
+        $line = preg_replace('/\x1b\[[0-9;]*m/', '', $line) ?? $line;
+
+        return trim(strip_tags($line));
     }
 
     /**

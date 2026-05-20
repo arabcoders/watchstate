@@ -21,6 +21,8 @@ use Symfony\Component\Console\Output\OutputInterface;
  */
 class ConsoleHandler extends AbstractProcessingHandler
 {
+    private JsonlFormatter $jsonlFormatter;
+
     /**
      * @var OutputInterface|null $output The console output interface to be used for printing log records
      */
@@ -60,6 +62,7 @@ class ConsoleHandler extends AbstractProcessingHandler
         parent::__construct(Level::Debug, $bubble);
 
         $this->output = $output;
+        $this->jsonlFormatter = new JsonlFormatter();
 
         if ($levelsMapper) {
             $this->levelsMapper = $levelsMapper;
@@ -113,6 +116,11 @@ class ConsoleHandler extends AbstractProcessingHandler
      */
     protected function write(LogRecord $record): void
     {
+        if (true === $this->isJsonlOutput()) {
+            $this->output->writeJsonlRecord($this->jsonlFormatter->format($record), true);
+            return;
+        }
+
         $date = $record['datetime'] ?? 'No date set';
 
         if (true === $date instanceof DateTimeInterface) {
@@ -132,6 +140,14 @@ class ConsoleHandler extends AbstractProcessingHandler
         $errOutput = $this->output instanceof ConsoleOutputInterface ? $this->output->getErrorOutput() : $this->output;
 
         $errOutput?->writeln($message, $this->output->getVerbosity());
+    }
+
+    /**
+     * Whether the current output is configured for JSONL mode.
+     */
+    protected function isJsonlOutput(): bool
+    {
+        return $this->output instanceof ConsoleOutput && true === $this->output->isJsonl();
     }
 
     /**
