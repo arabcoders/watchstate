@@ -21,6 +21,23 @@ class DirectMapperTest extends MapperAbstract
         return $mapper;
     }
 
+    public function test_log_item_id(): void
+    {
+        $this->mapper->add(new StateEntity($this->testMovie));
+
+        $record = null;
+        foreach ($this->handler->getRecords() as $logRecord) {
+            if (str_contains($logRecord->message, 'added')) {
+                $record = $logRecord;
+                break;
+            }
+        }
+
+        self::assertNotNull($record);
+        self::assertArrayHasKey('item_id', $record->context);
+        self::assertArrayNotHasKey('id', $record->context);
+    }
+
     public function test_skip_state_no_progress(): void
     {
         $this->testMovie[iState::COLUMN_WATCHED] = 0;

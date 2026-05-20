@@ -109,10 +109,12 @@ const popoverContent = computed(() => ({
 }));
 
 const popoverUi = computed(() => ({
-  content: props.popoverClass,
+  content: [`z-[${props.zIndex}]`, props.popoverClass].filter(Boolean).join(' '),
 }));
 
 const contentClass = computed(() => props.contentClass);
+
+const activeTrigger = resolvedTrigger;
 
 const show = () => {
   if (props.disabled) {
@@ -135,7 +137,4 @@ const toggle = () => {
 };
 
 watch(isOpen, (value) => emit(value ? 'show' : 'hide'));
-
-const activeTrigger = resolvedTrigger;
-const { showDelay, hideDelay, showArrow, disabled } = props;
 </script>

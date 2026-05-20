@@ -77,7 +77,7 @@ final class DispatchCommand extends Command
 
         if (null !== ($id = $input->getOption('id'))) {
             if (null === ($event = $this->repo->findById($id))) {
-                $this->logger->error(r("Event with id '{id}' not found.", ['id' => $id]));
+                $this->logger->error("Event with id '{event_id}' not found.", ['event_id' => $id]);
                 return self::FAILURE;
             }
 
@@ -110,9 +110,9 @@ final class DispatchCommand extends Command
 
             if ($created > $now) {
                 $this->logger->debug(
-                    "Event '{id}: {event}' is delayed by '{delay}s' seconds. Waiting for '{wait}s' seconds.",
+                    "Event '{event_id}: {event}' is delayed by '{delay}s' seconds. Waiting for '{wait}s' seconds.",
                     [
-                        'id' => $event->id,
+                        'event_id' => (string) $event->id,
                         'event' => $event->event,
                         'delay' => $delay,
                         'wait' => $created - $now,
@@ -125,9 +125,7 @@ final class DispatchCommand extends Command
         }
 
         if (count($events) < 1) {
-            if ('-v' === env('WS_CRON_DISPATCH_ARGS', '-v')) {
-                $this->logger->debug('No pending queued events found.');
-            }
+            $this->logger->debug('No pending queued events found.');
             return self::SUCCESS;
         }
 
@@ -135,17 +133,17 @@ final class DispatchCommand extends Command
 
         foreach ($events as $event) {
             if (null === ($newState = $this->repo->findById($event->id))) {
-                $this->logger->notice("The event '{id}' was deleted while the dispatcher was running", [
-                    'id' => $event->id,
+                $this->logger->notice("The event '{event_id}' was deleted while the dispatcher was running", [
+                    'event_id' => (string) $event->id,
                 ]);
                 continue;
             }
 
             if ($newState->status !== Status::PENDING) {
                 $this->logger->notice(
-                    "The event '{id}' was changed to '{status}' while the dispatcher was running. Ignoring event.",
+                    "The event '{event_id}' was changed to '{status}' while the dispatcher was running. Ignoring event.",
                     [
-                        'id' => $event->id,
+                        'event_id' => (string) $event->id,
                         'status' => $newState->status->name,
                     ],
                 );
@@ -166,7 +164,7 @@ final class DispatchCommand extends Command
         try {
             $message = "Dispatching Event: '{event}' queued at '{date}'.";
             $log_data = [
-                'id' => $event->id,
+                'event_id' => (string) $event->id,
                 'event' => $event->event,
                 'date' => make_date($event->created_at),
             ];
@@ -175,15 +173,9 @@ final class DispatchCommand extends Command
                 channel: 'event',
                 level: Level::Notice,
                 message: r($message, $log_data),
-                context: [
-                    'event_id' => (string) $event->id,
-                    'event' => $event->event,
-                ],
+                context: $log_data,
             );
 
-            if (count($event->event_data) > 0) {
-                $log_data['data'] = $event->event_data;
-            }
             $event->status = Status::RUNNING;
             $event->updated_at = (string) make_date();
             $event->attempts += 1;
@@ -251,8 +243,8 @@ final class DispatchCommand extends Command
             $event->updated_at = (string) make_date();
             $this->repo->save($event);
 
-            $this->logger->error('[event:{id}] {message}', [
-                'id' => $event->id,
+            $this->logger->error('[event:{event_id}] {message}', [
+                'event_id' => (string) $event->id,
                 'message' => $errorLog,
                 'trace' => $e->getTrace(),
             ]);
@@ -405,20 +397,26 @@ final class DispatchCommand extends Command
 
                 try {
                     queue_event($payload['event'], $payload['data'], $payload['opts']);
-                    $this->logger->info("Queued '{event}' event. it was saved to cache due to failure to persist it.", $payload);
+                    $this->logger->info("Queued '{event}' event. it was saved to cache due to failure to persist it.", [
+                        'event' => $payload['event'],
+                    ]);
                 } catch (Throwable) {
                     $attempts = max(0, (int) ag($payload, 'opts.' . self::CACHE_UNLOAD_ATTEMPTS, 0)) + 1;
                     $payload['opts'][self::CACHE_UNLOAD_ATTEMPTS] = $attempts;
+                    $logContext = [
+                        'event' => $payload['event'],
+                        'attempts' => $attempts,
+                    ];
 
                     if ($attempts < self::MAX_UNLOAD_ATTEMPTS) {
                         $remaining[] = $payload;
-                        $this->logger->error("Failed to re-queue '{event}' event.", $payload);
+                        $this->logger->error("Failed to re-queue '{event}' event.", $logContext);
                         continue;
                     }
 
                     $this->logger->error(
                         "Failed to re-queue '{event}' event after '{attempts}' unload attempts. Dropping cached event.",
-                        array_replace($payload, ['attempts' => $attempts]),
+                        $logContext,
                     );
                 }
             }

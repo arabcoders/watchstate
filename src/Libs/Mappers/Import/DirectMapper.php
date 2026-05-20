@@ -283,8 +283,8 @@ class DirectMapper implements ImportInterface
                 }
             }
 
-            $this->logger->notice("{mapper}: [N] '{user}@{backend}' added '#{id}: {title}'.", [
-                'id' => $entity->id ?? 'New',
+            $this->logger->notice("{mapper}: [N] '{user}@{backend}' added '#{item_id}: {title}'.", [
+                'item_id' => $entity->id ?? 'New',
                 'user' => $this->userContext->name ?? 'main',
                 'mapper' => after_last(self::class, '\\'),
                 'backend' => $entity->via,
@@ -387,7 +387,7 @@ class DirectMapper implements ImportInterface
                         $changeLog = $local->diff(fields: $_keys);
                     }
 
-                    $message = "{mapper}: [T] '{user}@{backend}' updated '#{id}: {title}' ";
+                    $message = "{mapper}: [T] '{user}@{backend}' updated '#{item_id}: {title}' ";
 
                     $this->logger->log(
                         true === $progressChange ? LogLevel::NOTICE : LogLevel::INFO,
@@ -395,7 +395,7 @@ class DirectMapper implements ImportInterface
                         [
                             'user' => $this->userContext->name ?? 'main',
                             'mapper' => after_last(self::class, '\\'),
-                            'id' => $local->id ?? 'New',
+                            'item_id' => $local->id ?? 'New',
                             'backend' => $entity->via,
                             'title' => $local->getName(),
                             'changes' => $changeLog,
@@ -443,7 +443,7 @@ class DirectMapper implements ImportInterface
                         context: [
                             'user' => $this->userContext->name ?? 'main',
                             'mapper' => after_last(self::class, '\\'),
-                            'id' => $local->id ?? 'New',
+                            'item_id' => $local->id ?? 'New',
                             'backend' => $entity->via,
                             'title' => $local->getName(),
                             'state' => [
@@ -460,11 +460,11 @@ class DirectMapper implements ImportInterface
             return $this;
         }
 
-        $msg = "{mapper}: [T] Ignoring '{user}@{backend}' - '#{id}: {title}'. No metadata changes detected.";
+        $msg = "{mapper}: [T] Ignoring '{user}@{backend}' - '#{item_id}: {title}'. No metadata changes detected.";
         $context = [
             'user' => $this->userContext->name ?? 'main',
             'mapper' => after_last(self::class, '\\'),
-            'id' => $local->id ?? 'New',
+            'item_id' => $local->id ?? 'New',
             'backend' => $entity->via,
             'title' => $local->getName(),
         ];
@@ -488,11 +488,11 @@ class DirectMapper implements ImportInterface
             }
 
             $this->logger->notice(
-                "{mapper}: [T] '{user}@{backend}' item '#{id}: {title}' reported '{state}' vs local '{local_state}', but the state change was ignored due to '{reasons}'.",
+                "{mapper}: [T] '{user}@{backend}' item '#{item_id}: {title}' reported '{state}' vs local '{local_state}', but the state change was ignored due to '{reasons}'.",
                 [
                     'user' => $this->userContext->name ?? 'main',
                     'mapper' => after_last(self::class, '\\'),
-                    'id' => $local->id ?? 'New',
+                    'item_id' => $local->id ?? 'New',
                     'backend' => $entity->via,
                     'state' => $entity->isWatched() ? 'played' : 'unplayed',
                     'local_state' => $local->isWatched() ? 'played' : 'unplayed',
@@ -551,9 +551,9 @@ class DirectMapper implements ImportInterface
                     }
                 }
 
-                $this->logger->notice("{mapper}: [O] '{user}@{backend}' marked '#{id}: {title}' as 'unplayed'.", [
+                $this->logger->notice("{mapper}: [O] '{user}@{backend}' marked '#{item_id}: {title}' as 'unplayed'.", [
                     'mapper' => after_last(self::class, '\\'),
-                    'id' => $cloned->id ?? 'New',
+                    'item_id' => $cloned->id ?? 'New',
                     'backend' => $entity->via,
                     'title' => $cloned->getName(),
                     'changes' => $local->diff(),
@@ -579,7 +579,7 @@ class DirectMapper implements ImportInterface
                         context: [
                             'user' => $this->userContext->name ?? 'main',
                             'mapper' => after_last(self::class, '\\'),
-                            'id' => $cloned->id ?? 'New',
+                            'item_id' => $cloned->id ?? 'New',
                             'backend' => $entity->via,
                             'title' => $cloned->getName(),
                             'state' => [
@@ -636,14 +636,14 @@ class DirectMapper implements ImportInterface
                             $changeLog = $local->diff(fields: $_keys);
                         }
 
-                        $message = "{mapper}: [O] '{user}@{backend}' updated '#{id}: {title}'";
+                        $message = "{mapper}: [O] '{user}@{backend}' updated '#{item_id}: {title}'";
                         $this->logger->log(
                             true === $progressChange ? LogLevel::NOTICE : LogLevel::INFO,
                             $message . (true === $progressChange ? ' due to play progress change.' : ' metadata.'),
                             [
                                 'user' => $this->userContext->name ?? 'main',
                                 'mapper' => after_last(self::class, '\\'),
-                                'id' => $cloned->id ?? 'New',
+                                'item_id' => $cloned->id ?? 'New',
                                 'backend' => $entity->via,
                                 'title' => $cloned->getName(),
                                 'changes' => $changeLog,
@@ -691,7 +691,7 @@ class DirectMapper implements ImportInterface
                             context: [
                                 'user' => $this->userContext->name ?? 'main',
                                 'mapper' => after_last(self::class, '\\'),
-                                'id' => $cloned->id ?? 'New',
+                                'item_id' => $cloned->id ?? 'New',
                                 'backend' => $entity->via,
                                 'title' => $cloned->getName(),
                                 'state' => [
@@ -722,11 +722,11 @@ class DirectMapper implements ImportInterface
             $enable = Config::get('clients.jellyfin.fix_played', false);
             if ($enable && $entity->isWatched() && true === $entity->getContext('should_mark', false)) {
                 $this->logger->notice(
-                    "{mapper}: [O] '{user}@{backend}' item '#{id}: {title}' date '{remote_date}' is older than last sync date '{local_date}'. Due to bug in jellyfin API a special case handling is applied to mark the item as played.",
+                    "{mapper}: [O] '{user}@{backend}' item '#{item_id}: {title}' date '{remote_date}' is older than last sync date '{local_date}'. Due to bug in jellyfin API a special case handling is applied to mark the item as played.",
                     [
                         'user' => $this->userContext->name ?? 'main',
                         'mapper' => after_last(self::class, '\\'),
-                        'id' => $cloned->id ?? 'New',
+                        'item_id' => $cloned->id ?? 'New',
                         'backend' => $entity->via,
                         'remote_date' => make_date($entity->updated),
                         'local_date' => make_date($opts[Options::AFTER]),
@@ -743,11 +743,11 @@ class DirectMapper implements ImportInterface
             }
 
             $this->logger->notice(
-                "[CODE:DM001] {mapper}: [O] '{user}@{backend}' item '#{id}: {title}' [R: {state}] date '{remote_date}' is older than backend last sync date '{local_date}' [L: {local_state}]. Queueing item for re-processing. Check FAQ.",
+                "[CODE:DM001] {mapper}: [O] '{user}@{backend}' item '#{item_id}: {title}' [R: {state}] date '{remote_date}' is older than backend last sync date '{local_date}' [L: {local_state}]. Queueing item for re-processing. Check FAQ.",
                 [
                     'user' => $this->userContext->name ?? 'main',
                     'mapper' => after_last(self::class, '\\'),
-                    'id' => $cloned->id ?? 'New',
+                    'item_id' => $cloned->id ?? 'New',
                     'backend' => $entity->via,
                     'remote_date' => make_date($entity->updated),
                     'local_date' => make_date($opts[Options::AFTER]),
@@ -770,11 +770,11 @@ class DirectMapper implements ImportInterface
             return $this->add($entity, $opts);
         }
 
-        $msg = "{mapper}: [O] Ignoring '{user}@{backend}' - '#{id}: {title}'. No changes detected.";
+        $msg = "{mapper}: [O] Ignoring '{user}@{backend}' - '#{item_id}: {title}'. No changes detected.";
         $context = [
             'user' => $this->userContext->name ?? 'main',
             'mapper' => after_last(self::class, '\\'),
-            'id' => $cloned->id ?? 'New',
+            'item_id' => $cloned->id ?? 'New',
             'backend' => $entity->via,
             'title' => $cloned->getName(),
         ];
@@ -809,7 +809,7 @@ class DirectMapper implements ImportInterface
                 "{mapper}: [A] Ignoring '{user}@{backend}' - '{title}'. No valid/supported external ids.",
                 [
                     'mapper' => after_last(self::class, '\\'),
-                    'id' => $entity->id ?? 'New',
+                    'item_id' => $entity->id ?? 'New',
                     'backend' => $entity->via,
                     'title' => $entity->getName(),
                     'user' => $this->userContext->name ?? 'main',
@@ -821,11 +821,11 @@ class DirectMapper implements ImportInterface
 
         if (true === $entity->isEpisode() && $entity->episode < 1) {
             $this->logger->notice(
-                "{mapper}: [A] Ignoring '{user}@{backend}' '{id}: {title}'. Item was marked as episode but no episode number was provided.",
+                "{mapper}: [A] Ignoring '{user}@{backend}' '{item_id}: {title}'. Item was marked as episode but no episode number was provided.",
                 [
                     'user' => $this->userContext->name ?? 'main',
                     'mapper' => after_last(self::class, '\\'),
-                    'id' => $entity->id ?? ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
+                    'item_id' => $entity->id ?? ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                     'backend' => $entity->via,
                     'title' => $entity->getName(),
                     'data' => $entity->getAll(),
@@ -865,7 +865,7 @@ class DirectMapper implements ImportInterface
          * 3 - mark entity as tainted and re-process it.
          */
         if (true === $hasAfter && true === $local->isWatched() && false === $entity->isWatched()) {
-            $message = "{mapper}: [A] Conflict detected in '{user}@{backend}: {title}' '{new_state}' vs local '#{id}: {current_state}'.";
+            $message = "{mapper}: [A] Conflict detected in '{user}@{backend}: {title}' '{new_state}' vs local '#{item_id}: {current_state}'.";
             $hasMeta = count($local->getMetadata($entity->via)) >= 1;
             $hasDate = $entity->updated === ag($local->getMetadata($entity->via), iState::COLUMN_META_DATA_PLAYED_AT);
 
@@ -880,7 +880,7 @@ class DirectMapper implements ImportInterface
             $this->logger->warning($message, [
                 'user' => $this->userContext->name ?? 'main',
                 'mapper' => after_last(self::class, '\\'),
-                'id' => $local->id ?? 'New',
+                'item_id' => $local->id ?? 'New',
                 'backend' => $entity->via,
                 'title' => $entity->getName(),
                 'current_state' => $local->isWatched() ? 'played' : 'unplayed',
@@ -927,11 +927,11 @@ class DirectMapper implements ImportInterface
         $changedKeys = true === $forceChange ? $this->getMetaChanges($cloned, $entity) : $local->diff(fields: $keys);
 
         if (false === $progressChange && false === $shouldMark && count($changedKeys) < 1) {
-            $msg = "{mapper}: [U] Ignoring '{user}@{backend}' - '#{id}: {title}'. Metadata & play state are identical.";
+            $msg = "{mapper}: [U] Ignoring '{user}@{backend}' - '#{item_id}: {title}'. Metadata & play state are identical.";
 
             $context = [
                 'mapper' => after_last(self::class, '\\'),
-                'id' => $cloned->id ?? 'New',
+                'item_id' => $cloned->id ?? 'New',
                 'backend' => $entity->via,
                 'title' => $cloned->getName(),
                 'user' => $this->userContext->name ?? 'main',
@@ -973,7 +973,7 @@ class DirectMapper implements ImportInterface
                 $this->removePointers($cloned)->addPointers($local, $local->id);
             }
 
-            $message = "{mapper}: [U] '{user}@{backend}' Updated '#{id}: {title}'.";
+            $message = "{mapper}: [U] '{user}@{backend}' Updated '#{item_id}: {title}'.";
 
             $stateChange = $cloned->isWatched() !== $local->isWatched();
 
@@ -982,14 +982,14 @@ class DirectMapper implements ImportInterface
             }
 
             if (true === $stateChange) {
-                $message = "{mapper}: [U] '{user}@{backend}' Updated and marked '#{id}: {title}' as '{state}'.";
+                $message = "{mapper}: [U] '{user}@{backend}' Updated and marked '#{item_id}: {title}' as '{state}'.";
             }
 
             if (true === $progressChange || count($changes) >= 1) {
                 $this->logger->log($progressChange || $stateChange ? LogLevel::NOTICE : LogLevel::INFO, $message, [
                     'user' => $this->userContext->name ?? 'main',
                     'mapper' => after_last(self::class, '\\'),
-                    'id' => $cloned->id ?? 'New',
+                    'item_id' => $cloned->id ?? 'New',
                     'backend' => $entity->via,
                     'title' => $cloned->getName(),
                     'state' => $local->isWatched() ? 'played' : 'unplayed',
@@ -1040,7 +1040,7 @@ class DirectMapper implements ImportInterface
                     context: [
                         'user' => $this->userContext->name ?? 'main',
                         'mapper' => after_last(self::class, '\\'),
-                        'id' => $cloned->id ?? 'New',
+                        'item_id' => $cloned->id ?? 'New',
                         'backend' => $entity->via,
                         'title' => $cloned->getName(),
                         'state' => [

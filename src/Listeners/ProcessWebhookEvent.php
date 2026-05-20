@@ -71,7 +71,7 @@ final class ProcessWebhookEvent
         $this->event = $event;
 
         $this->writer = function (Level $level, string $message, array $context = []) use ($event): void {
-            $event->addLog($level->getName() . ': ' . r($message, $context));
+            $event->addLogEntry($level, $message, $context);
             $this->logger->log($level, $message, $context);
         };
 
@@ -136,7 +136,6 @@ final class ProcessWebhookEvent
                     'headers' => $request->getHeaders(),
                     'payload' => $request->getParsedBody(),
                 ],
-                forceContext: true,
             );
             return;
         }
@@ -188,7 +187,6 @@ final class ProcessWebhookEvent
                     'headers' => $request->getHeaders(),
                     'payload' => $request->getParsedBody(),
                 ],
-                forceContext: true,
             );
             return;
         }
@@ -202,7 +200,6 @@ final class ProcessWebhookEvent
                     'client' => $client->getName(),
                     'headers' => $request->getHeaders(),
                 ],
-                forceContext: false,
             );
             return;
         }
@@ -371,7 +368,6 @@ final class ProcessWebhookEvent
                         'user' => $userContext->name,
                         'backend' => $client->getName(),
                     ],
-                    forceContext: true,
                 );
             }
 
@@ -486,19 +482,22 @@ final class ProcessWebhookEvent
             $lastSync = make_date($lastSync);
         }
 
-        ($this->writer)(Level::Notice, r("{prefix}Processing '{user}@{backend}' request '{title}'. {data}", [
+        ($this->writer)(Level::Notice, "{prefix}Processing '{user}@{backend}' request '{title}'.", [
             'backend' => $entity->via,
             'title' => $entity->getName(),
             'prefix' => true === $entity->isTainted() ? '[T] ' : '',
-            'lastSync' => $lastSync,
             'user' => $userContext->name,
-            'data' => array_to_string([
-                'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, '??'),
-                'state' => $entity->isWatched() ? 'played' : 'unplayed',
-                'progress' => $entity->hasPlayProgress() ? 'Yes' : 'No',
-                'request_id' => ag($options, Options::REQUEST_ID, '-'),
-            ]),
-        ]));
+            'item' => [
+                'title' => $entity->getName(),
+                'type' => $entity->type,
+            ],
+            'backend_item_id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID),
+            'request_id' => ag($options, Options::REQUEST_ID, '-'),
+            'state' => $entity->isWatched() ? 'played' : 'unplayed',
+            'progress' => $entity->hasPlayProgress() ? 'Yes' : 'No',
+            'webhook_event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, '??'),
+            'last_sync' => $lastSync,
+        ]);
 
         $isDebug = (bool) ag($options, Options::DEBUG_TRACE, false);
         if (true === (bool) ag($backend->getContext()->options, Options::DEBUG_TRACE, false)) {
@@ -553,7 +552,6 @@ final class ProcessWebhookEvent
         int|string|Level $level,
         string $message,
         array $context = [],
-        bool $forceContext = false,
     ): void {
         $params = $request->getServerParams();
 
@@ -583,13 +581,14 @@ final class ProcessWebhookEvent
             $context['attributes'] = $attributes;
         }
 
-        $levelName = $level instanceof Level ? $level->getName() : (string) $level;
-        $this->event?->addLog($levelName . ': ' . r($message, $context));
-
-        if (true === (Config::get('logs.context') || $forceContext)) {
-            $this->logger->log($level, $message, $context);
-        } else {
-            $this->logger->log($level, r($message, $context));
+        try {
+            $eventLevel = Logger::toMonologLevel($level);
+        } catch (Throwable) {
+            $eventLevel = Level::Notice;
         }
+
+        $this->event?->addLogEntry($eventLevel, $message, $context);
+
+        $this->logger->log($level, $message, $context);
     }
 }

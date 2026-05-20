@@ -100,7 +100,7 @@ final class DispatchCommandTest extends TestCase
             "Dispatching Event: 'on_push' queued at '2026-05-17T08:25:02+00:00'.",
             $records[0]->message,
         );
-        self::assertSame('550e8400-e29b-41d4-a716-446655440000', $records[0]->context['id']);
+        self::assertSame('550e8400-e29b-41d4-a716-446655440000', $records[0]->context['event_id']);
         self::assertSame('Listener visible.', $records[1]->message);
     }
 

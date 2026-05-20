@@ -683,8 +683,8 @@ if (!function_exists('queue_push')) {
         }
 
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-            $logger->error("Unable to push '{id}' event '{via}: {entity}'. It has no GUIDs.", [
-                'id' => $entity->id,
+            $logger->error("Unable to push '{item_id}' event '{via}: {entity}'. It has no GUIDs.", [
+                'item_id' => $entity->id,
                 'via' => $entity->via,
                 'entity' => $entity->getName(),
             ]);

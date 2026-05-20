@@ -3,7 +3,8 @@ import type { JsonObject, JsonValue, LogEntry } from '~/types';
 export type ParsedLogEntry = LogEntry;
 
 export type LogTone = 'neutral' | 'info' | 'warning' | 'error' | 'success';
-export type LogLevel = 'debug' | 'info' | 'warning' | 'error';
+export type LogLevel = 'debug' | 'info' | 'notice' | 'warning' | 'error';
+export type LogLevelColor = 'neutral' | 'info' | 'primary' | 'warning' | 'error';
 
 export type LogDetailRow = {
   label: string;
@@ -38,6 +39,22 @@ const EVENT_REGEX =
 const ITEM_REGEX = /'#(?<item_id>\d+):/;
 const IDENT_REGEX = /'((?<client>\w+):\s)?(?<user>\w+)@(?<backend>[\w-]+)'/i;
 let logSequence = 0;
+
+const LOG_LEVEL_ICON: Record<LogLevel, string> = {
+  debug: 'i-lucide-terminal',
+  info: 'i-lucide-info',
+  notice: 'i-lucide-bell-ring',
+  warning: 'i-lucide-triangle-alert',
+  error: 'i-lucide-circle-x',
+};
+
+const LOG_LEVEL_COLOR: Record<LogLevel, LogLevelColor> = {
+  debug: 'neutral',
+  info: 'info',
+  notice: 'primary',
+  warning: 'warning',
+  error: 'error',
+};
 
 const hashText = (value: string): string => {
   let hash = 0;
@@ -286,8 +303,9 @@ const logSeverityTone = (
 const getLogLevel = (level: string | null | undefined): LogLevel => {
   switch ((level ?? '').toLowerCase()) {
     case 'info':
-    case 'notice':
       return 'info';
+    case 'notice':
+      return 'notice';
     case 'warning':
     case 'warn':
       return 'warning';
@@ -527,15 +545,27 @@ const logRaw = (log: ParsedLogEntry): string => {
   }
 };
 
+const logLevelBadgeClass = (level: LogLevel): Array<string> => [
+  'inline-flex w-24 cursor-pointer items-center gap-1.5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide whitespace-nowrap',
+  'debug' === level ? 'bg-muted/40 text-muted' : '',
+  'info' === level ? 'bg-info/10 text-info' : '',
+  'notice' === level ? 'bg-primary/12 text-primary' : '',
+  'warning' === level ? 'bg-warning/10 text-warning' : '',
+  'error' === level ? 'bg-error/10 text-error' : '',
+];
+
 export {
   emptyEntry,
   formatLogException,
   formatLogStack,
   getLogLevel,
+  LOG_LEVEL_COLOR,
+  LOG_LEVEL_ICON,
   logDetailRows,
   logDisplayLine,
   logFieldRows,
   logHostLabel,
+  logLevelBadgeClass,
   logMessageText,
   logRaw,
   logSearchText,

@@ -67,18 +67,51 @@
           </UButton>
         </UTooltip>
 
-        <UTooltip text="Copy event.">
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-copy"
-            :disabled="isLoading"
-            @click="copyItem"
-          >
-            <span class="hidden sm:inline">Copy</span>
-          </UButton>
-        </UTooltip>
+        <Popover placement="bottom-end" trigger="click" :z-index="13000" :disabled="isLoading">
+          <template #trigger>
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-copy"
+              trailing-icon="i-lucide-chevron-down"
+              :disabled="isLoading"
+            >
+              <span class="hidden sm:inline">Copy</span>
+            </UButton>
+          </template>
+
+          <template #content="{ hide }">
+            <div class="w-52 space-y-1 p-1">
+              <button
+                type="button"
+                class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-default hover:bg-elevated hover:text-highlighted"
+                @click="copyEventId(hide)"
+              >
+                <UIcon name="i-lucide-hash" class="size-4 text-toned" />
+                <span>Copy ID</span>
+              </button>
+
+              <button
+                type="button"
+                class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-default hover:bg-elevated hover:text-highlighted"
+                @click="copyItem(hide)"
+              >
+                <UIcon name="i-lucide-copy" class="size-4 text-toned" />
+                <span>Copy Event</span>
+              </button>
+
+              <button
+                type="button"
+                class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-default hover:bg-elevated hover:text-highlighted"
+                @click="copyLogs(hide)"
+              >
+                <UIcon name="i-lucide-scroll-text" class="size-4 text-toned" />
+                <span>Copy Logs</span>
+              </button>
+            </div>
+          </template>
+        </Popover>
 
         <UTooltip text="Reload event data.">
           <UButton
@@ -208,25 +241,6 @@
         </template>
 
         <div v-if="toggleLogs" class="space-y-3">
-          <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-toned">
-            <span>
-              {{ filteredRows.length }} of {{ logRows.length }} line{{
-                1 === logRows.length ? '' : 's'
-              }}
-              {{ query ? 'visible' : 'loaded' }}
-            </span>
-
-            <UButton
-              color="neutral"
-              variant="outline"
-              size="xs"
-              icon="i-lucide-copy"
-              @click="copyLogs"
-            >
-              Copy logs
-            </UButton>
-          </div>
-
           <div class="max-h-[60vh] overflow-auto border border-default bg-elevated/30 shadow-sm">
             <template v-if="structuredRows.length > 0">
               <article
@@ -372,6 +386,7 @@ import { useStorage } from '@vueuse/core';
 import EventView from '~/components/EventView.vue';
 import LogDetailsChip from '~/components/LogDetailsChip.vue';
 import LogDetailsModal from '~/components/LogDetailsModal.vue';
+import Popover from '~/components/Popover.vue';
 import { useDialog } from '~/composables/useDialog';
 import type { EventsItem, GenericError, LogEntry } from '~/types';
 import {
@@ -385,6 +400,8 @@ import {
 } from '~/utils';
 import {
   getLogLevel,
+  LOG_LEVEL_ICON,
+  logLevelBadgeClass,
   logMessageText,
   logSearchText,
   logTimestampLabel,
@@ -412,18 +429,11 @@ const wrapLines = useStorage<boolean>('logs_wrap_lines', false);
 const selectedEventId = ref<string | null>(null);
 const selectedLog = ref<LogEntry | null>(null);
 
-type LogLevel = 'debug' | 'info' | 'warning' | 'error';
+type LogLevel = 'debug' | 'info' | 'notice' | 'warning' | 'error';
 type StructuredLogRow = {
   key: string;
   log: LogEntry;
   level: LogLevel;
-};
-
-const LOG_LEVEL_ICON: Record<LogLevel, string> = {
-  debug: 'i-lucide-terminal',
-  info: 'i-lucide-info',
-  warning: 'i-lucide-triangle-alert',
-  error: 'i-lucide-circle-x',
 };
 
 const cardUi = {
@@ -691,16 +701,14 @@ const structuredRowClass = (index: number): Array<string> => {
   return classes;
 };
 
-const logLevelBadgeClass = (level: LogLevel): Array<string> => [
-  'inline-flex cursor-pointer items-center gap-1.5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide',
-  'debug' === level ? 'bg-muted/40 text-muted' : '',
-  'info' === level ? 'bg-info/10 text-info' : '',
-  'warning' === level ? 'bg-warning/10 text-warning' : '',
-  'error' === level ? 'bg-error/10 text-error' : '',
-];
+const copyEventId = (hide?: () => void): void => {
+  copyText(item.value.id);
+  hide?.();
+};
 
-const copyItem = (): void => {
+const copyItem = (hide?: () => void): void => {
   copyText(JSON.stringify(item.value, null, 2));
+  hide?.();
 };
 
 const copyEventData = (): void => {
@@ -719,7 +727,8 @@ const copyOptions = (): void => {
   copyText(JSON.stringify(item.value.options, null, 2));
 };
 
-const copyLogs = (): void => {
+const copyLogs = (hide?: () => void): void => {
   copyText(filteredRows.value.map((logLine) => logLine.raw).join('\n'));
+  hide?.();
 };
 </script>

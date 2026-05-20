@@ -206,6 +206,8 @@ import {
   formatLogException,
   formatLogStack,
   getLogLevel,
+  LOG_LEVEL_COLOR,
+  LOG_LEVEL_ICON,
   logDetailRows,
   logFieldRows,
   logMessageText,
@@ -213,8 +215,7 @@ import {
   logTimestampTitle,
 } from '~/utils/logs';
 
-type LogLevel = 'debug' | 'info' | 'warning' | 'error';
-type LogLevelColor = 'neutral' | 'info' | 'warning' | 'error';
+type LogLevel = 'debug' | 'info' | 'notice' | 'warning' | 'error';
 
 const props = defineProps<{
   log: LogEntry | null;
@@ -224,20 +225,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update:open', value: boolean): void;
 }>();
-
-const LOG_LEVEL_COLOR: Record<LogLevel, LogLevelColor> = {
-  debug: 'neutral',
-  info: 'info',
-  warning: 'warning',
-  error: 'error',
-};
-
-const LOG_LEVEL_ICON: Record<LogLevel, string> = {
-  debug: 'i-lucide-terminal',
-  info: 'i-lucide-info',
-  warning: 'i-lucide-triangle-alert',
-  error: 'i-lucide-circle-x',
-};
 
 const detailsModalUi = {
   content: 'max-w-5xl',

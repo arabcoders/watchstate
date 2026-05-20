@@ -12,6 +12,7 @@ use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Events\DataEvent;
+use App\Libs\Extends\JsonlFormatter;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\TestCase;
 use App\Listeners\ProcessWebhookEvent;
@@ -66,6 +67,27 @@ final class ProcessWebhookEventTest extends TestCase
 
         self::assertSame([], $events);
         self::assertSame(EventStatus::RUNNING, $event->getStatus());
+
+        $processingLog = null;
+        foreach ($event->getLogs() as $log) {
+            if (false === JsonlFormatter::isJsonlRecord($log)) {
+                continue;
+            }
+
+            $payload = json_decode($log, true, 512, JSON_THROW_ON_ERROR);
+            if (str_contains((string) ag($payload, 'message', ''), "Processing 'main@test_plex' request")) {
+                $processingLog = $payload;
+                break;
+            }
+        }
+
+        self::assertNotNull($processingLog);
+        self::assertSame((string) $event->getEvent()->id, ag($processingLog, 'fields.event_id'));
+        self::assertSame('main', ag($processingLog, 'fields.user'));
+        self::assertSame('test_plex', ag($processingLog, 'fields.backend'));
+        self::assertSame('req-1', ag($processingLog, 'fields.request_id'));
+        self::assertSame('media.scrobble', ag($processingLog, 'fields.webhook_event'));
+        self::assertSame(121, ag($processingLog, 'fields.backend_item_id'));
     }
 
     public function test_tasks_processes(): void

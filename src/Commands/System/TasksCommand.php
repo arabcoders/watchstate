@@ -56,6 +56,7 @@ final class TasksCommand extends Command
     private array $logs = [];
     private array $taskOutput = [];
     private array $logContext = [];
+    private array $eventLogContext = [];
 
     private ?Closure $writer = null;
     private ?Closure $clear = null;
@@ -215,27 +216,33 @@ final class TasksCommand extends Command
         switch ($eventName) {
             case self::NAME:
                 if (null === ($name = ag($event->getData(), 'name'))) {
-                    $event->addLog(r('No task name was specified.'));
+                    $event->addLogEntry(Level::Error, 'No task name was specified.');
                     return $event;
                 }
 
                 $task = self::getTasks($name);
                 if (empty($task)) {
-                    $event->addLog(
-                        r("Invalid task '{name}'. There are no task with that name registered.", ['name' => $name]),
+                    $event->addLogEntry(
+                        Level::Error,
+                        "Invalid task '{task_id}'. There are no task with that name registered.",
+                        ['task_id' => $name],
                     );
                     return $event;
                 }
                 break;
             case self::CNAME:
                 if (null === ag($event->getData(), 'command')) {
-                    $event->addLog(r('No command name was specified.'));
+                    $event->addLogEntry(Level::Error, 'No command name was specified.');
                     return $event;
                 }
                 break;
         }
 
         try {
+            $this->eventLogContext = [
+                'event_id' => (string) $event->getEvent()->id,
+                'event' => $eventName,
+            ];
             $this->viaEvent = true;
 
             $input = new ArrayInput([], $this->getDefinition());
@@ -269,30 +276,39 @@ final class TasksCommand extends Command
             };
 
             if (self::CNAME === $eventName) {
-                $event->addLog(r("Task: Run '{name}'.", ['name' => $eventName]));
+                $event->addLogEntry(Level::Info, "Task: Run '{task_id}'.", [
+                    'task_id' => $eventName,
+                    'command' => ag($event->getData(), 'command'),
+                ]);
                 $exitCode = $this->run_command(
                     ag($event->getData(), 'command'),
                     ag($event->getData(), 'args', []),
                     $input,
                     Container::get(iOutput::class),
                 );
-                $event->addLog(r("Task: End '{name}' (Exit Code: {code})", [
-                    'name' => $eventName,
-                    'code' => $exitCode,
-                ]));
+                $event->addLogEntry(Level::Info, "Task: End '{task_id}' (Exit Code: {exit_code})", [
+                    'task_id' => $eventName,
+                    'command' => ag($event->getData(), 'command'),
+                    'exit_code' => $exitCode,
+                ]);
             }
 
             if (self::NAME === $eventName && !empty($task)) {
-                $event->addLog(r("Task: Run '{command}'.", ['command' => ag($task, 'command')]));
-                $exitCode = $this->runTask($task, $input, Container::get(iOutput::class));
-                $event->addLog(r("Task: End '{command}' (Exit Code: {code})", [
+                $event->addLogEntry(Level::Info, "Task: Run '{command}'.", [
+                    'task_id' => ag($task, 'name'),
                     'command' => ag($task, 'command'),
-                    'code' => $exitCode,
-                ]));
+                ]);
+                $exitCode = $this->runTask($task, $input, Container::get(iOutput::class));
+                $event->addLogEntry(Level::Info, "Task: End '{command}' (Exit Code: {exit_code})", [
+                    'task_id' => ag($task, 'name'),
+                    'command' => ag($task, 'command'),
+                    'exit_code' => $exitCode,
+                ]);
             }
         } finally {
             $this->needToSave = false;
             $this->writer = $this->clear = null;
+            $this->eventLogContext = [];
             $this->sleep = 1000;
             $this->viaEvent = false;
         }
@@ -396,7 +412,7 @@ final class TasksCommand extends Command
 
         $cmd[] = ag($task, 'command');
 
-        if (null !== ($args = ag($task, 'args'))) {
+        if (null !== ($args = ag($task, 'args')) && '' !== trim((string) $args)) {
             $cmd[] = $args;
         }
 
@@ -464,6 +480,8 @@ final class TasksCommand extends Command
                     'event' => $event->event,
                     'task_id' => (string) $task['name'],
                     'command' => (string) ag($task, 'command', ''),
+                    'cmd' => $process->getCommandLine(),
+                    'start_date' => $started->format('D, H:i:s T'),
                     'source' => 'task',
                 ],
             );
@@ -514,6 +532,10 @@ final class TasksCommand extends Command
                     'event' => $event->event,
                     'task_id' => (string) $task['name'],
                     'command' => (string) ag($task, 'command', ''),
+                    'exit_code' => $process->getExitCode() ?? self::INVALID,
+                    'status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
+                    'end_date' => $ended->format('D, H:i:s T'),
+                    'duration' => $ended->getTimestamp() - $started->getTimestamp(),
                     'source' => 'task',
                 ],
             );
@@ -762,7 +784,7 @@ final class TasksCommand extends Command
             channel: 'task',
             level: Level::Info,
             message: $this->normalizeTaskMessage($line),
-            context: $this->logContext,
+            context: array_replace($this->logContext, $this->eventLogContext),
         );
     }
 

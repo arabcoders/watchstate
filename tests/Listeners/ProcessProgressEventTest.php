@@ -12,6 +12,7 @@ use App\Libs\Database\PackageMigrationFactory;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Events\DataEvent;
+use App\Libs\Extends\JsonlFormatter;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\QueueRequests;
 use App\Libs\TestCase;
@@ -26,7 +27,7 @@ use Psr\SimpleCache\CacheInterface as iCache;
 
 final class ProcessProgressEventTest extends TestCase
 {
-    public function test_missing_metadata_logs_to_event_only(): void
+    public function test_metadata_missing_event_log(): void
     {
         $this->initTempApp();
         $this->seedTestServersConfig();
@@ -83,7 +84,16 @@ final class ProcessProgressEventTest extends TestCase
         self::assertNotEmpty(
             array_filter(
                 $event->getLogs(),
-                static fn(string $log): bool => str_contains($log, 'WARNING:') && str_contains($log, 'No metadata was found.'),
+                static function (string $log): bool {
+                    if (false === JsonlFormatter::isJsonlRecord($log)) {
+                        return false;
+                    }
+
+                    $payload = json_decode($log, true, 512, JSON_THROW_ON_ERROR);
+
+                    return 'warning' === ag($payload, 'level')
+                        && str_contains((string) ag($payload, 'message', ''), 'No metadata was found.');
+                },
             ),
         );
         self::assertFalse($handler->hasWarningRecords());

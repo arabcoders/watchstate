@@ -34,7 +34,7 @@
           id="filter"
           v-model="query"
           type="search"
-          placeholder="Filter"
+          :placeholder="'log' === contentType ? 'Filter log entries' : 'Filter'"
           icon="i-lucide-filter"
           size="sm"
           class="w-full sm:w-72"
@@ -51,6 +51,23 @@
             <span class="hidden sm:inline">Filter</span>
           </UButton>
         </UTooltip>
+
+        <USelect
+          v-if="'log' === contentType"
+          v-model="selectedLevels"
+          :items="levelFilterItems"
+          value-key="value"
+          label-key="label"
+          multiple
+          size="sm"
+          icon="i-lucide-list-filter"
+          class="w-44 shrink-0 sm:w-48"
+          :ui="{ content: 'min-w-48' }"
+        >
+          <template #default>
+            {{ levelFilterLabel }}
+          </template>
+        </USelect>
 
         <UTooltip text="Delete logfile.">
           <UButton
@@ -128,42 +145,21 @@
     />
 
     <template v-else-if="!error">
-      <UAlert
-        v-if="'log' === contentType && reachedEnd && !query"
-        color="info"
-        variant="soft"
-        icon="i-lucide-triangle-alert"
-        title="End of file"
-        description="No more logs available for this file."
-      />
-
-      <UAlert
-        v-if="'log' === contentType && 0 === filterItems.length"
-        :color="query ? 'warning' : 'info'"
-        variant="soft"
-        :icon="query ? 'i-lucide-filter' : 'i-lucide-triangle-alert'"
-        :title="query ? 'No matching logs' : 'No logs available'"
-      >
-        <template #description>
-          <p class="text-sm text-default">
-            <template v-if="query"
-              >No logs match this query: <u>{{ query }}</u></template
-            >
-            <template v-else>No logs available.</template>
-          </p>
-        </template>
-      </UAlert>
-
-      <UCard
-        v-if="'json' === contentType || 0 < filterItems.length"
-        class="overflow-hidden border border-default/70 shadow-sm"
-        :ui="viewerCardUi"
-      >
-        <div v-if="'json' === contentType" ref="logContainer" class="logbox">
+      <UCard class="overflow-hidden border border-default/70 shadow-sm" :ui="viewerCardUi">
+        <div
+          v-if="'json' === contentType"
+          ref="logContainer"
+          class="logbox overflow-auto"
+          :style="logContainerStyle"
+        >
           <code
             id="logView"
             class="logline block"
-            :class="wrapLines ? 'whitespace-pre-wrap ws-wrap-anywhere' : 'whitespace-pre'"
+            :class="
+              wrapLines
+                ? 'min-w-0 whitespace-pre-wrap ws-wrap-anywhere'
+                : 'w-max min-w-full whitespace-pre'
+            "
           >
             {{ renderJson(rawLines) }}
           </code>
@@ -176,6 +172,34 @@
           @scroll.passive="handleScroll"
           :style="logContainerStyle"
         >
+          <div
+            v-if="reachedEnd && !hasActiveStructuredFilter"
+            class="flex justify-center border-b border-default/40 px-4 py-3"
+          >
+            <div
+              class="inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning/10 px-3 py-1 text-[11px] font-medium text-warning"
+            >
+              <UIcon name="i-lucide-triangle-alert" class="size-3.5 shrink-0" />
+              No older lines remain in this file.
+            </div>
+          </div>
+
+          <div
+            v-if="canLoadFilteredHistory"
+            class="flex justify-center border-b border-default/40 px-4 py-3"
+          >
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="xs"
+              icon="i-lucide-history"
+              :loading="isLoading"
+              @click="loadContent(true)"
+            >
+              Load older lines into filter
+            </UButton>
+          </div>
+
           <template v-if="structuredRows.length > 0">
             <article
               v-for="(entry, index) in structuredRows"
@@ -236,21 +260,17 @@
             class="flex min-h-[55vh] flex-col items-center justify-center gap-3 px-6 py-8 text-center"
           >
             <UIcon
-              :name="query ? 'i-lucide-filter-x' : 'i-lucide-circle-off'"
+              :name="hasActiveStructuredFilter ? 'i-lucide-filter-x' : 'i-lucide-circle-off'"
               class="size-6 text-toned"
             />
 
             <div class="space-y-1">
               <p class="text-sm font-medium text-default">
-                {{ query ? 'No logs match this query' : 'No log lines available' }}
+                {{ emptyTitle }}
               </p>
 
               <p class="text-sm text-toned">
-                {{
-                  query
-                    ? 'Adjust the filter or load more lines.'
-                    : 'This file has no visible log lines yet.'
-                }}
+                {{ emptyDescription }}
               </p>
             </div>
           </div>
@@ -276,7 +296,6 @@ code {
 .logbox {
   background-color: #1f2229;
   min-width: 100%;
-  max-height: 73vh;
 }
 
 div.logbox pre {
@@ -303,6 +322,8 @@ import type { GenericResponse, LogEntry, LogResponse } from '~/types';
 import { copyText, makeEventName, notification, parse_api_response, request } from '~/utils';
 import {
   getLogLevel,
+  LOG_LEVEL_ICON,
+  logLevelBadgeClass,
   logMessageText,
   logSearchText,
   logTimestampLabel,
@@ -327,6 +348,13 @@ const data = ref<Array<LogEntry>>([]);
 const rawLines = ref<Array<string>>([]);
 const error = ref<string>('');
 const wrapLines = useStorage('logs_wrap_lines', false);
+const selectedLevels = useStorage<Array<LogLevel>>('logs_level_filter', [
+  'debug',
+  'info',
+  'notice',
+  'warning',
+  'error',
+]);
 const isDownloading = ref<boolean>(false);
 const isLoading = ref<boolean>(false);
 const toggleFilter = ref<boolean>(false);
@@ -341,20 +369,23 @@ const selectedEventId = ref<string | null>(null);
 const selectedLog = ref<LogEntry | null>(null);
 const isTodayLog = computed<boolean>(() => filename.includes(moment().format('YYYYMMDD')));
 
-type LogLevel = 'debug' | 'info' | 'warning' | 'error';
+type LogLevel = 'debug' | 'info' | 'notice' | 'warning' | 'error';
 
 type StructuredLogRow = {
   key: string;
   log: LogEntry;
   level: LogLevel;
+  isMatch: boolean;
+  isContext: boolean;
 };
 
-const LOG_LEVEL_ICON: Record<LogLevel, string> = {
-  debug: 'i-lucide-terminal',
-  info: 'i-lucide-info',
-  warning: 'i-lucide-triangle-alert',
-  error: 'i-lucide-circle-x',
+type LevelFilterItem = {
+  label: string;
+  value: LogLevel;
 };
+
+const LOG_LEVELS: Array<LogLevel> = ['debug', 'info', 'notice', 'warning', 'error'];
+const FILTER_CONTEXT_REGEX = /context:(\d+)/;
 
 const eventViewModalUi = {
   content: 'max-w-5xl',
@@ -416,23 +447,153 @@ const scrollLogContainerToBottom = (behavior: ScrollBehavior = 'auto'): void => 
 watch(toggleFilter, () => {
   if (!toggleFilter.value) {
     query.value = '';
+    scrollToBottom();
   }
 });
 
-const filterItems = computed<Array<LogEntry>>(() => {
-  if (!query.value) {
-    return data.value;
+const normalizedQuery = computed(() => query.value.trim().toLowerCase());
+const selectedLevelSet = computed(
+  () => new Set(LOG_LEVELS.filter((level) => selectedLevels.value.includes(level))),
+);
+const hasLevelFilter = computed(() => selectedLevelSet.value.size !== LOG_LEVELS.length);
+const filterContext = computed(() => {
+  const match = normalizedQuery.value.match(FILTER_CONTEXT_REGEX);
+  return match ? parseInt(match[1] ?? '0', 10) : 0;
+});
+const searchTerm = computed(() => normalizedQuery.value.replace(FILTER_CONTEXT_REGEX, '').trim());
+const hasTextFilter = computed(() => Boolean(searchTerm.value));
+const hasActiveStructuredFilter = computed(() => hasTextFilter.value || hasLevelFilter.value);
+const canLoadFilteredHistory = computed(
+  () =>
+    'log' === contentType.value &&
+    hasActiveStructuredFilter.value &&
+    !reachedEnd.value &&
+    data.value.length > 0,
+);
+const levelCounts = computed<Record<LogLevel, number>>(() => {
+  const counts: Record<LogLevel, number> = {
+    debug: 0,
+    info: 0,
+    notice: 0,
+    warning: 0,
+    error: 0,
+  };
+
+  data.value.forEach((item) => {
+    const level = getLogLevel(item.level);
+    counts[level] += 1;
+  });
+
+  return counts;
+});
+const levelFilterItems = computed<Array<LevelFilterItem>>(() =>
+  LOG_LEVELS.map((level) => ({
+    label: `${level.charAt(0).toUpperCase()}${level.slice(1)} (${levelCounts.value[level]})`,
+    value: level,
+  })),
+);
+const levelFilterLabel = computed(() => {
+  if (selectedLevelSet.value.size === LOG_LEVELS.length) {
+    return `All levels (${data.value.length})`;
   }
 
-  return data.value.filter((item) => logSearchText(item).includes(query.value.toLowerCase()));
+  if (selectedLevelSet.value.size === 0) {
+    return 'No levels selected';
+  }
+
+  return LOG_LEVELS.filter((level) => selectedLevelSet.value.has(level)).join(', ');
 });
 
 const structuredRows = computed<Array<StructuredLogRow>>(() => {
-  return filterItems.value.map((log, index) => ({
-    key: `${log.id}:${index}`,
-    log,
-    level: getLogLevel(log.level),
-  }));
+  if ('log' !== contentType.value) {
+    return [];
+  }
+
+  if (!hasActiveStructuredFilter.value) {
+    return data.value.map((log, index) => ({
+      key: `${log.id}:${index}`,
+      log,
+      level: getLogLevel(log.level),
+      isMatch: false,
+      isContext: false,
+    }));
+  }
+
+  const result: Array<StructuredLogRow> = [];
+  const visibleIndexes = new Set<number>();
+  const matchedIndexes = new Set<number>();
+
+  data.value.forEach((log, index) => {
+    if (!selectedLevelSet.value.has(getLogLevel(log.level))) {
+      return;
+    }
+
+    if (!hasTextFilter.value) {
+      visibleIndexes.add(index);
+      return;
+    }
+
+    if (logSearchText(log).includes(searchTerm.value)) {
+      matchedIndexes.add(index);
+
+      for (
+        let cursor = Math.max(0, index - filterContext.value);
+        cursor <= Math.min(data.value.length - 1, index + filterContext.value);
+        cursor++
+      ) {
+        visibleIndexes.add(cursor);
+      }
+    }
+  });
+
+  Array.from(visibleIndexes)
+    .sort((a, b) => a - b)
+    .forEach((index) => {
+      const log = data.value[index];
+      if (!log || !selectedLevelSet.value.has(getLogLevel(log.level))) {
+        return;
+      }
+
+      result.push({
+        key: `${log.id}:${index}`,
+        log,
+        level: getLogLevel(log.level),
+        isMatch: matchedIndexes.has(index),
+        isContext: !matchedIndexes.has(index),
+      });
+    });
+
+  return result;
+});
+
+const emptyTitle = computed(() => {
+  if ('json' === contentType.value) {
+    return 'No log lines available';
+  }
+
+  if (hasActiveStructuredFilter.value) {
+    return 'No logs match these filters';
+  }
+
+  if (!isLoading.value) {
+    return 'No log lines available';
+  }
+
+  return 'Loading logs...';
+});
+
+const emptyDescription = computed(() => {
+  if ('json' === contentType.value) {
+    return 'This file has no visible log lines yet.';
+  }
+
+  if (hasActiveStructuredFilter.value) {
+    return 'Adjust filters or load older lines into the current filter.';
+  }
+
+  return stream.value
+    ? 'Waiting for new stream output.'
+    : 'This file has no visible log lines yet.';
 });
 
 const openEvent = (id: string): void => {
@@ -443,7 +604,20 @@ const openLogDetails = (log: LogEntry): void => {
   selectedLog.value = log;
 };
 
-const loadContent = async (): Promise<void> => {
+const loadContent = async (force = false): Promise<void> => {
+  if (isLoading.value) {
+    return;
+  }
+
+  if (
+    'log' === contentType.value &&
+    hasActiveStructuredFilter.value &&
+    !force &&
+    data.value.length > 0
+  ) {
+    return;
+  }
+
   try {
     isLoading.value = true;
     const response = await request(`/log/${filename}?offset=${offset.value}`);
@@ -495,7 +669,11 @@ const loadContent = async (): Promise<void> => {
 };
 
 const handleScroll = (): void => {
-  if (!logContainer.value || query.value) {
+  if (!logContainer.value || 'json' === contentType.value) {
+    return;
+  }
+
+  if (hasActiveStructuredFilter.value) {
     return;
   }
 
@@ -687,6 +865,22 @@ const timestampLabel = (item: LogEntry): string => logTimestampLabel(item.dateti
 
 const logMessage = (item: LogEntry): string => logMessageText(item);
 
+const renderStructuredRowText = (entry: StructuredLogRow): string => {
+  const parts = [timestampLabel(entry.log), entry.level.toUpperCase()];
+
+  if (entry.log.logger) {
+    parts.push(`[${entry.log.logger}]`);
+  }
+
+  parts.push(logMessage(entry.log));
+
+  if (entry.log.exception_message) {
+    parts.push(`: ${entry.log.exception_message}`);
+  }
+
+  return parts.join(' ');
+};
+
 const structuredLineClass = computed<Array<string>>(() => [
   'flex-1',
   wrapLines.value ? 'min-w-0 whitespace-pre-wrap wrap-break-word' : 'min-w-max whitespace-pre',
@@ -698,20 +892,22 @@ const structuredRowClass = (_entry: StructuredLogRow, index: number): Array<stri
     'flex min-w-0 border-b border-default/40 bg-transparent transition-colors duration-150 last:border-b-0 hover:bg-elevated/70',
   ];
 
+  if (_entry.isMatch) {
+    classes.push('bg-warning/10');
+    return classes;
+  }
+
+  if (_entry.isContext) {
+    classes.push('bg-muted/30');
+    return classes;
+  }
+
   if (index % 2 === 1) {
     classes.push('bg-elevated/40');
   }
 
   return classes;
 };
-
-const logLevelBadgeClass = (level: LogLevel): Array<string> => [
-  'inline-flex cursor-pointer items-center gap-1.5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide',
-  'debug' === level ? 'bg-muted/40 text-muted' : '',
-  'info' === level ? 'bg-info/10 text-info' : '',
-  'warning' === level ? 'bg-warning/10 text-warning' : '',
-  'error' === level ? 'bg-error/10 text-error' : '',
-];
 
 const renderJson = (lines: Array<string>): string => {
   try {
@@ -727,6 +923,6 @@ const copyData = (): void => {
     return;
   }
 
-  copyText(filterItems.value.map((item) => item.raw).join('\n'));
+  copyText(structuredRows.value.map((item) => renderStructuredRowText(item)).join('\n'));
 };
 </script>

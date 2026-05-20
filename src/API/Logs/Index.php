@@ -32,12 +32,10 @@ final class Index
     private const int MAX_LIMIT = 100;
 
     private int $counter = 1;
-    private array $users = [];
     private array $logsDir = [];
 
     public function __construct(iImport $mapper, iLogger $logger)
     {
-        $this->users = array_keys(get_users_context(mapper: $mapper, logger: $logger));
         $this->logsDir = [
             [
                 'path' => fix_path(Config::get('tmpDir') . '/logs'),

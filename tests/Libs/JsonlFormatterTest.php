@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Libs;
 
 use App\Libs\Extends\JsonlFormatter;
+use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\TestCase;
 use DateTimeImmutable;
 use DateTimeInterface;
@@ -46,9 +47,36 @@ final class JsonlFormatterTest extends TestCase
         self::assertSame(LOG_WARNING, $payload['levelno']);
         self::assertSame('app', $payload['logger']);
         self::assertSame('Hello world', $payload['message']);
+        self::assertArrayNotHasKey('id', $payload['fields']);
         self::assertSame('main', $payload['fields']['user']);
+        self::assertSame('request-1', $payload['fields']['request.id']);
         self::assertSame('[redacted]', $payload['fields']['backendToken']);
         self::assertSame('/v1/api?apikey=[redacted]&ok=1', $payload['fields']['request.uri']);
+    }
+
+    public function test_id_processed(): void
+    {
+        $formatter = new JsonlFormatter();
+        $record = new LogRecord(
+            datetime: new DateTimeImmutable('2026-05-20T12:00:00.123+00:00'),
+            channel: 'app',
+            level: Level::Info,
+            message: "Event '{id}' request '{request.id}'.",
+            context: [
+                'id' => 'event-1',
+                'request' => [
+                    'id' => 'request-1',
+                ],
+            ],
+        );
+
+        $processed = (new LogMessageProcessor())($record);
+        $payload = json_decode(trim($formatter->format($processed)), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame("Event 'event-1' request 'request-1'.", $payload['message']);
+        self::assertSame('event-1', $payload['id']);
+        self::assertArrayNotHasKey('id', $payload['fields']);
+        self::assertSame('request-1', $payload['fields']['request.id']);
     }
 
     public function test_exception(): void

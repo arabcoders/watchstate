@@ -50,11 +50,11 @@ final readonly class ProcessProgressEvent
     public function __invoke(DataEvent $event): DataEvent
     {
         $writer = function (Level $level, string $message, array $context = []) use ($event) {
-            $event->addLog($level->getName() . ': ' . r($message, $context));
+            $event->addLogEntry($level, $message, $context);
             $this->logger->log($level, $message, $context);
         };
         $eventWriter = static function (Level $level, string $message, array $context = []) use ($event): void {
-            $event->addLog($level->getName() . ': ' . r($message, $context));
+            $event->addLogEntry($level, $message, $context);
         };
 
         $event->stopPropagation();
@@ -75,9 +75,9 @@ final readonly class ProcessProgressEvent
         $hasProgressValue = ag_exists($options, Options::STATE_PROGRESS_VALUE);
 
         if (null === ($item = $userContext->db->get(Container::get(iState::class)::fromArray($event->getData())))) {
-            $writer(Level::Error, "'{user}' item '{id}' is not referenced locally yet.", [
+            $writer(Level::Error, "'{user}' item '{item_id}' is not referenced locally yet.", [
                 'user' => $userContext->name,
-                'id' => ag($event->getData(), 'id', '?'),
+                'item_id' => ag($event->getData(), 'id', '?'),
             ]);
             return $event;
         }
@@ -88,9 +88,9 @@ final readonly class ProcessProgressEvent
             if (false === ($allowUpdate >= $minThreshold && time() > ($item->updated + $allowUpdate))) {
                 $writer(
                     level: Level::Info,
-                    message: "'{user}' item - '#{id}: {title}' is marked as watched. Not updating watch progress. {comp}",
+                    message: "'{user}' item - '#{item_id}: {title}' is marked as watched. Not updating watch progress. {comp}",
                     context: [
-                        'id' => $item->id,
+                        'item_id' => $item->id,
                         'title' => $item->getName(),
                         'user' => $userContext->name,
                         'comp' => $allowUpdate > $minThreshold
@@ -107,8 +107,8 @@ final readonly class ProcessProgressEvent
         }
 
         if (false === $hasProgressValue && false === $item->hasPlayProgress()) {
-            $writer(Level::Info, "'{user}' item '#{id}: {title}' has no watch progress to export.", [
-                'id' => $item->id,
+            $writer(Level::Info, "'{user}' item '#{item_id}: {title}' has no watch progress to export.", [
+                'item_id' => $item->id,
                 'title' => $item->title,
                 'user' => $userContext->name,
             ]);
@@ -210,9 +210,9 @@ final readonly class ProcessProgressEvent
             } catch (Throwable $ex) {
                 $writer(
                     Level::Error,
-                    "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to sync '#{id}: {title}' progress. '{error.message}' at '{error.file}:{error.line}'.",
+                    "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to sync '#{item_id}: {title}' progress. '{error.message}' at '{error.file}:{error.line}'.",
                     [
-                        'id' => $item->id,
+                        'item_id' => $item->id,
                         'backend' => $name,
                         'title' => $item->getName(),
                         'user' => $userContext->name,
@@ -229,8 +229,8 @@ final readonly class ProcessProgressEvent
             return $event;
         }
 
-        $writer(Level::Notice, "Processing '{user}@{backend}' - '#{id}: {title}' watch progress '{progress}' event.", [
-            'id' => $item->id,
+        $writer(Level::Notice, "Processing '{user}@{backend}' - '#{item_id}: {title}' watch progress '{progress}' event.", [
+            'item_id' => $item->id,
             'backend' => $item->via,
             'user' => $userContext->name,
             'title' => $item->getName(),
@@ -258,13 +258,14 @@ final readonly class ProcessProgressEvent
 
                     $context = ag($request->extras, 'context', []);
                     $context['user'] = $userContext->name;
-                    $context['id'] = ag($context, 'item.id', $item->id);
+                    $context['item_id'] = ag($context, 'item.id', $item->id);
+                    unset($context['id']);
                     $context['progress'] = ag($context, 'item.progress', $progress);
                     $statusCode = $response->getStatusCode();
 
                     if (true === (bool) ag($options, 'trace')) {
-                        $writer(Level::Debug, "Processing '{user}@{backend}' - '#{id}: {item.title}' response.", [
-                            'id' => $context['id'],
+                        $writer(Level::Debug, "Processing '{user}@{backend}' - '#{item_id}: {item.title}' response.", [
+                            'item_id' => $context['item_id'],
                             'url' => ag($context, 'remote.url', '??'),
                             'status_code' => $statusCode,
                             'headers' => $response->getHeaders(false),
@@ -276,7 +277,7 @@ final readonly class ProcessProgressEvent
                     if (false === in_array(Status::tryFrom($statusCode), [Status::OK, Status::NO_CONTENT], true)) {
                         $eventWriter(
                             Level::Error,
-                            "Request to change '{user}@{backend}' - '#{id}: {item.title}' watch progress returned with unexpected '{status_code}' status code.",
+                            "Request to change '{user}@{backend}' - '#{item_id}: {item.title}' watch progress returned with unexpected '{status_code}' status code.",
                             [
                                 ...$context,
                                 'status_code' => $statusCode,
@@ -288,7 +289,7 @@ final readonly class ProcessProgressEvent
 
                     $eventWriter(
                         Level::Notice,
-                        "Updated '{user}@{backend}' '#{id}: {item.title}' watch progress to '{progress}'.",
+                        "Updated '{user}@{backend}' '#{item_id}: {item.title}' watch progress to '{progress}'.",
                         [
                             ...$context,
                             'status_code' => $statusCode,
@@ -306,10 +307,10 @@ final readonly class ProcessProgressEvent
 
                     $eventWriter(
                         Level::Error,
-                        "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to change watch progress of {item.type} '#{id}: {item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                        "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to change watch progress of {item.type} '#{item_id}: {item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
                         [
                             ...$context,
-                            'id' => ag($context, 'item.id', $item->id),
+                            'item_id' => ag($context, 'item.id', $item->id),
                             'user' => $userContext->name,
                             'progress' => ag($context, 'item.progress', $progress),
                             ...exception_log($ex),

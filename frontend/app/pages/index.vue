@@ -362,6 +362,8 @@ import {
 } from '~/utils';
 import {
   getLogLevel,
+  LOG_LEVEL_ICON,
+  logLevelBadgeClass,
   logMessageText,
   logTimestampLabel,
   logTimestampTitle,
@@ -390,15 +392,6 @@ const selectedEventId = ref<string | null>(null);
 const selectedLog = ref<LogEntry | null>(null);
 const logReloadFrequency = 10000;
 let historyLoadToken = 0;
-
-type LogLevel = 'debug' | 'info' | 'warning' | 'error';
-
-const LOG_LEVEL_ICON: Record<LogLevel, string> = {
-  debug: 'i-lucide-terminal',
-  info: 'i-lucide-info',
-  warning: 'i-lucide-triangle-alert',
-  error: 'i-lucide-circle-x',
-};
 
 const eventViewModalUi = {
   content: 'max-w-5xl',
@@ -463,14 +456,6 @@ const structuredRowClass = (index: number): Array<string> => {
 
   return classes;
 };
-
-const logLevelBadgeClass = (level: LogLevel): Array<string> => [
-  'inline-flex cursor-pointer items-center gap-1.5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide',
-  'debug' === level ? 'bg-muted/40 text-muted' : '',
-  'info' === level ? 'bg-info/10 text-info' : '',
-  'warning' === level ? 'bg-warning/10 text-warning' : '',
-  'error' === level ? 'bg-error/10 text-error' : '',
-];
 
 const duplicatePopoverTrigger = computed<'click' | 'hover'>(() =>
   'mobile' === breakpoints.active().value ? 'click' : 'hover',

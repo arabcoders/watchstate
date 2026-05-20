@@ -169,18 +169,6 @@ const items = computed<Array<LinkItem>>(() => {
     });
   }
 
-  if (user.value) {
-    list.push({
-      key: `identity:${user.value}`,
-      label: `Use identity ${user.value}`,
-      shortLabel: user.value,
-      icon: 'i-lucide-user-round',
-      action: async () => {
-        await switchIdentity(user.value as string);
-      },
-    });
-  }
-
   return list;
 });
 

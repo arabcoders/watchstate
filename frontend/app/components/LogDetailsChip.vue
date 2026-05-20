@@ -146,17 +146,6 @@ const menuItems = computed<Array<ActionItem>>(() => {
     });
   }
 
-  if (user) {
-    list.push({
-      key: `identity:${user}`,
-      label: `Use identity ${user}`,
-      icon: 'i-lucide-user-round',
-      action: async () => {
-        await switchIdentity(user);
-      },
-    });
-  }
-
   return list;
 });
 

@@ -48,11 +48,11 @@ final readonly class ProcessPushEvent
     public function __invoke(DataEvent $e): DataEvent
     {
         $writer = function (Level $level, string $message, array $context = []) use ($e) {
-            $e->addLog($level->getName() . ': ' . r($message, $context));
+            $e->addLogEntry($level, $message, $context);
             $this->logger->log($level, $message, $context);
         };
         $eventWriter = static function (Level $level, string $message, array $context = []) use ($e): void {
-            $e->addLog($level->getName() . ': ' . r($message, $context));
+            $e->addLogEntry($level, $message, $context);
         };
 
         $e->stopPropagation();
@@ -68,16 +68,16 @@ final readonly class ProcessPushEvent
         }
 
         if (null === ($item = $userContext->db->get(Container::get(iState::class)::fromArray($e->getData())))) {
-            $writer(Level::Error, "Item '{user}: {id}' is not found or has been deleted.", [
+            $writer(Level::Error, "Item '{user}: {item_id}' is not found or has been deleted.", [
                 'user' => $user,
-                'id' => ag($e->getData(), 'id', '?'),
+                'item_id' => ag($e->getData(), 'id', '?'),
             ]);
             return $e;
         }
 
-        $writer(Level::Notice, "Processing '{user}@{via}' - '#{id}: {title}' push event.", [
+        $writer(Level::Notice, "Processing '{user}@{via}' - '#{item_id}: {title}' push event.", [
             'user' => $user,
-            'id' => $item->id,
+            'item_id' => $item->id,
             'via' => $item->via,
             'title' => $item->getName(),
         ]);
@@ -154,10 +154,11 @@ final readonly class ProcessPushEvent
             } catch (Throwable $e) {
                 $writer(
                     Level::Error,
-                    "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' - '#{item.id}: {item.title}' push event handling. {error.message} at '{error.file}:{error.line}'.",
+                    "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' - '#{item_id}: {item.title}' push event handling. {error.message} at '{error.file}:{error.line}'.",
                     [
                         'user' => $user,
                         'backend' => $name,
+                        'item_id' => $item->id,
                         'item' => [
                             'id' => $item->id,
                             'title' => $item->getName(),
@@ -186,14 +187,12 @@ final readonly class ProcessPushEvent
             return $e;
         }
 
-        $writer(Level::Notice, "Processing '{user}@{via}' - '#{id}: {title}' push event. {data}", [
+        $writer(Level::Notice, "Processing '{user}@{via}' - '#{item_id}: {title}' push event.", [
             'user' => $user,
-            'id' => $item->id,
+            'item_id' => $item->id,
             'via' => $item->via,
             'title' => $item->getName(),
-            'data' => array_to_string([
-                'played' => $item->isWatched(),
-            ]),
+            'played' => $item->isWatched(),
         ]);
 
         $http = Container::get(iHttp::class);
@@ -203,19 +202,20 @@ final readonly class ProcessPushEvent
             requests: $this->queue->getQueue(),
             client: $http,
             opts: [
-                'ok' => static function (Request $request, ResponseInterface $response) use ($eventWriter, $user): array {
+                'ok' => static function (Request $request, ResponseInterface $response) use ($eventWriter, $item, $user): array {
                     if (true === (bool) ag($request->options, 'user_data.' . Options::NO_LOGGING, false)) {
                         return [];
                     }
 
                     $context = ag($request->extras, 'context', []);
                     $context['user'] = $user;
+                    $context['item_id'] = $item->id;
                     $context['status_code'] = $response->getStatusCode();
 
                     if (Status::OK !== Status::tryFrom($context['status_code'])) {
                         $eventWriter(
                             Level::Error,
-                            "Request to change '{user}@{backend}' - '#{item.id}: {item.title}' play state returned with unexpected '{status_code}' status code.",
+                            "Request to change '{user}@{backend}' - '#{item_id}: {item.title}' play state returned with unexpected '{status_code}' status code.",
                             $context,
                         );
 
@@ -224,23 +224,24 @@ final readonly class ProcessPushEvent
 
                     $eventWriter(
                         Level::Notice,
-                        "Updated '{user}@{backend}' - '#{item.id}: {item.title}' watch state to '{play_state}'.",
+                        "Updated '{user}@{backend}' - '#{item_id}: {item.title}' watch state to '{play_state}'.",
                         $context,
                     );
 
                     return [];
                 },
-                'error' => static function (Request $request, Throwable $ex) use ($eventWriter, $user): array {
+                'error' => static function (Request $request, Throwable $ex) use ($eventWriter, $item, $user): array {
                     if (true === (bool) ag($request->options, 'user_data.' . Options::NO_LOGGING, false)) {
                         return [];
                     }
 
                     $context = ag($request->extras, 'context', []);
                     $context['user'] = $user;
+                    $context['item_id'] = $item->id;
 
                     $eventWriter(
                         Level::Error,
-                        "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to change play state of {item.type} '#{item.id}: {item.title}'. {error.message} at '{error.file}:{error.line}'.",
+                        "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to change play state of {item.type} '#{item_id}: {item.title}'. {error.message} at '{error.file}:{error.line}'.",
                         [
                             ...$context,
                             'error' => [
