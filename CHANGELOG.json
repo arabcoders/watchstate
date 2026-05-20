@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "ce1b5ee13464b70196b11bacf5dfb817cdfbe9b6",
-    "date": "2026-05-20T18:05:39+00:00",
+    "full_sha": "5dee46301bc1dfba25747975c8c6ad04e802c767",
+    "date": "2026-05-20T18:34:38+00:00",
     "commits": [
+      {
+        "sha": "5dee4630",
+        "full_sha": "5dee46301bc1dfba25747975c8c6ad04e802c767",
+        "message": "refactor: remove redundant log name display, as clicking the title will take user there anyway",
+        "author": "arabcoders",
+        "date": "2026-05-20T18:34:38+00:00"
+      },
       {
         "sha": "ce1b5ee1",
         "full_sha": "ce1b5ee13464b70196b11bacf5dfb817cdfbe9b6",
