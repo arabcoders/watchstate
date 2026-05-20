@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "eeacdbbcbfd38ff163eef1813dd3054d4bad8242",
-    "date": "2026-05-20T17:35:03+00:00",
+    "full_sha": "ce1b5ee13464b70196b11bacf5dfb817cdfbe9b6",
+    "date": "2026-05-20T18:05:39+00:00",
     "commits": [
+      {
+        "sha": "ce1b5ee1",
+        "full_sha": "ce1b5ee13464b70196b11bacf5dfb817cdfbe9b6",
+        "message": "fix: display http access logs as text, and show older logs in api response for now.",
+        "author": "arabcoders",
+        "date": "2026-05-20T18:05:39+00:00"
+      },
       {
         "sha": "eeacdbbc",
         "full_sha": "eeacdbbcbfd38ff163eef1813dd3054d4bad8242",
