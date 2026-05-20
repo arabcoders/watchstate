@@ -251,8 +251,6 @@
                   </UTooltip>
                 </div>
               </div>
-
-              <p class="text-sm text-toned">Recent log stream from {{ log.filename }}</p>
             </div>
           </template>
 
