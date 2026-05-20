@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "a7ca9279263b73b9d22e3d1d98062d08d9491c34",
-    "date": "2026-05-19T19:15:52+00:00",
+    "full_sha": "eeacdbbcbfd38ff163eef1813dd3054d4bad8242",
+    "date": "2026-05-20T17:35:03+00:00",
     "commits": [
+      {
+        "sha": "eeacdbbc",
+        "full_sha": "eeacdbbcbfd38ff163eef1813dd3054d4bad8242",
+        "message": "refactor: a follow up to take advantage of the new jsonl logging.",
+        "author": "arabcoders",
+        "date": "2026-05-20T17:35:03+00:00"
+      },
+      {
+        "sha": "ca005d4c",
+        "full_sha": "ca005d4c512a8ae482baf4b0ad3866197730a0cc",
+        "message": "refactor: use jsonl as log storage format",
+        "author": "arabcoders",
+        "date": "2026-05-20T15:11:08+00:00"
+      },
       {
         "sha": "a7ca9279",
         "full_sha": "a7ca9279263b73b9d22e3d1d98062d08d9491c34",
