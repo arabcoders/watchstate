@@ -13,6 +13,7 @@ use App\Libs\Extends\HttpClient;
 use App\Libs\Extends\MockHttpClient;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
+use Monolog\LogRecord;
 use ReflectionMethod;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -47,7 +48,10 @@ class ExportFlowTest extends PlexTestCase
 
     public function test_export_ignores_state_unchanged(): void
     {
-        $context = $this->makeContext([Options::IGNORE_DATE => true]);
+        $context = $this->makeContext([
+            Options::IGNORE_DATE => true,
+            Options::DEBUG_TRACE => true,
+        ]);
         $queue = new QueueRequests();
 
         $localEntity = $this->makeLocalEntity($context, watched: 1, updated: 2000);
@@ -71,6 +75,16 @@ class ExportFlowTest extends PlexTestCase
         );
 
         $this->assertSame(0, $queue->count());
+
+        $records = array_values(array_filter(
+            $this->handler->getRecords(),
+            static fn(LogRecord $record): bool => 'backend.item.ignored' === ($record->context['event_name'] ?? null),
+        ));
+
+        $this->assertNotEmpty($records);
+        $record = end($records);
+        $this->assertSame('state_unchanged', $record->context['reason'] ?? null);
+        $this->assertSame('backend.export', $record->context['subsystem'] ?? null);
     }
 
     public function test_export_ignores_newer(): void
@@ -99,6 +113,16 @@ class ExportFlowTest extends PlexTestCase
         );
 
         $this->assertSame(0, $queue->count());
+
+        $records = array_values(array_filter(
+            $this->handler->getRecords(),
+            static fn(LogRecord $record): bool => 'backend.item.ignored' === ($record->context['event_name'] ?? null),
+        ));
+
+        $this->assertNotEmpty($records);
+        $record = end($records);
+        $this->assertSame('date_not_newer_than_local_history', $record->context['reason'] ?? null);
+        $this->assertSame('backend.export', $record->context['subsystem'] ?? null);
     }
 
     public function test_export_ignores_not_found(): void
@@ -123,6 +147,16 @@ class ExportFlowTest extends PlexTestCase
         );
 
         $this->assertSame(0, $queue->count());
+
+        $records = array_values(array_filter(
+            $this->handler->getRecords(),
+            static fn(LogRecord $record): bool => 'backend.item.ignored' === ($record->context['event_name'] ?? null),
+        ));
+
+        $this->assertNotEmpty($records);
+        $record = end($records);
+        $this->assertSame('missing_local_state', $record->context['reason'] ?? null);
+        $this->assertSame('backend.export', $record->context['subsystem'] ?? null);
     }
 
     public function test_export_ignores_no_guids(): void
@@ -150,6 +184,16 @@ class ExportFlowTest extends PlexTestCase
         );
 
         $this->assertSame(0, $queue->count());
+
+        $records = array_values(array_filter(
+            $this->handler->getRecords(),
+            static fn(LogRecord $record): bool => 'backend.item.ignored' === ($record->context['event_name'] ?? null),
+        ));
+
+        $this->assertNotEmpty($records);
+        $record = end($records);
+        $this->assertSame('missing_supported_guid', $record->context['reason'] ?? null);
+        $this->assertSame('backend.export', $record->context['subsystem'] ?? null);
     }
 
     public function test_export_ignores_missing_date(): void
@@ -177,6 +221,16 @@ class ExportFlowTest extends PlexTestCase
         );
 
         $this->assertSame(0, $queue->count());
+
+        $records = array_values(array_filter(
+            $this->handler->getRecords(),
+            static fn(LogRecord $record): bool => 'backend.item.ignored' === ($record->context['event_name'] ?? null),
+        ));
+
+        $this->assertNotEmpty($records);
+        $record = end($records);
+        $this->assertSame('missing_date', $record->context['reason'] ?? null);
+        $this->assertSame('backend.export', $record->context['subsystem'] ?? null);
     }
 
     private function invokeProcess(

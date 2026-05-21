@@ -8,6 +8,7 @@ use App\API\Player\Playlist;
 use App\Libs\Enums\Http\Status;
 use App\Libs\TestCase;
 use Monolog\Handler\NullHandler;
+use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use Nyholm\Psr7\ServerRequest;
 use Nyholm\Psr7\Uri;
@@ -126,5 +127,34 @@ class PlaylistTest extends TestCase
         $updated = $cache->get($token);
         self::assertIsArray($updated);
         self::assertSame([$side], array_column(ag($updated, 'config.externals', []), 'path'));
+    }
+
+    public function test_playlist_logs_build_failure(): void
+    {
+        $this->initTempDir();
+        $path = self::$tmpPath . '/sample.txt';
+        file_put_contents($path, 'test');
+
+        $cache = new Psr16Cache(new ArrayAdapter());
+        $handler = new TestHandler();
+        $logger = new Logger('test', [$handler]);
+        $token = 'play-test';
+
+        $cache->set($token, [
+            'path' => $path,
+            'time' => 'PT24H',
+            'config' => [],
+        ]);
+
+        $request = new ServerRequest('GET', new Uri('http://localhost/v1/api/player/playlist/' . $token));
+        $response = (new Playlist($cache, $logger))($request, $token);
+
+        self::assertSame(Status::INTERNAL_SERVER_ERROR, Status::from($response->getStatusCode()));
+        self::assertTrue($handler->hasErrorRecords());
+
+        $records = $handler->getRecords();
+        $record = end($records);
+        self::assertSame('player.playlist.build_failed', $record->context['event_name'] ?? null);
+        self::assertSame($path, $record->context['media']['path'] ?? null);
     }
 }

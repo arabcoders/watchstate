@@ -25,7 +25,7 @@ final class ConsoleHandlerTest extends TestCase
             datetime: $date,
             channel: 'logger',
             level: Level::Warning,
-            message: 'SYSTEM: Playlist sync completed without any syncable playlist results.',
+            message: 'Playlist sync completed without syncable results across 2 users.',
         ));
 
         $raw = $output->fetch();
@@ -34,7 +34,7 @@ final class ConsoleHandlerTest extends TestCase
         self::assertStringContainsString("\033[", $raw);
         self::assertIsString($display);
         self::assertSame(
-            make_date($date)->format('m/d, H:i:s') . ' logger WARNING logger SYSTEM: Playlist sync completed without any syncable playlist results.' . PHP_EOL,
+            make_date($date)->format('m/d, H:i:s') . ' logger WARNING logger Playlist sync completed without syncable results across 2 users.' . PHP_EOL,
             $display,
         );
     }
@@ -49,11 +49,11 @@ final class ConsoleHandlerTest extends TestCase
             datetime: $date,
             channel: 'logger',
             level: Level::Warning,
-            message: 'SYSTEM: Playlist sync completed without any syncable playlist results.',
+            message: 'Playlist sync completed without syncable results across 2 users.',
         ));
 
         self::assertSame(
-            '[' . $date->format(DateTimeInterface::ATOM) . '] WARNING: SYSTEM: Playlist sync completed without any syncable playlist results.' . PHP_EOL,
+            '[' . $date->format(DateTimeInterface::ATOM) . '] WARNING: Playlist sync completed without syncable results across 2 users.' . PHP_EOL,
             $output->fetch(),
         );
     }
@@ -67,7 +67,7 @@ final class ConsoleHandlerTest extends TestCase
             datetime: new DateTimeImmutable('2026-05-21T07:36:40+03:00'),
             channel: 'logger',
             level: Level::Notice,
-            message: "SYSTEM: Status for 'tester' Movie: '0000' added, '0003' updated and '0000' failed.",
+            message: "Playlist summary for 'tester@office_plex': 0 playlists, 3 items, added 0, updated 3, removed 0.",
             context: ['user' => 'tester'],
         ));
 
@@ -76,5 +76,33 @@ final class ConsoleHandlerTest extends TestCase
         self::assertStringContainsString('NOTICE', $raw);
         self::assertStringContainsString("\033[35", $raw);
         self::assertStringNotContainsString("\033[31", $raw);
+    }
+
+    public function test_event_name_host_fallback(): void
+    {
+        $output = new BufferedOutput(OutputInterface::VERBOSITY_NORMAL, true);
+        $handler = new ConsoleHandler($output);
+        $date = new DateTimeImmutable('2026-05-21T07:36:40+03:00');
+
+        $handler->handle(new LogRecord(
+            datetime: $date,
+            channel: 'logger',
+            level: Level::Warning,
+            message: "Skipping playlist backend 'main@office_plex': type 'bad' is unsupported.",
+            context: [
+                'event_name' => 'playlist.backend.skipped',
+                'backend' => [
+                    'name' => 'office_plex',
+                ],
+            ],
+        ));
+
+        $display = preg_replace('/\x1b\[[0-9;]*m/', '', $output->fetch());
+
+        self::assertIsString($display);
+        self::assertSame(
+            make_date($date)->format('m/d, H:i:s') . " office_plex WARNING logger Skipping playlist backend 'main@office_plex': type 'bad' is unsupported." . PHP_EOL,
+            $display,
+        );
     }
 }

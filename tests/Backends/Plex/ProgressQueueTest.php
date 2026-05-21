@@ -18,7 +18,7 @@ use App\Libs\QueueRequests;
 
 class ProgressQueueTest extends PlexTestCase
 {
-    public function test_progress_queues_update(): void
+    public function test_queue_update(): void
     {
         Container::add(GetSessions::class, fn() => new class() {
             public function __invoke(): Response

@@ -84,10 +84,18 @@ class HttpClient implements iHttp, iLoggerAware, iReset
                 }
             }
 
-            $this->logger->debug('HttpClient - Request [ {method}: {url} ]', [
-                'method' => $method,
-                'url' => (string) $rUrl,
+            $this->logger->debug('HTTP {http.method} request started: {http.url}.', [
+                'event_name' => 'http.client.request.started',
+                'subsystem' => 'http.client',
+                'operation' => 'request',
+                'outcome' => 'started',
+                'http' => [
+                    'method' => $method,
+                    'url' => (string) $rUrl,
+                    'timeout' => $options['timeout'] ?? null,
+                ],
                 'options' => array_replace_recursive($options, [
+                    'keys' => array_keys($options),
                     'headers' => $headers,
                     'user_data' => [
                         'ok' => 'callable',

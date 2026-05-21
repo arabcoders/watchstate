@@ -303,6 +303,7 @@ return (function () {
             'config' => 'profiler.collector',
             'description' => 'The XHProf data collector URL to send the profiler data to.',
             'type' => 'string',
+            'mask' => true,
         ],
         [
             'key' => 'WS_PROFILER_SAVE',

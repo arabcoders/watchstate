@@ -17,6 +17,7 @@ use App\Libs\TestCase;
 use App\Libs\Uri;
 use Monolog\Handler\TestHandler;
 use Monolog\Level;
+use Monolog\LogRecord;
 use Monolog\Logger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
@@ -51,6 +52,23 @@ class JellyfinGuidTest extends TestCase
         }
     }
 
+    private function record(string $eventName, ?string $reason = null): ?LogRecord
+    {
+        foreach (array_reverse($this->handler->getRecords()) as $record) {
+            if ($eventName !== ($record->context['event_name'] ?? null)) {
+                continue;
+            }
+
+            if (null !== $reason && $reason !== ($record->context['reason'] ?? null)) {
+                continue;
+            }
+
+            return $record;
+        }
+
+        return null;
+    }
+
     private function getClass(): JellyfinGuid
     {
         $this->handler->clear();
@@ -78,6 +96,7 @@ class JellyfinGuidTest extends TestCase
         $this->logger = new Logger('logger', processors: [new LogMessageProcessor()]);
         $this->logger->pushHandler($this->handler);
 
+        Guid::reparse();
         Guid::setLogger($this->logger);
     }
 
@@ -90,10 +109,10 @@ class JellyfinGuidTest extends TestCase
             file_put_contents($tmpFile, "{'foo' => 'too' }");
             Config::save('guid.file', $tmpFile);
             $this->getClass();
-            $this->assertTrue(
-                $this->logged(Level::Error, 'Failed to parse GUIDs file', true),
-                "Assert message logged when the value type does not match the expected type."
-            );
+            $record = $this->record('guid.file.parse_failed');
+            $this->assertNotNull($record, 'Assert file parse failures are logged with stable event name.');
+            $this->assertSame($tmpFile, $record->context['file'] ?? null);
+            $this->handler->clear();
         } finally {
             Config::save('guid.file', $oldGuidFile);
         }
@@ -149,10 +168,10 @@ class JellyfinGuidTest extends TestCase
         $tmpFile = self::$tmpPath . '/guid_' . uniqid();
         touch($tmpFile);
             $this->getClass()->parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Info, 'is empty', true),
-                "Failed to assert that the GUID file is empty."
-            );
+            $record = $this->record('guid.mapping.ignored', 'empty_file');
+            $this->assertNotNull($record, 'Failed to assert that the GUID file is empty.');
+            $this->assertSame($tmpFile, $record->context['file'] ?? null);
+            $this->handler->clear();
 
 
         $tmpFile = self::$tmpPath . '/guid_' . uniqid();
@@ -177,10 +196,9 @@ class JellyfinGuidTest extends TestCase
 
             file_put_contents($tmpFile, Yaml::dump(ag_set($yaml, 'links.0', 'ff')));
             $this->getClass()->parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'Value must be an object.', true),
-                'Assert replace key is an object.'
-            );
+            $record = $this->record('guid.mapping.ignored', 'invalid_link_value');
+            $this->assertNotNull($record, 'Assert replace key is an object.');
+            $this->handler->clear();
 
 
         $this->handler->clear();
@@ -189,42 +207,37 @@ class JellyfinGuidTest extends TestCase
             $yaml = ag_set(['links' => [0 => ['type' => 'jellyfin']]], 'links.0.map', 'foo');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'map value must be an object.', true),
-                'Assert map key is an object.'
-            );
+            $record = $this->record('guid.mapping.ignored', 'invalid_map_value');
+            $this->assertNotNull($record, 'Assert map key is an object.');
+            $this->handler->clear();
 
             $yaml = ag_set($yaml, 'links.0.map', []);
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'map.from field is empty or not a string.', true),
-                'Assert to field is a string.'
-            );
+            $record = $this->record('guid.mapping.ignored', 'invalid_map_from');
+            $this->assertNotNull($record, 'Assert map.from is validated.');
+            $this->handler->clear();
 
             $yaml = ag_set($yaml, 'links.0.map.from', 'foo');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'map.to field is empty or not a string.', true),
-                'Assert to field is a string.'
-            );
+            $record = $this->record('guid.mapping.ignored', 'invalid_map_to');
+            $this->assertNotNull($record, 'Assert map.to is validated.');
+            $this->handler->clear();
 
             $yaml = ag_set($yaml, 'links.0.map.to', 'foobar');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'field does not starts with', true),
-                'Assert to field is a string.'
-            );
+            $record = $this->record('guid.mapping.ignored', 'invalid_guid_type_name');
+            $this->assertNotNull($record, 'Assert GUID type names are validated.');
+            $this->handler->clear();
 
             $yaml = ag_set($yaml, 'links.0.map.to', 'guid_foobar');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'map.to field is not a supported', true),
-                'Assert to field is a string.'
-            );
+            $record = $this->record('guid.mapping.ignored', 'unsupported_guid_type');
+            $this->assertNotNull($record, 'Assert supported GUID types are validated.');
+            $this->handler->clear();
 
             $yaml = ag_set($yaml, 'links.0.map', [
                 'from' => 'tsdb',
@@ -375,9 +388,9 @@ class JellyfinGuidTest extends TestCase
             $this->getClass()->get(['imdb' => '123'], $context),
             'Assert only the the oldest ID is returned for numeric GUIDs.');
 
-        $this->assertTrue(
-            $this->logged(Level::Debug, 'JellyfinGuid: Ignoring', true),
-            'Assert that a log is raised when the GUID is ignored by user choice.'
-        );
+        $record = $this->record('guid.external_id.ignored', 'user_ignored');
+        $this->assertNotNull($record, 'Assert that a log is raised when the GUID is ignored by user choice.');
+        $this->assertSame('imdb', $record->context['guid_source'] ?? null);
+        $this->handler->clear();
     }
 }

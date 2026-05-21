@@ -302,10 +302,18 @@ final readonly class Events
             $entity->logs[] = new JsonlFormatter()->formatValues(
                 channel: 'event',
                 level: Level::Info,
-                message: 'Event was manually updated',
+                message: r("Event '{queued_event}' was manually updated to {status}.", [
+                    'queued_event' => $entity->event,
+                    'status' => strtolower($entity->status->name),
+                ]),
                 context: [
                     'event_id' => (string) $entity->id,
-                    'event' => $entity->event,
+                    'queued_event' => $entity->event,
+                    'status' => strtolower($entity->status->name),
+                    'event_name' => 'events.manual_update',
+                    'subsystem' => 'events',
+                    'operation' => 'manual_update',
+                    'outcome' => 'completed',
                 ],
             );
             $this->repo->save($entity);

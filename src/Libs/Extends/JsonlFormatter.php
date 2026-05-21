@@ -130,7 +130,15 @@ final class JsonlFormatter extends NormalizerFormatter
         $stack = $this->stack($record->context);
         $processId = getmypid();
 
-        $this->flattenInto($fields, $record->context, skip: ['id', 'trace', 'e_file', 'e_line']);
+        $this->flattenInto($fields, $record->context, skip: [
+            'id',
+            'trace',
+            'e_file',
+            'e_line',
+            'exception.trace',
+            'error.trace',
+            'structured.exception.trace',
+        ]);
         $this->flattenInto($fields, $record->extra);
 
         $payload = [
@@ -188,7 +196,7 @@ final class JsonlFormatter extends NormalizerFormatter
             $line = $exceptionData['line'] ?? null;
         }
 
-        $function = $this->traceFunction($context['trace'] ?? ag($context, 'exception.trace'));
+        $function = $this->traceFunction($this->traceData($context));
         $path ??= $context['e_file'] ?? $context['file'] ?? null;
         $line ??= $context['e_line'] ?? $context['line'] ?? null;
 
@@ -388,7 +396,7 @@ final class JsonlFormatter extends NormalizerFormatter
      */
     private function stack(array $context): ?string
     {
-        $trace = $context['trace'] ?? ag($context, 'exception.trace');
+        $trace = $this->traceData($context);
 
         if (is_string($trace) && '' !== trim($trace)) {
             return $trace;
@@ -406,7 +414,7 @@ final class JsonlFormatter extends NormalizerFormatter
      */
     private function exceptionTrace(array $context): ?string
     {
-        $trace = $context['trace'] ?? ag($context, 'exception.trace');
+        $trace = $this->traceData($context);
 
         if (is_string($trace) && '' !== trim($trace)) {
             return trim($trace);
@@ -443,6 +451,11 @@ final class JsonlFormatter extends NormalizerFormatter
         }
 
         return [] === $lines ? null : implode(PHP_EOL, $lines);
+    }
+
+    private function traceData(array $context): mixed
+    {
+        return ag($context, ['trace', 'exception.trace', 'error.trace', 'structured.exception.trace']);
     }
 
     private function traceFunction(mixed $trace): ?string
@@ -510,11 +523,11 @@ final class JsonlFormatter extends NormalizerFormatter
 
             $key = (string) $key;
 
-            if ('' === $prefix && in_array($key, $skip, true)) {
+            $path = '' === $prefix ? $key : $prefix . '.' . $key;
+
+            if (true === $this->shouldSkipPath($path, $skip)) {
                 continue;
             }
-
-            $path = '' === $prefix ? $key : $prefix . '.' . $key;
 
             if ($this->isSensitivePath($path)) {
                 $output[$path] = '[redacted]';
@@ -527,7 +540,7 @@ final class JsonlFormatter extends NormalizerFormatter
                     continue;
                 }
 
-                $this->flattenInto($output, $value, $path);
+                $this->flattenInto($output, $value, $path, $skip);
                 continue;
             }
 
@@ -545,7 +558,7 @@ final class JsonlFormatter extends NormalizerFormatter
                 $normalizedObject = $this->normalizeValue($value);
 
                 if (is_array($normalizedObject)) {
-                    $this->flattenInto($output, $normalizedObject, $path);
+                    $this->flattenInto($output, $normalizedObject, $path, $skip);
                     continue;
                 }
 
@@ -566,6 +579,20 @@ final class JsonlFormatter extends NormalizerFormatter
                 $output[$path] = $normalized;
             }
         }
+    }
+
+    /**
+     * @param list<string> $skip
+     */
+    private function shouldSkipPath(string $path, array $skip): bool
+    {
+        foreach ($skip as $skipPath) {
+            if ($path === $skipPath || true === str_starts_with($path, $skipPath . '.')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function isSensitivePath(string $path): bool

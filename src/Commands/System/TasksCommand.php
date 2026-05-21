@@ -36,6 +36,8 @@ use Symfony\Component\Process\Exception\ExceptionInterface as ProcessException;
 use Symfony\Component\Process\Process;
 use Throwable;
 
+use function exception_log;
+
 /**
  * Class TasksCommand
  *
@@ -242,7 +244,7 @@ final class TasksCommand extends Command
         try {
             $this->eventLogContext = [
                 'event_id' => (string) $event->getEvent()->id,
-                'event' => $eventName,
+                'queued_event' => $eventName,
             ];
             $this->viaEvent = true;
 
@@ -277,9 +279,14 @@ final class TasksCommand extends Command
             };
 
             if (self::CNAME === $eventName) {
-                $event->addLogEntry(Level::Info, "Task: Run '{task_id}'.", [
+                $runStartedAt = make_date();
+                $event->addLogEntry(Level::Info, "Task '{task_id}' started: {command}.", [
                     'task_id' => $eventName,
                     'command' => ag($event->getData(), 'command'),
+                    'event_name' => 'task.run.started',
+                    'subsystem' => 'task',
+                    'operation' => 'run',
+                    'outcome' => 'started',
                 ]);
                 $exitCode = $this->run_command(
                     ag($event->getData(), 'command'),
@@ -287,24 +294,49 @@ final class TasksCommand extends Command
                     $input,
                     Container::get(iOutput::class),
                 );
-                $event->addLogEntry(Level::Info, "Task: End '{task_id}' (Exit Code: {exit_code})", [
-                    'task_id' => $eventName,
-                    'command' => ag($event->getData(), 'command'),
-                    'exit_code' => $exitCode,
-                ]);
+                $event->addLogEntry(
+                    0 === $exitCode ? Level::Info : Level::Error,
+                    "Task '{task_id}' {status} with exit code {exit_code} in {duration_seconds}s.",
+                    [
+                        'task_id' => $eventName,
+                        'command' => ag($event->getData(), 'command'),
+                        'exit_code' => $exitCode,
+                        'status' => 0 === $exitCode ? 'completed' : 'failed',
+                        'duration_seconds' => max(0, make_date()->getTimestamp() - $runStartedAt->getTimestamp()),
+                        'event_name' => 0 === $exitCode ? 'task.run.completed' : 'task.run.failed',
+                        'subsystem' => 'task',
+                        'operation' => 'run',
+                        'outcome' => 0 === $exitCode ? 'completed' : 'failed',
+                    ],
+                );
             }
 
             if (self::NAME === $eventName && !empty($task)) {
-                $event->addLogEntry(Level::Info, "Task: Run '{command}'.", [
+                $runStartedAt = make_date();
+                $event->addLogEntry(Level::Info, "Task '{task_id}' started: {command}.", [
                     'task_id' => ag($task, 'name'),
                     'command' => ag($task, 'command'),
+                    'event_name' => 'task.run.started',
+                    'subsystem' => 'task',
+                    'operation' => 'run',
+                    'outcome' => 'started',
                 ]);
                 $exitCode = $this->runTask($task, $input, Container::get(iOutput::class));
-                $event->addLogEntry(Level::Info, "Task: End '{command}' (Exit Code: {exit_code})", [
-                    'task_id' => ag($task, 'name'),
-                    'command' => ag($task, 'command'),
-                    'exit_code' => $exitCode,
-                ]);
+                $event->addLogEntry(
+                    0 === $exitCode ? Level::Info : Level::Error,
+                    "Task '{task_id}' {status} with exit code {exit_code} in {duration_seconds}s.",
+                    [
+                        'task_id' => ag($task, 'name'),
+                        'command' => ag($task, 'command'),
+                        'exit_code' => $exitCode,
+                        'status' => 0 === $exitCode ? 'completed' : 'failed',
+                        'duration_seconds' => max(0, make_date()->getTimestamp() - $runStartedAt->getTimestamp()),
+                        'event_name' => 0 === $exitCode ? 'task.run.completed' : 'task.run.failed',
+                        'subsystem' => 'task',
+                        'operation' => 'run',
+                        'outcome' => 0 === $exitCode ? 'completed' : 'failed',
+                    ],
+                );
             }
         } finally {
             $this->needToSave = false;
@@ -445,15 +477,22 @@ final class TasksCommand extends Command
                         usleep($this->sleep);
                     } catch (ProcessException $e) {
                         $process->stop();
-                        $this->write(
-                            r('Task: {name} (Failed). ({type}: {message}', [
-                                'name' => $task['name'],
-                                'startDate' => $started->format('D, H:i:s T'),
-                                'type' => $e::class,
-                                'message' => $e->getMessage(),
+                        $this->taskOutput[] = new JsonlFormatter()->formatValues(
+                            channel: 'task',
+                            level: Level::Error,
+                            message: r("Task process '{task_id}' failed while running {command}.", [
+                                'task_id' => (string) $task['name'],
+                                'command' => (string) ag($task, 'command', ''),
                             ]),
-                            $input,
-                            $output,
+                            context: array_replace($this->logContext, $this->eventLogContext, [
+                                'task_id' => (string) $task['name'],
+                                'command' => (string) ag($task, 'command', ''),
+                                'event_name' => 'task.process.failed',
+                                'subsystem' => 'task',
+                                'operation' => 'process',
+                                'outcome' => 'failed',
+                                ...exception_log($e),
+                            ]),
                         );
                         break;
                     }
@@ -476,18 +515,21 @@ final class TasksCommand extends Command
             $event->logs[] = new JsonlFormatter()->formatValues(
                 channel: 'task',
                 level: Level::Info,
-                message: r('run_task.{name}: {cmd} (Started: {start_date})', [
-                    'name' => $task['name'],
+                message: r("Task process '{task_id}' started: {cmd}.", [
+                    'task_id' => $task['name'],
                     'cmd' => $process->getCommandLine(),
-                    'start_date' => $started->format('D, H:i:s T'),
                 ]),
                 context: [
                     'event_id' => (string) $event->id,
-                    'event' => $event->event,
+                    'queued_event' => $event->event,
                     'task_id' => (string) $task['name'],
                     'command' => (string) ag($task, 'command', ''),
                     'cmd' => $process->getCommandLine(),
-                    'start_date' => $started->format('D, H:i:s T'),
+                    'started_at' => $started->format(DATE_ATOM),
+                    'event_name' => 'task.process.started',
+                    'subsystem' => 'task',
+                    'operation' => 'process',
+                    'outcome' => 'started',
                     'source' => 'task',
                 ],
             );
@@ -497,12 +539,20 @@ final class TasksCommand extends Command
                     $event->logs[] = new JsonlFormatter()->formatValues(
                         channel: 'task',
                         level: Level::Info,
-                        message: 'Task completed successfully. And did not produce any output.',
+                        message: r("Task '{task_id}' completed successfully without output.", [
+                            'task_id' => $task['name'],
+                        ]),
                         context: [
                             'event_id' => (string) $event->id,
-                            'event' => $event->event,
+                            'queued_event' => $event->event,
                             'task_id' => (string) $task['name'],
                             'command' => (string) ag($task, 'command', ''),
+                            'status' => 'success',
+                            'output_line_count' => 0,
+                            'event_name' => 'task.run.no_output',
+                            'subsystem' => 'task',
+                            'operation' => 'run',
+                            'outcome' => 'completed',
                             'source' => 'task',
                         ],
                     );
@@ -510,12 +560,22 @@ final class TasksCommand extends Command
                     $event->logs[] = new JsonlFormatter()->formatValues(
                         channel: 'task',
                         level: Level::Error,
-                        message: 'Task failed to complete. And did not produce any output.',
+                        message: r("Task '{task_id}' failed with exit code {exit_code} and no output.", [
+                            'task_id' => $task['name'],
+                            'exit_code' => $process->getExitCode() ?? self::INVALID,
+                        ]),
                         context: [
                             'event_id' => (string) $event->id,
-                            'event' => $event->event,
+                            'queued_event' => $event->event,
                             'task_id' => (string) $task['name'],
                             'command' => (string) ag($task, 'command', ''),
+                            'status' => 'failed',
+                            'output_line_count' => 0,
+                            'exit_code' => $process->getExitCode() ?? self::INVALID,
+                            'event_name' => 'task.run.no_output',
+                            'subsystem' => 'task',
+                            'operation' => 'run',
+                            'outcome' => 'failed',
                             'source' => 'task',
                         ],
                     );
@@ -526,22 +586,25 @@ final class TasksCommand extends Command
             $event->logs[] = new JsonlFormatter()->formatValues(
                 channel: 'task',
                 level: 0 === $process->getExitCode() ? Level::Info : Level::Error,
-                message: r('run_task.{name} ExitCode: {code}:{status} (Ended: {end_date}) - Took {duration}s', [
-                    'name' => $task['name'],
-                    'status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
-                    'code' => $process->getExitCode() ?? self::INVALID,
-                    'end_date' => $ended->format('D, H:i:s T'),
-                    'duration' => $ended->getTimestamp() - $started->getTimestamp(),
+                message: r("Task process '{task_id}' {status} with exit code {exit_code} in {duration_seconds}s.", [
+                    'task_id' => $task['name'],
+                    'status' => 0 === $process->getExitCode() ? 'completed' : 'failed',
+                    'exit_code' => $process->getExitCode() ?? self::INVALID,
+                    'duration_seconds' => $ended->getTimestamp() - $started->getTimestamp(),
                 ]),
                 context: [
                     'event_id' => (string) $event->id,
-                    'event' => $event->event,
+                    'queued_event' => $event->event,
                     'task_id' => (string) $task['name'],
                     'command' => (string) ag($task, 'command', ''),
                     'exit_code' => $process->getExitCode() ?? self::INVALID,
-                    'status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
-                    'end_date' => $ended->format('D, H:i:s T'),
-                    'duration' => $ended->getTimestamp() - $started->getTimestamp(),
+                    'status' => 0 === $process->getExitCode() ? 'completed' : 'failed',
+                    'ended_at' => $ended->format(DATE_ATOM),
+                    'duration_seconds' => $ended->getTimestamp() - $started->getTimestamp(),
+                    'event_name' => 'task.process.completed',
+                    'subsystem' => 'task',
+                    'operation' => 'process',
+                    'outcome' => 0 === $process->getExitCode() ? 'completed' : 'failed',
                     'source' => 'task',
                 ],
             );
@@ -561,10 +624,9 @@ final class TasksCommand extends Command
         }
 
         $this->write(
-            r('run_task.{name}: {cmd} (Started: {startDate})', [
-                'name' => $task['name'],
+            r("Task process '{task_id}' started: {cmd}.", [
+                'task_id' => $task['name'],
                 'cmd' => $process->getCommandLine(),
-                'startDate' => $started->format('D, H:i:s T'),
             ]),
             $input,
             $output,
@@ -573,12 +635,11 @@ final class TasksCommand extends Command
             $this->write($line, $input, $output);
         }
         $this->write(
-            r('run_task.{name}: ExitCode: {code}:{status} (Ended: {end_date}) - Took {duration}s', [
-                'name' => $task['name'],
-                'status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
-                'code' => $process->getExitCode() ?? self::INVALID,
-                'end_date' => $ended->format('D, H:i:s T'),
-                'duration' => $ended->getTimestamp() - $started->getTimestamp(),
+            r("Task process '{task_id}' {status} with exit code {exit_code} in {duration_seconds}s.", [
+                'task_id' => $task['name'],
+                'status' => 0 === $process->getExitCode() ? 'completed' : 'failed',
+                'exit_code' => $process->getExitCode() ?? self::INVALID,
+                'duration_seconds' => $ended->getTimestamp() - $started->getTimestamp(),
             ]),
             $input,
             $output,
@@ -640,15 +701,22 @@ final class TasksCommand extends Command
                         usleep($this->sleep);
                     } catch (ProcessException $e) {
                         $process->stop();
-                        $this->write(
-                            r('Command: {command} (Failed). ({type}: {message}', [
+                        $this->taskOutput[] = new JsonlFormatter()->formatValues(
+                            channel: 'task',
+                            level: Level::Error,
+                            message: r("Task process '{task_id}' failed while running {command}.", [
+                                'task_id' => self::CNAME,
                                 'command' => $command,
-                                'startDate' => $started->format('D, H:i:s T'),
-                                'type' => $e::class,
-                                'message' => $e->getMessage(),
                             ]),
-                            $input,
-                            $output,
+                            context: array_replace($this->logContext, $this->eventLogContext, [
+                                'task_id' => self::CNAME,
+                                'command' => $command,
+                                'event_name' => 'task.process.failed',
+                                'subsystem' => 'task',
+                                'operation' => 'process',
+                                'outcome' => 'failed',
+                                ...exception_log($e),
+                            ]),
                         );
                         break;
                     }
@@ -674,28 +742,24 @@ final class TasksCommand extends Command
             }
         }
 
-        $this->write('--------------------------', $input, $output);
         $this->write(
-            r('Command: {name} (Started: {startDate})', [
+            r("Task process '{task_id}' started: {command}.", [
+                'task_id' => self::CNAME,
                 'command' => $command,
-                'startDate' => $started->format('D, H:i:s T'),
             ]),
             $input,
             $output,
         );
-        $this->write(r('Command: {cmd}', ['cmd' => $process->getCommandLine()]), $input, $output);
         $this->write(
-            r('Exit Code: {code}:{status} (Ended: {end_date}) - Took {duration}s', [
-                'status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
-                'code' => $process->getExitCode() ?? self::INVALID,
-                'end_date' => $ended->format('D, H:i:s T'),
-                'duration' => $ended->getTimestamp() - $started->getTimestamp(),
+            r("Task process '{task_id}' {status} with exit code {exit_code} in {duration_seconds}s.", [
+                'task_id' => self::CNAME,
+                'status' => 0 === $process->getExitCode() ? 'completed' : 'failed',
+                'exit_code' => $process->getExitCode() ?? self::INVALID,
+                'duration_seconds' => $ended->getTimestamp() - $started->getTimestamp(),
             ]),
             $input,
             $output,
         );
-        $this->write('--------------------------', $input, $output);
-        $this->write(' ' . PHP_EOL, $input, $output);
 
         foreach ($this->taskOutput as $line) {
             $this->write($line, $input, $output);
@@ -806,11 +870,35 @@ final class TasksCommand extends Command
             return;
         }
 
-        $this->taskOutput[] = $line;
+        $lineNumber = count($this->taskOutput) + 1;
+        $wrappedLine = $line;
+
+        if (false === JsonlFormatter::isJsonlRecord($line)) {
+            $wrappedLine = rtrim(new JsonlFormatter()->formatValues(
+                channel: 'task',
+                level: 'err' === $std ? Level::Warning : Level::Info,
+                message: r('{stream} from task \'{task_id}\': {line}', [
+                    'stream' => 'err' === $std ? 'stderr' : 'stdout',
+                    'task_id' => (string) ag($this->logContext, 'task_id', ''),
+                    'line' => $this->normalizeTaskMessage($line),
+                ]),
+                context: array_replace($this->logContext, $this->eventLogContext, [
+                    'stream' => 'err' === $std ? 'stderr' : 'stdout',
+                    'line' => $this->normalizeTaskMessage($line),
+                    'line_number' => $lineNumber,
+                    'event_name' => 'task.output',
+                    'subsystem' => 'task',
+                    'operation' => 'output',
+                    'outcome' => 'received',
+                ]),
+            ), "\r\n");
+        }
+
+        $this->taskOutput[] = $wrappedLine;
 
         if (null !== $this->writer && false === $this->suppressor->isSuppressed($line)) {
             try {
-                ($this->writer)($this->formatTaskLogLine($line));
+                ($this->writer)($this->formatTaskLogLine($wrappedLine));
             } catch (Throwable) {
                 // Do nothing
             }
@@ -820,7 +908,7 @@ final class TasksCommand extends Command
             return;
         }
 
-        ('err' === $std ? $output->getErrorOutput() : $output)->writeln($this->formatTaskOutputLine($line));
+        ('err' === $std ? $output->getErrorOutput() : $output)->writeln($this->formatTaskOutputLine($wrappedLine));
     }
 
     private function formatTaskLogLine(string $line): string

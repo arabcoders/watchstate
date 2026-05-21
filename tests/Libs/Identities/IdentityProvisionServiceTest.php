@@ -7,10 +7,13 @@ namespace Tests\Libs\Identities;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Database\PdoFactory;
+use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\Identities\IdentityProvisionRequest;
 use App\Libs\Identities\IdentityProvisionService;
 use App\Libs\Options;
 use App\Libs\TestCase;
+use Monolog\Handler\TestHandler;
+use Monolog\Logger;
 use PDO;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Yaml\Yaml;
@@ -138,7 +141,7 @@ final class IdentityProvisionServiceTest extends TestCase
 
     public function test_syncBackends_preserves(): void
     {
-        $service = $this->makeService();
+        [$service, $handler] = $this->makeLoggedService();
 
         $result = $service->syncBackends(false);
 
@@ -181,6 +184,74 @@ final class IdentityProvisionServiceTest extends TestCase
 
         $this->assertSame('https://manual.example.com', ag($data, 'manual_backend.url'), 'Unlinked backends must remain untouched.');
         $this->assertSame('manual-token', ag($data, 'manual_backend.token'));
+
+        $records = $this->filterRecords($handler, 'identity.provision.backend.completed');
+
+        self::assertNotEmpty($records);
+        self::assertSame("Synced backend 'alice@plex_alice' from 'plex_main'.", $records[0]->message);
+        self::assertSame('backend.sync', $records[0]->context['operation']);
+        self::assertSame('plex_main', $records[0]->context['source_backend']);
+        self::assertSame('alice', $records[0]->context['identity']);
+        self::assertSame('plex_alice', $records[0]->context['backend']);
+    }
+
+    public function test_loadBackends_logs_structured_ignored_backends(): void
+    {
+        file_put_contents(
+            Config::get('backends_file'),
+            Yaml::dump([
+                'bad_type' => [
+                    'type' => 'bad',
+                    'url' => 'https://bad.example.com',
+                ],
+                'bad_url' => [
+                    'type' => 'plex',
+                    'url' => 'not-a-url',
+                ],
+            ], 4, 2),
+        );
+
+        [$service, $handler] = $this->makeLoggedService();
+
+        self::assertSame([], $service->loadBackends());
+
+        $records = $this->filterRecords($handler, 'identity.provision.backend.ignored');
+
+        self::assertCount(2, $records);
+        self::assertSame("Skipping backend 'bad_type': type 'bad' is unsupported.", $records[0]->message);
+        self::assertSame('unsupported_type', $records[0]->context['reason']);
+        self::assertSame('bad_type', $records[0]->context['backend']);
+        self::assertSame('bad', $records[0]->context['backend_type']);
+        self::assertSame("Skipping backend 'bad_url': URL 'not-a-url' is invalid.", $records[1]->message);
+        self::assertSame('invalid_url', $records[1]->context['reason']);
+        self::assertSame('bad_url', $records[1]->context['backend']);
+        self::assertSame('not-a-url', $records[1]->context['url']);
+    }
+
+    public function test_mapActions_logs_structured_rename(): void
+    {
+        [$service, $handler] = $this->makeLoggedService();
+        $user = ['name' => 'alice'];
+        $mapping = [[
+            'plex_main' => [
+                'name' => 'alice',
+                'replace_with' => 'alice_renamed',
+            ],
+        ]];
+
+        $service->mapActions('plex_main', $user, $mapping);
+
+        self::assertSame('alice_renamed', $user['name']);
+        self::assertSame('alice_renamed', $mapping[0]['plex_main']['name']);
+
+        $records = $this->filterRecords($handler, 'identity.provision.map.completed');
+
+        self::assertCount(1, $records);
+        self::assertSame("Renamed 'plex_main: alice' to 'plex_main: alice_renamed' using the mapper.", $records[0]->message);
+        self::assertSame('map.apply', $records[0]->context['operation']);
+        self::assertSame('plex_main', $records[0]->context['backend']);
+        self::assertSame('alice', $records[0]->context['username']);
+        self::assertSame('alice_renamed', $records[0]->context['new_username']);
     }
 
     public function test_createIdentities_initializes_new_identity_db(): void
@@ -218,6 +289,32 @@ final class IdentityProvisionServiceTest extends TestCase
 
         $config = Yaml::parseFile($this->tempDir . '/users/bob/servers.yaml');
         self::assertSame('https://new-plex.example.com', ag($config, 'plex_bob.url'));
+    }
+
+    /**
+     * @return array{IdentityProvisionService, TestHandler}
+     */
+    private function makeLoggedService(): array
+    {
+        $handler = new TestHandler();
+        $logger = new Logger('logger', processors: [new LogMessageProcessor()]);
+        $logger->pushHandler($handler);
+
+        return [new IdentityProvisionService(
+            mapper: Container::get(\App\Libs\Mappers\ImportInterface::class),
+            logger: $logger,
+        ), $handler];
+    }
+
+    /**
+     * @return array<int, \Monolog\LogRecord>
+     */
+    private function filterRecords(TestHandler $handler, string $eventName): array
+    {
+        return array_values(array_filter(
+            $handler->getRecords(),
+            static fn($record): bool => $eventName === ($record->context['event_name'] ?? null),
+        ));
     }
 
     private function makeService(): IdentityProvisionService

@@ -46,13 +46,13 @@ final class IndexTest extends TestCase
     public function test_event_marker(): void
     {
         $eventId = '550e8400-e29b-41d4-a716-446655440000';
-        $line = "[2026-04-27T10:17:56+03:00] NOTICE: [event:{$eventId}] Dispatching Event: 'on_push' queued at '2026-05-17T08:25:02+03:00'.";
+        $line = "[2026-04-27T10:17:56+03:00] NOTICE: [event:{$eventId}] Dispatching queued event 'on_push' from 2026-05-17T08:25:02+03:00.";
 
         $parsed = Index::formatLog($line);
 
         $this->assertSame($eventId, $parsed['event_id']);
         $this->assertSame('notice', $parsed['level']);
-        $this->assertSame("NOTICE: Dispatching Event: 'on_push' queued at '2026-05-17T08:25:02+03:00'.", $parsed['text']);
+        $this->assertSame("NOTICE: Dispatching queued event 'on_push' from 2026-05-17T08:25:02+03:00.", $parsed['text']);
     }
 
     public function test_jsonl(): void

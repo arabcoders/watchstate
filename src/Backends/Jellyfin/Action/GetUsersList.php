@@ -35,7 +35,7 @@ class GetUsersList
     /**
      * Class Constructor.
      *
-     * @param iHttp $http The HTTP client instance.
+     * @param iHttp&\App\Libs\Extends\HttpClient $http The HTTP client instance.
      * @param iLogger $logger The logger instance.
      */
     public function __construct(
@@ -89,7 +89,14 @@ class GetUsersList
             'url' => (string) $url,
         ];
 
-        $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' users list.", $logContext);
+        $this->logger->debug("Requesting users list from '{user}@{backend}'.", [
+            ...$logContext,
+            'event_name' => 'backend.request.started',
+            'subsystem' => 'backend.user',
+            'operation' => 'list',
+            'outcome' => 'started',
+            'http' => ['url' => (string) $url],
+        ]);
 
         $headers = $context->getHttpOptions();
 
@@ -107,10 +114,19 @@ class GetUsersList
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{client}: {user}@{backend}' users list returned with unexpected '{status_code}' status code.",
+                    message: "Users list request to '{user}@{backend}' returned status {http.status_code}.",
                     context: [
                         ...$logContext,
-                        'status_code' => $response->getStatusCode(),
+                        'event_name' => 'backend.response.failed',
+                        'subsystem' => 'backend.user',
+                        'operation' => 'list',
+                        'outcome' => 'failed',
+                        'reason' => 'unexpected_status',
+                        'http' => [
+                            'status_code' => $response->getStatusCode(),
+                            'expected_status_codes' => [Status::OK->value],
+                            'url' => (string) $url,
+                        ],
                     ],
                     level: Levels::ERROR,
                 ),
@@ -124,8 +140,12 @@ class GetUsersList
         );
 
         if ($context->trace) {
-            $this->logger->debug("{action}: Parsing '{client}: {user}@{backend}' user list payload.", [
+            $this->logger->debug("Processing users list response from '{user}@{backend}'.", [
                 ...$logContext,
+                'event_name' => 'backend.response.received',
+                'subsystem' => 'backend.user',
+                'operation' => 'list',
+                'outcome' => 'received',
                 'response' => ['body' => $json],
             ]);
         }

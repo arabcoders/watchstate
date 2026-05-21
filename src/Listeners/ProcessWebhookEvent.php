@@ -128,13 +128,19 @@ final class ProcessWebhookEvent
         }
 
         if (null === $client) {
+            $payload = $request->getParsedBody();
             $this->write(
                 $request,
                 Level::Warning,
-                'No backend client were able to parse the the request.',
+                'Webhook request from {request.ip} could not be parsed by any backend client.',
                 context: [
-                    'headers' => $request->getHeaders(),
-                    'payload' => $request->getParsedBody(),
+                    'event_name' => 'webhook.request.unparsed',
+                    'subsystem' => 'webhook',
+                    'operation' => 'request',
+                    'outcome' => 'ignored',
+                    'reason' => 'unsupported_payload',
+                    'backend_client_count' => count($usersContext['main']->config->getAll()),
+                    'payload_keys' => true === is_array($payload) ? array_keys($payload) : [],
                 ],
             );
             return;
@@ -146,12 +152,29 @@ final class ProcessWebhookEvent
         $uuid = ag($attr, 'backend.id');
 
         if (null === $uuid) {
-            $this->write($request, Level::Notice, "Request payload didn't contain a backend unique id.");
+            $payload = $request->getParsedBody();
+            $this->write($request, Level::Notice, 'Webhook request from {request.ip} is missing backend identifier.', [
+                'event_name' => 'webhook.request.missing_backend_id',
+                'subsystem' => 'webhook',
+                'operation' => 'request',
+                'outcome' => 'ignored',
+                'reason' => 'missing_backend_id',
+                'payload_keys' => true === is_array($payload) ? array_keys($payload) : [],
+            ]);
             return;
         }
 
         if (false === $isGeneric && null === $userId) {
-            $this->write($request, Level::Warning, "Request payload didn't contain a user id.");
+            $payload = $request->getParsedBody();
+            $this->write($request, Level::Warning, 'Webhook request from {request.ip} is missing user identifier.', [
+                'event_name' => 'webhook.request.missing_user_id',
+                'subsystem' => 'webhook',
+                'operation' => 'request',
+                'outcome' => 'ignored',
+                'reason' => 'missing_user_id',
+                'backend_uuid' => (string) $uuid,
+                'payload_keys' => true === is_array($payload) ? array_keys($payload) : [],
+            ]);
             return;
         }
 
@@ -181,11 +204,17 @@ final class ProcessWebhookEvent
             $this->write(
                 $request,
                 Level::Info,
-                "Request from '{client}' didn't match any user/backend.",
+                'Webhook request from {client} did not match any configured user/backend.',
                 context: [
-                    'client' => $client->getName(),
-                    'headers' => $request->getHeaders(),
-                    'payload' => $request->getParsedBody(),
+                    'event_name' => 'webhook.request.no_match',
+                    'subsystem' => 'webhook',
+                    'operation' => 'request',
+                    'outcome' => 'ignored',
+                    'reason' => 'no_config_match',
+                    'client' => $client->getType(),
+                    'backend_uuid' => (string) $uuid,
+                    'user_id' => null === $userId ? null : (string) $userId,
+                    'payload_keys' => true === is_array($request->getParsedBody()) ? array_keys($request->getParsedBody()) : [],
                 ],
             );
             return;
@@ -195,10 +224,17 @@ final class ProcessWebhookEvent
             $this->write(
                 $request,
                 Level::Info,
-                "Request from '{client}' treated as noop. No processing will be done.",
+                'Webhook request from {client} treated as noop: {reason_label}.',
                 context: [
-                    'client' => $client->getName(),
-                    'headers' => $request->getHeaders(),
+                    'event_name' => 'webhook.request.noop',
+                    'subsystem' => 'webhook',
+                    'operation' => 'request',
+                    'outcome' => 'ignored',
+                    'client' => $client->getType(),
+                    'backend_uuid' => (string) $uuid,
+                    'user_id' => null === $userId ? null : (string) $userId,
+                    'reason' => 'noop',
+                    'reason_label' => 'request flagged as noop',
                 ],
             );
             return;
@@ -224,11 +260,15 @@ final class ProcessWebhookEvent
             $this->write(
                 request: $request,
                 level: $this->level($e),
-                message: "Failed to process webhook for '{user}@{backend}'. {msg}.",
+                message: "Failed to process webhook item from '{user}@{backend}'.",
                 context: [
+                    'event_name' => 'webhook.item.failed',
+                    'subsystem' => 'webhook',
+                    'operation' => 'process',
+                    'outcome' => 'failed',
                     'user' => $mainBackend['userContext']->name,
                     'backend' => $mainBackend['backendName'],
-                    'msg' => $e->getMessage(),
+                    'client' => $mainBackend['client']->getType(),
                     ...exception_log($e),
                 ],
             );
@@ -239,14 +279,20 @@ final class ProcessWebhookEvent
             $this->write(
                 request: $request,
                 level: Level::Warning,
-                message: "Ignoring '{user}@{backend}' {item.type} '{item.title}'. No valid/supported external ids.",
+                message: "Ignoring webhook item '{item_title}' from '{user}@{backend}': no supported external ids.",
                 context: [
+                    'event_name' => 'webhook.item.ignored',
+                    'subsystem' => 'webhook',
+                    'operation' => 'process',
+                    'outcome' => 'ignored',
+                    'reason' => 'no_supported_external_ids',
                     'user' => $mainBackend['userContext']->name,
                     'backend' => $entity->via,
-                    'item' => [
-                        'title' => $entity->getName(),
-                        'type' => $entity->type,
-                    ],
+                    'client' => $mainBackend['client']->getType(),
+                    'item_id' => (string) ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '?'),
+                    'item_type' => $entity->type,
+                    'item_title' => $entity->getName(),
+                    'guid_count' => count($entity->getGuids()),
                 ],
             );
             return;
@@ -256,16 +302,21 @@ final class ProcessWebhookEvent
             $this->write(
                 request: $request,
                 level: Level::Notice,
-                message: "Ignoring '{user}@{backend}' {item.type} '{item.title}'. No episode/season number present.",
+                message: "Ignoring webhook item '{item_title}' from '{user}@{backend}': episode or season number is missing.",
                 context: [
+                    'event_name' => 'webhook.item.ignored',
+                    'subsystem' => 'webhook',
+                    'operation' => 'process',
+                    'outcome' => 'ignored',
+                    'reason' => 'missing_episode_metadata',
                     'user' => $mainBackend['userContext']->name,
                     'backend' => $entity->via,
-                    'item' => [
-                        'title' => $entity->getName(),
-                        'type' => $entity->type,
-                        'season' => (string) ($entity->season ?? 'None'),
-                        'episode' => (string) ($entity->episode ?? 'None'),
-                    ],
+                    'client' => $mainBackend['client']->getType(),
+                    'item_id' => (string) ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '?'),
+                    'item_type' => $entity->type,
+                    'item_title' => $entity->getName(),
+                    'season' => (string) ($entity->season ?? 'None'),
+                    'episode' => (string) ($entity->episode ?? 'None'),
                 ],
             );
 
@@ -276,10 +327,16 @@ final class ProcessWebhookEvent
             $this->write(
                 request: $request,
                 level: Level::Info,
-                message: "Request from '{client}' matched '{count}' user/backends.",
+                message: 'Webhook request from {client} matched {count} configured user/backends.',
                 context: [
-                    'client' => $client->getName(),
+                    'event_name' => 'webhook.request.matched_multiple',
+                    'subsystem' => 'webhook',
+                    'operation' => 'request',
+                    'outcome' => 'matched',
+                    'client' => $client->getType(),
                     'count' => count($backends),
+                    'backend_uuid' => (string) $uuid,
+                    'user_id' => null === $userId ? null : (string) $userId,
                 ],
             );
         }
@@ -312,16 +369,18 @@ final class ProcessWebhookEvent
                 $this->write(
                     request: $perUserRequest,
                     level: $this->level($e),
-                    message: "Failed to process '{user}@{backend}' {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'. {trace}",
+                    message: "Failed to process webhook item '{item_title}' from '{user}@{backend}'.",
                     context: [
+                        'event_name' => 'webhook.item.failed',
+                        'subsystem' => 'webhook',
+                        'operation' => 'process',
+                        'outcome' => 'failed',
                         'user' => $target['userContext']->name,
                         'backend' => $target['backendName'],
-                        'trace' => json_encode($e->getTrace(), flags: JSON_UNESCAPED_SLASHES),
-                        'item' => [
-                            'title' => $entity->getName(),
-                            'type' => $entity->type,
-                        ],
-                        'msg' => $e->getMessage(),
+                        'client' => $target['client']->getType(),
+                        'item_id' => (string) ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '?'),
+                        'item_type' => $entity->type,
+                        'item_title' => $entity->getName(),
                         ...exception_log($e),
                     ],
                 );
@@ -363,10 +422,16 @@ final class ProcessWebhookEvent
                 $this->write(
                     $request,
                     Level::Warning,
-                    "Import are disabled for '{user}@{backend}'.",
+                    "Ignoring webhook for '{user}@{backend}': import is disabled.",
                     context: [
                         'user' => $userContext->name,
-                        'backend' => $client->getName(),
+                        'backend' => $backendName,
+                        'client' => $client->getType(),
+                        'event_name' => 'webhook.backend.import_disabled',
+                        'subsystem' => 'webhook',
+                        'operation' => 'process',
+                        'outcome' => 'ignored',
+                        'reason' => 'import_disabled',
                     ],
                 );
             }
@@ -394,14 +459,20 @@ final class ProcessWebhookEvent
                 $this->write(
                     request: $request,
                     level: Level::Warning,
-                    message: "Ignoring '{user}@{backend}' {item.type} '{item.title}'. No valid/supported external ids.",
+                    message: "Ignoring webhook item '{item_title}' from '{user}@{backend}': no supported external ids.",
                     context: [
+                        'event_name' => 'webhook.item.ignored',
+                        'subsystem' => 'webhook',
+                        'operation' => 'process',
+                        'outcome' => 'ignored',
+                        'reason' => 'no_supported_external_ids',
                         'user' => $userContext->name,
                         'backend' => $entity->via,
-                        'item' => [
-                            'title' => $entity->getName(),
-                            'type' => $entity->type,
-                        ],
+                        'client' => $client->getType(),
+                        'item_id' => (string) ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '?'),
+                        'item_title' => $entity->getName(),
+                        'item_type' => $entity->type,
+                        'guid_count' => count($entity->getGuids()),
                     ],
                 );
             }
@@ -414,16 +485,21 @@ final class ProcessWebhookEvent
                 $this->write(
                     request: $request,
                     level: Level::Notice,
-                    message: "Ignoring '{user}@{backend}' {item.type} '{item.title}'. No episode/season number present.",
+                    message: "Ignoring webhook item '{item_title}' from '{user}@{backend}': episode or season number is missing.",
                     context: [
+                        'event_name' => 'webhook.item.ignored',
+                        'subsystem' => 'webhook',
+                        'operation' => 'process',
+                        'outcome' => 'ignored',
+                        'reason' => 'missing_episode_metadata',
                         'user' => $userContext->name,
                         'backend' => $entity->via,
-                        'item' => [
-                            'title' => $entity->getName(),
-                            'type' => $entity->type,
-                            'season' => (string) ($entity->season ?? 'None'),
-                            'episode' => (string) ($entity->episode ?? 'None'),
-                        ],
+                        'client' => $client->getType(),
+                        'item_id' => (string) ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '?'),
+                        'item_title' => $entity->getName(),
+                        'item_type' => $entity->type,
+                        'season' => (string) ($entity->season ?? 'None'),
+                        'episode' => (string) ($entity->episode ?? 'None'),
                     ],
                 );
             }
@@ -456,7 +532,14 @@ final class ProcessWebhookEvent
         try {
             $userContext = get_user_context(user: $user, mapper: $this->mapper, logger: $this->logger);
         } catch (RuntimeException $ex) {
-            ($this->writer)(Level::Error, $ex->getMessage());
+            ($this->writer)(Level::Error, "Failed to load webhook user context for '{user}'.", [
+                'event_name' => 'webhook.request.user_context_failed',
+                'subsystem' => 'webhook',
+                'operation' => 'request',
+                'outcome' => 'failed',
+                'user' => $user,
+                ...exception_log($ex),
+            ]);
             return $event;
         }
 
@@ -473,7 +556,19 @@ final class ProcessWebhookEvent
             try {
                 $backend->getMetadata(ag($entity->getMetadata($entity->via), iState::COLUMN_ID));
             } catch (Throwable $ex) {
-                ($this->writer)(Level::Info, $ex->getMessage());
+                ($this->writer)(Level::Info, "Ignoring webhook item '{item_title}' from '{user}@{backend}': metadata is unavailable.", [
+                    'event_name' => 'webhook.item.ignored',
+                    'subsystem' => 'webhook',
+                    'operation' => 'process',
+                    'outcome' => 'ignored',
+                    'reason' => 'metadata_unavailable',
+                    'user' => $userContext->name,
+                    'backend' => $entity->via,
+                    'item_id' => (string) ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '?'),
+                    'item_type' => $entity->type,
+                    'item_title' => $entity->getName(),
+                    ...exception_log($ex),
+                ]);
                 return $event;
             }
         }
@@ -482,32 +577,47 @@ final class ProcessWebhookEvent
             $lastSync = make_date($lastSync);
         }
 
-        ($this->writer)(Level::Notice, "{prefix}Processing '{user}@{backend}' request '{title}'.", [
+        $isDebug = (bool) ag($options, Options::DEBUG_TRACE, false);
+        if (true === (bool) ag($userContext->config->get("{$entity->via}.options"), Options::DEBUG_TRACE, false)) {
+            $isDebug = true;
+        }
+
+        ($this->writer)(Level::Notice, "Processing webhook {item_type} '{item_title}' from '{user}@{backend}'.", [
+            'event_name' => 'webhook.item.processing',
+            'subsystem' => 'webhook',
+            'operation' => 'process',
+            'outcome' => 'started',
             'backend' => $entity->via,
-            'title' => $entity->getName(),
-            'prefix' => true === $entity->isTainted() ? '[T] ' : '',
+            'client' => (string) ag($userContext->config->get($entity->via), 'type', $entity->via),
             'user' => $userContext->name,
-            'item' => [
-                'title' => $entity->getName(),
-                'type' => $entity->type,
-            ],
+            'item_id' => (string) ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '?'),
+            'item_title' => $entity->getName(),
+            'item_type' => $entity->type,
             'backend_item_id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID),
             'request_id' => ag($options, Options::REQUEST_ID, '-'),
             'state' => $entity->isWatched() ? 'played' : 'unplayed',
-            'progress' => $entity->hasPlayProgress() ? 'Yes' : 'No',
+            'progress' => true === $entity->hasPlayProgress(),
             'webhook_event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, '??'),
             'last_sync' => $lastSync,
+            'debug' => $isDebug,
+            'tainted' => $entity->isTainted(),
         ]);
-
-        $isDebug = (bool) ag($options, Options::DEBUG_TRACE, false);
-        if (true === (bool) ag($backend->getContext()->options, Options::DEBUG_TRACE, false)) {
-            $isDebug = true;
-        }
 
         $mapper = $userContext->mapper;
 
         if (true === $isDebug) {
-            ($this->writer)(Level::Notice, 'Debug mode enabled.');
+            ($this->writer)(Level::Notice, "Webhook debug tracing enabled for '{user}@{backend}'.", [
+                'event_name' => 'webhook.item.debug_enabled',
+                'subsystem' => 'webhook',
+                'operation' => 'process',
+                'outcome' => 'started',
+                'user' => $userContext->name,
+                'backend' => $entity->via,
+                'item_id' => (string) ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '?'),
+                'item_title' => $entity->getName(),
+                'item_type' => $entity->type,
+                'debug' => true,
+            ]);
             $mapper = $mapper->setOptions(ag_set($mapper->getOptions(), Options::DEBUG_TRACE, true));
         }
 

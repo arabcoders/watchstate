@@ -12,6 +12,7 @@ use App\Libs\Container;
 use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Options;
 use App\Libs\Playlists\PlaylistStore;
@@ -20,6 +21,7 @@ use App\Libs\TestCase;
 use App\Libs\Uri;
 use App\Libs\UserContext;
 use Monolog\Handler\NullHandler;
+use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use stdClass;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -29,7 +31,8 @@ final class PlaylistSyncServiceTest extends TestCase
 {
     public function test_partial_sync_no_promote(): void
     {
-        $logger = new Logger('test', [new NullHandler()]);
+        $handler = new TestHandler();
+        $logger = new Logger('test', [$handler], [new LogMessageProcessor()]);
         $userContext = $this->makeUserContext($logger);
         $store = new PlaylistStore($userContext->db->getDBLayer());
         Container::reinitialize();
@@ -134,6 +137,30 @@ final class PlaylistSyncServiceTest extends TestCase
         self::assertSame(1, ag($targetRows[0], 'metadata.sync.available_item_count'));
         self::assertSame(['Shared Episode B (2024)'], ag($targetRows[0], 'metadata.sync.missing_titles'));
 
+        $records = array_values(array_filter(
+            $handler->getRecords(),
+            static fn($record): bool => 'playlist.operation.planned' === ($record->context['event_name'] ?? null)
+                && 'partial_target_items' === ($record->context['reason'] ?? null),
+        ));
+
+        self::assertCount(1, $records);
+        self::assertSame(
+            "Planning partial create for playlist 'Shared Episodes' on 'main@target': 1 of 2 items are available.",
+            $records[0]->message,
+        );
+        self::assertSame('partial_target_items', $records[0]->context['reason']);
+        self::assertSame('Shared Episodes', $records[0]->context['playlist_title']);
+        self::assertSame(1, $records[0]->context['available_count']);
+        self::assertSame(2, $records[0]->context['total_count']);
+
+        $selected = array_values(array_filter(
+            $handler->getRecords(),
+            static fn($record): bool => 'playlist.plan.winner_selected' === ($record->context['event_name'] ?? null),
+        ));
+
+        self::assertNotEmpty($selected);
+        self::assertSame('source', $selected[0]->context['source_backend']);
+
         $secondRun = $service->sync($userContext, $clients, $opts);
 
         self::assertSame(0, $sourceState->createCalls);
@@ -162,6 +189,20 @@ final class PlaylistSyncServiceTest extends TestCase
         self::assertFalse((bool) ag($targetRows[0], 'metadata.sync.partial', false));
         self::assertFalse((bool) ag($targetRows[0], 'metadata.sync.generated_by_sync', false));
         self::assertNull(ag($targetRows[0], 'metadata.sync.desired_content_hash'));
+
+        $applied = array_values(array_filter(
+            $handler->getRecords(),
+            static fn($record): bool => 'playlist.operation.applied' === ($record->context['event_name'] ?? null),
+        ));
+
+        self::assertNotEmpty($applied);
+
+        $stored = array_values(array_filter(
+            $handler->getRecords(),
+            static fn($record): bool => 'playlist.snapshot.stored' === ($record->context['event_name'] ?? null),
+        ));
+
+        self::assertNotEmpty($stored);
     }
 
     public function test_sync_skips_empty(): void

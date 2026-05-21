@@ -37,7 +37,7 @@ final class Guid implements JsonSerializable, Stringable
     /**
      * @var array GUID types and their respective data types.
      */
-    private static array $supported = [
+    private const array DEFAULT_SUPPORTED = [
         Guid::GUID_IMDB => 'string',
         Guid::GUID_TVDB => 'string',
         Guid::GUID_TMDB => 'string',
@@ -49,6 +49,11 @@ final class Guid implements JsonSerializable, Stringable
     ];
 
     /**
+     * @var array GUID types and their respective data types.
+     */
+    private static array $supported = self::DEFAULT_SUPPORTED;
+
+    /**
      * Constant array for validating GUIDs.
      *
      * This array contains the patterns and example formats for validating GUIDs of different types.
@@ -58,7 +63,7 @@ final class Guid implements JsonSerializable, Stringable
      *
      * @var array<string, array{ pattern: string, example: string, tests: array{ valid: array<string|int>, invalid: array<string|int> } }>
      */
-    private static array $validateGuid = [
+    private const array DEFAULT_VALIDATE_GUID = [
         Guid::GUID_IMDB => [
             'description' => 'IMDB ID Parser.',
             'pattern' => '/^(?<guid>tt[0-9\/]+)$/i',
@@ -116,6 +121,18 @@ final class Guid implements JsonSerializable, Stringable
     ];
 
     /**
+     * Constant array for validating GUIDs.
+     *
+     * This array contains the patterns and example formats for validating GUIDs of different types.
+     * Each GUID type is mapped to an array with two keys:
+     * - 'pattern' (string): The regular expression pattern to match against the GUID.
+     * - 'example' (string): An example format of the GUID value.
+     *
+     * @var array<string, array{ pattern: string, example: string, tests: array{ valid: array<string|int>, invalid: array<string|int> } }>
+     */
+    private static array $validateGuid = self::DEFAULT_VALIDATE_GUID;
+
+    /**
      * @var string LOOKUP_KEY is how we format external ids to look up a record.
      */
     private const string LOOKUP_KEY = '{db}://{id}';
@@ -158,6 +175,18 @@ final class Guid implements JsonSerializable, Stringable
                 $this->getLogger()->info(
                     "Ignoring '{backend}' {item.type} '{item.title}' '{key}' external id. Unexpected value type.",
                     [
+                        'event_name' => 'guid.external_id.ignored',
+                        'subsystem' => 'guid',
+                        'operation' => 'parse',
+                        'outcome' => 'ignored',
+                        'reason' => 'unexpected_value_type',
+                        'reason_label' => 'external id value type is invalid',
+                        'client' => self::clientName($context),
+                        'user' => ag($context, 'user'),
+                        'backend' => ag($context, 'backend'),
+                        'item_id' => ag($context, 'item.id'),
+                        'guid_source' => $key,
+                        'guid_value' => is_scalar($value) || null === $value ? $value : get_debug_type($value),
                         'key' => $key,
                         'condition' => [
                             'expecting' => self::$supported[$key],
@@ -174,6 +203,18 @@ final class Guid implements JsonSerializable, Stringable
                     $this->getLogger()->info(
                         "Ignoring '{backend}' {item.type} '{item.title}' '{key}' external id. Unexpected value '{given}'. Expecting '{expected}'.",
                         [
+                            'event_name' => 'guid.external_id.ignored',
+                            'subsystem' => 'guid',
+                            'operation' => 'parse',
+                            'outcome' => 'ignored',
+                            'reason' => 'invalid_guid',
+                            'reason_label' => 'external id is invalid',
+                            'client' => self::clientName($context),
+                            'user' => ag($context, 'user'),
+                            'backend' => ag($context, 'backend'),
+                            'item_id' => ag($context, 'item.id'),
+                            'guid_source' => $key,
+                            'guid_value' => $value,
                             'key' => $key,
                             'expected' => self::$validateGuid[$key]['example'],
                             'given' => $value,
@@ -220,7 +261,19 @@ final class Guid implements JsonSerializable, Stringable
         }
 
         if (filesize($file) < 1) {
-            self::$logger?->info(r("The external GUID mapping file '{file}' is empty.", ['file' => $file]));
+            self::$logger?->info("GUID mapping file '{file}' is empty.", [
+                'event_name' => 'guid.mapping.ignored',
+                'subsystem' => 'guid',
+                'operation' => 'load_config',
+                'outcome' => 'ignored',
+                'reason' => 'empty_file',
+                'reason_label' => 'mapping file is empty',
+                'client' => 'guid',
+                'mapping_key' => null,
+                'mapping_from' => null,
+                'mapping_to' => null,
+                'file' => $file,
+            ]);
             return;
         }
 
@@ -261,59 +314,94 @@ final class Guid implements JsonSerializable, Stringable
 
         foreach ($guids as $key => $def) {
             if (false === is_array($def)) {
-                self::$logger?->warning(
-                    "Ignoring 'guids.{key}'. Value must be an object. '{given}' is given.",
-                    [
-                        'key' => $key,
-                        'given' => get_debug_type($def),
-                    ],
-                );
+                self::$logger?->warning("Ignoring GUID mapping '{mapping_key}' for {client}: {reason_label}.", [
+                    'event_name' => 'guid.mapping.ignored',
+                    'subsystem' => 'guid',
+                    'operation' => 'parse_config',
+                    'outcome' => 'ignored',
+                    'reason' => 'invalid_link_value',
+                    'reason_label' => 'value must be an object',
+                    'client' => 'guid',
+                    'mapping_key' => 'guids.' . $key,
+                    'mapping_from' => null,
+                    'mapping_to' => null,
+                    'given' => get_debug_type($def),
+                    'file' => $file,
+                ]);
                 continue;
             }
 
             $name = ag($def, 'name');
             if (null === $name || false === self::validateGUIDName($name)) {
-                self::$logger?->warning(
-                    "Ignoring 'guids.{key}'. name must start with 'guid_'. '{given}' is given.",
-                    [
-                        'key' => $key,
-                        'given' => $name ?? 'null',
-                    ],
-                );
+                self::$logger?->warning("Ignoring GUID mapping '{mapping_key}' for {client}: {reason_label}.", [
+                    'event_name' => 'guid.mapping.ignored',
+                    'subsystem' => 'guid',
+                    'operation' => 'parse_config',
+                    'outcome' => 'ignored',
+                    'reason' => 'invalid_guid_type_name',
+                    'reason_label' => "name must start with 'guid_'",
+                    'client' => 'guid',
+                    'mapping_key' => 'guids.' . $key,
+                    'mapping_from' => null,
+                    'mapping_to' => true === is_string($name) ? $name : null,
+                    'given' => $name ?? 'null',
+                    'file' => $file,
+                ]);
                 continue;
             }
 
             $type = ag($def, 'type');
             if (null === $type || false === is_string($type)) {
-                self::$logger?->warning(
-                    "Ignoring 'guids.{key}.{name}'. type must be a string. '{given}' is given.",
-                    [
-                        'key' => $key,
-                        'name' => $name,
-                        'given' => get_debug_type($type),
-                    ],
-                );
+                self::$logger?->warning("Ignoring GUID mapping '{mapping_key}' for {client}: {reason_label}.", [
+                    'event_name' => 'guid.mapping.ignored',
+                    'subsystem' => 'guid',
+                    'operation' => 'parse_config',
+                    'outcome' => 'ignored',
+                    'reason' => 'invalid_map_value',
+                    'reason_label' => 'type must be a string',
+                    'client' => 'guid',
+                    'mapping_key' => 'guids.' . $key,
+                    'mapping_from' => null,
+                    'mapping_to' => $name,
+                    'given' => get_debug_type($type),
+                    'file' => $file,
+                ]);
                 continue;
             }
 
             $validator = ag($def, 'validator', null);
             if (null === $validator || false === is_array($validator) || count($validator) < 1) {
-                self::$logger?->warning(
-                    "Ignoring 'guids.{key}.{name}'. validator key must be an object. '{given}' is given.",
-                    [
-                        'key' => $key,
-                        'name' => $name,
-                        'given' => get_debug_type($validator),
-                    ],
-                );
+                self::$logger?->warning("Ignoring GUID mapping '{mapping_key}' for {client}: {reason_label}.", [
+                    'event_name' => 'guid.mapping.ignored',
+                    'subsystem' => 'guid',
+                    'operation' => 'parse_config',
+                    'outcome' => 'ignored',
+                    'reason' => 'invalid_map_value',
+                    'reason_label' => 'validator key must be an object',
+                    'client' => 'guid',
+                    'mapping_key' => 'guids.' . $key,
+                    'mapping_from' => null,
+                    'mapping_to' => $name,
+                    'given' => get_debug_type($validator),
+                    'file' => $file,
+                ]);
                 continue;
             }
 
             $pattern = ag($validator, 'pattern');
             if (null === $pattern || false === @preg_match($pattern, '')) {
-                self::$logger?->warning("Ignoring 'guids.{key}.{name}'. validator.pattern is empty or invalid.", [
-                    'key' => $key,
-                    'name' => $name,
+                self::$logger?->warning("Ignoring GUID mapping '{mapping_key}' for {client}: {reason_label}.", [
+                    'event_name' => 'guid.mapping.ignored',
+                    'subsystem' => 'guid',
+                    'operation' => 'parse_config',
+                    'outcome' => 'ignored',
+                    'reason' => 'invalid_map_from',
+                    'reason_label' => 'validator.pattern is empty or invalid',
+                    'client' => 'guid',
+                    'mapping_key' => 'guids.' . $key,
+                    'mapping_from' => true === is_string($pattern) ? $pattern : null,
+                    'mapping_to' => $name,
+                    'file' => $file,
                 ]);
                 continue;
             }
@@ -321,27 +409,54 @@ final class Guid implements JsonSerializable, Stringable
             $example = ag($validator, 'example');
 
             if (empty($example) || false === is_string($example)) {
-                self::$logger?->warning("Ignoring 'guids.{key}.{name}'. validator.example is empty or not a string.", [
-                    'key' => $key,
-                    'name' => $name,
+                self::$logger?->warning("Ignoring GUID mapping '{mapping_key}' for {client}: {reason_label}.", [
+                    'event_name' => 'guid.mapping.ignored',
+                    'subsystem' => 'guid',
+                    'operation' => 'parse_config',
+                    'outcome' => 'ignored',
+                    'reason' => 'invalid_map_to',
+                    'reason_label' => 'validator.example is empty or not a string',
+                    'client' => 'guid',
+                    'mapping_key' => 'guids.' . $key,
+                    'mapping_from' => $pattern,
+                    'mapping_to' => true === is_string($example) ? $example : $name,
+                    'file' => $file,
                 ]);
                 continue;
             }
 
             $tests = ag($validator, 'tests', []);
             if (empty($tests) || false === is_array($tests)) {
-                self::$logger?->warning("Ignoring 'guids.{key}.{name}'. validator.tests key must be an object.", [
-                    'key' => $key,
-                    'name' => $name,
+                self::$logger?->warning("Ignoring GUID mapping '{mapping_key}' for {client}: {reason_label}.", [
+                    'event_name' => 'guid.mapping.ignored',
+                    'subsystem' => 'guid',
+                    'operation' => 'parse_config',
+                    'outcome' => 'ignored',
+                    'reason' => 'invalid_map_value',
+                    'reason_label' => 'validator.tests key must be an object',
+                    'client' => 'guid',
+                    'mapping_key' => 'guids.' . $key,
+                    'mapping_from' => $pattern,
+                    'mapping_to' => $name,
+                    'file' => $file,
                 ]);
                 continue;
             }
 
             $valid = ag($tests, 'valid', []);
             if (empty($valid) || false === is_array($valid) || count($valid) < 1) {
-                self::$logger?->warning("Ignoring 'guids.{key}.{name}'. validator.tests.valid key must be an array.", [
-                    'key' => $key,
-                    'name' => $name,
+                self::$logger?->warning("Ignoring GUID mapping '{mapping_key}' for {client}: {reason_label}.", [
+                    'event_name' => 'guid.mapping.ignored',
+                    'subsystem' => 'guid',
+                    'operation' => 'parse_config',
+                    'outcome' => 'ignored',
+                    'reason' => 'invalid_map_from',
+                    'reason_label' => 'validator.tests.valid key must be an array',
+                    'client' => 'guid',
+                    'mapping_key' => 'guids.' . $key,
+                    'mapping_from' => $pattern,
+                    'mapping_to' => $name,
+                    'file' => Config::get('guid.file'),
                 ]);
                 continue;
             }
@@ -352,11 +467,19 @@ final class Guid implements JsonSerializable, Stringable
                 }
 
                 self::$logger?->warning(
-                    "Ignoring 'guids.{key}.{name}'. validator.tests.valid value '{val}' does not match pattern.",
+                    "Ignoring GUID mapping '{mapping_key}' for {client}: {reason_label}.",
                     [
-                        'key' => $key,
-                        'name' => $name,
-                        'val' => $val,
+                        'event_name' => 'guid.mapping.ignored',
+                        'subsystem' => 'guid',
+                        'operation' => 'parse_config',
+                        'outcome' => 'ignored',
+                        'reason' => 'invalid_map_from',
+                        'reason_label' => 'validator.tests.valid value does not match pattern',
+                        'client' => 'guid',
+                        'mapping_key' => 'guids.' . $key,
+                        'mapping_from' => (string) $val,
+                        'mapping_to' => $name,
+                        'file' => $file,
                     ],
                 );
                 continue 2;
@@ -365,10 +488,19 @@ final class Guid implements JsonSerializable, Stringable
             $invalid = ag($tests, 'invalid', []);
             if (empty($invalid) || false === is_array($invalid) || count($invalid) < 1) {
                 self::$logger?->warning(
-                    "Ignoring 'guids.{key}.{name}'. validator.tests.invalid key must be an array.",
+                    "Ignoring GUID mapping '{mapping_key}' for {client}: {reason_label}.",
                     [
-                        'key' => $key,
-                        'name' => $name,
+                        'event_name' => 'guid.mapping.ignored',
+                        'subsystem' => 'guid',
+                        'operation' => 'parse_config',
+                        'outcome' => 'ignored',
+                        'reason' => 'invalid_map_to',
+                        'reason_label' => 'validator.tests.invalid key must be an array',
+                        'client' => 'guid',
+                        'mapping_key' => 'guids.' . $key,
+                        'mapping_from' => $pattern,
+                        'mapping_to' => $name,
+                        'file' => $file,
                     ],
                 );
                 continue;
@@ -380,11 +512,19 @@ final class Guid implements JsonSerializable, Stringable
                 }
 
                 self::$logger?->warning(
-                    "Ignoring 'guids.{key}.{name}'. validator.tests.invalid value '{val}' matches pattern.",
+                    "Ignoring GUID mapping '{mapping_key}' for {client}: {reason_label}.",
                     [
-                        'key' => $key,
-                        'name' => $name,
-                        'val' => $val,
+                        'event_name' => 'guid.mapping.ignored',
+                        'subsystem' => 'guid',
+                        'operation' => 'parse_config',
+                        'outcome' => 'ignored',
+                        'reason' => 'invalid_map_to',
+                        'reason_label' => 'validator.tests.invalid value matches pattern',
+                        'client' => 'guid',
+                        'mapping_key' => 'guids.' . $key,
+                        'mapping_from' => (string) $val,
+                        'mapping_to' => $name,
+                        'file' => $file,
                     ],
                 );
                 continue 2;
@@ -561,16 +701,14 @@ final class Guid implements JsonSerializable, Stringable
                 self::parseGUIDFile($file);
             }
         } catch (Throwable $e) {
-            self::$logger?->error("Failed to read or parse '{guid}' file. Error '{error}'.", [
-                'guid' => $file,
-                'error' => $e->getMessage(),
-                'exception' => [
-                    'message' => $e->getMessage(),
-                    'code' => $e->getCode(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'trace' => $e->getTrace(),
-                ],
+            self::$logger?->error("Failed to parse GUID mapping file '{file}' for {client}.", [
+                'event_name' => 'guid.file.parse_failed',
+                'subsystem' => 'guid',
+                'operation' => 'load_config',
+                'outcome' => 'failed',
+                'client' => 'guid',
+                'file' => $file,
+                ...exception_log($e),
             ]);
         } finally {
             self::$checkedExternalFile = true;
@@ -584,6 +722,8 @@ final class Guid implements JsonSerializable, Stringable
     public static function reparse(): void
     {
         self::$checkedExternalFile = false;
+        self::$supported = self::DEFAULT_SUPPORTED;
+        self::$validateGuid = self::DEFAULT_VALIDATE_GUID;
     }
 
     /**
@@ -596,5 +736,16 @@ final class Guid implements JsonSerializable, Stringable
     public static function validateGUIDName(string $name): bool
     {
         return str_starts_with($name, 'guid_') && is_valid_name($name);
+    }
+
+    private static function clientName(array $context): string
+    {
+        $client = ag($context, 'client');
+
+        if (true === is_string($client) && '' !== $client) {
+            return $client;
+        }
+
+        return 'guid';
     }
 }

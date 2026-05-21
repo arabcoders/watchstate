@@ -63,23 +63,41 @@ final readonly class ProcessPushEvent
         try {
             $userContext = get_user_context(user: $user, mapper: $this->mapper, logger: $this->logger);
         } catch (RuntimeException $ex) {
-            $writer(Level::Error, $ex->getMessage());
+            $writer(Level::Error, "Failed to load push user context for '{user}'.", [
+                'event_name' => 'push.user_context.failed',
+                'subsystem' => 'push',
+                'operation' => 'load_user_context',
+                'outcome' => 'failed',
+                'user' => $user,
+                ...exception_log($ex),
+            ]);
             return $e;
         }
 
         if (null === ($item = $userContext->db->get(Container::get(iState::class)::fromArray($e->getData())))) {
-            $writer(Level::Error, "Item '{user}: {item_id}' is not found or has been deleted.", [
+            $writer(Level::Error, "Cannot push item '#{item_id}' for '{user}': item is missing or deleted.", [
+                'event_name' => 'push.item.missing',
+                'subsystem' => 'push',
+                'operation' => 'load_item',
+                'outcome' => 'failed',
+                'reason' => 'missing_or_deleted',
                 'user' => $user,
                 'item_id' => ag($e->getData(), 'id', '?'),
             ]);
             return $e;
         }
 
-        $writer(Level::Notice, "Processing '{user}@{via}' - '#{item_id}: {title}' push event.", [
+        $writer(Level::Notice, "Processing push for '#{item_id}: {item_title}' from '{user}@{backend}'.", [
+            'event_name' => 'push.item.processing',
+            'subsystem' => 'push',
+            'operation' => 'queue',
+            'outcome' => 'started',
             'user' => $user,
             'item_id' => $item->id,
-            'via' => $item->via,
-            'title' => $item->getName(),
+            'backend' => $item->via,
+            'item_type' => $item->type,
+            'item_title' => $item->getName(),
+            'state' => $item->isWatched() ? 'played' : 'unplayed',
         ]);
 
         $options = $e->getOptions();
@@ -90,7 +108,12 @@ final readonly class ProcessPushEvent
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
             if (true !== (bool) ag($backend, 'export.enabled')) {
-                $writer(Level::Notice, "Export to '{user}@{backend}' is disabled by user.", [
+                $writer(Level::Notice, "Skipping push target '{user}@{backend}': export is disabled.", [
+                    'event_name' => 'push.backend.skipped',
+                    'subsystem' => 'push',
+                    'operation' => 'queue',
+                    'outcome' => 'skipped',
+                    'reason' => 'export_disabled',
                     'user' => $user,
                     'backend' => $backendName,
                 ]);
@@ -98,7 +121,12 @@ final readonly class ProcessPushEvent
             }
 
             if (!isset($supported[$type])) {
-                $writer(Level::Error, "Ignoring '{user}@{backend}'. Invalid type '{type}'.", [
+                $writer(Level::Error, "Skipping push target '{user}@{backend}': backend type '{type}' is unsupported.", [
+                    'event_name' => 'push.backend.skipped',
+                    'subsystem' => 'push',
+                    'operation' => 'queue',
+                    'outcome' => 'skipped',
+                    'reason' => 'unsupported_type',
                     'type' => $type,
                     'user' => $user,
                     'backend' => $backendName,
@@ -111,7 +139,12 @@ final readonly class ProcessPushEvent
             }
 
             if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {
-                $writer(Level::Error, "Ignoring '{user}@{backend}'. Invalid URL '{url}'.", [
+                $writer(Level::Error, "Skipping push target '{user}@{backend}': URL '{url}' is invalid.", [
+                    'event_name' => 'push.backend.skipped',
+                    'subsystem' => 'push',
+                    'operation' => 'queue',
+                    'outcome' => 'skipped',
+                    'reason' => 'invalid_url',
                     'user' => $user,
                     'backend' => $backendName,
                     'url' => $url ?? 'None',
@@ -124,7 +157,15 @@ final readonly class ProcessPushEvent
         }
 
         if (empty($list)) {
-            $writer(Level::Error, 'There are no eligible backends receive the event.');
+            $writer(Level::Error, "No eligible push targets found for '{user}'.", [
+                'event_name' => 'push.queue.empty',
+                'subsystem' => 'push',
+                'operation' => 'queue',
+                'outcome' => 'failed',
+                'reason' => 'no_eligible_backends',
+                'user' => $user,
+                'backend_count' => 0,
+            ]);
             return $e;
         }
 
@@ -154,28 +195,18 @@ final readonly class ProcessPushEvent
             } catch (Throwable $e) {
                 $writer(
                     Level::Error,
-                    "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' - '#{item_id}: {item.title}' push event handling. {error.message} at '{error.file}:{error.line}'.",
+                    "Push queueing failed for '#{item_id}: {item_title}' on '{user}@{backend}'.",
                     [
+                        'event_name' => 'push.item.failed',
+                        'subsystem' => 'push',
+                        'operation' => 'queue',
+                        'outcome' => 'failed',
                         'user' => $user,
                         'backend' => $name,
                         'item_id' => $item->id,
-                        'item' => [
-                            'id' => $item->id,
-                            'title' => $item->getName(),
-                        ],
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
+                        'item_type' => $item->type,
+                        'item_title' => $item->getName(),
+                        ...exception_log($e),
                     ],
                 );
             }
@@ -183,16 +214,28 @@ final readonly class ProcessPushEvent
         unset($backend);
 
         if (count($this->queue) < 1) {
-            $writer(Level::Notice, 'SYSTEM: No play state changes detected.');
+            $writer(Level::Notice, "No play-state changes queued for '{user}'.", [
+                'event_name' => 'push.queue.no_changes',
+                'subsystem' => 'push',
+                'operation' => 'queue',
+                'outcome' => 'completed',
+                'user' => $user,
+                'queue_count' => 0,
+            ]);
             return $e;
         }
 
-        $writer(Level::Notice, "Processing '{user}@{via}' - '#{item_id}: {title}' push event.", [
+        $writer(Level::Notice, "Processing push for '#{item_id}: {item_title}' from '{user}@{backend}'.", [
+            'event_name' => 'push.item.processing',
+            'subsystem' => 'push',
+            'operation' => 'dispatch',
+            'outcome' => 'started',
             'user' => $user,
             'item_id' => $item->id,
-            'via' => $item->via,
-            'title' => $item->getName(),
-            'played' => $item->isWatched(),
+            'backend' => $item->via,
+            'item_type' => $item->type,
+            'item_title' => $item->getName(),
+            'state' => $item->isWatched() ? 'played' : 'unplayed',
         ]);
 
         $http = Container::get(iHttp::class);
@@ -215,8 +258,17 @@ final readonly class ProcessPushEvent
                     if (Status::OK !== Status::tryFrom($context['status_code'])) {
                         $eventWriter(
                             Level::Error,
-                            "Request to change '{user}@{backend}' - '#{item_id}: {item.title}' play state returned with unexpected '{status_code}' status code.",
-                            $context,
+                            "Push update for '#{item_id}' on '{user}@{backend}' failed.",
+                            [
+                                ...$context,
+                                'event_name' => 'push.request.failed',
+                                'subsystem' => 'push',
+                                'operation' => 'dispatch',
+                                'outcome' => 'failed',
+                                'http' => [
+                                    'status_code' => $response->getStatusCode(),
+                                ],
+                            ],
                         );
 
                         return [];
@@ -224,8 +276,17 @@ final readonly class ProcessPushEvent
 
                     $eventWriter(
                         Level::Notice,
-                        "Updated '{user}@{backend}' - '#{item_id}: {item.title}' watch state to '{play_state}'.",
-                        $context,
+                        "Push update for '#{item_id}' on '{user}@{backend}' completed.",
+                        [
+                            ...$context,
+                            'event_name' => 'push.request.completed',
+                            'subsystem' => 'push',
+                            'operation' => 'dispatch',
+                            'outcome' => 'completed',
+                            'http' => [
+                                'status_code' => $response->getStatusCode(),
+                            ],
+                        ],
                     );
 
                     return [];
@@ -241,22 +302,14 @@ final readonly class ProcessPushEvent
 
                     $eventWriter(
                         Level::Error,
-                        "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to change play state of {item.type} '#{item_id}: {item.title}'. {error.message} at '{error.file}:{error.line}'.",
+                        "Push update for '#{item_id}' on '{user}@{backend}' failed.",
                         [
                             ...$context,
-                            'error' => [
-                                'kind' => $ex::class,
-                                'line' => $ex->getLine(),
-                                'message' => $ex->getMessage(),
-                                'file' => after($ex->getFile(), ROOT_PATH),
-                            ],
-                            'exception' => [
-                                'file' => $ex->getFile(),
-                                'line' => $ex->getLine(),
-                                'kind' => get_class($ex),
-                                'message' => $ex->getMessage(),
-                                'trace' => $ex->getTrace(),
-                            ],
+                            'event_name' => 'push.request.failed',
+                            'subsystem' => 'push',
+                            'operation' => 'dispatch',
+                            'outcome' => 'failed',
+                            ...exception_log($ex),
                         ],
                     );
 

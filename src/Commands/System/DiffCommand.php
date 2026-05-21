@@ -110,24 +110,34 @@ final class DiffCommand extends Command
 
         // -- source A.
         $mapper1 = new RestoreMapper($this->logger, $a);
-        $this->logger->info("Loading source A '{file}' into memory.", ['file' => $a]);
         $time = microtime(true);
         $mapper1->loadData();
         $end = microtime(true);
-        $this->logger->info("Finished parsing data from source A '{file}' in '{time}s'.", [
-            'file' => $a,
-            'time' => round($end - $time, 2),
+        $this->logger->info("Loaded diff source '{source}' from '{path}' with {entity_count} entities.", [
+            'event_name' => 'system.diff.source.loaded',
+            'subsystem' => 'system.diff',
+            'operation' => 'load_source',
+            'outcome' => 'completed',
+            'source' => 'a',
+            'path' => $a,
+            'entity_count' => $mapper1->getObjectsCount(),
+            'duration_seconds' => round($end - $time, 4),
         ]);
 
         // -- source B.
         $mapper2 = new RestoreMapper($this->logger, $b);
-        $this->logger->info("Loading source B '{file}' into memory.", ['file' => $b]);
         $time = microtime(true);
         $mapper2->loadData();
         $end = microtime(true);
-        $this->logger->info("Finished parsing data from source B '{file}' in '{time}s'.", [
-            'file' => $b,
-            'time' => round($end - $time, 2),
+        $this->logger->info("Loaded diff source '{source}' from '{path}' with {entity_count} entities.", [
+            'event_name' => 'system.diff.source.loaded',
+            'subsystem' => 'system.diff',
+            'operation' => 'load_source',
+            'outcome' => 'completed',
+            'source' => 'b',
+            'path' => $b,
+            'entity_count' => $mapper2->getObjectsCount(),
+            'duration_seconds' => round($end - $time, 4),
         ]);
 
         $this->logger->notice("Comparing '{memory}' of data. Please wait.", ['memory' => get_memory_usage()]);
@@ -204,12 +214,7 @@ final class DiffCommand extends Command
 
     private function saveContent(array $data, string $file, string $filter, string $source): void
     {
-        $this->logger->notice("Saving the difference 'Source: {source}, filter: {filter}' to '{file}'.", [
-            'file' => $file,
-            'source' => $source,
-            'filter' => $filter,
-        ]);
-
+        $start = microtime(true);
         $fp = Stream::make($file, 'wb');
         $fp->write('[');
 
@@ -231,6 +236,18 @@ final class DiffCommand extends Command
         $fp->seek(-1, SEEK_END);
         $fp->write(PHP_EOL . ']');
         $fp->close();
+
+        $this->logger->notice("Saved diff output to '{path}'.", [
+            'event_name' => 'system.diff.output.saved',
+            'subsystem' => 'system.diff',
+            'operation' => 'save_output',
+            'outcome' => 'completed',
+            'path' => $file,
+            'source' => $source,
+            'filter' => $filter,
+            'entity_count' => count($data),
+            'duration_seconds' => round(microtime(true) - $start, 4),
+        ]);
     }
 
     private function processEntity(iState $entity): string

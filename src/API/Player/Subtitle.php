@@ -177,7 +177,21 @@ final readonly class Subtitle
                 'X-Cache' => $response->getHeaderLine('X-Cache'),
             ]);
         } catch (Throwable $e) {
-            $this->logger->error($e->getMessage(), $e->getTrace());
+            $this->logger->error("Failed to return subtitle response for '{media.path}'.", [
+                'event_name' => 'player.subtitle.response_failed',
+                'subsystem' => 'player.subtitle',
+                'operation' => 'respond',
+                'outcome' => 'failed',
+                'media' => [
+                    'path' => $path,
+                ],
+                'subtitle' => [
+                    'source' => $source,
+                    'index' => (int) $index,
+                    'format' => $type,
+                ],
+                ...exception_log($e),
+            ]);
             return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);
         }
     }
@@ -247,6 +261,20 @@ final readonly class Subtitle
                     );
                 }
             } catch (RuntimeException|JsonException $e) {
+                $this->logger->error("Failed to inspect subtitle stream {subtitle.stream} for '{media.path}'.", [
+                    'event_name' => 'player.subtitle.inspect_failed',
+                    'subsystem' => 'player.subtitle',
+                    'operation' => 'inspect',
+                    'outcome' => 'failed',
+                    'media' => [
+                        'path' => $file,
+                    ],
+                    'subtitle' => [
+                        'stream' => $stream,
+                        'format' => $type,
+                    ],
+                    ...exception_log($e),
+                ]);
                 return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);
             }
         }
@@ -278,6 +306,30 @@ final readonly class Subtitle
             $process->wait();
 
             if (!$process->isSuccessful()) {
+                $this->logger->error(
+                    null !== $stream
+                        ? "Failed to extract subtitle stream {subtitle.stream} from '{media.path}'."
+                        : "Failed to convert subtitle for '{media.path}'.",
+                    [
+                        'event_name' => null !== $stream ? 'player.subtitle.extract_failed' : 'player.subtitle.convert_failed',
+                        'subsystem' => 'player.subtitle',
+                        'operation' => null !== $stream ? 'extract' : 'convert',
+                        'outcome' => 'failed',
+                        'media' => [
+                            'path' => $file,
+                        ],
+                        'subtitle' => [
+                            'stream' => $stream,
+                            'format' => $type,
+                        ],
+                        'transcode' => [
+                            'command' => $process->getCommandLine(),
+                            'stderr' => $process->getErrorOutput(),
+                            'stdout' => $process->getOutput(),
+                        ],
+                    ],
+                );
+
                 if (true === $debug) {
                     return api_error($process->getErrorOutput(), Status::INTERNAL_SERVER_ERROR, headers: [
                         'X-FFmpeg' => $process->getCommandLine(),
@@ -317,6 +369,25 @@ final readonly class Subtitle
                 'X-Cache' => 'miss',
             ]);
         } catch (Throwable $e) {
+            $this->logger->error(
+                null !== $stream
+                    ? "Failed to extract subtitle stream {subtitle.stream} from '{media.path}'."
+                    : "Failed to convert subtitle for '{media.path}'.",
+                [
+                    'event_name' => null !== $stream ? 'player.subtitle.extract_failed' : 'player.subtitle.convert_failed',
+                    'subsystem' => 'player.subtitle',
+                    'operation' => null !== $stream ? 'extract' : 'convert',
+                    'outcome' => 'failed',
+                    'media' => [
+                        'path' => $file,
+                    ],
+                    'subtitle' => [
+                        'stream' => $stream,
+                        'format' => $type,
+                    ],
+                    ...exception_log($e),
+                ],
+            );
             return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);
         } finally {
             if (file_exists($tmpFile) && is_link($tmpFile)) {

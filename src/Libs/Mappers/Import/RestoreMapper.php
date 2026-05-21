@@ -188,8 +188,14 @@ final class RestoreMapper implements iImport
     public function add(iState $entity, array $opts = []): self
     {
         if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
-            $this->logger->debug('MAPPER: Ignoring [{title}] no valid/supported external ids.', [
-                'title' => $entity->getName(),
+            $this->logger->debug("Ignoring restore item '{item_title}': no supported external ids.", [
+                'event_name' => 'mapper.restore.item.ignored',
+                'subsystem' => 'mapper.restore',
+                'operation' => 'add',
+                'outcome' => 'ignored',
+                'mapper' => after_last(self::class, '\\'),
+                'item_title' => $entity->getName(),
+                'reason' => 'no_supported_external_ids',
             ]);
             return $this;
         }

@@ -25,6 +25,7 @@ class PushQueueTest extends MediaBrowserTestCase
         ];
 
         foreach ($this->provideBackends() as [$clientName, $actionClass]) {
+            $this->handler?->clear();
             $http = new HttpClient(new MockHttpClient(
                 fn(string $method, string $url, array $options) => new MockResponse(
                     json_encode($payload),
@@ -68,6 +69,23 @@ class PushQueueTest extends MediaBrowserTestCase
             $this->assertCount(1, $followUps);
             $this->assertContainsOnlyInstancesOf(Request::class, $followUps);
             $this->assertStringContainsString('/Users/user-1/Items/item-1/UserData', (string) $followUps[0]->url);
+
+            $records = $this->handler?->getRecords() ?? [];
+            $start = array_filter(
+                $records,
+                static fn($record): bool => 'backend.request.started' === ($record->context['event_name'] ?? null)
+                    && 'backend.push' === ($record->context['subsystem'] ?? null)
+                    && 'update_state' === ($record->context['operation'] ?? null),
+            );
+            $completed = array_filter(
+                $records,
+                static fn($record): bool => 'backend.state_update.completed' === ($record->context['event_name'] ?? null)
+                    && 'backend.push' === ($record->context['subsystem'] ?? null)
+                    && 'update_state' === ($record->context['operation'] ?? null),
+            );
+
+            $this->assertNotEmpty($start);
+            $this->assertNotEmpty($completed);
         }
     }
 

@@ -6,11 +6,13 @@ namespace App\Libs\Playlists;
 
 use App\Libs\Database\DBLayer;
 use PDO;
+use Psr\Log\LoggerInterface as iLogger;
 
 final class PlaylistStore
 {
     public function __construct(
         private readonly DBLayer $db,
+        private readonly ?iLogger $logger = null,
     ) {}
 
     /**
@@ -44,6 +46,19 @@ final class PlaylistStore
                 $seen[(string) $playlist['id']] = true;
 
                 $this->replacePlaylistItems($playlistId, $playlist['items'] ?? [], $stats);
+
+                $this->logger?->info("Stored playlist snapshot '{playlist_title}' from '{backend}' with {item_count} items.", [
+                    'event_name' => 'playlist.snapshot.stored',
+                    'subsystem' => 'playlist',
+                    'operation' => 'store_snapshot',
+                    'outcome' => 'completed',
+                    'backend' => $backend,
+                    'playlist_id' => (string) ($playlist['id'] ?? ''),
+                    'playlist_title' => (string) ($playlist['title'] ?? 'Untitled playlist'),
+                    'item_count' => count($playlist['items'] ?? []),
+                    'hash' => $this->makeContentHash($playlist),
+                    'changed' => true,
+                ]);
             }
 
             foreach ($this->getExistingBackendMap($backend) as $backendId => $playlistId) {

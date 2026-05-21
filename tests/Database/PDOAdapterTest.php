@@ -19,6 +19,7 @@ use App\Libs\TestCase;
 use DateInterval;
 use DateTimeImmutable;
 use Monolog\Logger;
+use Monolog\Handler\TestHandler;
 use PDO;
 use Psr\SimpleCache\CacheInterface;
 use Tests\Support\SQLiteDbTestSupport;
@@ -339,7 +340,10 @@ class PDOAdapterTest extends TestCase
 
         try {
             $this->checkException(
-                closure: fn() => $db->insert(new StateEntity($this->testEpisode), [Options::FAIL_FAST_ON_LOCK => true]),
+                closure: fn() => $db->insert(new StateEntity($this->testEpisode), [
+                    Options::FAIL_FAST_ON_LOCK => true,
+                    'max_sleep' => 0,
+                ]),
                 reason: 'Fail-fast lock errors should bubble out of insert.',
                 exception: DBLayerException::class,
                 exceptionMessage: 'database is locked',
@@ -368,11 +372,47 @@ class PDOAdapterTest extends TestCase
 
         try {
             $this->checkException(
-                closure: fn() => $db->update($item, [Options::FAIL_FAST_ON_LOCK => true]),
+                closure: fn() => $db->update($item, [
+                    Options::FAIL_FAST_ON_LOCK => true,
+                    'max_sleep' => 0,
+                ]),
                 reason: 'Fail-fast lock errors should bubble out of update.',
                 exception: DBLayerException::class,
                 exceptionMessage: 'database is locked',
             );
+        } finally {
+            if (true === $lock->inTransaction()) {
+                $lock->rollBack();
+            }
+        }
+    }
+
+    public function test_insert_lock_logs_structured_failure(): void
+    {
+        $handler = new TestHandler();
+        $logger = new Logger('logger', [$handler]);
+        $this->initTempDir();
+        [$db, , $path] = $this->createFileDb($logger, self::$tmpPath . '/lock-logged-insert.db');
+        $db->setOptions([
+            Options::DEBUG_TRACE => true,
+            'class' => new StateEntity([]),
+        ]);
+        $db->setLogger($logger);
+
+        $lock = $this->openSqliteFile($path);
+        $lock->exec('BEGIN EXCLUSIVE');
+
+        try {
+            $entity = $db->insert(new StateEntity($this->testEpisode), ['max_sleep' => 0]);
+
+            self::assertNull($entity->id, 'Non-transaction insert failures should keep behavior and return the unsaved entity.');
+            self::assertTrue($handler->hasErrorRecords(), 'Insert lock failures should be logged.');
+
+            $records = $handler->getRecords();
+            $record = end($records);
+            self::assertSame('database.state.operation_failed', $record->context['event_name'] ?? null);
+            self::assertSame('insert', $record->context['operation'] ?? null);
+            self::assertSame('episode', $record->context['item_type'] ?? null);
         } finally {
             if (true === $lock->inTransaction()) {
                 $lock->rollBack();

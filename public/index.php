@@ -51,7 +51,6 @@ set_exception_handler(function (Throwable $e) {
         'kind' => $e::class,
         'line' => $e->getLine(),
         'message' => $e->getMessage(),
-        'file' => after($e->getFile(), ROOT_PATH),
     ]));
     exit(Command::FAILURE);
 });
@@ -171,12 +170,9 @@ $exitCode = $profiler->process(function () use ($request) {
 
         $out(
             r(
-                text: "HTTP: Exception '{kind}' was thrown unhandled during HTTP boot context. {message} at {file}:{line}.",
+                text: 'HTTP boot failed: {message}.',
                 context: [
-                    'kind' => $e::class,
-                    'line' => $e->getLine(),
                     'message' => $e->getMessage(),
-                    'file' => $e->getFile(),
                 ]
             )
         );
@@ -195,12 +191,9 @@ $exitCode = $profiler->process(function () use ($request) {
 
         $out(
             r(
-                text: "HTTP: Exception '{kind}' was thrown unhandled during response context. Error '{message} @ {file}:{line}'.",
+                text: 'HTTP response handling failed: {message}.',
                 context: [
-                    'kind' => $e::class,
-                    'line' => $e->getLine(),
                     'message' => $e->getMessage(),
-                    'file' => after($e->getFile(), ROOT_PATH),
                 ]
             )
         );

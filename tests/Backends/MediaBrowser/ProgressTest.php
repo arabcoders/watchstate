@@ -12,7 +12,7 @@ use App\Libs\QueueRequests;
 
 class ProgressTest extends MediaBrowserTestCase
 {
-    public function test_progress_handles_empty_entities(): void
+    public function test_empty_entities(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass]) {
             $http = $this->makeHttpClient();

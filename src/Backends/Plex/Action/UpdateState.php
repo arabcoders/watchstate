@@ -69,8 +69,13 @@ final class UpdateState
 
                     if (true === (bool) ag($context->options, Options::DRY_RUN, false)) {
                         $this->logger->notice(
-                            message: "{action}: Would mark '{client}: {user}@{backend}' {item.type} '{item.title}' as '{item.play_state}'.",
+                            message: "Would update play state for {item.type} '{item.title}' on '{user}@{backend}' to '{item.play_state}'.",
                             context: [
+                                'event_name' => 'backend.request.skipped',
+                                'subsystem' => 'backend.restore',
+                                'operation' => 'update_state',
+                                'outcome' => 'skipped',
+                                'reason' => 'dry_run',
                                 ...$rContext,
                                 'item' => [
                                     'id' => $itemId,
@@ -90,28 +95,44 @@ final class UpdateState
                             http_build_query(['identifier' => 'com.plexapp.plugins.library', 'key' => $itemId]),
                         );
 
+                    $requestContext = [
+                        ...$rContext,
+                        'play_state' => $entity->isWatched() ? 'played' : 'unplayed',
+                        'item' => [
+                            'id' => $itemId,
+                            'title' => $entity->getName(),
+                            'type' => $entity->type === iState::TYPE_EPISODE ? 'episode' : 'movie',
+                            'state' => $entity->isWatched() ? 'played' : 'unplayed',
+                        ],
+                        'url' => (string) $url,
+                    ];
+
+                    $this->logger->debug(
+                        message: "Updating play state for {item.type} '{item.title}' on '{user}@{backend}' to '{play_state}'.",
+                        context: [
+                            'event_name' => 'backend.request.started',
+                            'subsystem' => 'backend.restore',
+                            'operation' => 'update_state',
+                            'outcome' => 'started',
+                            ...$requestContext,
+                        ],
+                    );
+
                     $queue->add(
                         new Request(
                             method: Method::GET,
                             url: $url,
                             options: $context->getHttpOptions(),
-                            success: function (ResponseInterface $response) use ($entity, $itemId, $rContext): array {
-                                $requestContext = [
-                                    ...$rContext,
-                                    'play_state' => $entity->isWatched() ? 'played' : 'unplayed',
-                                    'item' => [
-                                        'id' => $itemId,
-                                        'title' => $entity->getName(),
-                                        'type' => $entity->type === iState::TYPE_EPISODE ? 'episode' : 'movie',
-                                        'state' => $entity->isWatched() ? 'played' : 'unplayed',
-                                    ],
-                                ];
-
+                            success: function (ResponseInterface $response) use ($requestContext): array {
                                 $statusCode = $response->getStatusCode();
                                 if (Status::OK !== Status::tryFrom($statusCode)) {
                                     $this->logger->error(
-                                        message: "{action}: Failed to change '{client}: {user}@{backend}' - '{item.title}' play state. Invalid HTTP '{status_code}' status code returned.",
+                                        message: "Play-state update for {item.type} '{item.title}' on '{user}@{backend}' returned status {status_code}.",
                                         context: [
+                                            'event_name' => 'backend.response.failed',
+                                            'subsystem' => 'backend.restore',
+                                            'operation' => 'update_state',
+                                            'outcome' => 'failed',
                                             ...$requestContext,
                                             'status_code' => $statusCode,
                                         ],
@@ -121,25 +142,28 @@ final class UpdateState
                                 }
 
                                 $this->logger->notice(
-                                    message: "{action}: Changed '{client}: {user}@{backend}' - '{item.title}' play state to '{play_state}'.",
-                                    context: $requestContext,
+                                    message: "Updated play state for {item.type} '{item.title}' on '{user}@{backend}' to '{play_state}'.",
+                                    context: [
+                                        'event_name' => 'backend.state_update.completed',
+                                        'subsystem' => 'backend.restore',
+                                        'operation' => 'update_state',
+                                        'outcome' => 'completed',
+                                        ...$requestContext,
+                                    ],
                                 );
 
                                 return [];
                             },
-                            error: function (Throwable $e) use ($entity, $itemId, $rContext): array {
+                            error: function (Throwable $e) use ($requestContext): array {
                                 $this->logger->error(
                                     ...lw(
-                                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' restore play state of {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                                        message: "Play-state request failed for {item.type} '{item.title}' on '{user}@{backend}'.",
                                         context: [
-                                            ...$rContext,
-                                            'play_state' => $entity->isWatched() ? 'played' : 'unplayed',
-                                            'item' => [
-                                                'id' => $itemId,
-                                                'title' => $entity->getName(),
-                                                'type' => $entity->type === iState::TYPE_EPISODE ? 'episode' : 'movie',
-                                                'state' => $entity->isWatched() ? 'played' : 'unplayed',
-                                            ],
+                                            'event_name' => 'backend.client.request_failed',
+                                            'subsystem' => 'backend.restore',
+                                            'operation' => 'update_state',
+                                            'outcome' => 'failed',
+                                            ...$requestContext,
                                             ...exception_log($e),
                                         ],
                                         e: $e,
@@ -149,16 +173,7 @@ final class UpdateState
                                 return [];
                             },
                             extras: [
-                                'context' => [
-                                    ...$rContext,
-                                    'play_state' => $entity->isWatched() ? 'played' : 'unplayed',
-                                    'item' => [
-                                        'id' => $itemId,
-                                        'title' => $entity->getName(),
-                                        'type' => $entity->type === iState::TYPE_EPISODE ? 'episode' : 'movie',
-                                        'state' => $entity->isWatched() ? 'played' : 'unplayed',
-                                    ],
-                                ],
+                                'context' => $requestContext,
                                 iHttp::class => $this->http,
                             ],
                         ),

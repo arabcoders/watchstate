@@ -291,6 +291,25 @@ class UtilsTest extends TestCase
         self::assertSame('main', $users['main']->name);
     }
 
+    public function test_exception_log_shape(): void
+    {
+        $e = new RuntimeException('Boom');
+
+        $payload = exception_log($e);
+
+        self::assertSame(RuntimeException::class, $payload['error']['type']);
+        self::assertSame(RuntimeException::class, $payload['error']['kind']);
+        self::assertSame('Boom', $payload['error']['message']);
+        self::assertSame(after($e->getFile(), ROOT_PATH), $payload['error']['file']);
+        self::assertSame($e->getLine(), $payload['error']['line']);
+        self::assertSame(RuntimeException::class, $payload['exception']['type']);
+        self::assertSame(RuntimeException::class, $payload['exception']['kind']);
+        self::assertSame('Boom', $payload['exception']['message']);
+        self::assertSame($e->getFile(), $payload['exception']['file']);
+        self::assertSame($e->getLine(), $payload['exception']['line']);
+        self::assertIsArray($payload['exception']['trace']);
+    }
+
     private function createMapper(Logger $logger): DirectMapper
     {
         $db = $this->createDb($logger);

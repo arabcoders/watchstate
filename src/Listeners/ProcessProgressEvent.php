@@ -66,7 +66,14 @@ final readonly class ProcessProgressEvent
         try {
             $userContext = get_user_context(user: $user, mapper: $this->mapper, logger: $this->logger);
         } catch (RuntimeException $ex) {
-            $writer(Level::Error, $ex->getMessage());
+            $writer(Level::Error, "Failed to load progress user context for '{user}'.", [
+                'event_name' => 'progress.user_context.failed',
+                'subsystem' => 'progress',
+                'operation' => 'load_user_context',
+                'outcome' => 'failed',
+                'user' => $user,
+                ...exception_log($ex),
+            ]);
             return $event;
         }
 
@@ -75,7 +82,12 @@ final readonly class ProcessProgressEvent
         $hasProgressValue = ag_exists($options, Options::STATE_PROGRESS_VALUE);
 
         if (null === ($item = $userContext->db->get(Container::get(iState::class)::fromArray($event->getData())))) {
-            $writer(Level::Error, "'{user}' item '{item_id}' is not referenced locally yet.", [
+            $writer(Level::Error, "Cannot update progress for '#{item_id}' and '{user}': item is not referenced locally.", [
+                'event_name' => 'progress.item.missing',
+                'subsystem' => 'progress',
+                'operation' => 'load_item',
+                'outcome' => 'failed',
+                'reason' => 'missing_local_reference',
                 'user' => $userContext->name,
                 'item_id' => ag($event->getData(), 'id', '?'),
             ]);
@@ -88,12 +100,18 @@ final readonly class ProcessProgressEvent
             if (false === ($allowUpdate >= $minThreshold && time() > ($item->updated + $allowUpdate))) {
                 $writer(
                     level: Level::Info,
-                    message: "'{user}' item - '#{item_id}: {title}' is marked as watched. Not updating watch progress. {comp}",
+                    message: "Skipping progress update for '#{item_id}: {item_title}': item is already watched.",
                     context: [
+                        'event_name' => 'progress.item.skipped',
+                        'subsystem' => 'progress',
+                        'operation' => 'queue',
+                        'outcome' => 'skipped',
+                        'reason' => 'item_watched',
                         'item_id' => $item->id,
-                        'title' => $item->getName(),
+                        'item_title' => $item->getName(),
                         'user' => $userContext->name,
-                        'comp' => $allowUpdate > $minThreshold
+                        'progress' => $item->getPlayProgress(),
+                        'comparison' => $allowUpdate > $minThreshold
                             ? array_to_string([
                                 'threshold' => $allowUpdate,
                                 'now' => ['secs' => time(), 'time' => make_date(time())],
@@ -107,10 +125,16 @@ final readonly class ProcessProgressEvent
         }
 
         if (false === $hasProgressValue && false === $item->hasPlayProgress()) {
-            $writer(Level::Info, "'{user}' item '#{item_id}: {title}' has no watch progress to export.", [
+            $writer(Level::Info, "No progress updates queued for '{user}'.", [
+                'event_name' => 'progress.queue.empty',
+                'subsystem' => 'progress',
+                'operation' => 'queue',
+                'outcome' => 'completed',
+                'reason' => 'no_progress_to_export',
                 'item_id' => $item->id,
-                'title' => $item->title,
+                'item_title' => $item->title,
                 'user' => $userContext->name,
+                'queue_count' => 0,
             ]);
             return $event;
         }
@@ -128,7 +152,12 @@ final readonly class ProcessProgressEvent
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
             if (true !== (bool) ag($backend, 'export.enabled')) {
-                $writer(Level::Notice, "Ignoring '{user}@{backend}'. Export is disabled.", [
+                $writer(Level::Notice, "Skipping progress target '{user}@{backend}': export is disabled.", [
+                    'event_name' => 'progress.backend.skipped',
+                    'subsystem' => 'progress',
+                    'operation' => 'queue',
+                    'outcome' => 'skipped',
+                    'reason' => 'export_disabled',
                     'backend' => $backendName,
                     'user' => $userContext->name,
                 ]);
@@ -136,7 +165,12 @@ final readonly class ProcessProgressEvent
             }
 
             if (!isset($supported[$type])) {
-                $writer(Level::Error, "Ignoring '{user}@{backend}'. Invalid type '{type}'.", [
+                $writer(Level::Error, "Skipping progress target '{user}@{backend}': backend type '{type}' is unsupported.", [
+                    'event_name' => 'progress.backend.skipped',
+                    'subsystem' => 'progress',
+                    'operation' => 'queue',
+                    'outcome' => 'skipped',
+                    'reason' => 'unsupported_type',
                     'type' => $type,
                     'backend' => $backendName,
                     'condition' => [
@@ -149,7 +183,12 @@ final readonly class ProcessProgressEvent
             }
 
             if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {
-                $writer(Level::Error, "Ignoring '{user}@{backend}'. Invalid URL '{url}'.", [
+                $writer(Level::Error, "Skipping progress target '{user}@{backend}': URL '{url}' is invalid.", [
+                    'event_name' => 'progress.backend.skipped',
+                    'subsystem' => 'progress',
+                    'operation' => 'queue',
+                    'outcome' => 'skipped',
+                    'reason' => 'invalid_url',
                     'backend' => $backendName,
                     'url' => $url ?? 'None',
                     'user' => $userContext->name,
@@ -162,7 +201,15 @@ final readonly class ProcessProgressEvent
         }
 
         if (empty($list)) {
-            $writer(Level::Warning, 'There are no backends to send the events to.');
+            $writer(Level::Warning, "No progress updates queued for '{user}'.", [
+                'event_name' => 'progress.queue.empty',
+                'subsystem' => 'progress',
+                'operation' => 'queue',
+                'outcome' => 'failed',
+                'reason' => 'no_eligible_backends',
+                'user' => $userContext->name,
+                'queue_count' => 0,
+            ]);
             return $event;
         }
 
@@ -200,21 +247,34 @@ final readonly class ProcessProgressEvent
             } catch (UnexpectedVersionException|NotImplementedException $ex) {
                 $writer(
                     Level::Notice,
-                    "This feature is not available for '{user}@{backend}'. '{error.message}' at '{error.file}:{error.line}'.",
+                    "Skipping progress update for '#{item_id}: {item_title}' on '{user}@{backend}': backend feature is unavailable.",
                     [
+                        'event_name' => 'progress.item.skipped',
+                        'subsystem' => 'progress',
+                        'operation' => 'queue',
+                        'outcome' => 'skipped',
+                        'reason' => 'feature_unavailable',
                         'user' => $userContext->name,
                         'backend' => $name,
+                        'item_id' => $item->id,
+                        'item_type' => $item->type,
+                        'item_title' => $item->getName(),
                         ...exception_log($ex),
                     ],
                 );
             } catch (Throwable $ex) {
                 $writer(
                     Level::Error,
-                    "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to sync '#{item_id}: {title}' progress. '{error.message}' at '{error.file}:{error.line}'.",
+                    "Failed to queue progress update for '#{item_id}: {item_title}' on '{user}@{backend}'.",
                     [
+                        'event_name' => 'progress.item.failed',
+                        'subsystem' => 'progress',
+                        'operation' => 'queue',
+                        'outcome' => 'failed',
                         'item_id' => $item->id,
                         'backend' => $name,
-                        'title' => $item->getName(),
+                        'item_type' => $item->type,
+                        'item_title' => $item->getName(),
                         'user' => $userContext->name,
                         ...exception_log($ex),
                     ],
@@ -225,16 +285,30 @@ final readonly class ProcessProgressEvent
         unset($backend);
 
         if (count($this->queue) < 1) {
-            $writer(Level::Notice, "Backend clients didn't queue items to be updated.");
+            $writer(Level::Notice, "No progress updates queued for '{user}'.", [
+                'event_name' => 'progress.queue.empty',
+                'subsystem' => 'progress',
+                'operation' => 'queue',
+                'outcome' => 'completed',
+                'reason' => 'no_updates_queued',
+                'user' => $userContext->name,
+                'queue_count' => 0,
+            ]);
             return $event;
         }
 
-        $writer(Level::Notice, "Processing '{user}@{backend}' - '#{item_id}: {title}' watch progress '{progress}' event.", [
+        $writer(Level::Notice, "Processing progress '{progress}' for '#{item_id}: {item_title}' from '{user}@{backend}'.", [
+            'event_name' => 'progress.item.processing',
+            'subsystem' => 'progress',
+            'operation' => 'dispatch',
+            'outcome' => 'started',
             'item_id' => $item->id,
             'backend' => $item->via,
             'user' => $userContext->name,
-            'title' => $item->getName(),
+            'item_type' => $item->type,
+            'item_title' => $item->getName(),
             'progress' => $progress,
+            'progress_seconds' => $progressValue / 1000,
         ]);
 
         $http = Container::get(iHttp::class);
@@ -264,10 +338,16 @@ final readonly class ProcessProgressEvent
                     $statusCode = $response->getStatusCode();
 
                     if (true === (bool) ag($options, 'trace')) {
-                        $writer(Level::Debug, "Processing '{user}@{backend}' - '#{item_id}: {item.title}' response.", [
+                        $writer(Level::Debug, "Processing progress response for '#{item_id}' from '{user}@{backend}'.", [
+                            'event_name' => 'progress.request.response',
+                            'subsystem' => 'progress',
+                            'operation' => 'dispatch',
+                            'outcome' => 'received',
                             'item_id' => $context['item_id'],
-                            'url' => ag($context, 'remote.url', '??'),
-                            'status_code' => $statusCode,
+                            'http' => [
+                                'url' => ag($context, 'remote.url', '??'),
+                                'status_code' => $statusCode,
+                            ],
                             'headers' => $response->getHeaders(false),
                             'response' => $response->getContent(false),
                             ...$context,
@@ -277,10 +357,16 @@ final readonly class ProcessProgressEvent
                     if (false === in_array(Status::tryFrom($statusCode), [Status::OK, Status::NO_CONTENT], true)) {
                         $eventWriter(
                             Level::Error,
-                            "Request to change '{user}@{backend}' - '#{item_id}: {item.title}' watch progress returned with unexpected '{status_code}' status code.",
+                            "Progress update for '#{item_id}' on '{user}@{backend}' failed.",
                             [
                                 ...$context,
-                                'status_code' => $statusCode,
+                                'event_name' => 'progress.request.failed',
+                                'subsystem' => 'progress',
+                                'operation' => 'dispatch',
+                                'outcome' => 'failed',
+                                'http' => [
+                                    'status_code' => $statusCode,
+                                ],
                             ],
                         );
 
@@ -289,10 +375,16 @@ final readonly class ProcessProgressEvent
 
                     $eventWriter(
                         Level::Notice,
-                        "Updated '{user}@{backend}' '#{item_id}: {item.title}' watch progress to '{progress}'.",
+                        "Progress update for '#{item_id}' on '{user}@{backend}' completed.",
                         [
                             ...$context,
-                            'status_code' => $statusCode,
+                            'event_name' => 'progress.request.completed',
+                            'subsystem' => 'progress',
+                            'operation' => 'dispatch',
+                            'outcome' => 'completed',
+                            'http' => [
+                                'status_code' => $statusCode,
+                            ],
                         ],
                     );
 
@@ -307,9 +399,13 @@ final readonly class ProcessProgressEvent
 
                     $eventWriter(
                         Level::Error,
-                        "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to change watch progress of {item.type} '#{item_id}: {item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                        "Progress update for '#{item_id}' on '{user}@{backend}' failed.",
                         [
                             ...$context,
+                            'event_name' => 'progress.request.failed',
+                            'subsystem' => 'progress',
+                            'operation' => 'dispatch',
+                            'outcome' => 'failed',
                             'item_id' => ag($context, 'item.id', $item->id),
                             'user' => $userContext->name,
                             'progress' => ag($context, 'item.progress', $progress),

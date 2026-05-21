@@ -75,16 +75,22 @@ final class ProcessWebhookEventTest extends TestCase
             }
 
             $payload = json_decode($log, true, 512, JSON_THROW_ON_ERROR);
-            if (str_contains((string) ag($payload, 'message', ''), "Processing 'main@test_plex' request")) {
+            if ('webhook.item.processing' === ag($payload, 'fields.event_name')) {
                 $processingLog = $payload;
                 break;
             }
         }
 
         self::assertNotNull($processingLog);
+        self::assertSame('webhook.item.processing', ag($processingLog, 'fields.event_name'));
         self::assertSame((string) $event->getEvent()->id, ag($processingLog, 'fields.event_id'));
         self::assertSame('main', ag($processingLog, 'fields.user'));
         self::assertSame('test_plex', ag($processingLog, 'fields.backend'));
+        self::assertSame('plex', strtolower((string) ag($processingLog, 'fields.client')));
+        self::assertSame('started', ag($processingLog, 'fields.outcome'));
+        self::assertSame('process', ag($processingLog, 'fields.operation'));
+        self::assertSame('movie', ag($processingLog, 'fields.item_type'));
+        self::assertSame('Movie Title (2020)', ag($processingLog, 'fields.item_title'));
         self::assertSame('req-1', ag($processingLog, 'fields.request_id'));
         self::assertSame('media.scrobble', ag($processingLog, 'fields.webhook_event'));
         self::assertSame(121, ag($processingLog, 'fields.backend_item_id'));

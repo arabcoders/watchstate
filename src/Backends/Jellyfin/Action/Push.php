@@ -111,8 +111,15 @@ class Push
 
             if (null === ag($metadata, iState::COLUMN_ID, null)) {
                 $this->logger->warning(
-                    message: "{action}: Ignoring '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. No metadata was found.",
-                    context: $logContext,
+                    message: "Ignoring {item.type} '#{item.id}: {item.title}' for '{user}@{backend}': backend metadata is missing.",
+                    context: [
+                        'event_name' => 'backend.item.ignored',
+                        'subsystem' => 'backend.push',
+                        'operation' => 'load_remote_state',
+                        'outcome' => 'ignored',
+                        'reason' => 'missing_backend_metadata',
+                        ...$logContext,
+                    ],
                 );
                 continue;
             }
@@ -139,8 +146,14 @@ class Push
                 $logContext['remote']['url'] = (string) $url;
 
                 $this->logger->debug(
-                    message: "{action}: Requesting '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' metadata.",
-                    context: $logContext,
+                    message: "Loading backend state for {item.type} '#{item.id}: {item.title}' from '{user}@{backend}'.",
+                    context: [
+                        'event_name' => 'backend.request.started',
+                        'subsystem' => 'backend.push',
+                        'operation' => 'load_remote_state',
+                        'outcome' => 'started',
+                        ...$logContext,
+                    ],
                 );
 
                 $requests[] = $this->http->request(
@@ -153,22 +166,14 @@ class Push
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "{action}: Exception '{error.kind}' unhandled during '{client}: {user}@{backend}' request for {item.type} '#{item.id}: {item.title}' metadata. {error.message} at '{error.file}:{error.line}'.",
+                        message: "Failed to load backend state for {item.type} '#{item.id}: {item.title}' from '{user}@{backend}'.",
                         context: [
-                            'error' => [
-                                'kind' => $e::class,
-                                'line' => $e->getLine(),
-                                'message' => $e->getMessage(),
-                                'file' => after($e->getFile(), ROOT_PATH),
-                            ],
+                            'event_name' => 'backend.client.request_failed',
+                            'subsystem' => 'backend.push',
+                            'operation' => 'load_remote_state',
+                            'outcome' => 'failed',
                             ...$logContext,
-                            'exception' => [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                                'message' => $e->getMessage(),
-                                'trace' => $e->getTrace(),
-                            ],
+                            ...exception_log($e),
                         ],
                         e: $e,
                     ),
@@ -184,8 +189,15 @@ class Push
             try {
                 if (null === ($id = ag($response->getInfo('user_data'), 'id'))) {
                     $this->logger->error(
-                        message: "{action}: Unable to get entity object id for '{client}: {user}@{backend}'.",
-                        context: $logContext,
+                        message: "Push response for '{user}@{backend}' is missing the local entity reference.",
+                        context: [
+                            'event_name' => 'backend.response.failed',
+                            'subsystem' => 'backend.push',
+                            'operation' => 'load_remote_state',
+                            'outcome' => 'failed',
+                            'reason' => 'missing_entity_reference',
+                            ...$logContext,
+                        ],
                     );
                     continue;
                 }
@@ -197,13 +209,28 @@ class Push
                 if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
                     if (Status::NOT_FOUND === Status::tryFrom($response->getStatusCode())) {
                         $this->logger->warning(
-                            message: "{action}: Request for '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' metadata returned with (404: Not Found) status code.",
-                            context: [...$logContext, 'status_code' => $response->getStatusCode()],
+                            message: "Backend state for {item.type} '#{item.id}: {item.title}' was not found on '{user}@{backend}'.",
+                            context: [
+                                'event_name' => 'backend.response.failed',
+                                'subsystem' => 'backend.push',
+                                'operation' => 'load_remote_state',
+                                'outcome' => 'failed',
+                                'reason' => 'not_found',
+                                ...$logContext,
+                                'status_code' => $response->getStatusCode(),
+                            ],
                         );
                     } else {
                         $this->logger->error(
-                            message: "{action}: Request for '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' metadata returned with unexpected '{status_code}' status code.",
-                            context: [...$logContext, 'status_code' => $response->getStatusCode()],
+                            message: "Backend state request for {item.type} '#{item.id}: {item.title}' on '{user}@{backend}' returned status {status_code}.",
+                            context: [
+                                'event_name' => 'backend.response.failed',
+                                'subsystem' => 'backend.push',
+                                'operation' => 'load_remote_state',
+                                'outcome' => 'failed',
+                                ...$logContext,
+                                'status_code' => $response->getStatusCode(),
+                            ],
                         );
                     }
 
@@ -218,17 +245,33 @@ class Push
 
                 if ($context->trace) {
                     $this->logger->debug(
-                        message: "{action}: Parsing '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' payload.",
-                        context: [...$logContext, 'response' => ['body' => $json]],
+                        message: "Parsing backend state for {item.type} '#{item.id}: {item.title}' from '{user}@{backend}'.",
+                        context: [
+                            'event_name' => 'backend.response.received',
+                            'subsystem' => 'backend.push',
+                            'operation' => 'load_remote_state',
+                            'outcome' => 'received',
+                            ...$logContext,
+                            'response' => ['body' => $json],
+                        ],
                     );
                 }
 
                 $isWatched = (int) (bool) ag($json, 'UserData.Played', false);
+                $playState = 1 === $isWatched ? 'Played' : 'Unplayed';
 
                 if ($entity->watched === $isWatched) {
                     $this->logger->info(
-                        message: "{action}: Ignoring '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}'. Play state is identical.",
-                        context: $logContext,
+                        message: "Ignoring {item.type} '#{item.id}: {item.title}' from '{user}@{backend}': play state is already '{play_state}'.",
+                        context: [
+                            'event_name' => 'backend.item.ignored',
+                            'subsystem' => 'backend.push',
+                            'operation' => 'update_state',
+                            'outcome' => 'ignored',
+                            'reason' => 'state_unchanged',
+                            ...$logContext,
+                            'play_state' => $playState,
+                        ],
                     );
                     continue;
                 }
@@ -237,8 +280,17 @@ class Push
                     $dateKey = 1 === $isWatched ? 'UserData.LastPlayedDate' : 'DateCreated';
                     if (null === ($date = ag($json, $dateKey))) {
                         $this->logger->error(
-                            message: "{action}: Ignoring '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}'. No {date_key} is set on backend object.",
-                            context: ['date_key' => $dateKey, ...$logContext, 'response' => ['body' => $json]],
+                            message: "Ignoring {item.type} '#{item.id}: {item.title}' from '{user}@{backend}': missing backend date '{date_key}'.",
+                            context: [
+                                'event_name' => 'backend.item.ignored',
+                                'subsystem' => 'backend.push',
+                                'operation' => 'update_state',
+                                'outcome' => 'ignored',
+                                'reason' => 'missing_date',
+                                'date_key' => $dateKey,
+                                ...$logContext,
+                                'response' => ['body' => $json],
+                            ],
                         );
                         continue;
                     }
@@ -249,8 +301,13 @@ class Push
 
                     if ($date->getTimestamp() >= ($timeExtra + $entity->updated)) {
                         $this->logger->notice(
-                            message: "{action}: Ignoring '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}'. Database date is older than backend date.",
+                            message: "Ignoring {item.type} '#{item.id}: {item.title}' from '{user}@{backend}': backend date is newer than local state.",
                             context: [
+                                'event_name' => 'backend.item.ignored',
+                                'subsystem' => 'backend.push',
+                                'operation' => 'update_state',
+                                'outcome' => 'ignored',
+                                'reason' => 'backend_date_newer',
                                 ...$logContext,
                                 'comparison' => [
                                     'database' => make_date($entity->updated),
@@ -277,12 +334,17 @@ class Push
                 }
 
                 $logContext['remote']['url'] = (string) $url;
-                $playState = $entity->isWatched() ? 'Played' : 'Unplayed';
-                $requestContext = $logContext + ['play_state' => $playState];
+                $requestContext = $logContext + ['play_state' => $entity->isWatched() ? 'Played' : 'Unplayed'];
 
                 $this->logger->debug(
-                    message: "{action}: Queuing request to change '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' play state to '{play_state}'.",
-                    context: $requestContext,
+                    message: "Updating play state for {item.type} '#{item.id}: {item.title}' on '{user}@{backend}' to '{play_state}'.",
+                    context: [
+                        'event_name' => 'backend.request.started',
+                        'subsystem' => 'backend.push',
+                        'operation' => 'update_state',
+                        'outcome' => 'started',
+                        ...$requestContext,
+                    ],
                 );
 
                 if (false === (bool) ag($context->options, Options::DRY_RUN, false)) {
@@ -302,8 +364,12 @@ class Push
 
                                 if (Status::OK !== Status::tryFrom($statusCode)) {
                                     $this->logger->error(
-                                        message: "{action}: Request to change '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' play state returned with unexpected '{status_code}' status code.",
+                                        message: "Play-state update for {item.type} '#{item.id}: {item.title}' on '{user}@{backend}' returned status {status_code}.",
                                         context: [
+                                            'event_name' => 'backend.response.failed',
+                                            'subsystem' => 'backend.push',
+                                            'operation' => 'update_state',
+                                            'outcome' => 'failed',
                                             ...$requestContext,
                                             'status_code' => $statusCode,
                                         ],
@@ -313,8 +379,14 @@ class Push
                                 }
 
                                 $this->logger->notice(
-                                    message: "{action}: Updated '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' play state to '{play_state}'.",
-                                    context: $requestContext,
+                                    message: "Updated play state for {item.type} '#{item.id}: {item.title}' on '{user}@{backend}' to '{play_state}'.",
+                                    context: [
+                                        'event_name' => 'backend.state_update.completed',
+                                        'subsystem' => 'backend.push',
+                                        'operation' => 'update_state',
+                                        'outcome' => 'completed',
+                                        ...$requestContext,
+                                    ],
                                 );
 
                                 if (true !== $entity->isWatched()) {
@@ -344,8 +416,12 @@ class Push
                             error: function (Throwable $e) use ($requestContext): array {
                                 $this->logger->error(
                                     ...lw(
-                                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' request to change play state of {item.type} '#{item.id}: {item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                                        message: "Play-state request failed for {item.type} '#{item.id}: {item.title}' on '{user}@{backend}'.",
                                         context: [
+                                            'event_name' => 'backend.client.request_failed',
+                                            'subsystem' => 'backend.push',
+                                            'operation' => 'update_state',
+                                            'outcome' => 'failed',
                                             ...$requestContext,
                                             ...exception_log($e),
                                         ],
@@ -365,22 +441,14 @@ class Push
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' push play state. {error.message} at '{error.file}:{error.line}'.",
+                        message: "Failed to prepare play-state update for {item.type} '#{item.id}: {item.title}' on '{user}@{backend}'.",
                         context: [
-                            'error' => [
-                                'kind' => $e::class,
-                                'line' => $e->getLine(),
-                                'message' => $e->getMessage(),
-                                'file' => after($e->getFile(), ROOT_PATH),
-                            ],
+                            'event_name' => 'backend.operation.failed',
+                            'subsystem' => 'backend.push',
+                            'operation' => 'prepare_state_update',
+                            'outcome' => 'failed',
                             ...$logContext,
-                            'exception' => [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                                'message' => $e->getMessage(),
-                                'trace' => $e->getTrace(),
-                            ],
+                            ...exception_log($e),
                         ],
                         e: $e,
                     ),

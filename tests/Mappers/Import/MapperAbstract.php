@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Mappers\Import;
 
 use App\Libs\Container;
+use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
@@ -67,6 +68,13 @@ abstract class MapperAbstract extends TestCase
         $this->mapper = $this->setupMapper();
 
         Message::reset();
+    }
+
+    public function tearDown(): void
+    {
+        Config::reset();
+
+        parent::tearDown();
     }
 
     /**
@@ -612,6 +620,54 @@ abstract class MapperAbstract extends TestCase
         $this->assertSame(['test' => 'test'],
             $mapper->getOptions(),
             'getOptions() should return the options we have set.');
+    }
+
+    public function test_load_data_logs_preload_completed(): void
+    {
+        $testMovie = new StateEntity($this->testMovie);
+        $testEpisode = new StateEntity($this->testEpisode);
+
+        $this->db->commit([$testEpisode, $testMovie]);
+
+        $this->mapper->loadData();
+
+        $records = array_values(array_filter(
+            $this->handler->getRecords(),
+            static fn($record): bool => 'mapper.preload.completed' === ($record->context['event_name'] ?? null),
+        ));
+
+        self::assertCount(1, $records);
+        self::assertSame(
+            "Preloaded {$records[0]->context['pointer_count']} pointers and {$records[0]->context['object_count']} objects for 'main' into " . after_last($this->mapper::class, '\\') . '.',
+            $records[0]->message,
+        );
+        self::assertSame('mapper', $records[0]->context['subsystem']);
+        self::assertGreaterThan(0, $records[0]->context['pointer_count']);
+        self::assertSame(2, $records[0]->context['object_count']);
+        self::assertArrayHasKey('duration_seconds', $records[0]->context);
+        self::assertArrayHasKey('memory', $records[0]->context);
+    }
+
+    public function test_add_logs_item_ignored_for_missing_guids(): void
+    {
+        $testMovieData = $this->testMovie;
+        $testMovieData[iState::COLUMN_GUIDS] = [];
+        $testMovieData[iState::COLUMN_META_DATA][$testMovieData[iState::COLUMN_VIA]][iState::COLUMN_GUIDS] = [];
+        $testMovie = new StateEntity($testMovieData);
+
+        $this->mapper->add($testMovie);
+
+        $records = array_values(array_filter(
+            $this->handler->getRecords(),
+            static fn($record): bool => 'mapper.item.ignored' === ($record->context['event_name'] ?? null)
+                && 'no_supported_external_ids' === ($record->context['reason'] ?? null),
+        ));
+
+        self::assertCount(1, $records);
+        self::assertSame("Ignoring movie '#121: Movie Title (2020)' from 'main@test_plex': no supported external ids.", $records[0]->message);
+        self::assertSame('no_supported_external_ids', $records[0]->context['reason']);
+        self::assertSame('movie', $records[0]->context['item_type']);
+        self::assertSame('121', (string) $records[0]->context['item_id']);
     }
 
 }

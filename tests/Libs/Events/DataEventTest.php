@@ -94,7 +94,8 @@ class DataEventTest extends TestCase
         $this->assertSame('notice', ag($record, 'level'));
         $this->assertSame('NOTICE: Listener visible', ag($record, 'message'));
         $this->assertSame((string) $dataEvent->getEvent()->id, ag($record, 'fields.event_id'));
-        $this->assertSame($dataEvent->getEvent()->event, ag($record, 'fields.event'));
+        $this->assertSame($dataEvent->getEvent()->event, ag($record, 'fields.queued_event'));
+        $this->assertNull(ag($record, 'fields.event'));
     }
 
     public function test_log_jsonl_keep(): void
@@ -147,6 +148,7 @@ class DataEventTest extends TestCase
         $payload = json_decode(trim($logs[0]), true, flags: JSON_THROW_ON_ERROR);
         $this->assertSame('debug', ag($payload, 'level'));
         $this->assertSame('visible debug', ag($payload, 'message'));
+        $this->assertSame('test', ag($payload, 'fields.queued_event'));
     }
 
     public function test_debug_record_skip(): void
@@ -190,5 +192,6 @@ class DataEventTest extends TestCase
         $payload = json_decode(trim($logs[0]), true, flags: JSON_THROW_ON_ERROR);
         $this->assertSame('info', ag($payload, 'level'));
         $this->assertSame('visible info', ag($payload, 'message'));
+        $this->assertSame('test', ag($payload, 'fields.queued_event'));
     }
 }

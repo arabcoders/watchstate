@@ -784,7 +784,14 @@ if (!function_exists('register_events')) {
                     $dispatcher->addListener(ag($event, 'on'), ag($event, 'callable'));
                 }
             } catch (Throwable $e) {
-                $logger->error($e->getMessage(), []);
+                $logger->error("Failed to register event listeners from '{file}'.", [
+                    'event_name' => 'app.exception.event_registration_failed',
+                    'subsystem' => 'app',
+                    'operation' => 'register_events',
+                    'outcome' => 'failed',
+                    'file' => $eventsFile,
+                    ...exception_log($e),
+                ]);
             }
         }
 
@@ -1622,12 +1629,16 @@ if (!function_exists('exception_log')) {
      *
      * @param Throwable $e The exception.
      *
-     * @return array{error: array,excpetion: array} The exception formatted in standard way.
+     * @return array{
+     *     error: array{type: class-string<Throwable>, kind: class-string<Throwable>, line: int, message: string, file: string},
+     *     exception: array{file: string, line: int, type: class-string<Throwable>, kind: class-string<Throwable>, message: string, trace: array<mixed>}
+     * } The exception formatted in standard way.
      */
     function exception_log(Throwable $e): array
     {
         return [
             'error' => [
+                'type' => $e::class,
                 'kind' => $e::class,
                 'line' => $e->getLine(),
                 'message' => $e->getMessage(),
@@ -1636,6 +1647,7 @@ if (!function_exists('exception_log')) {
             'exception' => [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
+                'type' => $e::class,
                 'kind' => $e::class,
                 'message' => $e->getMessage(),
                 'trace' => $e->getTrace(),

@@ -142,9 +142,11 @@ class GetLibrariesListTest extends TestCase
         $this->assertFalse($response->status);
         $this->assertNotNull($response->error);
         $this->assertStringContainsString(
-            "libraries returned with unexpected '401' status code",
+            "Libraries request to 'Plex@Plex' returned status 401",
             (string)$response->error
         );
+        $this->assertSame('backend.response.failed', $response->error->context['event_name'] ?? null);
+        $this->assertSame('backend.library', $response->error->context['subsystem'] ?? null);
 
         $this->assertNull($response->response);
         $this->assertTrue($response->error->hasException());

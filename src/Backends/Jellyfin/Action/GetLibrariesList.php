@@ -13,6 +13,7 @@ use App\Backends\Jellyfin\JellyfinClient as JFC;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Exceptions\AppExceptionInterface;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Options;
 use DateInterval;
@@ -35,7 +36,7 @@ class GetLibrariesList
     /**
      * Class constructor
      *
-     * @param iHttp $http The HTTP client object.
+     * @param iHttp&\App\Libs\Extends\HttpClient $http The HTTP client object.
      * @param iLogger $logger The logger object.
      */
     public function __construct(
@@ -82,9 +83,30 @@ class GetLibrariesList
                     logger: $this->logger,
                 );
         } catch (RuntimeException $e) {
+            $errorContext = $e instanceof AppExceptionInterface && $e->hasContext()
+                ? $e->getContext()
+                : [
+                    'action' => $this->action,
+                    'client' => $context->clientName,
+                    'backend' => $context->backendName,
+                    'user' => $context->userContext->name,
+                    'event_name' => 'backend.operation.failed',
+                    'subsystem' => 'backend.library',
+                    'operation' => 'request_libraries',
+                    'outcome' => 'failed',
+                    ...exception_log($e),
+                ];
+
             return new Response(
                 status: false,
-                error: new Error(message: $e->getMessage(), level: Levels::ERROR, previous: $e),
+                error: new Error(
+                    message: 'backend.response.failed' === ag($errorContext, 'event_name')
+                        ? "Libraries request to '{user}@{backend}' returned status {http.status_code}."
+                        : "Failed to load libraries from '{user}@{backend}'.",
+                    context: $errorContext,
+                    level: Levels::ERROR,
+                    previous: $e,
+                ),
             );
         }
 
@@ -96,8 +118,12 @@ class GetLibrariesList
         ];
 
         if ($context->trace) {
-            $this->logger->debug("{action}: Parsing '{client}: {user}@{backend}' libraries payload.", [
+            $this->logger->debug("Parsing libraries payload from '{user}@{backend}'.", [
                 ...$logContext,
+                'event_name' => 'backend.response.received',
+                'subsystem' => 'backend.library',
+                'operation' => 'request_libraries',
+                'outcome' => 'received',
                 'response' => ['body' => $json],
             ]);
         }
@@ -108,8 +134,13 @@ class GetLibrariesList
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{client}: {user}@{backend}' libraries returned empty list.",
+                    message: "Libraries response from '{user}@{backend}' was empty.",
                     context: [
+                        'event_name' => 'backend.response.completed',
+                        'subsystem' => 'backend.library',
+                        'operation' => 'request_libraries',
+                        'outcome' => 'completed',
+                        'reason' => 'empty_list',
                         ...$logContext,
                         'response' => ['body' => $json],
                     ],
@@ -197,20 +228,40 @@ class GetLibrariesList
             'url' => (string) $url,
         ];
 
-        $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' libraries list.", $logContext);
+        $this->logger->debug("Requesting libraries from '{user}@{backend}' via {client}.", [
+            ...$logContext,
+            'event_name' => 'backend.request.started',
+            'subsystem' => 'backend.library',
+            'operation' => 'request_libraries',
+            'outcome' => 'started',
+            'http' => ['url' => (string) $url],
+        ]);
 
         $response = $this->http->request(Method::GET, (string) $url, $context->getHttpOptions());
 
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
-            throw new RuntimeException(
+            $errorContext = [
+                ...$logContext,
+                'event_name' => 'backend.response.failed',
+                'subsystem' => 'backend.library',
+                'operation' => 'request_libraries',
+                'outcome' => 'failed',
+                'reason' => 'unexpected_status',
+                'http' => [
+                    'status_code' => $response->getStatusCode(),
+                    'expected_status_codes' => [Status::OK->value],
+                    'url' => (string) $url,
+                ],
+            ];
+
+            $ex = new RuntimeException(
                 r(
-                    text: "{action}: Request for '{client}: {user}@{backend}' libraries returned with unexpected '{status_code}' status code.",
-                    context: [
-                        ...$logContext,
-                        'status_code' => $response->getStatusCode(),
-                    ],
+                    text: "Libraries request to '{user}@{backend}' returned status {http.status_code}.",
+                    context: $errorContext,
                 ),
             );
+            $ex->setContext($errorContext);
+            throw $ex;
         }
 
         return json_decode(

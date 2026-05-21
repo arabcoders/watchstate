@@ -16,6 +16,7 @@ class UpdateStateDryRunTest extends MediaBrowserTestCase
     public function test_update_dry_no_queue(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass]) {
+            $this->handler?->clear();
             $http = $this->makeHttpClient();
             $context = $this->makeContext($clientName, [Options::DRY_RUN => true]);
             $queue = new QueueRequests();
@@ -41,6 +42,12 @@ class UpdateStateDryRunTest extends MediaBrowserTestCase
 
             $this->assertTrue($result->isSuccessful());
             $this->assertSame(0, $queue->count());
+
+            $records = $this->handler?->getRecords() ?? [];
+            $record = end($records);
+            $this->assertSame('backend.request.skipped', $record->context['event_name'] ?? null);
+            $this->assertSame('backend.restore', $record->context['subsystem'] ?? null);
+            $this->assertSame('dry_run', $record->context['reason'] ?? null);
         }
     }
 

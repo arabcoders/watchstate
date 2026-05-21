@@ -27,7 +27,7 @@ class DirectMapperTest extends MapperAbstract
 
         $record = null;
         foreach ($this->handler->getRecords() as $logRecord) {
-            if (str_contains($logRecord->message, 'added')) {
+            if ('mapper.item.added' === ($logRecord->context['event_name'] ?? null)) {
                 $record = $logRecord;
                 break;
             }

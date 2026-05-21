@@ -38,6 +38,7 @@ final readonly class ProcessProfileEvent
 
     public function __invoke(DataEvent $e): DataEvent
     {
+        $profileId = (string) ag($e->getData(), 'meta.id', '??');
         $writer = function (Level $level, string $message, array $context = []) use ($e) {
             $e->addLogEntry($level, $message, $context);
             $this->logger->log($level, $message, $context);
@@ -48,29 +49,54 @@ final readonly class ProcessProfileEvent
         $hasCollector = null !== ($url = ag($this->config, 'collector'));
         $saveProfile = (bool) ag($this->config, 'save', false);
         if (false === $hasCollector && false === $saveProfile) {
-            $writer(Level::Info, 'No profile collector url was set and save is disabled.');
+            $writer(Level::Info, "Profile '{profile_id}' export skipped: collector URL is not set and local save is disabled.", [
+                'event_name' => 'profile.export.disabled',
+                'subsystem' => 'profile',
+                'operation' => 'export',
+                'outcome' => 'skipped',
+                'profile_id' => $profileId,
+                'collector_configured' => false,
+                'save_enabled' => false,
+                'reason' => 'collector_not_configured_and_save_disabled',
+            ]);
             return $e;
         }
 
         $data = json_encode($e->getData());
         if (false === $data) {
-            $writer(Level::Error, 'Failed to encode profile data.');
+            $writer(Level::Error, "Failed to encode profile '{profile_id}'.", [
+                'event_name' => 'profile.encode.failed',
+                'subsystem' => 'profile',
+                'operation' => 'encode',
+                'outcome' => 'failed',
+                'profile_id' => $profileId,
+                'error' => [
+                    'message' => json_last_error_msg(),
+                ],
+            ]);
             return $e;
         }
 
         if (true === (bool) ag($this->config, 'save', false)) {
+            $path = r('{path}/{date}-{uuid}.json', [
+                'path' => rtrim(Config::get('profiler.path'), sys_get_temp_dir()),
+                'date' => gmdate('YmdHis'),
+                'uuid' => ag($e->getData(), 'meta.id', generate_uuid(...)),
+            ]);
+
             try {
-                $stream = new Stream(r('{path}/{date}-{uuid}.json', [
-                    'path' => rtrim(Config::get('profiler.path'), sys_get_temp_dir()),
-                    'date' => gmdate('YmdHis'),
-                    'uuid' => ag($e->getData(), 'meta.id', generate_uuid(...)),
-                ]), 'w');
+                $stream = new Stream($path, 'w');
                 $stream->write($data);
                 $stream->close();
-            } catch (Throwable $e) {
-                $writer(Level::Error, 'Failed to save profile data. {message}', [
-                    'message' => $e->getMessage(),
-                    'exception' => $e,
+            } catch (Throwable $ex) {
+                $writer(Level::Error, "Failed to save profile '{profile_id}' to '{path}'.", [
+                    'event_name' => 'profile.save.failed',
+                    'subsystem' => 'profile',
+                    'operation' => 'save',
+                    'outcome' => 'failed',
+                    'profile_id' => $profileId,
+                    'path' => $path,
+                    ...exception_log($ex),
                 ]);
             }
         }
@@ -82,20 +108,46 @@ final readonly class ProcessProfileEvent
                 $statusCode = $response->getStatusCode();
 
                 if (Status::OK !== Status::tryFrom($statusCode)) {
-                    $this->logger->error("Failed to process profile '{profile_id}'. Status: '{status}'.", [
-                        'profile_id' => ag($e->getData(), 'meta.id', '??'),
-                        'status' => $statusCode,
+                    $writer(Level::Error, "Profile collector returned status {http.status_code} for '{profile_id}'.", [
+                        'event_name' => 'profile.collector.unexpected_status',
+                        'subsystem' => 'profile',
+                        'operation' => 'collect',
+                        'outcome' => 'failed',
+                        'profile_id' => $profileId,
+                        'collector' => [
+                            'url' => $url,
+                        ],
+                        'http' => [
+                            'status_code' => $statusCode,
+                        ],
                     ]);
                     return $e;
                 }
 
-                $this->logger->notice("Successfully Processed '{profile_id}'.", [
-                    'profile_id' => ag($e->getData(), 'meta.id', '??'),
+                $writer(Level::Notice, "Sent profile '{profile_id}' to collector with status {http.status_code}.", [
+                    'event_name' => 'profile.collector.completed',
+                    'subsystem' => 'profile',
+                    'operation' => 'collect',
+                    'outcome' => 'completed',
+                    'profile_id' => $profileId,
+                    'collector' => [
+                        'url' => $url,
+                    ],
+                    'http' => [
+                        'status_code' => $statusCode,
+                    ],
                 ]);
-            } catch (TransportExceptionInterface $e) {
-                $writer(Level::Error, 'Error sending profile data to collector. {message}', [
-                    'message' => $e->getMessage(),
-                    'exception' => $e,
+            } catch (TransportExceptionInterface $ex) {
+                $writer(Level::Error, "Failed to send profile '{profile_id}' to collector.", [
+                    'event_name' => 'profile.collector.failed',
+                    'subsystem' => 'profile',
+                    'operation' => 'collect',
+                    'outcome' => 'failed',
+                    'profile_id' => $profileId,
+                    'collector' => [
+                        'url' => $url,
+                    ],
+                    ...exception_log($ex),
                 ]);
             }
         }

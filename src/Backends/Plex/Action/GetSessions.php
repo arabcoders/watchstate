@@ -21,6 +21,10 @@ final class GetSessions
 
     private string $action = 'plex.getSessions';
 
+    /**
+     * @param iHttp&\App\Libs\Extends\HttpClient $http
+     * @param iLogger $logger
+     */
     public function __construct(
         protected readonly iHttp $http,
         protected readonly iLogger $logger,
@@ -50,8 +54,15 @@ final class GetSessions
                 ];
 
                 $this->logger->debug(
-                    message: "{action}: Requesting '{client}: {user}@{backend}' active play sessions.",
-                    context: $logContext,
+                    message: "Requesting active sessions from '{user}@{backend}'.",
+                    context: [
+                        ...$logContext,
+                        'event_name' => 'backend.request.started',
+                        'subsystem' => 'backend.session',
+                        'operation' => 'load',
+                        'outcome' => 'started',
+                        'http' => ['url' => (string) $url],
+                    ],
                 );
 
                 $response = $this->http->request(
@@ -69,10 +80,19 @@ final class GetSessions
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: "{action}: Request for '{client}: {user}@{backend}' active play sessions returned with unexpected '{status_code}' status code.",
+                            message: "Sessions request to '{user}@{backend}' returned status {http.status_code}.",
                             context: [
                                 ...$logContext,
-                                'status_code' => $response->getStatusCode(),
+                                'event_name' => 'backend.response.failed',
+                                'subsystem' => 'backend.session',
+                                'operation' => 'load',
+                                'outcome' => 'failed',
+                                'reason' => 'unexpected_status',
+                                'http' => [
+                                    'status_code' => $response->getStatusCode(),
+                                    'expected_status_codes' => [Status::OK->value],
+                                    'url' => (string) $url,
+                                ],
                                 'response' => ['body' => $content],
                             ],
                             level: Levels::WARNING,
@@ -84,10 +104,18 @@ final class GetSessions
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: "{action}: Request for '{client}: {user}@{backend}' active play sessions returned with empty response.",
+                            message: "Sessions request to '{user}@{backend}' returned an empty response.",
                             context: [
                                 ...$logContext,
-                                'status_code' => $response->getStatusCode(),
+                                'event_name' => 'backend.response.failed',
+                                'subsystem' => 'backend.session',
+                                'operation' => 'load',
+                                'outcome' => 'failed',
+                                'reason' => 'empty_response',
+                                'http' => [
+                                    'status_code' => $response->getStatusCode(),
+                                    'url' => (string) $url,
+                                ],
                                 'response' => ['body' => $content],
                             ],
                             level: Levels::ERROR,
@@ -103,8 +131,15 @@ final class GetSessions
 
                 if (true === $context->trace) {
                     $this->logger->debug(
-                        message: "{action}: Processing '{client}: {user}@{backend}' active play sessions payload.",
-                        context: [...$logContext, 'response' => ['body' => $content]],
+                        message: "Processing sessions response from '{user}@{backend}'.",
+                        context: [
+                            ...$logContext,
+                            'event_name' => 'backend.response.received',
+                            'subsystem' => 'backend.session',
+                            'operation' => 'load',
+                            'outcome' => 'received',
+                            'response' => ['body' => $content],
+                        ],
                     );
                 }
 

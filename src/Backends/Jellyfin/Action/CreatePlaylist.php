@@ -68,6 +68,18 @@ class CreatePlaylist
             'url' => (string) $url,
         ];
 
+        $this->logger->debug(
+            message: "Creating playlist '{title}' on '{user}@{backend}'.",
+            context: [
+                ...$logContext,
+                'event_name' => 'backend.request.started',
+                'subsystem' => 'backend.playlist',
+                'operation' => 'create',
+                'outcome' => 'started',
+                'http' => ['method' => Method::POST->value, 'url' => (string) $url],
+            ],
+        );
+
         $response = $this->http->request(
             Method::POST,
             (string) $url,
@@ -78,8 +90,21 @@ class CreatePlaylist
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{client}: {user}@{backend}' playlist '{title}' returned with unexpected '{status_code}' status code.",
-                    context: [...$logContext, 'status_code' => $response->getStatusCode()],
+                    message: "Create playlist request for '{title}' on '{user}@{backend}' returned status {http.status_code}.",
+                    context: [
+                        ...$logContext,
+                        'event_name' => 'backend.response.failed',
+                        'subsystem' => 'backend.playlist',
+                        'operation' => 'create',
+                        'outcome' => 'failed',
+                        'reason' => 'unexpected_status',
+                        'http' => [
+                            'method' => Method::POST->value,
+                            'status_code' => $response->getStatusCode(),
+                            'expected_status_codes' => [Status::OK->value],
+                            'url' => (string) $url,
+                        ],
+                    ],
                     level: Levels::ERROR,
                 ),
             );

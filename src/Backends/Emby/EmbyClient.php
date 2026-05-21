@@ -804,7 +804,7 @@ class EmbyClient implements iClient
             message: ag(
                 $response->extra,
                 'message',
-                static fn() => $response->error?->format() ?? 'An unexpected error occurred.',
+                static fn() => $response->error?->format() ?? 'The backend request failed.',
             ),
             code: $code,
             previous: $response->error?->previous,

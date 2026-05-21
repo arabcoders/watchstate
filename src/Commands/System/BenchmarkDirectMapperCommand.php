@@ -161,6 +161,7 @@ final class BenchmarkDirectMapperCommand extends Command
      */
     protected function runCommand(iInput $input, iOutput $output): int
     {
+        $startedAt = microtime(true);
         $memoryLimitOpt = $input->getOption('memory-limit');
 
         if (null !== $memoryLimitOpt && '' !== (string) $memoryLimitOpt) {
@@ -352,7 +353,7 @@ final class BenchmarkDirectMapperCommand extends Command
             }
         }
 
-        if (null !== ($reportPath = $this->storeReport($report, $lines, $benchDir))) {
+        if (null !== ($reportPath = $this->storeReport($report, $lines, $benchDir, $startedAt))) {
             $lines[] = '';
             $lines[] = 'Saved: ' . $reportPath;
         }
@@ -364,11 +365,15 @@ final class BenchmarkDirectMapperCommand extends Command
         return self::SUCCESS;
     }
 
-    private function storeReport(array $report, array $lines, string $benchDir): ?string
+    private function storeReport(array $report, array $lines, string $benchDir, float $startedAt): ?string
     {
         if (false === is_dir($benchDir)) {
             if (false === @mkdir($benchDir, 0o755, true) && false === is_dir($benchDir)) {
-                $this->logger->warning("BenchmarkDirectMapperCommand: Unable to create '{path}' directory.", [
+                $this->logger->warning("Unable to create benchmark report directory '{path}'.", [
+                    'event_name' => 'benchmark.report.create_failed',
+                    'subsystem' => 'benchmark',
+                    'operation' => 'store_report',
+                    'outcome' => 'failed',
                     'path' => $benchDir,
                 ]);
                 return null;
@@ -387,11 +392,25 @@ final class BenchmarkDirectMapperCommand extends Command
         $content = implode(PHP_EOL, $lines) . PHP_EOL;
 
         if (false === @file_put_contents($path, $content)) {
-            $this->logger->warning("BenchmarkDirectMapperCommand: Unable to write report '{path}'.", [
+            $this->logger->warning("Unable to write benchmark report '{path}'.", [
+                'event_name' => 'benchmark.report.create_failed',
+                'subsystem' => 'benchmark',
+                'operation' => 'store_report',
+                'outcome' => 'failed',
                 'path' => $path,
             ]);
             return null;
         }
+
+        $this->logger->notice("Benchmark report saved to '{path}' in {duration_seconds}s.", [
+            'event_name' => 'benchmark.report.created',
+            'subsystem' => 'benchmark',
+            'operation' => 'store_report',
+            'outcome' => 'completed',
+            'command' => self::ROUTE,
+            'path' => $path,
+            'duration_seconds' => round(microtime(true) - $startedAt, 4),
+        ]);
 
         return $path;
     }
@@ -409,15 +428,26 @@ final class BenchmarkDirectMapperCommand extends Command
                 return $path;
             }
 
-            $this->logger->warning("BenchmarkDirectMapperCommand: Compare path '{path}' does not exist.", [
+            $this->logger->warning("Benchmark baseline '{path}' does not exist.", [
+                'event_name' => 'benchmark.compare.failed',
+                'subsystem' => 'benchmark',
+                'operation' => 'compare',
+                'outcome' => 'failed',
+                'reason' => 'baseline_not_found',
                 'path' => $path,
+                'baseline' => $path,
             ]);
             return null;
         }
 
         $latest = $this->findLatestReport($benchDir);
         if (null === $latest) {
-            $this->logger->notice("BenchmarkDirectMapperCommand: No prior reports found in '{path}'.", [
+            $this->logger->notice("No prior benchmark reports found in '{path}'.", [
+                'event_name' => 'benchmark.compare.skipped',
+                'subsystem' => 'benchmark',
+                'operation' => 'compare',
+                'outcome' => 'skipped',
+                'reason' => 'baseline_not_found',
                 'path' => $benchDir,
             ]);
         }

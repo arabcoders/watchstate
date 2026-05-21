@@ -9,7 +9,6 @@ use App\Command;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\Database\DatabaseInterface;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\RetryableHttpClient;
@@ -139,9 +138,20 @@ class ExportCommand extends Command
         }
 
         $mapperOpts = $dbOpts = [];
+        $dryRun = true === (bool) $input->getOption('dry-run');
+        $forceFullRequested = true === (bool) $input->getOption('force-full');
 
-        if ($input->getOption('dry-run')) {
+        if (true === $dryRun) {
             $mapperOpts[Options::DRY_RUN] = true;
+
+            $this->logger->notice('Dry run enabled; no changes will be committed to backends.', [
+                'event_name' => 'state.export.dry_run.enabled',
+                'subsystem' => 'state.export',
+                'operation' => 'export',
+                'outcome' => 'started',
+                'command' => self::ROUTE,
+                'dry_run' => true,
+            ]);
         }
 
         if ($input->getOption('trace')) {
@@ -183,28 +193,74 @@ class ExportCommand extends Command
         }
 
         $selected = $input->getOption('select-backend');
+        $excludeSelected = true === (bool) $input->getOption('exclude');
         $isCustom = !empty($selected) && count($selected) > 0;
         $supported = Config::get('supported', []);
+        $selection = [
+            'mode' => $this->resolveSelectionMode((array) $selected, $excludeSelected),
+            'backends' => array_values(array_filter(
+                array_map(trim(...), array_map('strval', (array) $selected)),
+                static fn(string $item): bool => '' !== $item,
+            )),
+        ];
+        $totalStart = microtime(true);
 
-        if (true === $input->getOption('dry-run')) {
-            $this->logger->notice('Dry run mode. No changes will be committed to backends.');
-        }
+        $this->logger->notice('Using WatchState {version.full}.', [
+            'event_name' => 'app.version',
+            'subsystem' => 'app',
+            'operation' => 'version',
+            'outcome' => 'resolved',
+            'command' => self::ROUTE,
+            'version' => [
+                'full' => get_full_version(),
+            ],
+        ]);
 
-        $this->logger->notice('SYSTEM: Using WatchState {full_version}', [
-            'full_version' => get_full_version(),
+        $this->logger->notice('Export started for {user_count} users.', [
+            'event_name' => 'state.export.started',
+            'subsystem' => 'state.export',
+            'operation' => 'export',
+            'outcome' => 'started',
+            'command' => self::ROUTE,
+            'user_count' => count($users),
+            'dry_run' => $dryRun,
+            'force_full' => $forceFullRequested,
+            'selection' => $selection,
         ]);
 
         foreach ($users as $userContext) {
+            $userStart = microtime(true);
+
+            $this->logger->notice("Exporting play states for '{user}'.", [
+                'event_name' => 'state.export.user.started',
+                'subsystem' => 'state.export',
+                'operation' => 'export',
+                'outcome' => 'started',
+                'command' => self::ROUTE,
+                'user' => $userContext->name,
+                'memory' => [
+                    'now' => get_memory_usage(),
+                    'peak' => get_peak_memory_usage(),
+                ],
+            ]);
+
             try {
                 $backends = $export = $push = $entities = [];
 
                 foreach ($userContext->config->getAll() as $backendName => $backend) {
                     $type = strtolower(ag($backend, 'type', 'unknown'));
 
-                    if ($isCustom && $input->getOption('exclude') === $this->in_array($selected, $backendName)) {
-                        $this->logger->info("SYSTEM: Ignoring '{user}@{backend}'. As requested.", [
+                    if ($isCustom && $excludeSelected === $this->in_array($selected, $backendName)) {
+                        $this->logger->info("Skipping '{user}@{backend}': excluded by selection.", [
+                            'event_name' => 'state.export.backend.skipped',
+                            'subsystem' => 'state.export',
+                            'operation' => 'select_backend',
+                            'outcome' => 'skipped',
+                            'command' => self::ROUTE,
                             'user' => $userContext->name,
                             'backend' => $backendName,
+                            'reason' => 'selected_excluded',
+                            'selection' => $selection,
                         ]);
                         continue;
                     }
@@ -212,39 +268,64 @@ class ExportCommand extends Command
                     if (true !== (bool) ag($backend, 'export.enabled')) {
                         if ($isCustom) {
                             $this->logger->warning(
-                                "SYSTEM: Exporting to a export disabled backend '{user}@{backend}' as requested.",
+                                "Exporting to disabled backend '{user}@{backend}' because it was explicitly selected.",
                                 [
+                                    'event_name' => 'state.export.backend.forced',
+                                    'subsystem' => 'state.export',
+                                    'operation' => 'select_backend',
+                                    'outcome' => 'forced',
+                                    'command' => self::ROUTE,
                                     'user' => $userContext->name,
                                     'backend' => $backendName,
+                                    'reason' => 'explicitly_selected',
+                                    'export_enabled' => false,
                                 ],
                             );
                         } else {
-                            $this->logger->info("SYSTEM: Ignoring '{user}@{backend}'. Export disabled.", [
+                            $this->logger->info("Skipping '{user}@{backend}': export is disabled.", [
+                                'event_name' => 'state.export.backend.skipped',
+                                'subsystem' => 'state.export',
+                                'operation' => 'select_backend',
+                                'outcome' => 'skipped',
+                                'command' => self::ROUTE,
                                 'user' => $userContext->name,
                                 'backend' => $backendName,
+                                'reason' => 'export_disabled',
                             ]);
                             continue;
                         }
                     }
 
                     if (!isset($supported[$type])) {
-                        $this->logger->error(
-                            "SYSTEM: Ignoring '{user}@{backend}'. Unexpected type '{type}'.",
+                        $this->logger->warning(
+                            "Skipping '{user}@{backend}': backend type '{backend_type}' is unsupported.",
                             [
-                                'type' => $type,
+                                'event_name' => 'state.export.backend.skipped',
+                                'subsystem' => 'state.export',
+                                'operation' => 'select_backend',
+                                'outcome' => 'skipped',
+                                'command' => self::ROUTE,
+                                'backend_type' => $type,
                                 'backend' => $backendName,
                                 'user' => $userContext->name,
                                 'types' => implode(', ', array_keys($supported)),
+                                'reason' => 'unsupported_type',
                             ],
                         );
                         continue;
                     }
 
                     if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {
-                        $this->logger->error("SYSTEM: Ignoring '{user}@{backend}'. Invalid URL '{url}'.", [
+                        $this->logger->warning("Skipping '{user}@{backend}': URL '{url}' is invalid.", [
+                            'event_name' => 'state.export.backend.skipped',
+                            'subsystem' => 'state.export',
+                            'operation' => 'select_backend',
+                            'outcome' => 'skipped',
+                            'command' => self::ROUTE,
                             'url' => $url ?? 'None',
                             'backend' => $backendName,
                             'user' => $userContext->name,
+                            'reason' => 'invalid_url',
                         ]);
                         continue;
                     }
@@ -254,11 +335,21 @@ class ExportCommand extends Command
                 }
 
                 if (empty($backends)) {
-                    $message = $isCustom ? '[-s, --select-backend] flag did not match any backend.' : 'No backends were found.';
-                    $this->logger->warning("{message}. For '{user}'.", [
-                        'message' => $message,
-                        'user' => $userContext->name,
-                    ]);
+                    $this->logger->warning(
+                        true === $isCustom
+                            ? "No selected backends matched for '{user}'."
+                            : "No export backends were available for '{user}'.",
+                        [
+                            'event_name' => 'state.export.backend.none_selected',
+                            'subsystem' => 'state.export',
+                            'operation' => 'select_backend',
+                            'outcome' => 'skipped',
+                            'command' => self::ROUTE,
+                            'user' => $userContext->name,
+                            'reason' => true === $isCustom ? 'selection_no_match' : 'no_backends',
+                            'selection' => $selection,
+                        ],
+                    );
                     continue;
                 }
 
@@ -299,10 +390,17 @@ class ExportCommand extends Command
                     foreach ($backends as $backend) {
                         if (null === ($lastSync = ag($backend, 'export.lastSync', null))) {
                             $this->logger->info(
-                                "SYSTEM: Using export mode for '{user}@{backend}'. No export last Sync date found.",
+                                "Using export mode for '{user}@{backend}': no export cursor was found.",
                                 [
+                                    'event_name' => 'state.export.backend.mode_selected',
+                                    'subsystem' => 'state.export',
+                                    'operation' => 'select_mode',
+                                    'outcome' => 'completed',
+                                    'command' => self::ROUTE,
                                     'user' => $userContext->name,
                                     'backend' => ag($backend, 'name'),
+                                    'mode' => 'export',
+                                    'reason' => 'missing_export_cursor',
                                 ],
                             );
 
@@ -312,10 +410,17 @@ class ExportCommand extends Command
 
                         if (null === ag($backend, 'import.lastSync', null)) {
                             $this->logger->warning(
-                                "SYSTEM: Using export mode for '{user}@{backend}'. The backend metadata not imported. You need to run import to populate the database.",
+                                "Using export mode for '{user}@{backend}': import metadata has not been populated yet.",
                                 [
+                                    'event_name' => 'state.export.backend.mode_selected',
+                                    'subsystem' => 'state.export',
+                                    'operation' => 'select_mode',
+                                    'outcome' => 'completed',
+                                    'command' => self::ROUTE,
                                     'user' => $userContext->name,
                                     'backend' => ag($backend, 'name'),
+                                    'mode' => 'export',
+                                    'reason' => 'missing_import_cursor',
                                 ],
                             );
 
@@ -330,27 +435,43 @@ class ExportCommand extends Command
 
                     $lastSync = make_date($minDate);
 
-                    $this->logger->notice("SYSTEM: Loading '{user}' database items that has changed since '{date}'.", [
-                        'date' => (string) $lastSync,
+                    $this->logger->notice("Loading local changes for '{user}' since {since}.", [
+                        'event_name' => 'state.export.changes.loading',
+                        'subsystem' => 'state.export',
+                        'operation' => 'load_changes',
+                        'outcome' => 'started',
+                        'command' => self::ROUTE,
+                        'since' => (string) $lastSync,
                         'user' => $userContext->name,
                     ]);
 
                     $entities = $userContext->db->getAll($lastSync);
 
                     if (count($entities) < 1 && count($export) < 1) {
-                        $this->logger->notice("SYSTEM: No play state changes detected since '{date}' for '{user}'.", [
-                            'date' => (string) $lastSync,
+                        $this->logger->notice("No play-state changes detected for '{user}' since {since}.", [
+                            'event_name' => 'state.export.no_changes',
+                            'subsystem' => 'state.export',
+                            'operation' => 'load_changes',
+                            'outcome' => 'completed',
+                            'command' => self::ROUTE,
+                            'since' => (string) $lastSync,
                             'user' => $userContext->name,
+                            'change_count' => 0,
                         ]);
                         continue;
                     }
 
                     if (count($entities) >= 1) {
                         $this->logger->info(
-                            "SYSTEM: Checking '{total}' media items for push mode compatibility for '{user}'.",
+                            "Checking {item_count} media items for push mode compatibility for '{user}'.",
                             (static function () use ($entities, $input, $userContext): array {
                                 $context = [
-                                    'total' => number_format(count($entities)),
+                                    'event_name' => 'state.export.push.compatibility.started',
+                                    'subsystem' => 'state.export',
+                                    'operation' => 'check_push_compatibility',
+                                    'outcome' => 'started',
+                                    'command' => self::ROUTE,
+                                    'item_count' => count($entities),
                                     'user' => $userContext->name,
                                 ];
 
@@ -381,16 +502,22 @@ class ExportCommand extends Command
 
                                     if (null === $addedDate || false === ctype_digit($addedDate)) {
                                         $this->logger->info(
-                                            "SYSTEM: Ignoring '{item.id}: {item.title}' for '{user}@{backend}' received invalid added_at '{added_at}' date.",
+                                            "Skipping push compatibility for '{user}@{backend}' item '#{item.id}: {item.title}': added_at '{added_at}' is invalid.",
                                             [
+                                                'event_name' => 'state.export.push.item.skipped',
+                                                'subsystem' => 'state.export',
+                                                'operation' => 'check_push_compatibility',
+                                                'outcome' => 'skipped',
+                                                'command' => self::ROUTE,
                                                 'user' => $userContext->name,
-                                                'type' => get_debug_type($addedDate),
                                                 'backend' => $name,
                                                 'item' => [
                                                     'id' => $entity->id,
                                                     'title' => $entity->getName(),
                                                 ],
                                                 'added_at' => $addedDate,
+                                                'added_at_type' => get_debug_type($addedDate),
+                                                'reason' => 'invalid_added_at',
                                                 'data' => $input->getOption('trace') ? $entity->getAll() : [],
                                             ],
                                         );
@@ -399,8 +526,13 @@ class ExportCommand extends Command
 
                                     if ($lastSync > ($addedDate + $extraMargin)) {
                                         $this->logger->info(
-                                            "SYSTEM: Ignoring '{item.id}: {item.title}' for '{user}@{backend}' waiting period for metadata expired.",
+                                            "Skipping push compatibility for '{user}@{backend}' item '#{item.id}: {item.title}': metadata wait period expired.",
                                             [
+                                                'event_name' => 'state.export.push.item.skipped',
+                                                'subsystem' => 'state.export',
+                                                'operation' => 'check_push_compatibility',
+                                                'outcome' => 'skipped',
+                                                'command' => self::ROUTE,
                                                 'user' => $userContext->name,
                                                 'backend' => $name,
                                                 'item' => [
@@ -413,6 +545,7 @@ class ExportCommand extends Command
                                                     'last_sync_at' => make_date($lastSync),
                                                     'diff' => $lastSync - ($addedDate + $extraMargin),
                                                 ],
+                                                'reason' => 'metadata_wait_expired',
                                             ],
                                         );
 
@@ -424,14 +557,21 @@ class ExportCommand extends Command
                                     }
 
                                     $this->logger->info(
-                                        "SYSTEM: Using export mode for '{user}@{backend}'. Backend local database entries did not have metadata for '{item.id}: {item.title}'.",
+                                        "Using export mode for '{user}@{backend}': local state for '#{item.id}: {item.title}' is missing backend metadata.",
                                         [
+                                            'event_name' => 'state.export.backend.mode_selected',
+                                            'subsystem' => 'state.export',
+                                            'operation' => 'select_mode',
+                                            'outcome' => 'completed',
+                                            'command' => self::ROUTE,
                                             'user' => $userContext->name,
                                             'backend' => $name,
+                                            'mode' => 'export',
                                             'item' => [
                                                 'id' => $entity->id,
                                                 'title' => $entity->getName(),
                                             ],
+                                            'reason' => 'missing_backend_metadata',
                                         ],
                                     );
 
@@ -447,21 +587,37 @@ class ExportCommand extends Command
                 } else {
                     $export = $backends;
                     $this->logger->notice(
-                        "SYSTEM: Not possible to use push mode when '-f, --force-full' flag is used.",
+                        "Push mode is unavailable when '--force-full' is used.",
+                        [
+                            'event_name' => 'state.export.push.unavailable',
+                            'subsystem' => 'state.export',
+                            'operation' => 'select_mode',
+                            'outcome' => 'skipped',
+                            'command' => self::ROUTE,
+                            'user' => $userContext->name,
+                            'reason' => 'force_full_requested',
+                        ],
                     );
                 }
 
                 $this->logger->notice(
-                    "SYSTEM: '{user}' Using push mode for '{push.total}' backends and export mode for '{export.total}' backends.",
+                    "Using push mode for {push_count} backends and export mode for {export_count} backends for '{user}'.",
                     [
+                        'event_name' => 'state.export.mode.selected',
+                        'subsystem' => 'state.export',
+                        'operation' => 'select_mode',
+                        'outcome' => 'completed',
+                        'command' => self::ROUTE,
                         'user' => $userContext->name,
+                        'push_count' => count($push),
+                        'export_count' => count($export),
                         'push' => [
                             'total' => count($push),
-                            'list' => implode(', ', array_keys($push)),
+                            'list' => array_keys($push),
                         ],
                         'export' => [
                             'total' => count($export),
-                            'list' => implode(', ', array_keys($export)),
+                            'list' => array_keys($export),
                         ],
                     ],
                 );
@@ -483,9 +639,18 @@ class ExportCommand extends Command
                 $total = count($this->queue->getQueue());
 
                 if ($total >= 1) {
-                    $this->logger->notice("SYSTEM: Sending '{total}' change play state requests for '{user}'.", [
-                        'total' => $total,
+                    $requestStart = microtime(true);
+
+                    $this->logger->notice("Waiting for {request_count} export requests for '{user}'.", [
+                        'event_name' => 'state.export.requests.started',
+                        'subsystem' => 'state.export',
+                        'operation' => 'send_requests',
+                        'outcome' => 'started',
+                        'command' => self::ROUTE,
+                        'phase' => 'write',
+                        'request_count' => $total,
                         'user' => $userContext->name,
+                        'sync_requests' => $syncRequests,
                     ]);
 
                     send_requests(
@@ -495,51 +660,100 @@ class ExportCommand extends Command
                         logger: $this->logger,
                     );
 
-                    $this->logger->notice("SYSTEM: Sent '{total}' change play state requests for '{user}'.", [
-                        'total' => $total,
+                    $this->logger->notice("Completed {request_count} export requests for '{user}' in {duration_seconds}s.", [
+                        'event_name' => 'state.export.requests.completed',
+                        'subsystem' => 'state.export',
+                        'operation' => 'send_requests',
+                        'outcome' => 'completed',
+                        'command' => self::ROUTE,
+                        'phase' => 'write',
+                        'request_count' => $total,
                         'user' => $userContext->name,
+                        'sync_requests' => $syncRequests,
+                        'duration_seconds' => round(microtime(true) - $requestStart, 4),
                     ]);
                 } else {
-                    $this->logger->notice("SYSTEM: No play state changes detected '{user}'.", [
+                    $this->logger->notice("No play-state changes detected for '{user}'.", [
+                        'event_name' => 'state.export.no_changes',
+                        'subsystem' => 'state.export',
+                        'operation' => 'send_requests',
+                        'outcome' => 'completed',
+                        'command' => self::ROUTE,
                         'user' => $userContext->name,
+                        'change_count' => 0,
                     ]);
                 }
 
-                if (true === $input->getOption('dry-run')) {
-                    continue;
-                }
+                if (false === $dryRun) {
+                    foreach ($backends as $backend) {
+                        if (null === ($name = ag($backend, 'name'))) {
+                            continue;
+                        }
 
-                foreach ($backends as $backend) {
-                    if (null === ($name = ag($backend, 'name'))) {
-                        continue;
-                    }
-
-                    if (false === (bool) Message::get("{$name}.has_errors", false)) {
-                        $userContext->config->set("{$name}.export.lastSync", time());
-                    } else {
-                        $this->logger->warning(
-                            "SYSTEM: Not updating '{user}@{backend}' export last sync date. There was errors recorded during the operation.",
-                            [
+                        if (false === (bool) Message::get("{$name}.has_errors", false)) {
+                            $lastSyncAt = time();
+                            $userContext->config->set("{$name}.export.lastSync", $lastSyncAt);
+                            $this->logger->notice("Updated export cursor for '{user}@{backend}' to {last_sync_at}.", [
+                                'event_name' => 'state.export.cursor.updated',
+                                'subsystem' => 'state.export',
+                                'operation' => 'update_cursor',
+                                'outcome' => 'completed',
+                                'command' => self::ROUTE,
                                 'backend' => $name,
                                 'user' => $userContext->name,
-                            ],
-                        );
+                                'last_sync_at' => (string) make_date($lastSyncAt),
+                                'mode' => 'mixed',
+                            ]);
+                        } else {
+                            $this->logger->warning(
+                                "Skipping export cursor update for '{user}@{backend}': errors were recorded during export.",
+                                [
+                                    'event_name' => 'state.export.cursor.skipped',
+                                    'subsystem' => 'state.export',
+                                    'operation' => 'update_cursor',
+                                    'outcome' => 'skipped',
+                                    'command' => self::ROUTE,
+                                    'backend' => $name,
+                                    'user' => $userContext->name,
+                                    'mode' => 'mixed',
+                                    'reason' => 'backend_errors_recorded',
+                                ],
+                            );
+                        }
                     }
+
+                    $userContext->config->persist();
                 }
 
-                $userContext->config->persist();
+                $this->logger->info("Exporting play states for '{user}' completed in {duration_seconds}s.", [
+                    'event_name' => 'state.export.user.completed',
+                    'subsystem' => 'state.export',
+                    'operation' => 'export',
+                    'outcome' => 'completed',
+                    'command' => self::ROUTE,
+                    'user' => $userContext->name,
+                    'duration_seconds' => round(microtime(true) - $userStart, 4),
+                    'backends' => array_keys($backends),
+                    'memory' => [
+                        'now' => get_memory_usage(),
+                        'peak' => get_peak_memory_usage(),
+                    ],
+                ]);
             } catch (Throwable $e) {
                 $this->logger->error(
-                    "SYSTEM: Unhandled exception '{error.kind}' was thrown during '{user}' export operation. '{error.message}' at '{error.file}:{error.line}'.",
-                    [
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
+                    ...lw(
+                        message: "Export failed for '{user}'.",
+                        context: [
+                            'event_name' => 'state.export.failed',
+                            'subsystem' => 'state.export',
+                            'operation' => 'export',
+                            'outcome' => 'failed',
+                            'command' => self::ROUTE,
+                            'user' => $userContext->name,
+                            ...exception_log($e),
                         ],
-                        'user' => $userContext->name,
-                    ],
+                        e: $e,
+                    ),
                 );
             } finally {
                 $this->queue->reset();
@@ -547,8 +761,27 @@ class ExportCommand extends Command
             }
         }
 
-        $this->logger->notice('SYSTEM: Using WatchState {full_version}', [
-            'full_version' => get_full_version(),
+        $this->logger->notice('Export completed for {user_count} users in {duration_seconds}s.', [
+            'event_name' => 'state.export.completed',
+            'subsystem' => 'state.export',
+            'operation' => 'export',
+            'outcome' => 'completed',
+            'command' => self::ROUTE,
+            'user_count' => count($users),
+            'duration_seconds' => round(microtime(true) - $totalStart, 4),
+            'dry_run' => $dryRun,
+            'force_full' => $forceFullRequested,
+        ]);
+
+        $this->logger->notice('Using WatchState {version.full}.', [
+            'event_name' => 'app.version',
+            'subsystem' => 'app',
+            'operation' => 'version',
+            'outcome' => 'resolved',
+            'command' => self::ROUTE,
+            'version' => [
+                'full' => get_full_version(),
+            ],
         ]);
 
         return self::SUCCESS;
@@ -565,9 +798,19 @@ class ExportCommand extends Command
      */
     protected function push(UserContext $userContext, array $backends, array $entities): int
     {
-        $this->logger->notice("Push mode started for '{user}: {backends}'.", [
+        $start = microtime(true);
+        $backendNames = array_keys($backends);
+
+        $this->logger->notice('Pushing {item_count} local changes to {backend_count} backends for \'{user}\'.', [
+            'event_name' => 'state.export.push.started',
+            'subsystem' => 'state.export',
+            'operation' => 'push',
+            'outcome' => 'started',
+            'command' => self::ROUTE,
             'user' => $userContext->name,
-            'backends' => implode(', ', array_keys($backends)),
+            'item_count' => count($entities),
+            'backend_count' => count($backendNames),
+            'backends' => $backendNames,
         ]);
 
         foreach ($backends as $backend) {
@@ -579,10 +822,21 @@ class ExportCommand extends Command
             );
         }
 
-        $this->logger->notice("Push mode ended for '{user}: {backends}'.", [
-            'user' => $userContext->name,
-            'backends' => implode(', ', array_keys($backends)),
-        ]);
+        $this->logger->notice(
+            'Pushed {item_count} local changes to {backend_count} backends for \'{user}\' in {duration_seconds}s.',
+            [
+                'event_name' => 'state.export.push.completed',
+                'subsystem' => 'state.export',
+                'operation' => 'push',
+                'outcome' => 'completed',
+                'command' => self::ROUTE,
+                'user' => $userContext->name,
+                'item_count' => count($entities),
+                'backend_count' => count($backendNames),
+                'backends' => $backendNames,
+                'duration_seconds' => round(microtime(true) - $start, 4),
+            ],
+        );
 
         return self::SUCCESS;
     }
@@ -602,14 +856,34 @@ class ExportCommand extends Command
         bool $isFull,
         bool $syncRequests = false,
     ): void {
-        $this->logger->notice("Export mode started for '{user}@{backends}'.", [
+        $start = microtime(true);
+        $backendNames = array_keys($backends);
+
+        $this->logger->notice('Running export mode for {backend_count} backends for \'{user}\'.', [
+            'event_name' => 'state.export.export_mode.started',
+            'subsystem' => 'state.export',
+            'operation' => 'export_mode',
+            'outcome' => 'started',
+            'command' => self::ROUTE,
             'user' => $userContext->name,
-            'backends' => implode(', ', array_keys($backends)),
+            'backend_count' => count($backendNames),
+            'backends' => $backendNames,
+            'dry_run' => $inDryMode,
+            'force_full' => $isFull,
+            'memory' => [
+                'now' => get_memory_usage(),
+                'peak' => get_peak_memory_usage(),
+            ],
         ]);
 
         $this->logger->notice(
-            message: "SYSTEM: Preloading user '{user}: {mapper}' data. Memory usage '{memory.now}'.",
+            message: "Preloading local state database for '{user}'.",
             context: [
+                'event_name' => 'state.export.preload.started',
+                'subsystem' => 'state.export',
+                'operation' => 'preload',
+                'outcome' => 'started',
+                'command' => self::ROUTE,
                 'user' => $userContext->name,
                 'mapper' => after_last($userContext->mapper::class, '\\'),
                 'memory' => [
@@ -623,11 +897,20 @@ class ExportCommand extends Command
         $userContext->mapper->reset()->loadData();
 
         $this->logger->notice(
-            message: "SYSTEM: Preloading user '{user}: {mapper}' data completed in '{duration}s'. Memory usage '{memory.now}'.",
+            message: "Preloaded local state database for '{user}' in {duration_seconds}s.",
             context: [
+                'event_name' => 'state.export.preload.completed',
+                'subsystem' => 'state.export',
+                'operation' => 'preload',
+                'outcome' => 'completed',
+                'command' => self::ROUTE,
                 'user' => $userContext->name,
                 'mapper' => after_last($userContext->mapper::class, '\\'),
-                'duration' => round(microtime(true) - $time, 4),
+                'duration_seconds' => round(microtime(true) - $time, 4),
+                'stats' => [
+                    'pointers' => count($userContext->mapper->getPointersList()),
+                    'objects' => $userContext->mapper->getObjectsCount(),
+                ],
                 'memory' => [
                     'now' => get_memory_usage(),
                     'peak' => get_peak_memory_usage(),
@@ -645,16 +928,31 @@ class ExportCommand extends Command
             $after = true === $isFull ? null : ag($backend, 'export.lastSync', null);
 
             if (null === $after) {
-                $this->logger->notice("SYSTEM: Exporting play state to '{user}@{backend}'.", [
+                $this->logger->notice("Exporting full play-state snapshot to '{user}@{backend}'.", [
+                    'event_name' => 'state.export.backend.started',
+                    'subsystem' => 'state.export',
+                    'operation' => 'export_backend',
+                    'outcome' => 'started',
+                    'command' => self::ROUTE,
                     'backend' => $name,
                     'user' => $userContext->name,
+                    'since' => 'Beginning',
+                    'mode' => 'export',
+                    'dry_run' => $inDryMode,
                 ]);
             } else {
                 $after = make_date($after);
-                $this->logger->notice("SYSTEM: Exporting play state changes since '{date}' to '{user}@{backend}'.", [
+                $this->logger->notice("Exporting play-state changes since {since} to '{user}@{backend}'.", [
+                    'event_name' => 'state.export.backend.started',
+                    'subsystem' => 'state.export',
+                    'operation' => 'export_backend',
+                    'outcome' => 'started',
+                    'command' => self::ROUTE,
                     'backend' => $name,
                     'user' => $userContext->name,
-                    'date' => (string) $after,
+                    'since' => (string) $after,
+                    'mode' => 'export',
+                    'dry_run' => $inDryMode,
                 ]);
             }
 
@@ -662,38 +960,99 @@ class ExportCommand extends Command
             array_push($requests, ...$backend['class']->export($userContext->mapper, $this->queue, $after));
 
             if (false === $inDryMode) {
-                if (true === (bool) Message::get("{$name}.has_errors")) {
-                    $this->logger->warning(
-                        "SYSTEM: Not updating '{user}@{backend}' export last sync date. There was errors recorded during the operation.",
-                        [
-                            'backend' => $name,
-                            'user' => $userContext->name,
-                        ],
-                    );
-                } else {
+                if (false === (bool) Message::get("{$name}.has_errors")) {
                     $userContext->config->set("{$name}.export.lastSync", time());
                 }
             }
         }
 
-        $start = microtime(true);
-        $this->logger->notice("SYSTEM: Sending '{total}' play state comparison {sync}requests for '{user}'.", [
-            'total' => count($requests),
-            'user' => $userContext->name,
-            'sync' => true === $syncRequests ? 'sync ' : '',
-        ]);
+        if (count($requests) < 1) {
+            $this->logger->notice("No export comparison requests were needed for '{user}'.", [
+                'event_name' => 'state.export.requests.completed',
+                'subsystem' => 'state.export',
+                'operation' => 'send_requests',
+                'outcome' => 'completed',
+                'command' => self::ROUTE,
+                'phase' => 'compare',
+                'request_count' => 0,
+                'user' => $userContext->name,
+                'sync_requests' => $syncRequests,
+            ]);
+        } else {
+            $requestStart = microtime(true);
 
-        send_requests(requests: $requests, client: $this->http, sync: $syncRequests, logger: $this->logger);
+            $this->logger->notice("Waiting for {request_count} export comparison requests for '{user}'.", [
+                'event_name' => 'state.export.requests.started',
+                'subsystem' => 'state.export',
+                'operation' => 'send_requests',
+                'outcome' => 'started',
+                'command' => self::ROUTE,
+                'phase' => 'compare',
+                'request_count' => count($requests),
+                'user' => $userContext->name,
+                'sync_requests' => $syncRequests,
+            ]);
 
-        $this->logger->notice("Export mode ended for '{user}: {backends}' in '{duration}'s.", [
-            'user' => $userContext->name,
-            'backends' => implode(', ', array_keys($backends)),
-            'duration' => round(microtime(true) - $start, 4),
-        ]);
+            send_requests(requests: $requests, client: $this->http, sync: $syncRequests, logger: $this->logger);
+
+            $this->logger->notice(
+                "Completed {request_count} export comparison requests for '{user}' in {duration_seconds}s.",
+                [
+                    'event_name' => 'state.export.requests.completed',
+                    'subsystem' => 'state.export',
+                    'operation' => 'send_requests',
+                    'outcome' => 'completed',
+                    'command' => self::ROUTE,
+                    'phase' => 'compare',
+                    'request_count' => count($requests),
+                    'user' => $userContext->name,
+                    'sync_requests' => $syncRequests,
+                    'duration_seconds' => round(microtime(true) - $requestStart, 4),
+                ],
+            );
+        }
+
+        $this->logger->notice(
+            "Export mode completed for {backend_count} backends for '{user}' in {duration_seconds}s.",
+            [
+                'event_name' => 'state.export.export_mode.completed',
+                'subsystem' => 'state.export',
+                'operation' => 'export_mode',
+                'outcome' => 'completed',
+                'command' => self::ROUTE,
+                'user' => $userContext->name,
+                'backend_count' => count($backendNames),
+                'backends' => $backendNames,
+                'duration_seconds' => round(microtime(true) - $start, 4),
+                'dry_run' => $inDryMode,
+                'force_full' => $isFull,
+                'memory' => [
+                    'now' => get_memory_usage(),
+                    'peak' => get_peak_memory_usage(),
+                ],
+            ],
+        );
     }
 
     private function in_array(array $list, string $search): bool
     {
         return array_any($list, static fn($item) => str_starts_with($search, $item));
+    }
+
+    /**
+     * @param array<int|string,mixed> $selected
+     */
+    private function resolveSelectionMode(array $selected, bool $exclude): string
+    {
+        $selected = array_values(array_filter(
+            array_map(trim(...), array_map('strval', $selected)),
+            static fn(string $item): bool => '' !== $item,
+        ));
+
+        if ([] === $selected) {
+            return 'all';
+        }
+
+        return true === $exclude ? 'exclude' : 'include';
     }
 }

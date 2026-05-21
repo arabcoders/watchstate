@@ -212,9 +212,20 @@ class BackupCommand extends Command
     protected function process(iInput $input): int
     {
         $mapperOpts = [];
+        $dryRun = true === (bool) $input->getOption('dry-run');
+        $keep = true === (bool) $input->getOption('keep');
+        $noEnhance = true === (bool) $input->getOption('no-enhance');
+        $noCompression = true === (bool) $input->getOption('no-compress');
 
-        if ($input->getOption('dry-run')) {
-            $this->logger->notice('SYSTEM: Dry run mode. No changes will be committed.');
+        if (true === $dryRun) {
+            $this->logger->notice('Dry run enabled; no backup files will be written.', [
+                'event_name' => 'state.backup.dry_run.enabled',
+                'subsystem' => 'state.backup',
+                'operation' => 'backup',
+                'outcome' => 'started',
+                'command' => self::ROUTE,
+                'dry_run' => true,
+            ]);
             $mapperOpts[Options::DRY_RUN] = true;
         }
 
@@ -232,18 +243,94 @@ class BackupCommand extends Command
                 select_users($input->getOption('user')),
             );
         } catch (RuntimeException $e) {
-            $this->logger->error($e->getMessage());
+            $this->logger->error('Backup setup failed while loading selected users.', [
+                'event_name' => 'state.backup.failed',
+                'subsystem' => 'state.backup',
+                'operation' => 'backup',
+                'outcome' => 'failed',
+                'command' => self::ROUTE,
+                ...exception_log($e),
+            ]);
+
             return self::FAILURE;
         }
 
-        $this->logger->notice("Using WatchState version - '{version}'.", ['version' => get_app_version()]);
+        $totalStart = microtime(true);
+
+        $this->logger->notice('Using WatchState {version.full}.', [
+            'event_name' => 'app.version',
+            'subsystem' => 'app',
+            'operation' => 'version',
+            'outcome' => 'resolved',
+            'command' => self::ROUTE,
+            'version' => [
+                'full' => get_full_version(),
+            ],
+        ]);
+
+        $this->logger->notice('Backup started for {user_count} users.', [
+            'event_name' => 'state.backup.started',
+            'subsystem' => 'state.backup',
+            'operation' => 'backup',
+            'outcome' => 'started',
+            'command' => self::ROUTE,
+            'user_count' => count($users),
+            'dry_run' => $dryRun,
+            'keep' => $keep,
+            'no_enhance' => $noEnhance,
+            'no_compress' => $noCompression,
+        ]);
+
         foreach ($users as $userContext) {
+            $userStart = microtime(true);
+
             try {
+                $this->logger->notice("Backing up play states for '{user}'.", [
+                    'event_name' => 'state.backup.user.started',
+                    'subsystem' => 'state.backup',
+                    'operation' => 'backup',
+                    'outcome' => 'started',
+                    'command' => self::ROUTE,
+                    'user' => $userContext->name,
+                    'memory' => [
+                        'now' => get_memory_usage(),
+                        'peak' => get_peak_memory_usage(),
+                    ],
+                ]);
+
                 $this->process_backup($input, $userContext);
+
+                $this->logger->notice("Completed backup for '{user}' in {duration_seconds}s.", [
+                    'event_name' => 'state.backup.user.completed',
+                    'subsystem' => 'state.backup',
+                    'operation' => 'backup',
+                    'outcome' => 'completed',
+                    'command' => self::ROUTE,
+                    'user' => $userContext->name,
+                    'duration_seconds' => round(microtime(true) - $userStart, 4),
+                    'memory' => [
+                        'now' => get_memory_usage(),
+                        'peak' => get_peak_memory_usage(),
+                    ],
+                ]);
             } finally {
                 $userContext->mapper->reset();
             }
         }
+
+        $this->logger->notice('Backup completed for {user_count} users in {duration_seconds}s.', [
+            'event_name' => 'state.backup.completed',
+            'subsystem' => 'state.backup',
+            'operation' => 'backup',
+            'outcome' => 'completed',
+            'command' => self::ROUTE,
+            'user_count' => count($users),
+            'duration_seconds' => round(microtime(true) - $totalStart, 4),
+            'dry_run' => $dryRun,
+            'keep' => $keep,
+            'no_enhance' => $noEnhance,
+            'no_compress' => $noCompression,
+        ]);
 
         return self::SUCCESS;
     }
@@ -253,28 +340,49 @@ class BackupCommand extends Command
         $list = [];
 
         $selected = $input->getOption('select-backend');
+        $excludeSelected = true === (bool) $input->getOption('exclude');
         $isCustom = !empty($selected) && count($selected) > 0;
         $supported = Config::get('supported', []);
+        $selection = [
+            'mode' => $this->resolveSelectionMode((array) $selected, $excludeSelected),
+            'backends' => array_values(array_filter(
+                array_map(trim(...), array_map('strval', (array) $selected)),
+                static fn(string $item): bool => '' !== $item,
+            )),
+        ];
 
         $noCompression = $input->getOption('no-compress');
 
         foreach ($userContext->config->getAll() as $backendName => $backend) {
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
-            if ($isCustom && $input->getOption('exclude') === $this->in_array($selected, $backendName)) {
-                $this->logger->info("SYSTEM: Ignoring '{user}@{backend}' as requested.", [
+            if ($isCustom && $excludeSelected === $this->in_array($selected, $backendName)) {
+                $this->logger->info("Skipping '{user}@{backend}': excluded by selection.", [
+                    'event_name' => 'state.backup.backend.skipped',
+                    'subsystem' => 'state.backup',
+                    'operation' => 'select_backend',
+                    'outcome' => 'skipped',
+                    'command' => self::ROUTE,
                     'user' => $userContext->name,
                     'backend' => $backendName,
+                    'reason' => 'selected_excluded',
+                    'selection' => $selection,
                 ]);
                 continue;
             }
 
             if (!isset($supported[$type])) {
-                $this->logger->error("SYSTEM: Ignoring '{user}@{backend}'. Unexpected type '{type}'.", [
+                $this->logger->warning("Skipping '{user}@{backend}': backend type '{backend_type}' is unsupported.", [
+                    'event_name' => 'state.backup.backend.skipped',
+                    'subsystem' => 'state.backup',
+                    'operation' => 'select_backend',
+                    'outcome' => 'skipped',
+                    'command' => self::ROUTE,
                     'user' => $userContext->name,
-                    'type' => $type,
+                    'backend_type' => $type,
                     'backend' => $backendName,
                     'types' => implode(', ', array_keys($supported)),
+                    'reason' => 'unsupported_type',
                 ]);
                 continue;
             }
@@ -282,26 +390,45 @@ class BackupCommand extends Command
             if (true !== (bool) ag($backend, 'import.enabled')) {
                 if ($isCustom) {
                     $this->logger->notice(
-                        "SYSTEM: The backend '{user}@{backend}' has import disabled, However the check is skipped due to --select-backend.",
+                        "Backing up disabled import backend '{user}@{backend}' because it was explicitly selected.",
                         [
+                            'event_name' => 'state.backup.backend.forced',
+                            'subsystem' => 'state.backup',
+                            'operation' => 'select_backend',
+                            'outcome' => 'forced',
+                            'command' => self::ROUTE,
                             'user' => $userContext->name,
                             'backend' => $backendName,
+                            'reason' => 'explicitly_selected',
+                            'import_enabled' => false,
                         ],
                     );
                 } else {
-                    $this->logger->info("SYSTEM: Ignoring '{user}@{backend}'. Import disabled.", [
+                    $this->logger->info("Skipping '{user}@{backend}': import is disabled.", [
+                        'event_name' => 'state.backup.backend.skipped',
+                        'subsystem' => 'state.backup',
+                        'operation' => 'select_backend',
+                        'outcome' => 'skipped',
+                        'command' => self::ROUTE,
                         'user' => $userContext->name,
                         'backend' => $backendName,
+                        'reason' => 'import_disabled',
                     ]);
                     continue;
                 }
             }
 
             if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {
-                $this->logger->error("SYSTEM: Ignoring '{user}@{backend}'. Invalid URL '{url}'.", [
+                $this->logger->warning("Skipping '{user}@{backend}': URL '{url}' is invalid.", [
+                    'event_name' => 'state.backup.backend.skipped',
+                    'subsystem' => 'state.backup',
+                    'operation' => 'select_backend',
+                    'outcome' => 'skipped',
+                    'command' => self::ROUTE,
                     'user' => $userContext->name,
                     'url' => $url ?? 'None',
                     'backend' => $backendName,
+                    'reason' => 'invalid_url',
                 ]);
                 continue;
             }
@@ -312,13 +439,29 @@ class BackupCommand extends Command
 
         if (empty($list)) {
             $this->logger->warning(
-                $isCustom ? '[-s, --select-backend] flag did not match any backend.' : 'No backends were found.',
+                $isCustom ? "No backup backends matched selection for '{user}'." : "No backup backends were available for '{user}'.",
+                [
+                    'event_name' => 'state.backup.backend.none_selected',
+                    'subsystem' => 'state.backup',
+                    'operation' => 'select_backend',
+                    'outcome' => 'skipped',
+                    'command' => self::ROUTE,
+                    'user' => $userContext->name,
+                    'reason' => $isCustom ? 'selection_no_match' : 'no_backends',
+                    'selection' => $selection,
+                ],
             );
+
             return;
         }
 
         if (true !== $input->getOption('no-enhance')) {
-            $this->logger->notice("SYSTEM: Preloading '{user}@{mapper}' data.", [
+            $this->logger->notice("Preloading local state database for '{user}'.", [
+                'event_name' => 'state.backup.preload.started',
+                'subsystem' => 'state.backup',
+                'operation' => 'preload',
+                'outcome' => 'started',
+                'command' => self::ROUTE,
                 'user' => $userContext->name,
                 'mapper' => after_last($userContext->mapper::class, '\\'),
                 'memory' => [
@@ -330,10 +473,15 @@ class BackupCommand extends Command
             $start = microtime(true);
             $userContext->mapper->loadData();
 
-            $this->logger->notice("SYSTEM: Preloading '{user}@{mapper}' data completed in '{duration}s'.", [
+            $this->logger->notice("Preloaded local state database for '{user}' in {duration_seconds}s.", [
+                'event_name' => 'state.backup.preload.completed',
+                'subsystem' => 'state.backup',
+                'operation' => 'preload',
+                'outcome' => 'completed',
+                'command' => self::ROUTE,
                 'user' => $userContext->name,
                 'mapper' => after_last($userContext->mapper::class, '\\'),
-                'duration' => round(microtime(true) - $start, 4),
+                'duration_seconds' => round(microtime(true) - $start, 4),
                 'memory' => [
                     'now' => get_memory_usage(),
                     'peak' => get_peak_memory_usage(),
@@ -364,9 +512,16 @@ class BackupCommand extends Command
                 UserContext::class => $userContext,
             ])->setLogger($this->logger);
 
-            $this->logger->notice("SYSTEM: Backing up '{user}@{backend}' play state.", [
+            $this->logger->notice("Backing up play state for '{user}@{backend}'.", [
+                'event_name' => 'state.backup.backend.started',
+                'subsystem' => 'state.backup',
+                'operation' => 'backup_backend',
+                'outcome' => 'started',
+                'command' => self::ROUTE,
                 'user' => $userContext->name,
                 'backend' => $name,
+                'dry_run' => true === (bool) $input->getOption('dry-run'),
+                'no_enhance' => true === (bool) $input->getOption('no-enhance'),
             ]);
 
             $fileName = $input->getOption('file');
@@ -389,11 +544,21 @@ class BackupCommand extends Command
                     'date' => make_date()->format('Ymd'),
                 ]);
 
+                $directory = dirname($fileName);
+                if (false === is_dir($directory) && false === @mkdir($directory, 0o755, true) && false === is_dir($directory)) {
+                    throw new RuntimeException(r("Unable to create backup directory '{path}'.", ['path' => $directory]));
+                }
+
                 if (false === file_exists($fileName)) {
                     touch($fileName);
                 }
 
-                $this->logger->notice("SYSTEM: '{user}@{backend}' is using '{file}' as backup target.", [
+                $this->logger->notice("Writing backup for '{user}@{backend}' to '{file}'.", [
+                    'event_name' => 'state.backup.file.selected',
+                    'subsystem' => 'state.backup',
+                    'operation' => 'select_file',
+                    'outcome' => 'completed',
+                    'command' => self::ROUTE,
                     'user' => $userContext->name,
                     'file' => realpath($fileName),
                     'backend' => $name,
@@ -423,11 +588,17 @@ class BackupCommand extends Command
         }
 
         $start = microtime(true);
-        $this->logger->notice("SYSTEM: Waiting on '{total}' {sync}requests for '{user}: {backends}' backends.", [
+        $this->logger->notice("Waiting for {request_count} backup requests for '{user}'.", [
+            'event_name' => 'state.backup.requests.started',
+            'subsystem' => 'state.backup',
+            'operation' => 'send_requests',
+            'outcome' => 'started',
+            'command' => self::ROUTE,
             'user' => $userContext->name,
-            'total' => number_format(count($queue)),
-            'backends' => implode(', ', array_keys($list)),
-            'sync' => $syncRequests ? 'sync ' : '',
+            'request_count' => count($queue),
+            'backend_count' => count($list),
+            'backends' => array_keys($list),
+            'sync_requests' => $syncRequests,
             'memory' => [
                 'now' => get_memory_usage(),
                 'peak' => get_peak_memory_usage(),
@@ -449,9 +620,15 @@ class BackupCommand extends Command
 
                 if (false === $noCompression) {
                     $file = $backend['fp']->getMetadata('uri');
-                    $this->logger->notice("SYSTEM: Compressing '{user}@{backend}' backup file '{file}'.", [
+                    $this->logger->notice("Compressing backup archive for '{user}@{backend}' to '{archive}'.", [
+                        'event_name' => 'state.backup.file.compressing',
+                        'subsystem' => 'state.backup',
+                        'operation' => 'compress_file',
+                        'outcome' => 'started',
+                        'command' => self::ROUTE,
                         'backend' => $b,
                         'file' => $file,
+                        'archive' => $file . '.zip',
                         'user' => $userContext->name,
                     ]);
 
@@ -466,10 +643,18 @@ class BackupCommand extends Command
             }
         }
 
-        $this->logger->notice("SYSTEM: Backup operation for '{user}: {backends}' backends finished in '{duration}s'.", [
+        $this->logger->notice("Completed backup requests for '{user}' in {duration_seconds}s.", [
+            'event_name' => 'state.backup.requests.completed',
+            'subsystem' => 'state.backup',
+            'operation' => 'send_requests',
+            'outcome' => 'completed',
+            'command' => self::ROUTE,
             'user' => $userContext->name,
-            'backends' => implode(', ', array_keys($list)),
-            'duration' => round(microtime(true) - $start, 4),
+            'request_count' => count($queue),
+            'backend_count' => count($list),
+            'backends' => array_keys($list),
+            'duration_seconds' => round(microtime(true) - $start, 4),
+            'sync_requests' => $syncRequests,
             'memory' => [
                 'now' => get_memory_usage(),
                 'peak' => get_peak_memory_usage(),
@@ -480,5 +665,22 @@ class BackupCommand extends Command
     private function in_array(array $list, string $search): bool
     {
         return array_any($list, static fn($item) => str_starts_with($search, $item));
+    }
+
+    /**
+     * @param array<int|string,mixed> $selected
+     */
+    private function resolveSelectionMode(array $selected, bool $exclude): string
+    {
+        $selected = array_values(array_filter(
+            array_map(trim(...), array_map('strval', $selected)),
+            static fn(string $item): bool => '' !== $item,
+        ));
+
+        if ([] === $selected) {
+            return 'all';
+        }
+
+        return true === $exclude ? 'exclude' : 'include';
     }
 }

@@ -37,7 +37,11 @@ final class Backup extends Import
 
         try {
             if ($context->trace) {
-                $this->logger->debug("{action}: Processing '{client}: {backend}' payload.", [
+                $this->logger->debug('Parsing backup payload from \'{backend}\'.', [
+                    'event_name' => 'backend.response.received',
+                    'subsystem' => 'backend.backup',
+                    'operation' => 'process_item',
+                    'outcome' => 'received',
                     ...$logContext,
                     'response' => [
                         'body' => $item,
@@ -74,18 +78,18 @@ final class Backup extends Import
                 ];
             } catch (InvalidArgumentException $e) {
                 $this->logger->info(
-                    message: "{action}: Failed to parse '{client}: {backend}' item response. '{error.kind}' with '{error.message}' at '{error.file}:{error.line}' ",
+                    message: "Ignoring backup item from '{backend}': payload could not be parsed.",
                     context: [
+                        'event_name' => 'backend.item.ignored',
+                        'subsystem' => 'backend.backup',
+                        'operation' => 'parse_item',
+                        'outcome' => 'ignored',
+                        'reason' => 'invalid_item_payload',
                         ...$logContext,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
                         'response' => [
                             'body' => $item,
                         ],
+                        ...exception_log($e),
                     ],
                 );
                 return;
@@ -175,23 +179,18 @@ final class Backup extends Import
             }
         } catch (Throwable $e) {
             $this->logger->error(
-                message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' backup. {error.message} at '{error.file}:{error.line}'.",
-                context: [
-                    ...$logContext,
-                    'error' => [
-                        'kind' => $e::class,
-                        'line' => $e->getLine(),
-                        'message' => $e->getMessage(),
-                        'file' => after($e->getFile(), ROOT_PATH),
+                ...lw(
+                    message: "Failed to back up {item.type} '{item.title}' from '{backend}'.",
+                    context: [
+                        'event_name' => 'backend.operation.failed',
+                        'subsystem' => 'backend.backup',
+                        'operation' => 'process_item',
+                        'outcome' => 'failed',
+                        ...$logContext,
+                        ...exception_log($e),
                     ],
-                    'exception' => [
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'kind' => get_class($e),
-                        'message' => $e->getMessage(),
-                        'trace' => $e->getTrace(),
-                    ],
-                ],
+                    e: $e,
+                ),
             );
         }
     }

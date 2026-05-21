@@ -18,6 +18,7 @@ class PushEdgeCasesTest extends MediaBrowserTestCase
     public function test_push_skips_missing_metadata(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass]) {
+            $this->handler?->clear();
             $context = $this->makeContext($clientName);
             $queue = new QueueRequests();
 
@@ -36,12 +37,19 @@ class PushEdgeCasesTest extends MediaBrowserTestCase
 
             $this->assertTrue($result->isSuccessful());
             $this->assertSame(0, $queue->count());
+
+            $records = $this->handler?->getRecords() ?? [];
+            $record = end($records);
+            $this->assertSame('backend.item.ignored', $record->context['event_name'] ?? null);
+            $this->assertSame('backend.push', $record->context['subsystem'] ?? null);
+            $this->assertSame('missing_backend_metadata', $record->context['reason'] ?? null);
         }
     }
 
     public function test_push_skips_identical_state(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass]) {
+            $this->handler?->clear();
             $context = $this->makeContext($clientName);
             $queue = new QueueRequests();
 
@@ -54,6 +62,12 @@ class PushEdgeCasesTest extends MediaBrowserTestCase
 
             $this->assertTrue($result->isSuccessful());
             $this->assertSame(0, $queue->count());
+
+            $records = $this->handler?->getRecords() ?? [];
+            $record = end($records);
+            $this->assertSame('backend.item.ignored', $record->context['event_name'] ?? null);
+            $this->assertSame('state_unchanged', $record->context['reason'] ?? null);
+            $this->assertSame('update_state', $record->context['operation'] ?? null);
         }
     }
 

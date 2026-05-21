@@ -64,14 +64,39 @@ final class DeletePlaylist
             'url' => (string) $url,
         ];
 
+        $this->logger->debug(
+            message: "Deleting playlist '{id}' from '{user}@{backend}'.",
+            context: [
+                ...$logContext,
+                'event_name' => 'backend.request.started',
+                'subsystem' => 'backend.playlist',
+                'operation' => 'delete',
+                'outcome' => 'started',
+                'http' => ['method' => Method::DELETE->value, 'url' => (string) $url],
+            ],
+        );
+
         $response = $this->http->request(Method::DELETE, (string) $url, $context->getHttpOptions());
 
         if (Status::NO_CONTENT !== Status::tryFrom($response->getStatusCode())) {
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{client}: {user}@{backend}' playlist '{id}' returned with unexpected '{status_code}' status code.",
-                    context: [...$logContext, 'status_code' => $response->getStatusCode()],
+                    message: "Delete playlist request for '{id}' on '{user}@{backend}' returned status {http.status_code}.",
+                    context: [
+                        ...$logContext,
+                        'event_name' => 'backend.response.failed',
+                        'subsystem' => 'backend.playlist',
+                        'operation' => 'delete',
+                        'outcome' => 'failed',
+                        'reason' => 'unexpected_status',
+                        'http' => [
+                            'method' => Method::DELETE->value,
+                            'status_code' => $response->getStatusCode(),
+                            'expected_status_codes' => [Status::NO_CONTENT->value],
+                            'url' => (string) $url,
+                        ],
+                    ],
                     level: Levels::ERROR,
                 ),
             );

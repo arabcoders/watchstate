@@ -100,8 +100,15 @@ class GenerateAccessToken
         ];
 
         $this->logger->debug(
-            message: "{action}: Requesting '{client}: {user}@{backend}' to generate access token for '{username}'.",
-            context: $logContext,
+            message: "Requesting an access token for '{username}' from '{user}@{backend}'.",
+            context: [
+                ...$logContext,
+                'event_name' => 'backend.request.started',
+                'subsystem' => 'backend.auth',
+                'operation' => 'token.generate',
+                'outcome' => 'started',
+                'http' => ['url' => (string) $url],
+            ],
         );
 
         $response = $this->http->request(Method::POST, (string) $url, [
@@ -126,10 +133,19 @@ class GenerateAccessToken
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{client}: {user}@{backend}' to generate access for '{username}' token returned with unexpected '{status_code}' status code. {body}",
+                    message: "Access token request for '{username}' on '{user}@{backend}' returned status {http.status_code}.",
                     context: [
                         ...$logContext,
-                        'status_code' => $response->getStatusCode(),
+                        'event_name' => 'backend.response.failed',
+                        'subsystem' => 'backend.auth',
+                        'operation' => 'token.generate',
+                        'outcome' => 'failed',
+                        'reason' => 'unexpected_status',
+                        'http' => [
+                            'status_code' => $response->getStatusCode(),
+                            'expected_status_codes' => [Status::OK->value],
+                            'url' => (string) $url,
+                        ],
                         'response' => [
                             'body' => $response->getContent(false),
                         ],
@@ -147,10 +163,14 @@ class GenerateAccessToken
 
         if ($context->trace) {
             $this->logger->debug(
-                message: "{action}: Parsing '{client}: {user}@{backend}' - '{username}' access token response payload.",
+                message: "Processing access token response for '{username}' from '{user}@{backend}'.",
                 context: [
                     ...$logContext,
-                    'trace' => $json,
+                    'event_name' => 'backend.response.received',
+                    'subsystem' => 'backend.auth',
+                    'operation' => 'token.generate',
+                    'outcome' => 'received',
+                    'response' => ['body' => $json],
                 ],
             );
         }

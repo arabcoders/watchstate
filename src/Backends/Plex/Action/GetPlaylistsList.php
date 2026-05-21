@@ -57,7 +57,17 @@ final class GetPlaylistsList
             'url' => (string) $url,
         ];
 
-        $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' playlists list.", $logContext);
+        $this->logger->debug(
+            message: "Requesting playlists list from '{user}@{backend}'.",
+            context: [
+                ...$logContext,
+                'event_name' => 'backend.request.started',
+                'subsystem' => 'backend.playlist',
+                'operation' => 'list',
+                'outcome' => 'started',
+                'http' => ['url' => (string) $url],
+            ],
+        );
 
         $response = $this->http->request(Method::GET, (string) $url, $context->getHttpOptions());
 
@@ -65,8 +75,20 @@ final class GetPlaylistsList
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{client}: {user}@{backend}' playlists returned with unexpected '{status_code}' status code.",
-                    context: [...$logContext, 'status_code' => $response->getStatusCode()],
+                    message: "Playlists list request to '{user}@{backend}' returned status {http.status_code}.",
+                    context: [
+                        ...$logContext,
+                        'event_name' => 'backend.response.failed',
+                        'subsystem' => 'backend.playlist',
+                        'operation' => 'list',
+                        'outcome' => 'failed',
+                        'reason' => 'unexpected_status',
+                        'http' => [
+                            'status_code' => $response->getStatusCode(),
+                            'expected_status_codes' => [Status::OK->value],
+                            'url' => (string) $url,
+                        ],
+                    ],
                     level: Levels::ERROR,
                 ),
             );

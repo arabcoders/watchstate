@@ -19,6 +19,8 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
 
+use function exception_log;
+
 #[Cli(command: self::ROUTE)]
 class PruneCommand extends Command
 {
@@ -236,11 +238,14 @@ class PruneCommand extends Command
 
     protected function reportPrunerError(array $pruner, Throwable $e, OutputInterface $output): void
     {
-        $this->logger->error("Skipping pruner '{name}'. {message}", [
-            'name' => ag($pruner, 'name', 'unknown'),
-            'message' => $e->getMessage(),
-            'exception' => $e::class,
-            'trace' => $e->getTrace(),
+        $this->logger->error("Pruner '{pruner}' failed for '{path}'.", [
+            'event_name' => 'system.prune.pruner.failed',
+            'subsystem' => 'system.prune',
+            'operation' => 'prune',
+            'outcome' => 'failed',
+            'pruner' => ag($pruner, 'name', 'unknown'),
+            'path' => $this->stringifyCallable(ag($pruner, 'callable')),
+            ...exception_log($e),
         ]);
 
         $output->writeln(r("<error>Skipping pruner '{name}'. {message}</error>", [

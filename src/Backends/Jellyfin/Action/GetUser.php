@@ -34,7 +34,7 @@ class GetUser
     /**
      * Class Constructor.
      *
-     * @param iHttp $http The HTTP client instance.
+     * @param iHttp&\App\Libs\Extends\HttpClient $http The HTTP client instance.
      * @param iLogger $logger The logger instance.
      */
     public function __construct(
@@ -78,8 +78,15 @@ class GetUser
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{client}: {user}@{backend}' user info failed. User not set.",
-                    context: $logContext,
+                    message: "Skipping user info request for '{user}@{backend}': backend user is not set.",
+                    context: [
+                        ...$logContext,
+                        'event_name' => 'backend.request.skipped',
+                        'subsystem' => 'backend.user',
+                        'operation' => 'load',
+                        'outcome' => 'skipped',
+                        'reason' => 'missing_backend_user',
+                    ],
                     level: Levels::ERROR,
                 ),
             );
@@ -90,7 +97,14 @@ class GetUser
         $logContext['url'] = (string) $url;
         $logContext['userId'] = $context->backendUser;
 
-        $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' user '{userId}' info.", $logContext);
+        $this->logger->debug("Requesting user '{userId}' from '{user}@{backend}'.", [
+            ...$logContext,
+            'event_name' => 'backend.request.started',
+            'subsystem' => 'backend.user',
+            'operation' => 'load',
+            'outcome' => 'started',
+            'http' => ['url' => (string) $url],
+        ]);
 
         $options = $context->getHttpOptions();
 
@@ -104,10 +118,19 @@ class GetUser
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{client}: {user}@{backend}' user '{userId}' info returned with unexpected '{status_code}' status code.",
+                    message: "User '{userId}' info request to '{user}@{backend}' returned status {http.status_code}.",
                     context: [
                         ...$logContext,
-                        'status_code' => $response->getStatusCode(),
+                        'event_name' => 'backend.response.failed',
+                        'subsystem' => 'backend.user',
+                        'operation' => 'load',
+                        'outcome' => 'failed',
+                        'reason' => 'unexpected_status',
+                        'http' => [
+                            'status_code' => $response->getStatusCode(),
+                            'expected_status_codes' => [Status::OK->value],
+                            'url' => (string) $url,
+                        ],
                     ],
                     level: Levels::ERROR,
                 ),
@@ -120,8 +143,12 @@ class GetUser
         );
 
         if ($context->trace) {
-            $this->logger->debug("{action}: Parsing '{client}: {user}@{backend}' user '{userId}' info payload.", [
+            $this->logger->debug("Processing user '{userId}' response from '{user}@{backend}'.", [
                 ...$logContext,
+                'event_name' => 'backend.response.received',
+                'subsystem' => 'backend.user',
+                'operation' => 'load',
+                'outcome' => 'received',
                 'response' => ['body' => $json],
             ]);
         }

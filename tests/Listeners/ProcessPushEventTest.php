@@ -81,9 +81,11 @@ final class ProcessPushEventTest extends TestCase
                         return false;
                     }
 
-                    return 'warning' === ($payload['level'] ?? null)
-                        && str_contains((string) ($payload['message'] ?? ''), "Ignoring '#{$entity->id}: {$entity->getName()}'")
-                        && str_contains((string) ($payload['message'] ?? ''), 'No metadata was found.');
+                    return 'notice' === ($payload['level'] ?? null)
+                        && 'push.item.processing' === ag($payload, 'fields.event_name')
+                        && str_contains((string) ($payload['message'] ?? ''), "Processing push for '#{$entity->id}: {$entity->getName()}'")
+                        && 'main' === ag($payload, 'fields.user')
+                        && 'test_jellyfin' === ag($payload, 'fields.backend');
                 },
             ),
         );

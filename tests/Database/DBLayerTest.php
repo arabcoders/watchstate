@@ -436,6 +436,11 @@ class DBLayerTest extends TestCase
             array_map(static fn($record): int => $record->level->value, $records),
             'Lock retries should stay at info until the last retry before failure, which should warn.',
         );
+        $this->assertSame(
+            ['database.lock.retry', 'database.lock.retry', 'database.lock.retry', 'database.lock.retry'],
+            array_map(static fn($record): ?string => $record->context['event_name'] ?? null, $records),
+            'Lock retry logs should use a stable event name for queries.',
+        );
 
         $this->handler?->clear();
 

@@ -8,6 +8,7 @@ use App\API\Player\Subtitle;
 use App\Libs\Enums\Http\Status;
 use App\Libs\TestCase;
 use Monolog\Handler\NullHandler;
+use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use Nyholm\Psr7\ServerRequest;
 use Nyholm\Psr7\Uri;
@@ -81,5 +82,34 @@ class SubtitleTest extends TestCase
         $response = (new Subtitle($cache, $logger))->m3u8($request, $token, 'webvtt', 'x', '1');
 
         $this->assertSame(Status::BAD_REQUEST, Status::from($response->getStatusCode()));
+    }
+
+    public function test_convert_logs_inspect_failure(): void
+    {
+        $this->initTempDir();
+        $path = self::$tmpPath . '/sample.txt';
+        file_put_contents($path, 'test');
+
+        $cache = new Psr16Cache(new ArrayAdapter());
+        $handler = new TestHandler();
+        $logger = new Logger('test', [$handler]);
+        $token = 'play-test';
+        $cache->set($token, [
+            'path' => $path,
+            'time' => 'PT24H',
+            'config' => [],
+        ]);
+
+        $request = new ServerRequest('GET', new Uri('http://localhost/v1/api/player/subtitle/' . $token . '/i0.webvtt'));
+        $response = (new Subtitle($cache, $logger))->convert($request, $token, 'i', '0', 'webvtt');
+
+        $this->assertSame(Status::INTERNAL_SERVER_ERROR, Status::from($response->getStatusCode()));
+        $this->assertTrue($handler->hasErrorRecords());
+
+        $records = $handler->getRecords();
+        $record = end($records);
+        $this->assertSame('player.subtitle.inspect_failed', $record->context['event_name'] ?? null);
+        $this->assertSame($path, $record->context['media']['path'] ?? null);
+        $this->assertSame(0, $record->context['subtitle']['stream'] ?? null);
     }
 }

@@ -113,10 +113,13 @@ final class Add
 
             $userContext->config->set($name, $config->getAll())->persist();
         } catch (InvalidContextException $e) {
-            $logger->error('Failed to validate backend context. {error}', [
+            $logger->error('Failed to validate backend context. ' . $e->getMessage(), [
+                'event_name' => 'backend.context.validation_failed',
+                'subsystem' => 'backend',
+                'operation' => 'context.validate',
+                'outcome' => 'failed',
                 'verify_host' => (bool) $data->get('options.client.verify_host', true),
-                'error' => $e->getMessage(),
-                'exception' => ag(exception_log($e), 'exception', []),
+                ...exception_log($e),
             ]);
             return api_error($e->getMessage(), Status::BAD_REQUEST);
         }

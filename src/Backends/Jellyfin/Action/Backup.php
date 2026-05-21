@@ -61,8 +61,12 @@ class Backup extends Import
 
         try {
             if ($context->trace) {
-                $this->logger->debug("{action}: Processing '{client}: {user}@{backend}' payload.", [
+                $this->logger->debug("Processing backup payload from '{user}@{backend}'.", [
                     ...$logContext,
+                    'event_name' => 'backend.response.processing',
+                    'subsystem' => 'backend.backup',
+                    'operation' => 'process_item',
+                    'outcome' => 'started',
                     'response' => ['body' => $item],
                 ]);
             }
@@ -89,10 +93,16 @@ class Backup extends Import
                     },
                     'type' => $type,
                 ];
-            } catch (InvalidArgumentException $e) {
-                $this->logger->info($e->getMessage(), [
+            } catch (InvalidArgumentException) {
+                $this->logger->info("Skipping Jellyfin backup item: unsupported content type '{item_type}'.", [
                     ...$logContext,
-                    'body' => $item,
+                    'event_name' => 'backend.item.ignored',
+                    'subsystem' => 'backend.backup',
+                    'operation' => 'process_item',
+                    'outcome' => 'ignored',
+                    'reason' => 'unsupported_type',
+                    'item_type' => $type,
+                    'response' => ['body' => $item],
                 ]);
                 return;
             }
@@ -174,22 +184,14 @@ class Backup extends Import
             }
         } catch (Throwable $e) {
             $this->logger->error(
-                message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' backup. {error.message} at '{error.file}:{error.line}'.",
+                message: "Failed to back up {item.type} '{item.title}' from '{user}@{backend}'.",
                 context: [
-                    'error' => [
-                        'kind' => $e::class,
-                        'line' => $e->getLine(),
-                        'message' => $e->getMessage(),
-                        'file' => after($e->getFile(), ROOT_PATH),
-                    ],
+                    'event_name' => 'backend.operation.failed',
+                    'subsystem' => 'backend.backup',
+                    'operation' => 'process_item',
+                    'outcome' => 'failed',
                     ...$logContext,
-                    'exception' => [
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'kind' => get_class($e),
-                        'message' => $e->getMessage(),
-                        'trace' => $e->getTrace(),
-                    ],
+                    ...exception_log($e),
                 ],
             );
         }

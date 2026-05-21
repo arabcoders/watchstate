@@ -19,6 +19,7 @@ class UpdateStateQueueTest extends MediaBrowserTestCase
     public function test_update_state_queues_request(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass]) {
+            $this->handler?->clear();
             $http = new HttpClient(new MockHttpClient(
                 fn(string $method, string $url, array $options) => new MockResponse('', [
                     'http_code' => 204,
@@ -50,6 +51,12 @@ class UpdateStateQueueTest extends MediaBrowserTestCase
             $this->assertTrue($result->isSuccessful());
             $this->assertSame(1, $queue->count());
             $this->assertContainsOnlyInstancesOf(Request::class, $queue->getQueue());
+
+            $records = $this->handler?->getRecords() ?? [];
+            $record = end($records);
+            $this->assertSame('backend.request.started', $record->context['event_name'] ?? null);
+            $this->assertSame('backend.restore', $record->context['subsystem'] ?? null);
+            $this->assertSame('update_state', $record->context['operation'] ?? null);
         }
     }
 

@@ -24,8 +24,6 @@ use App\Libs\UserContext;
 use Monolog\Level;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface as iLogger;
-use Symfony\Component\Console\Helper\Table;
-use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -169,14 +167,31 @@ class ImportCommand extends Command
         }
 
         $mapperOpts = $dbOpts = [];
+        $dryRun = true === (bool) $input->getOption('dry-run');
+        $forceFullRequested = true === (bool) $input->getOption('force-full');
 
-        if ($input->getOption('dry-run')) {
-            $this->logger->notice('Dry run mode. No changes will be committed.');
+        if (true === $dryRun) {
+            $this->logger->notice('Dry run enabled; no changes will be committed.', [
+                'event_name' => 'state.import.dry_run.enabled',
+                'subsystem' => 'state.import',
+                'operation' => 'import',
+                'outcome' => 'started',
+                'command' => self::ROUTE,
+                'dry_run' => true,
+            ]);
             $mapperOpts[Options::DRY_RUN] = true;
         }
 
         if (true === (bool) Config::get('guid.disable.episode', false)) {
-            $this->logger->notice('Mapper: Matching episodes via GUID is disabled.');
+            $this->logger->notice('Episode GUID matching is disabled for this import run.', [
+                'event_name' => 'state.import.mapper_guid_disabled',
+                'subsystem' => 'state.import',
+                'operation' => 'configure_mapper',
+                'outcome' => 'completed',
+                'command' => self::ROUTE,
+                'mapper' => after_last($this->mapper::class, '\\'),
+                'reason' => 'config_disabled',
+            ]);
         }
 
         if ($input->getOption('trace')) {
@@ -231,22 +246,54 @@ class ImportCommand extends Command
         $hasLibrarySelect = count($selectLibrary) > 0;
         $inverseLibrarySelect = true === $input->getOption('exclude-library');
         $supported = Config::get('supported', []);
+        $selection = [
+            'mode' => $this->resolveSelectionMode((array) $selected, true === (bool) $input->getOption('exclude')),
+            'backends' => array_values(array_filter(
+                array_map(trim(...), array_map('strval', (array) $selected)),
+                static fn(string $item): bool => '' !== $item,
+            )),
+        ];
 
         $totalStartTime = microtime(true);
 
-        $this->logger->notice('SYSTEM: Using WatchState {full_version}', [
-            'full_version' => get_full_version(),
+        $this->logger->notice('Using WatchState {version.full}.', [
+            'event_name' => 'app.version',
+            'subsystem' => 'app',
+            'operation' => 'version',
+            'outcome' => 'resolved',
+            'command' => self::ROUTE,
+            'version' => [
+                'full' => get_full_version(),
+            ],
         ]);
 
-        $this->logger->notice("SYSTEM: Starting import process for '{total}' users", ['total' => count($users)]);
+        $this->logger->notice('Import started for {user_count} users.', [
+            'event_name' => 'state.import.started',
+            'subsystem' => 'state.import',
+            'operation' => 'import',
+            'outcome' => 'started',
+            'command' => self::ROUTE,
+            'user_count' => count($users),
+            'dry_run' => $dryRun,
+            'force_full' => $forceFullRequested,
+            'selection' => $selection,
+        ]);
 
         foreach ($users as $userContext) {
             $list = [];
             $userStart = microtime(true);
 
-            $this->logger->notice("SYSTEM: Importing user '{user}' play states.", [
+            $this->logger->notice("Importing play states for '{user}'.", [
+                'event_name' => 'state.import.user.started',
+                'subsystem' => 'state.import',
+                'operation' => 'import',
+                'outcome' => 'started',
+                'command' => self::ROUTE,
                 'user' => $userContext->name,
-                'backends' => implode(', ', array_keys($list)),
+                'memory' => [
+                    'now' => get_memory_usage(),
+                    'peak' => get_peak_memory_usage(),
+                ],
             ]);
 
             foreach ($userContext->config->getAll() as $backendName => $backend) {
@@ -254,9 +301,16 @@ class ImportCommand extends Command
                 $metadata = false;
 
                 if ($isCustom && $input->getOption('exclude') === $this->in_array($selected, $backendName)) {
-                    $this->logger->info("SYSTEM: Ignoring '{user}@{backend}'. as requested.", [
+                    $this->logger->info("Skipping '{user}@{backend}': excluded by selection.", [
+                        'event_name' => 'state.import.backend.skipped',
+                        'subsystem' => 'state.import',
+                        'operation' => 'select_backend',
+                        'outcome' => 'skipped',
+                        'command' => self::ROUTE,
                         'user' => $userContext->name,
                         'backend' => $backendName,
+                        'reason' => 'selected_excluded',
+                        'selection' => $selection,
                     ]);
                     continue;
                 }
@@ -279,36 +333,61 @@ class ImportCommand extends Command
                 if (true !== $metadata && true !== (bool) ag($backend, 'import.enabled')) {
                     if ($isCustom) {
                         $this->logger->warning(
-                            message: "SYSTEM: Importing from import disabled '{user}@{backend}' As requested.",
+                            message: "Importing from disabled backend '{user}@{backend}' because it was explicitly selected.",
                             context: [
+                                'event_name' => 'state.import.backend.forced',
+                                'subsystem' => 'state.import',
+                                'operation' => 'select_backend',
+                                'outcome' => 'forced',
+                                'command' => self::ROUTE,
                                 'user' => $userContext->name,
                                 'backend' => $backendName,
+                                'reason' => 'explicitly_selected',
+                                'import_enabled' => false,
                             ],
                         );
                     } else {
-                        $this->logger->info("SYSTEM: Ignoring '{user}@{backend}'. Import disabled.", [
+                        $this->logger->info("Skipping '{user}@{backend}': import is disabled.", [
+                            'event_name' => 'state.import.backend.skipped',
+                            'subsystem' => 'state.import',
+                            'operation' => 'select_backend',
+                            'outcome' => 'skipped',
+                            'command' => self::ROUTE,
                             'user' => $userContext->name,
                             'backend' => $backendName,
+                            'reason' => 'import_disabled',
                         ]);
                         continue;
                     }
                 }
 
                 if (!isset($supported[$type])) {
-                    $this->logger->error("SYSTEM: Ignoring '{user}@{backend}'. Unexpected type '{type}'.", [
+                    $this->logger->warning("Skipping '{user}@{backend}': backend type '{backend_type}' is unsupported.", [
+                        'event_name' => 'state.import.backend.skipped',
+                        'subsystem' => 'state.import',
+                        'operation' => 'select_backend',
+                        'outcome' => 'skipped',
+                        'command' => self::ROUTE,
                         'user' => $userContext->name,
-                        'type' => $type,
+                        'backend_type' => $type,
                         'backend' => $backendName,
                         'types' => implode(', ', array_keys($supported)),
+                        'reason' => 'unsupported_type',
                     ]);
                     continue;
                 }
 
                 if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {
-                    $this->logger->error("SYSTEM: Ignoring '{user}@{backend}'. Invalid URL '{url}'.", [
+                    $this->logger->warning("Skipping '{user}@{backend}': URL '{url}' is invalid.", [
+                        'event_name' => 'state.import.backend.skipped',
+                        'subsystem' => 'state.import',
+                        'operation' => 'select_backend',
+                        'outcome' => 'skipped',
+                        'command' => self::ROUTE,
                         'user' => $userContext->name,
                         'url' => $url ?? 'None',
                         'backend' => $backendName,
+                        'reason' => 'invalid_url',
                     ]);
                     continue;
                 }
@@ -320,9 +399,18 @@ class ImportCommand extends Command
             if (empty($list)) {
                 $this->logger->warning(
                     $isCustom
-                        ? r("[-s, --select-backend] flag did not match any backend for '{user}'.", [
-                            'user' => $userContext->name,
-                        ]) : 'No backends were found.',
+                        ? "No selected backends matched for '{user}'."
+                        : "No import backends were available for '{user}'.",
+                    [
+                        'event_name' => 'state.import.backend.none_selected',
+                        'subsystem' => 'state.import',
+                        'operation' => 'select_backend',
+                        'outcome' => 'skipped',
+                        'command' => self::ROUTE,
+                        'user' => $userContext->name,
+                        'reason' => true === $isCustom ? 'selection_no_match' : 'no_backends',
+                        'selection' => $selection,
+                    ],
                 );
                 continue;
             }
@@ -331,8 +419,13 @@ class ImportCommand extends Command
             $queue = [];
 
             $this->logger->notice(
-                message: "SYSTEM: Preloading user '{user}: {mapper}' data. Memory usage '{memory.now}'.",
+                message: "Preloading local state database for '{user}'.",
                 context: [
+                    'event_name' => 'state.import.preload.started',
+                    'subsystem' => 'state.import',
+                    'operation' => 'preload',
+                    'outcome' => 'started',
+                    'command' => self::ROUTE,
                     'user' => $userContext->name,
                     'mapper' => after_last($userContext->mapper::class, '\\'),
                     'memory' => [
@@ -346,11 +439,20 @@ class ImportCommand extends Command
             $userContext->mapper->reset()->loadData();
 
             $this->logger->notice(
-                message: "SYSTEM: Preloading user '{user}: {mapper}' data completed in '{duration}s'. Memory usage '{memory.now}'.",
+                message: "Preloaded local state database for '{user}' in {duration_seconds}s.",
                 context: [
+                    'event_name' => 'state.import.preload.completed',
+                    'subsystem' => 'state.import',
+                    'operation' => 'preload',
+                    'outcome' => 'completed',
+                    'command' => self::ROUTE,
                     'user' => $userContext->name,
                     'mapper' => after_last($userContext->mapper::class, '\\'),
-                    'duration' => round(microtime(true) - $time, 4),
+                    'duration_seconds' => round(microtime(true) - $time, 4),
+                    'stats' => [
+                        'pointers' => count($userContext->mapper->getPointersList()),
+                        'objects' => $userContext->mapper->getObjectsCount(),
+                    ],
                     'memory' => [
                         'now' => get_memory_usage(),
                         'peak' => get_peak_memory_usage(),
@@ -405,11 +507,17 @@ class ImportCommand extends Command
                     $after = make_date($after);
                 }
 
-                $this->logger->notice("SYSTEM: Importing '{user}@{backend}' {import_type} changes.", [
+                $this->logger->notice("Importing {import_type} changes from '{user}@{backend}'.", [
+                    'event_name' => 'state.import.backend.started',
+                    'subsystem' => 'state.import',
+                    'operation' => 'import_backend',
+                    'outcome' => 'started',
+                    'command' => self::ROUTE,
                     'user' => $userContext->name,
                     'backend' => $name,
                     'import_type' => true === $metadata ? 'metadata' : 'metadata & play state',
                     'since' => null === $after ? 'Beginning' : (string) $after,
+                    'dry_run' => $dryRun,
                 ]);
 
                 array_push($queue, ...$backend['class']->pull($userContext->mapper, $after));
@@ -419,10 +527,16 @@ class ImportCommand extends Command
                 if (false === $inDryMode) {
                     if (true === (bool) Message::get("{$name}.has_errors")) {
                         $this->logger->warning(
-                            message: "SYSTEM: Not updating '{user}@{backend}' import last sync date. There was errors recorded during the operation.",
+                            message: "Skipping import cursor update for '{user}@{backend}': errors were recorded during import.",
                             context: [
+                                'event_name' => 'state.import.cursor.skipped',
+                                'subsystem' => 'state.import',
+                                'operation' => 'update_cursor',
+                                'outcome' => 'skipped',
+                                'command' => self::ROUTE,
                                 'user' => $userContext->name,
                                 'backend' => $name,
+                                'reason' => 'backend_errors_recorded',
                             ],
                         );
                     } else {
@@ -434,10 +548,15 @@ class ImportCommand extends Command
             unset($backend);
 
             $start = microtime(true);
-            $this->logger->notice("SYSTEM: Waiting on '{total}' {sync}requests for '{user}' backends.", [
+            $this->logger->notice("Waiting for {request_count} import requests for '{user}'.", [
+                'event_name' => 'state.import.requests.started',
+                'subsystem' => 'state.import',
+                'operation' => 'send_requests',
+                'outcome' => 'started',
+                'command' => self::ROUTE,
                 'user' => $userContext->name,
-                'total' => number_format(count($queue)),
-                'sync' => $syncRequests ? 'sync ' : '',
+                'request_count' => count($queue),
+                'sync_requests' => $syncRequests,
                 'memory' => [
                     'now' => get_memory_usage(),
                     'peak' => get_peak_memory_usage(),
@@ -449,9 +568,16 @@ class ImportCommand extends Command
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "SYSTEM: Import requests for '{user}' backends failed. '{error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "Import requests failed for '{user}'.",
                         context: [
+                            'event_name' => 'state.import.requests.failed',
+                            'subsystem' => 'state.import',
+                            'operation' => 'send_requests',
+                            'outcome' => 'failed',
+                            'command' => self::ROUTE,
                             'user' => $userContext->name,
+                            'request_count' => count($queue),
+                            'sync_requests' => $syncRequests,
                             ...exception_log($e),
                         ],
                         e: $e,
@@ -462,11 +588,18 @@ class ImportCommand extends Command
             }
 
             $this->logger->notice(
-                "SYSTEM: Completed '{total}' requests in '{duration}'s for '{user}' backends. Parsed '{responses.size}' of data.",
+                "Completed {request_count} import requests for '{user}' in {duration_seconds}s.",
                 [
+                    'event_name' => 'state.import.requests.completed',
+                    'subsystem' => 'state.import',
+                    'operation' => 'send_requests',
+                    'outcome' => 'completed',
+                    'command' => self::ROUTE,
                     'user' => $userContext->name,
-                    'total' => number_format(count($queue)),
-                    'duration' => round(microtime(true) - $start, 4),
+                    'request_count' => count($queue),
+                    'duration_seconds' => round(microtime(true) - $start, 4),
+                    'failed_count' => 0,
+                    'sync_requests' => $syncRequests,
                     'memory' => [
                         'now' => get_memory_usage(),
                         'peak' => get_peak_memory_usage(),
@@ -482,9 +615,15 @@ class ImportCommand extends Command
             $total = count($userContext->mapper);
 
             if ($total >= 1) {
-                $this->logger->notice("SYSTEM: Found '{total}' updated items from '{user}' backends.", [
+                $this->logger->notice("Found {updated_count} updated items from '{user}' backends.", [
+                    'event_name' => 'state.import.changes.collected',
+                    'subsystem' => 'state.import',
+                    'operation' => 'collect_changes',
+                    'outcome' => 'completed',
+                    'command' => self::ROUTE,
                     'user' => $userContext->name,
-                    'total' => $total,
+                    'updated_count' => $total,
+                    'backend_count' => count($list),
                     'memory' => [
                         'now' => get_memory_usage(),
                         'peak' => get_peak_memory_usage(),
@@ -498,11 +637,16 @@ class ImportCommand extends Command
             $userContext->mapper->reset();
 
             $this->logger->info(
-                "SYSTEM: Importing '{user}' play states completed in '{duration}'s. Memory usage '{memory.now}'.",
+                "Importing play states for '{user}' completed in {duration_seconds}s.",
                 [
+                    'event_name' => 'state.import.user.completed',
+                    'subsystem' => 'state.import',
+                    'operation' => 'import',
+                    'outcome' => 'completed',
+                    'command' => self::ROUTE,
                     'user' => $userContext->name,
-                    'backends' => implode(', ', array_keys($list)),
-                    'duration' => round(microtime(true) - $userStart, 4),
+                    'backends' => array_keys($list),
+                    'duration_seconds' => round(microtime(true) - $userStart, 4),
                     'memory' => [
                         'now' => get_memory_usage(),
                         'peak' => get_peak_memory_usage(),
@@ -517,19 +661,24 @@ class ImportCommand extends Command
 
                 if (($added + $updated + $failed) > 0) {
                     $this->logger->notice(
-                        "SYSTEM: Status for '{user}' {type}s: '{added}' added, '{updated}' updated and '{failed}' failed.",
+                        "Import status for '{user}' {item_type}: added {added_count}, updated {updated_count}, failed {failed_count}.",
                         [
+                            'event_name' => 'state.import.status',
+                            'subsystem' => 'state.import',
+                            'operation' => 'commit',
+                            'outcome' => 'completed',
+                            'command' => self::ROUTE,
                             'user' => $userContext->name,
-                            'type' => ucfirst($type),
-                            'added' => str_pad((string) number_format($added), 4, '0', STR_PAD_LEFT),
-                            'updated' => str_pad((string) number_format($updated), 4, '0', STR_PAD_LEFT),
-                            'failed' => str_pad((string) number_format($failed), 4, '0', STR_PAD_LEFT),
+                            'item_type' => $type,
+                            'added_count' => $added,
+                            'updated_count' => $updated,
+                            'failed_count' => $failed,
                         ],
                     );
                 }
             }
 
-            if (false === $input->getOption('dry-run')) {
+            if (false === $dryRun) {
                 $userContext->config->persist();
             }
 
@@ -542,12 +691,27 @@ class ImportCommand extends Command
             }
         }
 
-        $this->logger->notice("SYSTEM: Import process completed in '{duration}'s for all users.", [
-            'duration' => round(microtime(true) - $totalStartTime, 4),
+        $this->logger->notice('Import completed for {user_count} users in {duration_seconds}s.', [
+            'event_name' => 'state.import.completed',
+            'subsystem' => 'state.import',
+            'operation' => 'import',
+            'outcome' => 'completed',
+            'command' => self::ROUTE,
+            'user_count' => count($users),
+            'duration_seconds' => round(microtime(true) - $totalStartTime, 4),
+            'dry_run' => $dryRun,
+            'force_full' => $forceFullRequested,
         ]);
 
-        $this->logger->notice('SYSTEM: Using WatchState {full_version}', [
-            'full_version' => get_full_version(),
+        $this->logger->notice('Using WatchState {version.full}.', [
+            'event_name' => 'app.version',
+            'subsystem' => 'app',
+            'operation' => 'version',
+            'outcome' => 'resolved',
+            'command' => self::ROUTE,
+            'version' => [
+                'full' => get_full_version(),
+            ],
         ]);
 
         return self::SUCCESS;
@@ -574,6 +738,23 @@ class ImportCommand extends Command
     private function in_array(array $list, string $search): bool
     {
         return array_any($list, static fn($item) => str_starts_with($search, $item));
+    }
+
+    /**
+     * @param array<int|string,mixed> $selected
+     */
+    private function resolveSelectionMode(array $selected, bool $exclude): string
+    {
+        $selected = array_values(array_filter(
+            array_map(trim(...), array_map('strval', $selected)),
+            static fn(string $item): bool => '' !== $item,
+        ));
+
+        if ([] === $selected) {
+            return 'all';
+        }
+
+        return true === $exclude ? 'exclude' : 'include';
     }
 
     /**

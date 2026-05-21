@@ -13,7 +13,7 @@ use App\Libs\QueueRequests;
 
 class ProgressTest extends PlexTestCase
 {
-    public function test_progress_empty_entities(): void
+    public function test_empty_entities(): void
     {
         Container::add(GetSessions::class, fn() => new class() {
             public function __invoke(): Response

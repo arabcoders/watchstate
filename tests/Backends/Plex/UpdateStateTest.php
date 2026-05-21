@@ -16,6 +16,7 @@ class UpdateStateTest extends PlexTestCase
 {
     public function test_update_state_queues_request(): void
     {
+        $this->handler?->clear();
         $http = new \App\Libs\Extends\HttpClient(
             new \App\Libs\Extends\MockHttpClient(
                 new MockResponse('', ['http_code' => 200]),
@@ -46,10 +47,17 @@ class UpdateStateTest extends PlexTestCase
         $this->assertTrue($result->isSuccessful());
         $this->assertSame(1, $queue->count());
         $this->assertContainsOnlyInstancesOf(Request::class, $queue->getQueue());
+
+        $records = $this->handler?->getRecords() ?? [];
+        $record = end($records);
+        $this->assertSame('backend.request.started', $record->context['event_name'] ?? null);
+        $this->assertSame('backend.restore', $record->context['subsystem'] ?? null);
+        $this->assertSame('update_state', $record->context['operation'] ?? null);
     }
 
     public function test_update_state_dry_run(): void
     {
+        $this->handler?->clear();
         $http = $this->makeHttpClient();
         $context = $this->makeContext([Options::DRY_RUN => true]);
         $queue = new QueueRequests();
@@ -75,5 +83,11 @@ class UpdateStateTest extends PlexTestCase
 
         $this->assertTrue($result->isSuccessful());
         $this->assertSame(0, $queue->count());
+
+        $records = $this->handler?->getRecords() ?? [];
+        $record = end($records);
+        $this->assertSame('backend.request.skipped', $record->context['event_name'] ?? null);
+        $this->assertSame('backend.restore', $record->context['subsystem'] ?? null);
+        $this->assertSame('dry_run', $record->context['reason'] ?? null);
     }
 }

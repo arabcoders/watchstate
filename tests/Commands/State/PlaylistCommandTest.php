@@ -6,6 +6,7 @@ namespace Tests\Commands\State;
 
 use App\Backends\Common\ClientInterface as iClient;
 use App\Commands\State\PlaylistCommand;
+use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Playlists\PlaylistSyncService;
@@ -147,8 +148,8 @@ final class PlaylistCommandTest extends TestCase
 
         $contents = file_get_contents($logfile);
         self::assertIsString($contents);
-        self::assertStringContainsString('Starting playlist sync process', $contents);
-        self::assertStringContainsString('Playlist sync process completed', $contents);
+        self::assertStringContainsString('Playlist sync started for 1 users.', $contents);
+        self::assertStringContainsString('Playlist sync completed for 1 users in', $contents);
     }
 
     public function test_selected_user_only(): void
@@ -229,7 +230,7 @@ final class PlaylistCommandTest extends TestCase
             $this->seedTestServersConfig($name);
         }
 
-        $logger = new Logger('test');
+        $logger = new Logger('test', processors: [new LogMessageProcessor()]);
         $mapper = new DirectMapper($logger, $this->createDb($logger), new Psr16Cache(new ArrayAdapter()));
 
         return new class($service, $mapper, $logger, $client, $backendName) extends PlaylistCommand {

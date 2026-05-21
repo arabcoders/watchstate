@@ -123,7 +123,7 @@ class DataEvent extends Event
     {
         return [
             'event_id' => (string) ($this->eventInfo->id ?? ''),
-            'event' => $this->eventInfo->event,
+            'queued_event' => $this->eventInfo->event,
         ];
     }
 

@@ -29,7 +29,7 @@ class GetInfo
     /**
      * Class constructor.
      *
-     * @param iHttp $http The HTTP client instance to use.
+     * @param iHttp&\App\Libs\Extends\HttpClient $http The HTTP client instance to use.
      * @param iLogger $logger The logger instance to use.
      */
     public function __construct(
@@ -59,7 +59,14 @@ class GetInfo
                     'url' => (string) $url,
                 ];
 
-                $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' info.", $logContext);
+                $this->logger->debug("Requesting backend info from '{user}@{backend}'.", [
+                    ...$logContext,
+                    'event_name' => 'backend.request.started',
+                    'subsystem' => 'backend.info',
+                    'operation' => 'load',
+                    'outcome' => 'started',
+                    'http' => ['url' => (string) $url],
+                ]);
 
                 $response = $this->http->request(
                     method: Method::GET,
@@ -76,10 +83,19 @@ class GetInfo
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: "{action}: '{client}: {user}@{backend}' request returned with unexpected '{status_code}' status code.",
+                            message: "Backend info request to '{user}@{backend}' returned status {http.status_code}.",
                             context: [
                                 ...$logContext,
-                                'status_code' => $response->getStatusCode(),
+                                'event_name' => 'backend.response.failed',
+                                'subsystem' => 'backend.info',
+                                'operation' => 'load',
+                                'outcome' => 'failed',
+                                'reason' => 'unexpected_status',
+                                'http' => [
+                                    'status_code' => $response->getStatusCode(),
+                                    'expected_status_codes' => [Status::OK->value],
+                                    'url' => (string) $url,
+                                ],
                                 'response' => [
                                     'body' => $content,
                                 ],
@@ -93,11 +109,19 @@ class GetInfo
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: "{action}: '{client}: {user}@{backend}' request returned with empty response. Please make sure the container can communicate with the backend.",
+                            message: "Backend info request to '{user}@{backend}' returned an empty response.",
                             context: [
                                 ...$logContext,
-                                'response' => [
+                                'event_name' => 'backend.response.failed',
+                                'subsystem' => 'backend.info',
+                                'operation' => 'load',
+                                'outcome' => 'failed',
+                                'reason' => 'empty_response',
+                                'http' => [
                                     'status_code' => $response->getStatusCode(),
+                                    'url' => (string) $url,
+                                ],
+                                'response' => [
                                     'body' => $content,
                                 ],
                             ],
@@ -113,9 +137,13 @@ class GetInfo
                 );
 
                 if (true === $context->trace) {
-                    $this->logger->debug("{action}: Processing '{client}: {user}@{backend}' request payload.", [
+                    $this->logger->debug("Processing backend info response from '{user}@{backend}'.", [
                         ...$logContext,
-                        'trace' => $item,
+                        'event_name' => 'backend.response.received',
+                        'subsystem' => 'backend.info',
+                        'operation' => 'load',
+                        'outcome' => 'received',
+                        'response' => ['body' => $item],
                     ]);
                 }
 

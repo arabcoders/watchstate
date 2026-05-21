@@ -4,21 +4,32 @@ declare(strict_types=1);
 
 namespace Tests\Backends\MediaBrowser;
 
-use App\Backends\Emby\Action\Import as EmbyImport;
-use App\Backends\Emby\Action\GetMetaData as EmbyGetMetaData;
-use App\Backends\Emby\EmbyGuid;
 use App\Backends\Common\Request;
-use App\Backends\Jellyfin\Action\Import as JellyfinImport;
-use App\Backends\Jellyfin\Action\GetMetaData as JellyfinGetMetaData;
-use App\Backends\Jellyfin\JellyfinGuid;
 use App\Backends\Common\Response;
+use App\Backends\Emby\Action\GetMetaData as EmbyGetMetaData;
+use App\Backends\Emby\Action\Import as EmbyImport;
+use App\Backends\Emby\EmbyGuid;
+use App\Backends\Jellyfin\Action\GetMetaData as JellyfinGetMetaData;
+use App\Backends\Jellyfin\Action\Import as JellyfinImport;
+use App\Backends\Jellyfin\JellyfinGuid;
+use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Options;
+use Monolog\LogRecord;
 use ReflectionMethod;
+use Symfony\Component\HttpClient\Response\MockResponse;
 
 class ImportFlowTest extends MediaBrowserTestCase
 {
-    public function test_import_process_adds_items(): void
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // These tests exercise mocked failed responses directly; retries only add backoff delay.
+        Config::save('http.default.maxRetries', 0);
+    }
+
+    public function test_process_adds(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass]) {
             $context = $this->makeContext($clientName);
@@ -45,7 +56,7 @@ class ImportFlowTest extends MediaBrowserTestCase
         }
     }
 
-    public function test_import_ignores_missing_date(): void
+    public function test_missing_date(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass]) {
             $context = $this->makeContext($clientName);
@@ -73,7 +84,7 @@ class ImportFlowTest extends MediaBrowserTestCase
         }
     }
 
-    public function test_import_show_caches(): void
+    public function test_show_cache(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass]) {
             $context = $this->makeContext($clientName);
@@ -97,7 +108,7 @@ class ImportFlowTest extends MediaBrowserTestCase
         }
     }
 
-    public function test_import_ignores_no_guids(): void
+    public function test_missing_guid(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass]) {
             $context = $this->makeContext($clientName);
@@ -125,7 +136,7 @@ class ImportFlowTest extends MediaBrowserTestCase
         }
     }
 
-    public function test_import_episode_adds(): void
+    public function test_episode_adds(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass, $metaClass]) {
             $context = $this->makeContext($clientName);
@@ -174,7 +185,7 @@ class ImportFlowTest extends MediaBrowserTestCase
         }
     }
 
-    public function test_jellyfin_prefetched_genres(): void
+    public function test_prefetched_genres(): void
     {
         $context = $this->makeContext('Jellyfin');
         $mapper = $context->userContext->mapper;
@@ -230,7 +241,7 @@ class ImportFlowTest extends MediaBrowserTestCase
         $this->assertSame(0, $metaAction->calls);
     }
 
-    public function test_jellyfin_prefetches_parent(): void
+    public function test_prefetch_parent(): void
     {
         $context = $this->makeContext('Jellyfin', [
             Options::LIBRARY_SELECT => ['lib-2'],
@@ -261,7 +272,7 @@ class ImportFlowTest extends MediaBrowserTestCase
         $this->assertFalse(str_contains((string) $prefetchRequests[0]->url, 'filters=IsNotFolder'));
     }
 
-    public function test_import_ignores_invalid_type(): void
+    public function test_invalid_type(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass]) {
             $context = $this->makeContext($clientName);
@@ -288,6 +299,158 @@ class ImportFlowTest extends MediaBrowserTestCase
         }
     }
 
+    public function test_handle_status_failed(): void
+    {
+        foreach ($this->provideBackends() as $backend) {
+            [$clientName, $actionClass] = $backend;
+
+            $context = $this->makeContext($clientName);
+            $http = $this->makeHttpClient(
+                new MockResponse('', ['http_code' => 500]),
+                new MockResponse('', ['http_code' => 500]),
+                new MockResponse('', ['http_code' => 500]),
+                new MockResponse('', ['http_code' => 500]),
+            );
+            $action = new $actionClass($http, $this->logger);
+
+            $this->invokeHandle(
+                $action,
+                $context,
+                $this->makeHandleResponse($action, 'http://mediabrowser.test/library'),
+                static function (array $item, array $logContext = []): void {
+                },
+                [
+                    'action' => 'Emby' === $clientName ? 'emby.import' : 'jellyfin.import',
+                    'client' => $context->clientName,
+                    'backend' => $context->backendName,
+                    'user' => $context->userContext->name,
+                    'library' => ['title' => 'Shows'],
+                    'segment' => ['number' => 1, 'of' => 1],
+                ],
+            );
+
+            $record = $this->lastRecord('backend.response.failed');
+            $this->assertSame('backend.import', $record->context['subsystem'] ?? null);
+            $this->assertSame('request_library', $record->context['operation'] ?? null);
+            $this->assertSame('unexpected_status', $record->context['reason'] ?? null);
+        }
+    }
+
+    public function test_handle_item_failed(): void
+    {
+        foreach ($this->provideBackends() as $backend) {
+            [$clientName, $actionClass] = $backend;
+
+            $context = $this->makeContext($clientName);
+            $http = $this->makeHttpClient(new MockResponse(json_encode([
+                'Items' => [
+                    ['Id' => 'item-1', 'Type' => 'Movie'],
+                ],
+            ], JSON_THROW_ON_ERROR), ['http_code' => 200]));
+            $action = new $actionClass($http, $this->logger);
+
+            $this->invokeHandle(
+                $action,
+                $context,
+                $this->makeHandleResponse($action, 'http://mediabrowser.test/library'),
+                static function (array $item, array $logContext = []): void {
+                    throw new \RuntimeException('boom');
+                },
+                [
+                    'action' => 'Emby' === $clientName ? 'emby.import' : 'jellyfin.import',
+                    'client' => $context->clientName,
+                    'backend' => $context->backendName,
+                    'user' => $context->userContext->name,
+                    'library' => ['title' => 'Shows'],
+                    'segment' => ['number' => 1, 'of' => 1],
+                ],
+            );
+
+            $record = $this->lastRecord('backend.operation.failed');
+            $this->assertSame('backend.import', $record->context['subsystem'] ?? null);
+            $this->assertSame('process_item', $record->context['operation'] ?? null);
+        }
+    }
+
+    public function test_handle_parse_failed(): void
+    {
+        foreach ($this->provideBackends() as $backend) {
+            [$clientName, $actionClass] = $backend;
+
+            $context = $this->makeContext($clientName);
+            $http = $this->makeHttpClient(new MockResponse(
+                '{"Items":[{"Id":"item-1"},{"Id":}]}',
+                ['http_code' => 200],
+            ));
+            $action = new $actionClass($http, $this->logger);
+
+            $this->invokeHandle(
+                $action,
+                $context,
+                $this->makeHandleResponse($action, 'http://mediabrowser.test/library'),
+                static function (array $item, array $logContext = []): void {
+                },
+                [
+                    'action' => 'Emby' === $clientName ? 'emby.import' : 'jellyfin.import',
+                    'client' => $context->clientName,
+                    'backend' => $context->backendName,
+                    'user' => $context->userContext->name,
+                    'library' => ['title' => 'Shows'],
+                    'segment' => ['number' => 1, 'of' => 1],
+                ],
+            );
+
+            $record = $this->lastRecord('backend.operation.failed');
+            $this->assertSame('backend.import', $record->context['subsystem'] ?? null);
+            $this->assertSame('parse_library_response', $record->context['operation'] ?? null);
+        }
+    }
+
+    public function test_handle_completed(): void
+    {
+        foreach ($this->provideBackends() as $backend) {
+            [$clientName, $actionClass] = $backend;
+
+            $context = $this->makeContext($clientName);
+            $http = $this->makeHttpClient(new MockResponse(json_encode([
+                'Items' => [
+                    ['Id' => 'item-1', 'Type' => 'Movie'],
+                ],
+            ], JSON_THROW_ON_ERROR), ['http_code' => 200]));
+            $action = new $actionClass($http, $this->logger);
+            $seen = [];
+
+            $this->invokeHandle(
+                $action,
+                $context,
+                $this->makeHandleResponse($action, 'http://mediabrowser.test/library'),
+                static function (array $item, array $logContext = []) use (&$seen): void {
+                    $seen[] = $item['Id'] ?? null;
+                },
+                [
+                    'action' => 'Emby' === $clientName ? 'emby.import' : 'jellyfin.import',
+                    'client' => $context->clientName,
+                    'backend' => $context->backendName,
+                    'user' => $context->userContext->name,
+                    'library' => ['title' => 'Shows'],
+                    'segment' => ['number' => 1, 'of' => 1],
+                ],
+            );
+
+            $this->assertSame(['item-1'], $seen);
+
+            $records = array_values(array_filter(
+                $this->handler->getRecords(),
+                static fn(LogRecord $record): bool => 'backend.response.processing' === ($record->context['event_name'] ?? null),
+            ));
+            $records = array_slice($records, -2);
+
+            $this->assertCount(2, $records);
+            $this->assertSame('started', $records[0]->context['outcome'] ?? null);
+            $this->assertSame('completed', $records[1]->context['outcome'] ?? null);
+        }
+    }
+
     private function invokeProcess(
         object $action,
         \App\Backends\Common\Context $context,
@@ -301,6 +464,24 @@ class ImportFlowTest extends MediaBrowserTestCase
         $method->invoke($action, $context, $guid, $mapper, $item, $logContext, $opts);
     }
 
+    private function invokeHandle(
+        object $action,
+        \App\Backends\Common\Context $context,
+        \Symfony\Contracts\HttpClient\ResponseInterface $response,
+        \Closure $callback,
+        array $logContext,
+    ): void {
+        $method = new ReflectionMethod($action, 'handle');
+        $method->invoke($action, $context, $response, $callback, $logContext);
+    }
+
+    private function makeHandleResponse(object $action, string $url): \Symfony\Contracts\HttpClient\ResponseInterface
+    {
+        $property = new \ReflectionProperty($action, 'http');
+
+        return $property->getValue($action)->request('GET', $url);
+    }
+
     private function invokeProcessShow(
         object $action,
         \App\Backends\Common\Context $context,
@@ -310,6 +491,18 @@ class ImportFlowTest extends MediaBrowserTestCase
     ): void {
         $method = new ReflectionMethod($action, 'processShow');
         $method->invoke($action, $context, $guid, $item, $logContext);
+    }
+
+    private function lastRecord(string $eventName): LogRecord
+    {
+        $records = array_values(array_filter(
+            $this->handler->getRecords(),
+            static fn(LogRecord $record): bool => $eventName === ($record->context['event_name'] ?? null),
+        ));
+
+        $this->assertNotEmpty($records);
+
+        return end($records);
     }
 
     private function provideBackends(): array

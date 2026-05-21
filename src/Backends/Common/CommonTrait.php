@@ -38,25 +38,16 @@ trait CommonTrait
                 status: false,
                 error: new Error(
                     ...lw(
-                        message: "{client}: '{backend}' {action} thrown unhandled exception '{error.kind}'. '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "{client} request failed for '{backend}' during {action}.",
                         context: [
+                            'event_name' => 'backend.client.request_failed',
+                            'subsystem' => 'backend.client',
+                            'operation' => $action ?? 'request',
+                            'outcome' => 'failed',
                             'action' => $action ?? '',
                             'backend' => $context->backendName,
                             'client' => $context->clientName,
-                            'message' => $e->getMessage(),
-                            'error' => [
-                                'kind' => $e::class,
-                                'line' => $e->getLine(),
-                                'message' => $e->getMessage(),
-                                'file' => after($e->getFile(), ROOT_PATH),
-                            ],
-                            'exception' => [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                                'message' => $e->getMessage(),
-                                'trace' => $e->getTrace(),
-                            ],
+                            ...exception_log($e),
                         ],
                         e: $e,
                     ),

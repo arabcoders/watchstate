@@ -69,8 +69,15 @@ final class GetMetaData
                 ];
 
                 $this->logger->debug(
-                    message: "{action}: Requesting '{client}: {user}@{backend}' - '{id}' item metadata.",
-                    context: $logContext,
+                    message: "Requesting item metadata '#{id}' from '{user}@{backend}'.",
+                    context: [
+                        ...$logContext,
+                        'event_name' => 'backend.request.started',
+                        'subsystem' => 'backend.metadata',
+                        'operation' => 'load',
+                        'outcome' => 'started',
+                        'http' => ['url' => (string) $url],
+                    ],
                 );
 
                 if (null !== $cacheKey && $this->cache->has($cacheKey)) {
@@ -91,8 +98,20 @@ final class GetMetaData
                         return new Response(
                             status: false,
                             error: new Error(
-                                message: "{action}: Request for '{client}: {user}@{backend}' - '{id}' item returned with unexpected '{status_code}' status code.",
-                                context: [...$logContext, 'status_code' => $response->getStatusCode()],
+                                message: "Metadata request for item '#{id}' on '{user}@{backend}' returned status {http.status_code}.",
+                                context: [
+                                    ...$logContext,
+                                    'event_name' => 'backend.response.failed',
+                                    'subsystem' => 'backend.metadata',
+                                    'operation' => 'load',
+                                    'outcome' => 'failed',
+                                    'reason' => 'unexpected_status',
+                                    'http' => [
+                                        'status_code' => $response->getStatusCode(),
+                                        'expected_status_codes' => [Status::OK->value],
+                                        'url' => (string) $url,
+                                    ],
+                                ],
                             ),
                         );
                     }
@@ -118,8 +137,16 @@ final class GetMetaData
 
                 if (true === $context->trace) {
                     $this->logger->debug(
-                        message: "{action}: Processing '{client}: {user}@{backend}' - '{id}' item payload.",
-                        context: [...$logContext, 'cached' => $fromCache, 'response' => ['body' => $item]],
+                        message: "Processing item metadata '#{id}' from '{user}@{backend}'.",
+                        context: [
+                            ...$logContext,
+                            'event_name' => 'backend.response.received',
+                            'subsystem' => 'backend.metadata',
+                            'operation' => 'load',
+                            'outcome' => 'received',
+                            'cached' => $fromCache,
+                            'response' => ['body' => $item],
+                        ],
                     );
                 }
 

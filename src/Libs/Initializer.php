@@ -143,11 +143,16 @@ final class Initializer
         });
 
         set_exception_handler(static function (Throwable $e) use ($logger) {
-            $logger->error(message: '{class}: {error} ({file}:{line}).' . PHP_EOL, context: [
-                'class' => $e::class,
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
+            $logger->error('Unhandled exception: {error.message}.', [
+                'event_name' => 'app.exception.unhandled',
+                'subsystem' => 'app',
+                'operation' => 'exception',
+                'outcome' => 'failed',
+                'sapi' => PHP_SAPI,
+                'request' => [
+                    'uri' => before($_SERVER['REQUEST_URI'] ?? '', '?'),
+                ],
+                ...exception_log($e),
             ]);
             exit(1);
         });
@@ -159,12 +164,22 @@ final class Initializer
 
             gc_collect_cycles();
 
-            $logger->error(message: "{class}: {error} at '{file}:{line}'. '{URI}'", context: [
-                'class' => 'PHP.Engine',
-                'error' => $error['message'] ?? 'Unknown error',
-                'file' => $error['file'] ?? 'Unknown file',
-                'line' => $error['line'] ?? 'Unknown line',
-                'URI' => before($_SERVER['REQUEST_URI'] ?? '', '?'),
+            $logger->error('Fatal shutdown error.', [
+                'event_name' => 'app.shutdown.fatal',
+                'subsystem' => 'app',
+                'operation' => 'shutdown',
+                'outcome' => 'failed',
+                'request' => [
+                    'uri' => before($_SERVER['REQUEST_URI'] ?? '', '?'),
+                ],
+                'php' => [
+                    'error' => [
+                        'type' => $error['type'] ?? null,
+                        'message' => $error['message'] ?? 'Unknown error',
+                        'file' => $error['file'] ?? 'Unknown file',
+                        'line' => $error['line'] ?? 'Unknown line',
+                    ],
+                ],
             ]);
         });
 
@@ -236,6 +251,17 @@ final class Initializer
                 $request,
                 $response->getStatusCode() >= 400 ? Level::Error : Level::Info,
                 $this->formatLog($request, $response),
+                [
+                    'event_name' => 'http.request.completed',
+                    'subsystem' => 'http.request',
+                    'operation' => 'serve',
+                    'outcome' => 'completed',
+                    'response' => [
+                        'status_code' => $response->getStatusCode(),
+                        'size' => $response->getBody()->getSize() ?? 0,
+                    ],
+                    'duration_seconds' => $this->durationSeconds($response),
+                ],
             );
         } catch (HttpException|RouterHttpException $e) {
             $realStatusCode = $e instanceof RouterHttpException ? $e->getStatusCode() : $e->getCode();
@@ -247,11 +273,20 @@ final class Initializer
             );
 
             if (Status::SERVICE_UNAVAILABLE->value === $statusCode) {
-                Container::get(iLogger::class)->error($e->getMessage(), [
-                    'kind' => $e::class,
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'trace' => $e->getTrace(),
+                Container::get(iLogger::class)->error('HTTP request failed for {request.method} {request.path}.', [
+                    'event_name' => 'http.request.failed',
+                    'subsystem' => 'http.request',
+                    'operation' => 'serve',
+                    'outcome' => 'failed',
+                    'request' => [
+                        'method' => $request->getMethod(),
+                        'path' => $request->getUri()->getPath(),
+                        'uri' => (string) $request->getUri(),
+                    ],
+                    'response' => [
+                        'status_code' => $statusCode,
+                    ],
+                    ...exception_log($e),
                 ]);
             }
 
@@ -259,6 +294,17 @@ final class Initializer
                 $request,
                 $statusCode >= 400 ? Level::Error : Level::Info,
                 $this->formatLog($request, $response),
+                [
+                    'event_name' => 'http.request.failed',
+                    'subsystem' => 'http.request',
+                    'operation' => 'serve',
+                    'outcome' => 'failed',
+                    'response' => [
+                        'status_code' => $response->getStatusCode(),
+                        'size' => $response->getBody()->getSize() ?? 0,
+                    ],
+                    'duration_seconds' => $this->durationSeconds($response),
+                ],
             );
         } catch (Throwable $e) {
             $response = api_error(
@@ -277,14 +323,32 @@ final class Initializer
                     ],
             );
 
-            Container::get(iLogger::class)->error($e->getMessage(), [
-                'kind' => $e::class,
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTrace(),
+            Container::get(iLogger::class)->error('HTTP request failed for {request.method} {request.path}.', [
+                'event_name' => 'http.request.failed',
+                'subsystem' => 'http.request',
+                'operation' => 'serve',
+                'outcome' => 'failed',
+                'request' => [
+                    'method' => $request->getMethod(),
+                    'path' => $request->getUri()->getPath(),
+                    'uri' => (string) $request->getUri(),
+                ],
+                'response' => [
+                    'status_code' => Status::SERVICE_UNAVAILABLE->value,
+                ],
+                ...exception_log($e),
             ]);
 
-            $this->write($request, Level::Error, $this->formatLog($request, $response));
+            $this->write($request, Level::Error, $this->formatLog($request, $response), [
+                'event_name' => 'http.request.failed',
+                'subsystem' => 'http.request',
+                'operation' => 'serve',
+                'outcome' => 'failed',
+                'response' => [
+                    'status_code' => $response->getStatusCode(),
+                    'size' => $response->getBody()->getSize() ?? 0,
+                ],
+            ]);
         }
 
         return $response;
@@ -607,6 +671,7 @@ final class Initializer
     private function formatLog(iRequest $request, iResponse $response, ?string $message = null): string
     {
         $refer = '-';
+        $duration = $this->durationSeconds($response);
 
         if (true === ag_exists($request->getServerParams(), 'HTTP_REFERER')) {
             $refer = new Uri(ag($request->getServerParams(), 'HTTP_REFERER'))
@@ -615,17 +680,31 @@ final class Initializer
                 ->withUserInfo('');
         }
 
-        return r('{ip} - "{method} {uri} {protocol}" {status} {size} "{refer}" "{agent}" "{message}"', [
-            'ip' => get_client_ip($request),
-            'user' => ag($request->getServerParams(), 'REMOTE_USER', '-'),
-            'method' => $request->getMethod(),
-            'uri' => $request->getUri()->getPath(),
-            'protocol' => 'HTTP/' . $request->getProtocolVersion(),
-            'status' => $response->getStatusCode(),
-            'size' => $response->getBody()->getSize() ?? 0,
-            'agent' => ag($request->getServerParams(), 'HTTP_USER_AGENT', '-'),
-            'refer' => (string) $refer,
-            'message' => $message ?? '-',
-        ]);
+        return r(
+            $response->getStatusCode() >= 400
+                ? '{request.ip} {method} {path} failed with {status}{duration}.'
+                : '{request.ip} {method} {path} completed with {status}{duration}.',
+            [
+                'method' => $request->getMethod(),
+                'path' => $request->getUri()->getPath(),
+                'status' => $response->getStatusCode(),
+                'duration' => null === $duration ? '' : r(' in {duration}s', ['duration' => $duration]),
+                'message' => $message ?? '-',
+                'refer' => (string) $refer,
+            ],
+        );
+    }
+
+    private function durationSeconds(iResponse $response): ?float
+    {
+        $duration = $response->getHeaderLine('X-Application-Finished-In');
+
+        if ('' === $duration) {
+            return null;
+        }
+
+        $duration = rtrim($duration, 's');
+
+        return is_numeric($duration) ? (float) $duration : null;
     }
 }

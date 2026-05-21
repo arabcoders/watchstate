@@ -80,9 +80,13 @@ final class ConsoleLogFormatter
                 'fields.route.ip',
                 'fields.task_id',
                 'fields.command',
+                'fields.user.name',
                 'fields.user',
+                'fields.backend.name',
                 'fields.backend',
                 'fields.cli.stream',
+                'fields.item_id',
+                'fields.event_name',
                 'source.module',
                 'process.name',
                 'logger',
@@ -90,6 +94,10 @@ final class ConsoleLogFormatter
             ],
             '-',
         );
+
+        if (false === is_scalar($value)) {
+            return '-';
+        }
 
         return '' !== trim((string) $value) ? trim((string) $value) : '-';
     }

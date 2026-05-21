@@ -8,6 +8,7 @@ use App\Backends\Common\ClientInterface as iClient;
 use App\Libs\Config;
 use App\Libs\ConfigFile;
 use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Extends\JsonlFormatter;
 use App\Libs\Stream;
 use App\Listeners\ProcessProfileEvent;
 use Closure;
@@ -154,17 +155,26 @@ class Command extends BaseCommand
      */
     protected function single(Closure $closure, iOutput $output, array $opts = []): int
     {
+        $lockName = get_app_version() . ':' . $this->getName();
+
         try {
-            if (!$this->lock(get_app_version() . ':' . $this->getName())) {
-                $message = r("The command/task '{name}' is already running in another process.", [
-                    'name' => $this->getName(),
+            if (!$this->lock($lockName)) {
+                $message = r("Command '{command}' is already running.", [
+                    'command' => $this->getName(),
                 ]);
 
                 $output->writeln("<error>{$message}</error>");
 
                 if (null !== ($logger = ag($opts, iLogger::class))) {
                     assert($logger instanceof iLogger, 'Expected logger instance for task lock logging.');
-                    $logger->log(ag($opts, Level::class, Level::Notice), $message);
+                    $logger->log(ag($opts, Level::class, Level::Notice), $message, [
+                        'event_name' => 'cli.command.locked',
+                        'subsystem' => 'cli',
+                        'operation' => 'lock',
+                        'outcome' => 'locked',
+                        'command' => $this->getName(),
+                        'lock_name' => $lockName,
+                    ]);
                 }
 
                 return self::SUCCESS;
@@ -220,6 +230,25 @@ class Command extends BaseCommand
      */
     protected function displayContent(array $content, iOutput $output, string $mode = 'json'): void
     {
+        if ('jsonl' === Config::get('console.output')) {
+            $output->writeln(rtrim(new JsonlFormatter()->formatValues(
+                channel: 'cli',
+                level: Level::Info,
+                message: 'Command output ready.',
+                context: [
+                    'event_name' => 'cli.command.output',
+                    'subsystem' => 'cli',
+                    'operation' => 'display',
+                    'outcome' => 'completed',
+                    'command' => $this->getName(),
+                    'output_mode' => $mode,
+                    'data' => $content,
+                ],
+            ), "\r\n"));
+
+            return;
+        }
+
         switch ($mode) {
             case 'json':
                 $output->writeln(

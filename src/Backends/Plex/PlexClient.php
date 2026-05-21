@@ -865,7 +865,7 @@ class PlexClient implements iClient
 
                 throw new RuntimeException(
                     r(
-                        text: "PlexClient: Request for servers list returned with unexpected '{status_code}' status code. {context}",
+                        text: 'Failed to load Plex servers list: plex.tv returned status {status_code}. {context}',
                         context: [
                             'status_code' => $response->getStatusCode(),
                             'context' => array_to_string([
@@ -880,7 +880,7 @@ class PlexClient implements iClient
         } catch (TransportExceptionInterface $e) {
             throw new RuntimeException(
                 r(
-                    text: "PlexClient: Exception '{kind}' was thrown unhandled during request for plex servers list, likely network related error. {error} at '{file}:{line}'.",
+                    text: 'Failed to load Plex servers list because the request could not be completed.',
                     context: [
                         'kind' => $e::class,
                         'error' => $e->getMessage(),
@@ -898,7 +898,7 @@ class PlexClient implements iClient
         $list = [];
 
         if (false === $xml->Device) {
-            throw new RuntimeException('PlexClient: No backends were associated with the given token.');
+            throw new RuntimeException('No Plex servers were associated with the provided token.');
         }
 
         foreach ($xml->Device as $device) {
@@ -1019,7 +1019,7 @@ class PlexClient implements iClient
         } catch (TransportExceptionInterface $e) {
             throw new RuntimeException(
                 r(
-                    text: "PlexClient: Exception '{kind}' was thrown unhandled during request for plex servers list, likely network related error. {error} at '{file}:{line}'.",
+                    text: 'Failed to validate the Plex token because the request could not be completed.',
                     context: [
                         'kind' => $e::class,
                         'error' => $e->getMessage(),
@@ -1060,7 +1060,7 @@ class PlexClient implements iClient
             message: ag(
                 $response->extra,
                 'message',
-                static fn() => $response->error?->format() ?? 'An unexpected error occurred.',
+                static fn() => $response->error?->format() ?? 'The backend request failed.',
             ),
             code: $code,
             previous: $response->error?->previous,

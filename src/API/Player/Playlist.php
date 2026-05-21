@@ -213,7 +213,19 @@ readonly class Playlist
                 'Access-Control-Max-Age' => 300,
             ]);
         } catch (Throwable $e) {
-            $this->logger->error($e->getMessage(), ['trace' => $e->getTrace()]);
+            $this->logger->error("Failed to build playback playlist for '{media.path}'.", [
+                'event_name' => 'player.playlist.build_failed',
+                'subsystem' => 'player.playlist',
+                'operation' => 'build',
+                'outcome' => 'failed',
+                'media' => [
+                    'path' => $path,
+                ],
+                'player' => [
+                    'token' => $token,
+                ],
+                ...exception_log($e),
+            ]);
             return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);
         }
     }

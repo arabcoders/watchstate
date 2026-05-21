@@ -59,13 +59,38 @@ final class GetPlaylist
             'id' => $id,
         ];
 
+        $this->logger->debug(
+            message: "Requesting playlist '{id}' from '{user}@{backend}'.",
+            context: [
+                ...$logContext,
+                'event_name' => 'backend.request.started',
+                'subsystem' => 'backend.playlist',
+                'operation' => 'load',
+                'outcome' => 'started',
+                'http' => ['method' => Method::GET->value, 'url' => (string) $detailUrl],
+            ],
+        );
+
         $detailResponse = $this->http->request(Method::GET, (string) $detailUrl, $context->getHttpOptions());
         if (Status::OK !== Status::tryFrom($detailResponse->getStatusCode())) {
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{client}: {user}@{backend}' playlist '{id}' returned with unexpected '{status_code}' status code.",
-                    context: [...$logContext, 'status_code' => $detailResponse->getStatusCode()],
+                    message: "Playlist '{id}' request to '{user}@{backend}' returned status {http.status_code}.",
+                    context: [
+                        ...$logContext,
+                        'event_name' => 'backend.response.failed',
+                        'subsystem' => 'backend.playlist',
+                        'operation' => 'load',
+                        'outcome' => 'failed',
+                        'reason' => 'unexpected_status',
+                        'http' => [
+                            'method' => Method::GET->value,
+                            'status_code' => $detailResponse->getStatusCode(),
+                            'expected_status_codes' => [Status::OK->value],
+                            'url' => (string) $detailUrl,
+                        ],
+                    ],
                     level: Levels::ERROR,
                 ),
             );
@@ -83,8 +108,16 @@ final class GetPlaylist
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Playlist '{id}' was not found in '{client}: {user}@{backend}'.",
-                    context: $logContext,
+                    message: "Playlist '{id}' was not found on '{user}@{backend}'.",
+                    context: [
+                        ...$logContext,
+                        'event_name' => 'backend.request.skipped',
+                        'subsystem' => 'backend.playlist',
+                        'operation' => 'load',
+                        'outcome' => 'skipped',
+                        'reason' => 'playlist_not_found',
+                        'http' => ['method' => Method::GET->value, 'url' => (string) $detailUrl],
+                    ],
                     level: Levels::WARNING,
                 ),
             );
@@ -95,8 +128,21 @@ final class GetPlaylist
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{client}: {user}@{backend}' playlist '{id}' items returned with unexpected '{status_code}' status code.",
-                    context: [...$logContext, 'status_code' => $itemsResponse->getStatusCode()],
+                    message: "Playlist items request for '{id}' on '{user}@{backend}' returned status {http.status_code}.",
+                    context: [
+                        ...$logContext,
+                        'event_name' => 'backend.response.failed',
+                        'subsystem' => 'backend.playlist',
+                        'operation' => 'load_items',
+                        'outcome' => 'failed',
+                        'reason' => 'unexpected_status',
+                        'http' => [
+                            'method' => Method::GET->value,
+                            'status_code' => $itemsResponse->getStatusCode(),
+                            'expected_status_codes' => [Status::OK->value],
+                            'url' => (string) $itemsUrl,
+                        ],
+                    ],
                     level: Levels::ERROR,
                 ),
             );

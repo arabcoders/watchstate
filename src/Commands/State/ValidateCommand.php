@@ -142,14 +142,37 @@ class ValidateCommand extends Command
 
         $start_time = microtime(true);
 
+        $this->output(
+            Level::Notice,
+            'Validation started for {user_count} users.',
+            [
+                'event_name' => 'state.validate.started',
+                'subsystem' => 'state.validate',
+                'operation' => 'validate',
+                'outcome' => 'started',
+                'command' => self::ROUTE,
+                'user_count' => count($users),
+            ],
+            $logIO,
+        );
+
         foreach ($users as $userContext) {
             $userStart = microtime(true);
 
             $this->output(
                 Level::Notice,
-                "SYSTEM: Validating '{user}' local database metadata reference ids.",
+                "Validating local metadata references for '{user}'.",
                 [
+                    'event_name' => 'state.validate.user.started',
+                    'subsystem' => 'state.validate',
+                    'operation' => 'validate',
+                    'outcome' => 'started',
+                    'command' => self::ROUTE,
                     'user' => $userContext->name,
+                    'memory' => [
+                        'now' => get_memory_usage(),
+                        'peak' => get_peak_memory_usage(),
+                    ],
                 ],
                 $logIO,
             );
@@ -158,10 +181,15 @@ class ValidateCommand extends Command
 
             $this->output(
                 Level::Notice,
-                "SYSTEM: Completed '{user}' local database validation in '{duration}'s.",
+                "Completed validation for '{user}' in {duration_seconds}s.",
                 [
+                    'event_name' => 'state.validate.user.completed',
+                    'subsystem' => 'state.validate',
+                    'operation' => 'validate',
+                    'outcome' => 'completed',
+                    'command' => self::ROUTE,
                     'user' => $userContext->name,
-                    'duration' => round(microtime(true) - $userStart, 4),
+                    'duration_seconds' => round(microtime(true) - $userStart, 4),
                 ],
                 $logIO,
             );
@@ -169,9 +197,15 @@ class ValidateCommand extends Command
 
         $this->output(
             Level::Notice,
-            "SYSTEM: Completed local databases validation in '{duration}'s.",
+            'Validation completed for {user_count} users in {duration_seconds}s.',
             [
-                'duration' => round(microtime(true) - $start_time, 4),
+                'event_name' => 'state.validate.completed',
+                'subsystem' => 'state.validate',
+                'operation' => 'validate',
+                'outcome' => 'completed',
+                'command' => self::ROUTE,
+                'user_count' => count($users),
+                'duration_seconds' => round(microtime(true) - $start_time, 4),
             ],
             $logIO,
         );
@@ -194,6 +228,23 @@ class ValidateCommand extends Command
 
         $records = $userContext->db->getTotal();
 
+        $this->output(
+            Level::Notice,
+            "Loaded {record_count} local records for '{user}'.",
+            [
+                'event_name' => 'state.validate.records.loaded',
+                'subsystem' => 'state.validate',
+                'operation' => 'load_records',
+                'outcome' => 'completed',
+                'command' => self::ROUTE,
+                'user' => $userContext->name,
+                'record_count' => $records,
+                'backend_count' => count($clients),
+                'backends' => array_keys($clients),
+            ],
+            $logIO,
+        );
+
         if (null !== $progBar) {
             $progBar->progressStart($records);
             $progBar->newLine();
@@ -215,10 +266,16 @@ class ValidateCommand extends Command
                 if (count($item->getMetadata()) < 1) {
                     $this->output(
                         Level::Warning,
-                        "SYSTEM: No metadata found for item '{user}: #{id}' Removing record.",
+                        "Removing '#{id}' for '{user}': no backend metadata was stored.",
                         [
+                            'event_name' => 'state.validate.item.removed',
+                            'subsystem' => 'state.validate',
+                            'operation' => 'validate_item',
+                            'outcome' => 'removed',
+                            'command' => self::ROUTE,
                             'id' => $item->id,
                             'user' => $userContext->name,
+                            'reason' => 'missing_metadata',
                         ],
                         $logIO,
                     );
@@ -231,12 +288,17 @@ class ValidateCommand extends Command
 
                 $this->output(
                     Level::Debug,
-                    "SYSTEM: Validating '{user}: #{id}' - '{title}' reference ID for '{backends}'.",
+                    "Checking stored references for '{user}' item '#{id}: {title}'.",
                     [
+                        'event_name' => 'state.validate.item.started',
+                        'subsystem' => 'state.validate',
+                        'operation' => 'validate_item',
+                        'outcome' => 'started',
+                        'command' => self::ROUTE,
                         'id' => $item->id,
                         'user' => $userContext->name,
                         'title' => $item->getName(),
-                        'backends' => implode(', ', array_keys($meta)),
+                        'backends' => array_keys($meta),
                     ],
                     $logIO,
                 );
@@ -245,8 +307,13 @@ class ValidateCommand extends Command
                     $id = ag($metadata, iState::COLUMN_ID);
                     $this->output(
                         Level::Debug,
-                        "SYSTEM: Validating '{user}@{backend}: #{id} - {item_id}' '{title}' reference ID.",
+                        "Checking reference '{item_id}' for '{user}@{backend}' item '#{id}: {title}'.",
                         [
+                            'event_name' => 'state.validate.reference.started',
+                            'subsystem' => 'state.validate',
+                            'operation' => 'validate_reference',
+                            'outcome' => 'started',
+                            'command' => self::ROUTE,
                             'id' => $item->id,
                             'item_id' => $id,
                             'user' => $userContext->name,
@@ -259,11 +326,17 @@ class ValidateCommand extends Command
                     if (null === $id) {
                         $this->output(
                             Level::Notice,
-                            "SYSTEM: No reference ID found for item '{user}@{backend}: #{id}' Removing reference ID.",
+                            "Removing stored reference for '{user}@{backend}' item '#{id}': no backend id was saved.",
                             [
+                                'event_name' => 'state.validate.reference.removed',
+                                'subsystem' => 'state.validate',
+                                'operation' => 'validate_reference',
+                                'outcome' => 'removed',
+                                'command' => self::ROUTE,
                                 'id' => $item->id,
                                 'backend' => $backend,
                                 'user' => $userContext->name,
+                                'reason' => 'missing_reference_id',
                             ],
                             $logIO,
                         );
@@ -275,11 +348,17 @@ class ValidateCommand extends Command
                     if (null === ($clients[$backend] ?? null)) {
                         $this->output(
                             Level::Warning,
-                            "SYSTEM: '{user}: #{id}' has reference to '{backend}' which doesn't exists. Removing reference ID.",
+                            "Removing '{user}' item '#{id}' reference for '{backend}': backend is no longer configured.",
                             [
+                                'event_name' => 'state.validate.reference.removed',
+                                'subsystem' => 'state.validate',
+                                'operation' => 'validate_reference',
+                                'outcome' => 'removed',
+                                'command' => self::ROUTE,
                                 'id' => $item->id,
                                 'user' => $userContext->name,
                                 'backend' => $backend,
+                                'reason' => 'backend_missing',
                             ],
                             $logIO,
                         );
@@ -303,12 +382,18 @@ class ValidateCommand extends Command
                         if (false === $data) {
                             $this->output(
                                 Level::Notice,
-                                "SYSTEM: Request for '{user}@{backend}: #{id} - {item_id}' didnt return any data. Removing reference ID.",
+                                "Removing '{user}@{backend}' reference '{item_id}' from item '#{id}': backend returned no metadata.",
                                 [
+                                    'event_name' => 'state.validate.reference.removed',
+                                    'subsystem' => 'state.validate',
+                                    'operation' => 'validate_reference',
+                                    'outcome' => 'removed',
+                                    'command' => self::ROUTE,
                                     'id' => $item->id,
                                     'item_id' => $id,
                                     'user' => $userContext->name,
                                     'backend' => $backend,
+                                    'reason' => 'metadata_missing',
                                 ],
                                 $logIO,
                             );
@@ -320,14 +405,20 @@ class ValidateCommand extends Command
                         $sub_ref['found']++;
                     } catch (Throwable $e) {
                         $this->output(
-                            Level::Notice,
-                            "SYSTEM: Request for '{user}@{backend}: #{id} - {item_id}'. returned with error. {error}. Removing reference ID.",
+                            Level::Warning,
+                            "Removing '{user}@{backend}' reference '{item_id}' from item '#{id}': metadata lookup failed.",
                             [
+                                'event_name' => 'state.validate.reference.removed',
+                                'subsystem' => 'state.validate',
+                                'operation' => 'validate_reference',
+                                'outcome' => 'removed',
+                                'command' => self::ROUTE,
                                 'id' => $item->id,
                                 'item_id' => $id,
                                 'user' => $userContext->name,
                                 'backend' => $backend,
-                                'error' => $e->getMessage(),
+                                'reason' => 'metadata_lookup_failed',
+                                ...exception_log($e),
                             ],
                             $logIO,
                         );
@@ -341,10 +432,16 @@ class ValidateCommand extends Command
                 if (count($item->metadata) < 1) {
                     $this->output(
                         Level::Notice,
-                        "SYSTEM: Item '{user}: #{id}' no longer have any reference ID. Removing record.",
+                        "Removing '#{id}' for '{user}': no backend references remain.",
                         [
+                            'event_name' => 'state.validate.item.removed',
+                            'subsystem' => 'state.validate',
+                            'operation' => 'validate_item',
+                            'outcome' => 'removed',
+                            'command' => self::ROUTE,
                             'id' => $item->id,
                             'user' => $userContext->name,
+                            'reason' => 'no_references_remaining',
                         ],
                         $logIO,
                     );
@@ -366,8 +463,14 @@ class ValidateCommand extends Command
                     if (0 === ($progressUpdate % 500)) {
                         $this->output(
                             Level::Info,
-                            "SYSTEM: Processed '{progress}/{total}' %{percent}.",
+                            "Validated {progress}/{total} records ({percent}%) for '{user}'.",
                             [
+                                'event_name' => 'state.validate.progress',
+                                'subsystem' => 'state.validate',
+                                'operation' => 'validate',
+                                'outcome' => 'running',
+                                'command' => self::ROUTE,
+                                'user' => $userContext->name,
                                 'progress' => number_format($progressUpdate),
                                 'total' => $recordsCount,
                                 'percent' => round(($progressUpdate / $records) * 100, 3),
@@ -400,11 +503,17 @@ class ValidateCommand extends Command
     private function renderStatus(iOutput $output): void
     {
         foreach ($this->perRun as $user => $data) {
-            $this->logger->notice("User '{user}' local database, had {u} updated, {r} removed, {n} no change.", [
+            $this->logger->notice("Validation summary for '{user}': updated {updated_count}, removed {removed_count}, unchanged {unchanged_count}.", [
+                'event_name' => 'state.validate.summary',
+                'subsystem' => 'state.validate',
+                'operation' => 'summarize',
+                'outcome' => 'completed',
+                'command' => self::ROUTE,
                 'user' => $user,
-                'u' => $data['updated'],
-                'r' => $data['removed'],
-                'n' => $data['no_change'],
+                'updated_count' => $data['updated'],
+                'removed_count' => $data['removed'],
+                'unchanged_count' => $data['no_change'],
+                'backends' => $data['backends'],
             ]);
 
             $tbl = [];
@@ -414,9 +523,9 @@ class ValidateCommand extends Command
             foreach ($data['backends'] as $backend => $backendData) {
                 $i++;
                 $tbl[] = [
-                    'Backend' => $backend,
-                    'Reference Found' => $backendData['found'],
-                    'Reference Removed' => $backendData['removed'],
+                    'backend' => $backend,
+                    'reference_found' => $backendData['found'],
+                    'reference_removed' => $backendData['removed'],
                 ];
                 if ($i < $total) {
                     $tbl[] = new TableSeparator();

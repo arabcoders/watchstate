@@ -11,6 +11,7 @@ use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Libs\Container;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Exceptions\AppExceptionInterface;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Extends\RetryableHttpClient;
 use App\Libs\Options;
@@ -135,14 +136,26 @@ final class GetUsersList
             ->withHost('plex.tv')
             ->withPath('/api/v2/home/users/');
 
+        $logContext = [
+            'action' => $this->action,
+            'client' => $context->clientName,
+            'backend' => $context->backendName,
+            'user' => $context->userContext->name,
+            'url' => (string) $url,
+        ];
+
         if (null !== ($pin = ag($context->options, Options::PLEX_USER_PIN))) {
             $url = $url->withQuery(http_build_query(['pin' => $pin]));
+            $logContext['url'] = (string) $url;
         }
 
         $this->logger->debug("Requesting '{user}@{backend}' users list.", [
-            'user' => $context->userContext->name,
-            'backend' => $context->backendName,
-            'url' => (string) $url,
+            ...$logContext,
+            'event_name' => 'backend.request.started',
+            'subsystem' => 'backend.user',
+            'operation' => 'list',
+            'outcome' => 'started',
+            'http' => ['url' => (string) $url],
         ]);
 
         try {
@@ -151,14 +164,46 @@ final class GetUsersList
                     'Accept' => 'application/json',
                 ],
             ]);
-        } catch (InvalidArgumentException|iException $e) {
+        } catch (InvalidArgumentException $e) {
+            $errorContext = $e instanceof AppExceptionInterface && $e->hasContext() ? $e->getContext() : [];
+
             return new Response(
                 status: false,
                 error: new Error(
-                    message: $e->getMessage(),
+                    message: "Home users request to '{user}@{backend}' returned status {http.status_code}.",
                     context: [
-                        'user' => $context->userContext->name,
-                        'backend' => $context->backendName,
+                        ...$logContext,
+                        'event_name' => 'backend.response.failed',
+                        'subsystem' => 'backend.user',
+                        'operation' => 'list',
+                        'outcome' => 'failed',
+                        'reason' => 'unexpected_status',
+                        'http' => [
+                            'status_code' => ag($errorContext, 'status_code'),
+                            'expected_status_codes' => [Status::OK->value],
+                            'url' => (string) $url,
+                        ],
+                        'response' => ag($errorContext, 'response', []),
+                        'token_type' => ag($errorContext, 'token_type'),
+                        'error' => ag($errorContext, 'error'),
+                    ],
+                    level: Levels::ERROR,
+                    previous: $e,
+                ),
+            );
+        } catch (iException $e) {
+            return new Response(
+                status: false,
+                error: new Error(
+                    message: "Failed to request home users from '{user}@{backend}'.",
+                    context: [
+                        ...$logContext,
+                        'event_name' => 'backend.client.request_failed',
+                        'subsystem' => 'backend.user',
+                        'operation' => 'list',
+                        'outcome' => 'failed',
+                        'http' => ['url' => (string) $url],
+                        ...exception_log($e),
                     ],
                     level: Levels::ERROR,
                     previous: $e,
@@ -208,7 +253,11 @@ final class GetUsersList
                 'user' => $context->userContext->name,
                 'backend' => $context->backendName,
                 'url' => (string) $url,
-                'trace' => $json,
+                'event_name' => 'backend.response.received',
+                'subsystem' => 'backend.user',
+                'operation' => 'list',
+                'outcome' => 'received',
+                'response' => ['body' => $json],
             ]);
         }
 
@@ -331,14 +380,26 @@ final class GetUsersList
             ->withHost('plex.tv')
             ->withPath('/api/users/');
 
+        $logContext = [
+            'action' => $this->action,
+            'client' => $context->clientName,
+            'backend' => $context->backendName,
+            'user' => $context->userContext->name,
+            'url' => (string) $url,
+        ];
+
         if (null !== ($pin = ag($context->options, Options::PLEX_USER_PIN))) {
             $url = $url->withQuery(http_build_query(['pin' => $pin]));
+            $logContext['url'] = (string) $url;
         }
 
         $this->logger->debug("Requesting '{user}@{backend}' external users list.", [
-            'user' => $context->userContext->name,
-            'backend' => $context->backendName,
-            'url' => (string) $url,
+            ...$logContext,
+            'event_name' => 'backend.request.started',
+            'subsystem' => 'backend.user',
+            'operation' => 'list_external',
+            'outcome' => 'started',
+            'http' => ['url' => (string) $url],
         ]);
 
         try {
@@ -351,14 +412,46 @@ final class GetUsersList
             if (true !== (bool) ag($opts, Options::GET_TOKENS) || count($users) < 1) {
                 return new Response(status: true, response: $users);
             }
-        } catch (InvalidArgumentException|iException $e) {
+        } catch (InvalidArgumentException $e) {
+            $errorContext = $e instanceof AppExceptionInterface && $e->hasContext() ? $e->getContext() : [];
+
             return new Response(
                 status: false,
                 error: new Error(
-                    message: $e->getMessage(),
+                    message: "External users request to '{user}@{backend}' returned status {http.status_code}.",
                     context: [
-                        'user' => $context->userContext->name,
-                        'backend' => $context->backendName,
+                        ...$logContext,
+                        'event_name' => 'backend.response.failed',
+                        'subsystem' => 'backend.user',
+                        'operation' => 'list_external',
+                        'outcome' => 'failed',
+                        'reason' => 'unexpected_status',
+                        'http' => [
+                            'status_code' => ag($errorContext, 'status_code'),
+                            'expected_status_codes' => [Status::OK->value],
+                            'url' => (string) $url,
+                        ],
+                        'response' => ag($errorContext, 'response', []),
+                        'token_type' => ag($errorContext, 'token_type'),
+                        'error' => ag($errorContext, 'error'),
+                    ],
+                    level: Levels::ERROR,
+                    previous: $e,
+                ),
+            );
+        } catch (iException $e) {
+            return new Response(
+                status: false,
+                error: new Error(
+                    message: "Failed to request external users from '{user}@{backend}'.",
+                    context: [
+                        ...$logContext,
+                        'event_name' => 'backend.client.request_failed',
+                        'subsystem' => 'backend.user',
+                        'operation' => 'list_external',
+                        'outcome' => 'failed',
+                        'http' => ['url' => (string) $url],
+                        ...exception_log($e),
                     ],
                     level: Levels::ERROR,
                     previous: $e,
@@ -372,14 +465,26 @@ final class GetUsersList
             ->withHost('plex.tv')
             ->withPath(r('/api/servers/{backendId}/shared_servers', ['backendId' => $context->backendId]));
 
+        $logContext = [
+            'action' => $this->action,
+            'client' => $context->clientName,
+            'backend' => $context->backendName,
+            'user' => $context->userContext->name,
+            'url' => (string) $url,
+        ];
+
         if (null !== ($pin = ag($context->options, Options::PLEX_USER_PIN))) {
             $url = $url->withQuery(http_build_query(['pin' => $pin]));
+            $logContext['url'] = (string) $url;
         }
 
         $this->logger->debug("Requesting '{user}@{backend}' external users access-tokens.", [
-            'user' => $context->userContext->name,
-            'backend' => $context->backendName,
-            'url' => (string) $url,
+            ...$logContext,
+            'event_name' => 'backend.request.started',
+            'subsystem' => 'backend.auth',
+            'operation' => 'token.list_external',
+            'outcome' => 'started',
+            'http' => ['url' => (string) $url],
         ]);
 
         try {
@@ -388,14 +493,46 @@ final class GetUsersList
                     'Accept' => 'application/xml',
                 ],
             ]);
-        } catch (InvalidArgumentException|iException $e) {
+        } catch (InvalidArgumentException $e) {
+            $errorContext = $e instanceof AppExceptionInterface && $e->hasContext() ? $e->getContext() : [];
+
             return new Response(
                 status: false,
                 error: new Error(
-                    message: $e->getMessage(),
+                    message: "External user tokens request to '{user}@{backend}' returned status {http.status_code}.",
                     context: [
-                        'user' => $context->userContext->name,
-                        'backend' => $context->backendName,
+                        ...$logContext,
+                        'event_name' => 'backend.response.failed',
+                        'subsystem' => 'backend.auth',
+                        'operation' => 'token.list_external',
+                        'outcome' => 'failed',
+                        'reason' => 'unexpected_status',
+                        'http' => [
+                            'status_code' => ag($errorContext, 'status_code'),
+                            'expected_status_codes' => [Status::OK->value],
+                            'url' => (string) $url,
+                        ],
+                        'response' => ag($errorContext, 'response', []),
+                        'token_type' => ag($errorContext, 'token_type'),
+                        'error' => ag($errorContext, 'error'),
+                    ],
+                    level: Levels::ERROR,
+                    previous: $e,
+                ),
+            );
+        } catch (iException $e) {
+            return new Response(
+                status: false,
+                error: new Error(
+                    message: "Failed to request external user tokens from '{user}@{backend}'.",
+                    context: [
+                        ...$logContext,
+                        'event_name' => 'backend.client.request_failed',
+                        'subsystem' => 'backend.auth',
+                        'operation' => 'token.list_external',
+                        'outcome' => 'failed',
+                        'http' => ['url' => (string) $url],
+                        ...exception_log($e),
                     ],
                     level: Levels::ERROR,
                     previous: $e,
@@ -441,9 +578,14 @@ final class GetUsersList
 
         if ($context->trace) {
             $this->logger->debug("Parsing '{user}@{backend}' external users list payload.", [
+                'user' => $context->userContext->name,
                 'backend' => $context->backendName,
                 'url' => (string) $url,
-                'trace' => $data,
+                'event_name' => 'backend.response.received',
+                'subsystem' => 'backend.user',
+                'operation' => 'list_external',
+                'outcome' => 'received',
+                'response' => ['body' => $data],
             ]);
         }
 
@@ -517,9 +659,14 @@ final class GetUsersList
 
         if ($context->trace) {
             $this->logger->debug("Parsing '{user}@{backend}' users list payload.", [
+                'user' => $context->userContext->name,
                 'backend' => $context->backendName,
                 'url' => (string) $url,
-                'trace' => $json,
+                'event_name' => 'backend.response.received',
+                'subsystem' => 'backend.auth',
+                'operation' => 'token.list_external',
+                'outcome' => 'received',
+                'response' => ['body' => $json],
             ]);
         }
 
@@ -601,23 +748,26 @@ final class GetUsersList
         } catch (Throwable) {
         }
 
-        throw new InvalidArgumentException(
-            r(
-                "Request for '{user}@{backend}' users list returned with unexpected '{status_code}' status code. {tokenType}{extra_msg}",
-                [
-                    'user' => $context->userContext->name,
-                    'backend' => $context->backendName,
-                    'status_code' => $response->getStatusCode(),
-                    'body' => $response->getContent(false),
-                    'extra_msg' => !$extra_msg ? '' : ". {$extra_msg}",
-                    'tokenType' => ag_exists(
-                        $context->options,
-                        Options::ADMIN_TOKEN,
-                    )
-                        ? 'user & admin token'
-                        : 'user token',
-                ],
-            ),
-        );
+        $errorContext = [
+            'action' => $this->action,
+            'client' => $context->clientName,
+            'backend' => $context->backendName,
+            'user' => $context->userContext->name,
+            'url' => (string) $url,
+            'status_code' => $response->getStatusCode(),
+            'response' => ['body' => $response->getContent(false)],
+            'token_type' => ag_exists($context->options, Options::ADMIN_TOKEN)
+                ? 'user_and_admin_token'
+                : 'user_token',
+        ];
+
+        if ('' !== $extra_msg) {
+            $errorContext['error'] = ['message' => $extra_msg];
+        }
+
+        $ex = new InvalidArgumentException("Plex request to '{user}@{backend}' returned status {status_code}.");
+        $ex->setContext($errorContext);
+
+        throw $ex;
     }
 }

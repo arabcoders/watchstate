@@ -20,13 +20,14 @@ use App\Libs\Extends\HttpClient;
 use App\Libs\Extends\MockHttpClient;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
+use Monolog\LogRecord;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 class ProgressSkipTest extends MediaBrowserTestCase
 {
-    public function test_progress_skips_origin(): void
+    public function test_skip_origin(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass, $metaClass, $sessionsClass]) {
             $context = $this->makeContext($clientName);
@@ -47,10 +48,14 @@ class ProgressSkipTest extends MediaBrowserTestCase
 
             $this->assertTrue($result->isSuccessful());
             $this->assertSame(0, $queue->count());
+
+            $record = $this->lastIgnored();
+            $this->assertSame('backend.progress', $record->context['subsystem'] ?? null);
+            $this->assertSame('origin_backend', $record->context['reason'] ?? null);
         }
     }
 
-    public function test_progress_skips_missing_metadata(): void
+    public function test_skip_missing_metadata(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass, $metaClass, $sessionsClass]) {
             $context = $this->makeContext($clientName);
@@ -79,10 +84,14 @@ class ProgressSkipTest extends MediaBrowserTestCase
 
             $this->assertTrue($result->isSuccessful());
             $this->assertSame(0, $queue->count());
+
+            $record = $this->lastIgnored();
+            $this->assertSame('backend.progress', $record->context['subsystem'] ?? null);
+            $this->assertSame('missing_backend_metadata', $record->context['reason'] ?? null);
         }
     }
 
-    public function test_progress_skips_sender_date(): void
+    public function test_skip_sender_date(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass, $metaClass, $sessionsClass]) {
             $context = $this->makeContext($clientName);
@@ -107,10 +116,14 @@ class ProgressSkipTest extends MediaBrowserTestCase
 
             $this->assertTrue($result->isSuccessful());
             $this->assertSame(0, $queue->count());
+
+            $record = $this->lastIgnored();
+            $this->assertSame('backend.progress', $record->context['subsystem'] ?? null);
+            $this->assertSame('missing_event_date', $record->context['reason'] ?? null);
         }
     }
 
-    public function test_progress_skips_local_newer(): void
+    public function test_skip_local_newer(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass, $metaClass, $sessionsClass]) {
             $context = $this->makeContext($clientName);
@@ -138,10 +151,14 @@ class ProgressSkipTest extends MediaBrowserTestCase
 
             $this->assertTrue($result->isSuccessful());
             $this->assertSame(0, $queue->count());
+
+            $record = $this->lastIgnored();
+            $this->assertSame('backend.progress', $record->context['subsystem'] ?? null);
+            $this->assertSame('date_not_newer_than_local_history', $record->context['reason'] ?? null);
         }
     }
 
-    public function test_progress_skips_active_session(): void
+    public function test_skip_active_session(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass, $metaClass, $sessionsClass]) {
             $context = $this->makeContext($clientName, [Options::IGNORE_DATE => true]);
@@ -185,10 +202,14 @@ class ProgressSkipTest extends MediaBrowserTestCase
 
             $this->assertTrue($result->isSuccessful());
             $this->assertSame(0, $queue->count());
+
+            $record = $this->lastIgnored();
+            $this->assertSame('backend.progress', $record->context['subsystem'] ?? null);
+            $this->assertSame('active_session', $record->context['reason'] ?? null);
         }
     }
 
-    public function test_progress_skips_remote_watched(): void
+    public function test_skip_remote_watched(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass, $metaClass, $sessionsClass]) {
             $context = $this->makeContext($clientName, [Options::IGNORE_DATE => true]);
@@ -227,6 +248,10 @@ class ProgressSkipTest extends MediaBrowserTestCase
 
             $this->assertTrue($result->isSuccessful());
             $this->assertSame(0, $queue->count());
+
+            $record = $this->lastIgnored();
+            $this->assertSame('backend.progress', $record->context['subsystem'] ?? null);
+            $this->assertSame('remote_marked_watched', $record->context['reason'] ?? null);
         }
     }
 
@@ -260,6 +285,18 @@ class ProgressSkipTest extends MediaBrowserTestCase
                 'user_data' => $options['user_data'] ?? null,
             ]),
         ));
+    }
+
+    private function lastIgnored(): LogRecord
+    {
+        $records = array_values(array_filter(
+            $this->handler->getRecords(),
+            static fn(LogRecord $record): bool => 'backend.item.ignored' === ($record->context['event_name'] ?? null),
+        ));
+
+        $this->assertNotEmpty($records);
+
+        return end($records);
     }
 
     private function provideBackends(): array

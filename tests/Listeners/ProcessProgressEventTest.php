@@ -81,21 +81,21 @@ final class ProcessProgressEventTest extends TestCase
         $listener($event);
 
         self::assertSame(EventStatus::RUNNING, $event->getStatus());
-        self::assertNotEmpty(
-            array_filter(
-                $event->getLogs(),
-                static function (string $log): bool {
-                    if (false === JsonlFormatter::isJsonlRecord($log)) {
-                        return false;
-                    }
+        $records = array_values(array_filter(
+            $event->getLogs(),
+            static function (string $log): bool {
+                if (false === JsonlFormatter::isJsonlRecord($log)) {
+                    return false;
+                }
 
-                    $payload = json_decode($log, true, 512, JSON_THROW_ON_ERROR);
+                $payload = json_decode($log, true, 512, JSON_THROW_ON_ERROR);
 
-                    return 'warning' === ag($payload, 'level')
-                        && str_contains((string) ag($payload, 'message', ''), 'No metadata was found.');
-                },
-            ),
-        );
+                return 'progress.queue.empty' === ag($payload, 'fields.event_name')
+                    && in_array(ag($payload, 'fields.reason'), ['no_eligible_backends', 'no_updates_queued'], true);
+            },
+        ));
+
+        self::assertNotEmpty($records);
         self::assertFalse($handler->hasWarningRecords());
     }
 

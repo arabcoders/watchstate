@@ -70,8 +70,15 @@ final class CreatePlaylist
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Missing machine identifier for '{client}: {user}@{backend}' playlist create request.",
-                    context: $logContext,
+                    message: "Cannot create playlist '{title}' on '{user}@{backend}': machine identifier is missing.",
+                    context: [
+                        ...$logContext,
+                        'event_name' => 'backend.request.skipped',
+                        'subsystem' => 'backend.playlist',
+                        'operation' => 'create',
+                        'outcome' => 'skipped',
+                        'reason' => 'missing_machine_identifier',
+                    ],
                     level: Levels::ERROR,
                 ),
             );
@@ -95,14 +102,39 @@ final class CreatePlaylist
                 'uri' => $uri,
             ]));
 
+        $this->logger->debug(
+            message: "Creating playlist '{title}' on '{user}@{backend}'.",
+            context: [
+                ...$logContext,
+                'event_name' => 'backend.request.started',
+                'subsystem' => 'backend.playlist',
+                'operation' => 'create',
+                'outcome' => 'started',
+                'http' => ['method' => Method::POST->value, 'url' => (string) $url],
+            ],
+        );
+
         $response = $this->http->request(Method::POST, (string) $url, $context->getHttpOptions());
 
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{client}: {user}@{backend}' playlist '{title}' returned with unexpected '{status_code}' status code.",
-                    context: [...$logContext, 'status_code' => $response->getStatusCode(), 'url' => (string) $url],
+                    message: "Create playlist request for '{title}' on '{user}@{backend}' returned status {http.status_code}.",
+                    context: [
+                        ...$logContext,
+                        'event_name' => 'backend.response.failed',
+                        'subsystem' => 'backend.playlist',
+                        'operation' => 'create',
+                        'outcome' => 'failed',
+                        'reason' => 'unexpected_status',
+                        'http' => [
+                            'method' => Method::POST->value,
+                            'status_code' => $response->getStatusCode(),
+                            'expected_status_codes' => [Status::OK->value],
+                            'url' => (string) $url,
+                        ],
+                    ],
                     level: Levels::ERROR,
                 ),
             );

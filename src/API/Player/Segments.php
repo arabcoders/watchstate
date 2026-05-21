@@ -379,16 +379,17 @@ readonly class Segments
 
             return $response;
         } catch (Throwable $e) {
-            $this->logger->error("Failed to generate segment. '{error}' at {file}:{line}", [
+            $this->logger->error('Failed to generate player segment.', [
+                'event_name' => 'player.segment.generate_failed',
+                'subsystem' => 'player.segment',
+                'operation' => 'generate',
+                'outcome' => 'failed',
                 'stdout' => isset($process) ? $process->getOutput() : null,
                 'stderr' => isset($process) ? $process->getErrorOutput() : null,
                 'Ffmpeg' => $this->cmdLog($cmd),
                 'config' => $sConfig,
                 'command' => implode(' ', $cmd),
-                'error' => $e->getMessage(),
-                'line' => $e->getLine(),
-                'file' => $e->getFile(),
-                'trace' => $e->getTrace(),
+                ...exception_log($e),
             ]);
 
             $response = api_error('Failed to generate segment. check logs.', Status::INTERNAL_SERVER_ERROR);
@@ -467,14 +468,15 @@ readonly class Segments
             $stream->close();
             return $cacheFile;
         } catch (Throwable $e) {
-            $this->logger->error("Failed to extract subtitles. '{error}' at {file}:{line}", [
+            $this->logger->error('Failed to extract subtitle stream.', [
+                'event_name' => 'player.subtitle.extract_failed',
+                'subsystem' => 'player.subtitle',
+                'operation' => 'extract',
+                'outcome' => 'failed',
                 'stdout' => isset($process) ? $process->getOutput() : null,
                 'stderr' => isset($process) ? $process->getErrorOutput() : null,
                 'Ffmpeg' => $this->cmdLog($cmd),
-                'error' => $e->getMessage(),
-                'line' => $e->getLine(),
-                'file' => $e->getFile(),
-                'trace' => $e->getTrace(),
+                ...exception_log($e),
             ]);
             return "{$path}:stream_index={$stream}";
         }

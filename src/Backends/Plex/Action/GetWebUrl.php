@@ -39,13 +39,18 @@ final class GetWebUrl
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Invalid Web url type '{type}' for '{client}: {user}@{backend}'.",
+                    message: "Cannot build a web URL for '{user}@{backend}': type '{type}' is unsupported.",
                     context: [
                         'action' => $this->action,
                         'client' => $context->clientName,
                         'backend' => $context->backendName,
                         'user' => $context->userContext->name,
                         'type' => $type,
+                        'event_name' => 'backend.request.skipped',
+                        'subsystem' => 'backend.web',
+                        'operation' => 'build_url',
+                        'outcome' => 'skipped',
+                        'reason' => 'unsupported_type',
                     ],
                     level: Levels::WARNING,
                 ),

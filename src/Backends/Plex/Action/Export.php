@@ -35,6 +35,12 @@ final class Export extends Import
     ): void {
         $queue = ag($opts, 'queue', static fn() => Container::get(QueueRequests::class));
         $after = ag($opts, 'after', null);
+        $logContext = array_replace_recursive([
+            'action' => $this->action,
+            'client' => $context->clientName,
+            'backend' => $context->backendName,
+            'user' => $context->userContext->name,
+        ], $logContext);
         $library = ag($logContext, 'library.id');
         $type = ag($item, 'type');
 
@@ -47,10 +53,17 @@ final class Export extends Import
 
         try {
             if ($context->trace) {
-                $this->logger->debug("{action}: Processing '{client}: {user}@{backend}' response payload.", [
-                    ...$logContext,
-                    'response' => ['body' => $item],
-                ]);
+                $this->logger->debug(
+                    message: "Processing export payload from '{user}@{backend}'.",
+                    context: [
+                        'event_name' => 'backend.response.received',
+                        'subsystem' => 'backend.export',
+                        'operation' => 'process_item',
+                        'outcome' => 'received',
+                        ...$logContext,
+                        'response' => ['body' => $item],
+                    ],
+                );
             }
 
             Message::increment("{$context->backendName}.{$library}.total");
@@ -83,16 +96,15 @@ final class Export extends Import
             } catch (InvalidArgumentException $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "{action}: Failed to parse '{client}: {user}@{backend}' item response. '{error.kind}' with '{error.message}' at '{error.file}:{error.line}' ",
+                        message: "Failed to parse export item response from '{user}@{backend}'.",
                         context: [
+                            'event_name' => 'backend.operation.failed',
+                            'subsystem' => 'backend.export',
+                            'operation' => 'parse_item',
+                            'outcome' => 'failed',
                             ...$logContext,
-                            'error' => [
-                                'kind' => $e::class,
-                                'line' => $e->getLine(),
-                                'message' => $e->getMessage(),
-                                'file' => after($e->getFile(), ROOT_PATH),
-                            ],
                             'response' => ['body' => $item],
+                            ...exception_log($e),
                         ],
                         e: $e,
                     ),
@@ -102,8 +114,13 @@ final class Export extends Import
 
             if (null === ag($item, true === (bool) ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt')) {
                 $this->logger->debug(
-                    message: "{action}: Ignoring '{client}: {user}@{backend}' {item.type} '{item.title}'. No Date is set on object.",
+                    message: "Ignoring {item.type} '{item.title}' from '{user}@{backend}': missing date '{date_key}'.",
                     context: [
+                        'event_name' => 'backend.item.ignored',
+                        'subsystem' => 'backend.export',
+                        'operation' => 'process_item',
+                        'outcome' => 'ignored',
+                        'reason' => 'missing_date',
                         ...$logContext,
                         'date_key' => true === (bool) ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt',
                         'response' => ['body' => $item],
@@ -122,7 +139,7 @@ final class Export extends Import
             );
 
             if (!$rItem->hasGuids() && !$rItem->hasRelativeGuid()) {
-                $message = "{action}: Ignoring '{client}: {user}@{backend}' - '{item.title}'. No valid/supported external ids.";
+                $message = "Ignoring {item.type} '{item.title}' from '{user}@{backend}': no supported external IDs.";
 
                 if (null === ($item['Guid'] ?? null)) {
                     $item['Guid'] = [];
@@ -133,13 +150,21 @@ final class Export extends Import
                 }
 
                 if (empty($item['Guid'])) {
-                    $message .= " Most likely unmatched '{item.type}'.";
+                    $message .= ' Most likely unmatched {item.type}.';
                 }
 
-                $this->logger->info($message, [
-                    ...$logContext,
-                    'context' => ['guids' => !empty($item['Guid']) ? $item['Guid'] : 'None'],
-                ]);
+                $this->logger->info(
+                    message: $message,
+                    context: [
+                        'event_name' => 'backend.item.ignored',
+                        'subsystem' => 'backend.export',
+                        'operation' => 'create_entity',
+                        'outcome' => 'ignored',
+                        'reason' => 'missing_supported_guid',
+                        ...$logContext,
+                        'guids' => !empty($item['Guid']) ? $item['Guid'] : 'None',
+                    ],
+                );
 
                 Message::increment("{$context->backendName}.{$mappedType}.ignored_no_supported_guid");
                 return;
@@ -148,8 +173,13 @@ final class Export extends Import
             if (false === ag($context->options, Options::IGNORE_DATE, false)) {
                 if (true === $after instanceof DateTimeInterface && $rItem->updated >= $after->getTimestamp()) {
                     $this->logger->debug(
-                        message: "{action}: Ignoring '{client}: {user}@{backend}' - '{item.title}'. Backend date '{backend_date}' is equal or newer than last sync date '{last_sync}'.",
+                        message: "Ignoring {item.type} '{item.title}' from '{user}@{backend}': backend date is not newer than last sync date.",
                         context: [
+                            'event_name' => 'backend.item.ignored',
+                            'subsystem' => 'backend.export',
+                            'operation' => 'compare_dates',
+                            'outcome' => 'ignored',
+                            'reason' => 'date_not_newer_than_last_sync',
                             ...$logContext,
                             'last_sync' => make_date($after),
                             'backend_date' => make_date($rItem->updated),
@@ -162,12 +192,24 @@ final class Export extends Import
             }
 
             if (null === ($entity = $mapper->get($rItem))) {
-                $message = "{action}: Ignoring '{client}: {user}@{backend}' - '{item.title}'. {item.type} is not imported yet.";
-                if (true === (bool) ag($context->options, Options::IMPORT_METADATA_ONLY)) {
-                    $message .= ' The backend is marked as metadata source only.';
+                $metadataOnly = true === (bool) ag($context->options, Options::IMPORT_METADATA_ONLY);
+                $message = "Ignoring {item.type} '{item.title}' from '{user}@{backend}': item is not imported yet.";
+                if (true === $metadataOnly) {
+                    $message .= ' Backend is configured as metadata-only.';
                 }
 
-                $this->logger->info(message: $message, context: $logContext);
+                $this->logger->info(
+                    message: $message,
+                    context: [
+                        'event_name' => 'backend.item.ignored',
+                        'subsystem' => 'backend.export',
+                        'operation' => 'load_local_state',
+                        'outcome' => 'ignored',
+                        'reason' => 'missing_local_state',
+                        ...$logContext,
+                        'metadata_only' => $metadataOnly,
+                    ],
+                );
                 Message::increment("{$context->backendName}.{$mappedType}.ignored_not_found_in_db");
                 return;
             }
@@ -175,8 +217,16 @@ final class Export extends Import
             if ($rItem->watched === $entity->watched) {
                 if (true === (bool) ag($context->options, Options::DEBUG_TRACE)) {
                     $this->logger->debug(
-                        message: "{action}: Ignoring '{client}: {backend}' - '{item.title}'. {item.type} play state is identical.",
-                        context: $logContext,
+                        message: "Ignoring {item.type} '{item.title}' from '{user}@{backend}': play state is unchanged.",
+                        context: [
+                            'event_name' => 'backend.item.ignored',
+                            'subsystem' => 'backend.export',
+                            'operation' => 'compare_state',
+                            'outcome' => 'ignored',
+                            'reason' => 'state_unchanged',
+                            ...$logContext,
+                            'play_state' => $rItem->isWatched() ? 'Played' : 'Unplayed',
+                        ],
                     );
                 }
 
@@ -186,8 +236,13 @@ final class Export extends Import
 
             if ($rItem->updated >= $entity->updated && false === ag($context->options, Options::IGNORE_DATE, false)) {
                 $this->logger->debug(
-                    message: "{action}: Ignoring '{client}: {user}@{backend}' - '{item.title}'. Backend date '{backend_date}' is equal or newer than local history date '{db_date}'.",
+                    message: "Ignoring {item.type} '{item.title}' from '{user}@{backend}': backend date is not newer than local history date.",
                     context: [
+                        'event_name' => 'backend.item.ignored',
+                        'subsystem' => 'backend.export',
+                        'operation' => 'compare_dates',
+                        'outcome' => 'ignored',
+                        'reason' => 'date_not_newer_than_local_history',
                         ...$logContext,
                         'db_date' => make_date($entity->updated),
                         'backend_date' => make_date($rItem->updated),
@@ -203,19 +258,37 @@ final class Export extends Import
                 http_build_query(['identifier' => 'com.plexapp.plugins.library', 'key' => $item['ratingKey']]),
             );
 
-            $logContext['item']['url'] = $url;
+            $logContext['item']['url'] = (string) $url;
 
             Message::increment("{$context->userContext->name}.{$context->backendName}.export");
 
-            $requestContext = $logContext + ['play_state' => $entity->isWatched() ? 'Played' : 'Unplayed'];
+            $requestContext = [...$logContext, 'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed'];
 
             if (true === (bool) ag($context->options, Options::DRY_RUN, false)) {
                 $this->logger->notice(
-                    message: "{action}: Queuing request to change '{client}: {user}@{backend}' {item.type} '{item.title}' play state to '{play_state}'.",
-                    context: $requestContext,
+                    message: "Would update play state for {item.type} '{item.title}' on '{user}@{backend}' to '{play_state}'.",
+                    context: [
+                        'event_name' => 'backend.request.skipped',
+                        'subsystem' => 'backend.export',
+                        'operation' => 'update_state',
+                        'outcome' => 'skipped',
+                        'reason' => 'dry_run',
+                        ...$requestContext,
+                    ],
                 );
                 return;
             }
+
+            $this->logger->debug(
+                message: "Updating play state for {item.type} '{item.title}' on '{user}@{backend}' to '{play_state}'.",
+                context: [
+                    'event_name' => 'backend.request.started',
+                    'subsystem' => 'backend.export',
+                    'operation' => 'update_state',
+                    'outcome' => 'started',
+                    ...$requestContext,
+                ],
+            );
 
             $queue->add(
                 new Request(
@@ -227,8 +300,12 @@ final class Export extends Import
 
                         if (Status::OK !== Status::tryFrom($statusCode)) {
                             $this->logger->error(
-                                message: "{action}: Request to change '{client}: {user}@{backend}' {item.type} '{item.title}' play state returned with unexpected '{status_code}' status code.",
+                                message: "Play-state update for {item.type} '{item.title}' on '{user}@{backend}' returned status {status_code}.",
                                 context: [
+                                    'event_name' => 'backend.response.failed',
+                                    'subsystem' => 'backend.export',
+                                    'operation' => 'update_state',
+                                    'outcome' => 'failed',
                                     ...$requestContext,
                                     'status_code' => $statusCode,
                                 ],
@@ -238,8 +315,14 @@ final class Export extends Import
                         }
 
                         $this->logger->notice(
-                            message: "{action}: Updated '{client}: {user}@{backend}' {item.type} '{item.title}' play state to '{play_state}'.",
-                            context: $requestContext,
+                            message: "Updated play state for {item.type} '{item.title}' on '{user}@{backend}' to '{play_state}'.",
+                            context: [
+                                'event_name' => 'backend.state_update.completed',
+                                'subsystem' => 'backend.export',
+                                'operation' => 'update_state',
+                                'outcome' => 'completed',
+                                ...$requestContext,
+                            ],
                         );
 
                         return [];
@@ -247,8 +330,12 @@ final class Export extends Import
                     error: function (Throwable $e) use ($requestContext): array {
                         $this->logger->error(
                             ...lw(
-                                message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' request to change play state of {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                                message: "Play-state request failed for {item.type} '{item.title}' on '{user}@{backend}'.",
                                 context: [
+                                    'event_name' => 'backend.client.request_failed',
+                                    'subsystem' => 'backend.export',
+                                    'operation' => 'update_state',
+                                    'outcome' => 'failed',
                                     ...$requestContext,
                                     ...exception_log($e),
                                 ],
@@ -265,24 +352,20 @@ final class Export extends Import
                 ),
             );
         } catch (Throwable $e) {
+            $message = ag_exists($logContext, 'item.title')
+                ? "Export failed for {item.type} '{item.title}' on '{user}@{backend}'."
+                : "Export failed for '{user}@{backend}'.";
+
             $this->logger->error(
                 ...lw(
-                    message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' export. {error.message} at '{error.file}:{error.line}'.",
+                    message: $message,
                     context: [
+                        'event_name' => 'backend.operation.failed',
+                        'subsystem' => 'backend.export',
+                        'operation' => 'process_item',
+                        'outcome' => 'failed',
                         ...$logContext,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
+                        ...exception_log($e),
                     ],
                     e: $e,
                 ),

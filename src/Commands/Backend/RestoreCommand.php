@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Commands\Backend;
 
+use App\Backends\Common\ClientInterface as iClient;
 use App\Command;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
@@ -190,10 +191,17 @@ class RestoreCommand extends Command
             }
 
             $this->logger->warning(
-                "Exporting to '{user}@{backend}' is disabled, However, the check was bypass due to [-i, --ignore] flag being used.",
+                "Restore target '{user}@{backend}' has export disabled; continuing because bypass was requested.",
                 [
+                    'event_name' => 'backend.restore.export_disabled_bypassed',
+                    'subsystem' => 'backend.restore',
+                    'operation' => 'validate_target',
+                    'outcome' => 'warning',
+                    'command' => self::ROUTE,
                     'backend' => $name,
                     'user' => $userContext->name,
+                    'execute' => (bool) $input->getOption('execute'),
+                    'reason' => 'bypass_requested',
                 ],
             );
         }
@@ -233,37 +241,6 @@ class RestoreCommand extends Command
             }
         }
 
-        $this->logger->notice("Loading '{user}@{backend}' restore data.", [
-            'backend' => $name,
-            'user' => $userContext->name,
-            'memory' => [
-                'now' => get_memory_usage(),
-                'peak' => get_peak_memory_usage(),
-            ],
-        ]);
-
-        $start = microtime(true);
-        $mapper->loadData();
-
-        $this->logger->notice(
-            "SYSTEM: Loading restore data of '{user}@{backend}' completed in '{duration}'s. Memory usage '{memory.now}'.",
-            [
-                'backend' => $name,
-                'user' => $userContext->name,
-                'memory' => [
-                    'now' => get_memory_usage(),
-                    'peak' => get_peak_memory_usage(),
-                ],
-                'duration' => round(microtime(true) - $start, 4),
-            ],
-        );
-
-        if (false === $input->getOption('execute')) {
-            $this->logger->notice(
-                "No changes will be committed to backend. To execute the changes pass '--execute' flag option.",
-            );
-        }
-
         $opts = [
             Options::IGNORE_DATE => true,
             Options::DEBUG_TRACE => true === $input->getOption('trace'),
@@ -275,14 +252,40 @@ class RestoreCommand extends Command
         }
 
         $backend['options'] = array_replace_recursive($backend['options'] ?? [], $opts);
-        $backend = make_backend(backend: $backend, name: $name, options: [
-            UserContext::class => $userContext,
-        ]);
+        $backend = $this->makeBackend(backend: $backend, name: $name, userContext: $userContext);
+        $client = $backend->getContext()->clientName;
 
-        $this->logger->notice("Starting '{user}@{backend}' restore process.", [
+        $this->logger->notice("Loading restore data for '{user}@{backend}' from '{path}'.", [
+            'event_name' => 'backend.restore.data.loading',
+            'subsystem' => 'backend.restore',
+            'operation' => 'load_data',
+            'outcome' => 'started',
+            'command' => self::ROUTE,
             'backend' => $name,
             'user' => $userContext->name,
+            'client' => $client,
+            'path' => $file,
         ]);
+
+        $start = microtime(true);
+        $mapper->loadData();
+
+        $this->logger->notice(
+            "Loaded {item_count} restore items for '{user}@{backend}'.",
+            [
+                'event_name' => 'backend.restore.data.loaded',
+                'subsystem' => 'backend.restore',
+                'operation' => 'load_data',
+                'outcome' => 'completed',
+                'command' => self::ROUTE,
+                'backend' => $name,
+                'user' => $userContext->name,
+                'client' => $client,
+                'path' => $file,
+                'item_count' => $mapper->getObjectsCount(),
+                'duration_seconds' => round(microtime(true) - $start, 4),
+            ],
+        );
 
         if (false === ($syncRequests = $input->getOption('sync-requests'))) {
             $syncRequests = (bool) Config::get('http.default.sync_requests', false);
@@ -292,64 +295,114 @@ class RestoreCommand extends Command
             $syncRequests = false;
         }
 
+        $this->logger->notice("Comparing restore data for '{user}@{backend}'.", [
+            'event_name' => 'backend.restore.compare.started',
+            'subsystem' => 'backend.restore',
+            'operation' => 'compare',
+            'outcome' => 'started',
+            'command' => self::ROUTE,
+            'backend' => $name,
+            'user' => $userContext->name,
+            'client' => $client,
+            'local_count' => $mapper->getObjectsCount(),
+        ]);
+
         $requests = $backend->export($mapper, $this->queue, null);
 
         $start = microtime(true);
-        $this->logger->notice("SYSTEM: Sending '{total}' play state comparison requests for '{user}@{backend}'.", [
-            'backend' => $name,
-            'total' => count($requests),
-            'user' => $userContext->name,
-        ]);
+        $this->sendRequests($requests, $syncRequests);
 
-        send_requests(requests: $requests, client: $this->http, sync: $syncRequests, logger: $this->logger);
+        $changeCount = (int) Message::get("{$userContext->name}.{$name}.export", 0);
 
-        $this->logger->notice("SYSTEM: Completed '{total}' requests in '{duration}'s for '{user}@{backend}'.", [
+        $this->logger->notice("Restore comparison for '{user}@{backend}' found {change_count} changes.", [
+            'event_name' => 'backend.restore.compare.completed',
+            'subsystem' => 'backend.restore',
+            'operation' => 'compare',
+            'outcome' => 'completed',
+            'command' => self::ROUTE,
             'backend' => $name,
-            'total' => count($requests),
             'user' => $userContext->name,
-            'duration' => round(microtime(true) - $start, 4),
+            'client' => $client,
+            'local_count' => $mapper->getObjectsCount(),
+            'remote_count' => count($requests),
+            'change_count' => $changeCount,
+            'duration_seconds' => round(microtime(true) - $start, 4),
         ]);
 
         $total = count($this->queue->getQueue());
 
-        if ($total >= 1) {
-            $this->logger->notice("SYSTEM: Sending '{total}' change state requests for '{user}@{backend}'.", [
+        if ($changeCount < 1) {
+            $this->logger->notice("No restore differences found for '{user}@{backend}'.", [
+                'event_name' => 'backend.restore.no_difference',
+                'subsystem' => 'backend.restore',
+                'operation' => 'compare',
+                'outcome' => 'completed',
+                'command' => self::ROUTE,
                 'backend' => $name,
                 'user' => $userContext->name,
-                'total' => $total,
-            ]);
-        }
-
-        if ((int) Message::get("{$userContext->name}.{$name}.export", 0) < 1) {
-            $this->logger->notice("SYSTEM: No difference detected between backup file and '{user}@{backend}'.", [
-                'backend' => $name,
-                'user' => $userContext->name,
+                'client' => $client,
             ]);
         }
 
         if ($total < 1 || false === $input->getOption('execute')) {
+            if (false === $input->getOption('execute')) {
+                $this->logger->notice("Restore cancelled for '{user}@{backend}': dry-run mode is enabled.", [
+                    'event_name' => 'backend.restore.cancelled',
+                    'subsystem' => 'backend.restore',
+                    'operation' => 'commit',
+                    'outcome' => 'cancelled',
+                    'command' => self::ROUTE,
+                    'backend' => $name,
+                    'user' => $userContext->name,
+                    'reason' => 'dry_run',
+                    'reason_label' => 'dry-run mode is enabled',
+                ]);
+            }
+
             return self::SUCCESS;
         }
 
-        send_requests(
-            requests: $this->queue->getQueue(),
-            client: $this->http,
-            sync: $syncRequests,
-            logger: $this->logger,
-        );
+        $this->sendRequests($this->queue->getQueue(), $syncRequests);
 
         $this->logger->notice(
-            "SYSTEM: Sent '{total}' change play state requests to '{client}: {user}@{backend}' in '{duration}'s.",
+            "Sent {request_count} restore play-state requests to '{user}@{backend}' via {client}.",
             [
-                'total' => $total,
+                'event_name' => 'backend.restore.changes.sent',
+                'subsystem' => 'backend.restore',
+                'operation' => 'commit',
+                'outcome' => 'completed',
+                'command' => self::ROUTE,
+                'request_count' => $total,
                 'backend' => $name,
                 'user' => $userContext->name,
-                'client' => $backend->getContext()->clientName,
-                'duration' => round(microtime(true) - $opStart, 4),
+                'client' => $client,
+                'duration_seconds' => round(microtime(true) - $opStart, 4),
             ],
         );
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Create backend client instance.
+     *
+     * @param array<string,mixed> $backend
+     */
+    protected function makeBackend(array $backend, string $name, UserContext $userContext): iClient
+    {
+        return make_backend(backend: $backend, name: $name, options: [
+            UserContext::class => $userContext,
+        ]);
+    }
+
+    /**
+     * Send queued backend requests.
+     *
+     * @param array<array-key,mixed> $requests
+     */
+    protected function sendRequests(array $requests, bool $syncRequests): void
+    {
+        send_requests(requests: $requests, client: $this->http, sync: $syncRequests, logger: $this->logger);
     }
 
     /**

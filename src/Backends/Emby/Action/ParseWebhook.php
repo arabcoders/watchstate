@@ -124,7 +124,7 @@ final class ParseWebhook
             return new Response(status: false, extra: [
                 'http_code' => Status::BAD_REQUEST->value,
                 'message' => r(
-                    text: "Ignoring '{client}: {user}@{backend}' request. Invalid request, no payload.",
+                    text: "Ignoring backend request from '{user}@{backend}': payload is missing.",
                     context: $logContext,
                 ),
             ]);
@@ -271,8 +271,13 @@ final class ParseWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: "{action}: Ignoring '{client}: {user}@{backend}' - '{title}' webhook event. No valid/supported external ids.",
+                        message: "Ignoring webhook item '{title}' from '{user}@{backend}': no supported GUIDs were found.",
                         context: [
+                            'event_name' => 'backend.item.ignored',
+                            'subsystem' => 'backend.webhook',
+                            'operation' => 'parse_webhook',
+                            'outcome' => 'ignored',
+                            'reason' => 'missing_supported_guid',
                             'title' => $entity->getName(),
                             ...$logContext,
                             'context' => [
@@ -299,22 +304,14 @@ final class ParseWebhook
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' webhook event parsing. {error.message} at '{error.file}:{error.line}'.",
+                    message: "Failed to parse webhook event from '{user}@{backend}'.",
                     context: [
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
+                        'event_name' => 'backend.operation.failed',
+                        'subsystem' => 'backend.webhook',
+                        'operation' => 'parse_webhook',
+                        'outcome' => 'failed',
                         ...$logContext,
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
+                        ...exception_log($e),
                         'context' => [
                             'attributes' => $request->getAttributes(),
                             'payload' => $request->getParsedBody(),

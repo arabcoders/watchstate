@@ -28,6 +28,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Throwable;
 
+use function exception_log;
+
 #[Cli(command: self::ROUTE)]
 final class DispatchCommand extends Command
 {
@@ -125,7 +127,14 @@ final class DispatchCommand extends Command
         }
 
         if (count($events) < 1) {
-            $this->logger->debug('No pending queued events found.');
+            $this->logger->debug('No pending events found.', [
+                'event_name' => 'events.dispatch.none_pending',
+                'subsystem' => 'events.dispatch',
+                'operation' => 'dispatch',
+                'outcome' => 'completed',
+                'queue_count' => 0,
+                'visible_level' => strtolower($visibleLevel->name),
+            ]);
             return self::SUCCESS;
         }
 
@@ -162,18 +171,23 @@ final class DispatchCommand extends Command
         $capturedHandlers = null;
 
         try {
-            $message = "Dispatching Event: '{event}' queued at '{date}'.";
-            $log_data = [
+            $startedAt = make_date();
+            $logData = [
                 'event_id' => (string) $event->id,
-                'event' => $event->event,
-                'date' => make_date($event->created_at),
+                'queued_event' => $event->event,
+                'queued_at' => make_date($event->created_at)->format(DATE_ATOM),
+                'attempt' => $event->attempts + 1,
+                'event_name' => 'events.dispatch.started',
+                'subsystem' => 'events.dispatch',
+                'operation' => 'dispatch',
+                'outcome' => 'started',
             ];
 
             $event->logs[] = new JsonlFormatter()->formatValues(
                 channel: 'event',
                 level: Level::Notice,
-                message: r($message, $log_data),
-                context: $log_data,
+                message: r("Dispatching queued event '{queued_event}' from {queued_at}.", $logData),
+                context: $logData,
             );
 
             $event->status = Status::RUNNING;
@@ -203,18 +217,30 @@ final class DispatchCommand extends Command
             $event->updated_at = (string) make_date();
 
             if ($this->isVisible(array_slice($event->logs, $logCount), $visibleLevel)) {
-                $this->logger->notice($message, $log_data);
+                $this->logger->notice("Dispatching queued event '{queued_event}' from {queued_at}.", $logData);
             }
 
             $this->replayRecords($capturedHandlers, $capturedRecords);
 
+            $duration = max(0, make_date($event->updated_at)->getTimestamp() - $startedAt->getTimestamp());
+
             $event->logs[] = new JsonlFormatter()->formatValues(
                 channel: 'event',
                 level: Level::Notice,
-                message: r("Event '{event}' was dispatched.", ['event' => $event->event]),
+                message: r("Dispatched queued event '{queued_event}' in {duration_seconds}s.", [
+                    'queued_event' => $event->event,
+                    'duration_seconds' => $duration,
+                ]),
                 context: [
                     'event_id' => (string) $event->id,
-                    'event' => $event->event,
+                    'queued_event' => $event->event,
+                    'duration_seconds' => $duration,
+                    'attempt' => $event->attempts,
+                    'status' => strtolower($event->status->name),
+                    'event_name' => 'events.dispatch.completed',
+                    'subsystem' => 'events.dispatch',
+                    'operation' => 'dispatch',
+                    'outcome' => 'completed',
                 ],
             );
 
@@ -223,31 +249,29 @@ final class DispatchCommand extends Command
             $this->restoreLogger($capturedHandlers);
             $this->replayRecords($capturedHandlers, $capturedRecords);
 
-            $errorLog = r("Failed to dispatch event: '{event}'. {error}", [
-                'event' => ag($event, 'event'),
-                'error' => $e->getMessage(),
-            ]);
+            $errorLog = "Failed to dispatch queued event '{queued_event}'.";
+            $errorContext = [
+                'event_id' => (string) $event->id,
+                'queued_event' => $event->event,
+                'attempt' => $event->attempts,
+                'event_name' => 'events.dispatch.failed',
+                'subsystem' => 'events.dispatch',
+                'operation' => 'dispatch',
+                'outcome' => 'failed',
+                ...exception_log($e),
+            ];
 
             $event->logs[] = new JsonlFormatter()->formatValues(
                 channel: 'event',
                 level: Level::Error,
-                message: $errorLog,
-                context: [
-                    'event_id' => (string) $event->id,
-                    'event' => $event->event,
-                    'exception' => $e,
-                    'trace' => $e->getTrace(),
-                ],
+                message: r($errorLog, $errorContext),
+                context: $errorContext,
             );
             $event->status = Status::FAILED;
             $event->updated_at = (string) make_date();
             $this->repo->save($event);
 
-            $this->logger->error('[event:{event_id}] {message}', [
-                'event_id' => (string) $event->id,
-                'message' => $errorLog,
-                'trace' => $e->getTrace(),
-            ]);
+            $this->logger->error($errorLog, $errorContext);
         }
     }
 
@@ -397,27 +421,39 @@ final class DispatchCommand extends Command
 
                 try {
                     queue_event($payload['event'], $payload['data'], $payload['opts']);
-                    $this->logger->info("Queued '{event}' event. it was saved to cache due to failure to persist it.", [
-                        'event' => $payload['event'],
+                    $this->logger->info("Requeued cached event '{queued_event}'.", [
+                        'queued_event' => $payload['event'],
+                        'attempt' => (int) ag($payload, 'opts.' . self::CACHE_UNLOAD_ATTEMPTS, 0),
+                        'event_name' => 'events.cache.requeued',
+                        'subsystem' => 'events.cache',
+                        'operation' => 'requeue',
+                        'outcome' => 'queued',
                     ]);
                 } catch (Throwable) {
                     $attempts = max(0, (int) ag($payload, 'opts.' . self::CACHE_UNLOAD_ATTEMPTS, 0)) + 1;
                     $payload['opts'][self::CACHE_UNLOAD_ATTEMPTS] = $attempts;
                     $logContext = [
-                        'event' => $payload['event'],
-                        'attempts' => $attempts,
+                        'queued_event' => $payload['event'],
+                        'attempt' => $attempts,
+                        'event_name' => 'events.cache.dropped',
+                        'subsystem' => 'events.cache',
+                        'operation' => 'requeue',
+                        'outcome' => 'failed',
                     ];
 
                     if ($attempts < self::MAX_UNLOAD_ATTEMPTS) {
                         $remaining[] = $payload;
-                        $this->logger->error("Failed to re-queue '{event}' event.", $logContext);
+                        $this->logger->warning("Failed to requeue cached event '{queued_event}'; will retry.", [
+                            ...$logContext,
+                            'reason' => 'requeue_failed',
+                        ]);
                         continue;
                     }
 
-                    $this->logger->error(
-                        "Failed to re-queue '{event}' event after '{attempts}' unload attempts. Dropping cached event.",
-                        $logContext,
-                    );
+                    $this->logger->error("Dropped cached event '{queued_event}' after repeated requeue failures.", [
+                        ...$logContext,
+                        'reason' => 'max_attempts_reached',
+                    ]);
                 }
             }
 

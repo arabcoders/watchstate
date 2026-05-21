@@ -27,7 +27,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 class ProgressQueueTest extends MediaBrowserTestCase
 {
-    public function test_progress_queues_update(): void
+    public function test_queue_update(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass, $metaClass, $sessionsClass]) {
             $context = $this->makeContext($clientName, [Options::IGNORE_DATE => true]);
@@ -95,7 +95,7 @@ class ProgressQueueTest extends MediaBrowserTestCase
         }
     }
 
-    public function test_progress_force_reset(): void
+    public function test_force_reset(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass, $metaClass, $sessionsClass]) {
             $context = $this->makeContext($clientName, [
@@ -163,7 +163,7 @@ class ProgressQueueTest extends MediaBrowserTestCase
         }
     }
 
-    public function test_progress_force_value(): void
+    public function test_force_value(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass, $metaClass, $sessionsClass]) {
             $context = $this->makeContext($clientName, [

@@ -5,16 +5,18 @@ declare(strict_types=1);
 namespace Tests\Commands\State;
 
 use App\Commands\State\ExportCommand;
-use App\Libs\Container;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\LogSuppressor;
 use App\Libs\QueueRequests;
 use App\Libs\TestCase;
+use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
@@ -103,6 +105,9 @@ final class ExportCommandTest extends TestCase
                 ]),
             ],
         );
+        $handler = new TestHandler();
+        $logger->setHandlers([$handler]);
+        $logger->pushProcessor(new LogMessageProcessor());
 
         $aliceContext = $this->makeUserContext('alice', $logger);
         $entity = require __DIR__ . '/../../Fixtures/MovieEntity.php';
@@ -141,6 +146,97 @@ final class ExportCommandTest extends TestCase
                 'after' => 1_700_000_050,
             ],
         ], FakeBackendClient::getCalls('push'));
+
+        $records = array_values(array_filter(
+            $handler->getRecords(),
+            static fn($record): bool => 'state.export.push.started' === ($record->context['event_name'] ?? null),
+        ));
+
+        self::assertCount(1, $records);
+        self::assertSame("Pushing 1 local changes to 1 backends for 'alice'.", $records[0]->message);
+        self::assertSame(1, $records[0]->context['item_count']);
+        self::assertSame(['fake_export'], $records[0]->context['backends']);
+    }
+
+    public function test_logfile_lifecycle(): void
+    {
+        $logger = $this->initFakeBackendApp($this->fakeBackendConfig('fake_export'));
+        $logger->pushProcessor(new LogMessageProcessor());
+        $this->migrateMainDb($logger);
+
+        $logfile = self::$tmpPath . '/export-log.txt';
+        touch($logfile);
+
+        $command = new ExportCommand(
+            $this->createRuntimeMapper($logger),
+            new QueueRequests(),
+            $logger,
+            new LogSuppressor([]),
+            $this->createStub(iHttp::class),
+        );
+
+        $status = $this->makeTester($command)->execute([
+            '--logfile' => $logfile,
+        ], [
+            'verbosity' => OutputInterface::VERBOSITY_VERBOSE,
+        ]);
+
+        self::assertSame(ExportCommand::SUCCESS, $status);
+
+        $contents = file_get_contents($logfile);
+        self::assertIsString($contents);
+        self::assertStringContainsString('Export started for 1 users.', $contents);
+        self::assertStringContainsString("Exporting play states for 'main'.", $contents);
+        self::assertStringContainsString('Export completed for 1 users in', $contents);
+    }
+
+    public function test_logs_unsupported_backend(): void
+    {
+        $logger = $this->initFakeBackendApp([
+            'bad_backend' => [
+                'type' => 'bad',
+                'url' => 'https://bad.example.invalid',
+                'token' => 'token',
+                'user' => 'user',
+                'uuid' => 'uuid',
+                'import' => [
+                    'enabled' => true,
+                    'lastSync' => 1_700_000_000,
+                ],
+                'export' => [
+                    'enabled' => true,
+                    'lastSync' => 1_700_000_000,
+                ],
+                'options' => [],
+            ],
+        ]);
+        $handler = new TestHandler();
+        $logger->setHandlers([$handler]);
+        $logger->pushProcessor(new LogMessageProcessor());
+        $this->migrateMainDb($logger);
+
+        $command = new ExportCommand(
+            $this->createRuntimeMapper($logger),
+            new QueueRequests(),
+            $logger,
+            new LogSuppressor([]),
+            $this->createStub(iHttp::class),
+        );
+
+        $status = $this->makeTester($command)->execute([]);
+
+        self::assertSame(ExportCommand::SUCCESS, $status);
+
+        $records = array_values(array_filter(
+            $handler->getRecords(),
+            static fn($record): bool => 'state.export.backend.skipped' === ($record->context['event_name'] ?? null),
+        ));
+
+        self::assertCount(1, $records);
+        self::assertSame("Skipping 'main@bad_backend': backend type 'bad' is unsupported.", $records[0]->message);
+        self::assertSame('unsupported_type', $records[0]->context['reason']);
+        self::assertSame('bad_backend', $records[0]->context['backend']);
+        self::assertSame('bad', $records[0]->context['backend_type']);
     }
 
     private function makeTester(ExportCommand $command): CommandTester

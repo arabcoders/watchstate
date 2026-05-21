@@ -49,7 +49,17 @@ final class Users
                 $users[] = $user;
             }
         } catch (Throwable $e) {
-            $logger->error($e->getMessage(), $e->getTrace());
+            $logger->error("Failed to fetch backend users for '{backend_type}'.", [
+                'event_name' => 'backend.context.users_failed',
+                'subsystem' => 'backend.context',
+                'operation' => 'users_list',
+                'outcome' => 'failed',
+                'backend_type' => $type,
+                'target_user' => $opts[Options::TARGET_USER] ?? null,
+                'get_tokens' => (bool) ($opts[Options::GET_TOKENS] ?? false),
+                'no_cache' => (bool) ($opts[Options::NO_CACHE] ?? false),
+                ...exception_log($e),
+            ]);
             return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);
         }
 

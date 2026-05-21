@@ -37,6 +37,12 @@ class SearchQuery
      */
     protected string $action = 'jellyfin.searchQuery';
 
+    /**
+     * @param iHttp&\App\Libs\Extends\HttpClient $http
+     * @param iLogger $logger
+     * @param JellyfinGuid $jellyfinGuid
+     * @param iDB $db
+     */
     public function __construct(
         protected iHttp $http,
         protected iLogger $logger,
@@ -104,7 +110,14 @@ class SearchQuery
             'url' => (string) $url,
         ];
 
-        $this->logger->debug("{action}: Searching '{client}: {user}@{backend}' libraries for '{query}'.", $logContext);
+        $this->logger->debug("Searching '{user}@{backend}' for '{query}'.", [
+            ...$logContext,
+            'event_name' => 'backend.request.started',
+            'subsystem' => 'backend.search',
+            'operation' => 'query',
+            'outcome' => 'started',
+            'http' => ['url' => (string) $url],
+        ]);
 
         $response = $this->http->request(
             method: Method::GET,
@@ -119,10 +132,19 @@ class SearchQuery
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Search request for '{query}' in '{client}: {user}@{backend}' returned with unexpected '{status_code}' status code.",
+                    message: "Search request for '{query}' on '{user}@{backend}' returned status {http.status_code}.",
                     context: [
                         ...$logContext,
-                        'status_code' => $response->getStatusCode(),
+                        'event_name' => 'backend.response.failed',
+                        'subsystem' => 'backend.search',
+                        'operation' => 'query',
+                        'outcome' => 'failed',
+                        'reason' => 'unexpected_status',
+                        'http' => [
+                            'status_code' => $response->getStatusCode(),
+                            'expected_status_codes' => [Status::OK->value],
+                            'url' => (string) $url,
+                        ],
                     ],
                     level: Levels::ERROR,
                 ),
@@ -137,8 +159,15 @@ class SearchQuery
 
         if ($context->trace) {
             $this->logger->debug(
-                message: "{action}: Parsing Searching '{client}: {user}@{backend}' libraries for '{query}' payload.",
-                context: [...$logContext, 'response' => ['body' => $json]],
+                message: "Processing search response from '{user}@{backend}' for '{query}'.",
+                context: [
+                    ...$logContext,
+                    'event_name' => 'backend.response.received',
+                    'subsystem' => 'backend.search',
+                    'operation' => 'query',
+                    'outcome' => 'received',
+                    'response' => ['body' => $json],
+                ],
             );
         }
 
@@ -151,8 +180,15 @@ class SearchQuery
                 $entity = $this->createEntity($context, $jellyfinGuid, $item, $opts);
             } catch (Throwable $e) {
                 $this->logger->error(
-                    message: "{action}: Failed to map '{client}: {user}@{backend}' item to entity. {error}",
-                    context: [...$logContext, 'error' => $e->getMessage()],
+                    message: "Failed to map search result from '{user}@{backend}' to a local entity.",
+                    context: [
+                        ...$logContext,
+                        'event_name' => 'backend.operation.failed',
+                        'subsystem' => 'backend.search',
+                        'operation' => 'map_result',
+                        'outcome' => 'failed',
+                        ...exception_log($e),
+                    ],
                 );
                 continue;
             }
