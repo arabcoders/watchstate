@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "be129cbc6030edb56a072410db7d66e88d8eff9c",
-    "date": "2026-05-21T20:12:35+00:00",
+    "full_sha": "460003ae3ea351c39ac6aefd821d286f81587845",
+    "date": "2026-05-21T21:59:28+00:00",
     "commits": [
+      {
+        "sha": "460003ae",
+        "full_sha": "460003ae3ea351c39ac6aefd821d286f81587845",
+        "message": "refactor: add copy button to mini log display in index.",
+        "author": "arabcoders",
+        "date": "2026-05-21T21:59:28+00:00"
+      },
+      {
+        "sha": "4f103749",
+        "full_sha": "4f103749944dfbc1b46935a0b5623276ae041fc8",
+        "message": "fix: add more info guid.external_id.conflict log message and reduce it level to info instead of warning",
+        "author": "arabcoders",
+        "date": "2026-05-21T21:58:17+00:00"
+      },
       {
         "sha": "be129cbc",
         "full_sha": "be129cbc6030edb56a072410db7d66e88d8eff9c",
