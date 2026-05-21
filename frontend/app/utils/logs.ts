@@ -351,6 +351,11 @@ const logTimestampTitle = (value: string | null | undefined): string => {
   return date.toLocaleString();
 };
 
+const logTimestampClipboard = (value: string | null | undefined): string => {
+  const normalized = value?.trim() ?? '';
+  return '' === normalized ? '--:--:--' : normalized;
+};
+
 const logDisplayLine = (entry: ParsedLogEntry): string => {
   const host = logHostLabel(entry);
   const logger = entry.logger === host ? null : entry.logger;
@@ -366,13 +371,12 @@ const logDisplayLine = (entry: ParsedLogEntry): string => {
 };
 
 const logClipboardLine = (entry: ParsedLogEntry): string => {
-  const parts = [
-    logTimestampLabel(entry.datetime ?? entry.date),
-    getLogLevel(entry.level).toUpperCase(),
-  ];
+  const parts = [`[${logTimestampClipboard(entry.datetime ?? entry.date)}]`];
 
   if (entry.logger) {
-    parts.push(`[${entry.logger}]`);
+    parts.push(`${entry.logger}.${getLogLevel(entry.level).toUpperCase()}:`);
+  } else {
+    parts.push(getLogLevel(entry.level).toUpperCase() + ':');
   }
 
   parts.push(logMessageText(entry));
