@@ -236,6 +236,19 @@
                     </UButton>
                   </UTooltip>
 
+                  <UTooltip text="Copy transformed log text.">
+                    <UButton
+                      color="neutral"
+                      variant="outline"
+                      size="sm"
+                      icon="i-lucide-copy"
+                      aria-label="Copy transformed log text"
+                      @click="copyLogEntries(log.entries)"
+                    >
+                      <span class="hidden sm:inline">Copy</span>
+                    </UButton>
+                  </UTooltip>
+
                   <UTooltip text="Fetch latest log entries.">
                     <UButton
                       color="neutral"
@@ -355,12 +368,14 @@ import {
   makeName,
   parse_api_response,
   request,
+  copyText,
   ucFirst,
   TOOLTIP_DATE_FORMAT,
 } from '~/utils';
 import {
   getLogLevel,
   LOG_LEVEL_ICON,
+  logClipboardText,
   logLevelBadgeClass,
   logMessageText,
   logTimestampLabel,
@@ -431,6 +446,10 @@ const lineTitle = (item: LogEntry): string => logTimestampTitle(item.datetime ??
 const timestampLabel = (item: LogEntry): string => logTimestampLabel(item.datetime ?? item.date);
 
 const logMessage = (item: LogEntry): string => logMessageText(item);
+
+const copyLogEntries = (entries: Array<LogEntry>): void => {
+  copyText(logClipboardText(entries));
+};
 
 const structuredLineClass = computed<Array<string>>(() => [
   'flex-1',

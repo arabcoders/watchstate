@@ -323,6 +323,7 @@ import { copyText, makeEventName, notification, parse_api_response, request } fr
 import {
   getLogLevel,
   LOG_LEVEL_ICON,
+  logClipboardText,
   logLevelBadgeClass,
   logMessageText,
   logSearchText,
@@ -865,22 +866,6 @@ const timestampLabel = (item: LogEntry): string => logTimestampLabel(item.dateti
 
 const logMessage = (item: LogEntry): string => logMessageText(item);
 
-const renderStructuredRowText = (entry: StructuredLogRow): string => {
-  const parts = [timestampLabel(entry.log), entry.level.toUpperCase()];
-
-  if (entry.log.logger) {
-    parts.push(`[${entry.log.logger}]`);
-  }
-
-  parts.push(logMessage(entry.log));
-
-  if (entry.log.exception_message) {
-    parts.push(`: ${entry.log.exception_message}`);
-  }
-
-  return parts.join(' ');
-};
-
 const structuredLineClass = computed<Array<string>>(() => [
   'flex-1',
   wrapLines.value ? 'min-w-0 whitespace-pre-wrap wrap-break-word' : 'min-w-max whitespace-pre',
@@ -923,6 +908,6 @@ const copyData = (): void => {
     return;
   }
 
-  copyText(structuredRows.value.map((item) => renderStructuredRowText(item)).join('\n'));
+  copyText(logClipboardText(structuredRows.value.map((item) => item.log)));
 };
 </script>

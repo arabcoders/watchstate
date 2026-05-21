@@ -29,25 +29,41 @@
           </div>
 
           <div class="flex shrink-0 flex-wrap justify-end gap-2">
-            <UButton
-              color="neutral"
-              variant="outline"
-              size="xs"
-              icon="i-lucide-copy"
-              @click="copyLogMessage(log)"
-            >
-              Message
-            </UButton>
+            <Popover placement="bottom-end" trigger="click">
+              <template #trigger>
+                <UButton
+                  color="neutral"
+                  variant="outline"
+                  size="xs"
+                  icon="i-lucide-copy"
+                  trailing-icon="i-lucide-chevron-down"
+                >
+                  Copy
+                </UButton>
+              </template>
 
-            <UButton
-              color="neutral"
-              variant="outline"
-              size="xs"
-              icon="i-lucide-braces"
-              @click="copyLogRaw(log)"
-            >
-              JSON
-            </UButton>
+              <template #content="{ hide }">
+                <div class="w-52 space-y-1 p-1">
+                  <button
+                    type="button"
+                    class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-default hover:bg-elevated hover:text-highlighted"
+                    @click="copyLogMessage(log, hide)"
+                  >
+                    <UIcon name="i-lucide-scroll-text" class="size-4 text-toned" />
+                    <span>Message</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-default hover:bg-elevated hover:text-highlighted"
+                    @click="copyLogRaw(log, hide)"
+                  >
+                    <UIcon name="i-lucide-braces" class="size-4 text-toned" />
+                    <span>RAW DATA</span>
+                  </button>
+                </div>
+              </template>
+            </Popover>
           </div>
 
           <div class="min-w-0 space-y-2 sm:col-span-2">
@@ -200,6 +216,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useStorage } from '@vueuse/core';
+import Popover from '~/components/Popover.vue';
 import type { LogEntry } from '~/types';
 import { copyText } from '~/utils';
 import {
@@ -208,6 +225,7 @@ import {
   getLogLevel,
   LOG_LEVEL_COLOR,
   LOG_LEVEL_ICON,
+  logClipboardLine,
   logDetailRows,
   logFieldRows,
   logMessageText,
@@ -258,11 +276,13 @@ const formatStack = (value: string | null | undefined): string => formatLogStack
 
 const logRawData = (item: LogEntry): string => logRaw(item);
 
-const copyLogMessage = (item: LogEntry): void => {
-  copyText(logMessage(item));
+const copyLogMessage = (item: LogEntry, hide?: () => void): void => {
+  copyText(logClipboardLine(item));
+  hide?.();
 };
 
-const copyLogRaw = (item: LogEntry): void => {
+const copyLogRaw = (item: LogEntry, hide?: () => void): void => {
   copyText(logRawData(item));
+  hide?.();
 };
 </script>

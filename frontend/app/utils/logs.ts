@@ -365,6 +365,29 @@ const logDisplayLine = (entry: ParsedLogEntry): string => {
   return parts.filter((value) => value && '' !== value.trim()).join(' ');
 };
 
+const logClipboardLine = (entry: ParsedLogEntry): string => {
+  const parts = [
+    logTimestampLabel(entry.datetime ?? entry.date),
+    getLogLevel(entry.level).toUpperCase(),
+  ];
+
+  if (entry.logger) {
+    parts.push(`[${entry.logger}]`);
+  }
+
+  parts.push(logMessageText(entry));
+
+  if (entry.exception_message) {
+    parts.push(`: ${entry.exception_message}`);
+  }
+
+  return parts.join(' ');
+};
+
+const logClipboardText = (entries: Array<ParsedLogEntry>): string => {
+  return entries.map((entry) => logClipboardLine(entry)).join('\n');
+};
+
 const logSearchText = (entry: ParsedLogEntry): string => {
   const values = [
     entry.raw,
@@ -562,6 +585,8 @@ export {
   LOG_LEVEL_COLOR,
   LOG_LEVEL_ICON,
   logDetailRows,
+  logClipboardLine,
+  logClipboardText,
   logDisplayLine,
   logFieldRows,
   logHostLabel,
