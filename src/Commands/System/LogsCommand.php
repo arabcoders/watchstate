@@ -9,17 +9,16 @@ use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Exceptions\InvalidArgumentException;
+use App\Libs\Extends\ConsoleLogFormatter;
 use LimitIterator;
 use SplFileObject;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
-use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Yaml\Yaml;
-use Throwable;
 
 /**
  * Class LogsCommand.
@@ -30,6 +29,8 @@ use Throwable;
 final class LogsCommand extends Command
 {
     public const string ROUTE = 'system:logs';
+
+    private ?ConsoleLogFormatter $logFormatter = null;
 
     /**
      * @var array Constant array containing names of supported log files.
@@ -223,7 +224,7 @@ final class LogsCommand extends Command
                         $buffer .= $chunk;
                     }
 
-                    $lines = preg_split('/\R/', $buffer);
+                    $lines = preg_split('/\r\n|\r|\n/', $buffer);
                     if (false === $lines) {
                         $lines = [];
                     }
@@ -435,7 +436,9 @@ final class LogsCommand extends Command
             return;
         }
 
-        $output->writeln($this->formatEventLine($entry));
+        $this->logFormatter ??= new ConsoleLogFormatter();
+
+        $output->writeln($this->logFormatter->format($entry));
     }
 
     /**
@@ -468,113 +471,6 @@ final class LogsCommand extends Command
         }
 
         return $payload;
-    }
-
-    /**
-     * @param array<string,mixed> $entry
-     */
-    private function formatEventLine(array $entry): string
-    {
-        $severity = strtoupper((string) ag($entry, 'level', '-'));
-        $severityText = OutputFormatter::escape($severity);
-        $message = $this->messageText($entry);
-        $severityColor = $this->severityColor((string) ag($entry, 'level', ''), $message);
-
-        if (null !== $severityColor) {
-            $severityText = sprintf('<fg=%s;options=bold>%s</>', $severityColor, $severityText);
-        } else {
-            $severityText = sprintf('<options=bold>%s</>', $severityText);
-        }
-
-        return sprintf(
-            '<comment>%s</comment> <info>%s</info> %s <fg=cyan>%s</> %s',
-            OutputFormatter::escape($this->formatTimestamp((string) ag($entry, ['datetime', 'date'], '-'))),
-            OutputFormatter::escape($this->hostname($entry)),
-            $severityText,
-            OutputFormatter::escape((string) ag($entry, ['logger', 'channel'], '-')),
-            OutputFormatter::escape($message),
-        );
-    }
-
-    /**
-     * @param array<string,mixed> $entry
-     */
-    private function hostname(array $entry): string
-    {
-        $value = ag(
-            $entry,
-            [
-                'fields.structured.request.name',
-                'fields.hostname',
-                'fields.route.ip',
-                'fields.task_id',
-                'fields.command',
-                'fields.user',
-                'fields.backend',
-                'fields.cli.stream',
-                'source.module',
-                'process.name',
-                'logger',
-                'channel',
-            ],
-            '-',
-        );
-
-        return '' !== trim((string) $value) ? trim((string) $value) : '-';
-    }
-
-    /**
-     * @param array<string,mixed> $entry
-     */
-    private function messageText(array $entry): string
-    {
-        $message = trim((string) ag($entry, ['message', 'text'], '-'));
-
-        if ('' === $message) {
-            return '-';
-        }
-
-        if (null !== ($exception = ag($entry, 'exception_message')) && '' !== trim((string) $exception)) {
-            return $message . ' [' . trim((string) $exception) . ']';
-        }
-
-        return $message;
-    }
-
-    private function formatTimestamp(string $value): string
-    {
-        if ('' === trim($value)) {
-            return '-';
-        }
-
-        try {
-            return make_date($value)->format('m/d, H:i:s');
-        } catch (Throwable) {
-            return $value;
-        }
-    }
-
-    private function severityColor(string $severity, string $message): ?string
-    {
-        $value = strtolower($severity . ' ' . $message);
-
-        if (1 === preg_match('/(critical|crit|alert|error|err|fatal|panic|exception|failed)/', $value)) {
-            return 'red';
-        }
-
-        if (1 === preg_match('/(warning|warn|notice|noti|deprecated)/', $value)) {
-            return 'yellow';
-        }
-
-        if (1 === preg_match('/(success|started|listening|connected|ready|complete|done)/', $value)) {
-            return 'green';
-        }
-
-        if (1 === preg_match('/(info|inf|debug|deb|trace)/', $value)) {
-            return 'cyan';
-        }
-
-        return null;
     }
 
     private function getDisplayMode(InputInterface $input): string

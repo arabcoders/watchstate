@@ -55,6 +55,7 @@ final class TasksCommand extends Command
 
     private array $logs = [];
     private array $taskOutput = [];
+    private array $processOutputBuffers = [];
     private array $logContext = [];
     private array $eventLogContext = [];
 
@@ -401,6 +402,7 @@ final class TasksCommand extends Command
             'command' => (string) ag($task, 'command', ''),
             'source' => 'task',
         ];
+        $this->processOutputBuffers = [];
 
         $cmd = [];
 
@@ -457,6 +459,10 @@ final class TasksCommand extends Command
                     }
                 }
             }
+        }
+
+        if (true === $output instanceof ConsoleOutputInterface) {
+            $this->flushProcessOutputBuffers($input, $output);
         }
 
         $ended = make_date();
@@ -590,6 +596,7 @@ final class TasksCommand extends Command
             'command' => $command,
             'source' => 'task',
         ];
+        $this->processOutputBuffers = [];
 
         $cmd = [];
 
@@ -647,6 +654,10 @@ final class TasksCommand extends Command
                     }
                 }
             }
+        }
+
+        if (true === $output instanceof ConsoleOutputInterface) {
+            $this->flushProcessOutputBuffers($input, $output);
         }
 
         $ended = make_date();
@@ -738,40 +749,78 @@ final class TasksCommand extends Command
 
     private function captureProcessOutput(string $std, string $out, iInput $input, ConsoleOutputInterface $output): void
     {
-        $out = trim($out);
-
         if ('' === $out) {
             return;
         }
 
-        $lines = preg_split('/\R/', $out);
-        if (false === $lines) {
-            $lines = [];
+        $this->processOutputBuffers[$std] = (string) ($this->processOutputBuffers[$std] ?? '') . $out;
+        $this->drainProcessOutputBuffer($std, $input, $output);
+    }
+
+    private function flushProcessOutputBuffers(iInput $input, ConsoleOutputInterface $output): void
+    {
+        foreach (array_keys($this->processOutputBuffers) as $std) {
+            $this->drainProcessOutputBuffer((string) $std, $input, $output, true);
         }
 
-        foreach ($lines as $line) {
-            $line = trim((string) $line);
+        $this->processOutputBuffers = [];
+    }
 
-            if ('' === $line) {
-                continue;
-            }
+    private function drainProcessOutputBuffer(string $std, iInput $input, ConsoleOutputInterface $output, bool $flush = false): void
+    {
+        $buffer = (string) ($this->processOutputBuffers[$std] ?? '');
 
-            $this->taskOutput[] = $line;
-
-            if (null !== $this->writer && false === $this->suppressor->isSuppressed($line)) {
-                try {
-                    ($this->writer)($this->formatTaskLogLine($line));
-                } catch (Throwable) {
-                    // Do nothing
-                }
-            }
-
-            if (!$input->hasOption('live') || false === $input->getOption('live')) {
-                continue;
-            }
-
-            ('err' === $std ? $output->getErrorOutput() : $output)->writeln($this->formatTaskOutputLine($line));
+        if ('' === $buffer) {
+            return;
         }
+
+        $offset = 0;
+
+        while (1 === preg_match('/\r\n|\r|\n/', $buffer, $matches, PREG_OFFSET_CAPTURE, $offset)) {
+            $match = $matches[0];
+            $line = substr($buffer, $offset, $match[1] - $offset);
+            $this->captureProcessOutputLine($std, $line, $input, $output);
+            $offset = $match[1] + strlen((string) $match[0]);
+        }
+
+        $remaining = substr($buffer, $offset);
+
+        if (true === $flush && '' !== $remaining) {
+            $this->captureProcessOutputLine($std, $remaining, $input, $output);
+            $remaining = '';
+        }
+
+        if ('' === $remaining) {
+            unset($this->processOutputBuffers[$std]);
+            return;
+        }
+
+        $this->processOutputBuffers[$std] = $remaining;
+    }
+
+    private function captureProcessOutputLine(string $std, string $line, iInput $input, ConsoleOutputInterface $output): void
+    {
+        $line = trim($line);
+
+        if ('' === $line) {
+            return;
+        }
+
+        $this->taskOutput[] = $line;
+
+        if (null !== $this->writer && false === $this->suppressor->isSuppressed($line)) {
+            try {
+                ($this->writer)($this->formatTaskLogLine($line));
+            } catch (Throwable) {
+                // Do nothing
+            }
+        }
+
+        if (!$input->hasOption('live') || false === $input->getOption('live')) {
+            return;
+        }
+
+        ('err' === $std ? $output->getErrorOutput() : $output)->writeln($this->formatTaskOutputLine($line));
     }
 
     private function formatTaskLogLine(string $line): string

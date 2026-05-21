@@ -494,22 +494,6 @@ class ImportCommand extends Command
 
             $operations = $userContext->mapper->commit();
 
-            $a = [
-                [
-                    'Type' => ucfirst(iState::TYPE_MOVIE),
-                    'Added' => $operations[iState::TYPE_MOVIE]['added'] ?? '-',
-                    'Updated' => $operations[iState::TYPE_MOVIE]['updated'] ?? '-',
-                    'Failed' => $operations[iState::TYPE_MOVIE]['failed'] ?? '-',
-                ],
-                new TableSeparator(),
-                [
-                    'Type' => ucfirst(iState::TYPE_EPISODE),
-                    'Added' => $operations[iState::TYPE_EPISODE]['added'] ?? '-',
-                    'Updated' => $operations[iState::TYPE_EPISODE]['updated'] ?? '-',
-                    'Failed' => $operations[iState::TYPE_EPISODE]['failed'] ?? '-',
-                ],
-            ];
-
             Message::reset();
             $userContext->mapper->reset();
 
@@ -526,13 +510,24 @@ class ImportCommand extends Command
                 ],
             );
 
-            $output->writeln('');
-            new Table($output)
-                ->setHeaders(array_keys($a[0]))
-                ->setStyle('box')
-                ->setRows(array_values($a))
-                ->render();
-            $output->writeln('');
+            foreach ($operations as $type => $ops) {
+                $added = $ops['added'] ?? 0;
+                $updated = $ops['updated'] ?? 0;
+                $failed = $ops['failed'] ?? 0;
+
+                if (($added + $updated + $failed) > 0) {
+                    $this->logger->notice(
+                        "SYSTEM: Status for '{user}' {type}s: '{added}' added, '{updated}' updated and '{failed}' failed.",
+                        [
+                            'user' => $userContext->name,
+                            'type' => ucfirst($type),
+                            'added' => str_pad((string) number_format($added), 4, '0', STR_PAD_LEFT),
+                            'updated' => str_pad((string) number_format($updated), 4, '0', STR_PAD_LEFT),
+                            'failed' => str_pad((string) number_format($failed), 4, '0', STR_PAD_LEFT),
+                        ],
+                    );
+                }
+            }
 
             if (false === $input->getOption('dry-run')) {
                 $userContext->config->persist();

@@ -22,6 +22,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 class ConsoleHandler extends AbstractProcessingHandler
 {
     private JsonlFormatter $jsonlFormatter;
+    private ConsoleLogFormatter $consoleFormatter;
 
     /**
      * @var OutputInterface|null $output The console output interface to be used for printing log records
@@ -63,6 +64,7 @@ class ConsoleHandler extends AbstractProcessingHandler
 
         $this->output = $output;
         $this->jsonlFormatter = new JsonlFormatter();
+        $this->consoleFormatter = new ConsoleLogFormatter();
 
         if ($levelsMapper) {
             $this->levelsMapper = $levelsMapper;
@@ -121,6 +123,13 @@ class ConsoleHandler extends AbstractProcessingHandler
             return;
         }
 
+        $errOutput = $this->output instanceof ConsoleOutputInterface ? $this->output->getErrorOutput() : $this->output;
+
+        if (true === $this->output->isDecorated() && null !== $errOutput) {
+            $errOutput->writeln($this->consoleFormatter->format($record), $this->output->getVerbosity());
+            return;
+        }
+
         $date = $record['datetime'] ?? 'No date set';
 
         if (true === $date instanceof DateTimeInterface) {
@@ -136,8 +145,6 @@ class ConsoleHandler extends AbstractProcessingHandler
         if (false === empty($record['context']) && true === (bool) Config::get('logs.context')) {
             $message .= ' ' . array_to_json($record['context']);
         }
-
-        $errOutput = $this->output instanceof ConsoleOutputInterface ? $this->output->getErrorOutput() : $this->output;
 
         $errOutput?->writeln($message, $this->output->getVerbosity());
     }

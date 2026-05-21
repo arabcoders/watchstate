@@ -248,21 +248,14 @@ class PlaylistCommand extends Command
 
         if ([] === $rows) {
             $this->logger->warning('SYSTEM: Playlist sync completed without any syncable playlist results.');
-            $this->logger->notice("SYSTEM: Playlist sync process completed in '{duration}'s for all users.", [
-                'duration' => round(microtime(true) - $totalStart, 4),
-            ]);
-            $this->logger->notice('SYSTEM: Using WatchState {full_version}', [
-                'full_version' => get_full_version(),
-            ]);
-            $output->writeln('<comment>No matching backends produced syncable playlists.</comment>');
-            return self::SUCCESS;
+        } else {
+            foreach ($rows as $row) {
+                $this->logger->notice(
+                    message: 'SYSTEM: {User}@{Backend} - Playlists: {Playlists}, Items: {Items}, Added: {Added}, Updated: {Updated}, Removed: {Removed}',
+                    context: $row,
+                );
+            }
         }
-
-        new Table($output)
-            ->setStyle('box')
-            ->setHeaders(array_keys($rows[0]))
-            ->setRows($rows)
-            ->render();
 
         $this->logger->notice("SYSTEM: Playlist sync process completed in '{duration}'s for all users.", [
             'duration' => round(microtime(true) - $totalStart, 4),
