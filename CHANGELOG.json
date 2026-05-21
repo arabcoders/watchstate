@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "5dee46301bc1dfba25747975c8c6ad04e802c767",
-    "date": "2026-05-20T18:34:38+00:00",
+    "full_sha": "be129cbc6030edb56a072410db7d66e88d8eff9c",
+    "date": "2026-05-21T20:12:35+00:00",
     "commits": [
+      {
+        "sha": "be129cbc",
+        "full_sha": "be129cbc6030edb56a072410db7d66e88d8eff9c",
+        "message": "refactor: normalize logs",
+        "author": "arabcoders",
+        "date": "2026-05-21T20:12:35+00:00"
+      },
+      {
+        "sha": "1b1dfb09",
+        "full_sha": "1b1dfb0984cf95cfb9983caa8723ecabefddf9f2",
+        "message": "refactor: better consoel output",
+        "author": "arabcoders",
+        "date": "2026-05-21T04:45:02+00:00"
+      },
       {
         "sha": "5dee4630",
         "full_sha": "5dee46301bc1dfba25747975c8c6ad04e802c767",
