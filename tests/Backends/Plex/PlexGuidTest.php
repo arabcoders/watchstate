@@ -420,6 +420,11 @@ class PlexGuidTest extends TestCase
         $record = $this->record('guid.external_id.conflict', 'multiple_ids');
         $this->assertNotNull($record, 'Assert that a log is raised when multiple GUIDs for the same provider are found.');
         $this->assertContains($record->context['guid_source'] ?? null, ['imdb', 'cmdb']);
+        $this->assertSame('Test title', $record->context['item']['title'] ?? null);
+        $this->assertStringContainsString('Test title', $record->message);
+        foreach (($record->context['guid_values'] ?? []) as $guidValue) {
+            $this->assertStringContainsString((string) $guidValue, $record->message);
+        }
         $this->handler->clear();
 
         $this->assertEquals([Guid::GUID_IMDB => '1'], $this->getClass()->get([

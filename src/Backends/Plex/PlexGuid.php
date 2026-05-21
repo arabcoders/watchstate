@@ -541,8 +541,10 @@ final class PlexGuid implements iGuid
                     }
 
                     if (true === $log) {
-                        $this->logger->warning(
-                            "External id conflict for '#{item_id}' from '{user}@{backend}': multiple {guid_source} ids reported.",
+                        $guidValues = [$guid[$this->guidMapper[$key]], $value];
+
+                        $this->logger->info(
+                            "External id conflict for '#{item_id}: {item_title}' from '{user}@{backend}': multiple {guid_source} ids reported: '{guid_values_text}'.",
                             [
                                 'event_name' => 'guid.external_id.conflict',
                                 'subsystem' => 'guid',
@@ -554,8 +556,10 @@ final class PlexGuid implements iGuid
                                 'backend' => $this->context->backendName,
                                 'item_id' => $id,
                                 'guid_source' => $key,
-                                'guid_values' => [$guid[$this->guidMapper[$key]], $value],
+                                'guid_values' => $guidValues,
                                 ...$context,
+                                'item_title' => (string) ag($context, 'item.title', 'unknown title'),
+                                'guid_values_text' => implode("', '", $guidValues),
                             ],
                         );
                     }
