@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "10d5c41f674514427fd1bcd2ad97a560ada63483",
-    "date": "2026-05-22T12:55:43+00:00",
+    "full_sha": "e3363f3aab342f4292d6a84c37da8e1a82774f04",
+    "date": "2026-05-22T16:01:50+00:00",
     "commits": [
+      {
+        "sha": "e3363f3a",
+        "full_sha": "e3363f3aab342f4292d6a84c37da8e1a82774f04",
+        "message": "refactor: add rich log messages in critical endpoints.",
+        "author": "arabcoders",
+        "date": "2026-05-22T16:01:50+00:00"
+      },
+      {
+        "sha": "167de0c1",
+        "full_sha": "167de0c1c6dc039dfe9a34f1a8ee093bf98d2d78",
+        "message": "fix: run migration after manual user creation.",
+        "author": "arabcoders",
+        "date": "2026-05-22T15:08:12+00:00"
+      },
       {
         "sha": "10d5c41f",
         "full_sha": "10d5c41f674514427fd1bcd2ad97a560ada63483",
