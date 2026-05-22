@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "460003ae3ea351c39ac6aefd821d286f81587845",
-    "date": "2026-05-21T21:59:28+00:00",
+    "full_sha": "10d5c41f674514427fd1bcd2ad97a560ada63483",
+    "date": "2026-05-22T12:55:43+00:00",
     "commits": [
+      {
+        "sha": "10d5c41f",
+        "full_sha": "10d5c41f674514427fd1bcd2ad97a560ada63483",
+        "message": "fix: readd missing logs to push/progress events.",
+        "author": "arabcoders",
+        "date": "2026-05-22T12:55:43+00:00"
+      },
+      {
+        "sha": "d681ba13",
+        "full_sha": "d681ba136f9236cea8c2ece1af0c63d2ba302994",
+        "message": "refactor: use iso date format when coming logs.",
+        "author": "arabcoders",
+        "date": "2026-05-21T22:40:16+00:00"
+      },
       {
         "sha": "460003ae",
         "full_sha": "460003ae3ea351c39ac6aefd821d286f81587845",
