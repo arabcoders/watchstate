@@ -407,7 +407,7 @@ const addIdentity = async (): Promise<void> => {
     });
     const result = await parse_api_response<GenericResponse>(response);
 
-    if ('error' in result) {
+    if (!response.ok && 'error' in result) {
       formError.value = result.error?.message || 'Failed to create identity';
       return;
     }
