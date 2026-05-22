@@ -851,12 +851,28 @@ class JellyfinClient implements iClient
      */
     private function throwError(Response $response, string $className = RuntimeException::class, int $code = 0): void
     {
+        $message = ag($response->extra, 'message', null);
+
+        if (null === $message && null !== $response->error) {
+            $message = ag($response->error->extra, 'message', null);
+        }
+
+        if (!is_string($message) || '' === trim($message)) {
+            $message = $response->error?->format() ?? 'The backend request failed.';
+        }
+
+        $reason = ag($response->extra, 'error', null);
+
+        if (null === $reason && null !== $response->error) {
+            $reason = ag($response->error->extra, 'error', null);
+        }
+
+        if (is_string($reason) && '' !== trim($reason) && false === str_contains($message, $reason)) {
+            $message = trim($message . ' ' . $reason);
+        }
+
         throw new $className(
-            message: ag(
-                $response->extra,
-                'message',
-                static fn() => $response->error?->format() ?? 'The backend request failed.',
-            ),
+            message: $message,
             code: $code,
             previous: $response->error?->previous,
         );

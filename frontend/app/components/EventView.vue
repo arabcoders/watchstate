@@ -391,6 +391,7 @@ import { useDialog } from '~/composables/useDialog';
 import type { EventsItem, GenericError, LogEntry } from '~/types';
 import {
   copyText,
+  api_error_message,
   getEventStatusClass,
   makeEventName,
   notification,
@@ -599,7 +600,11 @@ const loadContent = async (): Promise<void> => {
     }
 
     if (200 !== response.status) {
-      notification('error', 'Error', 'Errors viewItem request error.');
+      notification(
+        'error',
+        'Error',
+        `Errors viewItem request error. ${api_error_message(json, response)}`,
+      );
       return;
     }
 

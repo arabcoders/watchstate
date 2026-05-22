@@ -7,6 +7,7 @@ namespace App\Backends\Common;
 use App\Libs\Container;
 use App\Libs\Options;
 use DateInterval;
+use JsonException;
 use Psr\Log\LoggerInterface as iLogger;
 use Throwable;
 
@@ -38,7 +39,7 @@ trait CommonTrait
                 status: false,
                 error: new Error(
                     ...lw(
-                        message: "{client} request failed for '{backend}' during {action}.",
+                        message: "{client} request failed for '{backend}' during {action}. {error.message}",
                         context: [
                             'event_name' => 'backend.client.request_failed',
                             'subsystem' => 'backend.client',
@@ -76,9 +77,9 @@ trait CommonTrait
         DateInterval $ttl,
         ?iLogger $logger = null,
     ): mixed {
+        $cache = $context->cache->getInterface();
+        $cacheKey = $context->backendName . '_' . $key;
         try {
-            $cache = $context->cache->getInterface();
-            $cacheKey = $context->backendName . '_' . $key;
             if (true === ag_exists($context->options, Options::PLEX_USER_PIN)) {
                 $cacheKey .= '_with_pin';
             }
@@ -122,5 +123,73 @@ trait CommonTrait
     protected function getLogger(): iLogger
     {
         return Container::get(iLogger::class);
+    }
+
+    /**
+     * Extract a short backend-provided reason from an HTTP response body.
+     *
+     * @param string|null $body HTTP response body.
+     * @param int $limit Maximum characters to expose.
+     *
+     * @return string|null The extracted reason if available.
+     */
+    protected function getBackendResponseReason(?string $body, int $limit = 500): ?string
+    {
+        if ('' === ($body = trim((string) $body))) {
+            return null;
+        }
+
+        try {
+            $json = json_decode($body, true, flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE);
+
+            if (is_array($json)) {
+                $reason = ag($json, [
+                    'message',
+                    'Message',
+                    'error.message',
+                    'error',
+                    'Error',
+                    'errors.0.message',
+                    'errors.0.title',
+                ]);
+
+                if (is_scalar($reason) && '' !== trim((string) $reason)) {
+                    return trim((string) $reason);
+                }
+            }
+        } catch (JsonException) {
+            // -- fallback for non-json responses, do nothing and try other methods.
+        }
+
+        if (false !== ($xml = @simplexml_load_string($body))) {
+            $xmlData = json_decode(json_encode($xml, JSON_INVALID_UTF8_IGNORE), true);
+
+            if (is_array($xmlData)) {
+                $reason = ag($xmlData, [
+                    'error',
+                    'errors.error',
+                    'message',
+                    'Message',
+                ]);
+
+                if (is_array($reason)) {
+                    $reason = array_shift($reason);
+                }
+
+                if (is_scalar($reason) && '' !== trim((string) $reason)) {
+                    return trim((string) $reason);
+                }
+            }
+        }
+
+        if ('' === ($reason = trim(strip_tags($body)))) {
+            return null;
+        }
+
+        if (strlen($reason) > $limit) {
+            return substr($reason, 0, $limit) . '...';
+        }
+
+        return $reason;
     }
 }

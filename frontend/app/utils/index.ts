@@ -569,6 +569,40 @@ const parse_api_response = async <T = JsonObject>(r: Response): Promise<T | Gene
   }
 };
 
+const is_api_error = (value: unknown): value is GenericError => {
+  if (null === value || 'object' !== typeof value || false === 'error' in value) {
+    return false;
+  }
+
+  const error = (value as { error?: unknown }).error;
+
+  return null !== error && 'object' === typeof error && 'message' in error;
+};
+
+const api_error_message = (
+  value: unknown,
+  response: Response | null = null,
+  fallback: string = 'Request failed',
+): string => {
+  if (is_api_error(value)) {
+    const message = String(value.error.message || fallback);
+    return `${value.error.code}: ${message}`;
+  }
+
+  if (null !== response) {
+    const message = response.statusText || fallback;
+    return `${response.status}: ${message}`;
+  }
+
+  return fallback;
+};
+
+const parse_api_error_message = async (
+  response: Response,
+  fallback: string = 'Request failed',
+): Promise<string> =>
+  api_error_message(await parse_api_response<JsonObject>(response), response, fallback);
+
 type HistoryLogItem = {
   item_id?: string | number | null;
   user?: string | null;
@@ -792,6 +826,9 @@ export {
   basename,
   encodePath,
   parse_api_response,
+  is_api_error,
+  api_error_message,
+  parse_api_error_message,
   goto_history_item,
   queue_event,
   syncOpacity,

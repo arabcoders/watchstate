@@ -111,6 +111,8 @@ class GetUsersList
         $response = $this->http->request(Method::GET, (string) $url, $headers);
 
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
+            $body = $response->getContent(false);
+
             return new Response(
                 status: false,
                 error: new Error(
@@ -127,8 +129,14 @@ class GetUsersList
                             'expected_status_codes' => [Status::OK->value],
                             'url' => (string) $url,
                         ],
+                        'response' => [
+                            'body' => $body,
+                        ],
                     ],
                     level: Levels::ERROR,
+                    extra: array_filter([
+                        'error' => $this->getBackendResponseReason($body),
+                    ]),
                 ),
             );
         }

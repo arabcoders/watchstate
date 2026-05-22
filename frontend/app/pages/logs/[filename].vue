@@ -319,7 +319,14 @@ import LogDetailsModal from '~/components/LogDetailsModal.vue';
 import { useDialog } from '~/composables/useDialog';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import type { GenericResponse, LogEntry, LogResponse } from '~/types';
-import { copyText, makeEventName, notification, parse_api_response, request } from '~/utils';
+import {
+  copyText,
+  makeEventName,
+  notification,
+  parse_api_error_message,
+  parse_api_response,
+  request,
+} from '~/utils';
 import {
   getLogLevel,
   LOG_LEVEL_ICON,
@@ -785,6 +792,16 @@ const downloadFile = async (): Promise<void> => {
 
   try {
     const response = await request(`/log/${filename}?download=1`);
+
+    if (!response.ok) {
+      notification(
+        'error',
+        'Error',
+        await parse_api_error_message(response, 'Failed to download log.'),
+      );
+      return;
+    }
+
     const pickerWindow = window as Window & {
       showSaveFilePicker?: (options: FilePickerOptions) => Promise<FilePickerHandle>;
     };

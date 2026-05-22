@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Backends\Jellyfin;
 
+use App\Backends\Common\CommonTrait;
 use App\Backends\Common\Context;
 use App\Backends\Jellyfin\Action\GetUser;
 use App\Libs\Container;
@@ -11,6 +12,7 @@ use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidContextException;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\HttpExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
@@ -18,6 +20,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 class JellyfinValidateContext
 {
+    use CommonTrait;
+
     public function __construct(
         private readonly iHttp $http,
     ) {}
@@ -102,17 +106,39 @@ class JellyfinValidateContext
         } catch (TransportExceptionInterface $e) {
             throw new InvalidContextException(r('Failed to connect to backend. {error}', ['error' => $e->getMessage()]), previous: $e);
         } catch (ClientExceptionInterface $e) {
-            throw new InvalidContextException(r('Got non 200 response. {error}', ['error' => $e->getMessage()]), previous: $e);
+            throw $this->httpException('Got non 200 response.', $e);
         } catch (RedirectionExceptionInterface $e) {
-            throw new InvalidContextException(
-                r('Redirection recursion detected. {error}', ['error' => $e->getMessage()]),
-                previous: $e,
-            );
+            throw $this->httpException('Redirection recursion detected.', $e);
         } catch (ServerExceptionInterface $e) {
-            throw new InvalidContextException(
-                r('Backend responded with 5xx error. {error}', ['error' => $e->getMessage()]),
-                previous: $e,
-            );
+            throw $this->httpException('Backend responded with 5xx error.', $e);
         }
+    }
+
+    /**
+     * Build a context-rich backend validation exception from an HTTP exception.
+     */
+    private function httpException(string $message, HttpExceptionInterface $e): InvalidContextException
+    {
+        $response = $e->getResponse();
+        $body = $response->getContent(false);
+        $reason = $this->getBackendResponseReason($body) ?? $e->getMessage();
+
+        $ex = new InvalidContextException(r('{message} Backend responded with {status_code}. {error}', [
+            'message' => $message,
+            'status_code' => $response->getStatusCode(),
+            'error' => $reason,
+        ]), previous: $e);
+
+        $ex->setContext([
+            'http' => [
+                'status_code' => $response->getStatusCode(),
+            ],
+            'response' => [
+                'body' => $body,
+                'reason' => $reason,
+            ],
+        ]);
+
+        return $ex;
     }
 }

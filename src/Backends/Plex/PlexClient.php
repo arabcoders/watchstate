@@ -863,15 +863,33 @@ class PlexClient implements iClient
                     }
                 }
 
+                $reason = null;
+
+                if (false !== ($xml = @simplexml_load_string($payload))) {
+                    $xmlData = json_decode(json_encode($xml, JSON_INVALID_UTF8_IGNORE), true);
+
+                    if (is_array($xmlData)) {
+                        $reason = ag($xmlData, ['error', 'errors.error']);
+
+                        if (is_array($reason)) {
+                            $reason = array_shift($reason);
+                        }
+                    }
+                }
+
+                if (!is_string($reason) || '' === trim($reason)) {
+                    $reason = array_to_string([
+                        'with_admin' => true === ag($opts, 'with_admin'),
+                        'payload' => $payload,
+                    ]);
+                }
+
                 throw new RuntimeException(
                     r(
-                        text: 'Failed to load Plex servers list: plex.tv returned status {status_code}. {context}',
+                        text: 'Failed to load Plex servers list: plex.tv returned status {status_code}. {error}',
                         context: [
                             'status_code' => $response->getStatusCode(),
-                            'context' => array_to_string([
-                                'with_admin' => true === ag($opts, 'with_admin'),
-                                'payload' => $payload,
-                            ]),
+                            'error' => $reason,
                         ],
                     ),
                     $response->getStatusCode(),
@@ -893,7 +911,11 @@ class PlexClient implements iClient
             );
         }
 
-        $xml = simplexml_load_string($payload);
+        $xml = @simplexml_load_string($payload);
+
+        if (false === $xml) {
+            throw new RuntimeException('Failed to parse Plex servers list response.');
+        }
 
         $list = [];
 
@@ -1056,12 +1078,28 @@ class PlexClient implements iClient
      */
     private function throwError(Response $response, string $className = RuntimeException::class, int $code = 0): void
     {
+        $message = ag($response->extra, 'message', null);
+
+        if (null === $message && null !== $response->error) {
+            $message = ag($response->error->extra, 'message', null);
+        }
+
+        if (!is_string($message) || '' === trim($message)) {
+            $message = $response->error?->format() ?? 'The backend request failed.';
+        }
+
+        $reason = ag($response->extra, 'error', null);
+
+        if (null === $reason && null !== $response->error) {
+            $reason = ag($response->error->extra, 'error', null);
+        }
+
+        if (is_string($reason) && '' !== trim($reason) && false === str_contains($message, $reason)) {
+            $message = trim($message . ' ' . $reason);
+        }
+
         throw new $className(
-            message: ag(
-                $response->extra,
-                'message',
-                static fn() => $response->error?->format() ?? 'The backend request failed.',
-            ),
+            message: $message,
             code: $code,
             previous: $response->error?->previous,
         );

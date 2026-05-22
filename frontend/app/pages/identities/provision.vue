@@ -488,7 +488,7 @@ import { NuxtLink } from '#components';
 import moment from 'moment';
 import draggable from 'vuedraggable';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
-import { notification, parse_api_response, request } from '~/utils';
+import { notification, parse_api_error_message, parse_api_response, request } from '~/utils';
 import { useDialog } from '~/composables/useDialog';
 import type { GenericResponse } from '~/types';
 
@@ -624,20 +624,29 @@ const generateFile = async (): Promise<void> => {
     return;
   }
 
-  const response = request(`/system/yaml/${filename}`, {
-    method: 'POST',
-    headers: { Accept: 'text/yaml' },
-    body: JSON.stringify(data),
-  });
+  try {
+    const response = await request(`/system/yaml/${filename}`, {
+      method: 'POST',
+      headers: { Accept: 'text/yaml' },
+      body: JSON.stringify(data),
+    });
 
-  const pickerWindow = window as Window & {
-    showSaveFilePicker?: (options: FilePickerOptions) => Promise<FilePickerHandle>;
-  };
-  const showSaveFilePicker = pickerWindow.showSaveFilePicker;
+    if (!response.ok) {
+      notification(
+        'error',
+        'Error',
+        await parse_api_error_message(response, 'Failed to export mapper.'),
+      );
+      return;
+    }
 
-  if (showSaveFilePicker) {
-    response.then(async (res) => {
-      if (!res.body) {
+    const pickerWindow = window as Window & {
+      showSaveFilePicker?: (options: FilePickerOptions) => Promise<FilePickerHandle>;
+    };
+    const showSaveFilePicker = pickerWindow.showSaveFilePicker;
+
+    if (showSaveFilePicker) {
+      if (!response.body) {
         notification('error', 'Error', 'No data returned from export request.');
         return;
       }
@@ -645,19 +654,25 @@ const generateFile = async (): Promise<void> => {
       const handle = await showSaveFilePicker({
         suggestedName: `${filename}`,
       });
-      await res.body.pipeTo(await handle.createWritable());
-    });
-  }
+      await response.body.pipeTo(await handle.createWritable());
+      return;
+    }
 
-  response
-    .then((res) => res.blob())
-    .then((blob) => {
-      const fileURL = URL.createObjectURL(blob);
-      const fileLink = document.createElement('a');
-      fileLink.href = fileURL;
-      fileLink.download = `${filename}`;
-      fileLink.click();
-    });
+    const blob = await response.blob();
+    const fileURL = URL.createObjectURL(blob);
+    const fileLink = document.createElement('a');
+    fileLink.href = fileURL;
+    fileLink.download = `${filename}`;
+    fileLink.click();
+    URL.revokeObjectURL(fileURL);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unexpected error';
+    if (message.includes('aborted')) {
+      return;
+    }
+
+    notification('error', 'Error', `Failed to export mapper. ${message}`);
+  }
 };
 
 interface DragEvent {
@@ -832,14 +847,33 @@ const provisionIdentities = async (): Promise<void> => {
       }),
     });
 
-    const response = await parse_api_response<GenericResponse>(req);
+    const response = await parse_api_response<
+      GenericResponse & {
+        warning_count?: number;
+        warnings?: Array<{ identity?: string; backend?: string; message?: string }>;
+      }
+    >(req);
 
     if ('error' in response) {
       notification('error', 'Error', `${req.status}: ${response.error.message}`);
       return;
     }
 
-    notification('success', 'Success', response.info.message);
+    const warningCount = Number(response.warning_count ?? 0);
+    if (0 < warningCount) {
+      const warning = response.warnings?.[0];
+      const firstWarning = warning
+        ? ` First warning: ${warning.identity ?? 'unknown'}@${warning.backend ?? 'unknown'}: ${warning.message ?? 'No details.'}`
+        : '';
+      notification(
+        'warning',
+        'Warning',
+        `${response.info.message} Completed with ${warningCount} warning(s).${firstWarning}`,
+        10000,
+      );
+    } else {
+      notification('success', 'Success', response.info.message);
+    }
 
     if (false === dryRun.value) {
       await navigateTo('/identities');

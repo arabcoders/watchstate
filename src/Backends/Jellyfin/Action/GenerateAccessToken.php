@@ -130,6 +130,8 @@ class GenerateAccessToken
         ]);
 
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
+            $body = $response->getContent(false);
+
             return new Response(
                 status: false,
                 error: new Error(
@@ -147,10 +149,13 @@ class GenerateAccessToken
                             'url' => (string) $url,
                         ],
                         'response' => [
-                            'body' => $response->getContent(false),
+                            'body' => $body,
                         ],
                     ],
                     level: Levels::ERROR,
+                    extra: array_filter([
+                        'error' => $this->getBackendResponseReason($body),
+                    ]),
                 ),
             );
         }

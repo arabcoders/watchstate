@@ -101,6 +101,9 @@ class GetInfo
                                 ],
                             ],
                             level: Levels::WARNING,
+                            extra: array_filter([
+                                'error' => $this->getBackendResponseReason($content),
+                            ]),
                         ),
                     );
                 }

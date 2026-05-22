@@ -20,6 +20,16 @@ use Throwable;
 
 final class IdentityProvisionService
 {
+    /**
+     * @var array<int, array{backend: string, client: string, user: string, message: string}>
+     */
+    private array $backendUserFailures = [];
+
+    /**
+     * @var array<int, array{identity: string, backend: string, message: string}>
+     */
+    private array $tokenFailures = [];
+
     public function __construct(
         private readonly iImport $mapper,
         private readonly iLogger $logger,
@@ -159,6 +169,8 @@ final class IdentityProvisionService
      */
     public function preview(array $mapping = []): array
     {
+        $this->resetProvisionFailures();
+
         if ([] === $mapping) {
             $mapping = $this->loadMappings();
         }
@@ -203,6 +215,7 @@ final class IdentityProvisionService
     public function provision(IdentityProvisionRequest $request): array
     {
         set_time_limit(60 * 10);
+        $this->resetProvisionFailures();
 
         $hasIdentities = $this->hasIdentities();
 
@@ -253,7 +266,7 @@ final class IdentityProvisionService
             $backendUsers = $this->getBackendUsers($backends, $mapping, false);
 
             if (count($backendUsers) < 1) {
-                throw new RuntimeException('No backend users were found.');
+                throw new RuntimeException($this->noBackendUsersMessage());
             }
 
             $results = $this->generateSingleBackendIdentities($backendUsers);
@@ -282,6 +295,7 @@ final class IdentityProvisionService
             return [
                 'identities' => $identities,
                 'has_identities' => $hasIdentities,
+                'warnings' => $this->tokenFailures,
             ];
         }
 
@@ -297,7 +311,7 @@ final class IdentityProvisionService
         $backendUsers = $this->getBackendUsers($backends, $mapping);
 
         if (count($backendUsers) < 1) {
-            throw new RuntimeException('No backend users were found.');
+            throw new RuntimeException($this->noBackendUsersMessage());
         }
 
         $results = $this->generateIdentitiesList($backendUsers, $mapping);
@@ -325,7 +339,39 @@ final class IdentityProvisionService
         return [
             'identities' => $identities,
             'has_identities' => $hasIdentities,
+            'warnings' => $this->tokenFailures,
         ];
+    }
+
+    /**
+     * Reset per-run provisioning failures.
+     */
+    private function resetProvisionFailures(): void
+    {
+        $this->backendUserFailures = [];
+        $this->tokenFailures = [];
+    }
+
+    /**
+     * Build the user-facing no-users error message.
+     */
+    private function noBackendUsersMessage(): string
+    {
+        if ([] === $this->backendUserFailures) {
+            return 'No backend users were found.';
+        }
+
+        $failures = array_map(
+            static fn(array $failure): string => r('{backend}: {message}', [
+                'backend' => $failure['backend'],
+                'message' => $failure['message'],
+            ]),
+            $this->backendUserFailures,
+        );
+
+        return r('No backend users were found. Failed backends: {failures}', [
+            'failures' => implode('; ', $failures),
+        ]);
     }
 
     /**
@@ -585,6 +631,13 @@ final class IdentityProvisionService
                     $users[] = $user;
                 }
             } catch (Throwable $e) {
+                $this->backendUserFailures[] = [
+                    'backend' => $client->getContext()->backendName,
+                    'client' => $client->getContext()->clientName,
+                    'user' => $client->getContext()->userContext->name,
+                    'message' => $e->getMessage(),
+                ];
+
                 $this->logger->error(
                     "Failed to load users from backend '{backend}' via {client}.",
                     [
@@ -793,6 +846,12 @@ final class IdentityProvisionService
                             );
 
                             if (false === $token) {
+                                $this->tokenFailures[] = [
+                                    'identity' => $identityName,
+                                    'backend' => $name,
+                                    'message' => 'Failed to generate access token.',
+                                ];
+
                                 $this->logger->error(
                                     message: "Failed to generate an access token for '{identity}@{backend}'.",
                                     context: [
@@ -811,6 +870,12 @@ final class IdentityProvisionService
                         }
                     }
                 } catch (Throwable $e) {
+                    $this->tokenFailures[] = [
+                        'identity' => $identityName,
+                        'backend' => $name,
+                        'message' => $e->getMessage(),
+                    ];
+
                     $this->logger->error(
                         message: "Failed to generate an access token for '{identity}@{backend}'.",
                         context: [

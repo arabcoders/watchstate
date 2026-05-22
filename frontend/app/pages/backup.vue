@@ -254,6 +254,7 @@ import {
   humanFileSize,
   makeConsoleCommand,
   notification,
+  parse_api_error_message,
   parse_api_response,
   request,
   TOOLTIP_DATE_FORMAT,
@@ -377,6 +378,15 @@ const downloadFile = async (item: BackItemWithUI): Promise<void> => {
   try {
     const response = await request(`/system/backup/${item.filename}`);
 
+    if (!response.ok) {
+      notification(
+        'error',
+        'Error',
+        await parse_api_error_message(response, 'Failed to download backup.'),
+      );
+      return;
+    }
+
     if (pickerWindow.showSaveFilePicker) {
       if (!response.body) {
         notification('error', 'Error', 'No data returned from backup download request.');
@@ -436,7 +446,14 @@ const queueTask = async (): Promise<void> => {
         `Task backup has been ${is_queued ? 'removed from the queue' : 'queued'}.`,
       );
       queued.value = !is_queued;
+      return;
     }
+
+    notification(
+      'error',
+      'Error',
+      await parse_api_error_message(response, 'Failed to update backup task queue.'),
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unexpected error';
     notification('error', 'Error', `Request error. ${message}`);

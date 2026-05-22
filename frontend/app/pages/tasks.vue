@@ -354,6 +354,7 @@ import {
   makeEventName,
   makeConsoleCommand,
   notification,
+  parse_api_error_message,
   parse_api_response,
   request,
   TOOLTIP_DATE_FORMAT,
@@ -524,7 +525,14 @@ const queueTask = async (task: TaskItem): Promise<void> => {
           }),
         );
       }
+      return;
     }
+
+    notification(
+      'error',
+      'Error',
+      await parse_api_error_message(response, `Failed to update '${task.name}' queue.`),
+    );
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unexpected error';
     notification('error', 'Error', `Request error. ${message}`);

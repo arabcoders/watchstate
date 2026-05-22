@@ -1,5 +1,5 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch, type Ref } from 'vue';
-import { notification, parse_api_response, request, ucFirst } from '~/utils';
+import { api_error_message, notification, parse_api_response, request, ucFirst } from '~/utils';
 import type {
   Backend,
   BackendEditUser,
@@ -158,7 +158,7 @@ export const useBackendSetup = (backend: Ref<Backend>, setupOptions?: UseBackend
       const json = await parse_api_response<BackendUuidResponse>(response);
 
       if (!response.ok) {
-        notifyError('Failed to get the UUID from the backend.');
+        notifyError(api_error_message(json, response, 'Failed to get the UUID from the backend.'));
         return;
       }
 
@@ -239,11 +239,7 @@ export const useBackendSetup = (backend: Ref<Backend>, setupOptions?: UseBackend
       const json = await parse_api_response<Array<BackendEditUser>>(response);
 
       if (!response.ok) {
-        if ('error' in json) {
-          notifyError(`${json.error.code}: ${json.error.message}`);
-        } else {
-          notifyError('Failed to load users');
-        }
+        notifyError(api_error_message(json, response, 'Failed to load users'));
         return;
       }
 
@@ -327,11 +323,7 @@ export const useBackendSetup = (backend: Ref<Backend>, setupOptions?: UseBackend
       const json = await parse_api_response<Array<BackendServer>>(response);
 
       if (!response.ok) {
-        if ('error' in json) {
-          notifyError(`${json.error.code}: ${json.error.message}`);
-        } else {
-          notifyError('Failed to load servers');
-        }
+        notifyError(api_error_message(json, response, 'Failed to load servers'));
         return;
       }
 
@@ -368,11 +360,7 @@ export const useBackendSetup = (backend: Ref<Backend>, setupOptions?: UseBackend
       const json = await parse_api_response<PlexOAuthData>(response);
 
       if (!response.ok) {
-        if ('error' in json) {
-          notifyError(`${json.error.code}: ${json.error.message}`);
-        } else {
-          notifyError('Failed to generate Plex auth request');
-        }
+        notifyError(api_error_message(json, response, 'Failed to generate Plex auth request'));
         return;
       }
 
@@ -438,11 +426,7 @@ export const useBackendSetup = (backend: Ref<Backend>, setupOptions?: UseBackend
       const json = await parse_api_response<PlexOAuthTokenResponse>(response);
 
       if (!response.ok) {
-        if ('error' in json) {
-          notifyError(`${json.error.code}: ${json.error.message}`);
-        } else {
-          notifyError('Failed to check auth status');
-        }
+        notifyError(api_error_message(json, response, 'Failed to check auth status'));
         return;
       }
 

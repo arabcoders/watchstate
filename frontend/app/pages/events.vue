@@ -483,6 +483,7 @@ import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import {
   TOOLTIP_DATE_FORMAT,
   awaitElement,
+  api_error_message,
   makeEventName,
   notification,
   parse_api_response,
@@ -984,7 +985,11 @@ const resetEvent = async (item: EventsItem, status: number = 0): Promise<void> =
     }
 
     if (200 !== response.status) {
-      notification('error', 'Error', 'Events view patch Request error.');
+      notification(
+        'error',
+        'Error',
+        `Events view patch Request error. ${api_error_message(json, response)}`,
+      );
       return;
     }
 

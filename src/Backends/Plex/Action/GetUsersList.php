@@ -189,6 +189,13 @@ final class GetUsersList
                     ],
                     level: Levels::ERROR,
                     previous: $e,
+                    extra: array_filter([
+                        'error' => ag(
+                            $errorContext,
+                            'error.message',
+                            fn() => $this->getBackendResponseReason((string) ag($errorContext, 'response.body', '')),
+                        ),
+                    ]),
                 ),
             );
         } catch (iException $e) {
@@ -207,6 +214,9 @@ final class GetUsersList
                     ],
                     level: Levels::ERROR,
                     previous: $e,
+                    extra: array_filter([
+                        'error' => $e->getMessage(),
+                    ]),
                 ),
             );
         }
@@ -437,6 +447,13 @@ final class GetUsersList
                     ],
                     level: Levels::ERROR,
                     previous: $e,
+                    extra: array_filter([
+                        'error' => ag(
+                            $errorContext,
+                            'error.message',
+                            fn() => $this->getBackendResponseReason((string) ag($errorContext, 'response.body', '')),
+                        ),
+                    ]),
                 ),
             );
         } catch (iException $e) {
@@ -455,6 +472,9 @@ final class GetUsersList
                     ],
                     level: Levels::ERROR,
                     previous: $e,
+                    extra: array_filter([
+                        'error' => $e->getMessage(),
+                    ]),
                 ),
             );
         }
@@ -518,6 +538,13 @@ final class GetUsersList
                     ],
                     level: Levels::ERROR,
                     previous: $e,
+                    extra: array_filter([
+                        'error' => ag(
+                            $errorContext,
+                            'error.message',
+                            fn() => $this->getBackendResponseReason((string) ag($errorContext, 'response.body', '')),
+                        ),
+                    ]),
                 ),
             );
         } catch (iException $e) {
@@ -536,6 +563,9 @@ final class GetUsersList
                     ],
                     level: Levels::ERROR,
                     previous: $e,
+                    extra: array_filter([
+                        'error' => $e->getMessage(),
+                    ]),
                 ),
             );
         }

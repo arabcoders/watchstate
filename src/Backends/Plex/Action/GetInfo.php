@@ -96,6 +96,9 @@ final class GetInfo
                                 'response' => ['body' => $content],
                             ],
                             level: Levels::WARNING,
+                            extra: array_filter([
+                                'error' => $this->getBackendResponseReason($content),
+                            ]),
                         ),
                     );
                 }

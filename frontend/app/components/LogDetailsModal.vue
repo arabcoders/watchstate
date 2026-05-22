@@ -82,27 +82,6 @@
           </div>
         </div>
 
-        <section v-if="log.exception" class="space-y-2">
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-toned hover:text-default"
-            @click="exceptionOpen = !exceptionOpen"
-          >
-            <UIcon
-              name="i-lucide-chevron-right"
-              :class="['size-4 transition-transform', exceptionOpen ? 'rotate-90' : '']"
-            />
-            <UIcon name="i-lucide-bug" class="size-4 text-error" />
-            Exception
-          </button>
-
-          <pre
-            v-if="exceptionOpen"
-            class="max-h-72 overflow-auto rounded-sm border border-error/30 bg-error/5 p-3 text-xs whitespace-pre-wrap text-error"
-            >{{ formatException(log.exception) }}</pre
-          >
-        </section>
-
         <section v-if="log.stack" class="space-y-2">
           <button
             type="button"
@@ -113,8 +92,8 @@
               name="i-lucide-chevron-right"
               :class="['size-4 transition-transform', stackOpen ? 'rotate-90' : '']"
             />
-            <UIcon name="i-lucide-layers" class="size-4 text-toned" />
-            Stack
+            <UIcon name="i-lucide-layers" class="size-4 text-error" />
+            Exception Stack
           </button>
 
           <pre
@@ -220,7 +199,6 @@ import Popover from '~/components/Popover.vue';
 import type { LogEntry } from '~/types';
 import { copyText } from '~/utils';
 import {
-  formatLogException,
   formatLogStack,
   getLogLevel,
   LOG_LEVEL_COLOR,
@@ -256,7 +234,6 @@ const modalOpen = computed({
 
 const selectedLogLevel = computed<LogLevel>(() => getLogLevel(props.log?.level));
 
-const exceptionOpen = useStorage<boolean>('logs_exception_open', false);
 const stackOpen = useStorage<boolean>('logs_stack_open', true);
 const fieldsOpen = useStorage<boolean>('logs_fields_open', true);
 const rawJsonOpen = useStorage<boolean>('logs_raw_json_open', false);
@@ -269,8 +246,6 @@ const logMessage = (item: LogEntry): string => logMessageText(item);
 const detailRows = (item: LogEntry) => logDetailRows(item);
 
 const fieldRows = (item: LogEntry) => logFieldRows(item);
-
-const formatException = (value: string | null | undefined): string => formatLogException(value);
 
 const formatStack = (value: string | null | undefined): string => formatLogStack(value);
 

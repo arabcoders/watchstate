@@ -162,6 +162,7 @@ final class Provision
         }
 
         $formatted = $this->formatMatchedIdentities(ag($result, 'identities', []));
+        $warnings = ag($result, 'warnings', []);
         $status = true === $provisionRequest->dryRun
             ? Status::OK
             : match ($mode) {
@@ -187,6 +188,8 @@ final class Provision
             'allow_single_backend_identities' => $provisionRequest->allowSingleBackendIdentities,
             'count' => count($formatted),
             'identities' => $formatted,
+            'warning_count' => count($warnings),
+            'warnings' => $warnings,
         ]);
     }
 

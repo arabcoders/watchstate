@@ -239,7 +239,15 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import Player from '~/components/Player.vue';
 import { useDialog } from '~/composables/useDialog';
 import type { PlayerSubtitleDeliveryMode, PlayerSubtitleTrack } from '~/types';
-import { basename, encodePath, notification, parse_api_response, request, ucFirst } from '~/utils';
+import {
+  api_error_message,
+  basename,
+  encodePath,
+  notification,
+  parse_api_response,
+  request,
+  ucFirst,
+} from '~/utils';
 
 type SelectItem = {
   label: string;
@@ -785,7 +793,7 @@ const loadContent = async (): Promise<void> => {
     }
 
     if ('error' in json) {
-      notification('error', 'Error', 'Failed to load item.');
+      notification('error', 'Error', `Failed to load item. ${api_error_message(json, response)}`);
       return;
     }
 
@@ -806,7 +814,7 @@ const loadContent = async (): Promise<void> => {
     updateHwAccel(video_codec.value);
   } catch (error: unknown) {
     console.error(error);
-    notification('error', 'Error', 'Failed to load item.');
+    notification('error', 'Error', `Failed to load item. ${String(error)}`);
   } finally {
     if (currentId === historyId.value && currentSession === sessionVersion.value) {
       isLoading.value = false;
@@ -839,7 +847,11 @@ const generateToken = async (): Promise<void> => {
     }
 
     if ('error' in json) {
-      notification('error', 'Token generation', 'Failed to generate token.');
+      notification(
+        'error',
+        'Token generation',
+        `Failed to generate token. ${api_error_message(json, response)}`,
+      );
       return;
     }
 
@@ -847,7 +859,7 @@ const generateToken = async (): Promise<void> => {
     playbackDirect.value = effectiveDirectPlay.value;
   } catch (error: unknown) {
     console.error(error);
-    notification('error', 'Error', 'Failed to generate token.');
+    notification('error', 'Error', `Failed to generate token. ${String(error)}`);
   } finally {
     if (currentId === historyId.value && currentSession === sessionVersion.value) {
       isGenerating.value = false;

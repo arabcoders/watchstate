@@ -33,7 +33,7 @@
           <p>
             After saving shared backend changes like URL, API key, UUID, or import/export settings,
             go to <NuxtLink to="/identities" class="text-primary">Identities</NuxtLink> and use
-            <strong>Sync Backends</strong> to propagate those changes safely.
+            <strong>Sync Backends</strong> sync the changes.
           </p>
         </div>
       </template>
