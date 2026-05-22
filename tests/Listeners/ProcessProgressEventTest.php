@@ -27,7 +27,7 @@ use Psr\SimpleCache\CacheInterface as iCache;
 
 final class ProcessProgressEventTest extends TestCase
 {
-    public function test_metadata_missing_event_log(): void
+    public function test_logs_shared_missing_metadata(): void
     {
         $this->initTempApp();
         $this->seedTestServersConfig();
@@ -96,7 +96,12 @@ final class ProcessProgressEventTest extends TestCase
         ));
 
         self::assertNotEmpty($records);
-        self::assertFalse($handler->hasWarningRecords());
+        self::assertNotEmpty(array_filter(
+            $handler->getRecords(),
+            static fn($record): bool => 'progress.queue.empty' === ($record->context['event_name'] ?? null)
+                && 'progress' === ($record->context['subsystem'] ?? null)
+                && in_array($record->context['reason'] ?? null, ['no_eligible_backends', 'no_updates_queued'], true),
+        ));
     }
 
     private function event(StateEntity $entity): DataEvent

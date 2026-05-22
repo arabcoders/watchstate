@@ -53,9 +53,6 @@ final readonly class ProcessProgressEvent
             $event->addLogEntry($level, $message, $context);
             $this->logger->log($level, $message, $context);
         };
-        $eventWriter = static function (Level $level, string $message, array $context = []) use ($event): void {
-            $event->addLogEntry($level, $message, $context);
-        };
 
         $event->stopPropagation();
 
@@ -216,7 +213,7 @@ final readonly class ProcessProgressEvent
         foreach ($list as $name => &$backend) {
             try {
                 $opts = ag($backend, 'options', []);
-                $backendLogger = LoggerProxy::create($eventWriter);
+                $backendLogger = LoggerProxy::create($writer);
 
                 if (ag($options, Options::IGNORE_DATE)) {
                     $opts[Options::IGNORE_DATE] = true;
@@ -319,7 +316,6 @@ final readonly class ProcessProgressEvent
             client: $http,
             opts: [
                 'ok' => static function (Request $request, ResponseInterface $response) use (
-                    $eventWriter,
                     $writer,
                     $options,
                     $userContext,
@@ -355,7 +351,7 @@ final readonly class ProcessProgressEvent
                     }
 
                     if (false === in_array(Status::tryFrom($statusCode), [Status::OK, Status::NO_CONTENT], true)) {
-                        $eventWriter(
+                        $writer(
                             Level::Error,
                             "Progress update for '#{item_id}' on '{user}@{backend}' failed.",
                             [
@@ -373,7 +369,7 @@ final readonly class ProcessProgressEvent
                         return [];
                     }
 
-                    $eventWriter(
+                    $writer(
                         Level::Notice,
                         "Progress update for '#{item_id}' on '{user}@{backend}' completed.",
                         [
@@ -390,14 +386,14 @@ final readonly class ProcessProgressEvent
 
                     return [];
                 },
-                'error' => static function (Request $request, Throwable $ex) use ($eventWriter, $userContext, $item, $progress): array {
+                'error' => static function (Request $request, Throwable $ex) use ($writer, $userContext, $item, $progress): array {
                     if (true === (bool) ag($request->options, 'user_data.' . Options::NO_LOGGING, false)) {
                         return [];
                     }
 
                     $context = ag($request->extras, 'context', []);
 
-                    $eventWriter(
+                    $writer(
                         Level::Error,
                         "Progress update for '#{item_id}' on '{user}@{backend}' failed.",
                         [

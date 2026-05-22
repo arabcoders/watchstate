@@ -51,9 +51,6 @@ final readonly class ProcessPushEvent
             $e->addLogEntry($level, $message, $context);
             $this->logger->log($level, $message, $context);
         };
-        $eventWriter = static function (Level $level, string $message, array $context = []) use ($e): void {
-            $e->addLogEntry($level, $message, $context);
-        };
 
         $e->stopPropagation();
         $this->queue->reset();
@@ -172,7 +169,7 @@ final readonly class ProcessPushEvent
         foreach ($list as $name => &$backend) {
             try {
                 $opts = ag($backend, 'options', []);
-                $backendLogger = LoggerProxy::create($eventWriter);
+                $backendLogger = LoggerProxy::create($writer);
 
                 if (ag($options, Options::IGNORE_DATE)) {
                     $opts[Options::IGNORE_DATE] = true;
@@ -245,7 +242,7 @@ final readonly class ProcessPushEvent
             requests: $this->queue->getQueue(),
             client: $http,
             opts: [
-                'ok' => static function (Request $request, ResponseInterface $response) use ($eventWriter, $item, $user): array {
+                'ok' => static function (Request $request, ResponseInterface $response) use ($writer, $item, $user): array {
                     if (true === (bool) ag($request->options, 'user_data.' . Options::NO_LOGGING, false)) {
                         return [];
                     }
@@ -256,7 +253,7 @@ final readonly class ProcessPushEvent
                     $context['status_code'] = $response->getStatusCode();
 
                     if (Status::OK !== Status::tryFrom($context['status_code'])) {
-                        $eventWriter(
+                        $writer(
                             Level::Error,
                             "Push update for '#{item_id}' on '{user}@{backend}' failed.",
                             [
@@ -274,7 +271,7 @@ final readonly class ProcessPushEvent
                         return [];
                     }
 
-                    $eventWriter(
+                    $writer(
                         Level::Notice,
                         "Push update for '#{item_id}' on '{user}@{backend}' completed.",
                         [
@@ -291,7 +288,7 @@ final readonly class ProcessPushEvent
 
                     return [];
                 },
-                'error' => static function (Request $request, Throwable $ex) use ($eventWriter, $item, $user): array {
+                'error' => static function (Request $request, Throwable $ex) use ($writer, $item, $user): array {
                     if (true === (bool) ag($request->options, 'user_data.' . Options::NO_LOGGING, false)) {
                         return [];
                     }
@@ -300,7 +297,7 @@ final readonly class ProcessPushEvent
                     $context['user'] = $user;
                     $context['item_id'] = $item->id;
 
-                    $eventWriter(
+                    $writer(
                         Level::Error,
                         "Push update for '#{item_id}' on '{user}@{backend}' failed.",
                         [

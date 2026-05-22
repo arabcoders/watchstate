@@ -25,7 +25,7 @@ use Psr\SimpleCache\CacheInterface as iCache;
 
 final class ProcessPushEventTest extends TestCase
 {
-    public function test_missing_metadata_logs_to_event_only(): void
+    public function test_logs_shared_missing_metadata(): void
     {
         $this->initTempApp();
         $this->seedTestServersConfig();
@@ -89,7 +89,13 @@ final class ProcessPushEventTest extends TestCase
                 },
             ),
         );
-        self::assertFalse($handler->hasWarningRecords());
+        self::assertNotEmpty(array_filter(
+            $handler->getRecords(),
+            static fn($record): bool => 'backend.item.ignored' === ($record->context['event_name'] ?? null)
+                && 'backend.push' === ($record->context['subsystem'] ?? null)
+                && 'missing_backend_metadata' === ($record->context['reason'] ?? null)
+                && 'test_jellyfin' === ($record->context['backend'] ?? null),
+        ));
     }
 
     private function event(StateEntity $entity): DataEvent
