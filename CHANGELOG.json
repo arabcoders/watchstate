@@ -1,9 +1,30 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "e3363f3aab342f4292d6a84c37da8e1a82774f04",
-    "date": "2026-05-22T16:01:50+00:00",
+    "full_sha": "45c1d0f01e29af5332d1cf5b80c18b86a74ff0a7",
+    "date": "2026-05-23T05:23:04+00:00",
     "commits": [
+      {
+        "sha": "45c1d0f0",
+        "full_sha": "45c1d0f01e29af5332d1cf5b80c18b86a74ff0a7",
+        "message": "refactor: followup on  state_id and remote_id migrations",
+        "author": "arabcoders",
+        "date": "2026-05-23T05:23:04+00:00"
+      },
+      {
+        "sha": "5bb46fe0",
+        "full_sha": "5bb46fe07f7413492cee55678652a2b73bd9fc62",
+        "message": "refactor: use updated_at field instead of updated for export state change detection. ref #831",
+        "author": "arabcoders",
+        "date": "2026-05-23T04:51:36+00:00"
+      },
+      {
+        "sha": "70af8f68",
+        "full_sha": "70af8f6882894b79bdced26f199d9b4edf47f1bf",
+        "message": "refactor: standardize on state_id for local and remote_id for backend item id.",
+        "author": "arabcoders",
+        "date": "2026-05-23T04:35:25+00:00"
+      },
       {
         "sha": "e3363f3a",
         "full_sha": "e3363f3aab342f4292d6a84c37da8e1a82774f04",
