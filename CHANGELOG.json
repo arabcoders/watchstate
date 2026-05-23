@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "d00549e63e2d277481ccc18c694039dbe1421f6a",
-    "date": "2026-05-23T05:57:01+00:00",
+    "full_sha": "a2f6aa4c35a8b1a01c5578cc6179d2a119801b19",
+    "date": "2026-05-23T06:21:27+00:00",
     "commits": [
+      {
+        "sha": "a2f6aa4c",
+        "full_sha": "a2f6aa4c35a8b1a01c5578cc6179d2a119801b19",
+        "message": "refactor: compact standard logging fields.",
+        "author": "arabcoders",
+        "date": "2026-05-23T06:21:27+00:00"
+      },
       {
         "sha": "d00549e6",
         "full_sha": "d00549e63e2d277481ccc18c694039dbe1421f6a",
