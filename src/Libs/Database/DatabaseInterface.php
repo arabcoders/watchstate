@@ -74,7 +74,7 @@ interface DatabaseInterface
      * Load entities from database.
      *
      * @param iDate|null $date Get Entities That has changed since given time, if null get all.
-     * @param array $opts (Optional) options.
+     * @param array{fields?:array<string>,DATE_COLUMN?:string,class?:iState|null} $opts (Optional) options.
      *
      * @return array<iState>
      */
@@ -165,7 +165,7 @@ interface DatabaseInterface
     /**
      * Fetch data from database.
      *
-     * @param array{fields:array<string>,after:DateTimeInterface|int|null,class:iState|null} $opts (Options to pass to the query)
+     * @param array{fields?:array<string>,after?:DateTimeInterface|int|null,DATE_COLUMN?:string,class?:iState|null} $opts (Options to pass to the query)
      *   Supported options:
      *     - fields: array<string> Columns to select.
      *     - after: DateTimeInterface|int|null Only rows updated after this timestamp.

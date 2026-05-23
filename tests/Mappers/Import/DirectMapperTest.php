@@ -39,6 +39,22 @@ class DirectMapperTest extends MapperAbstract
         self::assertArrayNotHasKey('id', $record->context);
     }
 
+    public function test_add_timestamps_now(): void
+    {
+        $before = time();
+        $this->testMovie[iState::COLUMN_UPDATED] = $before - 86_400;
+
+        $entity = new StateEntity($this->testMovie);
+        $this->mapper->add($entity);
+
+        $stored = $this->db->get($entity);
+
+        self::assertNotNull($stored);
+        self::assertSame($this->testMovie[iState::COLUMN_UPDATED], $stored->updated);
+        self::assertGreaterThanOrEqual($before, $stored->created_at);
+        self::assertGreaterThanOrEqual($before, $stored->updated_at);
+    }
+
     public function test_skip_state_no_progress(): void
     {
         $this->testMovie[iState::COLUMN_WATCHED] = 0;
@@ -122,6 +138,7 @@ class DirectMapperTest extends MapperAbstract
             'ON_SKIP_STATE callback should be called exactly once when SKIP_STATE is auto-set by DirectMapper',
         );
 
+        /** @var iState $skipStateEntity */
         $this->assertNotNull($skipStateEntity, 'Entity should be passed to ON_SKIP_STATE callback');
         $this->assertTrue($skipStateEntity->isTainted(), 'Entity should be marked as tainted');
         $this->assertSame(0, $skipStateEntity->watched, 'Entity watch state should be 0 (unwatched)');

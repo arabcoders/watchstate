@@ -445,7 +445,9 @@ class ExportCommand extends Command
                         'user' => $userContext->name,
                     ]);
 
-                    $entities = $userContext->db->getAll($lastSync);
+                    $entities = $userContext->db->getAll($lastSync, [
+                        Options::DATE_COLUMN => iState::COLUMN_UPDATED_AT,
+                    ]);
 
                     if (count($entities) < 1 && count($export) < 1) {
                         $this->logger->notice("No play-state changes detected for '{user}' since {since}.", [
