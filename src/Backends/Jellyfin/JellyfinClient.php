@@ -784,7 +784,7 @@ class JellyfinClient implements iClient
      */
     public function validateContext(Context $context): bool
     {
-        return Container::get(JellyfinValidateContext::class)($context);
+        return Container::get(JellyfinValidateContext::class)($this->withContext($context)->getContext());
     }
 
     /**
@@ -871,10 +871,16 @@ class JellyfinClient implements iClient
             $message = trim($message . ' ' . $reason);
         }
 
-        throw new $className(
+        $ex = new $className(
             message: $message,
             code: $code,
             previous: $response->error?->previous,
         );
+
+        if (method_exists($ex, 'setContext') && null !== $response->error && !empty($response->error->context)) {
+            $ex->setContext($response->error->context);
+        }
+
+        throw $ex;
     }
 }

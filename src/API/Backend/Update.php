@@ -62,7 +62,7 @@ final class Update
                 userContext: $userContext,
                 logger: Container::get(iLogger::class),
                 backendId: $config->get('uuid', null),
-                backendToken: $userContext->config->get("{$name}.token", null),
+                backendToken: $config->get('token', null),
                 backendUser: $config->get('user', null),
                 options: $config->get('options', []),
             );
@@ -104,6 +104,12 @@ final class Update
         } catch (InvalidContextException|ValidationException $e) {
             if ($e instanceof InvalidContextException) {
                 $errorContext = $e instanceof AppExceptionInterface && $e->hasContext() ? $e->getContext() : [];
+                $logUrl = isset($config) && $config instanceof DataUtil
+                    ? $config->get('url')
+                    : $userContext->config->get("{$name}.url");
+                $verifyHost = isset($config) && $config instanceof DataUtil
+                    ? (bool) $config->get('options.client.verify_host', true)
+                    : (bool) $userContext->config->get("{$name}.options.client.verify_host", true);
 
                 $this->logger->error('Failed to validate backend context. ' . $e->getMessage(), [
                     'event_name' => 'backend.context.validation_failed',
@@ -112,8 +118,8 @@ final class Update
                     'outcome' => 'failed',
                     'backend' => $name,
                     'backend_type' => $userContext->config->get("{$name}.type"),
-                    'url' => $userContext->config->get("{$name}.url"),
-                    'verify_host' => (bool) $userContext->config->get("{$name}.options.client.verify_host", true),
+                    'url' => $logUrl,
+                    'verify_host' => $verifyHost,
                     ...$errorContext,
                     ...exception_log($e),
                 ]);

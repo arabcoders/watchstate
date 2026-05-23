@@ -7,6 +7,7 @@ namespace App\API\Backends;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Exceptions\AppExceptionInterface;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Options;
 use App\Libs\Traits\APITraits;
@@ -27,6 +28,15 @@ final class Users
         try {
             $client = $this->getBasicClient($type, $params);
         } catch (InvalidArgumentException $e) {
+            $logger->error("Failed to build backend users request for '{backend_type}'.", [
+                'event_name' => 'backend.context.users_failed',
+                'subsystem' => 'backend.context',
+                'operation' => 'users_list',
+                'outcome' => 'failed',
+                'backend_type' => $type,
+                ...exception_log($e),
+            ]);
+
             return api_error($e->getMessage(), Status::BAD_REQUEST);
         }
 
@@ -49,6 +59,8 @@ final class Users
                 $users[] = $user;
             }
         } catch (Throwable $e) {
+            $errorContext = $e instanceof AppExceptionInterface && $e->hasContext() ? $e->getContext() : [];
+
             $logger->error("Failed to fetch backend users for '{backend_type}'.", [
                 'event_name' => 'backend.context.users_failed',
                 'subsystem' => 'backend.context',
@@ -58,6 +70,7 @@ final class Users
                 'target_user' => $opts[Options::TARGET_USER] ?? null,
                 'get_tokens' => (bool) ($opts[Options::GET_TOKENS] ?? false),
                 'no_cache' => (bool) ($opts[Options::NO_CACHE] ?? false),
+                ...$errorContext,
                 ...exception_log($e),
             ]);
             return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);

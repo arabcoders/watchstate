@@ -112,6 +112,7 @@ class GetUsersList
 
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             $body = $response->getContent(false);
+            $reason = $this->getBackendResponseReason($body);
 
             return new Response(
                 status: false,
@@ -131,11 +132,12 @@ class GetUsersList
                         ],
                         'response' => [
                             'body' => $body,
+                            'reason' => $reason,
                         ],
                     ],
                     level: Levels::ERROR,
                     extra: array_filter([
-                        'error' => $this->getBackendResponseReason($body),
+                        'error' => $reason,
                     ]),
                 ),
             );

@@ -59,9 +59,12 @@ class JellyfinValidateContext
 
         $action = Container::get(GetUser::class)($context);
         if ($action->hasError()) {
-            throw new InvalidContextException(r('Failed to get user info. {error}', [
+            $ex = new InvalidContextException(r('Failed to get user info. {error}', [
                 'error' => $action->error->format(),
             ]));
+            $ex->setContext($action->error->context);
+
+            throw $ex;
         }
 
         if (ag($action->response, 'id') !== $context->backendUser) {

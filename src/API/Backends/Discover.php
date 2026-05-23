@@ -8,11 +8,13 @@ use App\Backends\Plex\PlexClient;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Exceptions\AppExceptionInterface;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 use Throwable;
 
@@ -25,7 +27,7 @@ final class Discover
     ) {}
 
     #[Route(['GET', 'POST'], Index::URL . '/discover/{type}[/]', name: 'backends.get.users')]
-    public function __invoke(iRequest $request, array $args = []): iResponse
+    public function __invoke(iRequest $request, iLogger $logger, array $args = []): iResponse
     {
         if (null === ($type = ag($args, 'type'))) {
             return api_error('Invalid value for type path parameter.', Status::BAD_REQUEST);
@@ -39,6 +41,15 @@ final class Discover
             $client = $this->getBasicClient($type, DataUtil::fromRequest($request, true));
             assert($client instanceof PlexClient, 'Expected Plex client for discover request.');
         } catch (InvalidArgumentException $e) {
+            $logger->error("Failed to build backend discover request for '{backend_type}'.", [
+                'event_name' => 'backend.context.discover_failed',
+                'subsystem' => 'backend.context',
+                'operation' => 'discover',
+                'outcome' => 'failed',
+                'backend_type' => $type,
+                ...exception_log($e),
+            ]);
+
             return api_error($e->getMessage(), Status::BAD_REQUEST);
         }
 
@@ -52,6 +63,18 @@ final class Discover
             $list = $client::discover($this->http, $client->getContext()->backendToken, $opts);
             return api_response(Status::OK, ag($list, 'list', []));
         } catch (Throwable $e) {
+            $errorContext = $e instanceof AppExceptionInterface && $e->hasContext() ? $e->getContext() : [];
+
+            $logger->error("Failed to discover backends for '{backend_type}'.", [
+                'event_name' => 'backend.context.discover_failed',
+                'subsystem' => 'backend.context',
+                'operation' => 'discover',
+                'outcome' => 'failed',
+                'backend_type' => $type,
+                ...$errorContext,
+                ...exception_log($e),
+            ]);
+
             return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);
         }
     }

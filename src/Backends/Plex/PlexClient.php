@@ -1098,10 +1098,16 @@ class PlexClient implements iClient
             $message = trim($message . ' ' . $reason);
         }
 
-        throw new $className(
+        $ex = new $className(
             message: $message,
             code: $code,
             previous: $response->error?->previous,
         );
+
+        if (method_exists($ex, 'setContext') && null !== $response->error && !empty($response->error->context)) {
+            $ex->setContext($response->error->context);
+        }
+
+        throw $ex;
     }
 }

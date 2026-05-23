@@ -16,6 +16,7 @@ use Symfony\Component\Yaml\Yaml;
 use Tests\Support\FailingValidateBackendClient;
 use Tests\Support\FakeBackendClient;
 use Tests\Support\RequestResponseTrait;
+use Tests\Support\TokenAwareBackendClient;
 
 final class UpdateTest extends TestCase
 {
@@ -123,7 +124,7 @@ final class UpdateTest extends TestCase
                 method: Method::PUT,
                 uri: '/v1/api/backend/backend1',
                 post: [
-                    'url' => 'http://backend1.example.invalid',
+                    'url' => 'http://changed.example.invalid',
                     'token' => 'new_token',
                     'user' => 'user-1',
                     'uuid' => 'uuid-1',
@@ -153,8 +154,94 @@ final class UpdateTest extends TestCase
         self::assertSame('backend.context.validation_failed', $record->context['event_name'] ?? null);
         self::assertSame('backend1', $record->context['backend'] ?? null);
         self::assertSame('fake', $record->context['backend_type'] ?? null);
-        self::assertSame('http://backend1.example.invalid/system/Info', $record->context['http']['url'] ?? null);
+        self::assertSame('http://changed.example.invalid', $record->context['url'] ?? null);
+        self::assertSame('http://changed.example.invalid/system/Info', $record->context['http']['url'] ?? null);
         self::assertSame(200, $record->context['http']['status_code'] ?? null);
         self::assertSame('text/html', $record->context['response']['content_type'] ?? null);
+    }
+
+    public function test_rejects_bad_token(): void
+    {
+        Config::save('supported.fake', TokenAwareBackendClient::class);
+
+        $handler = new Update($this->createStub(iImport::class), new Logger('test'));
+
+        $response = $handler->update(
+            $this->getRequest(
+                method: Method::PUT,
+                uri: '/v1/api/backend/backend1',
+                post: [
+                    'url' => 'http://backend1.example.invalid',
+                    'token' => 'bad-token',
+                    'user' => 'user-1',
+                    'uuid' => 'uuid-1',
+                    'import' => [
+                        'enabled' => true,
+                    ],
+                    'export' => [
+                        'enabled' => true,
+                    ],
+                ],
+            ),
+            'backend1',
+        );
+
+        self::assertSame(Status::BAD_REQUEST->value, $response->getStatusCode());
+
+        $payload = json_decode((string) $response->getBody(), true, flags: JSON_THROW_ON_ERROR);
+        $saved = Yaml::parseFile((string) Config::get('backends_file'));
+
+        self::assertSame('Backend responded with 401. Most likely means token is invalid.', ag($payload, 'error.message'));
+        self::assertSame('token1', ag($saved, 'backend1.token'));
+    }
+
+    public function test_accepts_recovered_token(): void
+    {
+        Config::save('supported.fake', TokenAwareBackendClient::class);
+
+        file_put_contents((string) Config::get('backends_file'), Yaml::dump([
+            'backend1' => [
+                'type' => 'fake',
+                'url' => 'http://backend1.example.invalid',
+                'token' => 'bad-token',
+                'user' => 'user-1',
+                'uuid' => 'uuid-1',
+                'options' => [],
+                'import' => [
+                    'enabled' => true,
+                ],
+                'export' => [
+                    'enabled' => true,
+                ],
+            ],
+        ], 8, 2));
+
+        $handler = new Update($this->createStub(iImport::class), new Logger('test'));
+
+        $response = $handler->update(
+            $this->getRequest(
+                method: Method::PUT,
+                uri: '/v1/api/backend/backend1',
+                post: [
+                    'url' => 'http://backend1.example.invalid',
+                    'token' => 'good-token',
+                    'user' => 'user-1',
+                    'uuid' => 'uuid-1',
+                    'import' => [
+                        'enabled' => true,
+                    ],
+                    'export' => [
+                        'enabled' => true,
+                    ],
+                ],
+            ),
+            'backend1',
+        );
+
+        self::assertSame(Status::OK->value, $response->getStatusCode());
+
+        $saved = Yaml::parseFile((string) Config::get('backends_file'));
+
+        self::assertSame('good-token', ag($saved, 'backend1.token'));
     }
 }
