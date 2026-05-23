@@ -32,9 +32,35 @@ final readonly class LoggerProxy implements LoggerInterface
     public function log($level, Stringable|string $message, array $context = []): void
     {
         if (false === $level instanceof Level) {
-            $level = Level::tryFrom($level) ?? Level::Notice;
+            $level = $this->normalizeLevel($level);
         }
         ($this->callback)($level, $message, $context);
+    }
+
+    /**
+     * Normalize PSR, backend, and Monolog level values.
+     */
+    private function normalizeLevel(mixed $level): Level
+    {
+        if (is_int($level)) {
+            return Level::tryFrom($level) ?? Level::Notice;
+        }
+
+        if (is_string($level)) {
+            return match (strtolower($level)) {
+                'debug' => Level::Debug,
+                'info' => Level::Info,
+                'notice' => Level::Notice,
+                'warning' => Level::Warning,
+                'error' => Level::Error,
+                'critical' => Level::Critical,
+                'alert' => Level::Alert,
+                'emergency' => Level::Emergency,
+                default => Level::Notice,
+            };
+        }
+
+        return Level::Notice;
     }
 
     public function emergency(Stringable|string $message, array $context = []): void
