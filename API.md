@@ -263,7 +263,7 @@ Lists configured backends for the current user.
 ```
 
 **Notes**:
-- External responses omit the stored `options` object except for `options.IMPORT_METADATA_ONLY`.
+- External responses omit the stored `options` object.
 - The generated webhook URL includes `?apikey=...` when secure API mode is enabled.
 
 ---
@@ -605,7 +605,7 @@ Replaces a saved backend configuration and revalidates it.
 
 **Notes**:
 - Removed legacy keys are stripped automatically before the config is persisted.
-- When `import.enabled=true`, `options.IMPORT_METADATA_ONLY` is removed as a sanity check.
+- Backends with `import.enabled=false` now run in metadata-only mode.
 
 ---
 

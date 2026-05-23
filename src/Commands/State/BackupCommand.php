@@ -117,7 +117,8 @@ class BackupCommand extends Command
                         <notice>[ Important info ]</notice>
                         ------------------
 
-                        The command will only work on backends that has import enabled.
+                        The command will work on backends that can refresh metadata. Backends with <value>import.enabled=false</value>
+                        are still eligible because they now run in metadata-only mode.
 
                         Backups generated without [<flag>-k</flag>, <flag>--keep</flag>] flag are subject to be <notice>REMOVED</notice> during system:prune run.
                         To keep permanent copy of your backups you can use the [<flag>-k</flag>, </flag>--keep</info>] flag. For example:
@@ -385,37 +386,6 @@ class BackupCommand extends Command
                     'reason' => 'unsupported_type',
                 ]);
                 continue;
-            }
-
-            if (true !== (bool) ag($backend, 'import.enabled')) {
-                if ($isCustom) {
-                    $this->logger->notice(
-                        "Backing up disabled import backend '{user}@{backend}' because it was explicitly selected.",
-                        [
-                            'event_name' => 'state.backup.backend.forced',
-                            'subsystem' => 'state.backup',
-                            'operation' => 'select_backend',
-                            'outcome' => 'forced',
-                            'command' => self::ROUTE,
-                            'user' => $userContext->name,
-                            'backend' => $backendName,
-                            'reason' => 'explicitly_selected',
-                            'import_enabled' => false,
-                        ],
-                    );
-                } else {
-                    $this->logger->info("Skipping '{user}@{backend}': import is disabled.", [
-                        'event_name' => 'state.backup.backend.skipped',
-                        'subsystem' => 'state.backup',
-                        'operation' => 'select_backend',
-                        'outcome' => 'skipped',
-                        'command' => self::ROUTE,
-                        'user' => $userContext->name,
-                        'backend' => $backendName,
-                        'reason' => 'import_disabled',
-                    ]);
-                    continue;
-                }
             }
 
             if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {

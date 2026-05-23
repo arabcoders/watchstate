@@ -65,17 +65,15 @@ For each backend, follow these steps:
 Do exactly as you did for the main backend, but make the following changes:
 
 - *`Import play and progress updates`*: No
-- *`Import metadata only`*: Yes
 - *`Send play and progress updates`*: Yes
 - *`Force export local data to this backend: Yes`*: This depends on your setup:
     - If you have only one extra backend and have already imported your main backend data, select *Yes* and skip Step 2.
     - If you have multiple backends, keep this option disabled and proceed to Step 2.
 
 > [!IMPORTANT]  
-> Selecting the correct options is crucial to avoid altering the data in the main backend. The
-> *`Import metadata only`* will only appear if you have
-*`Import play and progress updates`*
-> disabled.
+> Selecting the correct options is crucial to avoid altering the data in the main backend. When
+> *`Import play and progress updates`* is disabled, WatchState automatically keeps metadata refresh
+> enabled for that backend.
 
 ### Step 2
 

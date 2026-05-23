@@ -150,12 +150,6 @@ return [
         'description' => 'Whether to enable debug tracing when operations are running.',
     ],
     [
-        'key' => 'options.IMPORT_METADATA_ONLY',
-        'type' => 'bool',
-        'visible' => false,
-        'description' => 'Whether to import metadata only when syncing.',
-    ],
-    [
         'key' => 'options.DRY_RUN',
         'type' => 'bool',
         'visible' => false,

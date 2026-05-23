@@ -15,7 +15,6 @@ use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
-use App\Libs\Options;
 use App\Libs\TestCase;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
@@ -27,6 +26,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
+use Symfony\Component\Yaml\Yaml;
 use Tests\Support\FakeBackendClient;
 use Tests\Support\StateCommandTestSupport;
 
@@ -193,8 +193,8 @@ final class ImportCommandTest extends TestCase
     public function test_fake_backend_runs_import(): void
     {
         $logger = $this->initFakeBackendApp($this->fakeBackendConfig('fake_import', [
-            'options' => [
-                Options::IMPORT_METADATA_ONLY => true,
+            'import' => [
+                'enabled' => false,
             ],
         ]));
         $logger->pushProcessor(new LogMessageProcessor());
@@ -213,6 +213,9 @@ final class ImportCommandTest extends TestCase
         self::assertSame(ImportCommand::SUCCESS, $status);
         self::assertSame([], FakeBackendClient::getCalls('metadata'));
         self::assertSame([], FakeBackendClient::getCalls('backup'));
+
+        $saved = Yaml::parseFile((string) Config::get('backends_file'));
+        self::assertFalse(ag_exists(ag($saved, 'fake_import.options', []), 'IMPORT_METADATA_ONLY'));
     }
 
     public function test_invalid_user_returns_failure(): void

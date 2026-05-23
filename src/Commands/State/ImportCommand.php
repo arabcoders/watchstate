@@ -298,7 +298,8 @@ class ImportCommand extends Command
 
             foreach ($userContext->config->getAll() as $backendName => $backend) {
                 $type = strtolower(ag($backend, 'type', 'unknown'));
-                $metadata = false;
+                $importEnabled = true === (bool) ag($backend, 'import.enabled');
+                $metadata = false === $importEnabled;
 
                 if ($isCustom && $input->getOption('exclude') === $this->in_array($selected, $backendName)) {
                     $this->logger->info("Skipping '{user}@{backend}': excluded by selection.", [
@@ -315,50 +316,8 @@ class ImportCommand extends Command
                     continue;
                 }
 
-                // -- sanity check in case user has both import.enabled and options.IMPORT_METADATA_ONLY enabled.
-                if (true === (bool) ag($backend, 'import.enabled')) {
-                    if (true === ag_exists($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
-                        $backend = ag_delete($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
-                    }
-                }
-
-                if (true === (bool) ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
-                    $metadata = true;
-                }
-
                 if (true === $input->getOption('metadata-only')) {
                     $metadata = true;
-                }
-
-                if (true !== $metadata && true !== (bool) ag($backend, 'import.enabled')) {
-                    if ($isCustom) {
-                        $this->logger->warning(
-                            message: "Importing from disabled backend '{user}@{backend}' because it was explicitly selected.",
-                            context: [
-                                'event_name' => 'state.import.backend.forced',
-                                'subsystem' => 'state.import',
-                                'operation' => 'select_backend',
-                                'outcome' => 'forced',
-                                'command' => self::ROUTE,
-                                'user' => $userContext->name,
-                                'backend' => $backendName,
-                                'reason' => 'explicitly_selected',
-                                'import_enabled' => false,
-                            ],
-                        );
-                    } else {
-                        $this->logger->info("Skipping '{user}@{backend}': import is disabled.", [
-                            'event_name' => 'state.import.backend.skipped',
-                            'subsystem' => 'state.import',
-                            'operation' => 'select_backend',
-                            'outcome' => 'skipped',
-                            'command' => self::ROUTE,
-                            'user' => $userContext->name,
-                            'backend' => $backendName,
-                            'reason' => 'import_disabled',
-                        ]);
-                        continue;
-                    }
                 }
 
                 if (!isset($supported[$type])) {
@@ -461,7 +420,7 @@ class ImportCommand extends Command
             );
 
             foreach ($list as $name => &$backend) {
-                $metadata = false;
+                $metadata = true !== (bool) ag($backend, 'import.enabled');
                 $opts = ag($backend, 'options', []);
 
                 if (true === $hasLibrarySelect) {
@@ -469,14 +428,13 @@ class ImportCommand extends Command
                     $opts[Options::LIBRARY_INVERSE] = $inverseLibrarySelect;
                 }
 
-                if (true === (bool) ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
+                if (true === $input->getOption('metadata-only')) {
                     $opts[Options::IMPORT_METADATA_ONLY] = true;
                     $metadata = true;
                 }
 
-                if (true === $input->getOption('metadata-only')) {
+                if (true === $metadata) {
                     $opts[Options::IMPORT_METADATA_ONLY] = true;
-                    $metadata = true;
                 }
 
                 if (true === $input->getOption('force-replace-metadata')) {

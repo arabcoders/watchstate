@@ -407,37 +407,7 @@ final class ProcessWebhookEvent
         $backend = $userContext->config->get($backendName);
 
         $debugTrace = true === (bool) ag($backend, 'options.' . Options::DEBUG_TRACE);
-
-        if (true === ($importEnabled = (bool) ag($backend, 'import.enabled'))) {
-            if (true === ag_exists($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
-                $backend = ag_delete($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
-                $userContext->config->delete("{$backendName}.options." . Options::IMPORT_METADATA_ONLY)->persist();
-            }
-        }
-
-        $metadataOnly = true === (bool) ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
-
-        if (true !== $metadataOnly && true !== $importEnabled) {
-            if (false === $isGeneric) {
-                $this->write(
-                    $request,
-                    Level::Warning,
-                    "Ignoring webhook for '{user}@{backend}': import is disabled.",
-                    context: [
-                        'user' => $userContext->name,
-                        'backend' => $backendName,
-                        'client' => $client->getType(),
-                        'event_name' => 'webhook.backend.import_disabled',
-                        'subsystem' => 'webhook',
-                        'operation' => 'process',
-                        'outcome' => 'ignored',
-                        'reason' => 'import_disabled',
-                    ],
-                );
-            }
-
-            return;
-        }
+        $importEnabled = true === (bool) ag($backend, 'import.enabled');
 
         try {
             // -- Maybe the user doesn't have access to the item, so an http exception may be thrown.
@@ -509,7 +479,7 @@ final class ProcessWebhookEvent
 
         $opts = [
             'tainted' => $entity->isTainted(),
-            Options::IMPORT_METADATA_ONLY => $metadataOnly,
+            Options::IMPORT_METADATA_ONLY => false === $importEnabled,
             Options::REQUEST_ID => ag($request->getServerParams(), 'X_REQUEST_ID'),
             Options::DEBUG_TRACE => $debugTrace,
             Options::IS_GENERIC => $isGeneric,

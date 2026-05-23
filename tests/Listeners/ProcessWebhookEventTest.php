@@ -14,6 +14,7 @@ use App\Libs\Enums\Http\Method;
 use App\Libs\Events\DataEvent;
 use App\Libs\Extends\JsonlFormatter;
 use App\Libs\Mappers\Import\DirectMapper;
+use App\Libs\Options;
 use App\Libs\TestCase;
 use App\Listeners\ProcessWebhookEvent;
 use App\Model\Events\Event;
@@ -22,6 +23,7 @@ use App\Model\Events\EventStatus;
 use Monolog\Logger;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\SimpleCache\CacheInterface;
+use Symfony\Component\Yaml\Yaml;
 use Tests\Support\RequestResponseTrait;
 
 final class ProcessWebhookEventTest extends TestCase
@@ -147,6 +149,54 @@ final class ProcessWebhookEventTest extends TestCase
         $event = $this->event('req-1', null, 'raw-body');
 
         $listener($event);
+    }
+
+    public function test_disabled_import_backend_is_processed_as_metadata_only(): void
+    {
+        $userContext = get_user_context(
+            'main',
+            new DirectMapper(new Logger('setup'), Container::get(iDB::class), Container::get(CacheInterface::class)),
+            new Logger('setup'),
+        );
+        $userContext->config->set('test_plex.import.enabled', false);
+        $userContext->config->set('test_plex.options.IMPORT_METADATA_ONLY', true)->persist();
+
+        $cache = Container::get(CacheInterface::class);
+        $logger = new Logger('test');
+
+        $client = $this->createMock(iClient::class);
+        $client->expects($this->once())->method('processRequest')->willReturnCallback($this->inspect(...));
+        $client->expects($this->once())->method('parseWebhook')->willReturn($this->movie());
+        $client->method('withContext')->willReturnSelf();
+        $client->method('setLogger')->willReturnSelf();
+        $client->method('getName')->willReturn('test_plex');
+        $client->method('getType')->willReturn('plex');
+
+        Container::add(iClient::class, $client);
+
+        $listener = new ProcessWebhookEvent(new DirectMapper($logger, Container::get(iDB::class), $cache), $logger);
+        $event = $this->event('req-2');
+
+        $listener($event);
+
+        $processingLog = null;
+        foreach ($event->getLogs() as $log) {
+            if (false === JsonlFormatter::isJsonlRecord($log)) {
+                continue;
+            }
+
+            $payload = json_decode($log, true, 512, JSON_THROW_ON_ERROR);
+            if ('webhook.item.processing' === ag($payload, 'fields.event_name')) {
+                $processingLog = $payload;
+                break;
+            }
+        }
+
+        self::assertNotNull($processingLog);
+        self::assertSame('webhook.item.processing', ag($processingLog, 'fields.event_name'));
+        self::assertSame('req-2', ag($processingLog, 'fields.request_id'));
+
+        $saved = Yaml::parseFile((string) Config::get('backends_file'));
     }
 
     private function inspect(iRequest $request): iRequest

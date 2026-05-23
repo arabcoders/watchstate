@@ -35,6 +35,7 @@ final class UpdateTest extends TestCase
                 'uuid' => 'uuid-1',
                 'webhook' => [],
                 'options' => [
+                    'IMPORT_METADATA_ONLY' => true,
                     'use_old_progress_endpoint' => true,
                     'keep' => 'value1',
                 ],
@@ -53,6 +54,7 @@ final class UpdateTest extends TestCase
                 'uuid' => 'uuid-2',
                 'webhook' => [],
                 'options' => [
+                    'IMPORT_METADATA_ONLY' => true,
                     'use_old_progress_endpoint' => true,
                     'keep' => 'value2',
                 ],
@@ -102,5 +104,7 @@ final class UpdateTest extends TestCase
         self::assertFalse(ag_exists(ag($saved, 'backend2', []), 'webhook'));
         self::assertFalse(ag_exists(ag($saved, 'backend1.options', []), 'use_old_progress_endpoint'));
         self::assertFalse(ag_exists(ag($saved, 'backend2.options', []), 'use_old_progress_endpoint'));
+        self::assertFalse(ag_exists(ag($saved, 'backend1.options', []), 'IMPORT_METADATA_ONLY'));
+        self::assertFalse(ag_exists(ag($saved, 'backend2.options', []), 'IMPORT_METADATA_ONLY'));
     }
 }

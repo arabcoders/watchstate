@@ -297,8 +297,6 @@ export interface BackendOptions {
   DUMP_PAYLOAD?: boolean;
   /** Whether to enable debug tracing when operations are running */
   DEBUG_TRACE?: boolean;
-  /** Whether to import metadata only when syncing */
-  IMPORT_METADATA_ONLY?: boolean;
   /** Enable dry-run changes will not be committed in supported context */
   DRY_RUN?: boolean;
   /** The max range a single record/episode can cover (default is 5) */
