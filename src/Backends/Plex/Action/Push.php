@@ -250,6 +250,8 @@ final class Push
 
                 $isWatched = 0 === (int) ag($json, 'viewCount', 0) ? 0 : 1;
                 $playState = 1 === $isWatched ? 'Played' : 'Unplayed';
+                $remoteTime = ag($json, 1 === $isWatched ? 'lastViewedAt' : 'addedAt');
+                $remoteTime = is_int($remoteTime) || is_string($remoteTime) ? $remoteTime : null;
 
                 if ($entity->watched === $isWatched) {
                     $this->logger->info(
@@ -270,7 +272,7 @@ final class Push
                 if (false === (bool) ag($context->options, Options::IGNORE_DATE, false)) {
                     $dateKey = 1 === $isWatched ? 'lastViewedAt' : 'addedAt';
 
-                    if (null === ($date = ag($json, $dateKey))) {
+                    if (null === $remoteTime) {
                         $this->logger->error(
                             message: "Ignoring {item.type} '#{item.state_id}: {item.title}' from '{user}@{backend}': missing backend date '{date_key}'.",
                             context: [
@@ -287,7 +289,7 @@ final class Push
                         continue;
                     }
 
-                    $date = make_date($date);
+                    $date = make_date($remoteTime);
 
                     $timeExtra = (int) ag($context->options, Options::EXPORT_ALLOWED_TIME_DIFF, 10);
 
@@ -326,7 +328,11 @@ final class Push
                     );
 
                 $logContext['remote']['url'] = (string) $url;
-                $requestContext = $logContext + ['play_state' => $entity->isWatched() ? 'Played' : 'Unplayed'];
+                $requestContext = $logContext
+                + [
+                    'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                    ...$this->timeContext($entity->updated, $remoteTime),
+                ];
 
                 $this->logger->debug(
                     message: "Updating play state for {item.type} '#{item.state_id}: {item.title}' on '{user}@{backend}' to '{play_state}'.",

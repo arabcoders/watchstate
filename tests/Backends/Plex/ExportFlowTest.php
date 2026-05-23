@@ -44,6 +44,24 @@ class ExportFlowTest extends PlexTestCase
 
         $this->assertSame(1, $queue->count());
         $this->assertContainsOnlyInstancesOf(Request::class, $queue->getQueue());
+
+        $request = $queue->getQueue()[0];
+        ($request->success)(new MockResponse('', ['http_code' => 200]));
+
+        $records = $this->handler?->getRecords() ?? [];
+        $completed = array_filter(
+            $records,
+            static fn(LogRecord $record): bool => 'backend.state_update.completed' === ($record->context['event_name'] ?? null)
+                && 'backend.export' === ($record->context['subsystem'] ?? null)
+                && 'update_state' === ($record->context['operation'] ?? null),
+        );
+
+        $this->assertNotEmpty($completed);
+
+        $record = end($completed);
+        $this->assertSame((string) make_date(2000), $record->context['local_time'] ?? null);
+        $this->assertSame((string) make_date($item['addedAt']), $record->context['remote_time'] ?? null);
+        $this->assertSame(2000 - $item['addedAt'], $record->context['diff_time'] ?? null);
     }
 
     public function test_export_ignores_state_unchanged(): void

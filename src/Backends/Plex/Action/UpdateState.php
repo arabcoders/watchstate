@@ -67,6 +67,8 @@ final class UpdateState
                         continue;
                     }
 
+                    $remoteTime = $this->metaTimeContext($meta);
+
                     if (true === (bool) ag($context->options, Options::DRY_RUN, false)) {
                         $this->logger->notice(
                             message: "Would update play state for {item.type} '{item.title}' on '{user}@{backend}' to '{item.play_state}'.",
@@ -98,6 +100,7 @@ final class UpdateState
                     $requestContext = [
                         ...$rContext,
                         'play_state' => $entity->isWatched() ? 'played' : 'unplayed',
+                        ...$this->timeContext($entity->updated, $remoteTime),
                         'item' => [
                             'remote_id' => (string) $itemId,
                             'title' => $entity->getName(),

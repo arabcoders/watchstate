@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Backends\Common;
 
 use App\Libs\Container;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Options;
 use DateInterval;
+use DateTimeInterface;
 use JsonException;
 use Psr\Log\LoggerInterface as iLogger;
 use Throwable;
@@ -123,6 +125,28 @@ trait CommonTrait
     protected function getLogger(): iLogger
     {
         return Container::get(iLogger::class);
+    }
+
+    protected function timeContext(int $localTime, int|string|null $remoteTime): array
+    {
+        $remoteDate = null === $remoteTime || '' === (string) $remoteTime ? null : make_date($remoteTime);
+
+        return [
+            'local_time' => make_date($localTime)->format(DateTimeInterface::ATOM),
+            'remote_time' => null === $remoteDate ? null : $remoteDate->format(DateTimeInterface::ATOM),
+            'diff_time' => null === $remoteDate ? null : $localTime - $remoteDate->getTimestamp(),
+        ];
+    }
+
+    protected function metaTimeContext(array $metadata): int|string|null
+    {
+        $key = true === (bool) ag($metadata, iState::COLUMN_WATCHED)
+            ? iState::COLUMN_META_DATA_PLAYED_AT
+            : iState::COLUMN_META_DATA_ADDED_AT;
+
+        $value = ag($metadata, $key);
+
+        return is_int($value) || is_string($value) ? $value : null;
     }
 
     /**

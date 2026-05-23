@@ -67,5 +67,23 @@ class PushQueueTest extends PlexTestCase
         $this->assertTrue($result->isSuccessful());
         $this->assertSame(1, $queue->count());
         $this->assertContainsOnlyInstancesOf(Request::class, $queue->getQueue());
+
+        $request = $queue->getQueue()[0];
+        ($request->success)(new MockResponse('', ['http_code' => 200]));
+
+        $records = $this->handler?->getRecords() ?? [];
+        $completed = array_filter(
+            $records,
+            static fn($record): bool => 'backend.state_update.completed' === ($record->context['event_name'] ?? null)
+                && 'backend.push' === ($record->context['subsystem'] ?? null)
+                && 'update_state' === ($record->context['operation'] ?? null),
+        );
+
+        $this->assertNotEmpty($completed);
+
+        $record = end($completed);
+        $this->assertSame((string) make_date(2000), $record->context['local_time'] ?? null);
+        $this->assertSame((string) make_date(1000), $record->context['remote_time'] ?? null);
+        $this->assertSame(1000, $record->context['diff_time'] ?? null);
     }
 }

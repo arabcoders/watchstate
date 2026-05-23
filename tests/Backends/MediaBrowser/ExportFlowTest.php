@@ -24,6 +24,7 @@ class ExportFlowTest extends MediaBrowserTestCase
     public function test_export_queues_requests(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass]) {
+            $this->handler?->clear();
             $context = $this->makeContext($clientName, [
                 Options::IGNORE_DATE => true,
                 Options::DEBUG_TRACE => true,
@@ -65,6 +66,22 @@ class ExportFlowTest extends MediaBrowserTestCase
             $this->assertCount(1, $followUps);
             $this->assertContainsOnlyInstancesOf(Request::class, $followUps);
             $this->assertStringContainsString('/Users/user-1/Items/item-1/UserData', (string) $followUps[0]->url);
+
+            $records = $this->handler?->getRecords() ?? [];
+            $completed = array_filter(
+                $records,
+                static fn(LogRecord $record): bool => 'backend.state_update.completed' === ($record->context['event_name'] ?? null)
+                    && 'backend.export' === ($record->context['subsystem'] ?? null)
+                    && 'update_state' === ($record->context['operation'] ?? null),
+            );
+
+            $this->assertNotEmpty($completed);
+
+            $remoteTime = make_date($item['DateCreated']);
+            $record = end($completed);
+            $this->assertSame((string) make_date(2000), $record->context['local_time'] ?? null);
+            $this->assertSame((string) $remoteTime, $record->context['remote_time'] ?? null);
+            $this->assertSame(2000 - $remoteTime->getTimestamp(), $record->context['diff_time'] ?? null);
         }
     }
 

@@ -67,6 +67,8 @@ class UpdateState
                         continue;
                     }
 
+                    $remoteTime = $this->metaTimeContext($meta);
+
                     $url = $context->backendUrl->withPath(
                         r('/Users/{user_id}/PlayedItems/{item_id}', [
                             'user_id' => $context->backendUser,
@@ -106,6 +108,7 @@ class UpdateState
                     $requestContext = [
                         ...$rContext,
                         'play_state' => $entity->isWatched() ? 'played' : 'unplayed',
+                        ...$this->timeContext($entity->updated, $remoteTime),
                         'item' => [
                             'remote_id' => (string) $itemId,
                             'title' => $entity->getName(),

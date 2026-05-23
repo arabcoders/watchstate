@@ -262,7 +262,11 @@ final class Export extends Import
 
             Message::increment("{$context->userContext->name}.{$context->backendName}.export");
 
-            $requestContext = [...$logContext, 'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed'];
+            $requestContext = [
+                ...$logContext,
+                'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                ...$this->timeContext($entity->updated, $rItem->updated),
+            ];
 
             if (true === (bool) ag($context->options, Options::DRY_RUN, false)) {
                 $this->logger->notice(

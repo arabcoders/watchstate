@@ -86,6 +86,11 @@ class PushQueueTest extends MediaBrowserTestCase
 
             $this->assertNotEmpty($start);
             $this->assertNotEmpty($completed);
+
+            $record = end($completed);
+            $this->assertSame((string) make_date(2000), $record->context['local_time'] ?? null);
+            $this->assertSame((string) make_date('1970-01-01T00:00:01Z'), $record->context['remote_time'] ?? null);
+            $this->assertSame(1999, $record->context['diff_time'] ?? null);
         }
     }
 
