@@ -335,7 +335,7 @@ class PlexGuidTest extends TestCase
 
     public function test_has()
     {
-        $context = ['item' => ['id' => 123, 'type' => 'episode', 'title' => 'Test title', 'year' => 2021]];
+        $context = ['item' => ['remote_id' => 123, 'type' => 'episode', 'title' => 'Test title', 'year' => 2021]];
 
         $this->assertTrue($this->getClass()->has([
             ['id' => 'com.plexapp.agents.imdb://123456'],
@@ -353,7 +353,7 @@ class PlexGuidTest extends TestCase
     {
         $context = [
             'item' => [
-                'id' => 123,
+                'remote_id' => 123,
                 'type' => 'episode',
                 'title' => 'Test title',
                 'year' => 2021,
@@ -394,7 +394,7 @@ class PlexGuidTest extends TestCase
 
     public function test_get()
     {
-        $context = ['item' => ['id' => 123, 'type' => 'episode', 'title' => 'Test title', 'year' => 2021]];
+        $context = ['item' => ['remote_id' => 123, 'type' => 'episode', 'title' => 'Test title', 'year' => 2021]];
 
         $this->assertEquals([], $this->getClass()->get([
             ['id' => 'com.plexapp.agents.imdb'],

@@ -181,7 +181,7 @@ final class ParseWebhook
             $logContext = [
                 ...$logContext,
                 'item' => [
-                    'id' => ag($item, 'ratingKey'),
+                    'remote_id' => (string) ag($item, 'ratingKey'),
                     'type' => ag($item, 'type'),
                     'title' => match ($type) {
                         iState::TYPE_MOVIE => r('{title} ({year})', [

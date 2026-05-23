@@ -454,7 +454,7 @@ final class PlexGuid implements iGuid
     {
         $guid = [];
 
-        $id = ag($context, 'item.id', null);
+        $id = ag($context, 'item.remote_id', null);
         $type = ag($context, 'item.type', '??');
         $type = PlexClient::TYPE_MAPPER[$type] ?? $type;
         $bName = $this->context->backendName;
@@ -480,7 +480,7 @@ final class PlexGuid implements iGuid
 
                 if (false === str_contains($val, '://')) {
                     if (true === $log) {
-                        $this->logger->info("Ignoring external id '{guid_source}:{guid_value}' for '#{item_id}' from '{user}@{backend}': {reason_label}.", [
+                        $this->logger->info("Ignoring external id '{guid_source}:{guid_value}' for '#{remote_id}' from '{user}@{backend}': {reason_label}.", [
                             'event_name' => 'guid.external_id.ignored',
                             'subsystem' => 'guid',
                             'operation' => 'parse',
@@ -490,7 +490,7 @@ final class PlexGuid implements iGuid
                             'client' => $this->context->clientName,
                             'user' => $this->context->userContext->name,
                             'backend' => $this->context->backendName,
-                            'item_id' => $id,
+                            'remote_id' => $id,
                             'guid_source' => before($val, '://'),
                             'guid_value' => after($val, '://'),
                             ...$context,
@@ -509,7 +509,7 @@ final class PlexGuid implements iGuid
                 if (true === is_ignored_id($this->context->userContext, $bName, $type, $key, $value, $id)) {
                     if (true === $log) {
                         $this->logger->debug(
-                            "Ignoring external id '{guid_source}:{guid_value}' for '#{item_id}' from '{user}@{backend}': {reason_label}.",
+                            "Ignoring external id '{guid_source}:{guid_value}' for '#{remote_id}' from '{user}@{backend}': {reason_label}.",
                             [
                                 'event_name' => 'guid.external_id.ignored',
                                 'subsystem' => 'guid',
@@ -520,7 +520,7 @@ final class PlexGuid implements iGuid
                                 'client' => $this->context->clientName,
                                 'user' => $this->context->userContext->name,
                                 'backend' => $bName,
-                                'item_id' => $id,
+                                'remote_id' => $id,
                                 'guid_source' => $key,
                                 'guid_value' => $value,
                                 'guid' => [
@@ -544,7 +544,7 @@ final class PlexGuid implements iGuid
                         $guidValues = [$guid[$this->guidMapper[$key]], $value];
 
                         $this->logger->info(
-                            "External id conflict for '#{item_id}: {item_title}' from '{user}@{backend}': multiple {guid_source} ids reported: '{guid_values_text}'.",
+                            "External id conflict for '#{remote_id}: {item_title}' from '{user}@{backend}': multiple {guid_source} ids reported: '{guid_values_text}'.",
                             [
                                 'event_name' => 'guid.external_id.conflict',
                                 'subsystem' => 'guid',
@@ -554,7 +554,7 @@ final class PlexGuid implements iGuid
                                 'client' => $this->context->clientName,
                                 'user' => $this->context->userContext->name,
                                 'backend' => $this->context->backendName,
-                                'item_id' => $id,
+                                'remote_id' => $id,
                                 'guid_source' => $key,
                                 'guid_values' => $guidValues,
                                 ...$context,
@@ -577,7 +577,7 @@ final class PlexGuid implements iGuid
             } catch (Throwable $e) {
                 if (true === $log) {
                     $this->logger->info(
-                        message: "Ignoring external id '{guid_source}:{guid_value}' for '#{item_id}' from '{user}@{backend}': {reason_label}.",
+                        message: "Ignoring external id '{guid_source}:{guid_value}' for '#{remote_id}' from '{user}@{backend}': {reason_label}.",
                         context: [
                             'event_name' => 'guid.external_id.ignored',
                             'subsystem' => 'guid',
@@ -588,7 +588,7 @@ final class PlexGuid implements iGuid
                             'client' => $this->context->clientName,
                             'user' => $this->context->userContext->name,
                             'backend' => $this->context->backendName,
-                            'item_id' => $id,
+                            'remote_id' => $id,
                             'guid_source' => before($val, '://'),
                             'guid_value' => after($val, '://'),
                             ...$context,
@@ -658,7 +658,7 @@ final class PlexGuid implements iGuid
                         'reason' => 'legacy_parse_failed',
                         'reason_label' => 'legacy GUID parsing failed',
                         'user' => $this->context->userContext->name,
-                        'item_id' => ag($context, 'item.id'),
+                        'remote_id' => ag($context, 'item.remote_id'),
                         'guid_source' => before($guid, '://'),
                         'guid_value' => after($guid, '://'),
                         'backend' => $this->context->backendName,
@@ -723,7 +723,7 @@ final class PlexGuid implements iGuid
                         'reason' => 'nfo_parse_failed',
                         'reason_label' => 'NFO GUID parsing failed',
                         'user' => $this->context->userContext->name,
-                        'item_id' => ag($context, 'item.id'),
+                        'remote_id' => ag($context, 'item.remote_id'),
                         'guid_source' => before($guid, '://'),
                         'guid_value' => after($guid, '://'),
                         'backend' => $this->context->backendName,

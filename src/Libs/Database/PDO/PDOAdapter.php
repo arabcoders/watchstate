@@ -248,7 +248,7 @@ final class PDOAdapter implements iDB
                 'subsystem' => 'database',
                 'operation' => 'lookup',
                 'outcome' => 'started',
-                'item_id' => null === $entity->id ? null : (string) $entity->id,
+                'state_id' => null === $entity->id ? null : (string) $entity->id,
                 'item_title' => $entity->getName(),
             ]);
         }
@@ -813,7 +813,7 @@ final class PDOAdapter implements iDB
             'operation' => $operation,
             'outcome' => 'failed',
             'table' => 'state',
-            'item_id' => null === $entity->id ? null : (string) $entity->id,
+            'state_id' => null === $entity->id ? null : (string) $entity->id,
             'item_type' => $entity->type,
             'item_title' => $entity->getName(),
             'item_label' => null !== $entity->id

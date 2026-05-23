@@ -192,7 +192,8 @@ final class ValidateCommandTest extends TestCase
         );
         self::assertSame('main', $match[0]->context['user']);
         self::assertSame('fake_validate', $match[0]->context['backend']);
-        self::assertSame('777', (string) $match[0]->context['item_id']);
+        self::assertSame('1', (string) $match[0]->context['state_id']);
+        self::assertSame('777', (string) $match[0]->context['remote_id']);
         self::assertSame(\RuntimeException::class, $match[0]->context['error']['type']);
     }
 

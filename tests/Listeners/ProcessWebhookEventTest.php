@@ -93,7 +93,7 @@ final class ProcessWebhookEventTest extends TestCase
         self::assertSame('Movie Title (2020)', ag($processingLog, 'fields.item_title'));
         self::assertSame('req-1', ag($processingLog, 'fields.request_id'));
         self::assertSame('media.scrobble', ag($processingLog, 'fields.webhook_event'));
-        self::assertSame(121, ag($processingLog, 'fields.backend_item_id'));
+        self::assertSame(121, ag($processingLog, 'fields.remote_id'));
     }
 
     public function test_tasks_processes(): void

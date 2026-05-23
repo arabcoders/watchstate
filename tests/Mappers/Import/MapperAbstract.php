@@ -667,7 +667,7 @@ abstract class MapperAbstract extends TestCase
         self::assertSame("Ignoring movie '#121: Movie Title (2020)' from 'main@test_plex': no supported external ids.", $records[0]->message);
         self::assertSame('no_supported_external_ids', $records[0]->context['reason']);
         self::assertSame('movie', $records[0]->context['item_type']);
-        self::assertSame('121', (string) $records[0]->context['item_id']);
+        self::assertSame('121', (string) $records[0]->context['remote_id']);
     }
 
 }

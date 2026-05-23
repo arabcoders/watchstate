@@ -159,7 +159,7 @@ final class ParseWebhook
             $logContext = [
                 ...$logContext,
                 'item' => [
-                    'id' => ag($obj, 'Id'),
+                    'remote_id' => (string) ag($obj, 'Id'),
                     'type' => ag($obj, 'Type'),
                     'title' => match (ag($obj, 'Type')) {
                         JFC::TYPE_MOVIE => r('{title} ({year})', [

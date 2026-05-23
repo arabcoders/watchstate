@@ -74,7 +74,7 @@ type LinkItem = {
 };
 
 const props = defineProps<{
-  item: Pick<LogEntry, 'item_id' | 'event_id' | 'user' | 'backend'>;
+  item: Pick<LogEntry, 'state_id' | 'event_id' | 'user' | 'backend'>;
   openEvent?: (id: string) => void;
   compact?: boolean;
 }>();
@@ -95,7 +95,7 @@ const asString = (value: unknown): string | null => {
 };
 
 const eventId = computed<string | null>(() => asString(props.item.event_id));
-const itemId = computed<string | null>(() => asString(props.item.item_id));
+const stateId = computed<string | null>(() => asString(props.item.state_id));
 const backend = computed<string | null>(() => asString(props.item.backend));
 const user = computed<string | null>(() => asString(props.item.user));
 
@@ -140,14 +140,14 @@ const items = computed<Array<LinkItem>>(() => {
     });
   }
 
-  if (itemId.value) {
+  if (stateId.value) {
     list.push({
-      key: `item:${itemId.value}`,
-      label: `History #${itemId.value}`,
-      shortLabel: `#${itemId.value}`,
+      key: `item:${stateId.value}`,
+      label: `History #${stateId.value}`,
+      shortLabel: `#${stateId.value}`,
       icon: 'i-lucide-history',
       action: async () => {
-        await goto_history_item({ item_id: itemId.value, user: user.value });
+        await goto_history_item({ state_id: stateId.value, user: user.value });
       },
     });
   }

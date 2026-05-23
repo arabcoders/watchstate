@@ -21,7 +21,8 @@ final class IndexTest extends TestCase
 
         $parsed = Index::formatLog($line);
 
-        $this->assertSame('123', $parsed['item_id'], 'Log formatter should extract history item ids from structured messages.');
+        $this->assertNull($parsed['state_id'], 'Legacy log formatter should not infer local history ids from plain text.');
+        $this->assertNull($parsed['remote_id'], 'Legacy log formatter should not infer backend ids from plain text.');
         $this->assertSame('main', $parsed['user'], 'Log formatter should expose the user even when no whitelist is provided.');
         $this->assertSame('emby_main', $parsed['backend'], 'Log formatter should expose the backend even when no whitelist is provided.');
         $this->assertSame('2026-04-27T10:17:56+03:00', $parsed['date'], 'Log formatter should preserve the bracketed timestamp.');
@@ -38,7 +39,8 @@ final class IndexTest extends TestCase
 
         $this->assertSame('{"message":"boom","code":1}', $parsed['text'], 'Non-string log payloads should be stringified for API consumers.');
         $this->assertNull($parsed['date'], 'Stringified payloads should not invent timestamps.');
-        $this->assertNull($parsed['item_id'], 'Stringified payloads should not invent item ids.');
+        $this->assertNull($parsed['state_id'], 'Stringified payloads should not invent local history ids.');
+        $this->assertNull($parsed['remote_id'], 'Stringified payloads should not invent backend ids.');
         $this->assertNull($parsed['user'], 'Stringified payloads should not invent users.');
         $this->assertNull($parsed['backend'], 'Stringified payloads should not invent backends.');
     }
@@ -71,7 +73,8 @@ final class IndexTest extends TestCase
                 'event_id' => '550e8400-e29b-41d4-a716-446655440000',
                 'user' => 'main',
                 'backend' => 'emby_main',
-                'item_id' => 123,
+                'state_id' => 123,
+                'remote_id' => 'abc-123',
             ],
         ], JSON_THROW_ON_ERROR);
 
@@ -81,7 +84,8 @@ final class IndexTest extends TestCase
         $this->assertSame('2026-05-20T12:00:00.123+00:00', $parsed['date']);
         $this->assertSame('notice', $parsed['level']);
         $this->assertSame('app', $parsed['logger']);
-        $this->assertSame('123', $parsed['item_id']);
+        $this->assertSame('123', $parsed['state_id']);
+        $this->assertSame('abc-123', $parsed['remote_id']);
         $this->assertSame('main', $parsed['user']);
         $this->assertSame('emby_main', $parsed['backend']);
     }

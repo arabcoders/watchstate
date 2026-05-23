@@ -246,7 +246,7 @@ class DirectMapper implements ImportInterface
             Message::increment("{$entity->via}.{$entity->type}.failed");
 
             $this->logger->notice(
-                'Ignoring {item_type} \'#{item_id}: {item_title}\' from \'{user}@{backend}\': backend is metadata-only.',
+                'Ignoring {item_type} \'#{remote_id}: {item_title}\' from \'{user}@{backend}\': backend is metadata-only.',
                 $this->itemContext($entity, [
                     'event_name' => 'mapper.item.ignored',
                     'operation' => 'add',
@@ -292,7 +292,7 @@ class DirectMapper implements ImportInterface
                 }
             }
 
-            $this->logger->notice('Added {item_type} \'#{item_id}: {item_title}\' from \'{user}@{backend}\' to local state.', [
+            $this->logger->notice('Added {item_type} \'#{remote_id}: {item_title}\' from \'{user}@{backend}\' to local state.', [
                 ...$this->itemContext($entity),
                 'event_name' => 'mapper.item.added',
                 'operation' => 'add',
@@ -330,7 +330,7 @@ class DirectMapper implements ImportInterface
             Message::increment("{$entity->via}.{$entity->type}.failed");
             $this->logger->error(
                 ...lw(
-                    message: 'Failed to map {item_type} \'#{item_id}: {item_title}\' from \'{user}@{backend}\' during add.',
+                    message: 'Failed to map {item_type} \'#{remote_id}: {item_title}\' from \'{user}@{backend}\' during add.',
                     context: [
                         ...$this->itemContext($entity),
                         'event_name' => 'mapper.item.failed',
@@ -398,8 +398,8 @@ class DirectMapper implements ImportInterface
                     $this->logger->log(
                         true === $progressChange ? LogLevel::NOTICE : LogLevel::INFO,
                         true === $progressChange
-                            ? 'Updated {item_type} \'#{item_id}: {item_title}\' from \'{user}@{backend}\' due to play progress change.'
-                            : 'Updated metadata for {item_type} \'#{item_id}: {item_title}\' from \'{user}@{backend}\'.',
+                            ? 'Updated {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\' due to play progress change.'
+                            : 'Updated metadata for {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\'.',
                         [
                             ...$this->itemContext($local, ['backend' => $entity->via]),
                             'event_name' => 'mapper.item.updated',
@@ -447,7 +447,7 @@ class DirectMapper implements ImportInterface
                 Message::increment("{$entity->via}.{$local->type}.failed");
                 $this->logger->error(
                     ...lw(
-                        message: 'Failed to map {item_type} \'#{item_id}: {item_title}\' from \'{user}@{backend}\' during metadata update.',
+                        message: 'Failed to map {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\' during metadata update.',
                         context: [
                             ...$this->itemContext($local, ['backend' => $entity->via]),
                             'event_name' => 'mapper.item.failed',
@@ -467,7 +467,7 @@ class DirectMapper implements ImportInterface
             return $this;
         }
 
-        $msg = 'No metadata changes for {item_type} \'#{item_id}: {item_title}\' from \'{user}@{backend}\'.';
+        $msg = 'No metadata changes for {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\'.';
         $context = $this->itemContext($local, [
             'backend' => $entity->via,
             'event_name' => 'mapper.item.unchanged',
@@ -495,7 +495,7 @@ class DirectMapper implements ImportInterface
             }
 
             $this->logger->notice(
-                'Ignoring state change for {item_type} \'#{item_id}: {item_title}\' from \'{user}@{backend}\': remote state {state} differs from local {local_state}.',
+                'Ignoring state change for {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\': remote state {state} differs from local {local_state}.',
                 [
                     ...$this->itemContext($local, ['backend' => $entity->via]),
                     'event_name' => 'mapper.item.ignored',
@@ -558,7 +558,7 @@ class DirectMapper implements ImportInterface
                     }
                 }
 
-                $this->logger->notice('Marked {item_type} \'#{item_id}: {item_title}\' from \'{user}@{backend}\' as unplayed.', [
+                $this->logger->notice('Marked {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\' as unplayed.', [
                     ...$this->itemContext($cloned, ['backend' => $entity->via]),
                     'event_name' => 'mapper.item.state_changed',
                     'operation' => 'state',
@@ -584,7 +584,7 @@ class DirectMapper implements ImportInterface
                 Message::increment("{$entity->via}.{$local->type}.failed");
                 $this->logger->error(
                     ...lw(
-                        message: 'Failed to map {item_type} \'#{item_id}: {item_title}\' from \'{user}@{backend}\' during state update.',
+                        message: 'Failed to map {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\' during state update.',
                         context: [
                             ...$this->itemContext($cloned, ['backend' => $entity->via]),
                             'event_name' => 'mapper.item.failed',
@@ -647,8 +647,8 @@ class DirectMapper implements ImportInterface
                         $this->logger->log(
                             true === $progressChange ? LogLevel::NOTICE : LogLevel::INFO,
                             true === $progressChange
-                                ? 'Updated {item_type} \'#{item_id}: {item_title}\' from \'{user}@{backend}\' due to play progress change.'
-                                : 'Updated metadata for {item_type} \'#{item_id}: {item_title}\' from \'{user}@{backend}\'.',
+                                ? 'Updated {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\' due to play progress change.'
+                                : 'Updated metadata for {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\'.',
                             [
                                 ...$this->itemContext($cloned, ['backend' => $entity->via]),
                                 'event_name' => 'mapper.item.updated',
@@ -696,7 +696,7 @@ class DirectMapper implements ImportInterface
                     Message::increment("{$entity->via}.{$local->type}.failed");
                     $this->logger->error(
                         ...lw(
-                            message: 'Failed to map {item_type} \'#{item_id}: {item_title}\' from \'{user}@{backend}\' during metadata update.',
+                            message: 'Failed to map {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\' during metadata update.',
                             context: [
                                 ...$this->itemContext($cloned, ['backend' => $entity->via]),
                                 'event_name' => 'mapper.item.failed',
@@ -730,7 +730,7 @@ class DirectMapper implements ImportInterface
             $enable = Config::get('clients.jellyfin.fix_played', false);
             if ($enable && $entity->isWatched() && true === $entity->getContext('should_mark', false)) {
                 $this->logger->notice(
-                    'Queued {item_type} \'#{item_id}: {item_title}\' from \'{user}@{backend}\' for reprocessing because Jellyfin reported a stale played date.',
+                    'Queued {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\' for reprocessing because Jellyfin reported a stale played date.',
                     [
                         ...$this->itemContext($cloned, ['backend' => $entity->via]),
                         'event_name' => 'mapper.item.requeued',
@@ -751,7 +751,7 @@ class DirectMapper implements ImportInterface
             }
 
             $this->logger->notice(
-                'Queued {item_type} \'#{item_id}: {item_title}\' from \'{user}@{backend}\' for reprocessing because remote data changed before last sync.',
+                'Queued {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\' for reprocessing because remote data changed before last sync.',
                 [
                     ...$this->itemContext($cloned, ['backend' => $entity->via]),
                     'event_name' => 'mapper.item.requeued',
@@ -779,7 +779,7 @@ class DirectMapper implements ImportInterface
             return $this->add($entity, $opts);
         }
 
-        $msg = 'Ignoring {item_type} \'#{item_id}: {item_title}\' from \'{user}@{backend}\': no changes detected.';
+        $msg = 'Ignoring {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\': no changes detected.';
         $context = $this->itemContext($cloned, [
             'backend' => $entity->via,
             'event_name' => 'mapper.item.ignored',
@@ -815,7 +815,7 @@ class DirectMapper implements ImportInterface
 
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
             $this->logger->warning(
-                'Ignoring {item_type} \'#{item_id}: {item_title}\' from \'{user}@{backend}\': no supported external ids.',
+                'Ignoring {item_type} \'#{remote_id}: {item_title}\' from \'{user}@{backend}\': no supported external ids.',
                 $this->itemContext($entity, [
                     'event_name' => 'mapper.item.ignored',
                     'operation' => 'add',
@@ -830,7 +830,7 @@ class DirectMapper implements ImportInterface
 
         if (true === $entity->isEpisode() && $entity->episode < 1) {
             $this->logger->notice(
-                'Ignoring {item_type} \'#{item_id}: {item_title}\' from \'{user}@{backend}\': episode number is missing.',
+                'Ignoring {item_type} \'#{remote_id}: {item_title}\' from \'{user}@{backend}\': episode number is missing.',
                 $this->itemContext($entity, [
                     'event_name' => 'mapper.item.ignored',
                     'operation' => 'add',
@@ -879,7 +879,7 @@ class DirectMapper implements ImportInterface
             $reason = false === $hasMeta ? 'missing_metadata' : 'played_at_matches_updated';
 
             $this->logger->warning(
-                'Queued {item_type} \'#{item_id}: {item_title}\' from \'{user}@{backend}\' for reprocessing because remote state conflicts with local metadata.',
+                'Queued {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\' for reprocessing because remote state conflicts with local metadata.',
                 [
                     ...$this->itemContext($local, ['backend' => $entity->via]),
                     'event_name' => 'mapper.item.requeued',
@@ -931,7 +931,7 @@ class DirectMapper implements ImportInterface
         $changedKeys = true === $forceChange ? $this->getMetaChanges($cloned, $entity) : $local->diff(fields: $keys);
 
         if (false === $progressChange && false === $shouldMark && count($changedKeys) < 1) {
-            $msg = 'Ignoring {item_type} \'#{item_id}: {item_title}\' from \'{user}@{backend}\': metadata and play state are identical.';
+            $msg = 'Ignoring {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\': metadata and play state are identical.';
 
             $context = $this->itemContext($cloned, [
                 'backend' => $entity->via,
@@ -980,7 +980,7 @@ class DirectMapper implements ImportInterface
             $stateChange = $cloned->isWatched() !== $local->isWatched();
 
             if (true === $progressChange || count($changes) >= 1) {
-                $message = "Updated {item_type} '#{item_id}: {item_title}' from '{user}@{backend}'.";
+                $message = "Updated {item_type} '#{state_id}: {item_title}' from '{user}@{backend}'.";
                 if (true === $stateChange) {
                     $message .= ' And marked it as {state}.';
                 } elseif (true === $progressChange) {
@@ -1041,7 +1041,7 @@ class DirectMapper implements ImportInterface
             Message::increment("{$entity->via}.{$local->type}.failed");
             $this->logger->error(
                 ...lw(
-                    message: 'Failed to map {item_type} \'#{item_id}: {item_title}\' from \'{user}@{backend}\' during update.',
+                    message: 'Failed to map {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\' during update.',
                     context: [
                         ...$this->itemContext($cloned, ['backend' => $entity->via]),
                         'event_name' => 'mapper.item.failed',
@@ -1454,7 +1454,7 @@ class DirectMapper implements ImportInterface
 
         if (true === $new->isWatched() && $allowUpdate < $minThreshold) {
             if (true === $this->inTraceMode()) {
-                $this->logger->info('Skipping progress update for {item_type} \'#{item_id}: {item_title}\': progress {progress} is below threshold {threshold}.', [
+                $this->logger->info('Skipping progress update for {item_type} \'#{remote_id}: {item_title}\': progress {progress} is below threshold {threshold}.', [
                     ...$this->itemContext($new),
                     'event_name' => 'mapper.progress.skipped',
                     'operation' => 'progress',
@@ -1597,7 +1597,8 @@ class DirectMapper implements ImportInterface
     {
         return $this->mapperContext(array_merge([
             'backend' => $entity->via,
-            'item_id' => $entity->id ?? ag($entity->getMetadata($entity->via), iState::COLUMN_ID, 'New'),
+            'state_id' => null === $entity->id ? null : (string) $entity->id,
+            'remote_id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, 'New'),
             'item_type' => $entity->type,
             'item_title' => $entity->getName(),
         ], $extra));

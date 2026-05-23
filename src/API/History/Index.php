@@ -550,13 +550,13 @@ final class Index
                         [],
                     );
                 } catch (Throwable $e) {
-                    $this->logger->error("Failed to resolve duplicate history for '{user}' item '#{item_id}'.", [
+                    $this->logger->error("Failed to resolve duplicate history for '{user}' item '#{state_id}'.", [
                         'event_name' => 'history.duplicates.resolve_failed',
                         'subsystem' => 'history.duplicates',
                         'operation' => 'resolve',
                         'outcome' => 'failed',
                         'user' => $userContext->name,
-                        'item_id' => (string) $entity['id'],
+                        'state_id' => (string) $entity['id'],
                         ...exception_log($e),
                     ]);
                 }
@@ -681,13 +681,13 @@ final class Index
                     [],
                 );
             } catch (Throwable $e) {
-                $this->logger->error("Failed to resolve duplicate history for '{user}' item '#{item_id}'.", [
+                $this->logger->error("Failed to resolve duplicate history for '{user}' item '#{state_id}'.", [
                     'event_name' => 'history.duplicates.resolve_failed',
                     'subsystem' => 'history.duplicates',
                     'operation' => 'resolve',
                     'outcome' => 'failed',
                     'user' => $userContext->name,
-                    'item_id' => (string) $item->id,
+                    'state_id' => (string) $item->id,
                     ...exception_log($e),
                 ]);
             }
@@ -727,13 +727,13 @@ final class Index
                 [],
             );
         } catch (Throwable $e) {
-            $this->logger->error("Failed to resolve duplicate history for '{user}' item '#{item_id}'.", [
+            $this->logger->error("Failed to resolve duplicate history for '{user}' item '#{state_id}'.", [
                 'event_name' => 'history.duplicates.resolve_failed',
                 'subsystem' => 'history.duplicates',
                 'operation' => 'resolve',
                 'outcome' => 'failed',
                 'user' => $userContext->name,
-                'item_id' => (string) $item->id,
+                'state_id' => (string) $item->id,
                 ...exception_log($e),
             ]);
             return api_error('Failed to get duplicates', Status::INTERNAL_SERVER_ERROR);

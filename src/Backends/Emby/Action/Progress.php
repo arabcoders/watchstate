@@ -114,13 +114,16 @@ class Progress
                 ? (int) ag($context->options, Options::STATE_PROGRESS_VALUE, 0)
                 : $entity->getPlayProgress();
 
+            $remoteId = ag($metadata, iState::COLUMN_ID, null);
+
             $logContext = [
                 'action' => $this->action,
                 'client' => $context->clientName,
                 'backend' => $context->backendName,
                 'user' => $context->userContext->name,
                 'item' => [
-                    'id' => $entity->id,
+                    'state_id' => null === $entity->id ? null : (string) $entity->id,
+                    'remote_id' => null === $remoteId ? null : (string) $remoteId,
                     'type' => $entity->type,
                     'title' => $entity->getName(),
                     'progress' => format_duration($progressValue),
@@ -129,7 +132,7 @@ class Progress
 
             if ($context->backendName === $entity->via) {
                 $this->logger->info(
-                    message: "Ignoring {item.type} '#{item.id}: {item.title}' for '{user}@{backend}': event originated from this backend.",
+                    message: "Ignoring {item.type} '#{item.state_id}: {item.title}' for '{user}@{backend}': event originated from this backend.",
                     context: [
                         'event_name' => 'backend.item.ignored',
                         'subsystem' => 'backend.progress',
@@ -144,7 +147,7 @@ class Progress
 
             if (null === ag($metadata, iState::COLUMN_ID, null)) {
                 $this->logger->warning(
-                    message: "Ignoring {item.type} '#{item.id}: {item.title}' for '{user}@{backend}': backend metadata is missing.",
+                    message: "Ignoring {item.type} '#{item.state_id}: {item.title}' for '{user}@{backend}': backend metadata is missing.",
                     context: [
                         'event_name' => 'backend.item.ignored',
                         'subsystem' => 'backend.progress',
@@ -160,7 +163,7 @@ class Progress
             $senderDate = ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_DATE);
             if (null === $senderDate) {
                 $this->logger->warning(
-                    message: "Ignoring {item.type} '#{item.id}: {item.title}' for '{user}@{backend}': sender event date is missing.",
+                    message: "Ignoring {item.type} '#{item.state_id}: {item.title}' for '{user}@{backend}': sender event date is missing.",
                     context: [
                         'event_name' => 'backend.item.ignored',
                         'subsystem' => 'backend.progress',
@@ -178,7 +181,7 @@ class Progress
             $datetime = ag($entity->getExtra($context->backendName), iState::COLUMN_EXTRA_DATE, null);
             if (false === $ignoreDate && null !== $datetime && make_date($datetime)->getTimestamp() > $senderDate) {
                 $this->logger->warning(
-                    message: "Ignoring {item.type} '#{item.id}: {item.title}' for '{user}@{backend}': event date is not newer than local backend history.",
+                    message: "Ignoring {item.type} '#{item.state_id}: {item.title}' for '{user}@{backend}': event date is not newer than local backend history.",
                     context: [
                         'event_name' => 'backend.item.ignored',
                         'subsystem' => 'backend.progress',
@@ -199,7 +202,7 @@ class Progress
 
             if (array_key_exists($logContext['remote']['id'], $sessions)) {
                 $this->logger->info(
-                    message: "Ignoring {item.type} '#{item.id}: {item.title}' for '{user}@{backend}': item is active in another session.",
+                    message: "Ignoring {item.type} '#{item.state_id}: {item.title}' for '{user}@{backend}': item is active in another session.",
                     context: [
                         'event_name' => 'backend.item.ignored',
                         'subsystem' => 'backend.progress',
@@ -222,7 +225,7 @@ class Progress
 
                 if (false === $ignoreDate && make_date($remoteItem->updated)->getTimestamp() > $senderDate) {
                     $this->logger->info(
-                        message: "Ignoring {item.type} '#{item.id}: {item.title}' for '{user}@{backend}': event date is not newer than backend state.",
+                        message: "Ignoring {item.type} '#{item.state_id}: {item.title}' for '{user}@{backend}': event date is not newer than backend state.",
                         context: [
                             'event_name' => 'backend.item.ignored',
                             'subsystem' => 'backend.progress',
@@ -244,7 +247,7 @@ class Progress
                     $allowUpdate = (int) Config::get('progress.threshold', 0);
                     if (false === ($allowUpdate >= $minThreshold && time() > ($entity->updated + $allowUpdate))) {
                         $this->logger->info(
-                            message: "Ignoring {item.type} '#{item.id}: {item.title}' for '{user}@{backend}': backend item is already watched.",
+                            message: "Ignoring {item.type} '#{item.state_id}: {item.title}' for '{user}@{backend}': backend item is already watched.",
                             context: [
                                 'event_name' => 'backend.item.ignored',
                                 'subsystem' => 'backend.progress',
@@ -260,7 +263,7 @@ class Progress
             } catch (\App\Libs\Exceptions\RuntimeException|RuntimeException|InvalidArgumentException $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "Failed to load backend state for {item.type} '#{item.id}: {item.title}' from '{user}@{backend}'.",
+                        message: "Failed to load backend state for {item.type} '#{item.state_id}: {item.title}' from '{user}@{backend}'.",
                         context: [
                             'event_name' => 'backend.operation.failed',
                             'subsystem' => 'backend.progress',

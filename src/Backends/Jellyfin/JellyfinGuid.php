@@ -298,7 +298,7 @@ class JellyfinGuid implements iGuid
     {
         $guid = [];
 
-        $id = ag($context, 'item.id', null);
+        $id = ag($context, 'item.remote_id', null);
         $type = ag($context, 'item.type', '??');
         $type = JellyfinClient::TYPE_MAPPER[$type] ?? $type;
         $bName = $this->context->backendName;
@@ -312,7 +312,7 @@ class JellyfinGuid implements iGuid
                 if (true === is_ignored_id($this->context->userContext, $bName, $type, $key, $value, $id)) {
                     if (true === $log) {
                         $this->logger->debug(
-                            "Ignoring external id '{guid_source}:{guid_value}' for '#{item_id}' from '{user}@{backend}': {reason_label}.",
+                            "Ignoring external id '{guid_source}:{guid_value}' for '#{remote_id}' from '{user}@{backend}': {reason_label}.",
                             [
                                 'event_name' => 'guid.external_id.ignored',
                                 'subsystem' => 'guid',
@@ -323,7 +323,7 @@ class JellyfinGuid implements iGuid
                                 'client' => $this->context->clientName,
                                 'user' => $this->context->userContext->name,
                                 'backend' => $bName,
-                                'item_id' => $id,
+                                'remote_id' => $id,
                                 'guid_source' => $key,
                                 'guid_value' => $value,
                                 'guid' => [
@@ -341,7 +341,7 @@ class JellyfinGuid implements iGuid
             } catch (Throwable $e) {
                 if (true === $log) {
                     $this->logger->info(
-                        message: "Ignoring external id '{guid_source}:{guid_value}' for '#{item_id}' from '{user}@{backend}': {reason_label}.",
+                        message: "Ignoring external id '{guid_source}:{guid_value}' for '#{remote_id}' from '{user}@{backend}': {reason_label}.",
                         context: [
                             'event_name' => 'guid.external_id.ignored',
                             'subsystem' => 'guid',
@@ -352,7 +352,7 @@ class JellyfinGuid implements iGuid
                             'client' => $this->context->clientName,
                             'user' => $this->context->userContext->name,
                             'backend' => $this->context->backendName,
-                            'item_id' => $id,
+                            'remote_id' => $id,
                             'guid_source' => $key,
                             'guid_value' => $value,
                             ...$context,

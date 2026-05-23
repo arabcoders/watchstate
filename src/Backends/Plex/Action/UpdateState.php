@@ -78,7 +78,7 @@ final class UpdateState
                                 'reason' => 'dry_run',
                                 ...$rContext,
                                 'item' => [
-                                    'id' => $itemId,
+                                    'remote_id' => (string) $itemId,
                                     'title' => $entity->getName(),
                                     'type' => $entity->type === iState::TYPE_EPISODE ? 'episode' : 'movie',
                                     'play_state' => $entity->isWatched() ? 'played' : 'unplayed',
@@ -99,7 +99,7 @@ final class UpdateState
                         ...$rContext,
                         'play_state' => $entity->isWatched() ? 'played' : 'unplayed',
                         'item' => [
-                            'id' => $itemId,
+                            'remote_id' => (string) $itemId,
                             'title' => $entity->getName(),
                             'type' => $entity->type === iState::TYPE_EPISODE ? 'episode' : 'movie',
                             'state' => $entity->isWatched() ? 'played' : 'unplayed',

@@ -99,13 +99,13 @@ const menuItems = computed<Array<ActionItem>>(() => {
   const list: Array<ActionItem> = [];
   const user = asString(props.item.user);
 
-  if (itemId.value) {
+  if (stateId.value) {
     list.push({
-      key: `item:${itemId.value}`,
-      label: `View item #${itemId.value}`,
+      key: `item:${stateId.value}`,
+      label: `View item #${stateId.value}`,
       icon: 'i-lucide-history',
       action: async () => {
-        await goto_history_item({ item_id: itemId.value, user });
+        await goto_history_item({ state_id: stateId.value, user });
       },
     });
   }
@@ -149,7 +149,7 @@ const menuItems = computed<Array<ActionItem>>(() => {
   return list;
 });
 
-const itemId = computed<string | null>(() => asString(props.item.item_id));
+const stateId = computed<string | null>(() => asString(props.item.state_id));
 const eventId = computed<string | null>(() => asString(props.item.event_id));
 const backend = computed<string | null>(() => asString(props.item.backend));
 

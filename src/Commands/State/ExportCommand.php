@@ -502,7 +502,7 @@ class ExportCommand extends Command
 
                                     if (null === $addedDate || false === ctype_digit($addedDate)) {
                                         $this->logger->info(
-                                            "Skipping push compatibility for '{user}@{backend}' item '#{item.id}: {item.title}': added_at '{added_at}' is invalid.",
+                                            "Skipping push compatibility for '{user}@{backend}' item '#{item.state_id}: {item.title}': added_at '{added_at}' is invalid.",
                                             [
                                                 'event_name' => 'state.export.push.item.skipped',
                                                 'subsystem' => 'state.export',
@@ -512,7 +512,7 @@ class ExportCommand extends Command
                                                 'user' => $userContext->name,
                                                 'backend' => $name,
                                                 'item' => [
-                                                    'id' => $entity->id,
+                                                    'state_id' => null === $entity->id ? null : (string) $entity->id,
                                                     'title' => $entity->getName(),
                                                 ],
                                                 'added_at' => $addedDate,
@@ -526,7 +526,7 @@ class ExportCommand extends Command
 
                                     if ($lastSync > ($addedDate + $extraMargin)) {
                                         $this->logger->info(
-                                            "Skipping push compatibility for '{user}@{backend}' item '#{item.id}: {item.title}': metadata wait period expired.",
+                                            "Skipping push compatibility for '{user}@{backend}' item '#{item.state_id}: {item.title}': metadata wait period expired.",
                                             [
                                                 'event_name' => 'state.export.push.item.skipped',
                                                 'subsystem' => 'state.export',
@@ -536,7 +536,7 @@ class ExportCommand extends Command
                                                 'user' => $userContext->name,
                                                 'backend' => $name,
                                                 'item' => [
-                                                    'id' => $entity->id,
+                                                    'state_id' => null === $entity->id ? null : (string) $entity->id,
                                                     'title' => $entity->getName(),
                                                 ],
                                                 'wait_period' => [
@@ -557,7 +557,7 @@ class ExportCommand extends Command
                                     }
 
                                     $this->logger->info(
-                                        "Using export mode for '{user}@{backend}': local state for '#{item.id}: {item.title}' is missing backend metadata.",
+                                        "Using export mode for '{user}@{backend}': local state for '#{item.state_id}: {item.title}' is missing backend metadata.",
                                         [
                                             'event_name' => 'state.export.backend.mode_selected',
                                             'subsystem' => 'state.export',
@@ -568,7 +568,7 @@ class ExportCommand extends Command
                                             'backend' => $name,
                                             'mode' => 'export',
                                             'item' => [
-                                                'id' => $entity->id,
+                                                'state_id' => null === $entity->id ? null : (string) $entity->id,
                                                 'title' => $entity->getName(),
                                             ],
                                             'reason' => 'missing_backend_metadata',

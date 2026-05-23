@@ -295,7 +295,8 @@ final class StateEntity implements iState
             'backend' => $this->via,
             'backend_id' => ag($this->getMetadata($this->via), iState::COLUMN_ID, null),
             'item' => [
-                iState::COLUMN_ID => $this->id,
+                'state_id' => $this->id,
+                'remote_id' => ag($this->getMetadata($this->via), iState::COLUMN_ID, null),
                 iState::COLUMN_TYPE => $this->type,
                 iState::COLUMN_YEAR => $this->year,
                 iState::COLUMN_TITLE => $this->getName(),
@@ -387,7 +388,8 @@ final class StateEntity implements iState
             'backend' => $this->via,
             'backend_id' => ag($this->getMetadata($this->via), iState::COLUMN_ID, null),
             'item' => [
-                iState::COLUMN_ID => $this->id,
+                'state_id' => $this->id,
+                'remote_id' => ag($this->getMetadata($this->via), iState::COLUMN_ID, null),
                 iState::COLUMN_TYPE => $this->type,
                 iState::COLUMN_YEAR => $this->year,
                 iState::COLUMN_TITLE => $this->getName(),

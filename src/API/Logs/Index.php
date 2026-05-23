@@ -391,7 +391,8 @@ final class Index
         if (empty($line)) {
             return [
                 'id' => md5((string) (hrtime(true) + random_int(1, 10_000))),
-                'item_id' => null,
+                'state_id' => null,
+                'remote_id' => null,
                 'event_id' => null,
                 'user' => null,
                 'backend' => null,
@@ -444,7 +445,8 @@ final class Index
         $legacy = self::formatLegacyLog($text, $users);
 
         $eventId = ag($fields, ['event_id', 'event.id', 'attributes.event.id'], ag($legacy, 'event_id'));
-        $itemId = ag($fields, ['item_id', 'item.id', 'attributes.item.id'], ag($legacy, 'item_id'));
+        $stateId = ag($fields, ['state_id', 'item.state_id', 'attributes.item.state_id']);
+        $remoteId = ag($fields, ['remote_id', 'item.remote_id', 'attributes.item.remote_id']);
         $user = ag($fields, ['user', 'user.name', 'attributes.user.name'], ag($legacy, 'user'));
         $backend = ag($fields, ['backend', 'backend.name', 'attributes.backend.name', 'via'], ag($legacy, 'backend'));
 
@@ -452,7 +454,8 @@ final class Index
 
         return [
             'id' => (string) ag($line, 'id', $fallbackId),
-            'item_id' => null === $itemId ? null : (string) $itemId,
+            'state_id' => null === $stateId ? null : (string) $stateId,
+            'remote_id' => null === $remoteId ? null : (string) $remoteId,
             'event_id' => null === $eventId ? null : (string) $eventId,
             'user' => null === $user ? null : (string) $user,
             'backend' => null === $backend ? null : (string) $backend,
@@ -485,14 +488,16 @@ final class Index
         $text = (string) ag($line, 'text', ag($line, 'message', ''));
         $legacy = self::formatLegacyLog($text, $users);
         $fallbackId = static fn() => md5((string) json_encode($line) . (hrtime(true) + random_int(1, 10_000)));
-        $itemId = ag($extras, 'item_id', ag($legacy, 'item_id'));
+        $stateId = ag($extras, ['state_id', 'item.state_id']);
+        $remoteId = ag($extras, ['remote_id', 'item.remote_id']);
         $eventId = ag($extras, 'event_id', ag($legacy, 'event_id'));
         $user = ag($extras, 'user', ag($legacy, 'user'));
         $backend = ag($extras, 'backend', ag($legacy, 'backend'));
 
         return [
             'id' => (string) ag($line, 'id', $fallbackId),
-            'item_id' => null === $itemId ? null : (string) $itemId,
+            'state_id' => null === $stateId ? null : (string) $stateId,
+            'remote_id' => null === $remoteId ? null : (string) $remoteId,
             'event_id' => null === $eventId ? null : (string) $eventId,
             'user' => null === $user ? null : (string) $user,
             'backend' => null === $backend ? null : (string) $backend,
@@ -517,7 +522,6 @@ final class Index
         $levelRegex = '/^(?:[a-z0-9_.-]+\.)?(?<level>EMERGENCY|ALERT|CRITICAL|ERROR|WARNING|NOTICE|INFO|DEBUG):\s*/i';
 
         $dateMatch = preg_match($dateRegex, $line, $matches);
-        $idMatch = preg_match("/'#(?P<item_id>\d+):/", $line, $idMatches);
         $eventMatch = preg_match($eventRegex, $line, $eventMatches);
         $identMatch = preg_match("/'((?P<client>\w+):\s)?(?P<user>\w+)@(?P<backend>\w+)'/i", $line, $identMatches);
         $text = 1 === $dateMatch ? trim(preg_replace($dateRegex, '', $line)) : $line;
@@ -529,7 +533,8 @@ final class Index
 
         $logLine = [
             'id' => md5($line . (hrtime(true) + random_int(1, 10_000))),
-            'item_id' => null,
+            'state_id' => null,
+            'remote_id' => null,
             'event_id' => 1 === $eventMatch ? $eventMatches['event_id'] : null,
             'user' => null,
             'backend' => null,
@@ -541,10 +546,6 @@ final class Index
             'message' => null,
             'fields' => [],
         ];
-
-        if (1 === $idMatch) {
-            $logLine['item_id'] = $idMatches['item_id'];
-        }
 
         if (1 === $identMatch && ([] === $users || in_array($identMatches['user'], $users, true))) {
             $logLine['user'] = $identMatches['user'];

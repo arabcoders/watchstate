@@ -886,7 +886,7 @@ class Import
                                     'reason' => 'range_limit_exceeded',
                                     'range_limit' => $episodeRangeLimit,
                                     'item' => [
-                                        'id' => ag($entity, 'Id'),
+                                        'remote_id' => null === ag($entity, 'Id') ? null : (string) ag($entity, 'Id'),
                                         'title' => ag($entity, ['Name', 'OriginalTitle'], '??'),
                                         'type' => ag($entity, 'Type'),
                                         'rangeCount' => count($range),
@@ -908,7 +908,7 @@ class Import
                                         'outcome' => 'completed',
                                         ...$logContext,
                                         'item' => [
-                                            'id' => ag($entity, 'Id'),
+                                            'remote_id' => null === ag($entity, 'Id') ? null : (string) ag($entity, 'Id'),
                                             'title' => ag($entity, ['Name', 'OriginalTitle'], '??'),
                                             'type' => ag($entity, 'Type'),
                                             'i' => $i,
@@ -998,7 +998,7 @@ class Import
     protected function processShow(Context $context, iGuid $guid, array $item, array $logContext = []): void
     {
         $logContext['item'] = [
-            'id' => ag($item, 'Id'),
+            'remote_id' => null === ag($item, 'Id') ? null : (string) ag($item, 'Id'),
             'title' => r('{title} ({year})', [
                 'title' => ag($item, ['Name', 'OriginalTitle'], '??'),
                 'year' => ag($item, 'ProductionYear', '0000'),
@@ -1089,7 +1089,7 @@ class Import
 
             try {
                 $logContext['item'] = [
-                    'id' => ag($item, 'Id'),
+                    'remote_id' => null === ag($item, 'Id') ? null : (string) ag($item, 'Id'),
                     'title' => match ($type) {
                         JFC::TYPE_MOVIE => r('{title} ({year})', [
                             'title' => ag($item, ['Name', 'OriginalTitle'], '??'),
@@ -1156,7 +1156,7 @@ class Import
 
             if (null === ag($item, $dateKey)) {
                 $this->logger->debug(
-                    message: "Ignoring {item.type} '#{item.id}: {item.title}' from '{user}@{backend}': missing date '{date_key}'.",
+                    message: "Ignoring {item.type} '#{item.remote_id}: {item.title}' from '{user}@{backend}': missing date '{date_key}'.",
                     context: [
                         'event_name' => 'backend.item.ignored',
                         'subsystem' => 'backend.import',

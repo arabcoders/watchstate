@@ -1014,7 +1014,7 @@ class Import
         }
 
         $logContext['item'] = [
-            'id' => ag($item, 'ratingKey'),
+            'remote_id' => null === ag($item, 'ratingKey') ? null : (string) ag($item, 'ratingKey'),
             'title' => r('{title} ({year})', [
                 'title' => ag($item, ['title', 'originalTitle'], '??'),
                 'year' => 0 === $year ? '0000' : $year,
@@ -1103,7 +1103,7 @@ class Import
 
             try {
                 $logContext['item'] = [
-                    'id' => ag($item, 'ratingKey'),
+                    'remote_id' => null === ag($item, 'ratingKey') ? null : (string) ag($item, 'ratingKey'),
                     'title' => match ($type) {
                         PlexClient::TYPE_MOVIE => r('{title} ({year})', [
                             'title' => ag($item, ['title', 'originalTitle'], '??'),
@@ -1146,7 +1146,7 @@ class Import
 
             if (null === ag($item, true === (bool) ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt')) {
                 $this->logger->debug(
-                    message: "Ignoring {item.type} '#{item.id}: {item.title}' from '{backend}': missing date '{date_key}'.",
+                    message: "Ignoring {item.type} '#{item.remote_id}: {item.title}' from '{backend}': missing date '{date_key}'.",
                     context: [
                         'event_name' => 'backend.item.ignored',
                         'subsystem' => 'backend.import',

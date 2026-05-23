@@ -84,7 +84,7 @@ trait PlexActionTrait
         $logContext = [
             'backend' => $context->backendName,
             'item' => [
-                'id' => ag($item, 'ratingKey'),
+                'remote_id' => (string) ag($item, 'ratingKey'),
                 'type' => ag($item, 'type'),
                 'title' => match ($type) {
                     iState::TYPE_MOVIE, iState::TYPE_SHOW => sprintf(
@@ -330,7 +330,7 @@ trait PlexActionTrait
         }
 
         $logContext['item'] = [
-            'id' => ag($json, 'ratingKey'),
+            'remote_id' => (string) ag($json, 'ratingKey'),
             'title' => sprintf(
                 '%s (%s)',
                 ag($json, ['title', 'originalTitle'], '??'),

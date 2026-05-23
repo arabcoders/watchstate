@@ -21,7 +21,7 @@ class DirectMapperTest extends MapperAbstract
         return $mapper;
     }
 
-    public function test_log_item_id(): void
+    public function test_log_ids(): void
     {
         $this->mapper->add(new StateEntity($this->testMovie));
 
@@ -34,7 +34,8 @@ class DirectMapperTest extends MapperAbstract
         }
 
         self::assertNotNull($record);
-        self::assertArrayHasKey('item_id', $record->context);
+        self::assertArrayHasKey('state_id', $record->context);
+        self::assertArrayHasKey('remote_id', $record->context);
         self::assertArrayNotHasKey('id', $record->context);
     }
 

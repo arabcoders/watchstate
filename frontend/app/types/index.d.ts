@@ -218,8 +218,10 @@ export interface LogItem {
 export interface LogEntry {
   /** Unique identifier for the log entry */
   id: string;
-  /** Associated item ID if available */
-  item_id: string | null;
+  /** Associated local history/state ID if available */
+  state_id: string | null;
+  /** Associated remote/backend item ID if available */
+  remote_id: string | null;
   /** Associated event ID if available */
   event_id: string | null;
   /** User associated with the log entry */

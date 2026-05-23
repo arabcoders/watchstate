@@ -266,14 +266,14 @@ class ValidateCommand extends Command
                 if (count($item->getMetadata()) < 1) {
                     $this->output(
                         Level::Warning,
-                        "Removing '#{id}' for '{user}': no backend metadata was stored.",
+                        "Removing '#{state_id}' for '{user}': no backend metadata was stored.",
                         [
                             'event_name' => 'state.validate.item.removed',
                             'subsystem' => 'state.validate',
                             'operation' => 'validate_item',
                             'outcome' => 'removed',
                             'command' => self::ROUTE,
-                            'id' => $item->id,
+                            'state_id' => $item->id,
                             'user' => $userContext->name,
                             'reason' => 'missing_metadata',
                         ],
@@ -288,14 +288,14 @@ class ValidateCommand extends Command
 
                 $this->output(
                     Level::Debug,
-                    "Checking stored references for '{user}' item '#{id}: {title}'.",
+                    "Checking stored references for '{user}' item '#{state_id}: {title}'.",
                     [
                         'event_name' => 'state.validate.item.started',
                         'subsystem' => 'state.validate',
                         'operation' => 'validate_item',
                         'outcome' => 'started',
                         'command' => self::ROUTE,
-                        'id' => $item->id,
+                        'state_id' => $item->id,
                         'user' => $userContext->name,
                         'title' => $item->getName(),
                         'backends' => array_keys($meta),
@@ -307,15 +307,15 @@ class ValidateCommand extends Command
                     $id = ag($metadata, iState::COLUMN_ID);
                     $this->output(
                         Level::Debug,
-                        "Checking reference '{item_id}' for '{user}@{backend}' item '#{id}: {title}'.",
+                        "Checking reference '{remote_id}' for '{user}@{backend}' item '#{state_id}: {title}'.",
                         [
                             'event_name' => 'state.validate.reference.started',
                             'subsystem' => 'state.validate',
                             'operation' => 'validate_reference',
                             'outcome' => 'started',
                             'command' => self::ROUTE,
-                            'id' => $item->id,
-                            'item_id' => $id,
+                            'state_id' => $item->id,
+                            'remote_id' => $id,
                             'user' => $userContext->name,
                             'title' => $item->getName(),
                             'backend' => $backend,
@@ -326,14 +326,14 @@ class ValidateCommand extends Command
                     if (null === $id) {
                         $this->output(
                             Level::Notice,
-                            "Removing stored reference for '{user}@{backend}' item '#{id}': no backend id was saved.",
+                            "Removing stored reference for '{user}@{backend}' item '#{state_id}': no backend id was saved.",
                             [
                                 'event_name' => 'state.validate.reference.removed',
                                 'subsystem' => 'state.validate',
                                 'operation' => 'validate_reference',
                                 'outcome' => 'removed',
                                 'command' => self::ROUTE,
-                                'id' => $item->id,
+                                'state_id' => $item->id,
                                 'backend' => $backend,
                                 'user' => $userContext->name,
                                 'reason' => 'missing_reference_id',
@@ -348,14 +348,14 @@ class ValidateCommand extends Command
                     if (null === ($clients[$backend] ?? null)) {
                         $this->output(
                             Level::Warning,
-                            "Removing '{user}' item '#{id}' reference for '{backend}': backend is no longer configured.",
+                            "Removing '{user}' item '#{state_id}' reference for '{backend}': backend is no longer configured.",
                             [
                                 'event_name' => 'state.validate.reference.removed',
                                 'subsystem' => 'state.validate',
                                 'operation' => 'validate_reference',
                                 'outcome' => 'removed',
                                 'command' => self::ROUTE,
-                                'id' => $item->id,
+                                'state_id' => $item->id,
                                 'user' => $userContext->name,
                                 'backend' => $backend,
                                 'reason' => 'backend_missing',
@@ -382,15 +382,15 @@ class ValidateCommand extends Command
                         if (false === $data) {
                             $this->output(
                                 Level::Notice,
-                                "Removing '{user}@{backend}' reference '{item_id}' from item '#{id}': backend returned no metadata.",
+                                "Removing '{user}@{backend}' reference '{remote_id}' from item '#{state_id}': backend returned no metadata.",
                                 [
                                     'event_name' => 'state.validate.reference.removed',
                                     'subsystem' => 'state.validate',
                                     'operation' => 'validate_reference',
                                     'outcome' => 'removed',
                                     'command' => self::ROUTE,
-                                    'id' => $item->id,
-                                    'item_id' => $id,
+                                    'state_id' => $item->id,
+                                    'remote_id' => $id,
                                     'user' => $userContext->name,
                                     'backend' => $backend,
                                     'reason' => 'metadata_missing',
@@ -406,15 +406,15 @@ class ValidateCommand extends Command
                     } catch (Throwable $e) {
                         $this->output(
                             Level::Warning,
-                            "Removing '{user}@{backend}' reference '{item_id}' from item '#{id}': metadata lookup failed.",
+                            "Removing '{user}@{backend}' reference '{remote_id}' from item '#{state_id}': metadata lookup failed.",
                             [
                                 'event_name' => 'state.validate.reference.removed',
                                 'subsystem' => 'state.validate',
                                 'operation' => 'validate_reference',
                                 'outcome' => 'removed',
                                 'command' => self::ROUTE,
-                                'id' => $item->id,
-                                'item_id' => $id,
+                                'state_id' => $item->id,
+                                'remote_id' => $id,
                                 'user' => $userContext->name,
                                 'backend' => $backend,
                                 'reason' => 'metadata_lookup_failed',
@@ -432,14 +432,14 @@ class ValidateCommand extends Command
                 if (count($item->metadata) < 1) {
                     $this->output(
                         Level::Notice,
-                        "Removing '#{id}' for '{user}': no backend references remain.",
+                        "Removing '#{state_id}' for '{user}': no backend references remain.",
                         [
                             'event_name' => 'state.validate.item.removed',
                             'subsystem' => 'state.validate',
                             'operation' => 'validate_item',
                             'outcome' => 'removed',
                             'command' => self::ROUTE,
-                            'id' => $item->id,
+                            'state_id' => $item->id,
                             'user' => $userContext->name,
                             'reason' => 'no_references_remaining',
                         ],

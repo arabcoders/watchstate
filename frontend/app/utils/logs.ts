@@ -36,7 +36,6 @@ const DATE_REGEX =
   /^\[([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?[+-][0-9]{2}:[0-9]{2})]/i;
 const EVENT_REGEX =
   /\[event:(?<event_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})]\s*/i;
-const ITEM_REGEX = /'#(?<item_id>\d+):/;
 const IDENT_REGEX = /'((?<client>\w+):\s)?(?<user>\w+)@(?<backend>[\w-]+)'/i;
 let logSequence = 0;
 
@@ -126,7 +125,8 @@ const flattenInto = (target: JsonObject, source: Record<string, unknown>, prefix
 
 const emptyEntry = (raw: string): ParsedLogEntry => ({
   id: nextLogId('log', raw),
-  item_id: null,
+  state_id: null,
+  remote_id: null,
   event_id: null,
   user: null,
   backend: null,
@@ -167,7 +167,12 @@ const parseJsonl = (line: string): ParsedLogEntry | null => {
   const fields: JsonObject = {};
   flattenInto(fields, fieldsSource);
 
-  const itemId = asString(fields.item_id ?? fields['item.id'] ?? fields['attributes.item.id']);
+  const stateId = asString(
+    fields.state_id ?? fields['item.state_id'] ?? fields['attributes.item.state_id'],
+  );
+  const remoteId = asString(
+    fields.remote_id ?? fields['item.remote_id'] ?? fields['attributes.item.remote_id'],
+  );
   const eventId = asString(fields.event_id ?? fields['event.id'] ?? fields['attributes.event.id']);
   const user = asString(fields.user ?? fields['user.name'] ?? fields['attributes.user.name']);
   const backend = asString(
@@ -176,7 +181,8 @@ const parseJsonl = (line: string): ParsedLogEntry | null => {
 
   return {
     id,
-    item_id: itemId,
+    state_id: stateId,
+    remote_id: remoteId,
     event_id: eventId,
     user,
     backend,
@@ -202,7 +208,6 @@ const parseLegacy = (line: string): ParsedLogEntry => {
   const dateMatch = DATE_REGEX.exec(line);
   const eventMatch = EVENT_REGEX.exec(line);
   const levelMatch = LEVEL_REGEX.exec(line);
-  const itemMatch = ITEM_REGEX.exec(line);
   const identMatch = IDENT_REGEX.exec(line);
 
   let text = dateMatch ? line.replace(DATE_REGEX, '').trim() : line;
@@ -213,7 +218,8 @@ const parseLegacy = (line: string): ParsedLogEntry => {
 
   return {
     id: nextLogId('legacy', line),
-    item_id: itemMatch?.groups?.item_id ?? null,
+    state_id: null,
+    remote_id: null,
     event_id: eventMatch?.groups?.event_id ?? null,
     user: identMatch?.groups?.user ?? null,
     backend: identMatch?.groups?.backend ?? null,

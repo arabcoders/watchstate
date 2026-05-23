@@ -604,12 +604,12 @@ const parse_api_error_message = async (
   api_error_message(await parse_api_response<JsonObject>(response), response, fallback);
 
 type HistoryLogItem = {
-  item_id?: string | number | null;
+  state_id?: string | number | null;
   user?: string | null;
 };
 
 const goto_history_item = async (item: HistoryLogItem): Promise<void> => {
-  if (!item.item_id) {
+  if (!item.state_id) {
     return;
   }
 
@@ -633,7 +633,7 @@ const goto_history_item = async (item: HistoryLogItem): Promise<void> => {
     api_user.value = log_user;
   }
 
-  await navigateTo(`/history/${item.item_id}`);
+  await navigateTo(`/history/${item.state_id}`);
 };
 
 /**

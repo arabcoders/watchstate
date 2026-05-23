@@ -285,7 +285,7 @@ class EmbyGuidTest extends TestCase
     {
         $context = [
             'item' => [
-                'id' => 123,
+                'remote_id' => 123,
                 'type' => EmbyClient::TYPE_EPISODE,
                 'title' => 'Test title',
                 'year' => 2021
@@ -307,7 +307,7 @@ class EmbyGuidTest extends TestCase
     {
         $context = [
             'item' => [
-                'id' => 123,
+                'remote_id' => 123,
                 'type' => 'episode',
                 'title' => 'Test title',
                 'year' => 2021,
@@ -336,7 +336,7 @@ class EmbyGuidTest extends TestCase
 
     public function test_get()
     {
-        $context = ['item' => ['id' => 123, 'type' => 'episode', 'title' => 'Test title', 'year' => 2021]];
+        $context = ['item' => ['remote_id' => 123, 'type' => 'episode', 'title' => 'Test title', 'year' => 2021]];
 
         $this->assertEquals([], $this->getClass()->get([
             ['imdb' => ''],
@@ -357,7 +357,7 @@ class EmbyGuidTest extends TestCase
     {
         $context = [
             'item' => [
-                'id' => 123,
+                'remote_id' => 123,
                 'type' => EmbyClient::TYPE_SHOW,
                 'title' => 'Test title',
                 'year' => 2021

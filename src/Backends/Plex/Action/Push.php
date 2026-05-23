@@ -81,13 +81,16 @@ final class Push
 
             $metadata = $entity->getMetadata($context->backendName);
 
+            $remoteId = ag($metadata, iState::COLUMN_ID, null);
+
             $logContext = [
                 'action' => $this->action,
                 'client' => $context->clientName,
                 'backend' => $context->backendName,
                 'user' => $context->userContext->name,
                 'item' => [
-                    'id' => $entity->id,
+                    'state_id' => null === $entity->id ? null : (string) $entity->id,
+                    'remote_id' => null === $remoteId ? null : (string) $remoteId,
                     'type' => $entity->type,
                     'title' => $entity->getName(),
                 ],
@@ -95,7 +98,7 @@ final class Push
 
             if (null === ag($metadata, iState::COLUMN_ID)) {
                 $this->logger->warning(
-                    message: "Ignoring {item.type} '#{item.id}: {item.title}' for '{user}@{backend}': backend metadata is missing.",
+                    message: "Ignoring {item.type} '#{item.state_id}: {item.title}' for '{user}@{backend}': backend metadata is missing.",
                     context: [
                         'event_name' => 'backend.item.ignored',
                         'subsystem' => 'backend.push',
@@ -116,7 +119,7 @@ final class Push
                 $logContext['remote']['url'] = (string) $url;
 
                 $this->logger->debug(
-                    message: "Loading backend state for {item.type} '#{item.id}: {item.title}' from '{user}@{backend}'.",
+                    message: "Loading backend state for {item.type} '#{item.state_id}: {item.title}' from '{user}@{backend}'.",
                     context: [
                         'event_name' => 'backend.request.started',
                         'subsystem' => 'backend.push',
@@ -136,7 +139,7 @@ final class Push
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "Failed to load backend state for {item.type} '#{item.id}: {item.title}' from '{user}@{backend}'.",
+                        message: "Failed to load backend state for {item.type} '#{item.state_id}: {item.title}' from '{user}@{backend}'.",
                         context: [
                             'event_name' => 'backend.client.request_failed',
                             'subsystem' => 'backend.push',
@@ -179,7 +182,7 @@ final class Push
                 if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
                     if (Status::NOT_FOUND === Status::tryFrom($response->getStatusCode())) {
                         $this->logger->warning(
-                            message: "Backend state for {item.type} '#{item.id}: {item.title}' was not found on '{user}@{backend}'.",
+                            message: "Backend state for {item.type} '#{item.state_id}: {item.title}' was not found on '{user}@{backend}'.",
                             context: [
                                 'event_name' => 'backend.response.failed',
                                 'subsystem' => 'backend.push',
@@ -192,7 +195,7 @@ final class Push
                         );
                     } else {
                         $this->logger->error(
-                            message: "Backend state request for {item.type} '#{item.id}: {item.title}' on '{user}@{backend}' returned status {status_code}.",
+                            message: "Backend state request for {item.type} '#{item.state_id}: {item.title}' on '{user}@{backend}' returned status {status_code}.",
                             context: [
                                 'event_name' => 'backend.response.failed',
                                 'subsystem' => 'backend.push',
@@ -215,7 +218,7 @@ final class Push
 
                 if ($context->trace) {
                     $this->logger->debug(
-                        message: "Parsing backend state for {item.type} '#{item.id}: {item.title}' from '{user}@{backend}'.",
+                        message: "Parsing backend state for {item.type} '#{item.state_id}: {item.title}' from '{user}@{backend}'.",
                         context: [
                             'event_name' => 'backend.response.received',
                             'subsystem' => 'backend.push',
@@ -231,7 +234,7 @@ final class Push
 
                 if (empty($json)) {
                     $this->logger->error(
-                        message: "Backend state for {item.type} '#{item.id}: {item.title}' from '{user}@{backend}' returned an empty payload.",
+                        message: "Backend state for {item.type} '#{item.state_id}: {item.title}' from '{user}@{backend}' returned an empty payload.",
                         context: [
                             'event_name' => 'backend.response.failed',
                             'subsystem' => 'backend.push',
@@ -250,7 +253,7 @@ final class Push
 
                 if ($entity->watched === $isWatched) {
                     $this->logger->info(
-                        message: "Ignoring {item.type} '#{item.id}: {item.title}' from '{user}@{backend}': play state is already '{play_state}'.",
+                        message: "Ignoring {item.type} '#{item.state_id}: {item.title}' from '{user}@{backend}': play state is already '{play_state}'.",
                         context: [
                             'event_name' => 'backend.item.ignored',
                             'subsystem' => 'backend.push',
@@ -269,7 +272,7 @@ final class Push
 
                     if (null === ($date = ag($json, $dateKey))) {
                         $this->logger->error(
-                            message: "Ignoring {item.type} '#{item.id}: {item.title}' from '{user}@{backend}': missing backend date '{date_key}'.",
+                            message: "Ignoring {item.type} '#{item.state_id}: {item.title}' from '{user}@{backend}': missing backend date '{date_key}'.",
                             context: [
                                 'event_name' => 'backend.item.ignored',
                                 'subsystem' => 'backend.push',
@@ -290,7 +293,7 @@ final class Push
 
                     if ($date->getTimestamp() >= ($entity->updated + $timeExtra)) {
                         $this->logger->notice(
-                            message: "Ignoring {item.type} '#{item.id}: {item.title}' from '{user}@{backend}': backend date is newer than local state.",
+                            message: "Ignoring {item.type} '#{item.state_id}: {item.title}' from '{user}@{backend}': backend date is newer than local state.",
                             context: [
                                 'event_name' => 'backend.item.ignored',
                                 'subsystem' => 'backend.push',
@@ -326,7 +329,7 @@ final class Push
                 $requestContext = $logContext + ['play_state' => $entity->isWatched() ? 'Played' : 'Unplayed'];
 
                 $this->logger->debug(
-                    message: "Updating play state for {item.type} '#{item.id}: {item.title}' on '{user}@{backend}' to '{play_state}'.",
+                    message: "Updating play state for {item.type} '#{item.state_id}: {item.title}' on '{user}@{backend}' to '{play_state}'.",
                     context: [
                         'event_name' => 'backend.request.started',
                         'subsystem' => 'backend.push',
@@ -347,7 +350,7 @@ final class Push
 
                                 if (Status::OK !== Status::tryFrom($statusCode)) {
                                     $this->logger->error(
-                                        message: "Play-state update for {item.type} '#{item.id}: {item.title}' on '{user}@{backend}' returned status {status_code}.",
+                                        message: "Play-state update for {item.type} '#{item.state_id}: {item.title}' on '{user}@{backend}' returned status {status_code}.",
                                         context: [
                                             'event_name' => 'backend.response.failed',
                                             'subsystem' => 'backend.push',
@@ -362,7 +365,7 @@ final class Push
                                 }
 
                                 $this->logger->notice(
-                                    message: "Updated play state for {item.type} '#{item.id}: {item.title}' on '{user}@{backend}' to '{play_state}'.",
+                                    message: "Updated play state for {item.type} '#{item.state_id}: {item.title}' on '{user}@{backend}' to '{play_state}'.",
                                     context: [
                                         'event_name' => 'backend.state_update.completed',
                                         'subsystem' => 'backend.push',
@@ -377,7 +380,7 @@ final class Push
                             error: function (Throwable $e) use ($requestContext): array {
                                 $this->logger->error(
                                     ...lw(
-                                        message: "Play-state request failed for {item.type} '#{item.id}: {item.title}' on '{user}@{backend}'.",
+                                        message: "Play-state request failed for {item.type} '#{item.state_id}: {item.title}' on '{user}@{backend}'.",
                                         context: [
                                             'event_name' => 'backend.client.request_failed',
                                             'subsystem' => 'backend.push',
@@ -402,7 +405,7 @@ final class Push
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "Failed to prepare play-state update for {item.type} '#{item.id}: {item.title}' on '{user}@{backend}'.",
+                        message: "Failed to prepare play-state update for {item.type} '#{item.state_id}: {item.title}' on '{user}@{backend}'.",
                         context: [
                             'event_name' => 'backend.operation.failed',
                             'subsystem' => 'backend.push',

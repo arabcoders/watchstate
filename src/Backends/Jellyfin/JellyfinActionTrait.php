@@ -75,7 +75,7 @@ trait JellyfinActionTrait
             'backend' => $context->backendName,
             'user' => $context->userContext->name,
             'item' => [
-                'id' => (string) ag($item, 'Id'),
+                'remote_id' => (string) ag($item, 'Id'),
                 'type' => $type,
                 'title' => match ($type) {
                     iState::TYPE_MOVIE, iState::TYPE_SHOW => sprintf(
@@ -317,7 +317,7 @@ trait JellyfinActionTrait
         $json = ag($this->getItemDetails(context: $context, id: $id, opts: $opts), []);
 
         $logContext['item'] = [
-            'id' => ag($json, 'Id'),
+            'remote_id' => (string) ag($json, 'Id'),
             'title' => sprintf(
                 '%s (%s)',
                 ag($json, ['Name', 'OriginalTitle'], '??'),

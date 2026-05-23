@@ -227,7 +227,7 @@ final class GetLibrary
             }
 
             $logContext['item'] = [
-                'id' => ag($entity, 'ratingKey'),
+                'remote_id' => null === ag($entity, 'ratingKey') ? null : (string) ag($entity, 'ratingKey'),
                 'title' => ag($entity, ['title', 'originalTitle'], '??'),
                 'year' => $year,
                 'type' => ag($entity, 'type'),
@@ -239,7 +239,7 @@ final class GetLibrary
                 $requests[] = $this->http->request(
                     method: Method::GET,
                     url: (string) $context->backendUrl->withPath(
-                        r('/library/metadata/{item_id}', ['item_id' => ag($logContext, 'item.id')]),
+                        r('/library/metadata/{item_id}', ['item_id' => ag($logContext, 'item.remote_id')]),
                     ),
                     options: $context->getHttpOptions() + ['user_data' => ['context' => $logContext]],
                 );
