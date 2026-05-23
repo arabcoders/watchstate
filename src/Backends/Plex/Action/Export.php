@@ -76,7 +76,7 @@ final class Export extends Import
 
             try {
                 $logContext['item'] = [
-                    'id' => ag($item, 'ratingKey'),
+                    'remote_id' => null === ag($item, 'ratingKey') ? null : (string) ag($item, 'ratingKey'),
                     'title' => match ($type) {
                         PlexClient::TYPE_MOVIE => r('{title} ({year})', [
                             'title' => ag($item, ['title', 'originalTitle'], '??'),

@@ -85,6 +85,7 @@ class ExportFlowTest extends PlexTestCase
         $record = end($records);
         $this->assertSame('state_unchanged', $record->context['reason'] ?? null);
         $this->assertSame('backend.export', $record->context['subsystem'] ?? null);
+        $this->assertSame('1', $record->context['item']['remote_id'] ?? null);
     }
 
     public function test_export_ignores_newer(): void
@@ -123,6 +124,7 @@ class ExportFlowTest extends PlexTestCase
         $record = end($records);
         $this->assertSame('date_not_newer_than_local_history', $record->context['reason'] ?? null);
         $this->assertSame('backend.export', $record->context['subsystem'] ?? null);
+        $this->assertSame('1', $record->context['item']['remote_id'] ?? null);
     }
 
     public function test_export_ignores_not_found(): void
@@ -157,6 +159,7 @@ class ExportFlowTest extends PlexTestCase
         $record = end($records);
         $this->assertSame('missing_local_state', $record->context['reason'] ?? null);
         $this->assertSame('backend.export', $record->context['subsystem'] ?? null);
+        $this->assertSame('1', $record->context['item']['remote_id'] ?? null);
     }
 
     public function test_export_ignores_no_guids(): void
@@ -194,6 +197,7 @@ class ExportFlowTest extends PlexTestCase
         $record = end($records);
         $this->assertSame('missing_supported_guid', $record->context['reason'] ?? null);
         $this->assertSame('backend.export', $record->context['subsystem'] ?? null);
+        $this->assertSame('1', $record->context['item']['remote_id'] ?? null);
     }
 
     public function test_export_ignores_missing_date(): void
@@ -231,6 +235,7 @@ class ExportFlowTest extends PlexTestCase
         $record = end($records);
         $this->assertSame('missing_date', $record->context['reason'] ?? null);
         $this->assertSame('backend.export', $record->context['subsystem'] ?? null);
+        $this->assertSame('1', $record->context['item']['remote_id'] ?? null);
     }
 
     private function invokeProcess(

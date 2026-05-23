@@ -90,6 +90,71 @@ final class IndexTest extends TestCase
         $this->assertSame('emby_main', $parsed['backend']);
     }
 
+    public function test_jsonl_nested_ids(): void
+    {
+        $line = json_encode([
+            'id' => 'nested-jsonl',
+            'datetime' => '2026-05-20T12:00:00.123+00:00',
+            'level' => 'notice',
+            'logger' => 'app',
+            'message' => 'Processing webhook',
+            'fields' => [
+                'event' => ['id' => '550e8400-e29b-41d4-a716-446655440000'],
+                'user' => ['name' => 'main'],
+                'backend' => ['name' => 'plex'],
+                'attributes' => [
+                    'item' => [
+                        'state_id' => 123,
+                        'remote_id' => 'abc-123',
+                    ],
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR);
+
+        $parsed = Index::formatLog($line);
+
+        $this->assertSame('123', $parsed['state_id']);
+        $this->assertSame('abc-123', $parsed['remote_id']);
+        $this->assertSame('main', $parsed['user']);
+        $this->assertSame('plex', $parsed['backend']);
+        $this->assertSame('550e8400-e29b-41d4-a716-446655440000', $parsed['event_id']);
+    }
+
+    public function test_schema_nested_ids(): void
+    {
+        $line = json_encode([
+            'schema' => 1,
+            'id' => 'schema-id',
+            'datetime' => '2026-05-20T12:00:00.123+00:00',
+            'level' => 'notice',
+            'logger' => 'app',
+            'message' => 'Processing export',
+            'context' => [
+                'attributes' => [
+                    'item' => [
+                        'state_id' => 321,
+                    ],
+                    'user' => ['name' => 'alice'],
+                    'backend' => ['name' => 'emby'],
+                    'event' => ['id' => '550e8400-e29b-41d4-a716-446655440001'],
+                ],
+            ],
+            'extras' => [
+                'item' => [
+                    'remote_id' => 'remote-321',
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR);
+
+        $parsed = Index::formatLog($line);
+
+        $this->assertSame('321', $parsed['state_id']);
+        $this->assertSame('remote-321', $parsed['remote_id']);
+        $this->assertSame('alice', $parsed['user']);
+        $this->assertSame('emby', $parsed['backend']);
+        $this->assertSame('550e8400-e29b-41d4-a716-446655440001', $parsed['event_id']);
+    }
+
     public function test_logView_returns_raw_lines(): void
     {
         $this->initTempApp();

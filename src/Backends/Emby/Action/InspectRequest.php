@@ -87,6 +87,7 @@ class InspectRequest
                     ],
                     'item' => [
                         'id' => ag($json, 'Item.Id', ''),
+                        'remote_id' => ag($json, 'Item.Id', ''),
                         'type' => ag($json, 'Item.Type'),
                     ],
                     'webhook' => [

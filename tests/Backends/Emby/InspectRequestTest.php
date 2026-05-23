@@ -35,6 +35,8 @@ class InspectRequestTest extends TestCase
         $parsed = $response->response;
         $this->assertSame('server-1', $parsed->getAttribute('backend')['id']);
         $this->assertSame('user-1', $parsed->getAttribute('user')['id']);
+        $this->assertSame('item-1', $parsed->getAttribute('item')['id']);
+        $this->assertSame('item-1', $parsed->getAttribute('item')['remote_id']);
     }
 
     public function test_handles_legacy_payload_wrapper(): void

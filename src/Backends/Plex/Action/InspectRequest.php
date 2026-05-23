@@ -62,6 +62,7 @@ final class InspectRequest
                     ],
                     'item' => [
                         'id' => ag($json, 'Metadata.ratingKey'),
+                        'remote_id' => ag($json, 'Metadata.ratingKey'),
                         'type' => ag($json, 'Metadata.type'),
                     ],
                     'webhook' => [

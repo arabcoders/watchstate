@@ -34,6 +34,8 @@ class InspectRequestTest extends PlexTestCase
 
         $this->assertTrue($result->isSuccessful());
         $this->assertSame('plex-server-1', $result->response->getAttribute('backend')['id']);
+        $this->assertSame('1', $result->response->getAttribute('item')['id']);
+        $this->assertSame('1', $result->response->getAttribute('item')['remote_id']);
         $this->assertSame('media.scrobble', $result->response->getAttribute('webhook')['event']);
     }
 

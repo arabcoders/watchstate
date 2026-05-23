@@ -48,6 +48,7 @@ class InspectRequestTest extends TestCase
         $this->assertSame('server-1', $parsed->getAttribute('backend')['id']);
         $this->assertSame('user-1', $parsed->getAttribute('user')['id']);
         $this->assertSame('item-1', $parsed->getAttribute('item')['id']);
+        $this->assertSame('item-1', $parsed->getAttribute('item')['remote_id']);
     }
 
     public function test_rejects_non_jellyfin_ua(): void

@@ -143,6 +143,7 @@ class ExportFlowTest extends MediaBrowserTestCase
             $record = end($records);
             $this->assertSame('state_unchanged', $record->context['reason'] ?? null);
             $this->assertSame('backend.export', $record->context['subsystem'] ?? null);
+            $this->assertSame('item-1', $record->context['item']['remote_id'] ?? null);
         }
     }
 
@@ -184,6 +185,7 @@ class ExportFlowTest extends MediaBrowserTestCase
             $record = end($records);
             $this->assertSame('date_not_newer_than_local_history', $record->context['reason'] ?? null);
             $this->assertSame('backend.export', $record->context['subsystem'] ?? null);
+            $this->assertSame('item-1', $record->context['item']['remote_id'] ?? null);
         }
     }
 
@@ -222,6 +224,7 @@ class ExportFlowTest extends MediaBrowserTestCase
             $record = end($records);
             $this->assertSame('missing_local_state', $record->context['reason'] ?? null);
             $this->assertSame('backend.export', $record->context['subsystem'] ?? null);
+            $this->assertSame('item-1', $record->context['item']['remote_id'] ?? null);
         }
     }
 
@@ -262,6 +265,7 @@ class ExportFlowTest extends MediaBrowserTestCase
             $record = end($records);
             $this->assertSame('missing_supported_guid', $record->context['reason'] ?? null);
             $this->assertSame('backend.export', $record->context['subsystem'] ?? null);
+            $this->assertSame('item-1', $record->context['item']['remote_id'] ?? null);
         }
     }
 
@@ -301,6 +305,7 @@ class ExportFlowTest extends MediaBrowserTestCase
             $record = end($records);
             $this->assertSame('missing_date', $record->context['reason'] ?? null);
             $this->assertSame('backend.export', $record->context['subsystem'] ?? null);
+            $this->assertSame('item-1', $record->context['item']['remote_id'] ?? null);
         }
     }
 

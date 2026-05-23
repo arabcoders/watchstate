@@ -10,7 +10,9 @@ use App\Backends\Plex\PlexGuid;
 use App\Backends\Common\Response;
 use App\Libs\Container;
 use App\Libs\Stream;
+use Monolog\LogRecord;
 use ReflectionMethod;
+use Tests\Support\FailingWriteStream;
 
 class BackupFlowTest extends PlexTestCase
 {
@@ -107,6 +109,37 @@ class BackupFlowTest extends PlexTestCase
         $content = (string) $writer;
 
         $this->assertStringContainsString('parent', $content);
+    }
+
+    public function test_backup_logs_remote_id_on_failure(): void
+    {
+        $context = $this->makeContext();
+        $mapper = $context->userContext->mapper;
+        $item = ag($this->fixture('library_movie_get_200'), 'response.body.MediaContainer.Metadata.0');
+        $writer = new FailingWriteStream('backup write failed');
+
+        $action = new Backup($this->makeHttpClient(), $this->logger);
+        $guid = (new PlexGuid($this->logger))->withContext($context);
+
+        $this->invokeProcess(
+            $action,
+            $context,
+            $guid,
+            $mapper,
+            $item,
+            ['library' => ['id' => 1]],
+            ['writer' => $writer, 'no_enhance' => true],
+        );
+
+        $records = array_values(array_filter(
+            $this->handler->getRecords(),
+            static fn(LogRecord $record): bool => 'backend.operation.failed' === ($record->context['event_name'] ?? null),
+        ));
+
+        $this->assertNotEmpty($records);
+        $record = end($records);
+        $this->assertSame('backend.backup', $record->context['subsystem'] ?? null);
+        $this->assertSame('1', $record->context['item']['remote_id'] ?? null);
     }
 
     private function invokeProcess(

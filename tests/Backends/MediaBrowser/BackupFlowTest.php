@@ -13,7 +13,9 @@ use App\Backends\Jellyfin\JellyfinGuid;
 use App\Backends\Common\Response;
 use App\Libs\Container;
 use App\Libs\Stream;
+use Monolog\LogRecord;
 use ReflectionMethod;
+use Tests\Support\FailingWriteStream;
 
 class BackupFlowTest extends MediaBrowserTestCase
 {
@@ -94,6 +96,41 @@ class BackupFlowTest extends MediaBrowserTestCase
             $content = (string) $writer;
 
             $this->assertStringContainsString('parent', $content);
+        }
+    }
+
+    public function test_backup_logs_remote_id_on_failure(): void
+    {
+        foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass]) {
+            $this->handler->clear();
+
+            $context = $this->makeContext($clientName);
+            $mapper = $context->userContext->mapper;
+            $item = $this->fixture('metadata');
+            $writer = new FailingWriteStream('backup write failed');
+
+            $action = new $actionClass($this->makeHttpClient(), $this->logger);
+            $guid = (new $guidClass($this->logger))->withContext($context);
+
+            $this->invokeProcess(
+                $action,
+                $context,
+                $guid,
+                $mapper,
+                $item,
+                ['library' => ['id' => 'lib-1']],
+                ['writer' => $writer, 'no_enhance' => true],
+            );
+
+            $records = array_values(array_filter(
+                $this->handler->getRecords(),
+                static fn(LogRecord $record): bool => 'backend.operation.failed' === ($record->context['event_name'] ?? null),
+            ));
+
+            $this->assertNotEmpty($records);
+            $record = end($records);
+            $this->assertSame('backend.backup', $record->context['subsystem'] ?? null);
+            $this->assertSame('item-1', $record->context['item']['remote_id'] ?? null);
         }
     }
 

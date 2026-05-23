@@ -372,12 +372,12 @@ final class Index
     public static function formatLog(mixed $line, array $users = [], bool $allowStructured = true): array
     {
         if (true === $allowStructured && is_array($line)) {
-            if (true === self::isJsonlLog($line)) {
-                return self::formatJsonlLog($line, $users);
-            }
-
             if (1 === (int) ag($line, 'schema', 0)) {
                 return self::formatSchemaLog($line, $users);
+            }
+
+            if (true === self::isJsonlLog($line)) {
+                return self::formatJsonlLog($line, $users);
             }
         }
 
@@ -408,12 +408,12 @@ final class Index
 
         $json = json_decode($line, true);
         if (true === $allowStructured && is_array($json)) {
-            if (true === self::isJsonlLog($json)) {
-                return self::formatJsonlLog($json, $users);
-            }
-
             if (1 === (int) ag($json, 'schema', 0)) {
                 return self::formatSchemaLog($json, $users);
+            }
+
+            if (true === self::isJsonlLog($json)) {
+                return self::formatJsonlLog($json, $users);
             }
         }
 
@@ -441,14 +441,17 @@ final class Index
             $fields = [];
         }
 
+        $flatFields = [];
+        self::flattenFields($flatFields, $fields);
+
         $text = (string) ag($line, 'message', '');
         $legacy = self::formatLegacyLog($text, $users);
 
-        $eventId = ag($fields, ['event_id', 'event.id', 'attributes.event.id'], ag($legacy, 'event_id'));
-        $stateId = ag($fields, ['state_id', 'item.state_id', 'attributes.item.state_id']);
-        $remoteId = ag($fields, ['remote_id', 'item.remote_id', 'attributes.item.remote_id']);
-        $user = ag($fields, ['user', 'user.name', 'attributes.user.name'], ag($legacy, 'user'));
-        $backend = ag($fields, ['backend', 'backend.name', 'attributes.backend.name', 'via'], ag($legacy, 'backend'));
+        $eventId = self::fieldValue($flatFields, ['event_id', 'event.id', 'attributes.event.id'], ag($legacy, 'event_id'));
+        $stateId = self::fieldValue($flatFields, ['state_id', 'item.state_id', 'attributes.item.state_id']);
+        $remoteId = self::fieldValue($flatFields, ['remote_id', 'item.remote_id', 'attributes.item.remote_id']);
+        $user = self::fieldValue($flatFields, ['user', 'user.name', 'attributes.user.name'], ag($legacy, 'user'));
+        $backend = self::fieldValue($flatFields, ['backend', 'backend.name', 'attributes.backend.name', 'via'], ag($legacy, 'backend'));
 
         $fallbackId = static fn() => md5((string) json_encode($line) . (hrtime(true) + random_int(1, 10_000)));
 
@@ -480,19 +483,45 @@ final class Index
             $context = [];
         }
 
+        $flatContext = [];
+        self::flattenFields($flatContext, $context);
+
         $extras = ag($line, 'extras', []);
         if (false === is_array($extras)) {
             $extras = [];
         }
 
+        $flatExtras = [];
+        self::flattenFields($flatExtras, $extras);
+
         $text = (string) ag($line, 'text', ag($line, 'message', ''));
         $legacy = self::formatLegacyLog($text, $users);
         $fallbackId = static fn() => md5((string) json_encode($line) . (hrtime(true) + random_int(1, 10_000)));
-        $stateId = ag($extras, ['state_id', 'item.state_id']);
-        $remoteId = ag($extras, ['remote_id', 'item.remote_id']);
-        $eventId = ag($extras, 'event_id', ag($legacy, 'event_id'));
-        $user = ag($extras, 'user', ag($legacy, 'user'));
-        $backend = ag($extras, 'backend', ag($legacy, 'backend'));
+        $stateId = self::fieldValue(
+            $flatExtras,
+            ['state_id', 'item.state_id', 'attributes.item.state_id'],
+            self::fieldValue($flatContext, ['state_id', 'item.state_id', 'attributes.item.state_id']),
+        );
+        $remoteId = self::fieldValue(
+            $flatExtras,
+            ['remote_id', 'item.remote_id', 'attributes.item.remote_id'],
+            self::fieldValue($flatContext, ['remote_id', 'item.remote_id', 'attributes.item.remote_id']),
+        );
+        $eventId = self::fieldValue(
+            $flatExtras,
+            ['event_id', 'event.id', 'attributes.event.id'],
+            self::fieldValue($flatContext, ['event_id', 'event.id', 'attributes.event.id'], ag($legacy, 'event_id')),
+        );
+        $user = self::fieldValue(
+            $flatExtras,
+            ['user', 'user.name', 'attributes.user.name'],
+            self::fieldValue($flatContext, ['user', 'user.name', 'attributes.user.name'], ag($legacy, 'user')),
+        );
+        $backend = self::fieldValue(
+            $flatExtras,
+            ['backend', 'backend.name', 'attributes.backend.name', 'via'],
+            self::fieldValue($flatContext, ['backend', 'backend.name', 'attributes.backend.name', 'via'], ag($legacy, 'backend')),
+        );
 
         return [
             'id' => (string) ag($line, 'id', $fallbackId),
@@ -510,6 +539,39 @@ final class Index
             'fields' => array_replace($context, $extras),
             'source' => ag($extras, 'source'),
         ];
+    }
+
+    /**
+     * @param array<string,mixed> $target
+     * @param array<string,mixed> $source
+     */
+    private static function flattenFields(array &$target, array $source, string $prefix = ''): void
+    {
+        foreach ($source as $key => $value) {
+            $path = '' === $prefix ? (string) $key : $prefix . '.' . $key;
+
+            if (true === is_array($value)) {
+                self::flattenFields($target, $value, $path);
+                continue;
+            }
+
+            $target[$path] = $value;
+        }
+    }
+
+    /**
+     * @param array<string,mixed> $fields
+     * @param array<string> $keys
+     */
+    private static function fieldValue(array $fields, array $keys, mixed $default = null): mixed
+    {
+        foreach ($keys as $key) {
+            if (array_key_exists($key, $fields)) {
+                return $fields[$key];
+            }
+        }
+
+        return $default;
     }
 
     /**

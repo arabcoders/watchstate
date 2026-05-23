@@ -87,7 +87,7 @@ class Export extends Import
 
             try {
                 $logContext['item'] = [
-                    'id' => ag($item, 'Id'),
+                    'remote_id' => null === ag($item, 'Id') ? null : (string) ag($item, 'Id'),
                     'title' => match ($type) {
                         JFC::TYPE_MOVIE => r('{title} ({year})', [
                             'title' => ag($item, ['Name', 'OriginalTitle'], '??'),
