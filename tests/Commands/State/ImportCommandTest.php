@@ -218,6 +218,48 @@ final class ImportCommandTest extends TestCase
         self::assertFalse(ag_exists(ag($saved, 'fake_import.options', []), 'IMPORT_METADATA_ONLY'));
     }
 
+    public function test_orders_full_before_metadata(): void
+    {
+        $logger = $this->initFakeBackendApp([
+            ...$this->fakeBackendConfig('metadata_first', [
+                'import' => [
+                    'enabled' => false,
+                ],
+            ]),
+            ...$this->fakeBackendConfig('full_second', [
+                'import' => [
+                    'enabled' => true,
+                ],
+            ]),
+        ]);
+        $this->migrateMainDb($logger);
+
+        FakeBackendClient::reset();
+
+        $command = new ImportCommand(
+            $this->createRuntimeMapper($logger),
+            $logger,
+            new LogSuppressor([]),
+            $this->createStub(iHttp::class),
+        );
+
+        $status = $this->makeTester($command)->execute([]);
+
+        self::assertSame(ImportCommand::SUCCESS, $status);
+        self::assertSame([
+            [
+                'backend' => 'full_second',
+                'user' => 'main',
+                'after' => 1_700_000_000,
+            ],
+            [
+                'backend' => 'metadata_first',
+                'user' => 'main',
+                'after' => 1_700_000_000,
+            ],
+        ], FakeBackendClient::getCalls('pull'));
+    }
+
     public function test_invalid_user_returns_failure(): void
     {
         $logger = new Logger('test');

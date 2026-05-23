@@ -24,6 +24,7 @@ use Monolog\Logger;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\SimpleCache\CacheInterface;
 use Symfony\Component\Yaml\Yaml;
+use Tests\Support\FakeBackendClient;
 use Tests\Support\RequestResponseTrait;
 
 final class ProcessWebhookEventTest extends TestCase
@@ -151,7 +152,7 @@ final class ProcessWebhookEventTest extends TestCase
         $listener($event);
     }
 
-    public function test_disabled_import_backend_is_processed_as_metadata_only(): void
+    public function test_disabled_import_means_metadata_only(): void
     {
         $userContext = get_user_context(
             'main',
@@ -197,6 +198,67 @@ final class ProcessWebhookEventTest extends TestCase
         self::assertSame('req-2', ag($processingLog, 'fields.request_id'));
 
         $saved = Yaml::parseFile((string) Config::get('backends_file'));
+    }
+
+    public function test_orders_full_before_metadata(): void
+    {
+        Config::save('supported.plex', FakeBackendClient::class);
+        FakeBackendClient::reset();
+
+        file_put_contents((string) Config::get('backends_file'), Yaml::dump([
+            'metadata_first' => [
+                'type' => 'plex',
+                'url' => 'https://example.invalid',
+                'token' => 'token-1',
+                'user' => '11111111',
+                'uuid' => 's00000000000000000000000000000000000000p',
+                'import' => [
+                    'enabled' => false,
+                ],
+                'export' => [
+                    'enabled' => true,
+                ],
+                'options' => [],
+            ],
+            'full_second' => [
+                'type' => 'plex',
+                'url' => 'https://example.invalid',
+                'token' => 'token-2',
+                'user' => '11111111',
+                'uuid' => 's00000000000000000000000000000000000000p',
+                'import' => [
+                    'enabled' => true,
+                ],
+                'export' => [
+                    'enabled' => true,
+                ],
+                'options' => [],
+            ],
+        ], 8, 2));
+
+        $cache = Container::get(CacheInterface::class);
+        $logger = new Logger('test');
+
+        $listener = new ProcessWebhookEvent(new DirectMapper($logger, Container::get(iDB::class), $cache), $logger);
+        $event = $this->event('req-3');
+
+        $listener($event);
+
+        $processingBackends = [];
+        foreach ($event->getLogs() as $log) {
+            if (false === JsonlFormatter::isJsonlRecord($log)) {
+                continue;
+            }
+
+            $payload = json_decode($log, true, 512, JSON_THROW_ON_ERROR);
+            if ('webhook.item.processing' !== ag($payload, 'fields.event_name')) {
+                continue;
+            }
+
+            $processingBackends[] = ag($payload, 'fields.backend');
+        }
+
+        self::assertSame(['full_second', 'metadata_first'], $processingBackends);
     }
 
     private function inspect(iRequest $request): iRequest

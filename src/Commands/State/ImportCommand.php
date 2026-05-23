@@ -374,6 +374,8 @@ class ImportCommand extends Command
                 continue;
             }
 
+            $list = $this->sortBackends($list, true === $input->getOption('metadata-only'));
+
             /** @var array<array-key,Request> $queue */
             $queue = [];
 
@@ -733,5 +735,29 @@ class ImportCommand extends Command
         $ids = array_filter(array_map(trim(...), $value), static fn($item) => '' !== $item);
 
         return array_values(array_unique($ids));
+    }
+
+    /**
+     * @param array<string,array<string,mixed>> $backends
+     *
+     * @return array<string,array<string,mixed>>
+     */
+    private function sortBackends(array $backends, bool $forceMetadataOnly = false): array
+    {
+        $full = [];
+        $metadata = [];
+
+        foreach ($backends as $name => $backend) {
+            $isMetadataOnly = true === $forceMetadataOnly || true !== (bool) ag($backend, 'import.enabled');
+
+            if (true === $isMetadataOnly) {
+                $metadata[$name] = $backend;
+                continue;
+            }
+
+            $full[$name] = $backend;
+        }
+
+        return [...$full, ...$metadata];
     }
 }

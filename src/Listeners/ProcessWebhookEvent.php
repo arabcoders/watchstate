@@ -220,6 +220,8 @@ final class ProcessWebhookEvent
             return;
         }
 
+        $backends = $this->sortBackends($backends);
+
         if (true === (bool) ag($request->getAttributes(), 'webhook.noop', false)) {
             $this->write(
                 $request,
@@ -671,5 +673,27 @@ final class ProcessWebhookEvent
         $this->event?->addLogEntry($eventLevel, $message, $context);
 
         $this->logger->log($level, $message, $context);
+    }
+
+    /**
+     * @param array<int,array{backendName:string,backend:array<string,mixed>,userContext:UserContext,client:iClient}> $backends
+     *
+     * @return array<int,array{backendName:string,backend:array<string,mixed>,userContext:UserContext,client:iClient}>
+     */
+    private function sortBackends(array $backends): array
+    {
+        $full = [];
+        $metadata = [];
+
+        foreach ($backends as $backend) {
+            if (true !== (bool) ag($backend, 'backend.import.enabled')) {
+                $metadata[] = $backend;
+                continue;
+            }
+
+            $full[] = $backend;
+        }
+
+        return [...$full, ...$metadata];
     }
 }
