@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "a2f6aa4c35a8b1a01c5578cc6179d2a119801b19",
-    "date": "2026-05-23T06:21:27+00:00",
+    "full_sha": "d6e42d6cf72b1d5e27f87e7c0cd8f1f2227651de",
+    "date": "2026-05-23T09:46:48+00:00",
     "commits": [
+      {
+        "sha": "d6e42d6c",
+        "full_sha": "d6e42d6cf72b1d5e27f87e7c0cd8f1f2227651de",
+        "message": "refactor: use last latest updated_at as cursor for export.",
+        "author": "arabcoders",
+        "date": "2026-05-23T09:46:48+00:00"
+      },
       {
         "sha": "a2f6aa4c",
         "full_sha": "a2f6aa4c35a8b1a01c5578cc6179d2a119801b19",
