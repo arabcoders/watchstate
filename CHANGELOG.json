@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "0a4730082bfa55149cd3e77fb76b0f7b4d68df8e",
-    "date": "2026-05-23T16:44:05+00:00",
+    "full_sha": "f52c8a8d3ce8549de3b8eac56b48bebce88ff7ed",
+    "date": "2026-05-23T18:23:23+00:00",
     "commits": [
+      {
+        "sha": "f52c8a8d",
+        "full_sha": "f52c8a8d3ce8549de3b8eac56b48bebce88ff7ed",
+        "message": "fix: handle string error levels",
+        "author": "arabcoders",
+        "date": "2026-05-23T18:23:23+00:00"
+      },
+      {
+        "sha": "b33815b6",
+        "full_sha": "b33815b654022ce9193a8d9e79e62ca8e0ed60c7",
+        "message": "fix: updating backend was using old token to validate",
+        "author": "arabcoders",
+        "date": "2026-05-23T18:18:44+00:00"
+      },
       {
         "sha": "0a473008",
         "full_sha": "0a4730082bfa55149cd3e77fb76b0f7b4d68df8e",
