@@ -245,6 +245,7 @@ class ExportCommand extends Command
             ]);
 
             try {
+                $cursorUpdatedAt = $this->getCursor($userContext);
                 $backends = $export = $push = $entities = [];
 
                 foreach ($userContext->config->getAll() as $backendName => $backend) {
@@ -675,15 +676,38 @@ class ExportCommand extends Command
                         'duration_seconds' => round(microtime(true) - $requestStart, 4),
                     ]);
                 } else {
-                    $this->logger->notice("No play-state changes detected for '{user}'.", [
-                        'event_name' => 'state.export.no_changes',
-                        'subsystem' => 'state.export',
-                        'operation' => 'send_requests',
-                        'outcome' => 'completed',
-                        'command' => self::ROUTE,
-                        'user' => $userContext->name,
-                        'change_count' => 0,
-                    ]);
+                    $this->logger->notice(
+                        "No backend play-state updates were required for '{user}'.",
+                        (static function () use ($entities, $export, $input, $push, $userContext): array {
+                            $context = [
+                                'event_name' => 'state.export.no_changes',
+                                'subsystem' => 'state.export',
+                                'operation' => 'send_requests',
+                                'outcome' => 'completed',
+                                'command' => self::ROUTE,
+                                'user' => $userContext->name,
+                                'change_count' => 0,
+                                'local_change_count' => count($entities),
+                                'push_backend_count' => count($push),
+                                'export_backend_count' => count($export),
+                            ];
+
+                            if ($input->getOption('trace')) {
+                                foreach ($entities as $entity) {
+                                    $context['items'][$entity->id ?? spl_object_id($entity)] = [
+                                        'title' => $entity->getName(),
+                                        'type' => $entity->type,
+                                        'via' => $entity->via,
+                                        'updated' => (string) make_date($entity->updated),
+                                        'updated_at' => (string) make_date($entity->updated_at),
+                                        'metadata' => $entity->getMetadata(),
+                                    ];
+                                }
+                            }
+
+                            return $context;
+                        })(),
+                    );
                 }
 
                 if (false === $dryRun) {
@@ -693,7 +717,7 @@ class ExportCommand extends Command
                         }
 
                         if (false === (bool) Message::get("{$name}.has_errors", false)) {
-                            $lastSyncAt = time();
+                            $lastSyncAt = max((int) ag($backend, 'export.lastSync', 0), $cursorUpdatedAt ?? time());
                             $userContext->config->set("{$name}.export.lastSync", $lastSyncAt);
                             $this->logger->notice("Updated export cursor for '{user}@{backend}' to {last_sync_at}.", [
                                 'event_name' => 'state.export.cursor.updated',
@@ -960,12 +984,6 @@ class ExportCommand extends Command
 
             assert($backend['class'] instanceof ClientInterface, 'Backend class must implement ClientInterface.');
             array_push($requests, ...$backend['class']->export($userContext->mapper, $this->queue, $after));
-
-            if (false === $inDryMode) {
-                if (false === (bool) Message::get("{$name}.has_errors")) {
-                    $userContext->config->set("{$name}.export.lastSync", time());
-                }
-            }
         }
 
         if (count($requests) < 1) {
@@ -1039,6 +1057,22 @@ class ExportCommand extends Command
     private function in_array(array $list, string $search): bool
     {
         return array_any($list, static fn($item) => str_starts_with($search, $item));
+    }
+
+    private function getCursor(UserContext $userContext): ?int
+    {
+        $stmt = $userContext
+            ->db
+            ->getDBLayer()
+            ->query(
+                'SELECT MAX(' . iState::COLUMN_UPDATED_AT . ') FROM state',
+            );
+
+        if (false === ($max = $stmt->fetchColumn())) {
+            return null;
+        }
+
+        return null === $max ? null : (int) $max;
     }
 
     /**

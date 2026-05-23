@@ -216,6 +216,74 @@ final class ExportCommandTest extends TestCase
                 'after' => 1_700_000_100,
             ],
         ], FakeBackendClient::getCalls('push'));
+
+        $aliceConfig = Yaml::parseFile(self::$tmpPath . '/users/alice/servers.yaml');
+        self::assertSame(1_700_000_150, ag($aliceConfig, 'fake_export.export.lastSync'));
+    }
+
+    public function test_trace_logs_items_when_no_backend_updates_are_required(): void
+    {
+        $logger = $this->initFakeBackendApp(
+            mainBackends: $this->fakeBackendConfig('fake_export'),
+            userBackends: [
+                'alice' => $this->fakeBackendConfig('fake_export', [
+                    'import' => [
+                        'enabled' => true,
+                        'lastSync' => 1_700_000_000,
+                    ],
+                    'export' => [
+                        'enabled' => true,
+                        'lastSync' => 1_700_000_100,
+                    ],
+                ]),
+            ],
+        );
+        $handler = new TestHandler();
+        $logger->setHandlers([$handler]);
+        $logger->pushProcessor(new LogMessageProcessor());
+
+        $aliceContext = $this->makeUserContext('alice', $logger);
+        $entity = require __DIR__ . '/../../Fixtures/MovieEntity.php';
+        $entity[iState::COLUMN_VIA] = 'fake_export';
+        $entity[iState::COLUMN_UPDATED] = 1_700_000_050;
+        $entity[iState::COLUMN_CREATED_AT] = 1_700_000_000;
+        $entity[iState::COLUMN_UPDATED_AT] = 1_700_000_150;
+        $entity[iState::COLUMN_META_DATA] = [
+            'fake_export' => [
+                iState::COLUMN_ID => 901,
+                iState::COLUMN_TYPE => iState::TYPE_MOVIE,
+                iState::COLUMN_WATCHED => 1,
+                iState::COLUMN_META_DATA_ADDED_AT => 1_700_000_000,
+                iState::COLUMN_META_DATA_PLAYED_AT => 1_700_000_050,
+            ],
+        ];
+        $inserted = $aliceContext->db->insert(new StateEntity($entity));
+
+        $status = $this->makeTester(new ExportCommand(
+            $this->createRuntimeMapper($logger),
+            new QueueRequests(),
+            $logger,
+            new LogSuppressor([]),
+            $this->createStub(iHttp::class),
+        ))->execute([
+            '--user' => 'alice',
+            '--trace' => true,
+        ]);
+
+        self::assertSame(ExportCommand::SUCCESS, $status);
+
+        $records = array_values(array_filter(
+            $handler->getRecords(),
+            static fn($record): bool => 'state.export.no_changes' === ($record->context['event_name'] ?? null),
+        ));
+
+        self::assertCount(1, $records);
+        self::assertSame("No backend play-state updates were required for 'alice'.", $records[0]->message);
+        self::assertSame(1, $records[0]->context['local_change_count']);
+        self::assertSame('Movie Title (2020)', $records[0]->context['items'][$inserted->id]['title']);
+        self::assertSame('movie', $records[0]->context['items'][$inserted->id]['type']);
+        self::assertSame('fake_export', $records[0]->context['items'][$inserted->id]['via']);
+        self::assertArrayHasKey('metadata', $records[0]->context['items'][$inserted->id]);
     }
 
     public function test_logfile_lifecycle(): void

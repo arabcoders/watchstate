@@ -149,7 +149,7 @@ final readonly class ProcessProgressEvent
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
             if (true !== (bool) ag($backend, 'export.enabled')) {
-                $writer(Level::Notice, "Skipping progress target '{user}@{backend}': export is disabled.", [
+                $writer(Level::Info, "Skipping progress target '{user}@{backend}': export is disabled.", [
                     'event_name' => 'progress.backend.skipped',
                     'subsystem' => 'progress',
                     'operation' => 'queue',

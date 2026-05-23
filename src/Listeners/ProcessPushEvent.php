@@ -105,7 +105,7 @@ final readonly class ProcessPushEvent
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
             if (true !== (bool) ag($backend, 'export.enabled')) {
-                $writer(Level::Notice, "Skipping push target '{user}@{backend}': export is disabled.", [
+                $writer(Level::Info, "Skipping push target '{user}@{backend}': export is disabled.", [
                     'event_name' => 'push.backend.skipped',
                     'subsystem' => 'push',
                     'operation' => 'queue',
