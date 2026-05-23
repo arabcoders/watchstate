@@ -246,8 +246,6 @@ export interface LogEntry {
   source?: JsonObject;
   /** Process metadata for structured logs */
   process?: JsonObject;
-  /** Thread metadata for structured logs */
-  thread?: JsonObject;
   /** Structured exception payload */
   exception?: string | null;
   /** Structured exception summary */

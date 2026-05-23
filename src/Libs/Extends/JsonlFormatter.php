@@ -153,10 +153,6 @@ final class JsonlFormatter extends NormalizerFormatter
                 'id' => false === $processId ? 0 : $processId,
                 'name' => PHP_SAPI,
             ],
-            'thread' => [
-                'id' => 0,
-                'name' => 'main',
-            ],
             'fields' => [] === $fields ? new stdClass() : $fields,
         ];
 

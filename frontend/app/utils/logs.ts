@@ -195,7 +195,6 @@ const parseJsonl = (line: string): ParsedLogEntry | null => {
     fields,
     source: (asRecord(payload.source) ?? undefined) as JsonObject | undefined,
     process: (asRecord(payload.process) ?? undefined) as JsonObject | undefined,
-    thread: (asRecord(payload.thread) ?? undefined) as JsonObject | undefined,
     exception: typeof payload.exception === 'string' ? payload.exception : null,
     exception_message:
       typeof payload.exception_message === 'string' ? payload.exception_message : null,

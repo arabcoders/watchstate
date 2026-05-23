@@ -29,7 +29,6 @@ final class LogsCommandTest extends TestCase
             'message' => "Importing 'main'.",
             'source' => ['module' => 'app'],
             'process' => ['id' => 1, 'name' => 'cli'],
-            'thread' => ['id' => 0, 'name' => 'main'],
             'fields' => ['user' => 'main'],
         ], JSON_THROW_ON_ERROR);
 
@@ -67,7 +66,6 @@ final class LogsCommandTest extends TestCase
             'message' => "Importing 'main'.",
             'source' => ['module' => 'app'],
             'process' => ['id' => 1, 'name' => 'cli'],
-            'thread' => ['id' => 0, 'name' => 'main'],
             'fields' => ['user' => 'main'],
         ], JSON_THROW_ON_ERROR);
 
@@ -107,7 +105,6 @@ final class LogsCommandTest extends TestCase
             'message' => "Importing 'main'.",
             'source' => ['module' => 'app'],
             'process' => ['id' => 1, 'name' => 'cli'],
-            'thread' => ['id' => 0, 'name' => 'main'],
             'fields' => ['user' => 'main'],
         ], JSON_THROW_ON_ERROR);
 
@@ -143,7 +140,6 @@ final class LogsCommandTest extends TestCase
                 'message' => '',
                 'source' => ['module' => 'task'],
                 'process' => ['id' => 1, 'name' => 'cli'],
-                'thread' => ['id' => 0, 'name' => 'main'],
                 'fields' => ['task_id' => 'indexes'],
             ], JSON_THROW_ON_ERROR),
             json_encode([
@@ -155,7 +151,6 @@ final class LogsCommandTest extends TestCase
                 'message' => 'Task finished.',
                 'source' => ['module' => 'task'],
                 'process' => ['id' => 1, 'name' => 'cli'],
-                'thread' => ['id' => 0, 'name' => 'main'],
                 'fields' => ['task_id' => 'indexes'],
             ], JSON_THROW_ON_ERROR),
         ];

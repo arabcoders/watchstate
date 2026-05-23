@@ -68,7 +68,6 @@ final class IndexTest extends TestCase
             'message' => "Processing 'main@emby_main' - '#123: IppSec' item.",
             'source' => ['module' => 'app'],
             'process' => ['id' => 1, 'name' => 'cli'],
-            'thread' => ['id' => 0, 'name' => 'main'],
             'fields' => [
                 'event_id' => '550e8400-e29b-41d4-a716-446655440000',
                 'user' => 'main',
