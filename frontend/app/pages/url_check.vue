@@ -326,10 +326,10 @@ const activeResultTab = ref<string>('request');
 const templates = ref<Array<{ id: number; key: string; override: Item }>>([
   {
     id: 1,
-    key: 'Jellyfin/Emby Server',
+    key: 'Jellyfin/Emby Server: Info',
     override: {
       method: 'GET',
-      url: 'http://[ip:port]/items',
+      url: 'http://[ip:port]/system/Info',
       headers: [
         { key: 'Accept', value: 'application/json' },
         { key: 'X-MediaBrowser-Token', value: '[API_KEY]' },
@@ -378,6 +378,18 @@ const templates = ref<Array<{ id: number; key: string; override: Item }>>([
       headers: [
         { key: 'X-Plex-Token', value: '[PLEX_TOKEN]' },
         { key: 'X-Plex-Client-Identifier', value: '[machineIdentifier]' },
+      ],
+    },
+  },
+  {
+    id: 6,
+    key: 'Jellyfin/Emby Server: Get Items',
+    override: {
+      method: 'GET',
+      url: 'http://[ip:port]/items',
+      headers: [
+        { key: 'Accept', value: 'application/json' },
+        { key: 'X-MediaBrowser-Token', value: '[API_KEY]' },
       ],
     },
   },

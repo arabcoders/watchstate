@@ -12,6 +12,7 @@ use App\Libs\Attributes\Route\Put;
 use App\Libs\Container;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Exceptions\AppExceptionInterface;
 use App\Libs\Exceptions\Backends\InvalidContextException;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Exceptions\ValidationException;
@@ -101,6 +102,23 @@ final class Update
 
             return api_response(Status::OK, $backend);
         } catch (InvalidContextException|ValidationException $e) {
+            if ($e instanceof InvalidContextException) {
+                $errorContext = $e instanceof AppExceptionInterface && $e->hasContext() ? $e->getContext() : [];
+
+                $this->logger->error('Failed to validate backend context. ' . $e->getMessage(), [
+                    'event_name' => 'backend.context.validation_failed',
+                    'subsystem' => 'backend',
+                    'operation' => 'context.validate',
+                    'outcome' => 'failed',
+                    'backend' => $name,
+                    'backend_type' => $userContext->config->get("{$name}.type"),
+                    'url' => $userContext->config->get("{$name}.url"),
+                    'verify_host' => (bool) $userContext->config->get("{$name}.options.client.verify_host", true),
+                    ...$errorContext,
+                    ...exception_log($e),
+                ]);
+            }
+
             return api_error($e->getMessage(), Status::BAD_REQUEST);
         }
     }

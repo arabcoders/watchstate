@@ -24,7 +24,7 @@ use Psr\Http\Message\UriInterface as iUri;
 use Psr\Log\LoggerInterface as iLogger;
 use Throwable;
 
-final class FakeBackendClient implements ClientInterface
+class FakeBackendClient implements ClientInterface
 {
     private ?Context $context = null;
 

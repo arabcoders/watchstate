@@ -12,6 +12,7 @@ use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Exceptions\AppExceptionInterface;
 use App\Libs\Exceptions\Backends\InvalidContextException;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Mappers\ImportInterface as iImport;
@@ -113,12 +114,22 @@ final class Add
 
             $userContext->config->set($name, $config->getAll())->persist();
         } catch (InvalidContextException $e) {
+            $errorContext = $e instanceof AppExceptionInterface && $e->hasContext() ? $e->getContext() : [];
+            $url = null;
+            if (isset($config) && $config instanceof DataUtil && $config->has('url')) {
+                $url = $config->get('url');
+            }
+
             $logger->error('Failed to validate backend context. ' . $e->getMessage(), [
                 'event_name' => 'backend.context.validation_failed',
                 'subsystem' => 'backend',
                 'operation' => 'context.validate',
                 'outcome' => 'failed',
+                'backend' => $name,
+                'backend_type' => $type,
+                'url' => $url,
                 'verify_host' => (bool) $data->get('options.client.verify_host', true),
+                ...$errorContext,
                 ...exception_log($e),
             ]);
             return api_error($e->getMessage(), Status::BAD_REQUEST);
