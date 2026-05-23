@@ -379,23 +379,6 @@ class ImportCommand extends Command
             /** @var array<array-key,Request> $queue */
             $queue = [];
 
-            $this->logger->notice(
-                message: "Preloading local state database for '{user}'.",
-                context: [
-                    'event_name' => 'state.import.preload.started',
-                    'subsystem' => 'state.import',
-                    'operation' => 'preload',
-                    'outcome' => 'started',
-                    'command' => self::ROUTE,
-                    'user' => $userContext->name,
-                    'mapper' => after_last($userContext->mapper::class, '\\'),
-                    'memory' => [
-                        'now' => get_memory_usage(),
-                        'peak' => get_peak_memory_usage(),
-                    ],
-                ],
-            );
-
             $time = microtime(true);
             $userContext->mapper->reset()->loadData();
 

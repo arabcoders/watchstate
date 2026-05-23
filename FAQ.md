@@ -467,10 +467,24 @@ the issue. Please enable webhooks for your jellyfin backend to avoid this issue.
 
 We have added an experimental workaround for this issue in the `state:import` command. To enable it, add the env `WS_CLIENTS_JELLYFIN_FIX_PLAYED` via the `Configuration > Environment` page. It's turned off by default as it may cause some issues as it's untested in production, so please use it with caution and report any issues you find.
 
-## CODE: DM001 - Item queued for re-processing.
+## CODE: DM001 - Ignoring update for ...: remote date is older than last sync date.
 
-This warning appears when the backend reports an older item state than the last recorded sync point. This usually
-shows up in edge cases and can often be resolved by forcing a state export to the backend.
+This log appears when the backend reports an older item state than the last recorded sync point.
+I.e it's recorded in local db that the item is played, but the backend reports it as unplayed with an older date than the last sync date. 
+
+This is a safety mechanism to prevent accidental overwriting of newer local data with older backend data. To fix it there is two options. 
+a forced export to the backend, or a forced import from the backend. both can be done via `CONFUGURATION > BACKENDS` then under the backend select
+in `Quick operations` select either:
+
+### Force export.
+
+3. Force export local play state to this backend.
+
+### Force import.
+
+8. force import local play state from this backend.
+
+This should resolve the issue.
 
 ---
 

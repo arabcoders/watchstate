@@ -169,7 +169,7 @@ class MemoryMapper implements ImportInterface
         }
 
         $this->logger->info(
-            'Preloaded {pointer_count} pointers and {object_count} objects for \'{user}\' into {mapper}.',
+            "Preloaded {pointer_count} pointers and {object_count} objects for '{user}' into {mapper}.",
             [
                 ...$this->mapperContext(),
                 'event_name' => 'mapper.preload.completed',
@@ -201,7 +201,7 @@ class MemoryMapper implements ImportInterface
         if (true === (bool) ag($opts, Options::IMPORT_METADATA_ONLY)) {
             Message::increment("{$entity->via}.{$entity->type}.failed");
             $this->logger->notice(
-                'Ignoring {item_type} \'#{remote_id}: {item_title}\' from \'{user}@{backend}\': backend is metadata-only.',
+                "Ignoring {item_type} '#{remote_id}: {item_title}' from '{user}@{backend}': backend is metadata-only.",
                 $this->itemContext($entity, [
                     'event_name' => 'mapper.item.ignored',
                     'operation' => 'add',
@@ -243,7 +243,7 @@ class MemoryMapper implements ImportInterface
             ];
         }
 
-        $this->logger->notice('Added {item_type} \'#{remote_id}: {item_title}\' from \'{user}@{backend}\' to local state.', [
+        $this->logger->notice("Added {item_type} '#{remote_id}: {item_title}' from '{user}@{backend}' to local state.", [
             ...$this->itemContext($entity),
             'event_name' => 'mapper.item.added',
             'operation' => 'add',
@@ -282,7 +282,7 @@ class MemoryMapper implements ImportInterface
             $changes = $this->objects[$pointer]->diff(fields: $keys);
 
             if (count($changes) >= 1) {
-                $this->logger->notice('Updated metadata for {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\'.', [
+                $this->logger->notice("Updated metadata for {item_type} '#{state_id}: {item_title}' from '{user}@{backend}'.", [
                     ...$this->itemContext($cloned, ['backend' => $entity->via]),
                     'event_name' => 'mapper.item.updated',
                     'operation' => 'metadata',
@@ -309,7 +309,7 @@ class MemoryMapper implements ImportInterface
             }
 
             $this->logger->notice(
-                'Ignoring state change for {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\': remote state {state} differs from local {local_state}.',
+                "Ignoring state change for {item_type} '#{state_id}: {item_title}' from '{user}@{backend}': remote state {state} differs from local {local_state}.",
                 [
                     ...$this->itemContext($this->objects[$pointer], ['backend' => $entity->via]),
                     'event_name' => 'mapper.item.ignored',
@@ -327,7 +327,7 @@ class MemoryMapper implements ImportInterface
 
         if (true === $this->inTraceMode()) {
             $this->logger->info(
-                'No metadata changes for {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\'.',
+                "No metadata changes for {item_type} '#{state_id}: {item_title}' from '{user}@{backend}'.",
                 $this->itemContext($cloned, [
                     'backend' => $entity->via,
                     'event_name' => 'mapper.item.unchanged',
@@ -362,7 +362,7 @@ class MemoryMapper implements ImportInterface
             );
 
             if (count($changes) >= 1) {
-                $this->logger->notice('Marked {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\' as unplayed.', [
+                $this->logger->notice("Marked {item_type} '#{state_id}: {item_title}' from '{user}@{backend}' as unplayed.", [
                     ...$this->itemContext($cloned, ['backend' => $entity->via]),
                     'event_name' => 'mapper.item.state_changed',
                     'operation' => 'state',
@@ -414,8 +414,8 @@ class MemoryMapper implements ImportInterface
 
                     $this->logger->notice(
                         $progress
-                            ? 'Updated {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\' due to play progress change.'
-                            : 'Updated metadata for {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\'.',
+                            ? "Updated {item_type} '#{state_id}: {item_title}' from '{user}@{backend}' due to play progress change."
+                            : "Updated metadata for {item_type} '#{state_id}: {item_title}' from '{user}@{backend}'.",
                         [
                             ...$this->itemContext($cloned, ['backend' => $entity->via]),
                             'event_name' => 'mapper.item.updated',
@@ -451,7 +451,7 @@ class MemoryMapper implements ImportInterface
         if ($entity->isWatched() !== $this->objects[$pointer]->isWatched()) {
             if ($this->inTraceMode()) {
                 $this->logger->debug(
-                    'Ignoring state change for {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\': remote item date is older than last sync.',
+                    "Ignoring state change for {item_type} '#{state_id}: {item_title}' from '{user}@{backend}': remote item date is older than last sync.",
                     [
                         ...$this->itemContext($this->objects[$pointer], ['backend' => $entity->via]),
                         'event_name' => 'mapper.item.ignored',
@@ -469,7 +469,7 @@ class MemoryMapper implements ImportInterface
         }
 
         if ($this->inTraceMode()) {
-            $this->logger->debug('Ignoring {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\': no changes detected.', $this->itemContext($cloned, [
+            $this->logger->debug("Ignoring {item_type} '#{state_id}: {item_title}' from '{user}@{backend}': no changes detected.", $this->itemContext($cloned, [
                 'backend' => $entity->via,
                 'event_name' => 'mapper.item.ignored',
                 'operation' => 'state',
@@ -488,7 +488,7 @@ class MemoryMapper implements ImportInterface
     {
         if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
             $this->logger->warning(
-                'Ignoring {item_type} \'#{remote_id}: {item_title}\' from \'{user}@{backend}\': no supported external ids.',
+                "Ignoring {item_type} '#{remote_id}: {item_title}' from '{user}@{backend}': no supported external ids.",
                 $this->itemContext($entity, [
                     'event_name' => 'mapper.item.ignored',
                     'operation' => 'add',
@@ -503,7 +503,7 @@ class MemoryMapper implements ImportInterface
 
         if (true === $entity->isEpisode() && $entity->episode < 1) {
             $this->logger->notice(
-                'Ignoring {item_type} \'#{remote_id}: {item_title}\' from \'{user}@{backend}\': episode number is missing.',
+                "Ignoring {item_type} '#{remote_id}: {item_title}' from '{user}@{backend}': episode number is missing.",
                 $this->itemContext($entity, [
                     'event_name' => 'mapper.item.ignored',
                     'operation' => 'add',
@@ -557,7 +557,7 @@ class MemoryMapper implements ImportInterface
 
             $reason = false === $hasMeta ? 'missing_metadata' : 'played_at_matches_updated';
 
-            $this->logger->warning('Queued {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\' for reprocessing because remote state conflicts with local metadata.', [
+            $this->logger->warning("Queued {item_type} '#{state_id}: {item_title}' from '{user}@{backend}' for reprocessing because remote state conflicts with local metadata.", [
                 ...$this->itemContext($cloned, ['backend' => $entity->via]),
                 'event_name' => 'mapper.item.requeued',
                 'operation' => 'state',
@@ -600,8 +600,8 @@ class MemoryMapper implements ImportInterface
             if (count($changes) >= 1) {
                 $this->logger->notice(
                     $cloned->isWatched() !== $this->objects[$pointer]->isWatched()
-                        ? 'Updated {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\' and marked it as {state}.'
-                        : 'Updated {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\'.',
+                        ? "Updated {item_type} '#{state_id}: {item_title}' from '{user}@{backend}' and marked it as {state}."
+                        : "Updated {item_type} '#{state_id}: {item_title}' from '{user}@{backend}'.",
                     [
                         ...$this->itemContext($cloned, ['backend' => $entity->via]),
                         'event_name' => 'mapper.item.updated',
@@ -630,7 +630,7 @@ class MemoryMapper implements ImportInterface
         }
 
         $this->logger->debug(
-            'Ignoring {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\': metadata and play state are identical.',
+            "Ignoring {item_type} '#{state_id}: {item_title}' from '{user}@{backend}': metadata and play state are identical.",
             [
                 ...$context,
                 'event_name' => 'mapper.item.ignored',
@@ -691,7 +691,7 @@ class MemoryMapper implements ImportInterface
             $count = count($this->changed);
 
             if (0 === $count) {
-                $this->logger->notice('Skipping mapper commit for \'{user}\': no changes detected.', [
+                $this->logger->notice("Skipping mapper commit for '{user}': no changes detected.", [
                     ...$this->mapperContext(),
                     'event_name' => 'mapper.commit.skipped',
                     'operation' => 'commit',
@@ -703,7 +703,7 @@ class MemoryMapper implements ImportInterface
             $inDryRunMode = $this->inDryRunMode();
 
             if (true === $inDryRunMode) {
-                $this->logger->notice('Recorded {total} mapper changes for \'{user}\' without committing them.', [
+                $this->logger->notice("Recorded {total} mapper changes for '{user}' without committing them.", [
                     ...$this->mapperContext(),
                     'event_name' => 'mapper.commit.skipped',
                     'operation' => 'commit',
@@ -714,9 +714,8 @@ class MemoryMapper implements ImportInterface
             }
 
             foreach ($this->changed as $pointer) {
+                $entity = &$this->objects[$pointer];
                 try {
-                    $entity = &$this->objects[$pointer];
-
                     if (null === $entity->id) {
                         if (false === $inDryRunMode) {
                             $db->insert($entity, $this->options);
@@ -733,8 +732,8 @@ class MemoryMapper implements ImportInterface
                     $this->logger->error(
                         ...lw(
                             message: null === $entity->id
-                                ? 'Failed to map {item_type} \'#{remote_id}: {item_title}\' from \'{user}@{backend}\' during {operation}.'
-                                : 'Failed to map {item_type} \'#{state_id}: {item_title}\' from \'{user}@{backend}\' during {operation}.',
+                                ? "Failed to map {item_type} '#{remote_id}: {item_title}' from '{user}@{backend}' during {operation}."
+                                : "Failed to map {item_type} '#{state_id}: {item_title}' from '{user}@{backend}' during {operation}.",
                             context: [
                                 ...$this->itemContext($entity),
                                 'event_name' => 'mapper.item.failed',

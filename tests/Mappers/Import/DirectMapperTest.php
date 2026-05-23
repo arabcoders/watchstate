@@ -170,6 +170,22 @@ class DirectMapperTest extends MapperAbstract
             $storedMetadata,
             'PLAYED_AT should be set in metadata during SKIP_STATE scenario',
         );
+
+        $records = array_values(array_filter(
+            $this->handler->getRecords(),
+            static fn($record): bool => 'mapper.item.requeued' === ($record->context['event_name'] ?? null)
+                && 'remote_updated_before_last_sync' === ($record->context['reason'] ?? null),
+        ));
+        self::assertCount(1, $records);
+        self::assertSame('mapper.item.requeued', $records[0]->context['event_name']);
+        self::assertSame('remote_updated_before_last_sync', $records[0]->context['reason']);
+
+        $ignored = array_values(array_filter(
+            $this->handler->getRecords(),
+            static fn($record): bool => 'mapper.item.ignored' === ($record->context['event_name'] ?? null)
+                && 'state_change_ignored' === ($record->context['reason'] ?? null),
+        ));
+        self::assertCount(0, $ignored);
     }
 
     /**
