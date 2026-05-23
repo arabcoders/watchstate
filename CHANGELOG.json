@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "45c1d0f01e29af5332d1cf5b80c18b86a74ff0a7",
-    "date": "2026-05-23T05:23:04+00:00",
+    "full_sha": "d00549e63e2d277481ccc18c694039dbe1421f6a",
+    "date": "2026-05-23T05:57:01+00:00",
     "commits": [
+      {
+        "sha": "d00549e6",
+        "full_sha": "d00549e63e2d277481ccc18c694039dbe1421f6a",
+        "message": "refactor: add time info to play change requests.",
+        "author": "arabcoders",
+        "date": "2026-05-23T05:57:01+00:00"
+      },
       {
         "sha": "45c1d0f0",
         "full_sha": "45c1d0f01e29af5332d1cf5b80c18b86a74ff0a7",
