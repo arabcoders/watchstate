@@ -637,10 +637,6 @@ abstract class MapperAbstract extends TestCase
         ));
 
         self::assertCount(1, $records);
-        self::assertSame(
-            "Preloaded {$records[0]->context['pointer_count']} pointers and {$records[0]->context['object_count']} objects for 'main' into " . after_last($this->mapper::class, '\\') . '.',
-            $records[0]->message,
-        );
         self::assertSame('mapper', $records[0]->context['subsystem']);
         self::assertGreaterThan(0, $records[0]->context['pointer_count']);
         self::assertSame(2, $records[0]->context['object_count']);
@@ -664,7 +660,6 @@ abstract class MapperAbstract extends TestCase
         ));
 
         self::assertCount(1, $records);
-        self::assertSame("Ignoring movie '#121: Movie Title (2020)' from 'main@test_plex': no supported external ids.", $records[0]->message);
         self::assertSame('no_supported_external_ids', $records[0]->context['reason']);
         self::assertSame('movie', $records[0]->context['item_type']);
         self::assertSame('121', (string) $records[0]->context['remote_id']);

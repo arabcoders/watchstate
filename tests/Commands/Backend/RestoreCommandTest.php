@@ -68,17 +68,9 @@ final class RestoreCommandTest extends TestCase
             }
         }
 
-        self::assertSame(
-            "Restore target 'main@fake_restore' has export disabled; continuing because bypass was requested.",
-            $byEvent['backend.restore.export_disabled_bypassed']->message,
-        );
         self::assertSame('restore.json', basename($byEvent['backend.restore.data.loading']->context['path']));
         self::assertSame(1, $byEvent['backend.restore.data.loaded']->context['item_count']);
         self::assertSame(0, $byEvent['backend.restore.compare.completed']->context['change_count']);
-        self::assertSame(
-            "No restore differences found for 'main@fake_restore'.",
-            $byEvent['backend.restore.no_difference']->message,
-        );
         self::assertSame('dry_run', $byEvent['backend.restore.cancelled']->context['reason']);
     }
 

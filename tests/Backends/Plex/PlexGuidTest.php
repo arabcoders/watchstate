@@ -16,7 +16,6 @@ use App\Libs\Guid;
 use App\Libs\TestCase;
 use App\Libs\Uri;
 use Monolog\Handler\TestHandler;
-use Monolog\Level;
 use Monolog\LogRecord;
 use Monolog\Logger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -26,31 +25,6 @@ use Symfony\Component\Yaml\Yaml;
 class PlexGuidTest extends TestCase
 {
     protected Logger|null $logger = null;
-
-    private function logged(Level $level, string $message, bool $clear = false): bool
-    {
-        try {
-            foreach ($this->handler->getRecords() as $record) {
-                if ($level !== $record->level) {
-                    continue;
-                }
-
-                if (null !== $record->formatted && true === str_contains($record->formatted, $message)) {
-                    return true;
-                }
-
-                if (true === str_contains($record->message, $message)) {
-                    return true;
-                }
-            }
-
-            return false;
-        } finally {
-            if (true === $clear) {
-                $this->handler->clear();
-            }
-        }
-    }
 
     private function record(string $eventName, ?string $reason = null): ?LogRecord
     {
@@ -421,10 +395,8 @@ class PlexGuidTest extends TestCase
         $this->assertNotNull($record, 'Assert that a log is raised when multiple GUIDs for the same provider are found.');
         $this->assertContains($record->context['guid_source'] ?? null, ['imdb', 'cmdb']);
         $this->assertSame('Test title', $record->context['item']['title'] ?? null);
-        $this->assertStringContainsString('Test title', $record->message);
-        foreach (($record->context['guid_values'] ?? []) as $guidValue) {
-            $this->assertStringContainsString((string) $guidValue, $record->message);
-        }
+        $this->assertContains(($record->context['guid_values'] ?? [])[0] ?? null, ['1', '2', 'afa', 'faf']);
+        $this->assertCount(2, $record->context['guid_values'] ?? []);
         $this->handler->clear();
 
         $this->assertEquals([Guid::GUID_IMDB => '1'], $this->getClass()->get([

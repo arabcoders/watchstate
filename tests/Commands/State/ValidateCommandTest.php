@@ -6,6 +6,7 @@ namespace Tests\Commands\State;
 
 use App\Commands\State\ValidateCommand;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Extends\JsonlFormatter;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\ImportInterface as iImport;
@@ -13,6 +14,7 @@ use App\Libs\TestCase;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use Symfony\Component\Console\Application;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Tester\CommandTester;
 use Tests\Support\FakeBackendClient;
@@ -71,6 +73,7 @@ final class ValidateCommandTest extends TestCase
         $tester = $this->makeTester($command);
         $status = $tester->execute([
             '--logfile' => $logfile,
+            '--jsonl' => true,
         ], [
             'verbosity' => OutputInterface::VERBOSITY_VERBOSE,
         ]);
@@ -79,9 +82,20 @@ final class ValidateCommandTest extends TestCase
 
         $contents = file_get_contents($logfile);
         self::assertIsString($contents);
-        self::assertStringContainsString('Validation started for 1 users.', $contents);
-        self::assertStringContainsString("Validating local metadata references for 'main'.", $contents);
-        self::assertStringContainsString('Validation completed for 1 users in', $contents);
+
+        $lines = array_values(array_filter(array_map(trim(...), explode(PHP_EOL, $contents))));
+        self::assertNotEmpty($lines);
+        self::assertTrue(JsonlFormatter::isJsonlRecord($lines[0]));
+
+        $records = array_map(
+            static fn(string $line): array => json_decode($line, true, 512, JSON_THROW_ON_ERROR),
+            $lines,
+        );
+        $eventNames = array_column(array_column($records, 'fields'), 'event_name');
+
+        self::assertContains('state.validate.started', $eventNames);
+        self::assertContains('state.validate.user.started', $eventNames);
+        self::assertContains('state.validate.completed', $eventNames);
     }
 
     public function test_invalid_user_returns_failure(): void
@@ -186,10 +200,6 @@ final class ValidateCommandTest extends TestCase
         ));
 
         self::assertCount(1, $match);
-        self::assertSame(
-            "Removing 'main@fake_validate' reference '777' from item '#1': metadata lookup failed.",
-            $match[0]->message,
-        );
         self::assertSame('main', $match[0]->context['user']);
         self::assertSame('fake_validate', $match[0]->context['backend']);
         self::assertSame('1', (string) $match[0]->context['state_id']);
@@ -200,6 +210,7 @@ final class ValidateCommandTest extends TestCase
     private function makeTester(ValidateCommand $command): CommandTester
     {
         $application = new Application();
+        $application->getDefinition()->addOption(new InputOption('jsonl', null, InputOption::VALUE_NONE));
         $application->addCommand($command);
 
         return new CommandTester($application->find(ValidateCommand::ROUTE));

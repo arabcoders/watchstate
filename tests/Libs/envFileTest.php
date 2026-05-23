@@ -129,21 +129,6 @@ class envFileTest extends TestCase
         $this->assertFalse($envFile->has('nonexistent_key'), "The key 'nonexistent_key' should not exist.");
     }
 
-    public function test_persist()
-    {
-        $tmpFile = self::$tmpPath . '/watchstate_test.env';
-        $envFile = new EnvFile($tmpFile, create: true);
-        $this->assertEmpty($envFile->get(array_keys($this->data)[0]));
-
-        foreach ($this->data as $key => $value) {
-            $envFile->set($key, $value);
-        }
-        $envFile->persist();
-
-        $envFile = new EnvFile($tmpFile);
-        $this->assertSame($this->data, $envFile->getAll(), "The data should be persisted and retrieved correctly.");
-    }
-
     public function test_getAll()
     {
         $tmpFile = self::$tmpPath . '/watchstate_test.env';

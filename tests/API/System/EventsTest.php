@@ -38,7 +38,7 @@ final class EventsTest extends TestCase
         $event->event_data = ['ok' => true];
         $event->logs = [
             '{"id":"one","datetime":"2026-05-20T12:00:00.123+00:00","level":"info","logger":"event","message":"first"}',
-            'NOTICE: legacy second',
+            '{"id":"two","datetime":"2026-05-20T12:05:00.123+00:00","level":"notice","logger":"event","message":"second"}',
         ];
         $event->created_at = make_date('2026-05-20T12:00:00+00:00');
         $event->updated_at = make_date('2026-05-20T12:05:00+00:00');
@@ -78,7 +78,6 @@ final class EventsTest extends TestCase
         self::assertTrue(JsonlFormatter::isJsonlRecord($logs[array_key_last($logs)]));
 
         $record = json_decode(trim($logs[array_key_last($logs)]), true, flags: JSON_THROW_ON_ERROR);
-        self::assertSame('Event \'system.test\' was manually updated to failed.', ag($record, 'message'));
         self::assertSame('events.manual_update', ag($record, 'fields.event_name'));
         self::assertSame('system.test', ag($record, 'fields.queued_event'));
         self::assertSame('failed', ag($record, 'fields.status'));

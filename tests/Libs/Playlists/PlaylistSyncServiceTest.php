@@ -144,10 +144,6 @@ final class PlaylistSyncServiceTest extends TestCase
         ));
 
         self::assertCount(1, $records);
-        self::assertSame(
-            "Planning partial create for playlist 'Shared Episodes' on 'main@target': 1 of 2 items are available.",
-            $records[0]->message,
-        );
         self::assertSame('partial_target_items', $records[0]->context['reason']);
         self::assertSame('Shared Episodes', $records[0]->context['playlist_title']);
         self::assertSame(1, $records[0]->context['available_count']);

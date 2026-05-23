@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Commands\State;
 
 use App\Commands\State\BackupCommand;
+use App\Libs\Extends\JsonlFormatter;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
@@ -87,6 +88,7 @@ final class BackupCommandTest extends TestCase
         $status = $this->makeTester($command)->execute([
             '--logfile' => $logfile,
             '--no-compress' => true,
+            '--jsonl' => true,
         ], [
             'verbosity' => OutputInterface::VERBOSITY_VERBOSE,
         ]);
@@ -95,9 +97,20 @@ final class BackupCommandTest extends TestCase
 
         $contents = file_get_contents($logfile);
         self::assertIsString($contents);
-        self::assertStringContainsString('Backup started for 1 users.', $contents);
-        self::assertStringContainsString("Backing up play states for 'main'.", $contents);
-        self::assertStringContainsString('Backup completed for 1 users in', $contents);
+
+        $lines = array_values(array_filter(array_map(trim(...), explode(PHP_EOL, $contents))));
+        self::assertNotEmpty($lines);
+        self::assertTrue(JsonlFormatter::isJsonlRecord($lines[0]));
+
+        $records = array_map(
+            static fn(string $line): array => json_decode($line, true, 512, JSON_THROW_ON_ERROR),
+            $lines,
+        );
+        $eventNames = array_column(array_column($records, 'fields'), 'event_name');
+
+        self::assertContains('state.backup.started', $eventNames);
+        self::assertContains('state.backup.user.started', $eventNames);
+        self::assertContains('state.backup.completed', $eventNames);
     }
 
     public function test_invalid_user_returns_failure(): void
@@ -179,7 +192,6 @@ final class BackupCommandTest extends TestCase
         ));
 
         self::assertCount(1, $records);
-        self::assertSame("Skipping 'main@bad_backend': backend type 'bad' is unsupported.", $records[0]->message);
         self::assertSame('unsupported_type', $records[0]->context['reason']);
         self::assertSame('bad_backend', $records[0]->context['backend']);
         self::assertSame('bad', $records[0]->context['backend_type']);
@@ -220,6 +232,7 @@ final class BackupCommandTest extends TestCase
     {
         $application = new Application();
         $application->getDefinition()->addOption(new InputOption('trace', null, InputOption::VALUE_NONE));
+        $application->getDefinition()->addOption(new InputOption('jsonl', null, InputOption::VALUE_NONE));
         $application->addCommand($command);
 
         return new CommandTester($application->find(BackupCommand::ROUTE));

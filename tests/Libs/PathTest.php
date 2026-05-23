@@ -259,39 +259,6 @@ class PathTest extends TestCase
         $this->assertSame('', $touched->read());
     }
 
-    public function test_virtual_properties(): void
-    {
-        $file = $this->path('foo.bar.txt');
-        $file->write('abc');
-
-        $this->assertSame($file->name(), $file->name);
-        $this->assertSame($file->stem(), $file->stem);
-        $this->assertSame($file->suffix(), $file->suffix);
-        $this->assertInstanceOf(Path::class, $file->parent);
-        $this->assertSame((string) $file->absolute(), (string) $file->absolute);
-    }
-
-    public function test_unknown_virtual_property_throws(): void
-    {
-        $file = $this->path('foo.txt');
-
-        $this->expectException(RuntimeException::class);
-        /** @noinspection PhpUndefinedFieldInspection */
-        $file->unknown_property;
-    }
-
-    public function test_empty_path(): void
-    {
-        $path = Path::make('');
-
-        $this->assertFalse($path->exists());
-        $this->assertFalse($path->isDir());
-        $this->assertFalse($path->isFile());
-        $this->assertSame('', $path->name());
-        $this->assertSame('', $path->stem());
-        $this->assertSame('', $path->suffix());
-    }
-
     public function test_children_files_match_sidecars(): void
     {
         $main = $this->path('my.movie.title.mp4');

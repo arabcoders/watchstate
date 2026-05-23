@@ -6,6 +6,7 @@ namespace Tests\Commands\State;
 
 use App\Backends\Common\ClientInterface as iClient;
 use App\Commands\State\PlaylistCommand;
+use App\Libs\Extends\JsonlFormatter;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
@@ -142,14 +143,25 @@ final class PlaylistCommandTest extends TestCase
         touch($logfile);
 
         $tester = $this->makeTester($service, $client);
-        $status = $tester->execute(['--logfile' => $logfile], ['verbosity' => OutputInterface::VERBOSITY_VERBOSE]);
+        $status = $tester->execute(['--logfile' => $logfile, '--jsonl' => true], ['verbosity' => OutputInterface::VERBOSITY_VERBOSE]);
 
         self::assertSame(PlaylistCommand::SUCCESS, $status);
 
         $contents = file_get_contents($logfile);
         self::assertIsString($contents);
-        self::assertStringContainsString('Playlist sync started for 1 users.', $contents);
-        self::assertStringContainsString('Playlist sync completed for 1 users in', $contents);
+
+        $lines = array_values(array_filter(array_map(trim(...), explode(PHP_EOL, $contents))));
+        self::assertNotEmpty($lines);
+        self::assertTrue(JsonlFormatter::isJsonlRecord($lines[0]));
+
+        $records = array_map(
+            static fn(string $line): array => json_decode($line, true, 512, JSON_THROW_ON_ERROR),
+            $lines,
+        );
+        $eventNames = array_column(array_column($records, 'fields'), 'event_name');
+
+        self::assertContains('playlist.sync.started', $eventNames);
+        self::assertContains('playlist.sync.completed', $eventNames);
     }
 
     public function test_selected_user_only(): void
@@ -208,6 +220,7 @@ final class PlaylistCommandTest extends TestCase
         $application = new Application();
         $application->getDefinition()->addOption(new InputOption('output', 'o', InputOption::VALUE_REQUIRED, '', 'table'));
         $application->getDefinition()->addOption(new InputOption('trace', null, InputOption::VALUE_NONE));
+        $application->getDefinition()->addOption(new InputOption('jsonl', null, InputOption::VALUE_NONE));
         $application->addCommand($this->makeCommand($service, $client, $backendName, $userNames));
 
         return new CommandTester($application->find(PlaylistCommand::ROUTE));

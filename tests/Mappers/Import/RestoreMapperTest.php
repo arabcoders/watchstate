@@ -28,7 +28,7 @@ final class RestoreMapperTest extends TestCase
         $records = $handler->getRecords();
         self::assertCount(1, $records);
         self::assertSame('mapper.restore.item.ignored', $records[0]->context['event_name']);
-        self::assertSame("Ignoring restore item 'Missing GUIDs (2020)': no supported external ids.", $records[0]->message);
+        self::assertSame('Missing GUIDs (2020)', $records[0]->context['item_title']);
         self::assertSame('no_supported_external_ids', $records[0]->context['reason']);
     }
 }

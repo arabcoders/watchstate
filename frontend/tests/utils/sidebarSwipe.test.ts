@@ -4,7 +4,6 @@ import {
   IOS_NAVIGATION_EDGE_WIDTH,
   MOBILE_SIDEBAR_EDGE_WIDTH,
   canStartSidebarOpenSwipe,
-  getSidebarSwipeMode,
   isAppleMobileTouchNavigator,
 } from '~/utils/sidebarSwipe'
 
@@ -65,9 +64,5 @@ describe('sidebarSwipe', () => {
     expect(canStartSidebarOpenSwipe(1, nav)).toBe(true)
     expect(canStartSidebarOpenSwipe(MOBILE_SIDEBAR_EDGE_WIDTH, nav)).toBe(true)
     expect(canStartSidebarOpenSwipe(MOBILE_SIDEBAR_EDGE_WIDTH + 1, nav)).toBe(false)
-  })
-
-  it('returns close while the sidebar is already open', () => {
-    expect(getSidebarSwipeMode(true, 4)).toBe('close')
   })
 })

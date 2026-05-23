@@ -16,7 +16,6 @@ use App\Libs\Guid;
 use App\Libs\TestCase;
 use App\Libs\Uri;
 use Monolog\Handler\TestHandler;
-use Monolog\Level;
 use Monolog\LogRecord;
 use Monolog\Logger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -26,31 +25,6 @@ use Symfony\Component\Yaml\Yaml;
 class EmbyGuidTest extends TestCase
 {
     protected Logger|null $logger = null;
-
-    private function logged(Level $level, string $message, bool $clear = false): bool
-    {
-        try {
-            foreach ($this->handler->getRecords() as $record) {
-                if ($level !== $record->level) {
-                    continue;
-                }
-
-                if (null !== $record->formatted && true === str_contains($record->formatted, $message)) {
-                    return true;
-                }
-
-                if (true === str_contains($record->message, $message)) {
-                    return true;
-                }
-            }
-
-            return false;
-        } finally {
-            if (true === $clear) {
-                $this->handler->clear();
-            }
-        }
-    }
 
     private function record(string $eventName, ?string $reason = null): ?LogRecord
     {

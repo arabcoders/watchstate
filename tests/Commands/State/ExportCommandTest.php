@@ -7,6 +7,7 @@ namespace Tests\Commands\State;
 use App\Commands\State\ExportCommand;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Extends\JsonlFormatter;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\LogSuppressor;
@@ -155,7 +156,6 @@ final class ExportCommandTest extends TestCase
         ));
 
         self::assertCount(1, $records);
-        self::assertSame("Pushing 1 local changes to 1 backends for 'alice'.", $records[0]->message);
         self::assertSame(1, $records[0]->context['item_count']);
         self::assertSame(['fake_export'], $records[0]->context['backends']);
     }
@@ -278,7 +278,6 @@ final class ExportCommandTest extends TestCase
         ));
 
         self::assertCount(1, $records);
-        self::assertSame("No backend play-state updates were required for 'alice'.", $records[0]->message);
         self::assertSame(1, $records[0]->context['local_change_count']);
         self::assertSame('Movie Title (2020)', $records[0]->context['items'][$inserted->id]['title']);
         self::assertSame('movie', $records[0]->context['items'][$inserted->id]['type']);
@@ -305,6 +304,7 @@ final class ExportCommandTest extends TestCase
 
         $status = $this->makeTester($command)->execute([
             '--logfile' => $logfile,
+            '--jsonl' => true,
         ], [
             'verbosity' => OutputInterface::VERBOSITY_VERBOSE,
         ]);
@@ -313,9 +313,20 @@ final class ExportCommandTest extends TestCase
 
         $contents = file_get_contents($logfile);
         self::assertIsString($contents);
-        self::assertStringContainsString('Export started for 1 users.', $contents);
-        self::assertStringContainsString("Exporting play states for 'main'.", $contents);
-        self::assertStringContainsString('Export completed for 1 users in', $contents);
+
+        $lines = array_values(array_filter(array_map(trim(...), explode(PHP_EOL, $contents))));
+        self::assertNotEmpty($lines);
+        self::assertTrue(JsonlFormatter::isJsonlRecord($lines[0]));
+
+        $records = array_map(
+            static fn(string $line): array => json_decode($line, true, 512, JSON_THROW_ON_ERROR),
+            $lines,
+        );
+        $eventNames = array_column(array_column($records, 'fields'), 'event_name');
+
+        self::assertContains('state.export.started', $eventNames);
+        self::assertContains('state.export.user.started', $eventNames);
+        self::assertContains('state.export.completed', $eventNames);
     }
 
     public function test_logs_unsupported_backend(): void
@@ -361,7 +372,6 @@ final class ExportCommandTest extends TestCase
         ));
 
         self::assertCount(1, $records);
-        self::assertSame("Skipping 'main@bad_backend': backend type 'bad' is unsupported.", $records[0]->message);
         self::assertSame('unsupported_type', $records[0]->context['reason']);
         self::assertSame('bad_backend', $records[0]->context['backend']);
         self::assertSame('bad', $records[0]->context['backend_type']);
@@ -371,6 +381,7 @@ final class ExportCommandTest extends TestCase
     {
         $application = new Application();
         $application->getDefinition()->addOption(new InputOption('trace', null, InputOption::VALUE_NONE));
+        $application->getDefinition()->addOption(new InputOption('jsonl', null, InputOption::VALUE_NONE));
         $application->addCommand($command);
 
         return new CommandTester($application->find(ExportCommand::ROUTE));

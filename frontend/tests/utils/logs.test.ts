@@ -54,13 +54,4 @@ describe('logs', () => {
     expect(parsed.user).toBe('main')
     expect(parsed.backend).toBe('plex')
   })
-
-  it('does not infer ids from legacy text', () => {
-    const parsed = parseLogLine(
-      "[2026-04-27T10:17:56+03:00] NOTICE: Processing 'main@emby_main' - '#123: IppSec' item.",
-    )
-
-    expect(parsed.state_id).toBeNull()
-    expect(parsed.remote_id).toBeNull()
-  })
 })

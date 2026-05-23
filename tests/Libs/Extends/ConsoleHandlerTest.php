@@ -7,7 +7,6 @@ namespace Tests\Libs\Extends;
 use App\Libs\Extends\ConsoleHandler;
 use App\Libs\TestCase;
 use DateTimeImmutable;
-use DateTimeInterface;
 use Monolog\Level;
 use Monolog\LogRecord;
 use Symfony\Component\Console\Output\BufferedOutput;
@@ -36,25 +35,6 @@ final class ConsoleHandlerTest extends TestCase
         self::assertSame(
             make_date($date)->format('m/d, H:i:s') . ' logger WARNING logger Playlist sync completed without syncable results across 2 users.' . PHP_EOL,
             $display,
-        );
-    }
-
-    public function test_plain_legacy(): void
-    {
-        $output = new BufferedOutput(OutputInterface::VERBOSITY_NORMAL, false);
-        $handler = new ConsoleHandler($output);
-        $date = new DateTimeImmutable('2026-05-21T06:54:10+03:00');
-
-        $handler->handle(new LogRecord(
-            datetime: $date,
-            channel: 'logger',
-            level: Level::Warning,
-            message: 'Playlist sync completed without syncable results across 2 users.',
-        ));
-
-        self::assertSame(
-            '[' . $date->format(DateTimeInterface::ATOM) . '] WARNING: Playlist sync completed without syncable results across 2 users.' . PHP_EOL,
-            $output->fetch(),
         );
     }
 

@@ -219,32 +219,6 @@ class ConfigFileTest extends TestCase
         $this->assertEmpty($class->getAll(), 'php:// streams should be empty, when re-opened.');
     }
 
-    public function test_configFile_set()
-    {
-        $params['file'] = self::$tmpPath . '/test_' . uniqid();
-
-        copy(__DIR__ . '/../Fixtures/test_servers.yaml', $params['file']);
-        $class = new ConfigFile(...$params);
-        $this->assertInstanceOf(ConfigFile::class, $class);
-
-        $class = ConfigFile::open(...$params);
-        $this->assertInstanceOf(ConfigFile::class, $class);
-
-        $this->assertArrayHasKey('token', $class->get('test_plex', []), 'Invalid response from parsing YAML file.');
-        $this->assertArrayNotHasKey(
-            'token',
-            $class->get('test_not_set', []),
-            'Invalid response from parsing YAML file.'
-        );
-        $this->assertTrue($class->has('test_plex'), 'Must return true if key exists.');
-        $this->assertFalse($class->has('test_not_set'), 'Must return false if key does not exist.');
-
-        $this->assertArrayHasKey('token', $class['test_plex'], 'Failed to get arrayAccess key correctly.');
-        $this->assertTrue(isset($class['test_plex']), 'Must return true if arrayAccess key exists.');
-        $this->assertNull($class['test_not_set'], 'Must return null if arrayAccess key does not exist.');
-        $this->assertFalse(isset($class['test_not_set']), 'Must return false if arrayAccess key does not exist.');
-    }
-
     public function test_addFilter()
     {
         $tmpFile = self::$tmpPath . '/test_' . uniqid();

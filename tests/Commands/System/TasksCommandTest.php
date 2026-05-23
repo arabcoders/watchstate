@@ -48,7 +48,6 @@ final class TasksCommandTest extends TestCase
 
         $payload = json_decode(trim($logs[0]), true, flags: JSON_THROW_ON_ERROR);
 
-        self::assertSame("stdout from task 'backup': processed 5 items", $payload['message']);
         self::assertSame('task.output', ag($payload, 'fields.event_name'));
         self::assertSame('stdout', ag($payload, 'fields.stream'));
         self::assertSame('processed 5 items', ag($payload, 'fields.line'));

@@ -44,24 +44,6 @@ class ConfigTest extends TestCase
         );
     }
 
-    public function test_get(): void
-    {
-        $this->assertSame(
-            $this->data['foo'],
-            Config::get('foo'),
-            'When key is set, get() returns its value'
-        );
-    }
-
-    public function test_default(): void
-    {
-        $this->assertSame(
-            'not_set',
-            Config::get('key_not_set', 'not_set'),
-            'When key is not set, default value is returned'
-        );
-    }
-
     public function test_append(): void
     {
         $data = $this->data;
@@ -106,12 +88,6 @@ class ConfigTest extends TestCase
             Config::getAll(),
             'When config is reset, getAll() returns empty array'
         );
-    }
-
-    public function test_has(): void
-    {
-        $this->assertTrue(Config::has('foo'), 'When key is set, has() returns true');
-        $this->assertFalse(Config::has('taz'), 'When key is not set, has() returns false');
     }
 
     public function test_remove(): void

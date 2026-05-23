@@ -83,9 +83,10 @@ final class ProcessPushEventTest extends TestCase
 
                     return 'notice' === ($payload['level'] ?? null)
                         && 'push.item.processing' === ag($payload, 'fields.event_name')
-                        && str_contains((string) ($payload['message'] ?? ''), "Processing push for '#{$entity->id}: {$entity->getName()}'")
                         && 'main' === ag($payload, 'fields.user')
-                        && 'test_jellyfin' === ag($payload, 'fields.backend');
+                        && 'test_jellyfin' === ag($payload, 'fields.backend')
+                        && (string) $entity->id === (string) ag($payload, 'fields.state_id')
+                        && $entity->getName() === ag($payload, 'fields.item_title');
                 },
             ),
         );

@@ -17,7 +17,7 @@ class StreamedBodyTest extends TestCase
         return new StreamedBody($fn ?? fn() => 'test', isReadable: $isReadable);
     }
 
-    public function test_expectations()
+    public function test_basic_stream_behavior()
     {
         $fn = fn() => 'test';
         $stream = StreamedBody::create($fn);
@@ -28,17 +28,6 @@ class StreamedBodyTest extends TestCase
             'getContents(): Must return the same value as the callback'
         );
         $this->assertSame('', $stream->getContents());
-
-        $this->assertSame('test', $this->getStream()->__toString(), 'Must implement __toString');
-        $this->assertSame('test', (string)$this->getStream(), 'Must implement __toString');
-        $this->assertNull(
-            $this->getStream()->getMetadata('key'),
-            "getMetadata(): Must return null as closure doesn't have metadata"
-        );
-        $this->assertNull(
-            $this->getStream()->getSize(),
-            'getSize(): Must return null as closure does not have a size'
-        );
 
         $this->assertSame(
             't',
@@ -52,23 +41,26 @@ class StreamedBodyTest extends TestCase
         $this->assertFalse($stream->eof(), 'eof(): Must remain false until the buffered body is consumed');
         $this->assertSame('est', $stream->getContents());
         $this->assertTrue($stream->eof(), 'eof(): Must become true after the buffered body is consumed');
+    }
 
-        $this->assertSame(0, $this->getStream()->tell(), 'tell(): Must return 0 before the stream is consumed');
-        $this->assertFalse($this->getStream()->eof(), 'eof(): Must return false before the callback executes');
-        $this->assertTrue($this->getStream()->isReadable(), 'isReadable(): Must return true as closure is readable');
-        $this->assertFalse(
-            $this->getStream()->isWritable(),
-            'isWritable(): Must return false as closure is not writable'
-        );
-        $this->assertFalse(
-            $this->getStream()->isSeekable(),
-            'isSeekable(): Must return false as closure is not seekable'
-        );
+    public function test_stream_capabilities_and_write_error(): void
+    {
+        $stream = $this->getStream();
 
-        $this->assertNull($this->getStream()->detach(), 'detach(): Must return null as closure is not detachable');
-        $this->assertNull($this->getStream()->seek(0), 'seek(): Must return null as closure is not seekable');
-        $this->assertNull($this->getStream()->rewind(), 'rewind(): Must return null as closure is not seekable');
-        $this->assertNull($this->getStream()->close(), 'close(): Must return null as closure is not closeable');
+        $this->assertSame('test', $stream->__toString(), 'Must implement __toString');
+
+        $fresh = $this->getStream();
+        $this->assertNull($fresh->getMetadata('key'), "getMetadata(): Must return null as closure doesn't have metadata");
+        $this->assertNull($fresh->getSize(), 'getSize(): Must return null as closure does not have a size');
+        $this->assertSame(0, $fresh->tell(), 'tell(): Must return 0 before the stream is consumed');
+        $this->assertFalse($fresh->eof(), 'eof(): Must return false before the callback executes');
+        $this->assertTrue($fresh->isReadable(), 'isReadable(): Must return true as closure is readable');
+        $this->assertFalse($fresh->isWritable(), 'isWritable(): Must return false as closure is not writable');
+        $this->assertFalse($fresh->isSeekable(), 'isSeekable(): Must return false as closure is not seekable');
+        $this->assertNull($fresh->detach(), 'detach(): Must return null as closure is not detachable');
+        $this->assertNull($fresh->seek(0), 'seek(): Must return null as closure is not seekable');
+        $this->assertNull($fresh->rewind(), 'rewind(): Must return null as closure is not seekable');
+        $this->assertNull($fresh->close(), 'close(): Must return null as closure is not closeable');
 
         $this->checkException(
             closure: fn() => $this->getStream()->write('test'),

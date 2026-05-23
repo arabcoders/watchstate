@@ -428,7 +428,7 @@ class DBLayerTest extends TestCase
 
         $records = array_values(array_filter(
             $this->handler?->getRecords() ?? [],
-            static fn($record): bool => str_contains($record->message, 'Database is locked'),
+            static fn($record): bool => 'database.lock.retry' === ($record->context['event_name'] ?? null),
         ));
 
         $this->assertSame(

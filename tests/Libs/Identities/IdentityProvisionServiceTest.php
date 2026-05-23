@@ -188,7 +188,6 @@ final class IdentityProvisionServiceTest extends TestCase
         $records = $this->filterRecords($handler, 'identity.provision.backend.completed');
 
         self::assertNotEmpty($records);
-        self::assertSame("Synced backend 'alice@plex_alice' from 'plex_main'.", $records[0]->message);
         self::assertSame('backend.sync', $records[0]->context['operation']);
         self::assertSame('plex_main', $records[0]->context['source_backend']);
         self::assertSame('alice', $records[0]->context['identity']);
@@ -218,11 +217,9 @@ final class IdentityProvisionServiceTest extends TestCase
         $records = $this->filterRecords($handler, 'identity.provision.backend.ignored');
 
         self::assertCount(2, $records);
-        self::assertSame("Skipping backend 'bad_type': type 'bad' is unsupported.", $records[0]->message);
         self::assertSame('unsupported_type', $records[0]->context['reason']);
         self::assertSame('bad_type', $records[0]->context['backend']);
         self::assertSame('bad', $records[0]->context['backend_type']);
-        self::assertSame("Skipping backend 'bad_url': URL 'not-a-url' is invalid.", $records[1]->message);
         self::assertSame('invalid_url', $records[1]->context['reason']);
         self::assertSame('bad_url', $records[1]->context['backend']);
         self::assertSame('not-a-url', $records[1]->context['url']);
@@ -247,7 +244,6 @@ final class IdentityProvisionServiceTest extends TestCase
         $records = $this->filterRecords($handler, 'identity.provision.map.completed');
 
         self::assertCount(1, $records);
-        self::assertSame("Renamed 'plex_main: alice' to 'plex_main: alice_renamed' using the mapper.", $records[0]->message);
         self::assertSame('map.apply', $records[0]->context['operation']);
         self::assertSame('plex_main', $records[0]->context['backend']);
         self::assertSame('alice', $records[0]->context['username']);
