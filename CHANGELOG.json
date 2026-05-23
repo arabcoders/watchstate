@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "d6e42d6cf72b1d5e27f87e7c0cd8f1f2227651de",
-    "date": "2026-05-23T09:46:48+00:00",
+    "full_sha": "d7c39e7c92001c7fac8101282180e953f91242d2",
+    "date": "2026-05-23T11:05:12+00:00",
     "commits": [
+      {
+        "sha": "d7c39e7c",
+        "full_sha": "d7c39e7c92001c7fac8101282180e953f91242d2",
+        "message": "fix: stable order for import backends.",
+        "author": "arabcoders",
+        "date": "2026-05-23T11:05:12+00:00"
+      },
+      {
+        "sha": "4e4eed1d",
+        "full_sha": "4e4eed1d4f55afe13dd36af121196b8f73bf14e9",
+        "message": "refactor: remove options.IMPORT_METADATA_ONLY and make import.enabled when disabled take it place.",
+        "author": "arabcoders",
+        "date": "2026-05-23T10:55:11+00:00"
+      },
       {
         "sha": "d6e42d6c",
         "full_sha": "d6e42d6cf72b1d5e27f87e7c0cd8f1f2227651de",
