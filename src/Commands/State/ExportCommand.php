@@ -196,6 +196,7 @@ class ExportCommand extends Command
 
         foreach ($users as $userContext) {
             try {
+                $cursorUpdatedAt = $this->getCursor($userContext);
                 $backends = $export = $push = $entities = [];
 
                 foreach ($userContext->config->getAll() as $backendName => $backend) {
@@ -335,7 +336,9 @@ class ExportCommand extends Command
                         'user' => $userContext->name,
                     ]);
 
-                    $entities = $userContext->db->getAll($lastSync);
+                    $entities = $userContext->db->getAll($lastSync, [
+                        Options::DATE_COLUMN => iState::COLUMN_UPDATED_AT,
+                    ]);
 
                     if (count($entities) < 1 && count($export) < 1) {
                         $this->logger->notice("SYSTEM: No play state changes detected since '{date}' for '{user}'.", [
@@ -515,7 +518,10 @@ class ExportCommand extends Command
                     }
 
                     if (false === (bool) Message::get("{$name}.has_errors", false)) {
-                        $userContext->config->set("{$name}.export.lastSync", time());
+                        $userContext->config->set(
+                            "{$name}.export.lastSync",
+                            max((int) ag($backend, 'export.lastSync', 0), $cursorUpdatedAt ?? time()),
+                        );
                     } else {
                         $this->logger->warning(
                             "SYSTEM: Not updating '{user}@{backend}' export last sync date. There was errors recorded during the operation.",
@@ -660,20 +666,6 @@ class ExportCommand extends Command
 
             assert($backend['class'] instanceof ClientInterface, 'Backend class must implement ClientInterface.');
             array_push($requests, ...$backend['class']->export($userContext->mapper, $this->queue, $after));
-
-            if (false === $inDryMode) {
-                if (true === (bool) Message::get("{$name}.has_errors")) {
-                    $this->logger->warning(
-                        "SYSTEM: Not updating '{user}@{backend}' export last sync date. There was errors recorded during the operation.",
-                        [
-                            'backend' => $name,
-                            'user' => $userContext->name,
-                        ],
-                    );
-                } else {
-                    $userContext->config->set("{$name}.export.lastSync", time());
-                }
-            }
         }
 
         $start = microtime(true);
@@ -695,5 +687,19 @@ class ExportCommand extends Command
     private function in_array(array $list, string $search): bool
     {
         return array_any($list, static fn($item) => str_starts_with($search, $item));
+    }
+
+    private function getCursor(UserContext $userContext): ?int
+    {
+        $stmt = $userContext
+            ->db
+            ->getDBLayer()
+            ->query('SELECT MAX(' . iState::COLUMN_UPDATED_AT . ') FROM state');
+
+        if (false === ($max = $stmt->fetchColumn())) {
+            return null;
+        }
+
+        return null === $max ? null : (int) $max;
     }
 }

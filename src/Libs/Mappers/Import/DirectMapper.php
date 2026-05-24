@@ -276,6 +276,9 @@ class DirectMapper implements ImportInterface
             if (true === $inDryRunMode) {
                 $entity->id = random_int((int) (PHP_INT_MAX / 2), PHP_INT_MAX);
             } else {
+                $now = time();
+                $entity->created_at = $now;
+                $entity->updated_at = $now;
                 $entity = $this->db->insert($entity, $opts);
                 $onStateUpdate = ag($opts, Options::STATE_UPDATE_EVENT, null);
                 if (null !== $onStateUpdate && true === $entity->isWatched()) {

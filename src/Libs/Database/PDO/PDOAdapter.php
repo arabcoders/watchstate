@@ -317,7 +317,7 @@ final class PDOAdapter implements iDB
         $sql = "SELECT {$fields} FROM state";
 
         if (null !== $date) {
-            $sql .= ' WHERE ' . iState::COLUMN_UPDATED . ' > ' . $date->getTimestamp();
+            $sql .= ' WHERE ' . $this->dateColumn($opts) . ' > ' . $date->getTimestamp();
         }
 
         $fromClass = $opts['class'] ?? $this->options['class'] ?? null;
@@ -665,7 +665,7 @@ final class PDOAdapter implements iDB
         if (true === array_key_exists(Options::AFTER, $opts) && null !== $opts[Options::AFTER]) {
             $after = $opts[Options::AFTER];
             $timestamp = $after instanceof DateTimeInterface ? $after->getTimestamp() : (int) $after;
-            $sql .= ' WHERE ' . iState::COLUMN_UPDATED . ' > :after';
+            $sql .= ' WHERE ' . $this->dateColumn($opts) . ' > :after';
             $bind['after'] = $timestamp;
         }
 
@@ -698,6 +698,27 @@ final class PDOAdapter implements iDB
     public function __destruct()
     {
         $this->resetPreparedWrites();
+    }
+
+    private function dateColumn(array $opts): string
+    {
+        $column = (string) ($opts[Options::DATE_COLUMN] ?? iState::COLUMN_UPDATED);
+
+        if (
+            false === in_array(
+                $column,
+                [
+                    iState::COLUMN_UPDATED,
+                    iState::COLUMN_CREATED_AT,
+                    iState::COLUMN_UPDATED_AT,
+                ],
+                true,
+            )
+        ) {
+            return iState::COLUMN_UPDATED;
+        }
+
+        return $column;
     }
 
     /**

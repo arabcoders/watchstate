@@ -108,6 +108,8 @@ final class ExportCommandTest extends TestCase
         $entity = require __DIR__ . '/../../Fixtures/MovieEntity.php';
         $entity[iState::COLUMN_VIA] = 'fake_export';
         $entity[iState::COLUMN_UPDATED] = 1_700_000_200;
+        $entity[iState::COLUMN_CREATED_AT] = 1_700_000_000;
+        $entity[iState::COLUMN_UPDATED_AT] = 1_700_000_200;
         $entity[iState::COLUMN_META_DATA] = [
             'fake_export' => [
                 iState::COLUMN_ID => 901,
@@ -141,6 +143,67 @@ final class ExportCommandTest extends TestCase
                 'after' => 1_700_000_050,
             ],
         ], FakeBackendClient::getCalls('push'));
+    }
+
+    public function test_row_timestamp_uses_push(): void
+    {
+        $logger = $this->initFakeBackendApp(
+            mainBackends: $this->fakeBackendConfig('fake_export'),
+            userBackends: [
+                'alice' => $this->fakeBackendConfig('fake_export', [
+                    'import' => [
+                        'enabled' => true,
+                        'lastSync' => 1_700_000_000,
+                    ],
+                    'export' => [
+                        'enabled' => true,
+                        'lastSync' => 1_700_000_100,
+                    ],
+                ]),
+            ],
+        );
+
+        $aliceContext = $this->makeUserContext('alice', $logger);
+        $entity = require __DIR__ . '/../../Fixtures/MovieEntity.php';
+        $entity[iState::COLUMN_VIA] = 'fake_export';
+        $entity[iState::COLUMN_UPDATED] = 1_700_000_050;
+        $entity[iState::COLUMN_CREATED_AT] = 1_700_000_000;
+        $entity[iState::COLUMN_UPDATED_AT] = 1_700_000_150;
+        $entity[iState::COLUMN_META_DATA] = [
+            'fake_export' => [
+                iState::COLUMN_ID => 901,
+                iState::COLUMN_TYPE => iState::TYPE_MOVIE,
+                iState::COLUMN_WATCHED => 1,
+                iState::COLUMN_META_DATA_ADDED_AT => 1_700_000_000,
+                iState::COLUMN_META_DATA_PLAYED_AT => 1_700_000_050,
+            ],
+        ];
+        $aliceContext->db->insert(new StateEntity($entity));
+
+        $command = new ExportCommand(
+            $this->createRuntimeMapper($logger),
+            new QueueRequests(),
+            $logger,
+            new LogSuppressor([]),
+            $this->createStub(iHttp::class),
+        );
+        $status = $this->makeTester($command)->execute([
+            '--user' => 'alice',
+        ]);
+
+        self::assertSame(ExportCommand::SUCCESS, $status);
+        self::assertSame([], FakeBackendClient::getCalls('export'));
+        self::assertSame([
+            [
+                'backend' => 'fake_export',
+                'user' => 'alice',
+                'count' => 1,
+                'after' => 1_700_000_100,
+            ],
+        ], FakeBackendClient::getCalls('push'));
+
+        $aliceConfig = Yaml::parseFile(self::$tmpPath . '/users/alice/servers.yaml');
+        self::assertSame(1_700_000_150, ag($aliceConfig, 'fake_export.export.lastSync'));
     }
 
     private function makeTester(ExportCommand $command): CommandTester
