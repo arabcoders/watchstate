@@ -7,6 +7,7 @@ namespace App\Backends\Common;
 use App\Libs\Container;
 use App\Libs\Options;
 use DateInterval;
+use JsonException;
 use Psr\Log\LoggerInterface as iLogger;
 use Throwable;
 
@@ -131,5 +132,67 @@ trait CommonTrait
     protected function getLogger(): iLogger
     {
         return Container::get(iLogger::class);
+    }
+
+    /**
+     * Extract a short backend-provided reason from an HTTP response body.
+     */
+    protected function getBackendResponseReason(?string $body, int $limit = 500): ?string
+    {
+        if ('' === ($body = trim((string) $body))) {
+            return null;
+        }
+
+        try {
+            $json = json_decode($body, true, flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE);
+
+            if (is_array($json)) {
+                $reason = ag($json, [
+                    'message',
+                    'Message',
+                    'error.message',
+                    'error',
+                    'Error',
+                    'errors.0.message',
+                    'errors.0.title',
+                ]);
+
+                if (is_scalar($reason) && '' !== trim((string) $reason)) {
+                    return trim((string) $reason);
+                }
+            }
+        } catch (JsonException) {
+        }
+
+        if (false !== ($xml = @simplexml_load_string($body))) {
+            $xmlData = json_decode(json_encode($xml, JSON_INVALID_UTF8_IGNORE), true);
+
+            if (is_array($xmlData)) {
+                $reason = ag($xmlData, [
+                    'error',
+                    'errors.error',
+                    'message',
+                    'Message',
+                ]);
+
+                if (is_array($reason)) {
+                    $reason = array_shift($reason);
+                }
+
+                if (is_scalar($reason) && '' !== trim((string) $reason)) {
+                    return trim((string) $reason);
+                }
+            }
+        }
+
+        if ('' === ($reason = trim(strip_tags($body)))) {
+            return null;
+        }
+
+        if (strlen($reason) > $limit) {
+            return substr($reason, 0, $limit) . '...';
+        }
+
+        return $reason;
     }
 }

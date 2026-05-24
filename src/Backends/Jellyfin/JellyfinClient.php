@@ -784,7 +784,7 @@ class JellyfinClient implements iClient
      */
     public function validateContext(Context $context): bool
     {
-        return Container::get(JellyfinValidateContext::class)($context);
+        return Container::get(JellyfinValidateContext::class)($this->withContext($context)->getContext());
     }
 
     /**
@@ -851,14 +851,36 @@ class JellyfinClient implements iClient
      */
     private function throwError(Response $response, string $className = RuntimeException::class, int $code = 0): void
     {
-        throw new $className(
-            message: ag(
-                $response->extra,
-                'message',
-                static fn() => $response->error?->format() ?? 'An unexpected error occurred.',
-            ),
+        $message = ag($response->extra, 'message', null);
+
+        if (null === $message && null !== $response->error) {
+            $message = ag($response->error->extra, 'message', null);
+        }
+
+        if (!is_string($message) || '' === trim($message)) {
+            $message = $response->error?->format() ?? 'The backend request failed.';
+        }
+
+        $reason = ag($response->extra, 'error', null);
+
+        if (null === $reason && null !== $response->error) {
+            $reason = ag($response->error->extra, 'error', null);
+        }
+
+        if (is_string($reason) && '' !== trim($reason) && false === str_contains($message, $reason)) {
+            $message = trim($message . ' ' . $reason);
+        }
+
+        $ex = new $className(
+            message: $message,
             code: $code,
             previous: $response->error?->previous,
         );
+
+        if (method_exists($ex, 'setContext') && null !== $response->error && !empty($response->error->context)) {
+            $ex->setContext($response->error->context);
+        }
+
+        throw $ex;
     }
 }

@@ -71,6 +71,7 @@ class GetInfo
                 );
 
                 $content = $response->getContent(false);
+                $reason = $this->getBackendResponseReason($content);
 
                 if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
                     return new Response(
@@ -82,9 +83,13 @@ class GetInfo
                                 'status_code' => $response->getStatusCode(),
                                 'response' => [
                                     'body' => $content,
+                                    'reason' => $reason,
                                 ],
                             ],
                             level: Levels::WARNING,
+                            extra: array_filter([
+                                'error' => $reason,
+                            ]),
                         ),
                     );
                 }

@@ -16,7 +16,6 @@ use App\Libs\Exceptions\Backends\InvalidContextException;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Exceptions\ValidationException;
 use App\Libs\Mappers\ImportInterface as iImport;
-use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use App\Libs\Uri;
 use JsonException;
@@ -61,7 +60,7 @@ final class Update
                 userContext: $userContext,
                 logger: Container::get(iLogger::class),
                 backendId: $config->get('uuid', null),
-                backendToken: $userContext->config->get("{$name}.token", null),
+                backendToken: $config->get('token', null),
                 backendUser: $config->get('user', null),
                 options: $config->get('options', []),
             );
@@ -88,13 +87,6 @@ final class Update
                     return $data;
                 })
                 ->persist();
-
-            // -- sanity check.
-            if (true === (bool) $userContext->config->get("{$name}.import.enabled", false)) {
-                if ($userContext->config->has("{$name}.options." . Options::IMPORT_METADATA_ONLY)) {
-                    $userContext->config->delete("{$name}.options." . Options::IMPORT_METADATA_ONLY);
-                }
-            }
 
             $userContext->config->persist();
 
@@ -169,13 +161,6 @@ final class Update
 
         foreach ($updates as $key => $value) {
             $userContext->config->set($key, $value);
-        }
-
-        // -- sanity check.
-        if (true === (bool) $userContext->config->get("{$name}.import.enabled", false)) {
-            if ($userContext->config->has("{$name}.options." . Options::IMPORT_METADATA_ONLY)) {
-                $userContext->config->delete("{$name}.options." . Options::IMPORT_METADATA_ONLY);
-            }
         }
 
         $userContext->config->persist();

@@ -128,7 +128,7 @@ final class LegacyCommand extends Command
                     $output->writeln(r('<comment>{target}: Legacy source db already renamed to {backup}. Skipping.</comment>', [
                         'target' => $target['name'],
                         'backup' => $target['backup'],
-                    ]));
+                    ]), OutputInterface::VERBOSITY_VERBOSE);
                 }
                 continue;
             }
