@@ -73,6 +73,7 @@ final class Index
 
         try {
             per_user_config($identityName);
+            ensure_migration(get_user_db($identityName));
         } catch (Throwable $e) {
             $this->logger->error(r('Failed to create identity {identity}: {error.message}', [
                 'identity' => $identityName,
