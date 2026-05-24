@@ -170,9 +170,6 @@ final class DispatchCommand extends Command
 
             $event->logs[] = r($message, $log_data);
 
-            if (count($event->event_data) > 0) {
-                $log_data['data'] = $event->event_data;
-            }
             $event->status = Status::RUNNING;
             $event->updated_at = (string) make_date();
             $event->attempts += 1;

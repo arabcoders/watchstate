@@ -415,13 +415,14 @@ final class PlexGuid implements iGuid
                     }
 
                     if (true === $log) {
-                        $this->logger->warning(
-                            "PlexGuid: '{client}: {backend}' reported multiple ids for same data source '{key}: {ids}' for {item.type} '{item.id}: {item.title}'.",
+                        $this->logger->info(
+                            "PlexGuid: '{client}: {backend}' reported conflicting '{key}' external ids '{existing_id}' and '{new_id}' for {item.type} '{item.id}: {item.title}'.",
                             [
                                 'client' => $this->context->clientName,
                                 'backend' => $this->context->backendName,
                                 'key' => $key,
-                                'ids' => sprintf('%s, %s', $guid[$this->guidMapper[$key]], $value),
+                                'existing_id' => $guid[$this->guidMapper[$key]],
+                                'new_id' => $value,
                                 ...$context,
                             ],
                         );

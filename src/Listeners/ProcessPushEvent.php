@@ -51,9 +51,6 @@ final readonly class ProcessPushEvent
             $e->addLog($level->getName() . ': ' . r($message, $context));
             $this->logger->log($level, $message, $context);
         };
-        $eventWriter = static function (Level $level, string $message, array $context = []) use ($e): void {
-            $e->addLog($level->getName() . ': ' . r($message, $context));
-        };
 
         $e->stopPropagation();
         $this->queue->reset();
@@ -131,7 +128,7 @@ final readonly class ProcessPushEvent
         foreach ($list as $name => &$backend) {
             try {
                 $opts = ag($backend, 'options', []);
-                $backendLogger = LoggerProxy::create($eventWriter);
+                $backendLogger = LoggerProxy::create($writer);
 
                 if (ag($options, Options::IGNORE_DATE)) {
                     $opts[Options::IGNORE_DATE] = true;
@@ -203,7 +200,7 @@ final readonly class ProcessPushEvent
             requests: $this->queue->getQueue(),
             client: $http,
             opts: [
-                'ok' => static function (Request $request, ResponseInterface $response) use ($eventWriter, $user): array {
+                'ok' => static function (Request $request, ResponseInterface $response) use ($writer, $user): array {
                     if (true === (bool) ag($request->options, 'user_data.' . Options::NO_LOGGING, false)) {
                         return [];
                     }
@@ -213,7 +210,7 @@ final readonly class ProcessPushEvent
                     $context['status_code'] = $response->getStatusCode();
 
                     if (Status::OK !== Status::tryFrom($context['status_code'])) {
-                        $eventWriter(
+                        $writer(
                             Level::Error,
                             "Request to change '{user}@{backend}' - '#{item.id}: {item.title}' play state returned with unexpected '{status_code}' status code.",
                             $context,
@@ -222,7 +219,7 @@ final readonly class ProcessPushEvent
                         return [];
                     }
 
-                    $eventWriter(
+                    $writer(
                         Level::Notice,
                         "Updated '{user}@{backend}' - '#{item.id}: {item.title}' watch state to '{play_state}'.",
                         $context,
@@ -230,7 +227,7 @@ final readonly class ProcessPushEvent
 
                     return [];
                 },
-                'error' => static function (Request $request, Throwable $ex) use ($eventWriter, $user): array {
+                'error' => static function (Request $request, Throwable $ex) use ($writer, $user): array {
                     if (true === (bool) ag($request->options, 'user_data.' . Options::NO_LOGGING, false)) {
                         return [];
                     }
@@ -238,7 +235,7 @@ final readonly class ProcessPushEvent
                     $context = ag($request->extras, 'context', []);
                     $context['user'] = $user;
 
-                    $eventWriter(
+                    $writer(
                         Level::Error,
                         "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to change play state of {item.type} '#{item.id}: {item.title}'. {error.message} at '{error.file}:{error.line}'.",
                         [

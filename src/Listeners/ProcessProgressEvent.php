@@ -53,9 +53,6 @@ final readonly class ProcessProgressEvent
             $event->addLog($level->getName() . ': ' . r($message, $context));
             $this->logger->log($level, $message, $context);
         };
-        $eventWriter = static function (Level $level, string $message, array $context = []) use ($event): void {
-            $event->addLog($level->getName() . ': ' . r($message, $context));
-        };
 
         $event->stopPropagation();
 
@@ -164,7 +161,7 @@ final readonly class ProcessProgressEvent
         foreach ($list as $name => &$backend) {
             try {
                 $opts = ag($backend, 'options', []);
-                $backendLogger = LoggerProxy::create($eventWriter);
+                $backendLogger = LoggerProxy::create($writer);
 
                 if (ag($options, Options::IGNORE_DATE)) {
                     $opts[Options::IGNORE_DATE] = true;
@@ -232,7 +229,6 @@ final readonly class ProcessProgressEvent
             client: $http,
             opts: [
                 'ok' => static function (Request $request, ResponseInterface $response) use (
-                    $eventWriter,
                     $writer,
                     $options,
                     $userContext,
@@ -261,7 +257,7 @@ final readonly class ProcessProgressEvent
                     }
 
                     if (false === in_array(Status::tryFrom($statusCode), [Status::OK, Status::NO_CONTENT], true)) {
-                        $eventWriter(
+                        $writer(
                             Level::Error,
                             "Request to change '{user}@{backend}' - '#{id}: {item.title}' watch progress returned with unexpected '{status_code}' status code.",
                             [
@@ -273,7 +269,7 @@ final readonly class ProcessProgressEvent
                         return [];
                     }
 
-                    $eventWriter(
+                    $writer(
                         Level::Notice,
                         "Updated '{user}@{backend}' '#{id}: {item.title}' watch progress to '{progress}'.",
                         [
@@ -284,14 +280,14 @@ final readonly class ProcessProgressEvent
 
                     return [];
                 },
-                'error' => static function (Request $request, Throwable $ex) use ($eventWriter, $userContext, $item, $progress): array {
+                'error' => static function (Request $request, Throwable $ex) use ($writer, $userContext, $item, $progress): array {
                     if (true === (bool) ag($request->options, 'user_data.' . Options::NO_LOGGING, false)) {
                         return [];
                     }
 
                     $context = ag($request->extras, 'context', []);
 
-                    $eventWriter(
+                    $writer(
                         Level::Error,
                         "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to change watch progress of {item.type} '#{id}: {item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
                         [

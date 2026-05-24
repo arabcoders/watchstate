@@ -407,7 +407,7 @@ class PlexGuidTest extends TestCase
         );
 
         $this->assertTrue(
-            $this->logged(Level::Warning, 'reported multiple ids', true),
+            $this->logged(Level::Info, 'reported conflicting', true),
             'Assert that a log is raised when multiple GUIDs for the same provider are found.'
         );
 

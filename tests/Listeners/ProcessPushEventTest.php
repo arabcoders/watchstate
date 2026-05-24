@@ -24,7 +24,7 @@ use Psr\SimpleCache\CacheInterface as iCache;
 
 final class ProcessPushEventTest extends TestCase
 {
-    public function test_missing_metadata_logs_to_event_only(): void
+    public function test_logs_shared_missing_metadata(): void
     {
         $this->initTempApp();
         $this->seedTestServersConfig();
@@ -76,7 +76,7 @@ final class ProcessPushEventTest extends TestCase
             ),
             $event->getLogs(),
         );
-        self::assertFalse($handler->hasWarningRecords());
+        self::assertTrue($handler->hasWarningRecords());
     }
 
     private function event(StateEntity $entity): DataEvent

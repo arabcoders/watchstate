@@ -37,7 +37,7 @@ final class Guid implements JsonSerializable, Stringable
     /**
      * @var array GUID types and their respective data types.
      */
-    private static array $supported = [
+    private const array DEFAULT_SUPPORTED = [
         Guid::GUID_IMDB => 'string',
         Guid::GUID_TVDB => 'string',
         Guid::GUID_TMDB => 'string',
@@ -47,6 +47,8 @@ final class Guid implements JsonSerializable, Stringable
         Guid::GUID_YOUTUBE => 'string',
         Guid::GUID_CMDB => 'string',
     ];
+
+    private static array $supported = self::DEFAULT_SUPPORTED;
 
     /**
      * Constant array for validating GUIDs.
@@ -58,7 +60,7 @@ final class Guid implements JsonSerializable, Stringable
      *
      * @var array<string, array{ pattern: string, example: string, tests: array{ valid: array<string|int>, invalid: array<string|int> } }>
      */
-    private static array $validateGuid = [
+    private const array DEFAULT_VALIDATE_GUID = [
         Guid::GUID_IMDB => [
             'description' => 'IMDB ID Parser.',
             'pattern' => '/^(?<guid>tt[0-9\/]+)$/i',
@@ -114,6 +116,8 @@ final class Guid implements JsonSerializable, Stringable
             ],
         ],
     ];
+
+    private static array $validateGuid = self::DEFAULT_VALIDATE_GUID;
 
     /**
      * @var string LOOKUP_KEY is how we format external ids to look up a record.
@@ -584,6 +588,8 @@ final class Guid implements JsonSerializable, Stringable
     public static function reparse(): void
     {
         self::$checkedExternalFile = false;
+        self::$supported = self::DEFAULT_SUPPORTED;
+        self::$validateGuid = self::DEFAULT_VALIDATE_GUID;
     }
 
     /**
