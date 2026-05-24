@@ -190,13 +190,26 @@
               <div class="rounded-md border border-default bg-elevated/30 p-4">
                 <div class="flex items-start justify-between gap-4">
                   <div class="min-w-0">
-                    <p class="text-sm font-medium text-highlighted">Enable Import</p>
-                    <p class="mt-1 text-sm text-toned">Retrieve data from this backend.</p>
+                    <p class="text-sm font-medium text-highlighted">
+                      <UIcon
+                        name="i-lucide-circle-check"
+                        class="text-success"
+                        v-if="!backend.import.enabled"
+                      />
+                      {{ backend.import.enabled ? 'Import Play State' : 'Metadata Only' }}
+                    </p>
+                    <p class="mt-1 text-sm text-toned">
+                      {{
+                        backend.import.enabled
+                          ? 'Retrieve play/progress from this backend.'
+                          : 'Retrieve metadata only when import is disabled.'
+                      }}
+                    </p>
                   </div>
 
                   <USwitch
                     :model-value="backend.import.enabled"
-                    :color="backend.import.enabled ? 'success' : 'neutral'"
+                    :color="backend.import.enabled ? 'success' : 'warning'"
                     @update:model-value="
                       (value) => updateValue(backend, 'import.enabled', Boolean(value))
                     "
@@ -248,9 +261,7 @@
                   </div>
 
                   <div class="min-w-0 sm:ml-auto sm:text-right">
-                    <template
-                      v-if="backend.import.enabled || backend.options?.IMPORT_METADATA_ONLY"
-                    >
+                    <template v-if="backend.import">
                       <div class="flex flex-wrap items-center gap-2 sm:justify-end">
                         <UTooltip
                           v-if="backend.import.lastSync"
@@ -261,13 +272,6 @@
                           }}</span>
                         </UTooltip>
                         <span v-else class="font-medium text-highlighted">Never</span>
-
-                        <UTooltip
-                          v-if="!backend.import.enabled && backend.options?.IMPORT_METADATA_ONLY"
-                          text="Only metadata being imported from this backend"
-                        >
-                          <UBadge color="warning" variant="soft">Metadata</UBadge>
-                        </UTooltip>
                       </div>
                     </template>
 
@@ -411,7 +415,7 @@ const usefulCommands: UsefulCommands = {
   },
   metadata_only: {
     id: 5,
-    title: 'Run metadata import from this backend.',
+    title: 'Run metadata-only import from this backend.',
     command: 'state:import -v --metadata-only -u {user} -s {name}',
   },
   import_debug: {
@@ -433,7 +437,7 @@ const usefulCommands: UsefulCommands = {
   },
   force_metadata: {
     id: 9,
-    title: 'Force metadata import from this backend.',
+    title: 'Force metadata-only import from this backend.',
     command: 'state:import -f -v --metadata-only -u {user} -s {name}',
   },
 };
@@ -615,7 +619,6 @@ const check_state = (backend: Backend, command: { state_key?: string }): boolean
   }
 
   const state = ag(backend as unknown as JsonObject, command.state_key, false);
-  console.log(backend, command.state_key, state);
   return Boolean(state);
 };
 </script>

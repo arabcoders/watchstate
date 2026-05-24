@@ -12,6 +12,7 @@ use App\Backends\Common\Response;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Method;
+use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
@@ -23,7 +24,7 @@ use Psr\Http\Message\UriInterface as iUri;
 use Psr\Log\LoggerInterface as iLogger;
 use Throwable;
 
-final class FakeBackendClient implements ClientInterface
+class FakeBackendClient implements ClientInterface
 {
     private ?Context $context = null;
 
@@ -34,6 +35,7 @@ final class FakeBackendClient implements ClientInterface
     /** @var array<string,array<int,array<string,mixed>>> */
     private static array $calls = [
         'metadata' => [],
+        'pull' => [],
         'backup' => [],
         'export' => [],
         'push' => [],
@@ -53,6 +55,7 @@ final class FakeBackendClient implements ClientInterface
     {
         self::$calls = [
             'metadata' => [],
+            'pull' => [],
             'backup' => [],
             'export' => [],
             'push' => [],
@@ -112,7 +115,17 @@ final class FakeBackendClient implements ClientInterface
 
     public function processRequest(iRequest $request, array $opts = []): iRequest
     {
-        return $request;
+        $context = $this->requireContext();
+
+        return $request
+            ->withAttribute('backend', [
+                'id' => $context->backendId,
+                'name' => $context->backendName,
+            ])
+            ->withAttribute('user', [
+                'id' => $context->backendUser,
+                'name' => $context->userContext->name,
+            ]);
     }
 
     public function parseWebhook(iRequest $request, array $opts = []): iState
@@ -122,6 +135,14 @@ final class FakeBackendClient implements ClientInterface
 
     public function pull(iImport $mapper, ?iDate $after = null): array
     {
+        $context = $this->requireContext();
+
+        self::record('pull', [
+            'backend' => $context->backendName,
+            'user' => $context->userContext->name,
+            'after' => null === $after ? null : $after->getTimestamp(),
+        ]);
+
         return [];
     }
 
@@ -384,7 +405,9 @@ final class FakeBackendClient implements ClientInterface
             iState::COLUMN_SEASON => null,
             iState::COLUMN_EPISODE => null,
             iState::COLUMN_PARENT => [],
-            iState::COLUMN_GUIDS => [],
+            iState::COLUMN_GUIDS => [
+                Guid::GUID_IMDB => 'tt-fake-' . $context->backendName,
+            ],
             iState::COLUMN_META_DATA => [
                 $context->backendName => [
                     iState::COLUMN_ID => 1,

@@ -241,7 +241,8 @@ class ImportCommand extends Command
 
             foreach ($userContext->config->getAll() as $backendName => $backend) {
                 $type = strtolower(ag($backend, 'type', 'unknown'));
-                $metadata = false;
+                $importEnabled = true === (bool) ag($backend, 'import.enabled');
+                $metadata = false === $importEnabled;
 
                 if ($isCustom && $input->getOption('exclude') === $this->in_array($selected, $backendName)) {
                     $this->logger->info("SYSTEM: Ignoring '{user}@{backend}'. as requested.", [
@@ -251,37 +252,8 @@ class ImportCommand extends Command
                     continue;
                 }
 
-                // -- sanity check in case user has both import.enabled and options.IMPORT_METADATA_ONLY enabled.
-                if (true === (bool) ag($backend, 'import.enabled')) {
-                    if (true === ag_exists($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
-                        $backend = ag_delete($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
-                    }
-                }
-
-                if (true === (bool) ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
-                    $metadata = true;
-                }
-
                 if (true === $input->getOption('metadata-only')) {
                     $metadata = true;
-                }
-
-                if (true !== $metadata && true !== (bool) ag($backend, 'import.enabled')) {
-                    if ($isCustom) {
-                        $this->logger->warning(
-                            message: "SYSTEM: Importing from import disabled '{user}@{backend}' As requested.",
-                            context: [
-                                'user' => $userContext->name,
-                                'backend' => $backendName,
-                            ],
-                        );
-                    } else {
-                        $this->logger->info("SYSTEM: Ignoring '{user}@{backend}'. Import disabled.", [
-                            'user' => $userContext->name,
-                            'backend' => $backendName,
-                        ]);
-                        continue;
-                    }
                 }
 
                 if (!isset($supported[$type])) {
@@ -317,6 +289,8 @@ class ImportCommand extends Command
                 continue;
             }
 
+            $list = $this->sortBackends($list, true === $input->getOption('metadata-only'));
+
             /** @var array<array-key,Request> $queue */
             $queue = [];
 
@@ -349,7 +323,7 @@ class ImportCommand extends Command
             );
 
             foreach ($list as $name => &$backend) {
-                $metadata = false;
+                $metadata = true !== (bool) ag($backend, 'import.enabled');
                 $opts = ag($backend, 'options', []);
 
                 if (true === $hasLibrarySelect) {
@@ -357,14 +331,13 @@ class ImportCommand extends Command
                     $opts[Options::LIBRARY_INVERSE] = $inverseLibrarySelect;
                 }
 
-                if (true === (bool) ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
+                if (true === $input->getOption('metadata-only')) {
                     $opts[Options::IMPORT_METADATA_ONLY] = true;
                     $metadata = true;
                 }
 
-                if (true === $input->getOption('metadata-only')) {
+                if (true === $metadata) {
                     $opts[Options::IMPORT_METADATA_ONLY] = true;
-                    $metadata = true;
                 }
 
                 if ($input->getOption('trace')) {
@@ -585,5 +558,29 @@ class ImportCommand extends Command
         $ids = array_filter(array_map(trim(...), $value), static fn($item) => '' !== $item);
 
         return array_values(array_unique($ids));
+    }
+
+    /**
+     * @param array<string,array<string,mixed>> $backends
+     *
+     * @return array<string,array<string,mixed>>
+     */
+    private function sortBackends(array $backends, bool $forceMetadataOnly = false): array
+    {
+        $full = [];
+        $metadata = [];
+
+        foreach ($backends as $name => $backend) {
+            $isMetadataOnly = true === $forceMetadataOnly || true !== (bool) ag($backend, 'import.enabled');
+
+            if (true === $isMetadataOnly) {
+                $metadata[$name] = $backend;
+                continue;
+            }
+
+            $full[$name] = $backend;
+        }
+
+        return [...$full, ...$metadata];
     }
 }

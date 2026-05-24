@@ -22,9 +22,14 @@ use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
+use Symfony\Component\Yaml\Yaml;
+use Tests\Support\FakeBackendClient;
+use Tests\Support\StateCommandTestSupport;
 
 final class ImportCommandTest extends TestCase
 {
+    use StateCommandTestSupport;
+
     public function test_request_phase_rollback(): void
     {
         $this->initTempApp();
@@ -95,6 +100,75 @@ final class ImportCommandTest extends TestCase
         )->fetchColumn();
 
         self::assertSame('state', $stateTable, 'Failed request-phase writes should be rolled back with the adapter transaction.');
+    }
+
+    public function test_fake_backend_runs_import(): void
+    {
+        $logger = $this->initFakeBackendApp($this->fakeBackendConfig('fake_import', [
+            'import' => [
+                'enabled' => false,
+            ],
+        ]));
+        $this->migrateMainDb($logger);
+        FakeBackendClient::reset();
+
+        $command = new ImportCommand(
+            $this->createRuntimeMapper($logger),
+            $logger,
+            new LogSuppressor([]),
+            $this->createStub(iHttp::class),
+        );
+
+        $status = $this->makeTester($command)->execute([]);
+
+        self::assertSame(ImportCommand::SUCCESS, $status);
+        self::assertSame([], FakeBackendClient::getCalls('metadata'));
+        self::assertSame([], FakeBackendClient::getCalls('backup'));
+
+        $saved = Yaml::parseFile((string) Config::get('backends_file'));
+        self::assertFalse(ag_exists(ag($saved, 'fake_import.options', []), 'IMPORT_METADATA_ONLY'));
+    }
+
+    public function test_orders_full_before_metadata(): void
+    {
+        $logger = $this->initFakeBackendApp([
+            ...$this->fakeBackendConfig('metadata_first', [
+                'import' => [
+                    'enabled' => false,
+                ],
+            ]),
+            ...$this->fakeBackendConfig('full_second', [
+                'import' => [
+                    'enabled' => true,
+                ],
+            ]),
+        ]);
+        $this->migrateMainDb($logger);
+
+        FakeBackendClient::reset();
+
+        $command = new ImportCommand(
+            $this->createRuntimeMapper($logger),
+            $logger,
+            new LogSuppressor([]),
+            $this->createStub(iHttp::class),
+        );
+
+        $status = $this->makeTester($command)->execute([]);
+
+        self::assertSame(ImportCommand::SUCCESS, $status);
+        self::assertSame([
+            [
+                'backend' => 'full_second',
+                'user' => 'main',
+                'after' => 1_700_000_000,
+            ],
+            [
+                'backend' => 'metadata_first',
+                'user' => 'main',
+                'after' => 1_700_000_000,
+            ],
+        ], FakeBackendClient::getCalls('pull'));
     }
 
     private function makeTester(ImportCommand $command): CommandTester

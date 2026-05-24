@@ -103,6 +103,38 @@ final class BackupCommandTest extends TestCase
         self::assertDirectoryDoesNotExist(self::$tmpPath . '/backup');
     }
 
+    public function test_metadata_only_backend_runs_backup(): void
+    {
+        $logger = $this->initFakeBackendApp($this->fakeBackendConfig('fake_backup', [
+            'import' => [
+                'enabled' => false,
+            ],
+        ]));
+        $this->migrateMainDb($logger);
+        mkdir(self::$tmpPath . '/backup', 0o755, true);
+
+        $command = new BackupCommand(
+            $this->createRuntimeMapper($logger),
+            $logger,
+            new LogSuppressor([]),
+            $this->createStub(iHttp::class),
+        );
+
+        $status = $this->makeTester($command)->execute([
+            '--no-compress' => true,
+        ]);
+
+        self::assertSame(BackupCommand::SUCCESS, $status);
+        self::assertSame([
+            [
+                'backend' => 'fake_backup',
+                'user' => 'main',
+                'dry_run' => false,
+                'no_enhance' => false,
+            ],
+        ], FakeBackendClient::getCalls('backup'));
+    }
+
     private function makeTester(BackupCommand $command): CommandTester
     {
         $application = new Application();

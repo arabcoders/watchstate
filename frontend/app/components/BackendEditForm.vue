@@ -434,36 +434,26 @@
               >
                 <div class="min-w-0">
                   <p class="text-sm font-medium text-highlighted">
-                    Import play and progress updates
+                    <UIcon
+                      name="i-lucide-circle-check"
+                      class="text-success"
+                      v-if="!backend.import.enabled"
+                    />
+                    {{ backend.import.enabled ? 'Import Play State' : 'Metadata Only' }}
                   </p>
                   <p class="mt-1 text-sm text-toned">
-                    Get play state and progress from this backend.
+                    {{
+                      backend.import.enabled
+                        ? 'Retrieve play/progress from this backend.'
+                        : 'Retrieve metadata only when import is disabled.'
+                    }}
                   </p>
                 </div>
 
                 <USwitch
                   id="backend_import"
                   v-model="backend.import.enabled"
-                  :color="backend.import.enabled ? 'success' : 'neutral'"
-                />
-              </div>
-
-              <div
-                v-if="backend.import && !backend.import.enabled"
-                class="flex items-start justify-between gap-4 rounded-md border border-default bg-elevated/20 px-3 py-3"
-              >
-                <div class="min-w-0">
-                  <p class="text-sm font-medium text-highlighted">Import metadata only</p>
-                  <p class="mt-1 text-sm text-toned">
-                    When state import is disabled, metadata-only import keeps titles, paths, and
-                    matching data fresh.
-                  </p>
-                </div>
-
-                <USwitch
-                  id="backend_import_metadata"
-                  v-model="backend.options.IMPORT_METADATA_ONLY"
-                  :color="backend.options?.IMPORT_METADATA_ONLY ? 'success' : 'neutral'"
+                  :color="backend.import.enabled ? 'success' : 'warning'"
                 />
               </div>
 

@@ -14,7 +14,6 @@ use App\Libs\Entity\StateEntity;
 use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Extends\Date;
 use App\Libs\Mappers\ImportInterface as iImport;
-use App\Libs\Options;
 use App\Libs\UserContext;
 use Cron\CronExpression;
 use LimitIterator;
@@ -262,13 +261,13 @@ final class ReportCommand extends Command
 
                 $this->filter(
                     r('Play state import enabled? <flag>{answer}</flag>', [
-                        'answer' => null !== ag($backend, 'import.enabled') ? 'Yes' : 'No',
+                        'answer' => true === (bool) ag($backend, 'import.enabled') ? 'Yes' : 'No',
                     ]),
                 );
 
                 $this->filter(
-                    r('Metadata only import enabled? <flag>{answer}</flag>', [
-                        'answer' => null !== ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY) ? 'Yes' : 'No',
+                    r('Metadata refresh enabled? <flag>{answer}</flag>', [
+                        'answer' => null !== ag($backend, 'import.enabled') ? 'Yes' : 'No',
                     ]),
                 );
 

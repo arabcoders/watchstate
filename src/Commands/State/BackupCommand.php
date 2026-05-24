@@ -117,7 +117,8 @@ class BackupCommand extends Command
                         <notice>[ Important info ]</notice>
                         ------------------
 
-                        The command will only work on backends that has import enabled.
+                        The command will work on backends that can refresh metadata. Backends with <value>import.enabled=false</value>
+                        are still eligible because they now run in metadata-only mode.
 
                         Backups generated without [<flag>-k</flag>, <flag>--keep</flag>] flag are subject to be <notice>REMOVED</notice> during system:prune run.
                         To keep permanent copy of your backups you can use the [<flag>-k</flag>, </flag>--keep</info>] flag. For example:
@@ -277,24 +278,6 @@ class BackupCommand extends Command
                     'types' => implode(', ', array_keys($supported)),
                 ]);
                 continue;
-            }
-
-            if (true !== (bool) ag($backend, 'import.enabled')) {
-                if ($isCustom) {
-                    $this->logger->notice(
-                        "SYSTEM: The backend '{user}@{backend}' has import disabled, However the check is skipped due to --select-backend.",
-                        [
-                            'user' => $userContext->name,
-                            'backend' => $backendName,
-                        ],
-                    );
-                } else {
-                    $this->logger->info("SYSTEM: Ignoring '{user}@{backend}'. Import disabled.", [
-                        'user' => $userContext->name,
-                        'backend' => $backendName,
-                    ]);
-                    continue;
-                }
             }
 
             if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {

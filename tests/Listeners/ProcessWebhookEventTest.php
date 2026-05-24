@@ -21,6 +21,8 @@ use App\Model\Events\EventStatus;
 use Monolog\Logger;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\SimpleCache\CacheInterface;
+use Symfony\Component\Yaml\Yaml;
+use Tests\Support\FakeBackendClient;
 use Tests\Support\RequestResponseTrait;
 
 final class ProcessWebhookEventTest extends TestCase
@@ -119,6 +121,91 @@ final class ProcessWebhookEventTest extends TestCase
         $event = $this->event('req-1', null, 'raw-body');
 
         $listener($event);
+    }
+
+    public function test_disabled_import_means_metadata_only(): void
+    {
+        $userContext = get_user_context(
+            'main',
+            new DirectMapper(new Logger('setup'), Container::get(iDB::class), Container::get(CacheInterface::class)),
+            new Logger('setup'),
+        );
+        $userContext->config->set('test_plex.import.enabled', false);
+        $userContext->config->set('test_plex.options.IMPORT_METADATA_ONLY', true)->persist();
+
+        $cache = Container::get(CacheInterface::class);
+        $logger = new Logger('test');
+
+        $client = $this->createMock(iClient::class);
+        $client->expects($this->once())->method('processRequest')->willReturnCallback($this->inspect(...));
+        $client->expects($this->once())->method('parseWebhook')->willReturn($this->movie());
+        $client->method('withContext')->willReturnSelf();
+        $client->method('setLogger')->willReturnSelf();
+        $client->method('getName')->willReturn('test_plex');
+        $client->method('getType')->willReturn('plex');
+
+        Container::add(iClient::class, $client);
+
+        $listener = new ProcessWebhookEvent(new DirectMapper($logger, Container::get(iDB::class), $cache), $logger);
+        $event = $this->event('req-2');
+
+        $listener($event);
+    }
+
+    public function test_orders_full_before_metadata(): void
+    {
+        Config::save('supported.plex', FakeBackendClient::class);
+        FakeBackendClient::reset();
+
+        file_put_contents((string) Config::get('backends_file'), Yaml::dump([
+            'metadata_first' => [
+                'type' => 'plex',
+                'url' => 'https://example.invalid',
+                'token' => 'token-1',
+                'user' => '11111111',
+                'uuid' => 's00000000000000000000000000000000000000p',
+                'import' => [
+                    'enabled' => false,
+                ],
+                'export' => [
+                    'enabled' => true,
+                ],
+                'options' => [],
+            ],
+            'full_second' => [
+                'type' => 'plex',
+                'url' => 'https://example.invalid',
+                'token' => 'token-2',
+                'user' => '11111111',
+                'uuid' => 's00000000000000000000000000000000000000p',
+                'import' => [
+                    'enabled' => true,
+                ],
+                'export' => [
+                    'enabled' => true,
+                ],
+                'options' => [],
+            ],
+        ], 8, 2));
+
+        $cache = Container::get(CacheInterface::class);
+        $logger = new Logger('test');
+
+        $listener = new ProcessWebhookEvent(new DirectMapper($logger, Container::get(iDB::class), $cache), $logger);
+        $event = $this->event('req-3');
+
+        $listener($event);
+
+        $processingBackends = [];
+        foreach ($event->getLogs() as $log) {
+            if (false === str_contains($log, "Processing 'main@")) {
+                continue;
+            }
+
+            $processingBackends[] = before(after($log, "Processing 'main@"), "' request");
+        }
+
+        self::assertSame(['full_second', 'metadata_first'], $processingBackends);
     }
 
     private function inspect(iRequest $request): iRequest

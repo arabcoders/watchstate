@@ -30,20 +30,12 @@ final class Index
     {
         $list = [];
         $user = $this->getUserContext($request, $mapper, $logger);
-        $removedKeys = ag(include __DIR__ . '/../../../config/removed.keys.php', 'backend', []);
-
         foreach ($this->getBackends(userContext: $user) as $backend) {
             if (!$request->getAttribute(Options::INTERNAL_REQUEST)) {
                 $item = array_filter(
                     $backend,
-                    static fn($key) => false === in_array($key, ['options', ...$removedKeys], true),
+                    static fn($key) => 'options' !== $key,
                     ARRAY_FILTER_USE_KEY,
-                );
-
-                $item = ag_set(
-                    $item,
-                    'options.' . Options::IMPORT_METADATA_ONLY,
-                    (bool) ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY, false),
                 );
                 $list[] = $item;
                 continue;

@@ -193,6 +193,8 @@ final class ProcessWebhookEvent
             return;
         }
 
+        $backends = $this->sortBackends($backends);
+
         if (true === (bool) ag($request->getAttributes(), 'webhook.noop', false)) {
             $this->write(
                 $request,
@@ -351,31 +353,13 @@ final class ProcessWebhookEvent
         $backend = $userContext->config->get($backendName);
 
         $debugTrace = true === (bool) ag($backend, 'options.' . Options::DEBUG_TRACE);
+        $importEnabled = true === (bool) ag($backend, 'import.enabled');
 
-        if (true === ($importEnabled = (bool) ag($backend, 'import.enabled'))) {
+        if (true === $importEnabled) {
             if (true === ag_exists($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
                 $backend = ag_delete($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
                 $userContext->config->delete("{$backendName}.options." . Options::IMPORT_METADATA_ONLY)->persist();
             }
-        }
-
-        $metadataOnly = true === (bool) ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
-
-        if (true !== $metadataOnly && true !== $importEnabled) {
-            if (false === $isGeneric) {
-                $this->write(
-                    $request,
-                    Level::Warning,
-                    "Import are disabled for '{user}@{backend}'.",
-                    context: [
-                        'user' => $userContext->name,
-                        'backend' => $client->getName(),
-                    ],
-                    forceContext: true,
-                );
-            }
-
-            return;
         }
 
         try {
@@ -437,7 +421,7 @@ final class ProcessWebhookEvent
 
         $opts = [
             'tainted' => $entity->isTainted(),
-            Options::IMPORT_METADATA_ONLY => $metadataOnly,
+            Options::IMPORT_METADATA_ONLY => false === $importEnabled,
             Options::REQUEST_ID => ag($request->getServerParams(), 'X_REQUEST_ID'),
             Options::DEBUG_TRACE => $debugTrace,
             Options::IS_GENERIC => $isGeneric,
@@ -591,5 +575,27 @@ final class ProcessWebhookEvent
         } else {
             $this->logger->log($level, r($message, $context));
         }
+    }
+
+    /**
+     * @param array<int,array{backendName:string,backend:array<string,mixed>,userContext:UserContext,client:iClient}> $backends
+     *
+     * @return array<int,array{backendName:string,backend:array<string,mixed>,userContext:UserContext,client:iClient}>
+     */
+    private function sortBackends(array $backends): array
+    {
+        $full = [];
+        $metadata = [];
+
+        foreach ($backends as $backend) {
+            if (true !== (bool) ag($backend, 'backend.import.enabled')) {
+                $metadata[] = $backend;
+                continue;
+            }
+
+            $full[] = $backend;
+        }
+
+        return [...$full, ...$metadata];
     }
 }
