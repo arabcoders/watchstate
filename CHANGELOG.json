@@ -1,5 +1,19 @@
 [
   {
+    "tag": "Untagged",
+    "full_sha": "56277d8580b193cc08d742429b8bf1ec9f392ac1",
+    "date": "2026-05-24T20:10:05+00:00",
+    "commits": [
+      {
+        "sha": "56277d85",
+        "full_sha": "56277d8580b193cc08d742429b8bf1ec9f392ac1",
+        "message": "Refactor: move logging to be owned by the event model.",
+        "author": "arabcoders",
+        "date": "2026-05-24T20:10:05+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v1.8.4",
     "full_sha": "9abcf971e35deef46b9434784a91a49d67dac19b",
     "date": "2026-05-24T17:10:57+00:00",
