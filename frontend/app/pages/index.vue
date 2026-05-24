@@ -236,6 +236,19 @@
                     </UButton>
                   </UTooltip>
 
+                  <UTooltip text="Copy transformed log text.">
+                    <UButton
+                      color="neutral"
+                      variant="outline"
+                      size="sm"
+                      icon="i-lucide-copy"
+                      aria-label="Copy transformed log text"
+                      @click="copyText(log.lines.map((entry) => entry.text).join('\n'))"
+                    >
+                      <span class="hidden sm:inline">Copy</span>
+                    </UButton>
+                  </UTooltip>
+
                   <UTooltip text="Fetch latest log entries.">
                     <UButton
                       color="neutral"
@@ -251,8 +264,6 @@
                   </UTooltip>
                 </div>
               </div>
-
-              <p class="text-sm text-toned">Recent log stream from {{ log.filename }}</p>
             </div>
           </template>
 
@@ -310,6 +321,7 @@ import LogLineLinks from '~/components/LogLineLinks.vue';
 import Popover from '~/components/Popover.vue';
 import DuplicateRecordList from '~/components/DuplicateRecordList.vue';
 import {
+  copyText,
   formatDuration,
   makeEventName,
   makeName,

@@ -67,18 +67,51 @@
           </UButton>
         </UTooltip>
 
-        <UTooltip text="Copy event.">
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-copy"
-            :disabled="isLoading"
-            @click="() => copyText(JSON.stringify(item, null, 2))"
-          >
-            <span class="hidden sm:inline">Copy</span>
-          </UButton>
-        </UTooltip>
+        <Popover placement="bottom-end" trigger="click" :z-index="13000" :disabled="isLoading">
+          <template #trigger>
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-copy"
+              trailing-icon="i-lucide-chevron-down"
+              :disabled="isLoading"
+            >
+              <span class="hidden sm:inline">Copy</span>
+            </UButton>
+          </template>
+
+          <template #content="{ hide }">
+            <div class="w-52 space-y-1 p-1">
+              <button
+                type="button"
+                class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-default hover:bg-elevated hover:text-highlighted"
+                @click="copyEventId(hide)"
+              >
+                <UIcon name="i-lucide-hash" class="size-4 text-toned" />
+                <span>Copy ID</span>
+              </button>
+
+              <button
+                type="button"
+                class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-default hover:bg-elevated hover:text-highlighted"
+                @click="copyItem(hide)"
+              >
+                <UIcon name="i-lucide-copy" class="size-4 text-toned" />
+                <span>Copy Event</span>
+              </button>
+
+              <button
+                type="button"
+                class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-default hover:bg-elevated hover:text-highlighted"
+                @click="copyLogs(hide)"
+              >
+                <UIcon name="i-lucide-scroll-text" class="size-4 text-toned" />
+                <span>Copy Logs</span>
+              </button>
+            </div>
+          </template>
+        </Popover>
 
         <UTooltip text="Reload event data.">
           <UButton
@@ -297,6 +330,7 @@ import { createError, useHead } from '#app';
 import moment from 'moment';
 import { useStorage } from '@vueuse/core';
 import LogLineLinks from '~/components/LogLineLinks.vue';
+import Popover from '~/components/Popover.vue';
 import { useDialog } from '~/composables/useDialog';
 import type { EventsItem, GenericError, LogEntry } from '~/types';
 import {
@@ -354,6 +388,21 @@ const formatLogLine = (logLine: LogEntry): string => {
   const prefix = logLine.date ? `[${logLine.date}] ` : '';
 
   return `${prefix}${String(logLine.text).trim()}`;
+};
+
+const copyEventId = (hide?: () => void): void => {
+  copyText(item.value.id);
+  hide?.();
+};
+
+const copyItem = (hide?: () => void): void => {
+  copyText(JSON.stringify(item.value, null, 2));
+  hide?.();
+};
+
+const copyLogs = (hide?: () => void): void => {
+  copyText(filteredRows.value.map((logLine) => formatLogLine(logLine)).join('\n'));
+  hide?.();
 };
 
 const hasLinks = (logLine: LogEntry): boolean => {

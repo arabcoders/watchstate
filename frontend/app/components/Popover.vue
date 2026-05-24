@@ -1,5 +1,5 @@
 <template>
-  <template v-if="disabled">
+  <template v-if="props.disabled">
     <slot name="trigger" :toggle="toggle" :show="show" :hide="hide" />
   </template>
 
@@ -7,9 +7,9 @@
     v-else
     v-model:open="isOpen"
     :mode="popoverMode"
-    :open-delay="showDelay"
-    :close-delay="hideDelay"
-    :arrow="showArrow"
+    :open-delay="props.showDelay"
+    :close-delay="props.hideDelay"
+    :arrow="props.showArrow"
     :dismissible="activeTrigger !== 'hover'"
     :content="popoverContent"
     :ui="popoverUi"
@@ -109,7 +109,7 @@ const popoverContent = computed(() => ({
 }));
 
 const popoverUi = computed(() => ({
-  content: props.popoverClass,
+  content: [`z-[${props.zIndex}]`, props.popoverClass].filter(Boolean).join(' '),
 }));
 
 const contentClass = computed(() => props.contentClass);
@@ -137,5 +137,4 @@ const toggle = () => {
 watch(isOpen, (value) => emit(value ? 'show' : 'hide'));
 
 const activeTrigger = resolvedTrigger;
-const { showDelay, hideDelay, showArrow, disabled } = props;
 </script>
