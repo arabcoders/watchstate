@@ -48,7 +48,7 @@ final readonly class ProcessPushEvent
     public function __invoke(DataEvent $e): DataEvent
     {
         $writer = function (Level $level, string $message, array $context = []) use ($e) {
-            $e->addLog($level->getName() . ': ' . r($message, $context));
+            $e->addLog($level, $message, $context);
             $this->logger->log($level, $message, $context);
         };
 
@@ -87,7 +87,7 @@ final readonly class ProcessPushEvent
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
             if (true !== (bool) ag($backend, 'export.enabled')) {
-                $writer(Level::Notice, "Export to '{user}@{backend}' is disabled by user.", [
+                $writer(Level::Info, "Export to '{user}@{backend}' is disabled by user.", [
                     'user' => $user,
                     'backend' => $backendName,
                 ]);

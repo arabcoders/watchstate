@@ -281,7 +281,7 @@ final class ParseWebhook
                                 'payload' => $request->getParsedBody(),
                             ],
                         ],
-                        level: Levels::ERROR,
+                        level: Levels::WARNING,
                     ),
                     extra: [
                         'http_code' => Status::OK->value,

@@ -50,7 +50,7 @@ final readonly class ProcessProgressEvent
     public function __invoke(DataEvent $event): DataEvent
     {
         $writer = function (Level $level, string $message, array $context = []) use ($event) {
-            $event->addLog($level->getName() . ': ' . r($message, $context));
+            $event->addLog($level, $message, $context);
             $this->logger->log($level, $message, $context);
         };
 

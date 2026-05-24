@@ -5,14 +5,18 @@ declare(strict_types=1);
 namespace App\Model\Events;
 
 use App\libs\Extends\Date;
+use App\Libs\Options;
 use App\Model\Base\Transformers\ArrayTransformer;
 use App\Model\Base\Transformers\DateTransformer;
 use App\Model\Base\Transformers\EnumTransformer;
 use App\Model\Events\EventsTable as EntityTable;
 use App\Model\Events\EventValidation as EntityValidation;
+use Monolog\Level;
 
 final class Event extends EntityTable
 {
+    public const int MAX_LOG_ENTRIES = 200;
+
     protected string $primaryKey = EntityTable::TABLE_PRIMARY_KEY;
 
     /**
@@ -80,6 +84,44 @@ final class Event extends EntityTable
     public function getStatusText(): string
     {
         return ucfirst(strtolower($this->status->name));
+    }
+
+    /**
+     * Add a formatted log entry if the current event options allow it.
+     *
+     * @param array<string, mixed> $context
+     *
+     * @return bool True when the log entry was persisted.
+     */
+    public function addLog(Level $level, string $message, array $context = []): bool
+    {
+        if (false === (bool) ($this->options[Options::DEBUG_TRACE] ?? false) && $level->value < Level::Info->value) {
+            return false;
+        }
+
+        $this->addRawLog($level->getName() . ': ' . r($message, $context));
+
+        return true;
+    }
+
+    /**
+     * Add a raw log entry without applying any level-based filtering.
+     */
+    public function addRawLog(string $log): void
+    {
+        if (count($this->logs) >= self::MAX_LOG_ENTRIES) {
+            array_shift($this->logs);
+        }
+
+        $this->logs[] = $log;
+    }
+
+    /**
+     * Remove all log entries for this event.
+     */
+    public function clearLogs(): void
+    {
+        $this->logs = [];
     }
 
     public function validate(): bool

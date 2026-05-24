@@ -71,7 +71,7 @@ final class ProcessWebhookEvent
         $this->event = $event;
 
         $this->writer = function (Level $level, string $message, array $context = []) use ($event): void {
-            $event->addLog($level->getName() . ': ' . r($message, $context));
+            $event->addLog($level, $message, $context);
             $this->logger->log($level, $message, $context);
         };
 
@@ -499,7 +499,17 @@ final class ProcessWebhookEvent
         $logger = clone $this->logger;
         assert($logger instanceof Logger, 'Expected logger instance for request processing.');
 
-        $handler = ProxyHandler::create($event->addLog(...), Level::Info);
+        $handler = ProxyHandler::create(
+            static function (string $_message, mixed $record) use ($event): void {
+                if (false === $record instanceof \Monolog\LogRecord) {
+                    return;
+                }
+
+                $event->addLog($record->level, $record->message, $record->context);
+            },
+            (bool) ag($options, Options::DEBUG_TRACE, false) ? Level::Debug : Level::Info,
+        );
+
         $logger->pushHandler($handler);
         $mapper->setLogger($logger);
         $opts = [
@@ -567,8 +577,13 @@ final class ProcessWebhookEvent
             $context['attributes'] = $attributes;
         }
 
-        $levelName = $level instanceof Level ? $level->getName() : (string) $level;
-        $this->event?->addLog($levelName . ': ' . r($message, $context));
+        try {
+            $eventLevel = Logger::toMonologLevel($level);
+        } catch (Throwable) {
+            $eventLevel = Level::Notice;
+        }
+
+        $this->event?->addLog($eventLevel, $message, $context);
 
         if (true === (Config::get('logs.context') || $forceContext)) {
             $this->logger->log($level, $message, $context);

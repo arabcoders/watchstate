@@ -18,6 +18,7 @@ use App\Model\Events\EventsRepository;
 use App\Model\Events\EventsTable as EntityTable;
 use App\Model\Events\EventStatus;
 use InvalidArgumentException;
+use Monolog\Level;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 
@@ -291,14 +292,14 @@ final readonly class Events
         }
 
         if (true === (bool) $params->get('reset_logs', false)) {
-            $entity->logs = [];
+            $entity->clearLogs();
         }
 
         $changed = !empty($entity->diff());
 
         if ($changed) {
             $entity->updated_at = (string) make_date();
-            $entity->logs[] = 'Event was manually updated';
+            $entity->addLog(Level::Info, 'Event was manually updated.');
             $this->repo->save($entity);
         }
 

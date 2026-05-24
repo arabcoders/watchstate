@@ -6,10 +6,12 @@ namespace Tests\Libs\Events;
 
 use App\Libs\Container;
 use App\Libs\Events\DataEvent;
+use App\Libs\Options;
 use App\Libs\TestCase;
 use App\Model\Events\Event;
 use App\Model\Events\EventsTable;
 use App\Model\Events\EventStatus;
+use Monolog\Level;
 
 class DataEventTest extends TestCase
 {
@@ -57,16 +59,84 @@ class DataEventTest extends TestCase
         $dataEvent = $this->getDataEvent();
 
         $this->assertSame(['test entry'], $dataEvent->getLogs(), 'getLogs() does not return the expected value');
-        $dataEvent->addLog('new entry');
+        $dataEvent->addRawLog('new entry');
 
         $this->assertSame(['test entry', 'new entry'],
             $dataEvent->getLogs(),
             'addLog() does not return the expected value');
 
         for ($i = 0; $i < 203; $i++) {
-            $dataEvent->addLog('new entry');
+            $dataEvent->addRawLog('new entry');
         }
 
         $this->assertCount(200, $dataEvent->getLogs(), 'addLog() Logs should not exceed 200 entries per event.');
+    }
+
+    public function test_skip_debug(): void
+    {
+        $dataEvent = $this->getDataEvent([
+            EventsTable::COLUMN_ID => generate_uuid(),
+            EventsTable::COLUMN_STATUS => EventStatus::PENDING->value,
+            EventsTable::COLUMN_REFERENCE => 'test',
+            EventsTable::COLUMN_EVENT => 'test',
+            EventsTable::COLUMN_EVENT_DATA => json_encode(['foo' => 'bar']),
+            EventsTable::COLUMN_OPTIONS => json_encode([]),
+            EventsTable::COLUMN_ATTEMPTS => 0,
+            EventsTable::COLUMN_LOGS => json_encode([]),
+            EventsTable::COLUMN_CREATED_AT => '2024-01-01 01:01:01',
+            EventsTable::COLUMN_UPDATED_AT => '2024-01-02 02:02:02',
+        ]);
+
+        self::assertFalse($dataEvent->addLog(Level::Debug, 'hidden debug'));
+
+        self::assertSame([], $dataEvent->getLogs());
+    }
+
+    public function test_allow_debug_trace(): void
+    {
+        $dataEvent = $this->getDataEvent([
+            EventsTable::COLUMN_ID => generate_uuid(),
+            EventsTable::COLUMN_STATUS => EventStatus::PENDING->value,
+            EventsTable::COLUMN_REFERENCE => 'test',
+            EventsTable::COLUMN_EVENT => 'test',
+            EventsTable::COLUMN_EVENT_DATA => json_encode(['foo' => 'bar']),
+            EventsTable::COLUMN_OPTIONS => json_encode([Options::DEBUG_TRACE => true]),
+            EventsTable::COLUMN_ATTEMPTS => 0,
+            EventsTable::COLUMN_LOGS => json_encode([]),
+            EventsTable::COLUMN_CREATED_AT => '2024-01-01 01:01:01',
+            EventsTable::COLUMN_UPDATED_AT => '2024-01-02 02:02:02',
+        ]);
+
+        self::assertTrue($dataEvent->addLog(Level::Debug, 'visible debug'));
+
+        self::assertSame(['DEBUG: visible debug'], $dataEvent->getLogs());
+    }
+
+    public function test_visible_logs_flag(): void
+    {
+        $dataEvent = $this->getDataEvent([
+            EventsTable::COLUMN_ID => generate_uuid(),
+            EventsTable::COLUMN_STATUS => EventStatus::PENDING->value,
+            EventsTable::COLUMN_REFERENCE => 'test',
+            EventsTable::COLUMN_EVENT => 'test',
+            EventsTable::COLUMN_EVENT_DATA => json_encode(['foo' => 'bar']),
+            EventsTable::COLUMN_OPTIONS => json_encode([]),
+            EventsTable::COLUMN_ATTEMPTS => 0,
+            EventsTable::COLUMN_LOGS => json_encode([]),
+            EventsTable::COLUMN_CREATED_AT => '2024-01-01 01:01:01',
+            EventsTable::COLUMN_UPDATED_AT => '2024-01-02 02:02:02',
+        ]);
+
+        $dataEvent->setVisibleLevel(Level::Notice);
+        self::assertFalse($dataEvent->hasVisibleLogs());
+
+        $dataEvent->addLog(Level::Info, 'hidden info');
+        self::assertFalse($dataEvent->hasVisibleLogs());
+
+        $dataEvent->addLog(Level::Notice, 'visible notice');
+        self::assertTrue($dataEvent->hasVisibleLogs());
+
+        $dataEvent->resetVisibleLogs();
+        self::assertFalse($dataEvent->hasVisibleLogs());
     }
 }

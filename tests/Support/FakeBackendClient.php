@@ -186,6 +186,15 @@ class FakeBackendClient implements ClientInterface
     {
         $context = $this->requireContext();
 
+        $this->logger?->debug('fake.push: hidden debug for {user}@{backend}', [
+            'user' => $context->userContext->name,
+            'backend' => $context->backendName,
+        ]);
+        $this->logger?->info('fake.push: visible info for {user}@{backend}', [
+            'user' => $context->userContext->name,
+            'backend' => $context->backendName,
+        ]);
+
         self::record('push', [
             'backend' => $context->backendName,
             'user' => $context->userContext->name,
@@ -199,6 +208,15 @@ class FakeBackendClient implements ClientInterface
     public function progress(array $entities, QueueRequests $queue, ?iDate $after = null): array
     {
         $context = $this->requireContext();
+
+        $this->logger?->debug('fake.progress: hidden debug for {user}@{backend}', [
+            'user' => $context->userContext->name,
+            'backend' => $context->backendName,
+        ]);
+        $this->logger?->info('fake.progress: visible info for {user}@{backend}', [
+            'user' => $context->userContext->name,
+            'backend' => $context->backendName,
+        ]);
 
         self::record('progress', [
             'backend' => $context->backendName,

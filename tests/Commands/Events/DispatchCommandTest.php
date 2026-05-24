@@ -13,41 +13,35 @@ use App\Model\Events\EventsRepository;
 use Monolog\Handler\TestHandler;
 use Monolog\Level;
 use Monolog\Logger;
-use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
 use ReflectionMethod;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 
 final class DispatchCommandTest extends TestCase
 {
-    public function test_visible_logs(): void
+    public function test_skip_marker_for_raw_logs(): void
     {
-        $method = new ReflectionMethod(DispatchCommand::class, 'isVisible');
-        $command = $this->makeCommand();
+        $handler = new TestHandler(Level::Debug);
+        $logger = new Logger('test', [$handler], [new LogMessageProcessor()]);
+        $dispatcher = new EventDispatcher();
+        $dispatcher->addListener('on_push', static function (DataEvent $event) use ($logger): void {
+            $event->addRawLog('listener raw output');
+            $logger->notice('Listener raw output.');
+        });
 
-        self::assertTrue($method->invoke(
-            $command,
-            [
-                'INFO: hidden',
-                'NOTICE: visible',
-                '[2026-04-27T10:17:56+03:00] WARNING: visible',
-                'plain text',
-            ],
-            Level::Notice,
+        $command = new DispatchCommand(
+            $dispatcher,
+            $this->repo(),
+            $this->createStub(iCache::class),
+            $logger,
+        );
+
+        $this->runEvent($command, $this->event(), Level::Notice);
+
+        self::assertSame(['Listener raw output.'], array_map(
+            static fn($record): string => $record->message,
+            $handler->getRecords(),
         ));
-
-        self::assertTrue($method->invoke(
-            $command,
-            [
-                'INFO: visible',
-                'NOTICE: visible',
-                'WARNING: visible',
-                'event.DEBUG: hidden',
-            ],
-            Level::Info,
-        ));
-
-        self::assertFalse($method->invoke($command, ['INFO: hidden'], Level::Warning));
     }
 
     public function test_orders_marker(): void
@@ -56,29 +50,18 @@ final class DispatchCommandTest extends TestCase
         $logger = new Logger('test', [$handler], [new LogMessageProcessor()]);
         $dispatcher = new EventDispatcher();
         $dispatcher->addListener('on_push', static function (DataEvent $event) use ($logger): void {
-            $event->addLog('NOTICE: listener visible');
+            $event->addLog(Level::Notice, 'listener visible');
             $logger->notice('Listener visible.');
         });
 
-        $repo = $this->createMock(EventsRepository::class);
-        $repo->expects(self::exactly(2))->method('save')->willReturn('event-id');
-
-        $event = new Event([]);
-        $event->id = '550e8400-e29b-41d4-a716-446655440000';
-        $event->event = 'on_push';
-        $event->created_at = make_date('2026-05-17T08:25:02+00:00');
-
-        $method = new ReflectionMethod(DispatchCommand::class, 'runEvent');
-        $method->invoke(
-            new DispatchCommand(
-                $dispatcher,
-                $repo,
-                $this->createStub(iCache::class),
-                $logger,
-            ),
-            $event,
-            Level::Notice,
+        $command = new DispatchCommand(
+            $dispatcher,
+            $this->repo(),
+            $this->createStub(iCache::class),
+            $logger,
         );
+
+        $this->runEvent($command, $this->event(), Level::Notice);
 
         $records = $handler->getRecords();
         self::assertSame(
@@ -88,13 +71,57 @@ final class DispatchCommandTest extends TestCase
         self::assertSame('Listener visible.', $records[1]->message);
     }
 
-    private function makeCommand(): DispatchCommand
+    public function test_allow_debug_marker(): void
     {
-        return new DispatchCommand(
-            new EventDispatcher(),
-            $this->createStub(EventsRepository::class),
+        $handler = new TestHandler(Level::Debug);
+        $logger = new Logger('test', [$handler], [new LogMessageProcessor()]);
+        $dispatcher = new EventDispatcher();
+        $dispatcher->addListener('on_push', static function (DataEvent $event): void {
+            $event->addLog(Level::Debug, 'listener debug');
+        });
+
+        $command = new DispatchCommand(
+            $dispatcher,
+            $this->repo(),
             $this->createStub(iCache::class),
-            $this->createStub(iLogger::class),
+            $logger,
         );
+
+        $event = $this->event();
+        $this->runEvent($command, $event, Level::Debug, true);
+
+        self::assertSame([
+            "NOTICE: Dispatching Event: 'on_push' queued at '2026-05-17T08:25:02+00:00'.",
+            'DEBUG: listener debug',
+            "NOTICE: Event 'on_push' was dispatched.",
+        ], $event->logs);
+        self::assertSame(
+            ["[event:550e8400-e29b-41d4-a716-446655440000] Dispatching Event: 'on_push' queued at '2026-05-17T08:25:02+00:00'."],
+            array_map(static fn($record): string => $record->message, $handler->getRecords()),
+        );
+    }
+
+    private function event(): Event
+    {
+        $event = new Event([]);
+        $event->id = '550e8400-e29b-41d4-a716-446655440000';
+        $event->event = 'on_push';
+        $event->created_at = make_date('2026-05-17T08:25:02+00:00');
+
+        return $event;
+    }
+
+    private function repo(): EventsRepository
+    {
+        $repo = $this->createMock(EventsRepository::class);
+        $repo->expects(self::exactly(2))->method('save')->willReturn('event-id');
+
+        return $repo;
+    }
+
+    private function runEvent(DispatchCommand $command, Event $event, Level $level, bool $debug = false): void
+    {
+        $method = new ReflectionMethod(DispatchCommand::class, 'runEvent');
+        $method->invoke($command, $event, $level, $debug);
     }
 }
