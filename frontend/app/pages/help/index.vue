@@ -119,5 +119,11 @@ const choices: Array<{ number: number; title: string; text: string; url: string 
     text: 'Browse the bundled Plex, Jellyfin, and Emby upstream routes.',
     url: '/help/openapi',
   },
+  {
+    number: 10,
+    title: 'Path matching',
+    text: 'How to enable path-based matching.',
+    url: '/help/path-match',
+  },
 ];
 </script>

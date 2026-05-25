@@ -129,6 +129,9 @@ return (function () {
         'disable' => [
             'episode' => (bool) env('WS_GUID_DISABLE_EPISODE', false),
         ],
+        'path' => [
+            'enabled' => (bool) env('WS_GUID_PATH_ENABLED', false),
+        ],
     ];
 
     $config['backends_file'] = fix_path(env('WS_BACKENDS_FILE', ag($config, 'path') . '/config/servers.yaml'));

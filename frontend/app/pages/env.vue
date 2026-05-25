@@ -257,7 +257,7 @@
                 <p>This environment variable overrides the shown configuration key.</p>
                 <p>
                   <code>{{ form_config }}</code>
-                  <span>:</span>
+                  <span>: </span>
                   <strong v-if="!form_mask">{{ form_config_value }}</strong>
                   <strong v-else class="text-toned italic">Hidden</strong>
                 </p>

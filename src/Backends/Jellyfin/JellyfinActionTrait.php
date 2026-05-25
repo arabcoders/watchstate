@@ -16,6 +16,7 @@ use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Guid;
 use App\Libs\Options;
+use App\Libs\PathGuid;
 use Psr\Http\Message\UriInterface as iUri;
 use Psr\SimpleCache\CacheInterface as iCache;
 
@@ -188,13 +189,42 @@ trait JellyfinActionTrait
         }
 
         $metadata[iState::COLUMN_META_MULTI] = false;
-        if (null !== ($mediaPath = ag($item, 'Path')) && !empty($mediaPath)) {
+        $mediaPath = ag(
+            $item,
+            'Path',
+            $opts['override'][iState::COLUMN_META_DATA][$context->backendName][iState::COLUMN_META_PATH] ?? null,
+        );
+        if (null !== $mediaPath && !empty($mediaPath)) {
             $metadata[iState::COLUMN_META_PATH] = (string) $mediaPath;
             if (
                 iState::TYPE_EPISODE === $type
                 && true === ag(parse_episode_range(basename((string) $mediaPath)), iState::COLUMN_META_MULTI, false)
             ) {
                 $metadata[iState::COLUMN_META_MULTI] = true;
+            }
+        }
+
+        if (true === (bool) Config::get('guid.path.enabled', false) && null !== $mediaPath && !empty($mediaPath)) {
+            $pathGuids = PathGuid::get(
+                type: $type,
+                path: (string) $mediaPath,
+                season: null !== ($builder[iState::COLUMN_SEASON] ?? null) ? (int) $builder[iState::COLUMN_SEASON] : null,
+                episode: null !== ($builder[iState::COLUMN_EPISODE] ?? null) ? (int) $builder[iState::COLUMN_EPISODE] : null,
+            );
+
+            if (null !== ($pathGuids[iState::COLUMN_GUIDS] ?? null)) {
+                $builder[iState::COLUMN_GUIDS] = array_replace(
+                    $builder[iState::COLUMN_GUIDS] ?? [],
+                    $pathGuids[iState::COLUMN_GUIDS],
+                );
+            }
+
+            if (null !== ($pathGuids[iState::COLUMN_PARENT] ?? null)) {
+                $builder[iState::COLUMN_PARENT] = array_replace(
+                    $builder[iState::COLUMN_PARENT] ?? [],
+                    $pathGuids[iState::COLUMN_PARENT],
+                );
+                $metadata[iState::COLUMN_PARENT] = $builder[iState::COLUMN_PARENT];
             }
         }
 

@@ -1148,6 +1148,31 @@ class StateEntityTest extends TestCase
         );
     }
 
+    public function test_episode_path_guid_disabled(): void
+    {
+        $guid = md5('episode:/series title/season 01/episode.mkv/1/2');
+        $parent = md5('show:/series title/season 01');
+        $data = $this->testEpisode;
+        $data[iState::COLUMN_GUIDS][Guid::GUID_PATH] = $guid;
+        $data[iState::COLUMN_PARENT][Guid::GUID_PATH] = $parent;
+        $entity = new StateEntity($data);
+
+        try {
+            Config::save('guid.disable.episode', true);
+
+            $this->assertSame($guid, $entity->guids[Guid::GUID_PATH]);
+            $this->assertSame([], $entity->getGuids());
+            $this->assertSame([], $entity->getPointers());
+            $this->assertContains('rguid_path://' . $parent . '/1/2', $entity->getRelativePointers());
+
+            Config::save('guid.disable.episode', false);
+
+            $this->assertContains('guid_path://' . $guid, $entity->getPointers());
+        } finally {
+            Config::save('guid.disable.episode', false);
+        }
+    }
+
     public function test_removeMetadata()
     {
         $data = $this->testMovie;
