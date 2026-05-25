@@ -17,6 +17,24 @@
     <UAlert color="warning" variant="soft" icon="i-lucide-info" title="Important">
       <template #description>
         <ul class="list-disc space-y-2 pl-5 text-sm text-default">
+          <li v-if="pathGuidEnvMissing">
+            Path matching is disabled. If this backend shares media files with your existing
+            backends, consider enabling
+            <NuxtLink
+              to="/env?edit=WS_GUID_PATH_ENABLED&value=true"
+              class="inline-flex items-center gap-1 text-primary"
+            >
+              <UIcon name="i-lucide-sliders-horizontal" class="size-4" />
+              <span>WS_GUID_PATH_ENABLED</span>
+            </NuxtLink>
+            before adding it, so future imports can store path GUIDs without a forced reimport. See
+            the
+            <NuxtLink to="/help/path-match" class="inline-flex items-center gap-1 text-primary">
+              <UIcon name="i-lucide-circle-help" class="size-4" />
+              <span>path matching guide</span>
+            </NuxtLink>
+            for details.
+          </li>
           <li>
             If you are adding new backend that is fresh and doesn't have your current watch state,
             you should turn off import and enable only metadata import at the start to prevent
@@ -641,6 +659,7 @@ const error = ref<string | null>(null);
 const backup_data = ref<boolean>(true);
 const force_export = ref<boolean>(false);
 const force_import = ref<boolean>(false);
+const pathGuidEnvMissing = ref<boolean>(false);
 
 type NotificationType = 'info' | 'success' | 'warning' | 'error';
 
@@ -849,6 +868,15 @@ const updateIdentifier = (): void => {
 onMounted(async () => {
   clearError();
   await loadSupported();
+
+  try {
+    const response = await request('/system/env/WS_GUID_PATH_ENABLED');
+    pathGuidEnvMissing.value = 200 !== response.status;
+  } catch (error) {
+    console.error(error);
+    pathGuidEnvMissing.value = false;
+  }
+
   if (supported.value.length > 0 && supported.value[0]) {
     backend.value.type = supported.value[0];
   }
