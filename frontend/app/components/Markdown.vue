@@ -235,7 +235,10 @@ const loadContent = async (): Promise<void> => {
     } as MarkedExtension;
 
     marked.use(options);
-    content.value = String(marked.parse(text));
+    const parsed = String(marked.parse(text));
+    content.value = parsed
+      .replace(/<table>/g, '<div class="ws-markdown-table"><table>')
+      .replace(/<\/table>/g, '</table></div>');
     await nextTick();
     addListeners();
   } catch (caughtError) {
@@ -266,9 +269,19 @@ onBeforeUnmount(() => removeListeners());
 .markdown-alert-title {
   display: inline-flex;
   align-items: center;
+  gap: 0.375rem;
   font-weight: 500;
   text-transform: uppercase;
   user-select: none;
+}
+
+.markdown-alert-title svg {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 1rem;
+  color: currentColor;
+  fill: currentColor;
+  stroke: currentColor;
 }
 
 .markdown-alert-note {
@@ -437,12 +450,34 @@ onBeforeUnmount(() => removeListeners());
   border-collapse: collapse;
   overflow: hidden;
   border-radius: 0.375rem;
-  border: 1px solid color-mix(in srgb, var(--ui-border) 50%, transparent);
+  border: 1px solid var(--ui-border);
+  background: var(--ui-bg);
+}
+
+.ws-markdown-table {
+  max-width: 100%;
+  margin: 1rem 0;
+  overflow-x: auto;
+  border: 1px solid var(--ui-border);
+  border-radius: 0.375rem;
+}
+
+.ws-markdown .ws-markdown-table table {
+  width: max-content;
+  min-width: 100%;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.ws-markdown .ws-markdown-table th,
+.ws-markdown .ws-markdown-table td {
+  white-space: nowrap;
 }
 
 .ws-markdown th,
 .ws-markdown td {
-  border: 1px solid color-mix(in srgb, var(--ui-border) 40%, transparent);
+  border: 1px solid var(--ui-border);
   padding: 0.65rem 0.75rem;
   text-align: left;
   vertical-align: top;
@@ -450,7 +485,11 @@ onBeforeUnmount(() => removeListeners());
 
 .ws-markdown th {
   font-weight: 600;
-  background: color-mix(in srgb, var(--ui-border) 18%, transparent);
+  background: var(--ui-bg-elevated);
+}
+
+.ws-markdown tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--ui-bg-elevated) 55%, transparent);
 }
 
 .ws-markdown img {
