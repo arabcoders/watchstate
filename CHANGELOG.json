@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "12677886d010098d44a1666f2f1bfbd16c3aaa93",
-    "date": "2026-05-25T13:47:30+00:00",
+    "full_sha": "d8f5eaee2093c24dcfb99a38414cf239b70cd09c",
+    "date": "2026-05-25T13:55:14+00:00",
     "commits": [
+      {
+        "sha": "d8f5eaee",
+        "full_sha": "d8f5eaee2093c24dcfb99a38414cf239b70cd09c",
+        "message": "fix: hide useless migration messages on container start up",
+        "author": "arabcoders",
+        "date": "2026-05-25T13:55:14+00:00"
+      },
       {
         "sha": "12677886",
         "full_sha": "12677886d010098d44a1666f2f1bfbd16c3aaa93",
