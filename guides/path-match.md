@@ -2,6 +2,8 @@
 
 Path matching adds a local GUID source named `guid_path`. When enabled, WatchState derives a stable hash from backend-reported media file paths and stores it alongside the normal GUIDs.
 
+This feature becomes available in v1.8.5+ and is disabled by default for now.
+
 # When Path Matching Helps
 
 Path matching is useful when your backends have missing, weak, or inconsistent external IDs, but they still point at the same local media files.

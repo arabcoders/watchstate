@@ -12,7 +12,7 @@ box, this tool supports `Jellyfin`, `Plex` and `Emby` media servers.
 
 ### 2026-05-25
 
-Path matching is now available. It lets items match using a GUID source derived from the media path, which helps when your backends share the same media files but have unreliable or inconsistent external IDs. See the [path matching guide](/guides/path-match.md) for setup and backfill instructions.
+Path matching is now available in v1.8.5+. It lets items match using a GUID source derived from the media path, which helps when your backends share the same media files but have unreliable or inconsistent external IDs. See the [path matching guide](/guides/path-match.md) for setup and backfill instructions.
 
 ### 2026-04-30
 
