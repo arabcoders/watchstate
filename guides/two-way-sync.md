@@ -19,8 +19,8 @@ On the export side, we compare the backend's last sync date with any local chang
 items that need updating for each backend. If there are only a few changes, we trigger a quick sync operation
 `push mode`. If the changes are more extensive, we perform a full export, which compares all remote data with the local
 data. This full export only happens when there are many changes and/or metadata is missing from the backend, which is
-why it's crucial to keep the `Import play and progress updates` option enabled, or disable it only
-when you want that backend to stay in metadata-only mode.
+why it's crucial to keep the `Enable Import` option enabled, or disable it only when you want that
+backend to stay in metadata-only mode.
 
 # Setting Up Two-Way Sync
 

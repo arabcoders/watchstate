@@ -81,7 +81,7 @@
         variant="soft"
         icon="i-lucide-loader-circle"
         title="Loading"
-        description="Requesting active play sessions. Please wait..."
+        description="Loading backends. Please wait..."
         :ui="{ icon: 'animate-spin' }"
       />
 
@@ -174,7 +174,7 @@
                 <div class="flex items-start justify-between gap-4">
                   <div class="min-w-0">
                     <p class="text-sm font-medium text-highlighted">Enable Export</p>
-                    <p class="mt-1 text-sm text-toned">Send data to this backend.</p>
+                    <p class="mt-1 text-sm text-toned">Send state updates to this backend.</p>
                   </div>
 
                   <USwitch
@@ -190,20 +190,22 @@
               <div class="rounded-md border border-default bg-elevated/30 p-4">
                 <div class="flex items-start justify-between gap-4">
                   <div class="min-w-0">
-                    <p class="text-sm font-medium text-highlighted">
-                      <UIcon
-                        name="i-lucide-circle-check"
-                        class="text-success"
-                        v-if="!backend.import.enabled"
-                      />
-                      {{ backend.import.enabled ? 'Import Play State' : 'Metadata Only' }}
-                    </p>
-                    <p class="mt-1 text-sm text-toned">
-                      {{
-                        backend.import.enabled
-                          ? 'Retrieve play/progress from this backend.'
-                          : 'Retrieve metadata only when import is disabled.'
-                      }}
+                    <p class="text-sm font-medium text-highlighted">Enable Import</p>
+                    <p class="mt-1 text-sm">
+                      Get
+                      <template v-if="backend.import.enabled">
+                        <UTooltip text="Watched status, playlists, progress and metadata">
+                          <span class="text-success underline cursor-help">everything</span>
+                        </UTooltip>
+                      </template>
+                      <template v-else>
+                        <UTooltip
+                          text="Import only metadata no watched status, playlists or progress will be imported"
+                        >
+                          <span class="text-error underline cursor-help">metadata</span>
+                        </UTooltip>
+                      </template>
+                      from this backend.
                     </p>
                   </div>
 
@@ -257,7 +259,7 @@
                     class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
                   >
                     <UIcon name="i-lucide-download" class="size-3.5 shrink-0" />
-                    <span>Last Import</span>
+                    <span>Last Import ({{ backend.import.enabled ? 'Full' : 'Basic' }})</span>
                   </div>
 
                   <div class="min-w-0 sm:ml-auto sm:text-right">
