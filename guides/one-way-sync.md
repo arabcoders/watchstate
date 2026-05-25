@@ -16,9 +16,9 @@ environment without modifying the original data.
 ### Adding your backend with has the most accurate data
 
 First, go to <!--i:i-lucide-server--> **Backends** and click on the <!--i:i-lucide-plus--> **Add Backend** button. Follow the
-interactive setup guide. When you reach the step asking *`Send play and progress updates`*, disable it,
+interactive setup guide. When you reach the step asking *`Enable export`*, disable it,
 this applies to
-your main backend as you don’t want to alter its data. Keep *`Import play and progress updates`*
+your main backend as you don’t want to alter its data. Keep *`Enable Import`*
 enabled, which will allow
 you to import data from the backend.
 
@@ -64,15 +64,15 @@ For each backend, follow these steps:
 
 Do exactly as you did for the main backend, but make the following changes:
 
-- *`Import play and progress updates`*: No
-- *`Send play and progress updates`*: Yes
+- *`Enable Import`*: No
+- *`Enable export`*: Yes
 - *`Force export local data to this backend: Yes`*: This depends on your setup:
     - If you have only one extra backend and have already imported your main backend data, select *Yes* and skip Step 2.
     - If you have multiple backends, keep this option disabled and proceed to Step 2.
 
 > [!IMPORTANT]  
 > Selecting the correct options is crucial to avoid altering the data in the main backend. When
-> *`Import play and progress updates`* is disabled, WatchState automatically keeps metadata refresh
+> *`Enable Import`* is disabled, WatchState automatically keeps metadata refresh
 > enabled for that backend.
 
 ### Step 2

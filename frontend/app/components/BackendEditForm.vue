@@ -433,20 +433,22 @@
                 class="flex items-start justify-between gap-4 rounded-md border border-default bg-elevated/20 px-3 py-3"
               >
                 <div class="min-w-0">
-                  <p class="text-sm font-medium text-highlighted">
-                    <UIcon
-                      name="i-lucide-circle-check"
-                      class="text-success"
-                      v-if="!backend.import.enabled"
-                    />
-                    {{ backend.import.enabled ? 'Import Play State' : 'Metadata Only' }}
-                  </p>
-                  <p class="mt-1 text-sm text-toned">
-                    {{
-                      backend.import.enabled
-                        ? 'Retrieve play/progress from this backend.'
-                        : 'Retrieve metadata only when import is disabled.'
-                    }}
+                  <p class="text-sm font-medium text-highlighted">Enable Import</p>
+                  <p class="mt-1 text-sm">
+                    Get
+                    <template v-if="backend.import.enabled">
+                      <UTooltip text="Watched status, playlists, progress and metadata">
+                        <span class="text-success underline cursor-help">everything</span>
+                      </UTooltip>
+                    </template>
+                    <template v-else>
+                      <UTooltip
+                        text="Import only metadata no watched status, playlists or progress will be imported"
+                      >
+                        <span class="text-error underline cursor-help">metadata</span>
+                      </UTooltip>
+                    </template>
+                    from this backend.
                   </p>
                 </div>
 
@@ -462,12 +464,8 @@
                 class="flex items-start justify-between gap-4 rounded-md border border-default bg-elevated/20 px-3 py-3"
               >
                 <div class="min-w-0">
-                  <p class="text-sm font-medium text-highlighted">
-                    Export play and progress updates
-                  </p>
-                  <p class="mt-1 text-sm text-toned">
-                    Send current WatchState play state updates to this backend.
-                  </p>
+                  <p class="text-sm font-medium text-highlighted">Enable Export</p>
+                  <p class="mt-1 text-sm text-toned">Send state updates to this backend.</p>
                 </div>
 
                 <USwitch

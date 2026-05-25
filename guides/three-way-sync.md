@@ -38,12 +38,12 @@ For each individual account (yours and your spouse's)
 2. Follow the usual add backend process to add the share account.
 3. Configure the settings as follows:
     - *`Name`*: Choose a unique name that isn't already used. e.g. `shared_family_one` or `shared_family_two`
-    - *`Import play and progress updates`*: Yes
-    - *`Send play and progress updates`*: No
+    - *`Enable Import`*: Yes
+    - *`Enable export`*: No
 
 > [!IMPORTANT]
-> Keeping *`Import play and progress updates`* enabled ensures the shared account's watch state
-> overrides the individual accounts. Disabling *`Send play and progress updates`* prevents individual
+> Keeping *`Enable Import`* enabled ensures the shared account's watch state
+> overrides the individual accounts. Disabling *`Enable export`* prevents individual
 > accounts from modifying the shared account's data.
 
 # Verify the Setup

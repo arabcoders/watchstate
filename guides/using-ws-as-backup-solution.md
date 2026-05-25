@@ -27,8 +27,8 @@ When you enable single backend mode:
 First, go to <!--i:i-lucide-server--> **Backends** and click on the <!--i:i-lucide-plus--> **Add Backend** button. Follow the
 interactive setup guide. Configure your media server backend (Plex, Jellyfin, or Emby) with the following settings:
 
-- *`Import play and progress updates`*: **Yes**
-- *`Send play and progress updates`*: **No**
+- *`Enable Import`*: **Yes**
+- *`Enable export`*: **No**
 - *`Create backup for this backend data: Yes`*: **No**
 - *`Force one time import from this backend: Yes`*: **No**
 

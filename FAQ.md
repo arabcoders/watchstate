@@ -1,5 +1,27 @@
 # FAQ
 
+# Import vs Export
+
+## What does it mean to export or import in WatchState terminology?
+
+WatchState syncs data between your configured backends.
+
+For each backend:
+
+* **Import** allows WatchState to read data from that backend.
+* **Export** allows WatchState to write data to that backend.
+
+Put simply, **Import** controls what WatchState can use as a source, while **Export** controls what WatchState can update as a target.
+
+For example, if Plex should provide the data and Jellyfin should be updated to match it, enable:
+
+* **Import** on Plex
+* **Export** on Jellyfin
+
+If both options are enabled on the same backend, WatchState can both read from it and write updates back to it during sync.
+
+---
+
 # How to enable scheduled/automatic tasks?
 
 To turn on automatic import or export tasks:
