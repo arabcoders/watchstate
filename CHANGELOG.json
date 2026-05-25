@@ -1,9 +1,44 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "54e001c1baf2d7deb8d54e21226d97bb7121325a",
-    "date": "2026-05-25T06:39:17+00:00",
+    "full_sha": "67e536a481ba3b614c09268e5b67c402b7670e3a",
+    "date": "2026-05-25T13:35:19+00:00",
     "commits": [
+      {
+        "sha": "67e536a4",
+        "full_sha": "67e536a481ba3b614c09268e5b67c402b7670e3a",
+        "message": "refactor: add path matching info pre-adding backends.",
+        "author": "arabcoders",
+        "date": "2026-05-25T13:35:19+00:00"
+      },
+      {
+        "sha": "aba5fdf1",
+        "full_sha": "aba5fdf1f37446260b6d5cdd6c65348b41603e16",
+        "message": "refactor: make events dispatch limit configurable.",
+        "author": "arabcoders",
+        "date": "2026-05-25T13:34:23+00:00"
+      },
+      {
+        "sha": "a2704c5c",
+        "full_sha": "a2704c5c0c92b192daa0a152e8acdabbb50712b6",
+        "message": "fix: update error messages to specify context for backend not found",
+        "author": "arabcoders",
+        "date": "2026-05-25T13:28:13+00:00"
+      },
+      {
+        "sha": "349f1232",
+        "full_sha": "349f1232797784ce0660b7fcb612dd008a55e2c1",
+        "message": "refactor: add FAQ section for path matching details and edge cases",
+        "author": "arabcoders",
+        "date": "2026-05-25T13:24:30+00:00"
+      },
+      {
+        "sha": "12b4207a",
+        "full_sha": "12b4207a7066c534954351fe90bd9ad57b99f181",
+        "message": "fix: table rendering in markdown",
+        "author": "arabcoders",
+        "date": "2026-05-25T13:24:10+00:00"
+      },
       {
         "sha": "54e001c1",
         "full_sha": "54e001c1baf2d7deb8d54e21226d97bb7121325a",
