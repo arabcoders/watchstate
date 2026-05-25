@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "56277d8580b193cc08d742429b8bf1ec9f392ac1",
-    "date": "2026-05-24T20:10:05+00:00",
+    "full_sha": "54e001c1baf2d7deb8d54e21226d97bb7121325a",
+    "date": "2026-05-25T06:39:17+00:00",
     "commits": [
+      {
+        "sha": "54e001c1",
+        "full_sha": "54e001c1baf2d7deb8d54e21226d97bb7121325a",
+        "message": "feat: increase timeout for scheduler runner.",
+        "author": "arabcoders",
+        "date": "2026-05-25T06:39:17+00:00"
+      },
+      {
+        "sha": "c588c30f",
+        "full_sha": "c588c30f8e7ed5543c3711abd71acf7b6ea35692",
+        "message": "Feat: add path-derived GUID source for media matching",
+        "author": "arabcoders",
+        "date": "2026-05-25T06:38:07+00:00"
+      },
       {
         "sha": "56277d85",
         "full_sha": "56277d8580b193cc08d742429b8bf1ec9f392ac1",
