@@ -78,7 +78,7 @@ echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Migrating legacy database if needed."
 /opt/bin/console db:legacy --execute
 
 echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Running database migrations."
-/opt/bin/console db:migrate --execute
+CONTAINER_INIT=1 /opt/bin/console db:migrate --execute
 
 echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Running database maintenance tasks."
 /opt/bin/console db:maintenance
