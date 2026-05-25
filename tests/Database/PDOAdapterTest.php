@@ -237,6 +237,47 @@ class PDOAdapterTest extends TestCase
         );
     }
 
+    public function test_get_path_guid(): void
+    {
+        $movieGuid = md5('movie:/movie title/movie title.mkv');
+        $movie = $this->testMovie;
+        $movie[iState::COLUMN_GUIDS] = [Guid::GUID_PATH => $movieGuid];
+        $storedMovie = $this->db->insert(new StateEntity($movie));
+
+        $movieQuery = $movie;
+        $movieQuery[iState::COLUMN_META_DATA] = [];
+
+        $this->assertSame(
+            $storedMovie->id,
+            $this->db->get(new StateEntity($movieQuery))->id,
+        );
+
+        $episodeGuid = md5('episode:/series title/season 01/episode.mkv/1/2');
+        $parentGuid = md5('show:/series title/season 01');
+        $episode = $this->testEpisode;
+        $episode[iState::COLUMN_GUIDS] = [Guid::GUID_PATH => $episodeGuid];
+        $episode[iState::COLUMN_PARENT] = [Guid::GUID_PATH => $parentGuid];
+        $storedEpisode = $this->db->insert(new StateEntity($episode));
+
+        $relativeQuery = $episode;
+        $relativeQuery[iState::COLUMN_GUIDS] = [];
+        $relativeQuery[iState::COLUMN_META_DATA] = [];
+
+        $this->assertSame(
+            $storedEpisode->id,
+            $this->db->get(new StateEntity($relativeQuery))->id,
+        );
+
+        $directQuery = $episode;
+        $directQuery[iState::COLUMN_PARENT] = [];
+        $directQuery[iState::COLUMN_META_DATA] = [];
+
+        $this->assertSame(
+            $storedEpisode->id,
+            $this->db->get(new StateEntity($directQuery))->id,
+        );
+    }
+
     public function test_getAll_conditions(): void
     {
         $item = new StateEntity($this->testEpisode);

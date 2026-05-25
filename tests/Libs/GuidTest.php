@@ -115,6 +115,10 @@ class GuidTest extends TestCase
             Guid::validate('guid_cmdb', '12345678'),
             'Assert supported guid with no validator returns true.'
         );
+        $this->assertTrue(
+            Guid::validate('path', '0123456789abcdef0123456789abcdef'),
+            'Assert path guid validates through prefix normalization.'
+        );
     }
 
     public function test_jsonSerialize()
@@ -344,9 +348,10 @@ class GuidTest extends TestCase
 
     public function test_getPointers()
     {
-        $guid = Guid::fromArray(['guid_imdb' => 'tt1234567', 'guid_tvdb' => '123']);
+        $path = '0123456789abcdef0123456789abcdef';
+        $guid = Guid::fromArray(['guid_imdb' => 'tt1234567', 'guid_tvdb' => '123', Guid::GUID_PATH => $path]);
         $this->assertEquals(
-            ['guid_imdb://tt1234567', 'guid_tvdb://123'],
+            ['guid_imdb://tt1234567', 'guid_tvdb://123', 'guid_path://' . $path],
             $guid->getPointers(),
             "Failed to assert that the GUID pointers are correct."
         );

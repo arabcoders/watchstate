@@ -124,7 +124,7 @@ class ImportCommand extends Command
                 'always-update-metadata',
                 null,
                 InputOption::VALUE_NONE,
-                'Mapper option. Always update the locally stored metadata from backend.',
+                'Replace existing metadata with data from backend even if there is no change.',
             )
             ->addOption('show-messages', null, InputOption::VALUE_NONE, 'Show internal messages.')
             ->addOption('logfile', null, InputOption::VALUE_REQUIRED, 'Save console output to file.');
@@ -284,7 +284,7 @@ class ImportCommand extends Command
                     $isCustom
                         ? r("[-s, --select-backend] flag did not match any backend for '{user}'.", [
                             'user' => $userContext->name,
-                        ]) : 'No backends were found.',
+                        ]) : 'No backends were found for import.',
                 );
                 continue;
             }

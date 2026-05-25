@@ -21,9 +21,12 @@ use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use PDO;
 use Psr\SimpleCache\CacheInterface as iCache;
+use Tests\Support\StateCommandTestSupport;
 
 final class ProcessPushEventTest extends TestCase
 {
+    use StateCommandTestSupport;
+
     public function test_logs_shared_missing_metadata(): void
     {
         $this->initTempApp();
@@ -77,6 +80,58 @@ final class ProcessPushEventTest extends TestCase
             $event->getLogs(),
         );
         self::assertTrue($handler->hasWarningRecords());
+    }
+
+    public function test_skip_debug_backend_logs(): void
+    {
+        $logger = $this->initFakeBackendApp($this->fakeBackendConfig('fake_push'));
+        $db = $this->migrateMainDb($logger);
+        $handler = new TestHandler();
+        $logger->pushHandler($handler);
+
+        $entity = StateEntity::fromArray([
+            iState::COLUMN_TYPE => iState::TYPE_MOVIE,
+            iState::COLUMN_UPDATED => time(),
+            iState::COLUMN_WATCHED => 1,
+            iState::COLUMN_VIA => 'other',
+            iState::COLUMN_TITLE => 'Fake Push Movie',
+            iState::COLUMN_YEAR => 2024,
+            iState::COLUMN_GUIDS => ['imdb' => 'tt-fake-push'],
+            iState::COLUMN_META_DATA => [
+                'fake_push' => [
+                    iState::COLUMN_ID => 101,
+                    iState::COLUMN_TYPE => iState::TYPE_MOVIE,
+                    iState::COLUMN_WATCHED => 0,
+                ],
+            ],
+            iState::COLUMN_EXTRA => [],
+            iState::COLUMN_CREATED_AT => time(),
+            iState::COLUMN_UPDATED_AT => time(),
+        ]);
+        $entity = $db->insert($entity);
+
+        $cache = Container::get(iCache::class);
+        assert($cache instanceof iCache, 'Expected cache service for push event test.');
+
+        $queue = Container::get(QueueRequests::class);
+        assert($queue instanceof QueueRequests, 'Expected queue service for push event test.');
+
+        $listener = new ProcessPushEvent(new DirectMapper($logger, $db, $cache), $logger, $queue);
+        $event = $this->event($entity);
+
+        $listener($event);
+
+        self::assertSame(EventStatus::RUNNING, $event->getStatus());
+        self::assertFalse(array_any(
+            $event->getLogs(),
+            static fn(string $log): bool => str_contains($log, 'fake.push: hidden debug'),
+        ));
+        self::assertTrue(array_any(
+            $event->getLogs(),
+            static fn(string $log): bool => str_contains($log, 'fake.push: visible info'),
+        ));
+        self::assertTrue($handler->hasDebugRecords());
+        self::assertTrue($handler->hasInfoRecords());
     }
 
     private function event(StateEntity $entity): DataEvent

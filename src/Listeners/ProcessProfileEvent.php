@@ -27,7 +27,7 @@ final readonly class ProcessProfileEvent
      * Class constructor.
      *
      * @param iLogger $logger The logger object.
-     * @param iHttp $client The http client object.
+     * @param iHttp&\App\Libs\Extends\HttpClient $client The http client object.
      */
     public function __construct(
         private iLogger $logger,
@@ -39,7 +39,7 @@ final readonly class ProcessProfileEvent
     public function __invoke(DataEvent $e): DataEvent
     {
         $writer = function (Level $level, string $message, array $context = []) use ($e) {
-            $e->addLog($level->getName() . ': ' . r($message, $context));
+            $e->addLog($level, $message, $context);
             $this->logger->log($level, $message, $context);
         };
 

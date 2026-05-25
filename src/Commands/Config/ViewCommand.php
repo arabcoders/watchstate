@@ -155,7 +155,7 @@ final class ViewCommand extends Command
 
         if (empty($list)) {
             $output->writeln(r('<error>{error}</error>', [
-                'error' => $isCustom ? '[-s, --select-backend] did not return any backend.' : 'No backends were found.',
+                'error' => $isCustom ? '[-s, --select-backend] did not return any backend.' : 'No backends were found for view.',
             ]));
             return self::FAILURE;
         }

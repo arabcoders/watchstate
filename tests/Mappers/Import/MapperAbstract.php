@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Mappers\Import;
 
 use App\Libs\Container;
+use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
@@ -20,6 +21,7 @@ use App\Model\Events\EventsRepository;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface;
+use Psr\SimpleCache\CacheInterface;
 use Symfony\Component\Cache\Adapter\NullAdapter;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
@@ -35,6 +37,9 @@ abstract class MapperAbstract extends TestCase
     protected ImportInterface|null $mapper = null;
     protected iDB|null $db = null;
     protected TestHandler|null $handler = null;
+    /**
+     * @var LoggerInterface&Logger|null
+     */
     protected LoggerInterface|null $logger = null;
     protected OutputInterface|null $output = null;
     protected InputInterface|null $input = null;
@@ -362,6 +367,37 @@ abstract class MapperAbstract extends TestCase
             $this->mapper->get($testMovie)->getAll(),
             'get() should return the correct data for the movie.'
         );
+    }
+
+    public function test_path_guid_conditions(): void
+    {
+        $movieGuid = md5('movie:/movie title/movie title.mkv');
+        $movie = $this->testMovie;
+        $movie[iState::COLUMN_GUIDS] = [Guid::GUID_PATH => $movieGuid];
+        $storedMovie = new StateEntity($movie);
+
+        $episodeGuid = md5('episode:/series title/season 01/episode.mkv/1/2');
+        $parentGuid = md5('show:/series title/season 01');
+        $episode = $this->testEpisode;
+        $episode[iState::COLUMN_GUIDS] = [Guid::GUID_PATH => $episodeGuid];
+        $episode[iState::COLUMN_PARENT] = [Guid::GUID_PATH => $parentGuid];
+        $storedEpisode = new StateEntity($episode);
+
+        try {
+            Config::save('guid.disable.episode', true);
+            $this->db->commit([$storedMovie, $storedEpisode]);
+            $this->mapper->loadData();
+
+            $foundMovie = $this->mapper->get(new StateEntity($movie));
+            $foundEpisode = $this->mapper->get(new StateEntity($episode));
+
+            $this->assertInstanceOf(iState::class, $foundMovie);
+            $this->assertInstanceOf(iState::class, $foundEpisode);
+            $this->assertSame($storedMovie->title, $foundMovie->title);
+            $this->assertSame($storedEpisode->title, $foundEpisode->title);
+        } finally {
+            Config::save('guid.disable.episode', false);
+        }
     }
 
     /**

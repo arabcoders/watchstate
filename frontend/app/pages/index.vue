@@ -346,7 +346,7 @@ useHead({ title: 'Index' });
 const route = useRoute();
 const poster_enable = useStorage('poster_enable', true);
 const autoReloadLogs = useStorage<boolean>('auto_reload_logs', true);
-const wrapLines = useStorage('logs_wrap_lines', false);
+const wrapLines = useStorage('index_logs_wrap_lines', false);
 const breakpoints = useBreakpoints({ mobile: 0, desktop: 640 });
 
 const lastHistory = ref<Array<HistoryItem>>([]);

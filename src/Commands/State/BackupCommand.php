@@ -295,7 +295,7 @@ class BackupCommand extends Command
 
         if (empty($list)) {
             $this->logger->warning(
-                $isCustom ? '[-s, --select-backend] flag did not match any backend.' : 'No backends were found.',
+                $isCustom ? '[-s, --select-backend] flag did not match any backend.' : 'No backends were found for backup.',
             );
             return;
         }

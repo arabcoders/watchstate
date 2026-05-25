@@ -61,6 +61,7 @@ final class DispatchCommand extends Command
             ->setName(self::ROUTE)
             ->addOption('id', 'i', InputOption::VALUE_REQUIRED, 'Force run this event.')
             ->addOption('reset', 'r', InputOption::VALUE_NONE, 'Reset event logs.')
+            ->addOption('limit', 'L', InputOption::VALUE_REQUIRED, 'How many events to run at per run.', 15)
             ->setDescription('Run queued events.');
     }
 
@@ -80,7 +81,7 @@ final class DispatchCommand extends Command
             }
 
             if ($input->getOption('reset')) {
-                $event->logs = [];
+                $event->clearLogs();
             }
 
             $this->runEvent($event, visibleLevel: $visibleLevel, debug: $debug);
@@ -88,14 +89,15 @@ final class DispatchCommand extends Command
             return self::SUCCESS;
         }
 
-        return $this->runEvents(visibleLevel: $visibleLevel, debug: $debug);
+        return $this->runEvents(visibleLevel: $visibleLevel, limit: (int) $input->getOption('limit'), debug: $debug);
     }
 
-    protected function runEvents(Level $visibleLevel, bool $debug = false): int
+    protected function runEvents(Level $visibleLevel, int $limit, bool $debug = false): int
     {
         $repo = $this->repo
             ->setSort(EventsTable::COLUMN_CREATED_AT)
             ->setAscendingOrder()
+            ->setPerpage($limit)
             ->findAll([EventsTable::COLUMN_STATUS => Status::PENDING->value]);
 
         $events = [];
@@ -168,18 +170,20 @@ final class DispatchCommand extends Command
                 'date' => make_date($event->created_at),
             ];
 
-            $event->logs[] = r($message, $log_data);
-
             $event->status = Status::RUNNING;
             $event->updated_at = (string) make_date();
             $event->attempts += 1;
             if (true === $debug) {
                 $event->options[Options::DEBUG_TRACE] = true;
             }
+
+            $ref = new DataEvent($event)->setVisibleLevel($visibleLevel);
+
+            $ref->addLog(Level::Notice, "Dispatching Event: '{event}' queued at '{date}'.", $log_data);
+            $ref->resetVisibleLogs();
+
             $this->repo->save($event);
 
-            $logCount = count($event->logs);
-            $ref = new DataEvent($event);
             $capturedHandlers = $this->captureLogger($capturedRecords);
 
             try {
@@ -196,13 +200,13 @@ final class DispatchCommand extends Command
 
             $event->updated_at = (string) make_date();
 
-            if ($this->isVisible(array_slice($event->logs, $logCount), $visibleLevel)) {
+            if ($ref->hasVisibleLogs()) {
                 $this->logger->notice($message, $log_data);
             }
 
             $this->replayRecords($capturedHandlers, $capturedRecords);
 
-            $event->logs[] = r("Event '{event}' was dispatched.", ['event' => $event->event]);
+            $ref->addLog(Level::Notice, "Event '{event}' was dispatched.", ['event' => $event->event]);
 
             $this->repo->save($event);
         } catch (Throwable $e) {
@@ -214,8 +218,10 @@ final class DispatchCommand extends Command
                 'error' => $e->getMessage(),
             ]);
 
-            $event->logs[] = $errorLog;
-            array_push($event->logs, ...$e->getTrace());
+            $event->addRawLog($errorLog);
+            foreach ($e->getTrace() as $trace) {
+                $event->addRawLog((string) json_encode($trace, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+            }
             $event->status = Status::FAILED;
             $event->updated_at = (string) make_date();
             $this->repo->save($event);
@@ -287,44 +293,6 @@ final class DispatchCommand extends Command
             OutputInterface::VERBOSITY_VERY_VERBOSE => Level::Info,
             default => Level::Debug,
         };
-    }
-
-    private function isVisible(array $logs, Level $visibleLevel): bool
-    {
-        $count = 0;
-
-        foreach ($logs as $log) {
-            $level = $this->eventLevel($log);
-
-            if (null === $level) {
-                continue;
-            }
-
-            if ($level->value >= $visibleLevel->value) {
-                $count++;
-            }
-        }
-
-        return $count > 0;
-    }
-
-    private function eventLevel(mixed $log): ?Level
-    {
-        if (false === is_string($log)) {
-            return null;
-        }
-
-        $levelRegex = '/^(?:\[[^\]]+]\s*)?(?:[a-z0-9_.-]+\.)?(?<level>EMERGENCY|ALERT|CRITICAL|ERROR|WARNING|NOTICE|INFO|DEBUG):\s*/i';
-
-        if (1 !== preg_match($levelRegex, trim($log), $matches)) {
-            return null;
-        }
-
-        try {
-            return MonologLogger::toMonologLevel(strtoupper($matches['level']));
-        } catch (Throwable) {
-            return null;
-        }
     }
 
     /**

@@ -255,7 +255,7 @@ class ExportCommand extends Command
                 }
 
                 if (empty($backends)) {
-                    $message = $isCustom ? '[-s, --select-backend] flag did not match any backend.' : 'No backends were found.';
+                    $message = $isCustom ? '[-s, --select-backend] flag did not match any backend.' : 'No backends were found for export.';
                     $this->logger->warning("{message}. For '{user}'.", [
                         'message' => $message,
                         'user' => $userContext->name,

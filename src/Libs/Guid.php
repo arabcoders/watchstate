@@ -33,6 +33,7 @@ final class Guid implements JsonSerializable, Stringable
     public const string GUID_ANIDB = 'guid_anidb';
     public const string GUID_YOUTUBE = 'guid_youtube';
     public const string GUID_CMDB = 'guid_cmdb';
+    public const string GUID_PATH = 'guid_path';
 
     /**
      * @var array GUID types and their respective data types.
@@ -46,6 +47,7 @@ final class Guid implements JsonSerializable, Stringable
         Guid::GUID_ANIDB => 'string',
         Guid::GUID_YOUTUBE => 'string',
         Guid::GUID_CMDB => 'string',
+        Guid::GUID_PATH => 'string',
     ];
 
     private static array $supported = self::DEFAULT_SUPPORTED;
@@ -113,6 +115,15 @@ final class Guid implements JsonSerializable, Stringable
             'tests' => [
                 'valid' => ['123456'],
                 'invalid' => ['123456a', 'd123456'],
+            ],
+        ],
+        Guid::GUID_PATH => [
+            'description' => 'The path ID Parser.',
+            'pattern' => '/^(?<guid>[a-f0-9]{32}(?:\/[0-9]+\/[0-9]+)?)$/',
+            'example' => '32 character md5 hash',
+            'tests' => [
+                'valid' => ['0123456789abcdef0123456789abcdef', '0123456789abcdef0123456789abcdef/1/2'],
+                'invalid' => ['0123456789abcdef0123456789abcdeg', '0123456789abcdef0123456789abcdef/1', '123456'],
             ],
         ],
     ];

@@ -491,6 +491,12 @@ return (function () {
             'type' => 'bool',
         ],
         [
+            'key' => 'WS_GUID_PATH_ENABLED',
+            'config' => 'guid.path.enabled',
+            'description' => 'Enable generating path-derived local GUIDs for matching.',
+            'type' => 'bool',
+        ],
+        [
             'key' => 'WS_PROGRESS_MINIMUM',
             'config' => 'progress.minimum',
             'description' => 'Time in seconds to consider progress update as valid.',

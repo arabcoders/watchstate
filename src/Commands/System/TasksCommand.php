@@ -13,6 +13,7 @@ use App\Libs\Events\DataEvent;
 use App\Libs\Extends\ConsoleOutput;
 use App\Libs\LogSuppressor;
 use App\Libs\Stream;
+use App\Model\Events\Event as EventModel;
 use App\Model\Events\EventListener;
 use App\Model\Events\EventsRepository;
 use App\Model\Events\EventStatus;
@@ -20,6 +21,7 @@ use Closure;
 use Cron\CronExpression;
 use DateInterval;
 use Exception;
+use Monolog\Level;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
 use Symfony\Component\Console\Completion\CompletionInput;
@@ -211,21 +213,21 @@ final class TasksCommand extends Command
         switch ($eventName) {
             case self::NAME:
                 if (null === ($name = ag($event->getData(), 'name'))) {
-                    $event->addLog(r('No task name was specified.'));
+                    $event->addLog(Level::Error, 'No task name was specified.');
                     return $event;
                 }
 
                 $task = self::getTasks($name);
                 if (empty($task)) {
-                    $event->addLog(
-                        r("Invalid task '{name}'. There are no task with that name registered.", ['name' => $name]),
-                    );
+                    $event->addLog(Level::Error, "Invalid task '{task_id}'. There are no task with that name registered.", [
+                        'task_id' => $name,
+                    ]);
                     return $event;
                 }
                 break;
             case self::CNAME:
                 if (null === ag($event->getData(), 'command')) {
-                    $event->addLog(r('No command name was specified.'));
+                    $event->addLog(Level::Error, 'No command name was specified.');
                     return $event;
                 }
                 break;
@@ -253,7 +255,7 @@ final class TasksCommand extends Command
                     $lastSave = $timeNow;
                 }
 
-                $event->addLog($msg);
+                $event->addRawLog($msg);
 
                 if ($timeNow >= $lastSave) {
                     ($this->save)();
@@ -265,26 +267,44 @@ final class TasksCommand extends Command
             };
 
             if (self::CNAME === $eventName) {
-                $event->addLog(r("Task: Run '{name}'.", ['name' => $eventName]));
+                $event->addLog(Level::Info, "Task '{task_id}' started: {command}.", [
+                    'task_id' => $eventName,
+                    'command' => ag($event->getData(), 'command'),
+                ]);
                 $exitCode = $this->run_command(
                     ag($event->getData(), 'command'),
                     ag($event->getData(), 'args', []),
                     $input,
                     Container::get(iOutput::class),
                 );
-                $event->addLog(r("Task: End '{name}' (Exit Code: {code})", [
-                    'name' => $eventName,
-                    'code' => $exitCode,
-                ]));
+                $event->addLog(
+                    0 === $exitCode ? Level::Info : Level::Error,
+                    "Task '{task_id}' {status} with exit code {exit_code}.",
+                    [
+                        'task_id' => $eventName,
+                        'exit_code' => $exitCode,
+                        'status' => 0 === $exitCode ? 'completed' : 'failed',
+                        'command' => ag($event->getData(), 'command'),
+                    ],
+                );
             }
 
             if (self::NAME === $eventName && !empty($task)) {
-                $event->addLog(r("Task: Run '{command}'.", ['command' => ag($task, 'command')]));
-                $exitCode = $this->runTask($task, $input, Container::get(iOutput::class));
-                $event->addLog(r("Task: End '{command}' (Exit Code: {code})", [
+                $event->addLog(Level::Info, "Task '{task_id}' started: {command}.", [
+                    'task_id' => ag($task, 'name'),
                     'command' => ag($task, 'command'),
-                    'code' => $exitCode,
-                ]));
+                ]);
+                $exitCode = $this->runTask($task, $input, Container::get(iOutput::class));
+                $event->addLog(
+                    0 === $exitCode ? Level::Info : Level::Error,
+                    "Task '{task_id}' {status} with exit code {exit_code}.",
+                    [
+                        'task_id' => ag($task, 'name'),
+                        'exit_code' => $exitCode,
+                        'status' => 0 === $exitCode ? 'completed' : 'failed',
+                        'command' => ag($task, 'command'),
+                    ],
+                );
             }
         } finally {
             $this->needToSave = false;
@@ -462,27 +482,33 @@ final class TasksCommand extends Command
             $event->event = self::NAME . '.' . $task['name'];
             $event->created_at = $started;
             $event->updated_at = $ended;
-            $event->logs[] = '--------------------------';
-            $event->logs[] = r('Task: {name} (Started: {start_date})', [
+            $event->addRawLog('--------------------------');
+            $event->addRawLog(r('Task: {name} (Started: {start_date})', [
                 'name' => $task['name'],
                 'start_date' => $started->format('D, H:i:s T'),
-            ]);
-            $event->logs[] = r('Command: {cmd}', ['cmd' => $process->getCommandLine()]);
-            $event->logs[] = r('Exit Code: {code}:{status} (Ended: {end_date}) - Took {duration}s', [
+            ]));
+            $event->addRawLog(r('Command: {cmd}', ['cmd' => $process->getCommandLine()]));
+            $event->addRawLog(r('Exit Code: {code}:{status} (Ended: {end_date}) - Took {duration}s', [
                 'status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
                 'code' => $process->getExitCode() ?? self::INVALID,
                 'end_date' => $ended->format('D, H:i:s T'),
                 'duration' => $ended->getTimestamp() - $started->getTimestamp(),
-            ]);
-            $event->logs[] = '--------------------------';
+            ]));
+            $event->addRawLog('--------------------------');
             if (count($this->taskOutput) < 1) {
                 if (0 === $process->getExitCode()) {
-                    $event->logs[] = 'Task completed successfully. And did not produce any output.';
+                    $event->addRawLog('Task completed successfully. And did not produce any output.');
                 } else {
-                    $event->logs[] = 'Task failed to complete. And did not produce any output.';
+                    $event->addRawLog('Task failed to complete. And did not produce any output.');
                 }
             } else {
-                $event->logs = array_merge($event->logs, array_slice($this->taskOutput, -200));
+                $limit = max(0, EventModel::MAX_LOG_ENTRIES - count($event->logs));
+
+                if ($limit > 0) {
+                    foreach (array_slice($this->taskOutput, -$limit) as $line) {
+                        $event->addRawLog($line);
+                    }
+                }
             }
             $this->eventsRepo->save($event);
         }

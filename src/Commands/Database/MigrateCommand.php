@@ -23,12 +23,15 @@ final class MigrateCommand extends Command
 {
     public const string ROUTE = 'db:migrate';
 
+    private bool $viaInit = false;
+
     public function __construct(
         private readonly PdoFactory $pdoFactory,
         private readonly PackageMigrationFactory $migrations,
         private readonly iLogger $logger,
     ) {
         parent::__construct();
+        $this->viaInit = (bool) env('CONTAINER_INIT', false);
     }
 
     protected function configure(): void
@@ -87,9 +90,12 @@ final class MigrateCommand extends Command
             }
 
             if (empty($result->migrations)) {
-                $output->writeln(r('<comment>{target}: No migration is needed.</comment>', [
-                    'target' => $target['name'],
-                ]));
+                $output->writeln(
+                    messages: r('<comment>{target}: No migration is needed.</comment>', [
+                        'target' => $target['name'],
+                    ]),
+                    options: $this->viaInit ? OutputInterface::VERBOSITY_VERBOSE : OutputInterface::VERBOSITY_NORMAL,
+                );
                 continue;
             }
 

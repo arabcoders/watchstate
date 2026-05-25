@@ -10,19 +10,15 @@ box, this tool supports `Jellyfin`, `Plex` and `Emby` media servers.
 
 # Updates
 
+### 2026-05-25
+
+Path matching is now available in v1.8.5+. It lets items match using a GUID source derived from the media path, which helps when your backends share the same media files but have unreliable or inconsistent external IDs. See the [path matching guide](/guides/path-match.md) for setup and backfill instructions.
+
 ### 2026-04-30
 
 WatchState now uses the new versioned `v02` database schema. On first boot after updating, startup may take a bit longer than usual while legacy databases are imported, migrations are applied, and indexes are rebuilt.
 
 During that upgrade, the old database files are kept as `.migrated` safety copies. Once the first boot finishes and you have confirmed everything looks good, you can delete those `.migrated` files if you want to reclaim the space.
-
-### 2026-04-26
-
-Cross-backend sync for playlists is now available as a **beta** feature. This is still early work, so expect some rough edges, 
-backend-specific issues, and possible breaking changes as it matures. 
-
-Because playlist behavior differs across backends, the feature may change over time, and if it proves too unreliable to support consistently, 
-it may be reworked or removed. To enable it, simply go to Tasks and enable the `Playlist` task.
 
 Please refer to [NEWS](/NEWS.md) for the latest updates and changes.
 
@@ -118,6 +114,8 @@ After starting the container, you can access the WebUI by visiting `http://local
 
 > [!NOTE]
 > Note, For the first time, you will be prompted to create a new system user, this is a one time operation.
+
+If you want WatchState to match items using local media paths, see the [path matching guide](guides/path-match.md).
 
 To add your backends, please click on the help button in the top right corner, and choose which method you
 want [one-way](guides/one-way-sync.md) or [two-way](guides/two-way-sync.md) sync. and follow the instructions.

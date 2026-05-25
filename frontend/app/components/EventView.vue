@@ -359,7 +359,7 @@ const timer = ref<ReturnType<typeof setInterval> | null>(null);
 const toggleLogs = useStorage<boolean>('events_toggle_logs', true);
 const toggleData = useStorage<boolean>('events_toggle_data', true);
 const toggleOptions = useStorage<boolean>('events_toggle_options', true);
-const wrapLines = useStorage<boolean>('logs_wrap_lines', false);
+const wrapLines = useStorage<boolean>('events_wrap_lines', false);
 
 const cardUi = {
   header: 'p-4',

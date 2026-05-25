@@ -10,6 +10,7 @@ use App\Backends\Common\Response;
 use App\Backends\Plex\Action\GetLibrariesList;
 use App\Backends\Plex\Action\GetMetaData;
 use App\Backends\Plex\Action\GetWebUrl;
+use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
@@ -17,6 +18,7 @@ use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Guid;
 use App\Libs\Options;
+use App\Libs\PathGuid;
 use Psr\Http\Message\UriInterface as iUri;
 use Psr\SimpleCache\CacheInterface as iCache;
 
@@ -213,6 +215,30 @@ trait PlexActionTrait
 
         if (null === $mediaPath && null !== ($showPath = ag($item, 'Location.0.path')) && !empty($showPath)) {
             $metadata[iState::COLUMN_META_PATH] = (string) $showPath;
+        }
+
+        if (true === (bool) Config::get('guid.path.enabled', false) && null !== $mediaPath && !empty($mediaPath)) {
+            $pathGuids = PathGuid::get(
+                type: $type,
+                path: (string) $mediaPath,
+                season: null !== ($builder[iState::COLUMN_SEASON] ?? null) ? (int) $builder[iState::COLUMN_SEASON] : null,
+                episode: null !== ($builder[iState::COLUMN_EPISODE] ?? null) ? (int) $builder[iState::COLUMN_EPISODE] : null,
+            );
+
+            if (null !== ($pathGuids[iState::COLUMN_GUIDS] ?? null)) {
+                $builder[iState::COLUMN_GUIDS] = array_replace(
+                    $builder[iState::COLUMN_GUIDS] ?? [],
+                    $pathGuids[iState::COLUMN_GUIDS],
+                );
+            }
+
+            if (null !== ($pathGuids[iState::COLUMN_PARENT] ?? null)) {
+                $builder[iState::COLUMN_PARENT] = array_replace(
+                    $builder[iState::COLUMN_PARENT] ?? [],
+                    $pathGuids[iState::COLUMN_PARENT],
+                );
+                $metadata[iState::COLUMN_PARENT] = $builder[iState::COLUMN_PARENT];
+            }
         }
 
         if (null !== ($PremieredAt = ag($item, 'originallyAvailableAt'))) {

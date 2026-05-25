@@ -71,7 +71,7 @@ final class SchedulerCommand extends Command
 
                 $output->writeln('Running tasks', iOutput::VERBOSITY_DEBUG);
                 $out = run_command(TasksCommand::ROUTE, ['--run', '--save-log'], asArray: true, opts: [
-                    'timeout' => 3600 * 4,
+                    'timeout' => 3600 * 8,
                 ]);
 
                 foreach ($out as $line) {
