@@ -284,7 +284,7 @@ class ImportCommand extends Command
                     $isCustom
                         ? r("[-s, --select-backend] flag did not match any backend for '{user}'.", [
                             'user' => $userContext->name,
-                        ]) : 'No backends were found.',
+                        ]) : 'No backends were found for import.',
                 );
                 continue;
             }
