@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "3657d617ff60e0529b10b8d10b3da6257ac244ff",
-    "date": "2026-05-25T14:06:20+00:00",
+    "full_sha": "b82986a82a08c7becc8f1e023813917b3563fd12",
+    "date": "2026-05-25T18:05:03+00:00",
     "commits": [
+      {
+        "sha": "b82986a8",
+        "full_sha": "b82986a82a08c7becc8f1e023813917b3563fd12",
+        "message": "refactor: clerify import vs export wording",
+        "author": "arabcoders",
+        "date": "2026-05-25T18:05:03+00:00"
+      },
       {
         "sha": "3657d617",
         "full_sha": "3657d617ff60e0529b10b8d10b3da6257ac244ff",
