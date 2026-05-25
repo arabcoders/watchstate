@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "67e536a481ba3b614c09268e5b67c402b7670e3a",
-    "date": "2026-05-25T13:35:19+00:00",
+    "full_sha": "12677886d010098d44a1666f2f1bfbd16c3aaa93",
+    "date": "2026-05-25T13:47:30+00:00",
     "commits": [
+      {
+        "sha": "12677886",
+        "full_sha": "12677886d010098d44a1666f2f1bfbd16c3aaa93",
+        "message": "docs: update README and path-match guide to specify path matching availability in v1.8.5+",
+        "author": "arabcoders",
+        "date": "2026-05-25T13:47:30+00:00"
+      },
       {
         "sha": "67e536a4",
         "full_sha": "67e536a481ba3b614c09268e5b67c402b7670e3a",
