@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "d8f5eaee2093c24dcfb99a38414cf239b70cd09c",
-    "date": "2026-05-25T13:55:14+00:00",
+    "full_sha": "3657d617ff60e0529b10b8d10b3da6257ac244ff",
+    "date": "2026-05-25T14:06:20+00:00",
     "commits": [
+      {
+        "sha": "3657d617",
+        "full_sha": "3657d617ff60e0529b10b8d10b3da6257ac244ff",
+        "message": "fix: rename storage keys for line wrapping options in EventView and index pages",
+        "author": "arabcoders",
+        "date": "2026-05-25T14:06:20+00:00"
+      },
       {
         "sha": "d8f5eaee",
         "full_sha": "d8f5eaee2093c24dcfb99a38414cf239b70cd09c",
