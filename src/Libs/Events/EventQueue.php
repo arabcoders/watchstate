@@ -98,6 +98,10 @@ final class EventQueue
             $item->options[Options::FAIL_FAST_ON_LOCK] = true;
         }
 
+        if (true === (bool) ag($opts, Options::REPLAY_PROGRESS, false)) {
+            $item->options[Options::REPLAY_PROGRESS] = true;
+        }
+
         if (null !== ($reference = ag($opts, EventsTable::COLUMN_REFERENCE))) {
             $item->reference = $reference;
         }

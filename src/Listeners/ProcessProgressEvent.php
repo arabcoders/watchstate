@@ -77,7 +77,9 @@ final readonly class ProcessProgressEvent
             return $event;
         }
 
-        if ($item->isWatched()) {
+        $isReplayProgress = true === (bool) ag($options, Options::REPLAY_PROGRESS, false);
+
+        if ($item->isWatched() && false === $isReplayProgress) {
             $allowUpdate = (int) Config::get('progress.threshold', 0);
             $minThreshold = (int) Config::get('progress.minThreshold', 86_400);
             if (false === ($allowUpdate >= $minThreshold && time() > ($item->updated + $allowUpdate))) {
@@ -173,6 +175,10 @@ final readonly class ProcessProgressEvent
 
                 if (ag($options, Options::DEBUG_TRACE)) {
                     $opts[Options::DEBUG_TRACE] = true;
+                }
+
+                if ($isReplayProgress) {
+                    $opts[Options::REPLAY_PROGRESS] = true;
                 }
 
                 $backend['options'] = $opts;

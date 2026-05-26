@@ -429,6 +429,10 @@ final class ProcessWebhookEvent
             Options::FAIL_FAST_ON_LOCK => true,
         ];
 
+        if (true === (bool) $entity->getContext(Options::REPLAY_PROGRESS, false)) {
+            $opts[Options::REPLAY_PROGRESS] = true;
+        }
+
         if (null === $this->event) {
             return;
         }
@@ -516,6 +520,7 @@ final class ProcessWebhookEvent
             Options::IMPORT_METADATA_ONLY => (bool) ag($options, Options::IMPORT_METADATA_ONLY),
             Options::DISABLE_MARK_UNPLAYED => (bool) ag($options, Options::DISABLE_MARK_UNPLAYED),
             Options::FAIL_FAST_ON_LOCK => (bool) ag($options, Options::FAIL_FAST_ON_LOCK, false),
+            Options::REPLAY_PROGRESS => (bool) ag($options, Options::REPLAY_PROGRESS, false),
             Options::STATE_UPDATE_EVENT => static fn(iState $state) => queue_push(
                 entity: $state,
                 userContext: $userContext,

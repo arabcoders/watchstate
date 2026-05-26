@@ -75,6 +75,7 @@ class Progress
     ): Response {
         $sessions = [];
         $ignoreDate = (bool) ag($context->options, Options::IGNORE_DATE, false);
+        $replayProgress = (bool) ag($context->options, Options::REPLAY_PROGRESS, false);
 
         /**
          * as plex act weird if we change the progress of a watched item while the item is playing,
@@ -131,7 +132,7 @@ class Progress
                 ],
             ];
 
-            if ($context->backendName === $entity->via) {
+            if ($context->backendName === $entity->via && false === $replayProgress) {
                 $this->logger->info(
                     message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. Event originated from this backend.",
                     context: $logContext,
@@ -183,6 +184,8 @@ class Progress
                 continue;
             }
 
+            $unwatchFirst = false;
+
             try {
                 $remoteData = ag(
                     $this->getItemDetails($context, $logContext['remote']['id'], [Options::NO_CACHE => true]),
@@ -209,14 +212,18 @@ class Progress
                 }
 
                 if ($remoteItem->isWatched()) {
-                    $allowUpdate = (int) Config::get('progress.threshold', 0);
-                    $minThreshold = (int) Config::get('progress.minThreshold', 86_400);
-                    if (false === ($allowUpdate >= $minThreshold && time() > ($entity->updated + $allowUpdate))) {
-                        $this->logger->info(
-                            message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. The backend says the item is marked as watched.",
-                            context: $logContext,
-                        );
-                        continue;
+                    if (true === $replayProgress) {
+                        $unwatchFirst = true;
+                    } else {
+                        $allowUpdate = (int) Config::get('progress.threshold', 0);
+                        $minThreshold = (int) Config::get('progress.minThreshold', 86_400);
+                        if (false === ($allowUpdate >= $minThreshold && time() > ($entity->updated + $allowUpdate))) {
+                            $this->logger->info(
+                                message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. The backend says the item is marked as watched.",
+                                context: $logContext,
+                            );
+                            continue;
+                        }
                     }
                 }
             } catch (\App\Libs\Exceptions\RuntimeException|RuntimeException|InvalidArgumentException $e) {
@@ -280,28 +287,16 @@ class Progress
                         'progress' => format_duration($entity->getPlayProgress()),
                     ];
 
-                    $queue->add(
-                        new Request(
-                            method: Method::POST,
-                            url: $url,
-                            options: $context->getHttpOptions(),
-                            success: function (ResponseInterface $response) use ($requestContext): array {
-                                $statusCode = $response->getStatusCode();
+                    $progressRequest = new Request(
+                        method: Method::POST,
+                        url: $url,
+                        options: $context->getHttpOptions(),
+                        success: function (ResponseInterface $response) use ($requestContext): array {
+                            $statusCode = $response->getStatusCode();
 
-                                if (false === in_array(Status::tryFrom($statusCode), [Status::OK, Status::NO_CONTENT], true)) {
-                                    $this->logger->error(
-                                        message: "{action}: Request to change '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' watch progress returned with unexpected '{status_code}' status code.",
-                                        context: [
-                                            ...$requestContext,
-                                            'status_code' => $statusCode,
-                                        ],
-                                    );
-
-                                    return [];
-                                }
-
-                                $this->logger->notice(
-                                    message: "{action}: Updated '{client}: {user}@{backend}' '#{item.id}: {item.title}' watch progress to '{progress}'.",
+                            if (false === in_array(Status::tryFrom($statusCode), [Status::OK, Status::NO_CONTENT], true)) {
+                                $this->logger->error(
+                                    message: "{action}: Request to change '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' watch progress returned with unexpected '{status_code}' status code.",
                                     context: [
                                         ...$requestContext,
                                         'status_code' => $statusCode,
@@ -309,26 +304,108 @@ class Progress
                                 );
 
                                 return [];
-                            },
-                            error: function (Throwable $e) use ($requestContext): array {
-                                $this->logger->error(
-                                    ...lw(
-                                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' request to change watch progress of {item.type} '#{item.id}: {item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
-                                        context: [
-                                            ...$requestContext,
-                                            ...exception_log($e),
-                                        ],
-                                        e: $e,
-                                    ),
-                                );
+                            }
 
-                                return [];
-                            },
-                            extras: [
-                                'context' => $requestContext,
-                                HttpClientInterface::class => $this->http,
-                            ],
-                        ),
+                            $this->logger->notice(
+                                message: "{action}: Updated '{client}: {user}@{backend}' '#{item.id}: {item.title}' watch progress to '{progress}'.",
+                                context: [
+                                    ...$requestContext,
+                                    'status_code' => $statusCode,
+                                ],
+                            );
+
+                            return [];
+                        },
+                        error: function (Throwable $e) use ($requestContext): array {
+                            $this->logger->error(
+                                ...lw(
+                                    message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' request to change watch progress of {item.type} '#{item.id}: {item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                                    context: [
+                                        ...$requestContext,
+                                        ...exception_log($e),
+                                    ],
+                                    e: $e,
+                                ),
+                            );
+
+                            return [];
+                        },
+                        extras: [
+                            'context' => $requestContext,
+                            HttpClientInterface::class => $this->http,
+                        ],
+                    );
+
+                    if (true === $unwatchFirst) {
+                        $unwatchUrl = $context
+                            ->backendUrl
+                            ->withPath('/:/unscrobble')
+                            ->withQuery(
+                                http_build_query([
+                                    'identifier' => 'com.plexapp.plugins.library',
+                                    'key' => $logContext['remote']['id'],
+                                ]),
+                            );
+
+                        $unwatchContext = $requestContext;
+                        $unwatchContext['remote']['url'] = (string) $unwatchUrl;
+
+                        $queue->add(
+                            new Request(
+                                method: Method::GET,
+                                url: $unwatchUrl,
+                                options: array_replace_recursive($context->getHttpOptions(), [
+                                    'user_data' => [Options::NO_LOGGING => true],
+                                ]),
+                                success: function (ResponseInterface $response) use ($progressRequest, $unwatchContext): array {
+                                    $statusCode = $response->getStatusCode();
+                                    if (false === in_array(Status::tryFrom($statusCode), [Status::OK, Status::NO_CONTENT], true)) {
+                                        $this->logger->error(
+                                            message: "{action}: Request to mark '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' as unplayed before progress update returned with unexpected '{status_code}' status code.",
+                                            context: [
+                                                ...$unwatchContext,
+                                                'event_name' => 'backend.response.failed',
+                                                'subsystem' => 'backend',
+                                                'operation' => 'progress_unwatch',
+                                                'outcome' => 'failed',
+                                                'reason' => 'unexpected_status',
+                                                'status_code' => $statusCode,
+                                            ],
+                                        );
+
+                                        return [];
+                                    }
+
+                                    return [$progressRequest];
+                                },
+                                error: function (Throwable $e) use ($unwatchContext): array {
+                                    $this->logger->error(
+                                        ...lw(
+                                            message: "Exception was thrown during '{client}: {user}@{backend}' unplayed request before progress update.",
+                                            context: [
+                                                ...$unwatchContext,
+                                                'event_name' => 'backend.client.request_failed',
+                                                'subsystem' => 'backend',
+                                                'operation' => 'progress_unwatch',
+                                                'outcome' => 'failed',
+                                                'reason' => 'request_exception',
+                                                ...exception_log($e),
+                                            ],
+                                            e: $e,
+                                        ),
+                                    );
+
+                                    return [];
+                                },
+                                extras: [HttpClientInterface::class => $this->http],
+                            ),
+                        );
+
+                        continue;
+                    }
+
+                    $queue->add(
+                        $progressRequest,
                     );
                 }
             } catch (Throwable $e) {

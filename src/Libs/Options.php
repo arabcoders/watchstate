@@ -65,6 +65,7 @@ final class Options
     public const string FAIL_FAST_ON_LOCK = 'FAIL_FAST_ON_LOCK';
     public const string CACHE_ONLY = 'CACHE_ONLY';
     public const string DATE_COLUMN = 'DATE_COLUMN';
+    public const string REPLAY_PROGRESS = 'REPLAY_PROGRESS';
 
     private function __construct() {}
 }

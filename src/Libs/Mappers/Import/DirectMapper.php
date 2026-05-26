@@ -99,6 +99,8 @@ class DirectMapper implements ImportInterface
 
     private ?int $progressMinThreshold = null;
 
+    private ?int $progressMinimum = null;
+
     /**
      * Class constructor.
      *
@@ -358,6 +360,7 @@ class DirectMapper implements ImportInterface
         $writer = ag($opts, Options::LOG_TO_WRITER, null);
         $keys = [iState::COLUMN_META_DATA];
 
+        $replayProgress = $this->normalizeReplayProgress($local, $entity, $opts);
         $progressChange = $this->shouldProgressUpdate($local, $entity, $opts);
 
         if (true === $progressChange || true === (clone $local)->apply($entity, fields: $keys)->isChanged($keys)) {
@@ -374,8 +377,17 @@ class DirectMapper implements ImportInterface
                     if (true === $progressChange) {
                         $_keys[] = iState::COLUMN_VIA;
                     }
+                    if (true === $replayProgress) {
+                        $_keys[] = iState::COLUMN_WATCHED;
+                        $_keys[] = iState::COLUMN_UPDATED;
+                    }
+
+                    $_keys = array_values(array_unique($_keys));
 
                     $local = $local->apply($entity, fields: $_keys);
+                    if (true === $replayProgress) {
+                        $local = $local->setContext(Options::REPLAY_PROGRESS, true);
+                    }
 
                     $changeLog = $changes;
                     if (true === $progressChange) {
@@ -586,6 +598,7 @@ class DirectMapper implements ImportInterface
             return $this;
         }
 
+        $replayProgress = $this->normalizeReplayProgress($local, $entity, $opts);
         $progressChange = $this->shouldProgressUpdate($local, $entity, $opts);
 
         $updateMeta = true === (bool) ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META);
@@ -607,7 +620,17 @@ class DirectMapper implements ImportInterface
                         if (true === $progressChange) {
                             $_keys[] = iState::COLUMN_VIA;
                         }
+
+                        if (true === $replayProgress) {
+                            $_keys[] = iState::COLUMN_WATCHED;
+                            $_keys[] = iState::COLUMN_UPDATED;
+                        }
+
+                        $_keys = array_values(array_unique($_keys));
                         $local = $local->apply($entity, fields: $_keys);
+                        if (true === $replayProgress) {
+                            $local = $local->setContext(Options::REPLAY_PROGRESS, true);
+                        }
 
                         $changeLog = $changes;
                         if (true === $progressChange) {
@@ -876,6 +899,7 @@ class DirectMapper implements ImportInterface
 
         $cloned = clone $local;
 
+        $replayProgress = $this->normalizeReplayProgress($local, $entity, $opts);
         $progressChange = $this->shouldProgressUpdate($local, $entity, $opts);
         $keys = $opts['diff_keys'] ?? $this->getDefaultDiffKeys();
 
@@ -885,7 +909,17 @@ class DirectMapper implements ImportInterface
             $_keys[] = iState::COLUMN_VIA;
         }
 
+        if (true === $replayProgress) {
+            $_keys[] = iState::COLUMN_WATCHED;
+            $_keys[] = iState::COLUMN_UPDATED;
+        }
+
+        $_keys = array_values(array_unique($_keys));
+
         $local = $local->apply(entity: $entity, fields: $_keys);
+        if (true === $replayProgress) {
+            $local = $local->setContext(Options::REPLAY_PROGRESS, true);
+        }
         $changedKeys = $local->diff(fields: $keys);
 
         if (false === $progressChange && false === $shouldMark && count($changedKeys) < 1) {
@@ -961,10 +995,10 @@ class DirectMapper implements ImportInterface
 
             if (false === $inDryRunMode) {
                 $this->db->update($local, $opts);
-                if (null !== ($onStateUpdate = ag($opts, Options::STATE_UPDATE_EVENT, null))) {
+                if (false === $replayProgress && null !== ($onStateUpdate = ag($opts, Options::STATE_UPDATE_EVENT, null))) {
                     $onStateUpdate($local);
                 }
-                if (true === $progressChange && !$stateChange) {
+                if (true === $progressChange && (false === $stateChange || true === $replayProgress)) {
                     $itemId = r('{type}://{id}:{tainted}@{backend}', [
                         'type' => $entity->type,
                         'backend' => $entity->via,
@@ -1069,12 +1103,18 @@ class DirectMapper implements ImportInterface
                 }
 
                 foreach ($this->progressItems as $entity) {
-                    $opts[EventsTable::COLUMN_REFERENCE] = r($name, [
+                    $eventOpts = $opts;
+                    $eventOpts[EventsTable::COLUMN_REFERENCE] = r($name, [
                         'type' => $entity->type,
                         'backend' => $entity->via,
                         'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                     ]);
-                    queue_event(ProcessProgressEvent::NAME, [iState::COLUMN_ID => $entity->id], $opts);
+
+                    if (true === (bool) $entity->getContext(Options::REPLAY_PROGRESS, false)) {
+                        $eventOpts[Options::REPLAY_PROGRESS] = true;
+                    }
+
+                    queue_event(ProcessProgressEvent::NAME, [iState::COLUMN_ID => $entity->id], $eventOpts);
                 }
             } catch (CacheInvalidArgumentException $e) {
                 $this->logger->error(
@@ -1394,6 +1434,50 @@ class DirectMapper implements ImportInterface
     }
 
     /**
+     * Normalize watched replay progress into an unplayed state with resume progress.
+     */
+    private function normalizeReplayProgress(iState $old, iState $new, array $opts = []): bool
+    {
+        if (true === (bool) ag($opts, Options::IMPORT_METADATA_ONLY, false)) {
+            return false;
+        }
+
+        if (true === (bool) ag($opts, Options::SKIP_STATE, false)) {
+            return false;
+        }
+
+        if (false === $old->isWatched() || false === $new->isWatched()) {
+            return false;
+        }
+
+        if (false === (bool) ag($opts, Options::REPLAY_PROGRESS, $new->getContext(Options::REPLAY_PROGRESS, false))) {
+            return false;
+        }
+
+        [$allowUpdate, $minThreshold] = $this->getProgressThresholds();
+        if ($allowUpdate < $minThreshold) {
+            return false;
+        }
+
+        $newPlayProgress = (int) ag($new->getMetadata($new->via), iState::COLUMN_META_DATA_PROGRESS, 0);
+        $oldPlayProgress = (int) ag($old->getMetadata($new->via), iState::COLUMN_META_DATA_PROGRESS, 0);
+
+        if ($newPlayProgress < $this->getProgressMinimum() || $newPlayProgress <= ($oldPlayProgress + 10)) {
+            return false;
+        }
+
+        $receivedAt = ag($new->getExtra($new->via), iState::COLUMN_EXTRA_DATE, null);
+        $updated = null === $receivedAt ? time() : make_date($receivedAt)->getTimestamp();
+
+        $new->watched = 0;
+        $new->updated = max($old->updated + 1, $updated);
+        $new->setMeta(iState::COLUMN_WATCHED, '0', $new->via);
+        $new->setContext(Options::REPLAY_PROGRESS, true);
+
+        return true;
+    }
+
+    /**
      * Get default diff keys list.
      */
     private function getDefaultDiffKeys(): array
@@ -1448,6 +1532,15 @@ class DirectMapper implements ImportInterface
         }
 
         return [$this->progressThreshold, $this->progressMinThreshold];
+    }
+
+    private function getProgressMinimum(): int
+    {
+        if (null === $this->progressMinimum) {
+            $this->progressMinimum = (int) Config::get('progress.minimum', 60_000);
+        }
+
+        return $this->progressMinimum;
     }
 
     private function rethrowLock(Throwable $e, array $opts = []): bool
