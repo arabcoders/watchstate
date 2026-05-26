@@ -61,7 +61,7 @@ final class DispatchCommand extends Command
             ->setName(self::ROUTE)
             ->addOption('id', 'i', InputOption::VALUE_REQUIRED, 'Force run this event.')
             ->addOption('reset', 'r', InputOption::VALUE_NONE, 'Reset event logs.')
-            ->addOption('limit', 'L', InputOption::VALUE_REQUIRED, 'How many events to run at per run.', 15)
+            ->addOption('limit', 'L', InputOption::VALUE_REQUIRED, 'How many events to run per invocation.', 100)
             ->setDescription('Run queued events.');
     }
 

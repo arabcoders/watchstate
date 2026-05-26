@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Mappers\Import;
 
+use App\Libs\Config;
+use App\Libs\Container;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Options;
+use App\Listeners\ProcessProgressEvent;
+use App\Model\Events\EventsRepository;
+use App\Model\Events\EventsTable;
 use Symfony\Component\Cache\Adapter\NullAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 
@@ -152,6 +157,83 @@ class DirectMapperTest extends MapperAbstract
             $storedMetadata,
             'PLAYED_AT should be set in metadata during SKIP_STATE scenario',
         );
+    }
+
+    public function test_watched_progress_replay(): void
+    {
+        $threshold = Config::get('progress.threshold');
+        $minThreshold = Config::get('progress.minThreshold');
+
+        Config::save('progress.threshold', 180);
+        Config::save('progress.minThreshold', 180);
+
+        try {
+            $now = time();
+            $this->testMovie[iState::COLUMN_WATCHED] = 1;
+            $this->testMovie[iState::COLUMN_UPDATED] = $now - 3600;
+            $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_WATCHED] = 1;
+            $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_META_DATA_PROGRESS] = 0;
+            $this->testMovie[iState::COLUMN_EXTRA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_EXTRA_DATE] = $now - 3600;
+
+            $testMovie = new StateEntity($this->testMovie);
+            $this->mapper->add($testMovie);
+            $this->mapper->commit();
+            $this->mapper->reset()->loadData();
+
+            $stored = $this->mapper->get($testMovie);
+            $this->assertNotNull($stored);
+
+            $progressCalls = 0;
+            $stateCalls = 0;
+            $progressEntity = null;
+
+            $updatedMovie = clone $stored;
+            $updatedMovie->watched = 1;
+            $updatedMovie->updated = $now - 3600;
+            $metadata = $updatedMovie->getMetadata();
+            $metadata[$updatedMovie->via][iState::COLUMN_WATCHED] = 1;
+            $metadata[$updatedMovie->via][iState::COLUMN_META_DATA_PROGRESS] = 120000;
+            $updatedMovie->metadata = $metadata;
+            $extra = $updatedMovie->getExtra();
+            $extra[$updatedMovie->via][iState::COLUMN_EXTRA_EVENT] = 'media.stop';
+            $extra[$updatedMovie->via][iState::COLUMN_EXTRA_DATE] = $now;
+            $updatedMovie->extra = $extra;
+            $updatedMovie->setIsTainted(true);
+
+            $this->mapper->add($updatedMovie, [
+                Options::REPLAY_PROGRESS => true,
+                Options::STATE_UPDATE_EVENT => static function () use (&$stateCalls): void {
+                    $stateCalls++;
+                },
+                Options::STATE_PROGRESS_EVENT => static function (iState $entity) use (&$progressCalls, &$progressEntity): void {
+                    $progressCalls++;
+                    $progressEntity = $entity;
+                },
+            ]);
+            $this->mapper->commit();
+
+            $this->mapper->reset()->loadData();
+            $result = $this->mapper->get($updatedMovie);
+
+            $this->assertNotNull($result);
+            $this->assertSame(0, $result->watched);
+            $this->assertSame('0', (string) ag($result->getMetadata($updatedMovie->via), iState::COLUMN_WATCHED));
+            $this->assertSame(120000, (int) ag($result->getMetadata($updatedMovie->via), iState::COLUMN_META_DATA_PROGRESS));
+            $this->assertSame(0, $stateCalls);
+            $this->assertSame(1, $progressCalls);
+            $this->assertInstanceOf(iState::class, $progressEntity);
+            $this->assertTrue($progressEntity->getContext(Options::REPLAY_PROGRESS, false));
+
+            $events = Container::get(EventsRepository::class)->findAll([
+                EventsTable::COLUMN_EVENT => ProcessProgressEvent::NAME,
+            ]);
+
+            $this->assertCount(1, $events);
+            $this->assertTrue((bool) ag($events[0]->options, Options::REPLAY_PROGRESS, false));
+        } finally {
+            Config::save('progress.threshold', $threshold);
+            Config::save('progress.minThreshold', $minThreshold);
+        }
     }
 
     /**

@@ -254,6 +254,7 @@ final class ParseWebhook
             $allowUpdate = (int) Config::get('progress.threshold', 0);
             $progCheck = $allowUpdate || 0 === $isPlayed;
 
+            $progress = null;
             if ($progCheck && null !== ($progress = ag($json, 'PlaybackInfo.PositionTicks', null))) {
                 $fields[iState::COLUMN_META_DATA][$context->backendName][iState::COLUMN_META_DATA_PROGRESS] = (string) floor(
                     $progress / 1_00_00,
@@ -266,6 +267,23 @@ final class ParseWebhook
                 item: $obj,
                 opts: ['override' => $fields],
             )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS, true));
+
+            if (
+                1 === $isPlayed
+                && null !== $progress
+                && true === in_array(
+                    $event,
+                    [
+                        'playback.pause',
+                        'playback.unpause',
+                        'playback.start',
+                        'playback.stop',
+                    ],
+                    true,
+                )
+            ) {
+                $entity = $entity->setContext(Options::REPLAY_PROGRESS, true);
+            }
 
             if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
                 return new Response(
