@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "34d6c53cb2d31220d0c3d6267ad96cb63bdd7b4f",
-    "date": "2026-05-26T15:22:35+00:00",
+    "full_sha": "84997e1c9972029a75da8c594a953f11e7d2ef4a",
+    "date": "2026-05-27T13:26:39+00:00",
     "commits": [
+      {
+        "sha": "84997e1c",
+        "full_sha": "84997e1c9972029a75da8c594a953f11e7d2ef4a",
+        "message": "fix: add missing Options import in ReportCommand",
+        "author": "arabcoders",
+        "date": "2026-05-27T13:26:39+00:00"
+      },
       {
         "sha": "34d6c53c",
         "full_sha": "34d6c53cb2d31220d0c3d6267ad96cb63bdd7b4f",
