@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "84997e1c9972029a75da8c594a953f11e7d2ef4a",
-    "date": "2026-05-27T13:26:39+00:00",
+    "full_sha": "9367b106825a753dc26de922791467824f461657",
+    "date": "2026-05-27T14:24:58+00:00",
     "commits": [
+      {
+        "sha": "9367b106",
+        "full_sha": "9367b106825a753dc26de922791467824f461657",
+        "message": "fix: replace direct logger calls in ProcessProfileEvent",
+        "author": "arabcoders",
+        "date": "2026-05-27T14:24:58+00:00"
+      },
       {
         "sha": "84997e1c",
         "full_sha": "84997e1c9972029a75da8c594a953f11e7d2ef4a",
