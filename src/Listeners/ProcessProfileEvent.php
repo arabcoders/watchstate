@@ -82,14 +82,14 @@ final readonly class ProcessProfileEvent
                 $statusCode = $response->getStatusCode();
 
                 if (Status::OK !== Status::tryFrom($statusCode)) {
-                    $this->logger->error("Failed to process profile '{id}'. Status: '{status}'.", [
+                    $writer(Level::Error, "Failed to process profile '{id}'. Status: '{status}'.", [
                         'id' => ag($e->getData(), 'meta.id', '??'),
                         'status' => $statusCode,
                     ]);
                     return $e;
                 }
 
-                $this->logger->notice("Successfully Processed '{id}'.", [
+                $writer(Level::Notice, "Successfully Processed '{id}'.", [
                     'id' => ag($e->getData(), 'meta.id', '??'),
                 ]);
             } catch (TransportExceptionInterface $e) {
