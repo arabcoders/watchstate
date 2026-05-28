@@ -125,5 +125,11 @@ const choices: Array<{ number: number; title: string; text: string; url: string 
     text: 'How to enable path-based matching.',
     url: '/help/path-match',
   },
+  {
+    number: 11,
+    title: 'Backend limitations',
+    text: 'Requirements and known limitations for supported backends.',
+    url: '/help/backend-limitations',
+  },
 ];
 </script>

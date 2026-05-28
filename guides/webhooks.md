@@ -232,38 +232,8 @@ Click *Save*.
 
 # Media Backends Webhook Limitations
 
-Here are some known limitations and issues when using webhooks with different media backends:
-
-### Plex
-
-- Plex doesn't send events for *marked as played/unplayed* actions.
-- Webhook events may be **skipped** when multiple items are added at once.
-- When items are marked as **unwatched**, Plex resets the date on the media object.
-- In old version of plex i.e. pre `1.41.6.9606` marking items as watched and if you didn't have progress on the show
-  will not show the item in continue watching, this is a limitation of the old plex version and not
-  watchstate. [reference](https://forums.plex.tv/t/continue-watching-is-buggy-unable-to-figure-out-why/869224/65)
-- Plex doesn't send watch progress update events during playback, it only sends the progress update during `play`,
-  `pause`, `stop`, `resume` events. So the progress update from plex will not be reflected until one of those events
-  kicks in.
-
-### Plex via Tautulli
-
-- **Marking items as unplayed** is not reliable, as Tautulli’s webhook payload lacks the data needed to detect this
-  change.
-- Similarly to plex, Tautulli doesn't send watch progress update events during playback.
-
-### Emby
-
-- The **webhook test event** previously contained no data, but this issue appears to be fixed in version `4.9.0.37+`.
-    - To verify if your Emby webhook setup works, try playing or marking an item as played/unplayed, and check if the
-      changes appear in the database.
-
-### Jellyfin
-
-- Even if a user ID is selected, Jellyfin may **still send events without user data**.
-- Items may be marked as **unplayed** if the setting *Libraries > Display > Date Added Behavior for New Content: Use
-  Date Scanned into Library* is enabled.
-    - This can happen when media files are replaced or updated.
+See the [backend limitations](/guides/backend-limitations.md) for a comprehensive list of per-backend requirements 
+and limitations, including webhook-specific event behaviour.
 
 # Sometimes Newly Added Content Does Not Show Up
 
@@ -272,7 +242,3 @@ complement webhook functionality.
 
 Simply go to the *Tasks* page and enable the *Import* and *Export* tasks. and set the schedule to `every 12 hours` or
 `every 24 hours` depending on your needs.
-
-# Troubleshooting
-
-TBA
