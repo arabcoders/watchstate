@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "9367b106825a753dc26de922791467824f461657",
-    "date": "2026-05-27T14:24:58+00:00",
+    "full_sha": "52a4c8cbe8fadb6ddf27907f4fb474b983bbf3e1",
+    "date": "2026-05-28T14:53:41+00:00",
     "commits": [
+      {
+        "sha": "52a4c8cb",
+        "full_sha": "52a4c8cbe8fadb6ddf27907f4fb474b983bbf3e1",
+        "message": "docs: add backend limitations guide and update webhook documentation",
+        "author": "arabcoders",
+        "date": "2026-05-28T14:53:41+00:00"
+      },
+      {
+        "sha": "34fd54f0",
+        "full_sha": "34fd54f06cbaf4473a940ee6c32c4da4dc152c61",
+        "message": "refactor; raise app.log level to error",
+        "author": "arabcoders",
+        "date": "2026-05-28T14:17:21+00:00"
+      },
       {
         "sha": "9367b106",
         "full_sha": "9367b106825a753dc26de922791467824f461657",
