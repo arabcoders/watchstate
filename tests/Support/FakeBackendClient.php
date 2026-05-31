@@ -46,6 +46,15 @@ class FakeBackendClient implements ClientInterface
     /** @var array<string,array<string,mixed>|Throwable> */
     private static array $metadataResponses = [];
 
+    /** @var array<string,Throwable> */
+    private static array $exportErrors = [];
+
+    /** @var array<string,bool> */
+    private static array $skipBackupWrites = [];
+
+    /** @var array<string,int> */
+    private static array $queuedExportRequests = [];
+
     public function __construct()
     {
         $this->guid = new FakeGuid();
@@ -63,6 +72,9 @@ class FakeBackendClient implements ClientInterface
             'update_state' => [],
         ];
         self::$metadataResponses = [];
+        self::$exportErrors = [];
+        self::$skipBackupWrites = [];
+        self::$queuedExportRequests = [];
     }
 
     /**
@@ -80,6 +92,21 @@ class FakeBackendClient implements ClientInterface
         array|Throwable $response,
     ): void {
         self::$metadataResponses[self::metadataKey($user, $backend, $id)] = $response;
+    }
+
+    public static function setExportError(string $user, string $backend, Throwable $error): void
+    {
+        self::$exportErrors[self::exportKey($user, $backend)] = $error;
+    }
+
+    public static function setSkipBackupWrite(string $user, string $backend, bool $skip = true): void
+    {
+        self::$skipBackupWrites[self::exportKey($user, $backend)] = $skip;
+    }
+
+    public static function setQueuedExportRequests(string $user, string $backend, int $count): void
+    {
+        self::$queuedExportRequests[self::exportKey($user, $backend)] = $count;
     }
 
     public function withContext(Context $context): ClientInterface
@@ -157,7 +184,11 @@ class FakeBackendClient implements ClientInterface
             'no_enhance' => (bool) ag($opts, 'no_enhance', false),
         ]);
 
-        if (null !== $writer && false === (bool) ag($opts, Options::DRY_RUN, false)) {
+        if (
+            null !== $writer
+            && false === (bool) ag($opts, Options::DRY_RUN, false)
+            && true !== (self::$skipBackupWrites[self::exportKey($context->userContext->name, $context->backendName)] ?? false)
+        ) {
             $payload = json_encode([
                 'backend' => $context->backendName,
                 'user' => $context->userContext->name,
@@ -178,6 +209,22 @@ class FakeBackendClient implements ClientInterface
             'user' => $context->userContext->name,
             'after' => null === $after ? null : $after->getTimestamp(),
         ]);
+
+        if (null !== ($error = self::$exportErrors[self::exportKey($context->userContext->name, $context->backendName)] ?? null)) {
+            throw $error;
+        }
+
+        $count = self::$queuedExportRequests[self::exportKey($context->userContext->name, $context->backendName)] ?? 0;
+
+        for ($i = 0; $i < $count; $i++) {
+            $queue->add(new Request(
+                method: Method::GET,
+                url: new Uri(r('https://restore-{backend}-{i}.example.invalid', [
+                    'backend' => $context->backendName,
+                    'i' => $i,
+                ])),
+            ));
+        }
 
         return [];
     }
@@ -394,6 +441,14 @@ class FakeBackendClient implements ClientInterface
             'user' => $user,
             'backend' => $backend,
             'id' => $id,
+        ]);
+    }
+
+    private static function exportKey(string $user, string $backend): string
+    {
+        return r('{user}:{backend}', [
+            'user' => $user,
+            'backend' => $backend,
         ]);
     }
 

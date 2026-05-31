@@ -132,6 +132,8 @@ class RestoreCommand extends Command
      */
     protected function process(iInput $input, iOutput $output): int
     {
+        $this->queue->reset();
+
         $userName = $input->getOption('user');
         if (empty($userName)) {
             $output->writeln(r('<error>ERROR: User not specified. Please use [-u, --user].</error>'));
@@ -292,64 +294,114 @@ class RestoreCommand extends Command
             $syncRequests = false;
         }
 
-        $requests = $backend->export($mapper, $this->queue, null);
+        try {
+            $requests = $backend->export($mapper, $this->queue, null);
 
-        $start = microtime(true);
-        $this->logger->notice("SYSTEM: Sending '{total}' play state comparison requests for '{user}@{backend}'.", [
-            'backend' => $name,
-            'total' => count($requests),
-            'user' => $userContext->name,
-        ]);
+            $stats = ['sent' => count($requests), 'failed' => 0];
 
-        send_requests(requests: $requests, client: $this->http, sync: $syncRequests, logger: $this->logger);
-
-        $this->logger->notice("SYSTEM: Completed '{total}' requests in '{duration}'s for '{user}@{backend}'.", [
-            'backend' => $name,
-            'total' => count($requests),
-            'user' => $userContext->name,
-            'duration' => round(microtime(true) - $start, 4),
-        ]);
-
-        $total = count($this->queue->getQueue());
-
-        if ($total >= 1) {
-            $this->logger->notice("SYSTEM: Sending '{total}' change state requests for '{user}@{backend}'.", [
+            $start = microtime(true);
+            $this->logger->notice("SYSTEM: Sending '{total}' play state comparison requests for '{user}@{backend}'.", [
                 'backend' => $name,
-                'user' => $userContext->name,
-                'total' => $total,
-            ]);
-        }
-
-        if ((int) Message::get("{$userContext->name}.{$name}.export", 0) < 1) {
-            $this->logger->notice("SYSTEM: No difference detected between backup file and '{user}@{backend}'.", [
-                'backend' => $name,
+                'total' => $stats['sent'],
                 'user' => $userContext->name,
             ]);
-        }
 
-        if ($total < 1 || false === $input->getOption('execute')) {
+            send_requests(
+                requests: $requests,
+                client: $this->http,
+                sync: $syncRequests,
+                logger: $this->logger,
+                opts: [
+                    'error' => static function () use (&$stats): array {
+                        $stats['failed']++;
+                        return [];
+                    },
+                ],
+            );
+
+            $this->logger->notice("SYSTEM: Completed '{total}' requests in '{duration}'s for '{user}@{backend}'.", [
+                'backend' => $name,
+                'total' => $stats['sent'],
+                'user' => $userContext->name,
+                'duration' => round(microtime(true) - $start, 4),
+            ]);
+
+            $total = count($this->queue->getQueue());
+            $sendStats = ['sent' => $total, 'failed' => 0];
+
+            if ($total >= 1) {
+                $this->logger->notice("SYSTEM: Sending '{total}' change state requests for '{user}@{backend}'.", [
+                    'backend' => $name,
+                    'user' => $userContext->name,
+                    'total' => $total,
+                ]);
+            }
+
+            if ((int) Message::get("{$userContext->name}.{$name}.export", 0) < 1) {
+                $this->logger->notice("SYSTEM: No difference detected between backup file and '{user}@{backend}'.", [
+                    'backend' => $name,
+                    'user' => $userContext->name,
+                ]);
+            }
+
+            if ($total >= 1 && false !== $input->getOption('execute')) {
+                send_requests(
+                    requests: $this->queue->getQueue(),
+                    client: $this->http,
+                    sync: $syncRequests,
+                    logger: $this->logger,
+                    opts: [
+                        'error' => static function () use (&$sendStats): array {
+                            $sendStats['failed']++;
+                            return [];
+                        },
+                    ],
+                );
+
+                $this->logger->notice(
+                    "SYSTEM: Sent '{total}' change play state requests to '{client}: {user}@{backend}' in '{duration}'s.",
+                    [
+                        'total' => $total,
+                        'backend' => $name,
+                        'user' => $userContext->name,
+                        'client' => $backend->getContext()->clientName,
+                        'duration' => round(microtime(true) - $opStart, 4),
+                    ],
+                );
+            }
+
+            if ($stats['failed'] > 0 || $sendStats['failed'] > 0) {
+                $this->logger->warning(
+                    "Restore completed with item-level request failures for '{user}@{backend}'.",
+                    [
+                        'user' => $userContext->name,
+                        'backend' => $name,
+                        'comparison' => $stats,
+                        'apply' => $sendStats,
+                    ],
+                );
+            }
+
             return self::SUCCESS;
+        } catch (Throwable $e) {
+            $this->logger->error(
+                "SYSTEM: Unhandled exception '{error.kind}' was thrown during '{user}@{backend}' restore operation. '{error.message}' at '{error.file}:{error.line}'.",
+                [
+                    'user' => $userContext->name,
+                    'backend' => $name,
+                    'error' => [
+                        'kind' => $e::class,
+                        'line' => $e->getLine(),
+                        'message' => $e->getMessage(),
+                        'file' => after($e->getFile(), ROOT_PATH),
+                    ],
+                ],
+            );
+
+            return self::FAILURE;
+        } finally {
+            $this->queue->reset();
         }
-
-        send_requests(
-            requests: $this->queue->getQueue(),
-            client: $this->http,
-            sync: $syncRequests,
-            logger: $this->logger,
-        );
-
-        $this->logger->notice(
-            "SYSTEM: Sent '{total}' change play state requests to '{client}: {user}@{backend}' in '{duration}'s.",
-            [
-                'total' => $total,
-                'backend' => $name,
-                'user' => $userContext->name,
-                'client' => $backend->getContext()->clientName,
-                'duration' => round(microtime(true) - $opStart, 4),
-            ],
-        );
-
-        return self::SUCCESS;
     }
 
     /**
