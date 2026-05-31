@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "52a4c8cbe8fadb6ddf27907f4fb474b983bbf3e1",
-    "date": "2026-05-28T14:53:41+00:00",
+    "full_sha": "1ccfb235e8c9b1cb45b2efd9e9e699ba1713d2d0",
+    "date": "2026-05-31T13:39:07+00:00",
     "commits": [
+      {
+        "sha": "1ccfb235",
+        "full_sha": "1ccfb235e8c9b1cb45b2efd9e9e699ba1713d2d0",
+        "message": "feat: allow watch progress restore via backup file",
+        "author": "arabcoders",
+        "date": "2026-05-31T13:39:07+00:00"
+      },
+      {
+        "sha": "c2aa24b1",
+        "full_sha": "c2aa24b14ecb0659b93514f666251d8f807becf6",
+        "message": "refactor: show warning when backup file is empty",
+        "author": "arabcoders",
+        "date": "2026-05-31T13:30:09+00:00"
+      },
       {
         "sha": "52a4c8cb",
         "full_sha": "52a4c8cbe8fadb6ddf27907f4fb474b983bbf3e1",
