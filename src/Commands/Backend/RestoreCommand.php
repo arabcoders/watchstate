@@ -89,6 +89,7 @@ class RestoreCommand extends Command
                 InputOption::VALUE_NONE,
                 'Send one request at a time instead of all at once. note: Slower but more reliable.',
             )
+            ->addOption('restore-watch-progress', 'P', InputOption::VALUE_NONE, 'Restore the watch progress from backup as well.')
             ->addOption(
                 'async-requests',
                 null,
@@ -268,6 +269,7 @@ class RestoreCommand extends Command
 
         $opts = [
             Options::IGNORE_DATE => true,
+            Options::REPLAY_PROGRESS => true === $input->getOption('restore-watch-progress'),
             Options::DEBUG_TRACE => true === $input->getOption('trace'),
             Options::DRY_RUN => false === $input->getOption('execute'),
         ];
@@ -370,7 +372,55 @@ class RestoreCommand extends Command
                 );
             }
 
-            if ($stats['failed'] > 0 || $sendStats['failed'] > 0) {
+            $progressStats = ['sent' => 0, 'failed' => 0];
+
+            if (true === $input->getOption('restore-watch-progress')) {
+                $this->queue->reset();
+                $backend->progress($mapper->getObjects(), $this->queue, null);
+
+                $progressStats['sent'] = count($this->queue->getQueue());
+
+                if ($progressStats['sent'] >= 1) {
+                    $this->logger->notice("SYSTEM: Sending '{total}' watch progress requests for '{user}@{backend}'.", [
+                        'backend' => $name,
+                        'user' => $userContext->name,
+                        'total' => $progressStats['sent'],
+                    ]);
+                } else {
+                    $this->logger->notice("SYSTEM: No watch progress changes detected between backup file and '{user}@{backend}'.", [
+                        'backend' => $name,
+                        'user' => $userContext->name,
+                    ]);
+                }
+
+                if ($progressStats['sent'] >= 1 && false !== $input->getOption('execute')) {
+                    send_requests(
+                        requests: $this->queue->getQueue(),
+                        client: $this->http,
+                        sync: $syncRequests,
+                        logger: $this->logger,
+                        opts: [
+                            'error' => static function () use (&$progressStats): array {
+                                $progressStats['failed']++;
+                                return [];
+                            },
+                        ],
+                    );
+
+                    $this->logger->notice(
+                        "SYSTEM: Sent '{total}' watch progress requests to '{client}: {user}@{backend}' in '{duration}'s.",
+                        [
+                            'total' => $progressStats['sent'],
+                            'backend' => $name,
+                            'user' => $userContext->name,
+                            'client' => $backend->getContext()->clientName,
+                            'duration' => round(microtime(true) - $opStart, 4),
+                        ],
+                    );
+                }
+            }
+
+            if ($stats['failed'] > 0 || $sendStats['failed'] > 0 || $progressStats['failed'] > 0) {
                 $this->logger->warning(
                     "Restore completed with item-level request failures for '{user}@{backend}'.",
                     [
@@ -378,6 +428,7 @@ class RestoreCommand extends Command
                         'backend' => $name,
                         'comparison' => $stats,
                         'apply' => $sendStats,
+                        'progress' => $progressStats,
                     ],
                 );
             }

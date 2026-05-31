@@ -35,7 +35,7 @@ final class RestoreCommandTest extends TestCase
                 'title' => 'Fake Movie',
                 'year' => 2024,
                 'guids' => [
-                    'guid_imdb' => 'tt-fake-fake_restore',
+                    'guid_imdb' => 'tt1234567',
                 ],
             ],
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
@@ -75,7 +75,7 @@ final class RestoreCommandTest extends TestCase
                 'title' => 'Fake Movie',
                 'year' => 2024,
                 'guids' => [
-                    'guid_imdb' => 'tt-fake-fake_restore',
+                    'guid_imdb' => 'tt1234567',
                 ],
             ],
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
@@ -105,6 +105,54 @@ final class RestoreCommandTest extends TestCase
         self::assertSame(RestoreCommand::SUCCESS, $status);
         self::assertCount(1, FakeBackendClient::getCalls('export'));
         self::assertCount(0, $queue->getQueue());
+    }
+
+    public function test_progress_flag_calls_progress(): void
+    {
+        $logger = $this->initFakeBackendApp($this->fakeBackendConfig('fake_restore'));
+
+        $backupFile = self::$tmpPath . '/backup.json';
+        file_put_contents($backupFile, json_encode([
+            [
+                'type' => 'movie',
+                'watched' => 0,
+                'updated' => 1_700_000_000,
+                'title' => 'Fake Movie',
+                'year' => 2024,
+                'progress' => 90000,
+                'guids' => [
+                    'guid_imdb' => 'tt1234567',
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+
+        $queue = new QueueRequests();
+
+        $command = new RestoreCommand(
+            $queue,
+            $logger,
+            new LogSuppressor([]),
+            $this->createStub(iHttp::class),
+        );
+
+        $status = $this->makeTester($command)->execute([
+            '--assume-yes' => true,
+            '--restore-watch-progress' => true,
+            '--user' => 'main',
+            '--select-backend' => 'fake_restore',
+            'file' => $backupFile,
+        ]);
+
+        self::assertSame(RestoreCommand::SUCCESS, $status);
+        self::assertCount(1, FakeBackendClient::getCalls('export'));
+        self::assertSame([
+            [
+                'backend' => 'fake_restore',
+                'user' => 'main',
+                'count' => 1,
+                'after' => null,
+            ],
+        ], FakeBackendClient::getCalls('progress'));
     }
 
     private function makeTester(RestoreCommand $command): CommandTester
