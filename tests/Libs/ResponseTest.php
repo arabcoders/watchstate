@@ -17,20 +17,20 @@ class ResponseTest extends TestCase
         $this->assertSame(
             '1.0',
             $response->getProtocolVersion(),
-            'Should return the same protocol version from constructor.'
+            'Should return the same protocol version from constructor.',
         );
 
         $response = $response->withProtocolVersion('1.1');
         $this->assertSame(
             '1.1',
             $response->getProtocolVersion(),
-            'Should return the same protocol version from response.'
+            'Should return the same protocol version from response.',
         );
 
         $this->assertSame(
             spl_object_id($response),
             spl_object_id($response->withProtocolVersion('1.1')),
-            'withProtocolVersion: should return same object when same version is set.'
+            'withProtocolVersion: should return same object when same version is set.',
         );
     }
 
@@ -40,20 +40,20 @@ class ResponseTest extends TestCase
         $this->assertSame(
             Status::ACCEPTED,
             Status::tryfrom($response->getStatusCode()),
-            'Validate same status code are returned from response.'
+            'Validate same status code are returned from response.',
         );
 
         $this->assertSame(
             'OK',
             $response->getReasonPhrase(),
-            'Validate same reason phrase are returned from response.'
+            'Validate same reason phrase are returned from response.',
         );
 
         $response = $response->withStatus(Status::BAD_REQUEST);
         $this->assertSame(
             Status::BAD_REQUEST,
             Status::tryfrom($response->getStatusCode()),
-            'Validate same status code are returned from response.'
+            'Validate same status code are returned from response.',
         );
 
         $this->checkException(
@@ -71,13 +71,13 @@ class ResponseTest extends TestCase
         $this->assertSame(
             spl_object_id($response),
             spl_object_id($response->withStatus(Status::BAD_REQUEST, '')),
-            'withStatus: should return same object when same status is set.'
+            'withStatus: should return same object when same status is set.',
         );
 
         $this->assertNotSame(
             spl_object_id($response),
             spl_object_id($response->withStatus(Status::BAD_REQUEST, 'OK')),
-            "withStatus: shouldn't return same object when reason is different but status code the same."
+            "withStatus: shouldn't return same object when reason is different but status code the same.",
         );
     }
 
@@ -91,61 +91,60 @@ class ResponseTest extends TestCase
         $this->assertSame(
             'has_header',
             $response->getHeaderLine('X-From-Construct'),
-            'Validate constructor headers are returned from response.'
+            'Validate constructor headers are returned from response.',
         );
 
         $this->assertSame(
             'a_numeric_header_key',
             $response->getHeaderLine('123'),
-            'Validate constructor headers are returned from response.'
+            'Validate constructor headers are returned from response.',
         );
 
         $response = $response->withHeader('Custom-Headers', 'Custom-Value');
         $this->assertSame(
             'Custom-Value',
             $response->getHeaderLine('Custom-Headers'),
-            'Validate same headers are returned from response.'
+            'Validate same headers are returned from response.',
         );
 
         $response = $response->withHeader('X-From-With-Header', ['Custom-Value-1', 'Custom-Value-2']);
         $this->assertSame(
             'Custom-Value-1, Custom-Value-2',
             $response->getHeaderLine('X-From-With-Header'),
-            'Validate same headers are returned from response.'
+            'Validate same headers are returned from response.',
         );
 
         $response = $response->withAddedHeader('Custom-Headers', 'Custom-Value-2');
         $this->assertSame(
             'Custom-Value, Custom-Value-2',
             $response->getHeaderLine('Custom-Headers'),
-            'Validate same headers are returned from response.'
+            'Validate same headers are returned from response.',
         );
 
         $this->assertSame(
-            [0 => 'Custom-Value', 1 => 'Custom-Value-2',],
+            [0 => 'Custom-Value', 1 => 'Custom-Value-2'],
             ag($response->getHeaders(), 'Custom-Headers', []),
-            'getHeaders: Validate same headers are returned from response.'
+            'getHeaders: Validate same headers are returned from response.',
         );
 
         $this->assertSame(
             spl_object_id($response),
             spl_object_id($response->withoutHeader('X-Not-set')),
-            'withoutHeader: should return same object when header is not set.'
+            'withoutHeader: should return same object when header is not set.',
         );
 
         $this->assertSame(
             'test',
             $response->withHeader('Custom-Headers', 'test')->getHeaderLine('Custom-Headers'),
-            'Calling withHeader should replace the existing header.'
+            'Calling withHeader should replace the existing header.',
         );
 
         $response = $response->withoutHeader('Custom-Headers');
         $this->assertSame(
             '',
             $response->getHeaderLine('Custom-Headers'),
-            'Validate same headers are returned from response.'
+            'Validate same headers are returned from response.',
         );
-
 
         $this->checkException(
             closure: fn() => $response->withHeader('X-عربي', 'test'),
@@ -188,14 +187,14 @@ class ResponseTest extends TestCase
         $this->assertSame(
             '',
             $response->getBody()->getContents(),
-            'When no body is set, it should create Stream object with empty string.'
+            'When no body is set, it should create Stream object with empty string.',
         );
 
         $response = new Response(Status::OK, body: 'Hello World');
         $this->assertSame(
             'Hello World',
             $response->getBody()->getContents(),
-            'Validate same body are returned from response.'
+            'Validate same body are returned from response.',
         );
 
         $stream = Stream::create('Hello World');
@@ -204,13 +203,13 @@ class ResponseTest extends TestCase
         $this->assertSame(
             'Hello World',
             $response->getBody()->getContents(),
-            'Validate same body are returned from response.'
+            'Validate same body are returned from response.',
         );
 
         $this->assertSame(
             spl_object_id($response),
             spl_object_id($response->withBody($stream)),
-            'withBody: should return same object when same body is set.'
+            'withBody: should return same object when same body is set.',
         );
     }
 }

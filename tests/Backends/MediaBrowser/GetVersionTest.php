@@ -28,7 +28,7 @@ class GetVersionTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinGetVersion::class],
-            ['Emby', EmbyGetVersion::class],
+            ['Emby',     EmbyGetVersion::class],
         ];
     }
 }

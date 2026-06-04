@@ -34,9 +34,9 @@ final class CommandLoaderTest extends TestCase
         };
 
         $container = new class($command) implements ContainerInterface {
-            public function __construct(private readonly Command $command)
-            {
-            }
+            public function __construct(
+                private readonly Command $command,
+            ) {}
 
             public function get(string $id): object
             {
@@ -50,11 +50,17 @@ final class CommandLoaderTest extends TestCase
         };
 
         $app = new Cli(new PSRContainer());
-        $app->setCommandLoader(new CommandLoader($container, [
-            'events:view' => 'events.view',
-        ], [
-            'events:view' => ['events:show'],
-        ]));
+        $app->setCommandLoader(
+            new CommandLoader(
+                $container,
+                [
+                    'events:view' => 'events.view',
+                ],
+                [
+                    'events:view' => ['events:show'],
+                ],
+            ),
+        );
 
         self::assertTrue($app->has('events:view'));
         self::assertTrue($app->has('events:show'));

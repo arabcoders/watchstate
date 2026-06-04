@@ -36,8 +36,8 @@ class ParseWebhookTest extends PlexTestCase
 
         $context = $this->makeContext();
         $cache = new Psr16Cache(new ArrayAdapter());
-        $request = (new ServerRequest('POST', 'http://plex.test'))->withParsedBody($webhook);
-        $guid = (new PlexGuid($this->logger))->withContext($context);
+        $request = new ServerRequest('POST', 'http://plex.test')->withParsedBody($webhook);
+        $guid = new PlexGuid($this->logger)->withContext($context);
 
         $action = new ParseWebhook($cache);
         $result = $action($context, $guid, $request);
@@ -58,7 +58,7 @@ class ParseWebhookTest extends PlexTestCase
         ];
 
         $context = $this->makeContext([Options::IGNORE => '99']);
-        $request = (new ServerRequest('POST', 'http://plex.test'))->withParsedBody($payload);
+        $request = new ServerRequest('POST', 'http://plex.test')->withParsedBody($payload);
 
         $action = new ParseWebhook(new Psr16Cache(new ArrayAdapter()));
         $result = $action($context, new PlexGuid($this->logger), $request);
@@ -78,7 +78,7 @@ class ParseWebhookTest extends PlexTestCase
         ];
 
         $context = $this->makeContext();
-        $request = (new ServerRequest('POST', 'http://plex.test'))->withParsedBody($payload);
+        $request = new ServerRequest('POST', 'http://plex.test')->withParsedBody($payload);
 
         $action = new ParseWebhook(new Psr16Cache(new ArrayAdapter()));
         $result = $action($context, new PlexGuid($this->logger), $request);

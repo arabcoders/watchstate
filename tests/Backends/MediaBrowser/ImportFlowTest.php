@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Backends\MediaBrowser;
 
-use App\Backends\Emby\Action\Import as EmbyImport;
-use App\Backends\Emby\Action\GetMetaData as EmbyGetMetaData;
-use App\Backends\Emby\EmbyGuid;
 use App\Backends\Common\Request;
-use App\Backends\Jellyfin\Action\Import as JellyfinImport;
-use App\Backends\Jellyfin\Action\GetMetaData as JellyfinGetMetaData;
-use App\Backends\Jellyfin\JellyfinGuid;
 use App\Backends\Common\Response;
+use App\Backends\Emby\Action\GetMetaData as EmbyGetMetaData;
+use App\Backends\Emby\Action\Import as EmbyImport;
+use App\Backends\Emby\EmbyGuid;
+use App\Backends\Jellyfin\Action\GetMetaData as JellyfinGetMetaData;
+use App\Backends\Jellyfin\Action\Import as JellyfinImport;
+use App\Backends\Jellyfin\JellyfinGuid;
 use App\Libs\Container;
 use App\Libs\Options;
 use ReflectionMethod;
@@ -27,7 +27,7 @@ class ImportFlowTest extends MediaBrowserTestCase
             $item['UserData']['PlaybackPositionTicks'] = 0;
 
             $action = new $actionClass($this->makeHttpClient(), $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
 
             $this->invokeProcess(
                 $action,
@@ -55,7 +55,7 @@ class ImportFlowTest extends MediaBrowserTestCase
             $item['UserData']['PlaybackPositionTicks'] = 0;
 
             $action = new $actionClass($this->makeHttpClient(), $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
 
             $this->invokeProcess(
                 $action,
@@ -88,7 +88,7 @@ class ImportFlowTest extends MediaBrowserTestCase
             ];
 
             $action = new $actionClass($this->makeHttpClient(), $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
 
             $this->invokeProcessShow($action, $context, $guid, $item, []);
 
@@ -107,7 +107,7 @@ class ImportFlowTest extends MediaBrowserTestCase
             $item['UserData']['PlaybackPositionTicks'] = 0;
 
             $action = new $actionClass($this->makeHttpClient(), $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
 
             $this->invokeProcess(
                 $action,
@@ -145,9 +145,9 @@ class ImportFlowTest extends MediaBrowserTestCase
             ];
 
             Container::add($metaClass, fn() => new class($showPayload) {
-                public function __construct(private array $payload)
-                {
-                }
+                public function __construct(
+                    private array $payload,
+                ) {}
 
                 public function __invoke(\App\Backends\Common\Context $context, string|int $id, array $opts = []): Response
                 {
@@ -156,7 +156,7 @@ class ImportFlowTest extends MediaBrowserTestCase
             });
 
             $action = new $actionClass($this->makeHttpClient(), $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
 
             $this->invokeProcess(
                 $action,
@@ -194,9 +194,9 @@ class ImportFlowTest extends MediaBrowserTestCase
         ];
 
         $metaAction = new class($show) {
-            public function __construct(private array $payload)
-            {
-            }
+            public function __construct(
+                private array $payload,
+            ) {}
 
             public int $calls = 0;
 
@@ -211,7 +211,7 @@ class ImportFlowTest extends MediaBrowserTestCase
         Container::add(JellyfinGetMetaData::class, fn() => $metaAction);
 
         $action = new JellyfinImport($this->makeHttpClient(), $this->logger);
-        $guid = (new JellyfinGuid($this->logger))->withContext($context);
+        $guid = new JellyfinGuid($this->logger)->withContext($context);
 
         $this->invokeProcessShow($action, $context, $guid, $show, []);
         $this->invokeProcess(
@@ -243,7 +243,7 @@ class ImportFlowTest extends MediaBrowserTestCase
             ),
             $this->logger,
         );
-        $guid = (new JellyfinGuid($this->logger))->withContext($context);
+        $guid = new JellyfinGuid($this->logger)->withContext($context);
         $mapper = $context->userContext->mapper;
 
         $result = $action($context, $guid, $mapper);
@@ -252,9 +252,11 @@ class ImportFlowTest extends MediaBrowserTestCase
 
         $prefetchRequests = array_values(array_filter(
             $result->response,
-            static fn($request) => $request instanceof Request
+            static fn($request) => (
+                $request instanceof Request
                 && str_contains((string) $request->url, 'recursive=false')
-                && str_contains((string) $request->url, 'includeItemTypes=Series'),
+                && str_contains((string) $request->url, 'includeItemTypes=Series')
+            ),
         ));
 
         $this->assertNotEmpty($prefetchRequests);
@@ -270,7 +272,7 @@ class ImportFlowTest extends MediaBrowserTestCase
             $item['Type'] = 'Audio';
 
             $action = new $actionClass($this->makeHttpClient(), $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
 
             $this->invokeProcess(
                 $action,
@@ -316,7 +318,7 @@ class ImportFlowTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinImport::class, JellyfinGuid::class, JellyfinGetMetaData::class],
-            ['Emby', EmbyImport::class, EmbyGuid::class, EmbyGetMetaData::class],
+            ['Emby',     EmbyImport::class,     EmbyGuid::class,     EmbyGetMetaData::class],
         ];
     }
 }

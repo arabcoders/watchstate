@@ -17,7 +17,7 @@ class ConfigFileTest extends TestCase
     private array $data = ['foo' => 'bar', 'baz' => 'kaz', 'sub' => ['key' => 'val']];
 
     private array $params = [];
-    private Logger|null $logger = null;
+    private ?Logger $logger = null;
 
     protected function setUp(): void
     {
@@ -49,7 +49,7 @@ class ConfigFileTest extends TestCase
                 type: 'json',
                 autoSave: false,
                 autoCreate: false,
-                autoBackup: false
+                autoBackup: false,
             ),
             reason: 'If file does not exist, and autoCreate is set to false, an exception should be thrown.',
             exception: InvalidArgumentException::class,
@@ -62,7 +62,7 @@ class ConfigFileTest extends TestCase
                 type: 'php',
                 autoSave: false,
                 autoCreate: false,
-                autoBackup: false
+                autoBackup: false,
             ),
             reason: 'If type is not supported, an exception should be thrown.',
             exception: InvalidArgumentException::class,
@@ -75,11 +75,11 @@ class ConfigFileTest extends TestCase
                 type: 'json',
                 autoSave: false,
                 autoCreate: true,
-                autoBackup: false
+                autoBackup: false,
             ),
             reason: 'If file is not writable, an exception should be thrown.',
             exception: InvalidArgumentException::class,
-            exceptionMessage: "could not be created",
+            exceptionMessage: 'could not be created',
         );
 
         try {
@@ -114,7 +114,7 @@ class ConfigFileTest extends TestCase
         $class->persist();
         $this->assertStringContainsString(
             'has been modified since last load.',
-            $this->handler->getRecords()[0]['message']
+            $this->handler->getRecords()[0]['message'],
         );
     }
 
@@ -128,7 +128,7 @@ class ConfigFileTest extends TestCase
         $this->assertArrayNotHasKey(
             'test_jellyfin',
             ConfigFile::open(...$params)->delete('test_jellyfin')->getAll(),
-            '->delete: Failed to delete key from YAML file.'
+            '->delete: Failed to delete key from YAML file.',
         );
 
         $class = ConfigFile::open(...$params);
@@ -136,7 +136,7 @@ class ConfigFileTest extends TestCase
         $this->assertArrayNotHasKey(
             'test_jellyfin',
             $class->getAll(),
-            'ArrayAccess: Failed to delete key from YAML file.'
+            'ArrayAccess: Failed to delete key from YAML file.',
         );
     }
 
@@ -147,14 +147,14 @@ class ConfigFileTest extends TestCase
         $this->assertArrayHasKey(
             'token',
             $class->get('test_plex', []),
-            '->get: Invalid response from parsing YAML file.'
+            '->get: Invalid response from parsing YAML file.',
         );
         $this->assertArrayHasKey('token', $class['test_plex'], 'ArrayAccess: Invalid response from parsing YAML file.');
 
         $this->assertArrayNotHasKey(
             'token',
             $class->get('test_not_set', []),
-            'Invalid response from parsing YAML file.'
+            'Invalid response from parsing YAML file.',
         );
         $this->assertNull($class['test_not_set'], 'ArrayAccess: Must return null if key does not exist.');
     }
@@ -179,7 +179,7 @@ class ConfigFileTest extends TestCase
         $this->assertArrayHasKey(
             'test_foo',
             ConfigFile::open(...$params)->set('test_foo', $this->data)->getAll(),
-            '->set: Failed to set key in YAML file.'
+            '->set: Failed to set key in YAML file.',
         );
 
         $class = ConfigFile::open(...$params);
@@ -234,7 +234,7 @@ class ConfigFileTest extends TestCase
         $this->assertArrayNotHasKey(
             'token',
             $class->get('test_not_set', []),
-            'Invalid response from parsing YAML file.'
+            'Invalid response from parsing YAML file.',
         );
         $this->assertTrue($class->has('test_plex'), 'Must return true if key exists.');
         $this->assertFalse($class->has('test_not_set'), 'Must return false if key does not exist.');
@@ -275,7 +275,7 @@ class ConfigFileTest extends TestCase
         $this->assertEquals(
             'LOWERCASE_VALUE',
             $reloaded->get('test_filter'),
-            'Filter should have uppercased the value during persist'
+            'Filter should have uppercased the value during persist',
         );
 
         // Test multiple filters can be added
@@ -296,12 +296,12 @@ class ConfigFileTest extends TestCase
         $this->assertEquals(
             'PREFIX_LOWERCASE_VALUE',
             $reloaded2->get('test_filter'),
-            'Both filters should have been applied'
+            'Both filters should have been applied',
         );
         $this->assertEquals(
             'PREFIX_value',
             $reloaded2->get('another_key'),
-            'Filter should apply to new keys'
+            'Filter should apply to new keys',
         );
 
         // Test that filter receives array and returns array
@@ -346,7 +346,7 @@ class ConfigFileTest extends TestCase
         $this->assertEquals(
             'should_stay_lowercase',
             $reloaded->get('test_value'),
-            'Filter should not have been applied after removal'
+            'Filter should not have been applied after removal',
         );
 
         // Test removing non-existent filter doesn't cause error
@@ -382,7 +382,7 @@ class ConfigFileTest extends TestCase
         $this->assertEquals(
             'PREFIX_value',
             $reloaded3->get('test_partial'),
-            'Only prefix filter should be applied, not uppercase'
+            'Only prefix filter should be applied, not uppercase',
         );
     }
 
@@ -449,7 +449,7 @@ class ConfigFileTest extends TestCase
         $this->assertEquals(
             $newData,
             $class->getAll(),
-            'Data should be fully replaced regardless of previous operations'
+            'Data should be fully replaced regardless of previous operations',
         );
         $this->assertArrayNotHasKey('before_key', $class->getAll(), 'Previous set operation should be overridden');
 
@@ -502,7 +502,7 @@ class ConfigFileTest extends TestCase
         $this->assertEquals(
             'LOWERCASE',
             $reloaded->get('key1'),
-            'Filter should be applied during persist after replaceAll'
+            'Filter should be applied during persist after replaceAll',
         );
         $this->assertEquals('VALUE', $reloaded->get('key2'), 'All values should be filtered');
     }

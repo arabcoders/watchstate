@@ -22,7 +22,7 @@ final class IndexTest extends TestCase
         $this->assertSame(
             "NOTICE: Processing 'main@emby_main' - '#123: IppSec' item.",
             $parsed['text'],
-            'Log formatter should strip the timestamp prefix from the display text.'
+            'Log formatter should strip the timestamp prefix from the display text.',
         );
     }
 
@@ -30,7 +30,11 @@ final class IndexTest extends TestCase
     {
         $parsed = Index::formatLog(['message' => 'boom', 'code' => 1]);
 
-        $this->assertSame('{"message":"boom","code":1}', $parsed['text'], 'Non-string log payloads should be stringified for API consumers.');
+        $this->assertSame(
+            '{"message":"boom","code":1}',
+            $parsed['text'],
+            'Non-string log payloads should be stringified for API consumers.',
+        );
         $this->assertNull($parsed['date'], 'Stringified payloads should not invent timestamps.');
         $this->assertNull($parsed['item_id'], 'Stringified payloads should not invent item ids.');
         $this->assertNull($parsed['user'], 'Stringified payloads should not invent users.');

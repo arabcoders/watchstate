@@ -44,7 +44,7 @@ final class IndexTest extends TestCase
         self::assertFileExists($configFile);
         self::assertFileExists($dbFile);
 
-        $tables = (new PDO('sqlite:' . $dbFile))
+        $tables = new PDO('sqlite:' . $dbFile)
             ->query("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
             ->fetchAll(PDO::FETCH_COLUMN);
 

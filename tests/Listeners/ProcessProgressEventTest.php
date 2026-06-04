@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Listeners;
 
-use App\Backends\Jellyfin\Action\GetSessions;
 use App\Backends\Common\Response;
+use App\Backends\Jellyfin\Action\GetSessions;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Database\PackageMigrationFactory;

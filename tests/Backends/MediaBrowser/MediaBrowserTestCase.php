@@ -7,13 +7,13 @@ namespace Tests\Backends\MediaBrowser;
 use App\Backends\Common\Cache;
 use App\Backends\Common\Context;
 use App\Libs\ConfigFile;
+use App\Libs\Container;
 use App\Libs\Database\PDO\PDOAdapter;
+use App\Libs\Entity\StateEntity;
+use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\HttpClient;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\Extends\MockHttpClient;
-use App\Libs\Container;
-use App\Libs\Entity\StateEntity;
-use App\Libs\Entity\StateInterface;
 use App\Libs\TestCase;
 use App\Libs\Uri;
 use App\Libs\UserContext;
@@ -26,8 +26,8 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 abstract class MediaBrowserTestCase extends TestCase
 {
-    protected TestHandler|null $handler = null;
-    protected Logger|null $logger = null;
+    protected ?TestHandler $handler = null;
+    protected ?Logger $logger = null;
 
     private array $fixtures = [];
 

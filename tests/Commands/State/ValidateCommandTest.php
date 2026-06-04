@@ -45,13 +45,16 @@ final class ValidateCommandTest extends TestCase
 
         self::assertSame(ValidateCommand::SUCCESS, $status);
         self::assertSame(0, $userContext->db->getTotal(), 'Record should be removed when its last backend reference disappears.');
-        self::assertSame([
+        self::assertSame(
             [
-                'backend' => 'fake_validate',
-                'user' => 'main',
-                'id' => '501',
+                [
+                    'backend' => 'fake_validate',
+                    'user' => 'main',
+                    'id' => '501',
+                ],
             ],
-        ], FakeBackendClient::getCalls('metadata'));
+            FakeBackendClient::getCalls('metadata'),
+        );
     }
 
     public function test_invalid_user_returns_failure(): void
@@ -106,14 +109,21 @@ final class ValidateCommandTest extends TestCase
 
         self::assertSame(ValidateCommand::SUCCESS, $status);
         self::assertSame(1, $mainContext->db->getTotal(), 'Main user records should remain untouched when another user is selected.');
-        self::assertSame(0, $aliceContext->db->getTotal(), 'Selected user records should be validated and removed when metadata no longer exists.');
-        self::assertSame([
+        self::assertSame(
+            0,
+            $aliceContext->db->getTotal(),
+            'Selected user records should be validated and removed when metadata no longer exists.',
+        );
+        self::assertSame(
             [
-                'backend' => 'fake_validate',
-                'user' => 'alice',
-                'id' => '602',
+                [
+                    'backend' => 'fake_validate',
+                    'user' => 'alice',
+                    'id' => '602',
+                ],
             ],
-        ], FakeBackendClient::getCalls('metadata'));
+            FakeBackendClient::getCalls('metadata'),
+        );
     }
 
     private function makeTester(ValidateCommand $command): CommandTester

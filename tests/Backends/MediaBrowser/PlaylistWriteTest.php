@@ -29,13 +29,16 @@ final class PlaylistWriteTest extends MediaBrowserTestCase
         self::assertSame('playlist-jf-new', $result->response['id']);
         self::assertSame('POST', $requests[0]['method']);
         self::assertStringEndsWith('/Playlists', $requests[0]['url']);
-        self::assertSame([
-            'Name' => 'Weekend Movies',
-            'Ids' => ['item-1', 'item-2'],
-            'UserId' => 'user-1',
-            'MediaType' => 'Video',
-            'IsPublic' => false,
-        ], json_decode((string) ($requests[0]['options']['body'] ?? ''), true, flags: JSON_THROW_ON_ERROR));
+        self::assertSame(
+            [
+                'Name' => 'Weekend Movies',
+                'Ids' => ['item-1', 'item-2'],
+                'UserId' => 'user-1',
+                'MediaType' => 'Video',
+                'IsPublic' => false,
+            ],
+            json_decode((string) ($requests[0]['options']['body'] ?? ''), true, flags: JSON_THROW_ON_ERROR),
+        );
     }
 
     public function test_emby_create_delete(): void

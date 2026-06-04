@@ -18,17 +18,17 @@ class AddCorsMiddlewareTest extends TestCase
     {
         $result = new AddCorsMiddleware()->process(
             request: $this->getRequest(),
-            handler: $this->getHandler(new Response(Status::OK))
+            handler: $this->getHandler(new Response(Status::OK)),
         );
 
         $this->assertTrue(
             $result->hasHeader('Access-Control-Allow-Origin'),
-            'Access-Control-Allow-Origin is not available'
+            'Access-Control-Allow-Origin is not available',
         );
 
         $this->assertTrue(
             $result->hasHeader('Access-Control-Allow-Credentials'),
-            'Access-Control-Allow-Credentials is not available'
+            'Access-Control-Allow-Credentials is not available',
         );
     }
 }

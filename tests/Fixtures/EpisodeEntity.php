@@ -77,15 +77,15 @@ return [
     iState::COLUMN_EXTRA => [
         'test_plex' => [
             iState::COLUMN_EXTRA_DATE => 1,
-            iState::COLUMN_EXTRA_EVENT => 'media.scrobble'
+            iState::COLUMN_EXTRA_EVENT => 'media.scrobble',
         ],
         'test_jellyfin' => [
             iState::COLUMN_EXTRA_DATE => 1,
-            iState::COLUMN_EXTRA_EVENT => 'media.scrobble'
+            iState::COLUMN_EXTRA_EVENT => 'media.scrobble',
         ],
         'test_emby' => [
             iState::COLUMN_EXTRA_DATE => 1,
-            iState::COLUMN_EXTRA_EVENT => 'media.scrobble'
+            iState::COLUMN_EXTRA_EVENT => 'media.scrobble',
         ],
     ],
     iState::COLUMN_CREATED_AT => 2,

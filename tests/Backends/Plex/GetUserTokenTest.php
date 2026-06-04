@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Tests\Backends\Plex;
 
 use App\Backends\Common\Response;
-use App\Backends\Plex\Action\GetUserToken;
 use App\Backends\Plex\Action\GetUsersList;
+use App\Backends\Plex\Action\GetUserToken;
 use App\Libs\Container;
 use App\Libs\Options;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -53,13 +53,16 @@ class GetUserTokenTest extends PlexTestCase
     {
         $http = new \App\Libs\Extends\MockHttpClient([
             new MockResponse(json_encode(['authToken' => 'temp-token']), ['http_code' => 201]),
-            new MockResponse(json_encode([
-                [
-                    'provides' => 'server',
-                    'clientIdentifier' => 'plex-server-1',
-                    'accessToken' => 'perm-token',
-                ],
-            ]), ['http_code' => 200]),
+            new MockResponse(
+                json_encode([
+                    [
+                        'provides' => 'server',
+                        'clientIdentifier' => 'plex-server-1',
+                        'accessToken' => 'perm-token',
+                    ],
+                ]),
+                ['http_code' => 200],
+            ),
         ]);
 
         $context = $this->makeContext();
@@ -74,13 +77,16 @@ class GetUserTokenTest extends PlexTestCase
     {
         $http = new \App\Libs\Extends\MockHttpClient([
             new MockResponse(json_encode(['authToken' => 'temp-token']), ['http_code' => 201]),
-            new MockResponse(json_encode([
-                [
-                    'provides' => 'server',
-                    'clientIdentifier' => 'other-server',
-                    'accessToken' => 'perm-token',
-                ],
-            ]), ['http_code' => 200]),
+            new MockResponse(
+                json_encode([
+                    [
+                        'provides' => 'server',
+                        'clientIdentifier' => 'other-server',
+                        'accessToken' => 'perm-token',
+                    ],
+                ]),
+                ['http_code' => 200],
+            ),
         ]);
 
         $context = $this->makeContext();

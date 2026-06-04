@@ -159,7 +159,7 @@ final class PruneCommandTest extends TestCase
         $this->assertSame(PruneCommand::SUCCESS, $status);
         $this->assertSame(
             [
-                ['always_pruner', false],
+                ['always_pruner',  false],
                 ['events_remover', false],
             ],
             self::$calls,
@@ -183,7 +183,7 @@ final class PruneCommandTest extends TestCase
         $this->assertSame(
             [
                 ['always_pruner', true],
-                ['logs_remover', true],
+                ['logs_remover',  true],
             ],
             self::$calls,
         );

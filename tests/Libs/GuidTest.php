@@ -18,7 +18,7 @@ use Symfony\Component\Yaml\Yaml;
 
 class GuidTest extends TestCase
 {
-    protected Logger|null $logger = null;
+    protected ?Logger $logger = null;
 
     private function logged(Level $level, string $message, bool $clear = false): bool
     {
@@ -61,21 +61,21 @@ class GuidTest extends TestCase
     public function test__construct()
     {
         $guid = Guid::fromArray(['guid_test' => 'ztt1234567']);
-        $this->assertCount(0, $guid->getAll(), "Count should be 0 when the GUID is not supported.");
+        $this->assertCount(0, $guid->getAll(), 'Count should be 0 when the GUID is not supported.');
 
         $guid = Guid::fromArray(['guid_imdb' => null]);
-        $this->assertCount(0, $guid->getAll(), "Count should be 0 when value of guid is null.");
+        $this->assertCount(0, $guid->getAll(), 'Count should be 0 when value of guid is null.');
 
         Guid::fromArray(['guid_tvdb' => INF], logger: $this->logger);
         $this->assertTrue(
             $this->logged(Level::Info, 'external id. Unexpected value type.', true),
-            "Assert message logged when the value type does not match the expected type."
+            'Assert message logged when the value type does not match the expected type.',
         );
 
         Guid::fromArray(['guid_tvdb' => 'tt1234567']);
         $this->assertTrue(
             $this->logged(Level::Info, "external id. Unexpected value '", true),
-            "Assert message logged when the value does not match the expected pattern."
+            'Assert message logged when the value does not match the expected pattern.',
         );
     }
 
@@ -88,7 +88,7 @@ class GuidTest extends TestCase
                     r("Failed to assert that '{value} test for '{guid}' returns true.", [
                         'guid' => $guid,
                         'value' => $value,
-                    ])
+                    ]),
                 );
             }
 
@@ -99,7 +99,7 @@ class GuidTest extends TestCase
                         'guid' => $guid,
                         'value' => $value,
                     ]),
-                    exception: InvalidArgumentException::class
+                    exception: InvalidArgumentException::class,
                 );
             }
         }
@@ -108,16 +108,16 @@ class GuidTest extends TestCase
             closure: fn() => Guid::validate('guid_not_set', '12345678'),
             reason: 'Failed to assert that an exception is thrown when the GUID is not supported.',
             exception: InvalidArgumentException::class,
-            exceptionMessage: 'Invalid db'
+            exceptionMessage: 'Invalid db',
         );
 
         $this->assertTrue(
             Guid::validate('guid_cmdb', '12345678'),
-            'Assert supported guid with no validator returns true.'
+            'Assert supported guid with no validator returns true.',
         );
         $this->assertTrue(
             Guid::validate('path', '0123456789abcdef0123456789abcdef'),
-            'Assert path guid validates through prefix normalization.'
+            'Assert path guid validates through prefix normalization.',
         );
     }
 
@@ -126,9 +126,9 @@ class GuidTest extends TestCase
         Guid::reparse();
         $guid = Guid::fromArray(['guid_imdb' => 'tt1234567', 'guid_tvdb' => '123']);
         $this->assertJsonStringEqualsJsonString(
-            json_encode(['guid_imdb' => 'tt1234567', 'guid_tvdb' => '123',]),
+            json_encode(['guid_imdb' => 'tt1234567', 'guid_tvdb' => '123']),
             json_encode($guid),
-            "Failed to assert that the JSON serialization of the Guid object is correct."
+            'Failed to assert that the JSON serialization of the Guid object is correct.',
         );
     }
 
@@ -136,9 +136,9 @@ class GuidTest extends TestCase
     {
         $guid = Guid::fromArray(['guid_imdb' => 'tt1234567', 'guid_tvdb' => '123']);
         $this->assertJsonStringEqualsJsonString(
-            json_encode(['guid_imdb' => 'tt1234567', 'guid_tvdb' => '123',]),
-            (string)$guid,
-            "Failed to assert that the string representation of the Guid object is correct. {records}"
+            json_encode(['guid_imdb' => 'tt1234567', 'guid_tvdb' => '123']),
+            (string) $guid,
+            'Failed to assert that the string representation of the Guid object is correct. {records}',
         );
     }
 
@@ -148,9 +148,9 @@ class GuidTest extends TestCase
 
         $this->checkException(
             closure: fn() => Guid::parseGUIDFile('not_set.yml'),
-            reason: "Failed to assert that the GUID file is not found.",
+            reason: 'Failed to assert that the GUID file is not found.',
             exception: InvalidArgumentException::class,
-            exceptionMessage: 'does not exist'
+            exceptionMessage: 'does not exist',
         );
 
         $tmpFile = self::$tmpPath . '/guid_' . uniqid();
@@ -159,9 +159,9 @@ class GuidTest extends TestCase
                 file_put_contents($tmpFile, 'fff: {_]');
                 Guid::parseGUIDFile($tmpFile);
             },
-            reason: "Failed to throw exception when the GUID file is invalid.",
+            reason: 'Failed to throw exception when the GUID file is invalid.',
             exception: InvalidArgumentException::class,
-            exceptionMessage: 'Failed to parse GUIDs file'
+            exceptionMessage: 'Failed to parse GUIDs file',
         );
 
         $tmpFile = self::$tmpPath . '/guid_' . uniqid();
@@ -170,9 +170,9 @@ class GuidTest extends TestCase
                 file_put_contents($tmpFile, 'invalid');
                 Guid::parseGUIDFile($tmpFile);
             },
-            reason: "Failed to throw exception when the GUID file is invalid.",
+            reason: 'Failed to throw exception when the GUID file is invalid.',
             exception: InvalidArgumentException::class,
-            exceptionMessage: 'is not an array'
+            exceptionMessage: 'is not an array',
         );
 
         $tmpFile = self::$tmpPath . '/guid_' . uniqid();
@@ -181,9 +181,9 @@ class GuidTest extends TestCase
                 file_put_contents($tmpFile, 'version: 2.0');
                 Guid::parseGUIDFile($tmpFile);
             },
-            reason: "Failed to throw exception when the GUID file version is not supported.",
+            reason: 'Failed to throw exception when the GUID file version is not supported.',
             exception: InvalidArgumentException::class,
-            exceptionMessage: 'Unsupported file version'
+            exceptionMessage: 'Unsupported file version',
         );
 
         $tmpFile = self::$tmpPath . '/guid_' . uniqid();
@@ -191,7 +191,7 @@ class GuidTest extends TestCase
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
             $this->logged(Level::Info, 'is empty', true),
-            "Failed to assert that the GUID file is empty."
+            'Failed to assert that the GUID file is empty.',
         );
 
         $tmpFile = self::$tmpPath . '/guid_' . uniqid();
@@ -200,9 +200,9 @@ class GuidTest extends TestCase
                 file_put_contents($tmpFile, Yaml::dump(['guids' => []]));
                 Guid::parseGUIDFile($tmpFile);
             },
-            reason: "Should throw an exception when there are no GUIDs mapping.",
+            reason: 'Should throw an exception when there are no GUIDs mapping.',
             exception: InvalidArgumentException::class,
-            exceptionMessage: 'does not contain any GUIDs mapping'
+            exceptionMessage: 'does not contain any GUIDs mapping',
         );
 
         $tmpFile = self::$tmpPath . '/guid_' . uniqid();
@@ -210,21 +210,21 @@ class GuidTest extends TestCase
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
             $this->logged(Level::Warning, 'Value must be an object', true),
-            'Assert that GUID key is an array.'
+            'Assert that GUID key is an array.',
         );
 
         file_put_contents($tmpFile, Yaml::dump(['guids' => [['name' => 'imdb']]]));
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
             $this->logged(Level::Warning, "name must start with 'guid_'", true),
-            'Assert that GUID name starts with guid_'
+            'Assert that GUID name starts with guid_',
         );
 
         file_put_contents($tmpFile, Yaml::dump(['guids' => [['name' => 'guid_imdb', 'type' => INF]]]));
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
             $this->logged(Level::Warning, 'type must be a string', true),
-            'Assert guid type is string.'
+            'Assert guid type is string.',
         );
 
         $yaml = [
@@ -232,9 +232,9 @@ class GuidTest extends TestCase
                 [
                     'name' => 'guid_foobar',
                     'type' => 'string',
-                    'validator' => []
-                ]
-            ]
+                    'validator' => [],
+                ],
+            ],
         ];
 
         file_put_contents($tmpFile, Yaml::dump($yaml));
@@ -242,7 +242,7 @@ class GuidTest extends TestCase
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
             $this->logged(Level::Warning, 'validator key must be an object', true),
-            'Assert validator key is an object.'
+            'Assert validator key is an object.',
         );
 
         $yaml = ag_set($yaml, 'guids.0.validator', ['pattern' => '\d']);
@@ -250,7 +250,7 @@ class GuidTest extends TestCase
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
             $this->logged(Level::Warning, 'validator.pattern is empty or invalid', true),
-            'Assert a message is logged when the pattern is invalid.'
+            'Assert a message is logged when the pattern is invalid.',
         );
 
         $yaml = ag_set($yaml, 'guids.0.validator', ['pattern' => '/^\d+$/']);
@@ -258,7 +258,7 @@ class GuidTest extends TestCase
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
             $this->logged(Level::Warning, 'validator.example is empty or not a string', true),
-            'Assert a message is logged when the example is empty or not a string.'
+            'Assert a message is logged when the example is empty or not a string.',
         );
 
         $yaml = ag_set($yaml, 'guids.0.validator', ['pattern' => '/^\d+$/', 'example' => '(number)']);
@@ -266,7 +266,7 @@ class GuidTest extends TestCase
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
             $this->logged(Level::Warning, 'validator.tests key must be an object', true),
-            'Assert a message is logged when the test key is not an object.'
+            'Assert a message is logged when the test key is not an object.',
         );
 
         $yaml = ag_set($yaml, 'guids.0.validator.tests', ['valid' => 'foo']);
@@ -274,7 +274,7 @@ class GuidTest extends TestCase
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
             $this->logged(Level::Warning, 'validator.tests.valid key must be an array', true),
-            'Assert a message is logged when the test key is not an object.'
+            'Assert a message is logged when the test key is not an object.',
         );
 
         $yaml = ag_set($yaml, 'guids.0.validator.tests.valid', ['d12345678']);
@@ -282,7 +282,7 @@ class GuidTest extends TestCase
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
             $this->logged(Level::Warning, 'does not match pattern', true),
-            'Assert a message is logged when valid test does not match the pattern.'
+            'Assert a message is logged when valid test does not match the pattern.',
         );
 
         $yaml = ag_set($yaml, 'guids.0.validator.tests', [
@@ -293,7 +293,7 @@ class GuidTest extends TestCase
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
             $this->logged(Level::Warning, 'validator.tests.invalid key must be an array', true),
-            'Assert a message is logged when invalid test is not an array.'
+            'Assert a message is logged when invalid test is not an array.',
         );
 
         $yaml = ag_set($yaml, 'guids.0.validator.tests', [
@@ -304,7 +304,7 @@ class GuidTest extends TestCase
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
             $this->logged(Level::Warning, 'validator.tests.invalid value', true),
-            'Assert a message is logged when invalid test match the pattern.'
+            'Assert a message is logged when invalid test match the pattern.',
         );
 
         $yaml = ag_set($yaml, 'guids.0.validator.tests', [
@@ -318,12 +318,12 @@ class GuidTest extends TestCase
         $this->assertArrayHasKey(
             'guid_foobar',
             Guid::getValidators(),
-            'Assert that the GUID is added to the validators.'
+            'Assert that the GUID is added to the validators.',
         );
         $this->assertArrayHasKey(
             'guid_foobar',
             Guid::getSupported(),
-            'Assert that the GUID is added to the supported GUIDs.'
+            'Assert that the GUID is added to the supported GUIDs.',
         );
     }
 
@@ -339,7 +339,7 @@ class GuidTest extends TestCase
             Guid::getSupported();
             $this->assertTrue(
                 $this->logged(Level::Error, 'Failed to read or parse', true),
-                "Failed to assert that the GUID file is empty."
+                'Failed to assert that the GUID file is empty.',
             );
         } finally {
             Config::save('guid.file', $oldGuidFile);
@@ -353,7 +353,7 @@ class GuidTest extends TestCase
         $this->assertEquals(
             ['guid_imdb://tt1234567', 'guid_tvdb://123', 'guid_path://' . $path],
             $guid->getPointers(),
-            "Failed to assert that the GUID pointers are correct."
+            'Failed to assert that the GUID pointers are correct.',
         );
     }
 
@@ -373,10 +373,10 @@ class GuidTest extends TestCase
                         'tests' => [
                             'valid' => ['12345678'],
                             'invalid' => ['d12345678'],
-                        ]
-                    ]
-                ]
-            ]
+                        ],
+                    ],
+                ],
+            ],
         ];
 
         try {
@@ -386,7 +386,7 @@ class GuidTest extends TestCase
             $this->assertArrayHasKey(
                 'guid_foobar',
                 Guid::getValidators(),
-                'Assert that the GUID is added to the validators.'
+                'Assert that the GUID is added to the validators.',
             );
         } finally {
             Config::save('guid.file', $oldGuidFile);
@@ -399,8 +399,7 @@ class GuidTest extends TestCase
         Guid::fromArray(['guid_tvdb' => INF]);
         $this->assertTrue(
             $this->logged(Level::Info, 'external id. Unexpected value type.', true),
-            "Assert message logged when the value type does not match the expected type."
+            'Assert message logged when the value type does not match the expected type.',
         );
     }
-
 }

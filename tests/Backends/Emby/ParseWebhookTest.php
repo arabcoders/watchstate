@@ -25,7 +25,7 @@ class ParseWebhookTest extends TestCase
             'Item' => ['Type' => 'Audio', 'Id' => 'item-1'],
         ];
 
-        $request = (new ServerRequest('POST', new Uri('http://mediabrowser.test')))->withParsedBody($payload);
+        $request = new ServerRequest('POST', new Uri('http://mediabrowser.test'))->withParsedBody($payload);
         $context = $this->createContext(EmbyClient::CLIENT_NAME);
         $logger = new Logger('test', [new NullHandler()]);
 
@@ -43,7 +43,7 @@ class ParseWebhookTest extends TestCase
             'Item' => ['Type' => EmbyClient::TYPE_MOVIE, 'Id' => 'item-1'],
         ];
 
-        $request = (new ServerRequest('POST', new Uri('http://mediabrowser.test')))->withParsedBody($payload);
+        $request = new ServerRequest('POST', new Uri('http://mediabrowser.test'))->withParsedBody($payload);
         $context = $this->createContext(EmbyClient::CLIENT_NAME);
         $logger = new Logger('test', [new NullHandler()]);
 
@@ -53,5 +53,4 @@ class ParseWebhookTest extends TestCase
         $this->assertFalse($response->isSuccessful());
         $this->assertSame(200, $response->extra['http_code']);
     }
-
 }

@@ -77,7 +77,8 @@ class GetUsersListTest extends PlexTestCase
 
     public function test_users_list_dedup(): void
     {
-        $externalUsersXml = '<MediaContainer>'
+        $externalUsersXml =
+            '<MediaContainer>'
             . '<User id="3003" username="Invited Guest" thumb="/users/external-uuid-3/avatar" home="0" restricted="0" protected="0" />'
             . '<User id="2002" username="Shared Member" thumb="/users/shared-uuid-2/avatar" home="1" restricted="1" protected="1" />'
             . '</MediaContainer>';
@@ -200,7 +201,12 @@ class GetUsersListTest extends PlexTestCase
         ]);
 
         $requests = [];
-        $http = new \App\Libs\Extends\MockHttpClient(function (string $method, string $url) use (&$requests, $homeUsersJson, $switchJson, $resourcesJson) {
+        $http = new \App\Libs\Extends\MockHttpClient(function (string $method, string $url) use (
+            &$requests,
+            $homeUsersJson,
+            $switchJson,
+            $resourcesJson,
+        ) {
             $requests[] = $url;
             if (str_contains($url, '/api/v2/home/users/') && str_contains($url, '/switch')) {
                 if (str_contains($url, '/api/v2/home/users/uuid-2/switch')) {

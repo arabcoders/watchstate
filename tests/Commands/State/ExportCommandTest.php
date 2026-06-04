@@ -8,8 +8,8 @@ use App\Commands\State\ExportCommand;
 use App\Libs\Container;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
-use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\LogSuppressor;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\QueueRequests;
 use App\Libs\TestCase;
 use Monolog\Logger;
@@ -54,13 +54,16 @@ final class ExportCommandTest extends TestCase
         ]);
 
         self::assertSame(ExportCommand::SUCCESS, $status);
-        self::assertSame([
+        self::assertSame(
             [
-                'backend' => 'fake_export',
-                'user' => 'alice',
-                'after' => null,
+                [
+                    'backend' => 'fake_export',
+                    'user' => 'alice',
+                    'after' => null,
+                ],
             ],
-        ], FakeBackendClient::getCalls('export'));
+            FakeBackendClient::getCalls('export'),
+        );
         self::assertSame([], FakeBackendClient::getCalls('push'));
 
         $aliceConfig = Yaml::parseFile(self::$tmpPath . '/users/alice/servers.yaml');
@@ -135,14 +138,17 @@ final class ExportCommandTest extends TestCase
 
         self::assertSame(ExportCommand::SUCCESS, $status);
         self::assertSame([], FakeBackendClient::getCalls('export'));
-        self::assertSame([
+        self::assertSame(
             [
-                'backend' => 'fake_export',
-                'user' => 'alice',
-                'count' => 1,
-                'after' => 1_700_000_050,
+                [
+                    'backend' => 'fake_export',
+                    'user' => 'alice',
+                    'count' => 1,
+                    'after' => 1_700_000_050,
+                ],
             ],
-        ], FakeBackendClient::getCalls('push'));
+            FakeBackendClient::getCalls('push'),
+        );
     }
 
     public function test_row_timestamp_uses_push(): void
@@ -193,14 +199,17 @@ final class ExportCommandTest extends TestCase
 
         self::assertSame(ExportCommand::SUCCESS, $status);
         self::assertSame([], FakeBackendClient::getCalls('export'));
-        self::assertSame([
+        self::assertSame(
             [
-                'backend' => 'fake_export',
-                'user' => 'alice',
-                'count' => 1,
-                'after' => 1_700_000_100,
+                [
+                    'backend' => 'fake_export',
+                    'user' => 'alice',
+                    'count' => 1,
+                    'after' => 1_700_000_100,
+                ],
             ],
-        ], FakeBackendClient::getCalls('push'));
+            FakeBackendClient::getCalls('push'),
+        );
 
         $aliceConfig = Yaml::parseFile(self::$tmpPath . '/users/alice/servers.yaml');
         self::assertSame(1_700_000_150, ag($aliceConfig, 'fake_export.export.lastSync'));

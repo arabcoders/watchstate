@@ -17,12 +17,12 @@ class envFileTest extends TestCase
         parent::setUp();
         $this->initTempDir();
         $this->data = [
-            "WS_TZ" => "Asia/Kuwait",
-            "WS_CRON_IMPORT" => "1",
-            "WS_CRON_EXPORT" => "0",
-            "WS_CRON_IMPORT_AT" => "16 */1 * * *",
-            "WS_CRON_EXPORT_AT" => "30 */3 * * *",
-            "WS_CRON_PUSH_AT" => "*/10 * * * *",
+            'WS_TZ' => 'Asia/Kuwait',
+            'WS_CRON_IMPORT' => '1',
+            'WS_CRON_EXPORT' => '0',
+            'WS_CRON_IMPORT_AT' => '16 */1 * * *',
+            'WS_CRON_EXPORT_AT' => '30 */3 * * *',
+            'WS_CRON_PUSH_AT' => '*/10 * * * *',
         ];
     }
 
@@ -32,7 +32,7 @@ class envFileTest extends TestCase
             closure: fn() => new EnvFile('nonexistent.env', create: false),
             reason: 'If file does not exist, and autoCreate is set to false, an exception should be thrown.',
             exception: RuntimeException::class,
-            exceptionMessage: "does not exist.",
+            exceptionMessage: 'does not exist.',
         );
 
         $tmpFile = self::$tmpPath . '/watchstate_test.env';
@@ -54,13 +54,13 @@ class envFileTest extends TestCase
 
         $this->assertNull(
             $envFile->get('nonexistent_key'),
-            "The value of a nonexistent key should be NULL by default."
+            'The value of a nonexistent key should be NULL by default.',
         );
 
         $this->assertSame(
             'default',
             $envFile->get('nonexistent', 'default'),
-            "The default value should be returned."
+            'The default value should be returned.',
         );
     }
 
@@ -83,20 +83,20 @@ class envFileTest extends TestCase
 
         $this->assertNull(
             $envFile->get('nonexistent_key'),
-            "The value of a nonexistent key should be NULL by default."
+            'The value of a nonexistent key should be NULL by default.',
         );
 
         $this->assertSame(
             'default',
             $envFile->get('nonexistent', 'default'),
-            "The default value should be returned."
+            'The default value should be returned.',
         );
 
         $envFile->set('new_key', true);
 
         $this->assertTrue(
             $envFile->get('new_key'),
-            "Due to unfortunate design, the value of key bool 'new_key' should be true. until we persist it."
+            "Due to unfortunate design, the value of key bool 'new_key' should be true. until we persist it.",
         );
 
         $envFile->persist();
@@ -105,7 +105,7 @@ class envFileTest extends TestCase
         $this->assertSame(
             '1',
             $envFile->get('new_key'),
-            "The value of key 'new_key' should be '1' as we cast bool to string."
+            "The value of key 'new_key' should be '1' as we cast bool to string.",
         );
     }
 
@@ -141,7 +141,7 @@ class envFileTest extends TestCase
         $envFile->persist();
 
         $envFile = new EnvFile($tmpFile);
-        $this->assertSame($this->data, $envFile->getAll(), "The data should be persisted and retrieved correctly.");
+        $this->assertSame($this->data, $envFile->getAll(), 'The data should be persisted and retrieved correctly.');
     }
 
     public function test_getAll()
@@ -156,7 +156,7 @@ class envFileTest extends TestCase
         $envFile->persist();
 
         $envFile = new EnvFile($tmpFile);
-        $this->assertSame($this->data, $envFile->getAll(), "The data should be persisted and retrieved correctly.");
+        $this->assertSame($this->data, $envFile->getAll(), 'The data should be persisted and retrieved correctly.');
     }
 
     public function test_remove()

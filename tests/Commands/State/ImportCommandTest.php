@@ -21,8 +21,8 @@ use Psr\SimpleCache\CacheInterface as iCache;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Tester\CommandTester;
-use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 use Symfony\Component\Yaml\Yaml;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 use Tests\Support\FakeBackendClient;
 use Tests\Support\StateCommandTestSupport;
 
@@ -95,9 +95,12 @@ final class ImportCommandTest extends TestCase
 
         self::assertTrue($command->sendRequestsCalled, 'Import command should reach the request processing phase.');
 
-        $stateTable = $db->getDBLayer()->query(
-            sql: "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'state'"
-        )->fetchColumn();
+        $stateTable = $db
+            ->getDBLayer()
+            ->query(
+                sql: "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'state'",
+            )
+            ->fetchColumn();
 
         self::assertSame('state', $stateTable, 'Failed request-phase writes should be rolled back with the adapter transaction.');
     }
@@ -157,18 +160,21 @@ final class ImportCommandTest extends TestCase
         $status = $this->makeTester($command)->execute([]);
 
         self::assertSame(ImportCommand::SUCCESS, $status);
-        self::assertSame([
+        self::assertSame(
             [
-                'backend' => 'full_second',
-                'user' => 'main',
-                'after' => 1_700_000_000,
+                [
+                    'backend' => 'full_second',
+                    'user' => 'main',
+                    'after' => 1_700_000_000,
+                ],
+                [
+                    'backend' => 'metadata_first',
+                    'user' => 'main',
+                    'after' => 1_700_000_000,
+                ],
             ],
-            [
-                'backend' => 'metadata_first',
-                'user' => 'main',
-                'after' => 1_700_000_000,
-            ],
-        ], FakeBackendClient::getCalls('pull'));
+            FakeBackendClient::getCalls('pull'),
+        );
     }
 
     private function makeTester(ImportCommand $command): CommandTester

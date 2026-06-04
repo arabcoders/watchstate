@@ -31,7 +31,7 @@ class GetUsersListTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinGetUsersList::class],
-            ['Emby', EmbyGetUsersList::class],
+            ['Emby',     EmbyGetUsersList::class],
         ];
     }
 }

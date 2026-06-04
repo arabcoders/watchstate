@@ -164,7 +164,7 @@ class PushEdgeCasesTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinPush::class],
-            ['Emby', EmbyPush::class],
+            ['Emby',     EmbyPush::class],
         ];
     }
 }

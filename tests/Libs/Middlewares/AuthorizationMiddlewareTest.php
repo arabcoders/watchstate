@@ -10,8 +10,8 @@ use App\Libs\Config;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Middlewares\AuthorizationMiddleware;
-use App\Libs\TokenUtil;
 use App\Libs\TestCase;
+use App\Libs\TokenUtil;
 use Tests\Support\AuthTokenTestSupport;
 use Tests\Support\RequestResponseTrait;
 
@@ -29,7 +29,7 @@ class AuthorizationMiddlewareTest extends TestCase
     {
         $result = new AuthorizationMiddleware()->process(
             request: $this->getRequest()->withAttribute('INTERNAL_REQUEST', true),
-            handler: $this->getHandler()
+            handler: $this->getHandler(),
         );
         $this->assertSame(200, $result->getStatusCode(), 'Internal request failed');
     }
@@ -38,7 +38,7 @@ class AuthorizationMiddlewareTest extends TestCase
     {
         $result = new AuthorizationMiddleware()->process(
             request: $this->getRequest(method: Method::OPTIONS),
-            handler: $this->getHandler()
+            handler: $this->getHandler(),
         );
 
         $this->assertSame(Status::OK, Status::from($result->getStatusCode()), 'Options request failed');
@@ -50,7 +50,7 @@ class AuthorizationMiddlewareTest extends TestCase
 
         $routes = [
             HealthCheck::URL,
-            Auth::URL . '/test'
+            Auth::URL . '/test',
         ];
 
         $routesSemiOpen = [
@@ -61,7 +61,7 @@ class AuthorizationMiddlewareTest extends TestCase
             $uri = parse_config_value($route);
             $result = new AuthorizationMiddleware()->process(
                 request: $this->getRequest(uri: $uri),
-                handler: $this->getHandler()
+                handler: $this->getHandler(),
             );
             $this->assertSame(Status::OK, Status::from($result->getStatusCode()), "Open route '{$uri}' failed");
         }
@@ -70,7 +70,7 @@ class AuthorizationMiddlewareTest extends TestCase
             $uri = parse_config_value($route);
             $result = new AuthorizationMiddleware()->process(
                 request: $this->getRequest(uri: $uri),
-                handler: $this->getHandler()
+                handler: $this->getHandler(),
             );
             $this->assertSame(Status::OK, Status::from($result->getStatusCode()), "Open route '{$uri}' failed");
         }
@@ -81,12 +81,12 @@ class AuthorizationMiddlewareTest extends TestCase
             $uri = parse_config_value($route);
             $result = new AuthorizationMiddleware()->process(
                 request: $this->getRequest(uri: $uri)->withoutHeader('Authorization'),
-                handler: $this->getHandler()
+                handler: $this->getHandler(),
             );
             $this->assertSame(
                 Status::BAD_REQUEST,
                 Status::from($result->getStatusCode()),
-                "Route '{$uri}' should fail without API key"
+                "Route '{$uri}' should fail without API key",
             );
         }
 
@@ -94,12 +94,12 @@ class AuthorizationMiddlewareTest extends TestCase
             $uri = parse_config_value($route);
             $result = new AuthorizationMiddleware()->process(
                 request: $this->getRequest(uri: $uri)->withHeader('Authorization', 'Bearer api'),
-                handler: $this->getHandler()
+                handler: $this->getHandler(),
             );
             $this->assertSame(
                 Status::UNAUTHORIZED,
                 Status::from($result->getStatusCode()),
-                "Route '{$uri}' should fail without correct API key"
+                "Route '{$uri}' should fail without correct API key",
             );
         }
 
@@ -109,14 +109,14 @@ class AuthorizationMiddlewareTest extends TestCase
             $result = new AuthorizationMiddleware()->process(
                 request: $this->getRequest(uri: $uri, query: ['apikey' => 'api_test_token'])->withHeader(
                     'X-apikey',
-                    'api_test_token'
+                    'api_test_token',
                 ),
-                handler: $this->getHandler()
+                handler: $this->getHandler(),
             );
             $this->assertSame(
                 Status::OK,
                 Status::from($result->getStatusCode()),
-                "Route '{$uri}' should pass with correct API key"
+                "Route '{$uri}' should pass with correct API key",
             );
         }
 

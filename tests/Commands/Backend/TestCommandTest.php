@@ -59,9 +59,12 @@ final class TestCommandTest extends \PHPUnit\Framework\TestCase
 
         $payload = json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR);
         self::assertSame('getPlaylistsList', $payload['action']);
-        self::assertSame([
-            ['id' => 'playlist-1', 'title' => 'Weekend Movies'],
-        ], $payload['result']);
+        self::assertSame(
+            [
+                ['id' => 'playlist-1', 'title' => 'Weekend Movies'],
+            ],
+            $payload['result'],
+        );
     }
 
     public function test_invokes_routes_opts(): void
@@ -87,9 +90,12 @@ final class TestCommandTest extends \PHPUnit\Framework\TestCase
 
         $payload = json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR);
         self::assertSame('getUsersList', $payload['action']);
-        self::assertSame([
-            ['id' => 1, 'name' => 'alpha'],
-        ], $payload['result']);
+        self::assertSame(
+            [
+                ['id' => 1, 'name' => 'alpha'],
+            ],
+            $payload['result'],
+        );
     }
 
     public function test_normalizes_named_opts(): void

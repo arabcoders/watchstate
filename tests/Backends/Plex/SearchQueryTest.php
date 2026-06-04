@@ -7,7 +7,6 @@ namespace Tests\Backends\Plex;
 use App\Backends\Plex\Action\SearchQuery;
 use App\Backends\Plex\PlexGuid;
 
-
 class SearchQueryTest extends PlexTestCase
 {
     public function test_search_query_success(): void

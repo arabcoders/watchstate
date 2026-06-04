@@ -51,12 +51,15 @@ final class QueryCommandTest extends TestCase
         ]);
 
         self::assertSame(QueryCommand::SUCCESS, $status);
-        self::assertSame([
+        self::assertSame(
             [
-                'id' => 1,
-                'name' => 'main-row',
+                [
+                    'id' => 1,
+                    'name' => 'main-row',
+                ],
             ],
-        ], json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR));
+            json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR),
+        );
     }
 
     public function test_write_affected_rows(): void
@@ -78,11 +81,14 @@ final class QueryCommandTest extends TestCase
         self::assertStringContainsString('Affected 1 row(s).', $tester->getDisplay());
 
         $result = $main->db->getDBLayer()->query('SELECT name FROM sample WHERE id = 1')->fetchAll(PDO::FETCH_ASSOC);
-        self::assertSame([
+        self::assertSame(
             [
-                'name' => 'after',
+                [
+                    'name' => 'after',
+                ],
             ],
-        ], $result);
+            $result,
+        );
     }
 
     public function test_user_routes_db(): void
@@ -110,12 +116,15 @@ final class QueryCommandTest extends TestCase
         ]);
 
         self::assertSame(QueryCommand::SUCCESS, $status);
-        self::assertSame([
+        self::assertSame(
             [
-                'id' => 1,
-                'name' => 'alice-row',
+                [
+                    'id' => 1,
+                    'name' => 'alice-row',
+                ],
             ],
-        ], json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR));
+            json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR),
+        );
     }
 
     public function test_named_params_bind(): void
@@ -142,12 +151,15 @@ final class QueryCommandTest extends TestCase
         ]);
 
         self::assertSame(QueryCommand::SUCCESS, $status);
-        self::assertSame([
+        self::assertSame(
             [
-                'id' => 2,
-                'name' => 'beta',
+                [
+                    'id' => 2,
+                    'name' => 'beta',
+                ],
             ],
-        ], json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR));
+            json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR),
+        );
     }
 
     public function test_named_params_kv(): void
@@ -196,12 +208,15 @@ final class QueryCommandTest extends TestCase
         ]);
 
         self::assertSame(QueryCommand::SUCCESS, $status);
-        self::assertSame([
+        self::assertSame(
             [
-                'id' => 2,
-                'name' => 'beta',
+                [
+                    'id' => 2,
+                    'name' => 'beta',
+                ],
             ],
-        ], json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR));
+            json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR),
+        );
     }
 
     public function test_positional_equals_literal(): void
@@ -228,12 +243,15 @@ final class QueryCommandTest extends TestCase
         ]);
 
         self::assertSame(QueryCommand::SUCCESS, $status);
-        self::assertSame([
+        self::assertSame(
             [
-                'id' => 1,
-                'name' => 'alpha=beta',
+                [
+                    'id' => 1,
+                    'name' => 'alpha=beta',
+                ],
             ],
-        ], json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR));
+            json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR),
+        );
     }
 
     public function test_mixed_placeholders_rejected(): void
@@ -275,14 +293,17 @@ final class QueryCommandTest extends TestCase
         self::assertSame(QueryCommand::SUCCESS, $status);
 
         $result = $db->query('SELECT id, enabled, score, note FROM flags')->fetchAll(PDO::FETCH_ASSOC);
-        self::assertSame([
+        self::assertSame(
             [
-                'id' => 1,
-                'enabled' => 1,
-                'score' => 2.5,
-                'note' => null,
+                [
+                    'id' => 1,
+                    'enabled' => 1,
+                    'score' => 2.5,
+                    'note' => null,
+                ],
             ],
-        ], $result);
+            $result,
+        );
     }
 
     public function test_unknown_user(): void

@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Backends\Plex;
 
-use App\Backends\Plex\Action\ToEntity;
+use App\Backends\Common\Response;
 use App\Backends\Plex\Action\GetMetaData;
+use App\Backends\Plex\Action\ToEntity;
 use App\Backends\Plex\PlexGuid;
 use App\Libs\Config;
-use App\Libs\Entity\StateInterface;
-use App\Backends\Common\Response;
 use App\Libs\Container;
+use App\Libs\Entity\StateInterface;
 use App\Libs\Guid;
 
 class ToEntityTest extends PlexTestCase
@@ -62,9 +62,9 @@ class ToEntityTest extends PlexTestCase
         ];
 
         Container::add(GetMetaData::class, fn() => new class($showPayload) {
-            public function __construct(private array $payload)
-            {
-            }
+            public function __construct(
+                private array $payload,
+            ) {}
 
             public function __invoke(\App\Backends\Common\Context $context, string|int $id, array $opts = []): Response
             {
@@ -130,9 +130,9 @@ class ToEntityTest extends PlexTestCase
         ];
 
         Container::add(GetMetaData::class, fn() => new class($showPayload) {
-            public function __construct(private array $payload)
-            {
-            }
+            public function __construct(
+                private array $payload,
+            ) {}
 
             public function __invoke(\App\Backends\Common\Context $context, string|int $id, array $opts = []): Response
             {

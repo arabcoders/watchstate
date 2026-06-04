@@ -38,7 +38,7 @@ class ExportFlowTest extends MediaBrowserTestCase
                 ]),
             ));
             $action = new $actionClass($http, $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
 
             $this->invokeProcess(
                 $action,
@@ -79,7 +79,7 @@ class ExportFlowTest extends MediaBrowserTestCase
 
             $http = $this->makeQueueHttp();
             $action = new $actionClass($http, $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
 
             $this->invokeProcess(
                 $action,
@@ -110,7 +110,7 @@ class ExportFlowTest extends MediaBrowserTestCase
             $item['UserData']['LastPlayedDate'] = '2024-01-02T00:00:00Z';
 
             $action = new $actionClass($this->makeQueueHttp(), $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
 
             $this->invokeProcess(
                 $action,
@@ -141,7 +141,7 @@ class ExportFlowTest extends MediaBrowserTestCase
             $item['DateCreated'] = '2024-01-02T00:00:00Z';
 
             $action = new $actionClass($this->makeQueueHttp(), $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
 
             $this->invokeProcess(
                 $action,
@@ -169,7 +169,7 @@ class ExportFlowTest extends MediaBrowserTestCase
             $item['UserData']['LastPlayedDate'] = '2024-01-02T00:00:00Z';
 
             $action = new $actionClass($this->makeQueueHttp(), $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
 
             $this->invokeProcess(
                 $action,
@@ -199,7 +199,7 @@ class ExportFlowTest extends MediaBrowserTestCase
             $item['UserData']['Played'] = false;
 
             $action = new $actionClass($this->makeQueueHttp(), $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
 
             $this->invokeProcess(
                 $action,
@@ -228,7 +228,7 @@ class ExportFlowTest extends MediaBrowserTestCase
             unset($item['DateCreated']);
 
             $action = new $actionClass($this->makeQueueHttp(), $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
 
             $this->invokeProcess(
                 $action,
@@ -289,9 +289,14 @@ class ExportFlowTest extends MediaBrowserTestCase
 
     private function buildMapper(\App\Backends\Common\Context $context, ?iState $entity): \App\Libs\Mappers\ImportInterface
     {
-        return new class($this->logger, $context->userContext->db, $context->userContext->cache, $entity) extends \App\Libs\Mappers\Import\DirectMapper {
-            public function __construct($logger, $db, $cache, private ?iState $entity)
-            {
+        return new class($this->logger, $context->userContext->db, $context->userContext->cache, $entity) extends
+            \App\Libs\Mappers\Import\DirectMapper {
+            public function __construct(
+                $logger,
+                $db,
+                $cache,
+                private ?iState $entity,
+            ) {
                 parent::__construct($logger, $db, $cache);
             }
 
@@ -306,7 +311,7 @@ class ExportFlowTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinExport::class, JellyfinGuid::class],
-            ['Emby', EmbyExport::class, EmbyGuid::class],
+            ['Emby',     EmbyExport::class,     EmbyGuid::class],
         ];
     }
 }

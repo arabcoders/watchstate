@@ -107,28 +107,32 @@ final class PlaylistStoreTest extends TestCase
         self::assertSame('title:weekend movies', $all[0]['sync_id']);
         self::assertNotNull($all[0]['deleted_at']);
 
-        $store->replaceBackendPlaylists('test_plex', [
+        $store->replaceBackendPlaylists(
+            'test_plex',
             [
-                'id' => 'playlist-2',
-                'sync_id' => 'title:weekend movies',
-                'title' => 'Weekend Movies',
-                'type' => 'video',
-                'editable' => true,
-                'smart' => false,
-                'public' => false,
-                'remote_updated_at' => 2000,
-                'metadata' => ['sync' => ['eligible' => true]],
-                'items' => [
-                    [
-                        'position' => 0,
-                        'state_id' => 10,
-                        'backend_item_id' => 'remote-b',
-                        'item_type' => 'movie',
-                        'title' => 'Test Movie',
+                [
+                    'id' => 'playlist-2',
+                    'sync_id' => 'title:weekend movies',
+                    'title' => 'Weekend Movies',
+                    'type' => 'video',
+                    'editable' => true,
+                    'smart' => false,
+                    'public' => false,
+                    'remote_updated_at' => 2000,
+                    'metadata' => ['sync' => ['eligible' => true]],
+                    'items' => [
+                        [
+                            'position' => 0,
+                            'state_id' => 10,
+                            'backend_item_id' => 'remote-b',
+                            'item_type' => 'movie',
+                            'title' => 'Test Movie',
+                        ],
                     ],
                 ],
             ],
-        ], ['playlist-2']);
+            ['playlist-2'],
+        );
 
         $current = $store->getByBackend('test_plex');
         self::assertCount(1, $current);

@@ -30,7 +30,7 @@ class GetInfoTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinGetInfo::class],
-            ['Emby', EmbyGetInfo::class],
+            ['Emby',     EmbyGetInfo::class],
         ];
     }
 }

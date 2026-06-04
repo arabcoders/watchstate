@@ -13,7 +13,7 @@ use Nyholm\Psr7\ServerRequest;
 
 class ServeStaticTest extends TestCase
 {
-    private ServeStatic|null $server = null;
+    private ?ServeStatic $server = null;
     private string $dataPath = __DIR__ . '/../Fixtures/static_data';
 
     protected function setUp(): void
@@ -119,20 +119,20 @@ class ServeStaticTest extends TestCase
         $response = $this->server->serve($this->createRequest('GET', '/test.html'));
         $this->assertEquals(Status::OK->value, $response->getStatusCode());
         $this->assertEquals('text/html; charset=utf-8', $response->getHeaderLine('Content-Type'));
-        $this->assertEquals(file_get_contents($this->dataPath . '/test.html'), (string)$response->getBody());
+        $this->assertEquals(file_get_contents($this->dataPath . '/test.html'), (string) $response->getBody());
         $this->assertSame(filesize($this->dataPath . '/test.html'), $response->getBody()->getSize());
 
         $response = new ServeStatic()->serve($this->createRequest('GET', '/guides/identities.md'));
         $this->assertEquals(Status::OK->value, $response->getStatusCode());
         $this->assertEquals('text/markdown; charset=utf-8', $response->getHeaderLine('Content-Type'));
-        $this->assertEquals(file_get_contents(__DIR__ . '/../../guides/identities.md'), (string)$response->getBody());
+        $this->assertEquals(file_get_contents(__DIR__ . '/../../guides/identities.md'), (string) $response->getBody());
 
         $response = new ServeStatic()->serve($this->createRequest('GET', '/guides/openapi/plex.json'));
         $this->assertEquals(Status::OK->value, $response->getStatusCode());
         $this->assertEquals('application/json; charset=utf-8', $response->getHeaderLine('Content-Type'));
         $this->assertEquals(
             file_get_contents(__DIR__ . '/../../src/Backends/Plex/plex-openai-stable.json'),
-            (string) $response->getBody()
+            (string) $response->getBody(),
         );
 
         $response = new ServeStatic()->serve($this->createRequest('HEAD', '/guides/openapi/jellyfin.json'));
@@ -147,14 +147,14 @@ class ServeStaticTest extends TestCase
         $this->assertEquals('image/jpeg', $response->getHeaderLine('Content-Type'));
         $this->assertEquals(
             file_get_contents(__DIR__ . '/../../screenshots/index.jpg'),
-            (string)$response->getBody()
+            (string) $response->getBody(),
         );
 
         // -- There are similar rules for .md files test them.
         $response = $this->server->serve($this->createRequest('GET', '/README.md'));
         $this->assertEquals(Status::OK->value, $response->getStatusCode());
         $this->assertEquals('text/markdown; charset=utf-8', $response->getHeaderLine('Content-Type'));
-        $this->assertEquals(file_get_contents(__DIR__ . '/../../README.md'), (string)$response->getBody());
+        $this->assertEquals(file_get_contents(__DIR__ . '/../../README.md'), (string) $response->getBody());
 
         // -- Check directory serving.
         $response = $this->server->serve($this->createRequest('GET', '/test'));
@@ -162,7 +162,7 @@ class ServeStaticTest extends TestCase
         $this->assertEquals('text/html; charset=utf-8', $response->getHeaderLine('Content-Type'));
         $this->assertEquals(
             file_get_contents(__DIR__ . '/../Fixtures/static_data/test/index.html'),
-            (string)$response->getBody()
+            (string) $response->getBody(),
         );
 
         $response = $this->server->serve($this->createRequest('GET', '/test.html', [
@@ -177,12 +177,11 @@ class ServeStaticTest extends TestCase
         $this->assertEquals('text/html; charset=utf-8', $response->getHeaderLine('Content-Type'));
         $this->assertEquals(
             file_get_contents(__DIR__ . '/../Fixtures/static_data/test/index.html'),
-            (string)$response->getBody()
+            (string) $response->getBody(),
         );
 
         $response = $this->server->serve($this->createRequest('GET', '/test/view/1'));
         $this->assertEquals(Status::OK->value, $response->getStatusCode());
-
 
         $response = $this->server->serve($this->createRequest('GET', '/test.html', [
             'if-modified-since' => '$$ INVALID DATA',
@@ -191,7 +190,7 @@ class ServeStaticTest extends TestCase
         $this->assertEquals(
             Status::OK->value,
             $response->getStatusCode(),
-            'If the date is invalid, the file should be served as normal.'
+            'If the date is invalid, the file should be served as normal.',
         );
     }
 }

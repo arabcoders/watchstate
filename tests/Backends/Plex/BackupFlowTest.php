@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Backends\Plex;
 
+use App\Backends\Common\Response;
 use App\Backends\Plex\Action\Backup;
 use App\Backends\Plex\Action\GetMetaData;
 use App\Backends\Plex\PlexGuid;
-use App\Backends\Common\Response;
 use App\Libs\Container;
 use App\Libs\Stream;
 use ReflectionMethod;
@@ -23,7 +23,7 @@ class BackupFlowTest extends PlexTestCase
         $writer = new Stream('php://temp', 'w+');
 
         $action = new Backup($this->makeHttpClient(), $this->logger);
-        $guid = (new PlexGuid($this->logger))->withContext($context);
+        $guid = new PlexGuid($this->logger)->withContext($context);
 
         $this->invokeProcess(
             $action,
@@ -78,9 +78,9 @@ class BackupFlowTest extends PlexTestCase
         ];
 
         Container::add(GetMetaData::class, fn() => new class($showPayload) {
-            public function __construct(private array $payload)
-            {
-            }
+            public function __construct(
+                private array $payload,
+            ) {}
 
             public function __invoke(\App\Backends\Common\Context $context, string|int $id, array $opts = []): Response
             {
@@ -91,7 +91,7 @@ class BackupFlowTest extends PlexTestCase
         $writer = new Stream('php://temp', 'w+');
 
         $action = new Backup($this->makeHttpClient(), $this->logger);
-        $guid = (new PlexGuid($this->logger))->withContext($context);
+        $guid = new PlexGuid($this->logger)->withContext($context);
 
         $this->invokeProcess(
             $action,

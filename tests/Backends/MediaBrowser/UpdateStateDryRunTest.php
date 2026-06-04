@@ -48,7 +48,7 @@ class UpdateStateDryRunTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinUpdateState::class],
-            ['Emby', EmbyUpdateState::class],
+            ['Emby',     EmbyUpdateState::class],
         ];
     }
 }

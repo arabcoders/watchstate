@@ -176,5 +176,4 @@ final class TransformersTest extends TestCase
         $decoded = $transformer(TransformType::DECODE, $encoded);
         $this->assertSame($payload, $decoded);
     }
-
 }

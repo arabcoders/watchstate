@@ -32,7 +32,7 @@ class ExportTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinExport::class, JellyfinGuid::class],
-            ['Emby', EmbyExport::class, EmbyGuid::class],
+            ['Emby',     EmbyExport::class,     EmbyGuid::class],
         ];
     }
 }

@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Backends\MediaBrowser;
 
+use App\Backends\Common\Response;
 use App\Backends\Emby\Action\Backup as EmbyBackup;
 use App\Backends\Emby\Action\GetMetaData as EmbyGetMetaData;
 use App\Backends\Emby\EmbyGuid;
 use App\Backends\Jellyfin\Action\Backup as JellyfinBackup;
 use App\Backends\Jellyfin\Action\GetMetaData as JellyfinGetMetaData;
 use App\Backends\Jellyfin\JellyfinGuid;
-use App\Backends\Common\Response;
 use App\Libs\Container;
 use App\Libs\Stream;
 use ReflectionMethod;
@@ -27,7 +27,7 @@ class BackupFlowTest extends MediaBrowserTestCase
             $writer = new Stream('php://temp', 'w+');
 
             $action = new $actionClass($this->makeHttpClient(), $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
 
             $this->invokeProcess(
                 $action,
@@ -65,9 +65,9 @@ class BackupFlowTest extends MediaBrowserTestCase
             ];
 
             Container::add($metaClass, fn() => new class($showPayload) {
-                public function __construct(private array $payload)
-                {
-                }
+                public function __construct(
+                    private array $payload,
+                ) {}
 
                 public function __invoke(\App\Backends\Common\Context $context, string|int $id, array $opts = []): Response
                 {
@@ -78,7 +78,7 @@ class BackupFlowTest extends MediaBrowserTestCase
             $writer = new Stream('php://temp', 'w+');
 
             $action = new $actionClass($this->makeHttpClient(), $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
 
             $this->invokeProcess(
                 $action,
@@ -114,7 +114,7 @@ class BackupFlowTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinBackup::class, JellyfinGuid::class, JellyfinGetMetaData::class],
-            ['Emby', EmbyBackup::class, EmbyGuid::class, EmbyGetMetaData::class],
+            ['Emby',     EmbyBackup::class,     EmbyGuid::class,     EmbyGetMetaData::class],
         ];
     }
 }

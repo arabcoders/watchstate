@@ -30,7 +30,7 @@ class ProxyTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinProxy::class],
-            ['Emby', EmbyProxy::class],
+            ['Emby',     EmbyProxy::class],
         ];
     }
 }

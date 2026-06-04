@@ -30,7 +30,7 @@ class PDOAdapterTest extends TestCase
     private array $testMovie = [];
     private array $testEpisode = [];
 
-    private iDB|null $db = null;
+    private ?iDB $db = null;
 
     public function setUp(): void
     {
@@ -83,14 +83,14 @@ class PDOAdapterTest extends TestCase
             public function getMultiple(iterable $keys, mixed $default = null): iterable
             {
                 foreach ($keys as $key) {
-                    yield $key => $this->get((string)$key, $default);
+                    yield $key => $this->get((string) $key, $default);
                 }
             }
 
             public function setMultiple(iterable $values, DateInterval|int|null $ttl = null): bool
             {
                 foreach ($values as $key => $value) {
-                    $this->set((string)$key, $value, $ttl);
+                    $this->set((string) $key, $value, $ttl);
                 }
 
                 return true;
@@ -99,7 +99,7 @@ class PDOAdapterTest extends TestCase
             public function deleteMultiple(iterable $keys): bool
             {
                 foreach ($keys as $key) {
-                    $this->delete((string)$key);
+                    $this->delete((string) $key);
                 }
 
                 return true;
@@ -131,10 +131,8 @@ class PDOAdapterTest extends TestCase
         $altEpisode[iState::COLUMN_GUIDS][Guid::GUID_TVRAGE] = '6501';
         $altEpisode[iState::COLUMN_GUIDS][Guid::GUID_ANIDB] = '6601';
         foreach ($altEpisode[iState::COLUMN_META_DATA] as $backend => $metadata) {
-            $altEpisode[iState::COLUMN_META_DATA][$backend][iState::COLUMN_META_DATA_EXTRA][iState::COLUMN_META_DATA_EXTRA_TITLE] =
-                'Different Episode Title';
-            $altEpisode[iState::COLUMN_META_DATA][$backend][iState::COLUMN_ID] =
-                ($metadata[iState::COLUMN_ID] ?? 0) + 100;
+            $altEpisode[iState::COLUMN_META_DATA][$backend][iState::COLUMN_META_DATA_EXTRA][iState::COLUMN_META_DATA_EXTRA_TITLE] = 'Different Episode Title';
+            $altEpisode[iState::COLUMN_META_DATA][$backend][iState::COLUMN_ID] = ($metadata[iState::COLUMN_ID] ?? 0) + 100;
         }
 
         $altEpisodeEntity = $this->db->insert(new StateEntity($altEpisode));
@@ -226,14 +224,14 @@ class PDOAdapterTest extends TestCase
         $this->assertSame(
             $modified->getAll(),
             $this->db->get($item)->getAll(),
-            'When db is not empty, get returns object.'
+            'When db is not empty, get returns object.',
         );
 
         // -- look up based on id
         $this->assertSame(
             $modified->getAll(),
             $this->db->get($modified)->getAll(),
-            'Look up db using id pointer and return object.'
+            'Look up db using id pointer and return object.',
         );
     }
 
@@ -285,7 +283,7 @@ class PDOAdapterTest extends TestCase
         $this->assertSame(
             [],
             $this->db->getAll(opts: ['class' => $item]),
-            'When db is empty, getAll returns empty array.'
+            'When db is empty, getAll returns empty array.',
         );
 
         $this->db->insert($item);
@@ -293,13 +291,13 @@ class PDOAdapterTest extends TestCase
         $this->assertCount(
             1,
             $this->db->getAll(opts: ['class' => $item]),
-            'When db is not empty, objects returned.'
+            'When db is not empty, objects returned.',
         );
 
         $this->assertCount(
             0,
             $this->db->getAll(date: new DateTimeImmutable('now'), opts: ['class' => $item]),
-            'When db is not empty, And date condition is not met. empty array should be returned.'
+            'When db is not empty, And date condition is not met. empty array should be returned.',
         );
     }
 
@@ -349,7 +347,7 @@ class PDOAdapterTest extends TestCase
         $this->assertSame(
             $updatedItem->getAll(),
             $r,
-            'When updating item, getAll should return same values as the recorded item.'
+            'When updating item, getAll should return same values as the recorded item.',
         );
 
         $updatedItem->watched = 0;
@@ -360,7 +358,7 @@ class PDOAdapterTest extends TestCase
 
         $this->assertNull(
             ag($item->getMetadata($item->via), iState::COLUMN_META_DATA_PLAYED_AT),
-            'When watched flag is set to 0, played_at metadata should be null.'
+            'When watched flag is set to 0, played_at metadata should be null.',
         );
     }
 
@@ -456,12 +454,12 @@ class PDOAdapterTest extends TestCase
         $this->assertArrayHasKey(
             $episodeEntity->id,
             $second,
-            'Episode record should remain present in cached duplicates result.'
+            'Episode record should remain present in cached duplicates result.',
         );
         $this->assertArrayHasKey(
             $movieEntity->id,
             $second,
-            'Related movie record should remain present in cached duplicates result.'
+            'Related movie record should remain present in cached duplicates result.',
         );
     }
 
@@ -483,7 +481,7 @@ class PDOAdapterTest extends TestCase
         $this->assertSame(
             $expectedIds,
             $fetchedIds,
-            'Fetch should yield the same set of IDs that were inserted.'
+            'Fetch should yield the same set of IDs that were inserted.',
         );
     }
 
@@ -507,35 +505,35 @@ class PDOAdapterTest extends TestCase
 
         $this->assertTrue(
             $this->db->remove($item1),
-            'When db is not empty, remove returns true if record removed.'
+            'When db is not empty, remove returns true if record removed.',
         );
         $this->assertInstanceOf(
             iState::class,
             $this->db->get($item2),
-            'When Record exists an instance of StateInterface is returned.'
+            'When Record exists an instance of StateInterface is returned.',
         );
 
         $this->assertNull(
             $this->db->get($item3),
-            'When Record does not exists a null is returned.'
+            'When Record does not exists a null is returned.',
         );
 
         // -- remove without id pointer.
         $this->assertTrue(
             $this->db->remove($item2),
-            'If record does not have id but have pointers resolve it in db and remove it, and return true.'
+            'If record does not have id but have pointers resolve it in db and remove it, and return true.',
         );
 
         $this->assertFalse(
             $this->db->remove($item3),
-            'If record does not have id and/or pointers, return false.'
+            'If record does not have id and/or pointers, return false.',
         );
 
         $item1 = new StateEntity($this->testEpisode);
         $this->db->insert($item1);
         $this->assertTrue(
             $this->db->remove(new StateEntity($this->testEpisode)),
-            'When removing item with id, return true.'
+            'When removing item with id, return true.',
         );
     }
 
@@ -547,7 +545,7 @@ class PDOAdapterTest extends TestCase
         $this->assertSame(
             ['added' => 2, 'updated' => 0, 'failed' => 0],
             $this->db->commit([$item1, $item2]),
-            'Array<added, updated, failed> with count of each operation status.'
+            'Array<added, updated, failed> with count of each operation status.',
         );
 
         $item1->guids['guid_anidb'] = iState::TYPE_EPISODE . '/1';
@@ -556,7 +554,7 @@ class PDOAdapterTest extends TestCase
         $this->assertSame(
             ['added' => 0, 'updated' => 2, 'failed' => 0],
             $this->db->commit([$item1, $item2]),
-            'Array<added, updated, failed> with count of each operation status.'
+            'Array<added, updated, failed> with count of each operation status.',
         );
     }
 
@@ -592,7 +590,7 @@ class PDOAdapterTest extends TestCase
         $this->assertCount(0, $item1_db->apply($item1)->diff(), 'When item is found, it should be returned.');
         $this->assertNull(
             $this->db->findByBackendId('not_set', 0, 'movie'),
-            'When item is not found, null should be returned.'
+            'When item is not found, null should be returned.',
         );
 
         $item2_db = $this->db->findByBackendId(
@@ -667,17 +665,19 @@ class PDOAdapterTest extends TestCase
 
     public function test_transaction()
     {
-        $this->db->getDBLayer()->transactional(function () {
-            $this->checkException(
-                closure: function () {
-                    return $this->db->transactional(fn() => throw new \PDOException('test', 11));
-                },
-                reason: 'If we started transaction from outside the db, it shouldn\'t swallow the exception.',
-                exception: DBLayerException::class,
-                exceptionMessage: 'test',
-                exceptionCode: 11,
-            );
-        });
+        $this->db
+            ->getDBLayer()
+            ->transactional(function () {
+                $this->checkException(
+                    closure: function () {
+                        return $this->db->transactional(fn() => throw new \PDOException('test', 11));
+                    },
+                    reason: 'If we started transaction from outside the db, it shouldn\'t swallow the exception.',
+                    exception: DBLayerException::class,
+                    exceptionMessage: 'test',
+                    exceptionCode: 11,
+                );
+            });
 
         $this->db->transactional(fn($db) => $db->insert(new StateEntity($this->testEpisode)));
 
@@ -710,7 +710,7 @@ class PDOAdapterTest extends TestCase
         self::assertSame(
             0,
             (int) $verify->query('SELECT COUNT(*) FROM state')->fetchColumn(),
-            'Uncommitted adapter writes should not be visible to another connection.'
+            'Uncommitted adapter writes should not be visible to another connection.',
         );
 
         unset($db);
@@ -718,7 +718,7 @@ class PDOAdapterTest extends TestCase
         self::assertSame(
             0,
             (int) $verify->query('SELECT COUNT(*) FROM state')->fetchColumn(),
-            'Destroying adapter should not auto-commit an open transaction.'
+            'Destroying adapter should not auto-commit an open transaction.',
         );
     }
 
@@ -754,15 +754,18 @@ class PDOAdapterTest extends TestCase
     private function stateManagedIndexes(PDO $pdo): array
     {
         $indexes = $pdo->query(
-            "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'state' ORDER BY name"
+            "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'state' ORDER BY name",
         )?->fetchAll(PDO::FETCH_COLUMN);
 
         $managed = array_values(array_filter(
             false === is_array($indexes) ? [] : $indexes,
-            fn(mixed $name): bool => true === is_string($name) && (
-                str_starts_with($name, 'state_parent_')
-                || str_starts_with($name, 'state_guids_')
-                || str_starts_with($name, 'state_metadata_')
+            fn(mixed $name): bool => (
+                true === is_string($name)
+                && (
+                    str_starts_with($name, 'state_parent_')
+                    || str_starts_with($name, 'state_guids_')
+                    || str_starts_with($name, 'state_metadata_')
+                )
             ),
         ));
 
@@ -770,5 +773,4 @@ class PDOAdapterTest extends TestCase
 
         return $managed;
     }
-
 }

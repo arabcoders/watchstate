@@ -6,8 +6,8 @@ namespace Tests\API\Player;
 
 use App\API\Player\Stream;
 use App\API\System\Sign;
-use App\Libs\Enums\Http\Status;
 use App\Libs\Emitter;
+use App\Libs\Enums\Http\Status;
 use App\Libs\TestCase;
 use Nyholm\Psr7\ServerRequest;
 use Nyholm\Psr7\Uri;
@@ -31,13 +31,13 @@ class StreamTest extends TestCase
             'version' => get_app_version(),
         ], cache: $cache);
 
-        $request = (new ServerRequest('GET', new Uri('http://localhost/v1/api/player/stream/' . $token)))
+        $request = new ServerRequest('GET', new Uri('http://localhost/v1/api/player/stream/' . $token))
             ->withHeader('Range', 'bytes=1-3');
 
         $response = (new Stream($cache))($request, $token);
         $out = '';
 
-        (new Emitter())
+        new Emitter()
             ->withHeaderFunc(static fn() => null)
             ->withHeadersSentFunc(static fn() => false)
             ->withBodyFunc(static function (string $data) use (&$out): void {
@@ -67,7 +67,7 @@ class StreamTest extends TestCase
             'version' => get_app_version(),
         ], cache: $cache);
 
-        $request = (new ServerRequest('GET', new Uri('http://localhost/v1/api/player/stream/' . $token)))
+        $request = new ServerRequest('GET', new Uri('http://localhost/v1/api/player/stream/' . $token))
             ->withHeader('Range', 'bytes=10-20');
 
         $response = (new Stream($cache))($request, $token);

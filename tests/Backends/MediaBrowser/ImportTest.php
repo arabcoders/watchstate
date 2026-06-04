@@ -96,7 +96,7 @@ class ImportTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinImport::class, JellyfinGuid::class],
-            ['Emby', EmbyImport::class, EmbyGuid::class],
+            ['Emby',     EmbyImport::class,     EmbyGuid::class],
         ];
     }
 }

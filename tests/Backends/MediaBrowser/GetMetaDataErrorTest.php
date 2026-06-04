@@ -31,7 +31,7 @@ class GetMetaDataErrorTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinGetMetaData::class],
-            ['Emby', EmbyGetMetaData::class],
+            ['Emby',     EmbyGetMetaData::class],
         ];
     }
 }

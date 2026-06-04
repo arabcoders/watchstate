@@ -12,7 +12,7 @@ use RuntimeException;
 
 class StreamedBodyTest extends TestCase
 {
-    private function getStream(Closure|null $fn = null, bool $isReadable = true): StreamedBody
+    private function getStream(?Closure $fn = null, bool $isReadable = true): StreamedBody
     {
         return new StreamedBody($fn ?? fn() => 'test', isReadable: $isReadable);
     }
@@ -25,25 +25,25 @@ class StreamedBodyTest extends TestCase
         $this->assertSame(
             'test',
             $stream->getContents(),
-            'getContents(): Must return the same value as the callback'
+            'getContents(): Must return the same value as the callback',
         );
         $this->assertSame('', $stream->getContents());
 
         $this->assertSame('test', $this->getStream()->__toString(), 'Must implement __toString');
-        $this->assertSame('test', (string)$this->getStream(), 'Must implement __toString');
+        $this->assertSame('test', (string) $this->getStream(), 'Must implement __toString');
         $this->assertNull(
             $this->getStream()->getMetadata('key'),
-            "getMetadata(): Must return null as closure doesn't have metadata"
+            "getMetadata(): Must return null as closure doesn't have metadata",
         );
         $this->assertNull(
             $this->getStream()->getSize(),
-            'getSize(): Must return null as closure does not have a size'
+            'getSize(): Must return null as closure does not have a size',
         );
 
         $this->assertSame(
             't',
             $this->getStream()->read(1),
-            'read(): Must return only the requested buffered chunk length'
+            'read(): Must return only the requested buffered chunk length',
         );
 
         $stream = $this->getStream();
@@ -58,11 +58,11 @@ class StreamedBodyTest extends TestCase
         $this->assertTrue($this->getStream()->isReadable(), 'isReadable(): Must return true as closure is readable');
         $this->assertFalse(
             $this->getStream()->isWritable(),
-            'isWritable(): Must return false as closure is not writable'
+            'isWritable(): Must return false as closure is not writable',
         );
         $this->assertFalse(
             $this->getStream()->isSeekable(),
-            'isSeekable(): Must return false as closure is not seekable'
+            'isSeekable(): Must return false as closure is not seekable',
         );
 
         $this->assertNull($this->getStream()->detach(), 'detach(): Must return null as closure is not detachable');
@@ -78,7 +78,7 @@ class StreamedBodyTest extends TestCase
 
         $this->assertFalse(
             $this->getStream(isReadable: false)->isReadable(),
-            'isReadable(): Must return false as closure is not readable'
+            'isReadable(): Must return false as closure is not readable',
         );
     }
 

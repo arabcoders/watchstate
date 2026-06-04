@@ -23,9 +23,12 @@ final class PerUserDbTest extends TestCase
     public function test_main_bootstrap(): void
     {
         $db = ensure_migration((string) Config::get('database.file'));
-        $tables = $db->getDBLayer()->query(
-            "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
-        )->fetchAll(PDO::FETCH_COLUMN);
+        $tables = $db
+            ->getDBLayer()
+            ->query(
+                "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name",
+            )
+            ->fetchAll(PDO::FETCH_COLUMN);
 
         self::assertContains('events', $tables);
         self::assertContains('migration_version', $tables);
@@ -40,9 +43,11 @@ final class PerUserDbTest extends TestCase
 
         $db = per_user_db('alice');
         $dbLayer = $db->getDBLayer();
-        $tables = $dbLayer->query(
-            "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
-        )->fetchAll(PDO::FETCH_COLUMN);
+        $tables = $dbLayer
+            ->query(
+                "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name",
+            )
+            ->fetchAll(PDO::FETCH_COLUMN);
 
         self::assertContains('events', $tables);
         self::assertContains('migration_version', $tables);
@@ -57,12 +62,15 @@ final class PerUserDbTest extends TestCase
             'name' => 'alice',
         ]);
 
-        self::assertSame([
+        self::assertSame(
             [
-                'id' => 1,
-                'name' => 'alice',
+                [
+                    'id' => 1,
+                    'name' => 'alice',
+                ],
             ],
-        ], $dbLayer->query('SELECT id, name FROM sample')->fetchAll(PDO::FETCH_ASSOC));
+            $dbLayer->query('SELECT id, name FROM sample')->fetchAll(PDO::FETCH_ASSOC),
+        );
         self::assertSame('sqlite', $dbLayer->getDriver());
     }
 
@@ -72,9 +80,12 @@ final class PerUserDbTest extends TestCase
 
         ensure_migration(get_user_db('alice'));
         $db = per_user_db('alice');
-        $tables = $db->getDBLayer()->query(
-            "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
-        )->fetchAll(PDO::FETCH_COLUMN);
+        $tables = $db
+            ->getDBLayer()
+            ->query(
+                "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name",
+            )
+            ->fetchAll(PDO::FETCH_COLUMN);
 
         self::assertFalse(file_exists(self::$tmpPath . '/db/' . PdoFactory::DB_FILE));
         self::assertContains('migration_version', $tables);

@@ -19,12 +19,12 @@ class NoAccessLogMiddlewareTest extends TestCase
     {
         $result = new NoAccessLogMiddleware()->process(
             request: $this->getRequest(),
-            handler: $this->getHandler(new Response(Status::OK))
+            handler: $this->getHandler(new Response(Status::OK)),
         );
 
         $this->assertFalse(
             $result->hasHeader('X-No-AccessLog'),
-            'If INTERNAL_REQUEST is not set, Logging should be enabled.'
+            'If INTERNAL_REQUEST is not set, Logging should be enabled.',
         );
     }
 
@@ -34,23 +34,23 @@ class NoAccessLogMiddlewareTest extends TestCase
 
         $result = new NoAccessLogMiddleware()->process(
             request: $this->getRequest()->withAttribute('INTERNAL_REQUEST', true),
-            handler: $this->getHandler(new Response(Status::OK))
+            handler: $this->getHandler(new Response(Status::OK)),
         );
 
         $this->assertFalse(
             $result->hasHeader('X-No-AccessLog'),
-            'If INTERNAL_REQUEST is not set, Logging should be enabled.'
+            'If INTERNAL_REQUEST is not set, Logging should be enabled.',
         );
 
         Config::save('api.logInternal', false);
         $result = new NoAccessLogMiddleware()->process(
             request: $this->getRequest()->withAttribute('INTERNAL_REQUEST', true),
-            handler: $this->getHandler(new Response(Status::OK))
+            handler: $this->getHandler(new Response(Status::OK)),
         );
 
         $this->assertTrue(
             $result->hasHeader('X-No-AccessLog'),
-            'If INTERNAL_REQUEST is set and api.logInternal is true, Logging should be disabled.'
+            'If INTERNAL_REQUEST is set and api.logInternal is true, Logging should be disabled.',
         );
     }
 }

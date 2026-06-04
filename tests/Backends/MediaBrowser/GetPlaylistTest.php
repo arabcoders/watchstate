@@ -53,7 +53,7 @@ final class GetPlaylistTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinGetPlaylist::class, 'playlist_detail_jellyfin'],
-            ['Emby', EmbyGetPlaylist::class, 'playlist_detail_emby'],
+            ['Emby',     EmbyGetPlaylist::class,     'playlist_detail_emby'],
         ];
     }
 }

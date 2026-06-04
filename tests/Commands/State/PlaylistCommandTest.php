@@ -9,6 +9,7 @@ use App\Commands\State\PlaylistCommand;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Playlists\PlaylistSyncService;
+use App\Libs\TestCase;
 use App\Libs\UserContext;
 use Monolog\Logger;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -18,7 +19,6 @@ use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Tester\CommandTester;
-use App\Libs\TestCase;
 
 final class PlaylistCommandTest extends TestCase
 {
@@ -206,8 +206,7 @@ final class PlaylistCommandTest extends TestCase
         iClient $client,
         string $backendName = 'test_plex',
         array $userNames = ['main'],
-    ): CommandTester
-    {
+    ): CommandTester {
         $application = new Application();
         $application->getDefinition()->addOption(new InputOption('output', 'o', InputOption::VALUE_REQUIRED, '', 'table'));
         $application->getDefinition()->addOption(new InputOption('trace', null, InputOption::VALUE_NONE));
@@ -221,8 +220,7 @@ final class PlaylistCommandTest extends TestCase
         iClient $client,
         string $backendName = 'test_plex',
         array $userNames = ['main'],
-    ): PlaylistCommand
-    {
+    ): PlaylistCommand {
         $this->initTempApp();
         $this->seedTestServersConfig();
 

@@ -6,10 +6,10 @@ namespace Tests\Commands\Backend;
 
 use App\Commands\Backend\RestoreCommand;
 use App\Libs\Extends\HttpClient;
+use App\Libs\Extends\MockHttpClient;
 use App\Libs\LogSuppressor;
 use App\Libs\QueueRequests;
 use App\Libs\TestCase;
-use App\Libs\Extends\MockHttpClient;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -27,18 +27,21 @@ final class RestoreCommandTest extends TestCase
         FakeBackendClient::setExportError('main', 'fake_restore', new \RuntimeException('restore export failed'));
 
         $backupFile = self::$tmpPath . '/backup.json';
-        file_put_contents($backupFile, json_encode([
+        file_put_contents($backupFile, json_encode(
             [
-                'type' => 'movie',
-                'watched' => 1,
-                'updated' => 1_700_000_000,
-                'title' => 'Fake Movie',
-                'year' => 2024,
-                'guids' => [
-                    'guid_imdb' => 'tt1234567',
+                [
+                    'type' => 'movie',
+                    'watched' => 1,
+                    'updated' => 1_700_000_000,
+                    'title' => 'Fake Movie',
+                    'year' => 2024,
+                    'guids' => [
+                        'guid_imdb' => 'tt1234567',
+                    ],
                 ],
             ],
-        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+        ));
 
         $queue = new QueueRequests();
         FakeBackendClient::setQueuedExportRequests('main', 'fake_restore', 1);
@@ -67,18 +70,21 @@ final class RestoreCommandTest extends TestCase
         $logger = $this->initFakeBackendApp($this->fakeBackendConfig('fake_restore'));
 
         $backupFile = self::$tmpPath . '/backup.json';
-        file_put_contents($backupFile, json_encode([
+        file_put_contents($backupFile, json_encode(
             [
-                'type' => 'movie',
-                'watched' => 1,
-                'updated' => 1_700_000_000,
-                'title' => 'Fake Movie',
-                'year' => 2024,
-                'guids' => [
-                    'guid_imdb' => 'tt1234567',
+                [
+                    'type' => 'movie',
+                    'watched' => 1,
+                    'updated' => 1_700_000_000,
+                    'title' => 'Fake Movie',
+                    'year' => 2024,
+                    'guids' => [
+                        'guid_imdb' => 'tt1234567',
+                    ],
                 ],
             ],
-        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+        ));
 
         $queue = new QueueRequests();
         FakeBackendClient::setQueuedExportRequests('main', 'fake_restore', 1);
@@ -112,19 +118,22 @@ final class RestoreCommandTest extends TestCase
         $logger = $this->initFakeBackendApp($this->fakeBackendConfig('fake_restore'));
 
         $backupFile = self::$tmpPath . '/backup.json';
-        file_put_contents($backupFile, json_encode([
+        file_put_contents($backupFile, json_encode(
             [
-                'type' => 'movie',
-                'watched' => 0,
-                'updated' => 1_700_000_000,
-                'title' => 'Fake Movie',
-                'year' => 2024,
-                'progress' => 90000,
-                'guids' => [
-                    'guid_imdb' => 'tt1234567',
+                [
+                    'type' => 'movie',
+                    'watched' => 0,
+                    'updated' => 1_700_000_000,
+                    'title' => 'Fake Movie',
+                    'year' => 2024,
+                    'progress' => 90000,
+                    'guids' => [
+                        'guid_imdb' => 'tt1234567',
+                    ],
                 ],
             ],
-        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+        ));
 
         $queue = new QueueRequests();
 
@@ -145,14 +154,17 @@ final class RestoreCommandTest extends TestCase
 
         self::assertSame(RestoreCommand::SUCCESS, $status);
         self::assertCount(1, FakeBackendClient::getCalls('export'));
-        self::assertSame([
+        self::assertSame(
             [
-                'backend' => 'fake_restore',
-                'user' => 'main',
-                'count' => 1,
-                'after' => null,
+                [
+                    'backend' => 'fake_restore',
+                    'user' => 'main',
+                    'count' => 1,
+                    'after' => null,
+                ],
             ],
-        ], FakeBackendClient::getCalls('progress'));
+            FakeBackendClient::getCalls('progress'),
+        );
     }
 
     private function makeTester(RestoreCommand $command): CommandTester

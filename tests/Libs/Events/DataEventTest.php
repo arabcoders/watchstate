@@ -24,7 +24,7 @@ class DataEventTest extends TestCase
                 EventsTable::COLUMN_REFERENCE => 'test',
                 EventsTable::COLUMN_EVENT => 'test',
                 EventsTable::COLUMN_EVENT_DATA => json_encode(['foo' => 'bar']),
-                EventsTable::COLUMN_OPTIONS => json_encode(['timeout' => 60,]),
+                EventsTable::COLUMN_OPTIONS => json_encode(['timeout' => 60]),
                 EventsTable::COLUMN_ATTEMPTS => 0,
                 EventsTable::COLUMN_LOGS => json_encode(['test entry']),
                 EventsTable::COLUMN_CREATED_AT => '2024-01-01 01:01:01',
@@ -49,9 +49,7 @@ class DataEventTest extends TestCase
         $this->assertSame('test', $dataEvent->getReference(), 'getReference() does not return the expected value');
         $this->assertSame(['test entry'], $dataEvent->getLogs(), 'getLogs() does not return the expected value');
         $this->assertSame(['foo' => 'bar'], $dataEvent->getData(), 'getData() does not return the expected value');
-        $this->assertSame(['timeout' => 60],
-            $dataEvent->getOptions(),
-            'getOptions() does not return the expected value');
+        $this->assertSame(['timeout' => 60], $dataEvent->getOptions(), 'getOptions() does not return the expected value');
     }
 
     public function test_logs_mutation()
@@ -61,9 +59,7 @@ class DataEventTest extends TestCase
         $this->assertSame(['test entry'], $dataEvent->getLogs(), 'getLogs() does not return the expected value');
         $dataEvent->addRawLog('new entry');
 
-        $this->assertSame(['test entry', 'new entry'],
-            $dataEvent->getLogs(),
-            'addLog() does not return the expected value');
+        $this->assertSame(['test entry', 'new entry'], $dataEvent->getLogs(), 'addLog() does not return the expected value');
 
         for ($i = 0; $i < 203; $i++) {
             $dataEvent->addRawLog('new entry');

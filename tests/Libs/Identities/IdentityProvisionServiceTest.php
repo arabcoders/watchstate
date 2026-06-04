@@ -33,88 +33,96 @@ final class IdentityProvisionServiceTest extends TestCase
 
         file_put_contents(
             Config::get('backends_file'),
-            Yaml::dump([
-                'plex_main' => [
-                    'type' => 'plex',
-                    'url' => 'https://new-plex.example.com',
-                    'token' => 'plex-main-token',
-                    'uuid' => 'plex-main-uuid-new',
-                    'user' => 'plex-main-user',
-                    'import' => ['enabled' => true, 'lastSync' => '2024-01-01T00:00:00+00:00'],
-                    'export' => ['enabled' => false, 'lastSync' => '2024-01-01T00:00:00+00:00'],
-                    'options' => [
-                        Options::ADMIN_TOKEN => 'plex-admin-token-new',
-                        Options::IGNORE => false,
-                        Options::LIBRARY_SEGMENT => 250,
+            Yaml::dump(
+                [
+                    'plex_main' => [
+                        'type' => 'plex',
+                        'url' => 'https://new-plex.example.com',
+                        'token' => 'plex-main-token',
+                        'uuid' => 'plex-main-uuid-new',
+                        'user' => 'plex-main-user',
+                        'import' => ['enabled' => true, 'lastSync' => '2024-01-01T00:00:00+00:00'],
+                        'export' => ['enabled' => false, 'lastSync' => '2024-01-01T00:00:00+00:00'],
+                        'options' => [
+                            Options::ADMIN_TOKEN => 'plex-admin-token-new',
+                            Options::IGNORE => false,
+                            Options::LIBRARY_SEGMENT => 250,
+                        ],
+                    ],
+                    'jellyfin_main' => [
+                        'type' => 'jellyfin',
+                        'url' => 'https://new-jellyfin.example.com',
+                        'token' => 'jellyfin-main-token-new',
+                        'uuid' => 'jellyfin-main-uuid-new',
+                        'user' => 'jellyfin-main-user',
+                        'import' => ['enabled' => true, 'lastSync' => '2024-01-01T00:00:00+00:00'],
+                        'export' => ['enabled' => true, 'lastSync' => '2024-01-01T00:00:00+00:00'],
+                        'options' => [
+                            Options::IGNORE => true,
+                            Options::LIBRARY_SEGMENT => 500,
+                        ],
                     ],
                 ],
-                'jellyfin_main' => [
-                    'type' => 'jellyfin',
-                    'url' => 'https://new-jellyfin.example.com',
-                    'token' => 'jellyfin-main-token-new',
-                    'uuid' => 'jellyfin-main-uuid-new',
-                    'user' => 'jellyfin-main-user',
-                    'import' => ['enabled' => true, 'lastSync' => '2024-01-01T00:00:00+00:00'],
-                    'export' => ['enabled' => true, 'lastSync' => '2024-01-01T00:00:00+00:00'],
-                    'options' => [
-                        Options::IGNORE => true,
-                        Options::LIBRARY_SEGMENT => 500,
-                    ],
-                ],
-            ], 5, 2),
+                5,
+                2,
+            ),
         );
 
         file_put_contents(
             $usersDir . '/servers.yaml',
-            Yaml::dump([
-                'plex_alice' => [
-                    'type' => 'plex',
-                    'url' => 'https://old-plex.example.com',
-                    'token' => 'plex-child-token',
-                    'uuid' => 'plex-child-uuid-old',
-                    'user' => 'plex-child-user',
-                    'import' => ['enabled' => false, 'lastSync' => '2025-01-02T03:04:05+00:00'],
-                    'export' => ['enabled' => true, 'lastSync' => '2025-01-02T03:04:05+00:00'],
-                    'options' => [
-                        Options::ALT_NAME => 'plex_main',
-                        Options::ALT_ID => 'plex-main-user-old',
-                        Options::ADMIN_TOKEN => 'plex-admin-token-old',
-                        Options::PLEX_USER_UUID => 'plex-child-user-uuid',
-                        Options::PLEX_USER_NAME => 'alice',
-                        Options::PLEX_USER_PIN => '1234',
-                        Options::PLEX_EXTERNAL_USER => true,
-                        'custom_option' => 'keep-me',
+            Yaml::dump(
+                [
+                    'plex_alice' => [
+                        'type' => 'plex',
+                        'url' => 'https://old-plex.example.com',
+                        'token' => 'plex-child-token',
+                        'uuid' => 'plex-child-uuid-old',
+                        'user' => 'plex-child-user',
+                        'import' => ['enabled' => false, 'lastSync' => '2025-01-02T03:04:05+00:00'],
+                        'export' => ['enabled' => true, 'lastSync' => '2025-01-02T03:04:05+00:00'],
+                        'options' => [
+                            Options::ALT_NAME => 'plex_main',
+                            Options::ALT_ID => 'plex-main-user-old',
+                            Options::ADMIN_TOKEN => 'plex-admin-token-old',
+                            Options::PLEX_USER_UUID => 'plex-child-user-uuid',
+                            Options::PLEX_USER_NAME => 'alice',
+                            Options::PLEX_USER_PIN => '1234',
+                            Options::PLEX_EXTERNAL_USER => true,
+                            'custom_option' => 'keep-me',
+                        ],
+                    ],
+                    'jellyfin_alice' => [
+                        'type' => 'jellyfin',
+                        'url' => 'https://old-jellyfin.example.com',
+                        'token' => 'jellyfin-main-token-old',
+                        'uuid' => 'jellyfin-main-uuid-old',
+                        'user' => 'jellyfin-child-user',
+                        'import' => ['enabled' => false, 'lastSync' => '2025-02-03T04:05:06+00:00'],
+                        'export' => ['enabled' => false, 'lastSync' => '2025-02-03T04:05:06+00:00'],
+                        'options' => [
+                            Options::ALT_NAME => 'jellyfin_main',
+                            Options::ALT_ID => 'jellyfin-main-user-old',
+                            Options::IGNORE => false,
+                            Options::LIBRARY_SEGMENT => 50,
+                            'custom_option' => 'keep-me-too',
+                        ],
+                    ],
+                    'manual_backend' => [
+                        'type' => 'jellyfin',
+                        'url' => 'https://manual.example.com',
+                        'token' => 'manual-token',
+                        'uuid' => 'manual-uuid',
+                        'user' => 'manual-user',
+                        'import' => ['enabled' => false],
+                        'export' => ['enabled' => false],
+                        'options' => [
+                            'custom_option' => 'manual',
+                        ],
                     ],
                 ],
-                'jellyfin_alice' => [
-                    'type' => 'jellyfin',
-                    'url' => 'https://old-jellyfin.example.com',
-                    'token' => 'jellyfin-main-token-old',
-                    'uuid' => 'jellyfin-main-uuid-old',
-                    'user' => 'jellyfin-child-user',
-                    'import' => ['enabled' => false, 'lastSync' => '2025-02-03T04:05:06+00:00'],
-                    'export' => ['enabled' => false, 'lastSync' => '2025-02-03T04:05:06+00:00'],
-                    'options' => [
-                        Options::ALT_NAME => 'jellyfin_main',
-                        Options::ALT_ID => 'jellyfin-main-user-old',
-                        Options::IGNORE => false,
-                        Options::LIBRARY_SEGMENT => 50,
-                        'custom_option' => 'keep-me-too',
-                    ],
-                ],
-                'manual_backend' => [
-                    'type' => 'jellyfin',
-                    'url' => 'https://manual.example.com',
-                    'token' => 'manual-token',
-                    'uuid' => 'manual-uuid',
-                    'user' => 'manual-user',
-                    'import' => ['enabled' => false],
-                    'export' => ['enabled' => false],
-                    'options' => [
-                        'custom_option' => 'manual',
-                    ],
-                ],
-            ], 6, 2),
+                6,
+                2,
+            ),
         );
     }
 

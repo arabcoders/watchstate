@@ -314,61 +314,71 @@ final class PlaylistSyncServiceTest extends TestCase
         $client->method('getContext')->willReturn($context);
         $client->method('getName')->willReturn($backendName);
         $client->method('getType')->willReturn('plex');
-        $client->method('getPlaylistsList')->willReturnCallback(
-            static function (array $opts = []) use ($state): array {
-                return array_values(array_map(
-                    static fn(array $playlist): array => [
-                        'id' => $playlist['id'],
-                        'title' => $playlist['title'],
-                        'type' => $playlist['type'],
-                        'remote_updated_at' => $playlist['remote_updated_at'],
-                    ],
-                    $state->playlists,
-                ));
-            },
-        );
-        $client->method('getPlaylist')->willReturnCallback(
-            static fn(string|int $id, array $opts = []): array => $state->playlists[(string) $id] ?? [],
-        );
-        $client->method('deletePlaylist')->willReturnCallback(
-            static function (string|int $id, array $opts = []) use ($state): array {
-                unset($state->playlists[(string) $id]);
-                $state->deleteCalls++;
-
-                return [];
-            },
-        );
-        $client->method('createPlaylist')->willReturnCallback(
-            static function (string $title, array $itemIds = [], array $opts = []) use ($backendName, $state, $titles): array {
-                $playlistId = sprintf('%s-playlist-%d', $backendName, $state->nextId++);
-                $state->playlists[$playlistId] = [
-                    'id' => $playlistId,
-                    'title' => $title,
-                    'type' => 'video',
-                    'editable' => true,
-                    'smart' => false,
-                    'public' => false,
-                    'remote_updated_at' => $state->nextUpdatedAt,
-                    'items' => array_values(array_map(
-                        static fn(string $itemId): array => [
-                            'Id' => $itemId,
-                            'Type' => 'Movie',
-                            'Name' => $titles[$itemId] ?? $itemId,
+        $client
+            ->method('getPlaylistsList')
+            ->willReturnCallback(
+                static function (array $opts = []) use ($state): array {
+                    return array_values(array_map(
+                        static fn(array $playlist): array => [
+                            'id' => $playlist['id'],
+                            'title' => $playlist['title'],
+                            'type' => $playlist['type'],
+                            'remote_updated_at' => $playlist['remote_updated_at'],
                         ],
-                        $itemIds,
-                    )),
-                ];
-                $state->nextUpdatedAt += 100;
-                $state->createCalls++;
+                        $state->playlists,
+                    ));
+                },
+            );
+        $client
+            ->method('getPlaylist')
+            ->willReturnCallback(
+                static fn(string|int $id, array $opts = []): array => $state->playlists[(string) $id] ?? [],
+            );
+        $client
+            ->method('deletePlaylist')
+            ->willReturnCallback(
+                static function (string|int $id, array $opts = []) use ($state): array {
+                    unset($state->playlists[(string) $id]);
+                    $state->deleteCalls++;
 
-                return ['id' => $playlistId];
-            },
-        );
-        $client->method('toEntity')->willReturnCallback(
-            static fn(array $item, array $opts = []): StateEntity => StateEntity::fromArray([
-                iState::COLUMN_ID => $entityIds[(string) ag($item, ['ratingKey', 'Id'], '')] ?? null,
-            ]),
-        );
+                    return [];
+                },
+            );
+        $client
+            ->method('createPlaylist')
+            ->willReturnCallback(
+                static function (string $title, array $itemIds = [], array $opts = []) use ($backendName, $state, $titles): array {
+                    $playlistId = sprintf('%s-playlist-%d', $backendName, $state->nextId++);
+                    $state->playlists[$playlistId] = [
+                        'id' => $playlistId,
+                        'title' => $title,
+                        'type' => 'video',
+                        'editable' => true,
+                        'smart' => false,
+                        'public' => false,
+                        'remote_updated_at' => $state->nextUpdatedAt,
+                        'items' => array_values(array_map(
+                            static fn(string $itemId): array => [
+                                'Id' => $itemId,
+                                'Type' => 'Movie',
+                                'Name' => $titles[$itemId] ?? $itemId,
+                            ],
+                            $itemIds,
+                        )),
+                    ];
+                    $state->nextUpdatedAt += 100;
+                    $state->createCalls++;
+
+                    return ['id' => $playlistId];
+                },
+            );
+        $client
+            ->method('toEntity')
+            ->willReturnCallback(
+                static fn(array $item, array $opts = []): StateEntity => StateEntity::fromArray([
+                    iState::COLUMN_ID => $entityIds[(string) ag($item, ['ratingKey', 'Id'], '')] ?? null,
+                ]),
+            );
 
         return $client;
     }

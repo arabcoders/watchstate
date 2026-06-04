@@ -309,7 +309,7 @@ class PathTest extends TestCase
         $this->assertContainsOnlyInstancesOf(Path::class, $sidecars);
         $this->assertSame(
             ['my.movie.title.en.ass', 'my.movie.title.eng.forced.srt', 'my.movie.title.nfo', 'my.movie.title.srt'],
-            $names
+            $names,
         );
     }
 

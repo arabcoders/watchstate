@@ -189,10 +189,13 @@ class FakeBackendClient implements ClientInterface
             && false === (bool) ag($opts, Options::DRY_RUN, false)
             && true !== (self::$skipBackupWrites[self::exportKey($context->userContext->name, $context->backendName)] ?? false)
         ) {
-            $payload = json_encode([
-                'backend' => $context->backendName,
-                'user' => $context->userContext->name,
-            ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            $payload = json_encode(
+                [
+                    'backend' => $context->backendName,
+                    'user' => $context->userContext->name,
+                ],
+                JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+            );
 
             $writer->write($payload . ',');
         }
@@ -295,8 +298,9 @@ class FakeBackendClient implements ClientInterface
             'id' => (string) $id,
         ]);
 
-        $response = self::$metadataResponses[self::metadataKey($context->userContext->name, $context->backendName, $id)]
-            ?? ['Id' => (string) $id];
+        $response = self::$metadataResponses[self::metadataKey($context->userContext->name, $context->backendName, $id)] ?? [
+            'Id' => (string) $id,
+        ];
 
         if ($response instanceof Throwable) {
             throw $response;

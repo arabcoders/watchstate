@@ -28,7 +28,7 @@ class ParseWebhookTest extends TestCase
             'ItemId' => 'item-1',
         ];
 
-        $request = (new ServerRequest('POST', new Uri('http://mediabrowser.test')))->withParsedBody($payload);
+        $request = new ServerRequest('POST', new Uri('http://mediabrowser.test'))->withParsedBody($payload);
         $context = $this->createContext(JellyfinClient::CLIENT_NAME);
         $logger = new Logger('test', [new NullHandler()]);
 
@@ -47,7 +47,7 @@ class ParseWebhookTest extends TestCase
             'ItemId' => 'item-1',
         ];
 
-        $request = (new ServerRequest('POST', new Uri('http://mediabrowser.test')))->withParsedBody($payload);
+        $request = new ServerRequest('POST', new Uri('http://mediabrowser.test'))->withParsedBody($payload);
         $context = $this->createContext(JellyfinClient::CLIENT_NAME);
         $logger = new Logger('test', [new NullHandler()]);
 
@@ -57,5 +57,4 @@ class ParseWebhookTest extends TestCase
         $this->assertFalse($response->isSuccessful());
         $this->assertSame(200, $response->extra['http_code']);
     }
-
 }

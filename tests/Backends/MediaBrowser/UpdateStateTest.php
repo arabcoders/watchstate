@@ -29,7 +29,7 @@ class UpdateStateTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinUpdateState::class],
-            ['Emby', EmbyUpdateState::class],
+            ['Emby',     EmbyUpdateState::class],
         ];
     }
 }

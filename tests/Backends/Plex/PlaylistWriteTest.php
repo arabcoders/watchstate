@@ -17,13 +17,16 @@ final class PlaylistWriteTest extends PlexTestCase
         $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$requests) {
             $requests[] = compact('method', 'url', 'options');
 
-            return new MockResponse(json_encode([
-                'MediaContainer' => [
-                    'Metadata' => [
-                        ['ratingKey' => 'new-plex-playlist'],
+            return new MockResponse(
+                json_encode([
+                    'MediaContainer' => [
+                        'Metadata' => [
+                            ['ratingKey' => 'new-plex-playlist'],
+                        ],
                     ],
-                ],
-            ], JSON_THROW_ON_ERROR), ['http_code' => 200]);
+                ], JSON_THROW_ON_ERROR),
+                ['http_code' => 200],
+            );
         });
 
         $action = new CreatePlaylist($http, $this->logger);
@@ -37,7 +40,10 @@ final class PlaylistWriteTest extends PlexTestCase
         self::assertStringContainsString('title=Weekend+Movies', $requests[0]['url']);
         self::assertStringContainsString('smart=0', $requests[0]['url']);
         self::assertStringContainsString('type=video', $requests[0]['url']);
-        self::assertStringContainsString('uri=server%3A%2F%2Fplex-server-1%2Fcom.plexapp.plugins.library%2Flibrary%2Fmetadata%2F11%2C22', $requests[0]['url']);
+        self::assertStringContainsString(
+            'uri=server%3A%2F%2Fplex-server-1%2Fcom.plexapp.plugins.library%2Flibrary%2Fmetadata%2F11%2C22',
+            $requests[0]['url'],
+        );
     }
 
     public function test_delete_playlist_endpoint(): void

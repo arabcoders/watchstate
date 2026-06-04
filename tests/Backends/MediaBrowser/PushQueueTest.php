@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Backends\MediaBrowser;
 
+use App\Backends\Common\Request;
 use App\Backends\Emby\Action\Push as EmbyPush;
 use App\Backends\Jellyfin\Action\Push as JellyfinPush;
-use App\Backends\Common\Request;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Extends\HttpClient;
@@ -75,7 +75,7 @@ class PushQueueTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinPush::class],
-            ['Emby', EmbyPush::class],
+            ['Emby',     EmbyPush::class],
         ];
     }
 }
