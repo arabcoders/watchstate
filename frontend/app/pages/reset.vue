@@ -46,51 +46,13 @@
             </div>
 
             <p class="text-sm leading-6 text-default">
-              Remove local WatchState state for every user. Backend definitions remain configured.
+              Remove local WatchState state for every configured user.
             </p>
           </div>
         </div>
       </template>
 
-      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        <div class="rounded-md border border-default bg-elevated/40 px-3 py-3">
-          <div
-            class="mb-2 inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-          >
-            <UIcon name="i-lucide-database" class="size-4" />
-            <span>Local records</span>
-          </div>
-
-          <p class="text-sm leading-6 text-default">Remove all stored WatchState records.</p>
-        </div>
-
-        <div class="rounded-md border border-default bg-elevated/40 px-3 py-3">
-          <div
-            class="mb-2 inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-          >
-            <UIcon name="i-lucide-trash-2" class="size-4" />
-            <span>Cache</span>
-          </div>
-
-          <p class="text-sm leading-6 text-default">Flush cached runtime data.</p>
-        </div>
-
-        <div
-          class="rounded-md border border-default bg-elevated/40 px-3 py-3 sm:col-span-2 xl:col-span-1"
-        >
-          <div
-            class="mb-2 inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-          >
-            <UIcon name="i-lucide-history" class="size-4" />
-            <span>Sync markers</span>
-          </div>
-
-          <p class="text-sm leading-6 text-default">
-            Clear import and export last-sync dates for every configured backend.
-          </p>
-        </div>
-      </div>
-
+      <template #body></template>
       <template #footer>
         <div class="flex flex-wrap items-center justify-end gap-2">
           <UButton
