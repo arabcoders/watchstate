@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "05b133c7e51368d3506c48c6f27cdc564d64ad07",
-    "date": "2026-06-04T17:24:19+00:00",
+    "full_sha": "fccf768c0717f9e7a636fae7b3349ffe41a6f89a",
+    "date": "2026-06-04T20:19:11+00:00",
     "commits": [
+      {
+        "sha": "fccf768c",
+        "full_sha": "fccf768c0717f9e7a636fae7b3349ffe41a6f89a",
+        "message": "refactor: remove useless info",
+        "author": "arabcoders",
+        "date": "2026-06-04T20:19:11+00:00"
+      },
       {
         "sha": "05b133c7",
         "full_sha": "05b133c7e51368d3506c48c6f27cdc564d64ad07",
