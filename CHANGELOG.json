@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "ea35d37e4364c480a077c2b3c9d80f6e0961b40a",
-    "date": "2026-06-04T06:11:38+00:00",
+    "full_sha": "05b133c7e51368d3506c48c6f27cdc564d64ad07",
+    "date": "2026-06-04T17:24:19+00:00",
     "commits": [
+      {
+        "sha": "05b133c7",
+        "full_sha": "05b133c7e51368d3506c48c6f27cdc564d64ad07",
+        "message": "fix: stale backend metadata after deletion. Closes #845",
+        "author": "arabcoders",
+        "date": "2026-06-04T17:24:19+00:00"
+      },
       {
         "sha": "ea35d37e",
         "full_sha": "ea35d37e4364c480a077c2b3c9d80f6e0961b40a",
