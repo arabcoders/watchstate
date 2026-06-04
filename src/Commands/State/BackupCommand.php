@@ -427,20 +427,34 @@ class BackupCommand extends Command
             assert($backend['fp'] instanceof iStream, 'Expected backup file stream.');
 
             if (false === $input->getOption('dry-run')) {
-                $backend['fp']->seek(-1, SEEK_END);
-                $backend['fp']->write(PHP_EOL . ']');
+                $file = (string) $backend['fp']->getMetadata('uri');
+
+                if (($backend['fp']->getSize() ?? 0) > 1) {
+                    $backend['fp']->seek(-1, SEEK_END);
+                    $backend['fp']->write(PHP_EOL . ']');
+                } else {
+                    $backend['fp']->close();
+                    if (true === file_exists($file)) {
+                        unlink($file);
+                    }
+
+                    $this->logger->warning("SYSTEM: No backup was generated for '{user}@{backend}'. No items were found.", [
+                        'user' => $userContext->name,
+                        'backend' => $b,
+                        'file' => $file,
+                    ]);
+
+                    continue;
+                }
 
                 if (false === $noCompression) {
-                    $file = $backend['fp']->getMetadata('uri');
                     $this->logger->notice("SYSTEM: Compressing '{user}@{backend}' backup file '{file}'.", [
                         'backend' => $b,
                         'file' => $file,
                         'user' => $userContext->name,
                     ]);
 
-                    $status = compress_files($file, [$file], ['affix' => 'zip']);
-
-                    if (true === $status) {
+                    if (true === compress_files($file, [$file], ['affix' => 'zip'])) {
                         unlink($file);
                     }
                 }

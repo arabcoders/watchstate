@@ -135,6 +135,29 @@ final class BackupCommandTest extends TestCase
         ], FakeBackendClient::getCalls('backup'));
     }
 
+    public function test_empty_backup_removes_file(): void
+    {
+        $logger = $this->initFakeBackendApp($this->fakeBackendConfig('fake_backup'));
+        mkdir(self::$tmpPath . '/backup', 0o755, true);
+        FakeBackendClient::setSkipBackupWrite('main', 'fake_backup');
+
+        $command = new BackupCommand(
+            $this->createRuntimeMapper($logger),
+            $logger,
+            new LogSuppressor([]),
+            $this->createStub(iHttp::class),
+        );
+
+        $status = $this->makeTester($command)->execute([
+            '--keep' => true,
+            '--no-enhance' => true,
+            '--no-compress' => true,
+        ]);
+
+        self::assertSame(BackupCommand::SUCCESS, $status);
+        self::assertFileDoesNotExist(self::$tmpPath . '/backup/main.fake_backup.json');
+    }
+
     private function makeTester(BackupCommand $command): CommandTester
     {
         $application = new Application();

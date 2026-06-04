@@ -232,7 +232,7 @@ return (function () {
         'file' => [
             'type' => 'stream',
             'enabled' => (bool) env('WS_LOGGER_FILE_ENABLE', true),
-            'level' => env('WS_LOGGER_FILE_LEVEL', Level::Warning),
+            'level' => env('WS_LOGGER_FILE_LEVEL', Level::Error),
             'filename' => ag($config, 'tmpDir') . '/logs/app.' . $logDateFormat . '.log',
         ],
         'stderr' => [

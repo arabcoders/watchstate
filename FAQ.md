@@ -203,7 +203,7 @@ No, webhooks are **not required** for the tool to function. You can use the buil
 
 > [!NOTE]
 > There are problems with jellyfin API, which are fixed by using webhooks, please check out
-> the [webhook guide](/guides/webhooks.md#media-backends-webhook-limitations) to learn more.
+> the [backend limitations guide](/guides/backend-limitations.md#jellyfin) to learn more.
 
 ---
 

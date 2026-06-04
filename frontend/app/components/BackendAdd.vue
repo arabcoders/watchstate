@@ -45,6 +45,17 @@
             </NuxtLink>
             to learn more.
           </li>
+          <li>
+            Each backend has specific requirements. Review the
+            <NuxtLink
+              to="/help/backend-limitations"
+              class="inline-flex items-center gap-1 text-primary"
+            >
+              <UIcon name="i-lucide-circle-help" class="size-4" />
+              <span>backend limitations</span>
+            </NuxtLink>
+            page before adding.
+          </li>
           <li v-if="api_user === 'main'">
             Do not add identity backends manually after finishing the main identity backend setup.
             Visit

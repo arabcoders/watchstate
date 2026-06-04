@@ -174,6 +174,20 @@ final class RestoreMapper implements iImport
                 $entity[iState::COLUMN_PARENT] = Guid::fromArray($entity[iState::COLUMN_PARENT])->getAll();
             }
 
+            if (null !== ($progress = $entity[iState::COLUMN_META_DATA_PROGRESS] ?? null)) {
+                $entity[iState::COLUMN_META_DATA] = [
+                    $entity[iState::COLUMN_VIA] => [
+                        iState::COLUMN_META_DATA_PROGRESS => (string) $progress,
+                    ],
+                ];
+                $entity[iState::COLUMN_EXTRA] = [
+                    $entity[iState::COLUMN_VIA] => [
+                        iState::COLUMN_EXTRA_EVENT => 'task.backup',
+                        iState::COLUMN_EXTRA_DATE => time(),
+                    ],
+                ];
+            }
+
             $item = $state::fromArray($entity);
 
             $this->add($item);
