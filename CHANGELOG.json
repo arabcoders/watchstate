@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "1ccfb235e8c9b1cb45b2efd9e9e699ba1713d2d0",
-    "date": "2026-05-31T13:39:07+00:00",
+    "full_sha": "ea35d37e4364c480a077c2b3c9d80f6e0961b40a",
+    "date": "2026-06-04T06:11:38+00:00",
     "commits": [
+      {
+        "sha": "ea35d37e",
+        "full_sha": "ea35d37e4364c480a077c2b3c9d80f6e0961b40a",
+        "message": "chore: format tests",
+        "author": "arabcoders",
+        "date": "2026-06-04T06:11:38+00:00"
+      },
+      {
+        "sha": "5e5b28e1",
+        "full_sha": "5e5b28e1630c8ceaa268c9c37bbde8baecb21581",
+        "message": "chore: update external packages",
+        "author": "arabcoders",
+        "date": "2026-06-04T06:10:25+00:00"
+      },
       {
         "sha": "1ccfb235",
         "full_sha": "1ccfb235e8c9b1cb45b2efd9e9e699ba1713d2d0",
