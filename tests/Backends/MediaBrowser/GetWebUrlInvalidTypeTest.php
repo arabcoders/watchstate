@@ -25,7 +25,7 @@ class GetWebUrlInvalidTypeTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinGetWebUrl::class],
-            ['Emby', EmbyGetWebUrl::class],
+            ['Emby',     EmbyGetWebUrl::class],
         ];
     }
 }

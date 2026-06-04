@@ -32,7 +32,7 @@ class BackupTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinBackup::class, JellyfinGuid::class],
-            ['Emby', EmbyBackup::class, EmbyGuid::class],
+            ['Emby',     EmbyBackup::class,     EmbyGuid::class],
         ];
     }
 }

@@ -37,7 +37,11 @@ class ParseWebhookSuccessTest extends TestCase
                     ),
                 ),
             );
-            return new GetMetaData($http, $this->createLogger(), new \Symfony\Component\Cache\Psr16Cache(new \Symfony\Component\Cache\Adapter\ArrayAdapter()));
+            return new GetMetaData(
+                $http,
+                $this->createLogger(),
+                new \Symfony\Component\Cache\Psr16Cache(new \Symfony\Component\Cache\Adapter\ArrayAdapter()),
+            );
         });
 
         $cache = new \Symfony\Component\Cache\Psr16Cache(new \Symfony\Component\Cache\Adapter\ArrayAdapter());
@@ -50,14 +54,14 @@ class ParseWebhookSuccessTest extends TestCase
             backendId: 'backend-1',
         );
 
-        $request = (new ServerRequest('POST', new Uri('http://mediabrowser.test')))
+        $request = new ServerRequest('POST', new Uri('http://mediabrowser.test'))
             ->withParsedBody($payload['webhook_emby']);
 
         $action = new ParseWebhook($this->createLogger());
-        $guid = (new EmbyGuid($this->createLogger()))->withContext($context);
+        $guid = new EmbyGuid($this->createLogger())->withContext($context);
         $result = $action($context, $guid, $request);
 
-        $message = $result->error?->format() ?? ($result->extra['message'] ?? '');
+        $message = $result->error?->format() ?? $result->extra['message'] ?? '';
         $this->assertTrue($result->isSuccessful(), $message);
         $this->assertSame('Test Movie', $result->response->title);
     }

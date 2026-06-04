@@ -28,7 +28,7 @@ class GetIdentifierTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinGetIdentifier::class],
-            ['Emby', EmbyGetIdentifier::class],
+            ['Emby',     EmbyGetIdentifier::class],
         ];
     }
 }

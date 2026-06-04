@@ -24,7 +24,7 @@ use Symfony\Component\Yaml\Yaml;
 
 class JellyfinGuidTest extends TestCase
 {
-    protected Logger|null $logger = null;
+    protected ?Logger $logger = null;
 
     private function logged(Level $level, string $message, bool $clear = false): bool
     {
@@ -65,7 +65,7 @@ class JellyfinGuidTest extends TestCase
                 backendId: 's000000000000000000000000000000j',
                 backendToken: 't000000000000000000000000000000j',
                 backendUser: 'u000000000000000000000000000000j',
-            )
+            ),
         );
     }
 
@@ -92,7 +92,7 @@ class JellyfinGuidTest extends TestCase
             $this->getClass();
             $this->assertTrue(
                 $this->logged(Level::Error, 'Failed to parse GUIDs file', true),
-                "Assert message logged when the value type does not match the expected type."
+                'Assert message logged when the value type does not match the expected type.',
             );
         } finally {
             Config::save('guid.file', $oldGuidFile);
@@ -104,165 +104,157 @@ class JellyfinGuidTest extends TestCase
         Config::save('guid.file', null);
 
         $tmpFile = self::$tmpPath . '/guid_' . uniqid();
-            $this->checkException(
-                closure: function () use ($tmpFile) {
-                    file_put_contents($tmpFile, 'version: 2.0');
-                    $this->getClass()->parseGUIDFile($tmpFile);
-                },
-                reason: "Failed to throw exception when the GUID file version is not supported.",
-                exception: InvalidArgumentException::class,
-                exceptionMessage: 'Unsupported file version'
-            );
-
+        $this->checkException(
+            closure: function () use ($tmpFile) {
+                file_put_contents($tmpFile, 'version: 2.0');
+                $this->getClass()->parseGUIDFile($tmpFile);
+            },
+            reason: 'Failed to throw exception when the GUID file version is not supported.',
+            exception: InvalidArgumentException::class,
+            exceptionMessage: 'Unsupported file version',
+        );
 
         $this->checkException(
             closure: fn() => $this->getClass()->parseGUIDFile('not_set.yml'),
-            reason: "Failed to assert that the GUID file is not found.",
+            reason: 'Failed to assert that the GUID file is not found.',
             exception: InvalidArgumentException::class,
-            exceptionMessage: 'does not exist'
+            exceptionMessage: 'does not exist',
         );
 
         $tmpFile = self::$tmpPath . '/guid_' . uniqid();
-            $this->checkException(
-                closure: function () use ($tmpFile) {
-                    file_put_contents($tmpFile, 'fff: {_]');
-                    $this->getClass()->parseGUIDFile($tmpFile);
-                },
-                reason: "Failed to throw exception when the GUID file is invalid.",
-                exception: InvalidArgumentException::class,
-                exceptionMessage: 'Failed to parse GUIDs file'
-            );
-
+        $this->checkException(
+            closure: function () use ($tmpFile) {
+                file_put_contents($tmpFile, 'fff: {_]');
+                $this->getClass()->parseGUIDFile($tmpFile);
+            },
+            reason: 'Failed to throw exception when the GUID file is invalid.',
+            exception: InvalidArgumentException::class,
+            exceptionMessage: 'Failed to parse GUIDs file',
+        );
 
         $tmpFile = self::$tmpPath . '/guid_' . uniqid();
-            $this->checkException(
-                closure: function () use ($tmpFile) {
-                    file_put_contents($tmpFile, 'invalid');
-                    $this->getClass()->parseGUIDFile($tmpFile);
-                },
-                reason: "Failed to throw exception when the GUID file is invalid.",
-                exception: InvalidArgumentException::class,
-                exceptionMessage: 'is not an array'
-            );
-
+        $this->checkException(
+            closure: function () use ($tmpFile) {
+                file_put_contents($tmpFile, 'invalid');
+                $this->getClass()->parseGUIDFile($tmpFile);
+            },
+            reason: 'Failed to throw exception when the GUID file is invalid.',
+            exception: InvalidArgumentException::class,
+            exceptionMessage: 'is not an array',
+        );
 
         $tmpFile = self::$tmpPath . '/guid_' . uniqid();
         touch($tmpFile);
-            $this->getClass()->parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Info, 'is empty', true),
-                "Failed to assert that the GUID file is empty."
-            );
-
-
-        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
-            $this->checkException(
-                closure: function () use ($tmpFile) {
-                    file_put_contents($tmpFile, Yaml::dump(['links' => 'foo']));
-                    $this->getClass()->parseGUIDFile($tmpFile);
-                },
-                reason: "Should throw an exception when there are no GUIDs mapping.",
-                exception: InvalidArgumentException::class,
-                exceptionMessage: 'links sub key is not an array'
-            );
-
+        $this->getClass()->parseGUIDFile($tmpFile);
+        $this->assertTrue(
+            $this->logged(Level::Info, 'is empty', true),
+            'Failed to assert that the GUID file is empty.',
+        );
 
         $tmpFile = self::$tmpPath . '/guid_' . uniqid();
-            $this->handler->clear();
-            $yaml = ['links' => []];
-            file_put_contents($tmpFile, Yaml::dump($yaml));
-            $this->assertCount(0, $this->handler->getRecords(), "There should be no messages logged for empty list.");
-            $this->handler->clear();
+        $this->checkException(
+            closure: function () use ($tmpFile) {
+                file_put_contents($tmpFile, Yaml::dump(['links' => 'foo']));
+                $this->getClass()->parseGUIDFile($tmpFile);
+            },
+            reason: 'Should throw an exception when there are no GUIDs mapping.',
+            exception: InvalidArgumentException::class,
+            exceptionMessage: 'links sub key is not an array',
+        );
 
+        $tmpFile = self::$tmpPath . '/guid_' . uniqid();
+        $this->handler->clear();
+        $yaml = ['links' => []];
+        file_put_contents($tmpFile, Yaml::dump($yaml));
+        $this->assertCount(0, $this->handler->getRecords(), 'There should be no messages logged for empty list.');
+        $this->handler->clear();
 
-            file_put_contents($tmpFile, Yaml::dump(ag_set($yaml, 'links.0', 'ff')));
-            $this->getClass()->parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'Value must be an object.', true),
-                'Assert replace key is an object.'
-            );
-
+        file_put_contents($tmpFile, Yaml::dump(ag_set($yaml, 'links.0', 'ff')));
+        $this->getClass()->parseGUIDFile($tmpFile);
+        $this->assertTrue(
+            $this->logged(Level::Warning, 'Value must be an object.', true),
+            'Assert replace key is an object.',
+        );
 
         $this->handler->clear();
 
         $tmpFile = self::$tmpPath . '/guid_' . uniqid();
-            $yaml = ag_set(['links' => [0 => ['type' => 'jellyfin']]], 'links.0.map', 'foo');
-            file_put_contents($tmpFile, Yaml::dump($yaml));
-            $this->getClass()->parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'map value must be an object.', true),
-                'Assert map key is an object.'
-            );
+        $yaml = ag_set(['links' => [0 => ['type' => 'jellyfin']]], 'links.0.map', 'foo');
+        file_put_contents($tmpFile, Yaml::dump($yaml));
+        $this->getClass()->parseGUIDFile($tmpFile);
+        $this->assertTrue(
+            $this->logged(Level::Warning, 'map value must be an object.', true),
+            'Assert map key is an object.',
+        );
 
-            $yaml = ag_set($yaml, 'links.0.map', []);
-            file_put_contents($tmpFile, Yaml::dump($yaml));
-            $this->getClass()->parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'map.from field is empty or not a string.', true),
-                'Assert to field is a string.'
-            );
+        $yaml = ag_set($yaml, 'links.0.map', []);
+        file_put_contents($tmpFile, Yaml::dump($yaml));
+        $this->getClass()->parseGUIDFile($tmpFile);
+        $this->assertTrue(
+            $this->logged(Level::Warning, 'map.from field is empty or not a string.', true),
+            'Assert to field is a string.',
+        );
 
-            $yaml = ag_set($yaml, 'links.0.map.from', 'foo');
-            file_put_contents($tmpFile, Yaml::dump($yaml));
-            $this->getClass()->parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'map.to field is empty or not a string.', true),
-                'Assert to field is a string.'
-            );
+        $yaml = ag_set($yaml, 'links.0.map.from', 'foo');
+        file_put_contents($tmpFile, Yaml::dump($yaml));
+        $this->getClass()->parseGUIDFile($tmpFile);
+        $this->assertTrue(
+            $this->logged(Level::Warning, 'map.to field is empty or not a string.', true),
+            'Assert to field is a string.',
+        );
 
-            $yaml = ag_set($yaml, 'links.0.map.to', 'foobar');
-            file_put_contents($tmpFile, Yaml::dump($yaml));
-            $this->getClass()->parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'field does not starts with', true),
-                'Assert to field is a string.'
-            );
+        $yaml = ag_set($yaml, 'links.0.map.to', 'foobar');
+        file_put_contents($tmpFile, Yaml::dump($yaml));
+        $this->getClass()->parseGUIDFile($tmpFile);
+        $this->assertTrue(
+            $this->logged(Level::Warning, 'field does not starts with', true),
+            'Assert to field is a string.',
+        );
 
-            $yaml = ag_set($yaml, 'links.0.map.to', 'guid_foobar');
-            file_put_contents($tmpFile, Yaml::dump($yaml));
-            $this->getClass()->parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'map.to field is not a supported', true),
-                'Assert to field is a string.'
-            );
+        $yaml = ag_set($yaml, 'links.0.map.to', 'guid_foobar');
+        file_put_contents($tmpFile, Yaml::dump($yaml));
+        $this->getClass()->parseGUIDFile($tmpFile);
+        $this->assertTrue(
+            $this->logged(Level::Warning, 'map.to field is not a supported', true),
+            'Assert to field is a string.',
+        );
 
-            $yaml = ag_set($yaml, 'links.0.map', [
-                'from' => 'tsdb',
-                'to' => Guid::GUID_IMDB,
-            ]);
+        $yaml = ag_set($yaml, 'links.0.map', [
+            'from' => 'tsdb',
+            'to' => Guid::GUID_IMDB,
+        ]);
 
-            $this->handler->clear();
+        $this->handler->clear();
 
-            file_put_contents($tmpFile, Yaml::dump($yaml));
-            $class = $this->getClass();
-            $class->parseGUIDFile($tmpFile);
-            $this->assertArrayHasKey(
-                'tsdb',
-                ag($class->getConfig(), 'guidMapper', []),
-                'Assert that the GUID mapping has been added.'
-            );
-            $this->handler->clear();
+        file_put_contents($tmpFile, Yaml::dump($yaml));
+        $class = $this->getClass();
+        $class->parseGUIDFile($tmpFile);
+        $this->assertArrayHasKey(
+            'tsdb',
+            ag($class->getConfig(), 'guidMapper', []),
+            'Assert that the GUID mapping has been added.',
+        );
+        $this->handler->clear();
 
-            $yaml = ag_set($yaml, 'links.0.map', [
-                'from' => 'imthedb',
-                'to' => 'guid_imdb',
-            ]);
-            file_put_contents($tmpFile, Yaml::dump($yaml));
-            $class = $this->getClass();
-            $class->parseGUIDFile($tmpFile);
-            $this->assertArrayHasKey(
-                'imthedb',
-                ag($class->getConfig(), 'guidMapper', []),
-                'Assert that the GUID mapping has been added.'
-            );
-
+        $yaml = ag_set($yaml, 'links.0.map', [
+            'from' => 'imthedb',
+            'to' => 'guid_imdb',
+        ]);
+        file_put_contents($tmpFile, Yaml::dump($yaml));
+        $class = $this->getClass();
+        $class->parseGUIDFile($tmpFile);
+        $this->assertArrayHasKey(
+            'imthedb',
+            ag($class->getConfig(), 'guidMapper', []),
+            'Assert that the GUID mapping has been added.',
+        );
     }
 
     public function test_isLocal()
     {
         $this->assertFalse(
             $this->getClass()->isLocal('test://123456/1/1'),
-            'Should always return false, as Jellyfin does not have local GUIDs.'
+            'Should always return false, as Jellyfin does not have local GUIDs.',
         );
     }
 
@@ -273,19 +265,25 @@ class JellyfinGuidTest extends TestCase
                 'id' => 123,
                 'type' => JellyfinClient::TYPE_EPISODE,
                 'title' => 'Test title',
-                'year' => 2021
-            ]
+                'year' => 2021,
+            ],
         ];
 
-        $this->assertTrue($this->getClass()->has([
-            'imdb' => '123456',
-            'tvdb' => '123456',
-        ], $context), 'Assert that the GUID exists.');
+        $this->assertTrue(
+            $this->getClass()->has([
+                'imdb' => '123456',
+                'tvdb' => '123456',
+            ], $context),
+            'Assert that the GUID exists.',
+        );
 
-        $this->assertFalse($this->getClass()->has([
-            ['none' => '123456'],
-            ['imdb' => ''],
-        ], $context), 'Assert that the GUID does not exist.');
+        $this->assertFalse(
+            $this->getClass()->has([
+                ['none' => '123456'],
+                ['imdb' => ''],
+            ], $context),
+            'Assert that the GUID does not exist.',
+        );
     }
 
     public function test_parse()
@@ -299,29 +297,34 @@ class JellyfinGuidTest extends TestCase
             ],
         ];
 
-        $this->assertEquals([
-            Guid::GUID_IMDB => '123456',
-            Guid::GUID_TMDB => '123456',
-            Guid::GUID_ANIDB => '123456',
-        ],
+        $this->assertEquals(
+            [
+                Guid::GUID_IMDB => '123456',
+                Guid::GUID_TMDB => '123456',
+                Guid::GUID_ANIDB => '123456',
+            ],
             $this->getClass()->parse([
                 'imdb' => '123456',
                 'tmdb' => '123456',
                 'anidb' => '123456',
             ], $context),
-            'Assert that the GUID exists.'
+            'Assert that the GUID exists.',
         );
 
-        $this->assertEquals([], $this->getClass()->parse([
-            '' => '',
-            'none' => '123456',
-            'imdb' => ''
-        ], $context), 'Assert that the GUID does not exist. for invalid GUIDs.');
+        $this->assertEquals(
+            [],
+            $this->getClass()->parse([
+                '' => '',
+                'none' => '123456',
+                'imdb' => '',
+            ], $context),
+            'Assert that the GUID does not exist. for invalid GUIDs.',
+        );
 
         $this->assertEquals(
             [Guid::GUID_TVMAZE => '123456'],
             $this->getClass()->parse(['tv maze' => '123456'], $context),
-            'Assert "tv maze" get converted to "tvmaze".'
+            'Assert "tv maze" get converted to "tvmaze".',
         );
     }
 
@@ -329,18 +332,23 @@ class JellyfinGuidTest extends TestCase
     {
         $context = ['item' => ['id' => 123, 'type' => 'episode', 'title' => 'Test title', 'year' => 2021]];
 
-        $this->assertEquals([], $this->getClass()->get([
-            ['imdb' => ''],
-        ], $context), 'Assert invalid guid return empty array.');
+        $this->assertEquals(
+            [],
+            $this->getClass()->get([
+                ['imdb' => ''],
+            ], $context),
+            'Assert invalid guid return empty array.',
+        );
 
-        $this->assertEquals([Guid::GUID_IMDB => '1', Guid::GUID_CMDB => 'afa', Guid::GUID_TVDB => '123'],
+        $this->assertEquals(
+            [Guid::GUID_IMDB => '1', Guid::GUID_CMDB => 'afa', Guid::GUID_TVDB => '123'],
             $this->getClass()->get([
                 'imdb' => '1',
                 'cmdb' => 'afa',
                 'tvdb' => '123',
                 'none' => '123',
             ], $context),
-            'Assert only the the oldest ID is returned for numeric GUIDs.'
+            'Assert only the the oldest ID is returned for numeric GUIDs.',
         );
     }
 
@@ -351,8 +359,8 @@ class JellyfinGuidTest extends TestCase
                 'id' => 123,
                 'type' => JellyfinClient::TYPE_SHOW,
                 'title' => 'Test title',
-                'year' => 2021
-            ]
+                'year' => 2021,
+            ],
         ];
 
         // -- as we cache the ignore list for each user now,
@@ -366,18 +374,20 @@ class JellyfinGuidTest extends TestCase
             opts: [
                 'reset' => true,
                 'list' => [
-                    (string)make_ignore_id('show://imdb:123@test_jellyfin') => 1
-                ]
-            ]
+                    (string) make_ignore_id('show://imdb:123@test_jellyfin') => 1,
+                ],
+            ],
         );
 
-        $this->assertEquals([],
+        $this->assertEquals(
+            [],
             $this->getClass()->get(['imdb' => '123'], $context),
-            'Assert only the the oldest ID is returned for numeric GUIDs.');
+            'Assert only the the oldest ID is returned for numeric GUIDs.',
+        );
 
         $this->assertTrue(
             $this->logged(Level::Debug, 'JellyfinGuid: Ignoring', true),
-            'Assert that a log is raised when the GUID is ignored by user choice.'
+            'Assert that a log is raised when the GUID is ignored by user choice.',
         );
     }
 }

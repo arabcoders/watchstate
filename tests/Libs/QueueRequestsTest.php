@@ -11,7 +11,7 @@ use App\Libs\TestCase;
 
 class QueueRequestsTest extends TestCase
 {
-    private QueueRequests|null $queue = null;
+    private ?QueueRequests $queue = null;
 
     protected function setUp(): void
     {
@@ -33,18 +33,18 @@ class QueueRequestsTest extends TestCase
         $this->assertCount(
             count($requests),
             $this->queue,
-            'Count reflects the number of queued requests.'
+            'Count reflects the number of queued requests.',
         );
 
         $this->assertSame(
             $requests,
             $this->queue->getQueue(),
-            'getQueue exposes the queued requests in insertion order.'
+            'getQueue exposes the queued requests in insertion order.',
         );
         $this->assertSame(
             $requests,
             iterator_to_array($this->queue),
-            'Iteration yields queued requests in insertion order.'
+            'Iteration yields queued requests in insertion order.',
         );
     }
 

@@ -17,16 +17,16 @@ use App\Libs\Uri;
 use App\Libs\UserContext;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
-use Psr\Log\LoggerInterface;
 use Psr\Http\Message\UriInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 abstract class PlexTestCase extends TestCase
 {
-    protected TestHandler|null $handler = null;
-    protected Logger|null $logger = null;
+    protected ?TestHandler $handler = null;
+    protected ?Logger $logger = null;
 
     private array $fixtures = [];
 

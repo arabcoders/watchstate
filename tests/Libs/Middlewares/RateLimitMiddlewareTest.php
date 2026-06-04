@@ -176,5 +176,4 @@ final class RateLimitMiddlewareTest extends TestCase
         $this->assertSame(Status::TOO_MANY_REQUESTS->value, $second->getStatusCode());
         $this->assertSame(2, $calls);
     }
-
 }

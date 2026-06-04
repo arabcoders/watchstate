@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Backends\MediaBrowser;
 
+use App\Backends\Common\Response;
 use App\Backends\Emby\Action\GetUsersList as EmbyGetUsersList;
 use App\Backends\Jellyfin\Action\GetUser;
 use App\Backends\Jellyfin\Action\GetUsersList as JellyfinGetUsersList;
-use App\Backends\Common\Response;
 use App\Libs\Container;
 use App\Libs\Options;
 
@@ -42,7 +42,7 @@ class GetUsersListLimitedTokenTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinGetUsersList::class],
-            ['Emby', EmbyGetUsersList::class],
+            ['Emby',     EmbyGetUsersList::class],
         ];
     }
 }

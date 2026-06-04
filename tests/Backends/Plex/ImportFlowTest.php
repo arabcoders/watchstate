@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Backends\Plex;
 
-use App\Backends\Plex\Action\Import;
-use App\Backends\Plex\Action\GetMetaData;
-use App\Backends\Plex\PlexGuid;
 use App\Backends\Common\Response;
+use App\Backends\Plex\Action\GetMetaData;
+use App\Backends\Plex\Action\Import;
+use App\Backends\Plex\PlexGuid;
 use App\Libs\Container;
 use ReflectionMethod;
 
@@ -20,7 +20,7 @@ class ImportFlowTest extends PlexTestCase
         $item = ag($this->fixture('library_movie_get_200'), 'response.body.MediaContainer.Metadata.0');
 
         $action = new Import($this->makeHttpClient(), $this->logger);
-        $guid = (new PlexGuid($this->logger))->withContext($context);
+        $guid = new PlexGuid($this->logger)->withContext($context);
 
         $this->invokeProcess(
             $action,
@@ -45,7 +45,7 @@ class ImportFlowTest extends PlexTestCase
         unset($item['addedAt'], $item['lastViewedAt']);
 
         $action = new Import($this->makeHttpClient(), $this->logger);
-        $guid = (new PlexGuid($this->logger))->withContext($context);
+        $guid = new PlexGuid($this->logger)->withContext($context);
 
         $this->invokeProcess(
             $action,
@@ -98,9 +98,9 @@ class ImportFlowTest extends PlexTestCase
         ];
 
         Container::add(GetMetaData::class, fn() => new class($showPayload) {
-            public function __construct(private array $payload)
-            {
-            }
+            public function __construct(
+                private array $payload,
+            ) {}
 
             public function __invoke(\App\Backends\Common\Context $context, string|int $id, array $opts = []): Response
             {
@@ -109,7 +109,7 @@ class ImportFlowTest extends PlexTestCase
         });
 
         $action = new Import($this->makeHttpClient(), $this->logger);
-        $guid = (new PlexGuid($this->logger))->withContext($context);
+        $guid = new PlexGuid($this->logger)->withContext($context);
 
         $this->invokeProcess(
             $action,
@@ -160,9 +160,9 @@ class ImportFlowTest extends PlexTestCase
         ];
 
         $metaAction = new class($show) {
-            public function __construct(private array $payload)
-            {
-            }
+            public function __construct(
+                private array $payload,
+            ) {}
 
             public int $calls = 0;
 
@@ -180,7 +180,7 @@ class ImportFlowTest extends PlexTestCase
         Container::add(GetMetaData::class, fn() => $metaAction);
 
         $action = new Import($this->makeHttpClient(), $this->logger);
-        $guid = (new PlexGuid($this->logger))->withContext($context);
+        $guid = new PlexGuid($this->logger)->withContext($context);
 
         $this->invokeProcessShow($action, $context, $guid, $show, []);
         $this->invokeProcess(
@@ -208,7 +208,7 @@ class ImportFlowTest extends PlexTestCase
         $item['guid'] = 'plex://local';
 
         $action = new Import($this->makeHttpClient(), $this->logger);
-        $guid = (new PlexGuid($this->logger))->withContext($context);
+        $guid = new PlexGuid($this->logger)->withContext($context);
 
         $this->invokeProcess(
             $action,

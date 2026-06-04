@@ -27,46 +27,53 @@ final class UpdateTest extends TestCase
         $this->initTempApp();
         Config::save('supported.fake', FakeBackendClient::class);
 
-        file_put_contents((string) Config::get('backends_file'), Yaml::dump([
-            'backend1' => [
-                'type' => 'fake',
-                'url' => 'http://backend1.example.invalid',
-                'token' => 'token1',
-                'user' => 'user-1',
-                'uuid' => 'uuid-1',
-                'webhook' => [],
-                'options' => [
-                    'IMPORT_METADATA_ONLY' => true,
-                    'use_old_progress_endpoint' => true,
-                    'keep' => 'value1',
+        file_put_contents(
+            (string) Config::get('backends_file'),
+            Yaml::dump(
+                [
+                    'backend1' => [
+                        'type' => 'fake',
+                        'url' => 'http://backend1.example.invalid',
+                        'token' => 'token1',
+                        'user' => 'user-1',
+                        'uuid' => 'uuid-1',
+                        'webhook' => [],
+                        'options' => [
+                            'IMPORT_METADATA_ONLY' => true,
+                            'use_old_progress_endpoint' => true,
+                            'keep' => 'value1',
+                        ],
+                        'import' => [
+                            'enabled' => true,
+                        ],
+                        'export' => [
+                            'enabled' => true,
+                        ],
+                    ],
+                    'backend2' => [
+                        'type' => 'fake',
+                        'url' => 'http://backend2.example.invalid',
+                        'token' => 'token2',
+                        'user' => 'user-2',
+                        'uuid' => 'uuid-2',
+                        'webhook' => [],
+                        'options' => [
+                            'IMPORT_METADATA_ONLY' => true,
+                            'use_old_progress_endpoint' => true,
+                            'keep' => 'value2',
+                        ],
+                        'import' => [
+                            'enabled' => true,
+                        ],
+                        'export' => [
+                            'enabled' => true,
+                        ],
+                    ],
                 ],
-                'import' => [
-                    'enabled' => true,
-                ],
-                'export' => [
-                    'enabled' => true,
-                ],
-            ],
-            'backend2' => [
-                'type' => 'fake',
-                'url' => 'http://backend2.example.invalid',
-                'token' => 'token2',
-                'user' => 'user-2',
-                'uuid' => 'uuid-2',
-                'webhook' => [],
-                'options' => [
-                    'IMPORT_METADATA_ONLY' => true,
-                    'use_old_progress_endpoint' => true,
-                    'keep' => 'value2',
-                ],
-                'import' => [
-                    'enabled' => true,
-                ],
-                'export' => [
-                    'enabled' => true,
-                ],
-            ],
-        ], 8, 2));
+                8,
+                2,
+            ),
+        );
     }
 
     public function test_update_strips_deprecated_keys(): void
@@ -148,22 +155,29 @@ final class UpdateTest extends TestCase
     {
         Config::save('supported.fake', TokenAwareBackendClient::class);
 
-        file_put_contents((string) Config::get('backends_file'), Yaml::dump([
-            'backend1' => [
-                'type' => 'fake',
-                'url' => 'http://backend1.example.invalid',
-                'token' => 'bad-token',
-                'user' => 'user-1',
-                'uuid' => 'uuid-1',
-                'options' => [],
-                'import' => [
-                    'enabled' => true,
+        file_put_contents(
+            (string) Config::get('backends_file'),
+            Yaml::dump(
+                [
+                    'backend1' => [
+                        'type' => 'fake',
+                        'url' => 'http://backend1.example.invalid',
+                        'token' => 'bad-token',
+                        'user' => 'user-1',
+                        'uuid' => 'uuid-1',
+                        'options' => [],
+                        'import' => [
+                            'enabled' => true,
+                        ],
+                        'export' => [
+                            'enabled' => true,
+                        ],
+                    ],
                 ],
-                'export' => [
-                    'enabled' => true,
-                ],
-            ],
-        ], 8, 2));
+                8,
+                2,
+            ),
+        );
 
         $handler = new Update($this->createStub(iImport::class), new Logger('test'));
 

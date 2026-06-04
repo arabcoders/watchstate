@@ -8,9 +8,7 @@ use App\Backends\Emby\Action\SearchQuery as EmbySearchQuery;
 use App\Backends\Emby\EmbyGuid;
 use App\Backends\Jellyfin\Action\SearchQuery as JellyfinSearchQuery;
 use App\Backends\Jellyfin\JellyfinGuid;
-
 use App\Libs\Extends\MockHttpClient;
-
 
 class SearchQueryTest extends MediaBrowserTestCase
 {
@@ -37,7 +35,7 @@ class SearchQueryTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinSearchQuery::class, JellyfinGuid::class],
-            ['Emby', EmbySearchQuery::class, EmbyGuid::class],
+            ['Emby',     EmbySearchQuery::class,     EmbyGuid::class],
         ];
     }
 }

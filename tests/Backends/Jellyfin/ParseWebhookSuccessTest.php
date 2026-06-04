@@ -52,14 +52,14 @@ class ParseWebhookSuccessTest extends TestCase
             backendId: 'backend-1',
         );
 
-        $request = (new ServerRequest('POST', new Uri('http://mediabrowser.test')))
+        $request = new ServerRequest('POST', new Uri('http://mediabrowser.test'))
             ->withParsedBody($payload['webhook_jellyfin']);
 
         $action = new ParseWebhook($cache);
-        $guid = (new JellyfinGuid($this->createLogger()))->withContext($context);
+        $guid = new JellyfinGuid($this->createLogger())->withContext($context);
         $result = $action($context, $guid, $request);
 
-        $message = $result->error?->format() ?? ($result->extra['message'] ?? '');
+        $message = $result->error?->format() ?? $result->extra['message'] ?? '';
         $this->assertTrue($result->isSuccessful(), $message);
         $this->assertSame('Test Movie', $result->response->title);
     }

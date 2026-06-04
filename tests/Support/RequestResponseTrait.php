@@ -42,8 +42,7 @@ trait RequestResponseTrait
         array $cookies = [],
         array $files = [],
         array $server = [],
-        iStream|null $body = null
-
+        ?iStream $body = null,
     ): iRequest {
         $factory = new Psr17Factory();
         $creator = new ServerRequestCreator($factory, $factory, $factory, $factory);
@@ -58,10 +57,14 @@ trait RequestResponseTrait
                 'SERVER_PORT' => 80,
                 'HTTP_USER_AGENT' => 'WatchState/0.0',
             ], $server),
-            headers: array_replace_recursive($server, [
-                'Accept' => 'application/json',
-                'Authorization' => 'Bearer api_test_token',
-            ], $headers),
+            headers: array_replace_recursive(
+                $server,
+                [
+                    'Accept' => 'application/json',
+                    'Authorization' => 'Bearer api_test_token',
+                ],
+                $headers,
+            ),
             cookie: $cookies,
             get: $query,
             post: $post,
@@ -69,5 +72,4 @@ trait RequestResponseTrait
             body: $body,
         );
     }
-
 }

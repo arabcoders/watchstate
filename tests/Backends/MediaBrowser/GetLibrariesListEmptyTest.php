@@ -29,7 +29,7 @@ class GetLibrariesListEmptyTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinGetLibrariesList::class],
-            ['Emby', EmbyGetLibrariesList::class],
+            ['Emby',     EmbyGetLibrariesList::class],
         ];
     }
 }

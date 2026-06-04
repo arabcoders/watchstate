@@ -17,7 +17,7 @@ class GetLibraryProcessTest extends PlexTestCase
         $item = ag($this->fixture('library_movie_get_200'), 'response.body.MediaContainer.Metadata.0');
 
         $action = new GetLibrary($this->makeHttpClient(), $this->logger);
-        $guid = (new PlexGuid($this->logger))->withContext($context);
+        $guid = new PlexGuid($this->logger)->withContext($context);
 
         $result = $this->invokeProcess(
             $action,
@@ -50,7 +50,7 @@ class GetLibraryProcessTest extends PlexTestCase
         ];
 
         $action = new GetLibrary($this->makeHttpClient(), $this->logger);
-        $guid = (new PlexGuid($this->logger))->withContext($context);
+        $guid = new PlexGuid($this->logger)->withContext($context);
 
         $result = $this->invokeProcess(
             $action,
@@ -75,7 +75,7 @@ class GetLibraryProcessTest extends PlexTestCase
         ];
 
         $action = new GetLibrary($this->makeHttpClient(), $this->logger);
-        $guid = (new PlexGuid($this->logger))->withContext($context);
+        $guid = new PlexGuid($this->logger)->withContext($context);
 
         $this->expectException(\App\Libs\Exceptions\Backends\RuntimeException::class);
 

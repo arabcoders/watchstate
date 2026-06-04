@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Tests\Backends\Plex;
 
 use App\Backends\Common\Response;
-use App\Backends\Plex\Action\GetLibrary;
 use App\Backends\Plex\Action\GetLibrariesList;
+use App\Backends\Plex\Action\GetLibrary;
 use App\Backends\Plex\PlexGuid;
 use App\Libs\Container;
 

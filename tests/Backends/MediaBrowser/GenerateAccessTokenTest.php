@@ -29,7 +29,7 @@ class GenerateAccessTokenTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinGenerateAccessToken::class],
-            ['Emby', EmbyGenerateAccessToken::class],
+            ['Emby',     EmbyGenerateAccessToken::class],
         ];
     }
 }

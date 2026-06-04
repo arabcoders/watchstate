@@ -42,12 +42,15 @@ class UtilsTest extends TestCase
             'items' => ['first', 'second'],
         ];
 
-        self::assertSame([
-            'user.name' => 'John',
-            'user.address.city' => 'New York',
-            'items.0' => 'first',
-            'items.1' => 'second',
-        ], flat_array($input));
+        self::assertSame(
+            [
+                'user.name' => 'John',
+                'user.address.city' => 'New York',
+                'items.0' => 'first',
+                'items.1' => 'second',
+            ],
+            flat_array($input),
+        );
     }
 
     public function test_flat_array_prefix(): void
@@ -64,13 +67,16 @@ class UtilsTest extends TestCase
             'empty' => $emptyObject,
         ];
 
-        self::assertSame([
-            'app::profile::name' => 'John',
-            'app::settings::enabled' => false,
-            'app::settings::count' => 0,
-            'app::settings::tags' => [],
-            'app::empty' => $emptyObject,
-        ], flat_array($input, 'app', '::'));
+        self::assertSame(
+            [
+                'app::profile::name' => 'John',
+                'app::settings::enabled' => false,
+                'app::settings::count' => 0,
+                'app::settings::tags' => [],
+                'app::empty' => $emptyObject,
+            ],
+            flat_array($input, 'app', '::'),
+        );
     }
 
     public function test_validate_servers_valid(): void

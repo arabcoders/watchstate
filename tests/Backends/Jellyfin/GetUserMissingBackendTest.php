@@ -17,7 +17,10 @@ class GetUserMissingBackendTest extends TestCase
         $logger = new \Monolog\Logger('test');
         $action = new GetUser($http, $logger);
 
-        $cache = new \App\Backends\Common\Cache($logger, new \Symfony\Component\Cache\Psr16Cache(new \Symfony\Component\Cache\Adapter\ArrayAdapter()));
+        $cache = new \App\Backends\Common\Cache(
+            $logger,
+            new \Symfony\Component\Cache\Psr16Cache(new \Symfony\Component\Cache\Adapter\ArrayAdapter()),
+        );
         $userContext = $this->createUserContext(JellyfinClient::CLIENT_NAME);
         $context = new \App\Backends\Common\Context(
             clientName: JellyfinClient::CLIENT_NAME,

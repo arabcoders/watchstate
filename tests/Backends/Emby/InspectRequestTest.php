@@ -110,5 +110,4 @@ class InspectRequestTest extends TestCase
 
         $this->assertFalse($response->isSuccessful());
     }
-
 }

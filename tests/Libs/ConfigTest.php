@@ -40,7 +40,7 @@ class ConfigTest extends TestCase
         $this->assertSame(
             $this->data,
             Config::getAll(),
-            'When config is initialized, getAll() returns all data'
+            'When config is initialized, getAll() returns all data',
         );
     }
 
@@ -49,7 +49,7 @@ class ConfigTest extends TestCase
         $this->assertSame(
             $this->data['foo'],
             Config::get('foo'),
-            'When key is set, get() returns its value'
+            'When key is set, get() returns its value',
         );
     }
 
@@ -58,7 +58,7 @@ class ConfigTest extends TestCase
         $this->assertSame(
             'not_set',
             Config::get('key_not_set', 'not_set'),
-            'When key is not set, default value is returned'
+            'When key is not set, default value is returned',
         );
     }
 
@@ -72,7 +72,7 @@ class ConfigTest extends TestCase
         $this->assertSame(
             $data,
             Config::getAll(),
-            'When data is appended, getAll() returns all data including appended data.'
+            'When data is appended, getAll() returns all data including appended data.',
         );
     }
 
@@ -84,12 +84,12 @@ class ConfigTest extends TestCase
         $this->assertSame(
             'updated',
             Config::get('foo'),
-            'When key is set via save, get() returns its value'
+            'When key is set via save, get() returns its value',
         );
         $this->assertSame(
             'updated',
             Config::get('sub.key'),
-            'When key is set via save, get() returns its value'
+            'When key is set via save, get() returns its value',
         );
     }
 
@@ -98,13 +98,13 @@ class ConfigTest extends TestCase
         $this->assertCount(
             count($this->data),
             Config::getAll(),
-            'When config is initialized, getAll() returns all data'
+            'When config is initialized, getAll() returns all data',
         );
 
         Config::reset();
         $this->assertEmpty(
             Config::getAll(),
-            'When config is reset, getAll() returns empty array'
+            'When config is reset, getAll() returns empty array',
         );
     }
 
@@ -123,11 +123,11 @@ class ConfigTest extends TestCase
         $this->assertSame(
             $data,
             Config::getAll(),
-            'When key is removed, getAll() returns all data except removed data.'
+            'When key is removed, getAll() returns all data except removed data.',
         );
         $this->assertFalse(
             Config::has('sub'),
-            'When key is removed, has() returns false'
+            'When key is removed, has() returns false',
         );
     }
 
@@ -150,5 +150,4 @@ class ConfigTest extends TestCase
 
         $this->assertSame('-7 DAYS', Config::get('logs.prune.after'));
     }
-
 }

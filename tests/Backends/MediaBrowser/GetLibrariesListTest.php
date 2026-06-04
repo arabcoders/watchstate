@@ -30,7 +30,7 @@ class GetLibrariesListTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinGetLibrariesList::class, '/movies.html?topParentId=lib-1'],
-            ['Emby', EmbyGetLibrariesList::class, '!/videos?serverId=backend-1&parentId=lib-1'],
+            ['Emby',     EmbyGetLibrariesList::class,     '!/videos?serverId=backend-1&parentId=lib-1'],
         ];
     }
 }

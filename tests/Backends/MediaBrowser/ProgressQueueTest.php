@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Backends\MediaBrowser;
 
+use App\Backends\Common\Request;
+use App\Backends\Common\Response;
 use App\Backends\Emby\Action\GetMetaData as EmbyGetMetaData;
 use App\Backends\Emby\Action\GetSessions as EmbyGetSessions;
 use App\Backends\Emby\Action\Progress as EmbyProgress;
 use App\Backends\Emby\EmbyGuid;
-use App\Backends\Common\Request;
 use App\Backends\Jellyfin\Action\GetMetaData as JellyfinGetMetaData;
 use App\Backends\Jellyfin\Action\GetSessions as JellyfinGetSessions;
 use App\Backends\Jellyfin\Action\Progress as JellyfinProgress;
 use App\Backends\Jellyfin\JellyfinGuid;
-use App\Backends\Common\Response;
 use App\Libs\Container;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
@@ -86,7 +86,7 @@ class ProgressQueueTest extends MediaBrowserTestCase
 
             $queue = new QueueRequests();
             $action = new $actionClass($http, $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
             $result = $action($context, $guid, [$entity], $queue);
 
             $this->assertTrue($result->isSuccessful());
@@ -157,7 +157,7 @@ class ProgressQueueTest extends MediaBrowserTestCase
 
             $queue = new QueueRequests();
             $action = new $actionClass($http, $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
             $result = $action($context, $guid, [$entity], $queue);
 
             $this->assertTrue($result->isSuccessful());
@@ -181,7 +181,7 @@ class ProgressQueueTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinProgress::class, JellyfinGuid::class, JellyfinGetMetaData::class, JellyfinGetSessions::class],
-            ['Emby', EmbyProgress::class, EmbyGuid::class, EmbyGetMetaData::class, EmbyGetSessions::class],
+            ['Emby',     EmbyProgress::class,     EmbyGuid::class,     EmbyGetMetaData::class,     EmbyGetSessions::class],
         ];
     }
 }

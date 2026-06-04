@@ -33,7 +33,7 @@ class GetSessionsTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinGetSessions::class],
-            ['Emby', EmbyGetSessions::class],
+            ['Emby',     EmbyGetSessions::class],
         ];
     }
 }

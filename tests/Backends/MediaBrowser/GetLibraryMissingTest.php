@@ -35,15 +35,24 @@ class GetLibraryMissingTest extends MediaBrowserTestCase
 
     private function registerLibrariesListAction(string $actionClass): void
     {
-        Container::add($actionClass, fn() => new $actionClass(new MockHttpClient($this->makeResponse($this->fixture('libraries'))), $this->logger));
-        Container::add(\App\Backends\Jellyfin\Action\GetLibrariesList::class, fn() => new \App\Backends\Jellyfin\Action\GetLibrariesList(new MockHttpClient($this->makeResponse($this->fixture('libraries'))), $this->logger));
+        Container::add(
+            $actionClass,
+            fn() => new $actionClass(new MockHttpClient($this->makeResponse($this->fixture('libraries'))), $this->logger),
+        );
+        Container::add(
+            \App\Backends\Jellyfin\Action\GetLibrariesList::class,
+            fn() => new \App\Backends\Jellyfin\Action\GetLibrariesList(
+                new MockHttpClient($this->makeResponse($this->fixture('libraries'))),
+                $this->logger,
+            ),
+        );
     }
 
     private function provideBackends(): array
     {
         return [
             ['Jellyfin', JellyfinGetLibrary::class, JellyfinGetLibrariesList::class, JellyfinGuid::class],
-            ['Emby', EmbyGetLibrary::class, EmbyGetLibrariesList::class, EmbyGuid::class],
+            ['Emby',     EmbyGetLibrary::class,     EmbyGetLibrariesList::class,     EmbyGuid::class],
         ];
     }
 }

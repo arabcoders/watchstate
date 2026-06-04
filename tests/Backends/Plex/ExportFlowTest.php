@@ -29,7 +29,7 @@ class ExportFlowTest extends PlexTestCase
         $item = ag($this->fixture('library_movie_get_200'), 'response.body.MediaContainer.Metadata.0');
 
         $action = new Export($this->makeQueueHttp(), $this->logger);
-        $guid = (new PlexGuid($this->logger))->withContext($context);
+        $guid = new PlexGuid($this->logger)->withContext($context);
 
         $this->invokeProcess(
             $action,
@@ -58,7 +58,7 @@ class ExportFlowTest extends PlexTestCase
         $item['lastViewedAt'] = 2000;
 
         $action = new Export($this->makeQueueHttp(), $this->logger);
-        $guid = (new PlexGuid($this->logger))->withContext($context);
+        $guid = new PlexGuid($this->logger)->withContext($context);
 
         $this->invokeProcess(
             $action,
@@ -86,7 +86,7 @@ class ExportFlowTest extends PlexTestCase
         $item['lastViewedAt'] = 3000;
 
         $action = new Export($this->makeQueueHttp(), $this->logger);
-        $guid = (new PlexGuid($this->logger))->withContext($context);
+        $guid = new PlexGuid($this->logger)->withContext($context);
 
         $this->invokeProcess(
             $action,
@@ -110,7 +110,7 @@ class ExportFlowTest extends PlexTestCase
         $item = ag($this->fixture('library_movie_get_200'), 'response.body.MediaContainer.Metadata.0');
 
         $action = new Export($this->makeQueueHttp(), $this->logger);
-        $guid = (new PlexGuid($this->logger))->withContext($context);
+        $guid = new PlexGuid($this->logger)->withContext($context);
 
         $this->invokeProcess(
             $action,
@@ -137,7 +137,7 @@ class ExportFlowTest extends PlexTestCase
         $item['Guid'] = [];
 
         $action = new Export($this->makeQueueHttp(), $this->logger);
-        $guid = (new PlexGuid($this->logger))->withContext($context);
+        $guid = new PlexGuid($this->logger)->withContext($context);
 
         $this->invokeProcess(
             $action,
@@ -164,7 +164,7 @@ class ExportFlowTest extends PlexTestCase
         unset($item['addedAt'], $item['lastViewedAt']);
 
         $action = new Export($this->makeQueueHttp(), $this->logger);
-        $guid = (new PlexGuid($this->logger))->withContext($context);
+        $guid = new PlexGuid($this->logger)->withContext($context);
 
         $this->invokeProcess(
             $action,
@@ -224,9 +224,14 @@ class ExportFlowTest extends PlexTestCase
 
     private function buildMapper(\App\Backends\Common\Context $context, ?iState $entity): \App\Libs\Mappers\ImportInterface
     {
-        return new class($this->logger, $context->userContext->db, $context->userContext->cache, $entity) extends \App\Libs\Mappers\Import\DirectMapper {
-            public function __construct($logger, $db, $cache, private ?iState $entity)
-            {
+        return new class($this->logger, $context->userContext->db, $context->userContext->cache, $entity) extends
+            \App\Libs\Mappers\Import\DirectMapper {
+            public function __construct(
+                $logger,
+                $db,
+                $cache,
+                private ?iState $entity,
+            ) {
                 parent::__construct($logger, $db, $cache);
             }
 

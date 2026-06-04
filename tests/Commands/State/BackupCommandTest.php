@@ -49,14 +49,17 @@ final class BackupCommandTest extends TestCase
         ]);
 
         self::assertSame(BackupCommand::SUCCESS, $status);
-        self::assertSame([
+        self::assertSame(
             [
-                'backend' => 'fake_backup',
-                'user' => 'alice',
-                'dry_run' => false,
-                'no_enhance' => false,
+                [
+                    'backend' => 'fake_backup',
+                    'user' => 'alice',
+                    'dry_run' => false,
+                    'no_enhance' => false,
+                ],
             ],
-        ], FakeBackendClient::getCalls('backup'));
+            FakeBackendClient::getCalls('backup'),
+        );
 
         $aliceFile = self::$tmpPath . '/backup/custom.alice.fake_backup.json';
         self::assertFileExists($aliceFile);
@@ -125,14 +128,17 @@ final class BackupCommandTest extends TestCase
         ]);
 
         self::assertSame(BackupCommand::SUCCESS, $status);
-        self::assertSame([
+        self::assertSame(
             [
-                'backend' => 'fake_backup',
-                'user' => 'main',
-                'dry_run' => false,
-                'no_enhance' => false,
+                [
+                    'backend' => 'fake_backup',
+                    'user' => 'main',
+                    'dry_run' => false,
+                    'no_enhance' => false,
+                ],
             ],
-        ], FakeBackendClient::getCalls('backup'));
+            FakeBackendClient::getCalls('backup'),
+        );
     }
 
     public function test_empty_backup_removes_file(): void

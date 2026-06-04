@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Tests\Backends\Plex;
 
 use App\Backends\Common\Context;
-use App\Backends\Common\Response;
 use App\Backends\Common\Request;
+use App\Backends\Common\Response;
 use App\Backends\Plex\Action\GetMetaData;
 use App\Backends\Plex\Action\GetSessions;
 use App\Backends\Plex\Action\Progress;
@@ -93,7 +93,7 @@ class ProgressQueueTest extends PlexTestCase
             ),
         );
         $action = new Progress($http, $this->logger);
-        $guid = (new PlexGuid($this->logger))->withContext($context);
+        $guid = new PlexGuid($this->logger)->withContext($context);
         $result = $action($context, $guid, [$entity], $queue);
 
         $message = $result->error?->format() ?? '';
@@ -174,7 +174,7 @@ class ProgressQueueTest extends PlexTestCase
             ),
         );
         $action = new Progress($http, $this->logger);
-        $guid = (new PlexGuid($this->logger))->withContext($context);
+        $guid = new PlexGuid($this->logger)->withContext($context);
         $result = $action($context, $guid, [$entity], $queue);
 
         $message = $result->error?->format() ?? '';

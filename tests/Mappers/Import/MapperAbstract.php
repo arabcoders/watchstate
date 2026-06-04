@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Mappers\Import;
 
-use App\Libs\Container;
 use App\Libs\Config;
+use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
@@ -23,26 +23,26 @@ use Monolog\Logger;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Symfony\Component\Cache\Adapter\NullAdapter;
+use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\NullOutput;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Cache\Psr16Cache;
 
 abstract class MapperAbstract extends TestCase
 {
     protected array $testMovie = [];
     protected array $testEpisode = [];
 
-    protected ImportInterface|null $mapper = null;
-    protected iDB|null $db = null;
-    protected TestHandler|null $handler = null;
+    protected ?ImportInterface $mapper = null;
+    protected ?iDB $db = null;
+    protected ?TestHandler $handler = null;
     /**
      * @var LoggerInterface&Logger|null
      */
-    protected LoggerInterface|null $logger = null;
-    protected OutputInterface|null $output = null;
-    protected InputInterface|null $input = null;
+    protected ?LoggerInterface $logger = null;
+    protected ?OutputInterface $output = null;
+    protected ?InputInterface $input = null;
 
     abstract protected function setupMapper(): ImportInterface;
 
@@ -85,7 +85,7 @@ abstract class MapperAbstract extends TestCase
         $this->assertSame(
             0,
             $this->mapper->getObjectsCount(),
-            'getObjectsCount() should return 0 as we have not modified or added new item yet.'
+            'getObjectsCount() should return 0 as we have not modified or added new item yet.',
         );
 
         $this->db->commit([$testEpisode, $testMovie]);
@@ -95,7 +95,7 @@ abstract class MapperAbstract extends TestCase
         $this->assertSame(
             2,
             $this->mapper->getObjectsCount(),
-            'getObjectsCount() should return 2 as we have added 2 items to the db.'
+            'getObjectsCount() should return 2 as we have added 2 items to the db.',
         );
     }
 
@@ -114,7 +114,7 @@ abstract class MapperAbstract extends TestCase
         $this->assertSame(
             0,
             $this->mapper->getObjectsCount(),
-            'getObjectsCount() should return 0 as we have not modified or added new item yet.'
+            'getObjectsCount() should return 0 as we have not modified or added new item yet.',
         );
 
         $this->db->commit([$testEpisode, $testMovie]);
@@ -124,7 +124,7 @@ abstract class MapperAbstract extends TestCase
         $this->assertSame(
             1,
             $this->mapper->getObjectsCount(),
-            'getObjectsCount() should return 1 as we have added 2 items to the db, but only 1 is newer than the date provided.'
+            'getObjectsCount() should return 1 as we have added 2 items to the db, but only 1 is newer than the date provided.',
         );
     }
 
@@ -137,7 +137,7 @@ abstract class MapperAbstract extends TestCase
         $this->assertCount(
             0,
             $this->mapper,
-            'Mapper should be empty as we have not modified or added new item yet.'
+            'Mapper should be empty as we have not modified or added new item yet.',
         );
 
         $this->mapper->add($testEpisode)->add($testMovie);
@@ -145,7 +145,7 @@ abstract class MapperAbstract extends TestCase
         $this->assertCount(
             2,
             $this->mapper,
-            'Mapper should have 2 items as we have added 2 items to the mapper.'
+            'Mapper should have 2 items as we have added 2 items to the mapper.',
         );
 
         $this->assertSame(
@@ -154,14 +154,14 @@ abstract class MapperAbstract extends TestCase
                 iState::TYPE_EPISODE => ['added' => 1, 'updated' => 0, 'failed' => 0],
             ],
             $this->mapper->commit(),
-            'commit() should return an array with the correct counts in format of [movie => [added, updated, failed],movie => [added, updated, failed]].'
+            'commit() should return an array with the correct counts in format of [movie => [added, updated, failed],movie => [added, updated, failed]].',
         );
 
         // -- assert 0 as we have committed the changes to the db, and the state should have been reset.
         $this->assertCount(
             0,
             $this->mapper,
-            'Mapper should be empty as we have committed the changes to the db, and the state should have been reset.'
+            'Mapper should be empty as we have committed the changes to the db, and the state should have been reset.',
         );
 
         $testEpisode->metadata['test_plex'][iState::COLUMN_GUIDS][Guid::GUID_TVRAGE] = '2';
@@ -176,7 +176,7 @@ abstract class MapperAbstract extends TestCase
                 iState::TYPE_EPISODE => ['added' => 0, 'updated' => 1, 'failed' => 0],
             ],
             $this->mapper->commit(),
-            'commit() should return an array with the correct counts in format of [movie => [added, updated, failed],movie => [added, updated, failed]].'
+            'commit() should return an array with the correct counts in format of [movie => [added, updated, failed],movie => [added, updated, failed]].',
         );
 
         $this->assertCount(0, $this->mapper);
@@ -198,8 +198,8 @@ abstract class MapperAbstract extends TestCase
         $this->assertSame(1, $obj->updated, 'updated should be 1');
         $this->assertSame(
             0,
-            (int)ag($obj->getMetadata($testMovie->via), iState::COLUMN_WATCHED),
-            'metadata.test_plex.watched should be 0'
+            (int) ag($obj->getMetadata($testMovie->via), iState::COLUMN_WATCHED),
+            'metadata.test_plex.watched should be 0',
         );
 
         // -- update
@@ -220,13 +220,13 @@ abstract class MapperAbstract extends TestCase
         $this->assertSame(5, $obj->updated, 'updated should be 5');
         $this->assertSame(
             1,
-            (int)ag($obj->getMetadata($testMovie->via), iState::COLUMN_WATCHED),
-            'metadata.test_plex.watched should be 1'
+            (int) ag($obj->getMetadata($testMovie->via), iState::COLUMN_WATCHED),
+            'metadata.test_plex.watched should be 1',
         );
         $this->assertSame(
             5,
-            (int)ag($obj->getMetadata($testMovie->via), iState::COLUMN_META_DATA_PLAYED_AT),
-            'metadata.test_plex.played_at should be 5'
+            (int) ag($obj->getMetadata($testMovie->via), iState::COLUMN_META_DATA_PLAYED_AT),
+            'metadata.test_plex.played_at should be 5',
         );
     }
 
@@ -248,8 +248,8 @@ abstract class MapperAbstract extends TestCase
         $this->assertSame($obj->updated, $obj->updated, 'updated should be 1');
         $this->assertSame(
             0,
-            (int)ag($obj->getMetadata($testMovie->via), iState::COLUMN_WATCHED),
-            'metadata.test_plex.watched should be 0'
+            (int) ag($obj->getMetadata($testMovie->via), iState::COLUMN_WATCHED),
+            'metadata.test_plex.watched should be 0',
         );
     }
 
@@ -289,7 +289,7 @@ abstract class MapperAbstract extends TestCase
 
         $this->assertTrue(
             $obj->isWatched(),
-            'If implemented correctly, Mapper call to shouldMarkAsUnplayed() will fail due to missing metadata, and the play state should not change.'
+            'If implemented correctly, Mapper call to shouldMarkAsUnplayed() will fail due to missing metadata, and the play state should not change.',
         );
     }
 
@@ -321,7 +321,7 @@ abstract class MapperAbstract extends TestCase
 
         $this->assertTrue(
             $obj->isWatched(),
-            'If implemented correctly, Mapper call to shouldMarkAsUnplayed() will fail due to missing date, and the play state should not change.'
+            'If implemented correctly, Mapper call to shouldMarkAsUnplayed() will fail due to missing date, and the play state should not change.',
         );
     }
 
@@ -347,7 +347,7 @@ abstract class MapperAbstract extends TestCase
         // -- expect null as we haven't added anything to db yet.
         $this->assertNull(
             $this->mapper->get($testEpisode),
-            'get() should return null as we haven\'t added anything to db yet.'
+            'get() should return null as we haven\'t added anything to db yet.',
         );
 
         $this->db->commit([$testEpisode, $testMovie]);
@@ -360,12 +360,12 @@ abstract class MapperAbstract extends TestCase
         $this->assertSame(
             $testEpisode2->getAll(),
             $this->mapper->get($testEpisode)->getAll(),
-            'get() should return the correct data for the episode.'
+            'get() should return the correct data for the episode.',
         );
         $this->assertSame(
             $testMovie2->getAll(),
             $this->mapper->get($testMovie)->getAll(),
-            'get() should return the correct data for the movie.'
+            'get() should return the correct data for the movie.',
         );
     }
 
@@ -416,18 +416,18 @@ abstract class MapperAbstract extends TestCase
 
         $this->assertNull(
             $this->mapper->get($testMovie),
-            'get() should return null as load data was called with fully loaded.'
+            'get() should return null as load data was called with fully loaded.',
         );
         $this->assertNull(
             $this->mapper->get($testEpisode),
-            'get() should return null as load data was called with fully loaded.'
+            'get() should return null as load data was called with fully loaded.',
         );
 
         $this->mapper->loadData(make_date($time - 1));
         $this->assertInstanceOf(
             iState::class,
             $this->mapper->get($testEpisode),
-            'get() should return the correct data as we called loadData with a date that is older than the updated date.'
+            'get() should return the correct data as we called loadData with a date that is older than the updated date.',
         );
     }
 
@@ -447,7 +447,7 @@ abstract class MapperAbstract extends TestCase
                 iState::TYPE_EPISODE => ['added' => 1, 'updated' => 0, 'failed' => 0],
             ],
             $insert,
-            'commit() should return an array with the correct counts in format of [ movie => [ added => int, updated => int, failed => int ], episode => [ added => int, updated => int, failed => int ] ].'
+            'commit() should return an array with the correct counts in format of [ movie => [ added => int, updated => int, failed => int ], episode => [ added => int, updated => int, failed => int ] ].',
         );
 
         $testMovie->metadata['test_plex'][iState::COLUMN_GUIDS][Guid::GUID_ANIDB] = '1920';
@@ -465,7 +465,7 @@ abstract class MapperAbstract extends TestCase
                 iState::TYPE_EPISODE => ['added' => 0, 'updated' => 1, 'failed' => 0],
             ],
             $updated,
-            'commit() should return an array with the correct counts in format of [ movie => [ added => int, updated => int, failed => int ], episode => [ added => int, updated => int, failed => int ] ].'
+            'commit() should return an array with the correct counts in format of [ movie => [ added => int, updated => int, failed => int ], episode => [ added => int, updated => int, failed => int ] ].',
         );
     }
 
@@ -476,12 +476,12 @@ abstract class MapperAbstract extends TestCase
 
         $this->assertFalse(
             $this->mapper->remove($testEpisode),
-            'remove() should return false as as the object does not yet exists in db.'
+            'remove() should return false as as the object does not yet exists in db.',
         );
         $this->mapper->add($testEpisode)->add($testMovie)->commit();
         $this->assertTrue(
             $this->mapper->remove($testEpisode),
-            'remove() should return true as as the object exists in db and was removed.'
+            'remove() should return true as as the object exists in db and was removed.',
         );
     }
 
@@ -492,12 +492,12 @@ abstract class MapperAbstract extends TestCase
         $testEpisode = new StateEntity($this->testEpisode);
         $this->assertFalse(
             $this->mapper->has($testEpisode),
-            'has() should return false as the object does not exists db yet.'
+            'has() should return false as the object does not exists db yet.',
         );
         $this->db->commit([$testEpisode]);
         $this->assertTrue(
             $this->mapper->has($testEpisode),
-            'has() should return true as the object exists in db.'
+            'has() should return true as the object exists in db.',
         );
     }
 
@@ -515,12 +515,12 @@ abstract class MapperAbstract extends TestCase
         $this->db->commit([$testEpisode, $testMovie]);
         $this->assertFalse(
             $this->mapper->has($testEpisode),
-            'has() should return false as loadData was called before inserting the records into db.'
+            'has() should return false as loadData was called before inserting the records into db.',
         );
         $this->mapper->loadData(make_date($time - 1));
         $this->assertTrue(
             $this->mapper->has($testEpisode),
-            'has() should return true as loadData was called with a date that is older than the entity updated'
+            'has() should return true as loadData was called with a date that is older than the entity updated',
         );
     }
 
@@ -546,7 +546,7 @@ abstract class MapperAbstract extends TestCase
         $this->assertCount(
             0,
             $this->mapper->getObjects(),
-            'getObjects() should return 0 as we have not added items yet.'
+            'getObjects() should return 0 as we have not added items yet.',
         );
 
         $this->db->commit([$testMovie, $testEpisode]);
@@ -557,7 +557,7 @@ abstract class MapperAbstract extends TestCase
         $this->assertCount(
             0,
             $this->mapper->reset()->getObjects(),
-            'getObjects() should return 0 as we have called reset on the mapper.'
+            'getObjects() should return 0 as we have called reset on the mapper.',
         );
     }
 
@@ -601,7 +601,7 @@ abstract class MapperAbstract extends TestCase
         $this->assertSame(
             0,
             $this->mapper->getObjectsCount(),
-            "getObjectsCount() should return 0 as as the episode number is 0 and shouldn't be processed."
+            "getObjectsCount() should return 0 as as the episode number is 0 and shouldn't be processed.",
         );
     }
 
@@ -611,14 +611,12 @@ abstract class MapperAbstract extends TestCase
         $mapper->setOptions([]);
         $this->assertEmpty(
             $mapper->getOptions(),
-            'getOptions() should return an empty array as we have not set any options yet.'
+            'getOptions() should return an empty array as we have not set any options yet.',
         );
 
         $mapper->setOptions(['test' => 'test']);
 
-        $this->assertSame(['test' => 'test'],
-            $mapper->getOptions(),
-            'getOptions() should return the options we have set.');
+        $this->assertSame(['test' => 'test'], $mapper->getOptions(), 'getOptions() should return the options we have set.');
     }
 
     public function test_mapper_withOptions()
@@ -629,25 +627,22 @@ abstract class MapperAbstract extends TestCase
         $this->assertNotSame(
             spl_object_hash($mapper),
             spl_object_hash($mapper->withOptions(['test' => 'test'])),
-            'withOptions() Any mutation should return a new object. and the spl_object_hash() should not be the same.'
+            'withOptions() Any mutation should return a new object. and the spl_object_hash() should not be the same.',
         );
 
         $this->assertNotSame(
             spl_object_id($mapper),
             spl_object_hash($mapper->withOptions(['test' => 'test'])),
-            'withOptions() Any mutation should return a new object. and the spl_object_id() should not be the same.'
+            'withOptions() Any mutation should return a new object. and the spl_object_id() should not be the same.',
         );
 
         $this->assertEmpty(
             $mapper->getOptions(),
-            'getOptions() should return an empty array as we have not set any options yet.'
+            'getOptions() should return an empty array as we have not set any options yet.',
         );
 
         $mapper = $mapper->withOptions(['test' => 'test']);
 
-        $this->assertSame(['test' => 'test'],
-            $mapper->getOptions(),
-            'getOptions() should return the options we have set.');
+        $this->assertSame(['test' => 'test'], $mapper->getOptions(), 'getOptions() should return the options we have set.');
     }
-
 }

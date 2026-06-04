@@ -10,11 +10,9 @@ use App\Backends\Jellyfin\Action\GetMetaData;
 use App\Backends\Jellyfin\Action\SearchId as JellyfinSearchId;
 use App\Backends\Jellyfin\JellyfinGuid;
 use App\Libs\Container;
-
-use App\Libs\Extends\MockHttpClient;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
-
+use App\Libs\Extends\MockHttpClient;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
@@ -56,7 +54,7 @@ class SearchIdTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinSearchId::class, JellyfinGuid::class],
-            ['Emby', EmbySearchId::class, EmbyGuid::class],
+            ['Emby',     EmbySearchId::class,     EmbyGuid::class],
         ];
     }
 }

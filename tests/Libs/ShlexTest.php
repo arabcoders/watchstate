@@ -79,7 +79,11 @@ class ShlexTest extends TestCase
             'state:export --backend=plex --dry-run --force' => ['state:export', '--backend=plex', '--dry-run', '--force'],
             'state:export --backend="my backend" --option=value' => ['state:export', '--backend=my backend', '--option=value'],
             'state:export --data=\'{"key":"value"}\'' => ['state:export', '--data={"key":"value"}'],
-            'state:import --file=/tmp/backup.json --output=/var/log/result.log' => ['state:import', '--file=/tmp/backup.json', '--output=/var/log/result.log'],
+            'state:import --file=/tmp/backup.json --output=/var/log/result.log' => [
+                'state:import',
+                '--file=/tmp/backup.json',
+                '--output=/var/log/result.log',
+            ],
             'state:export --match="*.mkv" --exclude="*.nfo"' => ['state:export', '--match=*.mkv', '--exclude=*.nfo'],
             'state:export --title="Movie (2024) - Part 1 & 2"' => ['state:export', '--title=Movie (2024) - Part 1 & 2'],
         ];
@@ -123,7 +127,7 @@ class ShlexTest extends TestCase
         $this->assertSame("hello world 'foo bar'", Shlex::join(['hello', 'world', 'foo bar']));
         $this->assertSame(
             "cmd --option=value 'arg with spaces' 'test;injection'",
-            Shlex::join(['cmd', '--option=value', 'arg with spaces', 'test;injection'])
+            Shlex::join(['cmd', '--option=value', 'arg with spaces', 'test;injection']),
         );
     }
 

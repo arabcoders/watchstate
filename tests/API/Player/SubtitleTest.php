@@ -30,7 +30,7 @@ class SubtitleTest extends TestCase
         ]);
 
         $request = new ServerRequest('GET', new Uri('http://localhost/v1/api/player/subtitle/' . $token . '/ass.x0.m3u8'));
-        $response = (new Subtitle($cache, $logger))->m3u8($request, $token, 'ass', 'x', '0');
+        $response = new Subtitle($cache, $logger)->m3u8($request, $token, 'ass', 'x', '0');
 
         $this->assertSame(Status::OK, Status::from($response->getStatusCode()));
         $this->assertStringContainsString('/' . $token . '/x0.ass', (string) $response->getBody());
@@ -48,7 +48,7 @@ class SubtitleTest extends TestCase
         ]);
 
         $request = new ServerRequest('GET', new Uri('http://localhost/v1/api/player/subtitle/' . $token . '/x0.txt'));
-        $response = (new Subtitle($cache, $logger))->convert($request, $token, 'x', '0', 'txt');
+        $response = new Subtitle($cache, $logger)->convert($request, $token, 'x', '0', 'txt');
 
         $this->assertSame(Status::BAD_REQUEST, Status::from($response->getStatusCode()));
     }
@@ -78,7 +78,7 @@ class SubtitleTest extends TestCase
         ]);
 
         $request = new ServerRequest('GET', new Uri('http://localhost/v1/api/player/subtitle/' . $token . '/webvtt.x1.m3u8'));
-        $response = (new Subtitle($cache, $logger))->m3u8($request, $token, 'webvtt', 'x', '1');
+        $response = new Subtitle($cache, $logger)->m3u8($request, $token, 'webvtt', 'x', '1');
 
         $this->assertSame(Status::BAD_REQUEST, Status::from($response->getStatusCode()));
     }

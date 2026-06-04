@@ -42,14 +42,17 @@ class GetLibraryTest extends MediaBrowserTestCase
         $http = new MockHttpClient($response);
 
         Container::add($actionClass, fn() => new $actionClass($http, $this->logger));
-        Container::add(\App\Backends\Jellyfin\Action\GetLibrariesList::class, fn() => new \App\Backends\Jellyfin\Action\GetLibrariesList($http, $this->logger));
+        Container::add(
+            \App\Backends\Jellyfin\Action\GetLibrariesList::class,
+            fn() => new \App\Backends\Jellyfin\Action\GetLibrariesList($http, $this->logger),
+        );
     }
 
     private function provideBackends(): array
     {
         return [
             ['Jellyfin', JellyfinGetLibrary::class, JellyfinGetLibrariesList::class, JellyfinGuid::class],
-            ['Emby', EmbyGetLibrary::class, EmbyGetLibrariesList::class, EmbyGuid::class],
+            ['Emby',     EmbyGetLibrary::class,     EmbyGetLibrariesList::class,     EmbyGuid::class],
         ];
     }
 }

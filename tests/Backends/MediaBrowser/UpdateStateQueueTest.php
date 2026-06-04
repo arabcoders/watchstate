@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Backends\MediaBrowser;
 
+use App\Backends\Common\Request;
 use App\Backends\Emby\Action\UpdateState as EmbyUpdateState;
 use App\Backends\Jellyfin\Action\UpdateState as JellyfinUpdateState;
-use App\Backends\Common\Request;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Extends\HttpClient;
@@ -57,7 +57,7 @@ class UpdateStateQueueTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinUpdateState::class],
-            ['Emby', EmbyUpdateState::class],
+            ['Emby',     EmbyUpdateState::class],
         ];
     }
 }

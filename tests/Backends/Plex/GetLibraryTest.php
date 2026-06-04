@@ -24,9 +24,9 @@ class GetLibraryTest extends PlexTestCase
         ];
 
         Container::add(GetLibrariesList::class, fn() => new class($section) {
-            public function __construct(private array $section)
-            {
-            }
+            public function __construct(
+                private array $section,
+            ) {}
 
             public function __invoke(\App\Backends\Common\Context $context, array $opts = []): Response
             {
@@ -44,7 +44,7 @@ class GetLibraryTest extends PlexTestCase
         $context = $this->makeContext();
 
         $action = new GetLibrary($http, $this->logger);
-        $guid = (new PlexGuid($this->logger))->withContext($context);
+        $guid = new PlexGuid($this->logger)->withContext($context);
         $result = $action($context, $guid, '1', [Options::TO_ENTITY => true]);
 
         $message = $result->error?->format() ?? '';

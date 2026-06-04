@@ -7,7 +7,6 @@ namespace Tests\Backends\Common;
 use App\Backends\Common\Cache;
 use App\Backends\Common\Error;
 use App\Libs\ConfigFile;
-
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\TestCase;
@@ -15,7 +14,6 @@ use App\Libs\Uri;
 use App\Libs\UserContext;
 use Monolog\Handler\NullHandler;
 use Monolog\Logger;
-
 use Symfony\Component\Cache\Adapter\NullAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 
@@ -40,15 +38,15 @@ class ResponseTest extends TestCase
                     file: __DIR__ . '/../../Fixtures/test_servers.yaml',
                     autoSave: false,
                     autoCreate: false,
-                    autoBackup: false
+                    autoBackup: false,
                 ),
                 mapper: new DirectMapper(
                     logger: $logger,
                     db: $db,
-                    cache: $cache->getInterface()
+                    cache: $cache->getInterface(),
                 ),
                 cache: $cache->getInterface(),
-                db: $db
+                db: $db,
             ),
             trace: false,
         );
@@ -57,18 +55,18 @@ class ResponseTest extends TestCase
 
         $this->assertTrue(
             $response->hasError(),
-            'Response object should not have an error if error is null.'
+            'Response object should not have an error if error is null.',
         );
 
         $this->assertNull(
             $response->response,
-            'Response object should have the same response as the one passed in the constructor.'
+            'Response object should have the same response as the one passed in the constructor.',
         );
 
         $this->assertInstanceOf(
             Error::class,
             $response->getError(),
-            'getError() should return an Error object in all cases even if error is null.'
+            'getError() should return an Error object in all cases even if error is null.',
         );
 
         $response = (fn() => $this->tryResponse($context, fn() => 'i am teapot'))();
@@ -76,8 +74,7 @@ class ResponseTest extends TestCase
         $this->assertSame(
             'i am teapot',
             $response->response,
-            'Response object should have the same response as the one passed in the constructor.'
+            'Response object should have the same response as the one passed in the constructor.',
         );
     }
-
 }

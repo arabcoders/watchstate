@@ -12,17 +12,17 @@ class VttConverterTest extends TestCase
 {
     protected function getData(): string
     {
-        return (string)Stream::make(__DIR__ . '/../Fixtures/subtitle.vtt', 'r');
+        return (string) Stream::make(__DIR__ . '/../Fixtures/subtitle.vtt', 'r');
     }
 
     protected function getExportedData(): string
     {
-        return (string)Stream::make(__DIR__ . '/../Fixtures/subtitle.exported.vtt', 'r');
+        return (string) Stream::make(__DIR__ . '/../Fixtures/subtitle.exported.vtt', 'r');
     }
 
     protected function getJSON(): array
     {
-        return json_decode((string)Stream::make(__DIR__ . '/../Fixtures/subtitle.json', 'r'), true);
+        return json_decode((string) Stream::make(__DIR__ . '/../Fixtures/subtitle.json', 'r'), true);
     }
 
     public function test_parse()
@@ -33,7 +33,7 @@ class VttConverterTest extends TestCase
         $this->assertEquals(
             trim(preg_replace('/\r\n|\r|\n/', "\r\n", $this->getExportedData())),
             trim(preg_replace('/\r\n|\r|\n/', "\r\n", VttConverter::export($data))),
-            'Failed to export VTT file'
+            'Failed to export VTT file',
         );
     }
 
@@ -42,12 +42,12 @@ class VttConverterTest extends TestCase
         $this->checkException(
             closure: function () {
                 $text = <<<VTT
-                WEBVTT
+                    WEBVTT
 
-                00:00:14 --> 00:00:21
-                test
+                    00:00:14 --> 00:00:21
+                    test
 
-                VTT;
+                    VTT;
 
                 return VttConverter::parse($text);
             },

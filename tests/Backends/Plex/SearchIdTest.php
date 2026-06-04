@@ -8,8 +8,6 @@ use App\Backends\Plex\Action\GetMetaData;
 use App\Backends\Plex\Action\SearchId;
 use App\Backends\Plex\PlexGuid;
 use App\Libs\Container;
-
-
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 

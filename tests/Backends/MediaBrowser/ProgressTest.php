@@ -32,7 +32,7 @@ class ProgressTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinProgress::class, JellyfinGuid::class],
-            ['Emby', EmbyProgress::class, EmbyGuid::class],
+            ['Emby',     EmbyProgress::class,     EmbyGuid::class],
         ];
     }
 }

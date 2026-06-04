@@ -21,7 +21,8 @@ final class EventQueueTest extends TestCase
     public function test_cache_only(): void
     {
         $cache = new Psr16Cache(new ArrayAdapter());
-        $repo = $this->getMockBuilder(EventsRepository::class)
+        $repo = $this
+            ->getMockBuilder(EventsRepository::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['getObject', 'findByReference', 'remove', 'save'])
             ->getMock();
@@ -31,13 +32,17 @@ final class EventQueueTest extends TestCase
         $repo->expects($this->never())->method('remove');
         $repo->expects($this->never())->method('save');
 
-        $queued = new EventQueue($cache, $repo)->queue('on_request', ['ok' => true], [
-            'unique' => true,
-            EventsTable::COLUMN_REFERENCE => 'request://1',
-            Options::CACHE_ONLY => true,
-            Options::CACHE_TTL => new \DateInterval('PT6H'),
-            Options::CONTEXT_USER => 'alice',
-        ]);
+        $queued = new EventQueue($cache, $repo)->queue(
+            'on_request',
+            ['ok' => true],
+            [
+                'unique' => true,
+                EventsTable::COLUMN_REFERENCE => 'request://1',
+                Options::CACHE_ONLY => true,
+                Options::CACHE_TTL => new \DateInterval('PT6H'),
+                Options::CONTEXT_USER => 'alice',
+            ],
+        );
 
         self::assertSame('on_request', $queued->event);
         self::assertSame(EventStatus::PENDING, $queued->status);
@@ -66,25 +71,30 @@ final class EventQueueTest extends TestCase
         foreach ($modes as $mode) {
             $reference = 'ref://' . $mode;
             $item = new EventInfo([], true);
-            $repo = $this->getMockBuilder(EventsRepository::class)
+            $repo = $this
+                ->getMockBuilder(EventsRepository::class)
                 ->disableOriginalConstructor()
                 ->onlyMethods(['getObject', 'findByReference', 'remove', 'save'])
                 ->getMock();
 
-            $repo->expects($this->once())
+            $repo
+                ->expects($this->once())
                 ->method('getObject')
                 ->with([])
                 ->willReturn($item);
 
             $optsMatcher = $this->callback(static function (array $opts) use ($reference): bool {
-                return true === $opts[Options::FAIL_FAST_ON_LOCK]
+                return (
+                    true === $opts[Options::FAIL_FAST_ON_LOCK]
                     && 'alice' === $opts[Options::CONTEXT_USER]
                     && $reference === $opts[EventsTable::COLUMN_REFERENCE]
-                    && true === $opts['unique'];
+                    && true === $opts['unique']
+                );
             });
 
             if ('find' === $mode) {
-                $repo->expects($this->once())
+                $repo
+                    ->expects($this->once())
                     ->method('findByReference')
                     ->with($reference, [], $optsMatcher)
                     ->willThrowException(new PDOException('database is locked'));
@@ -96,12 +106,14 @@ final class EventQueueTest extends TestCase
             if ('remove' === $mode) {
                 $existing = new EventInfo([], true);
 
-                $repo->expects($this->once())
+                $repo
+                    ->expects($this->once())
                     ->method('findByReference')
                     ->with($reference, [], $optsMatcher)
                     ->willReturn($existing);
 
-                $repo->expects($this->once())
+                $repo
+                    ->expects($this->once())
                     ->method('remove')
                     ->with($existing, $optsMatcher)
                     ->willThrowException(new PDOException('database is locked'));
@@ -110,34 +122,42 @@ final class EventQueueTest extends TestCase
             }
 
             if ('save' === $mode) {
-                $repo->expects($this->once())
+                $repo
+                    ->expects($this->once())
                     ->method('findByReference')
                     ->with($reference, [], $optsMatcher)
                     ->willReturn(null);
 
                 $repo->expects($this->never())->method('remove');
-                $repo->expects($this->once())
+                $repo
+                    ->expects($this->once())
                     ->method('save')
                     ->with(
                         $this->callback(static function (EventInfo $event) use ($reference): bool {
-                            return 'process_request' === $event->event
+                            return (
+                                'process_request' === $event->event
                                 && EventStatus::PENDING === $event->status
                                 && $reference === $event->reference
                                 && ['ok' => true] === $event->event_data
                                 && DataEvent::class === $event->options['class']
-                                && 'alice' === $event->options[Options::CONTEXT_USER];
+                                && 'alice' === $event->options[Options::CONTEXT_USER]
+                            );
                         }),
                         $optsMatcher,
                     )
                     ->willThrowException(new PDOException('database is locked'));
             }
 
-            $queued = new EventQueue($cache, $repo)->queue('process_request', ['ok' => true], [
-                'unique' => true,
-                EventsTable::COLUMN_REFERENCE => $reference,
-                Options::FAIL_FAST_ON_LOCK => true,
-                Options::CONTEXT_USER => 'alice',
-            ]);
+            $queued = new EventQueue($cache, $repo)->queue(
+                'process_request',
+                ['ok' => true],
+                [
+                    'unique' => true,
+                    EventsTable::COLUMN_REFERENCE => $reference,
+                    Options::FAIL_FAST_ON_LOCK => true,
+                    Options::CONTEXT_USER => 'alice',
+                ],
+            );
 
             self::assertSame('process_request', $queued->event);
             self::assertSame(EventStatus::PENDING, $queued->status);

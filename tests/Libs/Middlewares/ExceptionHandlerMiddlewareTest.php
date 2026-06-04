@@ -18,8 +18,8 @@ class ExceptionHandlerMiddlewareTest extends TestCase
         $result = new ExceptionHandlerMiddleware()->process(
             request: $this->getRequest(),
             handler: $this->getHandler(
-                fn() => throw new \RuntimeException('Test Exception', 404)
-            )
+                fn() => throw new \RuntimeException('Test Exception', 404),
+            ),
         );
 
         $json = json_decode($result->getBody()->getContents(), true, flags: JSON_THROW_ON_ERROR);

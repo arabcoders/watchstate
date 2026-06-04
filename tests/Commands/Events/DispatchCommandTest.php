@@ -90,11 +90,14 @@ final class DispatchCommandTest extends TestCase
         $event = $this->event();
         $this->runEvent($command, $event, Level::Debug, true);
 
-        self::assertSame([
-            "NOTICE: Dispatching Event: 'on_push' queued at '2026-05-17T08:25:02+00:00'.",
-            'DEBUG: listener debug',
-            "NOTICE: Event 'on_push' was dispatched.",
-        ], $event->logs);
+        self::assertSame(
+            [
+                "NOTICE: Dispatching Event: 'on_push' queued at '2026-05-17T08:25:02+00:00'.",
+                'DEBUG: listener debug',
+                "NOTICE: Event 'on_push' was dispatched.",
+            ],
+            $event->logs,
+        );
         self::assertSame(
             ["[event:550e8400-e29b-41d4-a716-446655440000] Dispatching Event: 'on_push' queued at '2026-05-17T08:25:02+00:00'."],
             array_map(static fn($record): string => $record->message, $handler->getRecords()),

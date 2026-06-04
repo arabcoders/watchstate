@@ -42,7 +42,7 @@ class ProgressSkipTest extends MediaBrowserTestCase
             $entity = $this->makeEntity($context, via: $context->backendName);
 
             $action = new $actionClass($this->makeQueueHttp(), $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
             $result = $action($context, $guid, [$entity], $queue);
 
             $this->assertTrue($result->isSuccessful());
@@ -74,7 +74,7 @@ class ProgressSkipTest extends MediaBrowserTestCase
             ]);
 
             $action = new $actionClass($this->makeQueueHttp(), $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
             $result = $action($context, $guid, [$entity], $queue);
 
             $this->assertTrue($result->isSuccessful());
@@ -102,7 +102,7 @@ class ProgressSkipTest extends MediaBrowserTestCase
             ]);
 
             $action = new $actionClass($this->makeQueueHttp(), $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
             $result = $action($context, $guid, [$entity], $queue);
 
             $this->assertTrue($result->isSuccessful());
@@ -133,7 +133,7 @@ class ProgressSkipTest extends MediaBrowserTestCase
             ]);
 
             $action = new $actionClass($this->makeQueueHttp(), $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
             $result = $action($context, $guid, [$entity], $queue);
 
             $this->assertTrue($result->isSuccessful());
@@ -180,7 +180,7 @@ class ProgressSkipTest extends MediaBrowserTestCase
 
             $queue = new QueueRequests();
             $action = new $actionClass($this->makeQueueHttp(), $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
             $result = $action($context, $guid, [$entity], $queue);
 
             $this->assertTrue($result->isSuccessful());
@@ -222,7 +222,7 @@ class ProgressSkipTest extends MediaBrowserTestCase
 
             $queue = new QueueRequests();
             $action = new $actionClass($this->makeQueueHttp(), $this->logger);
-            $guid = (new $guidClass($this->logger))->withContext($context);
+            $guid = new $guidClass($this->logger)->withContext($context);
             $result = $action($context, $guid, [$entity], $queue);
 
             $this->assertTrue($result->isSuccessful());
@@ -266,7 +266,7 @@ class ProgressSkipTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinProgress::class, JellyfinGuid::class, JellyfinGetMetaData::class, JellyfinGetSessions::class],
-            ['Emby', EmbyProgress::class, EmbyGuid::class, EmbyGetMetaData::class, EmbyGetSessions::class],
+            ['Emby',     EmbyProgress::class,     EmbyGuid::class,     EmbyGetMetaData::class,     EmbyGetSessions::class],
         ];
     }
 }

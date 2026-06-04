@@ -9,7 +9,6 @@ use App\Backends\Common\Context;
 use App\Backends\Plex\Action\GetLibrariesList;
 use App\Backends\Plex\PlexClient;
 use App\Libs\ConfigFile;
-
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\Extends\MockHttpClient;
 use App\Libs\Mappers\Import\DirectMapper;
@@ -27,9 +26,9 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 class GetLibrariesListTest extends TestCase
 {
-    protected TestHandler|null $handler = null;
-    protected LoggerInterface|null $logger = null;
-    protected Context|null $context = null;
+    protected ?TestHandler $handler = null;
+    protected ?LoggerInterface $logger = null;
+    protected ?Context $context = null;
     protected array $data = [];
 
     public function setUp(): void
@@ -37,8 +36,8 @@ class GetLibrariesListTest extends TestCase
         $this->handler = new TestHandler();
         $this->logger = new Logger('test', [$this->handler], [new LogMessageProcessor()]);
         $this->data = json_decode(
-            json: (string)Stream::make(__DIR__ . '/../../Fixtures/plex_data.json', 'r'),
-            associative: true
+            json: (string) Stream::make(__DIR__ . '/../../Fixtures/plex_data.json', 'r'),
+            associative: true,
         );
 
         $cache = new Cache($this->logger, new Psr16Cache(new ArrayAdapter()));
@@ -55,15 +54,15 @@ class GetLibrariesListTest extends TestCase
                     file: __DIR__ . '/../../Fixtures/test_servers.yaml',
                     autoSave: false,
                     autoCreate: false,
-                    autoBackup: false
+                    autoBackup: false,
                 ),
                 mapper: new DirectMapper(
                     logger: $this->logger,
                     db: $db,
-                    cache: $cache->getInterface()
+                    cache: $cache->getInterface(),
                 ),
                 cache: $cache->getInterface(),
-                db: $db
+                db: $db,
             ),
             backendId: 'za3g3543d0d637b4f9144099965f8f785cdf9f26',
             backendToken: 'fake-plex-token',
@@ -76,12 +75,12 @@ class GetLibrariesListTest extends TestCase
         $json = ag($this->data, 'sections_get_200');
 
         $resp = new MockResponse(json_encode(ag($json, 'response.body')), [
-            'http_code' => (int)ag($json, 'response.http_code'),
-            'response_headers' => ag($json, 'response.headers', [])
+            'http_code' => (int) ag($json, 'response.http_code'),
+            'response_headers' => ag($json, 'response.headers', []),
         ]);
 
         $client = new MockHttpClient($resp);
-        $response = new GetLibrariesList($client, $this->logger)($this->context);
+        $response = (new GetLibrariesList($client, $this->logger))($this->context);
 
         $this->assertTrue($response->status);
         $this->assertNull($response->error);
@@ -91,16 +90,19 @@ class GetLibrariesListTest extends TestCase
         $expected = [];
 
         foreach (ag($json, 'response.body.MediaContainer.Directory', []) as $item) {
-            $key = (int)ag($item, 'key');
+            $key = (int) ag($item, 'key');
             $type = ag($item, 'type', 'unknown');
             $agent = ag($item, 'agent', 'unknown');
             $supportedType = PlexClient::TYPE_MOVIE === $type || PlexClient::TYPE_SHOW === $type;
-            $webUrl = $this->context->backendUrl->withPath('/web/index.html')->withFragment(
-                r('!/media/{backend_id}/com.plexapp.plugins.library?source={key}', [
-                    'key' => $key,
-                    'backend_id' => $this->context->backendId,
-                ])
-            );
+            $webUrl = $this->context
+                ->backendUrl
+                ->withPath('/web/index.html')
+                ->withFragment(
+                    r('!/media/{backend_id}/com.plexapp.plugins.library?source={key}', [
+                        'key' => $key,
+                        'backend_id' => $this->context->backendId,
+                    ]),
+                );
 
             $expected[$key] = [
                 'id' => $key,
@@ -111,7 +113,7 @@ class GetLibrariesListTest extends TestCase
                 'agent' => $agent,
                 'scanner' => ag($item, 'scanner'),
                 'contentType' => strtolower($type),
-                'webUrl' => (string)$webUrl,
+                'webUrl' => (string) $webUrl,
             ];
         }
 
@@ -120,7 +122,7 @@ class GetLibrariesListTest extends TestCase
             $this->assertSame(
                 ag($expected, $item['id']),
                 $item,
-                r('Assert response item payload:{number} is formatted as expected', ['number' => $x])
+                r('Assert response item payload:{number} is formatted as expected', ['number' => $x]),
             );
             $x++;
         }
@@ -131,8 +133,8 @@ class GetLibrariesListTest extends TestCase
         $json = ag($this->data, 'sections_get_401');
 
         $resp = new MockResponse(json_encode(ag($json, 'response.body')), [
-            'http_code' => (int)ag($json, 'response.http_code'),
-            'response_headers' => ag($json, 'response.headers', [])
+            'http_code' => (int) ag($json, 'response.http_code'),
+            'response_headers' => ag($json, 'response.headers', []),
         ]);
 
         $client = new MockHttpClient($resp);
@@ -143,7 +145,7 @@ class GetLibrariesListTest extends TestCase
         $this->assertNotNull($response->error);
         $this->assertStringContainsString(
             "libraries returned with unexpected '401' status code",
-            (string)$response->error
+            (string) $response->error,
         );
 
         $this->assertNull($response->response);
@@ -175,7 +177,7 @@ class GetLibrariesListTest extends TestCase
 
         $resp = new MockResponse(json_encode($payload), ['http_code' => 200]);
         $client = new MockHttpClient($resp);
-        $response = new GetLibrariesList($client, $this->logger)($this->context);
+        $response = (new GetLibrariesList($client, $this->logger))($this->context);
 
         $this->assertTrue($response->status);
         $this->assertCount(2, $response->response);

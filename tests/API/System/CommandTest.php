@@ -271,5 +271,4 @@ final class CommandTest extends TestCase
         $this->assertSame('Command cancellation requested.', ag($cancelPayload, 'message'));
         $this->assertFileExists($sessionPath . '/cancel.flag');
     }
-
 }

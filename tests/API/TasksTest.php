@@ -6,8 +6,8 @@ namespace Tests\API;
 
 use App\API\Tasks;
 use App\Commands\System\TasksCommand;
-use App\Libs\Enums\Http\Status;
 use App\Libs\Database\PDO\PDOAdapter;
+use App\Libs\Enums\Http\Status;
 use App\Libs\TestCase;
 use App\Model\Events\EventsRepository;
 use App\Model\Events\EventStatus;
@@ -61,7 +61,10 @@ final class TasksTest extends TestCase
 
         $payload = json_decode((string) $response->getBody(), true, flags: JSON_THROW_ON_ERROR);
         $indexPayload = json_decode((string) $index->getBody(), true, flags: JSON_THROW_ON_ERROR);
-        $items = array_values(array_filter((array) ag($indexPayload, 'tasks', []), static fn(array $item): bool => 'backup' === ($item['name'] ?? null)));
+        $items = array_values(array_filter(
+            (array) ag($indexPayload, 'tasks', []),
+            static fn(array $item): bool => 'backup' === ($item['name'] ?? null),
+        ));
 
         self::assertSame('2024-01-02T00:10:00+00:00', ag($payload, 'prev_run'));
         self::assertSame($queuedId, ag($payload, 'prev_run_event_id'));
@@ -85,5 +88,4 @@ final class TasksTest extends TestCase
         self::assertNotNull(ag($payload, 'next_run'));
         self::assertNotSame(ag($payload, 'prev_run'), ag($payload, 'next_run'));
     }
-
 }

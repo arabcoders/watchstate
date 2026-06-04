@@ -19,10 +19,10 @@ use Symfony\Component\Cache\Psr16Cache;
 
 class CacheTest extends TestCase
 {
-    private Cache|null $cache = null;
-    private PSRCache|null $psrCache = null;
+    private ?Cache $cache = null;
+    private ?PSRCache $psrCache = null;
 
-    private Logger|null $logger = null;
+    private ?Logger $logger = null;
 
     protected function setUp(): void
     {
@@ -61,14 +61,14 @@ class CacheTest extends TestCase
             $this->assertEquals(
                 $value,
                 $this->cache->get($key),
-                'Assert value type is preserved'
+                'Assert value type is preserved',
             );
         }
 
         $this->assertEquals(
             'default_value',
             $this->cache->get('non_set', 'default_value'),
-            'Assert default value is returned when key is not found'
+            'Assert default value is returned when key is not found',
         );
     }
 
@@ -77,12 +77,12 @@ class CacheTest extends TestCase
         $this->cache->set('key_name', 'value');
         $this->assertTrue(
             $this->cache->has('key_name'),
-            'Assert key exists'
+            'Assert key exists',
         );
 
         $this->assertFalse(
             $this->cache->has('non_set'),
-            'Assert key does not exist'
+            'Assert key does not exist',
         );
     }
 
@@ -91,13 +91,13 @@ class CacheTest extends TestCase
         $this->cache->set('foo.bar', 'value');
         $this->assertTrue(
             $this->cache->has('foo.bar'),
-            'Assert key exists'
+            'Assert key exists',
         );
 
         $this->assertEquals(
             'value',
             $this->cache->get('foo.bar'),
-            'assert returned value is correct'
+            'assert returned value is correct',
         );
     }
 
@@ -106,22 +106,22 @@ class CacheTest extends TestCase
         $this->cache->set('foo.bar', 'value');
         $this->assertTrue(
             $this->cache->has('foo.bar'),
-            'Assert key exists'
+            'Assert key exists',
         );
 
         $this->assertTrue(
             $this->cache->remove('foo.bar'),
-            'Assert remove() true is returned when key exists and is removed'
+            'Assert remove() true is returned when key exists and is removed',
         );
 
         $this->assertFalse(
             $this->cache->remove('foo.taz'),
-            'Assert remove() false is returned when key does not exist'
+            'Assert remove() false is returned when key does not exist',
         );
 
         $this->assertFalse(
             $this->cache->has('foo.bar'),
-            'Assert key does not exist'
+            'Assert key does not exist',
         );
     }
 
@@ -130,35 +130,35 @@ class CacheTest extends TestCase
         $this->assertCount(
             0,
             $this->cache,
-            'Assert cache is empty'
+            'Assert cache is empty',
         );
 
         $this->cache->set('foo.bar', 'value');
         $this->assertCount(
             1,
             $this->cache,
-            'Assert cache has 1 item'
+            'Assert cache has 1 item',
         );
 
         $this->cache->set('foo.baz', 'value');
         $this->assertCount(
             1,
             $this->cache,
-            'Assert count still at 1 when adding another item with same parent key'
+            'Assert count still at 1 when adding another item with same parent key',
         );
 
         $this->cache->set('bar', 'value');
         $this->assertCount(
             2,
             $this->cache,
-            'There should be 2 items in the cache'
+            'There should be 2 items in the cache',
         );
 
         $this->cache->remove('foo.bar');
         $this->assertCount(
             2,
             $this->cache,
-            'Assert count still at 2 when removing a single item from a parent key'
+            'Assert count still at 2 when removing a single item from a parent key',
         );
 
         $this->cache->remove('foo');
@@ -166,7 +166,7 @@ class CacheTest extends TestCase
         $this->assertCount(
             0,
             $this->cache,
-            'Assert cache is empty after removing all items'
+            'Assert cache is empty after removing all items',
         );
     }
 
@@ -180,7 +180,7 @@ class CacheTest extends TestCase
                     {
                         throw new InvalidArgumentException('foo');
                     }
-                }
+                },
             ),
         );
 
@@ -189,7 +189,7 @@ class CacheTest extends TestCase
         $this->assertStringContainsString(
             'Failed to load cache data for key',
             $this->handler->getRecords()[0]['message'],
-            'Assert exception is caught and logged'
+            'Assert exception is caught and logged',
         );
     }
 
@@ -198,9 +198,9 @@ class CacheTest extends TestCase
         $c = new Cache(
             logger: $this->logger,
             cache: new class($this->logger) extends PSRCache {
-                public function __construct(private LoggerInterface $logger)
-                {
-                }
+                public function __construct(
+                    private LoggerInterface $logger,
+                ) {}
 
                 public function set(string $key, mixed $value, \DateInterval|int|null $ttl = null): bool
                 {
@@ -218,7 +218,7 @@ class CacheTest extends TestCase
         $this->assertStringContainsString(
             'set() called',
             $this->handler->getRecords()[0]['message'],
-            'assert set() is called and exception is caught'
+            'assert set() is called and exception is caught',
         );
     }
 
@@ -232,7 +232,7 @@ class CacheTest extends TestCase
         $this->assertCount(
             1,
             $this->psrCache->getData(),
-            'Assert data is saved into backend.'
+            'Assert data is saved into backend.',
         );
     }
 }

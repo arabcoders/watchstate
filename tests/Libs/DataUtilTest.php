@@ -19,10 +19,10 @@ class DataUtilTest extends TestCase
         'sub' => ['key' => 'val'],
         'bool' => true,
         'int' => 1,
-        'float' => 1.1
+        'float' => 1.1,
     ];
 
-    private iRequest|null $request = null;
+    private ?iRequest $request = null;
 
     protected function setUp(): void
     {
@@ -55,7 +55,7 @@ class DataUtilTest extends TestCase
                     'error' => UPLOAD_ERR_OK,
                     'tmp_name' => __DIR__ . '/../Fixtures/test_servers.yaml',
                 ],
-            ]
+            ],
         );
     }
 
@@ -70,19 +70,19 @@ class DataUtilTest extends TestCase
         $this->assertSame(
             $this->post,
             DataUtil::fromRequest($this->request)->getAll(),
-            'fromRequest() returns all data post data, Default is without query params.'
+            'fromRequest() returns all data post data, Default is without query params.',
         );
 
         $this->assertSame(
             $this->post,
             DataUtil::fromRequest($this->request, includeQueryParams: false)->getAll(),
-            'fromRequest() return only post data, without query params when includeQueryParams is explicitly set to false.'
+            'fromRequest() return only post data, without query params when includeQueryParams is explicitly set to false.',
         );
 
         $this->assertSame(
             array_replace_recursive($this->query, $this->post),
             DataUtil::fromRequest($this->request, includeQueryParams: true)->getAll(),
-            'fromRequest() returns all data including query params when includeQueryParams is explicitly set to true.'
+            'fromRequest() returns all data including query params when includeQueryParams is explicitly set to true.',
         );
     }
 
@@ -94,13 +94,13 @@ class DataUtilTest extends TestCase
         $this->assertSame(
             $this->query['limit'],
             $obj->get('limit'),
-            'get() returns the value of the key if it exists.'
+            'get() returns the value of the key if it exists.',
         );
         $this->assertNull($obj->get('not_set'), 'get() returns null if the key does not exist.');
         $this->assertSame(
             'default',
             $obj->get('not_set', 'default'),
-            'get() returns the default value if the key does not exist.'
+            'get() returns the default value if the key does not exist.',
         );
         $this->assertIsArray($obj->get('sub'), 'get() returns an array if the key is an array.');
         $this->assertIsBool($obj->get('bool'), 'get() returns a boolean if the key is a boolean.');
@@ -110,7 +110,7 @@ class DataUtilTest extends TestCase
         $this->assertSame(
             ag($this->post, 'sub.key'),
             $obj->get('sub.key'),
-            'get() returns the value of the key if it exists.'
+            'get() returns the value of the key if it exists.',
         );
     }
 
@@ -132,7 +132,7 @@ class DataUtilTest extends TestCase
         $this->assertSame(
             array_map($callback, $data),
             $obj->map($callback)->getAll(),
-            'map() returns the array with the callback applied to each value.'
+            'map() returns the array with the callback applied to each value.',
         );
     }
 
@@ -144,7 +144,7 @@ class DataUtilTest extends TestCase
         $this->assertSame(
             array_filter($data, $callback, ARRAY_FILTER_USE_BOTH),
             $obj->filter($callback)->getAll(),
-            'filter() returns the array with the callback applied to each value.'
+            'filter() returns the array with the callback applied to each value.',
         );
     }
 
@@ -157,7 +157,7 @@ class DataUtilTest extends TestCase
         $this->assertSame(
             $expected,
             $obj->with('new', 'value')->getAll(),
-            'with() returns a new DataUtil object with the key and value set.'
+            'with() returns a new DataUtil object with the key and value set.',
         );
     }
 
@@ -168,25 +168,25 @@ class DataUtilTest extends TestCase
         $this->assertSame(
             ['page' => $this->query['page']],
             $obj->without('limit')->getAll(),
-            'without() returns a new DataUtil object without the key.'
+            'without() returns a new DataUtil object without the key.',
         );
 
         $this->assertSame(
             $this->query,
             $obj->without('not_set')->getAll(),
-            'without() returns a new DataUtil object even if the key does not exist with same data.'
+            'without() returns a new DataUtil object even if the key does not exist with same data.',
         );
 
         $this->assertNotSame(
             spl_object_hash($obj),
             spl_object_hash($obj->without('not_set')),
-            'without() Any mutation should return a new object. and the spl_object_hash() should not be the same.'
+            'without() Any mutation should return a new object. and the spl_object_hash() should not be the same.',
         );
 
         $this->assertNotSame(
             spl_object_id($obj),
             spl_object_id($obj->without('not_set')),
-            'without() Any mutation should return a new object. and the spl_object_id() should not be the same.'
+            'without() Any mutation should return a new object. and the spl_object_id() should not be the same.',
         );
     }
 
@@ -199,7 +199,6 @@ class DataUtilTest extends TestCase
     public function test_dataUtil_toString()
     {
         $obj = DataUtil::fromArray($this->query);
-        $this->assertSame(json_encode($this->query), (string)$obj, 'jsonSerialize() returns the data array.');
+        $this->assertSame(json_encode($this->query), (string) $obj, 'jsonSerialize() returns the data array.');
     }
-
 }

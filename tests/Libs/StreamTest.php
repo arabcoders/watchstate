@@ -203,11 +203,11 @@ class StreamTest extends TestCase
         }
 
         $this->assertSame('test', $text, 'Reading from the stream should return the written text');
-        $this->assertSame('test', (string)$f, 'Reading from the stream should return the written text');
+        $this->assertSame('test', (string) $f, 'Reading from the stream should return the written text');
         $this->assertSame(
             '',
             $f->getContents(),
-            'If the stream is read to the end, getContents should return an empty string'
+            'If the stream is read to the end, getContents should return an empty string',
         );
 
         if ($f->isSeekable()) {
@@ -216,12 +216,12 @@ class StreamTest extends TestCase
         $this->assertSame(
             'test',
             $f->getContents(),
-            'After rewinding the stream, getContents should return the full text'
+            'After rewinding the stream, getContents should return the full text',
         );
         $this->assertSame(
             4,
             $f->getSize(),
-            'The size of the stream should be the length of the written text'
+            'The size of the stream should be the length of the written text',
         );
         $this->assertTrue($f->isSeekable(), 'The stream should be seekable');
         $this->assertTrue($f->isReadable(), 'The stream should be readable');
@@ -236,7 +236,7 @@ class StreamTest extends TestCase
     {
         $f = $this->getStream();
         $f->write('test');
-        $this->assertSame('test', (string)$f, 'Writing to the stream should write the text');
+        $this->assertSame('test', (string) $f, 'Writing to the stream should write the text');
         $this->assertSame(4, $f->getSize(), 'The size of the stream should be the length of the written text');
         $this->assertTrue($f->isSeekable(), 'The stream should be seekable');
         $this->assertTrue($f->isReadable(), 'The stream should not be readable');

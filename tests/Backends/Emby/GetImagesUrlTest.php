@@ -23,5 +23,4 @@ class GetImagesUrlTest extends TestCase
         $this->assertStringContainsString('/emby/Items/item-1/Images/Primary/', (string) $response->response['poster']);
         $this->assertStringContainsString('/emby/Items/item-1/Images/Backdrop/', (string) $response->response['background']);
     }
-
 }

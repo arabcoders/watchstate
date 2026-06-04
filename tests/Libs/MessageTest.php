@@ -27,23 +27,23 @@ class MessageTest extends TestCase
         $this->assertSame(
             'bar',
             Message::get('tester.foo'),
-            'When message is added, nested lookup returns the stored value.'
+            'When message is added, nested lookup returns the stored value.',
         );
         $this->assertSame(
             'fallback',
             Message::get('missing', 'fallback'),
-            'When key is not set, scalar defaults are returned.'
+            'When key is not set, scalar defaults are returned.',
         );
         $this->assertSame(
             'computed',
             Message::get('missing', fn() => 'computed'),
-            'When key is not set, closure defaults are resolved.'
+            'When key is not set, closure defaults are resolved.',
         );
         $this->assertNull(Message::get('missing'), 'When key is not set, null is returned by default.');
         $this->assertSame(
             ['tester' => ['foo' => 'bar']],
             Message::getAll(),
-            'Stored messages preserve their nested structure.'
+            'Stored messages preserve their nested structure.',
         );
     }
 
@@ -55,7 +55,7 @@ class MessageTest extends TestCase
         $this->assertSame(
             ['up' => ['foo' => 3]],
             Message::getAll(),
-            'Increment accumulates values at the requested nested key.'
+            'Increment accumulates values at the requested nested key.',
         );
 
         Message::reset();

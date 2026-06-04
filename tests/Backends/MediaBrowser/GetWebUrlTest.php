@@ -26,7 +26,7 @@ class GetWebUrlTest extends MediaBrowserTestCase
     {
         return [
             ['Jellyfin', JellyfinGetWebUrl::class, '!/details?id=item-1&serverId=backend-1'],
-            ['Emby', EmbyGetWebUrl::class, '!/item?id=item-1&serverId=backend-1'],
+            ['Emby',     EmbyGetWebUrl::class,     '!/item?id=item-1&serverId=backend-1'],
         ];
     }
 }

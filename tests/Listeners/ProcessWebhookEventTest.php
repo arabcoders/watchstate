@@ -50,7 +50,10 @@ final class ProcessWebhookEventTest extends TestCase
         $logger = new Logger('test');
 
         $client = $this->createMock(iClient::class);
-        $client->expects($this->once())->method('processRequest')->willReturnCallback($this->inspect(...));
+        $client
+            ->expects($this->once())
+            ->method('processRequest')
+            ->willReturnCallback($this->inspect(...));
         $client->expects($this->once())->method('parseWebhook')->willReturn($this->movie());
         $client->method('withContext')->willReturnSelf();
         $client->method('setLogger')->willReturnSelf();
@@ -77,7 +80,10 @@ final class ProcessWebhookEventTest extends TestCase
         $logger = new Logger('test');
 
         $client = $this->createMock(iClient::class);
-        $client->expects($this->once())->method('processRequest')->willReturnCallback($this->inspect(...));
+        $client
+            ->expects($this->once())
+            ->method('processRequest')
+            ->willReturnCallback($this->inspect(...));
         $client->expects($this->once())->method('parseWebhook')->willReturn($this->movie());
         $client->method('withContext')->willReturnSelf();
         $client->method('setLogger')->willReturnSelf();
@@ -103,12 +109,15 @@ final class ProcessWebhookEventTest extends TestCase
         $logger = new Logger('test');
 
         $client = $this->createMock(iClient::class);
-        $client->expects($this->once())->method('processRequest')->willReturnCallback(function (iRequest $request): iRequest {
-            self::assertNull($request->getParsedBody());
-            self::assertSame('raw-body', (string) $request->getBody());
+        $client
+            ->expects($this->once())
+            ->method('processRequest')
+            ->willReturnCallback(function (iRequest $request): iRequest {
+                self::assertNull($request->getParsedBody());
+                self::assertSame('raw-body', (string) $request->getBody());
 
-            return $this->inspect($request);
-        });
+                return $this->inspect($request);
+            });
         $client->expects($this->once())->method('parseWebhook')->willReturn($this->movie());
         $client->method('withContext')->willReturnSelf();
         $client->method('setLogger')->willReturnSelf();
@@ -137,7 +146,10 @@ final class ProcessWebhookEventTest extends TestCase
         $logger = new Logger('test');
 
         $client = $this->createMock(iClient::class);
-        $client->expects($this->once())->method('processRequest')->willReturnCallback($this->inspect(...));
+        $client
+            ->expects($this->once())
+            ->method('processRequest')
+            ->willReturnCallback($this->inspect(...));
         $client->expects($this->once())->method('parseWebhook')->willReturn($this->movie());
         $client->method('withContext')->willReturnSelf();
         $client->method('setLogger')->willReturnSelf();
@@ -157,36 +169,43 @@ final class ProcessWebhookEventTest extends TestCase
         Config::save('supported.plex', FakeBackendClient::class);
         FakeBackendClient::reset();
 
-        file_put_contents((string) Config::get('backends_file'), Yaml::dump([
-            'metadata_first' => [
-                'type' => 'plex',
-                'url' => 'https://example.invalid',
-                'token' => 'token-1',
-                'user' => '11111111',
-                'uuid' => 's00000000000000000000000000000000000000p',
-                'import' => [
-                    'enabled' => false,
+        file_put_contents(
+            (string) Config::get('backends_file'),
+            Yaml::dump(
+                [
+                    'metadata_first' => [
+                        'type' => 'plex',
+                        'url' => 'https://example.invalid',
+                        'token' => 'token-1',
+                        'user' => '11111111',
+                        'uuid' => 's00000000000000000000000000000000000000p',
+                        'import' => [
+                            'enabled' => false,
+                        ],
+                        'export' => [
+                            'enabled' => true,
+                        ],
+                        'options' => [],
+                    ],
+                    'full_second' => [
+                        'type' => 'plex',
+                        'url' => 'https://example.invalid',
+                        'token' => 'token-2',
+                        'user' => '11111111',
+                        'uuid' => 's00000000000000000000000000000000000000p',
+                        'import' => [
+                            'enabled' => true,
+                        ],
+                        'export' => [
+                            'enabled' => true,
+                        ],
+                        'options' => [],
+                    ],
                 ],
-                'export' => [
-                    'enabled' => true,
-                ],
-                'options' => [],
-            ],
-            'full_second' => [
-                'type' => 'plex',
-                'url' => 'https://example.invalid',
-                'token' => 'token-2',
-                'user' => '11111111',
-                'uuid' => 's00000000000000000000000000000000000000p',
-                'import' => [
-                    'enabled' => true,
-                ],
-                'export' => [
-                    'enabled' => true,
-                ],
-                'options' => [],
-            ],
-        ], 8, 2));
+                8,
+                2,
+            ),
+        );
 
         $cache = Container::get(CacheInterface::class);
         $logger = new Logger('test');
