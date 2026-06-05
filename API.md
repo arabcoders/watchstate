@@ -132,6 +132,8 @@ WatchState HTTP API reference. Examples use the default `/v1/api` prefix.
       - [GET /v1/api/tasks](#get-v1apitasks)
       - [GET /v1/api/tasks/{id}](#get-v1apitasksid)
       - [GET|POST|DELETE /v1/api/tasks/{id}/queue](#getpostdelete-v1apitasksidqueue)
+    - [Prune](#prune)
+      - [GET /v1/api/prune](#get-v1apiprune)
     - [Identities](#identities)
       - [GET /v1/api/identities](#get-v1apiidentities)
       - [POST /v1/api/identities](#post-v1apiidentities)
@@ -3361,6 +3363,33 @@ Gets queue state, queues a run, or cancels a queued run.
 
 **Notes**:
 - `POST` returns `202 Accepted`.
+
+---
+
+### Prune
+
+#### GET /v1/api/prune
+Lists all prune handlers.
+
+**Response**:
+```json
+{
+  "pruners": [
+    {
+      "name": "backend_metadata",
+      "display_name": "Backend Metadata",
+      "description": "Remove metadata for deleted backends.",
+      "cron": "35 */12 * * *",
+      "enabled": true,
+      "next_run": "2026-03-28T12:35:00+00:00"
+    },
+    ...
+  ]
+}
+```
+
+**Notes**:
+- Pruners that do not have a cron schedule or are disabled return `null` for `cron` and `next_run`.
 
 ---
 
