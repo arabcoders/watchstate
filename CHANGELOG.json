@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "04d016d0923f65d14a5038752823d0b32282f877",
-    "date": "2026-06-05T14:07:33+00:00",
+    "full_sha": "898450a62447f705ecbdc99b81ed0d7b3f8dd592",
+    "date": "2026-06-05T14:23:03+00:00",
     "commits": [
+      {
+        "sha": "898450a6",
+        "full_sha": "898450a62447f705ecbdc99b81ed0d7b3f8dd592",
+        "message": "docs: update api for new prune endpoint",
+        "author": "arabcoders",
+        "date": "2026-06-05T14:23:03+00:00"
+      },
       {
         "sha": "04d016d0",
         "full_sha": "04d016d0923f65d14a5038752823d0b32282f877",
