@@ -1,9 +1,30 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "c203fcc8d11cb900a4240816465d2eea47de53ee",
-    "date": "2026-06-05T13:10:57+00:00",
+    "full_sha": "04d016d0923f65d14a5038752823d0b32282f877",
+    "date": "2026-06-05T14:07:33+00:00",
     "commits": [
+      {
+        "sha": "04d016d0",
+        "full_sha": "04d016d0923f65d14a5038752823d0b32282f877",
+        "message": "Feat: expose pruner in UI",
+        "author": "arabcoders",
+        "date": "2026-06-05T14:07:33+00:00"
+      },
+      {
+        "sha": "ef8ea0ae",
+        "full_sha": "ef8ea0ae6022b177c2b1c492e3e989f3667732ba",
+        "message": "fix: show label for remove filter on mobile",
+        "author": "arabcoders",
+        "date": "2026-06-05T13:34:39+00:00"
+      },
+      {
+        "sha": "34f84eac",
+        "full_sha": "34f84eace20c38d57d589f26d34c30ed26053ef2",
+        "message": "fix: webhook force context was not working as expected.",
+        "author": "arabcoders",
+        "date": "2026-06-05T13:25:30+00:00"
+      },
       {
         "sha": "c203fcc8",
         "full_sha": "c203fcc8d11cb900a4240816465d2eea47de53ee",
