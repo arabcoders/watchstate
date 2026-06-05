@@ -1,5 +1,19 @@
 [
   {
+    "tag": "Untagged",
+    "full_sha": "c203fcc8d11cb900a4240816465d2eea47de53ee",
+    "date": "2026-06-05T13:10:57+00:00",
+    "commits": [
+      {
+        "sha": "c203fcc8",
+        "full_sha": "c203fcc8d11cb900a4240816465d2eea47de53ee",
+        "message": "Fix: directly address #845 to ignore generating webUrl if the backend does not exists",
+        "author": "arabcoders",
+        "date": "2026-06-05T13:10:57+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v1.8.6",
     "full_sha": "388ea3cc7276ce12d01aae60989cb8fc35a60255",
     "date": "2026-06-04T20:24:13+00:00",
