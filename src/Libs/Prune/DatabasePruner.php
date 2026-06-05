@@ -22,6 +22,14 @@ final class DatabasePruner
         $before = make_date(strtotime('-7 DAYS'));
         $playlistBefore = strtotime('-90 DAYS');
 
+        $this->logger->debug('Scanning for expired database records.', [
+            'event_name' => 'prune.database.scan_started',
+            'subsystem' => 'prune',
+            'operation' => 'prune_expired_db_records',
+            'outcome' => 'started',
+            'execute' => $execute,
+        ]);
+
         if (true !== $execute) {
             $eventsStmt = $this->db->query(
                 'SELECT COUNT(*) AS count FROM '
@@ -32,18 +40,35 @@ final class DatabasePruner
                 ['before' => $before->format('Y-m-d')],
             );
             $eventsCount = (int) ($eventsStmt->fetchColumn() ?? 0);
-            if ($eventsCount > 0) {
-                $this->logger->info("Pruned '{count}' events.", ['count' => $eventsCount]);
-            }
 
             $playlistsStmt = $this->db->query(
                 'SELECT COUNT(*) AS count FROM playlists WHERE deleted_at IS NOT NULL AND deleted_at < :before',
                 ['before' => $playlistBefore],
             );
             $playlistCount = (int) ($playlistsStmt->fetchColumn() ?? 0);
-            if ($playlistCount > 0) {
-                $this->logger->info("Pruned '{count}' deleted playlist snapshots.", ['count' => $playlistCount]);
+
+            if (1 > $eventsCount && 1 > $playlistCount) {
+                $this->logger->debug('No expired database records found.', [
+                    'event_name' => 'prune.database.skipped',
+                    'subsystem' => 'prune',
+                    'operation' => 'prune_expired_db_records',
+                    'outcome' => 'skipped',
+                    'reason' => 'no_expired_records',
+                ]);
+                return;
             }
+
+            $this->logger->info(
+                "Found '{events}' expired events and '{playlists}' deleted playlist snapshots.",
+                [
+                    'event_name' => 'prune.database.completed',
+                    'subsystem' => 'prune',
+                    'operation' => 'prune_expired_db_records',
+                    'outcome' => 'dry_run',
+                    'events' => $eventsCount,
+                    'playlists' => $playlistCount,
+                ],
+            );
 
             return;
         }
@@ -54,9 +79,6 @@ final class DatabasePruner
         );
 
         $eventsCount = $eventsStmt->rowCount();
-        if ($eventsCount > 0) {
-            $this->logger->info("Pruned '{count}' events.", ['count' => $eventsCount]);
-        }
 
         $playlistStmt = $this->db->query(
             'DELETE FROM playlists WHERE deleted_at IS NOT NULL AND deleted_at < :before',
@@ -64,8 +86,28 @@ final class DatabasePruner
         );
 
         $playlistCount = $playlistStmt->rowCount();
-        if ($playlistCount > 0) {
-            $this->logger->info("Pruned '{count}' deleted playlist snapshots.", ['count' => $playlistCount]);
+
+        if (1 > $eventsCount && 1 > $playlistCount) {
+            $this->logger->debug('No expired database records to remove.', [
+                'event_name' => 'prune.database.skipped',
+                'subsystem' => 'prune',
+                'operation' => 'prune_expired_db_records',
+                'outcome' => 'skipped',
+                'reason' => 'no_expired_records',
+            ]);
+            return;
         }
+
+        $this->logger->info(
+            "Pruned '{events}' expired events and '{playlists}' deleted playlist snapshots.",
+            [
+                'event_name' => 'prune.database.completed',
+                'subsystem' => 'prune',
+                'operation' => 'prune_expired_db_records',
+                'outcome' => 'completed',
+                'events' => $eventsCount,
+                'playlists' => $playlistCount,
+            ],
+        );
     }
 }

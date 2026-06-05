@@ -6,18 +6,43 @@ namespace App\Libs\Prune;
 
 use App\Libs\Attributes\Cli\Prune;
 use App\Libs\Config;
+use Psr\Log\LoggerInterface as iLogger;
 
 #[Prune(name: 'Command Sessions', cron: '*/5 * * * *', desc: 'Remove expired command sessions.')]
 final class CommandSessionsPruner
 {
     private const int COMPLETED_SESSION_RETENTION_SECONDS = 86_400;
 
+    public function __construct(
+        private readonly iLogger $logger,
+    ) {}
+
     public function __invoke(bool $execute): void
     {
         $path = fix_path((string) Config::get('tmpDir')) . '/console';
         if (false === is_dir($path)) {
+            $this->logger->debug('Console sessions directory not found.', [
+                'event_name' => 'prune.session.scan_started',
+                'subsystem' => 'prune',
+                'operation' => 'prune_expired_sessions',
+                'outcome' => 'skipped',
+                'reason' => 'directory_not_found',
+                'path' => $path,
+            ]);
             return;
         }
+
+        $this->logger->debug('Scanning for expired command sessions.', [
+            'event_name' => 'prune.session.scan_started',
+            'subsystem' => 'prune',
+            'operation' => 'prune_expired_sessions',
+            'outcome' => 'started',
+            'execute' => $execute,
+            'path' => $path,
+        ]);
+
+        $found = 0;
+        $removed = 0;
 
         foreach (new \DirectoryIterator($path) as $item) {
             if ($item->isDot() || false === $item->isDir()) {
@@ -29,17 +54,76 @@ final class CommandSessionsPruner
                 continue;
             }
 
+            $sessionName = $item->getBasename();
             $state = $this->readState($sessionPath);
+
+            if (null === $state) {
+                $this->logger->debug("Session '{session}' has no readable state, marking for removal.", [
+                    'event_name' => 'prune.session.no_state',
+                    'subsystem' => 'prune',
+                    'operation' => 'prune_expired_sessions',
+                    'outcome' => 'found',
+                    'reason' => 'no_readable_state',
+                    'session' => $sessionName,
+                ]);
+                $found++;
+                if (true === $execute) {
+                    $this->cleanupSession($sessionPath);
+                    $removed++;
+                }
+                continue;
+            }
+
             if (false === $this->shouldPrune($state)) {
                 continue;
             }
+
+            $found++;
+            $reason = $this->resolvePruneReason($state);
+
+            $this->logger->debug("Session '{session}' marked for removal.", [
+                'event_name' => 'prune.session.found',
+                'subsystem' => 'prune',
+                'operation' => 'prune_expired_sessions',
+                'outcome' => 'found',
+                'reason' => $reason,
+                'session' => $sessionName,
+                'status' => ag($state, 'status'),
+            ]);
 
             if (false === $execute) {
                 continue;
             }
 
-            $this->cleanupSession($sessionPath);
+            if (true === $this->cleanupSession($sessionPath)) {
+                $removed++;
+            }
         }
+
+        if (1 > $found) {
+            $this->logger->debug('No expired command sessions found.', [
+                'event_name' => 'prune.session.skipped',
+                'subsystem' => 'prune',
+                'operation' => 'prune_expired_sessions',
+                'outcome' => 'skipped',
+                'reason' => 'no_expired_sessions',
+                'path' => $path,
+            ]);
+            return;
+        }
+
+        $this->logger->info(
+            true === $execute
+                ? "Pruned '{count}' expired command sessions."
+                : "Found '{count}' expired command sessions.",
+            [
+                'event_name' => 'prune.session.completed',
+                'subsystem' => 'prune',
+                'operation' => 'prune_expired_sessions',
+                'outcome' => true === $execute ? 'completed' : 'dry_run',
+                'count' => true === $execute ? $removed : $found,
+            ],
+        );
     }
 
     private function shouldPrune(?array $state): bool
@@ -79,6 +163,28 @@ final class CommandSessionsPruner
         return ($finishedAtUnix + self::COMPLETED_SESSION_RETENTION_SECONDS) <= time();
     }
 
+    /**
+     * @return string
+     */
+    private function resolvePruneReason(?array $state): string
+    {
+        if (null === $state) {
+            return 'no_state';
+        }
+
+        $status = (string) ag($state, 'status', 'unknown');
+
+        if ('queued' === $status) {
+            return 'queued_expired';
+        }
+
+        if ('completed' === $status) {
+            return 'completed_expired';
+        }
+
+        return 'unknown_status';
+    }
+
     private function cleanupSession(string $path): bool
     {
         if (false === is_dir($path)) {
@@ -87,6 +193,14 @@ final class CommandSessionsPruner
 
         $locks = $this->acquireCleanupLocks($path);
         if ([] === $locks) {
+            $this->logger->debug("Could not acquire locks for session directory '{path}'.", [
+                'event_name' => 'prune.session.lock_failed',
+                'subsystem' => 'prune',
+                'operation' => 'prune_expired_sessions',
+                'outcome' => 'failed',
+                'reason' => 'lock_acquisition_failed',
+                'path' => $path,
+            ]);
             return false;
         }
 
@@ -96,7 +210,19 @@ final class CommandSessionsPruner
             $this->releaseCleanupLocks($locks);
         }
 
-        return false === is_dir($path);
+        $removed = false === is_dir($path);
+
+        if (true === $removed) {
+            $this->logger->debug("Removed session directory '{path}'.", [
+                'event_name' => 'prune.session.removed',
+                'subsystem' => 'prune',
+                'operation' => 'prune_expired_sessions',
+                'outcome' => 'completed',
+                'path' => $path,
+            ]);
+        }
+
+        return $removed;
     }
 
     /**

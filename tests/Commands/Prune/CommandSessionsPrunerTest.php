@@ -7,16 +7,19 @@ namespace Tests\Commands\Prune;
 use App\Libs\Config;
 use App\Libs\Prune\CommandSessionsPruner;
 use App\Libs\TestCase;
+use Monolog\Logger;
 
 final class CommandSessionsPrunerTest extends TestCase
 {
     private string $tmpDir;
+    private Logger $logger;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->initTempApp();
         $this->tmpDir = self::$tmpPath;
+        $this->logger = new Logger('test');
         mkdir($this->tmpDir . '/console', 0o755, true);
 
         Config::save('prune.paths', [ROOT_PATH . '/src/Libs/Prune']);
@@ -50,7 +53,7 @@ final class CommandSessionsPrunerTest extends TestCase
             'finished_at' => null,
         ]);
 
-        new CommandSessionsPruner()->__invoke(true);
+        new CommandSessionsPruner($this->logger)->__invoke(true);
 
         self::assertFalse(is_dir($expired));
         self::assertTrue(is_dir($recent));
@@ -68,7 +71,7 @@ final class CommandSessionsPrunerTest extends TestCase
             'expires_at' => make_date(strtotime('+10 minutes'))->format(DATE_ATOM),
         ]);
 
-        new CommandSessionsPruner()->__invoke(true);
+        new CommandSessionsPruner($this->logger)->__invoke(true);
 
         self::assertFalse(is_dir($expired));
         self::assertTrue(is_dir($fresh));
@@ -82,7 +85,7 @@ final class CommandSessionsPrunerTest extends TestCase
             'finished_at' => make_date(strtotime('-2 days'))->format(DATE_ATOM),
         ]);
 
-        new CommandSessionsPruner()->__invoke(false);
+        new CommandSessionsPruner($this->logger)->__invoke(false);
 
         self::assertTrue(is_dir($expired));
     }
@@ -94,7 +97,7 @@ final class CommandSessionsPrunerTest extends TestCase
             'expires_at' => make_date(strtotime('-10 minutes'))->format(DATE_ATOM),
         ]);
 
-        new CommandSessionsPruner()->__invoke(false);
+        new CommandSessionsPruner($this->logger)->__invoke(false);
 
         self::assertTrue(is_dir($expired));
     }
@@ -112,14 +115,14 @@ final class CommandSessionsPrunerTest extends TestCase
         self::assertIsResource($lockHandle);
         self::assertTrue(flock($lockHandle, LOCK_EX | LOCK_NB));
 
-        new CommandSessionsPruner()->__invoke(true);
+        new CommandSessionsPruner($this->logger)->__invoke(true);
 
         self::assertTrue(is_dir($expired));
 
         flock($lockHandle, LOCK_UN);
         fclose($lockHandle);
 
-        new CommandSessionsPruner()->__invoke(true);
+        new CommandSessionsPruner($this->logger)->__invoke(true);
 
         self::assertFalse(is_dir($expired));
     }

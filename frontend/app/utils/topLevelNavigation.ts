@@ -30,6 +30,7 @@ type TopLevelEntryId =
   | 'identities'
   | 'purge-cache'
   | 'reset'
+  | 'prune'
   | 'help'
   | 'api'
   | 'openapi'
@@ -299,6 +300,16 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     icon: 'i-lucide-rotate-ccw',
     to: '/reset',
     matchPath: '/reset',
+  },
+  {
+    id: 'prune',
+    section: 'system',
+    label: 'Prune',
+    pageLabel: 'Prune',
+    breadcrumbSectionLabel: 'System',
+    icon: 'i-lucide-scissors',
+    to: '/prune',
+    matchPath: '/prune',
   },
   {
     id: 'help',
