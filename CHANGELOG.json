@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "898450a62447f705ecbdc99b81ed0d7b3f8dd592",
-    "date": "2026-06-05T14:23:03+00:00",
+    "full_sha": "512af2278bf2793313c766a61ea4b4cf2f40bed5",
+    "date": "2026-06-07T18:40:27+00:00",
     "commits": [
+      {
+        "sha": "512af227",
+        "full_sha": "512af2278bf2793313c766a61ea4b4cf2f40bed5",
+        "message": "feat: add automatic webhook add flow for backends.",
+        "author": "arabcoders",
+        "date": "2026-06-07T18:40:27+00:00"
+      },
       {
         "sha": "898450a6",
         "full_sha": "898450a62447f705ecbdc99b81ed0d7b3f8dd592",
