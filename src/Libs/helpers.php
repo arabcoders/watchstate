@@ -1191,7 +1191,7 @@ if (!function_exists('discover_pruners')) {
     /**
      * @param array<string> $paths
      *
-     * @return array<string, array{name:string,cron:?string,desc:?string,enabled:bool,callable:string|array|Closure,item:ScannerItem,target:Target}>
+     * @return array<string, array{name:string,display_name:string,cron:?string,desc:?string,enabled:bool,callable:string|array|Closure,item:ScannerItem,target:Target}>
      */
     function discover_pruners(array $paths = []): array
     {
@@ -1211,6 +1211,7 @@ if (!function_exists('discover_pruners')) {
 
             $pruners[$name] = [
                 'name' => $name,
+                'display_name' => (string) ag($data, 'name', ''),
                 'cron' => '' !== $cron ? $cron : null,
                 'desc' => '' !== $desc ? $desc : null,
                 'enabled' => (bool) ag($data, 'enabled', true),

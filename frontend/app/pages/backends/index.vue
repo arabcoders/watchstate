@@ -75,6 +75,60 @@
         </template>
       </UModal>
 
+      <UModal
+        :open="null !== webhookBackend"
+        title="Webhook Management"
+        @update:open="handleWebhookModalClose"
+      >
+        <template #body>
+          <div v-if="null !== webhookBackend" class="space-y-3">
+            <p class="text-sm text-toned">
+              Add or update the webhook URL on the remote backend. The request fails if any of the
+              following happens:
+            </p>
+            <ul class="list-disc pl-5 text-sm text-toned">
+              <li>The webhook plugin is not installed.</li>
+              <li>The backend is not reachable.</li>
+              <li>Adding to Emby/Plex without PlexPass or Emby Premiere.</li>
+              <li>The token has insufficient permissions.</li>
+            </ul>
+            <UInput
+              :model-value="webhookFullUrl"
+              readonly
+              icon="i-lucide-link"
+              size="sm"
+              class="w-full"
+            />
+          </div>
+        </template>
+        <template #footer>
+          <div v-if="null !== webhookBackend" class="flex w-full items-center justify-end gap-2">
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-copy"
+              @click="
+                copyUrl(webhookBackend);
+                webhookBackend = null;
+              "
+            >
+              Copy URL
+            </UButton>
+            <UButton
+              color="primary"
+              variant="solid"
+              size="sm"
+              icon="i-lucide-webhook"
+              :loading="webhookLoading"
+              @click="addWebhook(webhookBackend)"
+            >
+              Add/Update
+            </UButton>
+          </div>
+        </template>
+      </UModal>
+
       <UAlert
         v-if="0 === backends.length && isLoading"
         color="info"
@@ -127,17 +181,15 @@
               </div>
 
               <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                <UTooltip v-if="backend.urls?.webhook" text="Copy webhook URL">
+                <UTooltip v-if="'main' === api_user && backend.urls?.webhook" text="Webhook">
                   <UButton
                     color="neutral"
                     variant="outline"
                     size="sm"
-                    square
-                    icon="i-lucide-copy"
-                    aria-label="Copy webhook URL"
-                    @click.prevent="copyUrl(backend)"
+                    icon="i-lucide-webhook"
+                    @click="webhookBackend = backend"
                   >
-                    <span class="hidden sm:inline">Copy Webhook URL</span>
+                    <span class="hidden sm:inline">Add Webhook</span>
                   </UButton>
                 </UTooltip>
 
@@ -306,7 +358,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import { navigateTo, useHead, useRoute } from '#app';
 import { useStorage } from '@vueuse/core';
 import moment from 'moment';
@@ -360,6 +412,17 @@ const editBackendName = ref<string>('');
 const api_user = useStorage('api_user', 'main');
 const isLoading = ref<boolean>(false);
 const selectedCommand = ref<string>('');
+
+const webhookBackend = ref<Backend | null>(null);
+const webhookLoading = ref<boolean>(false);
+
+const webhookFullUrl = computed((): string => {
+  const urls = webhookBackend.value?.urls;
+  if (undefined === urls?.webhook) {
+    return '';
+  }
+  return window.origin + urls.webhook;
+});
 
 const backendCardUi = {
   header: 'p-5',
@@ -500,6 +563,45 @@ onMounted((): void => {
 const copyUrl = (b: Backend): void => {
   if (b.urls?.webhook) {
     copyText(window.origin + b.urls.webhook);
+  }
+};
+
+const handleWebhookModalClose = (): void => {
+  webhookBackend.value = null;
+};
+
+const addWebhook = async (b: Backend): Promise<void> => {
+  if (undefined === b.urls?.webhook) {
+    return;
+  }
+
+  const webhook = b.urls.webhook;
+
+  webhookLoading.value = true;
+  try {
+    const webhookUrl = window.origin + webhook;
+    const response = await request(`/backend/${b.name}/webhook`, {
+      method: 'POST',
+      body: JSON.stringify({ webhook_url: webhookUrl }),
+    });
+
+    if (false === response.ok) {
+      const json = (await response.json()) as { error?: { message?: string } };
+      notification(
+        'error',
+        'Error',
+        json?.error?.message ?? `Failed to configure webhook for '${b.name}'.`,
+      );
+      return;
+    }
+
+    notification('success', 'Success', `Webhook configured for '${b.name}'.`);
+    webhookBackend.value = null;
+  } catch (e) {
+    const error = e as Error;
+    notification('error', 'Error', `Failed to configure webhook: ${error.message}`);
+  } finally {
+    webhookLoading.value = false;
   }
 };
 

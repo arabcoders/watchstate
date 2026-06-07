@@ -588,13 +588,10 @@ final class ProcessWebhookEvent
             $eventLevel = Level::Notice;
         }
 
-        $this->event?->addLog($eventLevel, $message, $context);
-
-        if (true === (Config::get('logs.context') || $forceContext)) {
-            $this->logger->log($level, $message, $context);
-        } else {
-            $this->logger->log($level, r($message, $context));
-        }
+        $forceContext = true === (Config::get('logs.context.force') || $forceContext);
+        $msg = true === $forceContext ? r($message, $context) : $message;
+        $this->event?->addLog($eventLevel, $msg, $forceContext ? [] : $context);
+        $this->logger->log($level, $msg, $forceContext ? [] : $context);
     }
 
     /**

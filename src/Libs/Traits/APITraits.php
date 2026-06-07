@@ -263,22 +263,30 @@ trait APITraits
 
         if (!empty($item[iState::COLUMN_META_DATA])) {
             foreach ($item[iState::COLUMN_META_DATA] as $key => &$metadata) {
-                $metadata['webUrl'] = (string) $this->getBackendItemWebUrl(
-                    backend: $key,
-                    type: ag($metadata, iState::COLUMN_TYPE),
-                    id: ag($metadata, iState::COLUMN_ID),
-                    userContext: $userContext,
-                );
+                try {
+                    $metadata['webUrl'] = (string) $this->getBackendItemWebUrl(
+                        backend: $key,
+                        type: ag($metadata, iState::COLUMN_TYPE),
+                        id: ag($metadata, iState::COLUMN_ID),
+                        userContext: $userContext,
+                    );
+                } catch (\Throwable) {
+                    $metadata['webUrl'] = null;
+                }
                 $item['reported_by'][] = $key;
             }
         }
 
-        $item['webUrl'] = (string) $this->getBackendItemWebUrl(
-            backend: $entity->via,
-            type: $entity->type,
-            id: ag($entity->getMetadata($entity->via), iState::COLUMN_ID, 0),
-            userContext: $userContext,
-        );
+        try {
+            $item['webUrl'] = (string) $this->getBackendItemWebUrl(
+                backend: $entity->via,
+                type: $entity->type,
+                id: ag($entity->getMetadata($entity->via), iState::COLUMN_ID, 0),
+                userContext: $userContext,
+            );
+        } catch (\Throwable) {
+            $item['webUrl'] = null;
+        }
 
         $item['not_reported_by'] = array_values(
             array_filter(

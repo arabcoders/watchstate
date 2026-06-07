@@ -11,6 +11,7 @@ use App\Backends\Common\Error;
 use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
+use App\Backends\Jellyfin\Action\AddWebhook;
 use App\Backends\Jellyfin\Action\Backup;
 use App\Backends\Jellyfin\Action\CreatePlaylist;
 use App\Backends\Jellyfin\Action\DeletePlaylist;
@@ -829,6 +830,24 @@ class JellyfinClient implements iClient
         }
 
         return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function addWebhook(string $webhookUrl, array $opts = []): Response
+    {
+        $response = Container::get(AddWebhook::class)(context: $this->context, webhookUrl: $webhookUrl, opts: $opts);
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
+            $this->throwError($response, HttpException::class, ag($response->extra, 'http_code', 400));
+        }
+
+        return $response;
     }
 
     /**

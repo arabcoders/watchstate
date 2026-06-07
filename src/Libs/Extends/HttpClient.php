@@ -8,6 +8,7 @@ use App\Libs\Enums\Http\Method;
 use App\Libs\Uri;
 use Psr\Log\LoggerAwareInterface as iLoggerAware;
 use Psr\Log\LoggerInterface as iLogger;
+use Stringable;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 use Symfony\Contracts\HttpClient\ResponseInterface as iResponse;
@@ -45,7 +46,7 @@ class HttpClient implements iHttp, iLoggerAware, iReset
      * Sends an HTTP request.
      *
      * @param string|Method $method The HTTP method (GET, POST, PUT, DELETE, etc.) to use for the request.
-     * @param string $url The URL to which the request is sent.
+     * @param string|Stringable $url The URL to which the request is sent.
      * @param array $options An optional array of request options.
      *                       Possible options include 'headers' to specify custom request headers,
      *                       'user_data' to provide additional user-defined data as an associate array,
@@ -54,10 +55,14 @@ class HttpClient implements iHttp, iLoggerAware, iReset
      * @return iResponse The response obtained from the remote server.
      * @throws TransportExceptionInterface If an error occurs while processing the request.
      */
-    public function request(string|Method $method, string $url, array $options = []): iResponse
+    public function request(string|Method $method, string|Stringable $url, array $options = []): iResponse
     {
         if (true === $method instanceof Method) {
             $method = $method->value;
+        }
+
+        if (true === $url instanceof Stringable) {
+            $url = (string) $url;
         }
 
         if (null !== $this->logger) {

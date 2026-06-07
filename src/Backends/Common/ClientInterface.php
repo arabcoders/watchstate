@@ -386,4 +386,14 @@ interface ClientInterface
      * @param array $opts options.
      */
     public function updateState(array $entities, QueueRequests $queue, array $opts = []): void;
+
+    /**
+     * Add or update a webhook.
+     *
+     * @param string $webhookUrl webhook URL.
+     * @param array $opts options.
+     *
+     * @return Response
+     */
+    public function addWebhook(string $webhookUrl, array $opts = []): Response;
 }

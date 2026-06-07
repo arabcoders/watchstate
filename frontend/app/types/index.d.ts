@@ -482,6 +482,24 @@ export interface TaskItem {
 }
 
 /**
+ * Represents a prune handler from the API.
+ */
+export interface PrunerItem {
+  /** Normalized pruner name */
+  name: string;
+  /** Display name (human-readable) */
+  display_name: string;
+  /** Description of what the pruner does */
+  description?: string;
+  /** Cron expression */
+  cron: string | null;
+  /** Whether the pruner is enabled */
+  enabled: boolean;
+  /** Next scheduled run (ISO string or null) */
+  next_run: string | null;
+}
+
+/**
  * Represents a backup file with metadata and download/restore functionality.
  */
 export interface BackupItem {

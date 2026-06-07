@@ -29,6 +29,7 @@ WatchState HTTP API reference. Examples use the default `/v1/api` prefix.
       - [DELETE /v1/api/backend/{name}](#delete-v1apibackendname)
       - [GET /v1/api/backend/{name}/info](#get-v1apibackendnameinfo)
       - [GET /v1/api/backend/{name}/version](#get-v1apibackendnameversion)
+      - [POST /v1/api/backend/{name}/webhook](#post-v1apibackendnamewebhook)
       - [GET /v1/api/backend/{name}/users](#get-v1apibackendnameusers)
       - [POST /v1/api/backend/{name}/accesstoken](#post-v1apibackendnameaccesstoken)
       - [GET /v1/api/backend/{name}/sessions](#get-v1apibackendnamesessions)
@@ -132,6 +133,8 @@ WatchState HTTP API reference. Examples use the default `/v1/api` prefix.
       - [GET /v1/api/tasks](#get-v1apitasks)
       - [GET /v1/api/tasks/{id}](#get-v1apitasksid)
       - [GET|POST|DELETE /v1/api/tasks/{id}/queue](#getpostdelete-v1apitasksidqueue)
+    - [Prune](#prune)
+      - [GET /v1/api/prune](#get-v1apiprune)
     - [Identities](#identities)
       - [GET /v1/api/identities](#get-v1apiidentities)
       - [POST /v1/api/identities](#post-v1apiidentities)
@@ -716,6 +719,40 @@ Returns the backend server version.
 **Errors**:
 - `404 Not Found` if the user or backend does not exist.
 - `500 Internal Server Error` if the backend request fails.
+
+---
+
+#### POST /v1/api/backend/{name}/webhook
+Registers or updates the WatchState webhook URL on the remote backend.
+
+**Path**:
+- `name`: Saved backend name.
+
+**Body**:
+```json
+{
+  "webhook_url": "https://your-ws.example.com/v1/api/webhook"
+}
+```
+
+**Response**:
+```json
+{
+  "message": "Webhook configured successfully."
+}
+```
+
+**Errors**:
+- `400 Bad Request` if `webhook_url` is missing or empty.
+- `404 Not Found` if the user or backend does not exist.
+- `503 Service Unavailable` if the backend rejected the webhook registration.
+- `500 Internal Server Error` if an unexpected error occurs.
+
+**Notes**:
+- If a webhook with the same URL already exists on the backend, the endpoint updates it instead of creating a duplicate.
+- For Emby, a Emby Premiere is required.
+- For Jellyfin, the Webhook plugin must be installed.
+- For Plex, a Plex Pass subscription is required.
 
 ---
 
@@ -3361,6 +3398,33 @@ Gets queue state, queues a run, or cancels a queued run.
 
 **Notes**:
 - `POST` returns `202 Accepted`.
+
+---
+
+### Prune
+
+#### GET /v1/api/prune
+Lists all prune handlers.
+
+**Response**:
+```json
+{
+  "pruners": [
+    {
+      "name": "backend_metadata",
+      "display_name": "Backend Metadata",
+      "description": "Remove metadata for deleted backends.",
+      "cron": "35 */12 * * *",
+      "enabled": true,
+      "next_run": "2026-03-28T12:35:00+00:00"
+    },
+    ...
+  ]
+}
+```
+
+**Notes**:
+- Pruners that do not have a cron schedule or are disabled return `null` for `cron` and `next_run`.
 
 ---
 

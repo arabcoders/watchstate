@@ -130,7 +130,9 @@
                   :disabled="isLoading"
                   aria-label="Remove filter"
                   @click="removeSearchFilter(index)"
-                />
+                >
+                  <span class="inline sm:hidden">Remove filter</span>
+                </UButton>
               </UTooltip>
             </div>
 

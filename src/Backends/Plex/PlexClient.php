@@ -9,6 +9,7 @@ use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Response;
+use App\Backends\Plex\Action\AddWebhook;
 use App\Backends\Plex\Action\Backup;
 use App\Backends\Plex\Action\CreatePlaylist;
 use App\Backends\Plex\Action\DeletePlaylist;
@@ -1036,6 +1037,24 @@ class PlexClient implements iClient
     public static function clientId(): string
     {
         return md5(Config::get('name') . '/PlexClient');
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function addWebhook(string $webhookUrl, array $opts = []): Response
+    {
+        $response = Container::get(AddWebhook::class)(context: $this->context, webhookUrl: $webhookUrl, opts: $opts);
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
+            $this->throwError($response, HttpException::class, ag($response->extra, 'http_code', 400));
+        }
+
+        return $response;
     }
 
     /**
