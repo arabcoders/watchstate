@@ -39,6 +39,12 @@ https://your_ws_url/v1/api/webhook?apikey=[api_key_you_got_from_terminal]
 
 # Adding Webhooks to Your Backends
 
+The easiest way to configure webhooks is through the WatchState UI: navigate to
+<!--i:i-lucide-server--> **Backends**, click the <!--i:i-lucide-webhook--> **Add Webhook** button on any backend card, then click **Add/Update Webhook**.
+This will automatically register or update the webhook URL on the remote backend.
+
+Alternatively, you can configure webhooks manually using the instructions below.
+
 ### Emby (Emby Premiere Required)
 
 1. Go to your Emby Server:

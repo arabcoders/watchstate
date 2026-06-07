@@ -98,6 +98,7 @@ export default defineNuxtConfig({
         'marked-gfm-heading-id',
         '@noble/hashes/hmac.js',
         '@noble/hashes/sha2.js',
+        'cronstrue',
       ],
     },
     server: {

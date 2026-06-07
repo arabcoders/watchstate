@@ -29,6 +29,7 @@ WatchState HTTP API reference. Examples use the default `/v1/api` prefix.
       - [DELETE /v1/api/backend/{name}](#delete-v1apibackendname)
       - [GET /v1/api/backend/{name}/info](#get-v1apibackendnameinfo)
       - [GET /v1/api/backend/{name}/version](#get-v1apibackendnameversion)
+      - [POST /v1/api/backend/{name}/webhook](#post-v1apibackendnamewebhook)
       - [GET /v1/api/backend/{name}/users](#get-v1apibackendnameusers)
       - [POST /v1/api/backend/{name}/accesstoken](#post-v1apibackendnameaccesstoken)
       - [GET /v1/api/backend/{name}/sessions](#get-v1apibackendnamesessions)
@@ -718,6 +719,40 @@ Returns the backend server version.
 **Errors**:
 - `404 Not Found` if the user or backend does not exist.
 - `500 Internal Server Error` if the backend request fails.
+
+---
+
+#### POST /v1/api/backend/{name}/webhook
+Registers or updates the WatchState webhook URL on the remote backend.
+
+**Path**:
+- `name`: Saved backend name.
+
+**Body**:
+```json
+{
+  "webhook_url": "https://your-ws.example.com/v1/api/webhook"
+}
+```
+
+**Response**:
+```json
+{
+  "message": "Webhook configured successfully."
+}
+```
+
+**Errors**:
+- `400 Bad Request` if `webhook_url` is missing or empty.
+- `404 Not Found` if the user or backend does not exist.
+- `503 Service Unavailable` if the backend rejected the webhook registration.
+- `500 Internal Server Error` if an unexpected error occurs.
+
+**Notes**:
+- If a webhook with the same URL already exists on the backend, the endpoint updates it instead of creating a duplicate.
+- For Emby, a Emby Premiere is required.
+- For Jellyfin, the Webhook plugin must be installed.
+- For Plex, a Plex Pass subscription is required.
 
 ---
 

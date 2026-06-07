@@ -432,6 +432,11 @@ class FakeBackendClient implements ClientInterface
         ]);
     }
 
+    public function addWebhook(string $webhookUrl, array $opts = []): Response
+    {
+        return new Response(status: true);
+    }
+
     private function requireContext(): Context
     {
         assert($this->context instanceof Context, 'Expected backend context before invoking fake backend client.');

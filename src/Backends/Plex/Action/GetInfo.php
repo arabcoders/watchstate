@@ -21,6 +21,12 @@ final class GetInfo
 
     protected string $action = 'plex.getInfo';
 
+    /**
+     * Undocumented function
+     *
+     * @param iHttp&\App\Libs\Extends\HttpClient $http
+     * @param iLogger $logger
+     */
     public function __construct(
         protected readonly iHttp $http,
         protected readonly iLogger $logger,
