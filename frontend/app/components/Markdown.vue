@@ -497,4 +497,9 @@ onBeforeUnmount(() => removeListeners());
   max-width: 100%;
   border-radius: 0.375rem;
 }
+
+.ws-markdown details summary {
+  cursor: pointer;
+  user-select: none;
+}
 </style>

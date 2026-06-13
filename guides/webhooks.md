@@ -33,26 +33,24 @@ If you have enabled `WS_SECURE_API_ENDPOINTS` environment variable, then you nee
 https://your_ws_url/v1/api/webhook?apikey=[api_key_you_got_from_terminal]
 ```
 
-> ![IMPORTANT]
-> Webhooks require that the local db contain references and metadata from the backends. Therefore, ensure that you have
-> completed the initial import for each backend before setting up webhooks. Otherwise, you may get unexpected results.
-
 # Adding Webhooks to Your Backends
 
-The easiest way to configure webhooks is through the WatchState UI: navigate to
+The easiest way to configure webhooks is through the UI: navigate to
 <!--i:i-lucide-server--> **Backends**, click the <!--i:i-lucide-webhook--> **Add Webhook** button on any backend card, then click **Add/Update Webhook**.
-This will automatically register or update the webhook URL on the remote backend.
+This will automatically register or update the webhook URL on the remote backend. Alternatively, you can configure webhooks manually using the 
+instructions below.
 
-Alternatively, you can configure webhooks manually using the instructions below.
+<details>
+<summary>Click here to open manual configuration instructions</summary>
 
 ### Emby (Emby Premiere Required)
 
 1. Go to your Emby Server:
     - **Old Emby Versions**: Go to *Server > Webhooks* and click *Add Webhook*.
-    - **New Emby Versions**: Go to *username Preferences > Notifications > + Add Notification > Webhooks*.
+    - **New Emby Versions**: Go to *Manage Emby Server > xxx Preferences > Notifications > + Add Notification > Webhooks*.
 
 2. **Name**:
-    - Whatever you want, we recommend **WatchState Global Webhook**.
+    - Whatever you want, we recommend **WatchState Webhook**.
 
 3. **Webhook/Notifications URL**:
     - see [The generic webhook URL](#webhook-url) section.
@@ -235,6 +233,7 @@ Click *Save Changes*.
 ```
 
 Click *Save*.
+</details>
 
 # Media Backends Webhook Limitations
 
