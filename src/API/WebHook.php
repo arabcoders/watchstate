@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\API;
 
-use App\API\System\Command as SystemCommand;
-use App\Commands\System\TasksCommand;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\Config;
 use App\Libs\Enums\Http\Status;
@@ -13,18 +11,15 @@ use App\Libs\Middlewares\AuthorizationMiddleware;
 use App\Libs\Options;
 use App\Libs\Uri;
 use App\Listeners\ProcessWebhookEvent;
-use DateInterval;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
-use Psr\SimpleCache\CacheInterface as iCache;
 
 final class WebHook
 {
     public const string URL = '%{api.prefix}/webhook';
 
-    public function __construct(
-        private readonly iCache $cache,
-    ) {
+    public function __construct()
+    {
         set_time_limit(0);
     }
 
@@ -53,15 +48,8 @@ final class WebHook
 
         $opts = [
             Options::FAIL_FAST_ON_LOCK => true,
+            Options::QUEUE_ONLY => true,
         ];
-
-        $isTaskRunning = true === (bool) $this->cache->get(TasksCommand::CACHE_NAME, false);
-        $isCommandRunning = true === (bool) $this->cache->get(SystemCommand::CACHE_NAME, false);
-
-        if ($isTaskRunning || $isCommandRunning) {
-            $opts[Options::CACHE_ONLY] = true;
-            $opts[Options::CACHE_TTL] = new DateInterval('PT6H');
-        }
 
         $post = $request->getParsedBody();
         $data = [

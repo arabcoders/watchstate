@@ -64,6 +64,7 @@ final class Options
     public const string ON_SKIP_STATE = 'ON_SKIP_STATE';
     public const string FAIL_FAST_ON_LOCK = 'FAIL_FAST_ON_LOCK';
     public const string CACHE_ONLY = 'CACHE_ONLY';
+    public const string QUEUE_ONLY = 'QUEUE_ONLY';
     public const string DATE_COLUMN = 'DATE_COLUMN';
     public const string REPLAY_PROGRESS = 'REPLAY_PROGRESS';
 

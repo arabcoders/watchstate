@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Libs\Config;
 use App\Libs\ConfigFile;
+use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Database\DBLayer;
 use App\Libs\Database\PDO\PDOAdapter;
@@ -11,6 +12,11 @@ use App\Libs\Database\PdoFactory;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Events\EventQueue;
+use App\Libs\Events\Queue\ArrayEventTransport;
+use App\Libs\Events\Queue\EventTransportInterface;
+use App\Libs\Events\Queue\FilesystemEventTransport;
+use App\Libs\Events\Queue\NullEventTransport;
+use App\Libs\Events\Queue\RedisStreamEventTransport;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Extends\HttpClient;
@@ -105,10 +111,50 @@ return (function (): array {
             'class' => fn() => new QueueRequests(),
         ],
 
+        EventTransportInterface::class => [
+            'class' => function (): EventTransportInterface {
+                $driver = strtolower((string) Config::get('events.queue.driver', 'auto'));
+
+                if ('null' === $driver) {
+                    return new NullEventTransport();
+                }
+
+                if ('array' === $driver || true === (defined('IN_TEST_MODE') && true === IN_TEST_MODE) && 'auto' === $driver) {
+                    return new ArrayEventTransport();
+                }
+
+                if ('file' === $driver) {
+                    return new FilesystemEventTransport(
+                        path: (string) Config::get('events.queue.path'),
+                        claimAfterSeconds: (int) Config::get('events.queue.file.claim_after_seconds', 300),
+                    );
+                }
+
+                try {
+                    return new RedisStreamEventTransport(
+                        redis: Container::get(Redis::class),
+                        stream: (string) Config::get('events.queue.redis.stream'),
+                        group: (string) Config::get('events.queue.redis.group'),
+                        consumer: (string) Config::get('events.queue.redis.consumer'),
+                        claimAfterMs: (int) Config::get('events.queue.redis.claim_after_ms', 300_000),
+                    );
+                } catch (Throwable $e) {
+                    if ('redis' === $driver) {
+                        throw $e;
+                    }
+
+                    return new FilesystemEventTransport(
+                        path: (string) Config::get('events.queue.path'),
+                        claimAfterSeconds: (int) Config::get('events.queue.file.claim_after_seconds', 300),
+                    );
+                }
+            },
+        ],
+
         EventQueue::class => [
-            'class' => fn(iCache $cache, EventsRepository $repo): EventQueue => new EventQueue($cache, $repo),
+            'class' => fn(EventTransportInterface $transport, EventsRepository $repo): EventQueue => new EventQueue($transport, $repo),
             'args' => [
-                iCache::class,
+                EventTransportInterface::class,
                 EventsRepository::class,
             ],
         ],

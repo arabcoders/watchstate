@@ -5,11 +5,17 @@ declare(strict_types=1);
 namespace Tests\Commands\Events;
 
 use App\Commands\Events\DispatchCommand;
+use App\Libs\Container;
 use App\Libs\Events\DataEvent;
+use App\Libs\Events\EventQueue;
+use App\Libs\Events\Queue\EventEnvelope;
+use App\Libs\Events\Queue\EventTransportInterface;
+use App\Libs\Events\Queue\FilesystemEventTransport;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\TestCase;
 use App\Model\Events\Event;
 use App\Model\Events\EventsRepository;
+use App\Model\Events\EventsTable;
 use Monolog\Handler\TestHandler;
 use Monolog\Level;
 use Monolog\Logger;
@@ -28,10 +34,14 @@ final class DispatchCommandTest extends TestCase
             $event->addRawLog('listener raw output');
             $logger->notice('Listener raw output.');
         });
+        $repo = $this->repo();
+        $transport = $this->transport();
 
         $command = new DispatchCommand(
             $dispatcher,
-            $this->repo(),
+            $repo,
+            new EventQueue($transport, $repo),
+            $transport,
             $this->createStub(iCache::class),
             $logger,
         );
@@ -53,10 +63,14 @@ final class DispatchCommandTest extends TestCase
             $event->addLog(Level::Notice, 'listener visible');
             $logger->notice('Listener visible.');
         });
+        $repo = $this->repo();
+        $transport = $this->transport();
 
         $command = new DispatchCommand(
             $dispatcher,
-            $this->repo(),
+            $repo,
+            new EventQueue($transport, $repo),
+            $transport,
             $this->createStub(iCache::class),
             $logger,
         );
@@ -79,10 +93,14 @@ final class DispatchCommandTest extends TestCase
         $dispatcher->addListener('on_push', static function (DataEvent $event): void {
             $event->addLog(Level::Debug, 'listener debug');
         });
+        $repo = $this->repo();
+        $transport = $this->transport();
 
         $command = new DispatchCommand(
             $dispatcher,
-            $this->repo(),
+            $repo,
+            new EventQueue($transport, $repo),
+            $transport,
             $this->createStub(iCache::class),
             $logger,
         );
@@ -104,6 +122,44 @@ final class DispatchCommandTest extends TestCase
         );
     }
 
+    public function test_drain_transport(): void
+    {
+        $this->initTempDir();
+        Container::init();
+
+        $logger = new Logger('test');
+        $repo = new EventsRepository($this->createDb($logger)->getDBLayer());
+        $transport = new FilesystemEventTransport(self::$tmpPath . '/queue/events');
+        $queue = new EventQueue($transport, $repo);
+
+        $transport->enqueue(EventEnvelope::create(
+            'on_push',
+            ['ok' => true],
+            [
+                EventsTable::COLUMN_REFERENCE => 'push://1',
+            ],
+        ));
+
+        $command = new DispatchCommand(
+            new EventDispatcher(),
+            $repo,
+            $queue,
+            $transport,
+            $this->createStub(iCache::class),
+            $logger,
+        );
+
+        $method = new ReflectionMethod(DispatchCommand::class, 'drainTransport');
+        $method->invoke($command, 10);
+
+        $events = $repo->findAll([EventsTable::COLUMN_EVENT => 'on_push']);
+
+        self::assertCount(1, $events);
+        self::assertSame(['ok' => true], $events[0]->event_data);
+        self::assertSame('push://1', $events[0]->reference);
+        self::assertSame(0, $transport->count());
+    }
+
     private function event(): Event
     {
         $event = new Event([]);
@@ -120,6 +176,11 @@ final class DispatchCommandTest extends TestCase
         $repo->expects(self::exactly(2))->method('save')->willReturn('event-id');
 
         return $repo;
+    }
+
+    private function transport(): EventTransportInterface
+    {
+        return $this->createStub(EventTransportInterface::class);
     }
 
     private function runEvent(DispatchCommand $command, Event $event, Level $level, bool $debug = false): void

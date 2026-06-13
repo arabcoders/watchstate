@@ -6,6 +6,8 @@ namespace Tests\Libs\Events;
 
 use App\Libs\Events\DataEvent;
 use App\Libs\Events\EventQueue;
+use App\Libs\Events\Queue\EventEnvelope;
+use App\Libs\Events\Queue\EventTransportInterface;
 use App\Libs\Options;
 use App\Libs\TestCase;
 use App\Model\Events\Event as EventInfo;
@@ -13,14 +15,12 @@ use App\Model\Events\EventsRepository;
 use App\Model\Events\EventsTable;
 use App\Model\Events\EventStatus;
 use PDOException;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
-use Symfony\Component\Cache\Psr16Cache;
 
 final class EventQueueTest extends TestCase
 {
     public function test_cache_only(): void
     {
-        $cache = new Psr16Cache(new ArrayAdapter());
+        $transport = $this->createMock(EventTransportInterface::class);
         $repo = $this
             ->getMockBuilder(EventsRepository::class)
             ->disableOriginalConstructor()
@@ -32,7 +32,24 @@ final class EventQueueTest extends TestCase
         $repo->expects($this->never())->method('remove');
         $repo->expects($this->never())->method('save');
 
-        $queued = new EventQueue($cache, $repo)->queue(
+        $transport
+            ->expects($this->once())
+            ->method('enqueue')
+            ->with($this->callback(static function (EventEnvelope $event): bool {
+                return (
+                    'on_request' === $event->event
+                    && ['ok' => true] === $event->data
+                    && 'request://1' === $event->opts[EventsTable::COLUMN_REFERENCE]
+                    && true === $event->opts['cached']
+                    && 'alice' === $event->opts[Options::CONTEXT_USER]
+                    && false === array_key_exists(Options::CACHE_ONLY, $event->opts)
+                    && false === array_key_exists(Options::CACHE_TTL, $event->opts)
+                    && false === array_key_exists(EventsRepository::class, $event->opts)
+                );
+            }))
+            ->willReturnCallback(static fn(EventEnvelope $event): EventEnvelope => $event);
+
+        $queued = new EventQueue($transport, $repo)->queue(
             'on_request',
             ['ok' => true],
             [
@@ -50,23 +67,21 @@ final class EventQueueTest extends TestCase
         self::assertSame(['ok' => true], $queued->event_data);
         self::assertSame(DataEvent::class, $queued->options['class']);
         self::assertSame('alice', $queued->options[Options::CONTEXT_USER]);
-
-        $events = $cache->get('events', []);
-
-        self::assertCount(1, $events);
-        self::assertSame('on_request', $events[0]['event']);
-        self::assertSame(['ok' => true], $events[0]['data']);
-        self::assertSame('request://1', $events[0]['opts'][EventsTable::COLUMN_REFERENCE]);
-        self::assertTrue($events[0]['opts']['cached']);
-        self::assertArrayNotHasKey(Options::CACHE_ONLY, $events[0]['opts']);
-        self::assertArrayNotHasKey(Options::CACHE_TTL, $events[0]['opts']);
-        self::assertArrayNotHasKey(EventsRepository::class, $events[0]['opts']);
     }
 
     public function test_lock_fallback(): void
     {
-        $cache = new Psr16Cache(new ArrayAdapter());
         $modes = ['find', 'remove', 'save'];
+        $queuedEvents = [];
+        $transport = $this->createMock(EventTransportInterface::class);
+        $transport
+            ->expects($this->exactly(3))
+            ->method('enqueue')
+            ->willReturnCallback(static function (EventEnvelope $event) use (&$queuedEvents): EventEnvelope {
+                $queuedEvents[] = $event;
+
+                return $event;
+            });
 
         foreach ($modes as $mode) {
             $reference = 'ref://' . $mode;
@@ -148,7 +163,7 @@ final class EventQueueTest extends TestCase
                     ->willThrowException(new PDOException('database is locked'));
             }
 
-            $queued = new EventQueue($cache, $repo)->queue(
+            $queued = new EventQueue($transport, $repo)->queue(
                 'process_request',
                 ['ok' => true],
                 [
@@ -168,18 +183,16 @@ final class EventQueueTest extends TestCase
             self::assertTrue($queued->options[Options::FAIL_FAST_ON_LOCK]);
         }
 
-        $events = $cache->get('events', []);
+        self::assertCount(3, $queuedEvents);
 
-        self::assertCount(3, $events);
-
-        foreach ($events as $index => $event) {
-            self::assertSame('process_request', $event['event']);
-            self::assertSame(['ok' => true], $event['data']);
-            self::assertTrue($event['opts']['cached']);
-            self::assertTrue($event['opts'][Options::FAIL_FAST_ON_LOCK]);
-            self::assertSame('alice', $event['opts'][Options::CONTEXT_USER]);
-            self::assertSame('ref://' . $modes[$index], $event['opts'][EventsTable::COLUMN_REFERENCE]);
-            self::assertArrayNotHasKey(EventsRepository::class, $event['opts']);
+        foreach ($queuedEvents as $index => $event) {
+            self::assertSame('process_request', $event->event);
+            self::assertSame(['ok' => true], $event->data);
+            self::assertTrue($event->opts['cached']);
+            self::assertTrue($event->opts[Options::FAIL_FAST_ON_LOCK]);
+            self::assertSame('alice', $event->opts[Options::CONTEXT_USER]);
+            self::assertSame('ref://' . $modes[$index], $event->opts[EventsTable::COLUMN_REFERENCE]);
+            self::assertArrayNotHasKey(EventsRepository::class, $event->opts);
         }
     }
 }

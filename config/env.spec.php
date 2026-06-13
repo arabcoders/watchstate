@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * Last update: 2025-07-13
  *
@@ -194,6 +196,48 @@ return (function () {
             'config' => 'cache.path',
             'description' => 'Where to store cache data. This is usually used if the cache server is not available and/or experiencing issues.',
             'type' => 'string',
+        ],
+        [
+            'key' => 'WS_EVENTS_QUEUE_DRIVER',
+            'config' => 'events.queue.driver',
+            'description' => 'The event queue transport driver. Supported values are auto, redis, file.',
+            'type' => 'string',
+        ],
+        [
+            'key' => 'WS_EVENTS_QUEUE_PATH',
+            'config' => 'events.queue.path',
+            'description' => 'Where to store filesystem event queue payloads.',
+            'type' => 'string',
+        ],
+        [
+            'key' => 'WS_EVENTS_QUEUE_REDIS_STREAM',
+            'config' => 'events.queue.redis.stream',
+            'description' => 'Redis stream key used for queued events.',
+            'type' => 'string',
+        ],
+        [
+            'key' => 'WS_EVENTS_QUEUE_FILE_CLAIM_AFTER_SECONDS',
+            'config' => 'events.queue.file.claim_after_seconds',
+            'description' => 'How old a claimed filesystem queued event must be before another dispatcher can reclaim it.',
+            'type' => 'int',
+        ],
+        [
+            'key' => 'WS_EVENTS_QUEUE_REDIS_GROUP',
+            'config' => 'events.queue.redis.group',
+            'description' => 'Redis consumer group used for queued events.',
+            'type' => 'string',
+        ],
+        [
+            'key' => 'WS_EVENTS_QUEUE_REDIS_CONSUMER',
+            'config' => 'events.queue.redis.consumer',
+            'description' => 'Redis consumer name used by this WatchState instance.',
+            'type' => 'string',
+        ],
+        [
+            'key' => 'WS_EVENTS_QUEUE_REDIS_CLAIM_AFTER_MS',
+            'config' => 'events.queue.redis.claim_after_ms',
+            'description' => 'How old a pending Redis stream event must be before another dispatcher can reclaim it.',
+            'type' => 'int',
         ],
         [
             'key' => 'WS_LOGGER_SYSLOG_FACILITY',

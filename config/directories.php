@@ -9,6 +9,7 @@ return [
     '{path}/users',
     '{tmp_dir}/logs',
     '{tmp_dir}/cache',
+    '{tmp_dir}/queue/events',
     '{tmp_dir}/profiler',
     '{tmp_dir}/webhooks',
     '{tmp_dir}/debug',
