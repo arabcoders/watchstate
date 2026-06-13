@@ -8,6 +8,9 @@ use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Events\DataEvent;
+use App\Libs\Events\EventQueue;
+use App\Libs\Events\Queue\EventEnvelope;
+use App\Libs\Events\Queue\EventTransportInterface as iEventTransport;
 use App\Libs\Extends\ProxyHandler;
 use App\Libs\Options;
 use App\Model\Events\Event;
@@ -49,6 +52,8 @@ final class DispatchCommand extends Command
     public function __construct(
         private readonly iDispatcher $dispatcher,
         private readonly EventsRepository $repo,
+        private readonly EventQueue $queue,
+        private readonly iEventTransport $transport,
         private readonly iCache $cache,
         private iLogger $logger,
     ) {
@@ -67,6 +72,7 @@ final class DispatchCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $this->drainTransport((int) $input->getOption('limit'));
         $this->unloadEvents();
 
         register_events();
@@ -90,6 +96,53 @@ final class DispatchCommand extends Command
         }
 
         return $this->runEvents(visibleLevel: $visibleLevel, limit: (int) $input->getOption('limit'), debug: $debug);
+    }
+
+    private function drainTransport(int $limit): void
+    {
+        foreach ($this->transport->dequeue($limit) as $envelope) {
+            try {
+                $item = $this->queue->materialize($envelope);
+                $this->transport->ack($envelope);
+                $this->logger->info("Materialized queued event '{event}'.", [
+                    'event_name' => 'event.queue.materialized',
+                    'subsystem' => 'events',
+                    'operation' => 'queue.materialize',
+                    'outcome' => 'success',
+                    'event' => $envelope->event,
+                    'queue_id' => $envelope->id,
+                    'item_id' => $item->id,
+                ]);
+            } catch (Throwable $e) {
+                $this->handleDrainFailure($envelope, $e);
+            }
+        }
+    }
+
+    private function handleDrainFailure(EventEnvelope $envelope, Throwable $e): void
+    {
+        $isLock = false !== stripos($e->getMessage(), 'database is locked');
+
+        if (true === $isLock) {
+            $this->transport->release($envelope);
+            $outcome = 'retry';
+            $reason = 'database_locked';
+        } else {
+            $this->transport->fail($envelope);
+            $outcome = 'failed';
+            $reason = 'materialize_failed';
+        }
+
+        $this->logger->error("Failed to materialize queued event '{event}'.", [
+            'event_name' => 'event.queue.materialize_failed',
+            'subsystem' => 'events',
+            'operation' => 'queue.materialize',
+            'outcome' => $outcome,
+            'reason' => $reason,
+            'event' => $envelope->event,
+            'queue_id' => $envelope->id,
+            ...exception_log($e),
+        ]);
     }
 
     protected function runEvents(Level $visibleLevel, int $limit, bool $debug = false): int

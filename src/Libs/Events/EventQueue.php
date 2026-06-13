@@ -4,19 +4,20 @@ declare(strict_types=1);
 
 namespace App\Libs\Events;
 
+use App\Libs\Events\Queue\EventEnvelope;
+use App\Libs\Events\Queue\EventTransportInterface as iEventTransport;
 use App\Libs\Options;
 use App\Model\Events\Event as EventInfo;
 use App\Model\Events\EventsRepository;
 use App\Model\Events\EventsTable;
 use App\Model\Events\EventStatus;
-use DateInterval;
+use DateTimeInterface;
 use PDOException;
-use Psr\SimpleCache\CacheInterface as iCache;
 
 final class EventQueue
 {
     public function __construct(
-        private readonly iCache $cache,
+        private readonly iEventTransport $transport,
         private readonly EventsRepository $repo,
     ) {}
 
@@ -28,14 +29,26 @@ final class EventQueue
      * @param array $opts Options.
      *
      * @return EventInfo
-     * @throws \Psr\SimpleCache\InvalidArgumentException May throw this exception if saving to db fails and fallback also fail.
      */
     public function queue(string $event, array $data = [], array $opts = []): EventInfo
     {
-        if (true === (bool) ag($opts, Options::CACHE_ONLY, false)) {
-            return $this->cacheItem($event, $data, $opts);
+        if (true === (bool) ag($opts, Options::QUEUE_ONLY, false) || true === (bool) ag($opts, Options::CACHE_ONLY, false)) {
+            return $this->transportItem($event, $data, $opts);
         }
 
+        return $this->persist($event, $data, $opts);
+    }
+
+    /**
+     * Materialize a transported event envelope into the database event journal.
+     */
+    public function materialize(EventEnvelope $envelope): EventInfo
+    {
+        return $this->persist($envelope->event, $envelope->data, $envelope->opts);
+    }
+
+    private function persist(string $event, array $data, array $opts = []): EventInfo
+    {
         $repo = ag($opts, EventsRepository::class, $this->repo);
         if (!$repo instanceof EventsRepository) {
             $repo = $this->repo;
@@ -66,7 +79,7 @@ final class EventQueue
             $item->id = $id;
         } catch (PDOException $e) {
             if (false === ag_exists($opts, 'cached') && false !== stripos($e->getMessage(), 'database is locked')) {
-                return $this->cacheItem($event, $data, $opts);
+                return $this->transportItem($event, $data, $opts);
             }
             throw $e;
         }
@@ -109,40 +122,19 @@ final class EventQueue
         return $item;
     }
 
-    private function cacheItem(string $event, array $data, array $opts): EventInfo
+    private function transportItem(string $event, array $data, array $opts): EventInfo
     {
         $item = $this->createEntity(new EventInfo(['id' => generate_uuid()]), $event, $data, $opts);
 
-        $events = $this->cache->get('events', []);
-        $reference = ag($opts, EventsTable::COLUMN_REFERENCE);
-        $isUnique = true === (bool) ag($opts, 'unique', false);
-        $ttl = ag($opts, Options::CACHE_TTL, new DateInterval('PT1H'));
+        unset($opts[EventsRepository::class], $opts[Options::CACHE_ONLY], $opts[Options::CACHE_TTL], $opts[Options::QUEUE_ONLY]);
+        $createdAt = $item->created_at instanceof DateTimeInterface
+            ? $item->created_at->format(DateTimeInterface::ATOM)
+            : (string) $item->created_at;
 
-        unset($opts[EventsRepository::class], $opts[Options::CACHE_ONLY], $opts[Options::CACHE_TTL]);
-        $opts[EventsTable::COLUMN_CREATED_AT] = $item->created_at;
+        $opts[EventsTable::COLUMN_CREATED_AT] = $createdAt;
         $opts['cached'] = true;
 
-        $cachedEvent = [
-            'event' => $event,
-            'data' => $data,
-            'opts' => $opts,
-        ];
-
-        if (true === $isUnique && null !== $reference) {
-            foreach ($events as $index => $queued) {
-                if ($reference !== ag($queued, 'opts.' . EventsTable::COLUMN_REFERENCE)) {
-                    continue;
-                }
-
-                $events[$index] = $cachedEvent;
-                $this->cache->set('events', $events, $ttl);
-
-                return $item;
-            }
-        }
-
-        $events[] = $cachedEvent;
-        $this->cache->set('events', $events, $ttl);
+        $this->transport->enqueue(EventEnvelope::create($event, $data, $opts));
 
         return $item;
     }

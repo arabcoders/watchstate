@@ -21,7 +21,7 @@ use Monolog\Level;
 return (function () {
     $inContainer = in_container();
     $progressTimeCheck = fn(int $v, int $d): int => 0 === $v || $v >= 180 ? $v : $d;
-    $progressToMS = fn(int $v): int => $v < 60 ? $v * 1000 : 60000;
+    $progressToMS = fn(int $v): int => $v < 60 ? $v * 1_000 : 60_000;
     $tokenExpiry = max(1, (int) env('WS_AUTH_TOKEN_EXPIRY', 2 * 24 * 60 * 60));
     $defaultRefreshWindow = max(60, min(24 * 60 * 60, max(60, intdiv($tokenExpiry, 4))));
     $logsPruneAfter = (string) env('WS_LOGS_PRUNE_AFTER', '-7 DAYS');
@@ -298,7 +298,7 @@ return (function () {
             'opcache.enable' => 1,
             'opcache.memory_consumption' => 128,
             'opcache.interned_strings_buffer' => 16,
-            'opcache.max_accelerated_files' => 10000,
+            'opcache.max_accelerated_files' => 10_000,
             'opcache.max_wasted_percentage' => 5,
             'opcache.validate_timestamps' => $inContainer ? 0 : 1,
             'expose_php' => 0,
@@ -416,6 +416,19 @@ return (function () {
 
     $config['events'] = [
         'logfile' => ag($config, 'tmpDir') . '/logs/events.' . $logDateFormat . '.log',
+        'queue' => [
+            'driver' => env('WS_EVENTS_QUEUE_DRIVER', 'auto'),
+            'path' => env('WS_EVENTS_QUEUE_PATH', fn() => ag($config, 'tmpDir') . '/queue/events'),
+            'file' => [
+                'claim_after_seconds' => (int) env('WS_EVENTS_QUEUE_FILE_CLAIM_AFTER_SECONDS', 300),
+            ],
+            'redis' => [
+                'stream' => env('WS_EVENTS_QUEUE_REDIS_STREAM', 'watchstate:events'),
+                'group' => env('WS_EVENTS_QUEUE_REDIS_GROUP', 'watchstate'),
+                'consumer' => env('WS_EVENTS_QUEUE_REDIS_CONSUMER', 'ws-worker'),
+                'claim_after_ms' => (int) env('WS_EVENTS_QUEUE_REDIS_CLAIM_AFTER_MS', 300_000),
+            ],
+        ],
         'listeners' => [
             'cache' => new DateInterval(env('WS_EVENTS_LISTENERS_CACHE', 'PT1M')),
             'file' => env('APP_EVENTS_FILE', function () use ($config): ?string {

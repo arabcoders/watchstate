@@ -10,6 +10,8 @@ use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Events\EventQueue;
+use App\Libs\Events\Queue\EventTransportInterface;
+use App\Libs\Events\Queue\FilesystemEventTransport;
 use App\Libs\Exceptions\DBAdapterException;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\Guid;
@@ -58,14 +60,16 @@ abstract class MapperAbstract extends TestCase
         $this->logger = new Logger('logger', processors: [new LogMessageProcessor()]);
         $this->logger->pushHandler($this->handler);
         Guid::setLogger($this->logger);
+        $this->initTempDir();
 
         $this->db = $this->createDb($this->logger);
         Container::reset();
         Container::init();
         Container::add(CacheInterface::class, new Psr16Cache(new NullAdapter()));
         Container::add(EventsRepository::class, new EventsRepository($this->db->getDBLayer()));
+        Container::add(EventTransportInterface::class, new FilesystemEventTransport(self::$tmpPath . '/queue/events'));
         Container::add(EventQueue::class, new EventQueue(
-            Container::get(CacheInterface::class),
+            Container::get(EventTransportInterface::class),
             Container::get(EventsRepository::class),
         ));
 
