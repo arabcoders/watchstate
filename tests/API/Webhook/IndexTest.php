@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\API\Webhook;
 
+use App\API\System\Command as SystemCommand;
 use App\API\WebHook;
 use App\Commands\System\TasksCommand;
 use App\Libs\Container;
@@ -68,6 +69,7 @@ final class IndexTest extends TestCase
         self::assertStringNotContainsString('apikey', $events[0]->event_data['server']['REQUEST_URI']);
         self::assertStringNotContainsString('ws_token', $events[0]->event_data['server']['REQUEST_URI']);
         self::assertSame('keep=1', $events[0]->event_data['server']['QUERY_STRING']);
+        self::assertTrue($events[0]->options[Options::FAIL_FAST_ON_LOCK]);
         self::assertSame([], $cache->get('events', []));
     }
 
@@ -103,6 +105,27 @@ final class IndexTest extends TestCase
         self::assertSame('', $events[0]['data']['body']);
         self::assertArrayNotHasKey('WS_API_KEY', $events[0]['data']['server']);
         self::assertTrue($events[0]['opts']['cached']);
+        self::assertTrue($events[0]['opts'][Options::FAIL_FAST_ON_LOCK]);
+        self::assertArrayNotHasKey(Options::CACHE_ONLY, $events[0]['opts']);
+        self::assertSame([], $this->repo->findAll([EventsTable::COLUMN_EVENT => ProcessWebhookEvent::NAME]));
+    }
+
+    public function test_cache_during_command(): void
+    {
+        $cache = Container::get(CacheInterface::class);
+        $cache->set(SystemCommand::CACHE_NAME, true, new \DateInterval('PT6H'));
+
+        $response = (new WebHook($cache))($this->getWebhookRequest('req-1'));
+
+        self::assertSame(200, $response->getStatusCode());
+
+        $events = $cache->get('events', []);
+
+        self::assertCount(1, $events);
+        self::assertSame(ProcessWebhookEvent::NAME, $events[0]['event']);
+        self::assertSame(['payload' => 'ok'], $events[0]['data']['post']);
+        self::assertTrue($events[0]['opts']['cached']);
+        self::assertTrue($events[0]['opts'][Options::FAIL_FAST_ON_LOCK]);
         self::assertArrayNotHasKey(Options::CACHE_ONLY, $events[0]['opts']);
         self::assertSame([], $this->repo->findAll([EventsTable::COLUMN_EVENT => ProcessWebhookEvent::NAME]));
     }

@@ -8,6 +8,7 @@ use App\Libs\Attributes\Route\Delete;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Attributes\Route\Post;
 use App\Libs\Config;
+use App\Libs\Container;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Extends\Date;
@@ -18,6 +19,7 @@ use DateInterval;
 use DirectoryIterator;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\SimpleCache\CacheInterface as iCache;
 use Random\RandomException;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
@@ -26,6 +28,8 @@ use Throwable;
 final class Command
 {
     public const string URL = '%{api.prefix}/system/command';
+
+    public const string CACHE_NAME = 'system.command.running';
 
     private const int TIMES_BEFORE_PING = 6;
     private const int PING_INTERVAL = 200_000;
@@ -232,6 +236,9 @@ final class Command
             timeout: ag($params, 'timeout', 7200),
         );
 
+        $cache = Container::get(iCache::class);
+        $cache->set(self::CACHE_NAME, true, new DateInterval('PT6H'));
+
         try {
             if (true === $pty) {
                 $process->setPty(true);
@@ -287,6 +294,8 @@ final class Command
             $this->failSession($sessionPath, $e->getMessage(), 124, $clientConnected && $isActiveConnection());
         } catch (Throwable $e) {
             $this->failSession($sessionPath, $e->getMessage(), 1, $clientConnected && $isActiveConnection());
+        } finally {
+            $cache->delete(self::CACHE_NAME);
         }
     }
 

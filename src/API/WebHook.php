@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\API;
 
+use App\API\System\Command as SystemCommand;
 use App\Commands\System\TasksCommand;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\Config;
@@ -23,7 +24,9 @@ final class WebHook
 
     public function __construct(
         private readonly iCache $cache,
-    ) {}
+    ) {
+        set_time_limit(0);
+    }
 
     /**
      * Receive a webhook request from a backend.
@@ -48,9 +51,14 @@ final class WebHook
             array_flip([AuthorizationMiddleware::KEY_NAME, AuthorizationMiddleware::TOKEN_NAME]),
         );
 
-        $opts = [];
+        $opts = [
+            Options::FAIL_FAST_ON_LOCK => true,
+        ];
 
-        if (true === (bool) $this->cache->get(TasksCommand::CACHE_NAME, false)) {
+        $isTaskRunning = true === (bool) $this->cache->get(TasksCommand::CACHE_NAME, false);
+        $isCommandRunning = true === (bool) $this->cache->get(SystemCommand::CACHE_NAME, false);
+
+        if ($isTaskRunning || $isCommandRunning) {
             $opts[Options::CACHE_ONLY] = true;
             $opts[Options::CACHE_TTL] = new DateInterval('PT6H');
         }

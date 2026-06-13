@@ -7,8 +7,11 @@ namespace Tests\API\System;
 use App\API\System\Command;
 use App\Libs\Attributes\Route\Post;
 use App\Libs\Config;
+use App\Libs\Container;
 use App\Libs\Enums\Http\Status;
 use App\Libs\TestCase;
+use DateInterval;
+use Psr\SimpleCache\CacheInterface as iCache;
 use Tests\Support\RequestResponseTrait;
 
 final class CommandTest extends TestCase
@@ -131,6 +134,62 @@ final class CommandTest extends TestCase
 
         $this->assertSame(Status::OK->value, $streamResponse->getStatusCode());
         $this->assertTrue(is_dir($sessionPath));
+    }
+
+    public function test_stream_marks_command(): void
+    {
+        Config::save('console.enable.all', true);
+
+        $cache = $this->createMock(iCache::class);
+        $cache
+            ->expects($this->once())
+            ->method('set')
+            ->with(
+                Command::CACHE_NAME,
+                true,
+                $this->callback(static fn(mixed $ttl): bool => $ttl instanceof DateInterval && 6 === $ttl->h),
+            )
+            ->willReturn(true);
+        $cache
+            ->expects($this->once())
+            ->method('delete')
+            ->with(Command::CACHE_NAME)
+            ->willReturn(true);
+
+        Container::init();
+        Container::add(iCache::class, $cache);
+
+        $handler = new Command();
+        $response = $handler->queue($this->getRequest(post: [
+            'command' => '$ printf api-marker',
+            'cwd' => $this->tmpDir,
+            'pty' => false,
+            'timeout' => 5,
+        ]));
+
+        $payload = json_decode((string) $response->getBody(), true);
+        $token = (string) ag($payload, 'token');
+        $sessionPath = $this->tmpDir . '/console/' . $token;
+        $streamResponse = $handler->stream($this->getRequest(), $token);
+
+        $bufferLevel = ob_get_level();
+        ob_start(static fn(string $_buffer, int $_phase): string => '');
+
+        try {
+            $body = (string) $streamResponse->getBody();
+        } finally {
+            while (ob_get_level() > $bufferLevel) {
+                ob_end_clean();
+            }
+        }
+
+        $state = json_decode((string) file_get_contents($sessionPath . '/state.json'), true);
+        $transcript = (string) file_get_contents($sessionPath . '/stream.log');
+
+        $this->assertSame('', $body);
+        $this->assertStringContainsString('api-marker', $transcript);
+        $this->assertSame('completed', ag($state, 'status'));
+        $this->assertSame(0, ag($state, 'exit_code'));
     }
 
     public function test_list(): void
