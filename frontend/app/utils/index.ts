@@ -210,7 +210,7 @@ const notification = (
   duration: number = 3000,
   opts: ToastOptions = {},
 ): void => {
-  let method: ToastMethod = 'info';
+  let method: ToastMethod;
   let options: ToastOptions = {
     timeout: duration,
   };
