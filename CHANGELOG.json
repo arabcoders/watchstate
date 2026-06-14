@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "117d12b416f8763b7d4b08d589d4f4ae4f7024ac",
-    "date": "2026-06-14T15:56:52+00:00",
+    "full_sha": "617e96ad28251965112c607d13022a4eaa9e2935",
+    "date": "2026-06-14T16:17:42+00:00",
     "commits": [
+      {
+        "sha": "617e96ad",
+        "full_sha": "617e96ad28251965112c607d13022a4eaa9e2935",
+        "message": "refactor: use native nuxt coloring for logs related views",
+        "author": "arabcoders",
+        "date": "2026-06-14T16:17:42+00:00"
+      },
+      {
+        "sha": "0786306c",
+        "full_sha": "0786306ca5bc4054a09eaddb1a4922db763322f1",
+        "message": "refactor: update spa page",
+        "author": "arabcoders",
+        "date": "2026-06-14T16:04:56+00:00"
+      },
       {
         "sha": "117d12b4",
         "full_sha": "117d12b416f8763b7d4b08d589d4f4ae4f7024ac",
