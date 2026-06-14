@@ -275,7 +275,7 @@
 
           <template #body>
             <pre
-              class="ws-terminal-panel ws-terminal-panel-lg rounded-md bg-neutral-950/95 text-sm text-neutral-100"
+              class="ws-terminal-panel ws-terminal-panel-lg rounded-md bg-elevated text-sm text-default"
             ><code>{{ response.response.body ? tryParse(response.response.body) : 'Empty body' }}</code></pre>
           </template>
         </UTabs>

@@ -42,7 +42,7 @@ final class StateEntity implements iState
     /**
      * @var string|int|null $id The corresponding database id.
      */
-    public null|string|int $id = null;
+    public string|int|null $id = null;
 
     /**
      * @var string $type What type of data this entity holds.

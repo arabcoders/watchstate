@@ -48,7 +48,7 @@ env:
   DOCKERHUB_SLUG: arabcoders/watchstate
   GHCR_SLUG: ghcr.io/arabcoders/watchstate
   BUN_VERSION: latest
-  NODE_VERSION: 20
+  NODE_VERSION: 24
 
 jobs:
   validate-build-config:

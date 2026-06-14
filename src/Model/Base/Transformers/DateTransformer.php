@@ -20,7 +20,7 @@ final readonly class DateTransformer
         return $class(...);
     }
 
-    public function __invoke(TransformType $type, mixed $data): string|null|DateTimeInterface
+    public function __invoke(TransformType $type, mixed $data): string|DateTimeInterface|null
     {
         if (null === $data) {
             if ($this->nullable) {

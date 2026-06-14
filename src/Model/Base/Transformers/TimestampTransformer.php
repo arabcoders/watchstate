@@ -20,7 +20,7 @@ final readonly class TimestampTransformer
         return $class(...);
     }
 
-    public function __invoke(TransformType $type, mixed $data): int|string|null|DateTimeInterface
+    public function __invoke(TransformType $type, mixed $data): int|string|DateTimeInterface|null
     {
         if (null === $data) {
             if ($this->nullable) {

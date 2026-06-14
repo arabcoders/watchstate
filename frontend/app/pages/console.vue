@@ -26,7 +26,7 @@
       </div>
     </div>
 
-    <div class="overflow-hidden border border-default bg-neutral-950/95 shadow-sm">
+    <div class="overflow-hidden border border-default bg-elevated shadow-sm">
       <div ref="outputConsole" class="min-h-[55vh] max-h-[55vh] overflow-hidden" />
     </div>
 
@@ -299,10 +299,6 @@
 .xterm {
   padding: 0.5rem !important;
 }
-
-.xterm-viewport {
-  background-color: #1f2229 !important;
-}
 </style>
 
 <script setup lang="ts">
@@ -310,7 +306,9 @@ import '@xterm/xterm/css/xterm.css';
 import moment from 'moment';
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useHead, useRoute, useRouter } from '#app';
+import { useColorMode } from '#imports';
 import { Terminal } from '@xterm/xterm';
+import type { ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import {
@@ -349,6 +347,61 @@ let fitFrame: number | null = null;
 let terminalResizeObserver: ResizeObserver | null = null;
 let didInitialRender = false;
 let renderedChunkCount = 0;
+
+const colorMode = useColorMode();
+
+const xtermDarkTheme: ITheme = {
+  background: '#1f2229',
+  foreground: '#e3c981',
+  cursor: '#e3c981',
+  cursorAccent: '#1f2229',
+  selectionBackground: 'rgba(255, 255, 255, 0.18)',
+  black: '#1f2229',
+  red: '#ff6b6b',
+  green: '#9ece6a',
+  yellow: '#e0af68',
+  blue: '#7aa2f7',
+  magenta: '#bb9af7',
+  cyan: '#7dcfff',
+  white: '#c0caf5',
+  brightBlack: '#414868',
+  brightRed: '#ff7e93',
+  brightGreen: '#9ece6a',
+  brightYellow: '#e0af68',
+  brightBlue: '#7aa2f7',
+  brightMagenta: '#bb9af7',
+  brightCyan: '#7dcfff',
+  brightWhite: '#e3c981',
+};
+
+const xtermLightTheme: ITheme = {
+  background: '#ffffff',
+  foreground: '#3b3a1d',
+  cursor: '#3b3a1d',
+  cursorAccent: '#ffffff',
+  selectionBackground: 'rgba(0, 0, 0, 0.12)',
+  black: '#3b3a1d',
+  red: '#c43c4a',
+  green: '#4a7a3c',
+  yellow: '#9a7b1f',
+  blue: '#3a5fb3',
+  magenta: '#8a4fb3',
+  cyan: '#2f7a7a',
+  white: '#6b6b6b',
+  brightBlack: '#6b6b6b',
+  brightRed: '#c43c4a',
+  brightGreen: '#4a7a3c',
+  brightYellow: '#9a7b1f',
+  brightBlue: '#3a5fb3',
+  brightMagenta: '#8a4fb3',
+  brightCyan: '#2f7a7a',
+  brightWhite: '#1f1f1f',
+};
+
+const xtermTheme = computed<ITheme>(() =>
+  'dark' === colorMode.value ? xtermDarkTheme : xtermLightTheme,
+);
+
 const terminal = ref<Terminal | null>(null);
 const terminalFit = ref<FitAddon | null>(null);
 const command = ref<string>(fromCommand);
@@ -369,6 +422,15 @@ const {
   stopCommand,
   stopStream,
 } = useConsoleStream();
+
+watch(
+  () => colorMode.value,
+  (mode) => {
+    if (terminal.value) {
+      terminal.value.options.theme = 'dark' === mode ? xtermDarkTheme : xtermLightTheme;
+    }
+  },
+);
 
 const isLoading = computed(() =>
   ['starting', 'streaming', 'reconnecting'].includes(streamState.value.status),
@@ -772,6 +834,7 @@ onMounted(async () => {
       disableStdin: true,
       convertEol: true,
       altClickMovesCursor: false,
+      theme: xtermTheme.value,
     });
     terminal.value.open(outputConsole.value);
     terminal.value.loadAddon(terminalFit.value);

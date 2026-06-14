@@ -236,6 +236,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, readonly, ref, watch } from 'vue';
 import { useBreakpoints, useStorage } from '@vueuse/core';
 import { navigateTo } from '#app';
+import { useColorMode } from '#imports';
 import { useAuthStore } from '~/store/auth';
 import { useMediaQuery } from '~/composables/useMediaQuery';
 import { usePageBackground } from '~/composables/usePageBackground';

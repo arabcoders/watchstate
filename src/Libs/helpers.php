@@ -437,7 +437,7 @@ if (!function_exists('api_response')) {
      */
     function api_response(
         Status|int $status = Status::OK,
-        array|null|iStream $body = null,
+        array|iStream|null $body = null,
         array $headers = [],
         ?string $reason = null,
     ): iResponse {
