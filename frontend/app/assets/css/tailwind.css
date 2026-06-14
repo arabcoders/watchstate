@@ -65,19 +65,19 @@
   }
 
   .ws-terminal {
-    background-color: #1f2229;
-    color: #e3c981;
+    background-color: var(--ui-bg-elevated);
+    color: var(--ui-text);
     line-height: 1.7;
   }
 
   .ws-terminal > span:nth-child(even),
   .ws-terminal > code > span:nth-child(even) {
-    color: #ffc9d4;
+    color: var(--ui-text-muted);
   }
 
   .ws-terminal > span:nth-child(odd),
   .ws-terminal > code > span:nth-child(odd) {
-    color: #e3c981;
+    color: var(--ui-text);
   }
 
   .ws-expandable-block {

@@ -213,11 +213,11 @@
 }
 
 .log-entry:nth-child(even) {
-  color: #ffc9d4;
+  color: var(--ui-text-muted);
 }
 
 .log-entry:nth-child(odd) {
-  color: #e3c981;
+  color: var(--ui-text);
 }
 
 code {
@@ -225,7 +225,7 @@ code {
 }
 
 .logbox {
-  background-color: #1f2229;
+  background-color: var(--ui-bg-elevated);
   min-width: 100%;
   max-height: 73vh;
   overflow-y: auto;
@@ -233,14 +233,14 @@ code {
 }
 
 div.logbox pre {
-  background-color: rgb(31, 34, 41);
+  background-color: var(--ui-bg);
 }
 
 .logline {
   word-break: break-all;
   line-height: 2.3em;
   padding: 1em;
-  color: #fff1b8;
+  color: var(--ui-text);
 }
 </style>
 

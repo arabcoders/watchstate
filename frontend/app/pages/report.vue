@@ -67,7 +67,7 @@
     <UCard v-else class="border border-default/70 shadow-sm" :ui="{ body: 'p-0' }">
       <pre
         ref="reportViewport"
-        class="max-h-[70vh] min-h-[60vh] overflow-y-auto bg-neutral-950/95 p-4 text-sm text-neutral-100 wrap-pre whitespace-pre-wrap wrap-break-word"
+        class="max-h-[70vh] min-h-[60vh] overflow-y-auto bg-elevated p-4 text-sm text-default wrap-pre whitespace-pre-wrap wrap-break-word"
       ><code><span v-for="(item, index) in data" :key="index" class="block">{{ item }}</span></code></pre>
     </UCard>
   </main>
