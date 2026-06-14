@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "edf6b5b8bf874b0538c80d9295e275cd3c6550e1",
-    "date": "2026-06-13T17:12:01+00:00",
+    "full_sha": "117d12b416f8763b7d4b08d589d4f4ae4f7024ac",
+    "date": "2026-06-14T15:56:52+00:00",
     "commits": [
+      {
+        "sha": "117d12b4",
+        "full_sha": "117d12b416f8763b7d4b08d589d4f4ae4f7024ac",
+        "message": "chore: update external packages",
+        "author": "arabcoders",
+        "date": "2026-06-14T15:56:52+00:00"
+      },
+      {
+        "sha": "b8e2406c",
+        "full_sha": "b8e2406c586added6abccc66005170ca6c3f233d",
+        "message": "refactor: mago updated format rules",
+        "author": "arabcoders",
+        "date": "2026-06-14T15:56:33+00:00"
+      },
       {
         "sha": "edf6b5b8",
         "full_sha": "edf6b5b8bf874b0538c80d9295e275cd3c6550e1",
