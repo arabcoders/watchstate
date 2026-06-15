@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "617e96ad28251965112c607d13022a4eaa9e2935",
-    "date": "2026-06-14T16:17:42+00:00",
+    "full_sha": "22a909ebce4b8add6b984655ea01fda4f28e79cd",
+    "date": "2026-06-15T14:59:19+00:00",
     "commits": [
+      {
+        "sha": "22a909eb",
+        "full_sha": "22a909ebce4b8add6b984655ea01fda4f28e79cd",
+        "message": "refactor: use the regular output instead fo stdout for import/playlist summary",
+        "author": "arabcoders",
+        "date": "2026-06-15T14:59:19+00:00"
+      },
       {
         "sha": "617e96ad",
         "full_sha": "617e96ad28251965112c607d13022a4eaa9e2935",
