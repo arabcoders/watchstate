@@ -24,6 +24,8 @@ final class PlaylistCommandTest extends TestCase
 {
     public function test_summary(): void
     {
+        $this->initTempDir();
+
         $service = $this->makeServiceMock();
         $service
             ->expects(self::once())
@@ -57,16 +59,21 @@ final class PlaylistCommandTest extends TestCase
         $client->method('getName')->willReturn('test_plex');
         $client->method('getType')->willReturn('plex');
 
+        $logfile = self::$tmpPath . '/playlist-summary.txt';
+        touch($logfile);
+
         $tester = $this->makeTester($service, $client);
-        $status = $tester->execute([]);
+        $status = $tester->execute(['--logfile' => $logfile], ['verbosity' => OutputInterface::VERBOSITY_VERBOSE]);
 
         self::assertSame(PlaylistCommand::SUCCESS, $status);
-        self::assertStringContainsString('test_plex', $tester->getDisplay());
-        self::assertStringContainsString('Playlists', $tester->getDisplay());
+        self::assertStringContainsString('Synced', file_get_contents($logfile));
+        self::assertStringContainsString('playlists,', file_get_contents($logfile));
     }
 
     public function test_skips_disabled_backend(): void
     {
+        $this->initTempDir();
+
         $service = $this->makeServiceMock();
         $service
             ->expects(self::once())
@@ -87,11 +94,14 @@ final class PlaylistCommandTest extends TestCase
             )
             ->willReturn([]);
 
+        $logfile = self::$tmpPath . '/playlist-skip.txt';
+        touch($logfile);
+
         $tester = $this->makeTester($service, $this->createStub(iClient::class), 'test_disabled');
-        $status = $tester->execute([]);
+        $status = $tester->execute(['--logfile' => $logfile], ['verbosity' => OutputInterface::VERBOSITY_VERBOSE]);
 
         self::assertSame(PlaylistCommand::SUCCESS, $status);
-        self::assertStringContainsString('No matching backends produced syncable playlists.', $tester->getDisplay());
+        self::assertStringContainsString('No matching backends produced syncable playlists.', file_get_contents($logfile));
     }
 
     public function test_disabled_passed_empty(): void

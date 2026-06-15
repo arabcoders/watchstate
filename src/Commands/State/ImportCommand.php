@@ -24,8 +24,6 @@ use App\Libs\UserContext;
 use Monolog\Level;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface as iLogger;
-use Symfony\Component\Console\Helper\Table;
-use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -453,22 +451,6 @@ class ImportCommand extends Command
 
             $operations = $userContext->mapper->commit();
 
-            $a = [
-                [
-                    'Type' => ucfirst(iState::TYPE_MOVIE),
-                    'Added' => $operations[iState::TYPE_MOVIE]['added'] ?? '-',
-                    'Updated' => $operations[iState::TYPE_MOVIE]['updated'] ?? '-',
-                    'Failed' => $operations[iState::TYPE_MOVIE]['failed'] ?? '-',
-                ],
-                new TableSeparator(),
-                [
-                    'Type' => ucfirst(iState::TYPE_EPISODE),
-                    'Added' => $operations[iState::TYPE_EPISODE]['added'] ?? '-',
-                    'Updated' => $operations[iState::TYPE_EPISODE]['updated'] ?? '-',
-                    'Failed' => $operations[iState::TYPE_EPISODE]['failed'] ?? '-',
-                ],
-            ];
-
             Message::reset();
             $userContext->mapper->reset();
 
@@ -485,13 +467,22 @@ class ImportCommand extends Command
                 ],
             );
 
-            $output->writeln('');
-            new Table($output)
-                ->setHeaders(array_keys($a[0]))
-                ->setStyle('box')
-                ->setRows(array_values($a))
-                ->render();
-            $output->writeln('');
+            $this->logger->notice(
+                "SYSTEM: Imported '{user}' play states: {movie.added} added, {movie.updated} updated, {movie.failed} failed (movies); {episode.added} added, {episode.updated} updated, {episode.failed} failed (episodes).",
+                [
+                    'user' => $userContext->name,
+                    'movie' => [
+                        'added' => $operations[iState::TYPE_MOVIE]['added'] ?? 0,
+                        'updated' => $operations[iState::TYPE_MOVIE]['updated'] ?? 0,
+                        'failed' => $operations[iState::TYPE_MOVIE]['failed'] ?? 0,
+                    ],
+                    'episode' => [
+                        'added' => $operations[iState::TYPE_EPISODE]['added'] ?? 0,
+                        'updated' => $operations[iState::TYPE_EPISODE]['updated'] ?? 0,
+                        'failed' => $operations[iState::TYPE_EPISODE]['failed'] ?? 0,
+                    ],
+                ],
+            );
 
             if (false === $input->getOption('dry-run')) {
                 $userContext->config->persist();
