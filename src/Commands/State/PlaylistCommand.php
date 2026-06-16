@@ -21,7 +21,6 @@ use App\Libs\UserContext;
 use Monolog\Level;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface as iLogger;
-use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -214,15 +213,19 @@ class PlaylistCommand extends Command
             }
 
             foreach ($results as $backend => $stats) {
-                $rows[] = [
-                    'User' => $userContext->name,
-                    'Backend' => $backend,
-                    'Playlists' => $stats['playlists'],
-                    'Items' => $stats['items'],
-                    'Added' => true === $dryRun ? '-' : $stats['added'],
-                    'Updated' => true === $dryRun ? '-' : $stats['updated'],
-                    'Removed' => true === $dryRun ? '-' : $stats['removed'],
-                ];
+                $rows[] = $backend;
+                $this->logger->notice(
+                    "SYSTEM: Synced '{user}@{backend}' playlists: {playlists} playlists, {items} items, {added} added, {updated} updated, {removed} removed.",
+                    [
+                        'user' => $userContext->name,
+                        'backend' => $backend,
+                        'playlists' => $stats['playlists'],
+                        'items' => $stats['items'],
+                        'added' => true === $dryRun ? 0 : $stats['added'],
+                        'updated' => true === $dryRun ? 0 : $stats['updated'],
+                        'removed' => true === $dryRun ? 0 : $stats['removed'],
+                    ],
+                );
             }
 
             if (false === $dryRun) {
@@ -254,15 +257,9 @@ class PlaylistCommand extends Command
             $this->logger->notice('SYSTEM: Using WatchState {full_version}', [
                 'full_version' => get_full_version(),
             ]);
-            $output->writeln('<comment>No matching backends produced syncable playlists.</comment>');
+            $this->logger->notice('SYSTEM: No matching backends produced syncable playlists.');
             return self::SUCCESS;
         }
-
-        new Table($output)
-            ->setStyle('box')
-            ->setHeaders(array_keys($rows[0]))
-            ->setRows($rows)
-            ->render();
 
         $this->logger->notice("SYSTEM: Playlist sync process completed in '{duration}'s for all users.", [
             'duration' => round(microtime(true) - $totalStart, 4),
