@@ -499,10 +499,22 @@ final class TasksCommand extends Command
                 );
             }
 
-            // --- Save-log (direct CLI only) ---
-
             if ($input->hasOption('save-log') && $input->getOption('save-log') && $hadChildOutput) {
                 $lines = [];
+
+                if ($this->viaEvent) {
+                    $name = null !== $task ? $task['name'] : implode(' ', $cmd);
+                    $lines[] = $this->jsonlFormatter->formatValues(
+                        channel: $this->logger instanceof \Monolog\Logger ? $this->logger->getName() : 'task',
+                        level: 0 === $exitCode ? Level::Info : Level::Error,
+                        message: r("Task '{name}' completed. ({status}) - Took {duration}s", [
+                            'name' => $name,
+                            'status' => 0 === $exitCode ? 'Success' : 'Failed',
+                            'duration' => $ended->getTimestamp() - $started->getTimestamp(),
+                        ]),
+                    );
+                }
+
                 foreach ($capture->getRecords() as $record) {
                     $lines[] = $this->resolveJsonl($record);
                 }
