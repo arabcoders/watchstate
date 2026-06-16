@@ -129,21 +129,23 @@ final class Index
 
             $file = new SplFileObject($file, 'r');
 
-            if ($file->getSize() > 1) {
-                $file->seek(PHP_INT_MAX);
-                $lastLine = $file->key();
-                $it = new LimitIterator($file, max(0, $lastLine - $limit), $lastLine);
-                foreach ($it as $line) {
-                    $line = trim((string) $line);
-                    if (empty($line)) {
-                        continue;
-                    }
+            if ($file->getSize() < 1) {
+                continue;
+            }
 
-                    $entry = self::decodeJsonlLine($line);
+            $file->seek(PHP_INT_MAX);
+            $lastLine = $file->key();
+            $it = new LimitIterator($file, max(0, $lastLine - $limit), $lastLine);
+            foreach ($it as $line) {
+                $line = trim((string) $line);
+                if (empty($line)) {
+                    continue;
+                }
 
-                    if (null !== $entry) {
-                        $builder['lines'][] = $entry;
-                    }
+                $entry = self::decodeJsonlLine($line);
+
+                if (null !== $entry) {
+                    $builder['lines'][] = $entry;
                 }
             }
 
