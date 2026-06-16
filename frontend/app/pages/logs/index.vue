@@ -16,7 +16,7 @@
         <UInput
           v-if="toggleFilter || query"
           id="filter"
-          v-model="query"
+          v-model.lazy="query"
           type="search"
           placeholder="Filter displayed content"
           icon="i-lucide-filter"

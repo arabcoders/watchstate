@@ -23,7 +23,7 @@
             size="sm"
             icon="i-lucide-filter"
             :disabled="!item?.logs || item.logs.length < 1"
-            @click="toggleFilter = !toggleFilter"
+            @click="onToggleFilter"
           >
             <span class="hidden sm:inline">Filter</span>
           </UButton>
@@ -240,45 +240,48 @@
           </button>
         </template>
 
-        <div v-if="toggleLogs" class="relative">
-          <code
-            class="ws-terminal ws-terminal-panel ws-terminal-panel-lg"
-            :class="wrapLines ? 'ws-wrap-anywhere whitespace-pre-wrap' : 'whitespace-pre'"
+        <div
+          v-if="toggleLogs"
+          class="overflow-auto rounded-lg border border-default/70 bg-elevated/40 shadow-sm"
+          :style="{ maxHeight: '50vh' }"
+        >
+          <article
+            v-for="(row, idx) in filteredRows"
+            :key="row.key"
+            :class="[
+              'flex min-w-0 border-b border-default/40 bg-transparent last:border-b-0 hover:bg-elevated/70',
+              1 === idx % 2 ? 'bg-elevated/40' : '',
+            ]"
           >
-            <span
-              v-for="(logLine, index) in filteredRows"
-              :key="`${logLine.id}-${index}`"
-              class="block"
-              ><span
-                v-if="logLine?.date || hasLinks(logLine)"
-                class="mr-[1ch] inline-flex items-baseline whitespace-normal"
-              >
-                <template v-if="logLine?.date"
-                  >[<UTooltip :text="`${moment(logLine.date).format(TOOLTIP_DATE_FORMAT)}`">
-                    <span class="cursor-help">{{
-                      moment(logLine.date).format('HH:mm:ss')
-                    }}</span> </UTooltip
-                  >]</template
+            <div
+              class="flex min-w-0 flex-1 items-start gap-[0.65rem] px-3 py-[0.65rem] leading-[1.6]"
+            >
+              <template v-if="row.kind === 'structured'">
+                <p
+                  :class="[
+                    wrapLines
+                      ? 'min-w-0 whitespace-pre-wrap ws-wrap-anywhere'
+                      : 'min-w-max whitespace-pre',
+                    'flex-1 text-default',
+                  ]"
                 >
-                <span v-if="hasLinks(logLine)" :class="logLine?.date ? 'ml-[1ch]' : ''">
-                  <LogLineLinks :item="logLine" />
-                </span>
-              </span>
-              <span>{{ String(logLine.text).trim() }}</span>
-            </span>
-          </code>
-          <UTooltip text="Copy logs">
-            <UButton
-              color="neutral"
-              variant="soft"
-              size="sm"
-              icon="i-lucide-copy"
-              class="absolute right-3 top-3"
-              @click="
-                () => copyText(filteredRows.map((logLine) => formatLogLine(logLine)).join('\n'))
-              "
-            />
-          </UTooltip>
+                  <StructuredLogLine
+                    :log="row.entry"
+                    :compact="true"
+                    :show-details="true"
+                    @details="openLogDetails"
+                  />
+                </p>
+              </template>
+              <template v-else>
+                <span
+                  class="mr-2 inline-flex size-2 shrink-0 rounded-full align-middle"
+                  :class="toneDotClass(row.tone)"
+                />
+                <span :class="toneTextClass(row.tone)">{{ String(row.entry.text).trim() }}</span>
+              </template>
+            </div>
+          </article>
         </div>
       </UCard>
 
@@ -321,6 +324,8 @@
         </div>
       </UCard>
     </template>
+
+    <LogDetailsModal v-model:open="detailsOpen" :log="selectedLog" />
   </div>
 </template>
 
@@ -329,10 +334,11 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { createError, useHead } from '#app';
 import moment from 'moment';
 import { useStorage } from '@vueuse/core';
-import LogLineLinks from '~/components/LogLineLinks.vue';
+import StructuredLogLine from '~/components/StructuredLogLine.vue';
+import LogDetailsModal from '~/components/LogDetailsModal.vue';
 import Popover from '~/components/Popover.vue';
 import { useDialog } from '~/composables/useDialog';
-import type { EventsItem, GenericError, LogEntry } from '~/types';
+import type { EventsItem, GenericError, LogEntry, ServerJsonLogEntry } from '~/types';
 import {
   copyText,
   getEventStatusClass,
@@ -342,6 +348,13 @@ import {
   request,
   TOOLTIP_DATE_FORMAT,
 } from '~/utils';
+import {
+  normalizeStructuredEntry,
+  lineTone,
+  toneDotClass,
+  toneTextClass,
+  type LogTone,
+} from '~/utils/logs';
 
 const emit = defineEmits<{
   closeOverlay: [];
@@ -360,34 +373,67 @@ const toggleLogs = useStorage<boolean>('events_toggle_logs', true);
 const toggleData = useStorage<boolean>('events_toggle_data', true);
 const toggleOptions = useStorage<boolean>('events_toggle_options', true);
 const wrapLines = useStorage<boolean>('events_wrap_lines', false);
+const selectedLog = ref<ServerJsonLogEntry | null>(null);
+const detailsOpen = ref(false);
 
 const cardUi = {
   header: 'p-4',
   body: 'px-4 pb-4 pt-0',
 };
 
-watch(toggleFilter, () => {
+type EventLogRow =
+  | { kind: 'structured'; key: string; entry: ServerJsonLogEntry }
+  | { kind: 'legacy'; key: string; entry: LogEntry; tone: LogTone };
+
+const onToggleFilter = (): void => {
+  toggleFilter.value = !toggleFilter.value;
   if (!toggleFilter.value) {
     query.value = '';
   }
+};
+
+const openLogDetails = (entry: ServerJsonLogEntry): void => {
+  selectedLog.value = entry;
+  detailsOpen.value = true;
+};
+
+watch(detailsOpen, (open) => {
+  if (!open) {
+    selectedLog.value = null;
+  }
 });
 
-const filteredRows = computed<Array<LogEntry>>(() => {
-  const rows = item.value.logs ?? [];
+const filteredRows = computed<Array<EventLogRow>>(() => {
+  const logs = item.value.logs ?? [];
 
   if (!query.value) {
-    return rows;
+    return logs.map((entry, index) => toEventLogRow(entry, index));
   }
 
   const queryValue = query.value.toLowerCase();
 
-  return rows.filter((logLine) => logLine.text.toLowerCase().includes(queryValue));
+  return logs
+    .map((entry, index) => toEventLogRow(entry, index))
+    .filter((row) => {
+      if (row.kind === 'structured') {
+        return row.entry.message.toLowerCase().includes(queryValue);
+      }
+      return row.entry.text.toLowerCase().includes(queryValue);
+    });
 });
 
-const formatLogLine = (logLine: LogEntry): string => {
-  const prefix = logLine.date ? `[${logLine.date}] ` : '';
-
-  return `${prefix}${String(logLine.text).trim()}`;
+const toEventLogRow = (raw: LogEntry | ServerJsonLogEntry, index: number): EventLogRow => {
+  const structured = normalizeStructuredEntry(raw);
+  if (null !== structured) {
+    return { kind: 'structured', key: `${structured.id}:${index}`, entry: structured };
+  }
+  const legacy = raw as LogEntry;
+  return {
+    kind: 'legacy',
+    key: `${legacy.id}:${index}`,
+    entry: legacy,
+    tone: lineTone(legacy.text),
+  };
 };
 
 const copyEventId = (hide?: () => void): void => {
@@ -401,12 +447,18 @@ const copyItem = (hide?: () => void): void => {
 };
 
 const copyLogs = (hide?: () => void): void => {
-  copyText(filteredRows.value.map((logLine) => formatLogLine(logLine)).join('\n'));
+  copyText(
+    filteredRows.value
+      .map((row) => {
+        if (row.kind === 'structured') {
+          return `[${row.entry.datetime}] ${row.entry.level.toUpperCase()} [${row.entry.logger}] ${row.entry.message}`;
+        }
+        const prefix = row.entry.date ? `[${row.entry.date}] ` : '';
+        return `${prefix}${String(row.entry.text).trim()}`;
+      })
+      .join('\n'),
+  );
   hide?.();
-};
-
-const hasLinks = (logLine: LogEntry): boolean => {
-  return Boolean(logLine.item_id || logLine.backend);
 };
 
 const getEventStatusColor = (status: number) => {
