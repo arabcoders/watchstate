@@ -59,7 +59,9 @@ class DataEventTest extends TestCase
         $this->assertSame(['test entry'], $dataEvent->getLogs(), 'getLogs() does not return the expected value');
         $dataEvent->addRawLog('new entry');
 
-        $this->assertSame(['test entry', 'new entry'], $dataEvent->getLogs(), 'addLog() does not return the expected value');
+        self::assertCount(2, $dataEvent->getLogs());
+        self::assertSame('test entry', $dataEvent->getLogs()[0]);
+        self::assertSame('new entry', $dataEvent->getLogs()[1]);
 
         for ($i = 0; $i < 203; $i++) {
             $dataEvent->addRawLog('new entry');
@@ -105,7 +107,8 @@ class DataEventTest extends TestCase
 
         self::assertTrue($dataEvent->addLog(Level::Debug, 'visible debug'));
 
-        self::assertSame(['DEBUG: visible debug'], $dataEvent->getLogs());
+        self::assertCount(1, $dataEvent->getLogs());
+        self::assertStringContainsString('"message":"visible debug"', $dataEvent->getLogs()[0]);
     }
 
     public function test_visible_logs_flag(): void

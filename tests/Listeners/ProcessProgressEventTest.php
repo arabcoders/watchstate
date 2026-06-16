@@ -86,7 +86,7 @@ final class ProcessProgressEventTest extends TestCase
         self::assertNotEmpty(
             array_filter(
                 $event->getLogs(),
-                static fn(string $log): bool => str_contains($log, 'WARNING:') && str_contains($log, 'No metadata was found.'),
+                static fn(string $log): bool => str_contains($log, '"level":"warning"') && str_contains($log, 'No metadata was found.'),
             ),
         );
         self::assertTrue($handler->hasWarningRecords());

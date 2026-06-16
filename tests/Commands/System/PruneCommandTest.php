@@ -8,6 +8,7 @@ use App\Commands\System\PruneCommand;
 use App\Libs\Attributes\Scanner\Item;
 use App\Libs\Attributes\Scanner\Target;
 use App\Libs\TestCase;
+use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
@@ -237,20 +238,21 @@ final class PruneCommandTest extends TestCase
 
     public function test_run_missing(): void
     {
-        $cmd = new TestablePruneCommand(self::prunersFixture());
-        $output = new BufferedOutput();
+        $handler = new TestHandler();
+        $cmd = new TestablePruneCommand(self::prunersFixture(), handler: $handler);
 
         $status = $cmd->run(new ArrayInput([
             '--run' => true,
             '--prune' => 'missing_pruner',
-        ]), $output);
+        ]), new BufferedOutput());
 
         $this->assertSame(PruneCommand::FAILURE, $status);
-        $this->assertStringContainsString('There are no pruner named', $output->fetch());
+        $this->assertTrue($handler->hasWarningThatContains('No pruner with that name registered'));
     }
 
     public function test_run_broken(): void
     {
+        $handler = new TestHandler();
         $broken = new Item(
             Target::IS_CLASS,
             'App\\Libs\\Attributes\\Cli\\Prune',
@@ -288,12 +290,11 @@ final class PruneCommandTest extends TestCase
                 'item' => $ok,
                 'target' => $ok->getTarget(),
             ],
-        ]);
+        ], handler: $handler);
 
-        $output = new BufferedOutput();
         $status = $cmd->run(new ArrayInput([
             '--run' => true,
-        ]), $output);
+        ]), new BufferedOutput());
 
         $this->assertSame(PruneCommand::SUCCESS, $status);
         $this->assertSame(
@@ -302,11 +303,12 @@ final class PruneCommandTest extends TestCase
             ],
             self::$calls,
         );
-        $this->assertStringContainsString('Skipping pruner', $output->fetch());
+        $this->assertTrue($handler->hasWarningThatContains('Skipping pruner'));
     }
 
     public function test_run_cron(): void
     {
+        $handler = new TestHandler();
         $bad = new Item(
             Target::IS_CLASS,
             'App\\Libs\\Attributes\\Cli\\Prune',
@@ -344,12 +346,11 @@ final class PruneCommandTest extends TestCase
                 'item' => $ok,
                 'target' => $ok->getTarget(),
             ],
-        ]);
+        ], handler: $handler);
 
-        $output = new BufferedOutput();
         $status = $cmd->run(new ArrayInput([
             '--run' => true,
-        ]), $output);
+        ]), new BufferedOutput());
 
         $this->assertSame(PruneCommand::SUCCESS, $status);
         $this->assertSame(
@@ -358,6 +359,6 @@ final class PruneCommandTest extends TestCase
             ],
             self::$calls,
         );
-        $this->assertStringContainsString('Skipping pruner', $output->fetch());
+        $this->assertTrue($handler->hasWarningThatContains('Skipping pruner'));
     }
 }

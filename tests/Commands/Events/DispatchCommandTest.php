@@ -79,9 +79,10 @@ final class DispatchCommandTest extends TestCase
 
         $records = $handler->getRecords();
         self::assertSame(
-            "[event:550e8400-e29b-41d4-a716-446655440000] Dispatching Event: 'on_push' queued at '2026-05-17T08:25:02+00:00'.",
+            "Dispatching Event: 'on_push' queued at '2026-05-17T08:25:02+00:00'.",
             $records[0]->message,
         );
+        self::assertSame('550e8400-e29b-41d4-a716-446655440000', $records[0]->context['event']['id'] ?? '');
         self::assertSame('Listener visible.', $records[1]->message);
     }
 
@@ -108,16 +109,12 @@ final class DispatchCommandTest extends TestCase
         $event = $this->event();
         $this->runEvent($command, $event, Level::Debug, true);
 
+        self::assertCount(3, $event->logs);
+        self::assertStringContainsString('Dispatching Event:', $event->logs[0]);
+        self::assertStringContainsString('"message":"listener debug"', $event->logs[1]);
+        self::assertStringContainsString('was dispatched', $event->logs[2]);
         self::assertSame(
-            [
-                "NOTICE: Dispatching Event: 'on_push' queued at '2026-05-17T08:25:02+00:00'.",
-                'DEBUG: listener debug',
-                "NOTICE: Event 'on_push' was dispatched.",
-            ],
-            $event->logs,
-        );
-        self::assertSame(
-            ["[event:550e8400-e29b-41d4-a716-446655440000] Dispatching Event: 'on_push' queued at '2026-05-17T08:25:02+00:00'."],
+            ["Dispatching Event: 'on_push' queued at '2026-05-17T08:25:02+00:00'."],
             array_map(static fn($record): string => $record->message, $handler->getRecords()),
         );
     }

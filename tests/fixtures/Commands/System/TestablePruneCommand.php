@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\fixtures\Commands\System;
 
 use App\Commands\System\PruneCommand;
+use App\Libs\Extends\LogMessageProcessor;
+use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use Symfony\Component\Console\Input\InputInterface;
 
@@ -16,8 +18,13 @@ final class TestablePruneCommand extends PruneCommand
 
     public function __construct(
         private readonly ?array $pruners = null,
+        private readonly ?TestHandler $handler = null,
     ) {
-        parent::__construct(new Logger('test'));
+        $logger = new Logger('test', [], [new LogMessageProcessor()]);
+        if (null !== $this->handler) {
+            $logger->pushHandler($this->handler);
+        }
+        parent::__construct($logger);
     }
 
     protected function getPruners(): array
