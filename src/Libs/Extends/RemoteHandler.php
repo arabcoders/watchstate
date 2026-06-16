@@ -37,7 +37,7 @@ final class RemoteHandler extends AbstractProcessingHandler
                 try {
                     $request->getStatusCode();
                 } catch (Throwable $e) {
-                    syslog(LOG_DEBUG, self::class . ': ' . $e->getMessage());
+                    syslog(LOG_DEBUG, $e->getMessage());
                 }
             }
         }
@@ -71,7 +71,7 @@ final class RemoteHandler extends AbstractProcessingHandler
                 ],
             ]);
         } catch (Throwable $e) {
-            syslog(LOG_ERR, sprintf('%s: %s. (%s:%d)', $e::class, $e->getMessage(), $e->getFile(), $e->getLine()));
+            syslog(LOG_ERR, $e->getMessage());
         }
     }
 }

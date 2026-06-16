@@ -101,6 +101,15 @@ class Cli extends Application
 
         $definition->addOption(
             new InputOption(
+                'jsonl',
+                null,
+                InputOption::VALUE_NONE,
+                'Output logs as JSONL records.',
+            ),
+        );
+
+        $definition->addOption(
+            new InputOption(
                 'debug',
                 null,
                 InputOption::VALUE_NONE,

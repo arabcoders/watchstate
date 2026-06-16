@@ -11,6 +11,7 @@ use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Exceptions\HttpException;
 use App\Libs\Extends\ConsoleHandler;
 use App\Libs\Extends\ConsoleOutput;
+use App\Libs\Extends\JsonlStreamHandler;
 use App\Libs\Extends\RemoteHandler;
 use App\Libs\Extends\RouterStrategy;
 use Closure;
@@ -44,6 +45,7 @@ final class Initializer
     private Cli $cli;
     private ConsoleOutput $cliOutput;
     private ?iLogger $accessLog = null;
+    private bool $accessLogStructured = false;
 
     /**
      * Initializes the object.
@@ -456,13 +458,18 @@ final class Initializer
         $wrap = Container::get(LogSuppressor::class);
 
         if (null !== ($logfile = Config::get('api.logfile'))) {
+            $accessHandler = $this->createStreamHandler((string) $logfile, Level::Info, true);
+            $this->accessLogStructured = $accessHandler instanceof JsonlStreamHandler;
+
             $this->accessLog = $logger
                 ->withName(name: 'http')
-                ->pushHandler($wrap->withHandler(new StreamHandler($logfile, Level::Info, true)));
+                ->pushHandler($wrap->withHandler($accessHandler));
 
             if (true === $inContainer) {
                 assert($this->accessLog instanceof Logger, 'Expected logger instance for access log.');
-                $this->accessLog->pushHandler($wrap->withHandler(new StreamHandler('php://stderr', Level::Info, true)));
+                $this->accessLog->pushHandler($wrap->withHandler(
+                    $this->createStreamHandler('php://stderr', Level::Info, true, $this->accessLogStructured ? 'jsonl' : null),
+                ));
             }
         }
 
@@ -490,10 +497,11 @@ final class Initializer
                 case 'stream':
                     $logger->pushHandler(
                         $wrap->withHandler(
-                            new StreamHandler(
-                                ag($context, 'filename'),
+                            $this->createStreamHandler(
+                                (string) ag($context, 'filename'),
                                 ag($context, 'level', Level::Info),
                                 (bool) ag($context, 'bubble', true),
+                                ag($context, 'format'),
                             ),
                         ),
                     );
@@ -570,6 +578,10 @@ final class Initializer
         }
 
         $context = array_replace_recursive([
+            'event_name' => $this->accessLogEventName($level),
+            'subsystem' => 'http',
+            'operation' => 'handle_request',
+            'outcome' => $this->isFailureLevel($level) ? 'failed' : 'completed',
             'request' => [
                 'method' => $request->getMethod(),
                 'path' => $uri->getPath(),
@@ -586,10 +598,54 @@ final class Initializer
             $context['attributes'] = $attributes;
         }
 
-        if (true === (Config::get('logs.context') || $forceContext)) {
+        if (true === (Config::get('logs.context') || $forceContext || $this->accessLogStructured)) {
             $this->accessLog->log($level, $message, $context);
         } else {
             $this->accessLog->log($level, r($message, $context));
+        }
+    }
+
+    private function createStreamHandler(
+        string $filename,
+        int|string|Level $level = Level::Info,
+        bool $bubble = true,
+        mixed $format = null,
+    ): StreamHandler {
+        if (true === $this->isJsonlStream($filename, $format)) {
+            return new JsonlStreamHandler($filename, $level, $bubble);
+        }
+
+        return new StreamHandler($filename, $level, $bubble);
+    }
+
+    private function isJsonlStream(string $filename, mixed $format = null): bool
+    {
+        if (is_scalar($format) && 'jsonl' === strtolower(trim((string) $format))) {
+            return true;
+        }
+
+        return str_ends_with(strtolower($filename), '.jsonl');
+    }
+
+    private function accessLogEventName(int|string|Level $level): string
+    {
+        return $this->isFailureLevel($level) ? 'http.request.failed' : 'http.request.completed';
+    }
+
+    private function isFailureLevel(int|string|Level $level): bool
+    {
+        if ($level instanceof Level) {
+            return $level->value >= Level::Error->value;
+        }
+
+        if (is_int($level)) {
+            return $level >= Level::Error->value;
+        }
+
+        try {
+            return Level::fromName($level)->value >= Level::Error->value;
+        } catch (\UnhandledMatchError) {
+            return false;
         }
     }
 

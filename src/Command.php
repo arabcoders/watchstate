@@ -8,6 +8,7 @@ use App\Backends\Common\ClientInterface as iClient;
 use App\Libs\Config;
 use App\Libs\ConfigFile;
 use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Stream;
 use App\Listeners\ProcessProfileEvent;
 use Closure;
@@ -69,6 +70,10 @@ class Command extends BaseCommand
 
         if ($input->hasOption('trace') && true === $input->getOption('trace')) {
             Config::save('logs.context', true);
+        }
+
+        if ($output instanceof ConsoleOutput) {
+            $output->syncJsonlMode($input);
         }
 
         if (!$input->hasOption('profile') || !$input->getOption('profile')) {

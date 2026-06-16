@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\API\System;
 
-use App\API\Logs\Index as LogsIndex;
 use App\Libs\Attributes\Route\Delete;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Attributes\Route\Patch;
@@ -306,6 +305,31 @@ final readonly class Events
         return api_message($changed ? 'Updated' : 'No Changes detected', Status::OK, $this->formatEntity($entity));
     }
 
+    public static function formatEventLog(mixed $line): array
+    {
+        if (!is_string($line)) {
+            $encoded = json_encode($line);
+            $line = false === $encoded ? '' : $encoded;
+        }
+
+        $payload = json_decode((string) $line, true, 512, JSON_INVALID_UTF8_IGNORE);
+
+        if (is_array($payload) && isset($payload['id'], $payload['datetime'], $payload['level'], $payload['logger'], $payload['message'])) {
+            return $payload;
+        }
+
+        return [
+            'id' => md5((string) (hrtime(true) + random_int(1, 10_000))),
+            'item_id' => null,
+            'event_id' => null,
+            'user' => null,
+            'backend' => null,
+            'date' => null,
+            'level' => null,
+            'text' => (string) $line,
+        ];
+    }
+
     private function formatEntity(EntityItem $entity): array
     {
         $data = $entity->getAll();
@@ -313,7 +337,7 @@ final readonly class Events
         $data['display_id'] = substr(str_replace('-', '', (string) $entity->id), 0, 12);
 
         if (is_array($entity->logs) && count($entity->logs) > 0) {
-            $data['logs'] = array_map(LogsIndex::formatLog(...), $entity->logs);
+            $data['logs'] = array_map(self::formatEventLog(...), $entity->logs);
         }
 
         if ($delay = ag($entity->options, Options::DELAY_BY)) {

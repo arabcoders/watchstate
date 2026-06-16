@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Libs\Extends;
 
+use App\Commands\System\LogsCommand;
 use App\Libs\Config;
-use DateTimeInterface;
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Level;
 use Monolog\LogRecord;
@@ -25,6 +25,11 @@ class ConsoleHandler extends AbstractProcessingHandler
      * @var OutputInterface|null $output The console output interface to be used for printing log records
      */
     private ?OutputInterface $output;
+
+    /**
+     * Lazily initialised JSONL formatter used when the error output is in JSONL mode.
+     */
+    private ?JsonlFormatter $jsonlFormatter = null;
 
     /**
      * Maps verbosity levels from the OutputInterface to corresponding log levels.
@@ -113,23 +118,24 @@ class ConsoleHandler extends AbstractProcessingHandler
      */
     protected function write(LogRecord $record): void
     {
-        $date = $record['datetime'] ?? 'No date set';
+        $errOutput = $this->output instanceof ConsoleOutputInterface ? $this->output->getErrorOutput() : $this->output;
 
-        if (true === $date instanceof DateTimeInterface) {
-            $date = $date->format(DateTimeInterface::ATOM);
+        if (null !== $errOutput && method_exists($errOutput, 'isJsonl') && true === $errOutput->isJsonl()) {
+            $this->jsonlFormatter ??= new JsonlFormatter();
+            $errOutput->writeln($this->jsonlFormatter->format($record), $this->output->getVerbosity());
+            return;
         }
 
-        $message = r('[{date}] {level}: {message}', [
-            'date' => $date,
-            'level' => $record['level_name'] ?? $record['level'] ?? '??',
-            'message' => $record['message'],
+        $message = LogsCommand::formatEventLine([
+            'datetime' => $record->datetime,
+            'level' => $record->level->getName(),
+            'logger' => $record->channel,
+            'message' => $record->message,
         ]);
 
-        if (false === empty($record['context']) && true === (bool) Config::get('logs.context')) {
-            $message .= ' ' . array_to_json($record['context']);
+        if (false === empty($record->context) && true === (bool) Config::get('logs.context')) {
+            $message .= ' ' . array_to_json($record->context);
         }
-
-        $errOutput = $this->output instanceof ConsoleOutputInterface ? $this->output->getErrorOutput() : $this->output;
 
         $errOutput?->writeln($message, $this->output->getVerbosity());
     }

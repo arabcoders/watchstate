@@ -74,7 +74,7 @@ return (function () {
         [
             'key' => 'WS_LOGGER_FILE_ENABLE',
             'config' => 'logger.file.enabled',
-            'description' => 'Enable logging to app.(YYYYMMDD).log file.',
+            'description' => 'Enable logging to app.(YYYYMMDD).jsonl file.',
             'type' => 'bool',
         ],
         [

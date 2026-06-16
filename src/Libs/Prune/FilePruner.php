@@ -25,7 +25,7 @@ final class FilePruner
                 'name' => 'logs_remover',
                 'path' => Config::get('tmpDir') . '/logs',
                 'base' => Config::get('tmpDir'),
-                'filter' => '/\.log$/',
+                'filter' => '/\.(?:log|jsonl)$/',
                 'time' => strtotime((string) Config::get('logs.prune.after', '-7 DAYS'), $time),
             ],
             [
