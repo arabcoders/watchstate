@@ -216,10 +216,12 @@ final class DispatchCommand extends Command
         $capturedHandlers = null;
 
         try {
-            $message = "[event:{id}] Dispatching Event: '{event}' queued at '{date}'.";
+            $message = "Dispatching Event: '{event.name}' queued at '{date}'.";
             $log_data = [
-                'id' => $event->id,
-                'event' => $event->event,
+                'event' => [
+                    'id' => $event->id,
+                    'name' => $event->event,
+                ],
                 'date' => make_date($event->created_at),
             ];
 
@@ -279,8 +281,8 @@ final class DispatchCommand extends Command
             $event->updated_at = (string) make_date();
             $this->repo->save($event);
 
-            $this->logger->error('[event:{id}] {message}', [
-                'id' => $event->id,
+            $this->logger->error('{message}', [
+                'event' => ['id' => $event->id],
                 'message' => $errorLog,
                 'trace' => $e->getTrace(),
             ]);

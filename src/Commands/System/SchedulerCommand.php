@@ -7,6 +7,7 @@ namespace App\Commands\System;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Stream;
+use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
@@ -24,8 +25,9 @@ final class SchedulerCommand extends Command
 
     private string $pidFile = '/tmp/ws-job-runner.pid';
 
-    public function __construct()
-    {
+    public function __construct(
+        private readonly iLogger $logger,
+    ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
         parent::__construct();
@@ -79,7 +81,11 @@ final class SchedulerCommand extends Command
                 }
             }
         } catch (Throwable $e) {
-            fwrite(STDERR, $e->getMessage());
+            $this->logger->error('Scheduler encountered an error: {message}', [
+                'message' => $e->getMessage(),
+                'exception' => $e,
+                'event_name' => 'task.scheduler_failed',
+            ]);
         } finally {
             if (file_exists($pidFile)) {
                 unlink($pidFile);

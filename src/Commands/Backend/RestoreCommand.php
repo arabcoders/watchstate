@@ -137,13 +137,13 @@ class RestoreCommand extends Command
 
         $userName = $input->getOption('user');
         if (empty($userName)) {
-            $output->writeln(r('<error>ERROR: User not specified. Please use [-u, --user].</error>'));
+            $this->logger->warning('User not specified. Use [-u, --user].');
             return self::FAILURE;
         }
 
         $name = $input->getOption('select-backend');
         if (empty($name)) {
-            $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backend].</error>'));
+            $this->logger->warning('Backend not specified. Use [-s, --select-backend].');
             return self::FAILURE;
         }
 
@@ -153,9 +153,9 @@ class RestoreCommand extends Command
             $newFile = Config::get('path') . '/backup/' . $file;
 
             if (false === file_exists($newFile) || false === is_readable($newFile)) {
-                $output->writeln(r("<error>ERROR: Unable to read backup file '{file}'.</error>", [
+                $this->logger->warning("Unable to read backup file '{file}'.", [
                     'file' => $file,
-                ]));
+                ]);
                 return self::FAILURE;
             }
 
@@ -169,26 +169,24 @@ class RestoreCommand extends Command
         try {
             $userContext = get_user_context(user: $userName, mapper: $mapper, logger: $this->logger);
         } catch (RuntimeException $e) {
-            $output->writeln(r('<error>{message}</error>', [
-                'message' => $e->getMessage(),
-            ]));
+            $this->logger->error($e->getMessage(), ['exception' => $e]);
             return self::FAILURE;
         }
 
         if (null === ($backend = $userContext->config->get($name, null))) {
-            $output->writeln(r("<error>ERROR: Backend '{user}@{backend}' not found.</error>", [
+            $this->logger->warning("Backend '{user}@{backend}' not found.", [
                 'backend' => $name,
                 'user' => $userContext->name,
-            ]));
+            ]);
             return self::FAILURE;
         }
 
         if (false === (bool) ag($backend, 'export.enabled')) {
             if (false === $input->getOption('ignore')) {
-                $output->writeln(r("<error>ERROR: Export to '{user}@{backend}' are disabled.</error>", [
+                $this->logger->warning("Export to '{user}@{backend}' is disabled.", [
                     'backend' => $name,
                     'user' => $userContext->name,
-                ]));
+                ]);
                 return self::FAILURE;
             }
 
@@ -220,9 +218,7 @@ class RestoreCommand extends Command
                 $question = new ConfirmationQuestion($text . PHP_EOL . '> ', false);
 
                 if (false === $helper->ask($input, $output, $question)) {
-                    $output->writeln(
-                        '<comment>Restore operation is cancelled, you answered no for risk assessment, or interaction is disabled.</comment>',
-                    );
+                    $this->logger->notice('Restore operation cancelled by user.');
                     return self::SUCCESS;
                 }
             } else {

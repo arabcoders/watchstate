@@ -10,18 +10,19 @@ use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Events\DataEvent;
-use App\Libs\Extends\ConsoleOutput;
+use App\Libs\Extends\CaptureHandler;
+use App\Libs\Extends\JsonlFormatter;
 use App\Libs\LogSuppressor;
 use App\Libs\Stream;
 use App\Model\Events\Event as EventModel;
 use App\Model\Events\EventListener;
 use App\Model\Events\EventsRepository;
 use App\Model\Events\EventStatus;
-use Closure;
 use Cron\CronExpression;
 use DateInterval;
 use Exception;
 use Monolog\Level;
+use Monolog\Logger;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
 use Symfony\Component\Console\Completion\CompletionInput;
@@ -29,7 +30,6 @@ use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
 use Symfony\Component\Process\Exception\ExceptionInterface as ProcessException;
 use Symfony\Component\Process\Process;
@@ -52,15 +52,9 @@ final class TasksCommand extends Command
     public const string CACHE_NAME = 'tasks.running';
     public const string CACHE_TIME = 'PT6H';
 
-    private array $logs = [];
-    private array $taskOutput = [];
-
-    private ?Closure $writer = null;
-    private ?Closure $clear = null;
-    private ?Closure $save = null;
-    private int $sleep = 1000;
-    private bool $needToSave = false;
     private bool $viaEvent = false;
+    private ?DataEvent $dispatchEvent = null;
+    private readonly JsonlFormatter $jsonlFormatter;
 
     /**
      * Class Constructor.
@@ -73,6 +67,8 @@ final class TasksCommand extends Command
     ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
+
+        $this->jsonlFormatter = new JsonlFormatter();
 
         parent::__construct();
     }
@@ -95,7 +91,6 @@ final class TasksCommand extends Command
             ->addOption('run', null, InputOption::VALUE_NONE, 'Run scheduled tasks.')
             ->addOption('task', 't', InputOption::VALUE_REQUIRED, 'Run the specified task only.')
             ->addOption('save-log', null, InputOption::VALUE_NONE, 'Save tasks output to file.')
-            ->addOption('live', null, InputOption::VALUE_NONE, 'See output in real time.')
             ->addOption(
                 'args',
                 'a',
@@ -235,36 +230,12 @@ final class TasksCommand extends Command
 
         try {
             $this->viaEvent = true;
+            $this->dispatchEvent = $event;
 
             $input = new ArrayInput([], $this->getDefinition());
             $input->setOption('run', null);
             $input->setOption('task', null);
             $input->setOption('save-log', true);
-            $input->setOption('live', false);
-
-            $this->clear = $event->clearLogs(...);
-
-            $this->save = fn() => $this->eventsRepo->save($event->getEvent());
-
-            $this->writer = function ($msg) use (&$event) {
-                static $lastSave = null;
-
-                $timeNow = time();
-
-                if (null === $lastSave) {
-                    $lastSave = $timeNow;
-                }
-
-                $event->addRawLog($msg);
-
-                if ($timeNow >= $lastSave) {
-                    ($this->save)();
-                    $lastSave = $timeNow + 3;
-                    $this->needToSave = false;
-                } else {
-                    $this->needToSave = true;
-                }
-            };
 
             if (self::CNAME === $eventName) {
                 $event->addLog(Level::Info, "Task '{task_id}' started: {command}.", [
@@ -307,9 +278,7 @@ final class TasksCommand extends Command
                 );
             }
         } finally {
-            $this->needToSave = false;
-            $this->writer = $this->clear = null;
-            $this->sleep = 1000;
+            $this->dispatchEvent = null;
             $this->viaEvent = false;
         }
 
@@ -334,9 +303,9 @@ final class TasksCommand extends Command
             $task = strtolower($task);
 
             if (false === ag_exists($tasks, $task)) {
-                $output->writeln(r('<error>There are no task named [{task}].</error>', [
+                $this->logger->error("Unknown task '{task}'. No task with that name registered.", [
                     'task' => $task,
-                ]));
+                ]);
                 return self::FAILURE;
             }
 
@@ -355,9 +324,9 @@ final class TasksCommand extends Command
         }
 
         if (count($run) < 1) {
-            $output->writeln(r('<info>[{datetime}] No task scheduled to run at this time.</info>', [
+            $this->logger->debug("No task scheduled at '{datetime}'.", [
                 'datetime' => make_date(),
-            ]), iOutput::VERBOSITY_VERBOSE);
+            ]);
 
             return self::SUCCESS;
         }
@@ -370,25 +339,6 @@ final class TasksCommand extends Command
             }
         } finally {
             $this->cache->delete(self::CACHE_NAME);
-        }
-
-        if ($input->getOption('save-log') && count($this->logs) >= 1) {
-            try {
-                $stream = new Stream(Config::get('tasks.logfile'), 'a');
-                $stream->write(preg_replace('#\R+#', PHP_EOL, implode(PHP_EOL, $this->logs)) . PHP_EOL . PHP_EOL);
-                $stream->close();
-            } catch (Throwable $e) {
-                $this->write(
-                    r("<error>Failed to open/write to logfile '{file}'. Error '{message}'.</error>", [
-                        'file' => Config::get('tasks.logfile'),
-                        'message' => $e->getMessage(),
-                    ]),
-                    $input,
-                    $output,
-                );
-
-                return self::INVALID;
-            }
         }
 
         return self::SUCCESS;
@@ -409,152 +359,7 @@ final class TasksCommand extends Command
             $cmd[] = $this->parseExtraArgs($input->getOption('args'));
         }
 
-        $process = Process::fromShellCommandline(implode(' ', $cmd), timeout: null);
-
-        $started = make_date();
-
-        $process->start(function ($std, $out) use ($input, $output) {
-            assert($output instanceof ConsoleOutputInterface, 'Expected console output interface.');
-            $out = trim((string) $out);
-
-            if (empty($out)) {
-                return;
-            }
-
-            foreach (explode(PHP_EOL, $out) as $line) {
-                if (empty($line)) {
-                    continue;
-                }
-
-                $this->taskOutput[] = $line;
-            }
-
-            if (null !== $this->writer && false === $this->suppressor->isSuppressed($out)) {
-                try {
-                    ($this->writer)($out);
-                } catch (Throwable) {
-                    // Do nothing
-                }
-            }
-
-            if (!$input->hasOption('live') && $input->getOption('live')) {
-                return;
-            }
-
-            ('err' === $std ? $output->getErrorOutput() : $output)->writeln($out);
-        });
-
-        if ($process->isRunning()) {
-            if (null === $this->save) {
-                $process->wait();
-            } else {
-                while ($process->isRunning()) {
-                    try {
-                        if (true === $this->needToSave) {
-                            $this->needToSave = false;
-                            ($this->save)();
-                        }
-                        $process->checkTimeout();
-                        usleep($this->sleep);
-                    } catch (ProcessException $e) {
-                        $process->stop();
-                        $this->write(
-                            r('Task: {name} (Failed). ({type}: {message}', [
-                                'name' => $task['name'],
-                                'startDate' => $started->format('D, H:i:s T'),
-                                'type' => $e::class,
-                                'message' => $e->getMessage(),
-                            ]),
-                            $input,
-                            $output,
-                        );
-                        break;
-                    }
-                }
-            }
-        }
-
-        $ended = make_date();
-
-        if (false === $this->viaEvent && (!in_array($task['name'], self::NO_EVENTS, true) || count($this->taskOutput) > 0)) {
-            $event = $this->eventsRepo->getObject([]);
-            $event->status = 0 === $process->getExitCode() ? EventStatus::SUCCESS : EventStatus::FAILED;
-            $event->event = self::NAME . '.' . $task['name'];
-            $event->created_at = $started;
-            $event->updated_at = $ended;
-            $event->addRawLog('--------------------------');
-            $event->addRawLog(r('Task: {name} (Started: {start_date})', [
-                'name' => $task['name'],
-                'start_date' => $started->format('D, H:i:s T'),
-            ]));
-            $event->addRawLog(r('Command: {cmd}', ['cmd' => $process->getCommandLine()]));
-            $event->addRawLog(r('Exit Code: {code}:{status} (Ended: {end_date}) - Took {duration}s', [
-                'status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
-                'code' => $process->getExitCode() ?? self::INVALID,
-                'end_date' => $ended->format('D, H:i:s T'),
-                'duration' => $ended->getTimestamp() - $started->getTimestamp(),
-            ]));
-            $event->addRawLog('--------------------------');
-            if (count($this->taskOutput) < 1) {
-                if (0 === $process->getExitCode()) {
-                    $event->addRawLog('Task completed successfully. And did not produce any output.');
-                } else {
-                    $event->addRawLog('Task failed to complete. And did not produce any output.');
-                }
-            } else {
-                $limit = max(0, EventModel::MAX_LOG_ENTRIES - count($event->logs));
-
-                if ($limit > 0) {
-                    foreach (array_slice($this->taskOutput, -$limit) as $line) {
-                        $event->addRawLog($line);
-                    }
-                }
-            }
-            $this->eventsRepo->save($event);
-        }
-
-        if (count($this->taskOutput) < 1) {
-            return $process->getExitCode() ?? self::INVALID;
-        }
-
-        if (null !== $this->clear) {
-            try {
-                ($this->clear)();
-            } catch (Throwable) {
-                // Do nothing
-            }
-        }
-
-        $this->write('--------------------------', $input, $output);
-        $this->write(
-            r('Task: {name} (Started: {startDate})', [
-                'name' => $task['name'],
-                'startDate' => $started->format('D, H:i:s T'),
-            ]),
-            $input,
-            $output,
-        );
-        $this->write(r('Command: {cmd}', ['cmd' => $process->getCommandLine()]), $input, $output);
-        $this->write(
-            r('Exit Code: {code}:{status} (Ended: {end_date}) - Took {duration}s', [
-                'status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
-                'code' => $process->getExitCode() ?? self::INVALID,
-                'end_date' => $ended->format('D, H:i:s T'),
-                'duration' => $ended->getTimestamp() - $started->getTimestamp(),
-            ]),
-            $input,
-            $output,
-        );
-        $this->write('--------------------------', $input, $output);
-        $this->write(' ' . PHP_EOL, $input, $output);
-
-        foreach ($this->taskOutput as $line) {
-            $this->write($line, $input, $output);
-        }
-
-        $this->taskOutput = [];
-
-        return $process->getExitCode() ?? self::INVALID;
+        return $this->runProcess($cmd, $input, $output, $task);
     }
 
     private function run_command(string $command, array $args, iInput $input, iOutput $output): int
@@ -573,143 +378,166 @@ final class TasksCommand extends Command
             }
         }
 
-        $process = Process::fromShellCommandline(implode(' ', $cmd), timeout: null);
-
-        $started = make_date();
-
-        $process->start(function ($std, $out) use ($input, $output) {
-            assert($output instanceof ConsoleOutputInterface, 'Expected console output interface.');
-            $out = trim((string) $out);
-
-            if (empty($out)) {
-                return;
-            }
-
-            foreach (explode(PHP_EOL, $out) as $line) {
-                if (empty($line)) {
-                    continue;
-                }
-
-                $this->taskOutput[] = $line;
-            }
-
-            if (null !== $this->writer && false === $this->suppressor->isSuppressed($out)) {
-                try {
-                    ($this->writer)($out);
-                } catch (Throwable) {
-                    // Do nothing
-                }
-            }
-
-            if (!$input->hasOption('live') && $input->getOption('live')) {
-                return;
-            }
-
-            ('err' === $std ? $output->getErrorOutput() : $output)->writeln($out);
-        });
-
-        if ($process->isRunning()) {
-            if (null === $this->save) {
-                $process->wait();
-            } else {
-                while ($process->isRunning()) {
-                    try {
-                        if (true === $this->needToSave) {
-                            $this->needToSave = false;
-                            ($this->save)();
-                        }
-                        $process->checkTimeout();
-                        usleep($this->sleep);
-                    } catch (ProcessException $e) {
-                        $process->stop();
-                        $this->write(
-                            r('Command: {command} (Failed). ({type}: {message}', [
-                                'command' => $command,
-                                'startDate' => $started->format('D, H:i:s T'),
-                                'type' => $e::class,
-                                'message' => $e->getMessage(),
-                            ]),
-                            $input,
-                            $output,
-                        );
-                        break;
-                    }
-                }
-            }
-        }
-
-        $ended = make_date();
-
-        if (count($this->taskOutput) < 1) {
-            return $process->getExitCode() ?? self::INVALID;
-        }
-
-        if (null !== $this->clear) {
-            try {
-                ($this->clear)();
-            } catch (Throwable) {
-                // Do nothing
-            }
-        }
-
-        $this->write('--------------------------', $input, $output);
-        $this->write(
-            r('Command: {name} (Started: {startDate})', [
-                'command' => $command,
-                'startDate' => $started->format('D, H:i:s T'),
-            ]),
-            $input,
-            $output,
-        );
-        $this->write(r('Command: {cmd}', ['cmd' => $process->getCommandLine()]), $input, $output);
-        $this->write(
-            r('Exit Code: {code}:{status} (Ended: {end_date}) - Took {duration}s', [
-                'status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
-                'code' => $process->getExitCode() ?? self::INVALID,
-                'end_date' => $ended->format('D, H:i:s T'),
-                'duration' => $ended->getTimestamp() - $started->getTimestamp(),
-            ]),
-            $input,
-            $output,
-        );
-        $this->write('--------------------------', $input, $output);
-        $this->write(' ' . PHP_EOL, $input, $output);
-
-        foreach ($this->taskOutput as $line) {
-            $this->write($line, $input, $output);
-        }
-
-        $this->taskOutput = [];
-
-        return $process->getExitCode() ?? self::INVALID;
+        return $this->runProcess($cmd, $input, $output, null);
     }
 
     /**
-     * Write method.
+     * Run a subprocess, routing all output through the logger via CaptureHandler.
      *
-     * Writes a given text to the output with the specified level.
-     * Optionally if the 'save-log' option is set to true, the output will be saved to the logs array.
-     * The logs array will be saved to the log file at the end of the command execution.
+     * @param array<string> $cmd
+     * @param array{name: string, command: string, args?: string}|null $task
      *
-     * @param string $text The text to write to output.
-     * @param iInput $input The input object.
-     * @param iOutput $output The output object.
-     * @param int $level The level of the output (default: iOutput::OUTPUT_NORMAL).
+     * @return int Exit code.
      */
-    private function write(string $text, iInput $input, iOutput $output, int $level = iOutput::OUTPUT_NORMAL): void
+    private function runProcess(array $cmd, iInput $input, iOutput $output, ?array $task = null): int
     {
-        assert($output instanceof ConsoleOutput, 'Expected console output for task runner.');
-        $output->writeln($text, $level);
-
-        $message = $output->getLastMessage();
-
-        if (null !== $this->writer) {
-            ($this->writer)($message);
+        if (false === str_contains(implode(' ', $cmd), '--jsonl')) {
+            $cmd[] = '--jsonl';
         }
 
-        if ($input->hasOption('save-log') && $input->getOption('save-log')) {
-            $this->logs[] = $message;
+        $capture = new CaptureHandler();
+        assert($this->logger instanceof Logger, 'Expected Monolog Logger instance.');
+        $this->logger->pushHandler($capture);
+
+        try {
+            $process = Process::fromShellCommandline(implode(' ', $cmd), timeout: null);
+            $started = make_date();
+            $hadChildOutput = false;
+
+            $process->start(function ($type, $out) use ($output, &$hadChildOutput) {
+                $out = trim((string) $out);
+
+                if ('' === $out) {
+                    return;
+                }
+
+                if ('err' === $type) {
+                    foreach (explode(PHP_EOL, $out) as $line) {
+                        $line = trim($line);
+
+                        if ('' === $line) {
+                            continue;
+                        }
+
+                        $this->logger->info($line);
+                        $hadChildOutput = true;
+                    }
+                } else {
+                    $output->writeln($out);
+                }
+            });
+
+            if ($process->isRunning()) {
+                try {
+                    $process->wait();
+                } catch (ProcessException $e) {
+                    $process->stop();
+
+                    if (null !== $task) {
+                        $this->logger->error("Task '{name}' failed: {error}", [
+                            'name' => $task['name'],
+                            'error' => $e->getMessage(),
+                            'exception' => $e,
+                        ]);
+                    } else {
+                        $this->logger->error('Command failed: {error}', [
+                            'command' => implode(' ', $cmd),
+                            'error' => $e->getMessage(),
+                            'exception' => $e,
+                        ]);
+                    }
+                }
+            }
+
+            $ended = make_date();
+            $exitCode = $process->getExitCode() ?? self::INVALID;
+
+            // --- Populate event-log ---
+
+            if (null !== $this->dispatchEvent && true === $this->viaEvent) {
+                foreach ($capture->getRecords() as $record) {
+                    $this->dispatchEvent->addRawLog($this->resolveJsonl($record));
+                }
+            }
+
+            if (null !== $task && false === $this->viaEvent) {
+                $records = $capture->getRecords();
+                $shouldCreateEvent = !in_array($task['name'], self::NO_EVENTS, true) || count($records) > 0;
+
+                if ($shouldCreateEvent) {
+                    $event = $this->eventsRepo->getObject([]);
+                    $event->status = 0 === $exitCode ? EventStatus::SUCCESS : EventStatus::FAILED;
+                    $event->event = self::NAME . '.' . $task['name'];
+                    $event->created_at = $started;
+                    $event->updated_at = $ended;
+
+                    foreach ($records as $record) {
+                        $event->addRawLog($this->resolveJsonl($record));
+                    }
+
+                    $this->eventsRepo->save($event);
+                }
+            }
+
+            // --- Console summary (direct CLI only) ---
+
+            if (false === $this->viaEvent && $hadChildOutput) {
+                $name = null !== $task ? $task['name'] : implode(' ', $cmd);
+
+                $this->logger->log(
+                    0 === $exitCode ? Level::Info : Level::Error,
+                    "Task '{name}' completed. ({status}) - Took {duration}s",
+                    [
+                        'name' => $name,
+                        'command' => $process->getCommandLine(),
+                        'exit_code' => $exitCode,
+                        'status' => 0 === $exitCode ? 'Success' : 'Failed',
+                        'started_at' => $started->format('D, H:i:s T'),
+                        'ended_at' => $ended->format('D, H:i:s T'),
+                        'duration' => $ended->getTimestamp() - $started->getTimestamp(),
+                    ],
+                );
+            }
+
+            // --- Save-log (direct CLI only) ---
+
+            if ($input->hasOption('save-log') && $input->getOption('save-log') && $hadChildOutput) {
+                $lines = [];
+                foreach ($capture->getRecords() as $record) {
+                    $lines[] = $this->resolveJsonl($record);
+                }
+
+                try {
+                    $stream = new Stream(Config::get('tasks.logfile'), 'a');
+                    $stream->write(implode('', $lines));
+                    $stream->close();
+                } catch (Throwable $e) {
+                    $this->logger->error("Failed to write to logfile '{file}': {error}", [
+                        'file' => Config::get('tasks.logfile'),
+                        'error' => $e->getMessage(),
+                        'exception' => $e,
+                    ]);
+                }
+            }
+
+            return $exitCode;
+        } finally {
+            $this->logger->popHandler();
         }
+    }
+
+    /**
+     * Format a captured LogRecord for event-log or save-log.
+     *
+     * Passes through JSONL lines from child processes, formats everything else.
+     */
+    private function resolveJsonl(\Monolog\LogRecord $record): string
+    {
+        if (JsonlFormatter::isJsonlRecord($record->message)) {
+            return $record->message . \PHP_EOL;
+        }
+
+        return $this->jsonlFormatter->format($record);
     }
 
     /**
