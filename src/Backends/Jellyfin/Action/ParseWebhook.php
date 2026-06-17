@@ -101,16 +101,18 @@ final class ParseWebhook
     {
         $logContext = [
             'action' => $this->action,
-            'client' => $context->clientName,
-            'backend' => $context->backendName,
-            'user' => $context->userContext->name,
+            'identity' => [
+                'client' => $context->clientName,
+                'backend' => $context->backendName,
+                'user' => $context->userContext->name,
+            ],
         ];
 
         if (null === ($json = $request->getParsedBody())) {
             return new Response(status: false, extra: [
                 'http_code' => Status::BAD_REQUEST->value,
                 'message' => r(
-                    text: "Ignoring '{client}: {user}@{backend}' request. Invalid request, no payload.",
+                    text: "Ignoring '{identity.client}: {identity.user}@{identity.backend}' request. Invalid request, no payload.",
                     context: $logContext,
                 ),
             ]);
@@ -124,7 +126,7 @@ final class ParseWebhook
             return new Response(status: false, extra: [
                 'http_code' => Status::OK->value,
                 'message' => r(
-                    text: "{user}@{backend}: Webhook content type '{type}' is not supported.",
+                    text: "{identity.user}@{identity.backend}: Webhook content type '{type}' is not supported.",
                     context: [...$logContext, 'type' => $type],
                 ),
             ]);
@@ -134,7 +136,7 @@ final class ParseWebhook
             return new Response(status: false, extra: [
                 'http_code' => Status::OK->value,
                 'message' => r(
-                    text: "{user}@{backend}: Webhook event type '{event}' is not supported.",
+                    text: "{identity.user}@{identity.backend}: Webhook event type '{event}' is not supported.",
                     context: [...$logContext, 'event' => $event],
                 ),
             ]);
@@ -143,7 +145,7 @@ final class ParseWebhook
         if (null === $id) {
             return new Response(status: false, extra: [
                 'http_code' => Status::BAD_REQUEST->value,
-                'message' => r('{user}@{backend}: No item id was found in body.', $logContext),
+                'message' => r('{identity.user}@{identity.backend}: No item id was found in body.', $logContext),
             ]);
         }
 
@@ -247,7 +249,7 @@ final class ParseWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: "{action}: Ignoring '{client}: {user}@{backend}' - '{title}' webhook event. No valid/supported external ids.",
+                        message: "{action}: Ignoring '{identity.client}: {identity.user}@{identity.backend}' - '{title}' webhook event. No valid/supported external ids.",
                         context: [
                             'title' => $entity->getName(),
                             ...$logContext,
@@ -261,7 +263,7 @@ final class ParseWebhook
                     ),
                     extra: [
                         'http_code' => Status::OK->value,
-                        'message' => r('{user}@{backend}: No valid/supported external ids.', $logContext),
+                        'message' => r('{identity.user}@{identity.backend}: No valid/supported external ids.', $logContext),
                     ],
                 );
             }
@@ -275,7 +277,7 @@ final class ParseWebhook
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Exception '{exception.type}' was thrown unhandled during '{client}: {user}@{backend}' webhook event parsing. {exception.message} at '{exception.file}:{exception.line}'.",
+                    message: "{action}: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' webhook event parsing. {exception.message} at '{exception.file}:{exception.line}'.",
                     context: [
                         ...$logContext,
                         ...exception_log($e),
@@ -289,10 +291,12 @@ final class ParseWebhook
                 ),
                 extra: [
                     'http_code' => Status::OK->value,
-                    'message' => r('{user}@{backend}: Failed to process event check logs.', [
-                        'client' => $context->clientName,
-                        'backend' => $context->backendName,
-                        'user' => $context->userContext->name,
+                    'message' => r('{identity.user}@{identity.backend}: Failed to process event check logs.', [
+                        'identity' => [
+                            'client' => $context->clientName,
+                            'backend' => $context->backendName,
+                            'user' => $context->userContext->name,
+                        ],
                     ]),
                 ],
             );

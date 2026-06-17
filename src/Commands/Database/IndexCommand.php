@@ -107,8 +107,10 @@ final class IndexCommand extends Command
 
             $db = $this->ensureDatabase($userContext);
 
-            $this->logger->notice("Ensuring user '{user}' database has correct indexes.", [
-                'user' => $userContext->name,
+            $this->logger->notice("Ensuring user '{identity.user}' database has correct indexes.", [
+                'identity' => [
+                    'user' => $userContext->name,
+                ],
             ]);
 
             ensure_indexes($db->getDBLayer(), $this->logger, [
@@ -118,8 +120,10 @@ final class IndexCommand extends Command
             ]);
 
             if ($input->getOption('force-reindex')) {
-                $this->logger->notice("User '{user}' database indexes have been recreated.", [
-                    'user' => $userContext->name,
+                $this->logger->notice("User '{identity.user}' database indexes have been recreated.", [
+                    'identity' => [
+                        'user' => $userContext->name,
+                    ],
                 ]);
             }
         }

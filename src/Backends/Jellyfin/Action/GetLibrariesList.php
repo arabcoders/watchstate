@@ -35,7 +35,7 @@ class GetLibrariesList
     /**
      * Class constructor
      *
-     * @param iHttp $http The HTTP client object.
+     * @param iHttp&\App\Libs\Extends\HttpClient $http The HTTP client object.
      * @param iLogger $logger The logger object.
      */
     public function __construct(
@@ -90,13 +90,15 @@ class GetLibrariesList
 
         $logContext = [
             'action' => $this->action,
-            'client' => $context->clientName,
-            'backend' => $context->backendName,
-            'user' => $context->userContext->name,
+            'identity' => [
+                'client' => $context->clientName,
+                'backend' => $context->backendName,
+                'user' => $context->userContext->name,
+            ],
         ];
 
         if ($context->trace) {
-            $this->logger->debug("{action}: Parsing '{client}: {user}@{backend}' libraries payload.", [
+            $this->logger->debug("{action}: Parsing '{identity.client}: {identity.user}@{identity.backend}' libraries payload.", [
                 ...$logContext,
                 'response' => ['body' => $json],
             ]);
@@ -108,7 +110,7 @@ class GetLibrariesList
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{client}: {user}@{backend}' libraries returned empty list.",
+                    message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' libraries returned empty list.",
                     context: [
                         ...$logContext,
                         'response' => ['body' => $json],
@@ -191,20 +193,22 @@ class GetLibrariesList
 
         $logContext = [
             'action' => $this->action,
-            'client' => $context->clientName,
-            'backend' => $context->backendName,
-            'user' => $context->userContext->name,
+            'identity' => [
+                'client' => $context->clientName,
+                'backend' => $context->backendName,
+                'user' => $context->userContext->name,
+            ],
             'url' => (string) $url,
         ];
 
-        $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' libraries list.", $logContext);
+        $this->logger->debug("{action}: Requesting '{identity.client}: {identity.user}@{identity.backend}' libraries list.", $logContext);
 
         $response = $this->http->request(Method::GET, (string) $url, $context->getHttpOptions());
 
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             throw new RuntimeException(
                 r(
-                    text: "{action}: Request for '{client}: {user}@{backend}' libraries returned with unexpected '{status_code}' status code.",
+                    text: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' libraries returned with unexpected '{status_code}' status code.",
                     context: [
                         ...$logContext,
                         'status_code' => $response->getStatusCode(),

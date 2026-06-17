@@ -61,9 +61,11 @@ class CreatePlaylist
         $url = $this->makeUrl(context: $context, title: $title, itemIds: $itemIds);
         $logContext = [
             'action' => $this->action,
-            'client' => $context->clientName,
-            'backend' => $context->backendName,
-            'user' => $context->userContext->name,
+            'identity' => [
+                'client' => $context->clientName,
+                'backend' => $context->backendName,
+                'user' => $context->userContext->name,
+            ],
             'title' => $title,
             'url' => (string) $url,
         ];
@@ -78,7 +80,7 @@ class CreatePlaylist
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{client}: {user}@{backend}' playlist '{title}' returned with unexpected '{status_code}' status code.",
+                    message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' playlist '{title}' returned with unexpected '{status_code}' status code.",
                     context: [...$logContext, 'status_code' => $response->getStatusCode()],
                     level: Levels::ERROR,
                 ),

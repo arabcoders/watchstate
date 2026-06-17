@@ -70,9 +70,11 @@ final class AddWebhook
 
             $logContext = [
                 'action' => $this->action,
-                'client' => $context->clientName,
-                'backend' => $context->backendName,
-                'user' => $context->userContext->name,
+                'identity' => [
+                    'client' => $context->clientName,
+                    'backend' => $context->backendName,
+                    'user' => $context->userContext->name,
+                ],
                 'url' => (string) $url,
             ];
 
@@ -80,7 +82,7 @@ final class AddWebhook
                 $url = $url->withQuery(http_build_query(['pin' => (string) $pin]));
             }
 
-            $this->logger->debug("Getting current webhooks for '{user}@{backend}'.", $logContext);
+            $this->logger->debug("Getting current webhooks for '{identity.user}@{identity.backend}'.", $logContext);
 
             $response = $this->http->request(Method::GET, (string) $url, array_replace_recursive(
                 $context->getHttpOptions(),
@@ -95,7 +97,7 @@ final class AddWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: "{action}: Request for '{client}: {user}@{backend}' get webhooks returned with unexpected '{status_code}' status code.",
+                        message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' get webhooks returned with unexpected '{status_code}' status code.",
                         context: [
                             ...$logContext,
                             'status_code' => $response->getStatusCode(),
@@ -114,7 +116,7 @@ final class AddWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: "{action}: Request for '{client}: {user}@{backend}' get webhooks returned with empty response.",
+                        message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' get webhooks returned with empty response.",
                         context: [...$logContext, 'response' => ['body' => $content]],
                         level: Levels::ERROR,
                     ),
@@ -129,7 +131,7 @@ final class AddWebhook
 
             if (true === $context->trace) {
                 $this->logger->debug(
-                    message: "{action}: Processing '{client}: {user}@{backend}' get info payload.",
+                    message: "{action}: Processing '{identity.client}: {identity.user}@{identity.backend}' get info payload.",
                     context: [...$logContext, 'response' => ['body' => $content, 'json' => $json]],
                 );
             }
@@ -174,7 +176,7 @@ final class AddWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: "{action}: Request for '{client}: {user}@{backend}' to add webhook returned with unexpected '{status_code}' status code.",
+                        message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' to add webhook returned with unexpected '{status_code}' status code.",
                         context: [
                             ...$logContext,
                             'status_code' => $resp->getStatusCode(),
@@ -194,11 +196,13 @@ final class AddWebhook
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Exception '{exception.type}' was thrown unhandled during '{client}: {user}@{backend}' request to add webhook. Error '{exception.message}' at '{exception.file}:{exception.line}'.",
+                    message: "Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' request to add webhook. Error '{exception.message}' at '{exception.file}:{exception.line}'.",
                     context: [
-                        'user' => $context->userContext->name,
-                        'backend' => $context->backendName,
-                        'client' => $context->clientName,
+                        'identity' => [
+                            'user' => $context->userContext->name,
+                            'backend' => $context->backendName,
+                            'client' => $context->clientName,
+                        ],
                         ...exception_log($e),
                     ],
                     level: Levels::ERROR,

@@ -41,18 +41,22 @@ final class IdentityProvisionService
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
             if (!isset($supported[$type])) {
-                $this->logger->error("SYSTEM: Ignoring '{backend}'. Unexpected backend type '{type}'.", [
+                $this->logger->error("SYSTEM: Ignoring '{identity.backend}'. Unexpected backend type '{type}'.", [
                     'type' => $type,
-                    'backend' => $backendName,
+                    'identity' => [
+                        'backend' => $backendName,
+                    ],
                     'types' => implode(', ', array_keys($supported)),
                 ]);
                 continue;
             }
 
             if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {
-                $this->logger->error("SYSTEM: Ignoring '{backend}'. Invalid url '{url}'.", [
+                $this->logger->error("SYSTEM: Ignoring '{identity.backend}'. Invalid url '{url}'.", [
                     'url' => $url ?? 'None',
-                    'backend' => $backendName,
+                    'identity' => [
+                        'backend' => $backendName,
+                    ],
                 ]);
                 continue;
             }
@@ -347,9 +351,11 @@ final class IdentityProvisionService
                     'source_backend' => $sourceBackendName,
                 ];
 
-                $this->logger->info("SYSTEM: Syncing identity backend '{identity}@{backend}' from '{source}'.", [
-                    'identity' => $identityName,
-                    'backend' => $backendName,
+                $this->logger->info("SYSTEM: Syncing identity backend '{identity.name}@{identity.backend}' from '{source}'.", [
+                    'identity' => [
+                        'name' => $identityName,
+                        'backend' => $backendName,
+                    ],
                     'source' => $sourceBackendName,
                     'dry_run' => $dryRun,
                 ]);
@@ -412,8 +418,10 @@ final class IdentityProvisionService
             $client = ag($backend, 'class');
             assert($client instanceof iClient, 'Expected backend client instance.');
 
-            $this->logger->info("SYSTEM: Getting users from '{backend}'.", [
-                'backend' => $client->getContext()->backendName,
+            $this->logger->info("SYSTEM: Getting users from '{identity.backend}'.", [
+                'identity' => [
+                    'backend' => $client->getContext()->backendName,
+                ],
             ]);
 
             try {
@@ -426,8 +434,8 @@ final class IdentityProvisionService
 
                     // Normalize early so matching and filesystem identity names stay stable.
                     $user['name'] = normalize_name((string) ag($user, 'name'), $this->logger, [
-                        'log_message' => "Normalized '{backend}: {name}' to '{backend}: {new_name}'",
-                        'context' => ['backend' => $backendName],
+                        'log_message' => "Normalized '{identity.backend}: {name}' to '{identity.backend}: {new_name}'",
+                        'context' => ['identity' => ['backend' => $backendName]],
                     ]);
 
                     if (false === $noMapActions) {
@@ -436,8 +444,8 @@ final class IdentityProvisionService
 
                     if (false === is_valid_name($user['name'])) {
                         $this->logger->error(
-                            message: "SYSTEM: Invalid user name '{backend}: {name}'. User names must be in [a-z_0-9] format. Skipping user.",
-                            context: ['name' => $user['name'], 'backend' => $backendName],
+                            message: "SYSTEM: Invalid user name '{identity.backend}: {name}'. User names must be in [a-z_0-9] format. Skipping user.",
+                            context: ['name' => $user['name'], 'identity' => ['backend' => $backendName]],
                         );
                         continue;
                     }
@@ -493,11 +501,13 @@ final class IdentityProvisionService
                 }
             } catch (Throwable $e) {
                 $this->logger->error(
-                    "Exception '{exception.type}' was thrown unhandled during '{client}: {user}@{backend}' get users list. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                    "Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' get users list. '{exception.message}' at '{exception.file}:{exception.line}'.",
                     [
-                        'client' => $client->getContext()->clientName,
-                        'backend' => $client->getContext()->backendName,
-                        'user' => $client->getContext()->userContext->name,
+                        'identity' => [
+                            'client' => $client->getContext()->clientName,
+                            'backend' => $client->getContext()->backendName,
+                            'user' => $client->getContext()->userContext->name,
+                        ],
                         ...exception_log($e),
                     ],
                 );
@@ -523,8 +533,8 @@ final class IdentityProvisionService
 
             if (false === is_valid_name($identityName)) {
                 $this->logger->error(
-                    message: "SYSTEM: Invalid identity name '{identity}'. Identity names must be in [a-z_0-9] format. skipping identity.",
-                    context: ['identity' => $identityName],
+                    message: "SYSTEM: Invalid identity name '{identity.name}'. Identity names must be in [a-z_0-9] format. skipping identity.",
+                    context: ['identity' => ['name' => $identityName]],
                 );
                 continue;
             }
@@ -533,17 +543,17 @@ final class IdentityProvisionService
 
             $this->logger->info(
                 false === is_dir($identityPath)
-                    ? "SYSTEM: Creating '{identity}' directory '{path}'."
-                    : "SYSTEM: '{identity}' directory '{path}' already exists.",
+                    ? "SYSTEM: Creating '{identity.name}' directory '{path}'."
+                    : "SYSTEM: '{identity.name}' directory '{path}' already exists.",
                 [
-                    'identity' => $identityName,
+                    'identity' => ['name' => $identityName],
                     'path' => $identityPath,
                 ],
             );
 
             if (false === $request->dryRun && false === is_dir($identityPath) && false === mkdir($identityPath, 0o755, true)) {
-                $this->logger->error("SYSTEM: Failed to create '{identity}' directory '{path}'.", [
-                    'identity' => $identityName,
+                $this->logger->error("SYSTEM: Failed to create '{identity.name}' directory '{path}'.", [
+                    'identity' => ['name' => $identityName],
                     'path' => $identityPath,
                 ]);
                 continue;
@@ -552,10 +562,10 @@ final class IdentityProvisionService
             $configFile = "{$identityPath}/servers.yaml";
             $this->logger->notice(
                 file_exists($configFile)
-                    ? "SYSTEM: '{identity}' configuration file '{file}' already exists."
-                    : "SYSTEM: Creating '{identity}' configuration file '{file}'.",
+                    ? "SYSTEM: '{identity.name}' configuration file '{file}' already exists."
+                    : "SYSTEM: Creating '{identity.name}' configuration file '{file}'.",
                 [
-                    'identity' => $identityName,
+                    'identity' => ['name' => $identityName],
                     'file' => $configFile,
                 ],
             );
@@ -621,9 +631,9 @@ final class IdentityProvisionService
                             ]);
                         }
 
-                        $this->logger->info("SYSTEM: Updating identity configuration for '{identity}@{name}' backend.", [
+                        $this->logger->info("SYSTEM: Updating identity configuration for '{identity.name}@{name}' backend.", [
                             'name' => $name,
-                            'identity' => $identityName,
+                            'identity' => ['name' => $identityName],
                         ]);
 
                         foreach ($update as $key => $value) {
@@ -657,8 +667,8 @@ final class IdentityProvisionService
 
                             if (false === $token) {
                                 $this->logger->error(
-                                    message: "Failed to generate access token for '{identity}@{backend}' backend.",
-                                    context: ['identity' => $identityName, 'backend' => $name],
+                                    message: "Failed to generate access token for '{identity.name}@{identity.backend}' backend.",
+                                    context: ['identity' => ['name' => $identityName, 'backend' => $name]],
                                 );
                             } else {
                                 $perIdentity->set("{$name}.token", $token);
@@ -667,10 +677,10 @@ final class IdentityProvisionService
                     }
                 } catch (Throwable $e) {
                     $this->logger->error(
-                        message: "Failed to generate access token for '{identity}@{name}' backend. {exception.message} at '{exception.file}:{exception.line}'.",
+                        message: "Failed to generate access token for '{identity.name}@{name}' backend. {exception.message} at '{exception.file}:{exception.line}'.",
                         context: [
                             'name' => $name,
-                            'identity' => $identityName,
+                            'identity' => ['name' => $identityName],
                             ...exception_log($e),
                         ],
                     );
@@ -681,10 +691,10 @@ final class IdentityProvisionService
             $dbFile = get_user_db($identityName);
             $this->logger->notice(
                 file_exists($dbFile)
-                    ? "SYSTEM: '{identity}' database file '{db}' already exists."
-                    : "SYSTEM: Creating '{identity}' database file '{db}'.",
+                    ? "SYSTEM: '{identity.name}' database file '{db}' already exists."
+                    : "SYSTEM: Creating '{identity.name}' database file '{db}'.",
                 [
-                    'identity' => $identityName,
+                    'identity' => ['name' => $identityName],
                     'db' => $dbFile,
                 ],
             );
@@ -733,8 +743,8 @@ final class IdentityProvisionService
             }
 
             if (true === $request->generateBackup && false === $request->shouldRecreate()) {
-                $this->logger->notice("SYSTEM: Queuing event to backup '{identity}' remote watch state.", [
-                    'identity' => $identityName,
+                $this->logger->notice("SYSTEM: Queuing event to backup '{identity.name}' remote watch state.", [
+                    'identity' => ['name' => $identityName],
                 ]);
 
                 if (false === $request->dryRun) {
@@ -872,9 +882,11 @@ final class IdentityProvisionService
                         continue;
                     }
 
-                    $this->logger->notice("Mapper: Found map entry for '{backend}: {user}'", [
-                        'backend' => $backend,
-                        'user' => $nameLower,
+                    $this->logger->notice("Mapper: Found map entry for '{identity.backend}: {identity.user}'", [
+                        'identity' => [
+                            'backend' => $backend,
+                            'user' => $nameLower,
+                        ],
                         'map' => $mapRow,
                     ]);
                     $matchedMapEntry = $mapRow;
@@ -937,9 +949,11 @@ final class IdentityProvisionService
                         continue;
                     }
 
-                    $this->logger->error("No partial fallback match via map for '{backend}: {user}'", [
-                        'backend' => $userObj['backend'],
-                        'user' => $userObj['name'],
+                    $this->logger->error("No partial fallback match via map for '{identity.backend}: {identity.user}'", [
+                        'identity' => [
+                            'backend' => $userObj['backend'],
+                            'user' => $userObj['name'],
+                        ],
                     ]);
                 }
 
@@ -967,9 +981,11 @@ final class IdentityProvisionService
                     continue;
                 }
 
-                $this->logger->error("No other users were found that match '{backend}: {user}{real_name}'.", [
-                    'backend' => $userObj['backend'],
-                    'user' => $userObj['name'],
+                $this->logger->error("No other users were found that match '{identity.backend}: {identity.user}{real_name}'.", [
+                    'identity' => [
+                        'backend' => $userObj['backend'],
+                        'user' => $userObj['name'],
+                    ],
                     'real_name' => $userObj['real_name'] !== $userObj['name']
                         ? r(' ({rl})', ['rl' => $userObj['real_name']])
                         : '',
@@ -1037,8 +1053,10 @@ final class IdentityProvisionService
         static $reported = [];
 
         if (null === ($username = ag($user, 'name'))) {
-            $this->logger->error("MAPPER: No username was given from one user of '{backend}' backend.", [
-                'backend' => $backend,
+            $this->logger->error("MAPPER: No username was given from one user of '{identity.backend}' backend.", [
+                'identity' => [
+                    'backend' => $backend,
+                ],
             ]);
             return;
         }
@@ -1048,8 +1066,10 @@ final class IdentityProvisionService
         if (count($hasMapping) < 1) {
             if (!isset($reported[$backend])) {
                 $reported[$backend] = true;
-                $this->logger->info("MAPPER: No mapping with '{backend}' as backend exists.", [
-                    'backend' => $backend,
+                $this->logger->info("MAPPER: No mapping with '{identity.backend}' as backend exists.", [
+                    'identity' => [
+                        'backend' => $backend,
+                    ],
                 ]);
             }
             return;
@@ -1076,8 +1096,10 @@ final class IdentityProvisionService
         unset($loopMap, $map);
 
         if (false === $found) {
-            $this->logger->debug("MAPPER: No map exists for '{backend}: {username}'.", [
-                'backend' => $backend,
+            $this->logger->debug("MAPPER: No map exists for '{identity.backend}: {username}'.", [
+                'identity' => [
+                    'backend' => $backend,
+                ],
                 'username' => $username,
             ]);
             return;
@@ -1094,9 +1116,11 @@ final class IdentityProvisionService
         if (null !== ($newUsername = ag($userMap, 'replace_with'))) {
             if (false === is_string($newUsername) || false === is_valid_name($newUsername)) {
                 $this->logger->error(
-                    message: "MAPPER: Failed to replace '{backend}: {username}' with '{backend}: {new_username}' name must be in [a-z_0-9] format.",
+                    message: "MAPPER: Failed to replace '{identity.backend}: {username}' with '{identity.backend}: {new_username}' name must be in [a-z_0-9] format.",
                     context: [
-                        'backend' => $backend,
+                        'identity' => [
+                            'backend' => $backend,
+                        ],
                         'username' => $username,
                         'new_username' => $newUsername,
                     ],
@@ -1105,9 +1129,11 @@ final class IdentityProvisionService
             }
 
             $this->logger->notice(
-                message: "MAPPER: Renaming '{backend}: {username}' to '{backend}: {new_username}'.",
+                message: "MAPPER: Renaming '{identity.backend}: {username}' to '{identity.backend}: {new_username}'.",
                 context: [
-                    'backend' => $backend,
+                    'identity' => [
+                        'backend' => $backend,
+                    ],
                     'username' => $username,
                     'new_username' => $newUsername,
                 ],

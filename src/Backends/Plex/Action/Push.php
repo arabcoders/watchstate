@@ -83,9 +83,11 @@ final class Push
 
             $logContext = [
                 'action' => $this->action,
-                'client' => $context->clientName,
-                'backend' => $context->backendName,
-                'user' => $context->userContext->name,
+                'identity' => [
+                    'client' => $context->clientName,
+                    'backend' => $context->backendName,
+                    'user' => $context->userContext->name,
+                ],
                 'item' => [
                     'id' => $entity->id,
                     'type' => $entity->type,
@@ -95,7 +97,7 @@ final class Push
 
             if (null === ag($metadata, iState::COLUMN_ID)) {
                 $this->logger->warning(
-                    message: "{action}: Ignoring '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. No metadata was found.",
+                    message: "{action}: Ignoring '#{item.id}: {item.title}' for '{identity.client}: {identity.user}@{identity.backend}'. No metadata was found.",
                     context: $logContext,
                 );
                 continue;
@@ -109,7 +111,7 @@ final class Push
                 $logContext['remote']['url'] = (string) $url;
 
                 $this->logger->debug(
-                    message: "{action}: Requesting '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' metadata.",
+                    message: "{action}: Requesting '{identity.client}: {identity.user}@{identity.backend}' {item.type} '#{item.id}: {item.title}' metadata.",
                     context: $logContext,
                 );
 
@@ -123,7 +125,7 @@ final class Push
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "{action}: Exception '{exception.type}' unhandled during '{client}: {user}@{backend}' request for {item.type} '#{item.id}: {item.title}' metadata. {exception.message} at '{exception.file}:{exception.line}'.",
+                        message: "{action}: Exception '{exception.type}' unhandled during '{identity.client}: {identity.user}@{identity.backend}' request for {item.type} '#{item.id}: {item.title}' metadata. {exception.message} at '{exception.file}:{exception.line}'.",
                         context: [
                             ...$logContext,
                             ...exception_log($e),
@@ -142,7 +144,7 @@ final class Push
             try {
                 if (null === ($id = ag($response->getInfo('user_data'), 'id'))) {
                     $this->logger->error(
-                        message: "{action}: Unable to get entity object id for '{client}: {user}@{backend}'.",
+                        message: "{action}: Unable to get entity object id for '{identity.client}: {identity.user}@{identity.backend}'.",
                         context: $logContext,
                     );
                     continue;
@@ -155,12 +157,12 @@ final class Push
                 if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
                     if (Status::NOT_FOUND === Status::tryFrom($response->getStatusCode())) {
                         $this->logger->warning(
-                            message: "{action}: Request for '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' metadata returned with (404: Not Found) status code.",
+                            message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' {item.type} '#{item.id}: {item.title}' metadata returned with (404: Not Found) status code.",
                             context: [...$logContext, 'status_code' => $response->getStatusCode()],
                         );
                     } else {
                         $this->logger->error(
-                            message: "{action}: Request for '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' metadata returned with unexpected '{status_code}' status code.",
+                            message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' {item.type} '#{item.id}: {item.title}' metadata returned with unexpected '{status_code}' status code.",
                             context: [...$logContext, 'status_code' => $response->getStatusCode()],
                         );
                     }
@@ -176,7 +178,7 @@ final class Push
 
                 if ($context->trace) {
                     $this->logger->debug(
-                        message: "{action}: Parsing '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' payload.",
+                        message: "{action}: Parsing '{identity.client}: {identity.user}@{identity.backend}' {item.type} '#{item.id}: {item.title}' payload.",
                         context: [...$logContext, 'response' => ['body' => $body]],
                     );
                 }
@@ -185,7 +187,7 @@ final class Push
 
                 if (empty($json)) {
                     $this->logger->error(
-                        message: "{action}: Ignoring '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}'. Returned with unexpected body.",
+                        message: "{action}: Ignoring '{identity.client}: {identity.user}@{identity.backend}' {item.type} '#{item.id}: {item.title}'. Returned with unexpected body.",
                         context: [...$logContext, 'response' => ['body' => $body]],
                     );
                     continue;
@@ -195,7 +197,7 @@ final class Push
 
                 if ($entity->watched === $isWatched) {
                     $this->logger->info(
-                        message: "{action}: Ignoring '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}'. Play state is identical.",
+                        message: "{action}: Ignoring '{identity.client}: {identity.user}@{identity.backend}' {item.type} '#{item.id}: {item.title}'. Play state is identical.",
                         context: $logContext,
                     );
                     continue;
@@ -206,7 +208,7 @@ final class Push
 
                     if (null === ($date = ag($json, $dateKey))) {
                         $this->logger->error(
-                            message: "{action}: Ignoring '{client}: {user}@{backend}' {item.type} '{item.title}'. No {date_key} is set on backend object.",
+                            message: "{action}: Ignoring '{identity.client}: {identity.user}@{identity.backend}' {item.type} '{item.title}'. No {date_key} is set on backend object.",
                             context: ['date_key' => $dateKey, ...$logContext, 'response' => ['body' => $json]],
                         );
                         continue;
@@ -218,7 +220,7 @@ final class Push
 
                     if ($date->getTimestamp() >= ($entity->updated + $timeExtra)) {
                         $this->logger->notice(
-                            message: "{action}: Ignoring '{client}: {user}@{backend}' {item.type} '{item.title}'. Database date is older than backend date.",
+                            message: "{action}: Ignoring '{identity.client}: {identity.user}@{identity.backend}' {item.type} '{item.title}'. Database date is older than backend date.",
                             context: [
                                 ...$logContext,
                                 'comparison' => [
@@ -249,7 +251,7 @@ final class Push
                 $requestContext = $logContext + ['play_state' => $entity->isWatched() ? 'Played' : 'Unplayed'];
 
                 $this->logger->debug(
-                    message: "{action}: Queuing request to change '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' play state to '{play_state}'.",
+                    message: "{action}: Queuing request to change '{identity.client}: {identity.user}@{identity.backend}' {item.type} '#{item.id}: {item.title}' play state to '{play_state}'.",
                     context: $requestContext,
                 );
 
@@ -264,7 +266,7 @@ final class Push
 
                                 if (Status::OK !== Status::tryFrom($statusCode)) {
                                     $this->logger->error(
-                                        message: "{action}: Request to change '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' play state returned with unexpected '{status_code}' status code.",
+                                        message: "{action}: Request to change '{identity.client}: {identity.user}@{identity.backend}' {item.type} '#{item.id}: {item.title}' play state returned with unexpected '{status_code}' status code.",
                                         context: [
                                             ...$requestContext,
                                             'status_code' => $statusCode,
@@ -275,7 +277,7 @@ final class Push
                                 }
 
                                 $this->logger->notice(
-                                    message: "{action}: Updated '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' play state to '{play_state}'.",
+                                    message: "{action}: Updated '{identity.client}: {identity.user}@{identity.backend}' {item.type} '#{item.id}: {item.title}' play state to '{play_state}'.",
                                     context: $requestContext,
                                 );
 
@@ -284,7 +286,7 @@ final class Push
                             error: function (Throwable $e) use ($requestContext): array {
                                 $this->logger->error(
                                     ...lw(
-                                        message: "{action}: Exception '{exception.type}' was thrown unhandled during '{client}: {user}@{backend}' request to change play state of {item.type} '#{item.id}: {item.title}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                                        message: "{action}: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' request to change play state of {item.type} '#{item.id}: {item.title}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
                                         context: [
                                             ...$requestContext,
                                             ...exception_log($e),
@@ -305,7 +307,7 @@ final class Push
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "{action}: Exception '{exception.type}' was thrown unhandled during '{client}: {user}@{backend}' push play state. {exception.message} at '{exception.file}:{exception.line}'.",
+                        message: "{action}: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' push play state. {exception.message} at '{exception.file}:{exception.line}'.",
                         context: [
                             ...$logContext,
                             ...exception_log($e),

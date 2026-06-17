@@ -35,7 +35,7 @@ class GetUsersList
     /**
      * Class Constructor.
      *
-     * @param iHttp $http The HTTP client instance.
+     * @param iHttp&\App\Libs\Extends\HttpClient $http The HTTP client instance.
      * @param iLogger $logger The logger instance.
      */
     public function __construct(
@@ -83,13 +83,15 @@ class GetUsersList
 
         $logContext = [
             'action' => $this->action,
-            'client' => $context->clientName,
-            'backend' => $context->backendName,
-            'user' => $context->userContext->name,
+            'identity' => [
+                'client' => $context->clientName,
+                'backend' => $context->backendName,
+                'user' => $context->userContext->name,
+            ],
             'url' => (string) $url,
         ];
 
-        $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' users list.", $logContext);
+        $this->logger->debug("{action}: Requesting '{identity.client}: {identity.user}@{identity.backend}' users list.", $logContext);
 
         $headers = $context->getHttpOptions();
 
@@ -110,7 +112,7 @@ class GetUsersList
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{client}: {user}@{backend}' users list returned with unexpected '{status_code}' status code.",
+                    message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' users list returned with unexpected '{status_code}' status code.",
                     context: [
                         ...$logContext,
                         'status_code' => $response->getStatusCode(),
@@ -134,7 +136,7 @@ class GetUsersList
         );
 
         if ($context->trace) {
-            $this->logger->debug("{action}: Parsing '{client}: {user}@{backend}' user list payload.", [
+            $this->logger->debug("{action}: Parsing '{identity.client}: {identity.user}@{identity.backend}' user list payload.", [
                 ...$logContext,
                 'response' => ['body' => $json],
             ]);

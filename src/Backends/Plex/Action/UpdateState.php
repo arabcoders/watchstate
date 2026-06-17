@@ -46,9 +46,11 @@ final class UpdateState
             fn: function () use ($context, $entities, $queue) {
                 $rContext = [
                     'action' => $this->action,
-                    'client' => $context->clientName,
-                    'backend' => $context->backendName,
-                    'user' => $context->backendUser,
+                    'identity' => [
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                        'user' => $context->backendUser,
+                    ],
                 ];
 
                 foreach ($entities as $entity) {
@@ -69,7 +71,7 @@ final class UpdateState
 
                     if (true === (bool) ag($context->options, Options::DRY_RUN, false)) {
                         $this->logger->notice(
-                            message: "{action}: Would mark '{client}: {user}@{backend}' {item.type} '{item.title}' as '{item.play_state}'.",
+                            message: "{action}: Would mark '{identity.client}: {identity.user}@{identity.backend}' {item.type} '{item.title}' as '{item.play_state}'.",
                             context: [
                                 ...$rContext,
                                 'item' => [
@@ -110,7 +112,7 @@ final class UpdateState
                                 $statusCode = $response->getStatusCode();
                                 if (Status::OK !== Status::tryFrom($statusCode)) {
                                     $this->logger->error(
-                                        message: "{action}: Failed to change '{client}: {user}@{backend}' - '{item.title}' play state. Invalid HTTP '{status_code}' status code returned.",
+                                        message: "{action}: Failed to change '{identity.client}: {identity.user}@{identity.backend}' - '{item.title}' play state. Invalid HTTP '{status_code}' status code returned.",
                                         context: [
                                             ...$requestContext,
                                             'status_code' => $statusCode,
@@ -121,7 +123,7 @@ final class UpdateState
                                 }
 
                                 $this->logger->notice(
-                                    message: "{action}: Changed '{client}: {user}@{backend}' - '{item.title}' play state to '{play_state}'.",
+                                    message: "{action}: Changed '{identity.client}: {identity.user}@{identity.backend}' - '{item.title}' play state to '{play_state}'.",
                                     context: $requestContext,
                                 );
 
@@ -130,7 +132,7 @@ final class UpdateState
                             error: function (Throwable $e) use ($entity, $itemId, $rContext): array {
                                 $this->logger->error(
                                     ...lw(
-                                        message: "{action}: Exception '{exception.type}' was thrown unhandled during '{client}: {user}@{backend}' restore play state of {item.type} '{item.title}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                                        message: "{action}: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' restore play state of {item.type} '{item.title}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
                                         context: [
                                             ...$rContext,
                                             'play_state' => $entity->isWatched() ? 'played' : 'unplayed',

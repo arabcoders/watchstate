@@ -37,6 +37,14 @@ class SearchQuery
      */
     protected string $action = 'jellyfin.searchQuery';
 
+    /**
+     * Class constructor
+     *
+     * @param iHttp&\App\Libs\Extends\HttpClient $http The HTTP client instance.
+     * @param iLogger $logger The logger instance.
+     * @param JellyfinGuid $jellyfinGuid The Jellyfin GUID instance.
+     * @param iDB $db The database instance.
+     */
     public function __construct(
         protected iHttp $http,
         protected iLogger $logger,
@@ -98,13 +106,18 @@ class SearchQuery
         $logContext = [
             'query' => $query,
             'action' => $this->action,
-            'client' => $context->clientName,
-            'backend' => $context->backendName,
-            'user' => $context->userContext->name,
+            'identity' => [
+                'client' => $context->clientName,
+                'backend' => $context->backendName,
+                'user' => $context->userContext->name,
+            ],
             'url' => (string) $url,
         ];
 
-        $this->logger->debug("{action}: Searching '{client}: {user}@{backend}' libraries for '{query}'.", $logContext);
+        $this->logger->debug(
+            "{action}: Searching '{identity.client}: {identity.user}@{identity.backend}' libraries for '{query}'.",
+            $logContext,
+        );
 
         $response = $this->http->request(
             method: Method::GET,
@@ -119,7 +132,7 @@ class SearchQuery
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Search request for '{query}' in '{client}: {user}@{backend}' returned with unexpected '{status_code}' status code.",
+                    message: "{action}: Search request for '{query}' in '{identity.client}: {identity.user}@{identity.backend}' returned with unexpected '{status_code}' status code.",
                     context: [
                         ...$logContext,
                         'status_code' => $response->getStatusCode(),
@@ -137,7 +150,7 @@ class SearchQuery
 
         if ($context->trace) {
             $this->logger->debug(
-                message: "{action}: Parsing Searching '{client}: {user}@{backend}' libraries for '{query}' payload.",
+                message: "{action}: Parsing Searching '{identity.client}: {identity.user}@{identity.backend}' libraries for '{query}' payload.",
                 context: [...$logContext, 'response' => ['body' => $json]],
             );
         }
@@ -151,7 +164,7 @@ class SearchQuery
                 $entity = $this->createEntity($context, $jellyfinGuid, $item, $opts);
             } catch (Throwable $e) {
                 $this->logger->error(
-                    message: "{action}: Failed to map '{client}: {user}@{backend}' item to entity. {error}",
+                    message: "{action}: Failed to map '{identity.client}: {identity.user}@{identity.backend}' item to entity. {error}",
                     context: [...$logContext, 'error' => $e->getMessage()],
                 );
                 continue;

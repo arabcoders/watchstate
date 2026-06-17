@@ -171,7 +171,7 @@ final class Guid implements JsonSerializable, Stringable
 
             if (self::$supported[$key] !== ($valueType = get_debug_type($value))) {
                 $this->getLogger()->info(
-                    "Ignoring '{backend}' {item.type} '{item.title}' '{key}' external id. Unexpected value type.",
+                    "Ignoring '{identity.backend}' {item.type} '{item.title}' '{key}' external id. Unexpected value type.",
                     [
                         'key' => $key,
                         'condition' => [
@@ -187,7 +187,7 @@ final class Guid implements JsonSerializable, Stringable
             if (null !== (self::$validateGuid[$key] ?? null)) {
                 if (1 !== @preg_match(self::$validateGuid[$key]['pattern'], $value, $matches)) {
                     $this->getLogger()->info(
-                        "Ignoring '{backend}' {item.type} '{item.title}' '{key}' external id. Unexpected value '{given}'. Expecting '{expected}'.",
+                        "Ignoring '{identity.backend}' {item.type} '{item.title}' '{key}' external id. Unexpected value '{given}'. Expecting '{expected}'.",
                         [
                             'key' => $key,
                             'expected' => self::$validateGuid[$key]['example'],

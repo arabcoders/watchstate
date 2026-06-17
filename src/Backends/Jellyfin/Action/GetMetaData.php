@@ -89,15 +89,17 @@ class GetMetaData
                 $logContext = [
                     'id' => $id,
                     'action' => $this->action,
-                    'client' => $context->clientName,
-                    'backend' => $context->backendName,
-                    'user' => $context->userContext->name,
+                    'identity' => [
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                        'user' => $context->userContext->name,
+                    ],
                     'url' => (string) $url,
                     ...ag($opts, Options::LOG_CONTEXT, []),
                 ];
 
                 $this->logger->debug(
-                    "{action}: Requesting '{client}: {user}@{backend}' - '{id}' item metadata.",
+                    "{action}: Requesting '{identity.client}: {identity.user}@{identity.backend}' - '{id}' item metadata.",
                     $logContext,
                 );
 
@@ -119,7 +121,7 @@ class GetMetaData
                         return new Response(
                             status: false,
                             error: new Error(
-                                message: "{action}: Request for '{client}: {user}@{backend}' - '{id}' item returned with unexpected '{status_code}' status code.",
+                                message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' - '{id}' item returned with unexpected '{status_code}' status code.",
                                 context: [
                                     ...$logContext,
                                     'status_code' => $response->getStatusCode(),
@@ -146,7 +148,7 @@ class GetMetaData
                 }
 
                 if (true === $context->trace) {
-                    $this->logger->debug("{action}: Processing '{client}: {user}@{backend}' - '{id}' item payload.", [
+                    $this->logger->debug("{action}: Processing '{identity.client}: {identity.user}@{identity.backend}' - '{id}' item payload.", [
                         ...$logContext,
                         'cached' => $fromCache,
                         'response' => [

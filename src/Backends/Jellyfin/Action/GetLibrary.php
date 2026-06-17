@@ -41,7 +41,7 @@ class GetLibrary
     /**
      * Class constructor
      *
-     * @param iHttp $http The HTTP client object.
+     * @param iHttp&\App\Libs\Extends\HttpClient $http The HTTP client object.
      * @param iLogger $logger The logger object.
      */
     public function __construct(
@@ -89,12 +89,14 @@ class GetLibrary
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: No library with id '{id}' found in '{client}: {user}@{backend}' response.",
+                    message: "{action}: No library with id '{id}' found in '{identity.client}: {identity.user}@{identity.backend}' response.",
                     context: [
                         'action' => $this->action,
-                        'client' => $context->clientName,
-                        'backend' => $context->backendName,
-                        'user' => $context->userContext->name,
+                        'identity' => [
+                            'client' => $context->clientName,
+                            'backend' => $context->backendName,
+                            'user' => $context->userContext->name,
+                        ],
                         'id' => $id,
                         'response' => [
                             'body' => $libraries,
@@ -109,9 +111,11 @@ class GetLibrary
 
         $logContext = [
             'action' => $this->action,
-            'client' => $context->clientName,
-            'backend' => $context->backendName,
-            'user' => $context->userContext->name,
+            'identity' => [
+                'client' => $context->clientName,
+                'backend' => $context->backendName,
+                'user' => $context->userContext->name,
+            ],
             'library' => [
                 'id' => $id,
                 'type' => ag($section, ['CollectionType', 'Type'], 'unknown'),
@@ -125,7 +129,7 @@ class GetLibrary
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: The request for '{client}: {user}@{backend}' library '{library.id}: {library.title}' returned with unsupported type '{library.type}'.",
+                    message: "{action}: The request for '{identity.client}: {identity.user}@{identity.backend}' library '{library.id}: {library.title}' returned with unsupported type '{library.type}'.",
                     context: $logContext,
                     level: Levels::WARNING,
                 ),
@@ -155,7 +159,10 @@ class GetLibrary
 
         $logContext['library']['url'] = (string) $url;
 
-        $this->logger->debug("Requesting '{client}: {user}@{backend}' library '{library.title}' content.", $logContext);
+        $this->logger->debug(
+            "Requesting '{identity.client}: {identity.user}@{identity.backend}' library '{library.title}' content.",
+            $logContext,
+        );
 
         $response = $this->http->request(Method::GET, (string) $url, $context->getHttpOptions());
 
@@ -163,7 +170,7 @@ class GetLibrary
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{client}: {user}@{backend}' library '{library.title}' items returned with unexpected '{status_code}' status code.",
+                    message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' library '{library.title}' items returned with unexpected '{status_code}' status code.",
                     context: [
                         'status_code' => $response->getStatusCode(),
                         ...$logContext,
@@ -188,7 +195,7 @@ class GetLibrary
         foreach ($it as $entity) {
             if ($entity instanceof DecodingError) {
                 $this->logger->warning(
-                    "{action}: Failed to decode one item of '{client}: {user}@{backend}' library '{library.title}' content.",
+                    "{action}: Failed to decode one item of '{identity.client}: {identity.user}@{identity.backend}' library '{library.title}' content.",
                     [
                         ...$logContext,
                         'error' => [
@@ -272,7 +279,7 @@ class GetLibrary
         }
 
         $this->logger->debug(
-            message: "{action}: Processing '{client}: {user}@{backend}' {item.type} '{item.title} ({item.year})'.",
+            message: "{action}: Processing '{identity.client}: {identity.user}@{identity.backend}' {item.type} '{item.title} ({item.year})'.",
             context: $data,
         );
 

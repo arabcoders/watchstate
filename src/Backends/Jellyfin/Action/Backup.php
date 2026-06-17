@@ -48,9 +48,11 @@ class Backup extends Import
         array $opts = [],
     ): void {
         $logContext['action'] = $this->action;
-        $logContext['client'] = $context->clientName;
-        $logContext['backend'] = $context->backendName;
-        $logContext['user'] = $context->userContext->name;
+        $logContext['identity'] = [
+            'client' => $context->clientName,
+            'backend' => $context->backendName,
+            'user' => $context->userContext->name,
+        ];
 
         if (JFC::TYPE_SHOW === ($type = ag($item, 'Type'))) {
             $this->processShow(context: $context, guid: $guid, item: $item, logContext: $logContext);
@@ -61,7 +63,7 @@ class Backup extends Import
 
         try {
             if ($context->trace) {
-                $this->logger->debug("{action}: Processing '{client}: {user}@{backend}' payload.", [
+                $this->logger->debug("{action}: Processing '{identity.client}: {identity.user}@{identity.backend}' payload.", [
                     ...$logContext,
                     'response' => ['body' => $item],
                 ]);
@@ -174,7 +176,7 @@ class Backup extends Import
             }
         } catch (Throwable $e) {
             $this->logger->error(
-                message: "{action}: Exception '{exception.type}' was thrown unhandled during '{client}: {user}@{backend}' backup. {exception.message} at '{exception.file}:{exception.line}'.",
+                message: "{action}: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' backup. {exception.message} at '{exception.file}:{exception.line}'.",
                 context: [
                     ...$logContext,
                     ...exception_log($e),

@@ -571,8 +571,8 @@ if (!function_exists('queue_push')) {
         $logger = Container::get(iLogger::class);
 
         if (!$entity->id) {
-            $logger->error("Unable to push event '{via}: {entity}'. It has no local id yet.", [
-                'via' => $entity->via,
+            $logger->error("Unable to push event '{identity.backend}: {entity}'. It has no local id yet.", [
+                'identity' => ['backend' => $entity->via],
                 'entity' => $entity->getName(),
             ]);
             return;
@@ -589,9 +589,9 @@ if (!function_exists('queue_push')) {
         }
 
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-            $logger->error("Unable to push '{id}' event '{via}: {entity}'. It has no GUIDs.", [
+            $logger->error("Unable to push '{id}' event '{identity.backend}: {entity}'. It has no GUIDs.", [
                 'id' => $entity->id,
-                'via' => $entity->via,
+                'identity' => ['backend' => $entity->via],
                 'entity' => $entity->getName(),
             ]);
             return;

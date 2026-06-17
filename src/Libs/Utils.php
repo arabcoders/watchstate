@@ -958,9 +958,9 @@ if (!function_exists('validate_servers_data')) {
                         if (false === in_array($value, $spec['choices'], true)) {
                             $hasErrors = true;
                             $errors[] = r(
-                                "{backend}: Field '{key}' must be one of [{choices}], got '{value}'.",
+                                "{identity.backend}: Field '{key}' must be one of [{choices}], got '{value}'.",
                                 [
-                                    'backend' => $backendName,
+                                    'identity' => ['backend' => $backendName],
                                     'key' => $key,
                                     'choices' => implode(', ', $spec['choices']),
                                     'value' => $value,
@@ -1578,8 +1578,8 @@ if (!function_exists('get_user_context')) {
     {
         $users = get_users(includeMain: true);
         if (false === in_array($user, $users, true)) {
-            $logger->error("User '{user}' not found.", [
-                'user' => $user,
+            $logger->error("User '{identity.user}' not found.", [
+                'identity' => ['user' => $user],
                 'users' => $users,
             ]);
             throw new RuntimeException(r("User '{user}' not found.", ['user' => $user]), 1001);

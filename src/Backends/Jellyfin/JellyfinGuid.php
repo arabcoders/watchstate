@@ -244,12 +244,14 @@ class JellyfinGuid implements iGuid
                 if (true === is_ignored_id($this->context->userContext, $bName, $type, $key, $value, $id)) {
                     if (true === $log) {
                         $this->logger->debug(
-                            "{class}: Ignoring '{client}: {user}@{backend}' external id '{source}' for {item.type} '{item.id}: {item.title}' as requested.",
+                            "{class}: Ignoring '{identity.client}: {identity.user}@{identity.backend}' external id '{source}' for {item.type} '{item.id}: {item.title}' as requested.",
                             [
                                 'class' => after_last(static::class, '\\'),
-                                'client' => $this->context->clientName,
-                                'user' => $this->context->userContext->name,
-                                'backend' => $bName,
+                                'identity' => [
+                                    'client' => $this->context->clientName,
+                                    'user' => $this->context->userContext->name,
+                                    'backend' => $bName,
+                                ],
                                 'source' => $key . '://' . $value,
                                 'guid' => [
                                     'source' => $key,
@@ -266,11 +268,13 @@ class JellyfinGuid implements iGuid
             } catch (Throwable $e) {
                 if (true === $log) {
                     $this->logger->info(
-                        message: "{class}: Ignoring '{user}@{backend}' invalid GUID '{agent}' for {item.type} '{item.id}: {item.title}'.",
+                        message: "{class}: Ignoring '{identity.user}@{identity.backend}' invalid GUID '{agent}' for {item.type} '{item.id}: {item.title}'.",
                         context: [
                             'class' => after_last(static::class, '\\'),
-                            'user' => $this->context->userContext->name,
-                            'backend' => $this->context->backendName,
+                            'identity' => [
+                                'user' => $this->context->userContext->name,
+                                'backend' => $this->context->backendName,
+                            ],
                             'agent' => $value,
                             ...$context,
                             ...exception_log($e),

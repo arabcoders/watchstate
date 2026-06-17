@@ -39,11 +39,13 @@ trait CommonTrait
                 status: false,
                 error: new Error(
                     ...lw(
-                        message: "{client}: '{backend}' {action} thrown unhandled exception '{exception.type}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                        message: "{identity.client}: '{identity.backend}' {action} thrown unhandled exception '{exception.type}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
                         context: [
                             'action' => $action ?? '',
-                            'backend' => $context->backendName,
-                            'client' => $context->clientName,
+                            'identity' => [
+                                'backend' => $context->backendName,
+                                'client' => $context->clientName,
+                            ],
                             ...exception_log($e),
                         ],
                         e: $e,
@@ -73,6 +75,7 @@ trait CommonTrait
         DateInterval $ttl,
         ?iLogger $logger = null,
     ): mixed {
+        $cacheKey = $cache = null;
         try {
             $cache = $context->cache->getInterface();
             $cacheKey = $context->backendName . '_' . $key;
@@ -81,29 +84,39 @@ trait CommonTrait
             }
 
             if (true === $cache->has($cacheKey)) {
-                $logger?->debug("{client} Cache hit for key '{backend}: {key}'.", [
+                $logger?->debug("{identity.client} Cache hit for key '{identity.backend}: {key}'.", [
                     'key' => $key,
-                    'client' => $context->clientName,
-                    'backend' => $context->backendName,
+                    'identity' => [
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                    ],
                 ]);
                 return $cache->get($cacheKey);
             }
         } catch (\Psr\SimpleCache\InvalidArgumentException) {
-            $logger?->error("{client} Failed to retrieve cached data for '{backend}: {key}'.", [
-                'client' => $context->clientName,
-                'backend' => $context->backendName,
+            $logger?->error("{identity.client} Failed to retrieve cached data for '{identity.backend}: {key}'.", [
+                'identity' => [
+                    'client' => $context->clientName,
+                    'backend' => $context->backendName,
+                ],
                 'key' => $key,
             ]);
         }
 
         $data = $fn();
 
+        if (null === $cache || null === $cacheKey) {
+            return $data;
+        }
+
         try {
             $cache->set($cacheKey, $data, $ttl);
         } catch (\Psr\SimpleCache\InvalidArgumentException) {
-            $logger?->error("{client} Failed to cache data for key '{backend}: {key}'.", [
-                'client' => $context->clientName,
-                'backend' => $context->backendName,
+            $logger?->error("{identity.client} Failed to cache data for key '{identity.backend}: {key}'.", [
+                'identity' => [
+                    'client' => $context->clientName,
+                    'backend' => $context->backendName,
+                ],
                 'key' => $key,
             ]);
         }

@@ -263,28 +263,34 @@ class BackupCommand extends Command
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
             if ($isCustom && $input->getOption('exclude') === $this->in_array($selected, $backendName)) {
-                $this->logger->info("SYSTEM: Ignoring '{user}@{backend}' as requested.", [
-                    'user' => $userContext->name,
-                    'backend' => $backendName,
+                $this->logger->info("SYSTEM: Ignoring '{identity.user}@{identity.backend}' as requested.", [
+                    'identity' => [
+                        'user' => $userContext->name,
+                        'backend' => $backendName,
+                    ],
                 ]);
                 continue;
             }
 
             if (!isset($supported[$type])) {
-                $this->logger->error("SYSTEM: Ignoring '{user}@{backend}'. Unexpected type '{type}'.", [
-                    'user' => $userContext->name,
+                $this->logger->error("SYSTEM: Ignoring '{identity.user}@{identity.backend}'. Unexpected type '{type}'.", [
+                    'identity' => [
+                        'user' => $userContext->name,
+                        'backend' => $backendName,
+                    ],
                     'type' => $type,
-                    'backend' => $backendName,
                     'types' => implode(', ', array_keys($supported)),
                 ]);
                 continue;
             }
 
             if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {
-                $this->logger->error("SYSTEM: Ignoring '{user}@{backend}'. Invalid URL '{url}'.", [
-                    'user' => $userContext->name,
+                $this->logger->error("SYSTEM: Ignoring '{identity.user}@{identity.backend}'. Invalid URL '{url}'.", [
+                    'identity' => [
+                        'user' => $userContext->name,
+                        'backend' => $backendName,
+                    ],
                     'url' => $url ?? 'None',
-                    'backend' => $backendName,
                 ]);
                 continue;
             }
@@ -301,8 +307,10 @@ class BackupCommand extends Command
         }
 
         if (true !== $input->getOption('no-enhance')) {
-            $this->logger->notice("SYSTEM: Preloading '{user}@{mapper}' data.", [
-                'user' => $userContext->name,
+            $this->logger->notice("SYSTEM: Preloading '{identity.user}@{mapper}' data.", [
+                'identity' => [
+                    'user' => $userContext->name,
+                ],
                 'mapper' => after_last($userContext->mapper::class, '\\'),
                 'memory' => [
                     'now' => get_memory_usage(),
@@ -313,8 +321,10 @@ class BackupCommand extends Command
             $start = microtime(true);
             $userContext->mapper->loadData();
 
-            $this->logger->notice("SYSTEM: Preloading '{user}@{mapper}' data completed in '{duration}s'.", [
-                'user' => $userContext->name,
+            $this->logger->notice("SYSTEM: Preloading '{identity.user}@{mapper}' data completed in '{duration}s'.", [
+                'identity' => [
+                    'user' => $userContext->name,
+                ],
                 'mapper' => after_last($userContext->mapper::class, '\\'),
                 'duration' => round(microtime(true) - $start, 4),
                 'memory' => [
@@ -347,9 +357,11 @@ class BackupCommand extends Command
                 UserContext::class => $userContext,
             ])->setLogger($this->logger);
 
-            $this->logger->notice("SYSTEM: Backing up '{user}@{backend}' play state.", [
-                'user' => $userContext->name,
-                'backend' => $name,
+            $this->logger->notice("SYSTEM: Backing up '{identity.user}@{identity.backend}' play state.", [
+                'identity' => [
+                    'user' => $userContext->name,
+                    'backend' => $name,
+                ],
             ]);
 
             $fileName = $input->getOption('file');
@@ -376,10 +388,12 @@ class BackupCommand extends Command
                     touch($fileName);
                 }
 
-                $this->logger->notice("SYSTEM: '{user}@{backend}' is using '{file}' as backup target.", [
-                    'user' => $userContext->name,
+                $this->logger->notice("SYSTEM: '{identity.user}@{identity.backend}' is using '{file}' as backup target.", [
+                    'identity' => [
+                        'user' => $userContext->name,
+                        'backend' => $name,
+                    ],
                     'file' => realpath($fileName),
-                    'backend' => $name,
                 ]);
 
                 $backend['fp'] = new Stream($fileName, 'wb+');
@@ -406,8 +420,10 @@ class BackupCommand extends Command
         }
 
         $start = microtime(true);
-        $this->logger->notice("SYSTEM: Waiting on '{total}' {sync}requests for '{user}: {backends}' backends.", [
-            'user' => $userContext->name,
+        $this->logger->notice("SYSTEM: Waiting on '{total}' {sync}requests for '{identity.user}: {backends}' backends.", [
+            'identity' => [
+                'user' => $userContext->name,
+            ],
             'total' => number_format(count($queue)),
             'backends' => implode(', ', array_keys($list)),
             'sync' => $syncRequests ? 'sync ' : '',
@@ -438,9 +454,11 @@ class BackupCommand extends Command
                         unlink($file);
                     }
 
-                    $this->logger->warning("SYSTEM: No backup was generated for '{user}@{backend}'. No items were found.", [
-                        'user' => $userContext->name,
-                        'backend' => $b,
+                    $this->logger->warning("SYSTEM: No backup was generated for '{identity.user}@{identity.backend}'. No items were found.", [
+                        'identity' => [
+                            'user' => $userContext->name,
+                            'backend' => $b,
+                        ],
                         'file' => $file,
                     ]);
 
@@ -448,10 +466,12 @@ class BackupCommand extends Command
                 }
 
                 if (false === $noCompression) {
-                    $this->logger->notice("SYSTEM: Compressing '{user}@{backend}' backup file '{file}'.", [
-                        'backend' => $b,
+                    $this->logger->notice("SYSTEM: Compressing '{identity.user}@{identity.backend}' backup file '{file}'.", [
+                        'identity' => [
+                            'backend' => $b,
+                            'user' => $userContext->name,
+                        ],
                         'file' => $file,
-                        'user' => $userContext->name,
                     ]);
 
                     if (true === compress_files($file, [$file], ['affix' => 'zip'])) {
@@ -463,8 +483,10 @@ class BackupCommand extends Command
             }
         }
 
-        $this->logger->notice("SYSTEM: Backup operation for '{user}: {backends}' backends finished in '{duration}s'.", [
-            'user' => $userContext->name,
+        $this->logger->notice("SYSTEM: Backup operation for '{identity.user}: {backends}' backends finished in '{duration}s'.", [
+            'identity' => [
+                'user' => $userContext->name,
+            ],
             'backends' => implode(', ', array_keys($list)),
             'duration' => round(microtime(true) - $start, 4),
             'memory' => [

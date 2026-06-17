@@ -144,9 +144,9 @@ final class PDOAdapter implements iDB
             if (true === $entity->isEpisode() && $entity->episode < 1) {
                 throw new DBException(
                     r(
-                        "PDOAdapter: Unexpected episode number '{number}' was given for '{via}: {title}'.",
+                        "PDOAdapter: Unexpected episode number '{number}' was given for '{identity.backend}: {title}'.",
                         [
-                            'via' => $entity->via,
+                            'identity' => ['backend' => $entity->via],
                             'title' => $entity->getName(),
                             'number' => $entity->episode,
                         ],
@@ -157,11 +157,11 @@ final class PDOAdapter implements iDB
             if (false === in_array($entity->type, [iState::TYPE_MOVIE, iState::TYPE_EPISODE], true)) {
                 throw new DBException(
                     r(
-                        "PDOAdapter: Unexpected content type '{type}' was given for '{via}: {title}'. Expecting '{types}'.",
+                        "PDOAdapter: Unexpected content type '{type}' was given for '{identity.backend}: {title}'. Expecting '{types}'.",
                         [
                             'type' => $entity->type,
                             'types' => implode(', ', [iState::TYPE_MOVIE, iState::TYPE_EPISODE]),
-                            'id' => $entity->via,
+                            'identity' => ['backend' => $entity->via],
                             'title' => $entity->getName(),
                         ],
                     ),
@@ -387,10 +387,10 @@ final class PDOAdapter implements iDB
             if (true === $entity->isEpisode() && $entity->episode < 1) {
                 throw new DBException(
                     r(
-                        "PDOAdapter: Unexpected episode number '{number}' was given for '#{id}' '{via}: {title}'.",
+                        "PDOAdapter: Unexpected episode number '{number}' was given for '#{id}' '{identity.backend}: {title}'.",
                         [
                             'id' => $entity->id,
-                            'via' => $entity->via,
+                            'identity' => ['backend' => $entity->via],
                             'title' => $entity->getName(),
                             'number' => $entity->episode,
                         ],

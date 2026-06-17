@@ -42,8 +42,8 @@ class PlaylistSyncService
         $fetchedBackends = [];
         $fetchTotals = $this->makeFetchStats();
 
-        $this->logger->notice("PLAYLIST: Starting playlist reconciliation for '{user}' across '{total}' backend clients.", [
-            'user' => $userContext->name,
+        $this->logger->notice("PLAYLIST: Starting playlist reconciliation for '{identity.user}' across '{total}' backend clients.", [
+            'identity' => ['user' => $userContext->name],
             'total' => count($clients),
             'dry_run' => $dryRun,
             'force_full' => $forceFull,
@@ -98,8 +98,8 @@ class PlaylistSyncService
             static fn(string $backendName): bool => true === isset($fetchedBackends[$backendName]),
         ));
 
-        $this->logger->notice("PLAYLIST: Completed playlist snapshot fetch phase for '{user}' in '{duration}'s.", [
-            'user' => $userContext->name,
+        $this->logger->notice("PLAYLIST: Completed playlist snapshot fetch phase for '{identity.user}' in '{duration}'s.", [
+            'identity' => ['user' => $userContext->name],
             'duration' => round(microtime(true) - $fetchStart, 4),
             'fetched_backends' => array_keys($fetchedBackends),
             'source_backends' => $sourceBackends,
@@ -111,8 +111,8 @@ class PlaylistSyncService
         if (true === $dryRun || [] === $targetBackends || [] === $sourceBackends) {
             $summary = $this->summarizeBackends($clients, $store, $results, $syncStats, $dryRun);
 
-            $this->logger->notice("PLAYLIST: Playlist reconciliation for '{user}' stopped after fetch phase.", [
-                'user' => $userContext->name,
+            $this->logger->notice("PLAYLIST: Playlist reconciliation for '{identity.user}' stopped after fetch phase.", [
+                'identity' => ['user' => $userContext->name],
                 'error' => $this->resolveEarlyStopReason($dryRun, $sourceBackends, $targetBackends),
                 'results' => $this->summarizeResultTotals($summary),
                 'duration' => round(microtime(true) - $syncStart, 4),
@@ -133,8 +133,8 @@ class PlaylistSyncService
         $operationSummary = $this->summarizeOperations($operations);
         $applyStart = microtime(true);
 
-        $this->logger->notice("PLAYLIST: Applying '{total}' planned playlist operations for '{user}'.", [
-            'user' => $userContext->name,
+        $this->logger->notice("PLAYLIST: Applying '{total}' planned playlist operations for '{identity.user}'.", [
+            'identity' => ['user' => $userContext->name],
             'total' => count($operations),
             'actions' => $operationSummary['actions'],
             'backends' => $operationSummary['backends'],
@@ -157,8 +157,8 @@ class PlaylistSyncService
             $exportSyncedBackends[] = $backendName;
         }
 
-        $this->logger->notice("PLAYLIST: Applied playlist operations for '{user}' in '{duration}'s.", [
-            'user' => $userContext->name,
+        $this->logger->notice("PLAYLIST: Applied playlist operations for '{identity.user}' in '{duration}'s.", [
+            'identity' => ['user' => $userContext->name],
             'duration' => round(microtime(true) - $applyStart, 4),
             'stats' => $this->summarizeSyncStats($applied['stats']),
             'touched_backends' => $applied['touched_backends'],
@@ -171,8 +171,8 @@ class PlaylistSyncService
         $refreshStart = microtime(true);
 
         if ([] !== $applied['touched_backends']) {
-            $this->logger->notice("PLAYLIST: Refreshing '{total}' touched playlist backends for '{user}'.", [
-                'user' => $userContext->name,
+            $this->logger->notice("PLAYLIST: Refreshing '{total}' touched playlist backends for '{identity.user}'.", [
+                'identity' => ['user' => $userContext->name],
                 'total' => count($applied['touched_backends']),
                 'backends' => $applied['touched_backends'],
                 'memory' => $this->getMemoryContext(),
@@ -203,8 +203,8 @@ class PlaylistSyncService
         }
 
         if ([] !== $applied['touched_backends']) {
-            $this->logger->notice("PLAYLIST: Refreshed touched playlist backends for '{user}' in '{duration}'s.", [
-                'user' => $userContext->name,
+            $this->logger->notice("PLAYLIST: Refreshed touched playlist backends for '{identity.user}' in '{duration}'s.", [
+                'identity' => ['user' => $userContext->name],
                 'duration' => round(microtime(true) - $refreshStart, 4),
                 'backends' => $applied['touched_backends'],
                 'stats' => $refreshTotals,
@@ -214,8 +214,8 @@ class PlaylistSyncService
 
         $summary = $this->summarizeBackends($clients, $store, $results, $syncStats, false);
 
-        $this->logger->notice("PLAYLIST: Playlist reconciliation for '{user}' completed in '{duration}'s.", [
-            'user' => $userContext->name,
+        $this->logger->notice("PLAYLIST: Playlist reconciliation for '{identity.user}' completed in '{duration}'s.", [
+            'identity' => ['user' => $userContext->name],
             'duration' => round(microtime(true) - $syncStart, 4),
             'results' => $this->summarizeResultTotals($summary),
             'memory' => $this->getMemoryContext(),
@@ -274,10 +274,12 @@ class PlaylistSyncService
 
         $stats['forced_ids'] = count($forceIds);
 
-        $this->logger->notice("PLAYLIST: Starting '{phase}' fetch for '{user}@{backend}' playlists ({mode}, {direction}).", [
+        $this->logger->notice("PLAYLIST: Starting '{phase}' fetch for '{identity.user}@{identity.backend}' playlists ({mode}, {direction}).", [
             'phase' => $phase,
-            'user' => $userContext->name,
-            'backend' => $backendName,
+            'identity' => [
+                'user' => $userContext->name,
+                'backend' => $backendName,
+            ],
             'mode' => true === $forceFull ? 'full' : 'incremental',
             'direction' => $direction,
             'last_sync' => null === $lastSync ? 'Beginning' : (string) make_date($lastSync),
@@ -363,10 +365,12 @@ class PlaylistSyncService
             }
         }
 
-        $this->logger->info("PLAYLIST: Completed '{phase}' fetch for '{user}@{backend}' playlists in '{duration}'s.", [
+        $this->logger->info("PLAYLIST: Completed '{phase}' fetch for '{identity.user}@{identity.backend}' playlists in '{duration}'s.", [
             'phase' => $phase,
-            'user' => $userContext->name,
-            'backend' => $backendName,
+            'identity' => [
+                'user' => $userContext->name,
+                'backend' => $backendName,
+            ],
             'duration' => round(microtime(true) - $start, 4),
             'direction' => $direction,
             'mode' => true === $forceFull ? 'full' : 'incremental',
@@ -416,10 +420,12 @@ class PlaylistSyncService
                 $resolvedItems = [];
 
                 $this->logger->info(
-                    "PLAYLIST: Skipping '{user}@{backend}' playlist '{title}'. Some items did not resolve to local state.",
+                    "PLAYLIST: Skipping '{identity.user}@{identity.backend}' playlist '{title}'. Some items did not resolve to local state.",
                     [
-                        'user' => $userContext->name,
-                        'backend' => $client->getContext()->backendName,
+                        'identity' => [
+                            'user' => $userContext->name,
+                            'backend' => $client->getContext()->backendName,
+                        ],
                         'title' => ag($playlist, 'title', 'unknown'),
                     ],
                 );
@@ -490,9 +496,9 @@ class PlaylistSyncService
             $entity = $client->toEntity($item, [Options::NO_CACHE => true]);
         } catch (Throwable $e) {
             $this->logger->warning(
-                "PLAYLIST: Failed to map '{backend}' playlist item '{title}'. {error}",
+                "PLAYLIST: Failed to map '{identity.backend}' playlist item '{title}'. {error}",
                 [
-                    'backend' => $client->getName(),
+                    'identity' => ['backend' => $client->getName()],
                     'title' => ag($item, ['title', 'Name', 'OriginalTitle'], 'unknown'),
                     'error' => $e->getMessage(),
                 ],
@@ -554,8 +560,8 @@ class PlaylistSyncService
             return $operations;
         }
 
-        $this->logger->notice("PLAYLIST: Planning playlist sync operations for '{user}' across '{total}' sync groups.", [
-            'user' => $userContext->name,
+        $this->logger->notice("PLAYLIST: Planning playlist sync operations for '{identity.user}' across '{total}' sync groups.", [
+            'identity' => ['user' => $userContext->name],
             'total' => count($groups),
             'source_backends' => $sourceBackends,
             'target_backends' => $targetBackends,
@@ -615,9 +621,9 @@ class PlaylistSyncService
                     $skipped['zero_available']++;
 
                     $this->logger->info(
-                        "PLAYLIST: Waiting to sync '{backend}' playlist '{title}'. No winner items are available on target backend yet.",
+                        "PLAYLIST: Waiting to sync '{identity.backend}' playlist '{title}'. No winner items are available on target backend yet.",
                         [
-                            'backend' => $backendName,
+                            'identity' => ['backend' => $backendName],
                             'title' => ag($winner, 'title', 'unknown'),
                             'winner_backend' => ag($winner, 'backend', 'unknown'),
                             'total' => $resolution['total_count'],
@@ -636,9 +642,9 @@ class PlaylistSyncService
                     $skipped['partial_waiting']++;
 
                     $this->logger->info(
-                        "PLAYLIST: Waiting to complete '{backend}' playlist '{title}'. '{available}' of '{total}' items are currently available on target backend.",
+                        "PLAYLIST: Waiting to complete '{identity.backend}' playlist '{title}'. '{available}' of '{total}' items are currently available on target backend.",
                         [
-                            'backend' => $backendName,
+                            'identity' => ['backend' => $backendName],
                             'title' => ag($winner, 'title', 'unknown'),
                             'available' => $resolution['available_count'],
                             'total' => $resolution['total_count'],
@@ -657,10 +663,10 @@ class PlaylistSyncService
                     $perBackend[$backendName]['partial'] = ($perBackend[$backendName]['partial'] ?? 0) + 1;
 
                     $this->logger->info(
-                        "PLAYLIST: Planning partial '{action}' for '{backend}' playlist '{title}'. '{available}' of '{total}' items are available on target backend.",
+                        "PLAYLIST: Planning partial '{action}' for '{identity.backend}' playlist '{title}'. '{available}' of '{total}' items are available on target backend.",
                         [
                             'action' => $action,
-                            'backend' => $backendName,
+                            'identity' => ['backend' => $backendName],
                             'title' => ag($winner, 'title', 'unknown'),
                             'available' => $resolution['available_count'],
                             'total' => $resolution['total_count'],
@@ -681,8 +687,8 @@ class PlaylistSyncService
             }
         }
 
-        $this->logger->info("PLAYLIST: Planned '{total}' playlist sync operations for '{user}' in '{duration}'s.", [
-            'user' => $userContext->name,
+        $this->logger->info("PLAYLIST: Planned '{total}' playlist sync operations for '{identity.user}' in '{duration}'s.", [
+            'identity' => ['user' => $userContext->name],
             'total' => count($operations),
             'duration' => round(microtime(true) - $start, 4),
             'actions' => $planned,
@@ -770,8 +776,8 @@ class PlaylistSyncService
             $createdId = trim((string) ag($createResult, 'id', ''));
             if ('' === $createdId) {
                 $this->logger->warning(
-                    "PLAYLIST: Backend '{backend}' create request completed without a playlist id.",
-                    ['backend' => $backendName],
+                    "PLAYLIST: Backend '{identity.backend}' create request completed without a playlist id.",
+                    ['identity' => ['backend' => $backendName]],
                 );
                 $failedBackends[$backendName] = true;
                 continue;
@@ -903,9 +909,9 @@ class PlaylistSyncService
             $entity = $this->getLocalStateById($userContext, (int) $stateId);
             if (null === $entity) {
                 $this->logger->info(
-                    "PLAYLIST: Skipping '{backend}' sync for '{title}'. Local state '{state_id}' no longer exists.",
+                    "PLAYLIST: Skipping '{identity.backend}' sync for '{title}'. Local state '{state_id}' no longer exists.",
                     [
-                        'backend' => $backend,
+                        'identity' => ['backend' => $backend],
                         'title' => ag($winner, 'title', 'unknown'),
                         'state_id' => $stateId,
                     ],
@@ -918,9 +924,9 @@ class PlaylistSyncService
             $backendId = trim((string) ag($entity->getMetadata($backend), iState::COLUMN_ID, ''));
             if ('' === $backendId) {
                 $this->logger->info(
-                    "PLAYLIST: Skipping '{backend}' sync for '{title}'. Item '{item}' is not available on target backend.",
+                    "PLAYLIST: Skipping '{identity.backend}' sync for '{title}'. Item '{item}' is not available on target backend.",
                     [
-                        'backend' => $backend,
+                        'identity' => ['backend' => $backend],
                         'title' => ag($winner, 'title', 'unknown'),
                         'item' => $entity->getName(),
                     ],
@@ -1111,9 +1117,9 @@ class PlaylistSyncService
         $store->updateMetadata((int) $target['id'], $cleared['metadata'] ?? []);
 
         $this->logger->info(
-            "PLAYLIST: Clearing partial sync marker for '{backend}' playlist '{title}'. Target playlist now matches the current desired state.",
+            "PLAYLIST: Clearing partial sync marker for '{identity.backend}' playlist '{title}'. Target playlist now matches the current desired state.",
             [
-                'backend' => ag($target, 'backend', 'unknown'),
+                'identity' => ['backend' => ag($target, 'backend', 'unknown')],
                 'title' => ag($target, 'title', 'unknown'),
             ],
         );
@@ -1467,10 +1473,10 @@ class PlaylistSyncService
     private function logBackendThrowable(Throwable $e, string $backendName, string $action): void
     {
         $this->logger->error(
-            "PLAYLIST: Failed to {action} for '{backend}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
+            "PLAYLIST: Failed to {action} for '{identity.backend}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
             [
                 'action' => $action,
-                'backend' => $backendName,
+                'identity' => ['backend' => $backendName],
                 ...exception_log($e),
             ],
         );

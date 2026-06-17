@@ -182,9 +182,11 @@ final class ProcessWebhookEvent
             $this->write(
                 $request,
                 Level::Info,
-                "Request from '{client}' didn't match any user/backend.",
+                "Request from '{identity.client}' didn't match any user/backend.",
                 context: [
-                    'client' => $client->getName(),
+                    'identity' => [
+                        'client' => $client->getName(),
+                    ],
                     'headers' => $request->getHeaders(),
                     'payload' => $request->getParsedBody(),
                 ],
@@ -199,9 +201,11 @@ final class ProcessWebhookEvent
             $this->write(
                 $request,
                 Level::Info,
-                "Request from '{client}' treated as noop. No processing will be done.",
+                "Request from '{identity.client}' treated as noop. No processing will be done.",
                 context: [
-                    'client' => $client->getName(),
+                    'identity' => [
+                        'client' => $client->getName(),
+                    ],
                     'headers' => $request->getHeaders(),
                 ],
                 forceContext: false,
@@ -229,10 +233,12 @@ final class ProcessWebhookEvent
             $this->write(
                 request: $request,
                 level: $this->level($e),
-                message: "Failed to process webhook for '{user}@{backend}'. {msg}.",
+                message: "Failed to process webhook for '{identity.user}@{identity.backend}'. {msg}.",
                 context: [
-                    'user' => $mainBackend['userContext']->name,
-                    'backend' => $mainBackend['backendName'],
+                    'identity' => [
+                        'user' => $mainBackend['userContext']->name,
+                        'backend' => $mainBackend['backendName'],
+                    ],
                     'msg' => $e->getMessage(),
                     ...exception_log($e),
                 ],
@@ -244,10 +250,12 @@ final class ProcessWebhookEvent
             $this->write(
                 request: $request,
                 level: Level::Warning,
-                message: "Ignoring '{user}@{backend}' {item.type} '{item.title}'. No valid/supported external ids.",
+                message: "Ignoring '{identity.user}@{identity.backend}' {item.type} '{item.title}'. No valid/supported external ids.",
                 context: [
-                    'user' => $mainBackend['userContext']->name,
-                    'backend' => $entity->via,
+                    'identity' => [
+                        'user' => $mainBackend['userContext']->name,
+                        'backend' => $entity->via,
+                    ],
                     'item' => [
                         'title' => $entity->getName(),
                         'type' => $entity->type,
@@ -261,10 +269,12 @@ final class ProcessWebhookEvent
             $this->write(
                 request: $request,
                 level: Level::Notice,
-                message: "Ignoring '{user}@{backend}' {item.type} '{item.title}'. No episode/season number present.",
+                message: "Ignoring '{identity.user}@{identity.backend}' {item.type} '{item.title}'. No episode/season number present.",
                 context: [
-                    'user' => $mainBackend['userContext']->name,
-                    'backend' => $entity->via,
+                    'identity' => [
+                        'user' => $mainBackend['userContext']->name,
+                        'backend' => $entity->via,
+                    ],
                     'item' => [
                         'title' => $entity->getName(),
                         'type' => $entity->type,
@@ -281,9 +291,11 @@ final class ProcessWebhookEvent
             $this->write(
                 request: $request,
                 level: Level::Info,
-                message: "Request from '{client}' matched '{count}' user/backends.",
+                message: "Request from '{identity.client}' matched '{count}' user/backends.",
                 context: [
-                    'client' => $client->getName(),
+                    'identity' => [
+                        'client' => $client->getName(),
+                    ],
                     'count' => count($backends),
                 ],
             );
@@ -317,10 +329,12 @@ final class ProcessWebhookEvent
                 $this->write(
                     request: $perUserRequest,
                     level: $this->level($e),
-                    message: "Failed to process '{user}@{backend}' {item.type} '{item.title}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                    message: "Failed to process '{identity.user}@{identity.backend}' {item.type} '{item.title}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
                     context: [
-                        'user' => $target['userContext']->name,
-                        'backend' => $target['backendName'],
+                        'identity' => [
+                            'user' => $target['userContext']->name,
+                            'backend' => $target['backendName'],
+                        ],
                         'item' => [
                             'title' => $entity->getName(),
                             'type' => $entity->type,
@@ -380,10 +394,12 @@ final class ProcessWebhookEvent
                 $this->write(
                     request: $request,
                     level: Level::Warning,
-                    message: "Ignoring '{user}@{backend}' {item.type} '{item.title}'. No valid/supported external ids.",
+                    message: "Ignoring '{identity.user}@{identity.backend}' {item.type} '{item.title}'. No valid/supported external ids.",
                     context: [
-                        'user' => $userContext->name,
-                        'backend' => $entity->via,
+                        'identity' => [
+                            'user' => $userContext->name,
+                            'backend' => $entity->via,
+                        ],
                         'item' => [
                             'title' => $entity->getName(),
                             'type' => $entity->type,
@@ -400,10 +416,12 @@ final class ProcessWebhookEvent
                 $this->write(
                     request: $request,
                     level: Level::Notice,
-                    message: "Ignoring '{user}@{backend}' {item.type} '{item.title}'. No episode/season number present.",
+                    message: "Ignoring '{identity.user}@{identity.backend}' {item.type} '{item.title}'. No episode/season number present.",
                     context: [
-                        'user' => $userContext->name,
-                        'backend' => $entity->via,
+                        'identity' => [
+                            'user' => $userContext->name,
+                            'backend' => $entity->via,
+                        ],
                         'item' => [
                             'title' => $entity->getName(),
                             'type' => $entity->type,
@@ -472,12 +490,14 @@ final class ProcessWebhookEvent
             $lastSync = make_date($lastSync);
         }
 
-        ($this->writer)(Level::Notice, r("{prefix}Processing '{user}@{backend}' request '{title}'. {data}", [
-            'backend' => $entity->via,
+        ($this->writer)(Level::Notice, r("{prefix}Processing '{identity.user}@{identity.backend}' request '{title}'. {data}", [
+            'identity' => [
+                'backend' => $entity->via,
+                'user' => $userContext->name,
+            ],
             'title' => $entity->getName(),
             'prefix' => true === $entity->isTainted() ? '[T] ' : '',
             'lastSync' => $lastSync,
-            'user' => $userContext->name,
             'data' => array_to_string([
                 'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, '??'),
                 'state' => $entity->isWatched() ? 'played' : 'unplayed',

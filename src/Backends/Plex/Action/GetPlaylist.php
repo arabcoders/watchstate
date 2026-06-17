@@ -53,9 +53,11 @@ final class GetPlaylist
 
         $logContext = [
             'action' => $this->action,
-            'client' => $context->clientName,
-            'backend' => $context->backendName,
-            'user' => $context->userContext->name,
+            'identity' => [
+                'client' => $context->clientName,
+                'backend' => $context->backendName,
+                'user' => $context->userContext->name,
+            ],
             'id' => $id,
         ];
 
@@ -64,7 +66,7 @@ final class GetPlaylist
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{client}: {user}@{backend}' playlist '{id}' returned with unexpected '{status_code}' status code.",
+                    message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' playlist '{id}' returned with unexpected '{status_code}' status code.",
                     context: [...$logContext, 'status_code' => $detailResponse->getStatusCode()],
                     level: Levels::ERROR,
                 ),
@@ -83,7 +85,7 @@ final class GetPlaylist
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Playlist '{id}' was not found in '{client}: {user}@{backend}'.",
+                    message: "{action}: Playlist '{id}' was not found in '{identity.client}: {identity.user}@{identity.backend}'.",
                     context: $logContext,
                     level: Levels::WARNING,
                 ),
@@ -95,7 +97,7 @@ final class GetPlaylist
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{client}: {user}@{backend}' playlist '{id}' items returned with unexpected '{status_code}' status code.",
+                    message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' playlist '{id}' items returned with unexpected '{status_code}' status code.",
                     context: [...$logContext, 'status_code' => $itemsResponse->getStatusCode()],
                     level: Levels::ERROR,
                 ),

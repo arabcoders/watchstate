@@ -35,6 +35,12 @@ final class GetLibrary
 
     private string $action = 'plex.getLibrary';
 
+    /**
+     * Class Constructor.
+     *
+     * @param iHttp&\App\Libs\Extends\HttpClient $http HTTP client for making requests to the backend.
+     * @param iLogger $logger Logger instance for logging.
+     */
     public function __construct(
         protected iHttp $http,
         protected iLogger $logger,
@@ -73,16 +79,18 @@ final class GetLibrary
 
         $logContext = [
             'action' => $this->action,
-            'client' => $context->clientName,
-            'backend' => $context->backendName,
-            'user' => $context->userContext->name,
+            'identity' => [
+                'client' => $context->clientName,
+                'backend' => $context->backendName,
+                'user' => $context->userContext->name,
+            ],
         ];
 
         if (null === ($section = ag($libraries, $id))) {
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: No library with id '{id}' found in '{client}: {user}@{backend}' response.",
+                    message: "{action}: No library with id '{id}' found in '{identity.client}: {identity.user}@{identity.backend}' response.",
                     context: [...$logContext, 'id' => $id, 'response' => ['body' => $libraries]],
                     level: Levels::WARNING,
                 ),
@@ -104,7 +112,7 @@ final class GetLibrary
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: The requested '{client}: {user}@{backend}' library '{library.title}' returned with unsupported type '{library.type}'.",
+                    message: "{action}: The requested '{identity.client}: {identity.user}@{identity.backend}' library '{library.title}' returned with unsupported type '{library.type}'.",
                     context: $logContext,
                     level: Levels::WARNING,
                 ),
@@ -133,7 +141,7 @@ final class GetLibrary
         $logContext['library']['url'] = (string) $url;
 
         $this->logger->debug(
-            message: "{action}: Requesting '{client}: {user}@{backend}' library '{library.title}' content.",
+            message: "{action}: Requesting '{identity.client}: {identity.user}@{identity.backend}' library '{library.title}' content.",
             context: $logContext,
         );
 
@@ -147,7 +155,7 @@ final class GetLibrary
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{client}: {user}@{backend}' library '{library.title}' returned with unexpected '{status_code}' status code.",
+                    message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' library '{library.title}' returned with unexpected '{status_code}' status code.",
                     context: [...$logContext, 'status_code' => $response->getStatusCode()],
                     level: Levels::ERROR,
                 ),
@@ -169,7 +177,7 @@ final class GetLibrary
         foreach ($it as $entity) {
             if ($entity instanceof DecodingError) {
                 $this->logger->warning(
-                    message: "{action}: Failed to decode one item of '{client}: {user}@{backend}' library '{library.title}' content. {error.message}",
+                    message: "{action}: Failed to decode one item of '{identity.client}: {identity.user}@{identity.backend}' library '{library.title}' content. {error.message}",
                     context: [
                         ...$logContext,
                         'error' => ['message' => $entity->getErrorMessage(), 'body' => $entity->getMalformedJson()],
@@ -210,7 +218,7 @@ final class GetLibrary
 
         if (!empty($requests)) {
             $this->logger->info(
-                message: "{action}: Requesting '{total}' items metadata from '{client}: {user}@{backend}' library '{library.title}'.",
+                message: "{action}: Requesting '{total}' items metadata from '{identity.client}: {identity.user}@{identity.backend}' library '{library.title}'.",
                 context: [...$logContext, 'total' => number_format(count($requests))],
             );
         }
@@ -224,7 +232,7 @@ final class GetLibrary
                 if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
                     if (false === $noLog) {
                         $this->logger->warning(
-                            message: "{action}: Request for '{client}: {user}@{backend}' {item.type} '{item.title}' metadata returned with unexpected '{status_code}' status code.",
+                            message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' {item.type} '{item.title}' metadata returned with unexpected '{status_code}' status code.",
                             context: [
                                 ...$requestContext,
                                 'status_code' => $response->getStatusCode(),
@@ -252,7 +260,7 @@ final class GetLibrary
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: "{action}: Exception '{exception.type}' was thrown unhandled during '{client}: {user}@{backend}' request for {item.type} '{item.title}' metadata. {exception.message} at '{exception.file}:{exception.line}'.",
+                        message: "{action}: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' request for {item.type} '{item.title}' metadata. {exception.message} at '{exception.file}:{exception.line}'.",
                         context: [
                             ...$requestContext,
                             ...exception_log($e),
@@ -304,7 +312,7 @@ final class GetLibrary
         }
 
         $this->logger->debug(
-            message: "{action}: Processing '{client}: {user}@{backend}' {item.type} '{item.title} ({item.year})'.",
+            message: "{action}: Processing '{identity.client}: {identity.user}@{identity.backend}' {item.type} '{item.title} ({item.year})'.",
             context: $logContext,
         );
 
@@ -378,7 +386,7 @@ final class GetLibrary
             default:
                 throw new RuntimeException(
                     r(
-                        text: "{action}: Unexpected item type '{type}' was encountered while parsing '{client}: {user}@{backend}' library '{library.title}'.",
+                        text: "{action}: Unexpected item type '{type}' was encountered while parsing '{identity.client}: {identity.user}@{identity.backend}' library '{library.title}'.",
                         context: [...$logContext, 'type' => ag($item, 'type')],
                     ),
                 );

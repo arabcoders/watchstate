@@ -70,8 +70,10 @@ final readonly class ProcessProgressEvent
         $options = $event->getOptions();
 
         if (null === ($item = $userContext->db->get(Container::get(iState::class)::fromArray($event->getData())))) {
-            $writer(Level::Error, "'{user}' item '{id}' is not referenced locally yet.", [
-                'user' => $userContext->name,
+            $writer(Level::Error, "'{identity.user}' item '{id}' is not referenced locally yet.", [
+                'identity' => [
+                    'user' => $userContext->name,
+                ],
                 'id' => ag($event->getData(), 'id', '?'),
             ]);
             return $event;
@@ -85,11 +87,10 @@ final readonly class ProcessProgressEvent
             if (false === ($allowUpdate >= $minThreshold && time() > ($item->updated + $allowUpdate))) {
                 $writer(
                     level: Level::Info,
-                    message: "'{user}' item - '#{id}: {title}' is marked as watched. Not updating watch progress. {comp}",
+                    message: "'{identity.user}' item - '#{id}: {title}' is marked as watched. Not updating watch progress. {comp}",
                     context: [
                         'id' => $item->id,
                         'title' => $item->getName(),
-                        'user' => $userContext->name,
                         'comp' => $allowUpdate > $minThreshold
                             ? array_to_string([
                                 'threshold' => $allowUpdate,
@@ -97,6 +98,9 @@ final readonly class ProcessProgressEvent
                                 'updated' => ['secs' => $item->updated, 'time' => make_date($item->updated)],
                                 'diff' => time() - ($item->updated + $allowUpdate),
                             ]) : 'watch progress sync for played items is disabled.',
+                        'identity' => [
+                            'user' => $userContext->name,
+                        ],
                     ],
                 );
                 return $event;
@@ -104,10 +108,12 @@ final readonly class ProcessProgressEvent
         }
 
         if (false === $item->hasPlayProgress()) {
-            $writer(Level::Info, "'{user}' item '#{id}: {title}' has no watch progress to export.", [
+            $writer(Level::Info, "'{identity.user}' item '#{id}: {title}' has no watch progress to export.", [
                 'id' => $item->id,
                 'title' => $item->title,
-                'user' => $userContext->name,
+                'identity' => [
+                    'user' => $userContext->name,
+                ],
             ]);
             return $event;
         }
@@ -122,31 +128,37 @@ final readonly class ProcessProgressEvent
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
             if (true !== (bool) ag($backend, 'export.enabled')) {
-                $writer(Level::Notice, "Ignoring '{user}@{backend}'. Export is disabled.", [
-                    'backend' => $backendName,
-                    'user' => $userContext->name,
+                $writer(Level::Notice, "Ignoring '{identity.user}@{identity.backend}'. Export is disabled.", [
+                    'identity' => [
+                        'backend' => $backendName,
+                        'user' => $userContext->name,
+                    ],
                 ]);
                 continue;
             }
 
             if (!isset($supported[$type])) {
-                $writer(Level::Error, "Ignoring '{user}@{backend}'. Invalid type '{type}'.", [
+                $writer(Level::Error, "Ignoring '{identity.user}@{identity.backend}'. Invalid type '{type}'.", [
                     'type' => $type,
-                    'backend' => $backendName,
                     'condition' => [
                         'expected' => implode(', ', array_keys($supported)),
                         'given' => $type,
                     ],
-                    'user' => $userContext->name,
+                    'identity' => [
+                        'backend' => $backendName,
+                        'user' => $userContext->name,
+                    ],
                 ]);
                 continue;
             }
 
             if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {
-                $writer(Level::Error, "Ignoring '{user}@{backend}'. Invalid URL '{url}'.", [
-                    'backend' => $backendName,
+                $writer(Level::Error, "Ignoring '{identity.user}@{identity.backend}'. Invalid URL '{url}'.", [
                     'url' => $url ?? 'None',
-                    'user' => $userContext->name,
+                    'identity' => [
+                        'backend' => $backendName,
+                        'user' => $userContext->name,
+                    ],
                 ]);
                 continue;
             }
@@ -190,22 +202,26 @@ final readonly class ProcessProgressEvent
             } catch (UnexpectedVersionException|NotImplementedException $ex) {
                 $writer(
                     Level::Notice,
-                    "This feature is not available for '{user}@{backend}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                    "This feature is not available for '{identity.user}@{identity.backend}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
                     [
-                        'user' => $userContext->name,
-                        'backend' => $name,
+                        'identity' => [
+                            'user' => $userContext->name,
+                            'backend' => $name,
+                        ],
                         ...exception_log($ex),
                     ],
                 );
             } catch (Throwable $ex) {
                 $writer(
                     Level::Error,
-                    "Exception '{exception.type}' was thrown unhandled during '{user}@{backend}' request to sync '#{id}: {title}' progress. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                    "Exception '{exception.type}' was thrown unhandled during '{identity.user}@{identity.backend}' request to sync '#{id}: {title}' progress. '{exception.message}' at '{exception.file}:{exception.line}'.",
                     [
                         'id' => $item->id,
-                        'backend' => $name,
                         'title' => $item->getName(),
-                        'user' => $userContext->name,
+                        'identity' => [
+                            'backend' => $name,
+                            'user' => $userContext->name,
+                        ],
                         ...exception_log($ex),
                     ],
                 );
@@ -219,12 +235,14 @@ final readonly class ProcessProgressEvent
             return $event;
         }
 
-        $writer(Level::Notice, "Processing '{user}@{backend}' - '#{id}: {title}' watch progress '{progress}' event.", [
+        $writer(Level::Notice, "Processing '{identity.user}@{identity.backend}' - '#{id}: {title}' watch progress '{progress}' event.", [
             'id' => $item->id,
-            'backend' => $item->via,
-            'user' => $userContext->name,
             'title' => $item->getName(),
             'progress' => $progress,
+            'identity' => [
+                'backend' => $item->via,
+                'user' => $userContext->name,
+            ],
         ]);
 
         $http = Container::get(iHttp::class);
@@ -246,13 +264,14 @@ final readonly class ProcessProgressEvent
                     }
 
                     $context = ag($request->extras, 'context', []);
-                    $context['user'] = $userContext->name;
+                    $context['identity']['user'] = $userContext->name;
+                    $context['identity']['backend'] ??= $context['backend'] ?? null;
                     $context['id'] = ag($context, 'item.id', $item->id);
                     $context['progress'] = ag($context, 'item.progress', $progress);
                     $statusCode = $response->getStatusCode();
 
                     if (true === (bool) ag($options, 'trace')) {
-                        $writer(Level::Debug, "Processing '{user}@{backend}' - '#{id}: {item.title}' response.", [
+                        $writer(Level::Debug, "Processing '{identity.user}@{identity.backend}' - '#{id}: {item.title}' response.", [
                             'id' => $context['id'],
                             'url' => ag($context, 'remote.url', '??'),
                             'status_code' => $statusCode,
@@ -265,7 +284,7 @@ final readonly class ProcessProgressEvent
                     if (false === in_array(Status::tryFrom($statusCode), [Status::OK, Status::NO_CONTENT], true)) {
                         $writer(
                             Level::Error,
-                            "Request to change '{user}@{backend}' - '#{id}: {item.title}' watch progress returned with unexpected '{status_code}' status code.",
+                            "Request to change '{identity.user}@{identity.backend}' - '#{id}: {item.title}' watch progress returned with unexpected '{status_code}' status code.",
                             [
                                 ...$context,
                                 'status_code' => $statusCode,
@@ -277,7 +296,7 @@ final readonly class ProcessProgressEvent
 
                     $writer(
                         Level::Notice,
-                        "Updated '{user}@{backend}' '#{id}: {item.title}' watch progress to '{progress}'.",
+                        "Updated '{identity.user}@{identity.backend}' '#{id}: {item.title}' watch progress to '{progress}'.",
                         [
                             ...$context,
                             'status_code' => $statusCode,
@@ -292,14 +311,15 @@ final readonly class ProcessProgressEvent
                     }
 
                     $context = ag($request->extras, 'context', []);
+                    $context['identity']['user'] = $userContext->name;
+                    $context['identity']['backend'] ??= $context['backend'] ?? null;
 
                     $writer(
                         Level::Error,
-                        "Exception '{exception.type}' was thrown unhandled during '{user}@{backend}' request to change watch progress of {item.type} '#{id}: {item.title}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                        "Exception '{exception.type}' was thrown unhandled during '{identity.user}@{identity.backend}' request to change watch progress of {item.type} '#{id}: {item.title}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
                         [
                             ...$context,
                             'id' => ag($context, 'item.id', $item->id),
-                            'user' => $userContext->name,
                             'progress' => ag($context, 'item.progress', $progress),
                             ...exception_log($ex),
                         ],

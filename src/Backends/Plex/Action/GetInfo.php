@@ -49,14 +49,16 @@ final class GetInfo
 
                 $logContext = [
                     'action' => $this->action,
-                    'client' => $context->clientName,
-                    'backend' => $context->backendName,
-                    'user' => $context->userContext->name,
+                    'identity' => [
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                        'user' => $context->userContext->name,
+                    ],
                     'url' => (string) $url,
                 ];
 
                 $this->logger->debug(
-                    message: "{action}: Requesting '{client}: {user}@{backend}' unique identifier.",
+                    message: "{action}: Requesting '{identity.client}: {identity.user}@{identity.backend}' unique identifier.",
                     context: $logContext,
                 );
 
@@ -76,7 +78,7 @@ final class GetInfo
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: "{action}: Request for '{client}: {user}@{backend}' get info returned with unexpected '{status_code}' status code.",
+                            message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' get info returned with unexpected '{status_code}' status code.",
                             context: [
                                 ...$logContext,
                                 'status_code' => $response->getStatusCode(),
@@ -97,7 +99,7 @@ final class GetInfo
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: "{action}: Request for '{client}: {user}@{backend}' get info returned with empty response.",
+                            message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' get info returned with empty response.",
                             context: [...$logContext, 'response' => ['body' => $content]],
                             level: Levels::ERROR,
                         ),
@@ -112,7 +114,7 @@ final class GetInfo
 
                 if (true === $context->trace) {
                     $this->logger->debug(
-                        message: "{action}: Processing '{client}: {user}@{backend}' get info payload.",
+                        message: "{action}: Processing '{identity.client}: {identity.user}@{identity.backend}' get info payload.",
                         context: [...$logContext, 'response' => ['body' => $item]],
                     );
                 }

@@ -28,6 +28,14 @@ final class SearchQuery
 
     private string $action = 'plex.searchQuery';
 
+    /**
+     * Class Constructor.
+     *
+     * @param iHttp&\App\Libs\Extends\HttpClient $http HTTP client for making requests to the backend.
+     * @param iLogger $logger Logger instance for logging.
+     * @param iDB $db Database interface for database operations.
+     * @param PlexGuid $plexGuid Plex GUID handler.
+     */
     public function __construct(
         protected iHttp $http,
         protected iLogger $logger,
@@ -84,13 +92,18 @@ final class SearchQuery
         $logContext = [
             'query' => $query,
             'action' => $this->action,
-            'client' => $context->clientName,
-            'backend' => $context->backendName,
-            'user' => $context->userContext->name,
+            'identity' => [
+                'client' => $context->clientName,
+                'backend' => $context->backendName,
+                'user' => $context->userContext->name,
+            ],
             'url' => (string) $url,
         ];
 
-        $this->logger->debug("{action}: Searching '{client}: {user}@{backend}' libraries for '{query}'.", $logContext);
+        $this->logger->debug(
+            "{action}: Searching '{identity.client}: {identity.user}@{identity.backend}' libraries for '{query}'.",
+            $logContext,
+        );
 
         $response = $this->http->request(
             method: Method::GET,
@@ -105,7 +118,7 @@ final class SearchQuery
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Search request for '{query}' in '{client}: {user}@{backend}' returned with unexpected '{status_code}' status code.",
+                    message: "{action}: Search request for '{query}' in '{identity.client}: {identity.user}@{identity.backend}' returned with unexpected '{status_code}' status code.",
                     context: [
                         ...$logContext,
                         'status_code' => $response->getStatusCode(),
@@ -123,7 +136,7 @@ final class SearchQuery
 
         if ($context->trace) {
             $this->logger->debug(
-                message: "{action}: Parsing Searching '{client}: {user}@{backend}' libraries for '{query}' payload.",
+                message: "{action}: Parsing Searching '{identity.client}: {identity.user}@{identity.backend}' libraries for '{query}' payload.",
                 context: [...$logContext, 'response' => ['body' => $json]],
             );
         }
@@ -144,7 +157,7 @@ final class SearchQuery
                     $entity = $this->createEntity($context, $plexGuid, $item, $opts);
                 } catch (Throwable $e) {
                     $this->logger->error(
-                        message: "{action}: Failed to map '{client}: {user}@{backend}' item to entity. {error}",
+                        message: "{action}: Failed to map '{identity.client}: {identity.user}@{identity.backend}' item to entity. {error}",
                         context: [...$logContext, 'error' => $e->getMessage()],
                     );
                     continue;

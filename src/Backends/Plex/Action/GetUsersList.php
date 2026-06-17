@@ -139,9 +139,11 @@ final class GetUsersList
             $url = $url->withQuery(http_build_query(['pin' => $pin]));
         }
 
-        $this->logger->debug("Requesting '{user}@{backend}' users list.", [
-            'user' => $context->userContext->name,
-            'backend' => $context->backendName,
+        $this->logger->debug("Requesting '{identity.user}@{identity.backend}' users list.", [
+            'identity' => [
+                'user' => $context->userContext->name,
+                'backend' => $context->backendName,
+            ],
             'url' => (string) $url,
         ]);
 
@@ -157,8 +159,10 @@ final class GetUsersList
                 error: new Error(
                     message: $e->getMessage(),
                     context: [
-                        'user' => $context->userContext->name,
-                        'backend' => $context->backendName,
+                        'identity' => [
+                            'user' => $context->userContext->name,
+                            'backend' => $context->backendName,
+                        ],
                     ],
                     level: Levels::ERROR,
                     previous: $e,
@@ -204,9 +208,11 @@ final class GetUsersList
         }
 
         if ($context->trace) {
-            $this->logger->debug("Parsing '{user}@{backend}' home users list payload.", [
-                'user' => $context->userContext->name,
-                'backend' => $context->backendName,
+            $this->logger->debug("Parsing '{identity.user}@{identity.backend}' home users list payload.", [
+                'identity' => [
+                    'user' => $context->userContext->name,
+                    'backend' => $context->backendName,
+                ],
                 'url' => (string) $url,
                 'data' => $json,
             ]);
@@ -335,9 +341,11 @@ final class GetUsersList
             $url = $url->withQuery(http_build_query(['pin' => $pin]));
         }
 
-        $this->logger->debug("Requesting '{user}@{backend}' external users list.", [
-            'user' => $context->userContext->name,
-            'backend' => $context->backendName,
+        $this->logger->debug("Requesting '{identity.user}@{identity.backend}' external users list.", [
+            'identity' => [
+                'user' => $context->userContext->name,
+                'backend' => $context->backendName,
+            ],
             'url' => (string) $url,
         ]);
 
@@ -357,8 +365,10 @@ final class GetUsersList
                 error: new Error(
                     message: $e->getMessage(),
                     context: [
-                        'user' => $context->userContext->name,
-                        'backend' => $context->backendName,
+                        'identity' => [
+                            'user' => $context->userContext->name,
+                            'backend' => $context->backendName,
+                        ],
                     ],
                     level: Levels::ERROR,
                     previous: $e,
@@ -376,9 +386,11 @@ final class GetUsersList
             $url = $url->withQuery(http_build_query(['pin' => $pin]));
         }
 
-        $this->logger->debug("Requesting '{user}@{backend}' external users access-tokens.", [
-            'user' => $context->userContext->name,
-            'backend' => $context->backendName,
+        $this->logger->debug("Requesting '{identity.user}@{identity.backend}' external users access-tokens.", [
+            'identity' => [
+                'user' => $context->userContext->name,
+                'backend' => $context->backendName,
+            ],
             'url' => (string) $url,
         ]);
 
@@ -394,8 +406,10 @@ final class GetUsersList
                 error: new Error(
                     message: $e->getMessage(),
                     context: [
-                        'user' => $context->userContext->name,
-                        'backend' => $context->backendName,
+                        'identity' => [
+                            'user' => $context->userContext->name,
+                            'backend' => $context->backendName,
+                        ],
                     ],
                     level: Levels::ERROR,
                     previous: $e,
@@ -440,8 +454,10 @@ final class GetUsersList
         }
 
         if ($context->trace) {
-            $this->logger->debug("Parsing '{user}@{backend}' external users list payload.", [
-                'backend' => $context->backendName,
+            $this->logger->debug("Parsing '{identity.user}@{identity.backend}' external users list payload.", [
+                'identity' => [
+                    'backend' => $context->backendName,
+                ],
                 'url' => (string) $url,
                 'data' => $data,
             ]);
@@ -516,8 +532,10 @@ final class GetUsersList
         }
 
         if ($context->trace) {
-            $this->logger->debug("Parsing '{user}@{backend}' users list payload.", [
-                'backend' => $context->backendName,
+            $this->logger->debug("Parsing '{identity.user}@{identity.backend}' users list payload.", [
+                'identity' => [
+                    'backend' => $context->backendName,
+                ],
                 'url' => (string) $url,
                 'data' => $json,
             ]);
@@ -603,10 +621,12 @@ final class GetUsersList
 
         throw new InvalidArgumentException(
             r(
-                "Request for '{user}@{backend}' users list returned with unexpected '{status_code}' status code. {tokenType}{extra_msg}",
+                "Request for '{identity.user}@{identity.backend}' users list returned with unexpected '{status_code}' status code. {tokenType}{extra_msg}",
                 [
-                    'user' => $context->userContext->name,
-                    'backend' => $context->backendName,
+                    'identity' => [
+                        'user' => $context->userContext->name,
+                        'backend' => $context->backendName,
+                    ],
                     'status_code' => $response->getStatusCode(),
                     'body' => $response->getContent(false),
                     'extra_msg' => !$extra_msg ? '' : ". {$extra_msg}",

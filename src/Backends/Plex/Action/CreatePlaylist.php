@@ -60,9 +60,11 @@ final class CreatePlaylist
         $machineIdentifier = trim((string) ($context->backendId ?? ''));
         $logContext = [
             'action' => $this->action,
-            'client' => $context->clientName,
-            'backend' => $context->backendName,
-            'user' => $context->userContext->name,
+            'identity' => [
+                'client' => $context->clientName,
+                'backend' => $context->backendName,
+                'user' => $context->userContext->name,
+            ],
             'title' => $title,
         ];
 
@@ -70,7 +72,7 @@ final class CreatePlaylist
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Missing machine identifier for '{client}: {user}@{backend}' playlist create request.",
+                    message: "{action}: Missing machine identifier for '{identity.client}: {identity.user}@{identity.backend}' playlist create request.",
                     context: $logContext,
                     level: Levels::ERROR,
                 ),
@@ -101,7 +103,7 @@ final class CreatePlaylist
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{client}: {user}@{backend}' playlist '{title}' returned with unexpected '{status_code}' status code.",
+                    message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' playlist '{title}' returned with unexpected '{status_code}' status code.",
                     context: [...$logContext, 'status_code' => $response->getStatusCode(), 'url' => (string) $url],
                     level: Levels::ERROR,
                 ),
