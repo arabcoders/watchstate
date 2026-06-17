@@ -24,9 +24,9 @@ use Monolog\LogRecord;
 use Psr\EventDispatcher\EventDispatcherInterface as iDispatcher;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
-use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Output\OutputInterface as iOutput;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Throwable;
 
@@ -70,7 +70,7 @@ final class DispatchCommand extends Command
             ->setDescription('Run queued events.');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    protected function runCommand(iInput $input, iOutput $output): int
     {
         $this->drainTransport((int) $input->getOption('limit'));
         $this->unloadEvents();
@@ -339,13 +339,13 @@ final class DispatchCommand extends Command
         }
     }
 
-    private function toLevel(OutputInterface $output): Level
+    private function toLevel(iOutput $output): Level
     {
         return match ($output->getVerbosity()) {
-            OutputInterface::VERBOSITY_QUIET => Level::Error,
-            OutputInterface::VERBOSITY_NORMAL => Level::Warning,
-            OutputInterface::VERBOSITY_VERBOSE => Level::Notice,
-            OutputInterface::VERBOSITY_VERY_VERBOSE => Level::Info,
+            iOutput::VERBOSITY_QUIET => Level::Error,
+            iOutput::VERBOSITY_NORMAL => Level::Warning,
+            iOutput::VERBOSITY_VERBOSE => Level::Notice,
+            iOutput::VERBOSITY_VERY_VERBOSE => Level::Info,
             default => Level::Debug,
         };
     }

@@ -7,8 +7,8 @@ namespace App\Commands\Events;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use Psr\EventDispatcher\EventDispatcherInterface as iDispatcher;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Input\InputInterface as iInput;
+use Symfony\Component\Console\Output\OutputInterface as iOutput;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 
 #[Cli(command: self::ROUTE)]
@@ -27,7 +27,7 @@ final class ListenersCommand extends Command
         $this->setName(self::ROUTE)->setDescription('Show registered events Listeners.');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    protected function runCommand(iInput $input, iOutput $output): int
     {
         $mode = $input->getOption('output');
         $keys = [];

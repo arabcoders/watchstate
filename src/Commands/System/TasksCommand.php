@@ -452,7 +452,23 @@ final class TasksCommand extends Command
             $ended = make_date();
             $exitCode = $process->getExitCode() ?? self::INVALID;
 
-            // --- Populate event-log ---
+            if (false === $this->viaEvent && $hadChildOutput) {
+                $name = null !== $task ? $task['name'] : implode(' ', $cmd);
+
+                $this->logger->log(
+                    0 === $exitCode ? Level::Info : Level::Error,
+                    "Task '{name}' completed. ({status}) - Took {duration}s",
+                    [
+                        'name' => $name,
+                        'command' => $process->getCommandLine(),
+                        'exit_code' => $exitCode,
+                        'status' => 0 === $exitCode ? 'Success' : 'Failed',
+                        'started_at' => $started->format('D, H:i:s T'),
+                        'ended_at' => $ended->format('D, H:i:s T'),
+                        'duration' => $ended->getTimestamp() - $started->getTimestamp(),
+                    ],
+                );
+            }
 
             if (null !== $this->dispatchEvent && true === $this->viaEvent) {
                 foreach ($capture->getRecords() as $record) {
@@ -477,26 +493,6 @@ final class TasksCommand extends Command
 
                     $this->eventsRepo->save($event);
                 }
-            }
-
-            // --- Console summary (direct CLI only) ---
-
-            if (false === $this->viaEvent && $hadChildOutput) {
-                $name = null !== $task ? $task['name'] : implode(' ', $cmd);
-
-                $this->logger->log(
-                    0 === $exitCode ? Level::Info : Level::Error,
-                    "Task '{name}' completed. ({status}) - Took {duration}s",
-                    [
-                        'name' => $name,
-                        'command' => $process->getCommandLine(),
-                        'exit_code' => $exitCode,
-                        'status' => 0 === $exitCode ? 'Success' : 'Failed',
-                        'started_at' => $started->format('D, H:i:s T'),
-                        'ended_at' => $ended->format('D, H:i:s T'),
-                        'duration' => $ended->getTimestamp() - $started->getTimestamp(),
-                    ],
-                );
             }
 
             if ($input->hasOption('save-log') && $input->getOption('save-log') && $hadChildOutput) {

@@ -570,11 +570,13 @@ final class Initializer
         if (false === empty($uri->getQuery())) {
             $query = [];
             parse_str($uri->getQuery(), $query);
-            if (true === ag_exists($query, 'apikey')) {
-                // @mago-expect lint:no-literal-password
-                $query['apikey'] = '....';
-                $uri = $uri->withQuery(http_build_query($query));
+            foreach (['apikey', 'api_key', 'token', 'ws_token', 'access_token', 'password', 'secret'] as $paramName) {
+                if (false === ag_exists($query, $paramName)) {
+                    continue;
+                }
+                $query[$paramName] = '...';
             }
+            $uri = $uri->withQuery(http_build_query($query));
         }
 
         $context = array_replace_recursive([

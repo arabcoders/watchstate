@@ -69,7 +69,7 @@ final class DiffCommand extends Command
      * @return int Returns 0 on success or an error code on failure.
      * @throws InvalidArgumentException
      */
-    protected function execute(iInput $input, iOutput $output): int
+    protected function runCommand(iInput $input, iOutput $output): int
     {
         $filter = $input->getOption('filter');
         $saveFile = $input->getOption('save');
