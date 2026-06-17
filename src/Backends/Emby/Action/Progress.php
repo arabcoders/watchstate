@@ -341,11 +341,7 @@ class Progress
                                             message: "{action}: Request to mark '{client}: {user}@{backend}' {item.type} '{item.title}' as unplayed before progress update returned with unexpected '{status_code}' status code.",
                                             context: [
                                                 ...$unwatchContext,
-                                                'event_name' => 'backend.response.failed',
-                                                'subsystem' => 'backend',
-                                                'operation' => 'progress_unwatch',
-                                                'outcome' => 'failed',
-                                                'reason' => 'unexpected_status',
+                                                'error' => 'unexpected_status',
                                                 'status_code' => $statusCode,
                                             ],
                                         );
@@ -358,14 +354,10 @@ class Progress
                                 error: function (Throwable $e) use ($unwatchContext): array {
                                     $this->logger->error(
                                         ...lw(
-                                            message: "Exception was thrown during '{client}: {user}@{backend}' unplayed request before progress update.",
+                                            message: "{action}: Exception was thrown during '{client}: {user}@{backend}' unplayed request before progress update.",
                                             context: [
                                                 ...$unwatchContext,
-                                                'event_name' => 'backend.client.request_failed',
-                                                'subsystem' => 'backend',
-                                                'operation' => 'progress_unwatch',
-                                                'outcome' => 'failed',
-                                                'reason' => 'request_exception',
+                                                'error' => 'request_exception',
                                                 ...exception_log($e),
                                             ],
                                             e: $e,

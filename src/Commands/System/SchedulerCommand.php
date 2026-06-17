@@ -81,10 +81,7 @@ final class SchedulerCommand extends Command
                 }
             }
         } catch (Throwable $e) {
-            $this->logger->error('Scheduler encountered an error: {exception.message}', [
-                'event_name' => 'task.scheduler_failed',
-                ...exception_log($e),
-            ]);
+            $this->logger->error('Scheduler encountered an error: {exception.message}', exception_log($e));
         } finally {
             if (file_exists($pidFile)) {
                 unlink($pidFile);

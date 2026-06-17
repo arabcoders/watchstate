@@ -25,10 +25,7 @@ final class BackendMetadataPruner
     {
         foreach (get_users_context($this->mapper, $this->logger) as $userContext) {
             $this->logger->debug("Scanning deleted backend metadata for user '{user}'.", [
-                'event_name' => 'state.metadata_prune.scan_started',
-                'subsystem' => 'state',
-                'operation' => 'prune_deleted_backend_metadata',
-                'outcome' => 'started',
+                'operation' => 'prune.metadata',
                 'user' => $userContext->name,
                 'execute' => $execute,
             ]);
@@ -37,11 +34,8 @@ final class BackendMetadataPruner
                 $stats = $this->pruneContext($userContext, $execute);
             } catch (Throwable $e) {
                 $this->logger->error("Failed to prune deleted backend metadata for user '{user}'.", [
-                    'event_name' => 'state.metadata_prune.failed',
-                    'subsystem' => 'state',
-                    'operation' => 'prune_deleted_backend_metadata',
-                    'outcome' => 'failed',
-                    'reason' => 'exception',
+                    'operation' => 'prune.metadata',
+                    'error' => 'exception',
                     'user' => $userContext->name,
                     ...exception_log($e),
                 ]);
@@ -50,11 +44,8 @@ final class BackendMetadataPruner
 
             if (1 > $stats['references'] && 1 > $stats['records']) {
                 $this->logger->debug("No deleted backend metadata found for user '{user}'.", [
-                    'event_name' => 'state.metadata_prune.skipped',
-                    'subsystem' => 'state',
-                    'operation' => 'prune_deleted_backend_metadata',
-                    'outcome' => 'skipped',
-                    'reason' => 'nothing_to_prune',
+                    'operation' => 'prune.metadata',
+                    'error' => 'nothing_to_prune',
                     'user' => $userContext->name,
                     'backends' => $stats['backends'],
                 ]);
@@ -66,10 +57,7 @@ final class BackendMetadataPruner
                     ? "Pruned '{references}' deleted backend metadata references and '{records}' empty state records for user '{user}'."
                     : "Found '{references}' deleted backend metadata references and '{records}' empty state records for user '{user}'.",
                 [
-                    'event_name' => 'state.metadata_prune.completed',
-                    'subsystem' => 'state',
-                    'operation' => 'prune_deleted_backend_metadata',
-                    'outcome' => true === $execute ? 'completed' : 'dry_run',
+                    'operation' => 'prune.metadata',
                     'user' => $userContext->name,
                     'references' => $stats['references'],
                     'records' => $stats['records'],
@@ -90,20 +78,14 @@ final class BackendMetadataPruner
 
         if ([] === $backends) {
             $this->logger->debug("No stale backend metadata keys found for user '{user}'.", [
-                'event_name' => 'state.metadata_prune.backends_skipped',
-                'subsystem' => 'state',
-                'operation' => 'find_deleted_backend_metadata',
-                'outcome' => 'skipped',
-                'reason' => 'no_stale_backends',
+                'operation' => 'prune.metadata',
+                'error' => 'no_stale_backends',
                 'user' => $userContext->name,
                 'active_backends' => array_keys($userContext->config->getAll()),
             ]);
         } else {
             $this->logger->debug("Found stale backend metadata keys for user '{user}'.", [
-                'event_name' => 'state.metadata_prune.backends_found',
-                'subsystem' => 'state',
-                'operation' => 'find_deleted_backend_metadata',
-                'outcome' => 'found',
+                'operation' => 'prune.metadata',
                 'user' => $userContext->name,
                 'backends' => $backends,
             ]);
@@ -176,14 +158,11 @@ final class BackendMetadataPruner
         $matches = $this->countBackendRows($db, $path);
 
         $this->logger->debug("Found '{count}' state records with deleted backend metadata for '{backend}'.", [
-            'event_name' => 'state.metadata_prune.backend_checked',
-            'subsystem' => 'state',
-            'operation' => 'prune_deleted_backend_metadata',
-            'outcome' => 0 < $matches ? 'found' : 'skipped',
-            'reason' => 0 < $matches ? null : 'no_matching_records',
+            'operation' => 'prune.metadata',
             'backend' => $backend,
             'count' => $matches,
             'execute' => $execute,
+            ...(0 < $matches ? [] : ['error' => 'no_matching_records']),
         ]);
 
         if (true !== $execute || 1 > $matches) {
@@ -246,10 +225,7 @@ final class BackendMetadataPruner
         $removed = $stmt->rowCount();
 
         $this->logger->debug("Removed deleted backend metadata for '{backend}' from '{count}' state records.", [
-            'event_name' => 'state.metadata_prune.backend_completed',
-            'subsystem' => 'state',
-            'operation' => 'prune_deleted_backend_metadata',
-            'outcome' => 'completed',
+            'operation' => 'prune.metadata',
             'backend' => $backend,
             'count' => $removed,
         ]);

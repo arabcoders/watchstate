@@ -113,7 +113,7 @@ class PlaylistSyncService
 
             $this->logger->notice("PLAYLIST: Playlist reconciliation for '{user}' stopped after fetch phase.", [
                 'user' => $userContext->name,
-                'reason' => $this->resolveEarlyStopReason($dryRun, $sourceBackends, $targetBackends),
+                'error' => $this->resolveEarlyStopReason($dryRun, $sourceBackends, $targetBackends),
                 'results' => $this->summarizeResultTotals($summary),
                 'duration' => round(microtime(true) - $syncStart, 4),
                 'memory' => $this->getMemoryContext(),

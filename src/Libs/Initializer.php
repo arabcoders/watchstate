@@ -582,10 +582,6 @@ final class Initializer
         }
 
         $context = array_replace_recursive([
-            'event_name' => $this->accessLogEventName($level),
-            'subsystem' => 'http',
-            'operation' => 'handle_request',
-            'outcome' => $this->isFailureLevel($level) ? 'failed' : 'completed',
             'request' => [
                 'method' => $request->getMethod(),
                 'path' => $uri->getPath(),
@@ -629,28 +625,6 @@ final class Initializer
         }
 
         return str_ends_with(strtolower($filename), '.jsonl');
-    }
-
-    private function accessLogEventName(int|string|Level $level): string
-    {
-        return $this->isFailureLevel($level) ? 'http.request.failed' : 'http.request.completed';
-    }
-
-    private function isFailureLevel(int|string|Level $level): bool
-    {
-        if ($level instanceof Level) {
-            return $level->value >= Level::Error->value;
-        }
-
-        if (is_int($level)) {
-            return $level >= Level::Error->value;
-        }
-
-        try {
-            return Level::fromName($level)->value >= Level::Error->value;
-        } catch (\UnhandledMatchError) {
-            return false;
-        }
     }
 
     private function formatLog(iRequest $request, iResponse $response, ?string $message = null): string

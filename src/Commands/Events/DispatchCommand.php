@@ -105,10 +105,6 @@ final class DispatchCommand extends Command
                 $item = $this->queue->materialize($envelope);
                 $this->transport->ack($envelope);
                 $this->logger->info("Materialized queued event '{event}'.", [
-                    'event_name' => 'event.queue.materialized',
-                    'subsystem' => 'events',
-                    'operation' => 'queue.materialize',
-                    'outcome' => 'success',
                     'event' => $envelope->event,
                     'queue_id' => $envelope->id,
                     'item_id' => $item->id,
@@ -125,20 +121,12 @@ final class DispatchCommand extends Command
 
         if (true === $isLock) {
             $this->transport->release($envelope);
-            $outcome = 'retry';
-            $reason = 'database_locked';
         } else {
             $this->transport->fail($envelope);
-            $outcome = 'failed';
-            $reason = 'materialize_failed';
         }
 
         $this->logger->error("Failed to materialize queued event '{event}'.", [
-            'event_name' => 'event.queue.materialize_failed',
-            'subsystem' => 'events',
-            'operation' => 'queue.materialize',
-            'outcome' => $outcome,
-            'reason' => $reason,
+            'error' => true === $isLock ? 'database_locked' : 'materialize_failed',
             'event' => $envelope->event,
             'queue_id' => $envelope->id,
             ...exception_log($e),
