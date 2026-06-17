@@ -1,9 +1,65 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "22a909ebce4b8add6b984655ea01fda4f28e79cd",
-    "date": "2026-06-15T14:59:19+00:00",
+    "full_sha": "9b8ecfd9a25561d38fe9ff295c5f65b725ba8e92",
+    "date": "2026-06-17T05:42:46+00:00",
     "commits": [
+      {
+        "sha": "9b8ecfd9",
+        "full_sha": "9b8ecfd9a25561d38fe9ff295c5f65b725ba8e92",
+        "message": "refactor: add label for actions in logs",
+        "author": "arabcoders",
+        "date": "2026-06-17T05:42:46+00:00"
+      },
+      {
+        "sha": "da657b8d",
+        "full_sha": "da657b8df344cf6c722718d8b4e835776b7c0777",
+        "message": "refactor: standardize input/output interface aliases across command classes",
+        "author": "arabcoders",
+        "date": "2026-06-17T04:34:12+00:00"
+      },
+      {
+        "sha": "3d3d9b1e",
+        "full_sha": "3d3d9b1e3023c42592f61ba53f018c3fd828c3e4",
+        "message": "fix: ignore empty log files in logs/recent",
+        "author": "arabcoders",
+        "date": "2026-06-16T19:25:18+00:00"
+      },
+      {
+        "sha": "10c8e47b",
+        "full_sha": "10c8e47ba5e483fe562eac3f7704caec09fea737",
+        "message": "fix: missing task completion log",
+        "author": "arabcoders",
+        "date": "2026-06-16T19:16:53+00:00"
+      },
+      {
+        "sha": "79d34fef",
+        "full_sha": "79d34fef95561867f9d38453cb0a557d9659e0b1",
+        "message": "refactor: update tests to reflect jsonl logging",
+        "author": "arabcoders",
+        "date": "2026-06-16T18:51:49+00:00"
+      },
+      {
+        "sha": "8b61a7a2",
+        "full_sha": "8b61a7a2d582f7d8f54191c517252eb04582f2e8",
+        "message": "refactor: update UI to account for jsonl logging",
+        "author": "arabcoders",
+        "date": "2026-06-16T18:51:25+00:00"
+      },
+      {
+        "sha": "9e1a9f5f",
+        "full_sha": "9e1a9f5f68fea8cf3aa9c676353b17d81d10ac0d",
+        "message": "refactor: command output through logger pipeline",
+        "author": "arabcoders",
+        "date": "2026-06-16T18:50:33+00:00"
+      },
+      {
+        "sha": "67c748ef",
+        "full_sha": "67c748efe66408576f2269681e792cf26d520716",
+        "message": "feat: add jsonl logging infra",
+        "author": "arabcoders",
+        "date": "2026-06-16T18:50:05+00:00"
+      },
       {
         "sha": "22a909eb",
         "full_sha": "22a909ebce4b8add6b984655ea01fda4f28e79cd",
