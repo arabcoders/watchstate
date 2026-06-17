@@ -12,16 +12,24 @@
       </span>
     </UTooltip>
 
-    <UButton
-      v-if="showDetails"
-      color="neutral"
-      variant="ghost"
-      size="xs"
-      icon="i-lucide-panel-right-open"
-      aria-label="Open log details"
-      class="inline-flex align-[-0.2em] opacity-70 hover:opacity-100"
-      @click="$emit('details', log)"
-    />
+    <UDropdownMenu
+      v-if="showDetails && menuItems.length > 0"
+      :items="menuItems"
+      :content="{ align: 'start' }"
+      :modal="false"
+    >
+      <UButton
+        color="neutral"
+        variant="ghost"
+        size="xs"
+        icon="i-lucide-ellipsis-vertical"
+        trailing-icon="i-lucide-chevron-down"
+        class="inline-flex h-5! align-[-0.2em] opacity-70 hover:opacity-100"
+        :ui="{ base: 'min-h-0 min-w-0', leadingIcon: 'size-3', trailingIcon: 'size-3' }"
+      >
+        <span class="text-[10px] font-medium">Actions</span>
+      </UButton>
+    </UDropdownMenu>
 
     <span
       :class="[logLevelBadgeClass(getLogLevel(log.level)), compact ? 'w-16! text-[9px]' : '']"
@@ -44,7 +52,9 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { ServerJsonLogEntry } from '~/types';
+import { makeEventName } from '~/utils';
 import {
   getLogLevel,
   LOG_LEVEL_ICON,
@@ -53,13 +63,59 @@ import {
   logTimeTitle,
 } from '~/utils/logs';
 
-defineProps<{
+const props = defineProps<{
   log: ServerJsonLogEntry;
   showDetails?: boolean;
   compact?: boolean;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   details: [entry: ServerJsonLogEntry];
+  openEvent: [eventId: string];
 }>();
+
+const eventId = computed<string | null>(() => {
+  const fields = props.log.fields;
+  if (!fields) {
+    return null;
+  }
+
+  const fromNested = fields['event.id'];
+  if ('string' === typeof fromNested && '' !== fromNested) {
+    return fromNested;
+  }
+
+  const fromFlat = fields['event_id'];
+  if ('string' === typeof fromFlat && '' !== fromFlat) {
+    return fromFlat;
+  }
+
+  return null;
+});
+
+type MenuItem = {
+  label: string;
+  icon: string;
+  onSelect: () => void;
+};
+
+const menuItems = computed<Array<Array<MenuItem>>>(() => {
+  const group: Array<MenuItem> = [
+    {
+      label: 'Log details',
+      icon: 'i-lucide-panel-right-open',
+      onSelect: () => emit('details', props.log),
+    },
+  ];
+
+  if (eventId.value) {
+    group.push({
+      label: `Event #${makeEventName(eventId.value)}`,
+      icon: 'i-lucide-activity',
+      onSelect: () => emit('openEvent', eventId.value as string),
+    });
+  }
+
+  return [group];
+});
 </script>

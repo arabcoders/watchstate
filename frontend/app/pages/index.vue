@@ -297,6 +297,7 @@
                     :compact="true"
                     :show-details="true"
                     @details="openLogDetails"
+                    @open-event="openEventFromLog"
                   />
                 </p>
               </div>
@@ -308,7 +309,11 @@
 
     <UModal v-model:open="eventViewOpen" :title="eventViewTitle" :ui="eventViewModalUi">
       <template #body>
-        <EventView v-if="selectedEventId" :id="selectedEventId" />
+        <EventView
+          v-if="selectedEventId"
+          :id="selectedEventId"
+          @open-event="(id) => (selectedEventId = id)"
+        />
       </template>
     </UModal>
 
@@ -399,6 +404,10 @@ const normalizeDashboardEntries = (
 const openLogDetails = (entry: ServerJsonLogEntry): void => {
   selectedLog.value = entry;
   detailsOpen.value = true;
+};
+
+const openEventFromLog = (eventId: string): void => {
+  selectedEventId.value = eventId;
 };
 
 const setLogContainerRef = (filename: string, el: HTMLElement | null): void => {

@@ -270,6 +270,7 @@
                     :compact="true"
                     :show-details="true"
                     @details="openLogDetails"
+                    @open-event="(id) => emit('openEvent', id)"
                   />
                 </p>
               </template>
@@ -360,6 +361,7 @@ const emit = defineEmits<{
   closeOverlay: [];
   delete: [EventsItem];
   deleted: [EventsItem];
+  openEvent: [eventId: string];
 }>();
 
 const props = defineProps<{ id: string }>();

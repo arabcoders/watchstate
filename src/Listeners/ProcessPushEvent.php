@@ -65,16 +65,16 @@ final readonly class ProcessPushEvent
         }
 
         if (null === ($item = $userContext->db->get(Container::get(iState::class)::fromArray($e->getData())))) {
-            $writer(Level::Error, "Item '{user}: {id}' is not found or has been deleted.", [
+            $writer(Level::Error, "Item '{user}: {item_id}' is not found or has been deleted.", [
                 'user' => $user,
-                'id' => ag($e->getData(), 'id', '?'),
+                'item_id' => ag($e->getData(), 'id', '?'),
             ]);
             return $e;
         }
 
-        $writer(Level::Notice, "Processing '{user}@{via}' - '#{id}: {title}' push event.", [
+        $writer(Level::Notice, "Processing '{user}@{via}' - '#{item_id}: {title}' push event.", [
             'user' => $user,
-            'id' => $item->id,
+            'item_id' => $item->id,
             'via' => $item->via,
             'title' => $item->getName(),
         ]);
@@ -183,9 +183,9 @@ final readonly class ProcessPushEvent
             return $e;
         }
 
-        $writer(Level::Notice, "Processing '{user}@{via}' - '#{id}: {title}' push event. {data}", [
+        $writer(Level::Notice, "Processing '{user}@{via}' - '#{item_id}: {title}' push event. {data}", [
             'user' => $user,
-            'id' => $item->id,
+            'item_id' => $item->id,
             'via' => $item->via,
             'title' => $item->getName(),
             'data' => array_to_string([

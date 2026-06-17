@@ -234,7 +234,7 @@ final class DispatchCommand extends Command
 
             $ref = new DataEvent($event)->setVisibleLevel($visibleLevel);
 
-            $ref->addLog(Level::Notice, "Dispatching Event: '{event}' queued at '{date}'.", $log_data);
+            $ref->addLog(Level::Notice, $message, $log_data);
             $ref->resetVisibleLogs();
 
             $this->repo->save($event);

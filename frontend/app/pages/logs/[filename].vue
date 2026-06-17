@@ -187,6 +187,7 @@
                   :log="entry.log"
                   :show-details="true"
                   @details="openLogDetails"
+                  @open-event="(id) => (selectedEventId = id)"
                 />
               </p>
             </div>
@@ -217,7 +218,11 @@
 
     <UModal v-model:open="eventViewOpen" :title="eventViewTitle" :ui="eventViewModalUi">
       <template #body>
-        <EventView v-if="selectedEventId" :id="selectedEventId" />
+        <EventView
+          v-if="selectedEventId"
+          :id="selectedEventId"
+          @open-event="(id) => (selectedEventId = id)"
+        />
       </template>
     </UModal>
 

@@ -333,6 +333,7 @@
           v-if="selectedEventId"
           :id="selectedEventId"
           @delete="() => void closeEventView()"
+          @open-event="(id) => (selectedEventId = id)"
         />
       </template>
     </UModal>
