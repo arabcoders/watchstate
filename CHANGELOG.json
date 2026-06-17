@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "89bd93a47e5daf03c218e2926b305307420d9c32",
-    "date": "2026-06-17T16:35:12+00:00",
+    "full_sha": "031a7ad3c999478192b89cd7b15b732d5fb613f9",
+    "date": "2026-06-17T17:47:53+00:00",
     "commits": [
+      {
+        "sha": "031a7ad3",
+        "full_sha": "031a7ad3c999478192b89cd7b15b732d5fb613f9",
+        "message": "refactor: remove metrics like keys from logs context.",
+        "author": "arabcoders",
+        "date": "2026-06-17T17:47:53+00:00"
+      },
       {
         "sha": "89bd93a4",
         "full_sha": "89bd93a47e5daf03c218e2926b305307420d9c32",
