@@ -150,7 +150,7 @@ class GenerateAccessToken
                 message: "{action}: Parsing '{client}: {user}@{backend}' - '{username}' access token response payload.",
                 context: [
                     ...$logContext,
-                    'trace' => $json,
+                    'data' => $json,
                 ],
             );
         }

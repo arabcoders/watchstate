@@ -97,7 +97,7 @@ final class IndexCommand extends Command
         try {
             $users = select_users($input->getOption('user'));
         } catch (RuntimeException $e) {
-            $this->logger->error($e->getMessage(), ['exception' => $e]);
+            $this->logger->error($e->getMessage(), exception_log($e));
 
             return self::FAILURE;
         }

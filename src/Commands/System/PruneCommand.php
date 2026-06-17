@@ -236,10 +236,9 @@ class PruneCommand extends Command
 
     protected function reportPrunerError(array $pruner, Throwable $e, OutputInterface $output): void
     {
-        $this->logger->warning("Skipping pruner '{name}'. {error}", [
+        $this->logger->warning("Skipping pruner '{name}'. {exception.message}", [
             'name' => ag($pruner, 'name', 'unknown'),
-            'error' => $e->getMessage(),
-            'exception' => $e,
+            ...exception_log($e),
         ]);
     }
 

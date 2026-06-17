@@ -317,16 +317,14 @@ final class ProcessWebhookEvent
                 $this->write(
                     request: $perUserRequest,
                     level: $this->level($e),
-                    message: "Failed to process '{user}@{backend}' {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'. {trace}",
+                    message: "Failed to process '{user}@{backend}' {item.type} '{item.title}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
                     context: [
                         'user' => $target['userContext']->name,
                         'backend' => $target['backendName'],
-                        'trace' => json_encode($e->getTrace(), flags: JSON_UNESCAPED_SLASHES),
                         'item' => [
                             'title' => $entity->getName(),
                             'type' => $entity->type,
                         ],
-                        'msg' => $e->getMessage(),
                         ...exception_log($e),
                     ],
                 );

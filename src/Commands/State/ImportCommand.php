@@ -193,7 +193,7 @@ class ImportCommand extends Command
         try {
             $selectedUsers = select_users($input->getOption('user'));
         } catch (RuntimeException $e) {
-            $this->logger->error($e->getMessage(), ['exception' => $e]);
+            $this->logger->error($e->getMessage(), exception_log($e));
 
             return self::FAILURE;
         }
@@ -404,7 +404,7 @@ class ImportCommand extends Command
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "SYSTEM: Import requests for '{user}' backends failed. '{error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "SYSTEM: Import requests for '{user}' backends failed. '{exception.type}' with message '{exception.message}' at '{exception.file}:{exception.line}'.",
                         context: [
                             'user' => $userContext->name,
                             ...exception_log($e),

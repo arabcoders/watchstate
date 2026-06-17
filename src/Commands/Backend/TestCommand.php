@@ -119,10 +119,7 @@ class TestCommand extends Command
             $result = $this->invokeAction($backend, $action, $params);
             $normalized = $this->normalizeValue($result);
         } catch (Throwable $e) {
-            $output->writeln(r('<error>{kind}: {message}</error>', [
-                'kind' => $e::class,
-                'message' => $e->getMessage(),
-            ]));
+            $output->writeln(r('<error>{exception.type}: {exception.message}</error>', exception_log($e)));
 
             return self::FAILURE;
         }

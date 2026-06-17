@@ -227,22 +227,10 @@ final class PDOAdapter implements iDB
                     throw $e;
                 }
                 $this->logger->error(
-                    message: "PDOAdapter: Exception '{error.kind}' was thrown unhandled. '{error.message}' at '{error.file}:{error.line}'.",
+                    message: "PDOAdapter: Exception '{exception.type}' was thrown unhandled. '{exception.message}' at '{exception.file}:{exception.line}'.",
                     context: [
                         'entity' => $entity->getAll(),
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
-                        'exception' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'trace' => $e->getTrace(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
+                        ...exception_log($e),
                         'last' => $this->db->getLastStatement(),
                     ],
                 );
@@ -456,22 +444,10 @@ final class PDOAdapter implements iDB
                     throw $e;
                 }
                 $this->logger->error(
-                    message: "PDOAdapter: Exception '{error.kind}' was thrown unhandled. '{error.message}' at '{error.file}:{error.line}'.",
+                    message: "PDOAdapter: Exception '{exception.type}' was thrown unhandled. '{exception.message}' at '{exception.file}:{exception.line}'.",
                     context: [
                         'entity' => $entity->getAll(),
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
-                        'exception' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'trace' => $e->getTrace(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
+                        ...exception_log($e),
                         'last' => $this->db->getLastStatement(),
                     ],
                 );
@@ -505,22 +481,10 @@ final class PDOAdapter implements iDB
             $this->db->query('DELETE FROM state WHERE id = :id', ['id' => (int) $id]);
         } catch (PDOException $e) {
             $this->logger->error(
-                message: "PDOAdapter: Exception '{error.kind}' was thrown unhandled. '{error.message}' at '{error.file}:{error.line}'.",
+                message: "PDOAdapter: Exception '{exception.type}' was thrown unhandled. '{exception.message}' at '{exception.file}:{exception.line}'.",
                 context: [
                     'entity' => $entity->getAll(),
-                    'error' => [
-                        'kind' => $e::class,
-                        'line' => $e->getLine(),
-                        'message' => $e->getMessage(),
-                        'file' => after($e->getFile(), ROOT_PATH),
-                    ],
-                    'exception' => [
-                        'kind' => $e::class,
-                        'line' => $e->getLine(),
-                        'trace' => $e->getTrace(),
-                        'message' => $e->getMessage(),
-                        'file' => after($e->getFile(), ROOT_PATH),
-                    ],
+                    ...exception_log($e),
                 ],
             );
             return false;
@@ -553,22 +517,10 @@ final class PDOAdapter implements iDB
                 } catch (PDOException $e) {
                     $actions['failed']++;
                     $this->logger->error(
-                        message: "PDOAdapter: Exception '{error.kind}' was thrown unhandled. '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "PDOAdapter: Exception '{exception.type}' was thrown unhandled. '{exception.message}' at '{exception.file}:{exception.line}'.",
                         context: [
                             'entity' => $entity->getAll(),
-                            'error' => [
-                                'kind' => $e::class,
-                                'line' => $e->getLine(),
-                                'message' => $e->getMessage(),
-                                'file' => after($e->getFile(), ROOT_PATH),
-                            ],
-                            'exception' => [
-                                'kind' => $e::class,
-                                'line' => $e->getLine(),
-                                'trace' => $e->getTrace(),
-                                'message' => $e->getMessage(),
-                                'file' => after($e->getFile(), ROOT_PATH),
-                            ],
+                            ...exception_log($e),
                         ],
                     );
                 }

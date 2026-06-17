@@ -63,8 +63,7 @@ final class RemoteHandler extends AbstractProcessingHandler
                 'json' => [
                     'id' => generate_uuid(),
                     'message' => $record->message,
-                    'trace' => ag($record->context, 'trace', []),
-                    'structured' => ag($record->context, 'structured', []),
+                    'trace' => ag($record->context, 'exception.trace', []),
                     'server' => ag($_SERVER ?? [], ['HTTP_HOST', 'SERVER_NAME'], 'watchstate.cli'),
                     'context' => $server,
                     'raw' => $record->toArray(),

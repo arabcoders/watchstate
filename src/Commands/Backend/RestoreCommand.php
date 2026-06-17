@@ -169,7 +169,7 @@ class RestoreCommand extends Command
         try {
             $userContext = get_user_context(user: $userName, mapper: $mapper, logger: $this->logger);
         } catch (RuntimeException $e) {
-            $this->logger->error($e->getMessage(), ['exception' => $e]);
+            $this->logger->error($e->getMessage(), exception_log($e));
             return self::FAILURE;
         }
 
@@ -432,16 +432,11 @@ class RestoreCommand extends Command
             return self::SUCCESS;
         } catch (Throwable $e) {
             $this->logger->error(
-                "SYSTEM: Unhandled exception '{error.kind}' was thrown during '{user}@{backend}' restore operation. '{error.message}' at '{error.file}:{error.line}'.",
+                "SYSTEM: Unhandled exception '{exception.type}' was thrown during '{user}@{backend}' restore operation. '{exception.message}' at '{exception.file}:{exception.line}'.",
                 [
                     'user' => $userContext->name,
                     'backend' => $name,
-                    'error' => [
-                        'kind' => $e::class,
-                        'line' => $e->getLine(),
-                        'message' => $e->getMessage(),
-                        'file' => after($e->getFile(), ROOT_PATH),
-                    ],
+                    ...exception_log($e),
                 ],
             );
 

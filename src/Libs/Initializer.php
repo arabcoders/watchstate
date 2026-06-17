@@ -143,12 +143,10 @@ final class Initializer
         });
 
         set_exception_handler(static function (Throwable $e) use ($logger) {
-            $logger->error(message: '{class}: {error} ({file}:{line}).' . PHP_EOL, context: [
-                'class' => $e::class,
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ]);
+            $logger->error(
+                message: '{exception.type}: {exception.message} ({exception.file}:{exception.line}).' . PHP_EOL,
+                context: exception_log($e),
+            );
             exit(1);
         });
 
@@ -159,12 +157,36 @@ final class Initializer
 
             gc_collect_cycles();
 
-            $logger->error(message: "{class}: {error} at '{file}:{line}'. '{URI}'", context: [
-                'class' => 'PHP.Engine',
-                'error' => $error['message'] ?? 'Unknown error',
-                'file' => $error['file'] ?? 'Unknown file',
-                'line' => $error['line'] ?? 'Unknown line',
-                'URI' => before($_SERVER['REQUEST_URI'] ?? '', '?'),
+            $type = $error['type'] ?? 0;
+
+            $logger->error(message: "{exception.type}: {exception.message} at '{exception.file}:{exception.line}'. '{request.uri}'", context: [
+                'exception' => [
+                    'type' => match ($type) {
+                        E_ERROR => 'E_ERROR',
+                        E_WARNING => 'E_WARNING',
+                        E_PARSE => 'E_PARSE',
+                        E_NOTICE => 'E_NOTICE',
+                        E_CORE_ERROR => 'E_CORE_ERROR',
+                        E_CORE_WARNING => 'E_CORE_WARNING',
+                        E_COMPILE_ERROR => 'E_COMPILE_ERROR',
+                        E_COMPILE_WARNING => 'E_COMPILE_WARNING',
+                        E_USER_ERROR => 'E_USER_ERROR',
+                        E_USER_WARNING => 'E_USER_WARNING',
+                        E_USER_NOTICE => 'E_USER_NOTICE',
+                        E_STRICT => 'E_STRICT',
+                        E_RECOVERABLE_ERROR => 'E_RECOVERABLE_ERROR',
+                        E_DEPRECATED => 'E_DEPRECATED',
+                        E_USER_DEPRECATED => 'E_USER_DEPRECATED',
+                        default => sprintf('UNKNOWN_ERROR_TYPE(%d)', $type),
+                    },
+                    'message' => $error['message'] ?? 'Unknown error',
+                    'file' => $error['file'] ?? 'Unknown file',
+                    'line' => $error['line'] ?? 'Unknown line',
+                    'trace' => [],
+                ],
+                'request' => [
+                    'uri' => before($_SERVER['REQUEST_URI'] ?? '', '?'),
+                ],
             ]);
         });
 
@@ -246,12 +268,7 @@ final class Initializer
             );
 
             if (Status::SERVICE_UNAVAILABLE->value === $statusCode) {
-                Container::get(iLogger::class)->error($e->getMessage(), [
-                    'kind' => $e::class,
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'trace' => $e->getTrace(),
-                ]);
+                Container::get(iLogger::class)->error($e->getMessage(), exception_log($e));
             }
 
             $this->write(
@@ -263,25 +280,10 @@ final class Initializer
             $response = api_error(
                 message: 'Unable to serve request check logs.',
                 httpCode: Status::SERVICE_UNAVAILABLE,
-                body: true !== (bool) Config::get('debug.enabled', false)
-                    ? []
-                    : [
-                        'exception' => [
-                            'message' => $e->getMessage(),
-                            'kind' => $e::class,
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'trace' => $e->getTrace(),
-                        ],
-                    ],
+                body: true !== (bool) Config::get('debug.enabled', false) ? [] : exception_log($e),
             );
 
-            Container::get(iLogger::class)->error($e->getMessage(), [
-                'kind' => $e::class,
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTrace(),
-            ]);
+            Container::get(iLogger::class)->error($e->getMessage(), exception_log($e));
 
             $this->write($request, Level::Error, $this->formatLog($request, $response));
         }

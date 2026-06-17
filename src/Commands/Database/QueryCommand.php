@@ -81,10 +81,7 @@ class QueryCommand extends Command
 
             return self::SUCCESS;
         } catch (Throwable $e) {
-            $output->writeln(r('<error>{kind}: {message}</error>', [
-                'kind' => $e::class,
-                'message' => $e->getMessage(),
-            ]));
+            $output->writeln(r('<error>{exception.type}: {exception.message}</error>', exception_log($e)));
 
             return self::FAILURE;
         }

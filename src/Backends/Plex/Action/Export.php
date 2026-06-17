@@ -83,15 +83,10 @@ final class Export extends Import
             } catch (InvalidArgumentException $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "{action}: Failed to parse '{client}: {user}@{backend}' item response. '{error.kind}' with '{error.message}' at '{error.file}:{error.line}' ",
+                        message: "{action}: Failed to parse '{client}: {user}@{backend}' item response. '{exception.type}' with '{exception.message}' at '{exception.file}:{exception.line}' ",
                         context: [
                             ...$logContext,
-                            'error' => [
-                                'kind' => $e::class,
-                                'line' => $e->getLine(),
-                                'message' => $e->getMessage(),
-                                'file' => after($e->getFile(), ROOT_PATH),
-                            ],
+                            ...exception_log($e),
                             'response' => ['body' => $item],
                         ],
                         e: $e,
@@ -247,7 +242,7 @@ final class Export extends Import
                     error: function (Throwable $e) use ($requestContext): array {
                         $this->logger->error(
                             ...lw(
-                                message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' request to change play state of {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                                message: "{action}: Exception '{exception.type}' was thrown unhandled during '{client}: {user}@{backend}' request to change play state of {item.type} '{item.title}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
                                 context: [
                                     ...$requestContext,
                                     ...exception_log($e),
@@ -267,22 +262,10 @@ final class Export extends Import
         } catch (Throwable $e) {
             $this->logger->error(
                 ...lw(
-                    message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' export. {error.message} at '{error.file}:{error.line}'.",
+                    message: "{action}: Exception '{exception.type}' was thrown unhandled during '{client}: {user}@{backend}' export. {exception.message} at '{exception.file}:{exception.line}'.",
                     context: [
                         ...$logContext,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
+                        ...exception_log($e),
                     ],
                     e: $e,
                 ),

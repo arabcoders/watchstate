@@ -133,7 +133,7 @@ class ValidateCommand extends Command
                 select_users($input->getOption('user')),
             );
         } catch (RuntimeException $e) {
-            $this->logger->error($e->getMessage(), ['exception' => $e]);
+            $this->logger->error($e->getMessage(), exception_log($e));
 
             return self::FAILURE;
         }

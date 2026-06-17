@@ -174,22 +174,10 @@ class Backup extends Import
             }
         } catch (Throwable $e) {
             $this->logger->error(
-                message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' backup. {error.message} at '{error.file}:{error.line}'.",
+                message: "{action}: Exception '{exception.type}' was thrown unhandled during '{client}: {user}@{backend}' backup. {exception.message} at '{exception.file}:{exception.line}'.",
                 context: [
-                    'error' => [
-                        'kind' => $e::class,
-                        'line' => $e->getLine(),
-                        'message' => $e->getMessage(),
-                        'file' => after($e->getFile(), ROOT_PATH),
-                    ],
                     ...$logContext,
-                    'exception' => [
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'kind' => get_class($e),
-                        'message' => $e->getMessage(),
-                        'trace' => $e->getTrace(),
-                    ],
+                    ...exception_log($e),
                 ],
             );
         }

@@ -434,16 +434,14 @@ final class TasksCommand extends Command
                     $process->stop();
 
                     if (null !== $task) {
-                        $this->logger->error("Task '{name}' failed: {error}", [
+                        $this->logger->error("Task '{name}' failed: {exception.message}", [
                             'name' => $task['name'],
-                            'error' => $e->getMessage(),
-                            'exception' => $e,
+                            ...exception_log($e),
                         ]);
                     } else {
-                        $this->logger->error('Command failed: {error}', [
+                        $this->logger->error('Command failed: {exception.message}', [
                             'command' => implode(' ', $cmd),
-                            'error' => $e->getMessage(),
-                            'exception' => $e,
+                            ...exception_log($e),
                         ]);
                     }
                 }
@@ -520,10 +518,9 @@ final class TasksCommand extends Command
                     $stream->write(implode('', $lines));
                     $stream->close();
                 } catch (Throwable $e) {
-                    $this->logger->error("Failed to write to logfile '{file}': {error}", [
+                    $this->logger->error("Failed to write to logfile '{file}': {exception.message}", [
                         'file' => Config::get('tasks.logfile'),
-                        'error' => $e->getMessage(),
-                        'exception' => $e,
+                        ...exception_log($e),
                     ]);
                 }
             }

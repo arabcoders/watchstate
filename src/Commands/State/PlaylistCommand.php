@@ -101,7 +101,7 @@ class PlaylistCommand extends Command
         try {
             $selectedUsers = select_users($input->getOption('user'));
         } catch (RuntimeException $e) {
-            $this->logger->error($e->getMessage(), ['exception' => $e]);
+            $this->logger->error($e->getMessage(), exception_log($e));
 
             return self::FAILURE;
         }
@@ -198,7 +198,7 @@ class PlaylistCommand extends Command
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "SYSTEM: Playlist sync for '{user}' failed. '{error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "SYSTEM: Playlist sync for '{user}' failed. '{exception.type}' with message '{exception.message}' at '{exception.file}:{exception.line}'.",
                         context: [
                             'user' => $userContext->name,
                             ...exception_log($e),
@@ -371,16 +371,11 @@ class PlaylistCommand extends Command
             } catch (Throwable $e) {
                 $stats['failed']++;
                 $this->logger->error(
-                    "PLAYLIST: Failed to initialize '{user}@{backend}' client. '{error.message}' at '{error.file}:{error.line}'.",
+                    "PLAYLIST: Failed to initialize '{user}@{backend}' client. '{exception.message}' at '{exception.file}:{exception.line}'.",
                     [
                         'user' => $userContext->name,
                         'backend' => $backendName,
-                        'error' => [
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                            'line' => $e->getLine(),
-                            'kind' => $e::class,
-                        ],
+                        ...exception_log($e),
                     ],
                 );
             }

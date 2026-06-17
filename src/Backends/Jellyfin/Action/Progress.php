@@ -241,22 +241,10 @@ class Progress
             } catch (\App\Libs\Exceptions\RuntimeException|RuntimeException|InvalidArgumentException $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' get {item.type} '#{item.id}: {item.title}' status. '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "{action}: Exception '{exception.type}' was thrown unhandled during '{client}: {user}@{backend}' get {item.type} '#{item.id}: {item.title}' status. '{exception.message}' at '{exception.file}:{exception.line}'.",
                         context: [
-                            'error' => [
-                                'kind' => $e::class,
-                                'line' => $e->getLine(),
-                                'message' => $e->getMessage(),
-                                'file' => after($e->getFile(), ROOT_PATH),
-                            ],
                             ...$logContext,
-                            'exception' => [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                                'message' => $e->getMessage(),
-                                'trace' => $e->getTrace(),
-                            ],
+                            ...exception_log($e),
                         ],
                         e: $e,
                     ),
@@ -340,7 +328,7 @@ class Progress
                         error: function (Throwable $e) use ($requestContext): array {
                             $this->logger->error(
                                 ...lw(
-                                    message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' request to change watch progress of {item.type} '#{item.id}: {item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                                    message: "{action}: Exception '{exception.type}' was thrown unhandled during '{client}: {user}@{backend}' request to change watch progress of {item.type} '#{item.id}: {item.title}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
                                     context: [
                                         ...$requestContext,
                                         ...exception_log($e),
@@ -427,22 +415,10 @@ class Progress
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' change {item.type} '#{item.id}: {item.title}' watch progress. '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "{action}: Exception '{exception.type}' was thrown unhandled during '{client}: {user}@{backend}' change {item.type} '#{item.id}: {item.title}' watch progress. '{exception.message}' at '{exception.file}:{exception.line}'.",
                         context: [
-                            'error' => [
-                                'kind' => $e::class,
-                                'line' => $e->getLine(),
-                                'message' => $e->getMessage(),
-                                'file' => after($e->getFile(), ROOT_PATH),
-                            ],
                             ...$logContext,
-                            'exception' => [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                                'message' => $e->getMessage(),
-                                'trace' => $e->getTrace(),
-                            ],
+                            ...exception_log($e),
                         ],
                         e: $e,
                     ),

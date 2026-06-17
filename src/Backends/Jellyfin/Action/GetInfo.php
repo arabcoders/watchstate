@@ -120,7 +120,7 @@ class GetInfo
                 if (true === $context->trace) {
                     $this->logger->debug("{action}: Processing '{client}: {user}@{backend}' request payload.", [
                         ...$logContext,
-                        'trace' => $item,
+                        'data' => $item,
                     ]);
                 }
 

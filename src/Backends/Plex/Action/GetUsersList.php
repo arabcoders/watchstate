@@ -208,7 +208,7 @@ final class GetUsersList
                 'user' => $context->userContext->name,
                 'backend' => $context->backendName,
                 'url' => (string) $url,
-                'trace' => $json,
+                'data' => $json,
             ]);
         }
 
@@ -443,7 +443,7 @@ final class GetUsersList
             $this->logger->debug("Parsing '{user}@{backend}' external users list payload.", [
                 'backend' => $context->backendName,
                 'url' => (string) $url,
-                'trace' => $data,
+                'data' => $data,
             ]);
         }
 
@@ -519,7 +519,7 @@ final class GetUsersList
             $this->logger->debug("Parsing '{user}@{backend}' users list payload.", [
                 'backend' => $context->backendName,
                 'url' => (string) $url,
-                'trace' => $json,
+                'data' => $json,
             ]);
         }
 

@@ -190,7 +190,7 @@ final readonly class ProcessProgressEvent
             } catch (UnexpectedVersionException|NotImplementedException $ex) {
                 $writer(
                     Level::Notice,
-                    "This feature is not available for '{user}@{backend}'. '{error.message}' at '{error.file}:{error.line}'.",
+                    "This feature is not available for '{user}@{backend}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
                     [
                         'user' => $userContext->name,
                         'backend' => $name,
@@ -200,7 +200,7 @@ final readonly class ProcessProgressEvent
             } catch (Throwable $ex) {
                 $writer(
                     Level::Error,
-                    "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to sync '#{id}: {title}' progress. '{error.message}' at '{error.file}:{error.line}'.",
+                    "Exception '{exception.type}' was thrown unhandled during '{user}@{backend}' request to sync '#{id}: {title}' progress. '{exception.message}' at '{exception.file}:{exception.line}'.",
                     [
                         'id' => $item->id,
                         'backend' => $name,
@@ -295,7 +295,7 @@ final readonly class ProcessProgressEvent
 
                     $writer(
                         Level::Error,
-                        "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to change watch progress of {item.type} '#{id}: {item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                        "Exception '{exception.type}' was thrown unhandled during '{user}@{backend}' request to change watch progress of {item.type} '#{id}: {item.title}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
                         [
                             ...$context,
                             'id' => ag($context, 'item.id', $item->id),

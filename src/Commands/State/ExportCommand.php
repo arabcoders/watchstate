@@ -159,7 +159,7 @@ class ExportCommand extends Command
                 select_users($input->getOption('user')),
             );
         } catch (RuntimeException $e) {
-            $this->logger->error($e->getMessage(), ['exception' => $e]);
+            $this->logger->error($e->getMessage(), exception_log($e));
 
             return self::FAILURE;
         }
@@ -534,15 +534,10 @@ class ExportCommand extends Command
                 $userContext->config->persist();
             } catch (Throwable $e) {
                 $this->logger->error(
-                    "SYSTEM: Unhandled exception '{error.kind}' was thrown during '{user}' export operation. '{error.message}' at '{error.file}:{error.line}'.",
+                    "SYSTEM: Unhandled exception '{exception.type}' was thrown during '{user}' export operation. '{exception.message}' at '{exception.file}:{exception.line}'.",
                     [
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
                         'user' => $userContext->name,
+                        ...exception_log($e),
                     ],
                 );
             } finally {

@@ -74,15 +74,10 @@ final class Backup extends Import
                 ];
             } catch (InvalidArgumentException $e) {
                 $this->logger->info(
-                    message: "{action}: Failed to parse '{client}: {backend}' item response. '{error.kind}' with '{error.message}' at '{error.file}:{error.line}' ",
+                    message: "{action}: Failed to parse '{client}: {backend}' item response. '{exception.type}' with '{exception.message}' at '{exception.file}:{exception.line}' ",
                     context: [
                         ...$logContext,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
+                        ...exception_log($e),
                         'response' => [
                             'body' => $item,
                         ],
@@ -175,22 +170,10 @@ final class Backup extends Import
             }
         } catch (Throwable $e) {
             $this->logger->error(
-                message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' backup. {error.message} at '{error.file}:{error.line}'.",
+                message: "{action}: Exception '{exception.type}' was thrown unhandled during '{client}: {backend}' backup. {exception.message} at '{exception.file}:{exception.line}'.",
                 context: [
                     ...$logContext,
-                    'error' => [
-                        'kind' => $e::class,
-                        'line' => $e->getLine(),
-                        'message' => $e->getMessage(),
-                        'file' => after($e->getFile(), ROOT_PATH),
-                    ],
-                    'exception' => [
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'kind' => get_class($e),
-                        'message' => $e->getMessage(),
-                        'trace' => $e->getTrace(),
-                    ],
+                    ...exception_log($e),
                 ],
             );
         }

@@ -25,6 +25,7 @@ final class JsonlFormatterTest extends TestCase
             context: [
                 'id' => 'log-1',
                 'event_name' => 'state.test.completed',
+                'request' => ['id' => 'req-123'],
                 'subsystem' => 'state',
                 'operation' => 'test_jsonl',
                 'outcome' => 'completed',
@@ -41,21 +42,25 @@ final class JsonlFormatterTest extends TestCase
         $payload = json_decode(trim($line), true, 512, JSON_THROW_ON_ERROR);
 
         self::assertStringEndsWith(PHP_EOL, $line);
-        self::assertSame('log-1', $payload['id']);
+        self::assertNotEmpty($payload['id']);
+        self::assertNotSame('log-1', $payload['id']);
+        self::assertNotSame('req-123', $payload['id']);
         self::assertSame('2026-05-19T12:00:00.123+00:00', $payload['datetime']);
         self::assertSame('warning', $payload['level']);
         self::assertSame(LOG_WARNING, $payload['levelno']);
         self::assertSame('app', $payload['logger']);
         self::assertSame('Hello world', $payload['message']);
-        self::assertSame('state.test.completed', $payload['event_name']);
+        self::assertArrayNotHasKey('event_name', $payload);
         self::assertSame('app', $payload['source']['module']);
+        self::assertSame('log-1', $payload['fields']['id']);
+        self::assertSame('state.test.completed', $payload['fields']['event_name']);
+        self::assertSame('req-123', $payload['fields']['request.id']);
         self::assertSame('state', $payload['fields']['subsystem']);
         self::assertSame('test_jsonl', $payload['fields']['operation']);
         self::assertSame('completed', $payload['fields']['outcome']);
         self::assertSame('main', $payload['fields']['user']);
         self::assertSame('emby_main', $payload['fields']['backend']);
         self::assertSame(123, $payload['fields']['item.id']);
-        self::assertArrayNotHasKey('event_name', $payload['fields']);
         self::assertArrayNotHasKey('token', $payload['fields']);
     }
 
@@ -68,25 +73,23 @@ final class JsonlFormatterTest extends TestCase
             level: Level::Error,
             message: 'Failed',
             context: [
-                'trace' => [
-                    [
-                        'file' => '/srv/app.php',
-                        'line' => 42,
-                        'class' => 'App\\Test',
-                        'type' => '::',
-                        'function' => 'run',
+                'exception' => [
+                    'type' => 'RuntimeException',
+                    'message' => 'Boom',
+                    'file' => '/srv/app.php',
+                    'line' => 42,
+                    'trace' => [
+                        [
+                            'file' => '/srv/app.php',
+                            'line' => 42,
+                            'class' => 'App\\Test',
+                            'type' => '::',
+                            'function' => 'run',
+                        ],
                     ],
                 ],
-                'structured' => [
-                    'exception' => [
-                        'type' => 'RuntimeException',
-                        'message' => 'Boom',
-                        'file' => '/srv/app.php',
-                        'line' => 42,
-                    ],
-                    'request' => [
-                        'path' => '/v1/api/test',
-                    ],
+                'request' => [
+                    'path' => '/v1/api/test',
                 ],
             ],
         );
@@ -103,7 +106,7 @@ final class JsonlFormatterTest extends TestCase
         self::assertSame('app.php', $payload['source']['file']);
         self::assertSame(42, $payload['source']['line']);
         self::assertSame('App\\Test::run', $payload['source']['function']);
-        self::assertSame('/v1/api/test', $payload['fields']['structured.request.path']);
+        self::assertSame('/v1/api/test', $payload['fields']['request.path']);
         self::assertArrayNotHasKey('structured.exception.type', $payload['fields']);
         self::assertArrayNotHasKey('trace', $payload['fields']);
     }
@@ -140,12 +143,12 @@ final class JsonlFormatterTest extends TestCase
 
         $logger = new Logger('app');
         $logger->pushHandler(new JsonlStreamHandler($stream));
-        $logger->warning('Handled', ['id' => 'handled-1']);
+        $logger->warning('Handled');
 
         rewind($stream);
         $payload = json_decode(trim((string) stream_get_contents($stream)), true, 512, JSON_THROW_ON_ERROR);
 
-        self::assertSame('handled-1', $payload['id']);
+        self::assertNotEmpty($payload['id']);
         self::assertSame('warning', $payload['level']);
         self::assertSame('Handled', $payload['message']);
     }

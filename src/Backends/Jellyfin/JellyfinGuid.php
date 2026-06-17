@@ -52,17 +52,10 @@ class JellyfinGuid implements iGuid
                 $this->parseGUIDFile($file);
             }
         } catch (Throwable $e) {
-            $this->logger->error("{class}: Failed to read or parse '{guid}' file. Error '{error}'.", [
+            $this->logger->error("{class}: Failed to read or parse '{guid}' file. Error '{exception.message}'.", [
                 'class' => after_last(static::class, '\\'),
                 'guid' => $file,
-                'error' => $e->getMessage(),
-                'exception' => [
-                    'message' => $e->getMessage(),
-                    'code' => $e->getCode(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'trace' => $e->getTrace(),
-                ],
+                ...exception_log($e),
             ]);
         }
     }

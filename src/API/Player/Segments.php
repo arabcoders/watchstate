@@ -379,16 +379,13 @@ readonly class Segments
 
             return $response;
         } catch (Throwable $e) {
-            $this->logger->error("Failed to generate segment. '{error}' at {file}:{line}", [
+            $this->logger->error("Failed to generate segment. '{exception.message}' at {exception.file}:{exception.line}", [
                 'stdout' => isset($process) ? $process->getOutput() : null,
                 'stderr' => isset($process) ? $process->getErrorOutput() : null,
                 'Ffmpeg' => $this->cmdLog($cmd),
                 'config' => $sConfig,
                 'command' => implode(' ', $cmd),
-                'error' => $e->getMessage(),
-                'line' => $e->getLine(),
-                'file' => $e->getFile(),
-                'trace' => $e->getTrace(),
+                ...exception_log($e),
             ]);
 
             $response = api_error('Failed to generate segment. check logs.', Status::INTERNAL_SERVER_ERROR);
@@ -467,14 +464,11 @@ readonly class Segments
             $stream->close();
             return $cacheFile;
         } catch (Throwable $e) {
-            $this->logger->error("Failed to extract subtitles. '{error}' at {file}:{line}", [
+            $this->logger->error("Failed to extract subtitles. '{exception.message}' at {exception.file}:{exception.line}", [
                 'stdout' => isset($process) ? $process->getOutput() : null,
                 'stderr' => isset($process) ? $process->getErrorOutput() : null,
                 'Ffmpeg' => $this->cmdLog($cmd),
-                'error' => $e->getMessage(),
-                'line' => $e->getLine(),
-                'file' => $e->getFile(),
-                'trace' => $e->getTrace(),
+                ...exception_log($e),
             ]);
             return "{$path}:stream_index={$stream}";
         }

@@ -576,16 +576,9 @@ final class Guid implements JsonSerializable, Stringable
                 self::parseGUIDFile($file);
             }
         } catch (Throwable $e) {
-            self::$logger?->error("Failed to read or parse '{guid}' file. Error '{error}'.", [
+            self::$logger?->error("Failed to read or parse '{guid}' file. Error '{exception.message}'.", [
                 'guid' => $file,
-                'error' => $e->getMessage(),
-                'exception' => [
-                    'message' => $e->getMessage(),
-                    'code' => $e->getCode(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'trace' => $e->getTrace(),
-                ],
+                ...exception_log($e),
             ]);
         } finally {
             self::$checkedExternalFile = true;

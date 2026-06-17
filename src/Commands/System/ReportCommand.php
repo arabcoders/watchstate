@@ -523,9 +523,9 @@ final class ReportCommand extends Command
                     ),
                 );
             } catch (Throwable $e) {
-                $this->filter(r("Error during parsing of '{file}.' '{kind}' was thrown unhandled with '{message}'", [
-                    'kind' => $e::class,
-                    'message' => $e->getMessage(),
+                $this->filter(r("Error during parsing of '{file}.' '{exception.type}' was thrown unhandled with '{exception.message}'", [
+                    'file' => $suppressFile,
+                    ...exception_log($e),
                 ]));
             }
         }

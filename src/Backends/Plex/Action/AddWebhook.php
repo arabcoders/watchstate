@@ -194,24 +194,12 @@ final class AddWebhook
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' request to add webhook. Error '{error.message}' at '{error.file}:{error.line}'.",
+                    message: "Exception '{exception.type}' was thrown unhandled during '{client}: {user}@{backend}' request to add webhook. Error '{exception.message}' at '{exception.file}:{exception.line}'.",
                     context: [
                         'user' => $context->userContext->name,
                         'backend' => $context->backendName,
                         'client' => $context->clientName,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
-                        'exception' => [
-                            'file' => after($e->getFile(), ROOT_PATH),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
+                        ...exception_log($e),
                     ],
                     level: Levels::ERROR,
                     previous: $e,

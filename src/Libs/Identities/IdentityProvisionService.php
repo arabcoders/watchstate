@@ -493,23 +493,12 @@ final class IdentityProvisionService
                 }
             } catch (Throwable $e) {
                 $this->logger->error(
-                    "Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' get users list. '{error.message}' at '{error.file}:{error.line}'.",
+                    "Exception '{exception.type}' was thrown unhandled during '{client}: {user}@{backend}' get users list. '{exception.message}' at '{exception.file}:{exception.line}'.",
                     [
                         'client' => $client->getContext()->clientName,
                         'backend' => $client->getContext()->backendName,
                         'user' => $client->getContext()->userContext->name,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                        ],
+                        ...exception_log($e),
                     ],
                 );
             }
@@ -678,22 +667,11 @@ final class IdentityProvisionService
                     }
                 } catch (Throwable $e) {
                     $this->logger->error(
-                        message: "Failed to generate access token for '{identity}@{name}' backend. {error} at '{file}:{line}'.",
+                        message: "Failed to generate access token for '{identity}@{name}' backend. {exception.message} at '{exception.file}:{exception.line}'.",
                         context: [
                             'name' => $name,
                             'identity' => $identityName,
-                            'error' => [
-                                'kind' => $e::class,
-                                'line' => $e->getLine(),
-                                'message' => $e->getMessage(),
-                                'file' => after($e->getFile(), ROOT_PATH),
-                            ],
-                            'exception' => [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                                'message' => $e->getMessage(),
-                            ],
+                            ...exception_log($e),
                         ],
                     );
                     continue;

@@ -1467,16 +1467,11 @@ class PlaylistSyncService
     private function logBackendThrowable(Throwable $e, string $backendName, string $action): void
     {
         $this->logger->error(
-            "PLAYLIST: Failed to {action} for '{backend}'. '{error.message}' at '{error.file}:{error.line}'.",
+            "PLAYLIST: Failed to {action} for '{backend}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
             [
                 'action' => $action,
                 'backend' => $backendName,
-                'error' => [
-                    'message' => $e->getMessage(),
-                    'file' => after($e->getFile(), ROOT_PATH),
-                    'line' => $e->getLine(),
-                    'kind' => $e::class,
-                ],
+                ...exception_log($e),
             ],
         );
     }

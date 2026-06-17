@@ -881,13 +881,8 @@ class PlexClient implements iClient
         } catch (TransportExceptionInterface $e) {
             throw new RuntimeException(
                 r(
-                    text: "PlexClient: Exception '{kind}' was thrown unhandled during request for plex servers list, likely network related error. {error} at '{file}:{line}'.",
-                    context: [
-                        'kind' => $e::class,
-                        'error' => $e->getMessage(),
-                        'line' => $e->getLine(),
-                        'file' => after($e->getFile(), ROOT_PATH),
-                    ],
+                    text: "PlexClient: Exception '{exception.type}' was thrown unhandled during request for plex servers list, likely network related error. {exception.message} at '{exception.file}:{exception.line}'.",
+                    context: exception_log($e),
                 ),
                 code: 500,
                 previous: $e,
@@ -1020,13 +1015,8 @@ class PlexClient implements iClient
         } catch (TransportExceptionInterface $e) {
             throw new RuntimeException(
                 r(
-                    text: "PlexClient: Exception '{kind}' was thrown unhandled during request for plex servers list, likely network related error. {error} at '{file}:{line}'.",
-                    context: [
-                        'kind' => $e::class,
-                        'error' => $e->getMessage(),
-                        'line' => $e->getLine(),
-                        'file' => after($e->getFile(), ROOT_PATH),
-                    ],
+                    text: "PlexClient: Exception '{exception.type}' was thrown unhandled during request for plex servers list, likely network related error. {exception.message} at '{exception.file}:{exception.line}'.",
+                    context: exception_log($e),
                 ),
                 code: 500,
                 previous: $e,

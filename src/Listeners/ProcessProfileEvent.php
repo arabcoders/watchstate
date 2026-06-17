@@ -68,14 +68,11 @@ final readonly class ProcessProfileEvent
                 $stream->write($data);
                 $stream->close();
             } catch (Throwable $e) {
-                $writer(Level::Error, 'Failed to save profile data. {message}', [
-                    'message' => $e->getMessage(),
-                    'exception' => $e,
-                ]);
+                $writer(Level::Error, 'Failed to save profile data. {exception.message}', exception_log($e));
             }
         }
 
-        if (null !== $url) {
+        if (true === $hasCollector && null !== $url) {
             try {
                 $response = $this->client->request(Method::POST, $url, ['body' => ['payload' => $data]]);
 
@@ -93,10 +90,7 @@ final readonly class ProcessProfileEvent
                     'id' => ag($e->getData(), 'meta.id', '??'),
                 ]);
             } catch (TransportExceptionInterface $e) {
-                $writer(Level::Error, 'Error sending profile data to collector. {message}', [
-                    'message' => $e->getMessage(),
-                    'exception' => $e,
-                ]);
+                $writer(Level::Error, 'Error sending profile data to collector. {exception.message}', exception_log($e));
             }
         }
 

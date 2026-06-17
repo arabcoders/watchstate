@@ -96,16 +96,9 @@ final class PlexGuid implements iGuid
                 $this->parseGUIDFile($file);
             }
         } catch (Throwable $e) {
-            $this->logger->error("Failed to read or parse '{guid}' file. Error '{error}'.", [
+            $this->logger->error("Failed to read or parse '{guid}' file. Error '{exception.message}'.", [
                 'guid' => $file,
-                'error' => $e->getMessage(),
-                'exception' => [
-                    'message' => $e->getMessage(),
-                    'code' => $e->getCode(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'trace' => $e->getTrace(),
-                ],
+                ...exception_log($e),
             ]);
         }
     }
@@ -505,24 +498,12 @@ final class PlexGuid implements iGuid
         } catch (Throwable $e) {
             if (true === $log) {
                 $this->logger->error(
-                    message: "PlexGuid: Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' parsing legacy agent '{agent}' identifier. Error '{error.message}' at '{error.file}:{error.line}.",
+                    message: "PlexGuid: Exception '{exception.type}' was thrown unhandled during '{client}: {backend}' parsing legacy agent '{agent}' identifier. Error '{exception.message}' at '{exception.file}:{exception.line}'.",
                     context: [
                         'backend' => $this->context->backendName,
                         'client' => $this->context->clientName,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
                         'agent' => $guid,
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
+                        ...exception_log($e),
                         ...$context,
                     ],
                 );
@@ -572,24 +553,12 @@ final class PlexGuid implements iGuid
         } catch (Throwable $e) {
             if (true === $log) {
                 $this->logger->error(
-                    message: "PlexGuid: Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' parsing NFO agent '{agent}' identifier. Error '{error.message}' at '{error.file}:{error.line}.",
+                    message: "PlexGuid: Exception '{exception.type}' was thrown unhandled during '{client}: {backend}' parsing NFO agent '{agent}' identifier. Error '{exception.message}' at '{exception.file}:{exception.line}'.",
                     context: [
                         'backend' => $this->context->backendName,
                         'client' => $this->context->clientName,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
                         'agent' => $guid,
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
+                        ...exception_log($e),
                         ...$context,
                     ],
                 );

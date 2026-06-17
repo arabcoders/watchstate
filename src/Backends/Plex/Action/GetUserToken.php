@@ -115,7 +115,7 @@ final class GetUserToken
                     'username' => $username,
                     'user_id' => $userId,
                     'url' => (string) $url,
-                    'trace' => $json,
+                    'data' => $json,
                     'headers' => $response->getHeaders(),
                 ]);
             }
@@ -164,7 +164,7 @@ final class GetUserToken
                         'username' => $username,
                         'user_id' => $userId,
                         'url' => (string) $url,
-                        'trace' => $json,
+                        'data' => $json,
                     ],
                 );
             }
@@ -213,27 +213,15 @@ final class GetUserToken
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' request for '{username}'{pin} access token. Error '{error.message}' at '{error.file}:{error.line}'.",
+                    message: "Exception '{exception.type}' was thrown unhandled during '{client}: {user}@{backend}' request for '{username}'{pin} access token. Error '{exception.message}' at '{exception.file}:{exception.line}'.",
                     context: [
                         'user' => $context->userContext->name,
                         'backend' => $context->backendName,
                         'client' => $context->clientName,
                         'pin' => isset($pin) ? ' with pin' : '',
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
                         'username' => $username,
                         'user_id' => $userId,
-                        'exception' => [
-                            'file' => after($e->getFile(), ROOT_PATH),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
+                        ...exception_log($e),
                     ],
                     level: Levels::ERROR,
                     previous: $e,

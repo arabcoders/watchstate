@@ -139,7 +139,7 @@ class UpdateState
                             error: function (Throwable $e) use ($context, $entity, $itemId, $rContext): array {
                                 $this->logger->error(
                                     ...lw(
-                                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' restore play state of {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                                        message: "{action}: Exception '{exception.type}' was thrown unhandled during '{client}: {user}@{backend}' restore play state of {item.type} '{item.title}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
                                         context: [
                                             ...$rContext,
                                             'play_state' => $entity->isWatched() ? 'played' : 'unplayed',

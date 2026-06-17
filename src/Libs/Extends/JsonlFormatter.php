@@ -16,19 +16,7 @@ use Throwable;
 final class JsonlFormatter extends NormalizerFormatter
 {
     private const array RESERVED_FIELDS = [
-        'id',
-        'event_name',
         'exception',
-        'error',
-        'trace',
-        'e_file',
-        'e_line',
-    ];
-
-    private const array EXCEPTION_FIELDS = [
-        'kind',
-        'file',
-        'line',
     ];
 
     private const array SENSITIVE_FIELDS = [
@@ -137,28 +125,18 @@ final class JsonlFormatter extends NormalizerFormatter
         $fields = [];
         $trace = $this->stack($record->context);
         $exceptionData = $this->exceptionData($record->context, $record->message, $trace);
-        $source = $this->source($record->context, $record->channel, $exceptionData);
+        $source = $this->source($record->context, $record->channel, $exceptionData, $trace);
         $fieldContext = $record->context;
 
         foreach (self::RESERVED_FIELDS as $field) {
             unset($fieldContext[$field]);
         }
 
-        if ([] !== $exceptionData) {
-            foreach (self::EXCEPTION_FIELDS as $field) {
-                unset($fieldContext[$field]);
-            }
-        }
-
-        if (isset($fieldContext['structured']) && is_array($fieldContext['structured'])) {
-            unset($fieldContext['structured']['exception'], $fieldContext['structured']['error']);
-        }
-
         $this->flattenInto($fields, $fieldContext);
         $this->flattenInto($fields, $record->extra);
 
         $payload = [
-            'id' => $this->recordId($record->context),
+            'id' => generate_uuid(),
             'datetime' => $record->datetime->setTimezone($this->timezone())->format(DateTimeInterface::RFC3339_EXTENDED),
             'level' => strtolower((string) $record->level->getName()),
             'levelno' => $this->syslogLevel($record->level),
@@ -169,43 +147,11 @@ final class JsonlFormatter extends NormalizerFormatter
             'fields' => [] === $fields ? new stdClass() : $fields,
         ];
 
-        if (null !== ($eventName = $this->eventName($record->context))) {
-            $payload['event_name'] = $eventName;
-        }
-
         if ([] !== $exceptionData) {
             $payload['exception'] = $exceptionData;
         }
 
         return $payload;
-    }
-
-    /**
-     * @param array<string, mixed> $context
-     */
-    private function recordId(array $context): string
-    {
-        $id = ag($context, ['id', 'request.id']);
-
-        if (is_scalar($id) && '' !== trim((string) $id)) {
-            return trim((string) $id);
-        }
-
-        return generate_uuid();
-    }
-
-    /**
-     * @param array<string, mixed> $context
-     */
-    private function eventName(array $context): ?string
-    {
-        $eventName = ag($context, 'event_name');
-
-        if (!is_scalar($eventName) || '' === trim((string) $eventName)) {
-            return null;
-        }
-
-        return trim((string) $eventName);
     }
 
     /**
@@ -225,13 +171,13 @@ final class JsonlFormatter extends NormalizerFormatter
     /**
      * @param array<string, mixed> $context
      * @param array<string, mixed> $exceptionData
+     * @param array<int, array<string, mixed>>|null $trace
      * @return array<string, mixed>
      */
-    private function source(array $context, string $channel, array $exceptionData = []): array
+    private function source(array $context, string $channel, array $exceptionData = [], ?array $trace = null): array
     {
         $path = null;
         $line = null;
-        $function = null;
         $module = $channel;
 
         $cliModule = ag($context, ['cli.command_name', 'cli.command_class']);
@@ -244,9 +190,7 @@ final class JsonlFormatter extends NormalizerFormatter
             $line = $exceptionData['line'] ?? null;
         }
 
-        $function = $this->traceFunction($context['trace'] ?? null);
-        $path ??= ag($context, ['source.path', 'e_file']);
-        $line ??= ag($context, ['source.line', 'e_line']);
+        $function = $this->traceFunction($trace);
 
         $source = [
             'module' => $module,
@@ -275,57 +219,26 @@ final class JsonlFormatter extends NormalizerFormatter
      */
     private function exceptionData(array $context, string $message, ?array $trace = null): array
     {
-        $exception = ag($context, 'structured.exception');
+        $exception = $context['exception'] ?? null;
+
+        if ($exception instanceof Throwable) {
+            return $this->normalizeExceptionData(
+                [
+                    'type' => $exception::class,
+                    'message' => $exception->getMessage(),
+                    'file' => $exception->getFile(),
+                    'line' => $exception->getLine(),
+                ],
+                $trace ?? $this->stack(['trace' => $exception->getTrace()]),
+            );
+        }
 
         if (is_array($exception) && [] !== $exception) {
-            return $this->normalizeExceptionData($exception, $trace);
-        }
-
-        $error = ag($context, 'error');
-        if (is_array($error) && [] !== $error) {
             return $this->normalizeExceptionData([
-                'type' => ag($error, ['type', 'kind']),
-                'message' => ag($error, 'message'),
-                'file' => ag($error, 'file'),
-                'line' => ag($error, 'line'),
-            ], $trace);
-        }
-
-        $exceptionContext = $context['exception'] ?? null;
-
-        if ($exceptionContext instanceof Throwable) {
-            return $this->normalizeExceptionData([
-                'type' => $exceptionContext::class,
-                'message' => $exceptionContext->getMessage(),
-                'file' => $exceptionContext->getFile(),
-                'line' => $exceptionContext->getLine(),
-            ], $trace);
-        }
-
-        if (is_string($exceptionContext) && '' !== trim($exceptionContext) && class_exists($exceptionContext)) {
-            return $this->normalizeExceptionData([
-                'type' => trim($exceptionContext),
-                'message' => $message,
-                'file' => $context['e_file'] ?? null,
-                'line' => $context['e_line'] ?? null,
-            ], $trace);
-        }
-
-        if (isset($context['kind']) || isset($context['file']) || isset($context['line'])) {
-            return $this->normalizeExceptionData([
-                'type' => $context['kind'] ?? null,
-                'message' => $message,
-                'file' => $context['file'] ?? null,
-                'line' => $context['line'] ?? null,
-            ], $trace);
-        }
-
-        if (isset($context['e_file']) || isset($context['e_line'])) {
-            return $this->normalizeExceptionData([
-                'type' => $context['exception'] ?? null,
-                'message' => $message,
-                'file' => $context['e_file'] ?? null,
-                'line' => $context['e_line'] ?? null,
+                'type' => $exception['type'] ?? $exception['kind'] ?? null,
+                'message' => $exception['message'] ?? null,
+                'file' => $exception['file'] ?? null,
+                'line' => $exception['line'] ?? null,
             ], $trace);
         }
 
@@ -371,6 +284,16 @@ final class JsonlFormatter extends NormalizerFormatter
     private function stack(array $context): ?array
     {
         $trace = $context['trace'] ?? null;
+
+        if (!is_array($trace) || [] === $trace) {
+            $exception = $context['exception'] ?? null;
+
+            if ($exception instanceof Throwable) {
+                $trace = $exception->getTrace();
+            } elseif (is_array($exception) && isset($exception['trace']) && is_array($exception['trace'])) {
+                $trace = $exception['trace'];
+            }
+        }
 
         if (!is_array($trace) || [] === $trace) {
             return null;

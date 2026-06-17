@@ -327,7 +327,7 @@ class DirectMapper implements ImportInterface
             Message::increment("{$entity->via}.{$entity->type}.failed");
             $this->logger->error(
                 ...lw(
-                    message: "{mapper}: [N] Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' - '{title}' add as new item. {error.message} at '{error.file}:{error.line}'.",
+                    message: "{mapper}: [N] Exception '{exception.type}' was thrown unhandled during '{user}@{backend}' - '{title}' add as new item. {exception.message} at '{exception.file}:{exception.line}'.",
                     context: [
                         'user' => $this->userContext->name ?? 'main',
                         'mapper' => after_last(self::class, '\\'),
@@ -441,7 +441,7 @@ class DirectMapper implements ImportInterface
                 Message::increment("{$entity->via}.{$local->type}.failed");
                 $this->logger->error(
                     ...lw(
-                        message: "{mapper}: [T] Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' - '{title}' metadata-only handling. {error.message} at '{error.file}:{error.line}'.",
+                        message: "{mapper}: [T] Exception '{exception.type}' was thrown unhandled during '{user}@{backend}' - '{title}' metadata-only handling. {exception.message} at '{exception.file}:{exception.line}'.",
                         context: [
                             'user' => $this->userContext->name ?? 'main',
                             'mapper' => after_last(self::class, '\\'),
@@ -577,7 +577,7 @@ class DirectMapper implements ImportInterface
                 Message::increment("{$entity->via}.{$local->type}.failed");
                 $this->logger->error(
                     ...lw(
-                        message: "{mapper}: [O] Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' - '{title}' handle old entity unplayed. {error.message} at '{error.file}:{error.line}'.",
+                        message: "{mapper}: [O] Exception '{exception.type}' was thrown unhandled during '{user}@{backend}' - '{title}' handle old entity unplayed. {exception.message} at '{exception.file}:{exception.line}'.",
                         context: [
                             'user' => $this->userContext->name ?? 'main',
                             'mapper' => after_last(self::class, '\\'),
@@ -683,7 +683,7 @@ class DirectMapper implements ImportInterface
                     Message::increment("{$entity->via}.{$local->type}.failed");
                     $this->logger->error(
                         ...lw(
-                            message: "{mapper}: [O] Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' - '{title}' handle old entity always update metadata. {error.message} at '{error.file}:{error.line}'.",
+                            message: "{mapper}: [O] Exception '{exception.type}' was thrown unhandled during '{user}@{backend}' - '{title}' handle old entity always update metadata. {exception.message} at '{exception.file}:{exception.line}'.",
                             context: [
                                 'user' => $this->userContext->name ?? 'main',
                                 'mapper' => after_last(self::class, '\\'),
@@ -1027,7 +1027,7 @@ class DirectMapper implements ImportInterface
             Message::increment("{$entity->via}.{$local->type}.failed");
             $this->logger->error(
                 ...lw(
-                    message: "{mapper}: [U] Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' - '{title}' add. {error.message} at '{error.file}:{error.line}'.",
+                    message: "{mapper}: [U] Exception '{exception.type}' was thrown unhandled during '{user}@{backend}' - '{title}' add. {exception.message} at '{exception.file}:{exception.line}'.",
                     context: [
                         'user' => $this->userContext->name ?? 'main',
                         'mapper' => after_last(self::class, '\\'),
@@ -1119,7 +1119,7 @@ class DirectMapper implements ImportInterface
             } catch (CacheInvalidArgumentException $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "{mapper}: Exception '{error.kind}' was thrown unhandled during progress queueing. {error.message} at '{error.file}:{error.line}'.",
+                        message: "{mapper}: Exception '{exception.type}' was thrown unhandled during progress queueing. {exception.message} at '{exception.file}:{exception.line}'.",
                         context: [
                             'mapper' => after_last(self::class, '\\'),
                             ...exception_log($e),

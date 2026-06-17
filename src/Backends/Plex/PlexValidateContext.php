@@ -148,9 +148,7 @@ final readonly class PlexValidateContext
 
             return $body;
         } catch (TransportExceptionInterface $e) {
-            throw new InvalidContextException(r('Failed to connect to backend. {error}', [
-                'error' => $e->getMessage(),
-            ]), previous: $e);
+            throw new InvalidContextException(r('Failed to connect to backend. {error}', ['error' => $e->getMessage()]), previous: $e);
         } catch (ClientExceptionInterface $e) {
             throw $this->httpException('Got non 200 response.', $e, (string) $url);
         } catch (RedirectionExceptionInterface $e) {

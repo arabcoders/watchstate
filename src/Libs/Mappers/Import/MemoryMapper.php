@@ -700,9 +700,8 @@ class MemoryMapper implements ImportInterface
             }
 
             foreach ($this->changed as $pointer) {
+                $entity = &$this->objects[$pointer];
                 try {
-                    $entity = &$this->objects[$pointer];
-
                     if (null === $entity->id) {
                         if (false === $inDryRunMode) {
                             $db->insert($entity, $this->options);
@@ -718,20 +717,15 @@ class MemoryMapper implements ImportInterface
                     $list[$entity->type]['failed']++;
                     $this->logger->error(
                         ...lw(
-                            message: "{mapper}: Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' - '{title}' {mode}. {error.message} at '{error.file}:{error.line}'.",
+                            message: "{mapper}: Exception '{exception.type}' was thrown unhandled during '{user}@{backend}' - '{title}' {mode}. {exception.message} at '{exception.file}:{exception.line}'.",
                             context: [
                                 'user' => $this->userContext->name ?? 'main',
                                 'mapper' => after_last(self::class, '\\'),
-                                'error' => [
-                                    'kind' => $e::class,
-                                    'line' => $e->getLine(),
-                                    'message' => $e->getMessage(),
-                                    'file' => after($e->getFile(), ROOT_PATH),
-                                ],
                                 'state' => $entity->getAll(),
                                 'backend' => $entity->via,
                                 'title' => $entity->getName(),
                                 'mode' => $entity->id === null ? 'add' : 'update',
+                                ...exception_log($e),
                             ],
                             e: $e,
                         ),
@@ -764,7 +758,7 @@ class MemoryMapper implements ImportInterface
             } catch (\Psr\SimpleCache\InvalidArgumentException $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "{mapper}: Exception '{error.kind}' was thrown unhandled during progress queueing. {error.message} at '{error.file}:{error.line}'.",
+                        message: "{mapper}: Exception '{exception.type}' was thrown unhandled during progress queueing. {exception.message} at '{exception.file}:{exception.line}'.",
                         context: [
                             'mapper' => after_last(self::class, '\\'),
                             ...exception_log($e),

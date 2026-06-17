@@ -281,10 +281,9 @@ final class DispatchCommand extends Command
             $event->updated_at = (string) make_date();
             $this->repo->save($event);
 
-            $this->logger->error('{message}', [
-                'event' => ['id' => $event->id],
-                'message' => $errorLog,
-                'trace' => $e->getTrace(),
+            $this->logger->error($errorLog, [
+                'event' => ['id' => $event->id, 'name' => $event->event],
+                ...exception_log($e),
             ]);
         }
     }

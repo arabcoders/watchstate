@@ -151,7 +151,7 @@ final readonly class ProcessPushEvent
             } catch (Throwable $e) {
                 $writer(
                     Level::Error,
-                    "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' - '#{item.id}: {item.title}' push event handling. {error.message} at '{error.file}:{error.line}'.",
+                    "Exception '{exception.type}' was thrown unhandled during '{user}@{backend}' - '#{item.id}: {item.title}' push event handling. {exception.message} at '{exception.file}:{exception.line}'.",
                     [
                         'user' => $user,
                         'backend' => $name,
@@ -159,19 +159,7 @@ final readonly class ProcessPushEvent
                             'id' => $item->id,
                             'title' => $item->getName(),
                         ],
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
+                        ...exception_log($e),
                     ],
                 );
             }
@@ -237,22 +225,10 @@ final readonly class ProcessPushEvent
 
                     $writer(
                         Level::Error,
-                        "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to change play state of {item.type} '#{item.id}: {item.title}'. {error.message} at '{error.file}:{error.line}'.",
+                        "Exception '{exception.type}' was thrown unhandled during '{user}@{backend}' request to change play state of {item.type} '#{item.id}: {item.title}'. {exception.message} at '{exception.file}:{exception.line}'.",
                         [
                             ...$context,
-                            'error' => [
-                                'kind' => $ex::class,
-                                'line' => $ex->getLine(),
-                                'message' => $ex->getMessage(),
-                                'file' => after($ex->getFile(), ROOT_PATH),
-                            ],
-                            'exception' => [
-                                'file' => $ex->getFile(),
-                                'line' => $ex->getLine(),
-                                'kind' => get_class($ex),
-                                'message' => $ex->getMessage(),
-                                'trace' => $ex->getTrace(),
-                            ],
+                            ...exception_log($ex),
                         ],
                     );
 

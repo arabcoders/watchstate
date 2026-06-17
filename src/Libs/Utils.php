@@ -1622,22 +1622,16 @@ if (!function_exists('exception_log')) {
      *
      * @param Throwable $e The exception.
      *
-     * @return array{error: array,excpetion: array} The exception formatted in standard way.
+     * @return array{exception:array{type:string,message:string,file:string,line:int,trace:array{array{string,mixed}}}}
      */
     function exception_log(Throwable $e): array
     {
         return [
-            'error' => [
-                'kind' => $e::class,
-                'line' => $e->getLine(),
+            'exception' => [
+                'type' => $e::class,
                 'message' => $e->getMessage(),
                 'file' => after($e->getFile(), ROOT_PATH),
-            ],
-            'exception' => [
-                'file' => $e->getFile(),
                 'line' => $e->getLine(),
-                'kind' => $e::class,
-                'message' => $e->getMessage(),
                 'trace' => $e->getTrace(),
             ],
         ];
