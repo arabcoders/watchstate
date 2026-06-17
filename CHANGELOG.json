@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "031a7ad3c999478192b89cd7b15b732d5fb613f9",
-    "date": "2026-06-17T17:47:53+00:00",
+    "full_sha": "d9e3e6d39b0d4722cc4853834d91631f13d9a753",
+    "date": "2026-06-17T19:55:42+00:00",
     "commits": [
+      {
+        "sha": "d9e3e6d3",
+        "full_sha": "d9e3e6d39b0d4722cc4853834d91631f13d9a753",
+        "message": "refactor(logs): log backend, user and client uinder  'identity' structure.",
+        "author": "arabcoders",
+        "date": "2026-06-17T19:55:42+00:00"
+      },
       {
         "sha": "031a7ad3",
         "full_sha": "031a7ad3c999478192b89cd7b15b732d5fb613f9",
