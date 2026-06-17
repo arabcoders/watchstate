@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "9b8ecfd9a25561d38fe9ff295c5f65b725ba8e92",
-    "date": "2026-06-17T05:42:46+00:00",
+    "full_sha": "89bd93a47e5daf03c218e2926b305307420d9c32",
+    "date": "2026-06-17T16:35:12+00:00",
     "commits": [
+      {
+        "sha": "89bd93a4",
+        "full_sha": "89bd93a47e5daf03c218e2926b305307420d9c32",
+        "message": "refactor: standardize exception logging",
+        "author": "arabcoders",
+        "date": "2026-06-17T16:35:12+00:00"
+      },
       {
         "sha": "9b8ecfd9",
         "full_sha": "9b8ecfd9a25561d38fe9ff295c5f65b725ba8e92",
