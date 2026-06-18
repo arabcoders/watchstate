@@ -32,18 +32,6 @@
           </UButton>
         </UTooltip>
 
-        <UTooltip :text="wrapLines ? 'Disable wrap lines' : 'Enable wrap lines'">
-          <UButton
-            color="neutral"
-            :variant="wrapLines ? 'soft' : 'outline'"
-            size="sm"
-            icon="i-lucide-wrap-text"
-            @click="wrapLines = !wrapLines"
-          >
-            <span class="hidden sm:inline">Wrap</span>
-          </UButton>
-        </UTooltip>
-
         <Popover placement="bottom-end" trigger="click" :z-index="13000" :disabled="isLoading">
           <template #trigger>
             <UButton
@@ -117,47 +105,30 @@
     />
 
     <template v-if="!isLoading || item?.id">
-      <UCard class="border border-default/70 shadow-sm">
-        <div class="flex flex-wrap items-center gap-2 text-sm text-default">
-          <span>Event</span>
-          <UBadge color="info" variant="soft">{{ item.event }}</UBadge>
-
-          <template v-if="item.reference">
-            <span>with reference</span>
-            <UBadge color="neutral" variant="outline">{{ item.reference }}</UBadge>
-          </template>
-
-          <span>was created</span>
-          <UTooltip :text="moment(item.created_at).format(TOOLTIP_DATE_FORMAT)">
-            <UBadge color="warning" variant="soft">
-              {{ moment(item.created_at).fromNow() }}
-            </UBadge>
-          </UTooltip>
-
-          <span>and last updated</span>
-          <template v-if="!item.updated_at">
-            <UBadge color="neutral" variant="outline">not started</UBadge>
-          </template>
-          <template v-else>
-            <UTooltip :text="moment(item.updated_at).format(TOOLTIP_DATE_FORMAT)">
-              <UBadge color="error" variant="soft">
-                {{ moment(item.updated_at).fromNow() }}
-              </UBadge>
-            </UTooltip>
-          </template>
-
-          <span>with status of</span>
-          <UBadge :color="getEventStatusColor(item.status)">
-            <span class="inline-flex items-center gap-1">
-              <UIcon
-                :name="getEventStatusIcon(item.status)"
-                :class="getEventStatusIconClass(item.status)"
-              />
-              <span>{{ item.status }}: {{ item.status_name }}</span>
-            </span>
-          </UBadge>
-        </div>
-      </UCard>
+      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Event" :value="item.event ?? 'Unknown'" icon="i-lucide-tag" />
+        <StatCard
+          label="Status"
+          :value="item.status_name ?? 'Unknown'"
+          :icon="getEventStatusIcon(item.status)"
+          :color="getEventStatusColor(item.status)"
+          :hint="String(item.status ?? '')"
+        />
+        <StatCard
+          label="Created"
+          :value="item.created_at ? moment(item.created_at).fromNow() : '-'"
+          icon="i-lucide-clock"
+          :tooltip="item.created_at ? moment(item.created_at).format(TOOLTIP_DATE_FORMAT) : ''"
+        />
+        <StatCard
+          v-if="item.updated_at"
+          label="Updated"
+          :value="moment(item.updated_at).fromNow()"
+          icon="i-lucide-clock"
+          :tooltip="moment(item.updated_at).format(TOOLTIP_DATE_FORMAT)"
+        />
+        <StatCard v-else label="Updated" value="-" hint="not started" icon="i-lucide-clock" />
+      </div>
 
       <section v-if="item?.event_data && Object.keys(item.event_data).length > 0" class="space-y-3">
         <button
@@ -173,13 +144,33 @@
             </span>
             <p class="text-base font-semibold text-highlighted">Attached Data</p>
           </div>
-          <UIcon
-            name="i-lucide-chevron-right"
-            :class="['size-4 text-toned transition-transform', toggleData ? 'rotate-90' : '']"
-          />
+          <div class="flex items-center gap-2" @click.stop>
+            <UButton
+              color="neutral"
+              :variant="wrapData ? 'soft' : 'outline'"
+              size="sm"
+              icon="i-lucide-wrap-text"
+              @click="wrapData = !wrapData"
+            >
+              <span class="hidden sm:inline">Wrap</span>
+            </UButton>
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-copy"
+              @click="copyText(displayedEventData)"
+            >
+              Copy
+            </UButton>
+            <UIcon
+              name="i-lucide-chevron-right"
+              :class="['size-4 text-toned transition-transform', toggleData ? 'rotate-90' : '']"
+            />
+          </div>
         </button>
 
-        <div v-if="toggleData" class="space-y-3">
+        <template v-if="toggleData">
           <UInput
             v-model="dataQuery"
             type="search"
@@ -197,25 +188,14 @@
             title="No matching lines"
           />
 
-          <div class="relative">
-            <code
-              class="ws-terminal ws-terminal-panel ws-terminal-panel-lg"
-              :class="wrapLines ? 'whitespace-pre-wrap' : 'whitespace-pre'"
-            >
-              {{ displayedEventData }}
-            </code>
-            <UTooltip text="Copy event data">
-              <UButton
-                color="neutral"
-                variant="soft"
-                size="sm"
-                icon="i-lucide-copy"
-                class="absolute right-3 top-3"
-                @click="() => copyText(displayedEventData)"
-              />
-            </UTooltip>
-          </div>
-        </div>
+          <code
+            v-if="!dataQuery || filteredEventDataLineCount > 0"
+            class="ws-terminal ws-terminal-panel ws-terminal-panel-lg max-h-[35vh] overflow-auto"
+            :class="wrapData ? 'whitespace-pre-wrap' : 'whitespace-pre'"
+          >
+            {{ displayedEventData }}
+          </code>
+        </template>
       </section>
 
       <section v-if="item?.logs && item.logs.length > 0" class="space-y-3">
@@ -232,15 +212,24 @@
             </span>
             <p class="text-base font-semibold text-highlighted">Event Logs</p>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2" @click.stop>
             <UButton
               color="neutral"
-              :variant="toggleFilter ? 'soft' : 'outline'"
-              size="xs"
-              icon="i-lucide-filter"
-              @click.stop="onToggleFilter"
+              :variant="wrapLogs ? 'soft' : 'outline'"
+              size="sm"
+              icon="i-lucide-wrap-text"
+              @click="wrapLogs = !wrapLogs"
             >
-              <span class="hidden sm:inline">Filter</span>
+              <span class="hidden sm:inline">Wrap</span>
+            </UButton>
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-copy"
+              @click="copyLogs()"
+            >
+              Copy
             </UButton>
             <UIcon
               name="i-lucide-chevron-right"
@@ -249,10 +238,8 @@
           </div>
         </button>
 
-        <div v-if="toggleLogs" class="space-y-3">
+        <template v-if="toggleLogs">
           <UInput
-            v-if="toggleFilter"
-            id="filter"
             v-model="query"
             type="search"
             icon="i-lucide-filter"
@@ -271,7 +258,7 @@
 
           <div
             class="overflow-auto rounded-lg border border-default/70 bg-elevated/40 shadow-sm"
-            :style="{ maxHeight: '50vh' }"
+            :style="{ maxHeight: '40vh' }"
           >
             <article
               v-for="(row, idx) in filteredRows"
@@ -287,7 +274,7 @@
                 <template v-if="row.kind === 'structured'">
                   <p
                     :class="[
-                      wrapLines
+                      wrapLogs
                         ? 'min-w-0 whitespace-pre-wrap ws-wrap-anywhere'
                         : 'min-w-max whitespace-pre',
                       'flex-1 text-default',
@@ -311,7 +298,7 @@
               </div>
             </article>
           </div>
-        </div>
+        </template>
       </section>
 
       <section v-if="item?.options && Object.keys(item.options).length > 0" class="space-y-3">
@@ -328,13 +315,33 @@
             </span>
             <p class="text-base font-semibold text-highlighted">Attached Options</p>
           </div>
-          <UIcon
-            name="i-lucide-chevron-right"
-            :class="['size-4 text-toned transition-transform', toggleOptions ? 'rotate-90' : '']"
-          />
+          <div class="flex items-center gap-2" @click.stop>
+            <UButton
+              color="neutral"
+              :variant="wrapOptions ? 'soft' : 'outline'"
+              size="sm"
+              icon="i-lucide-wrap-text"
+              @click="wrapOptions = !wrapOptions"
+            >
+              <span class="hidden sm:inline">Wrap</span>
+            </UButton>
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-copy"
+              @click="copyText(displayedOptions)"
+            >
+              Copy
+            </UButton>
+            <UIcon
+              name="i-lucide-chevron-right"
+              :class="['size-4 text-toned transition-transform', toggleOptions ? 'rotate-90' : '']"
+            />
+          </div>
         </button>
 
-        <div v-if="toggleOptions" class="space-y-3">
+        <template v-if="toggleOptions">
           <UInput
             v-model="optionsQuery"
             type="search"
@@ -352,25 +359,14 @@
             title="No matching lines"
           />
 
-          <div class="relative">
-            <code
-              class="ws-terminal ws-terminal-panel ws-terminal-panel-lg"
-              :class="wrapLines ? 'whitespace-pre-wrap' : 'whitespace-pre'"
-            >
-              {{ displayedOptions }}
-            </code>
-            <UTooltip text="Copy options">
-              <UButton
-                color="neutral"
-                variant="soft"
-                size="sm"
-                icon="i-lucide-copy"
-                class="absolute right-3 top-3"
-                @click="() => copyText(displayedOptions)"
-              />
-            </UTooltip>
-          </div>
-        </div>
+          <code
+            v-if="!optionsQuery || filteredOptionsLineCount > 0"
+            class="ws-terminal ws-terminal-panel ws-terminal-panel-lg max-h-[35vh] overflow-auto"
+            :class="wrapOptions ? 'whitespace-pre-wrap' : 'whitespace-pre'"
+          >
+            {{ displayedOptions }}
+          </code>
+        </template>
       </section>
     </template>
 
@@ -386,6 +382,7 @@ import { useStorage } from '@vueuse/core';
 import StructuredLogLine from '~/components/StructuredLogLine.vue';
 import LogDetailsModal from '~/components/LogDetailsModal.vue';
 import Popover from '~/components/Popover.vue';
+import StatCard from '~/components/StatCard.vue';
 import { useDialog } from '~/composables/useDialog';
 import type { EventsItem, GenericError, LogEntry, ServerJsonLogEntry } from '~/types';
 import {
@@ -413,25 +410,19 @@ const dataQuery = ref<string>('');
 const optionsQuery = ref<string>('');
 const item = ref<EventsItem>({} as EventsItem);
 const isLoading = ref<boolean>(true);
-const toggleFilter = ref<boolean>(false);
 const timer = ref<ReturnType<typeof setInterval> | null>(null);
 const toggleLogs = useStorage<boolean>('events_toggle_logs', true);
 const toggleData = useStorage<boolean>('events_toggle_data', true);
 const toggleOptions = useStorage<boolean>('events_toggle_options', true);
-const wrapLines = useStorage<boolean>('events_wrap_lines', false);
+const wrapData = useStorage<boolean>('events_wrap_data', false);
+const wrapLogs = useStorage<boolean>('events_wrap_logs', false);
+const wrapOptions = useStorage<boolean>('events_wrap_options', false);
 const selectedLog = ref<ServerJsonLogEntry | null>(null);
 const detailsOpen = ref(false);
 
 type EventLogRow =
   | { kind: 'structured'; key: string; entry: ServerJsonLogEntry }
   | { kind: 'legacy'; key: string; entry: LogEntry };
-
-const onToggleFilter = (): void => {
-  toggleFilter.value = !toggleFilter.value;
-  if (!toggleFilter.value) {
-    query.value = '';
-  }
-};
 
 const openLogDetails = (entry: ServerJsonLogEntry): void => {
   selectedLog.value = entry;
@@ -523,25 +514,14 @@ const copyLogs = (hide?: () => void): void => {
   hide?.();
 };
 
-const getEventStatusColor = (status: number) => {
+const getEventStatusColor = (
+  status: number,
+): 'primary' | 'success' | 'error' | 'warning' | 'info' | 'neutral' => {
   const value = getEventStatusClass(status);
-
-  if (value.includes('danger')) {
-    return 'error';
-  }
-
-  if (value.includes('warning')) {
-    return 'warning';
-  }
-
-  if (value.includes('success')) {
-    return 'success';
-  }
-
-  if (value.includes('info')) {
-    return 'info';
-  }
-
+  if (value.includes('danger')) return 'error';
+  if (value.includes('warning')) return 'warning';
+  if (value.includes('success')) return 'success';
+  if (value.includes('info')) return 'info';
   return 'neutral';
 };
 
@@ -560,10 +540,6 @@ const getEventStatusIcon = (status: number): string => {
     default:
       return 'i-lucide-circle-help';
   }
-};
-
-const getEventStatusIconClass = (status: number): string => {
-  return 1 === status ? 'size-3.5 animate-spin' : 'size-3.5';
 };
 
 onMounted(async () => {

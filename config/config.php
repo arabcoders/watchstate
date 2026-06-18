@@ -240,7 +240,7 @@ return (function () {
             'format' => 'jsonl',
         ],
         'access' => [
-            'enabled' => (bool) env('WS_LOGGER_ACCESS_ENABLE', $inContainer),
+            'enabled' => (bool) env('WS_LOGGER_ACCESS_ENABLE', true),
             'level' => env('WS_LOGGER_ACCESS_LEVEL', Level::Info),
             'filename' => ag($config, 'tmpDir') . '/logs/access.' . $logDateFormat . '.jsonl',
             'format' => $accessLogFormat,
