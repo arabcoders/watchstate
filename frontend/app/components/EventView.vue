@@ -6,29 +6,6 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
-        <UInput
-          v-if="toggleFilter"
-          id="filter"
-          v-model="query"
-          type="search"
-          icon="i-lucide-filter"
-          size="sm"
-          placeholder="Filter"
-        />
-
-        <UTooltip text="Filter event logs.">
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-filter"
-            :disabled="!item?.logs || item.logs.length < 1"
-            @click="onToggleFilter"
-          >
-            <span class="hidden sm:inline">Filter</span>
-          </UButton>
-        </UTooltip>
-
         <UTooltip text="Reset event.">
           <UButton
             color="neutral"
@@ -182,148 +159,219 @@
         </div>
       </UCard>
 
-      <UCard
-        v-if="item?.event_data && Object.keys(item.event_data).length > 0"
-        class="border border-default/70 shadow-sm"
-        :ui="cardUi"
-      >
-        <template #header>
-          <button
-            type="button"
-            class="flex items-center gap-2 text-left text-sm font-semibold text-highlighted"
-            @click="toggleData = !toggleData"
-          >
-            <UIcon
-              :name="toggleData ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-              class="size-4 text-toned"
-            />
-            <span>{{ !toggleData ? 'Show' : 'Hide' }} attached data</span>
-          </button>
-        </template>
-
-        <div v-if="toggleData" class="relative">
-          <code
-            class="ws-terminal ws-terminal-panel ws-terminal-panel-lg"
-            :class="wrapLines ? 'whitespace-pre-wrap' : 'whitespace-pre'"
-          >
-            {{ JSON.stringify(item.event_data, null, 2) }}
-          </code>
-          <UTooltip text="Copy event data">
-            <UButton
-              color="neutral"
-              variant="soft"
-              size="sm"
-              icon="i-lucide-copy"
-              class="absolute right-3 top-3"
-              @click="() => copyText(JSON.stringify(item.event_data, null, 2))"
-            />
-          </UTooltip>
-        </div>
-      </UCard>
-
-      <UCard
-        v-if="item?.logs && item.logs.length > 0"
-        class="border border-default/70 shadow-sm"
-        :ui="cardUi"
-      >
-        <template #header>
-          <button
-            type="button"
-            class="flex items-center gap-2 text-left text-sm font-semibold text-highlighted"
-            @click="toggleLogs = !toggleLogs"
-          >
-            <UIcon
-              :name="toggleLogs ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-              class="size-4 text-toned"
-            />
-            <span>{{ !toggleLogs ? 'Show' : 'Hide' }} event logs</span>
-          </button>
-        </template>
-
-        <div
-          v-if="toggleLogs"
-          class="overflow-auto rounded-lg border border-default/70 bg-elevated/40 shadow-sm"
-          :style="{ maxHeight: '50vh' }"
+      <section v-if="item?.event_data && Object.keys(item.event_data).length > 0" class="space-y-3">
+        <button
+          type="button"
+          class="flex w-full flex-wrap items-center justify-between gap-3 text-left"
+          @click="toggleData = !toggleData"
         >
-          <article
-            v-for="(row, idx) in filteredRows"
-            :key="row.key"
-            :class="[
-              'flex min-w-0 border-b border-default/40 bg-transparent last:border-b-0 hover:bg-elevated/70',
-              1 === idx % 2 ? 'bg-elevated/40' : '',
-            ]"
-          >
-            <div
-              class="flex min-w-0 flex-1 items-start gap-[0.65rem] px-3 py-[0.65rem] leading-[1.6]"
+          <div class="flex items-center gap-3">
+            <span
+              class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-default bg-elevated/70 text-primary"
             >
-              <template v-if="row.kind === 'structured'">
-                <p
-                  :class="[
-                    wrapLines
-                      ? 'min-w-0 whitespace-pre-wrap ws-wrap-anywhere'
-                      : 'min-w-max whitespace-pre',
-                    'flex-1 text-default',
-                  ]"
-                >
-                  <StructuredLogLine
-                    :log="row.entry"
-                    :compact="true"
-                    :show-details="true"
-                    @details="openLogDetails"
-                    @open-event="(id) => emit('openEvent', id)"
-                  />
-                </p>
-              </template>
-              <template v-else>
-                <span
-                  class="mr-2 inline-flex size-2 shrink-0 rounded-full align-middle"
-                  :class="toneDotClass(row.tone)"
-                />
-                <span :class="toneTextClass(row.tone)">{{ String(row.entry.text).trim() }}</span>
-              </template>
-            </div>
-          </article>
+              <UIcon name="i-lucide-database" class="size-4" />
+            </span>
+            <p class="text-base font-semibold text-highlighted">Attached Data</p>
+          </div>
+          <UIcon
+            name="i-lucide-chevron-right"
+            :class="['size-4 text-toned transition-transform', toggleData ? 'rotate-90' : '']"
+          />
+        </button>
+
+        <div v-if="toggleData" class="space-y-3">
+          <UInput
+            v-model="dataQuery"
+            type="search"
+            icon="i-lucide-filter"
+            size="sm"
+            placeholder="Filter attached data"
+            class="w-full"
+          />
+
+          <UAlert
+            v-if="dataQuery && 0 === filteredEventDataLineCount"
+            color="warning"
+            variant="soft"
+            icon="i-lucide-filter"
+            title="No matching lines"
+          />
+
+          <div class="relative">
+            <code
+              class="ws-terminal ws-terminal-panel ws-terminal-panel-lg"
+              :class="wrapLines ? 'whitespace-pre-wrap' : 'whitespace-pre'"
+            >
+              {{ displayedEventData }}
+            </code>
+            <UTooltip text="Copy event data">
+              <UButton
+                color="neutral"
+                variant="soft"
+                size="sm"
+                icon="i-lucide-copy"
+                class="absolute right-3 top-3"
+                @click="() => copyText(displayedEventData)"
+              />
+            </UTooltip>
+          </div>
         </div>
-      </UCard>
+      </section>
 
-      <UCard
-        v-if="item?.options && Object.keys(item.options).length > 0"
-        class="border border-default/70 shadow-sm"
-        :ui="cardUi"
-      >
-        <template #header>
-          <button
-            type="button"
-            class="flex items-center gap-2 text-left text-sm font-semibold text-highlighted"
-            @click="toggleOptions = !toggleOptions"
-          >
-            <UIcon
-              :name="toggleOptions ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-              class="size-4 text-toned"
-            />
-            <span>{{ !toggleOptions ? 'Show' : 'Hide' }} attached options</span>
-          </button>
-        </template>
-
-        <div v-if="toggleOptions" class="relative">
-          <code
-            class="ws-terminal ws-terminal-panel ws-terminal-panel-lg"
-            :class="wrapLines ? 'whitespace-pre-wrap' : 'whitespace-pre'"
-          >
-            {{ JSON.stringify(item.options, null, 2) }}
-          </code>
-          <UTooltip text="Copy options">
+      <section v-if="item?.logs && item.logs.length > 0" class="space-y-3">
+        <button
+          type="button"
+          class="flex w-full flex-wrap items-center justify-between gap-3 text-left"
+          @click="toggleLogs = !toggleLogs"
+        >
+          <div class="flex items-center gap-3">
+            <span
+              class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-default bg-elevated/70 text-primary"
+            >
+              <UIcon name="i-lucide-scroll-text" class="size-4" />
+            </span>
+            <p class="text-base font-semibold text-highlighted">Event Logs</p>
+          </div>
+          <div class="flex items-center gap-2">
             <UButton
               color="neutral"
-              variant="soft"
-              size="sm"
-              icon="i-lucide-copy"
-              class="absolute right-3 top-3"
-              @click="() => copyText(JSON.stringify(item.options, null, 2))"
+              :variant="toggleFilter ? 'soft' : 'outline'"
+              size="xs"
+              icon="i-lucide-filter"
+              @click.stop="onToggleFilter"
+            >
+              <span class="hidden sm:inline">Filter</span>
+            </UButton>
+            <UIcon
+              name="i-lucide-chevron-right"
+              :class="['size-4 text-toned transition-transform', toggleLogs ? 'rotate-90' : '']"
             />
-          </UTooltip>
+          </div>
+        </button>
+
+        <div v-if="toggleLogs" class="space-y-3">
+          <UInput
+            v-if="toggleFilter"
+            id="filter"
+            v-model="query"
+            type="search"
+            icon="i-lucide-filter"
+            size="sm"
+            placeholder="Filter event logs"
+            class="w-full"
+          />
+
+          <UAlert
+            v-if="query && 0 === filteredRows.length"
+            color="warning"
+            variant="soft"
+            icon="i-lucide-filter"
+            title="No matching logs"
+          />
+
+          <div
+            class="overflow-auto rounded-lg border border-default/70 bg-elevated/40 shadow-sm"
+            :style="{ maxHeight: '50vh' }"
+          >
+            <article
+              v-for="(row, idx) in filteredRows"
+              :key="row.key"
+              :class="[
+                'flex min-w-0 border-b border-default/40 bg-transparent last:border-b-0 hover:bg-elevated/70',
+                1 === idx % 2 ? 'bg-elevated/40' : '',
+              ]"
+            >
+              <div
+                class="flex min-w-0 flex-1 items-start gap-[0.65rem] px-3 py-[0.65rem] leading-[1.6]"
+              >
+                <template v-if="row.kind === 'structured'">
+                  <p
+                    :class="[
+                      wrapLines
+                        ? 'min-w-0 whitespace-pre-wrap ws-wrap-anywhere'
+                        : 'min-w-max whitespace-pre',
+                      'flex-1 text-default',
+                    ]"
+                  >
+                    <StructuredLogLine
+                      :log="row.entry"
+                      :compact="true"
+                      :show-details="true"
+                      @details="openLogDetails"
+                      @open-event="(id) => emit('openEvent', id)"
+                    />
+                  </p>
+                </template>
+                <template v-else>
+                  <span
+                    class="mr-2 inline-flex size-2 shrink-0 rounded-full bg-muted align-middle"
+                  />
+                  <span class="text-default">{{ String(row.entry.text).trim() }}</span>
+                </template>
+              </div>
+            </article>
+          </div>
         </div>
-      </UCard>
+      </section>
+
+      <section v-if="item?.options && Object.keys(item.options).length > 0" class="space-y-3">
+        <button
+          type="button"
+          class="flex w-full flex-wrap items-center justify-between gap-3 text-left"
+          @click="toggleOptions = !toggleOptions"
+        >
+          <div class="flex items-center gap-3">
+            <span
+              class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-default bg-elevated/70 text-primary"
+            >
+              <UIcon name="i-lucide-settings-2" class="size-4" />
+            </span>
+            <p class="text-base font-semibold text-highlighted">Attached Options</p>
+          </div>
+          <UIcon
+            name="i-lucide-chevron-right"
+            :class="['size-4 text-toned transition-transform', toggleOptions ? 'rotate-90' : '']"
+          />
+        </button>
+
+        <div v-if="toggleOptions" class="space-y-3">
+          <UInput
+            v-model="optionsQuery"
+            type="search"
+            icon="i-lucide-filter"
+            size="sm"
+            placeholder="Filter attached options"
+            class="w-full"
+          />
+
+          <UAlert
+            v-if="optionsQuery && 0 === filteredOptionsLineCount"
+            color="warning"
+            variant="soft"
+            icon="i-lucide-filter"
+            title="No matching lines"
+          />
+
+          <div class="relative">
+            <code
+              class="ws-terminal ws-terminal-panel ws-terminal-panel-lg"
+              :class="wrapLines ? 'whitespace-pre-wrap' : 'whitespace-pre'"
+            >
+              {{ displayedOptions }}
+            </code>
+            <UTooltip text="Copy options">
+              <UButton
+                color="neutral"
+                variant="soft"
+                size="sm"
+                icon="i-lucide-copy"
+                class="absolute right-3 top-3"
+                @click="() => copyText(displayedOptions)"
+              />
+            </UTooltip>
+          </div>
+        </div>
+      </section>
     </template>
 
     <LogDetailsModal v-model:open="detailsOpen" :log="selectedLog" />
@@ -349,13 +397,7 @@ import {
   request,
   TOOLTIP_DATE_FORMAT,
 } from '~/utils';
-import {
-  normalizeStructuredEntry,
-  lineTone,
-  toneDotClass,
-  toneTextClass,
-  type LogTone,
-} from '~/utils/logs';
+import { filterLogTextLines, normalizeStructuredEntry } from '~/utils/logs';
 
 const emit = defineEmits<{
   closeOverlay: [];
@@ -367,6 +409,8 @@ const emit = defineEmits<{
 const props = defineProps<{ id: string }>();
 
 const query = ref<string>('');
+const dataQuery = ref<string>('');
+const optionsQuery = ref<string>('');
 const item = ref<EventsItem>({} as EventsItem);
 const isLoading = ref<boolean>(true);
 const toggleFilter = ref<boolean>(false);
@@ -378,14 +422,9 @@ const wrapLines = useStorage<boolean>('events_wrap_lines', false);
 const selectedLog = ref<ServerJsonLogEntry | null>(null);
 const detailsOpen = ref(false);
 
-const cardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-};
-
 type EventLogRow =
   | { kind: 'structured'; key: string; entry: ServerJsonLogEntry }
-  | { kind: 'legacy'; key: string; entry: LogEntry; tone: LogTone };
+  | { kind: 'legacy'; key: string; entry: LogEntry };
 
 const onToggleFilter = (): void => {
   toggleFilter.value = !toggleFilter.value;
@@ -405,6 +444,24 @@ watch(detailsOpen, (open) => {
   }
 });
 
+const eventDataJson = computed<string>(() => JSON.stringify(item.value.event_data ?? {}, null, 2));
+const filteredEventDataLines = computed<Array<string>>(() =>
+  filterLogTextLines(eventDataJson.value, dataQuery.value),
+);
+const filteredEventDataLineCount = computed<number>(() => filteredEventDataLines.value.length);
+const displayedEventData = computed<string>(() =>
+  dataQuery.value ? filteredEventDataLines.value.join('\n') : eventDataJson.value,
+);
+
+const optionsJson = computed<string>(() => JSON.stringify(item.value.options ?? {}, null, 2));
+const filteredOptionsLines = computed<Array<string>>(() =>
+  filterLogTextLines(optionsJson.value, optionsQuery.value),
+);
+const filteredOptionsLineCount = computed<number>(() => filteredOptionsLines.value.length);
+const displayedOptions = computed<string>(() =>
+  optionsQuery.value ? filteredOptionsLines.value.join('\n') : optionsJson.value,
+);
+
 const filteredRows = computed<Array<EventLogRow>>(() => {
   const logs = item.value.logs ?? [];
 
@@ -418,6 +475,10 @@ const filteredRows = computed<Array<EventLogRow>>(() => {
     .map((entry, index) => toEventLogRow(entry, index))
     .filter((row) => {
       if (row.kind === 'structured') {
+        if (query.value.includes('.')) {
+          return filterLogTextLines(JSON.stringify(row.entry, null, 2), query.value).length > 0;
+        }
+
         return row.entry.message.toLowerCase().includes(queryValue);
       }
       return row.entry.text.toLowerCase().includes(queryValue);
@@ -434,7 +495,6 @@ const toEventLogRow = (raw: LogEntry | ServerJsonLogEntry, index: number): Event
     kind: 'legacy',
     key: `${legacy.id}:${index}`,
     entry: legacy,
-    tone: lineTone(legacy.text),
   };
 };
 

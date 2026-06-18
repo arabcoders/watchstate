@@ -490,21 +490,41 @@ final class ProcessWebhookEvent
             $lastSync = make_date($lastSync);
         }
 
-        ($this->writer)(Level::Notice, r("{prefix}Processing '{identity.user}@{identity.backend}' request '{title}'. {data}", [
-            'identity' => [
-                'backend' => $entity->via,
-                'user' => $userContext->name,
+        $eventName = (string) ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, '??');
+        $state = $entity->isWatched() ? 'played' : 'unplayed';
+        $hasProgress = $entity->hasPlayProgress();
+
+        ($this->writer)(
+            Level::Notice,
+            "{prefix}Processing webhook request '{item.title}' ({event.name}, {state}, progress: {progress.status}).",
+            [
+                'identity' => [
+                    'backend' => $entity->via,
+                    'user' => $userContext->name,
+                ],
+                'item' => [
+                    'title' => $entity->getName(),
+                ],
+                'event' => [
+                    'name' => $eventName,
+                ],
+                'state' => $state,
+                'progress' => [
+                    'has_progress' => $hasProgress,
+                    'status' => true === $hasProgress ? 'yes' : 'no',
+                ],
+                'request' => [
+                    'id' => ag($options, Options::REQUEST_ID, '-'),
+                ],
+                'sync' => [
+                    'last_at' => $lastSync,
+                ],
+                'flags' => [
+                    'tainted' => $entity->isTainted(),
+                ],
+                'prefix' => true === $entity->isTainted() ? '[T] ' : '',
             ],
-            'title' => $entity->getName(),
-            'prefix' => true === $entity->isTainted() ? '[T] ' : '',
-            'lastSync' => $lastSync,
-            'data' => array_to_string([
-                'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, '??'),
-                'state' => $entity->isWatched() ? 'played' : 'unplayed',
-                'progress' => $entity->hasPlayProgress() ? 'Yes' : 'No',
-                'request_id' => ag($options, Options::REQUEST_ID, '-'),
-            ]),
-        ]));
+        );
 
         $isDebug = (bool) ag($options, Options::DEBUG_TRACE, false);
         if (true === (bool) ag($backend->getContext()->options, Options::DEBUG_TRACE, false)) {

@@ -217,11 +217,24 @@ final class ProcessWebhookEventTest extends TestCase
 
         $processingBackends = [];
         foreach ($event->getLogs() as $log) {
-            if (false === str_contains($log, "Processing 'main@")) {
+            $payload = json_decode($log, true, 512, JSON_THROW_ON_ERROR);
+
+            if (false === str_contains((string) $payload['message'], 'Processing webhook request')) {
                 continue;
             }
 
-            $processingBackends[] = before(after($log, "Processing 'main@"), "' request");
+            $fields = $payload['fields'];
+
+            $processingBackends[] = $fields['identity.backend'];
+
+            self::assertSame('main', $fields['identity.user']);
+            self::assertSame('Fake Movie (2024)', $fields['item.title']);
+            self::assertSame('??', $fields['event.name']);
+            self::assertSame('unplayed', $fields['state']);
+            self::assertFalse($fields['progress.has_progress']);
+            self::assertSame('no', $fields['progress.status']);
+            self::assertSame('req-3', $fields['request.id']);
+            self::assertFalse($fields['flags.tainted']);
         }
 
         self::assertSame(['full_second', 'metadata_first'], $processingBackends);

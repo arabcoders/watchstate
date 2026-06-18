@@ -317,7 +317,7 @@ final class LogsCommand extends Command
         $severity = strtoupper((string) $entry['level']);
         $severityText = OutputFormatter::escape($severity);
         $message = self::messageText($entry);
-        $severityColor = self::severityColor((string) $entry['level'], $message);
+        $severityColor = self::severityColor((string) $entry['level']);
 
         if (null !== $severityColor) {
             $severityText = sprintf('<fg=%s;options=bold>%s</>', $severityColor, $severityText);
@@ -360,27 +360,17 @@ final class LogsCommand extends Command
         }
     }
 
-    private static function severityColor(string $severity, string $message): ?string
+    private static function severityColor(string $severity): ?string
     {
-        $value = strtolower($severity . ' ' . $message);
+        $value = strtolower($severity);
 
-        if (1 === preg_match('/(critical|crit|alert|error|err|fatal|panic|exception|failed)/', $value)) {
-            return 'red';
-        }
-
-        if (1 === preg_match('/(warning|warn|notice|noti|deprecated)/', $value)) {
-            return 'yellow';
-        }
-
-        if (1 === preg_match('/(success|started|listening|connected|ready|complete|done)/', $value)) {
-            return 'green';
-        }
-
-        if (1 === preg_match('/(info|inf|debug|deb|trace)/', $value)) {
-            return 'cyan';
-        }
-
-        return null;
+        return match ($value) {
+            'emergency', 'alert', 'critical', 'error', 'fatal' => 'red',
+            'warning', 'warn' => 'yellow',
+            'notice' => 'magenta',
+            'info' => 'cyan',
+            default => null,
+        };
     }
 
     /**

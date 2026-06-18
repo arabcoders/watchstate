@@ -40,25 +40,39 @@
             </UButton>
           </UDropdownMenu>
 
-          <div class="min-w-0 space-y-2 sm:col-span-2">
-            <p class="wrap-break-word w-full font-mono text-sm text-default">
-              {{ log.message }}
-            </p>
-          </div>
+          <UAlert
+            :color="LOG_LEVEL_COLOR[getLogLevel(log.level)]"
+            variant="soft"
+            :icon="LOG_LEVEL_ICON[getLogLevel(log.level)]"
+            title=""
+            class="min-w-0 sm:col-span-2"
+          >
+            <template #description>
+              <p class="wrap-break-word w-full font-mono text-sm text-default">
+                {{ log.message }}
+              </p>
+            </template>
+          </UAlert>
         </div>
 
-        <section v-if="log.exception" class="space-y-2">
+        <section v-if="log.exception" class="space-y-3">
           <button
             type="button"
-            class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-toned hover:text-default"
+            class="flex w-full flex-wrap items-center justify-between gap-3 text-left"
             @click="exceptionOpen = !exceptionOpen"
           >
+            <div class="flex items-center gap-3">
+              <span
+                class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-error/30 bg-error/5 text-error"
+              >
+                <UIcon name="i-lucide-bug" class="size-4" />
+              </span>
+              <p class="text-base font-semibold text-highlighted">Exception</p>
+            </div>
             <UIcon
               name="i-lucide-chevron-right"
-              :class="['size-4 transition-transform', exceptionOpen ? 'rotate-90' : '']"
+              :class="['size-4 text-toned transition-transform', exceptionOpen ? 'rotate-90' : '']"
             />
-            <UIcon name="i-lucide-bug" class="size-4 text-error" />
-            Exception
           </button>
 
           <pre
@@ -68,18 +82,24 @@
           >
         </section>
 
-        <section v-if="detailRows.length > 0" class="space-y-2">
+        <section v-if="detailRows.length > 0" class="space-y-3">
           <button
             type="button"
-            class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-toned hover:text-default"
+            class="flex w-full flex-wrap items-center justify-between gap-3 text-left"
             @click="sourceOpen = !sourceOpen"
           >
+            <div class="flex items-center gap-3">
+              <span
+                class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-default bg-elevated/70 text-primary"
+              >
+                <UIcon name="i-lucide-file-code" class="size-4" />
+              </span>
+              <p class="text-base font-semibold text-highlighted">Source</p>
+            </div>
             <UIcon
               name="i-lucide-chevron-right"
-              :class="['size-4 transition-transform', sourceOpen ? 'rotate-90' : '']"
+              :class="['size-4 text-toned transition-transform', sourceOpen ? 'rotate-90' : '']"
             />
-            <UIcon name="i-lucide-file-code" class="size-4 text-info" />
-            Source
           </button>
 
           <dl v-if="sourceOpen" class="grid gap-2 sm:grid-cols-2">
@@ -100,23 +120,46 @@
           </dl>
         </section>
 
-        <section v-if="fieldRows.length > 0" class="space-y-2">
+        <section v-if="fieldRows.length > 0" class="space-y-3">
           <button
             type="button"
-            class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-toned hover:text-default"
+            class="flex w-full flex-wrap items-center justify-between gap-3 text-left"
             @click="fieldsOpen = !fieldsOpen"
           >
+            <div class="flex items-center gap-3">
+              <span
+                class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-default bg-elevated/70 text-primary"
+              >
+                <UIcon name="i-lucide-tags" class="size-4" />
+              </span>
+              <p class="text-base font-semibold text-highlighted">Fields</p>
+            </div>
             <UIcon
               name="i-lucide-chevron-right"
-              :class="['size-4 transition-transform', fieldsOpen ? 'rotate-90' : '']"
+              :class="['size-4 text-toned transition-transform', fieldsOpen ? 'rotate-90' : '']"
             />
-            <UIcon name="i-lucide-tags" class="size-4 text-primary" />
-            Fields
           </button>
 
           <div v-if="fieldsOpen" class="space-y-2">
+            <UInput
+              v-model="fieldsQuery"
+              type="search"
+              icon="i-lucide-filter"
+              placeholder="Filter fields"
+              size="sm"
+              class="w-full"
+            />
+
+            <UAlert
+              v-if="fieldsQuery && 0 === visibleFieldRows.length"
+              color="warning"
+              variant="soft"
+              icon="i-lucide-filter"
+              title="No matching fields"
+            />
+
             <div
-              v-for="field in fieldRows"
+              v-for="field in visibleFieldRows"
               :key="field.key"
               class="rounded-sm border border-default bg-elevated/40"
             >
@@ -146,13 +189,12 @@
                 <div class="mb-3 flex items-center justify-between gap-3">
                   <div v-if="field.kind !== 'scalar'" class="w-full">
                     <UInput
-                      :model-value="fieldFilter(field.key)"
+                      v-model="fieldFilters[field.key]"
                       type="search"
                       icon="i-lucide-filter"
                       placeholder="Filter field lines"
                       size="sm"
                       class="w-full"
-                      @change="setFieldFilter(field.key, ($event.target as HTMLInputElement).value)"
                     />
                   </div>
                   <UButton
@@ -163,6 +205,15 @@
                     @click="copyText(displayedFieldValue(field), true)"
                   />
                 </div>
+
+                <UAlert
+                  v-if="fieldFilter(field.key) && 0 === filteredFieldLineCount(field)"
+                  color="warning"
+                  variant="soft"
+                  icon="i-lucide-filter"
+                  title="No matching lines"
+                  class="mb-3"
+                />
 
                 <pre
                   v-if="field.kind === 'json'"
@@ -181,25 +232,59 @@
           </div>
         </section>
 
-        <section class="space-y-2">
+        <section class="space-y-3">
           <button
             type="button"
-            class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-toned hover:text-default"
+            class="flex w-full flex-wrap items-center justify-between gap-3 text-left"
             @click="rawJsonOpen = !rawJsonOpen"
           >
+            <div class="flex items-center gap-3">
+              <span
+                class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-default bg-elevated/70 text-primary"
+              >
+                <UIcon name="i-lucide-braces" class="size-4" />
+              </span>
+              <p class="text-base font-semibold text-highlighted">Raw Data</p>
+            </div>
             <UIcon
               name="i-lucide-chevron-right"
-              :class="['size-4 transition-transform', rawJsonOpen ? 'rotate-90' : '']"
+              :class="['size-4 text-toned transition-transform', rawJsonOpen ? 'rotate-90' : '']"
             />
-            <UIcon name="i-lucide-braces" class="size-4 text-toned" />
-            Raw data
           </button>
 
-          <pre
-            v-if="rawJsonOpen"
-            class="max-h-96 overflow-auto rounded-sm border border-default bg-elevated/50 p-3 text-xs whitespace-pre-wrap text-default"
-            >{{ rawJson }}</pre
-          >
+          <div v-if="rawJsonOpen" class="space-y-3">
+            <UInput
+              v-model="rawJsonQuery"
+              type="search"
+              icon="i-lucide-filter"
+              placeholder="Filter raw data"
+              size="sm"
+              class="w-full"
+            />
+
+            <UAlert
+              v-if="rawJsonQuery && 0 === filteredRawJsonLineCount"
+              color="warning"
+              variant="soft"
+              icon="i-lucide-filter"
+              title="No matching lines"
+            />
+
+            <div class="relative">
+              <pre
+                class="max-h-96 overflow-auto rounded-sm border border-default bg-elevated/50 p-3 pr-12 text-xs whitespace-pre-wrap text-default"
+                >{{ displayedRawJson }}</pre
+              >
+              <UButton
+                size="xs"
+                color="neutral"
+                variant="outline"
+                icon="i-lucide-copy"
+                class="absolute right-3 top-3"
+                @click="copyText(displayedRawJson, true)"
+              />
+            </div>
+          </div>
         </section>
       </div>
     </template>
@@ -211,7 +296,7 @@ import { useStorage } from '@vueuse/core';
 import { computed, ref } from 'vue';
 import { copyText } from '~/utils';
 import type { ServerJsonLogEntry, ServerJsonLogException } from '~/types';
-import { getLogLevel, LOG_LEVEL_ICON, logTimeTitle } from '~/utils/logs';
+import { filterLogTextLines, getLogLevel, LOG_LEVEL_ICON, logTimeTitle } from '~/utils/logs';
 import type { LogLevel } from '~/utils/logs';
 
 type LogLevelColor = 'neutral' | 'primary' | 'info' | 'warning' | 'error';
@@ -258,17 +343,24 @@ const sourceOpen = useStorage<boolean>('logs_source_open', true);
 
 const fieldOpenState = ref<Record<string, boolean>>({});
 const fieldFilters = ref<Record<string, string>>({});
+const fieldsQuery = ref<string>('');
+const rawJsonQuery = ref<string>('');
 
 const fieldOpen = (key: string): boolean => fieldOpenState.value[key] ?? false;
 const toggleField = (key: string): void => {
   fieldOpenState.value[key] = !fieldOpen(key);
 };
 const fieldFilter = (key: string): string => fieldFilters.value[key] ?? '';
-const setFieldFilter = (key: string, value: string): void => {
-  fieldFilters.value[key] = value;
-};
 
 const rawJson = computed(() => (props.log ? JSON.stringify(props.log, null, 2) : ''));
+
+const filteredRawJsonLines = computed<Array<string>>(() =>
+  filterLogTextLines(rawJson.value, rawJsonQuery.value),
+);
+const filteredRawJsonLineCount = computed<number>(() => filteredRawJsonLines.value.length);
+const displayedRawJson = computed<string>(() =>
+  rawJsonQuery.value ? filteredRawJsonLines.value.join('\n') : rawJson.value,
+);
 
 const copyMenuContent = computed(() => ({ align: 'end' as const }));
 
@@ -426,7 +518,7 @@ const fieldRows = computed((): FieldRow[] => {
 
     rows.push({
       key,
-      label: key.replaceAll('_', ' '),
+      label: key,
       value,
       preview: value.split('\n')[0] ?? value,
       kind,
@@ -436,21 +528,34 @@ const fieldRows = computed((): FieldRow[] => {
   return rows;
 });
 
-const filterLinesByQuery = (value: string, query: string): string => {
-  if (!query.trim()) {
-    return value;
+const visibleFieldRows = computed((): FieldRow[] => {
+  const query = fieldsQuery.value.trim().toLowerCase();
+  if (!query) {
+    return fieldRows.value;
   }
-  return value
-    .split('\n')
-    .filter((line) => line.toLowerCase().includes(query.trim().toLowerCase()))
-    .join('\n');
-};
+
+  if (query.includes('.')) {
+    const keyMatches = fieldRows.value.filter((field) => field.key.toLowerCase().includes(query));
+    if (keyMatches.length > 0) {
+      return keyMatches;
+    }
+  }
+
+  return fieldRows.value.filter((field) => {
+    const haystack = `${field.key}\n${field.preview}\n${field.value}`.toLowerCase();
+    return haystack.includes(query) || filterLogTextLines(field.value, query).length > 0;
+  });
+});
 
 const displayedFieldValue = (field: FieldRow): string => {
   const filter = fieldFilters.value[field.key];
   if (filter && filter.trim()) {
-    return filterLinesByQuery(field.value, filter);
+    return filterLogTextLines(field.value, filter).join('\n');
   }
   return field.value;
+};
+
+const filteredFieldLineCount = (field: FieldRow): number => {
+  return filterLogTextLines(field.value, fieldFilter(field.key)).length;
 };
 </script>
