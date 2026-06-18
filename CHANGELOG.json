@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "69eedc40a315df60e649b6ffd1c40d2232b8c729",
-    "date": "2026-06-18T16:53:52+00:00",
+    "full_sha": "b516417f6c24294b4c4f64082eeda5cc85366d48",
+    "date": "2026-06-18T17:25:02+00:00",
     "commits": [
+      {
+        "sha": "b516417f",
+        "full_sha": "b516417f6c24294b4c4f64082eeda5cc85366d48",
+        "message": "refactor: update logs viewer to account for logs context changes",
+        "author": "arabcoders",
+        "date": "2026-06-18T17:25:02+00:00"
+      },
       {
         "sha": "69eedc40",
         "full_sha": "69eedc40a315df60e649b6ffd1c40d2232b8c729",
