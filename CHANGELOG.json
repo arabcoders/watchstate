@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "3ae9f9f754e437f2cdf1aeacd7136afc3b88ce10",
-    "date": "2026-06-18T14:51:46+00:00",
+    "full_sha": "69eedc40a315df60e649b6ffd1c40d2232b8c729",
+    "date": "2026-06-18T16:53:52+00:00",
     "commits": [
+      {
+        "sha": "69eedc40",
+        "full_sha": "69eedc40a315df60e649b6ffd1c40d2232b8c729",
+        "message": "refactor(logs): finalize structured log context cleanup",
+        "author": "arabcoders",
+        "date": "2026-06-18T16:53:52+00:00"
+      },
       {
         "sha": "3ae9f9f7",
         "full_sha": "3ae9f9f754e437f2cdf1aeacd7136afc3b88ce10",
