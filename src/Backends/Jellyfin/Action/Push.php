@@ -281,31 +281,10 @@ class Push
                             method: $entity->isWatched() ? Method::POST : Method::DELETE,
                             url: $url,
                             options: $context->getHttpOptions(),
-                            success: function (ResponseInterface $response) use (
-                                $context,
-                                $entity,
-                                $json,
-                                $lastPlayed,
-                                $requestContext,
-                            ): array {
-                                $statusCode = $response->getStatusCode();
-
-                                if (Status::OK !== Status::tryFrom($statusCode)) {
-                                    $this->logger->error(
-                                        message: "{action}: Request to change '{identity.client}: {identity.user}@{identity.backend}' {item.type} '#{item.id}: {item.title}' play state returned with unexpected '{status_code}' status code.",
-                                        context: [
-                                            ...$requestContext,
-                                            'status_code' => $statusCode,
-                                        ],
-                                    );
-
+                            success: function (ResponseInterface $response) use ($context, $entity, $json, $lastPlayed): array {
+                                if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
                                     return [];
                                 }
-
-                                $this->logger->notice(
-                                    message: "{action}: Updated '{identity.client}: {identity.user}@{identity.backend}' {item.type} '#{item.id}: {item.title}' play state to '{play_state}'.",
-                                    context: $requestContext,
-                                );
 
                                 if (true !== $entity->isWatched()) {
                                     return [];
@@ -330,20 +309,6 @@ class Push
                                         extras: [iHttp::class => $this->http],
                                     ),
                                 ];
-                            },
-                            error: function (Throwable $e) use ($requestContext): array {
-                                $this->logger->error(
-                                    ...lw(
-                                        message: "{action}: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' request to change play state of {item.type} '#{item.id}: {item.title}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
-                                        context: [
-                                            ...$requestContext,
-                                            ...exception_log($e),
-                                        ],
-                                        e: $e,
-                                    ),
-                                );
-
-                                return [];
                             },
                             extras: [
                                 'context' => $requestContext,

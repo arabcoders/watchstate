@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Commands\State;
 
 use App\Backends\Common\ClientInterface;
+use App\Backends\Common\Request;
 use App\Command;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\RetryableHttpClient;
 use App\Libs\Extends\StreamLogHandler;
@@ -29,6 +31,7 @@ use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
+use Symfony\Contracts\HttpClient\ResponseInterface as iResponse;
 use Throwable;
 
 /**
@@ -188,7 +191,7 @@ class ExportCommand extends Command
             $this->logger->notice('Dry run mode. No changes will be committed to backends.');
         }
 
-        $this->logger->notice('SYSTEM: Using WatchState {full_version}', [
+        $this->logger->notice('Using WatchState {full_version}', [
             'full_version' => get_full_version(),
         ]);
 
@@ -201,7 +204,7 @@ class ExportCommand extends Command
                     $type = strtolower(ag($backend, 'type', 'unknown'));
 
                     if ($isCustom && $input->getOption('exclude') === $this->in_array($selected, $backendName)) {
-                        $this->logger->info("SYSTEM: Ignoring '{identity.user}@{identity.backend}'. As requested.", [
+                        $this->logger->info("Ignoring '{identity.user}@{identity.backend}'. As requested.", [
                             'identity' => [
                                 'user' => $userContext->name,
                                 'backend' => $backendName,
@@ -213,7 +216,7 @@ class ExportCommand extends Command
                     if (true !== (bool) ag($backend, 'export.enabled')) {
                         if ($isCustom) {
                             $this->logger->warning(
-                                "SYSTEM: Exporting to a export disabled backend '{identity.user}@{identity.backend}' as requested.",
+                                "Exporting to a export disabled backend '{identity.user}@{identity.backend}' as requested.",
                                 [
                                     'identity' => [
                                         'user' => $userContext->name,
@@ -222,7 +225,7 @@ class ExportCommand extends Command
                                 ],
                             );
                         } else {
-                            $this->logger->info("SYSTEM: Ignoring '{identity.user}@{identity.backend}'. Export disabled.", [
+                            $this->logger->info("Ignoring '{identity.user}@{identity.backend}'. Export disabled.", [
                                 'identity' => [
                                     'user' => $userContext->name,
                                     'backend' => $backendName,
@@ -234,7 +237,7 @@ class ExportCommand extends Command
 
                     if (!isset($supported[$type])) {
                         $this->logger->error(
-                            "SYSTEM: Ignoring '{identity.user}@{identity.backend}'. Unexpected type '{type}'.",
+                            "Ignoring '{identity.user}@{identity.backend}'. Unexpected type '{type}'.",
                             [
                                 'type' => $type,
                                 'identity' => [
@@ -248,7 +251,7 @@ class ExportCommand extends Command
                     }
 
                     if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {
-                        $this->logger->error("SYSTEM: Ignoring '{identity.user}@{identity.backend}'. Invalid URL '{url}'.", [
+                        $this->logger->error("Ignoring '{identity.user}@{identity.backend}'. Invalid URL '{url}'.", [
                             'url' => $url ?? 'None',
                             'identity' => [
                                 'backend' => $backendName,
@@ -310,7 +313,7 @@ class ExportCommand extends Command
                     foreach ($backends as $backend) {
                         if (null === ($lastSync = ag($backend, 'export.lastSync', null))) {
                             $this->logger->info(
-                                "SYSTEM: Using export mode for '{identity.user}@{identity.backend}'. No export last Sync date found.",
+                                "Using export mode for '{identity.user}@{identity.backend}'. No export last Sync date found.",
                                 [
                                     'identity' => [
                                         'user' => $userContext->name,
@@ -325,7 +328,7 @@ class ExportCommand extends Command
 
                         if (null === ag($backend, 'import.lastSync', null)) {
                             $this->logger->warning(
-                                "SYSTEM: Using export mode for '{identity.user}@{identity.backend}'. The backend metadata not imported. You need to run import to populate the database.",
+                                "Using export mode for '{identity.user}@{identity.backend}'. The backend metadata not imported. You need to run import to populate the database.",
                                 [
                                     'identity' => [
                                         'user' => $userContext->name,
@@ -345,7 +348,7 @@ class ExportCommand extends Command
 
                     $lastSync = make_date($minDate);
 
-                    $this->logger->notice("SYSTEM: Loading '{identity.user}' database items that has changed since '{date}'.", [
+                    $this->logger->notice("Loading '{identity.user}' database items that has changed since '{date}'.", [
                         'date' => (string) $lastSync,
                         'identity' => [
                             'user' => $userContext->name,
@@ -357,7 +360,7 @@ class ExportCommand extends Command
                     ]);
 
                     if (count($entities) < 1 && count($export) < 1) {
-                        $this->logger->notice("SYSTEM: No play state changes detected since '{date}' for '{identity.user}'.", [
+                        $this->logger->notice("No play state changes detected since '{date}' for '{identity.user}'.", [
                             'date' => (string) $lastSync,
                             'identity' => [
                                 'user' => $userContext->name,
@@ -368,7 +371,7 @@ class ExportCommand extends Command
 
                     if (count($entities) >= 1) {
                         $this->logger->info(
-                            "SYSTEM: Checking '{total}' media items for push mode compatibility for '{identity.user}'.",
+                            "Checking '{total}' media items for push mode compatibility for '{identity.user}'.",
                             (static function () use ($entities, $input, $userContext): array {
                                 $context = [
                                     'total' => number_format(count($entities)),
@@ -404,7 +407,7 @@ class ExportCommand extends Command
 
                                     if (null === $addedDate || false === ctype_digit($addedDate)) {
                                         $this->logger->info(
-                                            "SYSTEM: Ignoring '{item.id}: {item.title}' for '{identity.user}@{identity.backend}' received invalid added_at '{added_at}' date.",
+                                            "Ignoring '{item.id}: {item.title}' for '{identity.user}@{identity.backend}' received invalid added_at '{added_at}' date.",
                                             [
                                                 'identity' => [
                                                     'user' => $userContext->name,
@@ -424,7 +427,7 @@ class ExportCommand extends Command
 
                                     if ($lastSync > ($addedDate + $extraMargin)) {
                                         $this->logger->info(
-                                            "SYSTEM: Ignoring '{item.id}: {item.title}' for '{identity.user}@{identity.backend}' waiting period for metadata expired.",
+                                            "Ignoring '{item.id}: {item.title}' for '{identity.user}@{identity.backend}' waiting period for metadata expired.",
                                             [
                                                 'identity' => [
                                                     'user' => $userContext->name,
@@ -451,7 +454,7 @@ class ExportCommand extends Command
                                     }
 
                                     $this->logger->info(
-                                        "SYSTEM: Using export mode for '{identity.user}@{identity.backend}'. Backend local database entries did not have metadata for '{item.id}: {item.title}'.",
+                                        "Using export mode for '{identity.user}@{identity.backend}'. Backend local database entries did not have metadata for '{item.id}: {item.title}'.",
                                         [
                                             'identity' => [
                                                 'user' => $userContext->name,
@@ -476,12 +479,12 @@ class ExportCommand extends Command
                 } else {
                     $export = $backends;
                     $this->logger->notice(
-                        "SYSTEM: Not possible to use push mode when '-f, --force-full' flag is used.",
+                        "Not possible to use push mode when '-f, --force-full' flag is used.",
                     );
                 }
 
                 $this->logger->notice(
-                    "SYSTEM: '{identity.user}' Using push mode for '{push.total}' backends and export mode for '{export.total}' backends.",
+                    "'{identity.user}' Using push mode for '{push.total}' backends and export mode for '{export.total}' backends.",
                     [
                         'identity' => [
                             'user' => $userContext->name,
@@ -514,28 +517,78 @@ class ExportCommand extends Command
                 $total = count($this->queue->getQueue());
 
                 if ($total >= 1) {
-                    $this->logger->notice("SYSTEM: Sending '{total}' change play state requests for '{identity.user}'.", [
+                    $this->logger->notice("Sending '{total}' change play state requests for '{identity.user}'.", [
                         'total' => $total,
                         'identity' => [
                             'user' => $userContext->name,
                         ],
                     ]);
+
+                    $logger = $this->logger;
+                    $user = $userContext->name;
 
                     send_requests(
                         requests: $this->queue->getQueue(),
                         client: $this->http,
                         sync: $syncRequests,
                         logger: $this->logger,
+                        opts: [
+                            'ok' => static function (Request $request, iResponse $response) use ($logger, $user): array {
+                                if (true === (bool) ag($request->options, 'user_data.' . Options::NO_LOGGING, false)) {
+                                    return [];
+                                }
+
+                                $context = ag($request->extras, 'context', []);
+                                $context['identity']['user'] = $user;
+                                $context['identity']['backend'] ??= $context['backend'] ?? null;
+                                $context['status_code'] = $response->getStatusCode();
+
+                                if (Status::OK !== Status::tryFrom($context['status_code'])) {
+                                    $logger->error(
+                                        "Request to change '{identity.user}@{identity.backend}' - '#{item.id}: {item.title}' play state returned with unexpected '{status_code}' status code.",
+                                        $context,
+                                    );
+
+                                    return [];
+                                }
+
+                                $logger->notice(
+                                    "Updated '{identity.user}@{identity.backend}' - '#{item.id}: {item.title}' watch state to '{play_state}'.",
+                                    $context,
+                                );
+
+                                return [];
+                            },
+                            'error' => static function (Request $request, Throwable $ex) use ($logger, $user): array {
+                                if (true === (bool) ag($request->options, 'user_data.' . Options::NO_LOGGING, false)) {
+                                    return [];
+                                }
+
+                                $context = ag($request->extras, 'context', []);
+                                $context['identity']['user'] = $user;
+                                $context['identity']['backend'] ??= $context['backend'] ?? null;
+
+                                $logger->error(
+                                    "Exception '{exception.type}' was thrown unhandled during '{identity.user}@{identity.backend}' request to change play state of {item.type} '#{item.id}: {item.title}'. {exception.message} at '{exception.file}:{exception.line}'.",
+                                    [
+                                        ...$context,
+                                        ...exception_log($ex),
+                                    ],
+                                );
+
+                                return [];
+                            },
+                        ],
                     );
 
-                    $this->logger->notice("SYSTEM: Sent '{total}' change play state requests for '{identity.user}'.", [
+                    $this->logger->notice("Sent '{total}' change play state requests for '{identity.user}'.", [
                         'total' => $total,
                         'identity' => [
                             'user' => $userContext->name,
                         ],
                     ]);
                 } else {
-                    $this->logger->notice("SYSTEM: No play state changes detected '{identity.user}'.", [
+                    $this->logger->notice("No play state changes detected for '{identity.user}'.", [
                         'identity' => [
                             'user' => $userContext->name,
                         ],
@@ -558,7 +611,7 @@ class ExportCommand extends Command
                         );
                     } else {
                         $this->logger->warning(
-                            "SYSTEM: Not updating '{identity.user}@{identity.backend}' export last sync date. There was errors recorded during the operation.",
+                            "Not updating '{identity.user}@{identity.backend}' export last sync date. There was errors recorded during the operation.",
                             [
                                 'identity' => [
                                     'backend' => $name,
@@ -572,7 +625,7 @@ class ExportCommand extends Command
                 $userContext->config->persist();
             } catch (Throwable $e) {
                 $this->logger->error(
-                    "SYSTEM: Unhandled exception '{exception.type}' was thrown during '{identity.user}' export operation. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                    "Unhandled exception '{exception.type}' was thrown during '{identity.user}' export operation. '{exception.message}' at '{exception.file}:{exception.line}'.",
                     [
                         'identity' => [
                             'user' => $userContext->name,
@@ -586,7 +639,7 @@ class ExportCommand extends Command
             }
         }
 
-        $this->logger->notice('SYSTEM: Using WatchState {full_version}', [
+        $this->logger->notice('Using WatchState {full_version}', [
             'full_version' => get_full_version(),
         ]);
 
@@ -653,7 +706,7 @@ class ExportCommand extends Command
         ]);
 
         $this->logger->notice(
-            message: "SYSTEM: Preloading user '{identity.user}: {mapper}' data. Memory usage '{memory.now}'.",
+            message: "Preloading user '{identity.user}: {mapper}' data. Memory usage '{memory.now}'.",
             context: [
                 'identity' => [
                     'user' => $userContext->name,
@@ -670,7 +723,7 @@ class ExportCommand extends Command
         $userContext->mapper->reset()->loadData();
 
         $this->logger->notice(
-            message: "SYSTEM: Preloading user '{identity.user}: {mapper}' data completed in '{duration}s'. Memory usage '{memory.now}'.",
+            message: "Preloading user '{identity.user}: {mapper}' data completed in '{duration}s'. Memory usage '{memory.now}'.",
             context: [
                 'identity' => [
                     'user' => $userContext->name,
@@ -694,7 +747,7 @@ class ExportCommand extends Command
             $after = true === $isFull ? null : ag($backend, 'export.lastSync', null);
 
             if (null === $after) {
-                $this->logger->notice("SYSTEM: Exporting play state to '{identity.user}@{identity.backend}'.", [
+                $this->logger->notice("Exporting play state to '{identity.user}@{identity.backend}'.", [
                     'identity' => [
                         'backend' => $name,
                         'user' => $userContext->name,
@@ -702,7 +755,7 @@ class ExportCommand extends Command
                 ]);
             } else {
                 $after = make_date($after);
-                $this->logger->notice("SYSTEM: Exporting play state changes since '{date}' to '{identity.user}@{identity.backend}'.", [
+                $this->logger->notice("Exporting play state changes since '{date}' to '{identity.user}@{identity.backend}'.", [
                     'identity' => [
                         'backend' => $name,
                         'user' => $userContext->name,
@@ -716,7 +769,7 @@ class ExportCommand extends Command
         }
 
         $start = microtime(true);
-        $this->logger->notice("SYSTEM: Sending '{total}' play state comparison {sync}requests for '{identity.user}'.", [
+        $this->logger->notice("Sending '{total}' play state comparison {sync}requests for '{identity.user}'.", [
             'total' => count($requests),
             'identity' => [
                 'user' => $userContext->name,

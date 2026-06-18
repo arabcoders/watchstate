@@ -74,7 +74,7 @@ final readonly class ProcessPushEvent
             return $e;
         }
 
-        $writer(Level::Notice, "Processing '{identity.user}@{identity.backend}' - '#{item_id}: {title}' push event.", [
+        $writer(Level::Notice, "Received '{identity.user}@{identity.backend}' - '#{item_id}: {title}' push event.", [
             'identity' => [
                 'user' => $user,
                 'backend' => $item->via,
@@ -179,11 +179,11 @@ final readonly class ProcessPushEvent
         unset($backend);
 
         if (count($this->queue) < 1) {
-            $writer(Level::Notice, 'SYSTEM: No play state changes detected.');
+            $writer(Level::Notice, 'No play state changes detected.');
             return $e;
         }
 
-        $writer(Level::Notice, "Processing '{identity.user}@{identity.backend}' - '#{item_id}: {title}' push event. {data}", [
+        $writer(Level::Notice, "Dispatching '{identity.user}@{identity.backend}' - '#{item_id}: {title}' push event. {data}", [
             'identity' => [
                 'user' => $user,
                 'backend' => $item->via,

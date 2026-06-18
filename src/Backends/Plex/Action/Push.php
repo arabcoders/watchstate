@@ -17,7 +17,6 @@ use App\Libs\QueueRequests;
 use DateTimeInterface as iDate;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
-use Symfony\Contracts\HttpClient\ResponseInterface as iResponse;
 use Throwable;
 
 final class Push
@@ -261,42 +260,6 @@ final class Push
                             method: Method::GET,
                             url: $url,
                             options: $context->getHttpOptions(),
-                            success: function (iResponse $response) use ($requestContext): array {
-                                $statusCode = $response->getStatusCode();
-
-                                if (Status::OK !== Status::tryFrom($statusCode)) {
-                                    $this->logger->error(
-                                        message: "{action}: Request to change '{identity.client}: {identity.user}@{identity.backend}' {item.type} '#{item.id}: {item.title}' play state returned with unexpected '{status_code}' status code.",
-                                        context: [
-                                            ...$requestContext,
-                                            'status_code' => $statusCode,
-                                        ],
-                                    );
-
-                                    return [];
-                                }
-
-                                $this->logger->notice(
-                                    message: "{action}: Updated '{identity.client}: {identity.user}@{identity.backend}' {item.type} '#{item.id}: {item.title}' play state to '{play_state}'.",
-                                    context: $requestContext,
-                                );
-
-                                return [];
-                            },
-                            error: function (Throwable $e) use ($requestContext): array {
-                                $this->logger->error(
-                                    ...lw(
-                                        message: "{action}: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' request to change play state of {item.type} '#{item.id}: {item.title}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
-                                        context: [
-                                            ...$requestContext,
-                                            ...exception_log($e),
-                                        ],
-                                        e: $e,
-                                    ),
-                                );
-
-                                return [];
-                            },
                             extras: [
                                 'context' => $requestContext,
                                 iHttp::class => $this->http,
