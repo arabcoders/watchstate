@@ -881,7 +881,7 @@ class Import
 
             if (null === ag($item, true === (bool) ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt')) {
                 $this->logger->debug(
-                    message: "Ignoring '{identity.client}: {identity.backend}' - '{item.id}: {item.title}'. No date '{date_key}' is set on object. '{body}'",
+                    message: "Ignoring '{identity.user}@{identity.backend}' - '{item.id}: {item.title}'. No date '{date_key}' is set on object. '{response.body}'",
                     context: [
                         ...$logContext,
                         'date_key' => true === (bool) ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt',

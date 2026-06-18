@@ -71,10 +71,10 @@ final class UpdateState
 
                     if (true === (bool) ag($context->options, Options::DRY_RUN, false)) {
                         $this->logger->notice(
-                            message: "Would mark '{identity.user}@{identity.backend}' {item.type} '{item.title}' as '{item.play_state}'.",
+                            message: "Would mark '{identity.user}@{identity.backend}' {history.type} '{history.title}' as '{history.play_state}'.",
                             context: [
                                 ...$rContext,
-                                'item' => [
+                                'history' => [
                                     'id' => $itemId,
                                     'title' => $entity->getName(),
                                     'type' => $entity->type === iState::TYPE_EPISODE ? 'episode' : 'movie',
@@ -101,7 +101,7 @@ final class UpdateState
                                 $requestContext = [
                                     ...$rContext,
                                     'play_state' => $entity->isWatched() ? 'played' : 'unplayed',
-                                    'item' => [
+                                    'history' => [
                                         'id' => $itemId,
                                         'title' => $entity->getName(),
                                         'type' => $entity->type === iState::TYPE_EPISODE ? 'episode' : 'movie',
@@ -112,7 +112,7 @@ final class UpdateState
                                 $statusCode = $response->getStatusCode();
                                 if (Status::OK !== Status::tryFrom($statusCode)) {
                                     $this->logger->error(
-                                        message: "Failed to change '{identity.user}@{identity.backend}' - '{item.title}' play state. Invalid HTTP '{response.status_code}' status code returned.",
+                                        message: "Failed to change '{identity.user}@{identity.backend}' - '{history.title}' play state. Invalid HTTP '{response.status_code}' status code returned.",
                                         context: [
                                             ...$requestContext,
                                             'response' => ['status_code' => $statusCode],
@@ -123,7 +123,7 @@ final class UpdateState
                                 }
 
                                 $this->logger->notice(
-                                    message: "Changed '{identity.user}@{identity.backend}' - '{item.title}' play state to '{play_state}'.",
+                                    message: "Changed '{identity.user}@{identity.backend}' - '{history.title}' play state to '{play_state}'.",
                                     context: $requestContext,
                                 );
 
@@ -132,11 +132,11 @@ final class UpdateState
                             error: function (Throwable $e) use ($entity, $itemId, $rContext): array {
                                 $this->logger->error(
                                     ...lw(
-                                        message: "Failed during '{identity.user}@{identity.backend}' restore play state of {item.type} '{item.title}'. {exception.message}",
+                                        message: "Failed during '{identity.user}@{identity.backend}' restore play state of {history.type} '{history.title}'. {exception.message}",
                                         context: [
                                             ...$rContext,
                                             'play_state' => $entity->isWatched() ? 'played' : 'unplayed',
-                                            'item' => [
+                                            'history' => [
                                                 'id' => $itemId,
                                                 'title' => $entity->getName(),
                                                 'type' => $entity->type === iState::TYPE_EPISODE ? 'episode' : 'movie',
@@ -154,7 +154,7 @@ final class UpdateState
                                 'context' => [
                                     ...$rContext,
                                     'play_state' => $entity->isWatched() ? 'played' : 'unplayed',
-                                    'item' => [
+                                    'history' => [
                                         'id' => $itemId,
                                         'title' => $entity->getName(),
                                         'type' => $entity->type === iState::TYPE_EPISODE ? 'episode' : 'movie',

@@ -104,7 +104,7 @@ class Push
                     'backend' => $context->backendName,
                     'user' => $context->userContext->name,
                 ],
-                'item' => [
+                'history' => [
                     'id' => $entity->id,
                     'type' => $entity->type,
                     'title' => $entity->getName(),
@@ -113,7 +113,7 @@ class Push
 
             if (null === ag($metadata, iState::COLUMN_ID, null)) {
                 $this->logger->warning(
-                    message: "Ignoring '#{item.id}: {item.title}' for '{identity.user}@{identity.backend}'. No metadata was found.",
+                    message: "Ignoring '#{history.id}: {history.title}' for '{identity.user}@{identity.backend}'. No metadata was found.",
                     context: $logContext,
                 );
                 continue;
@@ -141,7 +141,7 @@ class Push
                 $logContext['request']['url'] = (string) $url;
 
                 $this->logger->debug(
-                    message: "Requesting '{identity.user}@{identity.backend}' {item.type} '#{item.id}: {item.title}' metadata.",
+                    message: "Requesting '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' metadata.",
                     context: $logContext,
                 );
 
@@ -155,7 +155,7 @@ class Push
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "Failed during '{identity.user}@{identity.backend}' request for {item.type} '#{item.id}: {item.title}' metadata. {exception.message}",
+                        message: "Failed during '{identity.user}@{identity.backend}' request for {history.type} '#{history.id}: {history.title}' metadata. {exception.message}",
                         context: [
                             ...$logContext,
                             ...exception_log($e),
@@ -187,12 +187,12 @@ class Push
                 if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
                     if (Status::NOT_FOUND === Status::tryFrom($response->getStatusCode())) {
                         $this->logger->warning(
-                            message: "Request for '{identity.user}@{identity.backend}' {item.type} '#{item.id}: {item.title}' metadata returned with (404: Not Found) status code.",
+                            message: "Request for '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' metadata returned with (404: Not Found) status code.",
                             context: [...$logContext, 'response' => ['status_code' => $response->getStatusCode()]],
                         );
                     } else {
                         $this->logger->error(
-                            message: "Request for '{identity.user}@{identity.backend}' {item.type} '#{item.id}: {item.title}' metadata returned with unexpected '{response.status_code}' status code.",
+                            message: "Request for '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' metadata returned with unexpected '{response.status_code}' status code.",
                             context: [...$logContext, 'response' => ['status_code' => $response->getStatusCode()]],
                         );
                     }
@@ -208,7 +208,7 @@ class Push
 
                 if ($context->trace) {
                     $this->logger->debug(
-                        message: "Parsing '{identity.user}@{identity.backend}' {item.type} '#{item.id}: {item.title}' payload.",
+                        message: "Parsing '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' payload.",
                         context: [...$logContext, 'response' => ['body' => $json]],
                     );
                 }
@@ -217,7 +217,7 @@ class Push
 
                 if ($entity->watched === $isWatched) {
                     $this->logger->info(
-                        message: "Ignoring '{identity.user}@{identity.backend}' {item.type} '#{item.id}: {item.title}'. Play state is identical.",
+                        message: "Ignoring '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}'. Play state is identical.",
                         context: $logContext,
                     );
                     continue;
@@ -227,7 +227,7 @@ class Push
                     $dateKey = 1 === $isWatched ? 'UserData.LastPlayedDate' : 'DateCreated';
                     if (null === ($date = ag($json, $dateKey))) {
                         $this->logger->error(
-                            message: "Ignoring '{identity.user}@{identity.backend}' {item.type} '#{item.id}: {item.title}'. No {date_key} is set on backend object.",
+                            message: "Ignoring '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}'. No {date_key} is set on backend object.",
                             context: ['date_key' => $dateKey, ...$logContext, 'response' => ['body' => $json]],
                         );
                         continue;
@@ -239,7 +239,7 @@ class Push
 
                     if ($date->getTimestamp() >= ($timeExtra + $entity->updated)) {
                         $this->logger->notice(
-                            message: "Ignoring '{identity.user}@{identity.backend}' {item.type} '#{item.id}: {item.title}'. Database date is older than backend date.",
+                            message: "Ignoring '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}'. Database date is older than backend date.",
                             context: [
                                 ...$logContext,
                                 'comparison' => [
@@ -271,7 +271,7 @@ class Push
                 $requestContext = $logContext + ['play_state' => $playState];
 
                 $this->logger->debug(
-                    message: "Queuing request to change '{identity.user}@{identity.backend}' {item.type} '#{item.id}: {item.title}' play state to '{play_state}'.",
+                    message: "Queuing request to change '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' play state to '{play_state}'.",
                     context: $requestContext,
                 );
 

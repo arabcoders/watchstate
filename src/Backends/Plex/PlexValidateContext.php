@@ -165,9 +165,9 @@ final readonly class PlexValidateContext
         $reason = $this->getBackendResponseReason($body) ?? $e->getMessage();
         $contentType = $this->getContentType($response);
 
-        $ex = new InvalidContextException(r('{message} Backend responded with {status_code}. {error}', [
+        $ex = new InvalidContextException(r('{message} Backend responded with {response.status_code}. {error}', [
             'message' => $message,
-            'status_code' => $response->getStatusCode(),
+            'response' => ['status_code' => $response->getStatusCode()],
             'error' => $reason,
         ]), previous: $e);
 

@@ -79,9 +79,9 @@ final readonly class ProcessProfileEvent
                 $statusCode = $response->getStatusCode();
 
                 if (Status::OK !== Status::tryFrom($statusCode)) {
-                    $writer(Level::Error, "Failed to process profile '{id}'. Status: '{status_code}'.", [
+                    $writer(Level::Error, "Failed to process profile '{id}'. Status: '{response.status_code}'.", [
                         'id' => ag($e->getData(), 'meta.id', '??'),
-                        'status_code' => $statusCode,
+                        'response' => ['status_code' => $statusCode],
                     ]);
                     return $e;
                 }

@@ -866,9 +866,9 @@ class PlexClient implements iClient
 
                 throw new RuntimeException(
                     r(
-                        text: "Request for servers list returned with unexpected '{status_code}' status code. {context}",
+                        text: "Request for servers list returned with unexpected '{response.status_code}' status code. {context}",
                         context: [
-                            'status_code' => $response->getStatusCode(),
+                            'response' => ['status_code' => $response->getStatusCode()],
                             'context' => array_to_string([
                                 'with_admin' => true === ag($opts, 'with_admin'),
                                 'payload' => $payload,

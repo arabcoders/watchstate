@@ -501,7 +501,7 @@ final class IdentityProvisionService
                 }
             } catch (Throwable $e) {
                 $this->logger->error(
-                    "Failed during '{identity.client}: {identity.user}@{identity.backend}' get users list. {exception.message}",
+                    "Failed during '{identity.user}@{identity.backend}' get users list. {exception.message}",
                     [
                         'identity' => [
                             'client' => $client->getContext()->clientName,

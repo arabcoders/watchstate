@@ -266,17 +266,18 @@ final readonly class ProcessProgressEvent
                     $context = ag($request->extras, 'context', []);
                     $context['identity']['user'] = $userContext->name;
                     $context['identity']['backend'] ??= $context['backend'] ?? null;
-                    $context['id'] = ag($context, 'item.id', $item->id);
-                    $context['progress'] = ag($context, 'item.progress', $progress);
+                    $context['id'] = ag($context, 'history.id', $item->id);
+                    $context['progress'] = ag($context, 'history.progress', $progress);
                     $statusCode = $response->getStatusCode();
 
                     if (true === (bool) ag($options, 'trace')) {
-                        $writer(Level::Debug, "Processing '{identity.user}@{identity.backend}' - '#{id}: {item.title}' response.", [
+                        $writer(Level::Debug, "Processing '{identity.user}@{identity.backend}' - '#{id}: {history.title}' response.", [
                             'id' => $context['id'],
-                            'url' => ag($context, 'request.url', '??'),
-                            'status_code' => $statusCode,
-                            'headers' => $response->getHeaders(false),
-                            'response' => $response->getContent(false),
+                            'response' => [
+                                'status_code' => $statusCode,
+                                'headers' => $response->getHeaders(false),
+                                'body' => $response->getContent(false),
+                            ],
                             ...$context,
                         ]);
                     }
@@ -284,10 +285,10 @@ final readonly class ProcessProgressEvent
                     if (false === in_array(Status::tryFrom($statusCode), [Status::OK, Status::NO_CONTENT], true)) {
                         $writer(
                             Level::Error,
-                            "Request to change '{identity.user}@{identity.backend}' - '#{id}: {item.title}' watch progress returned with unexpected '{status_code}' status code.",
+                            "Request to change '{identity.user}@{identity.backend}' - '#{id}: {history.title}' watch progress returned with unexpected '{response.status_code}' status code.",
                             [
                                 ...$context,
-                                'status_code' => $statusCode,
+                                'response' => ['status_code' => $statusCode],
                             ],
                         );
 
@@ -296,10 +297,10 @@ final readonly class ProcessProgressEvent
 
                     $writer(
                         Level::Notice,
-                        "Updated '{identity.user}@{identity.backend}' '#{id}: {item.title}' watch progress to '{progress}'.",
+                        "Updated '{identity.user}@{identity.backend}' '#{id}: {history.title}' watch progress to '{progress}'.",
                         [
                             ...$context,
-                            'status_code' => $statusCode,
+                            'response' => ['status_code' => $statusCode],
                         ],
                     );
 
@@ -316,11 +317,11 @@ final readonly class ProcessProgressEvent
 
                     $writer(
                         Level::Error,
-                        "Failed during '{identity.user}@{identity.backend}' request to change watch progress of {item.type} '#{id}: {item.title}'. {exception.message}",
+                        "Failed during '{identity.user}@{identity.backend}' request to change watch progress of {history.type} '#{id}: {history.title}'. {exception.message}",
                         [
                             ...$context,
-                            'id' => ag($context, 'item.id', $item->id),
-                            'progress' => ag($context, 'item.progress', $progress),
+                            'id' => ag($context, 'history.id', $item->id),
+                            'progress' => ag($context, 'history.progress', $progress),
                             ...exception_log($ex),
                         ],
                     );

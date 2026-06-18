@@ -361,7 +361,7 @@ final class GetUserToken
         return new Response(
             status: false,
             error: new Error(
-                message: "Request to '{identity.user}@{identity.backend}' to grant access token for '{user_id}' returned with unexpected '{status_code}' status code. {tokenType}{extra_msg}",
+                message: "Request to '{identity.user}@{identity.backend}' to grant access token for '{user_id}' returned with unexpected '{response.status_code}' status code. {tokenType}{extra_msg}",
                 context: [
                     'identity' => [
                         'user' => $context->userContext->name,
@@ -381,7 +381,6 @@ final class GetUserToken
                     )
                         ? 'user & admin token'
                         : 'user token',
-                    'response' => $response,
                 ],
                 level: Levels::ERROR,
                 extra: [

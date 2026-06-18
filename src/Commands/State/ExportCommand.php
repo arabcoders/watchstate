@@ -407,14 +407,14 @@ class ExportCommand extends Command
 
                                     if (null === $addedDate || false === ctype_digit($addedDate)) {
                                         $this->logger->info(
-                                            "Ignoring '{item.id}: {item.title}' for '{identity.user}@{identity.backend}' received invalid added_at '{added_at}' date.",
+                                            "Ignoring '{history.id}: {history.title}' for '{identity.user}@{identity.backend}' received invalid added_at '{added_at}' date.",
                                             [
                                                 'identity' => [
                                                     'user' => $userContext->name,
                                                     'backend' => $name,
                                                 ],
                                                 'type' => get_debug_type($addedDate),
-                                                'item' => [
+                                                'history' => [
                                                     'id' => $entity->id,
                                                     'title' => $entity->getName(),
                                                 ],
@@ -427,13 +427,13 @@ class ExportCommand extends Command
 
                                     if ($lastSync > ($addedDate + $extraMargin)) {
                                         $this->logger->info(
-                                            "Ignoring '{item.id}: {item.title}' for '{identity.user}@{identity.backend}' waiting period for metadata expired.",
+                                            "Ignoring '{history.id}: {history.title}' for '{identity.user}@{identity.backend}' waiting period for metadata expired.",
                                             [
                                                 'identity' => [
                                                     'user' => $userContext->name,
                                                     'backend' => $name,
                                                 ],
-                                                'item' => [
+                                                'history' => [
                                                     'id' => $entity->id,
                                                     'title' => $entity->getName(),
                                                 ],
@@ -454,13 +454,13 @@ class ExportCommand extends Command
                                     }
 
                                     $this->logger->info(
-                                        "Using export mode for '{identity.user}@{identity.backend}'. Backend local database entries did not have metadata for '{item.id}: {item.title}'.",
+                                        "Using export mode for '{identity.user}@{identity.backend}'. Backend local database entries did not have metadata for '{history.id}: {history.title}'.",
                                         [
                                             'identity' => [
                                                 'user' => $userContext->name,
                                                 'backend' => $name,
                                             ],
-                                            'item' => [
+                                            'history' => [
                                                 'id' => $entity->id,
                                                 'title' => $entity->getName(),
                                             ],
@@ -545,7 +545,7 @@ class ExportCommand extends Command
 
                                 if (Status::OK !== Status::tryFrom($context['response']['status_code'])) {
                                     $logger->error(
-                                        "Request to change '{identity.user}@{identity.backend}' - '#{item.id}: {item.title}' play state returned with unexpected '{response.status_code}' status code.",
+                                        "Request to change '{identity.user}@{identity.backend}' - '#{history.id}: {history.title}' play state returned with unexpected '{response.status_code}' status code.",
                                         $context,
                                     );
 
@@ -553,7 +553,7 @@ class ExportCommand extends Command
                                 }
 
                                 $logger->notice(
-                                    "Updated '{identity.user}@{identity.backend}' - '#{item.id}: {item.title}' watch state to '{play_state}'.",
+                                    "Updated '{identity.user}@{identity.backend}' - '#{history.id}: {history.title}' watch state to '{play_state}'.",
                                     $context,
                                 );
 
@@ -569,7 +569,7 @@ class ExportCommand extends Command
                                 $context['identity']['backend'] ??= $context['backend'] ?? null;
 
                                 $logger->error(
-                                    "Failed during '{identity.user}@{identity.backend}' request to change play state of {item.type} '#{item.id}: {item.title}'. {exception.message}",
+                                    "Failed during '{identity.user}@{identity.backend}' request to change play state of {history.type} '#{history.id}: {history.title}'. {exception.message}",
                                     [
                                         ...$context,
                                         ...exception_log($ex),

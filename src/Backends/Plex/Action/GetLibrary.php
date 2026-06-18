@@ -155,8 +155,8 @@ final class GetLibrary
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Request for '{identity.user}@{identity.backend}' library '{library.title}' returned with unexpected '{status_code}' status code.",
-                    context: [...$logContext, 'status_code' => $response->getStatusCode()],
+                    message: "Request for '{identity.user}@{identity.backend}' library '{library.title}' returned with unexpected '{response.status_code}' status code.",
+                    context: [...$logContext, 'response' => ['status_code' => $response->getStatusCode()]],
                     level: Levels::ERROR,
                 ),
             );

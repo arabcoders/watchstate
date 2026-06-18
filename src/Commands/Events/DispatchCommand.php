@@ -107,7 +107,7 @@ final class DispatchCommand extends Command
                 $this->logger->info("Materialized queued event '{event}'.", [
                     'event' => $envelope->event,
                     'queue_id' => $envelope->id,
-                    'item_id' => $item->id,
+                    'history' => ['id' => $item->id],
                 ]);
             } catch (Throwable $e) {
                 $this->handleDrainFailure($envelope, $e);

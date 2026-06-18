@@ -621,7 +621,7 @@ final class GetUsersList
 
         throw new InvalidArgumentException(
             r(
-                "Request for '{identity.user}@{identity.backend}' users list returned with unexpected '{status_code}' status code. {tokenType}{extra_msg}",
+                "Request for '{identity.user}@{identity.backend}' users list returned with unexpected '{response.status_code}' status code. {tokenType}{extra_msg}",
                 [
                     'identity' => [
                         'user' => $context->userContext->name,

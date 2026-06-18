@@ -128,7 +128,7 @@ class GenerateAccessToken
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Request for '{identity.user}@{identity.backend}' to generate access for '{username}' token returned with unexpected '{response.status_code}' status code. {body}",
+                    message: "Request for '{identity.user}@{identity.backend}' to generate access for '{username}' token returned with unexpected '{response.status_code}' status code. {response.body}",
                     context: [
                         ...$logContext,
                         'response' => [

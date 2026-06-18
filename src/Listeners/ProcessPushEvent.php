@@ -65,22 +65,24 @@ final readonly class ProcessPushEvent
         }
 
         if (null === ($item = $userContext->db->get(Container::get(iState::class)::fromArray($e->getData())))) {
-            $writer(Level::Error, "Item '{identity.user}: {item_id}' is not found or has been deleted.", [
+            $writer(Level::Error, "Item '{identity.user}: {history.id}' is not found or has been deleted.", [
                 'identity' => [
                     'user' => $user,
                 ],
-                'item_id' => ag($e->getData(), 'id', '?'),
+                'history' => ['id' => ag($e->getData(), 'id', '?')],
             ]);
             return $e;
         }
 
-        $writer(Level::Notice, "Received '{identity.user}@{identity.backend}' - '#{item_id}: {title}' push event.", [
+        $writer(Level::Notice, "Received '{identity.user}@{identity.backend}' - '#{history.id}: {history.title}' push event.", [
             'identity' => [
                 'user' => $user,
                 'backend' => $item->via,
             ],
-            'item_id' => $item->id,
-            'title' => $item->getName(),
+            'history' => [
+                'id' => $item->id,
+                'title' => $item->getName(),
+            ],
         ]);
 
         $options = $e->getOptions();
@@ -161,13 +163,13 @@ final readonly class ProcessPushEvent
             } catch (Throwable $e) {
                 $writer(
                     Level::Error,
-                    "Failed during '{identity.user}@{identity.backend}' - '#{item.id}: {item.title}' push event handling. {exception.message}",
+                    "Failed during '{identity.user}@{identity.backend}' - '#{history.id}: {history.title}' push event handling. {exception.message}",
                     [
                         'identity' => [
                             'user' => $user,
                             'backend' => $name,
                         ],
-                        'item' => [
+                        'history' => [
                             'id' => $item->id,
                             'title' => $item->getName(),
                         ],
@@ -183,13 +185,15 @@ final readonly class ProcessPushEvent
             return $e;
         }
 
-        $writer(Level::Notice, "Dispatching '{identity.user}@{identity.backend}' - '#{item_id}: {title}' push event. {data}", [
+        $writer(Level::Notice, "Dispatching '{identity.user}@{identity.backend}' - '#{history.id}: {history.title}' push event. {data}", [
             'identity' => [
                 'user' => $user,
                 'backend' => $item->via,
             ],
-            'item_id' => $item->id,
-            'title' => $item->getName(),
+            'history' => [
+                'id' => $item->id,
+                'title' => $item->getName(),
+            ],
             'data' => array_to_string([
                 'played' => $item->isWatched(),
             ]),
@@ -215,7 +219,7 @@ final readonly class ProcessPushEvent
                     if (Status::OK !== Status::tryFrom($context['response']['status_code'])) {
                         $writer(
                             Level::Error,
-                            "Request to change '{identity.user}@{identity.backend}' - '#{item.id}: {item.title}' play state returned with unexpected '{response.status_code}' status code.",
+                            "Request to change '{identity.user}@{identity.backend}' - '#{history.id}: {history.title}' play state returned with unexpected '{response.status_code}' status code.",
                             $context,
                         );
 
@@ -224,7 +228,7 @@ final readonly class ProcessPushEvent
 
                     $writer(
                         Level::Notice,
-                        "Updated '{identity.user}@{identity.backend}' - '#{item.id}: {item.title}' watch state to '{play_state}'.",
+                        "Updated '{identity.user}@{identity.backend}' - '#{history.id}: {history.title}' watch state to '{play_state}'.",
                         $context,
                     );
 
@@ -241,7 +245,7 @@ final readonly class ProcessPushEvent
 
                     $writer(
                         Level::Error,
-                        "Failed during '{identity.user}@{identity.backend}' request to change play state of {item.type} '#{item.id}: {item.title}'. {exception.message}",
+                        "Failed during '{identity.user}@{identity.backend}' request to change play state of {history.type} '#{history.id}: {history.title}'. {exception.message}",
                         [
                             ...$context,
                             ...exception_log($ex),

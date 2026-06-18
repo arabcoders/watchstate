@@ -251,15 +251,17 @@ class ValidateCommand extends Command
                     $id = ag($metadata, iState::COLUMN_ID);
                     $this->output(
                         Level::Debug,
-                        "Validating '{identity.user}@{identity.backend}: #{id} - {item_id}' '{title}' reference ID.",
+                        "Validating '{identity.user}@{identity.backend}: #{history.id} - {item.id}' '{history.title}' reference ID.",
                         [
-                            'id' => $item->id,
-                            'item_id' => $id,
+                            'history' => [
+                                'id' => $item->id,
+                                'title' => $item->getName(),
+                            ],
+                            'item' => ['id' => $id],
                             'identity' => [
                                 'user' => $userContext->name,
                                 'backend' => $backend,
                             ],
-                            'title' => $item->getName(),
                         ],
                         $logIO,
                     );
@@ -315,10 +317,10 @@ class ValidateCommand extends Command
                         if (false === $data) {
                             $this->output(
                                 Level::Notice,
-                                "Request for '{identity.user}@{identity.backend}: #{id} - {item_id}' didnt return any data. Removing reference ID.",
+                                "Request for '{identity.user}@{identity.backend}: #{history.id} - {item.id}' didnt return any data. Removing reference ID.",
                                 [
-                                    'id' => $item->id,
-                                    'item_id' => $id,
+                                    'history' => ['id' => $item->id],
+                                    'item' => ['id' => $id],
                                     'identity' => [
                                         'user' => $userContext->name,
                                         'backend' => $backend,
@@ -335,10 +337,10 @@ class ValidateCommand extends Command
                     } catch (Throwable $e) {
                         $this->output(
                             Level::Notice,
-                            "Request for '{identity.user}@{identity.backend}: #{id} - {item_id}'. returned with error. {error}. Removing reference ID.",
+                            "Request for '{identity.user}@{identity.backend}: #{history.id} - {item.id}'. returned with error. {error}. Removing reference ID.",
                             [
-                                'id' => $item->id,
-                                'item_id' => $id,
+                                'history' => ['id' => $item->id],
+                                'item' => ['id' => $id],
                                 'identity' => [
                                     'user' => $userContext->name,
                                     'backend' => $backend,
