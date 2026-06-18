@@ -291,7 +291,6 @@ export interface ServerJsonLogEntry {
   level: string;
   levelno?: number;
   logger: string;
-  event_name?: string;
   source?: ServerJsonLogSource;
   process?: ServerJsonLogProcess;
   fields?: Record<string, unknown>;

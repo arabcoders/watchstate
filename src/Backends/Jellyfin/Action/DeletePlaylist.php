@@ -63,7 +63,7 @@ class DeletePlaylist
                 'user' => $context->userContext->name,
             ],
             'id' => $id,
-            'url' => (string) $url,
+            'request' => ['url' => (string) $url],
         ];
 
         $response = $this->http->request(Method::DELETE, (string) $url, $context->getHttpOptions());
@@ -72,8 +72,8 @@ class DeletePlaylist
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' playlist '{id}' returned with unexpected '{status_code}' status code.",
-                    context: [...$logContext, 'status_code' => $response->getStatusCode()],
+                    message: "Request for '{identity.user}@{identity.backend}' playlist '{id}' returned with unexpected '{response.status_code}' status code.",
+                    context: [...$logContext, 'response' => ['status_code' => $response->getStatusCode()]],
                     level: Levels::ERROR,
                 ),
             );

@@ -78,7 +78,7 @@ final class PDOIndexer
         }
 
         foreach ($queries as $query) {
-            $this->logger->debug("PDOIndexer: Running SQL query '{query}'.", [
+            $this->logger->debug("Running SQL query '{query}'.", [
                 'query' => $query,
                 'start' => make_date(),
             ]);

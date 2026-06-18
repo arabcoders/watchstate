@@ -94,7 +94,7 @@ final class GetLibrariesList
 
         if ($context->trace) {
             $this->logger->debug(
-                message: "{action}: Parsing '{identity.client}: {identity.user}@{identity.backend}' libraries payload.",
+                message: "Parsing '{identity.user}@{identity.backend}' libraries payload.",
                 context: [...$logContext, 'response' => ['body' => $json]],
             );
         }
@@ -105,7 +105,7 @@ final class GetLibrariesList
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' libraries returned empty list.",
+                    message: "Request for '{identity.user}@{identity.backend}' libraries returned empty list.",
                     context: [...$logContext, 'response' => ['key' => 'MediaContainer.Directory', 'body' => $json]],
                     level: Levels::WARNING,
                 ),
@@ -179,7 +179,7 @@ final class GetLibrariesList
 
         $logContext['url'] = (string) $url;
 
-        $this->logger->debug("{action}: Requesting '{identity.client}: {identity.user}@{identity.backend}' libraries list.", $logContext);
+        $this->logger->debug("Requesting '{identity.user}@{identity.backend}' libraries list.", $logContext);
 
         $response = $this->http->request(Method::GET, (string) $url, $context->getHttpOptions());
 
@@ -187,7 +187,7 @@ final class GetLibrariesList
 
         if ($context->trace) {
             $this->logger->debug(
-                message: "{action}: Processing '{identity.client}: {identity.user}@{identity.backend}' response.",
+                message: "Processing '{identity.user}@{identity.backend}' response.",
                 context: [...$logContext, 'response' => ['body' => $payload]],
             );
         }
@@ -195,8 +195,8 @@ final class GetLibrariesList
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             throw new RuntimeException(
                 r(
-                    text: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' libraries returned with unexpected '{status_code}' status code.",
-                    context: [...$logContext, 'status_code' => $response->getStatusCode()],
+                    text: "Request for '{identity.user}@{identity.backend}' libraries returned with unexpected '{response.status_code}' status code.",
+                    context: [...$logContext, 'response' => ['status_code' => $response->getStatusCode()]],
                 ),
             );
         }

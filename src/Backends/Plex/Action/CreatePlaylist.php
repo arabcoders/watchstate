@@ -72,7 +72,7 @@ final class CreatePlaylist
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Missing machine identifier for '{identity.client}: {identity.user}@{identity.backend}' playlist create request.",
+                    message: "Missing machine identifier for '{identity.user}@{identity.backend}' playlist create request.",
                     context: $logContext,
                     level: Levels::ERROR,
                 ),
@@ -103,8 +103,12 @@ final class CreatePlaylist
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' playlist '{title}' returned with unexpected '{status_code}' status code.",
-                    context: [...$logContext, 'status_code' => $response->getStatusCode(), 'url' => (string) $url],
+                    message: "Request for '{identity.user}@{identity.backend}' playlist '{title}' returned with unexpected '{response.status_code}' status code.",
+                    context: [
+                        ...$logContext,
+                        'response' => ['status_code' => $response->getStatusCode()],
+                        'request' => ['url' => (string) $url],
+                    ],
                     level: Levels::ERROR,
                 ),
             );

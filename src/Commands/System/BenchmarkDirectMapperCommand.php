@@ -368,7 +368,7 @@ final class BenchmarkDirectMapperCommand extends Command
     {
         if (false === is_dir($benchDir)) {
             if (false === @mkdir($benchDir, 0o755, true) && false === is_dir($benchDir)) {
-                $this->logger->warning("BenchmarkDirectMapperCommand: Unable to create '{path}' directory.", [
+                $this->logger->warning("Unable to create '{path}' directory.", [
                     'path' => $benchDir,
                 ]);
                 return null;
@@ -387,7 +387,7 @@ final class BenchmarkDirectMapperCommand extends Command
         $content = implode(PHP_EOL, $lines) . PHP_EOL;
 
         if (false === @file_put_contents($path, $content)) {
-            $this->logger->warning("BenchmarkDirectMapperCommand: Unable to write report '{path}'.", [
+            $this->logger->warning("Unable to write report '{path}'.", [
                 'path' => $path,
             ]);
             return null;
@@ -409,7 +409,7 @@ final class BenchmarkDirectMapperCommand extends Command
                 return $path;
             }
 
-            $this->logger->warning("BenchmarkDirectMapperCommand: Compare path '{path}' does not exist.", [
+            $this->logger->warning("Compare path '{path}' does not exist.", [
                 'path' => $path,
             ]);
             return null;
@@ -417,7 +417,7 @@ final class BenchmarkDirectMapperCommand extends Command
 
         $latest = $this->findLatestReport($benchDir);
         if (null === $latest) {
-            $this->logger->notice("BenchmarkDirectMapperCommand: No prior reports found in '{path}'.", [
+            $this->logger->notice("No prior reports found in '{path}'.", [
                 'path' => $benchDir,
             ]);
         }

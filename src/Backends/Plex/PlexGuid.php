@@ -96,7 +96,7 @@ final class PlexGuid implements iGuid
                 $this->parseGUIDFile($file);
             }
         } catch (Throwable $e) {
-            $this->logger->error("Failed to read or parse '{guid}' file. Error '{exception.message}'.", [
+            $this->logger->error("Failed to read or parse '{guid}' file. {exception.message}.", [
                 'guid' => $file,
                 ...exception_log($e),
             ]);
@@ -366,7 +366,7 @@ final class PlexGuid implements iGuid
 
                 if (false === str_contains($val, '://')) {
                     if (true === $log) {
-                        $this->logger->info("PlexGuid: Unable to parse '{identity.backend}: {agent}' identifier.", [
+                        $this->logger->info("Unable to parse '{identity.backend}: {agent}' identifier.", [
                             'identity' => [
                                 'backend' => $this->context->backendName,
                             ],
@@ -387,7 +387,7 @@ final class PlexGuid implements iGuid
                 if (true === is_ignored_id($this->context->userContext, $bName, $type, $key, $value, $id)) {
                     if (true === $log) {
                         $this->logger->debug(
-                            "PlexGuid: Ignoring '{identity.client}: {identity.backend}' external id '{source}' for {item.type} '{item.id}: {item.title}' as requested.",
+                            "Ignoring '{identity.client}: {identity.backend}' external id '{source}' for {item.type} '{item.id}: {item.title}' as requested.",
                             [
                                 'identity' => [
                                     'client' => $this->context->clientName,
@@ -413,7 +413,7 @@ final class PlexGuid implements iGuid
 
                     if (true === $log) {
                         $this->logger->info(
-                            "PlexGuid: '{identity.client}: {identity.backend}' reported conflicting '{key}' external ids '{existing_id}' and '{new_id}' for {item.type} '{item.id}: {item.title}'.",
+                            "'{identity.client}: {identity.backend}' reported conflicting '{key}' external ids '{existing_id}' and '{new_id}' for {item.type} '{item.id}: {item.title}'.",
                             [
                                 'identity' => [
                                     'client' => $this->context->clientName,
@@ -506,7 +506,7 @@ final class PlexGuid implements iGuid
         } catch (Throwable $e) {
             if (true === $log) {
                 $this->logger->error(
-                    message: "PlexGuid: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.backend}' parsing legacy agent '{agent}' identifier. Error '{exception.message}' at '{exception.file}:{exception.line}'.",
+                    message: "Failed during '{identity.client}: {identity.backend}' parsing legacy agent '{agent}' identifier. {exception.message}",
                     context: [
                         'identity' => [
                             'backend' => $this->context->backendName,
@@ -563,7 +563,7 @@ final class PlexGuid implements iGuid
         } catch (Throwable $e) {
             if (true === $log) {
                 $this->logger->error(
-                    message: "PlexGuid: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.backend}' parsing NFO agent '{agent}' identifier. Error '{exception.message}' at '{exception.file}:{exception.line}'.",
+                    message: "Failed during '{identity.client}: {identity.backend}' parsing NFO agent '{agent}' identifier. {exception.message}",
                     context: [
                         'identity' => [
                             'backend' => $this->context->backendName,

@@ -550,7 +550,7 @@ final class Index
                         [],
                     );
                 } catch (Throwable $e) {
-                    $this->logger->error($e->getMessage());
+                    $this->logger->error($e->getMessage(), exception_log($e));
                 }
             }
 
@@ -673,7 +673,7 @@ final class Index
                     [],
                 );
             } catch (Throwable $e) {
-                $this->logger->error($e->getMessage());
+                $this->logger->error($e->getMessage(), exception_log($e));
             }
         }
 
@@ -711,7 +711,7 @@ final class Index
                 [],
             );
         } catch (Throwable $e) {
-            $this->logger->error($e->getMessage());
+            $this->logger->error($e->getMessage(), exception_log($e));
             return api_error('Failed to get duplicates', Status::INTERNAL_SERVER_ERROR);
         }
 

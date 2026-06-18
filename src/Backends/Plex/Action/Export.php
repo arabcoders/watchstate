@@ -47,7 +47,7 @@ final class Export extends Import
 
         try {
             if ($context->trace) {
-                $this->logger->debug("{action}: Processing '{identity.client}: {identity.user}@{identity.backend}' response payload.", [
+                $this->logger->debug("Processing '{identity.user}@{identity.backend}' response payload.", [
                     ...$logContext,
                     'response' => ['body' => $item],
                 ]);
@@ -83,7 +83,7 @@ final class Export extends Import
             } catch (InvalidArgumentException $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "{action}: Failed to parse '{identity.client}: {identity.user}@{identity.backend}' item response. '{exception.type}' with '{exception.message}' at '{exception.file}:{exception.line}' ",
+                        message: "Failed to parse '{identity.user}@{identity.backend}' item response. {exception.message}",
                         context: [
                             ...$logContext,
                             ...exception_log($e),
@@ -97,7 +97,7 @@ final class Export extends Import
 
             if (null === ag($item, true === (bool) ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt')) {
                 $this->logger->debug(
-                    message: "{action}: Ignoring '{identity.client}: {identity.user}@{identity.backend}' {item.type} '{item.title}'. No Date is set on object.",
+                    message: "Ignoring '{identity.user}@{identity.backend}' {item.type} '{item.title}'. No Date is set on object.",
                     context: [
                         ...$logContext,
                         'date_key' => true === (bool) ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt',
@@ -117,7 +117,7 @@ final class Export extends Import
             );
 
             if (!$rItem->hasGuids() && !$rItem->hasRelativeGuid()) {
-                $message = "{action}: Ignoring '{identity.client}: {identity.user}@{identity.backend}' - '{item.title}'. No valid/supported external ids.";
+                $message = "Ignoring '{identity.user}@{identity.backend}' - '{item.title}'. No valid/supported external ids.";
 
                 if (null === ($item['Guid'] ?? null)) {
                     $item['Guid'] = [];
@@ -143,7 +143,7 @@ final class Export extends Import
             if (false === ag($context->options, Options::IGNORE_DATE, false)) {
                 if (true === $after instanceof DateTimeInterface && $rItem->updated >= $after->getTimestamp()) {
                     $this->logger->debug(
-                        message: "{action}: Ignoring '{identity.client}: {identity.user}@{identity.backend}' - '{item.title}'. Backend date '{backend_date}' is equal or newer than last sync date '{last_sync}'.",
+                        message: "Ignoring '{identity.user}@{identity.backend}' - '{item.title}'. Backend date '{backend_date}' is equal or newer than last sync date '{last_sync}'.",
                         context: [
                             ...$logContext,
                             'last_sync' => make_date($after),
@@ -157,7 +157,7 @@ final class Export extends Import
             }
 
             if (null === ($entity = $mapper->get($rItem))) {
-                $message = "{action}: Ignoring '{identity.client}: {identity.user}@{identity.backend}' - '{item.title}'. {item.type} is not imported yet.";
+                $message = "Ignoring '{identity.user}@{identity.backend}' - '{item.title}'. {item.type} is not imported yet.";
                 if (true === (bool) ag($context->options, Options::IMPORT_METADATA_ONLY)) {
                     $message .= ' The backend is marked as metadata source only.';
                 }
@@ -170,7 +170,7 @@ final class Export extends Import
             if ($rItem->watched === $entity->watched) {
                 if (true === (bool) ag($context->options, Options::DEBUG_TRACE)) {
                     $this->logger->debug(
-                        message: "{action}: Ignoring '{identity.client}: {identity.backend}' - '{item.title}'. {item.type} play state is identical.",
+                        message: "Ignoring '{identity.client}: {identity.backend}' - '{item.title}'. {item.type} play state is identical.",
                         context: $logContext,
                     );
                 }
@@ -181,7 +181,7 @@ final class Export extends Import
 
             if ($rItem->updated >= $entity->updated && false === ag($context->options, Options::IGNORE_DATE, false)) {
                 $this->logger->debug(
-                    message: "{action}: Ignoring '{identity.client}: {identity.user}@{identity.backend}' - '{item.title}'. Backend date '{backend_date}' is equal or newer than local history date '{db_date}'.",
+                    message: "Ignoring '{identity.user}@{identity.backend}' - '{item.title}'. Backend date '{backend_date}' is equal or newer than local history date '{db_date}'.",
                     context: [
                         ...$logContext,
                         'db_date' => make_date($entity->updated),
@@ -206,7 +206,7 @@ final class Export extends Import
 
             if (true === (bool) ag($context->options, Options::DRY_RUN, false)) {
                 $this->logger->notice(
-                    message: "{action}: Queuing request to change '{identity.client}: {identity.user}@{identity.backend}' {item.type} '{item.title}' play state to '{play_state}'.",
+                    message: "Queuing request to change '{identity.user}@{identity.backend}' {item.type} '{item.title}' play state to '{play_state}'.",
                     context: $requestContext,
                 );
                 return;
@@ -222,10 +222,10 @@ final class Export extends Import
 
                         if (Status::OK !== Status::tryFrom($statusCode)) {
                             $this->logger->error(
-                                message: "{action}: Request to change '{identity.client}: {identity.user}@{identity.backend}' {item.type} '{item.title}' play state returned with unexpected '{status_code}' status code.",
+                                message: "Request to change '{identity.user}@{identity.backend}' {item.type} '{item.title}' play state returned with unexpected '{response.status_code}' status code.",
                                 context: [
                                     ...$requestContext,
-                                    'status_code' => $statusCode,
+                                    'response' => ['status_code' => $statusCode],
                                 ],
                             );
 
@@ -233,7 +233,7 @@ final class Export extends Import
                         }
 
                         $this->logger->notice(
-                            message: "{action}: Updated '{identity.client}: {identity.user}@{identity.backend}' {item.type} '{item.title}' play state to '{play_state}'.",
+                            message: "Updated '{identity.user}@{identity.backend}' {item.type} '{item.title}' play state to '{play_state}'.",
                             context: $requestContext,
                         );
 
@@ -242,7 +242,7 @@ final class Export extends Import
                     error: function (Throwable $e) use ($requestContext): array {
                         $this->logger->error(
                             ...lw(
-                                message: "{action}: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' request to change play state of {item.type} '{item.title}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                                message: "Failed during '{identity.user}@{identity.backend}' request to change play state of {item.type} '{item.title}'. {exception.message}",
                                 context: [
                                     ...$requestContext,
                                     ...exception_log($e),
@@ -262,7 +262,7 @@ final class Export extends Import
         } catch (Throwable $e) {
             $this->logger->error(
                 ...lw(
-                    message: "{action}: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' export. {exception.message} at '{exception.file}:{exception.line}'.",
+                    message: "Failed during '{identity.user}@{identity.backend}' export. {exception.message}",
                     context: [
                         ...$logContext,
                         ...exception_log($e),

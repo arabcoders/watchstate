@@ -363,7 +363,6 @@ const searchableLog = (log: ServerJsonLogEntry): string =>
     log.message,
     log.level,
     log.logger,
-    log.event_name ?? '',
     log.exception ? JSON.stringify(log.exception) : '',
     log.source ? JSON.stringify(log.source) : '',
     log.process ? JSON.stringify(log.process) : '',

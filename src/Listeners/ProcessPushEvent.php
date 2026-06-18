@@ -161,7 +161,7 @@ final readonly class ProcessPushEvent
             } catch (Throwable $e) {
                 $writer(
                     Level::Error,
-                    "Exception '{exception.type}' was thrown unhandled during '{identity.user}@{identity.backend}' - '#{item.id}: {item.title}' push event handling. {exception.message} at '{exception.file}:{exception.line}'.",
+                    "Failed during '{identity.user}@{identity.backend}' - '#{item.id}: {item.title}' push event handling. {exception.message}",
                     [
                         'identity' => [
                             'user' => $user,
@@ -210,12 +210,12 @@ final readonly class ProcessPushEvent
                     $context = ag($request->extras, 'context', []);
                     $context['identity']['user'] = $user;
                     $context['identity']['backend'] ??= $context['backend'] ?? null;
-                    $context['status_code'] = $response->getStatusCode();
+                    $context['response']['status_code'] = $response->getStatusCode();
 
-                    if (Status::OK !== Status::tryFrom($context['status_code'])) {
+                    if (Status::OK !== Status::tryFrom($context['response']['status_code'])) {
                         $writer(
                             Level::Error,
-                            "Request to change '{identity.user}@{identity.backend}' - '#{item.id}: {item.title}' play state returned with unexpected '{status_code}' status code.",
+                            "Request to change '{identity.user}@{identity.backend}' - '#{item.id}: {item.title}' play state returned with unexpected '{response.status_code}' status code.",
                             $context,
                         );
 
@@ -241,7 +241,7 @@ final readonly class ProcessPushEvent
 
                     $writer(
                         Level::Error,
-                        "Exception '{exception.type}' was thrown unhandled during '{identity.user}@{identity.backend}' request to change play state of {item.type} '#{item.id}: {item.title}'. {exception.message} at '{exception.file}:{exception.line}'.",
+                        "Failed during '{identity.user}@{identity.backend}' request to change play state of {item.type} '#{item.id}: {item.title}'. {exception.message}",
                         [
                             ...$context,
                             ...exception_log($ex),

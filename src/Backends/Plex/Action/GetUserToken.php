@@ -91,7 +91,7 @@ final class GetUserToken
                 ],
                 'username' => $username,
                 'user_id' => $userId,
-                'url' => (string) $url,
+                'request' => ['url' => (string) $url],
             ]);
 
             $opts['user_info'] = ['username' => $username, 'user_id' => $userId];
@@ -118,7 +118,7 @@ final class GetUserToken
                     ],
                     'username' => $username,
                     'user_id' => $userId,
-                    'url' => (string) $url,
+                    'request' => ['url' => (string) $url],
                     'data' => $json,
                     'headers' => $response->getHeaders(),
                 ]);
@@ -140,7 +140,7 @@ final class GetUserToken
                 ],
                 'username' => $username,
                 'user_id' => $userId,
-                'url' => (string) $url,
+                'request' => ['url' => (string) $url],
             ]);
 
             $response = $this->request(Method::GET, $url, Status::OK, $context, array_replace_recursive([
@@ -171,7 +171,7 @@ final class GetUserToken
                         ],
                         'username' => $username,
                         'user_id' => $userId,
-                        'url' => (string) $url,
+                        'request' => ['url' => (string) $url],
                         'data' => $json,
                     ],
                 );
@@ -225,7 +225,7 @@ final class GetUserToken
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' request for '{username}'{pin} access token. Error '{exception.message}' at '{exception.file}:{exception.line}'.",
+                    message: "Failed during '{identity.user}@{identity.backend}' request for '{username}'{pin} access token. {exception.message}",
                     context: [
                         'identity' => [
                             'user' => $context->userContext->name,
@@ -368,11 +368,13 @@ final class GetUserToken
                         'backend' => $context->backendName,
                     ],
                     'user_id' => ag($opts, 'user_info.user_id', '??'),
-                    'status_code' => $response->getStatusCode(),
-                    'body' => $response->getContent(false),
-                    'parsed' => $response->toArray(false),
+                    'response' => [
+                        'status_code' => $response->getStatusCode(),
+                        'body' => $response->getContent(false),
+                        'parsed' => $response->toArray(false),
+                    ],
                     'extra_msg' => $extra_msg,
-                    'url' => (string) $url,
+                    'request' => ['url' => (string) $url],
                     'tokenType' => ag_exists(
                         $context->options,
                         Options::ADMIN_TOKEN,

@@ -39,7 +39,7 @@ trait CommonTrait
                 status: false,
                 error: new Error(
                     ...lw(
-                        message: "{identity.client}: '{identity.backend}' {action} thrown unhandled exception '{exception.type}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                        message: "{identity.client}: '{identity.backend}' {action} {exception.message}",
                         context: [
                             'action' => $action ?? '',
                             'identity' => [

@@ -170,11 +170,11 @@ class JellyfinValidateContext
         ]), previous: $e);
 
         $ex->setContext([
-            'http' => [
+            'request' => [
                 'url' => $url,
-                'status_code' => $response->getStatusCode(),
             ],
             'response' => [
+                'status_code' => $response->getStatusCode(),
                 'headers' => $response->getHeaders(false),
                 'content_type' => $contentType,
                 'body' => $body,
@@ -193,11 +193,11 @@ class JellyfinValidateContext
 
         $ex = new InvalidContextException($message);
         $ex->setContext([
-            'http' => [
+            'request' => [
                 'url' => $url,
-                'status_code' => $response->getStatusCode(),
             ],
             'response' => [
+                'status_code' => $response->getStatusCode(),
                 'headers' => $response->getHeaders(false),
                 'content_type' => $contentType,
                 'body' => $body,
@@ -227,11 +227,11 @@ class JellyfinValidateContext
         );
 
         $ex->setContext([
-            'http' => [
+            'request' => [
                 'url' => $url,
-                'status_code' => $response->getStatusCode(),
             ],
             'response' => [
+                'status_code' => $response->getStatusCode(),
                 'headers' => $response->getHeaders(false),
                 'content_type' => $contentType,
                 'body' => $body,

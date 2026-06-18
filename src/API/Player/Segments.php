@@ -379,7 +379,7 @@ readonly class Segments
 
             return $response;
         } catch (Throwable $e) {
-            $this->logger->error("Failed to generate segment. '{exception.message}' at {exception.file}:{exception.line}", [
+            $this->logger->error('Failed to generate segment. {exception.message}', [
                 'stdout' => isset($process) ? $process->getOutput() : null,
                 'stderr' => isset($process) ? $process->getErrorOutput() : null,
                 'Ffmpeg' => $this->cmdLog($cmd),
@@ -464,7 +464,7 @@ readonly class Segments
             $stream->close();
             return $cacheFile;
         } catch (Throwable $e) {
-            $this->logger->error("Failed to extract subtitles. '{exception.message}' at {exception.file}:{exception.line}", [
+            $this->logger->error('Failed to extract subtitles. {exception.message}', [
                 'stdout' => isset($process) ? $process->getOutput() : null,
                 'stderr' => isset($process) ? $process->getErrorOutput() : null,
                 'Ffmpeg' => $this->cmdLog($cmd),

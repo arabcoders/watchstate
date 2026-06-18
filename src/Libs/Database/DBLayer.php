@@ -968,7 +968,7 @@ final class DBLayer implements LoggerAwareInterface
 
                 $this->logger?->log(
                     ($attempts + 1) >= $this->retry ? Level::Warning : Level::Info,
-                    "PDOAdapter: Database is locked. sleeping for '{sleep}s'.",
+                    "Database is locked. sleeping for '{sleep}s'.",
                     [
                         'sleep' => $sleep,
                     ],

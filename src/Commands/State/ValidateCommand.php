@@ -145,7 +145,7 @@ class ValidateCommand extends Command
 
             $this->output(
                 Level::Notice,
-                "SYSTEM: Validating '{identity.user}' local database metadata reference ids.",
+                "Validating '{identity.user}' local database metadata reference ids.",
                 [
                     'identity' => [
                         'user' => $userContext->name,
@@ -158,7 +158,7 @@ class ValidateCommand extends Command
 
             $this->output(
                 Level::Notice,
-                "SYSTEM: Completed '{identity.user}' local database validation in '{duration}'s.",
+                "Completed '{identity.user}' local database validation in '{duration}'s.",
                 [
                     'identity' => [
                         'user' => $userContext->name,
@@ -171,7 +171,7 @@ class ValidateCommand extends Command
 
         $this->output(
             Level::Notice,
-            "SYSTEM: Completed local databases validation in '{duration}'s.",
+            "Completed local databases validation in '{duration}'s.",
             [
                 'duration' => round(microtime(true) - $start_time, 4),
             ],
@@ -217,7 +217,7 @@ class ValidateCommand extends Command
                 if (count($item->getMetadata()) < 1) {
                     $this->output(
                         Level::Warning,
-                        "SYSTEM: No metadata found for item '{identity.user}: #{id}' Removing record.",
+                        "No metadata found for item '{identity.user}: #{id}' Removing record.",
                         [
                             'id' => $item->id,
                             'identity' => [
@@ -235,7 +235,7 @@ class ValidateCommand extends Command
 
                 $this->output(
                     Level::Debug,
-                    "SYSTEM: Validating '{identity.user}: #{id}' - '{title}' reference ID for '{backends}'.",
+                    "Validating '{identity.user}: #{id}' - '{title}' reference ID for '{backends}'.",
                     [
                         'id' => $item->id,
                         'identity' => [
@@ -251,7 +251,7 @@ class ValidateCommand extends Command
                     $id = ag($metadata, iState::COLUMN_ID);
                     $this->output(
                         Level::Debug,
-                        "SYSTEM: Validating '{identity.user}@{identity.backend}: #{id} - {item_id}' '{title}' reference ID.",
+                        "Validating '{identity.user}@{identity.backend}: #{id} - {item_id}' '{title}' reference ID.",
                         [
                             'id' => $item->id,
                             'item_id' => $id,
@@ -267,7 +267,7 @@ class ValidateCommand extends Command
                     if (null === $id) {
                         $this->output(
                             Level::Notice,
-                            "SYSTEM: No reference ID found for item '{identity.user}@{identity.backend}: #{id}' Removing reference ID.",
+                            "No reference ID found for item '{identity.user}@{identity.backend}: #{id}' Removing reference ID.",
                             [
                                 'id' => $item->id,
                                 'identity' => [
@@ -285,7 +285,7 @@ class ValidateCommand extends Command
                     if (null === ($clients[$backend] ?? null)) {
                         $this->output(
                             Level::Warning,
-                            "SYSTEM: '{identity.user}: #{id}' has reference to '{identity.backend}' which doesn't exists. Removing reference ID.",
+                            "'{identity.user}: #{id}' has reference to '{identity.backend}' which doesn't exists. Removing reference ID.",
                             [
                                 'id' => $item->id,
                                 'identity' => [
@@ -315,7 +315,7 @@ class ValidateCommand extends Command
                         if (false === $data) {
                             $this->output(
                                 Level::Notice,
-                                "SYSTEM: Request for '{identity.user}@{identity.backend}: #{id} - {item_id}' didnt return any data. Removing reference ID.",
+                                "Request for '{identity.user}@{identity.backend}: #{id} - {item_id}' didnt return any data. Removing reference ID.",
                                 [
                                     'id' => $item->id,
                                     'item_id' => $id,
@@ -335,7 +335,7 @@ class ValidateCommand extends Command
                     } catch (Throwable $e) {
                         $this->output(
                             Level::Notice,
-                            "SYSTEM: Request for '{identity.user}@{identity.backend}: #{id} - {item_id}'. returned with error. {error}. Removing reference ID.",
+                            "Request for '{identity.user}@{identity.backend}: #{id} - {item_id}'. returned with error. {error}. Removing reference ID.",
                             [
                                 'id' => $item->id,
                                 'item_id' => $id,
@@ -357,7 +357,7 @@ class ValidateCommand extends Command
                 if (count($item->metadata) < 1) {
                     $this->output(
                         Level::Notice,
-                        "SYSTEM: Item '{identity.user}: #{id}' no longer have any reference ID. Removing record.",
+                        "Item '{identity.user}: #{id}' no longer have any reference ID. Removing record.",
                         [
                             'id' => $item->id,
                             'identity' => [
@@ -384,7 +384,7 @@ class ValidateCommand extends Command
                     if (0 === ($progressUpdate % 500)) {
                         $this->output(
                             Level::Info,
-                            "SYSTEM: Processed '{progress}/{total}' %{percent}.",
+                            "Processed '{progress}/{total}' %{percent}.",
                             [
                                 'progress' => number_format($progressUpdate),
                                 'total' => $recordsCount,

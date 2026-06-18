@@ -94,12 +94,12 @@ class GetMetaData
                         'backend' => $context->backendName,
                         'user' => $context->userContext->name,
                     ],
-                    'url' => (string) $url,
+                    'request' => ['url' => (string) $url],
                     ...ag($opts, Options::LOG_CONTEXT, []),
                 ];
 
                 $this->logger->debug(
-                    "{action}: Requesting '{identity.client}: {identity.user}@{identity.backend}' - '{id}' item metadata.",
+                    "Requesting '{identity.user}@{identity.backend}' - '{id}' item metadata.",
                     $logContext,
                 );
 
@@ -121,10 +121,10 @@ class GetMetaData
                         return new Response(
                             status: false,
                             error: new Error(
-                                message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' - '{id}' item returned with unexpected '{status_code}' status code.",
+                                message: "Request for '{identity.user}@{identity.backend}' - '{id}' item returned with unexpected '{response.status_code}' status code.",
                                 context: [
                                     ...$logContext,
-                                    'status_code' => $response->getStatusCode(),
+                                    'response' => ['status_code' => $response->getStatusCode()],
                                 ],
                             ),
                         );
@@ -148,7 +148,7 @@ class GetMetaData
                 }
 
                 if (true === $context->trace) {
-                    $this->logger->debug("{action}: Processing '{identity.client}: {identity.user}@{identity.backend}' - '{id}' item payload.", [
+                    $this->logger->debug("Processing '{identity.user}@{identity.backend}' - '{id}' item payload.", [
                         ...$logContext,
                         'cached' => $fromCache,
                         'response' => [

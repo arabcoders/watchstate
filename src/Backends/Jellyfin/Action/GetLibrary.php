@@ -89,7 +89,7 @@ class GetLibrary
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: No library with id '{id}' found in '{identity.client}: {identity.user}@{identity.backend}' response.",
+                    message: "No library with id '{id}' found in '{identity.user}@{identity.backend}' response.",
                     context: [
                         'action' => $this->action,
                         'identity' => [
@@ -129,7 +129,7 @@ class GetLibrary
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: The request for '{identity.client}: {identity.user}@{identity.backend}' library '{library.id}: {library.title}' returned with unsupported type '{library.type}'.",
+                    message: "The request for '{identity.user}@{identity.backend}' library '{library.id}: {library.title}' returned with unsupported type '{library.type}'.",
                     context: $logContext,
                     level: Levels::WARNING,
                 ),
@@ -160,7 +160,7 @@ class GetLibrary
         $logContext['library']['url'] = (string) $url;
 
         $this->logger->debug(
-            "Requesting '{identity.client}: {identity.user}@{identity.backend}' library '{library.title}' content.",
+            "Requesting '{identity.user}@{identity.backend}' library '{library.title}' content.",
             $logContext,
         );
 
@@ -170,9 +170,9 @@ class GetLibrary
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' library '{library.title}' items returned with unexpected '{status_code}' status code.",
+                    message: "Request for '{identity.user}@{identity.backend}' library '{library.title}' items returned with unexpected '{response.status_code}' status code.",
                     context: [
-                        'status_code' => $response->getStatusCode(),
+                        'response' => ['status_code' => $response->getStatusCode()],
                         ...$logContext,
                     ],
                     level: Levels::ERROR,
@@ -195,7 +195,7 @@ class GetLibrary
         foreach ($it as $entity) {
             if ($entity instanceof DecodingError) {
                 $this->logger->warning(
-                    "{action}: Failed to decode one item of '{identity.client}: {identity.user}@{identity.backend}' library '{library.title}' content.",
+                    "Failed to decode one item of '{identity.user}@{identity.backend}' library '{library.title}' content.",
                     [
                         ...$logContext,
                         'error' => [
@@ -220,7 +220,7 @@ class GetLibrary
                 'title' => ag($entity, ['Name', 'OriginalTitle', 'SortName', 'ForcedSortName'], '??'),
                 'year' => ag($entity, 'ProductionYear', '0000'),
                 'type' => ag($entity, 'Type'),
-                'url' => (string) $url,
+                'request' => ['url' => (string) $url],
             ];
 
             // -- Handle multi episode entries.
@@ -279,7 +279,7 @@ class GetLibrary
         }
 
         $this->logger->debug(
-            message: "{action}: Processing '{identity.client}: {identity.user}@{identity.backend}' {item.type} '{item.title} ({item.year})'.",
+            message: "Processing '{identity.user}@{identity.backend}' {item.type} '{item.title} ({item.year})'.",
             context: $data,
         );
 
@@ -293,7 +293,7 @@ class GetLibrary
             iState::COLUMN_ID => ag($item, 'Id'),
             iState::COLUMN_TYPE => ucfirst(ag($item, 'Type', 'unknown')),
             iState::COLUMN_META_LIBRARY => ag($log, 'library.title'),
-            'url' => (string) $url,
+            'request' => ['url' => (string) $url],
             'webUrl' => (string) $webUrl,
             iState::COLUMN_TITLE => ag($item, $possibleTitlesList, '??'),
             iState::COLUMN_YEAR => ag($item, 'ProductionYear'),

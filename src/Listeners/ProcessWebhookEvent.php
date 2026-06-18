@@ -329,7 +329,7 @@ final class ProcessWebhookEvent
                 $this->write(
                     request: $perUserRequest,
                     level: $this->level($e),
-                    message: "Failed to process '{identity.user}@{identity.backend}' {item.type} '{item.title}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                    message: "Failed to process '{identity.user}@{identity.backend}' {item.type} '{item.title}'. {exception.message}",
                     context: [
                         'identity' => [
                             'user' => $target['userContext']->name,

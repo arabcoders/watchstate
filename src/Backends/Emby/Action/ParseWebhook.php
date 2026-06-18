@@ -126,7 +126,7 @@ final class ParseWebhook
             return new Response(status: false, extra: [
                 'http_code' => Status::BAD_REQUEST->value,
                 'message' => r(
-                    text: "Ignoring '{identity.client}: {identity.user}@{identity.backend}' request. Invalid request, no payload.",
+                    text: "Ignoring '{identity.user}@{identity.backend}' request. Invalid request, no payload.",
                     context: $logContext,
                 ),
             ]);
@@ -291,7 +291,7 @@ final class ParseWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: "{action}: Ignoring '{identity.client}: {identity.user}@{identity.backend}' - '{title}' webhook event. No valid/supported external ids.",
+                        message: "Ignoring '{identity.user}@{identity.backend}' - '{title}' webhook event. No valid/supported external ids.",
                         context: [
                             'title' => $entity->getName(),
                             ...$logContext,
@@ -319,7 +319,7 @@ final class ParseWebhook
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' webhook event parsing. {exception.message} at '{exception.file}:{exception.line}'.",
+                    message: "Failed during '{identity.user}@{identity.backend}' webhook event parsing. {exception.message}",
                     context: [
                         ...$logContext,
                         ...exception_log($e),

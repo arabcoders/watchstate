@@ -202,7 +202,7 @@ final readonly class ProcessProgressEvent
             } catch (UnexpectedVersionException|NotImplementedException $ex) {
                 $writer(
                     Level::Notice,
-                    "This feature is not available for '{identity.user}@{identity.backend}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                    "This feature is not available for '{identity.user}@{identity.backend}'. {exception.message}",
                     [
                         'identity' => [
                             'user' => $userContext->name,
@@ -214,7 +214,7 @@ final readonly class ProcessProgressEvent
             } catch (Throwable $ex) {
                 $writer(
                     Level::Error,
-                    "Exception '{exception.type}' was thrown unhandled during '{identity.user}@{identity.backend}' request to sync '#{id}: {title}' progress. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                    "Failed during '{identity.user}@{identity.backend}' request to sync '#{id}: {title}' progress. {exception.message}",
                     [
                         'id' => $item->id,
                         'title' => $item->getName(),
@@ -273,7 +273,7 @@ final readonly class ProcessProgressEvent
                     if (true === (bool) ag($options, 'trace')) {
                         $writer(Level::Debug, "Processing '{identity.user}@{identity.backend}' - '#{id}: {item.title}' response.", [
                             'id' => $context['id'],
-                            'url' => ag($context, 'remote.url', '??'),
+                            'url' => ag($context, 'request.url', '??'),
                             'status_code' => $statusCode,
                             'headers' => $response->getHeaders(false),
                             'response' => $response->getContent(false),
@@ -316,7 +316,7 @@ final readonly class ProcessProgressEvent
 
                     $writer(
                         Level::Error,
-                        "Exception '{exception.type}' was thrown unhandled during '{identity.user}@{identity.backend}' request to change watch progress of {item.type} '#{id}: {item.title}'. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                        "Failed during '{identity.user}@{identity.backend}' request to change watch progress of {item.type} '#{id}: {item.title}'. {exception.message}",
                         [
                             ...$context,
                             'id' => ag($context, 'item.id', $item->id),

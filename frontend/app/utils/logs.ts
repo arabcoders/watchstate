@@ -161,10 +161,6 @@ export const normalizeStructuredEntry = (value: unknown): ServerJsonLogEntry | n
     entry.levelno = payload.levelno;
   }
 
-  if (typeof payload.event_name === 'string' && payload.event_name.trim().length > 0) {
-    entry.event_name = payload.event_name.trim();
-  }
-
   if (payload.source && typeof payload.source === 'object' && !Array.isArray(payload.source)) {
     entry.source = payload.source as ServerJsonLogEntry['source'];
   }

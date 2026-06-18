@@ -74,7 +74,7 @@ final class AddWebhook
 
             $this->logger->debug("Getting installed plugins for '{identity.user}@{identity.backend}'.", [
                 ...$logContext,
-                'url' => (string) $pluginsUrl,
+                'request' => ['url' => (string) $pluginsUrl],
             ]);
 
             $response = $this->http->request(Method::GET, $pluginsUrl, array_replace_recursive(
@@ -90,11 +90,11 @@ final class AddWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' plugins list returned with unexpected '{status_code}' status code.",
+                        message: "Request for '{identity.user}@{identity.backend}' plugins list returned with unexpected '{response.status_code}' status code.",
                         context: [
                             ...$logContext,
-                            'status_code' => $response->getStatusCode(),
                             'response' => [
+                                'status_code' => $response->getStatusCode(),
                                 'body' => $content,
                                 'reason' => $reason,
                             ],
@@ -109,7 +109,7 @@ final class AddWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' plugins list returned with empty response.",
+                        message: "Request for '{identity.user}@{identity.backend}' plugins list returned with empty response.",
                         context: [...$logContext, 'response' => ['body' => $content]],
                         level: Levels::ERROR,
                     ),
@@ -136,7 +136,7 @@ final class AddWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: "{action}: Webhook plugin not found on '{identity.client}: {identity.user}@{identity.backend}'.",
+                        message: "Webhook plugin not found on '{identity.user}@{identity.backend}'.",
                         context: $logContext,
                         level: Levels::ERROR,
                     ),
@@ -162,11 +162,11 @@ final class AddWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' get webhooks returned with unexpected '{status_code}' status code.",
+                        message: "Request for '{identity.user}@{identity.backend}' get webhooks returned with unexpected '{response.status_code}' status code.",
                         context: [
                             ...$logContext,
-                            'status_code' => $response->getStatusCode(),
                             'response' => [
+                                'status_code' => $response->getStatusCode(),
                                 'body' => $content,
                                 'reason' => $reason,
                             ],
@@ -181,7 +181,7 @@ final class AddWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' get webhooks returned with empty response.",
+                        message: "Request for '{identity.user}@{identity.backend}' get webhooks returned with empty response.",
                         context: [...$logContext, 'response' => ['body' => $content]],
                         level: Levels::ERROR,
                     ),
@@ -196,7 +196,7 @@ final class AddWebhook
 
             if (true === $context->trace) {
                 $this->logger->debug(
-                    message: "{action}: Processing '{identity.client}: {identity.user}@{identity.backend}' get info payload.",
+                    message: "Processing '{identity.user}@{identity.backend}' get info payload.",
                     context: [...$logContext, 'response' => ['body' => $config]],
                 );
             }
@@ -210,7 +210,7 @@ final class AddWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: "{action}: Failed to get users list for '{identity.client}: {identity.user}@{identity.backend}' while adding webhook.",
+                        message: "Failed to get users list for '{identity.user}@{identity.backend}' while adding webhook.",
                         context: [
                             ...$logContext,
                             'response' => $usersList->error?->context['response'] ?? null,
@@ -286,12 +286,12 @@ final class AddWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' to {mode} webhook returned with unexpected '{status_code}' status code.",
+                        message: "Request for '{identity.user}@{identity.backend}' to {mode} webhook returned with unexpected '{response.status_code}' status code.",
                         context: [
                             ...$logContext,
                             'mode' => $mode,
-                            'status_code' => $resp->getStatusCode(),
                             'response' => [
+                                'status_code' => $resp->getStatusCode(),
                                 'body' => $resp->getContent(false),
                                 'reason' => $reason,
                             ],
@@ -307,7 +307,7 @@ final class AddWebhook
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' request to {mode} webhook. Error '{exception.message}' at '{exception.file}:{exception.line}'.",
+                    message: "Failed during '{identity.user}@{identity.backend}' request to {mode} webhook. {exception.message}",
                     context: [
                         'identity' => [
                             'user' => $context->userContext->name,

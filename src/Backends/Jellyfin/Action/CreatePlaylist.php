@@ -67,7 +67,7 @@ class CreatePlaylist
                 'user' => $context->userContext->name,
             ],
             'title' => $title,
-            'url' => (string) $url,
+            'request' => ['url' => (string) $url],
         ];
 
         $response = $this->http->request(
@@ -80,8 +80,8 @@ class CreatePlaylist
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' playlist '{title}' returned with unexpected '{status_code}' status code.",
-                    context: [...$logContext, 'status_code' => $response->getStatusCode()],
+                    message: "Request for '{identity.user}@{identity.backend}' playlist '{title}' returned with unexpected '{response.status_code}' status code.",
+                    context: [...$logContext, 'response' => ['status_code' => $response->getStatusCode()]],
                     level: Levels::ERROR,
                 ),
             );

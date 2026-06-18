@@ -172,11 +172,11 @@ final readonly class PlexValidateContext
         ]), previous: $e);
 
         $ex->setContext([
-            'http' => [
+            'request' => [
                 'url' => $url,
-                'status_code' => $response->getStatusCode(),
             ],
             'response' => [
+                'status_code' => $response->getStatusCode(),
                 'headers' => $response->getHeaders(false),
                 'content_type' => $contentType,
                 'body' => $body,
@@ -195,11 +195,11 @@ final readonly class PlexValidateContext
 
         $ex = new InvalidContextException($message);
         $ex->setContext([
-            'http' => [
+            'request' => [
                 'url' => $url,
-                'status_code' => $response->getStatusCode(),
             ],
             'response' => [
+                'status_code' => $response->getStatusCode(),
                 'headers' => $response->getHeaders(false),
                 'content_type' => $contentType,
                 'body' => $body,
@@ -229,11 +229,11 @@ final readonly class PlexValidateContext
         );
 
         $ex->setContext([
-            'http' => [
+            'request' => [
                 'url' => $url,
-                'status_code' => $response->getStatusCode(),
             ],
             'response' => [
+                'status_code' => $response->getStatusCode(),
                 'headers' => $response->getHeaders(false),
                 'content_type' => $contentType,
                 'body' => $body,

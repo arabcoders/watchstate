@@ -144,7 +144,7 @@ final class GetUsersList
                 'user' => $context->userContext->name,
                 'backend' => $context->backendName,
             ],
-            'url' => (string) $url,
+            'request' => ['url' => (string) $url],
         ]);
 
         try {
@@ -201,7 +201,7 @@ final class GetUsersList
 
         if ($this->logRequests) {
             $this->rawRequests[] = [
-                'url' => (string) $url,
+                'request' => ['url' => (string) $url],
                 'headers' => $response->getHeaders(false),
                 'body' => $json,
             ];
@@ -213,7 +213,7 @@ final class GetUsersList
                     'user' => $context->userContext->name,
                     'backend' => $context->backendName,
                 ],
-                'url' => (string) $url,
+                'request' => ['url' => (string) $url],
                 'data' => $json,
             ]);
         }
@@ -346,7 +346,7 @@ final class GetUsersList
                 'user' => $context->userContext->name,
                 'backend' => $context->backendName,
             ],
-            'url' => (string) $url,
+            'request' => ['url' => (string) $url],
         ]);
 
         try {
@@ -391,7 +391,7 @@ final class GetUsersList
                 'user' => $context->userContext->name,
                 'backend' => $context->backendName,
             ],
-            'url' => (string) $url,
+            'request' => ['url' => (string) $url],
         ]);
 
         try {
@@ -447,7 +447,7 @@ final class GetUsersList
 
         if ($this->logRequests) {
             $this->rawRequests[] = [
-                'url' => (string) $url,
+                'request' => ['url' => (string) $url],
                 'headers' => $response->getHeaders(false),
                 'body' => json_decode(json_encode($content), true),
             ];
@@ -458,7 +458,7 @@ final class GetUsersList
                 'identity' => [
                     'backend' => $context->backendName,
                 ],
-                'url' => (string) $url,
+                'request' => ['url' => (string) $url],
                 'data' => $data,
             ]);
         }
@@ -525,7 +525,7 @@ final class GetUsersList
 
         if ($this->logRequests) {
             $this->rawRequests[] = [
-                'url' => (string) $url,
+                'request' => ['url' => (string) $url],
                 'headers' => $response->getHeaders(false),
                 'body' => $json,
             ];
@@ -536,7 +536,7 @@ final class GetUsersList
                 'identity' => [
                     'backend' => $context->backendName,
                 ],
-                'url' => (string) $url,
+                'request' => ['url' => (string) $url],
                 'data' => $json,
             ]);
         }
@@ -627,8 +627,10 @@ final class GetUsersList
                         'user' => $context->userContext->name,
                         'backend' => $context->backendName,
                     ],
-                    'status_code' => $response->getStatusCode(),
-                    'body' => $response->getContent(false),
+                    'response' => [
+                        'status_code' => $response->getStatusCode(),
+                        'body' => $response->getContent(false),
+                    ],
                     'extra_msg' => !$extra_msg ? '' : ". {$extra_msg}",
                     'tokenType' => ag_exists(
                         $context->options,

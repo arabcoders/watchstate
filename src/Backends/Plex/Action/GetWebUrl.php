@@ -39,7 +39,7 @@ final class GetWebUrl
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Invalid Web url type '{type}' for '{identity.client}: {identity.user}@{identity.backend}'.",
+                    message: "Invalid Web url type '{type}' for '{identity.user}@{identity.backend}'.",
                     context: [
                         'action' => $this->action,
                         'identity' => [

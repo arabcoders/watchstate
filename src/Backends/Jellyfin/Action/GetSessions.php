@@ -62,11 +62,11 @@ class GetSessions
                         'backend' => $context->backendName,
                         'user' => $context->userContext->name,
                     ],
-                    'url' => (string) $url,
+                    'request' => ['url' => (string) $url],
                 ];
 
                 $this->logger->debug(
-                    "{action}: Requesting '{identity.client}: {identity.user}@{identity.backend}' play sessions.",
+                    "Requesting '{identity.user}@{identity.backend}' play sessions.",
                     $logContext,
                 );
 
@@ -85,11 +85,10 @@ class GetSessions
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' get sessions returned with unexpected '{status_code}' status code.",
+                            message: "Request for '{identity.user}@{identity.backend}' get sessions returned with unexpected '{response.status_code}' status code.",
                             context: [
                                 ...$logContext,
-                                'status_code' => $response->getStatusCode(),
-                                'response' => ['body' => $content],
+                                'response' => ['status_code' => $response->getStatusCode(), 'body' => $content],
                             ],
                             level: Levels::WARNING,
                         ),
@@ -100,7 +99,7 @@ class GetSessions
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' get sessions returned with empty response.",
+                            message: "Request for '{identity.user}@{identity.backend}' get sessions returned with empty response.",
                             context: [
                                 ...$logContext,
                                 'response' => ['status_code' => $response->getStatusCode(), 'body' => $content],
@@ -117,7 +116,7 @@ class GetSessions
                 );
 
                 if (true === $context->trace) {
-                    $this->logger->debug("Processing '{identity.client}: {identity.user}@{identity.backend}' {action} payload.", [
+                    $this->logger->debug("Processing '{identity.user}@{identity.backend}' {action} payload.", [
                         ...$logContext,
                         'response' => ['body' => $items],
                     ]);

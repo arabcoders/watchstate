@@ -97,11 +97,11 @@ final class SearchQuery
                 'backend' => $context->backendName,
                 'user' => $context->userContext->name,
             ],
-            'url' => (string) $url,
+            'request' => ['url' => (string) $url],
         ];
 
         $this->logger->debug(
-            "{action}: Searching '{identity.client}: {identity.user}@{identity.backend}' libraries for '{query}'.",
+            "Searching '{identity.user}@{identity.backend}' libraries for '{query}'.",
             $logContext,
         );
 
@@ -118,10 +118,10 @@ final class SearchQuery
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Search request for '{query}' in '{identity.client}: {identity.user}@{identity.backend}' returned with unexpected '{status_code}' status code.",
+                    message: "Search request for '{query}' in '{identity.user}@{identity.backend}' returned with unexpected '{response.status_code}' status code.",
                     context: [
                         ...$logContext,
-                        'status_code' => $response->getStatusCode(),
+                        'response' => ['status_code' => $response->getStatusCode()],
                     ],
                     level: Levels::ERROR,
                 ),
@@ -136,7 +136,7 @@ final class SearchQuery
 
         if ($context->trace) {
             $this->logger->debug(
-                message: "{action}: Parsing Searching '{identity.client}: {identity.user}@{identity.backend}' libraries for '{query}' payload.",
+                message: "Parsing Searching '{identity.user}@{identity.backend}' libraries for '{query}' payload.",
                 context: [...$logContext, 'response' => ['body' => $json]],
             );
         }
@@ -157,7 +157,7 @@ final class SearchQuery
                     $entity = $this->createEntity($context, $plexGuid, $item, $opts);
                 } catch (Throwable $e) {
                     $this->logger->error(
-                        message: "{action}: Failed to map '{identity.client}: {identity.user}@{identity.backend}' item to entity. {error}",
+                        message: "Failed to map '{identity.user}@{identity.backend}' item to entity. {error}",
                         context: [...$logContext, 'error' => $e->getMessage()],
                     );
                     continue;

@@ -58,10 +58,10 @@ class GetInfo
                         'backend' => $context->backendName,
                         'user' => $context->userContext->name,
                     ],
-                    'url' => (string) $url,
+                    'request' => ['url' => (string) $url],
                 ];
 
-                $this->logger->debug("{action}: Requesting '{identity.client}: {identity.user}@{identity.backend}' info.", $logContext);
+                $this->logger->debug("Requesting '{identity.user}@{identity.backend}' info.", $logContext);
 
                 $response = $this->http->request(
                     method: Method::GET,
@@ -79,11 +79,11 @@ class GetInfo
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: "{action}: '{identity.client}: {identity.user}@{identity.backend}' request returned with unexpected '{status_code}' status code.",
+                            message: "'{identity.user}@{identity.backend}' request returned with unexpected '{response.status_code}' status code.",
                             context: [
                                 ...$logContext,
-                                'status_code' => $response->getStatusCode(),
                                 'response' => [
+                                    'status_code' => $response->getStatusCode(),
                                     'body' => $content,
                                     'reason' => $reason,
                                 ],
@@ -100,7 +100,7 @@ class GetInfo
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: "{action}: '{identity.client}: {identity.user}@{identity.backend}' request returned with empty response. Please make sure the container can communicate with the backend.",
+                            message: "'{identity.user}@{identity.backend}' request returned with empty response. Please make sure the container can communicate with the backend.",
                             context: [
                                 ...$logContext,
                                 'response' => [
@@ -120,7 +120,7 @@ class GetInfo
                 );
 
                 if (true === $context->trace) {
-                    $this->logger->debug("{action}: Processing '{identity.client}: {identity.user}@{identity.backend}' request payload.", [
+                    $this->logger->debug("Processing '{identity.user}@{identity.backend}' request payload.", [
                         ...$logContext,
                         'data' => $item,
                     ]);

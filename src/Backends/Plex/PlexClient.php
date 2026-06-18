@@ -866,7 +866,7 @@ class PlexClient implements iClient
 
                 throw new RuntimeException(
                     r(
-                        text: "PlexClient: Request for servers list returned with unexpected '{status_code}' status code. {context}",
+                        text: "Request for servers list returned with unexpected '{status_code}' status code. {context}",
                         context: [
                             'status_code' => $response->getStatusCode(),
                             'context' => array_to_string([
@@ -881,7 +881,7 @@ class PlexClient implements iClient
         } catch (TransportExceptionInterface $e) {
             throw new RuntimeException(
                 r(
-                    text: "PlexClient: Exception '{exception.type}' was thrown unhandled during request for plex servers list, likely network related error. {exception.message} at '{exception.file}:{exception.line}'.",
+                    text: 'Failed during request for plex servers list, likely network related error. {exception.message}',
                     context: exception_log($e),
                 ),
                 code: 500,
@@ -1015,7 +1015,7 @@ class PlexClient implements iClient
         } catch (TransportExceptionInterface $e) {
             throw new RuntimeException(
                 r(
-                    text: "PlexClient: Exception '{exception.type}' was thrown unhandled during request for plex servers list, likely network related error. {exception.message} at '{exception.file}:{exception.line}'.",
+                    text: 'Failed during request for plex servers list, likely network related error. {exception.message}',
                     context: exception_log($e),
                 ),
                 code: 500,

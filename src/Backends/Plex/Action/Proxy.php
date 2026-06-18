@@ -63,11 +63,11 @@ final class Proxy
                         'backend' => $context->backendName,
                         'user' => $context->userContext->name,
                     ],
-                    'url' => $url,
+                    'request' => ['url' => $url],
                 ];
 
                 $this->logger->debug(
-                    message: "{action}: proxying request via '{identity.client}: {identity.user}@{identity.backend}'.",
+                    message: "proxying request via '{identity.user}@{identity.backend}'.",
                     context: $logContext,
                 );
 

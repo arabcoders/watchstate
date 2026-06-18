@@ -255,7 +255,7 @@ class RestoreCommand extends Command
         $mapper->loadData();
 
         $this->logger->notice(
-            "SYSTEM: Loading restore data of '{identity.user}@{identity.backend}' completed in '{duration}'s. Memory usage '{memory.now}'.",
+            "Loading restore data of '{identity.user}@{identity.backend}' completed in '{duration}'s. Memory usage '{memory.now}'.",
             [
                 'identity' => [
                     'backend' => $name,
@@ -312,7 +312,7 @@ class RestoreCommand extends Command
             $stats = ['sent' => count($requests), 'failed' => 0];
 
             $start = microtime(true);
-            $this->logger->notice("SYSTEM: Sending '{total}' play state comparison requests for '{identity.user}@{identity.backend}'.", [
+            $this->logger->notice("Sending '{total}' play state comparison requests for '{identity.user}@{identity.backend}'.", [
                 'identity' => [
                     'backend' => $name,
                     'user' => $userContext->name,
@@ -333,7 +333,7 @@ class RestoreCommand extends Command
                 ],
             );
 
-            $this->logger->notice("SYSTEM: Completed '{total}' requests in '{duration}'s for '{identity.user}@{identity.backend}'.", [
+            $this->logger->notice("Completed '{total}' requests in '{duration}'s for '{identity.user}@{identity.backend}'.", [
                 'identity' => [
                     'backend' => $name,
                     'user' => $userContext->name,
@@ -346,7 +346,7 @@ class RestoreCommand extends Command
             $sendStats = ['sent' => $total, 'failed' => 0];
 
             if ($total >= 1) {
-                $this->logger->notice("SYSTEM: Sending '{total}' change state requests for '{identity.user}@{identity.backend}'.", [
+                $this->logger->notice("Sending '{total}' change state requests for '{identity.user}@{identity.backend}'.", [
                     'identity' => [
                         'backend' => $name,
                         'user' => $userContext->name,
@@ -356,7 +356,7 @@ class RestoreCommand extends Command
             }
 
             if ((int) Message::get("{$userContext->name}.{$name}.export", 0) < 1) {
-                $this->logger->notice("SYSTEM: No difference detected between backup file and '{identity.user}@{identity.backend}'.", [
+                $this->logger->notice("No difference detected between backup file and '{identity.user}@{identity.backend}'.", [
                     'identity' => [
                         'backend' => $name,
                         'user' => $userContext->name,
@@ -379,7 +379,7 @@ class RestoreCommand extends Command
                 );
 
                 $this->logger->notice(
-                    "SYSTEM: Sent '{total}' change play state requests to '{identity.client}: {identity.user}@{identity.backend}' in '{duration}'s.",
+                    "Sent '{total}' change play state requests to '{identity.client}: {identity.user}@{identity.backend}' in '{duration}'s.",
                     [
                         'total' => $total,
                         'identity' => [
@@ -401,7 +401,7 @@ class RestoreCommand extends Command
                 $progressStats['sent'] = count($this->queue->getQueue());
 
                 if ($progressStats['sent'] >= 1) {
-                    $this->logger->notice("SYSTEM: Sending '{total}' watch progress requests for '{identity.user}@{identity.backend}'.", [
+                    $this->logger->notice("Sending '{total}' watch progress requests for '{identity.user}@{identity.backend}'.", [
                         'identity' => [
                             'backend' => $name,
                             'user' => $userContext->name,
@@ -409,7 +409,7 @@ class RestoreCommand extends Command
                         'total' => $progressStats['sent'],
                     ]);
                 } else {
-                    $this->logger->notice("SYSTEM: No watch progress changes detected between backup file and '{identity.user}@{identity.backend}'.", [
+                    $this->logger->notice("No watch progress changes detected between backup file and '{identity.user}@{identity.backend}'.", [
                         'identity' => [
                             'backend' => $name,
                             'user' => $userContext->name,
@@ -432,7 +432,7 @@ class RestoreCommand extends Command
                     );
 
                     $this->logger->notice(
-                        "SYSTEM: Sent '{total}' watch progress requests to '{identity.client}: {identity.user}@{identity.backend}' in '{duration}'s.",
+                        "Sent '{total}' watch progress requests to '{identity.client}: {identity.user}@{identity.backend}' in '{duration}'s.",
                         [
                             'total' => $progressStats['sent'],
                             'identity' => [
@@ -464,7 +464,7 @@ class RestoreCommand extends Command
             return self::SUCCESS;
         } catch (Throwable $e) {
             $this->logger->error(
-                "SYSTEM: Unhandled exception '{exception.type}' was thrown during '{identity.user}@{identity.backend}' restore operation. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                "Failed during '{identity.user}@{identity.backend}' restore operation. {exception.message}",
                 [
                     'identity' => [
                         'user' => $userContext->name,

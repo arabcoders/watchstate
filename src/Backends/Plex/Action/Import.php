@@ -89,7 +89,7 @@ class Import
                     logContext: $logContext,
                 ),
                 error: fn(array $logContext = []) => fn(Throwable $e) => $this->logger->error(
-                    message: "{action}: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' library '{library.title}' request. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                    message: "Failed during '{identity.user}@{identity.backend}' library '{library.title}' request. {exception.message}",
                     context: [
                         'action' => $this->action,
                         'identity' => [
@@ -122,19 +122,19 @@ class Import
 
         try {
             $url = $context->backendUrl->withPath('/library/sections');
-            $rContext['url'] = (string) $url;
+            $rContext['request']['url'] = (string) $url;
 
-            $this->logger->debug("{action}: Requesting '{identity.client}: {identity.user}@{identity.backend}' libraries.", $rContext);
+            $this->logger->debug("Requesting '{identity.user}@{identity.backend}' libraries.", $rContext);
 
             $response = $this->http->request(Method::GET, (string) $url, $context->getHttpOptions());
 
             $payload = $response->getContent(false);
 
             if ($context->trace) {
-                $this->logger->debug("{action}: Processing '{identity.client}: {identity.user}@{identity.backend}' libraries response.", [
+                $this->logger->debug("Processing '{identity.user}@{identity.backend}' libraries response.", [
                     ...$rContext,
-                    'status_code' => $response->getStatusCode(),
                     'response' => [
+                        'status_code' => $response->getStatusCode(),
                         'body' => $payload,
                         'headers' => $response->getHeaders(false),
                     ],
@@ -144,8 +144,8 @@ class Import
             if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
                 $logContext = [
                     ...$rContext,
-                    'status_code' => $response->getStatusCode(),
                     'response' => [
+                        'status_code' => $response->getStatusCode(),
                         'headers' => $response->getHeaders(false),
                     ],
                 ];
@@ -155,7 +155,7 @@ class Import
                 }
 
                 $this->logger->error(
-                    "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' libraries returned with unexpected '{status_code}' status code.",
+                    "Request for '{identity.user}@{identity.backend}' libraries returned with unexpected '{response.status_code}' status code.",
                     $logContext,
                 );
 
@@ -175,7 +175,7 @@ class Import
 
             if (empty($listDirs)) {
                 $this->logger->warning(
-                    message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' libraries returned with empty list.",
+                    message: "Request for '{identity.user}@{identity.backend}' libraries returned with empty list.",
                     context: [
                         ...$rContext,
                         'response' => [
@@ -190,7 +190,7 @@ class Import
         } catch (ExceptionInterface $e) {
             $this->logger->error(
                 ...lw(
-                    message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' libraries has failed. '{exception.type}' with message '{exception.message}' at '{exception.file}:{exception.line}'.",
+                    message: "Request for '{identity.user}@{identity.backend}' libraries has failed. {exception.message}",
                     context: [...$rContext, ...exception_log($e)],
                     e: $e,
                 ),
@@ -200,7 +200,7 @@ class Import
         } catch (JsonException $e) {
             $this->logger->error(
                 ...lw(
-                    message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' libraries returned with invalid body. '{exception.type}' with message '{exception.message}' at '{exception.file}:{exception.line}'.",
+                    message: "Request for '{identity.user}@{identity.backend}' libraries returned with invalid body. {exception.message}",
                     context: [...$rContext, ...exception_log($e)],
                     e: $e,
                 ),
@@ -210,7 +210,7 @@ class Import
         } catch (Throwable $e) {
             $this->logger->error(
                 ...lw(
-                    message: "{action}: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' request for libraries. {exception.message} at '{exception.file}:{exception.line}'.",
+                    message: "Failed during '{identity.user}@{identity.backend}' request for libraries. {exception.message}",
                     context: [...$rContext, ...exception_log($e)],
                     e: $e,
                 ),
@@ -272,7 +272,7 @@ class Import
 
             if (false === in_array(ag($logContext, 'library.agent'), PlexClient::SUPPORTED_AGENTS, true)) {
                 $this->logger->notice(
-                    message: "{action}: Ignoring '{identity.client}: {identity.user}@{identity.backend}' - '{library.title}' Unsupported agent type. '{agent}'.",
+                    message: "Ignoring '{identity.user}@{identity.backend}' - '{library.title}' Unsupported agent type. '{agent}'.",
                     context: [
                         ...$logContext,
                         'agent' => ag($logContext, 'library.agent', '??'),
@@ -299,7 +299,7 @@ class Import
             $logContext['library']['url'] = $url;
 
             $this->logger->debug(
-                message: "{action}: Requesting '{identity.client}: {identity.user}@{identity.backend}' - '{library.title}' items count.",
+                message: "Requesting '{identity.user}@{identity.backend}' - '{library.title}' items count.",
                 context: $logContext,
             );
 
@@ -329,7 +329,7 @@ class Import
                     );
 
                     $this->logger->debug(
-                        message: "{action}: Requesting '{identity.client}: {identity.user}@{identity.backend}' - '{library.title}' series count.",
+                        message: "Requesting '{identity.user}@{identity.backend}' - '{library.title}' series count.",
                         context: $logContextSub,
                     );
 
@@ -351,7 +351,7 @@ class Import
             } catch (ExceptionInterface $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' - '{library.title}' items count has failed. '{exception.type}' with message '{exception.message}' at '{exception.file}:{exception.line}'.",
+                        message: "Request for '{identity.user}@{identity.backend}' - '{library.title}' items count has failed. {exception.message}",
                         context: [...$rContext, ...exception_log($e), ...$logContext],
                         e: $e,
                     ),
@@ -360,7 +360,7 @@ class Import
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "{action}: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' request for libraries. {exception.message} at '{exception.file}:{exception.line}'.",
+                        message: "Failed during '{identity.user}@{identity.backend}' request for libraries. {exception.message}",
                         context: [...$rContext, ...exception_log($e), ...$logContext],
                         e: $e,
                     ),
@@ -376,10 +376,10 @@ class Import
             try {
                 if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
                     $this->logger->error(
-                        message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' - '{library.title}' items count returned with unexpected '{status_code}' status code.",
+                        message: "Request for '{identity.user}@{identity.backend}' - '{library.title}' items count returned with unexpected '{response.status_code}' status code.",
                         context: [
                             ...$logContext,
-                            'status_code' => $response->getStatusCode(),
+                            'response' => ['status_code' => $response->getStatusCode()],
                         ],
                     );
                     continue;
@@ -389,7 +389,7 @@ class Import
 
                 if ($totalCount < 1) {
                     $this->logger->warning(
-                        message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' - '{library.title}' items count returned with 0 or less.",
+                        message: "Request for '{identity.user}@{identity.backend}' - '{library.title}' items count returned with 0 or less.",
                         context: [
                             ...$logContext,
                             'response' => [
@@ -408,7 +408,7 @@ class Import
             } catch (ExceptionInterface $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' - '{library.title}' total items has failed. '{exception.type}' '{exception.message}' at '{exception.file}:{exception.line}'.",
+                        message: "Request for '{identity.user}@{identity.backend}' - '{library.title}' total items has failed. {exception.message}",
                         context: [...$logContext, ...exception_log($e)],
                         e: $e,
                     ),
@@ -417,7 +417,7 @@ class Import
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "{action}: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' request for items count. {exception.message} at '{exception.file}:{exception.line}'.",
+                        message: "Failed during '{identity.user}@{identity.backend}' request for items count. {exception.message}",
                         context: [...$logContext, ...exception_log($e)],
                         e: $e,
                     ),
@@ -454,14 +454,14 @@ class Import
                     'id' => $libraryId,
                     'title' => ag($section, 'title', '??'),
                     'type' => ag($section, 'type', 'unknown'),
-                    'url' => $url,
+                    'request' => ['url' => $url],
                 ],
             ];
 
             if (false === array_key_exists('show_' . $libraryId, $total)) {
                 $ignored++;
                 $this->logger->warning(
-                    message: "{action}: Ignoring '{identity.client}: {identity.user}@{identity.backend}' - '{library.title}'. No series items count was found.",
+                    message: "Ignoring '{identity.user}@{identity.backend}' - '{library.title}'. No series items count was found.",
                     context: $logContext,
                 );
                 continue;
@@ -497,7 +497,7 @@ class Import
                     $logContext['library']['url'] = $url;
 
                     $this->logger->debug(
-                        message: "{action}: Requesting '{identity.client}: {identity.user}@{identity.backend}' - '{library.title} {segment.number}/{segment.of}' series external ids.",
+                        message: "Requesting '{identity.user}@{identity.backend}' - '{library.title} {segment.number}/{segment.of}' series external ids.",
                         context: $logContext,
                     );
 
@@ -517,7 +517,7 @@ class Import
                 } catch (Throwable $e) {
                     $this->logger->error(
                         ...lw(
-                            message: "{action}: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' '{library.title} {segment.number}/{segment.of}' series external ids request. {exception.message} at '{exception.file}:{exception.line}'.",
+                            message: "Failed during '{identity.user}@{identity.backend}' '{library.title} {segment.number}/{segment.of}' series external ids request. {exception.message}",
                             context: [...$logContext, ...exception_log($e)],
                             e: $e,
                         ),
@@ -547,7 +547,7 @@ class Import
             if (true === in_array($libraryId, $ignoreIds ?? [], true)) {
                 $ignored++;
                 $this->logger->info(
-                    message: "{action}: Ignoring '{identity.client}: {identity.user}@{identity.backend}' - '{library.title}'. Requested by user.",
+                    message: "Ignoring '{identity.user}@{identity.backend}' - '{library.title}'. Requested by user.",
                     context: $logContext,
                 );
                 continue;
@@ -555,7 +555,7 @@ class Import
 
             if ($selectLibraryList && $inverseLibrarySelect === in_array($libraryId, $selectLibraryList, true)) {
                 $this->logger->info(
-                    message: "{action}: Excluding '{identity.client}: {identity.user}@{identity.backend}' - '{library.title}'. Requested by user.",
+                    message: "Excluding '{identity.user}@{identity.backend}' - '{library.title}'. Requested by user.",
                     context: $logContext,
                 );
                 continue;
@@ -564,7 +564,7 @@ class Import
             if (!in_array(ag($logContext, 'library.type'), [PlexClient::TYPE_MOVIE, PlexClient::TYPE_SHOW], true)) {
                 $unsupported++;
                 $this->logger->info(
-                    message: "{action}: Ignoring '{identity.client}: {identity.user}@{identity.backend}' - '{library.title}'. Library type '{library.type}' is not supported.",
+                    message: "Ignoring '{identity.user}@{identity.backend}' - '{library.title}'. Library type '{library.type}' is not supported.",
                     context: $logContext,
                 );
                 continue;
@@ -573,7 +573,7 @@ class Import
             if (false === array_key_exists($libraryId, $total)) {
                 $ignored++;
                 $this->logger->warning(
-                    message: "{action}: Ignoring '{identity.client}: {identity.user}@{identity.backend}' - '{library.title}'. No items count was found.",
+                    message: "Ignoring '{identity.user}@{identity.backend}' - '{library.title}'. No items count was found.",
                     context: $logContext,
                 );
                 continue;
@@ -610,7 +610,7 @@ class Import
                     $logContext['library']['url'] = $url;
 
                     $this->logger->debug(
-                        message: "{action}: Requesting '{identity.client}: {identity.user}@{identity.backend}' - '{library.title} {segment.number}/{segment.of}' content list.",
+                        message: "Requesting '{identity.user}@{identity.backend}' - '{library.title} {segment.number}/{segment.of}' content list.",
                         context: $logContext,
                     );
 
@@ -630,7 +630,7 @@ class Import
                 } catch (Throwable $e) {
                     $this->logger->error(
                         ...lw(
-                            message: "{action}: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' - '{library.title} {segment.number}/{segment.of}' content list request. {exception.message} at '{exception.file}:{exception.line}'.",
+                            message: "Failed during '{identity.user}@{identity.backend}' - '{library.title} {segment.number}/{segment.of}' content list request. {exception.message}",
                             context: [...$logContext, ...exception_log($e)],
                             e: $e,
                         ),
@@ -641,7 +641,7 @@ class Import
         }
 
         if (0 === count($requests)) {
-            $this->logger->warning("{action}: No requests for '{identity.client}: {identity.user}@{identity.backend}' libraries were queued.", [
+            $this->logger->warning("No requests for '{identity.user}@{identity.backend}' libraries were queued.", [
                 ...$rContext,
                 'context' => [
                     'total' => count($listDirs),
@@ -665,10 +665,10 @@ class Import
     {
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             $this->logger->error(
-                message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' - '{library.title} {segment.number}/{segment.of}' content returned with unexpected '{status_code}' status code.",
+                message: "Request for '{identity.user}@{identity.backend}' - '{library.title} {segment.number}/{segment.of}' content returned with unexpected '{response.status_code}' status code.",
                 context: [
                     ...$logContext,
-                    'status_code' => $response->getStatusCode(),
+                    'response' => ['status_code' => $response->getStatusCode()],
                 ],
             );
             return;
@@ -676,7 +676,7 @@ class Import
 
         $start = microtime(true);
         $this->logger->info(
-            message: "{action}: Parsing '{identity.client}: {identity.user}@{identity.backend}' - '{library.title} {segment.number}/{segment.of}' response.",
+            message: "Parsing '{identity.user}@{identity.backend}' - '{library.title} {segment.number}/{segment.of}' response.",
             context: [
                 ...$logContext,
                 'time' => [
@@ -703,7 +703,7 @@ class Import
                 try {
                     if ($entity instanceof DecodingError) {
                         $this->logger->warning(
-                            message: "{action}: Failed to decode one item of '{identity.client}: {identity.user}@{identity.backend}' - '{library.title} {segment.number}/{segment.of}' items. {error.message}",
+                            message: "Failed to decode one item of '{identity.user}@{identity.backend}' - '{library.title} {segment.number}/{segment.of}' items. {error.message}",
                             context: [
                                 ...$logContext,
                                 'error' => [
@@ -718,7 +718,7 @@ class Import
                 } catch (Throwable $e) {
                     $this->logger->error(
                         ...lw(
-                            message: "{action}: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' parsing '{library.title} {segment.number}/{segment.of}' item response. {exception.message} at '{exception.file}:{exception.line}'.",
+                            message: "Failed during '{identity.user}@{identity.backend}' parsing '{library.title} {segment.number}/{segment.of}' item response. {exception.message}",
                             context: [...$logContext, ...exception_log($e), 'entity' => $entity],
                             e: $e,
                         ),
@@ -728,7 +728,7 @@ class Import
         } catch (Throwable $e) {
             $this->logger->error(
                 ...lw(
-                    message: "{action}: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' parsing of '{library.title} {segment.number}/{segment.of}' response. {exception.message} at '{exception.file}:{exception.line}'.",
+                    message: "Failed during '{identity.user}@{identity.backend}' parsing of '{library.title} {segment.number}/{segment.of}' response. {exception.message}",
                     context: [...$logContext, ...exception_log($e)],
                     e: $e,
                 ),
@@ -737,7 +737,7 @@ class Import
 
         $end = microtime(true);
         $this->logger->info(
-            message: "Parsing '{identity.client}: {identity.user}@{identity.backend}' - '{library.title} {segment.number}/{segment.of}' completed in '{time.duration}s'.",
+            message: "Parsing '{identity.user}@{identity.backend}' - '{library.title} {segment.number}/{segment.of}' completed in '{time.duration}s'.",
             context: [
                 ...$logContext,
                 'time' => [
@@ -780,7 +780,7 @@ class Import
 
         if ($context->trace) {
             $this->logger->debug(
-                message: "{action}: Processing '{identity.client}: {identity.user}@{identity.backend}' - '{item.type}: {item.title} ({item.year})' payload.",
+                message: "Processing '{identity.user}@{identity.backend}' - '{item.type}: {item.title} ({item.year})' payload.",
                 context: [
                     ...$logContext,
                     'response' => [
@@ -793,7 +793,7 @@ class Import
         $showMetadata = $this->cacheShowMetadata(context: $context, guid: $guid, item: $item, logContext: $logContext);
 
         if ([] === ag($showMetadata, 'guids', [])) {
-            $message = "{action}: Ignoring '{identity.client}: {identity.user}@{identity.backend}' - '{item.title}'. {item.type} has no valid/supported external ids.";
+            $message = "Ignoring '{identity.user}@{identity.backend}' - '{item.title}'. {item.type} has no valid/supported external ids.";
 
             if (empty($guids)) {
                 $message .= ' Most likely unmatched {item.type}.';
@@ -825,7 +825,7 @@ class Import
 
         try {
             if ($context->trace) {
-                $this->logger->debug("{action}: Processing '{identity.client}: {identity.user}@{identity.backend}' response payload.", [
+                $this->logger->debug("Processing '{identity.user}@{identity.backend}' response payload.", [
                     ...$logContext,
                     'response' => [
                         'body' => $item,
@@ -855,7 +855,7 @@ class Import
                         ]),
                         default => throw new InvalidArgumentException(
                             r(
-                                text: "{action}: Unexpected content type '{type}' was received from '{identity.client}: {identity.user}@{identity.backend}'.",
+                                text: "Unexpected content type '{type}' was received from '{identity.user}@{identity.backend}'.",
                                 context: [...$logContext, 'type' => $type],
                             ),
                         ),
@@ -865,7 +865,7 @@ class Import
             } catch (InvalidArgumentException $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "{action}: Failed to parse '{identity.client}: {identity.user}@{identity.backend}' item response. '{exception.type}' with '{exception.message}' at '{exception.file}:{exception.line}' ",
+                        message: "Failed to parse '{identity.user}@{identity.backend}' item response. {exception.message}",
                         context: [
                             ...$logContext,
                             ...exception_log($e),
@@ -881,7 +881,7 @@ class Import
 
             if (null === ag($item, true === (bool) ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt')) {
                 $this->logger->debug(
-                    message: "{action}: Ignoring '{identity.client}: {identity.backend}' - '{item.id}: {item.title}'. No date '{date_key}' is set on object. '{body}'",
+                    message: "Ignoring '{identity.client}: {identity.backend}' - '{item.id}: {item.title}'. No date '{date_key}' is set on object. '{body}'",
                     context: [
                         ...$logContext,
                         'date_key' => true === (bool) ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt',
@@ -916,7 +916,7 @@ class Import
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "{action}: Exception '{exception.type}' occurred during '{identity.client}: {identity.user}@{identity.backend}' - '{library.title}' - '{item.id}: {item.title}' entity creation. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                        message: "Failed during '{identity.user}@{identity.backend}' - '{library.title}' - '{item.id}: {item.title}' entity creation. {exception.message}",
                         context: [
                             ...$logContext,
                             ...exception_log($e),
@@ -928,7 +928,7 @@ class Import
             }
 
             if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-                $message = "{action}: Ignoring '{identity.client}: {identity.user}@{identity.backend}' - '{item.title}'. No valid/supported external ids.";
+                $message = "Ignoring '{identity.user}@{identity.backend}' - '{item.title}'. No valid/supported external ids.";
 
                 if (null === ($item['Guid'] ?? null)) {
                     $item['Guid'] = [];
@@ -960,7 +960,7 @@ class Import
         } catch (Throwable $e) {
             $this->logger->error(
                 ...lw(
-                    message: "{action}: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' - '{library.title}' - '{item.title}' item process. {exception.message} at '{exception.file}:{exception.line}'.",
+                    message: "Failed during '{identity.user}@{identity.backend}' - '{library.title}' - '{item.title}' item process. {exception.message}",
                     context: [...$logContext, ...exception_log($e)],
                     e: $e,
                 ),

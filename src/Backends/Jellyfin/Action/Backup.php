@@ -63,7 +63,7 @@ class Backup extends Import
 
         try {
             if ($context->trace) {
-                $this->logger->debug("{action}: Processing '{identity.client}: {identity.user}@{identity.backend}' payload.", [
+                $this->logger->debug("Processing '{identity.user}@{identity.backend}' payload.", [
                     ...$logContext,
                     'response' => ['body' => $item],
                 ]);
@@ -94,7 +94,7 @@ class Backup extends Import
             } catch (InvalidArgumentException $e) {
                 $this->logger->info($e->getMessage(), [
                     ...$logContext,
-                    'body' => $item,
+                    'response' => ['body' => $item],
                 ]);
                 return;
             }
@@ -176,7 +176,7 @@ class Backup extends Import
             }
         } catch (Throwable $e) {
             $this->logger->error(
-                message: "{action}: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.user}@{identity.backend}' backup. {exception.message} at '{exception.file}:{exception.line}'.",
+                message: "Failed during '{identity.user}@{identity.backend}' backup. {exception.message}",
                 context: [
                     ...$logContext,
                     ...exception_log($e),

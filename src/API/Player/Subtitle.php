@@ -177,7 +177,7 @@ final readonly class Subtitle
                 'X-Cache' => $response->getHeaderLine('X-Cache'),
             ]);
         } catch (Throwable $e) {
-            $this->logger->error($e->getMessage(), $e->getTrace());
+            $this->logger->error($e->getMessage(), exception_log($e));
             return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);
         }
     }

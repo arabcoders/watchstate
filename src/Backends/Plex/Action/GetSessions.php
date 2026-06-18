@@ -54,11 +54,11 @@ final class GetSessions
                         'backend' => $context->backendName,
                         'user' => $context->userContext->name,
                     ],
-                    'url' => (string) $url,
+                    'request' => ['url' => (string) $url],
                 ];
 
                 $this->logger->debug(
-                    message: "{action}: Requesting '{identity.client}: {identity.user}@{identity.backend}' active play sessions.",
+                    message: "Requesting '{identity.user}@{identity.backend}' active play sessions.",
                     context: $logContext,
                 );
 
@@ -77,11 +77,10 @@ final class GetSessions
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' active play sessions returned with unexpected '{status_code}' status code.",
+                            message: "Request for '{identity.user}@{identity.backend}' active play sessions returned with unexpected '{response.status_code}' status code.",
                             context: [
                                 ...$logContext,
-                                'status_code' => $response->getStatusCode(),
-                                'response' => ['body' => $content],
+                                'response' => ['status_code' => $response->getStatusCode(), 'body' => $content],
                             ],
                             level: Levels::WARNING,
                         ),
@@ -92,11 +91,10 @@ final class GetSessions
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' active play sessions returned with empty response.",
+                            message: "Request for '{identity.user}@{identity.backend}' active play sessions returned with empty response.",
                             context: [
                                 ...$logContext,
-                                'status_code' => $response->getStatusCode(),
-                                'response' => ['body' => $content],
+                                'response' => ['status_code' => $response->getStatusCode(), 'body' => $content],
                             ],
                             level: Levels::ERROR,
                         ),
@@ -111,7 +109,7 @@ final class GetSessions
 
                 if (true === $context->trace) {
                     $this->logger->debug(
-                        message: "{action}: Processing '{identity.client}: {identity.user}@{identity.backend}' active play sessions payload.",
+                        message: "Processing '{identity.user}@{identity.backend}' active play sessions payload.",
                         context: [...$logContext, 'response' => ['body' => $content]],
                     );
                 }

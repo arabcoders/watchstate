@@ -215,7 +215,7 @@ class BackupCommand extends Command
         $mapperOpts = [];
 
         if ($input->getOption('dry-run')) {
-            $this->logger->notice('SYSTEM: Dry run mode. No changes will be committed.');
+            $this->logger->notice('Dry run mode. No changes will be committed.');
             $mapperOpts[Options::DRY_RUN] = true;
         }
 
@@ -237,7 +237,7 @@ class BackupCommand extends Command
             return self::FAILURE;
         }
 
-        $this->logger->notice("Using WatchState version - '{version}'.", ['version' => get_app_version()]);
+        $this->logger->notice('Using WatchState {full_version}', ['full_version' => get_app_version()]);
         foreach ($users as $userContext) {
             try {
                 $this->process_backup($input, $userContext);
@@ -263,7 +263,7 @@ class BackupCommand extends Command
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
             if ($isCustom && $input->getOption('exclude') === $this->in_array($selected, $backendName)) {
-                $this->logger->info("SYSTEM: Ignoring '{identity.user}@{identity.backend}' as requested.", [
+                $this->logger->info("Ignoring '{identity.user}@{identity.backend}' as requested.", [
                     'identity' => [
                         'user' => $userContext->name,
                         'backend' => $backendName,
@@ -273,7 +273,7 @@ class BackupCommand extends Command
             }
 
             if (!isset($supported[$type])) {
-                $this->logger->error("SYSTEM: Ignoring '{identity.user}@{identity.backend}'. Unexpected type '{type}'.", [
+                $this->logger->error("Ignoring '{identity.user}@{identity.backend}'. Unexpected type '{type}'.", [
                     'identity' => [
                         'user' => $userContext->name,
                         'backend' => $backendName,
@@ -285,7 +285,7 @@ class BackupCommand extends Command
             }
 
             if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {
-                $this->logger->error("SYSTEM: Ignoring '{identity.user}@{identity.backend}'. Invalid URL '{url}'.", [
+                $this->logger->error("Ignoring '{identity.user}@{identity.backend}'. Invalid URL '{url}'.", [
                     'identity' => [
                         'user' => $userContext->name,
                         'backend' => $backendName,
@@ -307,7 +307,7 @@ class BackupCommand extends Command
         }
 
         if (true !== $input->getOption('no-enhance')) {
-            $this->logger->notice("SYSTEM: Preloading '{identity.user}@{mapper}' data.", [
+            $this->logger->notice("Preloading '{identity.user}@{mapper}' data.", [
                 'identity' => [
                     'user' => $userContext->name,
                 ],
@@ -321,7 +321,7 @@ class BackupCommand extends Command
             $start = microtime(true);
             $userContext->mapper->loadData();
 
-            $this->logger->notice("SYSTEM: Preloading '{identity.user}@{mapper}' data completed in '{duration}s'.", [
+            $this->logger->notice("Preloading '{identity.user}@{mapper}' data completed in '{duration}s'.", [
                 'identity' => [
                     'user' => $userContext->name,
                 ],
@@ -357,7 +357,7 @@ class BackupCommand extends Command
                 UserContext::class => $userContext,
             ])->setLogger($this->logger);
 
-            $this->logger->notice("SYSTEM: Backing up '{identity.user}@{identity.backend}' play state.", [
+            $this->logger->notice("Backing up '{identity.user}@{identity.backend}' play state.", [
                 'identity' => [
                     'user' => $userContext->name,
                     'backend' => $name,
@@ -388,7 +388,7 @@ class BackupCommand extends Command
                     touch($fileName);
                 }
 
-                $this->logger->notice("SYSTEM: '{identity.user}@{identity.backend}' is using '{file}' as backup target.", [
+                $this->logger->notice("'{identity.user}@{identity.backend}' is using '{file}' as backup target.", [
                     'identity' => [
                         'user' => $userContext->name,
                         'backend' => $name,
@@ -420,7 +420,7 @@ class BackupCommand extends Command
         }
 
         $start = microtime(true);
-        $this->logger->notice("SYSTEM: Waiting on '{total}' {sync}requests for '{identity.user}: {backends}' backends.", [
+        $this->logger->notice("Waiting on '{total}' {sync}requests for '{identity.user}: {backends}' backends.", [
             'identity' => [
                 'user' => $userContext->name,
             ],
@@ -454,7 +454,7 @@ class BackupCommand extends Command
                         unlink($file);
                     }
 
-                    $this->logger->warning("SYSTEM: No backup was generated for '{identity.user}@{identity.backend}'. No items were found.", [
+                    $this->logger->warning("No backup was generated for '{identity.user}@{identity.backend}'. No items were found.", [
                         'identity' => [
                             'user' => $userContext->name,
                             'backend' => $b,
@@ -466,7 +466,7 @@ class BackupCommand extends Command
                 }
 
                 if (false === $noCompression) {
-                    $this->logger->notice("SYSTEM: Compressing '{identity.user}@{identity.backend}' backup file '{file}'.", [
+                    $this->logger->notice("Compressing '{identity.user}@{identity.backend}' backup file '{file}'.", [
                         'identity' => [
                             'backend' => $b,
                             'user' => $userContext->name,
@@ -483,7 +483,7 @@ class BackupCommand extends Command
             }
         }
 
-        $this->logger->notice("SYSTEM: Backup operation for '{identity.user}: {backends}' backends finished in '{duration}s'.", [
+        $this->logger->notice("Backup operation for '{identity.user}: {backends}' backends finished in '{duration}s'.", [
             'identity' => [
                 'user' => $userContext->name,
             ],

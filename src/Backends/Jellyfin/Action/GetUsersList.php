@@ -88,10 +88,10 @@ class GetUsersList
                 'backend' => $context->backendName,
                 'user' => $context->userContext->name,
             ],
-            'url' => (string) $url,
+            'request' => ['url' => (string) $url],
         ];
 
-        $this->logger->debug("{action}: Requesting '{identity.client}: {identity.user}@{identity.backend}' users list.", $logContext);
+        $this->logger->debug("Requesting '{identity.user}@{identity.backend}' users list.", $logContext);
 
         $headers = $context->getHttpOptions();
 
@@ -112,11 +112,11 @@ class GetUsersList
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' users list returned with unexpected '{status_code}' status code.",
+                    message: "Request for '{identity.user}@{identity.backend}' users list returned with unexpected '{response.status_code}' status code.",
                     context: [
                         ...$logContext,
-                        'status_code' => $response->getStatusCode(),
                         'response' => [
+                            'status_code' => $response->getStatusCode(),
                             'body' => $body,
                             'reason' => $reason,
                         ],
@@ -136,7 +136,7 @@ class GetUsersList
         );
 
         if ($context->trace) {
-            $this->logger->debug("{action}: Parsing '{identity.client}: {identity.user}@{identity.backend}' user list payload.", [
+            $this->logger->debug("Parsing '{identity.user}@{identity.backend}' user list payload.", [
                 ...$logContext,
                 'response' => ['body' => $json],
             ]);
@@ -164,7 +164,11 @@ class GetUsersList
         }
 
         if ($logRequests) {
-            $callback([['url' => (string) $url, 'headers' => $response->getHeaders(false), 'body' => $json]]);
+            $callback([[
+                'request' => ['url' => (string) $url],
+                'headers' => $response->getHeaders(false),
+                'body' => $json,
+            ]]);
         }
 
         return new Response(status: true, response: $list);

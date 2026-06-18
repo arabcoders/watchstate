@@ -473,7 +473,7 @@ class PlexGuidTest extends TestCase
         );
 
         $this->assertTrue(
-            $this->logged(Level::Debug, 'PlexGuid: Ignoring', true),
+            $this->logged(Level::Debug, 'Ignoring', true),
             'Assert that a log is raised when the GUID is ignored by user choice.',
         );
     }

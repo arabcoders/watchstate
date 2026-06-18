@@ -134,7 +134,7 @@ final class PDOAdapter implements iDB
         try {
             if (null !== ($entity->id ?? null)) {
                 throw new DBException(
-                    r("PDOAdapter: Unable to insert item that has primary key already defined. '#{id}'.", [
+                    r("Unable to insert item that has primary key already defined. '#{id}'.", [
                         'id' => $entity->id,
                     ]),
                     21,
@@ -144,7 +144,7 @@ final class PDOAdapter implements iDB
             if (true === $entity->isEpisode() && $entity->episode < 1) {
                 throw new DBException(
                     r(
-                        "PDOAdapter: Unexpected episode number '{number}' was given for '{identity.backend}: {title}'.",
+                        "Unexpected episode number '{number}' was given for '{identity.backend}: {title}'.",
                         [
                             'identity' => ['backend' => $entity->via],
                             'title' => $entity->getName(),
@@ -157,7 +157,7 @@ final class PDOAdapter implements iDB
             if (false === in_array($entity->type, [iState::TYPE_MOVIE, iState::TYPE_EPISODE], true)) {
                 throw new DBException(
                     r(
-                        "PDOAdapter: Unexpected content type '{type}' was given for '{identity.backend}: {title}'. Expecting '{types}'.",
+                        "Unexpected content type '{type}' was given for '{identity.backend}: {title}'. Expecting '{types}'.",
                         [
                             'type' => $entity->type,
                             'types' => implode(', ', [iState::TYPE_MOVIE, iState::TYPE_EPISODE]),
@@ -227,7 +227,7 @@ final class PDOAdapter implements iDB
                     throw $e;
                 }
                 $this->logger->error(
-                    message: "PDOAdapter: Exception '{exception.type}' was thrown unhandled. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                    message: 'Failed. {exception.message}',
                     context: [
                         'entity' => $entity->getAll(),
                         ...exception_log($e),
@@ -250,7 +250,7 @@ final class PDOAdapter implements iDB
         $inTraceMode = true === (bool) ($this->options[Options::DEBUG_TRACE] ?? false);
 
         if ($inTraceMode) {
-            $this->logger->debug("PDOAdapter: Looking for '{name}'.", ['name' => $entity->getName()]);
+            $this->logger->debug("Looking for '{name}'.", ['name' => $entity->getName()]);
         }
 
         if (null !== $entity->id) {
@@ -260,7 +260,7 @@ final class PDOAdapter implements iDB
                 $item = $entity::fromArray($item);
 
                 if ($inTraceMode) {
-                    $this->logger->debug("PDOAdapter: Found '{name}' using direct id match.", [
+                    $this->logger->debug("Found '{name}' using direct id match.", [
                         'name' => $item->getName(),
                         iState::COLUMN_ID => $entity->id,
                     ]);
@@ -272,7 +272,7 @@ final class PDOAdapter implements iDB
 
         if (null !== ($item = $this->findByExternalId($entity))) {
             if ($inTraceMode) {
-                $this->logger->debug("PDOAdapter: Found '{name}' using external id match.", [
+                $this->logger->debug("Found '{name}' using external id match.", [
                     'name' => $item->getName(),
                     iState::COLUMN_GUIDS => $entity->getGuids(),
                 ]);
@@ -297,7 +297,7 @@ final class PDOAdapter implements iDB
         }
 
         if (true === (bool) ($this->options[Options::DEBUG_TRACE] ?? false)) {
-            $this->logger->debug("PDOAdapter: Selecting fields '{fields}'.", [
+            $this->logger->debug("Selecting fields '{fields}'.", [
                 'fields' => array_to_string($opts['fields'] ?? ['all']),
             ]);
         }
@@ -379,7 +379,7 @@ final class PDOAdapter implements iDB
     {
         try {
             if (null === ($entity->id ?? null)) {
-                throw new DBException(r("PDOAdapter: Unable to update '{title}' without primary key defined.", [
+                throw new DBException(r("Unable to update '{title}' without primary key defined.", [
                     'title' => $entity->getName() ?? 'Unknown',
                 ]), 51);
             }
@@ -387,7 +387,7 @@ final class PDOAdapter implements iDB
             if (true === $entity->isEpisode() && $entity->episode < 1) {
                 throw new DBException(
                     r(
-                        "PDOAdapter: Unexpected episode number '{number}' was given for '#{id}' '{identity.backend}: {title}'.",
+                        "Unexpected episode number '{number}' was given for '#{id}' '{identity.backend}: {title}'.",
                         [
                             'id' => $entity->id,
                             'identity' => ['backend' => $entity->via],
@@ -444,7 +444,7 @@ final class PDOAdapter implements iDB
                     throw $e;
                 }
                 $this->logger->error(
-                    message: "PDOAdapter: Exception '{exception.type}' was thrown unhandled. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                    message: 'Failed. {exception.message}',
                     context: [
                         'entity' => $entity->getAll(),
                         ...exception_log($e),
@@ -481,7 +481,7 @@ final class PDOAdapter implements iDB
             $this->db->query('DELETE FROM state WHERE id = :id', ['id' => (int) $id]);
         } catch (PDOException $e) {
             $this->logger->error(
-                message: "PDOAdapter: Exception '{exception.type}' was thrown unhandled. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                message: 'Failed. {exception.message}',
                 context: [
                     'entity' => $entity->getAll(),
                     ...exception_log($e),
@@ -517,7 +517,7 @@ final class PDOAdapter implements iDB
                 } catch (PDOException $e) {
                     $actions['failed']++;
                     $this->logger->error(
-                        message: "PDOAdapter: Exception '{exception.type}' was thrown unhandled. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                        message: 'Failed. {exception.message}',
                         context: [
                             'entity' => $entity->getAll(),
                             ...exception_log($e),

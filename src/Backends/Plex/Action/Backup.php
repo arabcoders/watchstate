@@ -37,7 +37,7 @@ final class Backup extends Import
 
         try {
             if ($context->trace) {
-                $this->logger->debug("{action}: Processing '{identity.client}: {identity.backend}' payload.", [
+                $this->logger->debug("Processing '{identity.client}: {identity.backend}' payload.", [
                     ...$logContext,
                     'response' => [
                         'body' => $item,
@@ -74,7 +74,7 @@ final class Backup extends Import
                 ];
             } catch (InvalidArgumentException $e) {
                 $this->logger->info(
-                    message: "{action}: Failed to parse '{identity.client}: {identity.backend}' item response. '{exception.type}' with '{exception.message}' at '{exception.file}:{exception.line}' ",
+                    message: "Failed to parse '{identity.client}: {identity.backend}' item response. {exception.message}",
                     context: [
                         ...$logContext,
                         ...exception_log($e),
@@ -170,7 +170,7 @@ final class Backup extends Import
             }
         } catch (Throwable $e) {
             $this->logger->error(
-                message: "{action}: Exception '{exception.type}' was thrown unhandled during '{identity.client}: {identity.backend}' backup. {exception.message} at '{exception.file}:{exception.line}'.",
+                message: "Failed during '{identity.client}: {identity.backend}' backup. {exception.message}",
                 context: [
                     ...$logContext,
                     ...exception_log($e),

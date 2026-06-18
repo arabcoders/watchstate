@@ -188,7 +188,7 @@ class ExportCommand extends Command
         $supported = Config::get('supported', []);
 
         if (true === $input->getOption('dry-run')) {
-            $this->logger->notice('Dry run mode. No changes will be committed to backends.');
+            $this->logger->notice('Dry run mode. No changes will be committed.');
         }
 
         $this->logger->notice('Using WatchState {full_version}', [
@@ -541,11 +541,11 @@ class ExportCommand extends Command
                                 $context = ag($request->extras, 'context', []);
                                 $context['identity']['user'] = $user;
                                 $context['identity']['backend'] ??= $context['backend'] ?? null;
-                                $context['status_code'] = $response->getStatusCode();
+                                $context['response']['status_code'] = $response->getStatusCode();
 
-                                if (Status::OK !== Status::tryFrom($context['status_code'])) {
+                                if (Status::OK !== Status::tryFrom($context['response']['status_code'])) {
                                     $logger->error(
-                                        "Request to change '{identity.user}@{identity.backend}' - '#{item.id}: {item.title}' play state returned with unexpected '{status_code}' status code.",
+                                        "Request to change '{identity.user}@{identity.backend}' - '#{item.id}: {item.title}' play state returned with unexpected '{response.status_code}' status code.",
                                         $context,
                                     );
 
@@ -569,7 +569,7 @@ class ExportCommand extends Command
                                 $context['identity']['backend'] ??= $context['backend'] ?? null;
 
                                 $logger->error(
-                                    "Exception '{exception.type}' was thrown unhandled during '{identity.user}@{identity.backend}' request to change play state of {item.type} '#{item.id}: {item.title}'. {exception.message} at '{exception.file}:{exception.line}'.",
+                                    "Failed during '{identity.user}@{identity.backend}' request to change play state of {item.type} '#{item.id}: {item.title}'. {exception.message}",
                                     [
                                         ...$context,
                                         ...exception_log($ex),
@@ -625,7 +625,7 @@ class ExportCommand extends Command
                 $userContext->config->persist();
             } catch (Throwable $e) {
                 $this->logger->error(
-                    "Unhandled exception '{exception.type}' was thrown during '{identity.user}' export operation. '{exception.message}' at '{exception.file}:{exception.line}'.",
+                    "Failed during '{identity.user}' export operation. {exception.message}",
                     [
                         'identity' => [
                             'user' => $userContext->name,

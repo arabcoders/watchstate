@@ -98,7 +98,7 @@ class GetLibrariesList
         ];
 
         if ($context->trace) {
-            $this->logger->debug("{action}: Parsing '{identity.client}: {identity.user}@{identity.backend}' libraries payload.", [
+            $this->logger->debug("Parsing '{identity.user}@{identity.backend}' libraries payload.", [
                 ...$logContext,
                 'response' => ['body' => $json],
             ]);
@@ -110,7 +110,7 @@ class GetLibrariesList
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' libraries returned empty list.",
+                    message: "Request for '{identity.user}@{identity.backend}' libraries returned empty list.",
                     context: [
                         ...$logContext,
                         'response' => ['body' => $json],
@@ -198,20 +198,20 @@ class GetLibrariesList
                 'backend' => $context->backendName,
                 'user' => $context->userContext->name,
             ],
-            'url' => (string) $url,
+            'request' => ['url' => (string) $url],
         ];
 
-        $this->logger->debug("{action}: Requesting '{identity.client}: {identity.user}@{identity.backend}' libraries list.", $logContext);
+        $this->logger->debug("Requesting '{identity.user}@{identity.backend}' libraries list.", $logContext);
 
         $response = $this->http->request(Method::GET, (string) $url, $context->getHttpOptions());
 
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             throw new RuntimeException(
                 r(
-                    text: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' libraries returned with unexpected '{status_code}' status code.",
+                    text: "Request for '{identity.user}@{identity.backend}' libraries returned with unexpected '{response.status_code}' status code.",
                     context: [
                         ...$logContext,
-                        'status_code' => $response->getStatusCode(),
+                        'response' => ['status_code' => $response->getStatusCode()],
                     ],
                 ),
             );

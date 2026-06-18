@@ -80,7 +80,7 @@ class GetUser
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' user info failed. User not set.",
+                    message: "Request for '{identity.user}@{identity.backend}' user info failed. User not set.",
                     context: $logContext,
                     level: Levels::ERROR,
                 ),
@@ -89,11 +89,11 @@ class GetUser
 
         $url = $context->backendUrl->withPath('/Users/' . $context->backendUser);
 
-        $logContext['url'] = (string) $url;
+        $logContext['request']['url'] = (string) $url;
         $logContext['userId'] = $context->backendUser;
 
         $this->logger->debug(
-            "{action}: Requesting '{identity.client}: {identity.user}@{identity.backend}' user '{userId}' info.",
+            "Requesting '{identity.user}@{identity.backend}' user '{userId}' info.",
             $logContext,
         );
 
@@ -112,11 +112,11 @@ class GetUser
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{identity.client}: {identity.user}@{identity.backend}' user '{userId}' info returned with unexpected '{status_code}' status code.",
+                    message: "Request for '{identity.user}@{identity.backend}' user '{userId}' info returned with unexpected '{response.status_code}' status code.",
                     context: [
                         ...$logContext,
-                        'status_code' => $response->getStatusCode(),
                         'response' => [
+                            'status_code' => $response->getStatusCode(),
                             'body' => $body,
                             'reason' => $reason,
                         ],
@@ -135,7 +135,7 @@ class GetUser
         );
 
         if ($context->trace) {
-            $this->logger->debug("{action}: Parsing '{identity.client}: {identity.user}@{identity.backend}' user '{userId}' info payload.", [
+            $this->logger->debug("Parsing '{identity.user}@{identity.backend}' user '{userId}' info payload.", [
                 ...$logContext,
                 'response' => ['body' => $json],
             ]);

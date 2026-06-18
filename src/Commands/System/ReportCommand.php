@@ -523,7 +523,7 @@ final class ReportCommand extends Command
                     ),
                 );
             } catch (Throwable $e) {
-                $this->filter(r("Error during parsing of '{file}.' '{exception.type}' was thrown unhandled with '{exception.message}'", [
+                $this->filter(r("Error during parsing of '{file}.' {exception.message}", [
                     'file' => $suppressFile,
                     ...exception_log($e),
                 ]));
