@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "ec5227300a40c2fcf9ef4d497c72ee2f06460844",
-    "date": "2026-06-18T18:14:46+00:00",
+    "full_sha": "ec6c4eda54b9e6ea6a553bbb6770274959a18116",
+    "date": "2026-06-18T19:23:47+00:00",
     "commits": [
+      {
+        "sha": "ec6c4eda",
+        "full_sha": "ec6c4eda54b9e6ea6a553bbb6770274959a18116",
+        "message": "refactor: improve log viewing experience",
+        "author": "arabcoders",
+        "date": "2026-06-18T19:23:47+00:00"
+      },
       {
         "sha": "ec522730",
         "full_sha": "ec5227300a40c2fcf9ef4d497c72ee2f06460844",
