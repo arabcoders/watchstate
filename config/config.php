@@ -30,6 +30,11 @@ return (function () {
         $logsPruneAfter = '-7 DAYS';
     }
 
+    $accessLogFormat = strtolower(trim((string) env('WS_LOGGER_ACCESS_FORMAT', 'text')));
+    if (false === in_array($accessLogFormat, ['text', 'jsonl'], true)) {
+        $accessLogFormat = 'text';
+    }
+
     $config = [
         'name' => 'WatchState',
         // -- Handled by the build system.
@@ -144,8 +149,6 @@ return (function () {
 
     $dbFile = ag($config, 'path') . '/db/' . PdoFactory::DB_FILE;
 
-    $config['api']['logfile'] = ag($config, 'tmpDir') . '/logs/access.' . $logDateFormat . '.jsonl';
-
     $isMemory = 'MEMORY' === env('WS_DB_MODE', 'WAL');
     $pragma = [
         // -- To allow rollback to v1.7.0.
@@ -235,6 +238,12 @@ return (function () {
             'level' => env('WS_LOGGER_FILE_LEVEL', Level::Error),
             'filename' => ag($config, 'tmpDir') . '/logs/app.' . $logDateFormat . '.jsonl',
             'format' => 'jsonl',
+        ],
+        'access' => [
+            'enabled' => (bool) env('WS_LOGGER_ACCESS_ENABLE', $inContainer),
+            'level' => env('WS_LOGGER_ACCESS_LEVEL', Level::Info),
+            'filename' => ag($config, 'tmpDir') . '/logs/access.' . $logDateFormat . '.jsonl',
+            'format' => $accessLogFormat,
         ],
         'stderr' => [
             'type' => 'stream',

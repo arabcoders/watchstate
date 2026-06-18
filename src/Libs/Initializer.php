@@ -19,6 +19,7 @@ use ErrorException;
 use League\Route\Http\Exception as RouterHttpException;
 use League\Route\RouteGroup;
 use League\Route\Router as APIRouter;
+use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogHandler;
 use Monolog\Level;
@@ -459,23 +460,35 @@ final class Initializer
 
         $wrap = Container::get(LogSuppressor::class);
 
-        if (null !== ($logfile = Config::get('api.logfile'))) {
-            $accessHandler = $this->createStreamHandler((string) $logfile, Level::Info, true);
+        $accessContext = Config::get('logger.access', []);
+        if (true === (bool) ag($accessContext, 'enabled', false) && null !== ($logfile = ag($accessContext, 'filename'))) {
+            $accessHandler = $this->createStreamHandler(
+                (string) $logfile,
+                ag($accessContext, 'level', Level::Info),
+                true,
+            );
             $this->accessLogStructured = $accessHandler instanceof JsonlStreamHandler;
 
             $this->accessLog = $logger
                 ->withName(name: 'http')
                 ->pushHandler($wrap->withHandler($accessHandler));
 
-            if (true === $inContainer) {
-                assert($this->accessLog instanceof Logger, 'Expected logger instance for access log.');
-                $this->accessLog->pushHandler($wrap->withHandler(
-                    $this->createStreamHandler('php://stderr', Level::Info, true, $this->accessLogStructured ? 'jsonl' : null),
-                ));
-            }
+            assert($this->accessLog instanceof Logger, 'Expected logger instance for access log.');
+            $this->accessLog->pushHandler($wrap->withHandler(
+                $this->createStreamHandler(
+                    'php://stderr',
+                    ag($accessContext, 'level', Level::Info),
+                    true,
+                    ag($accessContext, 'format', 'text'),
+                ),
+            ));
         }
 
         foreach ($loggers as $name => $context) {
+            if ('access' === $name) {
+                continue;
+            }
+
             if (null === ag($context, 'type', null)) {
                 throw new RuntimeException(r("Logger '{name}' has no type set.", ['name' => $name]));
             }
@@ -615,7 +628,13 @@ final class Initializer
             return new JsonlStreamHandler($filename, $level, $bubble);
         }
 
-        return new StreamHandler($filename, $level, $bubble);
+        $handler = new StreamHandler($filename, $level, $bubble);
+
+        if (is_scalar($format) && 'text' === strtolower(trim((string) $format))) {
+            $handler->setFormatter(new LineFormatter("%message%\n", null, true, true));
+        }
+
+        return $handler;
     }
 
     private function isJsonlStream(string $filename, mixed $format = null): bool
