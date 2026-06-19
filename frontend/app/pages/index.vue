@@ -214,18 +214,18 @@
                   :icon="autoReloadLogs ? 'i-lucide-pause' : 'i-lucide-play'"
                   @click.stop="toggleLogsAutoReload()"
                 >
-                  <span class="hidden sm:inline">Auto Reload</span>
+                  Auto
                 </UButton>
               </UTooltip>
 
               <UButton
                 icon="i-lucide-wrap-text"
-                :variant="wrapLines ? 'soft' : 'outline'"
+                :variant="isLogWrapped(log.filename) ? 'soft' : 'outline'"
                 color="neutral"
                 size="xs"
-                @click.stop="wrapLines = !wrapLines"
+                @click.stop="toggleLogWrap(log.filename)"
               >
-                <span class="hidden sm:inline">Wrap</span>
+                Wrap
               </UButton>
 
               <span @click.stop>
@@ -241,7 +241,7 @@
                     size="xs"
                     trailing-icon="i-lucide-chevron-down"
                   >
-                    <span class="hidden sm:inline">Copy</span>
+                    Copy
                   </UButton>
                 </UDropdownMenu>
               </span>
@@ -254,7 +254,7 @@
                 :loading="reloadingLogs"
                 @click.stop="void reloadLogs()"
               >
-                <span class="hidden sm:inline">Refresh</span>
+                Refresh
               </UButton>
 
               <UIcon
@@ -270,8 +270,7 @@
           <div
             v-if="isLogOpen(log.filename)"
             :ref="(el: unknown) => setLogContainerRef(log.filename, el as HTMLElement | null)"
-            class="overflow-auto rounded-lg border border-default/70 bg-elevated/40 shadow-sm"
-            :style="{ maxHeight: '20vh' }"
+            class="min-w-0 max-h-[35vh] overflow-y-auto overflow-x-hidden rounded-lg border border-default/70 bg-elevated/40 shadow-sm sm:max-h-[20vh]"
           >
             <article
               v-for="(entry, idx) in normalizeDashboardEntries(log.lines)"
@@ -282,24 +281,21 @@
               ]"
             >
               <div
-                class="flex min-w-0 flex-1 items-start gap-[0.65rem] px-3 py-[0.65rem] leading-[1.6]"
+                class="flex w-full min-w-0 flex-col gap-1 px-3 py-[0.65rem] leading-[1.6] md:flex-row md:items-start md:gap-2"
               >
-                <p
-                  :class="[
-                    wrapLines
-                      ? 'min-w-0 whitespace-pre-wrap ws-wrap-anywhere'
-                      : 'min-w-max whitespace-pre',
-                    'flex-1 text-default',
-                  ]"
-                >
-                  <StructuredLogLine
-                    :log="entry"
-                    :compact="true"
-                    :show-details="true"
-                    @details="openLogDetails"
-                    @open-event="openEventFromLog"
-                  />
-                </p>
+                <StructuredLogLine
+                  :log="entry"
+                  :compact="true"
+                  :show-details="true"
+                  :wrapped="isLogWrapped(log.filename)"
+                  :expanded="isExpandedLogRow(dashboardLogRowKey(log.filename, entry, idx))"
+                  toggleable
+                  @details="openLogDetails"
+                  @open-event="openEventFromLog"
+                  @toggle-expand="
+                    toggleExpandedLogRow(dashboardLogRowKey(log.filename, entry, idx))
+                  "
+                />
               </div>
             </article>
           </div>
@@ -317,7 +313,16 @@
       </template>
     </UModal>
 
-    <LogDetailsModal v-model:open="detailsOpen" :log="selectedLog" />
+    <LogDetailsModal
+      v-model:open="detailsOpen"
+      :log="selectedLog"
+      @open-event="
+        (id) => {
+          detailsOpen = false;
+          selectedEventId = id;
+        }
+      "
+    />
   </div>
 </template>
 
@@ -360,7 +365,7 @@ useHead({ title: 'Index' });
 const route = useRoute();
 const poster_enable = useStorage('poster_enable', true);
 const autoReloadLogs = useStorage<boolean>('auto_reload_logs', true);
-const wrapLines = useStorage('index_logs_wrap_lines', false);
+const logWrap = useStorage<Record<string, boolean>>('index_logs_wrap', {});
 const breakpoints = useBreakpoints({ mobile: 0, desktop: 640 });
 
 const lastHistory = ref<Array<HistoryItem>>([]);
@@ -371,6 +376,7 @@ const logReloadInterval = ref<ReturnType<typeof setInterval> | null>(null);
 const selectedEventId = ref<string | null>(null);
 const selectedLog = ref<ServerJsonLogEntry | null>(null);
 const detailsOpen = ref(false);
+const expandedLogRows = ref<Set<string>>(new Set());
 const logOpen = useStorage<Record<string, boolean>>('index_logs_open', {});
 const logReloadFrequency = 10000;
 let historyLoadToken = 0;
@@ -401,6 +407,23 @@ const normalizeDashboardEntries = (
     .map((item) => normalizeStructuredEntry(item))
     .filter((item): item is ServerJsonLogEntry => null !== item);
 
+const dashboardLogRowKey = (filename: string, entry: ServerJsonLogEntry, index: number): string =>
+  `${filename}:${entry.id}:${index}`;
+
+const isExpandedLogRow = (key: string): boolean => expandedLogRows.value.has(key);
+
+const toggleExpandedLogRow = (key: string): void => {
+  const next = new Set(expandedLogRows.value);
+
+  if (next.has(key)) {
+    next.delete(key);
+  } else {
+    next.add(key);
+  }
+
+  expandedLogRows.value = next;
+};
+
 const openLogDetails = (entry: ServerJsonLogEntry): void => {
   selectedLog.value = entry;
   detailsOpen.value = true;
@@ -426,6 +449,10 @@ const scrollLogContainerToBottom = (filename: string): void => {
 };
 
 const isLogOpen = (filename: string): boolean => logOpen.value[filename] ?? true;
+const isLogWrapped = (filename: string): boolean => logWrap.value[filename] ?? false;
+const toggleLogWrap = (filename: string): void => {
+  logWrap.value = { ...logWrap.value, [filename]: !isLogWrapped(filename) };
+};
 const toggleLog = (filename: string): void => {
   const wasOpen = isLogOpen(filename);
   logOpen.value[filename] = !wasOpen;

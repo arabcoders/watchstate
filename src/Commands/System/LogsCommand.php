@@ -208,6 +208,18 @@ final class LogsCommand extends Command
 
         $it = new LimitIterator($file, max(0, $lastLine - $limit), $lastLine);
 
+        if ($input->hasParameterOption('--jsonl', true)) {
+            foreach ($it as $line) {
+                $line = trim((string) $line);
+
+                if ('' !== $line) {
+                    $output->writeln($line);
+                }
+            }
+
+            return self::SUCCESS;
+        }
+
         foreach ($it as $line) {
             $line = trim((string) $line);
 
@@ -245,6 +257,7 @@ final class LogsCommand extends Command
             return self::FAILURE;
         }
 
+        $jsonlPassthrough = $input->hasParameterOption('--jsonl', true);
         $lastPos = 0;
 
         while (true) {
@@ -268,10 +281,14 @@ final class LogsCommand extends Command
                         continue;
                     }
 
-                    $entry = self::parseJsonlLine($line);
+                    if ($jsonlPassthrough) {
+                        $output->writeln($line);
+                    } else {
+                        $entry = self::parseJsonlLine($line);
 
-                    if (null !== $entry) {
-                        $output->writeln(self::formatEventLine($entry));
+                        if (null !== $entry) {
+                            $output->writeln(self::formatEventLine($entry));
+                        }
                     }
 
                     flush();

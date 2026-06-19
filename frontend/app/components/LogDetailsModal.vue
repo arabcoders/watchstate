@@ -18,6 +18,22 @@
           />
         </div>
         <div class="flex flex-wrap items-center justify-end gap-2">
+          <UDropdownMenu
+            v-if="quickActions.length > 0"
+            :items="[quickActions]"
+            :content="{ align: 'end' }"
+            :modal="false"
+          >
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-arrow-up-right-from-square"
+              trailing-icon="i-lucide-chevron-down"
+            >
+              Open
+            </UButton>
+          </UDropdownMenu>
           <UDropdownMenu :items="copyMenuItems" :content="copyMenuContent" :modal="false">
             <UButton
               color="neutral"
@@ -356,9 +372,11 @@
 </template>
 
 <script setup lang="ts">
+import { navigateTo } from '#app';
 import { useStorage } from '@vueuse/core';
 import { computed, ref } from 'vue';
-import { copyText, TOOLTIP_DATE_FORMAT } from '~/utils';
+import { copyText, goto_history_item, makeEventName, TOOLTIP_DATE_FORMAT } from '~/utils';
+import { useDialog } from '~/composables/useDialog';
 import moment from 'moment';
 import StatCard from '~/components/StatCard.vue';
 import type { ServerJsonLogEntry, ServerJsonLogException } from '~/types';
@@ -374,6 +392,11 @@ type FieldRow = {
   preview: string;
   kind: 'scalar' | 'text' | 'json';
 };
+type QuickAction = {
+  label: string;
+  icon: string;
+  onSelect: () => void | Promise<void>;
+};
 
 const props = defineProps<{
   modelValue?: boolean;
@@ -382,7 +405,11 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (event: 'update:modelValue', value: boolean): void;
+  (event: 'openEvent', eventId: string): void;
 }>();
+
+const dialog = useDialog();
+const apiUser = useStorage('api_user', 'main');
 
 const open = computed({
   get: () => props.modelValue ?? false,
@@ -443,6 +470,105 @@ const displayedRawJson = computed<string>(() =>
 );
 
 const copyMenuContent = computed(() => ({ align: 'end' as const }));
+
+const asString = (value: unknown): string | null => {
+  if ('string' === typeof value) {
+    const trimmed = value.trim();
+    return '' === trimmed ? null : trimmed;
+  }
+  if ('number' === typeof value || 'boolean' === typeof value) {
+    return String(value);
+  }
+  return null;
+};
+
+const fieldValue = (path: string): unknown => {
+  const fields = props.log?.fields;
+  if (!fields) {
+    return null;
+  }
+  if (path in fields) {
+    return fields[path];
+  }
+
+  let cursor: unknown = fields;
+  for (const segment of path.split('.')) {
+    if (!cursor || Array.isArray(cursor) || 'object' !== typeof cursor || !(segment in cursor)) {
+      return null;
+    }
+    cursor = (cursor as Record<string, unknown>)[segment];
+  }
+
+  return cursor;
+};
+
+const fieldString = (path: string): string | null => asString(fieldValue(path));
+
+const eventId = computed<string | null>(() => fieldString('event.id') ?? fieldString('event_id'));
+const historyId = computed<string | null>(() => fieldString('history.id'));
+const identityUser = computed<string | null>(() => fieldString('identity.user'));
+const identityBackend = computed<string | null>(() => fieldString('identity.backend'));
+
+const switchIdentity = async (identity: string): Promise<boolean> => {
+  if (identity === apiUser.value) {
+    return true;
+  }
+
+  const { status } = await dialog.confirmDialog({
+    title: 'Switch Identity',
+    message: `This log is related to identity '${identity}'. You are currently using '${apiUser.value}'. Do you want to switch to view it?`,
+  });
+
+  if (true !== status) {
+    return false;
+  }
+
+  apiUser.value = identity;
+  return true;
+};
+
+const quickActions = computed<Array<QuickAction>>(() => {
+  const actions: Array<QuickAction> = [];
+
+  const event = eventId.value;
+  if (event) {
+    actions.push({
+      label: `Event #${makeEventName(event)}`,
+      icon: 'i-lucide-activity',
+      onSelect: () => {
+        emit('openEvent', event);
+      },
+    });
+  }
+
+  const history = historyId.value;
+  if (history) {
+    actions.push({
+      label: `History #${history}`,
+      icon: 'i-lucide-history',
+      onSelect: async () => {
+        await goto_history_item({ history_id: history, user: identityUser.value });
+      },
+    });
+  }
+
+  const backend = identityBackend.value;
+  if (backend) {
+    actions.push({
+      label: `Backend ${backend}`,
+      icon: 'i-lucide-server',
+      onSelect: async () => {
+        const user = identityUser.value;
+        if (user && false === (await switchIdentity(user))) {
+          return;
+        }
+        await navigateTo(`/backend/${backend}`);
+      },
+    });
+  }
+
+  return actions;
+});
 
 const copyMenuItems = computed(() => [
   [

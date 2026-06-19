@@ -1,5 +1,7 @@
 <template>
-  <span class="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 align-middle">
+  <span
+    class="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 align-middle md:shrink-0 md:flex-nowrap"
+  >
     <UTooltip v-if="log.datetime" :text="logTimeTitle(log.datetime)">
       <span
         :class="
@@ -48,7 +50,19 @@
     </span>
   </span>
 
-  <span :class="compact ? 'ml-1' : 'ml-2'">{{ log.message }}</span>
+  <button
+    v-if="toggleable"
+    type="button"
+    class="block min-w-0 flex-1 cursor-pointer text-left"
+    :aria-expanded="expanded || wrapped"
+    @click="emit('toggleExpand')"
+  >
+    <span :class="messageClass">{{ log.message }}</span>
+  </button>
+
+  <span v-else class="block min-w-0 flex-1">
+    <span :class="messageClass">{{ log.message }}</span>
+  </span>
 </template>
 
 <script setup lang="ts">
@@ -66,15 +80,28 @@ import {
   logTimeTitle,
 } from '~/utils/logs';
 
-const props = defineProps<{
-  log: ServerJsonLogEntry;
-  showDetails?: boolean;
-  compact?: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    log: ServerJsonLogEntry;
+    showDetails?: boolean;
+    compact?: boolean;
+    wrapped?: boolean;
+    expanded?: boolean;
+    toggleable?: boolean;
+  }>(),
+  {
+    showDetails: false,
+    compact: false,
+    wrapped: false,
+    expanded: false,
+    toggleable: false,
+  },
+);
 
 const emit = defineEmits<{
   details: [entry: ServerJsonLogEntry];
   openEvent: [eventId: string];
+  toggleExpand: [];
 }>();
 
 const apiUser = useStorage('api_user', 'main');
@@ -121,6 +148,12 @@ const eventId = computed<string | null>(() => fieldString('event.id') ?? fieldSt
 const historyId = computed<string | null>(() => fieldString('history.id'));
 const identityUser = computed<string | null>(() => fieldString('identity.user'));
 const identityBackend = computed<string | null>(() => fieldString('identity.backend'));
+const messageClass = computed<Array<string>>(() => [
+  'text-sm text-default',
+  props.expanded || props.wrapped
+    ? 'block whitespace-pre-wrap wrap-break-word'
+    : 'ws-log-message-collapsed md:block md:truncate',
+]);
 
 const switchIdentity = async (identity: string): Promise<boolean> => {
   if (identity === apiUser.value) {

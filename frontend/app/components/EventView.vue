@@ -257,7 +257,7 @@
           />
 
           <div
-            class="overflow-auto rounded-lg border border-default/70 bg-elevated/40 shadow-sm"
+            class="min-w-0 overflow-y-auto overflow-x-hidden rounded-lg border border-default/70 bg-elevated/40 shadow-sm"
             :style="{ maxHeight: '40vh' }"
           >
             <article
@@ -269,31 +269,37 @@
               ]"
             >
               <div
-                class="flex min-w-0 flex-1 items-start gap-[0.65rem] px-3 py-[0.65rem] leading-[1.6]"
+                class="flex w-full min-w-0 flex-col gap-1 px-3 py-[0.65rem] leading-[1.6] md:flex-row md:items-start md:gap-2"
               >
                 <template v-if="row.kind === 'structured'">
-                  <p
-                    :class="[
-                      wrapLogs
-                        ? 'min-w-0 whitespace-pre-wrap ws-wrap-anywhere'
-                        : 'min-w-max whitespace-pre',
-                      'flex-1 text-default',
-                    ]"
-                  >
-                    <StructuredLogLine
-                      :log="row.entry"
-                      :compact="true"
-                      :show-details="true"
-                      @details="openLogDetails"
-                      @open-event="(id) => emit('openEvent', id)"
-                    />
-                  </p>
+                  <StructuredLogLine
+                    :log="row.entry"
+                    :compact="true"
+                    :show-details="true"
+                    :wrapped="wrapLogs"
+                    :expanded="isExpandedLogRow(row.key)"
+                    toggleable
+                    @details="openLogDetails"
+                    @open-event="(id) => emit('openEvent', id)"
+                    @toggle-expand="toggleExpandedLogRow(row.key)"
+                  />
                 </template>
                 <template v-else>
                   <span
-                    class="mr-2 inline-flex size-2 shrink-0 rounded-full bg-muted align-middle"
-                  />
-                  <span class="text-default">{{ String(row.entry.text).trim() }}</span>
+                    class="inline-flex max-w-full flex-wrap items-center gap-2 text-[11px] text-toned md:shrink-0 md:flex-nowrap"
+                  >
+                    <span class="inline-flex size-2 shrink-0 rounded-full bg-muted" />
+                  </span>
+                  <button
+                    type="button"
+                    class="block min-w-0 flex-1 cursor-pointer text-left"
+                    :aria-expanded="isExpandedLogRow(row.key) || wrapLogs"
+                    @click="toggleExpandedLogRow(row.key)"
+                  >
+                    <span :class="legacyLogMessageClass(row.key)">{{
+                      String(row.entry.text).trim()
+                    }}</span>
+                  </button>
                 </template>
               </div>
             </article>
@@ -370,7 +376,16 @@
       </section>
     </template>
 
-    <LogDetailsModal v-model:open="detailsOpen" :log="selectedLog" />
+    <LogDetailsModal
+      v-model:open="detailsOpen"
+      :log="selectedLog"
+      @open-event="
+        (id) => {
+          detailsOpen = false;
+          emit('openEvent', id);
+        }
+      "
+    />
   </div>
 </template>
 
@@ -419,6 +434,7 @@ const wrapLogs = useStorage<boolean>('events_wrap_logs', false);
 const wrapOptions = useStorage<boolean>('events_wrap_options', false);
 const selectedLog = ref<ServerJsonLogEntry | null>(null);
 const detailsOpen = ref(false);
+const expandedLogRows = ref<Set<string>>(new Set());
 
 type EventLogRow =
   | { kind: 'structured'; key: string; entry: ServerJsonLogEntry }
@@ -428,6 +444,27 @@ const openLogDetails = (entry: ServerJsonLogEntry): void => {
   selectedLog.value = entry;
   detailsOpen.value = true;
 };
+
+const isExpandedLogRow = (key: string): boolean => expandedLogRows.value.has(key);
+
+const toggleExpandedLogRow = (key: string): void => {
+  const next = new Set(expandedLogRows.value);
+
+  if (next.has(key)) {
+    next.delete(key);
+  } else {
+    next.add(key);
+  }
+
+  expandedLogRows.value = next;
+};
+
+const legacyLogMessageClass = (key: string): Array<string> => [
+  'text-sm text-default',
+  isExpandedLogRow(key) || wrapLogs.value
+    ? 'block whitespace-pre-wrap wrap-break-word'
+    : 'ws-log-message-collapsed md:block md:truncate',
+];
 
 watch(detailsOpen, (open) => {
   if (!open) {

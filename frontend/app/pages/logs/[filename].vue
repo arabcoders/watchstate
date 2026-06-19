@@ -25,7 +25,7 @@
             icon="i-lucide-chevron-down"
             @click="scrollToBottom"
           >
-            <span class="hidden sm:inline">Bottom</span>
+            Bottom
           </UButton>
         </UTooltip>
 
@@ -65,13 +65,13 @@
         </USelect>
 
         <UButton
-          icon="i-lucide-refresh-cw"
+          icon="i-lucide-wrap-text"
+          :variant="wrapLines ? 'soft' : 'outline'"
           color="neutral"
-          variant="outline"
           size="sm"
-          @click="reloadLog"
+          @click="wrapLines = !wrapLines"
         >
-          Refresh
+          Wrap
         </UButton>
 
         <UTooltip text="Delete logfile.">
@@ -82,7 +82,7 @@
             icon="i-lucide-trash-2"
             @click="deleteFile"
           >
-            <span class="hidden sm:inline">Delete</span>
+            Delete
           </UButton>
         </UTooltip>
 
@@ -95,19 +95,9 @@
             :loading="isDownloading"
             @click="downloadFile"
           >
-            <span class="hidden sm:inline">Download</span>
+            Download
           </UButton>
         </UTooltip>
-
-        <UButton
-          icon="i-lucide-wrap-text"
-          :variant="wrapLines ? 'soft' : 'outline'"
-          color="neutral"
-          size="sm"
-          @click="wrapLines = !wrapLines"
-        >
-          Wrap
-        </UButton>
 
         <UTooltip text="Copy text">
           <UDropdownMenu :items="copyMenuItems" :content="{ align: 'end' }" :modal="false">
@@ -118,10 +108,20 @@
               icon="i-lucide-copy"
               trailing-icon="i-lucide-chevron-down"
             >
-              <span class="hidden sm:inline">Copy</span>
+              Copy
             </UButton>
           </UDropdownMenu>
         </UTooltip>
+
+        <UButton
+          icon="i-lucide-refresh-cw"
+          color="neutral"
+          variant="outline"
+          size="sm"
+          @click="reloadLog"
+        >
+          Refresh
+        </UButton>
       </div>
     </div>
 
@@ -142,7 +142,7 @@
     <template v-else-if="!error">
       <div
         ref="logContainer"
-        class="overflow-auto border border-default bg-elevated/30 shadow-sm text-default"
+        class="min-w-0 overflow-y-auto overflow-x-hidden border border-default bg-elevated/30 shadow-sm text-default"
         :style="{ minHeight: '70vh', maxHeight: '70vh' }"
         @scroll.passive="handleScroll"
       >
@@ -177,19 +177,18 @@
         <template v-if="0 < rows.length">
           <article v-for="(entry, index) in rows" :key="entry.key" :class="rowClass(entry, index)">
             <div
-              :class="[
-                'flex min-w-0 flex-1 items-start gap-[0.65rem] px-3 py-[0.65rem] leading-[1.6]',
-                wrapLines ? 'w-full' : 'w-max min-w-full',
-              ]"
+              class="flex w-full min-w-0 flex-col gap-1 px-3 py-[0.65rem] leading-[1.6] md:flex-row md:items-start md:gap-2"
             >
-              <p :class="structuredLineClass">
-                <StructuredLogLine
-                  :log="entry.log"
-                  :show-details="true"
-                  @details="openLogDetails"
-                  @open-event="(id) => (selectedEventId = id)"
-                />
-              </p>
+              <StructuredLogLine
+                :log="entry.log"
+                :show-details="true"
+                :wrapped="wrapLines"
+                :expanded="isExpandedLogRow(entry.key)"
+                toggleable
+                @details="openLogDetails"
+                @open-event="(id) => (selectedEventId = id)"
+                @toggle-expand="toggleExpandedLogRow(entry.key)"
+              />
             </div>
           </article>
         </template>
@@ -226,7 +225,16 @@
       </template>
     </UModal>
 
-    <LogDetailsModal v-model:open="detailsOpen" :log="selectedLog" />
+    <LogDetailsModal
+      v-model:open="detailsOpen"
+      :log="selectedLog"
+      @open-event="
+        (id) => {
+          detailsOpen = false;
+          selectedEventId = id;
+        }
+      "
+    />
   </main>
 </template>
 
@@ -291,6 +299,7 @@ const streamController = ref<AbortController | null>(null);
 const selectedEventId = ref<string | null>(null);
 const selectedLog = ref<ServerJsonLogEntry | null>(null);
 const detailsOpen = ref(false);
+const expandedLogRows = ref<Set<string>>(new Set());
 const selectedLevels = useStorage<Array<LogLevel>>('logs_level_filter', [...LOG_LEVELS]);
 
 let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -309,12 +318,6 @@ const eventViewOpen = computed({
 const eventViewTitle = computed(() =>
   null === selectedEventId.value ? 'Event' : `#${makeEventName(selectedEventId.value)}`,
 );
-
-const structuredLineClass = computed<Array<string>>(() => [
-  'flex-1',
-  wrapLines.value ? 'min-w-0 whitespace-pre-wrap ws-wrap-anywhere' : 'min-w-max whitespace-pre',
-  'text-default',
-]);
 
 const normalizedQuery = computed(() => query.value.trim().toLowerCase());
 const selectedLevelSet = computed(
@@ -449,6 +452,20 @@ const rowClass = (entry: LogRow, index: number): Array<string> => {
 const openLogDetails = (entry: ServerJsonLogEntry): void => {
   selectedLog.value = entry;
   detailsOpen.value = true;
+};
+
+const isExpandedLogRow = (key: string): boolean => expandedLogRows.value.has(key);
+
+const toggleExpandedLogRow = (key: string): void => {
+  const next = new Set(expandedLogRows.value);
+
+  if (next.has(key)) {
+    next.delete(key);
+  } else {
+    next.add(key);
+  }
+
+  expandedLogRows.value = next;
 };
 
 const applyLogBatch = (items: Array<unknown>, prepend = false): void => {
