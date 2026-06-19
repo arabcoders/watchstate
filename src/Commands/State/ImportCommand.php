@@ -168,7 +168,7 @@ class ImportCommand extends Command
         }
 
         if (true === (bool) Config::get('guid.disable.episode', false)) {
-            $this->logger->notice('Mapper: Matching episodes via GUID is disabled.');
+            $this->logger->info('Matching episodes via GUID is disabled.');
         }
 
         if ($input->getOption('trace')) {
@@ -193,9 +193,7 @@ class ImportCommand extends Command
         try {
             $selectedUsers = select_users($input->getOption('user'));
         } catch (RuntimeException $e) {
-            $output->writeln(r('<error>{message}</error>', [
-                'message' => $e->getMessage(),
-            ]));
+            $this->logger->error($e->getMessage(), exception_log($e));
 
             return self::FAILURE;
         }
@@ -222,18 +220,20 @@ class ImportCommand extends Command
 
         $totalStartTime = microtime(true);
 
-        $this->logger->notice('SYSTEM: Using WatchState {full_version}', [
+        $this->logger->notice('Using WatchState {full_version}', [
             'full_version' => get_full_version(),
         ]);
 
-        $this->logger->notice("SYSTEM: Starting import process for '{total}' users", ['total' => count($users)]);
+        $this->logger->notice("Starting import process for '{total}' users", ['total' => count($users)]);
 
         foreach ($users as $userContext) {
             $list = [];
             $userStart = microtime(true);
 
-            $this->logger->notice("SYSTEM: Importing user '{user}' play states.", [
-                'user' => $userContext->name,
+            $this->logger->notice("Importing user '{identity.user}' play states.", [
+                'identity' => [
+                    'user' => $userContext->name,
+                ],
                 'backends' => implode(', ', array_keys($list)),
             ]);
 
@@ -243,9 +243,11 @@ class ImportCommand extends Command
                 $metadata = false === $importEnabled;
 
                 if ($isCustom && $input->getOption('exclude') === $this->in_array($selected, $backendName)) {
-                    $this->logger->info("SYSTEM: Ignoring '{user}@{backend}'. as requested.", [
-                        'user' => $userContext->name,
-                        'backend' => $backendName,
+                    $this->logger->info("Ignoring '{identity.user}@{identity.backend}'. as requested.", [
+                        'identity' => [
+                            'user' => $userContext->name,
+                            'backend' => $backendName,
+                        ],
                     ]);
                     continue;
                 }
@@ -255,20 +257,24 @@ class ImportCommand extends Command
                 }
 
                 if (!isset($supported[$type])) {
-                    $this->logger->error("SYSTEM: Ignoring '{user}@{backend}'. Unexpected type '{type}'.", [
-                        'user' => $userContext->name,
+                    $this->logger->error("Ignoring '{identity.user}@{identity.backend}'. Unexpected type '{type}'.", [
+                        'identity' => [
+                            'user' => $userContext->name,
+                            'backend' => $backendName,
+                        ],
                         'type' => $type,
-                        'backend' => $backendName,
                         'types' => implode(', ', array_keys($supported)),
                     ]);
                     continue;
                 }
 
                 if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {
-                    $this->logger->error("SYSTEM: Ignoring '{user}@{backend}'. Invalid URL '{url}'.", [
-                        'user' => $userContext->name,
+                    $this->logger->error("Ignoring '{identity.user}@{identity.backend}'. Invalid URL '{url}'.", [
+                        'identity' => [
+                            'user' => $userContext->name,
+                            'backend' => $backendName,
+                        ],
                         'url' => $url ?? 'None',
-                        'backend' => $backendName,
                     ]);
                     continue;
                 }
@@ -293,9 +299,11 @@ class ImportCommand extends Command
             $queue = [];
 
             $this->logger->notice(
-                message: "SYSTEM: Preloading user '{user}: {mapper}' data. Memory usage '{memory.now}'.",
+                message: "Preloading user '{identity.user}: {mapper}' data. Memory usage '{memory.now}'.",
                 context: [
-                    'user' => $userContext->name,
+                    'identity' => [
+                        'user' => $userContext->name,
+                    ],
                     'mapper' => after_last($userContext->mapper::class, '\\'),
                     'memory' => [
                         'now' => get_memory_usage(),
@@ -308,9 +316,11 @@ class ImportCommand extends Command
             $userContext->mapper->reset()->loadData();
 
             $this->logger->notice(
-                message: "SYSTEM: Preloading user '{user}: {mapper}' data completed in '{duration}s'. Memory usage '{memory.now}'.",
+                message: "Preloading user '{identity.user}: {mapper}' data completed in '{duration}s'. Memory usage '{memory.now}'.",
                 context: [
-                    'user' => $userContext->name,
+                    'identity' => [
+                        'user' => $userContext->name,
+                    ],
                     'mapper' => after_last($userContext->mapper::class, '\\'),
                     'duration' => round(microtime(true) - $time, 4),
                     'memory' => [
@@ -362,9 +372,11 @@ class ImportCommand extends Command
                     $after = make_date($after);
                 }
 
-                $this->logger->notice("SYSTEM: Importing '{user}@{backend}' {import_type} changes.", [
-                    'user' => $userContext->name,
-                    'backend' => $name,
+                $this->logger->notice("Importing '{identity.user}@{identity.backend}' {import_type} changes.", [
+                    'identity' => [
+                        'user' => $userContext->name,
+                        'backend' => $name,
+                    ],
                     'import_type' => true === $metadata ? 'metadata' : 'metadata & play state',
                     'since' => null === $after ? 'Beginning' : (string) $after,
                 ]);
@@ -376,10 +388,12 @@ class ImportCommand extends Command
                 if (false === $inDryMode) {
                     if (true === (bool) Message::get("{$name}.has_errors")) {
                         $this->logger->warning(
-                            message: "SYSTEM: Not updating '{user}@{backend}' import last sync date. There was errors recorded during the operation.",
+                            message: "Not updating '{identity.user}@{identity.backend}' import last sync date. There was errors recorded during the operation.",
                             context: [
-                                'user' => $userContext->name,
-                                'backend' => $name,
+                                'identity' => [
+                                    'user' => $userContext->name,
+                                    'backend' => $name,
+                                ],
                             ],
                         );
                     } else {
@@ -391,8 +405,10 @@ class ImportCommand extends Command
             unset($backend);
 
             $start = microtime(true);
-            $this->logger->notice("SYSTEM: Waiting on '{total}' {sync}requests for '{user}' backends.", [
-                'user' => $userContext->name,
+            $this->logger->notice("Waiting on '{total}' {sync}requests for '{identity.user}' backends.", [
+                'identity' => [
+                    'user' => $userContext->name,
+                ],
                 'total' => number_format(count($queue)),
                 'sync' => $syncRequests ? 'sync ' : '',
                 'memory' => [
@@ -406,9 +422,11 @@ class ImportCommand extends Command
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "SYSTEM: Import requests for '{user}' backends failed. '{error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "Import requests for '{identity.user}' backends failed. {exception.message}",
                         context: [
-                            'user' => $userContext->name,
+                            'identity' => [
+                                'user' => $userContext->name,
+                            ],
                             ...exception_log($e),
                         ],
                         e: $e,
@@ -419,9 +437,11 @@ class ImportCommand extends Command
             }
 
             $this->logger->notice(
-                "SYSTEM: Completed '{total}' requests in '{duration}'s for '{user}' backends. Parsed '{responses.size}' of data.",
+                "Completed '{total}' requests in '{duration}'s for '{identity.user}' backends. Parsed '{responses.size}' of data.",
                 [
-                    'user' => $userContext->name,
+                    'identity' => [
+                        'user' => $userContext->name,
+                    ],
                     'total' => number_format(count($queue)),
                     'duration' => round(microtime(true) - $start, 4),
                     'memory' => [
@@ -439,8 +459,10 @@ class ImportCommand extends Command
             $total = count($userContext->mapper);
 
             if ($total >= 1) {
-                $this->logger->notice("SYSTEM: Found '{total}' updated items from '{user}' backends.", [
-                    'user' => $userContext->name,
+                $this->logger->notice("Found '{total}' updated items from '{identity.user}' backends.", [
+                    'identity' => [
+                        'user' => $userContext->name,
+                    ],
                     'total' => $total,
                     'memory' => [
                         'now' => get_memory_usage(),
@@ -455,9 +477,11 @@ class ImportCommand extends Command
             $userContext->mapper->reset();
 
             $this->logger->info(
-                "SYSTEM: Importing '{user}' play states completed in '{duration}'s. Memory usage '{memory.now}'.",
+                "Importing '{identity.user}' play states completed in '{duration}'s. Memory usage '{memory.now}'.",
                 [
-                    'user' => $userContext->name,
+                    'identity' => [
+                        'user' => $userContext->name,
+                    ],
                     'backends' => implode(', ', array_keys($list)),
                     'duration' => round(microtime(true) - $userStart, 4),
                     'memory' => [
@@ -468,9 +492,11 @@ class ImportCommand extends Command
             );
 
             $this->logger->notice(
-                "SYSTEM: Imported '{user}' play states: {movie.added} added, {movie.updated} updated, {movie.failed} failed (movies); {episode.added} added, {episode.updated} updated, {episode.failed} failed (episodes).",
+                "Imported '{identity.user}' play states: {movie.added} added, {movie.updated} updated, {movie.failed} failed (movies); {episode.added} added, {episode.updated} updated, {episode.failed} failed (episodes).",
                 [
-                    'user' => $userContext->name,
+                    'identity' => [
+                        'user' => $userContext->name,
+                    ],
                     'movie' => [
                         'added' => $operations[iState::TYPE_MOVIE]['added'] ?? 0,
                         'updated' => $operations[iState::TYPE_MOVIE]['updated'] ?? 0,
@@ -497,11 +523,11 @@ class ImportCommand extends Command
             }
         }
 
-        $this->logger->notice("SYSTEM: Import process completed in '{duration}'s for all users.", [
+        $this->logger->notice("Import process completed in '{duration}'s for all users.", [
             'duration' => round(microtime(true) - $totalStartTime, 4),
         ]);
 
-        $this->logger->notice('SYSTEM: Using WatchState {full_version}', [
+        $this->logger->notice('Using WatchState {full_version}', [
             'full_version' => get_full_version(),
         ]);
 

@@ -66,11 +66,13 @@ final class TasksTest extends TestCase
             static fn(array $item): bool => 'backup' === ($item['name'] ?? null),
         ));
 
-        self::assertSame('2024-01-02T00:10:00+00:00', ag($payload, 'prev_run'));
+        $expectedPrevRun = (string) make_date('2024-01-02T00:10:00+00:00');
+
+        self::assertSame($expectedPrevRun, ag($payload, 'prev_run'));
         self::assertSame($queuedId, ag($payload, 'prev_run_event_id'));
         self::assertNotSame(ag($payload, 'prev_run'), ag($payload, 'next_run'));
         self::assertCount(1, $items);
-        self::assertSame('2024-01-02T00:10:00+00:00', ag($items[0], 'prev_run'));
+        self::assertSame($expectedPrevRun, ag($items[0], 'prev_run'));
         self::assertSame($queuedId, ag($items[0], 'prev_run_event_id'));
     }
 

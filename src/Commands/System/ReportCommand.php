@@ -433,7 +433,7 @@ final class ReportCommand extends Command
      */
     private function handleLog(string $type, string|int $date, int|string $limit): void
     {
-        $logFile = Config::get('tmpDir') . '/logs/' . r('{type}.{date}.log', ['type' => $type, 'date' => $date]);
+        $logFile = LogsCommand::getLogFile($type, $date);
 
         $this->filter(r('[ <value>{logFile}</value> ]' . PHP_EOL, [
             'logFile' => after($logFile, Config::get('tmpDir')),
@@ -462,6 +462,22 @@ final class ReportCommand extends Command
             $line = trim((string) $line);
 
             if (empty($line)) {
+                continue;
+            }
+
+            $entry = LogsCommand::parseJsonlLine($line);
+
+            if (null !== $entry) {
+                $this->filter(r(
+                    '{date} {level} [{logger}] {message}',
+                    [
+                        'date' => ag($entry, 'datetime', ''),
+                        'level' => strtoupper((string) ag($entry, 'level', '')),
+                        'logger' => ag($entry, 'logger', ''),
+                        'message' => ag($entry, 'message', ''),
+                    ],
+                ));
+
                 continue;
             }
 
@@ -507,9 +523,9 @@ final class ReportCommand extends Command
                     ),
                 );
             } catch (Throwable $e) {
-                $this->filter(r("Error during parsing of '{file}.' '{kind}' was thrown unhandled with '{message}'", [
-                    'kind' => $e::class,
-                    'message' => $e->getMessage(),
+                $this->filter(r("Error during parsing of '{file}.' {exception.message}", [
+                    'file' => $suppressFile,
+                    ...exception_log($e),
                 ]));
             }
         }

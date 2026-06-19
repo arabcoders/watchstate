@@ -213,7 +213,7 @@ readonly class Playlist
                 'Access-Control-Max-Age' => 300,
             ]);
         } catch (Throwable $e) {
-            $this->logger->error($e->getMessage(), ['trace' => $e->getTrace()]);
+            $this->logger->error($e->getMessage(), exception_log($e));
             return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);
         }
     }

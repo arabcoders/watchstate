@@ -22,6 +22,12 @@ final class Proxy
 
     private string $action = 'plex.proxy';
 
+    /**
+     * Class constructor.
+     *
+     * @param iHttp&\App\Libs\Extends\HttpClient $http HTTP client for making requests to the backend.
+     * @param iLogger $logger Logger instance for logging.
+     */
     public function __construct(
         protected readonly iHttp $http,
         protected readonly iLogger $logger,
@@ -52,14 +58,16 @@ final class Proxy
 
                 $logContext = [
                     'action' => $this->action,
-                    'client' => $context->clientName,
-                    'backend' => $context->backendName,
-                    'user' => $context->userContext->name,
-                    'url' => $url,
+                    'identity' => [
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                        'user' => $context->userContext->name,
+                    ],
+                    'request' => ['url' => $url],
                 ];
 
                 $this->logger->debug(
-                    message: "{action}: proxying request via '{client}: {user}@{backend}'.",
+                    message: "proxying request via '{identity.user}@{identity.backend}'.",
                     context: $logContext,
                 );
 

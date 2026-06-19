@@ -51,8 +51,8 @@ final class ValidateContextTest extends PlexTestCase
             exceptionMessage: 'non-JSON response from /',
             callback: static function (self $test, ?\Throwable $e): void {
                 $test->assertInstanceOf(InvalidContextException::class, $e);
-                $test->assertSame(200, $e->getContext('http.status_code'));
-                $test->assertSame('http://plex.test/', $e->getContext('http.url'));
+                $test->assertSame(200, $e->getContext('response.status_code'));
+                $test->assertSame('http://plex.test/', $e->getContext('request.url'));
                 $test->assertStringContainsString('Plex', (string) $e->getContext('response.reason'));
             },
         );

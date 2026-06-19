@@ -30,6 +30,11 @@ return (function () {
         $logsPruneAfter = '-7 DAYS';
     }
 
+    $accessLogFormat = strtolower(trim((string) env('WS_LOGGER_ACCESS_FORMAT', 'text')));
+    if (false === in_array($accessLogFormat, ['text', 'jsonl'], true)) {
+        $accessLogFormat = 'text';
+    }
+
     $config = [
         'name' => 'WatchState',
         // -- Handled by the build system.
@@ -144,8 +149,6 @@ return (function () {
 
     $dbFile = ag($config, 'path') . '/db/' . PdoFactory::DB_FILE;
 
-    $config['api']['logfile'] = ag($config, 'tmpDir') . '/logs/access.' . $logDateFormat . '.log';
-
     $isMemory = 'MEMORY' === env('WS_DB_MODE', 'WAL');
     $pragma = [
         // -- To allow rollback to v1.7.0.
@@ -233,13 +236,21 @@ return (function () {
             'type' => 'stream',
             'enabled' => (bool) env('WS_LOGGER_FILE_ENABLE', true),
             'level' => env('WS_LOGGER_FILE_LEVEL', Level::Error),
-            'filename' => ag($config, 'tmpDir') . '/logs/app.' . $logDateFormat . '.log',
+            'filename' => ag($config, 'tmpDir') . '/logs/app.' . $logDateFormat . '.jsonl',
+            'format' => 'jsonl',
+        ],
+        'access' => [
+            'enabled' => (bool) env('WS_LOGGER_ACCESS_ENABLE', true),
+            'level' => env('WS_LOGGER_ACCESS_LEVEL', Level::Info),
+            'filename' => ag($config, 'tmpDir') . '/logs/access.' . $logDateFormat . '.jsonl',
+            'format' => $accessLogFormat,
         ],
         'stderr' => [
             'type' => 'stream',
             'enabled' => 'cli' !== PHP_SAPI,
             'level' => Level::Warning,
             'filename' => 'php://stderr',
+            'format' => 'jsonl',
         ],
         'console' => [
             'type' => 'console',
@@ -343,7 +354,7 @@ return (function () {
     };
 
     $config['tasks'] = [
-        'logfile' => ag($config, 'tmpDir') . '/logs/task.' . $logDateFormat . '.log',
+        'logfile' => ag($config, 'tmpDir') . '/logs/task.' . $logDateFormat . '.jsonl',
         'list' => [
             ImportCommand::TASK_NAME => [
                 'command' => ImportCommand::ROUTE,
@@ -415,7 +426,7 @@ return (function () {
     ];
 
     $config['events'] = [
-        'logfile' => ag($config, 'tmpDir') . '/logs/events.' . $logDateFormat . '.log',
+        'logfile' => ag($config, 'tmpDir') . '/logs/events.' . $logDateFormat . '.jsonl',
         'queue' => [
             'driver' => env('WS_EVENTS_QUEUE_DRIVER', 'auto'),
             'path' => env('WS_EVENTS_QUEUE_PATH', fn() => ag($config, 'tmpDir') . '/queue/events'),

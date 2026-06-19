@@ -11,6 +11,7 @@ use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Playlists\PlaylistSyncService;
 use App\Libs\TestCase;
 use App\Libs\UserContext;
+use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -191,16 +192,17 @@ final class PlaylistCommandTest extends TestCase
 
     public function test_invalid_user(): void
     {
+        $handler = new TestHandler();
         $service = $this->makeServiceMock();
         $service->expects(self::never())->method('sync');
 
-        $tester = $this->makeTester($service, $this->createStub(iClient::class));
+        $tester = $this->makeTester($service, $this->createStub(iClient::class), handler: $handler);
         $status = $tester->execute([
             '--user' => 'ghost',
         ]);
 
         self::assertSame(PlaylistCommand::FAILURE, $status);
-        self::assertStringContainsString("User 'ghost' not found.", $tester->getDisplay());
+        self::assertTrue($handler->hasErrorThatContains("User 'ghost' not found."));
     }
 
     /**
@@ -216,11 +218,12 @@ final class PlaylistCommandTest extends TestCase
         iClient $client,
         string $backendName = 'test_plex',
         array $userNames = ['main'],
+        ?TestHandler $handler = null,
     ): CommandTester {
         $application = new Application();
         $application->getDefinition()->addOption(new InputOption('output', 'o', InputOption::VALUE_REQUIRED, '', 'table'));
         $application->getDefinition()->addOption(new InputOption('trace', null, InputOption::VALUE_NONE));
-        $application->addCommand($this->makeCommand($service, $client, $backendName, $userNames));
+        $application->addCommand($this->makeCommand($service, $client, $backendName, $userNames, $handler));
 
         return new CommandTester($application->find(PlaylistCommand::ROUTE));
     }
@@ -230,6 +233,7 @@ final class PlaylistCommandTest extends TestCase
         iClient $client,
         string $backendName = 'test_plex',
         array $userNames = ['main'],
+        ?TestHandler $handler = null,
     ): PlaylistCommand {
         $this->initTempApp();
         $this->seedTestServersConfig();
@@ -243,6 +247,9 @@ final class PlaylistCommandTest extends TestCase
         }
 
         $logger = new Logger('test');
+        if (null !== $handler) {
+            $logger->pushHandler($handler);
+        }
         $mapper = new DirectMapper($logger, $this->createDb($logger), new Psr16Cache(new ArrayAdapter()));
 
         return new class($service, $mapper, $logger, $client, $backendName) extends PlaylistCommand {

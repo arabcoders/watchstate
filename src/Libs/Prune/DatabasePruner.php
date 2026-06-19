@@ -23,10 +23,7 @@ final class DatabasePruner
         $playlistBefore = strtotime('-90 DAYS');
 
         $this->logger->debug('Scanning for expired database records.', [
-            'event_name' => 'prune.database.scan_started',
-            'subsystem' => 'prune',
-            'operation' => 'prune_expired_db_records',
-            'outcome' => 'started',
+            'operation' => 'prune.database',
             'execute' => $execute,
         ]);
 
@@ -49,11 +46,8 @@ final class DatabasePruner
 
             if (1 > $eventsCount && 1 > $playlistCount) {
                 $this->logger->debug('No expired database records found.', [
-                    'event_name' => 'prune.database.skipped',
-                    'subsystem' => 'prune',
-                    'operation' => 'prune_expired_db_records',
-                    'outcome' => 'skipped',
-                    'reason' => 'no_expired_records',
+                    'operation' => 'prune.database',
+                    'error' => 'no_expired_records',
                 ]);
                 return;
             }
@@ -61,10 +55,7 @@ final class DatabasePruner
             $this->logger->info(
                 "Found '{events}' expired events and '{playlists}' deleted playlist snapshots.",
                 [
-                    'event_name' => 'prune.database.completed',
-                    'subsystem' => 'prune',
-                    'operation' => 'prune_expired_db_records',
-                    'outcome' => 'dry_run',
+                    'operation' => 'prune.database',
                     'events' => $eventsCount,
                     'playlists' => $playlistCount,
                 ],
@@ -89,11 +80,8 @@ final class DatabasePruner
 
         if (1 > $eventsCount && 1 > $playlistCount) {
             $this->logger->debug('No expired database records to remove.', [
-                'event_name' => 'prune.database.skipped',
-                'subsystem' => 'prune',
-                'operation' => 'prune_expired_db_records',
-                'outcome' => 'skipped',
-                'reason' => 'no_expired_records',
+                'operation' => 'prune.database',
+                'error' => 'no_expired_records',
             ]);
             return;
         }
@@ -101,10 +89,7 @@ final class DatabasePruner
         $this->logger->info(
             "Pruned '{events}' expired events and '{playlists}' deleted playlist snapshots.",
             [
-                'event_name' => 'prune.database.completed',
-                'subsystem' => 'prune',
-                'operation' => 'prune_expired_db_records',
-                'outcome' => 'completed',
+                'operation' => 'prune.database',
                 'events' => $eventsCount,
                 'playlists' => $playlistCount,
             ],

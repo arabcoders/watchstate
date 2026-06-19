@@ -9,6 +9,7 @@ use App\Libs\Entity\StateInterface as iState;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\TestCase;
+use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -59,14 +60,18 @@ final class ValidateCommandTest extends TestCase
 
     public function test_invalid_user_returns_failure(): void
     {
-        $command = new ValidateCommand($this->createMockMapper(), new Logger('test'), new LogSuppressor([]));
+        $handler = new TestHandler();
+        $logger = new Logger('test');
+        $logger->pushHandler($handler);
+
+        $command = new ValidateCommand($this->createMockMapper(), $logger, new LogSuppressor([]));
         $tester = $this->makeTester($command);
         $status = $tester->execute([
             '--user' => 'ghost',
         ]);
 
         self::assertSame(ValidateCommand::FAILURE, $status);
-        self::assertStringContainsString("User 'ghost' not found.", $tester->getDisplay());
+        self::assertTrue($handler->hasErrorThatContains("User 'ghost' not found."));
     }
 
     public function test_selected_user_db_only(): void

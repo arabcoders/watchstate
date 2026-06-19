@@ -22,21 +22,15 @@ final class CommandSessionsPruner
         $path = fix_path((string) Config::get('tmpDir')) . '/console';
         if (false === is_dir($path)) {
             $this->logger->debug('Console sessions directory not found.', [
-                'event_name' => 'prune.session.scan_started',
-                'subsystem' => 'prune',
-                'operation' => 'prune_expired_sessions',
-                'outcome' => 'skipped',
-                'reason' => 'directory_not_found',
+                'operation' => 'prune.sessions',
+                'error' => 'directory_not_found',
                 'path' => $path,
             ]);
             return;
         }
 
-        $this->logger->debug('Scanning for expired command sessions.', [
-            'event_name' => 'prune.session.scan_started',
-            'subsystem' => 'prune',
-            'operation' => 'prune_expired_sessions',
-            'outcome' => 'started',
+        $this->logger->debug('Scanning for expired command sessions in {path}.', [
+            'operation' => 'prune.sessions',
             'execute' => $execute,
             'path' => $path,
         ]);
@@ -58,12 +52,9 @@ final class CommandSessionsPruner
             $state = $this->readState($sessionPath);
 
             if (null === $state) {
-                $this->logger->debug("Session '{session}' has no readable state, marking for removal.", [
-                    'event_name' => 'prune.session.no_state',
-                    'subsystem' => 'prune',
-                    'operation' => 'prune_expired_sessions',
-                    'outcome' => 'found',
-                    'reason' => 'no_readable_state',
+                $this->logger->debug("Command session '{session}' has no readable state, marking for removal.", [
+                    'operation' => 'prune.sessions',
+                    'error' => 'no_readable_state',
                     'session' => $sessionName,
                 ]);
                 $found++;
@@ -81,12 +72,9 @@ final class CommandSessionsPruner
             $found++;
             $reason = $this->resolvePruneReason($state);
 
-            $this->logger->debug("Session '{session}' marked for removal.", [
-                'event_name' => 'prune.session.found',
-                'subsystem' => 'prune',
-                'operation' => 'prune_expired_sessions',
-                'outcome' => 'found',
-                'reason' => $reason,
+            $this->logger->debug("Command session '{session}' marked for removal.", [
+                'operation' => 'prune.sessions',
+                'error' => $reason,
                 'session' => $sessionName,
                 'status' => ag($state, 'status'),
             ]);
@@ -102,11 +90,8 @@ final class CommandSessionsPruner
 
         if (1 > $found) {
             $this->logger->debug('No expired command sessions found.', [
-                'event_name' => 'prune.session.skipped',
-                'subsystem' => 'prune',
-                'operation' => 'prune_expired_sessions',
-                'outcome' => 'skipped',
-                'reason' => 'no_expired_sessions',
+                'operation' => 'prune.sessions',
+                'error' => 'no_expired_sessions',
                 'path' => $path,
             ]);
             return;
@@ -117,10 +102,7 @@ final class CommandSessionsPruner
                 ? "Pruned '{count}' expired command sessions."
                 : "Found '{count}' expired command sessions.",
             [
-                'event_name' => 'prune.session.completed',
-                'subsystem' => 'prune',
-                'operation' => 'prune_expired_sessions',
-                'outcome' => true === $execute ? 'completed' : 'dry_run',
+                'operation' => 'prune.sessions',
                 'count' => true === $execute ? $removed : $found,
             ],
         );
@@ -194,11 +176,8 @@ final class CommandSessionsPruner
         $locks = $this->acquireCleanupLocks($path);
         if ([] === $locks) {
             $this->logger->debug("Could not acquire locks for session directory '{path}'.", [
-                'event_name' => 'prune.session.lock_failed',
-                'subsystem' => 'prune',
-                'operation' => 'prune_expired_sessions',
-                'outcome' => 'failed',
-                'reason' => 'lock_acquisition_failed',
+                'operation' => 'prune.sessions',
+                'error' => 'lock_acquisition_failed',
                 'path' => $path,
             ]);
             return false;
@@ -214,10 +193,7 @@ final class CommandSessionsPruner
 
         if (true === $removed) {
             $this->logger->debug("Removed session directory '{path}'.", [
-                'event_name' => 'prune.session.removed',
-                'subsystem' => 'prune',
-                'operation' => 'prune_expired_sessions',
-                'outcome' => 'completed',
+                'operation' => 'prune.sessions',
                 'path' => $path,
             ]);
         }

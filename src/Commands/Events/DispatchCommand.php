@@ -24,9 +24,9 @@ use Monolog\LogRecord;
 use Psr\EventDispatcher\EventDispatcherInterface as iDispatcher;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
-use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Output\OutputInterface as iOutput;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Throwable;
 
@@ -70,7 +70,7 @@ final class DispatchCommand extends Command
             ->setDescription('Run queued events.');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    protected function runCommand(iInput $input, iOutput $output): int
     {
         $this->drainTransport((int) $input->getOption('limit'));
         $this->unloadEvents();
@@ -105,13 +105,9 @@ final class DispatchCommand extends Command
                 $item = $this->queue->materialize($envelope);
                 $this->transport->ack($envelope);
                 $this->logger->info("Materialized queued event '{event}'.", [
-                    'event_name' => 'event.queue.materialized',
-                    'subsystem' => 'events',
-                    'operation' => 'queue.materialize',
-                    'outcome' => 'success',
                     'event' => $envelope->event,
                     'queue_id' => $envelope->id,
-                    'item_id' => $item->id,
+                    'history' => ['id' => $item->id],
                 ]);
             } catch (Throwable $e) {
                 $this->handleDrainFailure($envelope, $e);
@@ -125,20 +121,12 @@ final class DispatchCommand extends Command
 
         if (true === $isLock) {
             $this->transport->release($envelope);
-            $outcome = 'retry';
-            $reason = 'database_locked';
         } else {
             $this->transport->fail($envelope);
-            $outcome = 'failed';
-            $reason = 'materialize_failed';
         }
 
         $this->logger->error("Failed to materialize queued event '{event}'.", [
-            'event_name' => 'event.queue.materialize_failed',
-            'subsystem' => 'events',
-            'operation' => 'queue.materialize',
-            'outcome' => $outcome,
-            'reason' => $reason,
+            'error' => true === $isLock ? 'database_locked' : 'materialize_failed',
             'event' => $envelope->event,
             'queue_id' => $envelope->id,
             ...exception_log($e),
@@ -216,10 +204,12 @@ final class DispatchCommand extends Command
         $capturedHandlers = null;
 
         try {
-            $message = "[event:{id}] Dispatching Event: '{event}' queued at '{date}'.";
+            $message = "Dispatching Event: '{event.name}' queued at '{date}'.";
             $log_data = [
-                'id' => $event->id,
-                'event' => $event->event,
+                'event' => [
+                    'id' => $event->id,
+                    'name' => $event->event,
+                ],
                 'date' => make_date($event->created_at),
             ];
 
@@ -232,7 +222,7 @@ final class DispatchCommand extends Command
 
             $ref = new DataEvent($event)->setVisibleLevel($visibleLevel);
 
-            $ref->addLog(Level::Notice, "Dispatching Event: '{event}' queued at '{date}'.", $log_data);
+            $ref->addLog(Level::Notice, $message, $log_data);
             $ref->resetVisibleLogs();
 
             $this->repo->save($event);
@@ -279,10 +269,9 @@ final class DispatchCommand extends Command
             $event->updated_at = (string) make_date();
             $this->repo->save($event);
 
-            $this->logger->error('[event:{id}] {message}', [
-                'id' => $event->id,
-                'message' => $errorLog,
-                'trace' => $e->getTrace(),
+            $this->logger->error($errorLog, [
+                'event' => ['id' => $event->id, 'name' => $event->event],
+                ...exception_log($e),
             ]);
         }
     }
@@ -337,13 +326,13 @@ final class DispatchCommand extends Command
         }
     }
 
-    private function toLevel(OutputInterface $output): Level
+    private function toLevel(iOutput $output): Level
     {
         return match ($output->getVerbosity()) {
-            OutputInterface::VERBOSITY_QUIET => Level::Error,
-            OutputInterface::VERBOSITY_NORMAL => Level::Warning,
-            OutputInterface::VERBOSITY_VERBOSE => Level::Notice,
-            OutputInterface::VERBOSITY_VERY_VERBOSE => Level::Info,
+            iOutput::VERBOSITY_QUIET => Level::Error,
+            iOutput::VERBOSITY_NORMAL => Level::Warning,
+            iOutput::VERBOSITY_VERBOSE => Level::Notice,
+            iOutput::VERBOSITY_VERY_VERBOSE => Level::Info,
             default => Level::Debug,
         };
     }

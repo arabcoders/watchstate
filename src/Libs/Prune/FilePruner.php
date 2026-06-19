@@ -25,7 +25,7 @@ final class FilePruner
                 'name' => 'logs_remover',
                 'path' => Config::get('tmpDir') . '/logs',
                 'base' => Config::get('tmpDir'),
-                'filter' => '/\.log$/',
+                'filter' => '/\.(?:log|jsonl)$/',
                 'time' => strtotime((string) Config::get('logs.prune.after', '-7 DAYS'), $time),
             ],
             [
@@ -64,10 +64,7 @@ final class FilePruner
         ];
 
         $this->logger->debug('Scanning for expired generated files.', [
-            'event_name' => 'prune.file.scan_started',
-            'subsystem' => 'prune',
-            'operation' => 'prune_expired_files',
-            'outcome' => 'started',
+            'operation' => 'prune.files',
             'execute' => $execute,
         ]);
 
@@ -82,11 +79,8 @@ final class FilePruner
 
         if (1 > $totalFound) {
             $this->logger->debug('No expired generated files found.', [
-                'event_name' => 'prune.file.skipped',
-                'subsystem' => 'prune',
-                'operation' => 'prune_expired_files',
-                'outcome' => 'skipped',
-                'reason' => 'no_expired_files',
+                'operation' => 'prune.files',
+                'error' => 'no_expired_files',
                 'execute' => $execute,
             ]);
             return;
@@ -97,10 +91,7 @@ final class FilePruner
                 ? "Pruned '{count}' expired generated files."
                 : "Found '{count}' expired generated files.",
             [
-                'event_name' => 'prune.file.completed',
-                'subsystem' => 'prune',
-                'operation' => 'prune_expired_files',
-                'outcome' => true === $execute ? 'completed' : 'dry_run',
+                'operation' => 'prune.files',
                 'count' => true === $execute ? $totalRemoved : $totalFound,
             ],
         );
@@ -121,12 +112,9 @@ final class FilePruner
         $removed = 0;
 
         if (!is_int($expiresAt)) {
-            $this->logger->warning("No expected time to live found for '{name}'.", [
-                'event_name' => 'prune.file.ttl_missing',
-                'subsystem' => 'prune',
-                'operation' => 'prune_expired_files',
-                'outcome' => 'failed',
-                'reason' => 'missing_ttl',
+            $this->logger->warning("No TTL configured for '{name}'.", [
+                'operation' => 'prune.files',
+                'error' => 'missing_ttl',
                 'name' => $name,
                 'path' => $path,
             ]);
@@ -136,11 +124,8 @@ final class FilePruner
         if (null === $path || false === is_dir($path)) {
             if (true === (bool) ag($item, 'report', true)) {
                 $this->logger->warning("Path for '{name}' not found or is inaccessible.", [
-                    'event_name' => 'prune.file.path_missing',
-                    'subsystem' => 'prune',
-                    'operation' => 'prune_expired_files',
-                    'outcome' => 'failed',
-                    'reason' => 'path_not_found',
+                    'operation' => 'prune.files',
+                    'error' => 'path_not_found',
                     'name' => $name,
                     'path' => $path,
                 ]);
@@ -166,11 +151,8 @@ final class FilePruner
 
             if (null !== $filter && false === @preg_match($filter, $fileName)) {
                 $this->logger->debug("File '{file}' did not pass filter checks.", [
-                    'event_name' => 'prune.file.filtered',
-                    'subsystem' => 'prune',
-                    'operation' => 'prune_expired_files',
-                    'outcome' => 'skipped',
-                    'reason' => 'filter_mismatch',
+                    'operation' => 'prune.files',
+                    'error' => 'filter_mismatch',
                     'name' => $name,
                     'file' => $relativeFile,
                 ]);
@@ -179,11 +161,8 @@ final class FilePruner
 
             if (is_callable($validate) && false === $validate($entry)) {
                 $this->logger->debug("File '{file}' did not pass validation checks.", [
-                    'event_name' => 'prune.file.validation_failed',
-                    'subsystem' => 'prune',
-                    'operation' => 'prune_expired_files',
-                    'outcome' => 'skipped',
-                    'reason' => 'validation_failed',
+                    'operation' => 'prune.files',
+                    'error' => 'validation_failed',
                     'name' => $name,
                     'file' => $relativeFile,
                 ]);
@@ -192,11 +171,8 @@ final class FilePruner
 
             if ($entry->getMTime() > $expiresAt) {
                 $this->logger->debug("File '{file}' not yet expired.", [
-                    'event_name' => 'prune.file.not_expired',
-                    'subsystem' => 'prune',
-                    'operation' => 'prune_expired_files',
-                    'outcome' => 'skipped',
-                    'reason' => 'not_expired',
+                    'operation' => 'prune.files',
+                    'error' => 'not_expired',
                     'name' => $name,
                     'file' => $relativeFile,
                     'ttl' => number_format($entry->getMTime() - $expiresAt),
@@ -206,15 +182,17 @@ final class FilePruner
 
             $found++;
 
-            $this->logger->debug("Removing expired file '{file}'.", [
-                'event_name' => 'prune.file.removing',
-                'subsystem' => 'prune',
-                'operation' => 'prune_expired_files',
-                'outcome' => true === $execute ? 'removed' : 'dry_run',
-                'name' => $name,
-                'file' => $relativeFile,
-                'mtime' => $entry->getMTime(),
-            ]);
+            $this->logger->debug(
+                true === $execute
+                    ? "Removing expired file '{file}'."
+                    : "Dry run, would remove expired file '{file}'.",
+                [
+                    'operation' => 'prune.files',
+                    'name' => $name,
+                    'file' => $relativeFile,
+                    'mtime' => $entry->getMTime(),
+                ],
+            );
 
             if (true === $execute) {
                 @unlink($entry->getRealPath());
@@ -224,11 +202,8 @@ final class FilePruner
 
         if (0 === $found) {
             $this->logger->debug("No expired files found for '{name}'.", [
-                'event_name' => 'prune.file.directory_clean',
-                'subsystem' => 'prune',
-                'operation' => 'prune_expired_files',
-                'outcome' => 'skipped',
-                'reason' => 'no_expired_files',
+                'operation' => 'prune.files',
+                'error' => 'no_expired_files',
                 'name' => $name,
                 'path' => $path,
             ]);

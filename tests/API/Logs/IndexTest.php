@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\API\Logs;
 
 use App\API\Logs\Index;
+use App\API\System\Events;
 use App\Libs\TestCase;
 
 final class IndexTest extends TestCase
@@ -13,32 +14,18 @@ final class IndexTest extends TestCase
     {
         $line = "[2026-04-27T10:17:56+03:00] NOTICE: Processing 'main@emby_main' - '#123: IppSec' item.";
 
-        $parsed = Index::formatLog($line);
+        $parsed = Events::formatEventLog($line);
 
-        $this->assertSame('123', $parsed['item_id'], 'Log formatter should extract history item ids from structured messages.');
-        $this->assertSame('main', $parsed['user'], 'Log formatter should expose the user even when no whitelist is provided.');
-        $this->assertSame('emby_main', $parsed['backend'], 'Log formatter should expose the backend even when no whitelist is provided.');
-        $this->assertSame('2026-04-27T10:17:56+03:00', $parsed['date'], 'Log formatter should preserve the bracketed timestamp.');
-        $this->assertSame(
-            "NOTICE: Processing 'main@emby_main' - '#123: IppSec' item.",
-            $parsed['text'],
-            'Log formatter should strip the timestamp prefix from the display text.',
-        );
+        $this->assertSame($line, $parsed['text']);
+        $this->assertNull($parsed['date']);
     }
 
     public function test_formatLog_stringifies(): void
     {
-        $parsed = Index::formatLog(['message' => 'boom', 'code' => 1]);
+        $parsed = Events::formatEventLog(['message' => 'boom', 'code' => 1]);
 
-        $this->assertSame(
-            '{"message":"boom","code":1}',
-            $parsed['text'],
-            'Non-string log payloads should be stringified for API consumers.',
-        );
-        $this->assertNull($parsed['date'], 'Stringified payloads should not invent timestamps.');
-        $this->assertNull($parsed['item_id'], 'Stringified payloads should not invent item ids.');
-        $this->assertNull($parsed['user'], 'Stringified payloads should not invent users.');
-        $this->assertNull($parsed['backend'], 'Stringified payloads should not invent backends.');
+        $this->assertSame('{"message":"boom","code":1}', $parsed['text']);
+        $this->assertNull($parsed['date']);
     }
 
     public function test_event_marker(): void
@@ -46,10 +33,45 @@ final class IndexTest extends TestCase
         $eventId = '550e8400-e29b-41d4-a716-446655440000';
         $line = "[2026-04-27T10:17:56+03:00] NOTICE: [event:{$eventId}] Dispatching Event: 'on_push' queued at '2026-05-17T08:25:02+03:00'.";
 
-        $parsed = Index::formatLog($line);
+        $parsed = Events::formatEventLog($line);
 
-        $this->assertSame($eventId, $parsed['event_id']);
+        $this->assertSame($line, $parsed['text']);
+        $this->assertNull($parsed['level']);
+    }
+
+    public function test_jsonl(): void
+    {
+        $eventId = '550e8400-e29b-41d4-a716-446655440000';
+        $line = json_encode(
+            [
+                'id' => 'log-1',
+                'datetime' => '2026-04-27T10:17:56.123+03:00',
+                'level' => 'notice',
+                'levelno' => LOG_NOTICE,
+                'logger' => 'logger',
+                'message' => "[event:{$eventId}] Processing '#123: IppSec' item.",
+                'event_name' => 'state.test.completed',
+                'source' => ['module' => 'logger'],
+                'process' => ['id' => 1, 'name' => 'cli'],
+                'fields' => [
+                    'user' => 'main',
+                    'backend' => 'emby_main',
+                    'item.id' => '123',
+                ],
+            ],
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR,
+        );
+
+        $parsed = Index::decodeJsonlLine($line);
+
+        $this->assertSame('log-1', $parsed['id']);
+        $this->assertSame('123', $parsed['fields']['item.id']);
+        $this->assertSame('main', $parsed['fields']['user']);
+        $this->assertSame('emby_main', $parsed['fields']['backend']);
+        $this->assertSame('2026-04-27T10:17:56.123+03:00', $parsed['datetime']);
         $this->assertSame('notice', $parsed['level']);
-        $this->assertSame("NOTICE: Dispatching Event: 'on_push' queued at '2026-05-17T08:25:02+03:00'.", $parsed['text']);
+        $this->assertSame("[event:{$eventId}] Processing '#123: IppSec' item.", $parsed['message']);
+        $this->assertSame('state.test.completed', $parsed['event_name']);
+        $this->assertSame('logger', $parsed['logger']);
     }
 }

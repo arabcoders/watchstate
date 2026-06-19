@@ -133,9 +133,7 @@ class ValidateCommand extends Command
                 select_users($input->getOption('user')),
             );
         } catch (RuntimeException $e) {
-            $output->writeln(r('<error>{message}</error>', [
-                'message' => $e->getMessage(),
-            ]));
+            $this->logger->error($e->getMessage(), exception_log($e));
 
             return self::FAILURE;
         }
@@ -147,9 +145,11 @@ class ValidateCommand extends Command
 
             $this->output(
                 Level::Notice,
-                "SYSTEM: Validating '{user}' local database metadata reference ids.",
+                "Validating '{identity.user}' local database metadata reference ids.",
                 [
-                    'user' => $userContext->name,
+                    'identity' => [
+                        'user' => $userContext->name,
+                    ],
                 ],
                 $logIO,
             );
@@ -158,9 +158,11 @@ class ValidateCommand extends Command
 
             $this->output(
                 Level::Notice,
-                "SYSTEM: Completed '{user}' local database validation in '{duration}'s.",
+                "Completed '{identity.user}' local database validation in '{duration}'s.",
                 [
-                    'user' => $userContext->name,
+                    'identity' => [
+                        'user' => $userContext->name,
+                    ],
                     'duration' => round(microtime(true) - $userStart, 4),
                 ],
                 $logIO,
@@ -169,7 +171,7 @@ class ValidateCommand extends Command
 
         $this->output(
             Level::Notice,
-            "SYSTEM: Completed local databases validation in '{duration}'s.",
+            "Completed local databases validation in '{duration}'s.",
             [
                 'duration' => round(microtime(true) - $start_time, 4),
             ],
@@ -215,10 +217,12 @@ class ValidateCommand extends Command
                 if (count($item->getMetadata()) < 1) {
                     $this->output(
                         Level::Warning,
-                        "SYSTEM: No metadata found for item '{user}: #{id}' Removing record.",
+                        "No metadata found for item '{identity.user}: #{id}' Removing record.",
                         [
                             'id' => $item->id,
-                            'user' => $userContext->name,
+                            'identity' => [
+                                'user' => $userContext->name,
+                            ],
                         ],
                         $logIO,
                     );
@@ -231,10 +235,12 @@ class ValidateCommand extends Command
 
                 $this->output(
                     Level::Debug,
-                    "SYSTEM: Validating '{user}: #{id}' - '{title}' reference ID for '{backends}'.",
+                    "Validating '{identity.user}: #{id}' - '{title}' reference ID for '{backends}'.",
                     [
                         'id' => $item->id,
-                        'user' => $userContext->name,
+                        'identity' => [
+                            'user' => $userContext->name,
+                        ],
                         'title' => $item->getName(),
                         'backends' => implode(', ', array_keys($meta)),
                     ],
@@ -245,13 +251,17 @@ class ValidateCommand extends Command
                     $id = ag($metadata, iState::COLUMN_ID);
                     $this->output(
                         Level::Debug,
-                        "SYSTEM: Validating '{user}@{backend}: #{id} - {item_id}' '{title}' reference ID.",
+                        "Validating '{identity.user}@{identity.backend}: #{history.id} - {item.id}' '{history.title}' reference ID.",
                         [
-                            'id' => $item->id,
-                            'item_id' => $id,
-                            'user' => $userContext->name,
-                            'title' => $item->getName(),
-                            'backend' => $backend,
+                            'history' => [
+                                'id' => $item->id,
+                                'title' => $item->getName(),
+                            ],
+                            'item' => ['id' => $id],
+                            'identity' => [
+                                'user' => $userContext->name,
+                                'backend' => $backend,
+                            ],
                         ],
                         $logIO,
                     );
@@ -259,11 +269,13 @@ class ValidateCommand extends Command
                     if (null === $id) {
                         $this->output(
                             Level::Notice,
-                            "SYSTEM: No reference ID found for item '{user}@{backend}: #{id}' Removing reference ID.",
+                            "No reference ID found for item '{identity.user}@{identity.backend}: #{id}' Removing reference ID.",
                             [
                                 'id' => $item->id,
-                                'backend' => $backend,
-                                'user' => $userContext->name,
+                                'identity' => [
+                                    'backend' => $backend,
+                                    'user' => $userContext->name,
+                                ],
                             ],
                             $logIO,
                         );
@@ -275,11 +287,13 @@ class ValidateCommand extends Command
                     if (null === ($clients[$backend] ?? null)) {
                         $this->output(
                             Level::Warning,
-                            "SYSTEM: '{user}: #{id}' has reference to '{backend}' which doesn't exists. Removing reference ID.",
+                            "'{identity.user}: #{id}' has reference to '{identity.backend}' which doesn't exists. Removing reference ID.",
                             [
                                 'id' => $item->id,
-                                'user' => $userContext->name,
-                                'backend' => $backend,
+                                'identity' => [
+                                    'user' => $userContext->name,
+                                    'backend' => $backend,
+                                ],
                             ],
                             $logIO,
                         );
@@ -303,12 +317,14 @@ class ValidateCommand extends Command
                         if (false === $data) {
                             $this->output(
                                 Level::Notice,
-                                "SYSTEM: Request for '{user}@{backend}: #{id} - {item_id}' didnt return any data. Removing reference ID.",
+                                "Request for '{identity.user}@{identity.backend}: #{history.id} - {item.id}' didnt return any data. Removing reference ID.",
                                 [
-                                    'id' => $item->id,
-                                    'item_id' => $id,
-                                    'user' => $userContext->name,
-                                    'backend' => $backend,
+                                    'history' => ['id' => $item->id],
+                                    'item' => ['id' => $id],
+                                    'identity' => [
+                                        'user' => $userContext->name,
+                                        'backend' => $backend,
+                                    ],
                                 ],
                                 $logIO,
                             );
@@ -321,12 +337,14 @@ class ValidateCommand extends Command
                     } catch (Throwable $e) {
                         $this->output(
                             Level::Notice,
-                            "SYSTEM: Request for '{user}@{backend}: #{id} - {item_id}'. returned with error. {error}. Removing reference ID.",
+                            "Request for '{identity.user}@{identity.backend}: #{history.id} - {item.id}'. returned with error. {error}. Removing reference ID.",
                             [
-                                'id' => $item->id,
-                                'item_id' => $id,
-                                'user' => $userContext->name,
-                                'backend' => $backend,
+                                'history' => ['id' => $item->id],
+                                'item' => ['id' => $id],
+                                'identity' => [
+                                    'user' => $userContext->name,
+                                    'backend' => $backend,
+                                ],
                                 'error' => $e->getMessage(),
                             ],
                             $logIO,
@@ -341,10 +359,12 @@ class ValidateCommand extends Command
                 if (count($item->metadata) < 1) {
                     $this->output(
                         Level::Notice,
-                        "SYSTEM: Item '{user}: #{id}' no longer have any reference ID. Removing record.",
+                        "Item '{identity.user}: #{id}' no longer have any reference ID. Removing record.",
                         [
                             'id' => $item->id,
-                            'user' => $userContext->name,
+                            'identity' => [
+                                'user' => $userContext->name,
+                            ],
                         ],
                         $logIO,
                     );
@@ -366,7 +386,7 @@ class ValidateCommand extends Command
                     if (0 === ($progressUpdate % 500)) {
                         $this->output(
                             Level::Info,
-                            "SYSTEM: Processed '{progress}/{total}' %{percent}.",
+                            "Processed '{progress}/{total}' %{percent}.",
                             [
                                 'progress' => number_format($progressUpdate),
                                 'total' => $recordsCount,
@@ -400,8 +420,10 @@ class ValidateCommand extends Command
     private function renderStatus(iOutput $output): void
     {
         foreach ($this->perRun as $user => $data) {
-            $this->logger->notice("User '{user}' local database, had {u} updated, {r} removed, {n} no change.", [
-                'user' => $user,
+            $this->logger->notice("User '{identity.user}' local database, had {u} updated, {r} removed, {n} no change.", [
+                'identity' => [
+                    'user' => $user,
+                ],
                 'u' => $data['updated'],
                 'r' => $data['removed'],
                 'n' => $data['no_change'],

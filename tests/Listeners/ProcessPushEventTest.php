@@ -69,16 +69,12 @@ final class ProcessPushEventTest extends TestCase
         $listener($event);
 
         self::assertSame(EventStatus::RUNNING, $event->getStatus());
-        self::assertContains(
-            r(
-                "WARNING: jellyfin.push: Ignoring '#{id}: {title}' for 'Jellyfin: main@test_jellyfin'. No metadata was found.",
-                [
-                    'id' => $entity->id,
-                    'title' => $entity->getName(),
-                ],
-            ),
-            $event->getLogs(),
+        $logs = implode('', $event->getLogs());
+        self::assertStringContainsString(
+            'jellyfin.push',
+            $logs,
         );
+        self::assertStringContainsString('No metadata was found', $logs);
         self::assertTrue($handler->hasWarningRecords());
     }
 

@@ -9,6 +9,8 @@ use App\Libs\LogSuppressor;
 use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Formatter\OutputFormatterInterface as iOutput;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
+use Symfony\Component\Console\Input\ArgvInput;
+use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\ConsoleOutput as baseConsoleOutput;
 
 /**
@@ -22,6 +24,8 @@ final class ConsoleOutput extends baseConsoleOutput
 {
     private bool $noSuppressor = false;
     private ?LogSuppressor $suppressor = null;
+    private mixed $message = '';
+    private bool $jsonl = false;
 
     /**
      * Constructor for the class.
@@ -40,8 +44,6 @@ final class ConsoleOutput extends baseConsoleOutput
         $formatter ??= new OutputFormatter();
 
         if (null !== $formatter) {
-            //(black, red, green, yellow, blue, magenta, cyan, white, default, gray, bright-red, bright-green,
-            //bright-yellow, bright-blue, bright-magenta, bright-cyan, bright-white)
             $formatter->setStyle('flag', new OutputFormatterStyle('green'));
             $formatter->setStyle('value', new OutputFormatterStyle('yellow'));
             $formatter->setStyle('notice', new OutputFormatterStyle('magenta'));
@@ -50,15 +52,23 @@ final class ConsoleOutput extends baseConsoleOutput
         }
 
         parent::__construct($verbosity, $decorated, $formatter);
-    }
 
-    private mixed $message = '';
+        $this->setErrorOutput(
+            new JsonlStreamOutput(
+                defined('STDERR') ? STDERR : fopen('php://stderr', 'w'),
+                $verbosity,
+                $decorated,
+                $formatter,
+                'stderr',
+            ),
+        );
+    }
 
     /**
      * Writes the given message to a certain location, optionally appending a newline character.
      *
      * @param string $message The message to be written.
-     * @param bool $newline Whether to append a newline character after the message. Default is false.
+     * @param bool $newline Whether to append a newline character after the message.
      */
     protected function doWrite(string $message, bool $newline): void
     {
@@ -87,8 +97,9 @@ final class ConsoleOutput extends baseConsoleOutput
     }
 
     /**
-     * Disable the suppressor
-     * @return $this
+     * Disable the suppressor.
+     *
+     * @return self
      */
     public function withNoSuppressor(): self
     {
@@ -97,5 +108,65 @@ final class ConsoleOutput extends baseConsoleOutput
         $instance->suppressor = null;
 
         return $instance;
+    }
+
+    /**
+     * Enable or disable JSONL output mode.
+     *
+     * @param bool $jsonl Whether to emit JSONL formatted output.
+     */
+    public function setJsonl(bool $jsonl): void
+    {
+        $this->jsonl = $jsonl;
+
+        $error = $this->getErrorOutput();
+        if (method_exists($error, 'setJsonl')) {
+            $error->setJsonl($jsonl);
+        }
+    }
+
+    /**
+     * Check whether JSONL output mode is active.
+     *
+     * @return bool True when JSONL mode is enabled.
+     */
+    public function isJsonl(): bool
+    {
+        return $this->jsonl;
+    }
+
+    /**
+     * Enable JSONL mode when the --jsonl flag is present in the input.
+     *
+     * @param InputInterface|null $input The console input to inspect. Falls back to argv when null.
+     */
+    public function syncJsonlMode(?InputInterface $input = null): void
+    {
+        $input ??= new ArgvInput();
+
+        if (!$input->hasParameterOption('--jsonl', true)) {
+            return;
+        }
+
+        $this->setJsonl(true);
+    }
+
+    /**
+     * Strip ANSI color codes and trim trailing newlines from a message.
+     *
+     * @param string $message The raw message potentially containing escape sequences.
+     * @param bool $newline Whether the original write included a newline.
+     *
+     * @return string The cleaned message.
+     */
+    private function normalizeMessage(string $message, bool $newline): string
+    {
+        $normalized = preg_replace('/\x1b\[[0-9;]*m/', '', $message) ?? $message;
+
+        if ($newline) {
+            return rtrim($normalized, "\r\n");
+        }
+
+        return $normalized;
     }
 }

@@ -132,9 +132,9 @@ class PruneCommand extends Command
             $prunerName = normalize_pruner_name((string) $prunerName);
 
             if (false === ag_exists($pruners, $prunerName)) {
-                $output->writeln(r('<error>There are no pruner named [{pruner}].</error>', [
+                $this->logger->warning("Unknown pruner '{pruner}'. No pruner with that name registered.", [
                     'pruner' => $prunerName,
-                ]));
+                ]);
 
                 return self::FAILURE;
             }
@@ -159,9 +159,9 @@ class PruneCommand extends Command
         }
 
         if (count($run) < 1) {
-            $output->writeln(r('<info>[{datetime}] No pruners scheduled to run at this time.</info>', [
+            $this->logger->debug("No pruners scheduled at '{datetime}'.", [
                 'datetime' => make_date(),
-            ]), OutputInterface::VERBOSITY_DEBUG);
+            ]);
         }
 
         foreach ($run as $pruner) {
@@ -236,17 +236,10 @@ class PruneCommand extends Command
 
     protected function reportPrunerError(array $pruner, Throwable $e, OutputInterface $output): void
     {
-        $this->logger->error("Skipping pruner '{name}'. {message}", [
+        $this->logger->warning("Skipping pruner '{name}'. {exception.message}", [
             'name' => ag($pruner, 'name', 'unknown'),
-            'message' => $e->getMessage(),
-            'exception' => $e::class,
-            'trace' => $e->getTrace(),
+            ...exception_log($e),
         ]);
-
-        $output->writeln(r("<error>Skipping pruner '{name}'. {message}</error>", [
-            'name' => ag($pruner, 'name', 'unknown'),
-            'message' => $e->getMessage(),
-        ]), OutputInterface::OUTPUT_NORMAL);
     }
 
     public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void

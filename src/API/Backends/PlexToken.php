@@ -49,15 +49,17 @@ final class PlexToken
         ]);
 
         if (Status::CREATED !== Status::from($req->getStatusCode())) {
-            $this->logger->error("Request for OAuth PIN returned with unexpected '{status_code}' status code.", [
-                'status_code' => $req->getStatusCode(),
-                'parsed' => $req->toArray(false),
-                'body' => $req->getContent(false),
+            $this->logger->error("Request for OAuth PIN returned with unexpected '{response.status_code}' status code.", [
+                'response' => [
+                    'status_code' => $req->getStatusCode(),
+                    'parsed' => $req->toArray(false),
+                    'body' => $req->getContent(false),
+                ],
             ]);
             return api_error(
                 r(
-                    text: "Request for OAuth PIN returned with unexpected '{status_code}' status code.",
-                    context: ['status_code' => $req->getStatusCode()],
+                    text: "Request for OAuth PIN returned with unexpected '{response.status_code}' status code.",
+                    context: ['response' => ['status_code' => $req->getStatusCode()]],
                 ),
                 Status::from($req->getStatusCode()),
             );
@@ -96,16 +98,18 @@ final class PlexToken
         ]);
 
         if (Status::OK !== Status::from($req->getStatusCode())) {
-            $this->logger->error("Request for OAuth PIN check returned with unexpected '{status_code}' status code.", [
-                'status_code' => $req->getStatusCode(),
-                'parsed' => $req->toArray(false),
-                'body' => $req->getContent(false),
+            $this->logger->error("Request for OAuth PIN check returned with unexpected '{response.status_code}' status code.", [
+                'response' => [
+                    'status_code' => $req->getStatusCode(),
+                    'parsed' => $req->toArray(false),
+                    'body' => $req->getContent(false),
+                ],
             ]);
 
             return api_error(
                 r(
-                    text: "Request for OAuth PIN check returned with unexpected '{status_code}' status code.",
-                    context: ['status_code' => $req->getStatusCode()],
+                    text: "Request for OAuth PIN check returned with unexpected '{response.status_code}' status code.",
+                    context: ['response' => ['status_code' => $req->getStatusCode()]],
                 ),
                 Status::from($req->getStatusCode()),
             );

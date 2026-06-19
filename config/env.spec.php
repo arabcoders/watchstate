@@ -72,9 +72,37 @@ return (function () {
             'type' => 'bool',
         ],
         [
+            'key' => 'WS_LOGGER_ACCESS_ENABLE',
+            'config' => 'logger.access.enabled',
+            'description' => 'Enable HTTP access logging to container stderr/stdout.',
+            'type' => 'bool',
+        ],
+        [
+            'key' => 'WS_LOGGER_ACCESS_LEVEL',
+            'config' => 'logger.access.level',
+            'description' => 'Set the log level for HTTP access logging to container stderr/stdout. Default: INFO.',
+            'type' => 'string',
+        ],
+        [
+            'key' => 'WS_LOGGER_ACCESS_FORMAT',
+            'config' => 'logger.access.format',
+            'description' => 'Set HTTP access logging format for container stderr/stdout. Supported: text, jsonl.',
+            'type' => 'string',
+            'choices' => ['text', 'jsonl'],
+            'validate' => function (mixed $value): string {
+                $value = strtolower(trim((string) $value));
+
+                if (false === in_array($value, ['text', 'jsonl'], true)) {
+                    throw new ValidationException('Invalid access logger format. Must be: text, jsonl.');
+                }
+
+                return $value;
+            },
+        ],
+        [
             'key' => 'WS_LOGGER_FILE_ENABLE',
             'config' => 'logger.file.enabled',
-            'description' => 'Enable logging to app.(YYYYMMDD).log file.',
+            'description' => 'Enable logging to app.(YYYYMMDD).jsonl file.',
             'type' => 'bool',
         ],
         [

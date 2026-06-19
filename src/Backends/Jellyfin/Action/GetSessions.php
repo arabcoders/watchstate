@@ -27,6 +27,13 @@ class GetSessions
 
     protected string $action = 'jellyfin.getSessions';
 
+    /**
+     * Class constructor
+     *
+     * @param iHttp&\App\Libs\Extends\HttpClient $http The HTTP client object.
+     * @param iLogger $logger The logger object.
+     * @param iCache $cache The cache object.
+     */
     public function __construct(
         protected readonly iHttp $http,
         protected readonly iLogger $logger,
@@ -50,13 +57,18 @@ class GetSessions
 
                 $logContext = [
                     'action' => $this->action,
-                    'client' => $context->clientName,
-                    'backend' => $context->backendName,
-                    'user' => $context->userContext->name,
-                    'url' => (string) $url,
+                    'identity' => [
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                        'user' => $context->userContext->name,
+                    ],
+                    'request' => ['url' => (string) $url],
                 ];
 
-                $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' play sessions.", $logContext);
+                $this->logger->debug(
+                    "Requesting '{identity.user}@{identity.backend}' play sessions.",
+                    $logContext,
+                );
 
                 $response = $this->http->request(
                     method: Method::GET,
@@ -73,11 +85,10 @@ class GetSessions
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: "{action}: Request for '{client}: {user}@{backend}' get sessions returned with unexpected '{status_code}' status code.",
+                            message: "Request for '{identity.user}@{identity.backend}' get sessions returned with unexpected '{response.status_code}' status code.",
                             context: [
                                 ...$logContext,
-                                'status_code' => $response->getStatusCode(),
-                                'response' => ['body' => $content],
+                                'response' => ['status_code' => $response->getStatusCode(), 'body' => $content],
                             ],
                             level: Levels::WARNING,
                         ),
@@ -88,7 +99,7 @@ class GetSessions
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: "{action}: Request for '{client}: {user}@{backend}' get sessions returned with empty response.",
+                            message: "Request for '{identity.user}@{identity.backend}' get sessions returned with empty response.",
                             context: [
                                 ...$logContext,
                                 'response' => ['status_code' => $response->getStatusCode(), 'body' => $content],
@@ -105,7 +116,7 @@ class GetSessions
                 );
 
                 if (true === $context->trace) {
-                    $this->logger->debug("Processing '{client}: {user}@{backend}' {action} payload.", [
+                    $this->logger->debug("Processing '{identity.user}@{identity.backend}' {action} payload.", [
                         ...$logContext,
                         'response' => ['body' => $items],
                     ]);

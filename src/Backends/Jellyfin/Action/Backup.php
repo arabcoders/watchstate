@@ -48,9 +48,11 @@ class Backup extends Import
         array $opts = [],
     ): void {
         $logContext['action'] = $this->action;
-        $logContext['client'] = $context->clientName;
-        $logContext['backend'] = $context->backendName;
-        $logContext['user'] = $context->userContext->name;
+        $logContext['identity'] = [
+            'client' => $context->clientName,
+            'backend' => $context->backendName,
+            'user' => $context->userContext->name,
+        ];
 
         if (JFC::TYPE_SHOW === ($type = ag($item, 'Type'))) {
             $this->processShow(context: $context, guid: $guid, item: $item, logContext: $logContext);
@@ -61,7 +63,7 @@ class Backup extends Import
 
         try {
             if ($context->trace) {
-                $this->logger->debug("{action}: Processing '{client}: {user}@{backend}' payload.", [
+                $this->logger->debug("Processing '{identity.user}@{identity.backend}' payload.", [
                     ...$logContext,
                     'response' => ['body' => $item],
                 ]);
@@ -92,7 +94,7 @@ class Backup extends Import
             } catch (InvalidArgumentException $e) {
                 $this->logger->info($e->getMessage(), [
                     ...$logContext,
-                    'body' => $item,
+                    'response' => ['body' => $item],
                 ]);
                 return;
             }
@@ -174,22 +176,10 @@ class Backup extends Import
             }
         } catch (Throwable $e) {
             $this->logger->error(
-                message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' backup. {error.message} at '{error.file}:{error.line}'.",
+                message: "Failed during '{identity.user}@{identity.backend}' backup. {exception.message}",
                 context: [
-                    'error' => [
-                        'kind' => $e::class,
-                        'line' => $e->getLine(),
-                        'message' => $e->getMessage(),
-                        'file' => after($e->getFile(), ROOT_PATH),
-                    ],
                     ...$logContext,
-                    'exception' => [
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'kind' => get_class($e),
-                        'message' => $e->getMessage(),
-                        'trace' => $e->getTrace(),
-                    ],
+                    ...exception_log($e),
                 ],
             );
         }

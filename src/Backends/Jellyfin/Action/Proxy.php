@@ -22,6 +22,12 @@ class Proxy
 
     private string $action = 'jellyfin.proxy';
 
+    /**
+     * Class constructor
+     *
+     * @param iHttp&\App\Libs\Extends\HttpClient $http The HTTP client instance.
+     * @param iLogger $logger The logger instance.
+     */
     public function __construct(
         protected readonly iHttp $http,
         protected readonly iLogger $logger,
@@ -52,14 +58,16 @@ class Proxy
 
                 $logContext = [
                     'action' => $this->action,
-                    'client' => $context->clientName,
-                    'backend' => $context->backendName,
-                    'user' => $context->userContext->name,
-                    'url' => $url,
+                    'identity' => [
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                        'user' => $context->userContext->name,
+                    ],
+                    'request' => ['url' => $url],
                 ];
 
                 $this->logger->debug(
-                    message: "{action}: proxying request via '{client}: {user}@{backend}'.",
+                    message: "proxying request via '{identity.user}@{identity.backend}'.",
                     context: $logContext,
                 );
 

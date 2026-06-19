@@ -84,12 +84,14 @@ final class GetUserToken
                 $url = $url->withQuery(http_build_query(['pin' => (string) $pin]));
             }
 
-            $this->logger->debug("Requesting temporary access token for '{user}@{backend}' user '{username}'.", [
-                'user' => $context->userContext->name,
-                'backend' => $context->backendName,
+            $this->logger->debug("Requesting temporary access token for '{identity.user}@{identity.backend}' user '{username}'.", [
+                'identity' => [
+                    'user' => $context->userContext->name,
+                    'backend' => $context->backendName,
+                ],
                 'username' => $username,
                 'user_id' => $userId,
-                'url' => (string) $url,
+                'request' => ['url' => (string) $url],
             ]);
 
             $opts['user_info'] = ['username' => $username, 'user_id' => $userId];
@@ -109,13 +111,15 @@ final class GetUserToken
             );
 
             if ($context->trace) {
-                $this->logger->debug("Parsing temporary access token for '{user}@{backend}' user '{username}'.", [
-                    'user' => $context->userContext->name,
-                    'backend' => $context->backendName,
+                $this->logger->debug("Parsing temporary access token for '{identity.user}@{identity.backend}' user '{username}'.", [
+                    'identity' => [
+                        'user' => $context->userContext->name,
+                        'backend' => $context->backendName,
+                    ],
                     'username' => $username,
                     'user_id' => $userId,
-                    'url' => (string) $url,
-                    'trace' => $json,
+                    'request' => ['url' => (string) $url],
+                    'data' => $json,
                     'headers' => $response->getHeaders(),
                 ]);
             }
@@ -129,12 +133,14 @@ final class GetUserToken
                 ->withPath('/api/v2/resources')
                 ->withQuery(http_build_query(['includeIPv6' => 1, 'includeHttps' => 1, 'includeRelay' => 1]));
 
-            $this->logger->debug("Requesting permanent access token for '{user}@{backend}' user '{username}'.", [
-                'user' => $context->userContext->name,
-                'backend' => $context->backendName,
+            $this->logger->debug("Requesting permanent access token for '{identity.user}@{identity.backend}' user '{username}'.", [
+                'identity' => [
+                    'user' => $context->userContext->name,
+                    'backend' => $context->backendName,
+                ],
                 'username' => $username,
                 'user_id' => $userId,
-                'url' => (string) $url,
+                'request' => ['url' => (string) $url],
             ]);
 
             $response = $this->request(Method::GET, $url, Status::OK, $context, array_replace_recursive([
@@ -157,14 +163,16 @@ final class GetUserToken
 
             if ($context->trace) {
                 $this->logger->debug(
-                    "Parsing permanent access token for '{user}@{backend}' user '{username}' payload.",
+                    "Parsing permanent access token for '{identity.user}@{identity.backend}' user '{username}' payload.",
                     [
-                        'user' => $context->userContext->name,
-                        'backend' => $context->backendName,
+                        'identity' => [
+                            'user' => $context->userContext->name,
+                            'backend' => $context->backendName,
+                        ],
                         'username' => $username,
                         'user_id' => $userId,
-                        'url' => (string) $url,
-                        'trace' => $json,
+                        'request' => ['url' => (string) $url],
+                        'data' => $json,
                     ],
                 );
             }
@@ -186,11 +194,13 @@ final class GetUserToken
             }
 
             $this->logger->error(
-                "Response had '{count}' associated servers, non match '{user}@{backend}: {backend_id}' unique identifier.",
+                "Response had '{count}' associated servers, non match '{identity.user}@{identity.backend}: {backend_id}' unique identifier.",
                 [
                     'count' => count($json),
-                    'user' => $context->userContext->name,
-                    'backend' => $context->backendName,
+                    'identity' => [
+                        'user' => $context->userContext->name,
+                        'backend' => $context->backendName,
+                    ],
                     'backend_id' => $context->backendId,
                     'servers' => $servers,
                 ],
@@ -199,10 +209,12 @@ final class GetUserToken
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "No permanent access token was found for '{username}' in '{user}@{backend}' response. Likely invalid unique identifier was selected or plex.tv API error, check https://status.plex.tv or try running same command with [--debug] flag for more information.",
+                    message: "No permanent access token was found for '{username}' in '{identity.user}@{identity.backend}' response. Likely invalid unique identifier was selected or plex.tv API error, check https://status.plex.tv or try running same command with [--debug] flag for more information.",
                     context: [
-                        'user' => $context->userContext->name,
-                        'backend' => $context->backendName,
+                        'identity' => [
+                            'user' => $context->userContext->name,
+                            'backend' => $context->backendName,
+                        ],
                         'username' => $username,
                         'user_id' => $userId,
                     ],
@@ -213,27 +225,17 @@ final class GetUserToken
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' request for '{username}'{pin} access token. Error '{error.message}' at '{error.file}:{error.line}'.",
+                    message: "Failed during '{identity.user}@{identity.backend}' request for '{username}'{pin} access token. {exception.message}",
                     context: [
-                        'user' => $context->userContext->name,
-                        'backend' => $context->backendName,
-                        'client' => $context->clientName,
-                        'pin' => isset($pin) ? ' with pin' : '',
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
+                        'identity' => [
+                            'user' => $context->userContext->name,
+                            'backend' => $context->backendName,
+                            'client' => $context->clientName,
                         ],
+                        'pin' => isset($pin) ? ' with pin' : '',
                         'username' => $username,
                         'user_id' => $userId,
-                        'exception' => [
-                            'file' => after($e->getFile(), ROOT_PATH),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
+                        ...exception_log($e),
                     ],
                     level: Levels::ERROR,
                     previous: $e,
@@ -279,10 +281,12 @@ final class GetUserToken
         return new Response(
             status: false,
             error: new Error(
-                message: "Failed to generate '{user}@{backend}'. '{userId}:{username}' access-token.",
+                message: "Failed to generate '{identity.user}@{identity.backend}'. '{userId}:{username}' access-token.",
                 context: [
-                    'user' => $context->userContext->name,
-                    'backend' => $context->backendName,
+                    'identity' => [
+                        'user' => $context->userContext->name,
+                        'backend' => $context->backendName,
+                    ],
                     'userId' => $userId,
                     'username' => $username,
                 ],
@@ -357,23 +361,26 @@ final class GetUserToken
         return new Response(
             status: false,
             error: new Error(
-                message: "Request to '{user}@{backend}' to grant access token for '{user_id}' returned with unexpected '{status_code}' status code. {tokenType}{extra_msg}",
+                message: "Request to '{identity.user}@{identity.backend}' to grant access token for '{user_id}' returned with unexpected '{response.status_code}' status code. {tokenType}{extra_msg}",
                 context: [
-                    'user' => $context->userContext->name,
-                    'backend' => $context->backendName,
+                    'identity' => [
+                        'user' => $context->userContext->name,
+                        'backend' => $context->backendName,
+                    ],
                     'user_id' => ag($opts, 'user_info.user_id', '??'),
-                    'status_code' => $response->getStatusCode(),
-                    'body' => $response->getContent(false),
-                    'parsed' => $response->toArray(false),
+                    'response' => [
+                        'status_code' => $response->getStatusCode(),
+                        'body' => $response->getContent(false),
+                        'parsed' => $response->toArray(false),
+                    ],
                     'extra_msg' => $extra_msg,
-                    'url' => (string) $url,
+                    'request' => ['url' => (string) $url],
                     'tokenType' => ag_exists(
                         $context->options,
                         Options::ADMIN_TOKEN,
                     )
                         ? 'user & admin token'
                         : 'user token',
-                    'response' => $response,
                 ],
                 level: Levels::ERROR,
                 extra: [

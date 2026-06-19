@@ -96,16 +96,9 @@ final class PlexGuid implements iGuid
                 $this->parseGUIDFile($file);
             }
         } catch (Throwable $e) {
-            $this->logger->error("Failed to read or parse '{guid}' file. Error '{error}'.", [
+            $this->logger->error("Failed to read or parse '{guid}' file. {exception.message}.", [
                 'guid' => $file,
-                'error' => $e->getMessage(),
-                'exception' => [
-                    'message' => $e->getMessage(),
-                    'code' => $e->getCode(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'trace' => $e->getTrace(),
-                ],
+                ...exception_log($e),
             ]);
         }
     }
@@ -373,8 +366,10 @@ final class PlexGuid implements iGuid
 
                 if (false === str_contains($val, '://')) {
                     if (true === $log) {
-                        $this->logger->info("PlexGuid: Unable to parse '{backend}: {agent}' identifier.", [
-                            'backend' => $this->context->backendName,
+                        $this->logger->info("Unable to parse '{identity.backend}: {agent}' identifier.", [
+                            'identity' => [
+                                'backend' => $this->context->backendName,
+                            ],
                             'agent' => $val,
                             ...$context,
                         ]);
@@ -392,10 +387,12 @@ final class PlexGuid implements iGuid
                 if (true === is_ignored_id($this->context->userContext, $bName, $type, $key, $value, $id)) {
                     if (true === $log) {
                         $this->logger->debug(
-                            "PlexGuid: Ignoring '{client}: {backend}' external id '{source}' for {item.type} '{item.id}: {item.title}' as requested.",
+                            "Ignoring '{identity.client}: {identity.backend}' external id '{source}' for {item.type} '{item.id}: {item.title}' as requested.",
                             [
-                                'client' => $this->context->clientName,
-                                'backend' => $bName,
+                                'identity' => [
+                                    'client' => $this->context->clientName,
+                                    'backend' => $bName,
+                                ],
                                 'source' => $val,
                                 'guid' => [
                                     'source' => $key,
@@ -416,10 +413,12 @@ final class PlexGuid implements iGuid
 
                     if (true === $log) {
                         $this->logger->info(
-                            "PlexGuid: '{client}: {backend}' reported conflicting '{key}' external ids '{existing_id}' and '{new_id}' for {item.type} '{item.id}: {item.title}'.",
+                            "'{identity.client}: {identity.backend}' reported conflicting '{key}' external ids '{existing_id}' and '{new_id}' for {item.type} '{item.id}: {item.title}'.",
                             [
-                                'client' => $this->context->clientName,
-                                'backend' => $this->context->backendName,
+                                'identity' => [
+                                    'client' => $this->context->clientName,
+                                    'backend' => $this->context->backendName,
+                                ],
                                 'key' => $key,
                                 'existing_id' => $guid[$this->guidMapper[$key]],
                                 'new_id' => $value,
@@ -441,11 +440,13 @@ final class PlexGuid implements iGuid
             } catch (Throwable $e) {
                 if (true === $log) {
                     $this->logger->info(
-                        message: "{class}: Ignoring '{user}@{backend}' invalid GUID '{agent}' for {item.type} '{item.id}: {item.title}'.",
+                        message: "{class}: Ignoring '{identity.user}@{identity.backend}' invalid GUID '{agent}' for {item.type} '{item.id}: {item.title}'.",
                         context: [
                             'class' => after_last(self::class, '\\'),
-                            'user' => $this->context->userContext->name,
-                            'backend' => $this->context->backendName,
+                            'identity' => [
+                                'user' => $this->context->userContext->name,
+                                'backend' => $this->context->backendName,
+                            ],
                             'agent' => $val,
                             ...$context,
                             ...exception_log($e),
@@ -505,24 +506,14 @@ final class PlexGuid implements iGuid
         } catch (Throwable $e) {
             if (true === $log) {
                 $this->logger->error(
-                    message: "PlexGuid: Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' parsing legacy agent '{agent}' identifier. Error '{error.message}' at '{error.file}:{error.line}.",
+                    message: "Failed during '{identity.client}: {identity.backend}' parsing legacy agent '{agent}' identifier. {exception.message}",
                     context: [
-                        'backend' => $this->context->backendName,
-                        'client' => $this->context->clientName,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
+                        'identity' => [
+                            'backend' => $this->context->backendName,
+                            'client' => $this->context->clientName,
                         ],
                         'agent' => $guid,
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
+                        ...exception_log($e),
                         ...$context,
                     ],
                 );
@@ -572,24 +563,14 @@ final class PlexGuid implements iGuid
         } catch (Throwable $e) {
             if (true === $log) {
                 $this->logger->error(
-                    message: "PlexGuid: Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' parsing NFO agent '{agent}' identifier. Error '{error.message}' at '{error.file}:{error.line}.",
+                    message: "Failed during '{identity.client}: {identity.backend}' parsing NFO agent '{agent}' identifier. {exception.message}",
                     context: [
-                        'backend' => $this->context->backendName,
-                        'client' => $this->context->clientName,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
+                        'identity' => [
+                            'backend' => $this->context->backendName,
+                            'client' => $this->context->clientName,
                         ],
                         'agent' => $guid,
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
+                        ...exception_log($e),
                         ...$context,
                     ],
                 );

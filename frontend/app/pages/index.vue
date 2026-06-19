@@ -178,146 +178,164 @@
       </div>
 
       <div class="space-y-4">
-        <UCard
-          v-for="log in logs"
-          :key="log.filename"
-          class="border border-default/70 shadow-sm"
-          :ui="logCardUi"
-        >
-          <template #header>
-            <div class="space-y-2">
-              <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0 flex-1">
-                  <div class="flex min-w-0 items-center gap-3">
-                    <span
-                      class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-default bg-elevated/60 text-toned"
-                    >
-                      <UIcon
-                        :name="logTypeIcon(log.type)"
-                        :class="reloadingLogs ? 'animate-spin' : ''"
-                      />
-                    </span>
-
-                    <div class="min-w-0">
-                      <NuxtLink
-                        :to="`/logs/${log.filename}`"
-                        class="block truncate text-base font-semibold text-highlighted hover:text-primary"
-                      >
-                        {{ ucFirst(log.type) }} Logs
-                      </NuxtLink>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="flex shrink-0 items-center gap-2">
-                  <UTooltip :text="autoReloadLogs ? 'Disable auto reload' : 'Enable auto reload'">
-                    <UButton
-                      color="neutral"
-                      :variant="autoReloadLogs ? 'soft' : 'outline'"
-                      size="sm"
-                      :icon="autoReloadLogs ? 'i-lucide-pause' : 'i-lucide-play'"
-                      :aria-label="autoReloadLogs ? 'Disable auto reload' : 'Enable auto reload'"
-                      @click="toggleLogsAutoReload()"
-                    >
-                      <span class="hidden sm:inline">Auto Reload</span>
-                    </UButton>
-                  </UTooltip>
-
-                  <UTooltip text="Toggle wrap line">
-                    <UButton
-                      color="neutral"
-                      :variant="wrapLines ? 'soft' : 'outline'"
-                      size="sm"
-                      icon="i-lucide-wrap-text"
-                      aria-label="Toggle wrap lines"
-                      @click="wrapLines = !wrapLines"
-                    >
-                      <span class="hidden sm:inline">Wrap</span>
-                    </UButton>
-                  </UTooltip>
-
-                  <UTooltip text="Copy transformed log text.">
-                    <UButton
-                      color="neutral"
-                      variant="outline"
-                      size="sm"
-                      icon="i-lucide-copy"
-                      aria-label="Copy transformed log text"
-                      @click="copyText(log.lines.map((entry) => entry.text).join('\n'))"
-                    >
-                      <span class="hidden sm:inline">Copy</span>
-                    </UButton>
-                  </UTooltip>
-
-                  <UTooltip text="Fetch latest log entries.">
-                    <UButton
-                      color="neutral"
-                      variant="outline"
-                      size="sm"
-                      icon="i-lucide-refresh-cw"
-                      :loading="reloadingLogs"
-                      aria-label="Fetch latest log entries"
-                      @click="void reloadLogs()"
-                    >
-                      <span class="hidden sm:inline">Reload</span>
-                    </UButton>
-                  </UTooltip>
-                </div>
+        <section v-for="log in logs" :key="log.filename" class="space-y-3">
+          <button
+            type="button"
+            class="flex w-full flex-wrap items-center justify-between gap-3 text-left"
+            @click="toggleLog(log.filename)"
+          >
+            <div class="flex items-center gap-3">
+              <span
+                class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-default bg-elevated/70 text-primary"
+              >
+                <UIcon
+                  :name="logTypeIcon(log.type)"
+                  :class="reloadingLogs ? 'animate-spin' : ''"
+                  class="size-4"
+                />
+              </span>
+              <div>
+                <p class="text-base font-semibold text-highlighted">{{ ucFirst(log.type) }} Logs</p>
+                <NuxtLink
+                  :to="`/logs/${log.filename}`"
+                  class="text-sm text-toned hover:text-primary"
+                  @click.stop
+                >
+                  {{ log.filename }}
+                </NuxtLink>
               </div>
             </div>
-          </template>
+            <div class="flex items-center gap-2">
+              <UTooltip :text="autoReloadLogs ? 'Disable auto reload' : 'Enable auto reload'">
+                <UButton
+                  color="neutral"
+                  :variant="autoReloadLogs ? 'soft' : 'outline'"
+                  size="xs"
+                  :icon="autoReloadLogs ? 'i-lucide-pause' : 'i-lucide-play'"
+                  @click.stop="toggleLogsAutoReload()"
+                >
+                  Auto
+                </UButton>
+              </UTooltip>
 
-          <div class="space-y-3">
-            <div class="overflow-hidden border border-default bg-default/60">
-              <code
-                class="ws-terminal ws-terminal-panel ws-terminal-panel-dashboard"
-                :class="wrapLines ? 'ws-wrap-anywhere whitespace-pre-wrap' : 'whitespace-pre'"
+              <UButton
+                icon="i-lucide-wrap-text"
+                :variant="isLogWrapped(log.filename) ? 'soft' : 'outline'"
+                color="neutral"
+                size="xs"
+                @click.stop="toggleLogWrap(log.filename)"
               >
-                <span
-                  v-for="(item, index) in log.lines"
-                  :key="`${log.filename}-${index}`"
-                  class="block"
-                  ><span
-                    v-if="item?.date || hasLinks(item)"
-                    class="mr-[1ch] inline-flex items-baseline whitespace-normal"
+                Wrap
+              </UButton>
+
+              <span @click.stop>
+                <UDropdownMenu
+                  :items="getCopyMenuItems(log)"
+                  :content="{ align: 'end' }"
+                  :modal="false"
+                >
+                  <UButton
+                    icon="i-lucide-copy"
+                    color="neutral"
+                    variant="outline"
+                    size="xs"
+                    trailing-icon="i-lucide-chevron-down"
                   >
-                    <template v-if="item?.date"
-                      >[<UTooltip :text="`${moment(item.date).format(TOOLTIP_DATE_FORMAT)}`">
-                        <span class="cursor-help">{{
-                          moment(item.date).format('HH:mm:ss')
-                        }}</span> </UTooltip
-                      >]</template
-                    >
-                    <span v-if="hasLinks(item)" :class="item?.date ? 'ml-[1ch]' : ''">
-                      <LogLineLinks :item="item" :open-event="openEvent" />
-                    </span>
-                  </span>
-                  <span>{{ String(item.text).trim() }}</span>
-                </span>
-              </code>
+                    Copy
+                  </UButton>
+                </UDropdownMenu>
+              </span>
+
+              <UButton
+                icon="i-lucide-refresh-cw"
+                color="neutral"
+                variant="outline"
+                size="xs"
+                :loading="reloadingLogs"
+                @click.stop="void reloadLogs()"
+              >
+                Refresh
+              </UButton>
+
+              <UIcon
+                name="i-lucide-chevron-right"
+                :class="[
+                  'size-4 text-toned transition-transform',
+                  isLogOpen(log.filename) ? 'rotate-90' : '',
+                ]"
+              />
             </div>
+          </button>
+
+          <div
+            v-if="isLogOpen(log.filename)"
+            :ref="(el: unknown) => setLogContainerRef(log.filename, el as HTMLElement | null)"
+            class="min-w-0 max-h-[35vh] overflow-y-auto overflow-x-hidden rounded-lg border border-default/70 bg-elevated/40 shadow-sm sm:max-h-[20vh]"
+          >
+            <article
+              v-for="(entry, idx) in normalizeDashboardEntries(log.lines)"
+              :key="`${log.filename}-${idx}`"
+              :class="[
+                'flex min-w-0 border-b border-default/40 bg-transparent last:border-b-0 hover:bg-elevated/70',
+                1 === idx % 2 ? 'bg-elevated/40' : '',
+              ]"
+            >
+              <div
+                class="flex w-full min-w-0 flex-col gap-1 px-3 py-[0.65rem] leading-[1.6] md:flex-row md:items-start md:gap-2"
+              >
+                <StructuredLogLine
+                  :log="entry"
+                  :compact="true"
+                  :show-details="true"
+                  :wrapped="isLogWrapped(log.filename)"
+                  :expanded="isExpandedLogRow(dashboardLogRowKey(log.filename, entry, idx))"
+                  toggleable
+                  @details="openLogDetails"
+                  @open-event="openEventFromLog"
+                  @toggle-expand="
+                    toggleExpandedLogRow(dashboardLogRowKey(log.filename, entry, idx))
+                  "
+                />
+              </div>
+            </article>
           </div>
-        </UCard>
+        </section>
       </div>
     </section>
 
     <UModal v-model:open="eventViewOpen" :title="eventViewTitle" :ui="eventViewModalUi">
       <template #body>
-        <EventView v-if="selectedEventId" :id="selectedEventId" />
+        <EventView
+          v-if="selectedEventId"
+          :id="selectedEventId"
+          @open-event="(id) => (selectedEventId = id)"
+        />
       </template>
     </UModal>
+
+    <LogDetailsModal
+      v-model:open="detailsOpen"
+      :log="selectedLog"
+      @open-event="
+        (id) => {
+          detailsOpen = false;
+          selectedEventId = id;
+        }
+      "
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, onUpdated, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useHead, useRoute } from '#app';
 import { useBreakpoints, useStorage } from '@vueuse/core';
 import { NuxtLink } from '#components';
 import moment from 'moment';
 import EventView from '~/components/EventView.vue';
 import FloatingImage from '~/components/FloatingImage.vue';
-import LogLineLinks from '~/components/LogLineLinks.vue';
+import StructuredLogLine from '~/components/StructuredLogLine.vue';
+import LogDetailsModal from '~/components/LogDetailsModal.vue';
 import Popover from '~/components/Popover.vue';
 import DuplicateRecordList from '~/components/DuplicateRecordList.vue';
 import {
@@ -330,7 +348,8 @@ import {
   ucFirst,
   TOOLTIP_DATE_FORMAT,
 } from '~/utils';
-import type { HistoryItem, JsonObject, LogEntry } from '~/types';
+import type { HistoryItem, JsonObject, LogEntry, ServerJsonLogEntry } from '~/types';
+import { normalizeStructuredEntry } from '~/utils/logs';
 
 type IndexLogFile = {
   type: string;
@@ -338,7 +357,7 @@ type IndexLogFile = {
   date: number;
   size: number;
   modified: string;
-  lines: Array<LogEntry>;
+  lines: Array<LogEntry | ServerJsonLogEntry>;
 };
 
 useHead({ title: 'Index' });
@@ -346,7 +365,7 @@ useHead({ title: 'Index' });
 const route = useRoute();
 const poster_enable = useStorage('poster_enable', true);
 const autoReloadLogs = useStorage<boolean>('auto_reload_logs', true);
-const wrapLines = useStorage('index_logs_wrap_lines', false);
+const logWrap = useStorage<Record<string, boolean>>('index_logs_wrap', {});
 const breakpoints = useBreakpoints({ mobile: 0, desktop: 640 });
 
 const lastHistory = ref<Array<HistoryItem>>([]);
@@ -355,8 +374,13 @@ const reloadingLogs = ref<boolean>(false);
 const historyLoading = ref<boolean>(true);
 const logReloadInterval = ref<ReturnType<typeof setInterval> | null>(null);
 const selectedEventId = ref<string | null>(null);
+const selectedLog = ref<ServerJsonLogEntry | null>(null);
+const detailsOpen = ref(false);
+const expandedLogRows = ref<Set<string>>(new Set());
+const logOpen = useStorage<Record<string, boolean>>('index_logs_open', {});
 const logReloadFrequency = 10000;
 let historyLoadToken = 0;
+const logContainers = ref<Record<string, HTMLElement>>({});
 
 const eventViewModalUi = {
   content: 'max-w-5xl',
@@ -376,13 +400,90 @@ const eventViewTitle = computed(() =>
   null === selectedEventId.value ? 'Event' : `#${makeEventName(selectedEventId.value)}`,
 );
 
-const hasLinks = (item: LogEntry): boolean => {
-  return Boolean(item.item_id || item.event_id || item.backend);
+const normalizeDashboardEntries = (
+  lines: Array<LogEntry | ServerJsonLogEntry>,
+): Array<ServerJsonLogEntry> =>
+  lines
+    .map((item) => normalizeStructuredEntry(item))
+    .filter((item): item is ServerJsonLogEntry => null !== item);
+
+const dashboardLogRowKey = (filename: string, entry: ServerJsonLogEntry, index: number): string =>
+  `${filename}:${entry.id}:${index}`;
+
+const isExpandedLogRow = (key: string): boolean => expandedLogRows.value.has(key);
+
+const toggleExpandedLogRow = (key: string): void => {
+  const next = new Set(expandedLogRows.value);
+
+  if (next.has(key)) {
+    next.delete(key);
+  } else {
+    next.add(key);
+  }
+
+  expandedLogRows.value = next;
 };
 
-const openEvent = (id: string): void => {
-  selectedEventId.value = id;
+const openLogDetails = (entry: ServerJsonLogEntry): void => {
+  selectedLog.value = entry;
+  detailsOpen.value = true;
 };
+
+const openEventFromLog = (eventId: string): void => {
+  selectedEventId.value = eventId;
+};
+
+const setLogContainerRef = (filename: string, el: HTMLElement | null): void => {
+  if (null !== el) {
+    logContainers.value[filename] = el;
+  }
+};
+
+const scrollLogContainerToBottom = (filename: string): void => {
+  void nextTick(() => {
+    const el = logContainers.value[filename];
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  });
+};
+
+const isLogOpen = (filename: string): boolean => logOpen.value[filename] ?? true;
+const isLogWrapped = (filename: string): boolean => logWrap.value[filename] ?? false;
+const toggleLogWrap = (filename: string): void => {
+  logWrap.value = { ...logWrap.value, [filename]: !isLogWrapped(filename) };
+};
+const toggleLog = (filename: string): void => {
+  const wasOpen = isLogOpen(filename);
+  logOpen.value[filename] = !wasOpen;
+
+  if (false === wasOpen) {
+    scrollLogContainerToBottom(filename);
+  }
+};
+
+const getCopyMenuItems = (log: IndexLogFile) => [
+  [
+    {
+      label: 'Copy text',
+      icon: 'i-lucide-message-square-text',
+      onSelect: () => {
+        copyText(
+          normalizeDashboardEntries(log.lines)
+            .map((e) => `[${e.datetime}] ${e.level.toUpperCase()} [${e.logger}] ${e.message}`)
+            .join('\n'),
+        );
+      },
+    },
+    {
+      label: 'Copy raw',
+      icon: 'i-lucide-braces',
+      onSelect: () => {
+        copyText(log.lines.map((l) => ('string' === typeof l ? l : JSON.stringify(l))).join('\n'));
+      },
+    },
+  ],
+];
 
 const duplicatePopoverTrigger = computed<'click' | 'hover'>(() =>
   'mobile' === breakpoints.active().value ? 'click' : 'hover',
@@ -392,11 +493,6 @@ const historyCardUi = {
   header: 'p-4 sm:p-5',
   body: 'px-4 pb-4 pt-0 sm:px-5 sm:pb-5',
   footer: 'px-4 pb-4 pt-0 sm:px-5 sm:pb-5',
-};
-
-const logCardUi = {
-  header: 'p-4 sm:p-5',
-  body: 'px-4 pb-4 pt-0 sm:px-5 sm:pb-5',
 };
 
 const logTypeIcon = (type: string): string => {
@@ -510,6 +606,15 @@ const reloadLogs = async (): Promise<void> => {
     }
 
     logs.value = logsResponse;
+
+    void nextTick(() => {
+      for (const filename of Object.keys(logContainers.value)) {
+        const el = logContainers.value[filename];
+        if (el) {
+          el.scrollTop = el.scrollHeight;
+        }
+      }
+    });
   } catch {
   } finally {
     reloadingLogs.value = false;
@@ -552,12 +657,6 @@ onMounted(async () => {
   startLogsAutoReload();
 });
 
-onUpdated(() => {
-  document.querySelectorAll('.ws-terminal-panel-dashboard').forEach((element) => {
-    element.scrollTop = element.scrollHeight;
-  });
-});
-
 watch(autoReloadLogs, (value: boolean) => {
   if (true === value) {
     startLogsAutoReload();
@@ -565,6 +664,12 @@ watch(autoReloadLogs, (value: boolean) => {
   }
 
   stopLogsAutoReload();
+});
+
+watch(detailsOpen, (open) => {
+  if (!open) {
+    selectedLog.value = null;
+  }
 });
 
 onBeforeUnmount(() => stopLogsAutoReload());

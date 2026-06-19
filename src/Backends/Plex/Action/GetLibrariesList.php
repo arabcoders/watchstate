@@ -27,6 +27,12 @@ final class GetLibrariesList
 
     private string $action = 'plex.getLibrariesList';
 
+    /**
+     * Class Constructor.
+     *
+     * @param iHttp&\App\Libs\Extends\HttpClient $http HTTP client for making requests to the backend.
+     * @param iLogger $logger Logger instance for logging.
+     */
     public function __construct(
         protected iHttp $http,
         protected iLogger $logger,
@@ -60,9 +66,11 @@ final class GetLibrariesList
     {
         $logContext = [
             'action' => $this->action,
-            'client' => $context->clientName,
-            'backend' => $context->backendName,
-            'user' => $context->userContext->name,
+            'identity' => [
+                'client' => $context->clientName,
+                'backend' => $context->backendName,
+                'user' => $context->userContext->name,
+            ],
         ];
 
         try {
@@ -86,7 +94,7 @@ final class GetLibrariesList
 
         if ($context->trace) {
             $this->logger->debug(
-                message: "{action}: Parsing '{client}: {user}@{backend}' libraries payload.",
+                message: "Parsing '{identity.user}@{identity.backend}' libraries payload.",
                 context: [...$logContext, 'response' => ['body' => $json]],
             );
         }
@@ -97,7 +105,7 @@ final class GetLibrariesList
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{client}: {user}@{backend}' libraries returned empty list.",
+                    message: "Request for '{identity.user}@{identity.backend}' libraries returned empty list.",
                     context: [...$logContext, 'response' => ['key' => 'MediaContainer.Directory', 'body' => $json]],
                     level: Levels::WARNING,
                 ),
@@ -171,7 +179,7 @@ final class GetLibrariesList
 
         $logContext['url'] = (string) $url;
 
-        $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' libraries list.", $logContext);
+        $this->logger->debug("Requesting '{identity.user}@{identity.backend}' libraries list.", $logContext);
 
         $response = $this->http->request(Method::GET, (string) $url, $context->getHttpOptions());
 
@@ -179,7 +187,7 @@ final class GetLibrariesList
 
         if ($context->trace) {
             $this->logger->debug(
-                message: "{action}: Processing '{client}: {user}@{backend}' response.",
+                message: "Processing '{identity.user}@{identity.backend}' response.",
                 context: [...$logContext, 'response' => ['body' => $payload]],
             );
         }
@@ -187,8 +195,8 @@ final class GetLibrariesList
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             throw new RuntimeException(
                 r(
-                    text: "{action}: Request for '{client}: {user}@{backend}' libraries returned with unexpected '{status_code}' status code.",
-                    context: [...$logContext, 'status_code' => $response->getStatusCode()],
+                    text: "Request for '{identity.user}@{identity.backend}' libraries returned with unexpected '{response.status_code}' status code.",
+                    context: [...$logContext, 'response' => ['status_code' => $response->getStatusCode()]],
                 ),
             );
         }

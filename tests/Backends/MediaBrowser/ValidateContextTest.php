@@ -36,8 +36,8 @@ final class ValidateContextTest extends MediaBrowserTestCase
             exceptionMessage: 'non-JSON response from /system/Info',
             callback: static function (self $test, ?\Throwable $e): void {
                 $test->assertInstanceOf(InvalidContextException::class, $e);
-                $test->assertSame(200, $e->getContext('http.status_code'));
-                $test->assertSame('http://mediabrowser.test/system/Info', $e->getContext('http.url'));
+                $test->assertSame(200, $e->getContext('response.status_code'));
+                $test->assertSame('http://mediabrowser.test/system/Info', $e->getContext('request.url'));
                 $test->assertSame('text/html', $e->getContext('response.content_type'));
                 $test->assertStringContainsString('Jellyfin', (string) $e->getContext('response.reason'));
             },
@@ -68,7 +68,7 @@ final class ValidateContextTest extends MediaBrowserTestCase
             exceptionMessage: 'Backend responded with 401',
             callback: static function (self $test, ?\Throwable $e): void {
                 $test->assertInstanceOf(InvalidContextException::class, $e);
-                $test->assertSame(401, $e->getContext('http.status_code'));
+                $test->assertSame(401, $e->getContext('response.status_code'));
                 $test->assertSame('application/json', $e->getContext('response.content_type'));
                 $test->assertSame('Access denied', $e->getContext('response.reason'));
             },

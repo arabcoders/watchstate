@@ -97,9 +97,7 @@ final class IndexCommand extends Command
         try {
             $users = select_users($input->getOption('user'));
         } catch (RuntimeException $e) {
-            $output->writeln(r('<error>{message}</error>', [
-                'message' => $e->getMessage(),
-            ]));
+            $this->logger->error($e->getMessage(), exception_log($e));
 
             return self::FAILURE;
         }
@@ -109,9 +107,11 @@ final class IndexCommand extends Command
 
             $db = $this->ensureDatabase($userContext);
 
-            $output->writeln(r("Ensuring user '{user}' database has correct indexes.", [
-                'user' => $userContext->name,
-            ]), iOutput::VERBOSITY_VERBOSE);
+            $this->logger->notice("Ensuring user '{identity.user}' database has correct indexes.", [
+                'identity' => [
+                    'user' => $userContext->name,
+                ],
+            ]);
 
             ensure_indexes($db->getDBLayer(), $this->logger, [
                 UserContext::class => $userContext,
@@ -120,9 +120,11 @@ final class IndexCommand extends Command
             ]);
 
             if ($input->getOption('force-reindex')) {
-                $output->writeln(r("User '{user}' Database Indexes have been recreated successfully.", [
-                    'user' => $userContext->name,
-                ]));
+                $this->logger->notice("User '{identity.user}' database indexes have been recreated.", [
+                    'identity' => [
+                        'user' => $userContext->name,
+                    ],
+                ]);
             }
         }
 

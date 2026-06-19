@@ -47,12 +47,7 @@ set_error_handler($errorHandler);
 
 set_exception_handler(function (Throwable $e) {
     $out = fn($message) => in_container() ? fwrite(STDERR, $message) : syslog(LOG_ERR, $message);
-    $out(r(text: '{kind}: {message} ({file}:{line}).', context: [
-        'kind' => $e::class,
-        'line' => $e->getLine(),
-        'message' => $e->getMessage(),
-        'file' => after($e->getFile(), ROOT_PATH),
-    ]));
+    $out(r(text: '{exception.type}: {exception.message} ({exception.file}:{exception.line}).', context: exception_log($e)));
     exit(Command::FAILURE);
 });
 
@@ -171,13 +166,8 @@ $exitCode = $profiler->process(function () use ($request) {
 
         $out(
             r(
-                text: "HTTP: Exception '{kind}' was thrown unhandled during HTTP boot context. {message} at {file}:{line}.",
-                context: [
-                    'kind' => $e::class,
-                    'line' => $e->getLine(),
-                    'message' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                ]
+                text: "HTTP: Exception '{exception.type}' was thrown unhandled during HTTP boot context. {exception.message} at {exception.file}:{exception.line}.",
+                context: exception_log($e),
             )
         );
 
@@ -195,13 +185,8 @@ $exitCode = $profiler->process(function () use ($request) {
 
         $out(
             r(
-                text: "HTTP: Exception '{kind}' was thrown unhandled during response context. Error '{message} @ {file}:{line}'.",
-                context: [
-                    'kind' => $e::class,
-                    'line' => $e->getLine(),
-                    'message' => $e->getMessage(),
-                    'file' => after($e->getFile(), ROOT_PATH),
-                ]
+                text: "HTTP: Exception '{exception.type}' was thrown unhandled during response context. Error '{exception.message} @ {exception.file}:{exception.line}'.",
+                context: exception_log($e),
             )
         );
 

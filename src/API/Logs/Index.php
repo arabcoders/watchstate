@@ -41,7 +41,7 @@ final class Index
         $this->logsDir = [
             [
                 'path' => fix_path(Config::get('tmpDir') . '/logs'),
-                'type' => '*.*.log',
+                'type' => '*.jsonl',
             ],
             [
                 'path' => fix_path(Config::get('tmpDir') . '/webhooks'),
@@ -68,7 +68,7 @@ final class Index
             $path = ag($pathInfo, 'path');
             $type = ag($pathInfo, 'type', '*.*.log');
             foreach (glob($path . '/' . $type) as $file) {
-                preg_match('/(\w+)\.(.+?)\.(log|json)/i', basename($file), $matches);
+                preg_match('/(\w+)\.(.+?)\.(jsonl|json)$/i', basename($file), $matches);
                 $date = $matches[2] ?? null;
                 if (null !== $date && !is_numeric($date)) {
                     $date = null;
@@ -110,7 +110,7 @@ final class Index
         $limit = $limit < 1 ? 50 : $limit;
 
         foreach (glob($path . '/' . $type) as $file) {
-            preg_match('/(\w+)\.(\w+)\.log/i', basename($file), $matches);
+            preg_match('/(\w+)\.(\w+)\.jsonl$/i', basename($file), $matches);
 
             $logDate = $matches[2] ?? null;
 
@@ -129,17 +129,23 @@ final class Index
 
             $file = new SplFileObject($file, 'r');
 
-            if ($file->getSize() > 1) {
-                $file->seek(PHP_INT_MAX);
-                $lastLine = $file->key();
-                $it = new LimitIterator($file, max(0, $lastLine - $limit), $lastLine);
-                foreach ($it as $line) {
-                    $line = trim((string) $line);
-                    if (empty($line)) {
-                        continue;
-                    }
+            if ($file->getSize() < 1) {
+                continue;
+            }
 
-                    $builder['lines'][] = self::formatLog($line, $this->users);
+            $file->seek(PHP_INT_MAX);
+            $lastLine = $file->key();
+            $it = new LimitIterator($file, max(0, $lastLine - $limit), $lastLine);
+            foreach ($it as $line) {
+                $line = trim((string) $line);
+                if (empty($line)) {
+                    continue;
+                }
+
+                $entry = self::decodeJsonlLine($line);
+
+                if (null !== $entry) {
+                    $builder['lines'][] = $entry;
                 }
             }
 
@@ -185,6 +191,9 @@ final class Index
             $offset = self::MAX_LIMIT;
         }
 
+        $ext = pathinfo($filePath, PATHINFO_EXTENSION);
+        $parser = 'json' === $ext ? 'json' : 'jsonl';
+
         if ($file->getSize() < 1) {
             return api_response(Status::OK, [
                 'filename' => basename($filePath),
@@ -192,13 +201,12 @@ final class Index
                 'next' => null,
                 'max' => 0,
                 'lines' => [],
+                'parser' => $parser,
             ]);
         }
 
-        $contentType = pathinfo($filePath, PATHINFO_EXTENSION);
-
         $file->seek(PHP_INT_MAX);
-        $lastLine = 'json' === $contentType ? 0 : $file->key();
+        $lastLine = 'json' === $ext ? 0 : $file->key();
 
         if ($offset === self::MAX_LIMIT && self::MAX_LIMIT >= $lastLine) {
             $offset = $lastLine;
@@ -210,15 +218,37 @@ final class Index
             'next' => null,
             'max' => $lastLine,
             'lines' => [],
-            'type' => $contentType,
+            'parser' => $parser,
         ];
 
         if ($offset <= $lastLine) {
-            $start = max(0, $lastLine - $offset);
-            $it = new LimitIterator($file, $start, 'json' === $contentType ? PHP_INT_MAX : self::MAX_LIMIT);
+            if ('json' === $ext) {
+                $content = @file_get_contents($filePath);
 
-            foreach ($it as $line) {
-                $data['lines'][] = self::formatLog(trim((string) $line), $this->users);
+                if (false !== $content) {
+                    $entry = json_decode($content, true, 512, JSON_INVALID_UTF8_IGNORE);
+
+                    if (is_array($entry)) {
+                        $data['lines'][] = $entry;
+                    }
+                }
+            } else {
+                $start = max(0, $lastLine - $offset);
+                $it = new LimitIterator($file, $start, self::MAX_LIMIT);
+
+                foreach ($it as $line) {
+                    $line = trim((string) $line);
+
+                    if (empty($line)) {
+                        continue;
+                    }
+
+                    $entry = self::decodeJsonlLine($line);
+
+                    if (null !== $entry) {
+                        $data['lines'][] = $entry;
+                    }
+                }
             }
 
             $hasMore = $lastLine > $offset;
@@ -258,11 +288,24 @@ final class Index
                         implode(
                             PHP_EOL,
                             array_map(
-                                function ($data) {
-                                    if (!is_string($data)) {
+                                static function ($line) {
+                                    if (!is_string($line)) {
                                         return null;
                                     }
-                                    return 'data: ' . json_encode(self::formatLog(trim($data), $this->users));
+
+                                    $line = trim($line);
+
+                                    if ('' === $line) {
+                                        return null;
+                                    }
+
+                                    $entry = self::decodeJsonlLine($line);
+
+                                    if (null !== $entry) {
+                                        return 'data: ' . json_encode($entry);
+                                    }
+
+                                    return null;
                                 },
                                 (array) preg_split("/\R/", $data),
                             ),
@@ -338,70 +381,28 @@ final class Index
     }
 
     /**
-     * Format log line.
+     * Decode a JSONL line into a structured log entry.
      *
-     * @param string $line
-     * @param array $users
-     *
-     * @return array
-     * @throws RandomException
+     * @return array<string, mixed>|null
      */
-    public static function formatLog(mixed $line, array $users = []): array
+    public static function decodeJsonlLine(string $line): ?array
     {
-        if (!is_string($line)) {
-            $line = json_encode($line);
+        $payload = json_decode($line, true, 512, JSON_INVALID_UTF8_IGNORE);
+
+        if (!is_array($payload)) {
+            return null;
         }
 
-        $line ??= '';
-
-        if (empty($line)) {
-            return [
-                'id' => md5((string) (hrtime(true) + random_int(1, 10_000))),
-                'item_id' => null,
-                'event_id' => null,
-                'user' => null,
-                'backend' => null,
-                'date' => null,
-                'level' => null,
-                'text' => $line,
-            ];
+        foreach (['id', 'datetime', 'level', 'logger'] as $required) {
+            if (!isset($payload[$required]) || '' === trim((string) $payload[$required])) {
+                return null;
+            }
         }
 
-        $dateRegex = '/^\[([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?[+-][0-9]{2}:[0-9]{2})]/i';
-        $eventRegex = '/\[event:(?<event_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})]\s*/i';
-        $levelRegex = '/^(?:[a-z0-9_.-]+\.)?(?<level>EMERGENCY|ALERT|CRITICAL|ERROR|WARNING|NOTICE|INFO|DEBUG):\s*/i';
-
-        $dateMatch = preg_match($dateRegex, $line, $matches);
-        $idMatch = preg_match("/'#(?P<item_id>\d+):/", $line, $idMatches);
-        $eventMatch = preg_match($eventRegex, $line, $eventMatches);
-        $identMatch = preg_match("/'((?P<client>\w+):\s)?(?P<user>\w+)@(?P<backend>\w+)'/i", $line, $identMatches);
-        $text = 1 === $dateMatch ? trim(preg_replace($dateRegex, '', $line)) : $line;
-        $levelMatch = preg_match($levelRegex, $text, $levelMatches);
-
-        if (1 === $eventMatch) {
-            $text = trim(preg_replace($eventRegex, '', $text, 1));
+        if (false === array_key_exists('message', $payload)) {
+            return null;
         }
 
-        $logLine = [
-            'id' => md5($line . (hrtime(true) + random_int(1, 10_000))),
-            'item_id' => null,
-            'event_id' => 1 === $eventMatch ? $eventMatches['event_id'] : null,
-            'user' => null,
-            'backend' => null,
-            'date' => 1 === $dateMatch ? $matches[1] : null,
-            'level' => 1 === $levelMatch ? strtolower($levelMatches['level']) : null,
-            'text' => $text,
-        ];
-
-        if (1 === $idMatch) {
-            $logLine['item_id'] = $idMatches['item_id'];
-        }
-
-        if (1 === $identMatch && ([] === $users || in_array($identMatches['user'], $users, true))) {
-            $logLine['user'] = $identMatches['user'];
-            $logLine['backend'] = $identMatches['backend'];
-        }
-
-        return $logLine;
+        return $payload;
     }
 }

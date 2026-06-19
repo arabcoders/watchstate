@@ -70,17 +70,19 @@ final class AddWebhook
 
             $logContext = [
                 'action' => $this->action,
-                'client' => $context->clientName,
-                'backend' => $context->backendName,
-                'user' => $context->userContext->name,
-                'url' => (string) $url,
+                'identity' => [
+                    'client' => $context->clientName,
+                    'backend' => $context->backendName,
+                    'user' => $context->userContext->name,
+                ],
+                'request' => ['url' => (string) $url],
             ];
 
             if (null !== ($pin = ag($opts, Options::PLEX_USER_PIN, ag($context->options, Options::PLEX_USER_PIN)))) {
                 $url = $url->withQuery(http_build_query(['pin' => (string) $pin]));
             }
 
-            $this->logger->debug("Getting current webhooks for '{user}@{backend}'.", $logContext);
+            $this->logger->debug("Getting current webhooks for '{identity.user}@{identity.backend}'.", $logContext);
 
             $response = $this->http->request(Method::GET, (string) $url, array_replace_recursive(
                 $context->getHttpOptions(),
@@ -95,11 +97,11 @@ final class AddWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: "{action}: Request for '{client}: {user}@{backend}' get webhooks returned with unexpected '{status_code}' status code.",
+                        message: "Request for '{identity.user}@{identity.backend}' get webhooks returned with unexpected '{response.status_code}' status code.",
                         context: [
                             ...$logContext,
-                            'status_code' => $response->getStatusCode(),
                             'response' => [
+                                'status_code' => $response->getStatusCode(),
                                 'body' => $content,
                                 'reason' => $reason,
                             ],
@@ -114,7 +116,7 @@ final class AddWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: "{action}: Request for '{client}: {user}@{backend}' get webhooks returned with empty response.",
+                        message: "Request for '{identity.user}@{identity.backend}' get webhooks returned with empty response.",
                         context: [...$logContext, 'response' => ['body' => $content]],
                         level: Levels::ERROR,
                     ),
@@ -129,7 +131,7 @@ final class AddWebhook
 
             if (true === $context->trace) {
                 $this->logger->debug(
-                    message: "{action}: Processing '{client}: {user}@{backend}' get info payload.",
+                    message: "Processing '{identity.user}@{identity.backend}' get info payload.",
                     context: [...$logContext, 'response' => ['body' => $content, 'json' => $json]],
                 );
             }
@@ -174,11 +176,11 @@ final class AddWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: "{action}: Request for '{client}: {user}@{backend}' to add webhook returned with unexpected '{status_code}' status code.",
+                        message: "Request for '{identity.user}@{identity.backend}' to add webhook returned with unexpected '{response.status_code}' status code.",
                         context: [
                             ...$logContext,
-                            'status_code' => $resp->getStatusCode(),
                             'response' => [
+                                'status_code' => $resp->getStatusCode(),
                                 'body' => $resp->getContent(false),
                                 'reason' => $reason,
                             ],
@@ -194,24 +196,14 @@ final class AddWebhook
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' request to add webhook. Error '{error.message}' at '{error.file}:{error.line}'.",
+                    message: "Failed during '{identity.user}@{identity.backend}' request to add webhook. {exception.message}",
                     context: [
-                        'user' => $context->userContext->name,
-                        'backend' => $context->backendName,
-                        'client' => $context->clientName,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
+                        'identity' => [
+                            'user' => $context->userContext->name,
+                            'backend' => $context->backendName,
+                            'client' => $context->clientName,
                         ],
-                        'exception' => [
-                            'file' => after($e->getFile(), ROOT_PATH),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
+                        ...exception_log($e),
                     ],
                     level: Levels::ERROR,
                     previous: $e,

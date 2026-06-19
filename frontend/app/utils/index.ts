@@ -570,12 +570,12 @@ const parse_api_response = async <T = JsonObject>(r: Response): Promise<T | Gene
 };
 
 type HistoryLogItem = {
-  item_id?: string | number | null;
+  history_id?: string | number | null;
   user?: string | null;
 };
 
 const goto_history_item = async (item: HistoryLogItem): Promise<void> => {
-  if (!item.item_id) {
+  if (!item.history_id) {
     return;
   }
 
@@ -599,7 +599,7 @@ const goto_history_item = async (item: HistoryLogItem): Promise<void> => {
     api_user.value = log_user;
   }
 
-  await navigateTo(`/history/${item.item_id}`);
+  await navigateTo(`/history/${item.history_id}`);
 };
 
 /**

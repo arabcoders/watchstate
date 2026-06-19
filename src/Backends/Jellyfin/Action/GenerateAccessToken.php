@@ -92,15 +92,17 @@ class GenerateAccessToken
 
         $logContext = [
             'action' => $this->action,
-            'client' => $context->clientName,
-            'backend' => $context->backendName,
-            'user' => $context->userContext->name,
-            'url' => (string) $url,
+            'identity' => [
+                'client' => $context->clientName,
+                'backend' => $context->backendName,
+                'user' => $context->userContext->name,
+            ],
+            'request' => ['url' => (string) $url],
             'username' => (string) $identifier,
         ];
 
         $this->logger->debug(
-            message: "{action}: Requesting '{client}: {user}@{backend}' to generate access token for '{username}'.",
+            message: "Requesting '{identity.user}@{identity.backend}' to generate access token for '{username}'.",
             context: $logContext,
         );
 
@@ -126,11 +128,11 @@ class GenerateAccessToken
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Request for '{client}: {user}@{backend}' to generate access for '{username}' token returned with unexpected '{status_code}' status code. {body}",
+                    message: "Request for '{identity.user}@{identity.backend}' to generate access for '{username}' token returned with unexpected '{response.status_code}' status code. {response.body}",
                     context: [
                         ...$logContext,
-                        'status_code' => $response->getStatusCode(),
                         'response' => [
+                            'status_code' => $response->getStatusCode(),
                             'body' => $response->getContent(false),
                         ],
                     ],
@@ -147,10 +149,10 @@ class GenerateAccessToken
 
         if ($context->trace) {
             $this->logger->debug(
-                message: "{action}: Parsing '{client}: {user}@{backend}' - '{username}' access token response payload.",
+                message: "Parsing '{identity.user}@{identity.backend}' - '{username}' access token response payload.",
                 context: [
                     ...$logContext,
-                    'trace' => $json,
+                    'data' => $json,
                 ],
             );
         }

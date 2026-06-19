@@ -11,6 +11,7 @@ use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Exceptions\HttpException;
 use App\Libs\Extends\ConsoleHandler;
 use App\Libs\Extends\ConsoleOutput;
+use App\Libs\Extends\JsonlStreamHandler;
 use App\Libs\Extends\RemoteHandler;
 use App\Libs\Extends\RouterStrategy;
 use Closure;
@@ -18,6 +19,7 @@ use ErrorException;
 use League\Route\Http\Exception as RouterHttpException;
 use League\Route\RouteGroup;
 use League\Route\Router as APIRouter;
+use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogHandler;
 use Monolog\Level;
@@ -44,6 +46,7 @@ final class Initializer
     private Cli $cli;
     private ConsoleOutput $cliOutput;
     private ?iLogger $accessLog = null;
+    private bool $accessLogStructured = false;
 
     /**
      * Initializes the object.
@@ -141,12 +144,10 @@ final class Initializer
         });
 
         set_exception_handler(static function (Throwable $e) use ($logger) {
-            $logger->error(message: '{class}: {error} ({file}:{line}).' . PHP_EOL, context: [
-                'class' => $e::class,
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ]);
+            $logger->error(
+                message: '{exception.type}: {exception.message} ({exception.file}:{exception.line}).' . PHP_EOL,
+                context: exception_log($e),
+            );
             exit(1);
         });
 
@@ -157,12 +158,36 @@ final class Initializer
 
             gc_collect_cycles();
 
-            $logger->error(message: "{class}: {error} at '{file}:{line}'. '{URI}'", context: [
-                'class' => 'PHP.Engine',
-                'error' => $error['message'] ?? 'Unknown error',
-                'file' => $error['file'] ?? 'Unknown file',
-                'line' => $error['line'] ?? 'Unknown line',
-                'URI' => before($_SERVER['REQUEST_URI'] ?? '', '?'),
+            $type = $error['type'] ?? 0;
+
+            $logger->error(message: "{exception.type}: {exception.message} at '{exception.file}:{exception.line}'. '{request.uri}'", context: [
+                'exception' => [
+                    'type' => match ($type) {
+                        E_ERROR => 'E_ERROR',
+                        E_WARNING => 'E_WARNING',
+                        E_PARSE => 'E_PARSE',
+                        E_NOTICE => 'E_NOTICE',
+                        E_CORE_ERROR => 'E_CORE_ERROR',
+                        E_CORE_WARNING => 'E_CORE_WARNING',
+                        E_COMPILE_ERROR => 'E_COMPILE_ERROR',
+                        E_COMPILE_WARNING => 'E_COMPILE_WARNING',
+                        E_USER_ERROR => 'E_USER_ERROR',
+                        E_USER_WARNING => 'E_USER_WARNING',
+                        E_USER_NOTICE => 'E_USER_NOTICE',
+                        E_STRICT => 'E_STRICT',
+                        E_RECOVERABLE_ERROR => 'E_RECOVERABLE_ERROR',
+                        E_DEPRECATED => 'E_DEPRECATED',
+                        E_USER_DEPRECATED => 'E_USER_DEPRECATED',
+                        default => sprintf('UNKNOWN_ERROR_TYPE(%d)', $type),
+                    },
+                    'message' => $error['message'] ?? 'Unknown error',
+                    'file' => $error['file'] ?? 'Unknown file',
+                    'line' => $error['line'] ?? 'Unknown line',
+                    'trace' => [],
+                ],
+                'request' => [
+                    'uri' => before($_SERVER['REQUEST_URI'] ?? '', '?'),
+                ],
             ]);
         });
 
@@ -244,12 +269,7 @@ final class Initializer
             );
 
             if (Status::SERVICE_UNAVAILABLE->value === $statusCode) {
-                Container::get(iLogger::class)->error($e->getMessage(), [
-                    'kind' => $e::class,
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'trace' => $e->getTrace(),
-                ]);
+                Container::get(iLogger::class)->error($e->getMessage(), exception_log($e));
             }
 
             $this->write(
@@ -261,25 +281,10 @@ final class Initializer
             $response = api_error(
                 message: 'Unable to serve request check logs.',
                 httpCode: Status::SERVICE_UNAVAILABLE,
-                body: true !== (bool) Config::get('debug.enabled', false)
-                    ? []
-                    : [
-                        'exception' => [
-                            'message' => $e->getMessage(),
-                            'kind' => $e::class,
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'trace' => $e->getTrace(),
-                        ],
-                    ],
+                body: true !== (bool) Config::get('debug.enabled', false) ? [] : exception_log($e),
             );
 
-            Container::get(iLogger::class)->error($e->getMessage(), [
-                'kind' => $e::class,
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTrace(),
-            ]);
+            Container::get(iLogger::class)->error($e->getMessage(), exception_log($e));
 
             $this->write($request, Level::Error, $this->formatLog($request, $response));
         }
@@ -455,18 +460,35 @@ final class Initializer
 
         $wrap = Container::get(LogSuppressor::class);
 
-        if (null !== ($logfile = Config::get('api.logfile'))) {
+        $accessContext = Config::get('logger.access', []);
+        if (true === (bool) ag($accessContext, 'enabled', false) && null !== ($logfile = ag($accessContext, 'filename'))) {
+            $accessHandler = $this->createStreamHandler(
+                (string) $logfile,
+                ag($accessContext, 'level', Level::Info),
+                true,
+            );
+            $this->accessLogStructured = $accessHandler instanceof JsonlStreamHandler;
+
             $this->accessLog = $logger
                 ->withName(name: 'http')
-                ->pushHandler($wrap->withHandler(new StreamHandler($logfile, Level::Info, true)));
+                ->pushHandler($wrap->withHandler($accessHandler));
 
-            if (true === $inContainer) {
-                assert($this->accessLog instanceof Logger, 'Expected logger instance for access log.');
-                $this->accessLog->pushHandler($wrap->withHandler(new StreamHandler('php://stderr', Level::Info, true)));
-            }
+            assert($this->accessLog instanceof Logger, 'Expected logger instance for access log.');
+            $this->accessLog->pushHandler($wrap->withHandler(
+                $this->createStreamHandler(
+                    'php://stderr',
+                    ag($accessContext, 'level', Level::Info),
+                    true,
+                    ag($accessContext, 'format', 'text'),
+                ),
+            ));
         }
 
         foreach ($loggers as $name => $context) {
+            if ('access' === $name) {
+                continue;
+            }
+
             if (null === ag($context, 'type', null)) {
                 throw new RuntimeException(r("Logger '{name}' has no type set.", ['name' => $name]));
             }
@@ -490,10 +512,11 @@ final class Initializer
                 case 'stream':
                     $logger->pushHandler(
                         $wrap->withHandler(
-                            new StreamHandler(
-                                ag($context, 'filename'),
+                            $this->createStreamHandler(
+                                (string) ag($context, 'filename'),
                                 ag($context, 'level', Level::Info),
                                 (bool) ag($context, 'bubble', true),
+                                ag($context, 'format'),
                             ),
                         ),
                     );
@@ -562,11 +585,13 @@ final class Initializer
         if (false === empty($uri->getQuery())) {
             $query = [];
             parse_str($uri->getQuery(), $query);
-            if (true === ag_exists($query, 'apikey')) {
-                // @mago-expect lint:no-literal-password
-                $query['apikey'] = '....';
-                $uri = $uri->withQuery(http_build_query($query));
+            foreach (['apikey', 'api_key', 'token', 'ws_token', 'access_token', 'password', 'secret'] as $paramName) {
+                if (false === ag_exists($query, $paramName)) {
+                    continue;
+                }
+                $query[$paramName] = '...';
             }
+            $uri = $uri->withQuery(http_build_query($query));
         }
 
         $context = array_replace_recursive([
@@ -586,11 +611,39 @@ final class Initializer
             $context['attributes'] = $attributes;
         }
 
-        if (true === (Config::get('logs.context') || $forceContext)) {
+        if (true === (Config::get('logs.context') || $forceContext || $this->accessLogStructured)) {
             $this->accessLog->log($level, $message, $context);
         } else {
             $this->accessLog->log($level, r($message, $context));
         }
+    }
+
+    private function createStreamHandler(
+        string $filename,
+        int|string|Level $level = Level::Info,
+        bool $bubble = true,
+        mixed $format = null,
+    ): StreamHandler {
+        if (true === $this->isJsonlStream($filename, $format)) {
+            return new JsonlStreamHandler($filename, $level, $bubble);
+        }
+
+        $handler = new StreamHandler($filename, $level, $bubble);
+
+        if (is_scalar($format) && 'text' === strtolower(trim((string) $format))) {
+            $handler->setFormatter(new LineFormatter("%message%\n", null, true, true));
+        }
+
+        return $handler;
+    }
+
+    private function isJsonlStream(string $filename, mixed $format = null): bool
+    {
+        if (is_scalar($format) && 'jsonl' === strtolower(trim((string) $format))) {
+            return true;
+        }
+
+        return str_ends_with(strtolower($filename), '.jsonl');
     }
 
     private function formatLog(iRequest $request, iResponse $response, ?string $message = null): string

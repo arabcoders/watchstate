@@ -23,6 +23,9 @@ class JellyfinValidateContext
 {
     use \App\Backends\Common\CommonTrait;
 
+    /**
+     * @param iHttp&\App\Libs\Extends\HttpClient $http
+     */
     public function __construct(
         private readonly iHttp $http,
     ) {}
@@ -140,7 +143,10 @@ class JellyfinValidateContext
 
             return $body;
         } catch (TransportExceptionInterface $e) {
-            throw new InvalidContextException(r('Failed to connect to backend. {error}', ['error' => $e->getMessage()]), previous: $e);
+            throw new InvalidContextException(
+                r('Failed to connect to backend. {error}', ['error' => $e->getMessage()]),
+                previous: $e,
+            );
         } catch (ClientExceptionInterface $e) {
             throw $this->httpException('Got non 200 response.', $e, (string) $url);
         } catch (RedirectionExceptionInterface $e) {
@@ -157,18 +163,18 @@ class JellyfinValidateContext
         $reason = $this->getBackendResponseReason($body) ?? $e->getMessage();
         $contentType = $this->getContentType($response);
 
-        $ex = new InvalidContextException(r('{message} Backend responded with {status_code}. {error}', [
+        $ex = new InvalidContextException(r('{message} Backend responded with {response.status_code}. {error}', [
             'message' => $message,
-            'status_code' => $response->getStatusCode(),
+            'response' => ['status_code' => $response->getStatusCode()],
             'error' => $reason,
         ]), previous: $e);
 
         $ex->setContext([
-            'http' => [
+            'request' => [
                 'url' => $url,
-                'status_code' => $response->getStatusCode(),
             ],
             'response' => [
+                'status_code' => $response->getStatusCode(),
                 'headers' => $response->getHeaders(false),
                 'content_type' => $contentType,
                 'body' => $body,
@@ -187,11 +193,11 @@ class JellyfinValidateContext
 
         $ex = new InvalidContextException($message);
         $ex->setContext([
-            'http' => [
+            'request' => [
                 'url' => $url,
-                'status_code' => $response->getStatusCode(),
             ],
             'response' => [
+                'status_code' => $response->getStatusCode(),
                 'headers' => $response->getHeaders(false),
                 'content_type' => $contentType,
                 'body' => $body,
@@ -221,11 +227,11 @@ class JellyfinValidateContext
         );
 
         $ex->setContext([
-            'http' => [
+            'request' => [
                 'url' => $url,
-                'status_code' => $response->getStatusCode(),
             ],
             'response' => [
+                'status_code' => $response->getStatusCode(),
                 'headers' => $response->getHeaders(false),
                 'content_type' => $contentType,
                 'body' => $body,

@@ -111,6 +111,22 @@
     overflow-wrap: anywhere;
   }
 
+  .ws-log-message-collapsed {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow-wrap: anywhere;
+  }
+
+  @media (min-width: 768px) {
+    .ws-log-message-collapsed {
+      -webkit-line-clamp: 1;
+      line-clamp: 1;
+    }
+  }
+
   .ws-terminal-panel {
     display: block;
     width: 100%;

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Model\Events;
 
 use App\libs\Extends\Date;
+use App\Libs\Extends\JsonlFormatter;
 use App\Libs\Options;
 use App\Model\Base\Transformers\ArrayTransformer;
 use App\Model\Base\Transformers\DateTransformer;
@@ -16,6 +17,11 @@ use Monolog\Level;
 final class Event extends EntityTable
 {
     public const int MAX_LOG_ENTRIES = 200;
+
+    /**
+     * Lazily initialised JSONL formatter shared across all event instances.
+     */
+    private static ?JsonlFormatter $jsonlFormatter = null;
 
     protected string $primaryKey = EntityTable::TABLE_PRIMARY_KEY;
 
@@ -99,7 +105,16 @@ final class Event extends EntityTable
             return false;
         }
 
-        $this->addRawLog($level->getName() . ': ' . r($message, $context));
+        self::$jsonlFormatter ??= new JsonlFormatter();
+
+        $formatted = r_array(text: $message, context: $context, opts: ['log_behavior' => true]);
+
+        $this->addRawLog(self::$jsonlFormatter->formatValues(
+            channel: 'event',
+            level: $level,
+            message: $formatted['message'],
+            context: $context,
+        ));
 
         return true;
     }

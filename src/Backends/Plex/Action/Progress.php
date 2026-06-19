@@ -121,10 +121,12 @@ class Progress
 
             $logContext = [
                 'action' => $this->action,
-                'client' => $context->clientName,
-                'backend' => $context->backendName,
-                'user' => $context->userContext->name,
-                'item' => [
+                'identity' => [
+                    'client' => $context->clientName,
+                    'backend' => $context->backendName,
+                    'user' => $context->userContext->name,
+                ],
+                'history' => [
                     'id' => $entity->id,
                     'type' => $entity->type,
                     'title' => $entity->getName(),
@@ -134,7 +136,7 @@ class Progress
 
             if ($context->backendName === $entity->via && false === $replayProgress) {
                 $this->logger->info(
-                    message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. Event originated from this backend.",
+                    message: "Not processing '#{history.id}: {history.title}' for '{identity.user}@{identity.backend}'. Event originated from this backend.",
                     context: $logContext,
                 );
                 continue;
@@ -142,7 +144,7 @@ class Progress
 
             if (null === ag($metadata, iState::COLUMN_ID, null)) {
                 $this->logger->warning(
-                    message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. No metadata was found.",
+                    message: "Not processing '#{history.id}: {history.title}' for '{identity.user}@{identity.backend}'. No metadata was found.",
                     context: $logContext,
                 );
                 continue;
@@ -151,7 +153,7 @@ class Progress
             $senderDate = ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_DATE);
             if (null === $senderDate) {
                 $this->logger->warning(
-                    message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. The event originator did not set a date.",
+                    message: "Not processing '#{history.id}: {history.title}' for '{identity.user}@{identity.backend}'. The event originator did not set a date.",
                     context: $logContext,
                 );
                 continue;
@@ -163,7 +165,7 @@ class Progress
 
             if (false === $ignoreDate && null !== $datetime && make_date($datetime)->getTimestamp() > $senderDate) {
                 $this->logger->warning(
-                    message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. Event date '{event_date}' is older than backend local db item date '{local_date}'.",
+                    message: "Not processing '#{history.id}: {history.title}' for '{identity.user}@{identity.backend}'. Event date '{event_date}' is older than backend local db item date '{local_date}'.",
                     context: [
                         ...$logContext,
                         'event_date' => make_date($senderDate),
@@ -178,7 +180,7 @@ class Progress
 
             if (array_key_exists($logContext['remote']['id'], $sessions)) {
                 $this->logger->notice(
-                    message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. The item is playing right now.",
+                    message: "Not processing '#{history.id}: {history.title}' for '{identity.user}@{identity.backend}'. The item is playing right now.",
                     context: $logContext,
                 );
                 continue;
@@ -197,7 +199,7 @@ class Progress
 
                 if (false === $ignoreDate && make_date($remoteItem->updated)->getTimestamp() > $senderDate) {
                     $this->logger->info(
-                        message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. Event date '{event_date}' is older than backend remote item date '{remote_date}'.",
+                        message: "Not processing '#{history.id}: {history.title}' for '{identity.user}@{identity.backend}'. Event date '{event_date}' is older than backend remote item date '{remote_date}'.",
                         context: [
                             ...$logContext,
                             'event_date' => make_date($senderDate),
@@ -219,7 +221,7 @@ class Progress
                         $minThreshold = (int) Config::get('progress.minThreshold', 86_400);
                         if (false === ($allowUpdate >= $minThreshold && time() > ($entity->updated + $allowUpdate))) {
                             $this->logger->info(
-                                message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. The backend says the item is marked as watched.",
+                                message: "Not processing '#{history.id}: {history.title}' for '{identity.user}@{identity.backend}'. The backend says the item is marked as watched.",
                                 context: $logContext,
                             );
                             continue;
@@ -229,22 +231,10 @@ class Progress
             } catch (\App\Libs\Exceptions\RuntimeException|RuntimeException|InvalidArgumentException $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' get {item.type} '#{item.id}: {item.title}' status. '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "Failed during '{identity.user}@{identity.backend}' get {history.type} '#{history.id}: {history.title}' status. {exception.message}",
                         context: [
-                            'error' => [
-                                'kind' => $e::class,
-                                'line' => $e->getLine(),
-                                'message' => $e->getMessage(),
-                                'file' => after($e->getFile(), ROOT_PATH),
-                            ],
                             ...$logContext,
-                            'exception' => [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                                'message' => $e->getMessage(),
-                                'trace' => $e->getTrace(),
-                            ],
+                            ...exception_log($e),
                         ],
                         e: $e,
                     ),
@@ -270,10 +260,10 @@ class Progress
                         ]),
                     );
 
-                $logContext['remote']['url'] = (string) $url;
+                $logContext['request']['url'] = (string) $url;
 
                 $this->logger->debug(
-                    message: "{action}: Updating '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' watch progress to '{progress}'.",
+                    message: "Updating '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' watch progress to '{progress}'.",
                     context: [
                         ...$logContext,
                         'progress' => format_duration($entity->getPlayProgress()),
@@ -296,10 +286,10 @@ class Progress
 
                             if (false === in_array(Status::tryFrom($statusCode), [Status::OK, Status::NO_CONTENT], true)) {
                                 $this->logger->error(
-                                    message: "{action}: Request to change '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' watch progress returned with unexpected '{status_code}' status code.",
+                                    message: "Request to change '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' watch progress returned with unexpected '{response.status_code}' status code.",
                                     context: [
                                         ...$requestContext,
-                                        'status_code' => $statusCode,
+                                        'response' => ['status_code' => $statusCode],
                                     ],
                                 );
 
@@ -307,10 +297,10 @@ class Progress
                             }
 
                             $this->logger->notice(
-                                message: "{action}: Updated '{client}: {user}@{backend}' '#{item.id}: {item.title}' watch progress to '{progress}'.",
+                                message: "Updated '{identity.user}@{identity.backend}' '#{history.id}: {history.title}' watch progress to '{progress}'.",
                                 context: [
                                     ...$requestContext,
-                                    'status_code' => $statusCode,
+                                    'response' => ['status_code' => $statusCode],
                                 ],
                             );
 
@@ -319,7 +309,7 @@ class Progress
                         error: function (Throwable $e) use ($requestContext): array {
                             $this->logger->error(
                                 ...lw(
-                                    message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' request to change watch progress of {item.type} '#{item.id}: {item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                                    message: "Failed during '{identity.user}@{identity.backend}' request to change watch progress of {history.type} '#{history.id}: {history.title}'. {exception.message}",
                                     context: [
                                         ...$requestContext,
                                         ...exception_log($e),
@@ -348,7 +338,7 @@ class Progress
                             );
 
                         $unwatchContext = $requestContext;
-                        $unwatchContext['remote']['url'] = (string) $unwatchUrl;
+                        $unwatchContext['request']['url'] = (string) $unwatchUrl;
 
                         $queue->add(
                             new Request(
@@ -361,15 +351,11 @@ class Progress
                                     $statusCode = $response->getStatusCode();
                                     if (false === in_array(Status::tryFrom($statusCode), [Status::OK, Status::NO_CONTENT], true)) {
                                         $this->logger->error(
-                                            message: "{action}: Request to mark '{client}: {user}@{backend}' {item.type} '#{item.id}: {item.title}' as unplayed before progress update returned with unexpected '{status_code}' status code.",
+                                            message: "Request to mark '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' as unplayed before progress update returned with unexpected '{response.status_code}' status code.",
                                             context: [
                                                 ...$unwatchContext,
-                                                'event_name' => 'backend.response.failed',
-                                                'subsystem' => 'backend',
-                                                'operation' => 'progress_unwatch',
-                                                'outcome' => 'failed',
-                                                'reason' => 'unexpected_status',
-                                                'status_code' => $statusCode,
+                                                'error' => 'unexpected_status',
+                                                'response' => ['status_code' => $statusCode],
                                             ],
                                         );
 
@@ -381,14 +367,10 @@ class Progress
                                 error: function (Throwable $e) use ($unwatchContext): array {
                                     $this->logger->error(
                                         ...lw(
-                                            message: "Exception was thrown during '{client}: {user}@{backend}' unplayed request before progress update.",
+                                            message: "Exception was thrown during '{identity.user}@{identity.backend}' unplayed request before progress update.",
                                             context: [
                                                 ...$unwatchContext,
-                                                'event_name' => 'backend.client.request_failed',
-                                                'subsystem' => 'backend',
-                                                'operation' => 'progress_unwatch',
-                                                'outcome' => 'failed',
-                                                'reason' => 'request_exception',
+                                                'error' => 'request_exception',
                                                 ...exception_log($e),
                                             ],
                                             e: $e,
@@ -411,22 +393,10 @@ class Progress
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' change {item.type} '#{item.id}: {item.title}' watch progress. '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "Failed during '{identity.user}@{identity.backend}' change {history.type} '#{history.id}: {history.title}' watch progress. {exception.message}",
                         context: [
-                            'error' => [
-                                'kind' => $e::class,
-                                'line' => $e->getLine(),
-                                'message' => $e->getMessage(),
-                                'file' => after($e->getFile(), ROOT_PATH),
-                            ],
                             ...$logContext,
-                            'exception' => [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                                'message' => $e->getMessage(),
-                                'trace' => $e->getTrace(),
-                            ],
+                            ...exception_log($e),
                         ],
                         e: $e,
                     ),

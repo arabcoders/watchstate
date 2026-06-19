@@ -101,9 +101,7 @@ class PlaylistCommand extends Command
         try {
             $selectedUsers = select_users($input->getOption('user'));
         } catch (RuntimeException $e) {
-            $output->writeln(r('<error>{message}</error>', [
-                'message' => $e->getMessage(),
-            ]));
+            $this->logger->error($e->getMessage(), exception_log($e));
 
             return self::FAILURE;
         }
@@ -122,16 +120,16 @@ class PlaylistCommand extends Command
         }
 
         if (true === $dryRun) {
-            $this->logger->notice('Dry run mode. No playlist changes will be committed.');
+            $this->logger->notice('Dry run mode. No changes will be committed.');
         }
 
         $totalStart = microtime(true);
 
-        $this->logger->notice('SYSTEM: Using WatchState {full_version}', [
+        $this->logger->notice('Using WatchState {full_version}', [
             'full_version' => get_full_version(),
         ]);
 
-        $this->logger->notice("SYSTEM: Starting playlist sync process for '{total}' users.", [
+        $this->logger->notice("Starting playlist sync process for '{total}' users.", [
             'total' => count($users),
             'dry_run' => $dryRun,
             'force_full' => $forceFull,
@@ -146,8 +144,10 @@ class PlaylistCommand extends Command
         foreach ($users as $userContext) {
             $userStart = microtime(true);
 
-            $this->logger->notice("SYSTEM: Syncing '{user}' playlists.", [
-                'user' => $userContext->name,
+            $this->logger->notice("Syncing '{identity.user}' playlists.", [
+                'identity' => [
+                    'user' => $userContext->name,
+                ],
                 'memory' => [
                     'now' => get_memory_usage(),
                     'peak' => get_peak_memory_usage(),
@@ -164,10 +164,10 @@ class PlaylistCommand extends Command
             if ([] === $clients) {
                 $this->logger->warning(
                     $selectedBackends === []
-                        ? r("SYSTEM: No playlist backends were prepared for '{user}'.", [
+                        ? r("No playlist backends were prepared for '{user}'.", [
                             'user' => $userContext->name,
                         ])
-                        : r("SYSTEM: [-s, --select-backend] flag did not match any playlist backend for '{user}'.", [
+                        : r("[-s, --select-backend] flag did not match any playlist backend for '{user}'.", [
                             'user' => $userContext->name,
                         ]),
                 );
@@ -178,8 +178,10 @@ class PlaylistCommand extends Command
             $sourceBackends = $this->getSourceBackends($userContext, array_keys($clients));
             $targetBackends = $this->getTargetBackends($userContext, array_keys($clients));
 
-            $this->logger->notice("SYSTEM: Prepared '{total}' playlist backends for '{user}'.", [
-                'user' => $userContext->name,
+            $this->logger->notice("Prepared '{total}' playlist backends for '{identity.user}'.", [
+                'identity' => [
+                    'user' => $userContext->name,
+                ],
                 'total' => count($clients),
                 'backends' => array_keys($clients),
                 'source_backends' => $sourceBackends,
@@ -200,9 +202,11 @@ class PlaylistCommand extends Command
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "SYSTEM: Playlist sync for '{user}' failed. '{error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "Playlist sync for '{identity.user}' failed. {exception.message}",
                         context: [
-                            'user' => $userContext->name,
+                            'identity' => [
+                                'user' => $userContext->name,
+                            ],
                             ...exception_log($e),
                         ],
                         e: $e,
@@ -215,10 +219,12 @@ class PlaylistCommand extends Command
             foreach ($results as $backend => $stats) {
                 $rows[] = $backend;
                 $this->logger->notice(
-                    "SYSTEM: Synced '{user}@{backend}' playlists: {playlists} playlists, {items} items, {added} added, {updated} updated, {removed} removed.",
+                    "Synced '{identity.user}@{identity.backend}' playlists: {playlists} playlists, {items} items, {added} added, {updated} updated, {removed} removed.",
                     [
-                        'user' => $userContext->name,
-                        'backend' => $backend,
+                        'identity' => [
+                            'user' => $userContext->name,
+                            'backend' => $backend,
+                        ],
                         'playlists' => $stats['playlists'],
                         'items' => $stats['items'],
                         'added' => true === $dryRun ? 0 : $stats['added'],
@@ -232,14 +238,18 @@ class PlaylistCommand extends Command
                 $persistStart = microtime(true);
                 $userContext->config->persist();
 
-                $this->logger->notice("SYSTEM: Persisted playlist sync state for '{user}' in '{duration}'s.", [
-                    'user' => $userContext->name,
+                $this->logger->notice("Persisted playlist sync state for '{identity.user}' in '{duration}'s.", [
+                    'identity' => [
+                        'user' => $userContext->name,
+                    ],
                     'duration' => round(microtime(true) - $persistStart, 4),
                 ]);
             }
 
-            $this->logger->info("SYSTEM: Syncing '{user}' playlists completed in '{duration}'s. Memory usage '{memory.now}'.", [
-                'user' => $userContext->name,
+            $this->logger->info("Syncing '{identity.user}' playlists completed in '{duration}'s. Memory usage '{memory.now}'.", [
+                'identity' => [
+                    'user' => $userContext->name,
+                ],
                 'backends' => implode(', ', array_keys($clients)),
                 'duration' => round(microtime(true) - $userStart, 4),
                 'memory' => [
@@ -250,22 +260,22 @@ class PlaylistCommand extends Command
         }
 
         if ([] === $rows) {
-            $this->logger->warning('SYSTEM: Playlist sync completed without any syncable playlist results.');
-            $this->logger->notice("SYSTEM: Playlist sync process completed in '{duration}'s for all users.", [
+            $this->logger->warning('Playlist sync completed without any syncable playlist results.');
+            $this->logger->notice("Playlist sync process completed in '{duration}'s for all users.", [
                 'duration' => round(microtime(true) - $totalStart, 4),
             ]);
-            $this->logger->notice('SYSTEM: Using WatchState {full_version}', [
+            $this->logger->notice('Using WatchState {full_version}', [
                 'full_version' => get_full_version(),
             ]);
-            $this->logger->notice('SYSTEM: No matching backends produced syncable playlists.');
+            $this->logger->notice('No matching backends produced syncable playlists.');
             return self::SUCCESS;
         }
 
-        $this->logger->notice("SYSTEM: Playlist sync process completed in '{duration}'s for all users.", [
+        $this->logger->notice("Playlist sync process completed in '{duration}'s for all users.", [
             'duration' => round(microtime(true) - $totalStart, 4),
         ]);
 
-        $this->logger->notice('SYSTEM: Using WatchState {full_version}', [
+        $this->logger->notice('Using WatchState {full_version}', [
             'full_version' => get_full_version(),
         ]);
 
@@ -296,9 +306,11 @@ class PlaylistCommand extends Command
 
             if ($selected !== [] && $exclude === $this->matchesSelection($selected, $backendName)) {
                 $stats['filtered']++;
-                $this->logger->info("PLAYLIST: Ignoring '{user}@{backend}'. As requested.", [
-                    'user' => $userContext->name,
-                    'backend' => $backendName,
+                $this->logger->info("Ignoring '{identity.user}@{identity.backend}'. As requested.", [
+                    'identity' => [
+                        'user' => $userContext->name,
+                        'backend' => $backendName,
+                    ],
                 ]);
                 continue;
             }
@@ -311,18 +323,22 @@ class PlaylistCommand extends Command
 
                 if ($selected !== []) {
                     $this->logger->warning(
-                        "PLAYLIST: Syncing disabled '{user}@{backend}' as requested.",
+                        "Syncing disabled '{identity.user}@{identity.backend}' as requested.",
                         [
-                            'user' => $userContext->name,
-                            'backend' => $backendName,
+                            'identity' => [
+                                'user' => $userContext->name,
+                                'backend' => $backendName,
+                            ],
                         ],
                     );
                 } else {
                     $this->logger->info(
-                        "PLAYLIST: Ignoring '{user}@{backend}'. Playlist sync disabled.",
+                        "Ignoring '{identity.user}@{identity.backend}'. Playlist sync disabled.",
                         [
-                            'user' => $userContext->name,
-                            'backend' => $backendName,
+                            'identity' => [
+                                'user' => $userContext->name,
+                                'backend' => $backendName,
+                            ],
                         ],
                     );
                     continue;
@@ -333,10 +349,12 @@ class PlaylistCommand extends Command
             if (null === Config::get("supported.{$backendType}")) {
                 $stats['unsupported']++;
                 $this->logger->warning(
-                    "PLAYLIST: Ignoring '{user}@{backend}'. Unsupported backend type '{type}'.",
+                    "Ignoring '{identity.user}@{identity.backend}'. Unsupported backend type '{type}'.",
                     [
-                        'user' => $userContext->name,
-                        'backend' => $backendName,
+                        'identity' => [
+                            'user' => $userContext->name,
+                            'backend' => $backendName,
+                        ],
                         'type' => $backendType,
                     ],
                 );
@@ -347,10 +365,12 @@ class PlaylistCommand extends Command
             if (false === filter_var($url, FILTER_VALIDATE_URL)) {
                 $stats['invalid_url']++;
                 $this->logger->warning(
-                    "PLAYLIST: Ignoring '{user}@{backend}'. Invalid URL '{url}'.",
+                    "Ignoring '{identity.user}@{identity.backend}'. Invalid URL '{url}'.",
                     [
-                        'user' => $userContext->name,
-                        'backend' => $backendName,
+                        'identity' => [
+                            'user' => $userContext->name,
+                            'backend' => $backendName,
+                        ],
                         'url' => $url,
                     ],
                 );
@@ -373,23 +393,22 @@ class PlaylistCommand extends Command
             } catch (Throwable $e) {
                 $stats['failed']++;
                 $this->logger->error(
-                    "PLAYLIST: Failed to initialize '{user}@{backend}' client. '{error.message}' at '{error.file}:{error.line}'.",
+                    "Failed to initialize '{identity.user}@{identity.backend}' client. {exception.message}",
                     [
-                        'user' => $userContext->name,
-                        'backend' => $backendName,
-                        'error' => [
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                            'line' => $e->getLine(),
-                            'kind' => $e::class,
+                        'identity' => [
+                            'user' => $userContext->name,
+                            'backend' => $backendName,
                         ],
+                        ...exception_log($e),
                     ],
                 );
             }
         }
 
-        $this->logger->info("SYSTEM: Prepared playlist clients for '{user}'.", [
-            'user' => $userContext->name,
+        $this->logger->info("Prepared playlist clients for '{identity.user}'.", [
+            'identity' => [
+                'user' => $userContext->name,
+            ],
             'selection' => [
                 'mode' => $this->resolveSelectionMode($selected, $exclude),
                 'backends' => $selected,

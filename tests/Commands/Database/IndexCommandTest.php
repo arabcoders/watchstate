@@ -8,9 +8,11 @@ use App\Commands\Database\IndexCommand;
 use App\Libs\Container;
 use App\Libs\Database\PdoFactory;
 use App\Libs\Entity\StateEntity;
+use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Options;
 use App\Libs\TestCase;
+use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -32,15 +34,22 @@ final class IndexCommandTest extends TestCase
 
     public function test_all_targets(): void
     {
-        $tester = $this->makeTester(new IndexCommand($this->makeMapper(), new Logger('test')));
+        $handler = new TestHandler();
+        $logger = new Logger('test', [], [new LogMessageProcessor()]);
+        $logger->pushHandler($handler);
+
+        $tester = $this->makeTester(new IndexCommand($this->makeMapper($logger), $logger));
         $status = $tester->execute([
             '--force-reindex' => true,
         ]);
 
         self::assertSame(IndexCommand::SUCCESS, $status);
-        self::assertStringContainsString("User 'main' Database Indexes have been recreated successfully.", $tester->getDisplay());
-        self::assertStringContainsString("User 'alice' Database Indexes have been recreated successfully.", $tester->getDisplay());
-        self::assertStringContainsString("User 'bob' Database Indexes have been recreated successfully.", $tester->getDisplay());
+        self::assertTrue($handler->hasNoticeThatContains("User 'main' database indexes have been recreated."));
+        self::assertTrue($handler->hasNoticeThatContains("User 'alice' database indexes have been recreated."));
+        self::assertTrue($handler->hasNoticeThatContains("User 'bob' database indexes have been recreated."));
+        self::assertTrue($handler->hasNoticeThatContains("User 'main' database indexes have been recreated."));
+        self::assertTrue($handler->hasNoticeThatContains("User 'alice' database indexes have been recreated."));
+        self::assertTrue($handler->hasNoticeThatContains("User 'bob' database indexes have been recreated."));
         $this->assertDbHasCoreTables(self::$tmpPath . '/db/' . PdoFactory::DB_FILE);
         $this->assertDbHasCoreTables(self::$tmpPath . '/users/alice/' . PdoFactory::DB_FILE);
         $this->assertDbHasCoreTables(self::$tmpPath . '/users/bob/' . PdoFactory::DB_FILE);
@@ -48,16 +57,20 @@ final class IndexCommandTest extends TestCase
 
     public function test_selected_user(): void
     {
-        $tester = $this->makeTester(new IndexCommand($this->makeMapper(), new Logger('test')));
+        $handler = new TestHandler();
+        $logger = new Logger('test', [], [new LogMessageProcessor()]);
+        $logger->pushHandler($handler);
+
+        $tester = $this->makeTester(new IndexCommand($this->makeMapper($logger), $logger));
         $status = $tester->execute([
             '--user' => 'alice',
             '--force-reindex' => true,
         ]);
 
         self::assertSame(IndexCommand::SUCCESS, $status);
-        self::assertStringContainsString("User 'alice' Database Indexes have been recreated successfully.", $tester->getDisplay());
-        self::assertStringNotContainsString("User 'main' Database Indexes have been recreated successfully.", $tester->getDisplay());
-        self::assertStringNotContainsString("User 'bob' Database Indexes have been recreated successfully.", $tester->getDisplay());
+        self::assertTrue($handler->hasNoticeThatContains("User 'alice' database indexes have been recreated."));
+        self::assertFalse($handler->hasNoticeThatContains("User 'main' database indexes have been recreated."));
+        self::assertFalse($handler->hasNoticeThatContains("User 'bob' database indexes have been recreated."));
         self::assertFalse(file_exists(self::$tmpPath . '/db/' . PdoFactory::DB_FILE));
         self::assertFalse(file_exists(self::$tmpPath . '/users/bob/' . PdoFactory::DB_FILE));
         $this->assertDbHasCoreTables(self::$tmpPath . '/users/alice/' . PdoFactory::DB_FILE);
@@ -65,18 +78,21 @@ final class IndexCommandTest extends TestCase
 
     public function test_invalid_user(): void
     {
-        $tester = $this->makeTester(new IndexCommand($this->makeMapper(), new Logger('test')));
+        $handler = new TestHandler();
+        $logger = new Logger('test', [], [new LogMessageProcessor()]);
+        $logger->pushHandler($handler);
+
+        $tester = $this->makeTester(new IndexCommand($this->makeMapper($logger), $logger));
         $status = $tester->execute([
             '--user' => 'ghost',
         ]);
 
         self::assertSame(IndexCommand::FAILURE, $status);
-        self::assertStringContainsString("User 'ghost' not found.", $tester->getDisplay());
+        self::assertTrue($handler->hasErrorThatContains("User 'ghost' not found."));
     }
 
-    private function makeMapper(): DirectMapper
+    private function makeMapper(Logger $logger): DirectMapper
     {
-        $logger = new Logger('test');
         $db = $this->createDb($logger);
         $db->setOptions([
             Options::DEBUG_TRACE => true,

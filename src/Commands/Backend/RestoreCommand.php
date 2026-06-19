@@ -137,13 +137,13 @@ class RestoreCommand extends Command
 
         $userName = $input->getOption('user');
         if (empty($userName)) {
-            $output->writeln(r('<error>ERROR: User not specified. Please use [-u, --user].</error>'));
+            $this->logger->warning('User not specified. Use [-u, --user].');
             return self::FAILURE;
         }
 
         $name = $input->getOption('select-backend');
         if (empty($name)) {
-            $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backend].</error>'));
+            $this->logger->warning('Backend not specified. Use [-s, --select-backend].');
             return self::FAILURE;
         }
 
@@ -153,9 +153,9 @@ class RestoreCommand extends Command
             $newFile = Config::get('path') . '/backup/' . $file;
 
             if (false === file_exists($newFile) || false === is_readable($newFile)) {
-                $output->writeln(r("<error>ERROR: Unable to read backup file '{file}'.</error>", [
+                $this->logger->warning("Unable to read backup file '{file}'.", [
                     'file' => $file,
-                ]));
+                ]);
                 return self::FAILURE;
             }
 
@@ -169,34 +169,38 @@ class RestoreCommand extends Command
         try {
             $userContext = get_user_context(user: $userName, mapper: $mapper, logger: $this->logger);
         } catch (RuntimeException $e) {
-            $output->writeln(r('<error>{message}</error>', [
-                'message' => $e->getMessage(),
-            ]));
+            $this->logger->error($e->getMessage(), exception_log($e));
             return self::FAILURE;
         }
 
         if (null === ($backend = $userContext->config->get($name, null))) {
-            $output->writeln(r("<error>ERROR: Backend '{user}@{backend}' not found.</error>", [
-                'backend' => $name,
-                'user' => $userContext->name,
-            ]));
+            $this->logger->warning("Backend '{identity.user}@{identity.backend}' not found.", [
+                'identity' => [
+                    'backend' => $name,
+                    'user' => $userContext->name,
+                ],
+            ]);
             return self::FAILURE;
         }
 
         if (false === (bool) ag($backend, 'export.enabled')) {
             if (false === $input->getOption('ignore')) {
-                $output->writeln(r("<error>ERROR: Export to '{user}@{backend}' are disabled.</error>", [
-                    'backend' => $name,
-                    'user' => $userContext->name,
-                ]));
+                $this->logger->warning("Export to '{identity.user}@{identity.backend}' is disabled.", [
+                    'identity' => [
+                        'backend' => $name,
+                        'user' => $userContext->name,
+                    ],
+                ]);
                 return self::FAILURE;
             }
 
             $this->logger->warning(
-                "Exporting to '{user}@{backend}' is disabled, However, the check was bypass due to [-i, --ignore] flag being used.",
+                "Exporting to '{identity.user}@{identity.backend}' is disabled, However, the check was bypass due to [-i, --ignore] flag being used.",
                 [
-                    'backend' => $name,
-                    'user' => $userContext->name,
+                    'identity' => [
+                        'backend' => $name,
+                        'user' => $userContext->name,
+                    ],
                 ],
             );
         }
@@ -220,25 +224,27 @@ class RestoreCommand extends Command
                 $question = new ConfirmationQuestion($text . PHP_EOL . '> ', false);
 
                 if (false === $helper->ask($input, $output, $question)) {
-                    $output->writeln(
-                        '<comment>Restore operation is cancelled, you answered no for risk assessment, or interaction is disabled.</comment>',
-                    );
+                    $this->logger->notice('Restore operation cancelled by user.');
                     return self::SUCCESS;
                 }
             } else {
                 $this->logger->notice(
-                    "The restore target '{user}@{backend}' has import enabled, which means the changes will propagate back to the other backends.",
+                    "The restore target '{identity.user}@{identity.backend}' has import enabled, which means the changes will propagate back to the other backends.",
                     [
-                        'user' => $userContext->name,
-                        'backend' => $name,
+                        'identity' => [
+                            'user' => $userContext->name,
+                            'backend' => $name,
+                        ],
                     ],
                 );
             }
         }
 
-        $this->logger->notice("Loading '{user}@{backend}' restore data.", [
-            'backend' => $name,
-            'user' => $userContext->name,
+        $this->logger->notice("Loading '{identity.user}@{identity.backend}' restore data.", [
+            'identity' => [
+                'backend' => $name,
+                'user' => $userContext->name,
+            ],
             'memory' => [
                 'now' => get_memory_usage(),
                 'peak' => get_peak_memory_usage(),
@@ -249,10 +255,12 @@ class RestoreCommand extends Command
         $mapper->loadData();
 
         $this->logger->notice(
-            "SYSTEM: Loading restore data of '{user}@{backend}' completed in '{duration}'s. Memory usage '{memory.now}'.",
+            "Loading restore data of '{identity.user}@{identity.backend}' completed in '{duration}'s. Memory usage '{memory.now}'.",
             [
-                'backend' => $name,
-                'user' => $userContext->name,
+                'identity' => [
+                    'backend' => $name,
+                    'user' => $userContext->name,
+                ],
                 'memory' => [
                     'now' => get_memory_usage(),
                     'peak' => get_peak_memory_usage(),
@@ -283,9 +291,11 @@ class RestoreCommand extends Command
             UserContext::class => $userContext,
         ]);
 
-        $this->logger->notice("Starting '{user}@{backend}' restore process.", [
-            'backend' => $name,
-            'user' => $userContext->name,
+        $this->logger->notice("Starting '{identity.user}@{identity.backend}' restore process.", [
+            'identity' => [
+                'backend' => $name,
+                'user' => $userContext->name,
+            ],
         ]);
 
         if (false === ($syncRequests = $input->getOption('sync-requests'))) {
@@ -302,10 +312,12 @@ class RestoreCommand extends Command
             $stats = ['sent' => count($requests), 'failed' => 0];
 
             $start = microtime(true);
-            $this->logger->notice("SYSTEM: Sending '{total}' play state comparison requests for '{user}@{backend}'.", [
-                'backend' => $name,
+            $this->logger->notice("Sending '{total}' play state comparison requests for '{identity.user}@{identity.backend}'.", [
+                'identity' => [
+                    'backend' => $name,
+                    'user' => $userContext->name,
+                ],
                 'total' => $stats['sent'],
-                'user' => $userContext->name,
             ]);
 
             send_requests(
@@ -321,10 +333,12 @@ class RestoreCommand extends Command
                 ],
             );
 
-            $this->logger->notice("SYSTEM: Completed '{total}' requests in '{duration}'s for '{user}@{backend}'.", [
-                'backend' => $name,
+            $this->logger->notice("Completed '{total}' requests in '{duration}'s for '{identity.user}@{identity.backend}'.", [
+                'identity' => [
+                    'backend' => $name,
+                    'user' => $userContext->name,
+                ],
                 'total' => $stats['sent'],
-                'user' => $userContext->name,
                 'duration' => round(microtime(true) - $start, 4),
             ]);
 
@@ -332,17 +346,21 @@ class RestoreCommand extends Command
             $sendStats = ['sent' => $total, 'failed' => 0];
 
             if ($total >= 1) {
-                $this->logger->notice("SYSTEM: Sending '{total}' change state requests for '{user}@{backend}'.", [
-                    'backend' => $name,
-                    'user' => $userContext->name,
+                $this->logger->notice("Sending '{total}' change state requests for '{identity.user}@{identity.backend}'.", [
+                    'identity' => [
+                        'backend' => $name,
+                        'user' => $userContext->name,
+                    ],
                     'total' => $total,
                 ]);
             }
 
             if ((int) Message::get("{$userContext->name}.{$name}.export", 0) < 1) {
-                $this->logger->notice("SYSTEM: No difference detected between backup file and '{user}@{backend}'.", [
-                    'backend' => $name,
-                    'user' => $userContext->name,
+                $this->logger->notice("No difference detected between backup file and '{identity.user}@{identity.backend}'.", [
+                    'identity' => [
+                        'backend' => $name,
+                        'user' => $userContext->name,
+                    ],
                 ]);
             }
 
@@ -361,12 +379,14 @@ class RestoreCommand extends Command
                 );
 
                 $this->logger->notice(
-                    "SYSTEM: Sent '{total}' change play state requests to '{client}: {user}@{backend}' in '{duration}'s.",
+                    "Sent '{total}' change play state requests to '{identity.client}: {identity.user}@{identity.backend}' in '{duration}'s.",
                     [
                         'total' => $total,
-                        'backend' => $name,
-                        'user' => $userContext->name,
-                        'client' => $backend->getContext()->clientName,
+                        'identity' => [
+                            'backend' => $name,
+                            'user' => $userContext->name,
+                            'client' => $backend->getContext()->clientName,
+                        ],
                         'duration' => round(microtime(true) - $opStart, 4),
                     ],
                 );
@@ -381,15 +401,19 @@ class RestoreCommand extends Command
                 $progressStats['sent'] = count($this->queue->getQueue());
 
                 if ($progressStats['sent'] >= 1) {
-                    $this->logger->notice("SYSTEM: Sending '{total}' watch progress requests for '{user}@{backend}'.", [
-                        'backend' => $name,
-                        'user' => $userContext->name,
+                    $this->logger->notice("Sending '{total}' watch progress requests for '{identity.user}@{identity.backend}'.", [
+                        'identity' => [
+                            'backend' => $name,
+                            'user' => $userContext->name,
+                        ],
                         'total' => $progressStats['sent'],
                     ]);
                 } else {
-                    $this->logger->notice("SYSTEM: No watch progress changes detected between backup file and '{user}@{backend}'.", [
-                        'backend' => $name,
-                        'user' => $userContext->name,
+                    $this->logger->notice("No watch progress changes detected between backup file and '{identity.user}@{identity.backend}'.", [
+                        'identity' => [
+                            'backend' => $name,
+                            'user' => $userContext->name,
+                        ],
                     ]);
                 }
 
@@ -408,12 +432,14 @@ class RestoreCommand extends Command
                     );
 
                     $this->logger->notice(
-                        "SYSTEM: Sent '{total}' watch progress requests to '{client}: {user}@{backend}' in '{duration}'s.",
+                        "Sent '{total}' watch progress requests to '{identity.client}: {identity.user}@{identity.backend}' in '{duration}'s.",
                         [
                             'total' => $progressStats['sent'],
-                            'backend' => $name,
-                            'user' => $userContext->name,
-                            'client' => $backend->getContext()->clientName,
+                            'identity' => [
+                                'backend' => $name,
+                                'user' => $userContext->name,
+                                'client' => $backend->getContext()->clientName,
+                            ],
                             'duration' => round(microtime(true) - $opStart, 4),
                         ],
                     );
@@ -422,10 +448,12 @@ class RestoreCommand extends Command
 
             if ($stats['failed'] > 0 || $sendStats['failed'] > 0 || $progressStats['failed'] > 0) {
                 $this->logger->warning(
-                    "Restore completed with item-level request failures for '{user}@{backend}'.",
+                    "Restore completed with item-level request failures for '{identity.user}@{identity.backend}'.",
                     [
-                        'user' => $userContext->name,
-                        'backend' => $name,
+                        'identity' => [
+                            'user' => $userContext->name,
+                            'backend' => $name,
+                        ],
                         'comparison' => $stats,
                         'apply' => $sendStats,
                         'progress' => $progressStats,
@@ -436,16 +464,13 @@ class RestoreCommand extends Command
             return self::SUCCESS;
         } catch (Throwable $e) {
             $this->logger->error(
-                "SYSTEM: Unhandled exception '{error.kind}' was thrown during '{user}@{backend}' restore operation. '{error.message}' at '{error.file}:{error.line}'.",
+                "Failed during '{identity.user}@{identity.backend}' restore operation. {exception.message}",
                 [
-                    'user' => $userContext->name,
-                    'backend' => $name,
-                    'error' => [
-                        'kind' => $e::class,
-                        'line' => $e->getLine(),
-                        'message' => $e->getMessage(),
-                        'file' => after($e->getFile(), ROOT_PATH),
+                    'identity' => [
+                        'user' => $userContext->name,
+                        'backend' => $name,
                     ],
+                    ...exception_log($e),
                 ],
             );
 

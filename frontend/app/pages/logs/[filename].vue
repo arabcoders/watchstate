@@ -17,7 +17,7 @@
       </div>
 
       <div v-if="!error" class="flex flex-wrap items-center justify-end gap-2">
-        <UTooltip v-if="'log' === contentType && !autoScroll" text="Go to bottom">
+        <UTooltip v-if="!autoScroll" text="Go to bottom">
           <UButton
             color="neutral"
             variant="outline"
@@ -25,32 +25,54 @@
             icon="i-lucide-chevron-down"
             @click="scrollToBottom"
           >
-            <span class="hidden sm:inline">Bottom</span>
+            Bottom
           </UButton>
         </UTooltip>
 
         <UInput
-          v-if="'json' !== contentType && (toggleFilter || query)"
-          id="filter"
-          v-model="query"
+          v-if="toggleFilter"
+          v-model.lazy="query"
           type="search"
-          placeholder="Filter"
+          placeholder="Filter log entries"
           icon="i-lucide-filter"
+          autofocus
           size="sm"
           class="w-full sm:w-72"
         />
 
-        <UTooltip v-if="'json' !== contentType" text="Filter log lines.">
-          <UButton
-            color="neutral"
-            :variant="toggleFilter ? 'soft' : 'outline'"
-            size="sm"
-            icon="i-lucide-filter"
-            @click="toggleFilter = !toggleFilter"
-          >
-            <span class="hidden sm:inline">Filter</span>
-          </UButton>
-        </UTooltip>
+        <UButton
+          icon="i-lucide-filter"
+          :variant="toggleFilter ? 'soft' : 'outline'"
+          color="neutral"
+          size="sm"
+          @click="toggleFilter = !toggleFilter"
+        >
+          Filter
+        </UButton>
+
+        <USelect
+          v-model="selectedLevels"
+          :items="levelFilterItems"
+          value-key="value"
+          label-key="label"
+          multiple
+          size="sm"
+          icon="i-lucide-list-filter"
+          class="w-44 shrink-0 sm:w-48"
+          :ui="{ content: 'min-w-48' }"
+        >
+          <template #default>{{ levelFilterLabel }}</template>
+        </USelect>
+
+        <UButton
+          icon="i-lucide-wrap-text"
+          :variant="wrapLines ? 'soft' : 'outline'"
+          color="neutral"
+          size="sm"
+          @click="wrapLines = !wrapLines"
+        >
+          Wrap
+        </UButton>
 
         <UTooltip text="Delete logfile.">
           <UButton
@@ -60,7 +82,7 @@
             icon="i-lucide-trash-2"
             @click="deleteFile"
           >
-            <span class="hidden sm:inline">Delete</span>
+            Delete
           </UButton>
         </UTooltip>
 
@@ -73,33 +95,33 @@
             :loading="isDownloading"
             @click="downloadFile"
           >
-            <span class="hidden sm:inline">Download</span>
-          </UButton>
-        </UTooltip>
-
-        <UTooltip text="Toggle wrap line">
-          <UButton
-            color="neutral"
-            :variant="wrapLines ? 'soft' : 'outline'"
-            size="sm"
-            icon="i-lucide-wrap-text"
-            @click="wrapLines = !wrapLines"
-          >
-            <span class="hidden sm:inline">Wrap</span>
+            Download
           </UButton>
         </UTooltip>
 
         <UTooltip text="Copy text">
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-copy"
-            @click="copyData"
-          >
-            <span class="hidden sm:inline">Copy</span>
-          </UButton>
+          <UDropdownMenu :items="copyMenuItems" :content="{ align: 'end' }" :modal="false">
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-copy"
+              trailing-icon="i-lucide-chevron-down"
+            >
+              Copy
+            </UButton>
+          </UDropdownMenu>
         </UTooltip>
+
+        <UButton
+          icon="i-lucide-refresh-cw"
+          color="neutral"
+          variant="outline"
+          size="sm"
+          @click="reloadLog"
+        >
+          Refresh
+        </UButton>
       </div>
     </div>
 
@@ -117,132 +139,104 @@
       </template>
     </UAlert>
 
-    <UAlert
-      v-else-if="isLoading && 0 === data.length"
-      color="info"
-      variant="soft"
-      icon="i-lucide-loader-circle"
-      title="Loading"
-      description="Loading data. Please wait..."
-      :ui="{ icon: 'animate-spin' }"
-    />
-
     <template v-else-if="!error">
-      <UAlert
-        v-if="'log' === contentType && reachedEnd && !query"
-        color="info"
-        variant="soft"
-        icon="i-lucide-triangle-alert"
-        title="End of file"
-        description="No more logs available for this file."
-      />
-
-      <UAlert
-        v-if="'log' === contentType && 0 === filterItems.length"
-        :color="query ? 'warning' : 'info'"
-        variant="soft"
-        :icon="query ? 'i-lucide-filter' : 'i-lucide-triangle-alert'"
-        :title="query ? 'No matching logs' : 'No logs available'"
+      <div
+        ref="logContainer"
+        class="min-w-0 overflow-y-auto overflow-x-hidden border border-default bg-elevated/30 shadow-sm text-default"
+        :style="{ minHeight: '70vh', maxHeight: '70vh' }"
+        @scroll.passive="handleScroll"
       >
-        <template #description>
-          <p class="text-sm text-default">
-            <template v-if="query"
-              >No logs match this query: <u>{{ query }}</u></template
-            >
-            <template v-else>No logs available.</template>
-          </p>
-        </template>
-      </UAlert>
-
-      <UCard
-        v-if="'json' === contentType || 0 < filterItems.length"
-        class="overflow-hidden border border-default/70 shadow-sm"
-        :ui="viewerCardUi"
-      >
-        <div v-if="'json' === contentType" ref="logContainer" class="logbox">
-          <code
-            id="logView"
-            class="logline block"
-            :class="wrapLines ? 'whitespace-pre-wrap ws-wrap-anywhere' : 'whitespace-pre'"
+        <div
+          v-if="reachedEnd && !hasActiveFilter"
+          class="flex justify-center border-b border-default/40 px-4 py-3"
+        >
+          <div
+            class="inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning/10 px-3 py-1 text-[11px] font-medium text-warning"
           >
-            {{ renderJson(data) }}
-          </code>
+            <UIcon name="i-lucide-triangle-alert" class="size-3.5 shrink-0" />
+            No older lines remain in this file.
+          </div>
         </div>
 
-        <div v-else ref="logContainer" class="logbox" @scroll.passive="handleScroll">
-          <code id="logView" class="logline block">
-            <span
-              v-for="item in filterItems"
-              :key="item.id"
-              :class="['log-entry block', wrapLines ? '' : 'whitespace-nowrap']"
-              ><span
-                v-if="item.date || hasLinks(item)"
-                class="mr-[1ch] inline-flex items-baseline whitespace-normal"
-              >
-                <template v-if="item.date"
-                  >[<span class="cursor-help" :title="item.date">{{ formatDate(item.date) }}</span
-                  >]</template
-                >
-                <span v-if="hasLinks(item)" :class="item.date ? 'ml-[1ch]' : ''">
-                  <LogLineLinks :item="item" :open-event="openEvent" />
-                </span>
-              </span>
-              <span
-                :class="wrapLines ? 'whitespace-pre-wrap ws-wrap-anywhere' : 'whitespace-pre'"
-                >{{ String(item.text).trimStart() }}</span
-              ></span
+        <div
+          v-if="canLoadFilteredHistory"
+          class="flex justify-center border-b border-default/40 px-4 py-3"
+        >
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="xs"
+            icon="i-lucide-history"
+            :loading="isLoading"
+            @click="() => loadContent(true)"
+          >
+            Load older lines into filter
+          </UButton>
+        </div>
+
+        <template v-if="0 < rows.length">
+          <article v-for="(entry, index) in rows" :key="entry.key" :class="rowClass(entry, index)">
+            <div
+              class="flex w-full min-w-0 flex-col gap-1 px-3 py-[0.65rem] leading-[1.6] md:flex-row md:items-start md:gap-2"
             >
-          </code>
-        </div>
-      </UCard>
-
-      <UModal v-model:open="eventViewOpen" :title="eventViewTitle" :ui="eventViewModalUi">
-        <template #body>
-          <EventView v-if="selectedEventId" :id="selectedEventId" />
+              <StructuredLogLine
+                :log="entry.log"
+                :show-details="true"
+                :wrapped="wrapLines"
+                :expanded="isExpandedLogRow(entry.key)"
+                toggleable
+                @details="openLogDetails"
+                @open-event="(id) => (selectedEventId = id)"
+                @toggle-expand="toggleExpandedLogRow(entry.key)"
+              />
+            </div>
+          </article>
         </template>
-      </UModal>
+
+        <div
+          v-else
+          class="flex min-h-[55vh] flex-col items-center justify-center gap-3 px-6 py-8 text-center"
+        >
+          <UIcon
+            :name="hasActiveFilter ? 'i-lucide-filter-x' : 'i-lucide-circle-off'"
+            class="size-6 text-toned"
+          />
+
+          <div class="space-y-1">
+            <p class="text-sm font-medium text-default">
+              {{ emptyTitle }}
+            </p>
+
+            <p class="text-sm text-toned">
+              {{ emptyDescription }}
+            </p>
+          </div>
+        </div>
+      </div>
     </template>
+
+    <UModal v-model:open="eventViewOpen" :title="eventViewTitle" :ui="eventViewModalUi">
+      <template #body>
+        <EventView
+          v-if="selectedEventId"
+          :id="selectedEventId"
+          @open-event="(id) => (selectedEventId = id)"
+        />
+      </template>
+    </UModal>
+
+    <LogDetailsModal
+      v-model:open="detailsOpen"
+      :log="selectedLog"
+      @open-event="
+        (id) => {
+          detailsOpen = false;
+          selectedEventId = id;
+        }
+      "
+    />
   </main>
 </template>
-
-<style scoped>
-#logView {
-  min-height: 72vh;
-  min-width: inherit;
-  max-width: 100%;
-}
-
-.log-entry:nth-child(even) {
-  color: var(--ui-text-muted);
-}
-
-.log-entry:nth-child(odd) {
-  color: var(--ui-text);
-}
-
-code {
-  background-color: unset;
-}
-
-.logbox {
-  background-color: var(--ui-bg-elevated);
-  min-width: 100%;
-  max-height: 73vh;
-  overflow-y: auto;
-  overflow-x: auto;
-}
-
-div.logbox pre {
-  background-color: var(--ui-bg);
-}
-
-.logline {
-  word-break: break-all;
-  line-height: 2.3em;
-  padding: 1em;
-  color: var(--ui-text);
-}
-</style>
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, onUnmounted, ref, watch } from 'vue';
@@ -251,19 +245,30 @@ import { useStorage } from '@vueuse/core';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import moment from 'moment';
 import EventView from '~/components/EventView.vue';
-import LogLineLinks from '~/components/LogLineLinks.vue';
+import LogDetailsModal from '~/components/LogDetailsModal.vue';
+import StructuredLogLine from '~/components/StructuredLogLine.vue';
 import { useDialog } from '~/composables/useDialog';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
-import type { GenericResponse, LogEntry } from '~/types';
-import {
-  copyText,
-  disableOpacity,
-  enableOpacity,
-  makeEventName,
-  notification,
-  parse_api_response,
-  request,
-} from '~/utils';
+import type { GenericResponse, LogResponse, ServerJsonLogEntry } from '~/types';
+import { copyText, makeEventName, notification, parse_api_response, request } from '~/utils';
+import { getLogLevel, normalizeStructuredEntry } from '~/utils/logs';
+import type { LogLevel } from '~/utils/logs';
+
+const FILTER_CONTEXT_REGEX = /context:(\d+)/;
+const LOG_LEVELS: Array<LogLevel> = ['debug', 'info', 'notice', 'warning', 'error'];
+const LOG_ROW_CLASS =
+  'flex min-w-0 border-b border-default/40 bg-transparent transition-colors duration-150 last:border-b-0 hover:bg-elevated/70';
+
+type LevelFilterItem = { label: string; value: LogLevel };
+type LogRow = {
+  key: string;
+  number: number;
+  index: number;
+  log: ServerJsonLogEntry;
+  level: LogLevel;
+  isMatch: boolean;
+  isContext: boolean;
+};
 
 const router = useRouter();
 const route = useRoute();
@@ -273,11 +278,13 @@ const filenameParam = Array.isArray(route.params.filename)
 const filename = filenameParam ?? '';
 
 const pageShell = requireTopLevelPageShell('logs');
-
 useHead({ title: `Logs : ${filename}` });
 
+const token = useStorage('token', '');
+const dialog = useDialog();
+
 const query = ref<string>('');
-const data = ref<Array<LogEntry>>([]);
+const data = ref<Array<ServerJsonLogEntry>>([]);
 const error = ref<string>('');
 const wrapLines = useStorage('logs_wrap_lines', false);
 const isDownloading = ref<boolean>(false);
@@ -286,18 +293,20 @@ const toggleFilter = ref<boolean>(false);
 const autoScroll = ref<boolean>(true);
 const reachedEnd = ref<boolean>(false);
 const offset = ref<number>(0);
-const contentType = ref<'log' | 'json'>('log');
 const stream = ref<boolean>(false);
 const logContainer = ref<HTMLElement | null>(null);
 const streamController = ref<AbortController | null>(null);
 const selectedEventId = ref<string | null>(null);
+const selectedLog = ref<ServerJsonLogEntry | null>(null);
+const detailsOpen = ref(false);
+const expandedLogRows = ref<Set<string>>(new Set());
+const selectedLevels = useStorage<Array<LogLevel>>('logs_level_filter', [...LOG_LEVELS]);
+
+let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
+
 const isTodayLog = computed<boolean>(() => filename.includes(moment().format('YYYYMMDD')));
 
-const eventViewModalUi = {
-  content: 'max-w-5xl',
-  body: 'p-4 sm:p-5',
-};
-
+const eventViewModalUi = { content: 'max-w-5xl', body: 'p-4 sm:p-5' };
 const eventViewOpen = computed({
   get: () => null !== selectedEventId.value,
   set: (value: boolean) => {
@@ -306,70 +315,181 @@ const eventViewOpen = computed({
     }
   },
 });
-
 const eventViewTitle = computed(() =>
   null === selectedEventId.value ? 'Event' : `#${makeEventName(selectedEventId.value)}`,
 );
 
-let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
+const normalizedQuery = computed(() => query.value.trim().toLowerCase());
+const selectedLevelSet = computed(
+  () => new Set(LOG_LEVELS.filter((level) => selectedLevels.value.includes(level))),
+);
+const hasLevelFilter = computed(() => selectedLevelSet.value.size !== LOG_LEVELS.length);
+const filterContext = computed(() => {
+  const m = normalizedQuery.value.match(FILTER_CONTEXT_REGEX);
+  return m ? parseInt(m[1] ?? '0', 10) : 0;
+});
+const searchTerm = computed(() => normalizedQuery.value.replace(FILTER_CONTEXT_REGEX, '').trim());
+const hasTextFilter = computed(() => Boolean(searchTerm.value));
+const hasActiveFilter = computed(() => hasTextFilter.value || hasLevelFilter.value);
+const canLoadFilteredHistory = computed(
+  () => hasActiveFilter.value && !reachedEnd.value && data.value.length > 0,
+);
 
-const token = useStorage('token', '');
-const dialog = useDialog();
+const levelCounts = computed<Record<LogLevel, number>>(() => {
+  const counts: Record<LogLevel, number> = { debug: 0, info: 0, notice: 0, warning: 0, error: 0 };
+  data.value.forEach((log) => {
+    const l = getLogLevel(log.level);
+    counts[l] += 1;
+  });
+  return counts;
+});
 
-type FilePickerOptions = {
-  suggestedName?: string;
+const levelFilterItems = computed<Array<LevelFilterItem>>(() =>
+  LOG_LEVELS.map((level) => ({
+    label: `${ucFirst(level)} (${levelCounts.value[level]})`,
+    value: level,
+  })),
+);
+
+const levelFilterLabel = computed(() => {
+  if (selectedLevelSet.value.size === LOG_LEVELS.length) {
+    return `All levels (${data.value.length})`;
+  }
+  if (selectedLevelSet.value.size === 0) {
+    return 'No levels selected';
+  }
+  return LOG_LEVELS.filter((level) => selectedLevelSet.value.has(level)).join(', ');
+});
+
+const searchableLog = (log: ServerJsonLogEntry): string =>
+  [
+    log.message,
+    log.level,
+    log.logger,
+    log.exception ? JSON.stringify(log.exception) : '',
+    log.source ? JSON.stringify(log.source) : '',
+    log.process ? JSON.stringify(log.process) : '',
+    log.fields ? JSON.stringify(log.fields) : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+const rows = computed<Array<LogRow>>(() => {
+  if (!hasActiveFilter.value) {
+    return data.value.map((log, index) => ({
+      key: `${log.id}:${index}`,
+      number: index + 1,
+      index,
+      log,
+      level: getLogLevel(log.level),
+      isMatch: false,
+      isContext: false,
+    }));
+  }
+
+  const result: Array<LogRow> = [];
+  const visibleIndexes = new Set<number>();
+  const matchedIndexes = new Set<number>();
+
+  data.value.forEach((log, index) => {
+    if (!selectedLevelSet.value.has(getLogLevel(log.level))) {
+      return;
+    }
+    if (!hasTextFilter.value) {
+      visibleIndexes.add(index);
+      return;
+    }
+    if (searchableLog(log).includes(searchTerm.value)) {
+      matchedIndexes.add(index);
+      for (
+        let cursor = Math.max(0, index - filterContext.value);
+        cursor <= Math.min(data.value.length - 1, index + filterContext.value);
+        cursor++
+      ) {
+        visibleIndexes.add(cursor);
+      }
+    }
+  });
+
+  Array.from(visibleIndexes)
+    .sort((a, b) => a - b)
+    .forEach((index) => {
+      const log = data.value[index];
+      if (!log || !selectedLevelSet.value.has(getLogLevel(log.level))) {
+        return;
+      }
+      result.push({
+        key: `${log.id}:${index}`,
+        number: index + 1,
+        index,
+        log,
+        level: getLogLevel(log.level),
+        isMatch: matchedIndexes.has(index),
+        isContext: !matchedIndexes.has(index),
+      });
+    });
+
+  return result;
+});
+
+const rowClass = (entry: LogRow, index: number): Array<string> => {
+  const classes = [LOG_ROW_CLASS];
+  if (entry.isMatch) {
+    classes.push('bg-warning/10');
+    return classes;
+  }
+  if (entry.isContext) {
+    classes.push('bg-muted/30');
+    return classes;
+  }
+  if (index % 2 === 1) {
+    classes.push('bg-elevated/40');
+  }
+  return classes;
 };
 
-type FilePickerHandle = {
-  createWritable: () => Promise<WritableStream>;
+const openLogDetails = (entry: ServerJsonLogEntry): void => {
+  selectedLog.value = entry;
+  detailsOpen.value = true;
 };
 
-const viewerCardUi = {
-  body: 'p-0',
+const isExpandedLogRow = (key: string): boolean => expandedLogRows.value.has(key);
+
+const toggleExpandedLogRow = (key: string): void => {
+  const next = new Set(expandedLogRows.value);
+
+  if (next.has(key)) {
+    next.delete(key);
+  } else {
+    next.add(key);
+  }
+
+  expandedLogRows.value = next;
 };
 
-const scrollLogContainerToBottom = (behavior: ScrollBehavior = 'auto'): void => {
-  if (!logContainer.value) {
+const applyLogBatch = (items: Array<unknown>, prepend = false): void => {
+  const entries = items
+    .map((item) => normalizeStructuredEntry(item))
+    .filter((item): item is ServerJsonLogEntry => null !== item);
+  if (entries.length < 1) {
+    return;
+  }
+  data.value = prepend ? [...entries, ...data.value] : [...data.value, ...entries];
+};
+
+const loadContent = async (force = false): Promise<void> => {
+  if (isLoading.value) {
+    return;
+  }
+  if (hasActiveFilter.value && !force && data.value.length > 0) {
     return;
   }
 
-  logContainer.value.scrollTo({ top: logContainer.value.scrollHeight, behavior });
-};
-
-watch(toggleFilter, () => {
-  if (!toggleFilter.value) {
-    query.value = '';
-  }
-});
-
-const filterItems = computed<Array<LogEntry>>(() => {
-  if (!query.value) {
-    return data.value;
-  }
-
-  return data.value.filter((item) => item.text.toLowerCase().includes(query.value.toLowerCase()));
-});
-
-const hasLinks = (item: LogEntry): boolean => {
-  return Boolean(item.item_id || item.event_id || item.backend);
-};
-
-const openEvent = (id: string): void => {
-  selectedEventId.value = id;
-};
-
-const loadContent = async (): Promise<void> => {
   try {
     isLoading.value = true;
     const response = await request(`/log/${filename}?offset=${offset.value}`);
-    const json = await parse_api_response<{
-      filename: string;
-      offset: number;
-      next: number | null;
-      max: number;
-      type: 'log' | 'json';
-      lines: Array<LogEntry>;
-    }>(response);
+    const json = await parse_api_response<LogResponse>(response);
 
     if (200 !== response.status) {
       if ('error' in json) {
@@ -377,20 +497,16 @@ const loadContent = async (): Promise<void> => {
       }
       return;
     }
-
     if ('logs-filename' !== route.name) {
       return;
     }
-
     if ('error' in json) {
       error.value = `${json.error.code}: ${json.error.message}`;
       return;
     }
 
-    contentType.value = json.type ?? 'log';
-
     if (0 < json.lines.length) {
-      data.value.unshift(...json.lines);
+      applyLogBatch(json.lines as Array<unknown>, true);
     }
 
     offset.value = json.next ?? offset.value;
@@ -403,7 +519,6 @@ const loadContent = async (): Promise<void> => {
         scrollLogContainerToBottom('auto');
       }
     });
-
     watchLog();
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Unexpected error';
@@ -412,11 +527,57 @@ const loadContent = async (): Promise<void> => {
   }
 };
 
-const handleScroll = (): void => {
-  if (!logContainer.value || query.value) {
+const reloadLog = async (): Promise<void> => {
+  if (isLoading.value) {
     return;
   }
+  offset.value = 0;
+  reachedEnd.value = false;
+  data.value = [];
+  await loadContent();
+};
 
+const scrollLogContainerToBottom = (behavior: ScrollBehavior = 'auto'): void => {
+  if (!logContainer.value) {
+    return;
+  }
+  logContainer.value.scrollTo({ top: logContainer.value.scrollHeight, behavior });
+};
+
+const emptyTitle = computed(() => {
+  if (hasActiveFilter.value) {
+    return 'No logs match these filters';
+  }
+  if (!isLoading.value) {
+    return 'No log lines available';
+  }
+  return 'Loading logs...';
+});
+
+const emptyDescription = computed(() => {
+  if (hasActiveFilter.value) {
+    return 'Adjust filters or load older lines into the current filter.';
+  }
+  return stream.value
+    ? 'Waiting for new stream output.'
+    : 'This source has no available log lines yet.';
+});
+
+watch(toggleFilter, () => {
+  if (!toggleFilter.value) {
+    query.value = '';
+  }
+});
+watch(detailsOpen, (open) => {
+  if (!open) {
+    selectedLog.value = null;
+  }
+});
+
+const handleScroll = (): void => {
+  if (!logContainer.value || hasActiveFilter.value) {
+    return;
+  }
   const container = logContainer.value;
   const nearBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
   const nearTop = container.scrollTop < 50;
@@ -444,22 +605,18 @@ const scrollToBottom = (): void => {
 
 onMounted(async () => {
   await loadContent();
-  await nextTick(() => disableOpacity());
 });
-
 onBeforeUnmount(() => closeStream());
-
 onUnmounted(async () => {
   closeStream();
   if (scrollTimeout) {
     clearTimeout(scrollTimeout);
     scrollTimeout = null;
   }
-  await nextTick(() => enableOpacity());
 });
 
 const watchLog = (): void => {
-  if (!isTodayLog.value || 'log' !== contentType.value || stream.value) {
+  if (!isTodayLog.value || stream.value) {
     return;
   }
 
@@ -472,25 +629,22 @@ const watchLog = (): void => {
       if ('data' !== evt.event) {
         return;
       }
-
       const lines = evt.data.split(/\n/g);
 
-      for (let index = 0; index < lines.length; index++) {
+      for (let i = 0; i < lines.length; i++) {
         try {
-          const line = String(lines[index]);
+          const line = String(lines[i]);
           if (!line.trim()) {
             continue;
           }
-
-          data.value.push(JSON.parse(line) as LogEntry);
-
+          applyLogBatch([line]);
           await nextTick(() => {
             if (autoScroll.value) {
               scrollLogContainerToBottom('smooth');
             }
           });
-        } catch (streamError) {
-          console.error(streamError);
+        } catch {
+          /* ignore */
         }
       }
     },
@@ -498,16 +652,9 @@ const watchLog = (): void => {
       stream.value = false;
       streamController.value = null;
     },
-    headers: {
-      Authorization: `Token ${token.value}`,
-    },
+    headers: { Authorization: `Token ${token.value}` },
     signal: controller.signal,
-  }).catch((streamError) => {
-    if (controller.signal.aborted) {
-      return;
-    }
-
-    console.error(streamError);
+  }).catch(() => {
     stream.value = false;
     streamController.value = null;
   });
@@ -521,11 +668,12 @@ const closeStream = (): void => {
 
 const downloadFile = async (): Promise<void> => {
   isDownloading.value = true;
-
   try {
     const response = await request(`/log/${filename}?download=1`);
     const pickerWindow = window as Window & {
-      showSaveFilePicker?: (options: FilePickerOptions) => Promise<FilePickerHandle>;
+      showSaveFilePicker?: (options: {
+        suggestedName?: string;
+      }) => Promise<{ createWritable: () => Promise<WritableStream> }>;
     };
     const showSaveFilePicker = pickerWindow.showSaveFilePicker;
 
@@ -534,10 +682,7 @@ const downloadFile = async (): Promise<void> => {
         notification('error', 'Error', 'No data returned from download request.');
         return;
       }
-
-      const handle = await showSaveFilePicker({
-        suggestedName: `${filename}`,
-      });
+      const handle = await showSaveFilePicker({ suggestedName: `${filename}` });
       await response.body.pipeTo(await handle.createWritable());
       return;
     }
@@ -550,8 +695,11 @@ const downloadFile = async (): Promise<void> => {
     fileLink.click();
     URL.revokeObjectURL(fileURL);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    notification('error', 'Error', `Failed to download the file. ${message}`);
+    notification(
+      'error',
+      'Error',
+      `Failed to download the file. ${err instanceof Error ? err.message : String(err)}`,
+    );
   } finally {
     isDownloading.value = false;
   }
@@ -563,23 +711,19 @@ const deleteFile = async (): Promise<void> => {
     confirmText: 'Delete',
     confirmColor: 'error',
   });
-
   if (true !== confirmStatus) {
     return;
   }
 
   try {
     closeStream();
-
     const response = await request(`/log/${filename}`, { method: 'DELETE' });
     const json = await parse_api_response<GenericResponse>(response);
-
     if (response.ok) {
       notification('success', 'Information', `Logfile '${filename}' has been deleted.`);
       await router.push('/logs');
       return;
     }
-
     if ('error' in json) {
       notification(
         'error',
@@ -588,25 +732,41 @@ const deleteFile = async (): Promise<void> => {
       );
       return;
     }
-
     notification('error', 'Error', 'Request to delete logfile failed.');
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    notification('error', 'Error', `Failed to request to delete a logfile. ${message}.`);
+    notification(
+      'error',
+      'Error',
+      `Failed to request to delete a logfile. ${err instanceof Error ? err.message : String(err)}.`,
+    );
   }
 };
 
-const formatDate = (dt: string): string => moment(dt).format('DD/MM HH:mm:ss');
+const ucFirst = (str: string): string => (str ? str.charAt(0).toUpperCase() + str.slice(1) : str);
 
-const renderJson = (lines: Array<LogEntry>): string =>
-  JSON.stringify(JSON.parse(lines.map((entry) => entry.text).join('')), null, 4);
-
-const copyData = (): void => {
-  if ('json' === contentType.value) {
-    copyText(renderJson(data.value));
-    return;
-  }
-
-  copyText(filterItems.value.map((item) => item.text).join('\n'));
-};
+const copyMenuItems = computed(() => [
+  [
+    {
+      label: 'Copy text',
+      icon: 'i-lucide-message-square-text',
+      onSelect: () => {
+        copyText(
+          rows.value
+            .map(
+              (row) =>
+                `[${row.log.datetime}] ${row.log.level.toUpperCase()} [${row.log.logger}] ${row.log.message}`,
+            )
+            .join('\n'),
+        );
+      },
+    },
+    {
+      label: 'Copy raw',
+      icon: 'i-lucide-braces',
+      onSelect: () => {
+        copyText(rows.value.map((row) => JSON.stringify(row.log)).join('\n'));
+      },
+    },
+  ],
+]);
 </script>

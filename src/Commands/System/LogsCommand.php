@@ -9,9 +9,11 @@ use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Exceptions\InvalidArgumentException;
 use LimitIterator;
+use RuntimeException;
 use SplFileObject;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
+use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -169,10 +171,7 @@ final class LogsCommand extends Command
 
         $limit = (int) $input->getOption('limit');
 
-        $file = r(text: Config::get('tmpDir') . '/logs/{type}.{date}.log', context: [
-            'type' => $type,
-            'date' => $date,
-        ]);
+        $file = self::getLogFile($type, $date);
 
         if (false === file_exists($file)) {
             $output->writeln(
@@ -191,38 +190,7 @@ final class LogsCommand extends Command
         }
 
         if ($input->getOption('follow')) {
-            $p = $file->getRealPath();
-            $lastPos = 0;
-
-            while (true) {
-                clearstatcache(false, $p);
-                $len = filesize($p);
-                if ($len < $lastPos) {
-                    //-- file deleted or reset
-                    $lastPos = $len;
-                } elseif ($len > $lastPos) {
-                    if (false === ($f = fopen($p, 'rb'))) {
-                        $output->writeln(
-                            sprintf('<error>Unable to open file \'%s\'.</error>', $file->getRealPath()),
-                        );
-                        return self::FAILURE;
-                    }
-
-                    fseek($f, $lastPos);
-
-                    while (!feof($f)) {
-                        $buffer = fread($f, 4096);
-                        $output->write((string) $buffer);
-                        flush();
-                    }
-
-                    $lastPos = ftell($f);
-
-                    fclose($f);
-                }
-
-                usleep(500_000); //0.5s
-            }
+            return $this->followLogFile($file, $input, $output);
         }
 
         $limit = $limit < 1 ? self::DEFAULT_LIMIT : $limit;
@@ -240,6 +208,18 @@ final class LogsCommand extends Command
 
         $it = new LimitIterator($file, max(0, $lastLine - $limit), $lastLine);
 
+        if ($input->hasParameterOption('--jsonl', true)) {
+            foreach ($it as $line) {
+                $line = trim((string) $line);
+
+                if ('' !== $line) {
+                    $output->writeln($line);
+                }
+            }
+
+            return self::SUCCESS;
+        }
+
         foreach ($it as $line) {
             $line = trim((string) $line);
 
@@ -247,10 +227,167 @@ final class LogsCommand extends Command
                 continue;
             }
 
-            $output->writeln($line);
+            $entry = self::parseJsonlLine($line);
+
+            if (null !== $entry) {
+                if ('json' === $input->getOption('output')) {
+                    $output->writeln((string) json_encode(
+                        $entry,
+                        JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE,
+                    ));
+                    continue;
+                }
+
+                $output->writeln(self::formatEventLine($entry));
+            }
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Follow a log file and output new lines as they are written.
+     */
+    private function followLogFile(SplFileObject $file, InputInterface $input, OutputInterface $output): int
+    {
+        $p = $file->getRealPath();
+
+        if (false === $p) {
+            $output->writeln(sprintf('<error>Unable to open file \'%s\'.</error>', $file->getFilename()));
+            return self::FAILURE;
+        }
+
+        $jsonlPassthrough = $input->hasParameterOption('--jsonl', true);
+        $lastPos = 0;
+
+        while (true) {
+            clearstatcache(false, $p);
+            $len = filesize($p);
+
+            if ($len < $lastPos) {
+                $lastPos = $len;
+            } elseif ($len > $lastPos) {
+                if (false === ($f = fopen($p, 'rb'))) {
+                    $output->writeln(sprintf('<error>Unable to open file \'%s\'.</error>', $p));
+                    return self::FAILURE;
+                }
+
+                fseek($f, $lastPos);
+
+                while (false !== ($line = fgets($f))) {
+                    $line = trim($line);
+
+                    if ('' === $line) {
+                        continue;
+                    }
+
+                    if ($jsonlPassthrough) {
+                        $output->writeln($line);
+                    } else {
+                        $entry = self::parseJsonlLine($line);
+
+                        if (null !== $entry) {
+                            $output->writeln(self::formatEventLine($entry));
+                        }
+                    }
+
+                    flush();
+                }
+
+                $lastPos = ftell($f);
+                fclose($f);
+            }
+
+            usleep(500_000);
+        }
+    }
+
+    /**
+     * Parse a JSONL line into a structured log entry.
+     *
+     * @return array<string, mixed>|null
+     */
+    public static function parseJsonlLine(string $line): ?array
+    {
+        $payload = json_decode($line, true, 512, JSON_INVALID_UTF8_IGNORE);
+
+        if (!is_array($payload)) {
+            return null;
+        }
+
+        foreach (['id', 'datetime', 'level', 'logger', 'message'] as $required) {
+            if (!isset($payload[$required]) || '' === trim((string) $payload[$required])) {
+                return null;
+            }
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Render a parsed JSONL entry as a colorized console line.
+     *
+     * @param array<string, mixed> $entry
+     */
+    public static function formatEventLine(array $entry): string
+    {
+        $severity = strtoupper((string) $entry['level']);
+        $severityText = OutputFormatter::escape($severity);
+        $message = self::messageText($entry);
+        $severityColor = self::severityColor((string) $entry['level']);
+
+        if (null !== $severityColor) {
+            $severityText = sprintf('<fg=%s;options=bold>%s</>', $severityColor, $severityText);
+        } else {
+            $severityText = sprintf('<options=bold>%s</>', $severityText);
+        }
+
+        return sprintf(
+            '<comment>%s</comment> %s <fg=cyan>%s</> %s',
+            OutputFormatter::escape(self::formatTimestamp((string) $entry['datetime'])),
+            $severityText,
+            OutputFormatter::escape((string) $entry['logger']),
+            OutputFormatter::escape($message),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $entry
+     */
+    private static function messageText(array $entry): string
+    {
+        $message = trim((string) ($entry['message'] ?? '-'));
+
+        if ('' === $message) {
+            return '-';
+        }
+
+        return $message;
+    }
+
+    /**
+     * @param array<string, mixed> $entry
+     */
+    private static function formatTimestamp(string $value): string
+    {
+        try {
+            return make_date($value)->format('m/d, H:i:s');
+        } catch (RuntimeException) {
+            return $value;
+        }
+    }
+
+    private static function severityColor(string $severity): ?string
+    {
+        $value = strtolower($severity);
+
+        return match ($value) {
+            'emergency', 'alert', 'critical', 'error', 'fatal' => 'red',
+            'warning', 'warn' => 'yellow',
+            'notice' => 'magenta',
+            'info' => 'cyan',
+            default => null,
+        };
     }
 
     /**
@@ -269,8 +406,8 @@ final class LogsCommand extends Command
 
         $isTable = $input->getOption('output') === 'table';
 
-        foreach (glob($path . '/*.*.log') as $file) {
-            preg_match('/(\w+)\.(\w+)\.log/i', basename($file), $matches);
+        foreach (glob($path . '/*.*.jsonl') as $file) {
+            preg_match('/(\w+)\.(\w+)\.jsonl$/i', basename($file), $matches);
 
             $size = filesize($file);
 
@@ -388,5 +525,18 @@ final class LogsCommand extends Command
     public static function getTypes(): array
     {
         return self::LOG_FILES;
+    }
+
+    /**
+     * Resolve a dated log file, preferring JSONL and falling back to legacy line logs.
+     */
+    public static function getLogFile(string $type, string|int $date): string
+    {
+        $basePath = Config::get('tmpDir') . '/logs';
+
+        return r(text: $basePath . '/{type}.{date}.jsonl', context: [
+            'type' => $type,
+            'date' => $date,
+        ]);
     }
 }

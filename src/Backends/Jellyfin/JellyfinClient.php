@@ -367,11 +367,13 @@ class JellyfinClient implements iClient
                 response: new Response(
                     status: false,
                     error: new Error(
-                        message: "Watch progress support works on {client} version {version.required} and above. '{user}@{backend}' is running {version.current}.",
+                        message: "Watch progress support works on {identity.client} version {version.required} and above. '{identity.user}@{identity.backend}' is running {version.current}.",
                         context: [
-                            'client' => static::CLIENT_NAME,
-                            'user' => $this->context->userContext->name,
-                            'backend' => $this->context->backendName,
+                            'identity' => [
+                                'client' => static::CLIENT_NAME,
+                                'user' => $this->context->userContext->name,
+                                'backend' => $this->context->backendName,
+                            ],
                             'version' => [
                                 'current' => $version,
                                 'required' => '10.9.x',

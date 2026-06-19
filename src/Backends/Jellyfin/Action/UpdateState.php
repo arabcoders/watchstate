@@ -48,9 +48,11 @@ class UpdateState
             fn: function () use ($context, $entities, $queue) {
                 $rContext = [
                     'action' => $this->action,
-                    'client' => $context->clientName,
-                    'backend' => $context->backendName,
-                    'user' => $context->backendUser,
+                    'identity' => [
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                        'user' => $context->backendUser,
+                    ],
                 ];
 
                 foreach ($entities as $entity) {
@@ -84,10 +86,10 @@ class UpdateState
 
                     if (true === (bool) ag($context->options, Options::DRY_RUN, false)) {
                         $this->logger->notice(
-                            message: "{action}: Would mark '{client}: {user}@{backend}' {item.type} '{item.title}' as '{item.play_state}'.",
+                            message: "Would mark '{identity.user}@{identity.backend}' {history.type} '{history.title}' as '{history.play_state}'.",
                             context: [
                                 ...$rContext,
-                                'item' => [
+                                'history' => [
                                     'id' => $itemId,
                                     'title' => $entity->getName(),
                                     'type' => $entity->type === iState::TYPE_EPISODE ? 'episode' : 'movie',
@@ -107,22 +109,22 @@ class UpdateState
                                 $requestContext = [
                                     ...$rContext,
                                     'play_state' => $entity->isWatched() ? 'played' : 'unplayed',
-                                    'item' => [
+                                    'history' => [
                                         'id' => $itemId,
                                         'title' => $entity->getName(),
                                         'type' => $entity->type === iState::TYPE_EPISODE ? 'episode' : 'movie',
                                         'state' => $entity->isWatched() ? 'played' : 'unplayed',
                                     ],
-                                    'url' => (string) $url,
+                                    'request' => ['url' => (string) $url],
                                 ];
 
                                 $statusCode = $response->getStatusCode();
                                 if (Status::OK !== Status::tryFrom($statusCode)) {
                                     $this->logger->error(
-                                        message: "{action}: Failed to change '{client}: {user}@{backend}' - '{item.title}' play state. Invalid HTTP '{status_code}' status code returned.",
+                                        message: "Failed to change '{identity.user}@{identity.backend}' - '{history.title}' play state. Invalid HTTP '{response.status_code}' status code returned.",
                                         context: [
                                             ...$requestContext,
-                                            'status_code' => $statusCode,
+                                            'response' => ['status_code' => $statusCode],
                                         ],
                                     );
 
@@ -130,7 +132,7 @@ class UpdateState
                                 }
 
                                 $this->logger->notice(
-                                    message: "{action}: Changed '{client}: {user}@{backend}' - '{item.title}' play state to '{play_state}'.",
+                                    message: "Changed '{identity.user}@{identity.backend}' - '{history.title}' play state to '{play_state}'.",
                                     context: $requestContext,
                                 );
 
@@ -139,11 +141,11 @@ class UpdateState
                             error: function (Throwable $e) use ($context, $entity, $itemId, $rContext): array {
                                 $this->logger->error(
                                     ...lw(
-                                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' restore play state of {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                                        message: "Failed during '{identity.user}@{identity.backend}' restore play state of {history.type} '{history.title}'. {exception.message}",
                                         context: [
                                             ...$rContext,
                                             'play_state' => $entity->isWatched() ? 'played' : 'unplayed',
-                                            'item' => [
+                                            'history' => [
                                                 'id' => $itemId,
                                                 'title' => $entity->getName(),
                                                 'type' => $entity->type === iState::TYPE_EPISODE ? 'episode' : 'movie',
@@ -161,13 +163,13 @@ class UpdateState
                                 'context' => [
                                     ...$rContext,
                                     'play_state' => $entity->isWatched() ? 'played' : 'unplayed',
-                                    'item' => [
+                                    'history' => [
                                         'id' => $itemId,
                                         'title' => $entity->getName(),
                                         'type' => $entity->type === iState::TYPE_EPISODE ? 'episode' : 'movie',
                                         'state' => $entity->isWatched() ? 'played' : 'unplayed',
                                     ],
-                                    'url' => (string) $url,
+                                    'request' => ['url' => (string) $url],
                                 ],
                                 iHttp::class => $this->http,
                             ],

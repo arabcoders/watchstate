@@ -40,13 +40,15 @@ class GetWebUrl
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "{action}: Invalid Web url type '{type}' for '{client}: {user}@{backend}'.",
+                    message: "Invalid Web url type '{type}' for '{identity.user}@{identity.backend}'.",
                     context: [
                         'type' => $type,
                         'action' => $this->action,
-                        'client' => $context->clientName,
-                        'backend' => $context->backendName,
-                        'user' => $context->userContext,
+                        'identity' => [
+                            'client' => $context->clientName,
+                            'backend' => $context->backendName,
+                            'user' => $context->userContext,
+                        ],
                     ],
                     level: Levels::WARNING,
                 ),

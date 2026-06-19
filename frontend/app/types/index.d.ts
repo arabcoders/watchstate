@@ -247,7 +247,54 @@ export interface LogResponse {
   /** Maximum number of lines in the file */
   max: number;
   /** Array of log entries */
-  lines: Array<LogEntry>;
+  lines: Array<ServerJsonLogEntry>;
+  /** Parser type */
+  parser?: string | null;
+}
+
+export interface ServerJsonLogSource {
+  path?: string;
+  file?: string;
+  module?: string;
+  function?: string;
+  line?: number | string;
+}
+
+export interface ServerJsonLogProcess {
+  id?: number | string;
+  name?: string;
+}
+
+export interface ServerJsonLogStackFrame {
+  file?: string;
+  line?: number | string;
+  function?: string;
+  class?: string;
+  type?: string;
+  [key: string]: unknown;
+}
+
+export interface ServerJsonLogException {
+  type?: string;
+  code?: number | string | boolean;
+  message?: string;
+  file?: string;
+  line?: number | string;
+  trace?: Array<ServerJsonLogStackFrame> | null;
+  [key: string]: unknown;
+}
+
+export interface ServerJsonLogEntry {
+  id: string;
+  message: string;
+  datetime: string;
+  level: string;
+  levelno?: number;
+  logger: string;
+  source?: ServerJsonLogSource;
+  process?: ServerJsonLogProcess;
+  fields?: Record<string, unknown>;
+  exception?: ServerJsonLogException | null;
 }
 
 /**
@@ -428,7 +475,7 @@ export interface EventsItem {
   /** Event data payload (optional) */
   event_data?: JsonObject;
   /** Event logs array (optional) */
-  logs?: Array<LogEntry>;
+  logs?: Array<LogEntry | ServerJsonLogEntry>;
   /** Event options (optional) */
   options?: JsonObject;
   /** Display toggle for event data (UI state) */

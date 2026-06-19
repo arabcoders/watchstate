@@ -12,6 +12,7 @@ use App\Libs\LogSuppressor;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\QueueRequests;
 use App\Libs\TestCase;
+use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputOption;
@@ -72,7 +73,10 @@ final class ExportCommandTest extends TestCase
 
     public function test_invalid_user_returns_failure(): void
     {
+        $handler = new TestHandler();
         $logger = new Logger('test');
+        $logger->pushHandler($handler);
+
         $command = new ExportCommand(
             $this->createStub(iImport::class),
             new QueueRequests(),
@@ -86,7 +90,7 @@ final class ExportCommandTest extends TestCase
         ]);
 
         self::assertSame(ExportCommand::FAILURE, $status);
-        self::assertStringContainsString("User 'ghost' not found.", $tester->getDisplay());
+        self::assertTrue($handler->hasErrorThatContains("User 'ghost' not found."));
     }
 
     public function test_matching_backend_uses_push(): void
