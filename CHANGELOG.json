@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "a52015e8e48353a823a1d98273756ef23b645cda",
-    "date": "2026-06-18T21:30:08+00:00",
+    "full_sha": "12b65076f2a0a5b42cbb3e1085b4f165a9c7b4c8",
+    "date": "2026-06-19T17:52:31+00:00",
     "commits": [
+      {
+        "sha": "12b65076",
+        "full_sha": "12b65076f2a0a5b42cbb3e1085b4f165a9c7b4c8",
+        "message": "refactor: better log viewer for mobile\n\nrefactor: add quick links to log viewer.",
+        "author": "arabcoders",
+        "date": "2026-06-19T17:52:31+00:00"
+      },
       {
         "sha": "a52015e8",
         "full_sha": "a52015e8e48353a823a1d98273756ef23b645cda",
