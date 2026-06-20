@@ -1,5 +1,19 @@
 [
   {
+    "tag": "Untagged",
+    "full_sha": "9e179430f79f71e565e285894c1016616a357c2d",
+    "date": "2026-06-20T18:05:39+00:00",
+    "commits": [
+      {
+        "sha": "9e179430",
+        "full_sha": "9e179430f79f71e565e285894c1016616a357c2d",
+        "message": "refactor: update log messages",
+        "author": "arabcoders",
+        "date": "2026-06-20T18:05:39+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v1.9.0",
     "full_sha": "60f9383839696f24a7d49eccbee1dc1560bd326f",
     "date": "2026-06-19T18:18:10+00:00",
