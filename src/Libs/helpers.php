@@ -572,6 +572,8 @@ if (!function_exists('queue_push')) {
 
         if (!$entity->id) {
             $logger->error("Unable to push event '{identity.backend}: {entity}'. It has no local id yet.", [
+                'operation' => 'queue.push',
+                'error' => 'no_local_id',
                 'identity' => ['backend' => $entity->via],
                 'entity' => $entity->getName(),
             ]);
@@ -590,6 +592,8 @@ if (!function_exists('queue_push')) {
 
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
             $logger->error("Unable to push '{id}' event '{identity.backend}: {entity}'. It has no GUIDs.", [
+                'operation' => 'queue.push',
+                'error' => 'no_guids',
                 'id' => $entity->id,
                 'identity' => ['backend' => $entity->via],
                 'entity' => $entity->getName(),

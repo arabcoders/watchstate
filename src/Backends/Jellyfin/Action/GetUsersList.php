@@ -112,7 +112,7 @@ class GetUsersList
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Request for '{identity.user}@{identity.backend}' users list returned with unexpected '{response.status_code}' status code.",
+                    message: "Request for '{identity.user}@{identity.backend}' users list returned HTTP {response.status_code}.",
                     context: [
                         ...$logContext,
                         'response' => [

@@ -137,7 +137,11 @@ class Progress
             if ($context->backendName === $entity->via && false === $replayProgress) {
                 $this->logger->info(
                     message: "Not processing '#{history.id}: {history.title}' for '{identity.user}@{identity.backend}'. Event originated from this backend.",
-                    context: $logContext,
+                    context: [
+                        ...$logContext,
+                        'operation' => 'progress.skip',
+                        'error' => 'event_from_this_backend',
+                    ],
                 );
                 continue;
             }
@@ -145,7 +149,11 @@ class Progress
             if (null === ag($metadata, iState::COLUMN_ID, null)) {
                 $this->logger->warning(
                     message: "Not processing '#{history.id}: {history.title}' for '{identity.user}@{identity.backend}'. No metadata was found.",
-                    context: $logContext,
+                    context: [
+                        ...$logContext,
+                        'operation' => 'progress.skip',
+                        'error' => 'no_metadata',
+                    ],
                 );
                 continue;
             }
@@ -154,7 +162,11 @@ class Progress
             if (null === $senderDate) {
                 $this->logger->warning(
                     message: "Not processing '#{history.id}: {history.title}' for '{identity.user}@{identity.backend}'. The event originator did not set a date.",
-                    context: $logContext,
+                    context: [
+                        ...$logContext,
+                        'operation' => 'progress.skip',
+                        'error' => 'no_event_date',
+                    ],
                 );
                 continue;
             }
@@ -165,12 +177,16 @@ class Progress
 
             if (false === $ignoreDate && null !== $datetime && make_date($datetime)->getTimestamp() > $senderDate) {
                 $this->logger->warning(
-                    message: "Not processing '#{history.id}: {history.title}' for '{identity.user}@{identity.backend}'. Event date '{event_date}' is older than backend local db item date '{local_date}'.",
+                    message: "Not processing '#{history.id}: {history.title}' for '{identity.user}@{identity.backend}'. Event date '{comparison.event_date}' is older than local database date '{comparison.local_date}'.",
                     context: [
                         ...$logContext,
-                        'event_date' => make_date($senderDate),
-                        'local_date' => make_date($datetime),
-                        'compare' => ['remote' => make_date($datetime), 'sender' => make_date($senderDate)],
+                        'operation' => 'progress.skip',
+                        'error' => 'stale_event_date',
+                        'comparison' => [
+                            'event_date' => make_date($senderDate),
+                            'local_date' => make_date($datetime),
+                            'delta_seconds' => make_date($datetime)->getTimestamp() - $senderDate,
+                        ],
                     ],
                 );
                 continue;
@@ -181,7 +197,11 @@ class Progress
             if (array_key_exists($logContext['remote']['id'], $sessions)) {
                 $this->logger->notice(
                     message: "Not processing '#{history.id}: {history.title}' for '{identity.user}@{identity.backend}'. The item is playing right now.",
-                    context: $logContext,
+                    context: [
+                        ...$logContext,
+                        'operation' => 'progress.skip',
+                        'error' => 'currently_playing',
+                    ],
                 );
                 continue;
             }
@@ -199,14 +219,15 @@ class Progress
 
                 if (false === $ignoreDate && make_date($remoteItem->updated)->getTimestamp() > $senderDate) {
                     $this->logger->info(
-                        message: "Not processing '#{history.id}: {history.title}' for '{identity.user}@{identity.backend}'. Event date '{event_date}' is older than backend remote item date '{remote_date}'.",
+                        message: "Not processing '#{history.id}: {history.title}' for '{identity.user}@{identity.backend}'. Event date '{comparison.event_date}' is older than backend date '{comparison.remote_date}'.",
                         context: [
                             ...$logContext,
-                            'event_date' => make_date($senderDate),
-                            'remote_date' => make_date($remoteItem->updated),
-                            'compare' => [
-                                'remote' => make_date($remoteItem->updated),
-                                'sender' => make_date($senderDate),
+                            'operation' => 'progress.skip',
+                            'error' => 'stale_event_date',
+                            'comparison' => [
+                                'event_date' => make_date($senderDate),
+                                'remote_date' => make_date($remoteItem->updated),
+                                'delta_seconds' => make_date($remoteItem->updated)->getTimestamp() - $senderDate,
                             ],
                         ],
                     );
@@ -222,7 +243,11 @@ class Progress
                         if (false === ($allowUpdate >= $minThreshold && time() > ($entity->updated + $allowUpdate))) {
                             $this->logger->info(
                                 message: "Not processing '#{history.id}: {history.title}' for '{identity.user}@{identity.backend}'. The backend says the item is marked as watched.",
-                                context: $logContext,
+                                context: [
+                                    ...$logContext,
+                                    'operation' => 'progress.skip',
+                                    'error' => 'backend_marked_watched',
+                                ],
                             );
                             continue;
                         }
@@ -231,7 +256,7 @@ class Progress
             } catch (\App\Libs\Exceptions\RuntimeException|RuntimeException|InvalidArgumentException $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "Failed during '{identity.user}@{identity.backend}' get {history.type} '#{history.id}: {history.title}' status. {exception.message}",
+                        message: "Failed to get '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' status. {exception.message}",
                         context: [
                             ...$logContext,
                             ...exception_log($e),
@@ -286,7 +311,7 @@ class Progress
 
                             if (false === in_array(Status::tryFrom($statusCode), [Status::OK, Status::NO_CONTENT], true)) {
                                 $this->logger->error(
-                                    message: "Request to change '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' watch progress returned with unexpected '{response.status_code}' status code.",
+                                    message: "Watch progress update for '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' returned HTTP {response.status_code}.",
                                     context: [
                                         ...$requestContext,
                                         'response' => ['status_code' => $statusCode],
@@ -309,7 +334,7 @@ class Progress
                         error: function (Throwable $e) use ($requestContext): array {
                             $this->logger->error(
                                 ...lw(
-                                    message: "Failed during '{identity.user}@{identity.backend}' request to change watch progress of {history.type} '#{history.id}: {history.title}'. {exception.message}",
+                                    message: "Failed to update watch progress for '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}'. {exception.message}",
                                     context: [
                                         ...$requestContext,
                                         ...exception_log($e),
@@ -351,7 +376,7 @@ class Progress
                                     $statusCode = $response->getStatusCode();
                                     if (false === in_array(Status::tryFrom($statusCode), [Status::OK, Status::NO_CONTENT], true)) {
                                         $this->logger->error(
-                                            message: "Request to mark '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' as unplayed before progress update returned with unexpected '{response.status_code}' status code.",
+                                            message: "Mark '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' as unplayed before progress update returned HTTP {response.status_code}.",
                                             context: [
                                                 ...$unwatchContext,
                                                 'error' => 'unexpected_status',
@@ -367,7 +392,7 @@ class Progress
                                 error: function (Throwable $e) use ($unwatchContext): array {
                                     $this->logger->error(
                                         ...lw(
-                                            message: "Exception was thrown during '{identity.user}@{identity.backend}' unplayed request before progress update.",
+                                            message: "Failed to mark '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' as unplayed before progress update. {exception.message}",
                                             context: [
                                                 ...$unwatchContext,
                                                 'error' => 'request_exception',
@@ -393,7 +418,7 @@ class Progress
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "Failed during '{identity.user}@{identity.backend}' change {history.type} '#{history.id}: {history.title}' watch progress. {exception.message}",
+                        message: "Failed to update watch progress for '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}'. {exception.message}",
                         context: [
                             ...$logContext,
                             ...exception_log($e),

@@ -97,7 +97,11 @@ final class Push
             if (null === ag($metadata, iState::COLUMN_ID)) {
                 $this->logger->warning(
                     message: "Ignoring '#{history.id}: {history.title}' for '{identity.user}@{identity.backend}'. No metadata was found.",
-                    context: $logContext,
+                    context: [
+                        ...$logContext,
+                        'operation' => 'push.skip',
+                        'error' => 'no_metadata',
+                    ],
                 );
                 continue;
             }
@@ -124,7 +128,7 @@ final class Push
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "Failed during '{identity.user}@{identity.backend}' request for {history.type} '#{history.id}: {history.title}' metadata. {exception.message}",
+                        message: "Failed to request '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' metadata. {exception.message}",
                         context: [
                             ...$logContext,
                             ...exception_log($e),
@@ -156,12 +160,12 @@ final class Push
                 if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
                     if (Status::NOT_FOUND === Status::tryFrom($response->getStatusCode())) {
                         $this->logger->warning(
-                            message: "Request for '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' metadata returned with (404: Not Found) status code.",
+                            message: "Request for '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' metadata returned HTTP 404 (Not Found).",
                             context: [...$logContext, 'response' => ['status_code' => $response->getStatusCode()]],
                         );
                     } else {
                         $this->logger->error(
-                            message: "Request for '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' metadata returned with unexpected '{response.status_code}' status code.",
+                            message: "Request for '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' metadata returned HTTP {response.status_code}.",
                             context: [...$logContext, 'response' => ['status_code' => $response->getStatusCode()]],
                         );
                     }
@@ -186,7 +190,7 @@ final class Push
 
                 if (empty($json)) {
                     $this->logger->error(
-                        message: "Ignoring '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}'. Returned with unexpected body.",
+                        message: "Ignoring '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}'. Backend returned unexpected body.",
                         context: [...$logContext, 'response' => ['body' => $body]],
                     );
                     continue;
@@ -197,7 +201,11 @@ final class Push
                 if ($entity->watched === $isWatched) {
                     $this->logger->info(
                         message: "Ignoring '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}'. Play state is identical.",
-                        context: $logContext,
+                        context: [
+                            ...$logContext,
+                            'operation' => 'push.skip',
+                            'error' => 'play_state_identical',
+                        ],
                     );
                     continue;
                 }
@@ -207,8 +215,14 @@ final class Push
 
                     if (null === ($date = ag($json, $dateKey))) {
                         $this->logger->error(
-                            message: "Ignoring '{identity.user}@{identity.backend}' {history.type} '{history.title}'. No {date_key} is set on backend object.",
-                            context: ['date_key' => $dateKey, ...$logContext, 'response' => ['body' => $json]],
+                            message: "Ignoring '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}'. No {date_key} is set on backend object.",
+                            context: [
+                                'date_key' => $dateKey,
+                                ...$logContext,
+                                'operation' => 'push.skip',
+                                'error' => 'no_backend_date',
+                                'response' => ['body' => $json],
+                            ],
                         );
                         continue;
                     }
@@ -219,14 +233,16 @@ final class Push
 
                     if ($date->getTimestamp() >= ($entity->updated + $timeExtra)) {
                         $this->logger->notice(
-                            message: "Ignoring '{identity.user}@{identity.backend}' {history.type} '{history.title}'. Database date is older than backend date.",
+                            message: "Ignoring '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}'. Database date '{comparison.database_date}' is older than backend date '{comparison.backend_date}'.",
                             context: [
                                 ...$logContext,
+                                'operation' => 'push.skip',
+                                'error' => 'stale_database_date',
                                 'comparison' => [
-                                    'database' => make_date($entity->updated),
-                                    'backend' => $date,
-                                    'difference' => $date->getTimestamp() - $entity->updated,
-                                    'extra_margin' => [Options::EXPORT_ALLOWED_TIME_DIFF => $timeExtra],
+                                    'database_date' => make_date($entity->updated),
+                                    'backend_date' => $date,
+                                    'delta_seconds' => $date->getTimestamp() - $entity->updated,
+                                    'margin_seconds' => $timeExtra,
                                 ],
                             ],
                         );
@@ -270,7 +286,7 @@ final class Push
             } catch (Throwable $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "Failed during '{identity.user}@{identity.backend}' push play state. {exception.message}",
+                        message: "Failed to push play state for '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}'. {exception.message}",
                         context: [
                             ...$logContext,
                             ...exception_log($e),

@@ -454,7 +454,7 @@ the issue. Please enable webhooks for your jellyfin backend to avoid this issue.
 
 We have added an experimental workaround for this issue in the `state:import` command. To enable it, add the env `WS_CLIENTS_JELLYFIN_FIX_PLAYED` via the `Configuration > Environment` page. It's turned off by default as it may cause some issues as it's untested in production, so please use it with caution and report any issues you find.
 
-## CODE: DM001 - Item queued for re-processing.
+## DM001 (`error: dm001_stale_date`) - Item queued for re-processing.
 
 This warning appears when the backend reports an older item state than the last recorded sync point. This usually
 shows up in edge cases and can often be resolved by forcing a state export to the backend.

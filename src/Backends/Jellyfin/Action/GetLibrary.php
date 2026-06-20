@@ -129,7 +129,7 @@ class GetLibrary
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "The request for '{identity.user}@{identity.backend}' library '{library.id}: {library.title}' returned with unsupported type '{library.type}'.",
+                    message: "The request for '{identity.user}@{identity.backend}' library '{library.id}: {library.title}' returned unsupported type '{library.type}'.",
                     context: $logContext,
                     level: Levels::WARNING,
                 ),
@@ -170,7 +170,7 @@ class GetLibrary
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Request for '{identity.user}@{identity.backend}' library '{library.title}' items returned with unexpected '{response.status_code}' status code.",
+                    message: "Request for '{identity.user}@{identity.backend}' library '{library.title}' items returned HTTP {response.status_code}.",
                     context: [
                         'response' => ['status_code' => $response->getStatusCode()],
                         ...$logContext,

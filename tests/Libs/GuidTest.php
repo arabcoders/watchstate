@@ -20,31 +20,6 @@ class GuidTest extends TestCase
 {
     protected ?Logger $logger = null;
 
-    private function logged(Level $level, string $message, bool $clear = false): bool
-    {
-        try {
-            foreach ($this->handler->getRecords() as $record) {
-                if ($level !== $record->level) {
-                    continue;
-                }
-
-                if (null !== $record->formatted && true === str_contains($record->formatted, $message)) {
-                    return true;
-                }
-
-                if (true === str_contains($record->message, $message)) {
-                    return true;
-                }
-            }
-
-            return false;
-        } finally {
-            if (true === $clear) {
-                $this->handler->clear();
-            }
-        }
-    }
-
     protected function setUp(): void
     {
         parent::setUp();
@@ -68,13 +43,13 @@ class GuidTest extends TestCase
 
         Guid::fromArray(['guid_tvdb' => INF], logger: $this->logger);
         $this->assertTrue(
-            $this->logged(Level::Info, 'external id. Unexpected value type.', true),
+            $this->loggedWith(Level::Info, ['operation' => 'guid.validate', 'error' => 'unexpected_value_type'], true),
             'Assert message logged when the value type does not match the expected type.',
         );
 
         Guid::fromArray(['guid_tvdb' => 'tt1234567']);
         $this->assertTrue(
-            $this->logged(Level::Info, "external id. Unexpected value '", true),
+            $this->loggedWith(Level::Info, ['operation' => 'guid.validate', 'error' => 'unexpected_value'], true),
             'Assert message logged when the value does not match the expected pattern.',
         );
     }
@@ -190,7 +165,7 @@ class GuidTest extends TestCase
         touch($tmpFile);
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Info, 'is empty', true),
+            $this->loggedWith(Level::Info, ['operation' => 'guid.load_file'], true),
             'Failed to assert that the GUID file is empty.',
         );
 
@@ -209,21 +184,21 @@ class GuidTest extends TestCase
         file_put_contents($tmpFile, Yaml::dump(['guids' => ['guid_imdb' => 'tt1234567']]));
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'Value must be an object', true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.definition', 'error' => 'def_not_object'], true),
             'Assert that GUID key is an array.',
         );
 
         file_put_contents($tmpFile, Yaml::dump(['guids' => [['name' => 'imdb']]]));
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, "name must start with 'guid_'", true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.definition', 'error' => 'def_name_invalid'], true),
             'Assert that GUID name starts with guid_',
         );
 
         file_put_contents($tmpFile, Yaml::dump(['guids' => [['name' => 'guid_imdb', 'type' => INF]]]));
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'type must be a string', true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.definition', 'error' => 'def_type_not_string'], true),
             'Assert guid type is string.',
         );
 
@@ -241,7 +216,7 @@ class GuidTest extends TestCase
 
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'validator key must be an object', true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.definition', 'error' => 'def_validator_not_object'], true),
             'Assert validator key is an object.',
         );
 
@@ -249,7 +224,7 @@ class GuidTest extends TestCase
         file_put_contents($tmpFile, Yaml::dump($yaml));
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'validator.pattern is empty or invalid', true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.definition', 'error' => 'def_pattern_invalid'], true),
             'Assert a message is logged when the pattern is invalid.',
         );
 
@@ -257,7 +232,7 @@ class GuidTest extends TestCase
         file_put_contents($tmpFile, Yaml::dump($yaml));
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'validator.example is empty or not a string', true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.definition', 'error' => 'def_example_missing'], true),
             'Assert a message is logged when the example is empty or not a string.',
         );
 
@@ -265,7 +240,7 @@ class GuidTest extends TestCase
         file_put_contents($tmpFile, Yaml::dump($yaml));
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'validator.tests key must be an object', true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.definition', 'error' => 'def_tests_not_object'], true),
             'Assert a message is logged when the test key is not an object.',
         );
 
@@ -273,7 +248,7 @@ class GuidTest extends TestCase
         file_put_contents($tmpFile, Yaml::dump($yaml));
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'validator.tests.valid key must be an array', true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.definition', 'error' => 'def_valid_tests_not_array'], true),
             'Assert a message is logged when the test key is not an object.',
         );
 
@@ -281,7 +256,7 @@ class GuidTest extends TestCase
         file_put_contents($tmpFile, Yaml::dump($yaml));
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'does not match pattern', true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.definition', 'error' => 'def_valid_test_no_match'], true),
             'Assert a message is logged when valid test does not match the pattern.',
         );
 
@@ -292,7 +267,7 @@ class GuidTest extends TestCase
         file_put_contents($tmpFile, Yaml::dump($yaml));
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'validator.tests.invalid key must be an array', true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.definition', 'error' => 'def_invalid_tests_not_array'], true),
             'Assert a message is logged when invalid test is not an array.',
         );
 
@@ -303,7 +278,7 @@ class GuidTest extends TestCase
         file_put_contents($tmpFile, Yaml::dump($yaml));
         Guid::parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'validator.tests.invalid value', true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.definition', 'error' => 'def_invalid_test_matches'], true),
             'Assert a message is logged when invalid test match the pattern.',
         );
 
@@ -338,7 +313,7 @@ class GuidTest extends TestCase
             Guid::reparse();
             Guid::getSupported();
             $this->assertTrue(
-                $this->logged(Level::Error, 'Failed to read or parse', true),
+                $this->loggedWith(Level::Error, ['operation' => 'guid.load_file', 'error' => 'file_parse_failed'], true),
                 'Failed to assert that the GUID file is empty.',
             );
         } finally {
@@ -398,7 +373,7 @@ class GuidTest extends TestCase
         Guid::setLogger($this->logger);
         Guid::fromArray(['guid_tvdb' => INF]);
         $this->assertTrue(
-            $this->logged(Level::Info, 'external id. Unexpected value type.', true),
+            $this->loggedWith(Level::Info, ['operation' => 'guid.validate', 'error' => 'unexpected_value_type'], true),
             'Assert message logged when the value type does not match the expected type.',
         );
     }

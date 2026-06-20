@@ -90,7 +90,7 @@ final class AddWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: "Request for '{identity.user}@{identity.backend}' plugins list returned with unexpected '{response.status_code}' status code.",
+                        message: "Request for '{identity.user}@{identity.backend}' plugins list returned HTTP {response.status_code}.",
                         context: [
                             ...$logContext,
                             'response' => [
@@ -109,7 +109,7 @@ final class AddWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: "Request for '{identity.user}@{identity.backend}' plugins list returned with empty response.",
+                        message: "Request for '{identity.user}@{identity.backend}' plugins list returned an empty response.",
                         context: [...$logContext, 'response' => ['body' => $content]],
                         level: Levels::ERROR,
                     ),
@@ -162,7 +162,7 @@ final class AddWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: "Request for '{identity.user}@{identity.backend}' get webhooks returned with unexpected '{response.status_code}' status code.",
+                        message: "Request for '{identity.user}@{identity.backend}' get webhooks returned HTTP {response.status_code}.",
                         context: [
                             ...$logContext,
                             'response' => [
@@ -181,7 +181,7 @@ final class AddWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: "Request for '{identity.user}@{identity.backend}' get webhooks returned with empty response.",
+                        message: "Request for '{identity.user}@{identity.backend}' get webhooks returned an empty response.",
                         context: [...$logContext, 'response' => ['body' => $content]],
                         level: Levels::ERROR,
                     ),
@@ -286,7 +286,7 @@ final class AddWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: "Request for '{identity.user}@{identity.backend}' to {mode} webhook returned with unexpected '{response.status_code}' status code.",
+                        message: "Request for '{identity.user}@{identity.backend}' to {mode} webhook returned HTTP {response.status_code}.",
                         context: [
                             ...$logContext,
                             'mode' => $mode,

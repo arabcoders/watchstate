@@ -112,7 +112,7 @@ final class GetLibrary
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "The requested '{identity.user}@{identity.backend}' library '{library.title}' returned with unsupported type '{library.type}'.",
+                    message: "The requested '{identity.user}@{identity.backend}' library '{library.title}' returned unsupported type '{library.type}'.",
                     context: $logContext,
                     level: Levels::WARNING,
                 ),
@@ -155,7 +155,7 @@ final class GetLibrary
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Request for '{identity.user}@{identity.backend}' library '{library.title}' returned with unexpected '{response.status_code}' status code.",
+                    message: "Request for '{identity.user}@{identity.backend}' library '{library.title}' returned HTTP {response.status_code}.",
                     context: [...$logContext, 'response' => ['status_code' => $response->getStatusCode()]],
                     level: Levels::ERROR,
                 ),
@@ -232,7 +232,7 @@ final class GetLibrary
                 if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
                     if (false === $noLog) {
                         $this->logger->warning(
-                            message: "Request for '{identity.user}@{identity.backend}' {item.type} '{item.title}' metadata returned with unexpected '{response.status_code}' status code.",
+                            message: "Request for '{identity.user}@{identity.backend}' {item.type} '{item.title}' metadata returned HTTP {response.status_code}.",
                             context: [
                                 ...$requestContext,
                                 'response' => ['status_code' => $response->getStatusCode(), 'body' => $response->getContent(false)],

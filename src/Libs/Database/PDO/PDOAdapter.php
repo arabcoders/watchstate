@@ -227,9 +227,10 @@ final class PDOAdapter implements iDB
                     throw $e;
                 }
                 $this->logger->error(
-                    message: 'Failed. {exception.message}',
+                    message: 'Failed to insert state record. {exception.message}',
                     context: [
                         'entity' => $entity->getAll(),
+                        'operation' => 'state.insert',
                         ...exception_log($e),
                         'last' => $this->db->getLastStatement(),
                     ],
@@ -444,9 +445,10 @@ final class PDOAdapter implements iDB
                     throw $e;
                 }
                 $this->logger->error(
-                    message: 'Failed. {exception.message}',
+                    message: 'Failed to update state record. {exception.message}',
                     context: [
                         'entity' => $entity->getAll(),
+                        'operation' => 'state.update',
                         ...exception_log($e),
                         'last' => $this->db->getLastStatement(),
                     ],
@@ -481,9 +483,10 @@ final class PDOAdapter implements iDB
             $this->db->query('DELETE FROM state WHERE id = :id', ['id' => (int) $id]);
         } catch (PDOException $e) {
             $this->logger->error(
-                message: 'Failed. {exception.message}',
+                message: 'Failed to remove state record. {exception.message}',
                 context: [
                     'entity' => $entity->getAll(),
+                    'operation' => 'state.remove',
                     ...exception_log($e),
                 ],
             );
@@ -517,9 +520,10 @@ final class PDOAdapter implements iDB
                 } catch (PDOException $e) {
                     $actions['failed']++;
                     $this->logger->error(
-                        message: 'Failed. {exception.message}',
+                        message: 'Failed to commit state record. {exception.message}',
                         context: [
                             'entity' => $entity->getAll(),
+                            'operation' => 'state.commit',
                             ...exception_log($e),
                         ],
                     );

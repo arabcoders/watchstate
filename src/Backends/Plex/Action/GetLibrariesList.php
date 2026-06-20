@@ -195,7 +195,7 @@ final class GetLibrariesList
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             throw new RuntimeException(
                 r(
-                    text: "Request for '{identity.user}@{identity.backend}' libraries returned with unexpected '{response.status_code}' status code.",
+                    text: "Request for '{identity.user}@{identity.backend}' libraries returned HTTP {response.status_code}.",
                     context: [...$logContext, 'response' => ['status_code' => $response->getStatusCode()]],
                 ),
             );

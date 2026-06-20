@@ -42,6 +42,8 @@ final class IdentityProvisionService
 
             if (!isset($supported[$type])) {
                 $this->logger->error("Ignoring '{identity.backend}'. Unexpected backend type '{type}'.", [
+                    'operation' => 'identity.discover',
+                    'error' => 'unexpected_backend_type',
                     'type' => $type,
                     'identity' => [
                         'backend' => $backendName,
@@ -52,7 +54,9 @@ final class IdentityProvisionService
             }
 
             if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {
-                $this->logger->error("Ignoring '{identity.backend}'. Invalid url '{url}'.", [
+                $this->logger->error("Ignoring '{identity.backend}'. Invalid URL '{url}'.", [
+                    'operation' => 'identity.discover',
+                    'error' => 'invalid_url',
                     'url' => $url ?? 'None',
                     'identity' => [
                         'backend' => $backendName,
@@ -92,11 +96,17 @@ final class IdentityProvisionService
         }
 
         if (false === $map->has('version')) {
-            $this->logger->warning('Starting with mapper.yaml v1.5, the version key is required.');
+            $this->logger->warning('mapper.yaml is missing the version key. Required since v1.5.', [
+                'operation' => 'identity.mapper',
+                'error' => 'missing_version_key',
+            ]);
         }
 
         if (false === $map->has('map')) {
-            $this->logger->warning('Please upgrade your mapper.yaml file to v1.5 format spec.');
+            $this->logger->warning('mapper.yaml is missing the map key. Upgrade to v1.5 format spec.', [
+                'operation' => 'identity.mapper',
+                'error' => 'missing_map_key',
+            ]);
         }
 
         $this->logger->info('Mapper file found, using it to map identities.', [
@@ -445,7 +455,13 @@ final class IdentityProvisionService
                     if (false === is_valid_name($user['name'])) {
                         $this->logger->error(
                             message: "Invalid user name '{identity.backend}: {name}'. User names must be in [a-z_0-9] format. Skipping user.",
-                            context: ['name' => $user['name'], 'identity' => ['backend' => $backendName]],
+                            context: [
+                                'operation' => 'identity.sync',
+                                'error' => 'invalid_user_name',
+                                'constraint' => '[a-z_0-9]',
+                                'name' => $user['name'],
+                                'identity' => ['backend' => $backendName],
+                            ],
                         );
                         continue;
                     }
@@ -459,8 +475,13 @@ final class IdentityProvisionService
 
                     if (false === is_valid_name($info['backendName'])) {
                         $this->logger->error(
-                            message: "Invalid backend name '{name}'. Backend name must be in [a-z_0-9] format. skipping the associated users.",
-                            context: ['name' => $info['backendName']],
+                            message: "Invalid backend name '{name}'. Backend name must be in [a-z_0-9] format. Skipping the associated users.",
+                            context: [
+                                'operation' => 'identity.sync',
+                                'error' => 'invalid_backend_name',
+                                'constraint' => '[a-z_0-9]',
+                                'name' => $info['backendName'],
+                            ],
                         );
                         continue;
                     }
@@ -501,8 +522,9 @@ final class IdentityProvisionService
                 }
             } catch (Throwable $e) {
                 $this->logger->error(
-                    "Failed during '{identity.user}@{identity.backend}' get users list. {exception.message}",
+                    "Failed to get users list from '{identity.user}@{identity.backend}'. {exception.message}",
                     [
+                        'operation' => 'identity.get_users',
                         'identity' => [
                             'client' => $client->getContext()->clientName,
                             'backend' => $client->getContext()->backendName,
@@ -533,8 +555,13 @@ final class IdentityProvisionService
 
             if (false === is_valid_name($identityName)) {
                 $this->logger->error(
-                    message: "Invalid identity name '{identity.name}'. Identity names must be in [a-z_0-9] format. skipping identity.",
-                    context: ['identity' => ['name' => $identityName]],
+                    message: "Invalid identity name '{identity.name}'. Identity names must be in [a-z_0-9] format. Skipping identity.",
+                    context: [
+                        'operation' => 'identity.create',
+                        'error' => 'invalid_identity_name',
+                        'constraint' => '[a-z_0-9]',
+                        'identity' => ['name' => $identityName],
+                    ],
                 );
                 continue;
             }
@@ -584,8 +611,13 @@ final class IdentityProvisionService
 
                 if (false === is_valid_name($name)) {
                     $this->logger->error(
-                        message: "Invalid backend name '{name}'. Backend name must be in [a-z_0-9] format. skipping backend.",
-                        context: ['name' => $name],
+                        message: "Invalid backend name '{name}'. Backend name must be in [a-z_0-9] format. Skipping backend.",
+                        context: [
+                            'operation' => 'identity.create',
+                            'error' => 'invalid_backend_name',
+                            'constraint' => '[a-z_0-9]',
+                            'name' => $name,
+                        ],
                     );
                     continue;
                 }
@@ -668,7 +700,11 @@ final class IdentityProvisionService
                             if (false === $token) {
                                 $this->logger->error(
                                     message: "Failed to generate access token for '{identity.name}@{identity.backend}' backend.",
-                                    context: ['identity' => ['name' => $identityName, 'backend' => $name]],
+                                    context: [
+                                        'operation' => 'identity.access_token',
+                                        'error' => 'token_generation_failed',
+                                        'identity' => ['name' => $identityName, 'backend' => $name],
+                                    ],
                                 );
                             } else {
                                 $perIdentity->set("{$name}.token", $token);
@@ -679,6 +715,8 @@ final class IdentityProvisionService
                     $this->logger->error(
                         message: "Failed to generate access token for '{identity.name}@{name}' backend. {exception.message}",
                         context: [
+                            'operation' => 'identity.access_token',
+                            'error' => 'token_generation_failed',
                             'name' => $name,
                             'identity' => ['name' => $identityName],
                             ...exception_log($e),
@@ -950,6 +988,8 @@ final class IdentityProvisionService
                     }
 
                     $this->logger->error("No partial fallback match via map for '{identity.backend}: {identity.user}'", [
+                        'operation' => 'identity.match',
+                        'error' => 'no_partial_fallback',
                         'identity' => [
                             'backend' => $userObj['backend'],
                             'user' => $userObj['name'],
@@ -982,6 +1022,8 @@ final class IdentityProvisionService
                 }
 
                 $this->logger->error("No other users were found that match '{identity.backend}: {identity.user}{real_name}'.", [
+                    'operation' => 'identity.match',
+                    'error' => 'no_user_match',
                     'identity' => [
                         'backend' => $userObj['backend'],
                         'user' => $userObj['name'],
@@ -1054,6 +1096,8 @@ final class IdentityProvisionService
 
         if (null === ($username = ag($user, 'name'))) {
             $this->logger->error("No username was given from one user of '{identity.backend}' backend.", [
+                'operation' => 'identity.match',
+                'error' => 'missing_username',
                 'identity' => [
                     'backend' => $backend,
                 ],
@@ -1118,6 +1162,9 @@ final class IdentityProvisionService
                 $this->logger->error(
                     message: "Failed to replace '{identity.backend}: {username}' with '{identity.backend}: {new_username}' name must be in [a-z_0-9] format.",
                     context: [
+                        'operation' => 'identity.rename',
+                        'error' => 'invalid_replacement_name',
+                        'constraint' => '[a-z_0-9]',
                         'identity' => [
                             'backend' => $backend,
                         ],

@@ -118,7 +118,7 @@ final class SearchQuery
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Search request for '{query}' in '{identity.user}@{identity.backend}' returned with unexpected '{response.status_code}' status code.",
+                    message: "Search request for '{query}' in '{identity.user}@{identity.backend}' returned HTTP {response.status_code}.",
                     context: [
                         ...$logContext,
                         'response' => ['status_code' => $response->getStatusCode()],

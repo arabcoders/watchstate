@@ -121,7 +121,7 @@ class GetMetaData
                         return new Response(
                             status: false,
                             error: new Error(
-                                message: "Request for '{identity.user}@{identity.backend}' - '{id}' item returned with unexpected '{response.status_code}' status code.",
+                                message: "Request for '{identity.user}@{identity.backend}' - '{id}' item returned HTTP {response.status_code}.",
                                 context: [
                                     ...$logContext,
                                     'response' => ['status_code' => $response->getStatusCode()],

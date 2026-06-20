@@ -112,7 +112,7 @@ class GetUser
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Request for '{identity.user}@{identity.backend}' user '{userId}' info returned with unexpected '{response.status_code}' status code.",
+                    message: "Request for '{identity.user}@{identity.backend}' user '{userId}' info returned HTTP {response.status_code}.",
                     context: [
                         ...$logContext,
                         'response' => [

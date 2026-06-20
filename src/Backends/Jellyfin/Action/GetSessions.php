@@ -85,7 +85,7 @@ class GetSessions
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: "Request for '{identity.user}@{identity.backend}' get sessions returned with unexpected '{response.status_code}' status code.",
+                            message: "Request for '{identity.user}@{identity.backend}' get sessions returned HTTP {response.status_code}.",
                             context: [
                                 ...$logContext,
                                 'response' => ['status_code' => $response->getStatusCode(), 'body' => $content],
@@ -99,7 +99,7 @@ class GetSessions
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: "Request for '{identity.user}@{identity.backend}' get sessions returned with empty response.",
+                            message: "Request for '{identity.user}@{identity.backend}' get sessions returned an empty response.",
                             context: [
                                 ...$logContext,
                                 'response' => ['status_code' => $response->getStatusCode(), 'body' => $content],

@@ -244,6 +244,8 @@ class DirectMapper implements ImportInterface
                 "[N] Ignoring '#{history.id}: {history.title}' by '{identity.user}@{identity.backend}', not found locally and backend set as metadata source only.",
                 [
                     'mapper' => after_last(self::class, '\\'),
+                    'operation' => 'mapper.new',
+                    'error' => 'metadata_source_only',
                     'metaOnly' => true,
                     'history' => [
                         'id' => $entity->id ?? 'New',
@@ -521,6 +523,8 @@ class DirectMapper implements ImportInterface
                 "[T] Ignoring '#{history.id}: {history.title}' by '{identity.user}@{identity.backend}', reported '{state}' vs local '{local_state}', state change ignored due to '{reasons}'.",
                 [
                     'mapper' => after_last(self::class, '\\'),
+                    'operation' => 'mapper.transition',
+                    'error' => 'state_change_ignored',
                     'history' => [
                         'id' => $local->id ?? 'New',
                         'title' => $entity->getName(),
@@ -766,15 +770,20 @@ class DirectMapper implements ImportInterface
             $enable = Config::get('clients.jellyfin.fix_played', false);
             if ($enable && $entity->isWatched() && true === $entity->getContext('should_mark', false)) {
                 $this->logger->notice(
-                    "[O] '#{history.id}: {history.title}' by '{identity.user}@{identity.backend}' date '{remote_date}' is older than last sync date '{local_date}'. Jellyfin API bug workaround applied to mark as played.",
+                    "[O] '#{history.id}: {history.title}' by '{identity.user}@{identity.backend}' date '{comparison.remote_date}' is older than last sync date '{comparison.local_date}'. Jellyfin API bug workaround applied to mark as played.",
                     [
                         'mapper' => after_last(self::class, '\\'),
+                        'operation' => 'mapper.old_entity',
+                        'error' => 'jellyfin_played_bug',
                         'history' => [
                             'id' => $cloned->id ?? 'New',
                             'title' => $entity->getName(),
                         ],
-                        'remote_date' => make_date($entity->updated),
-                        'local_date' => make_date($opts[Options::AFTER]),
+                        'comparison' => [
+                            'remote_date' => make_date($entity->updated),
+                            'local_date' => make_date($opts[Options::AFTER]),
+                            'delta_seconds' => $opts[Options::AFTER]->getTimestamp() - $entity->updated,
+                        ],
                         'identity' => [
                             'user' => $this->userContext->name ?? 'main',
                             'backend' => $entity->via,
@@ -789,15 +798,20 @@ class DirectMapper implements ImportInterface
             }
 
             $this->logger->notice(
-                "[CODE:DM001] [O] '#{history.id}: {history.title}' by '{identity.user}@{identity.backend}' date '{remote_date}' is older than last sync date '{local_date}'. Queueing for re-processing. Check FAQ.",
+                "[O] '#{history.id}: {history.title}' by '{identity.user}@{identity.backend}' date '{comparison.remote_date}' is older than last sync date '{comparison.local_date}'. Queueing for re-processing. Check FAQ.",
                 [
                     'mapper' => after_last(self::class, '\\'),
+                    'operation' => 'mapper.old_entity',
+                    'error' => 'dm001_stale_date',
                     'history' => [
                         'id' => $cloned->id ?? 'New',
                         'title' => $entity->getName(),
                     ],
-                    'remote_date' => make_date($entity->updated),
-                    'local_date' => make_date($opts[Options::AFTER]),
+                    'comparison' => [
+                        'remote_date' => make_date($entity->updated),
+                        'local_date' => make_date($opts[Options::AFTER]),
+                        'delta_seconds' => $opts[Options::AFTER]->getTimestamp() - $entity->updated,
+                    ],
                     'state' => $entity->isWatched() ? 'played' : 'unplayed',
                     'local_state' => $local->isWatched() ? 'played' : 'unplayed',
                     'identity' => [
@@ -857,6 +871,8 @@ class DirectMapper implements ImportInterface
                 "[A] Ignoring '#{history.id}: {history.title}' by '{identity.user}@{identity.backend}', no external guids.",
                 [
                     'mapper' => after_last(self::class, '\\'),
+                    'operation' => 'mapper.add',
+                    'error' => 'no_external_guids',
                     'history' => [
                         'id' => $entity->id ?? 'New',
                         'title' => $entity->getName(),
@@ -876,6 +892,8 @@ class DirectMapper implements ImportInterface
                 "[A] Ignoring '#{history.id}: {history.title}' by '{identity.user}@{identity.backend}', marked as episode but no episode number.",
                 [
                     'mapper' => after_last(self::class, '\\'),
+                    'operation' => 'mapper.add',
+                    'error' => 'no_episode_number',
                     'history' => [
                         'id' => $entity->id ?? ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                         'title' => $entity->getName(),

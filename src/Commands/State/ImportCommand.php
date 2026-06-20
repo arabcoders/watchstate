@@ -193,7 +193,13 @@ class ImportCommand extends Command
         try {
             $selectedUsers = select_users($input->getOption('user'));
         } catch (RuntimeException $e) {
-            $this->logger->error($e->getMessage(), exception_log($e));
+            $this->logger->error(
+                'Failed to resolve import users. {exception.message}',
+                [
+                    'operation' => 'import.resolve_users',
+                    ...exception_log($e),
+                ],
+            );
 
             return self::FAILURE;
         }
@@ -243,7 +249,7 @@ class ImportCommand extends Command
                 $metadata = false === $importEnabled;
 
                 if ($isCustom && $input->getOption('exclude') === $this->in_array($selected, $backendName)) {
-                    $this->logger->info("Ignoring '{identity.user}@{identity.backend}'. as requested.", [
+                    $this->logger->info("Ignoring '{identity.user}@{identity.backend}' as requested.", [
                         'identity' => [
                             'user' => $userContext->name,
                             'backend' => $backendName,
@@ -258,6 +264,8 @@ class ImportCommand extends Command
 
                 if (!isset($supported[$type])) {
                     $this->logger->error("Ignoring '{identity.user}@{identity.backend}'. Unexpected type '{type}'.", [
+                        'operation' => 'command.backend_config',
+                        'error' => 'unexpected_backend_type',
                         'identity' => [
                             'user' => $userContext->name,
                             'backend' => $backendName,
@@ -270,6 +278,8 @@ class ImportCommand extends Command
 
                 if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {
                     $this->logger->error("Ignoring '{identity.user}@{identity.backend}'. Invalid URL '{url}'.", [
+                        'operation' => 'command.backend_config',
+                        'error' => 'invalid_url',
                         'identity' => [
                             'user' => $userContext->name,
                             'backend' => $backendName,
@@ -388,8 +398,10 @@ class ImportCommand extends Command
                 if (false === $inDryMode) {
                     if (true === (bool) Message::get("{$name}.has_errors")) {
                         $this->logger->warning(
-                            message: "Not updating '{identity.user}@{identity.backend}' import last sync date. There was errors recorded during the operation.",
+                            message: "Not updating '{identity.user}@{identity.backend}' import last sync date due to errors recorded during the operation.",
                             context: [
+                                'operation' => 'import.sync_date',
+                                'error' => 'skipped_due_to_errors',
                                 'identity' => [
                                     'user' => $userContext->name,
                                     'backend' => $name,
@@ -494,6 +506,7 @@ class ImportCommand extends Command
             $this->logger->notice(
                 "Imported '{identity.user}' play states: {movie.added} added, {movie.updated} updated, {movie.failed} failed (movies); {episode.added} added, {episode.updated} updated, {episode.failed} failed (episodes).",
                 [
+                    'operation' => 'import.summary',
                     'identity' => [
                         'user' => $userContext->name,
                     ],

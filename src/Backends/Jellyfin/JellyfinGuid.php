@@ -52,8 +52,9 @@ class JellyfinGuid implements iGuid
                 $this->parseGUIDFile($file);
             }
         } catch (Throwable $e) {
-            $this->logger->error("{class}: Failed to read or parse '{guid}' file. {exception.message}.", [
-                'class' => after_last(static::class, '\\'),
+            $this->logger->error("Failed to read or parse GUID file '{guid}'. {exception.message}", [
+                'operation' => 'guid.load_file',
+                'error' => 'file_parse_failed',
                 'guid' => $file,
                 ...exception_log($e),
             ]);
@@ -78,7 +79,10 @@ class JellyfinGuid implements iGuid
         }
 
         if (filesize($file) < 1) {
-            $this->logger->info("The external GUID mapping file '{file}' is empty.", ['file' => $file]);
+            $this->logger->info("The external GUID mapping file '{file}' is empty.", [
+                'operation' => 'guid.load_file',
+                'file' => $file,
+            ]);
             return;
         }
 
@@ -125,7 +129,9 @@ class JellyfinGuid implements iGuid
 
         foreach ($mapping as $key => $map) {
             if (false === is_array($map)) {
-                $this->logger->warning("Ignoring 'links.{key}'. Value must be an object. '{given}' is given.", [
+                $this->logger->warning("Ignoring link mapping '{key}'. Value must be an object. '{given}' given.", [
+                    'operation' => 'guid.link_map',
+                    'error' => 'link_not_object',
                     'key' => $key,
                     'type' => $this->type,
                     'given' => get_debug_type($map),
@@ -140,7 +146,9 @@ class JellyfinGuid implements iGuid
             $mapper = ag($map, 'map', null);
 
             if (false === is_array($mapper)) {
-                $this->logger->warning("Ignoring 'links.{key}'. map value must be an object. '{given}' is given.", [
+                $this->logger->warning("Ignoring link mapping '{key}'. 'map' value must be an object. '{given}' given.", [
+                    'operation' => 'guid.link_map',
+                    'error' => 'link_map_not_object',
                     'key' => $key,
                     'type' => $this->type,
                     'given' => get_debug_type($mapper),
@@ -152,7 +160,9 @@ class JellyfinGuid implements iGuid
             $to = ag($mapper, 'to', null);
 
             if (empty($from) || false === is_string($from)) {
-                $this->logger->warning("Ignoring 'links.{key}'. map.from field is empty or not a string.", [
+                $this->logger->warning("Ignoring link mapping '{key}'. 'map.from' field is empty or not a string.", [
+                    'operation' => 'guid.link_map',
+                    'error' => 'link_from_missing',
                     'type' => $this->type,
                     'key' => $key,
                 ]);
@@ -160,7 +170,9 @@ class JellyfinGuid implements iGuid
             }
 
             if (empty($to) || false === is_string($to)) {
-                $this->logger->warning("Ignoring 'links.{key}'. map.to field is empty or not a string.", [
+                $this->logger->warning("Ignoring link mapping '{key}'. 'map.to' field is empty or not a string.", [
+                    'operation' => 'guid.link_map',
+                    'error' => 'link_to_missing',
                     'type' => $this->type,
                     'key' => $key,
                 ]);
@@ -168,7 +180,9 @@ class JellyfinGuid implements iGuid
             }
 
             if (false === Guid::validateGUIDName($to)) {
-                $this->logger->warning("Ignoring 'links.{key}'. map.to '{to}' field does not starts with 'guid_'.", [
+                $this->logger->warning("Ignoring link mapping '{key}'. 'map.to' field does not starts with 'guid_', '{to}' given.", [
+                    'operation' => 'guid.link_map',
+                    'error' => 'link_to_not_guid',
                     'type' => $this->type,
                     'key' => $key,
                     'to' => $to,
@@ -177,7 +191,9 @@ class JellyfinGuid implements iGuid
             }
 
             if (false === in_array($to, $supported, true)) {
-                $this->logger->warning("Ignoring 'links.{key}'. map.to field is not a supported GUID type.", [
+                $this->logger->warning("Ignoring link mapping '{key}'. 'map.to' field is not a supported GUID type, '{to}' given.", [
+                    'operation' => 'guid.link_map',
+                    'error' => 'link_to_not_supported',
                     'type' => $this->type,
                     'key' => $key,
                     'to' => $to,
@@ -244,9 +260,10 @@ class JellyfinGuid implements iGuid
                 if (true === is_ignored_id($this->context->userContext, $bName, $type, $key, $value, $id)) {
                     if (true === $log) {
                         $this->logger->debug(
-                            "{class}: Ignoring '{identity.client}: {identity.user}@{identity.backend}' external id '{source}' for {item.type} '{item.id}: {item.title}' as requested.",
+                            "Ignoring '{identity.client}: {identity.user}@{identity.backend}' external id '{source}' for {item.type} '{item.id}: {item.title}' as requested.",
                             [
-                                'class' => after_last(static::class, '\\'),
+                                'operation' => 'guid.parse',
+                                'error' => 'ignored_by_user',
                                 'identity' => [
                                     'client' => $this->context->clientName,
                                     'user' => $this->context->userContext->name,
@@ -268,9 +285,10 @@ class JellyfinGuid implements iGuid
             } catch (Throwable $e) {
                 if (true === $log) {
                     $this->logger->info(
-                        message: "{class}: Ignoring '{identity.user}@{identity.backend}' invalid GUID '{agent}' for {item.type} '{item.id}: {item.title}'.",
+                        message: "Ignoring '{identity.user}@{identity.backend}' invalid GUID '{agent}' for {item.type} '{item.id}: {item.title}'.",
                         context: [
-                            'class' => after_last(static::class, '\\'),
+                            'operation' => 'guid.parse',
+                            'error' => 'invalid_guid',
                             'identity' => [
                                 'user' => $this->context->userContext->name,
                                 'backend' => $this->context->backendName,

@@ -101,7 +101,13 @@ class PlaylistCommand extends Command
         try {
             $selectedUsers = select_users($input->getOption('user'));
         } catch (RuntimeException $e) {
-            $this->logger->error($e->getMessage(), exception_log($e));
+            $this->logger->error(
+                'Failed to resolve playlist sync users. {exception.message}',
+                [
+                    'operation' => 'playlist.resolve_users',
+                    ...exception_log($e),
+                ],
+            );
 
             return self::FAILURE;
         }
@@ -351,6 +357,8 @@ class PlaylistCommand extends Command
                 $this->logger->warning(
                     "Ignoring '{identity.user}@{identity.backend}'. Unsupported backend type '{type}'.",
                     [
+                        'operation' => 'command.backend_config',
+                        'error' => 'unsupported_backend_type',
                         'identity' => [
                             'user' => $userContext->name,
                             'backend' => $backendName,
@@ -367,6 +375,8 @@ class PlaylistCommand extends Command
                 $this->logger->warning(
                     "Ignoring '{identity.user}@{identity.backend}'. Invalid URL '{url}'.",
                     [
+                        'operation' => 'command.backend_config',
+                        'error' => 'invalid_url',
                         'identity' => [
                             'user' => $userContext->name,
                             'backend' => $backendName,

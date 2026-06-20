@@ -144,7 +144,7 @@ class GetLibrariesListTest extends TestCase
         $this->assertFalse($response->status);
         $this->assertNotNull($response->error);
         $this->assertStringContainsString(
-            "libraries returned with unexpected '401' status code",
+            'libraries returned HTTP 401',
             (string) $response->error,
         );
 

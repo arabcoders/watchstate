@@ -10,6 +10,7 @@ use App\Libs\LogSuppressor;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\TestCase;
 use Monolog\Handler\TestHandler;
+use Monolog\Level;
 use Monolog\Logger;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -71,7 +72,14 @@ final class ValidateCommandTest extends TestCase
         ]);
 
         self::assertSame(ValidateCommand::FAILURE, $status);
-        self::assertTrue($handler->hasErrorThatContains("User 'ghost' not found."));
+        self::assertTrue(
+            $this->hasRecordWith(
+                $handler,
+                Level::Error,
+                ['operation' => 'validate.resolve_users'],
+            ),
+            'Assert resolve-users error logged with operation token.',
+        );
     }
 
     public function test_selected_user_db_only(): void

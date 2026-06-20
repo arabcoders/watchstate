@@ -13,6 +13,7 @@ use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\QueueRequests;
 use App\Libs\TestCase;
 use Monolog\Handler\TestHandler;
+use Monolog\Level;
 use Monolog\Logger;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputOption;
@@ -90,7 +91,14 @@ final class ExportCommandTest extends TestCase
         ]);
 
         self::assertSame(ExportCommand::FAILURE, $status);
-        self::assertTrue($handler->hasErrorThatContains("User 'ghost' not found."));
+        self::assertTrue(
+            $this->hasRecordWith(
+                $handler,
+                Level::Error,
+                ['operation' => 'export.resolve_users'],
+            ),
+            'Assert resolve-users error logged with operation token.',
+        );
     }
 
     public function test_matching_backend_uses_push(): void

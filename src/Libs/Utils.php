@@ -784,7 +784,13 @@ if (!function_exists('register_events')) {
                     $dispatcher->addListener(ag($event, 'on'), ag($event, 'callable'));
                 }
             } catch (Throwable $e) {
-                $logger->error($e->getMessage(), []);
+                $logger->error(
+                    'Failed to register event listener. {exception.message}',
+                    [
+                        'operation' => 'events.register_listener',
+                        ...exception_log($e),
+                    ],
+                );
             }
         }
 
@@ -1579,6 +1585,8 @@ if (!function_exists('get_user_context')) {
         $users = get_users(includeMain: true);
         if (false === in_array($user, $users, true)) {
             $logger->error("User '{identity.user}' not found.", [
+                'operation' => 'user_context.resolve',
+                'error' => 'user_not_found',
                 'identity' => ['user' => $user],
                 'users' => $users,
             ]);

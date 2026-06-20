@@ -15,6 +15,7 @@ use arabcoders\database\Dialect\DialectFactory;
 use Closure;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\TestHandler;
+use Monolog\Level;
 use Monolog\Logger;
 use PDO;
 use Psr\Log\LoggerInterface;
@@ -62,6 +63,85 @@ class TestCase extends \PHPUnit\Framework\TestCase
         if (!is_dir(self::$tmpPath) && !mkdir(self::$tmpPath, 0o777, true) && !is_dir(self::$tmpPath)) {
             throw new \RuntimeException(sprintf('Directory "%s" was not created', self::$tmpPath));
         }
+    }
+
+    /**
+     * Assert that at least one log record in the handler matches the given level and context filters.
+     *
+     * Structured context fields (e.g. 'operation', 'error') are the stable contract for log assertions.
+     * Prefer this over substring matching on message text, which is fragile under prose refactors.
+     *
+     * @param Level $level Expected log level.
+     * @param array<string, mixed> $context Key/value pairs that must be present in the record context.
+     * @param bool $clear Whether to clear the handler after checking.
+     *
+     * @return bool True if a matching record was found.
+     */
+    protected function loggedWith(Level $level, array $context = [], bool $clear = false): bool
+    {
+        if (null === $this->handler) {
+            return false;
+        }
+
+        try {
+            foreach ($this->handler->getRecords() as $record) {
+                if ($level !== $record->level) {
+                    continue;
+                }
+
+                $match = true;
+                foreach ($context as $key => $value) {
+                    if (ag($record->context, $key) === $value) {
+                        continue;
+                    }
+                    $match = false;
+                    break;
+                }
+
+                if (true === $match) {
+                    return true;
+                }
+            }
+
+            return false;
+        } finally {
+            if (true === $clear) {
+                $this->handler->clear();
+            }
+        }
+    }
+
+    /**
+     * Static variant of loggedWith() for tests that use a local TestHandler instead of $this->handler.
+     *
+     * @param TestHandler $handler The handler to inspect.
+     * @param Level $level Expected log level.
+     * @param array<string, mixed> $context Key/value pairs that must be present in the record context.
+     *
+     * @return bool True if a matching record was found.
+     */
+    protected static function hasRecordWith(TestHandler $handler, Level $level, array $context = []): bool
+    {
+        foreach ($handler->getRecords() as $record) {
+            if ($level !== $record->level) {
+                continue;
+            }
+
+            $match = true;
+            foreach ($context as $key => $value) {
+                if (ag($record->context, $key) === $value) {
+                    continue;
+                }
+                $match = false;
+                break;
+            }
+
+            if (true === $match) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     protected function initTempApp(?string $path = null): string

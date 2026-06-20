@@ -162,7 +162,13 @@ class ExportCommand extends Command
                 select_users($input->getOption('user')),
             );
         } catch (RuntimeException $e) {
-            $this->logger->error($e->getMessage(), exception_log($e));
+            $this->logger->error(
+                'Failed to resolve export users. {exception.message}',
+                [
+                    'operation' => 'export.resolve_users',
+                    ...exception_log($e),
+                ],
+            );
 
             return self::FAILURE;
         }
@@ -216,7 +222,7 @@ class ExportCommand extends Command
                     if (true !== (bool) ag($backend, 'export.enabled')) {
                         if ($isCustom) {
                             $this->logger->warning(
-                                "Exporting to a export disabled backend '{identity.user}@{identity.backend}' as requested.",
+                                "Exporting to an export disabled backend '{identity.user}@{identity.backend}' as requested.",
                                 [
                                     'identity' => [
                                         'user' => $userContext->name,
@@ -239,6 +245,8 @@ class ExportCommand extends Command
                         $this->logger->error(
                             "Ignoring '{identity.user}@{identity.backend}'. Unexpected type '{type}'.",
                             [
+                                'operation' => 'command.backend_config',
+                                'error' => 'unexpected_backend_type',
                                 'type' => $type,
                                 'identity' => [
                                     'backend' => $backendName,
@@ -252,6 +260,8 @@ class ExportCommand extends Command
 
                     if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {
                         $this->logger->error("Ignoring '{identity.user}@{identity.backend}'. Invalid URL '{url}'.", [
+                            'operation' => 'command.backend_config',
+                            'error' => 'invalid_url',
                             'url' => $url ?? 'None',
                             'identity' => [
                                 'backend' => $backendName,
@@ -545,7 +555,7 @@ class ExportCommand extends Command
 
                                 if (Status::OK !== Status::tryFrom($context['response']['status_code'])) {
                                     $logger->error(
-                                        "Request to change '{identity.user}@{identity.backend}' - '#{history.id}: {history.title}' play state returned with unexpected '{response.status_code}' status code.",
+                                        "Request to change '{identity.user}@{identity.backend}' - '#{history.id}: {history.title}' play state returned HTTP {response.status_code}.",
                                         $context,
                                     );
 
@@ -611,8 +621,10 @@ class ExportCommand extends Command
                         );
                     } else {
                         $this->logger->warning(
-                            "Not updating '{identity.user}@{identity.backend}' export last sync date. There was errors recorded during the operation.",
+                            "Not updating '{identity.user}@{identity.backend}' export last sync date due to errors recorded during the operation.",
                             [
+                                'operation' => 'export.sync_date',
+                                'error' => 'skipped_due_to_errors',
                                 'identity' => [
                                     'backend' => $name,
                                     'user' => $userContext->name,

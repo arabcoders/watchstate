@@ -79,7 +79,7 @@ class GetInfo
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: "'{identity.user}@{identity.backend}' request returned with unexpected '{response.status_code}' status code.",
+                            message: "'{identity.user}@{identity.backend}' request returned HTTP {response.status_code}.",
                             context: [
                                 ...$logContext,
                                 'response' => [
@@ -100,7 +100,7 @@ class GetInfo
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: "'{identity.user}@{identity.backend}' request returned with empty response. Please make sure the container can communicate with the backend.",
+                            message: "'{identity.user}@{identity.backend}' request returned an empty response. Please make sure the container can communicate with the backend.",
                             context: [
                                 ...$logContext,
                                 'response' => [

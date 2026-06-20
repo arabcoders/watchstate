@@ -550,7 +550,20 @@ final class Index
                         [],
                     );
                 } catch (Throwable $e) {
-                    $this->logger->error($e->getMessage(), exception_log($e));
+                    $this->logger->error(
+                        "Failed to load duplicates for '#{item.id}: {item.title}'. {exception.message}",
+                        [
+                            'operation' => 'history.duplicates',
+                            'identity' => [
+                                'user' => $userContext->name,
+                            ],
+                            'item' => [
+                                'id' => $entity['id'] ?? null,
+                                'title' => ag($entity, 'title', '??'),
+                            ],
+                            ...exception_log($e),
+                        ],
+                    );
                 }
             }
 
@@ -673,7 +686,20 @@ final class Index
                     [],
                 );
             } catch (Throwable $e) {
-                $this->logger->error($e->getMessage(), exception_log($e));
+                $this->logger->error(
+                    "Failed to load duplicates for '#{item.id}: {item.title}'. {exception.message}",
+                    [
+                        'operation' => 'history.duplicates',
+                        'identity' => [
+                            'user' => $userContext->name,
+                        ],
+                        'item' => [
+                            'id' => $item->id,
+                            'title' => $item->getName(),
+                        ],
+                        ...exception_log($e),
+                    ],
+                );
             }
         }
 
@@ -711,7 +737,20 @@ final class Index
                 [],
             );
         } catch (Throwable $e) {
-            $this->logger->error($e->getMessage(), exception_log($e));
+            $this->logger->error(
+                "Failed to load duplicates for '#{item.id}: {item.title}'. {exception.message}",
+                [
+                    'operation' => 'history.duplicates',
+                    'identity' => [
+                        'user' => $userContext->name,
+                    ],
+                    'item' => [
+                        'id' => $item->id,
+                        'title' => $item->getName(),
+                    ],
+                    ...exception_log($e),
+                ],
+            );
             return api_error('Failed to get duplicates', Status::INTERNAL_SERVER_ERROR);
         }
 

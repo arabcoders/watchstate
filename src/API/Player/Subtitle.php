@@ -177,7 +177,13 @@ final readonly class Subtitle
                 'X-Cache' => $response->getHeaderLine('X-Cache'),
             ]);
         } catch (Throwable $e) {
-            $this->logger->error($e->getMessage(), exception_log($e));
+            $this->logger->error(
+                'Failed to convert subtitle. {exception.message}',
+                [
+                    'operation' => 'player.subtitle_convert',
+                    ...exception_log($e),
+                ],
+            );
             return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);
         }
     }

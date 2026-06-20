@@ -104,6 +104,8 @@ final readonly class ProcessPushEvent
 
             if (!isset($supported[$type])) {
                 $writer(Level::Error, "Ignoring '{identity.user}@{identity.backend}'. Invalid type '{type}'.", [
+                    'operation' => 'webhook.backend_config',
+                    'error' => 'unexpected_backend_type',
                     'type' => $type,
                     'identity' => [
                         'user' => $user,
@@ -119,6 +121,8 @@ final readonly class ProcessPushEvent
 
             if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {
                 $writer(Level::Error, "Ignoring '{identity.user}@{identity.backend}'. Invalid URL '{url}'.", [
+                    'operation' => 'webhook.backend_config',
+                    'error' => 'invalid_url',
                     'url' => $url ?? 'None',
                     'identity' => [
                         'user' => $user,
@@ -219,7 +223,7 @@ final readonly class ProcessPushEvent
                     if (Status::OK !== Status::tryFrom($context['response']['status_code'])) {
                         $writer(
                             Level::Error,
-                            "Request to change '{identity.user}@{identity.backend}' - '#{history.id}: {history.title}' play state returned with unexpected '{response.status_code}' status code.",
+                            "Request to change '{identity.user}@{identity.backend}' - '#{history.id}: {history.title}' play state returned HTTP {response.status_code}.",
                             $context,
                         );
 
