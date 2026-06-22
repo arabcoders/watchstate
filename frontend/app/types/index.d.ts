@@ -1486,3 +1486,107 @@ export interface OpenAPIPathItem {
   patch?: OpenAPIOperation;
   trace?: OpenAPIOperation;
 }
+
+/**
+ * System report response from /api/system/report endpoint.
+ */
+export interface SystemReport {
+  /** ISO 8601 generation timestamp */
+  generated_at: string;
+  /** System runtime information */
+  system: SystemReportSystem;
+  /** List of configured user names */
+  users: Array<string>;
+  /** Backend diagnostics */
+  backends: Array<SystemReportBackend>;
+  /** Log suppression rules */
+  suppression: SystemReportSuppression;
+  /** Scheduled tasks */
+  tasks: Array<SystemReportTask>;
+  /** Recent log entries grouped by type and day */
+  logs: Array<SystemReportLog>;
+}
+
+/**
+ * System runtime info block.
+ */
+export interface SystemReportSystem {
+  version: string;
+  php_version: string;
+  sapi: string;
+  timezone: string;
+  data_path: string;
+  temp_path: string;
+  database_migrated: boolean;
+  env_file_exists: boolean;
+  scheduler_running: boolean;
+  scheduler_message: string;
+  in_container: boolean;
+}
+
+/**
+ * Backend diagnostics entry.
+ */
+export interface SystemReportBackend {
+  name: string;
+  user: string;
+  type: string;
+  version: string | null;
+  https: boolean;
+  has_uuid: boolean;
+  has_user: boolean;
+  export: {
+    enabled: boolean;
+    last_sync: number | null;
+    playlist_last_sync: number | null;
+  };
+  import: {
+    enabled: boolean;
+    metadata_refresh: boolean;
+    last_sync: number | null;
+    playlist_last_sync: number | null;
+  };
+  options: Record<string, unknown>;
+  sample_entries?: Array<Record<string, unknown>>;
+}
+
+/**
+ * Log suppression rules block.
+ */
+export interface SystemReportSuppression {
+  file_exists: boolean;
+  rules: Record<string, unknown> | null;
+  error: string | null;
+}
+
+/**
+ * Scheduled task entry.
+ */
+export interface SystemReportTask {
+  name: string;
+  enabled: boolean;
+  args: string | null;
+  timer: string | null;
+  next_run: string | null;
+  error: string | null;
+}
+
+/**
+ * Log section grouped by type (merging today and yesterday).
+ */
+export interface SystemReportLog {
+  /** Log type: 'app', 'access', or 'task' */
+  type: string;
+  entries: Array<SystemReportLogEntry>;
+}
+
+/**
+ * Individual log entry in a report log section.
+ */
+export interface SystemReportLogEntry {
+  datetime: string;
+  level: string;
+  logger: string;
+  message: string;
+  separator?: boolean;
+}

@@ -2699,12 +2699,63 @@ Restarts the task scheduler.
 ---
 
 #### GET /v1/api/system/report
-Returns the output of the `system:report` command.
+Returns a structured diagnostic report.
 
 **Response**:
 ```json
 {
-  "...": "report payload"
+  "generated_at": "2024-01-01T12:00:00+00:00",
+  "system": {
+    "version": "v1.0.0",
+    "php_version": "8.4.0",
+    "sapi": "cli",
+    "timezone": "UTC",
+    "data_path": "/config",
+    "temp_path": "/tmp",
+    "database_migrated": true,
+    "env_file_exists": true,
+    "scheduler_running": true,
+    "scheduler_message": "OK",
+    "in_container": true
+  },
+  "users": ["main"],
+  "backends": [
+    {
+      "name": "plex_server",
+      "user": "main",
+      "type": "plex",
+      "version": "1.40.1",
+      "https": true,
+      "has_uuid": true,
+      "has_user": true,
+      "export": { "enabled": true, "last_sync": 1704110400, "playlist_last_sync": null },
+      "import": { "enabled": true, "metadata_refresh": true, "last_sync": 1704110400, "playlist_last_sync": null },
+      "options": {}
+    }
+  ],
+  "suppression": {
+    "file_exists": false,
+    "rules": null,
+    "error": null
+  },
+  "tasks": [
+    {
+      "name": "import",
+      "enabled": true,
+      "args": "-v",
+      "timer": "5 * * * *",
+      "next_run": "2024-01-01T13:00:00+00:00",
+      "error": null
+    }
+  ],
+  "logs": [
+    {
+      "type": "app",
+      "entries": [
+        { "datetime": "2024-01-01T12:00:00+00:00", "level": "INFO", "logger": "main", "message": "Application started" }
+      ]
+    }
+  ]
 }
 ```
 

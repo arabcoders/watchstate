@@ -221,7 +221,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'System Report',
     pageLabel: 'System Report',
     breadcrumbSectionLabel: 'Diagnostics',
-    description: 'Diagnostic report for bug reports.',
+    description: 'Diagnostic report for submitting bugs.',
     icon: 'i-lucide-flag',
     to: '/report',
     matchPath: '/report',
