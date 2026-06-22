@@ -1,18 +1,17 @@
 <template>
   <div class="space-y-6">
     <div class="space-y-2">
-      <div
-        class="flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-      >
-        <UIcon :name="pageShell.icon" class="size-4" />
-        <span>{{ pageShell.sectionLabel }}</span>
-        <span>/</span>
-        <NuxtLink to="/identities" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
-        <span>/</span>
-        <span class="normal-case tracking-normal">{{ id }}</span>
-        <span>/</span>
-        <span class="text-highlighted normal-case tracking-normal">Delete</span>
-      </div>
+      <PageHeader v-bind="pageShell">
+        <template #kicker>
+          <span>{{ pageShell.sectionLabel }}</span>
+          <span>/</span>
+          <NuxtLink to="/identities" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
+          <span>/</span>
+          <span class="normal-case tracking-normal">{{ id }}</span>
+          <span>/</span>
+          <span class="text-highlighted normal-case tracking-normal">Delete</span>
+        </template>
+      </PageHeader>
 
       <div class="space-y-1">
         <h1 class="text-2xl font-semibold text-highlighted">Delete identity</h1>
@@ -137,6 +136,7 @@
 import { onMounted, nextTick, ref } from 'vue';
 import { navigateTo, useRoute } from '#app';
 import { useStorage } from '@vueuse/core';
+import PageHeader from '~/components/PageHeader.vue';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import { notification, parse_api_response, request } from '~/utils';
 import { useDialog } from '~/composables/useDialog';

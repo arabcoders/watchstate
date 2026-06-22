@@ -1,11 +1,8 @@
 <template>
   <div class="space-y-6">
     <section class="space-y-4">
-      <div class="space-y-1">
-        <div
-          class="flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-        >
-          <UIcon :name="pageShell.icon" class="size-4" />
+      <PageHeader v-bind="pageShell">
+        <template #kicker>
           <span>{{ pageShell.sectionLabel }}</span>
           <span>/</span>
           <NuxtLink to="/backends" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
@@ -15,12 +12,12 @@
           }}</NuxtLink>
           <span>/</span>
           <span class="text-highlighted normal-case tracking-normal">Delete</span>
-        </div>
+        </template>
+      </PageHeader>
 
-        <div>
-          <h1 class="text-2xl font-semibold text-highlighted">Delete Backend</h1>
-          <p class="mt-1 text-sm text-toned">Delete backend configuration and data.</p>
-        </div>
+      <div>
+        <h1 class="text-2xl font-semibold text-highlighted">Delete Backend</h1>
+        <p class="mt-1 text-sm text-toned">Delete backend configuration and data.</p>
       </div>
 
       <UAlert
@@ -115,6 +112,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { navigateTo, useRoute } from '#app';
+import PageHeader from '~/components/PageHeader.vue';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import { notification, parse_api_response, request } from '~/utils';
 import type { Backend, GenericError } from '~/types';

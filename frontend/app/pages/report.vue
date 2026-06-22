@@ -1,19 +1,8 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-4">
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div class="min-w-0 space-y-1">
-        <div
-          class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-        >
-          <UIcon :name="pageShell.icon" class="size-4" />
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
-          <span>{{ pageShell.pageLabel }}</span>
-        </div>
-      </div>
-
-      <div v-if="data.length > 0" class="flex flex-wrap items-center justify-end gap-2">
-        <UTooltip text="Scroll to top">
+  <main class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader v-bind="pageShell">
+      <template #actions>
+        <UTooltip v-if="data.length > 0" text="Scroll to top">
           <UButton
             color="neutral"
             variant="outline"
@@ -22,11 +11,11 @@
             aria-label="Scroll report to top"
             @click="scrollToTop"
           >
-            <span class="hidden sm:inline">Scroll Up</span>
+            Up
           </UButton>
         </UTooltip>
 
-        <UTooltip text="Scroll to bottom">
+        <UTooltip v-if="data.length > 0" text="Scroll to bottom">
           <UButton
             color="neutral"
             variant="outline"
@@ -35,11 +24,11 @@
             aria-label="Scroll report to bottom"
             @click="scrollToBottom"
           >
-            <span class="hidden sm:inline">Scroll Down</span>
+            Bottom
           </UButton>
         </UTooltip>
 
-        <UTooltip text="Copy report">
+        <UTooltip v-if="data.length > 0" text="Copy report">
           <UButton
             color="neutral"
             variant="outline"
@@ -48,11 +37,11 @@
             aria-label="Copy report"
             @click="copyReport"
           >
-            <span class="hidden sm:inline">Copy Report</span>
+            Copy Report
           </UButton>
         </UTooltip>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <UAlert
       v-if="data.length < 1"
@@ -64,18 +53,22 @@
       :ui="{ icon: 'animate-spin' }"
     />
 
-    <UCard v-else class="border border-default/70 shadow-sm" :ui="{ body: 'p-0' }">
+    <div
+      v-else
+      ref="reportViewport"
+      class="ws-card ws-terminal-panel ws-terminal-panel-lg bg-elevated"
+    >
       <pre
-        ref="reportViewport"
-        class="max-h-[70vh] min-h-[60vh] overflow-y-auto bg-elevated p-4 text-sm text-default wrap-pre whitespace-pre-wrap wrap-break-word"
+        class="whitespace-pre-wrap wrap-break-word text-sm leading-6 text-default"
       ><code><span v-for="(item, index) in data" :key="index" class="block">{{ item }}</span></code></pre>
-    </UCard>
+    </div>
   </main>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useHead, useRoute } from '#app';
+import PageHeader from '~/components/PageHeader.vue';
 import { useDialog } from '~/composables/useDialog';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import { copyText, parse_api_response, request } from '~/utils';

@@ -1,19 +1,8 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-4">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-      <div class="space-y-1">
-        <div
-          class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-        >
-          <UIcon :name="pageShell.icon" class="size-4" />
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
-          <span>{{ pageShell.pageLabel }}</span>
-        </div>
-      </div>
-
-      <div v-if="hasResponse" class="flex flex-wrap items-center justify-end gap-2">
-        <UTooltip text="Copy request and response">
+  <main class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader v-bind="pageShell">
+      <template #actions>
+        <UTooltip v-if="hasResponse" text="Copy request and response">
           <UButton
             color="neutral"
             variant="outline"
@@ -24,10 +13,10 @@
             <span class="hidden sm:inline">Copy</span>
           </UButton>
         </UTooltip>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
-    <UCard class="border border-default/70 bg-default/90 shadow-sm" :ui="formCardUi">
+    <UCard class="shadow-sm" :ui="formCardUi">
       <template #header>
         <div class="inline-flex items-center gap-2 text-base font-semibold text-highlighted">
           <UIcon name="i-lucide-send" class="size-4 shrink-0 text-toned" />
@@ -182,7 +171,7 @@
     </UCard>
 
     <div v-if="hasResponse" class="grid gap-4 xl:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
-      <UCard class="border border-default/70 bg-default/90 shadow-sm" :ui="summaryCardUi">
+      <UCard class="shadow-sm" :ui="summaryCardUi">
         <template #header>
           <div class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
             <UIcon name="i-lucide-activity" class="size-4 text-toned" />
@@ -222,7 +211,7 @@
         </div>
       </UCard>
 
-      <UCard class="border border-default/70 bg-default/90 shadow-sm" :ui="resultCardUi">
+      <UCard class="shadow-sm" :ui="resultCardUi">
         <template #header>
           <div class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
             <UIcon name="i-lucide-panels-top-left" class="size-4 text-toned" />
@@ -288,6 +277,7 @@
 import { computed, nextTick, ref, watch } from 'vue';
 import { useHead } from '#app';
 import type { TableColumn } from '@nuxt/ui';
+import PageHeader from '~/components/PageHeader.vue';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import { copyText, notification, parse_api_response, request } from '~/utils';
 import { useDialog } from '~/composables/useDialog';
@@ -391,6 +381,15 @@ const templates = ref<Array<{ id: number; key: string; override: Item }>>([
         { key: 'Accept', value: 'application/json' },
         { key: 'X-MediaBrowser-Token', value: '[API_KEY]' },
       ],
+    },
+  },
+  {
+    id: 7,
+    key: 'Plex.tv: Validate Token',
+    override: {
+      method: 'GET',
+      url: 'https://plex.tv/api/v2/user',
+      headers: [{ key: 'X-Plex-Token', value: '[PLEX_TOKEN]' }],
     },
   },
 ]);

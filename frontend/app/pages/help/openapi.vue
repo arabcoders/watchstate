@@ -1,23 +1,7 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-4">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-      <div class="min-w-0 space-y-1">
-        <div
-          class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-        >
-          <UIcon :name="pageShell.icon" class="size-4" />
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
-          <span>{{ pageShell.pageLabel }}</span>
-        </div>
-
-        <div class="space-y-1">
-          <h1 class="text-xl font-semibold text-highlighted sm:text-2xl">{{ specTitle }}</h1>
-          <p class="text-sm text-toned">{{ specMeta }}</p>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center justify-end gap-2">
+  <main class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader v-bind="pageShell">
+      <template #actions>
         <UInput
           v-if="showFilter || query"
           id="filter"
@@ -56,7 +40,12 @@
             <span class="hidden sm:inline">JSON</span>
           </UButton>
         </a>
-      </div>
+      </template>
+    </PageHeader>
+
+    <div class="space-y-1">
+      <h1 class="text-xl font-semibold text-highlighted sm:text-2xl">{{ specTitle }}</h1>
+      <p class="text-sm text-toned">{{ specMeta }}</p>
     </div>
 
     <UAlert
@@ -98,12 +87,7 @@
       </UAlert>
 
       <div v-else class="grid items-start gap-4 xl:grid-cols-2">
-        <UCard
-          v-for="route in filteredRoutes"
-          :key="route.key"
-          class="border border-default/70 bg-default/90 shadow-sm"
-          :ui="cardUi"
-        >
+        <UCard v-for="route in filteredRoutes" :key="route.key" class="shadow-sm" :ui="cardUi">
           <template #header>
             <button
               type="button"
@@ -180,7 +164,7 @@
                 <div
                   v-for="parameter in route.parameters"
                   :key="`${route.key}-param-${parameter.key}`"
-                  class="rounded-md border border-default bg-default/70 px-3 py-3"
+                  class="rounded-md border border-default bg-elevated/40 px-3 py-3"
                 >
                   <div class="flex flex-wrap items-center gap-2">
                     <div class="font-mono text-sm font-semibold text-highlighted">
@@ -211,7 +195,7 @@
 
                   <pre
                     v-if="shouldShowShape(parameter.schemaSummary, parameter.shape)"
-                    class="mt-3 overflow-x-auto rounded-md border border-default bg-default/70 p-3 text-xs text-toned"
+                    class="mt-3 overflow-x-auto rounded-md border border-default bg-elevated/40 p-3 text-xs text-toned"
                   ><code>{{ parameter.shape }}</code></pre>
                 </div>
               </div>
@@ -223,7 +207,7 @@
                 <span>Request Body</span>
               </div>
 
-              <div class="rounded-md border border-default bg-default/70 px-3 py-3">
+              <div class="rounded-md border border-default bg-elevated/40 px-3 py-3">
                 <div class="flex flex-wrap items-center gap-2">
                   <UBadge color="neutral" variant="soft" size="sm">
                     {{ route.requestBody.mediaType }}
@@ -254,7 +238,7 @@
 
                 <pre
                   v-if="shouldShowShape(route.requestBody.schemaSummary, route.requestBody.shape)"
-                  class="overflow-x-auto rounded-md border border-default bg-default/70 p-3 text-xs text-toned"
+                  class="overflow-x-auto rounded-md border border-default bg-elevated/40 p-3 text-xs text-toned"
                 ><code>{{ route.requestBody.shape }}</code></pre>
 
                 <div v-else-if="!route.requestBody.schemaSummary" class="text-sm text-toned">
@@ -273,7 +257,7 @@
                 <div
                   v-for="response in route.responses"
                   :key="`${route.key}-response-${response.status}`"
-                  class="rounded-md border border-default bg-default/70 px-3 py-3"
+                  class="rounded-md border border-default bg-elevated/40 px-3 py-3"
                 >
                   <div class="flex flex-wrap items-center gap-2">
                     <UBadge :color="responseColor(response.status)" variant="soft" size="sm">
@@ -302,7 +286,7 @@
 
                   <pre
                     v-if="shouldShowShape(response.schemaSummary, response.shape)"
-                    class="mt-3 overflow-x-auto rounded-md border border-default bg-default/70 p-3 text-xs text-toned"
+                    class="mt-3 overflow-x-auto rounded-md border border-default bg-elevated/40 p-3 text-xs text-toned"
                   ><code>{{ response.shape }}</code></pre>
 
                   <div v-else-if="!response.schemaSummary" class="mt-2 text-sm text-toned">
@@ -323,6 +307,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useHead } from '#app';
+import PageHeader from '~/components/PageHeader.vue';
 import { awaitElement, parse_api_response } from '~/utils';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import type {

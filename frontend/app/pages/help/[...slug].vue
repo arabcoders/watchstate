@@ -1,17 +1,14 @@
 <template>
-  <main v-if="url" class="w-full min-w-0 max-w-full space-y-4">
-    <div class="space-y-1">
-      <div
-        class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-      >
-        <UIcon :name="pageShell.icon" class="size-4" />
+  <main v-if="url" class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader v-bind="pageShell">
+      <template #kicker>
         <span>{{ pageShell.sectionLabel }}</span>
         <span class="text-toned">/</span>
         <NuxtLink to="/help" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
         <span class="text-toned">/</span>
         <span class="truncate text-highlighted normal-case tracking-normal">{{ pageTitle }}</span>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <Markdown :file="url" />
   </main>
@@ -22,6 +19,7 @@ import { computed, ref, watch } from 'vue';
 import { navigateTo, useHead, useRoute } from '#app';
 import { NuxtLink } from '#components';
 import Markdown from '~/components/Markdown.vue';
+import PageHeader from '~/components/PageHeader.vue';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 
 const route = useRoute();

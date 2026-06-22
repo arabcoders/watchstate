@@ -1,89 +1,85 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-4">
+  <main class="w-full min-w-0 max-w-full space-y-6">
     <div class="space-y-3">
-      <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-        <div class="min-w-0 flex-1 space-y-2">
-          <div
-            class="flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-          >
-            <UIcon :name="pageShell.icon" class="size-4" />
-            <span>{{ pageShell.sectionLabel }}</span>
-            <span>/</span>
-            <NuxtLink to="/history" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
-            <span>/</span>
-            <span class="truncate text-highlighted normal-case tracking-normal">{{
-              headerTitle
-            }}</span>
-          </div>
-        </div>
+      <PageHeader v-bind="pageShell">
+        <template #kicker>
+          <span>{{ pageShell.sectionLabel }}</span>
+          <span>/</span>
+          <NuxtLink to="/history" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
+          <span>/</span>
+          <span class="truncate text-highlighted normal-case tracking-normal">{{
+            headerTitle
+          }}</span>
+        </template>
+        <template #actions>
+          <template v-if="data?.via">
+            <UTooltip
+              v-if="data?.files?.length > 0"
+              :text="`${data.content_exists ? 'Play media' : 'Media is inaccessible'}`"
+            >
+              <UButton
+                color="neutral"
+                variant="outline"
+                size="sm"
+                icon="i-lucide-play"
+                :disabled="!data.content_exists"
+                @click="openPlaybackModal"
+              >
+                Play
+              </UButton>
+            </UTooltip>
 
-        <div v-if="data?.via" class="flex flex-wrap items-center justify-end gap-2">
-          <UTooltip
-            v-if="data?.files?.length > 0"
-            :text="`${data.content_exists ? 'Play media' : 'Media is inaccessible'}`"
-          >
+            <UTooltip text="Toggle watch state">
+              <UButton
+                color="neutral"
+                :variant="data.watched ? 'soft' : 'outline'"
+                size="sm"
+                :icon="data.watched ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                @click="toggleWatched"
+              >
+                {{ data.watched ? 'Unwatched' : 'Watched' }}
+              </UButton>
+            </UTooltip>
+
+            <UTooltip text="View raw record payload">
+              <UButton
+                color="neutral"
+                variant="outline"
+                size="sm"
+                icon="i-lucide-bug"
+                @click="showRawData = true"
+              >
+                Raw Data
+              </UButton>
+            </UTooltip>
+
+            <UTooltip text="Delete the record">
+              <UButton
+                color="neutral"
+                variant="outline"
+                size="sm"
+                icon="i-lucide-trash-2"
+                :disabled="isDeleting || isLoading"
+                :loading="isDeleting"
+                @click="deleteItem"
+              >
+                Delete
+              </UButton>
+            </UTooltip>
+
             <UButton
               color="neutral"
               variant="outline"
               size="sm"
-              icon="i-lucide-play"
-              :disabled="!data.content_exists"
-              @click="openPlaybackModal"
+              icon="i-lucide-refresh-cw"
+              :loading="isLoading"
+              @click="() => void loadContent(id)"
             >
-              Play
+              Reload
             </UButton>
-          </UTooltip>
-
-          <UTooltip text="Toggle watch state">
-            <UButton
-              color="neutral"
-              :variant="data.watched ? 'soft' : 'outline'"
-              size="sm"
-              :icon="data.watched ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-              @click="toggleWatched"
-            >
-              {{ data.watched ? 'Unwatched' : 'Watched' }}
-            </UButton>
-          </UTooltip>
-
-          <UTooltip text="View raw record payload">
-            <UButton
-              color="neutral"
-              variant="outline"
-              size="sm"
-              icon="i-lucide-bug"
-              @click="showRawData = true"
-            >
-              Raw Data
-            </UButton>
-          </UTooltip>
-
-          <UTooltip text="Delete the record">
-            <UButton
-              color="neutral"
-              variant="outline"
-              size="sm"
-              icon="i-lucide-trash-2"
-              :disabled="isDeleting || isLoading"
-              :loading="isDeleting"
-              @click="deleteItem"
-            >
-              Delete
-            </UButton>
-          </UTooltip>
-
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-refresh-cw"
-            :loading="isLoading"
-            @click="() => void loadContent(id)"
-          >
-            Reload
-          </UButton>
-        </div>
-      </div>
+          </template>
+        </template>
+      </PageHeader>
 
       <div
         v-if="
@@ -246,8 +242,8 @@
       <div class="space-y-4">
         <div v-if="data?.via" class="space-y-4">
           <UCard
-            class="border border-default/70 shadow-sm"
-            :class="[data.watched ? 'ring-1 ring-success/30' : '', 'bg-default/90']"
+            class="shadow-sm"
+            :class="[data.watched ? 'ring-1 ring-success/30' : '']"
             :ui="detailCardUi"
           >
             <template #header>
@@ -658,8 +654,8 @@
               <UCard
                 v-for="(item, key) in data.metadata"
                 :key="key"
-                class="h-full border border-default/70 shadow-sm"
-                :class="[Number(item.watched) ? 'ring-1 ring-success/30' : '', 'bg-default/90']"
+                class="h-full shadow-sm"
+                :class="[Number(item.watched) ? 'ring-1 ring-success/30' : '']"
                 :ui="detailCardUi"
               >
                 <template #header>
@@ -1168,7 +1164,7 @@
 
           <UCard
             v-if="comparisonBackends.length > 0"
-            class="hidden border border-default/70 bg-default/90 shadow-sm xl:block"
+            class="hidden shadow-sm xl:block"
             :ui="detailCardUi"
           >
             <template #header>
@@ -1286,7 +1282,7 @@
                       <div
                         class="border border-default/50 px-3 py-3 text-sm text-default transition-colors"
                         :class="[
-                          0 === rowIndex % 2 ? 'bg-default' : 'bg-elevated/20',
+                          0 === rowIndex % 2 ? 'bg-elevated/40' : 'bg-elevated/20',
                           'group-hover/row:bg-elevated/50',
                           row.expandable ? 'cursor-pointer' : '',
                         ]"
@@ -1320,7 +1316,7 @@
                           false !== row.compareDiffs && entry.differs
                             ? 'bg-warning/10 ring-1 ring-inset ring-warning/20'
                             : 0 === rowIndex % 2
-                              ? 'bg-default/90'
+                              ? 'bg-elevated/40'
                               : 'bg-elevated/20',
                           false !== row.compareDiffs && entry.differs
                             ? 'group-hover/row:bg-warning/15'
@@ -1425,7 +1421,7 @@
         </div>
       </div>
 
-      <UCard class="border border-default/70 bg-default/90 shadow-sm" :ui="tipsCardUi">
+      <UCard class="shadow-sm" :ui="tipsCardUi">
         <template #header>
           <button
             type="button"
@@ -1481,6 +1477,7 @@ import { NuxtLink } from '#components';
 import { useBreakpoints, useStorage } from '@vueuse/core';
 import moment from 'moment';
 import DuplicateRecordList from '~/components/DuplicateRecordList.vue';
+import PageHeader from '~/components/PageHeader.vue';
 import PlaybackSelection from '~/components/PlaybackSelection.vue';
 import Popover from '~/components/Popover.vue';
 import TextModal from '~/components/TextModal.vue';

@@ -1,129 +1,126 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-4">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-      <div class="min-w-0 space-y-2">
-        <div
-          class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-        >
-          <UIcon :name="pageShell.icon" :class="['size-4', stream ? 'animate-spin' : '']" />
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
-          <NuxtLink to="/logs" class="text-toned hover:text-primary">{{
-            pageShell.pageLabel
-          }}</NuxtLink>
-          <span>/</span>
-          <span class="truncate text-highlighted normal-case tracking-normal">{{ filename }}</span>
-        </div>
-      </div>
-
-      <div v-if="!error" class="flex flex-wrap items-center justify-end gap-2">
-        <UTooltip v-if="!autoScroll" text="Go to bottom">
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-chevron-down"
-            @click="scrollToBottom"
-          >
-            Bottom
-          </UButton>
-        </UTooltip>
-
-        <UInput
-          v-if="toggleFilter"
-          v-model.lazy="query"
-          type="search"
-          placeholder="Filter log entries"
-          icon="i-lucide-filter"
-          autofocus
-          size="sm"
-          class="w-full sm:w-72"
-        />
-
-        <UButton
-          icon="i-lucide-filter"
-          :variant="toggleFilter ? 'soft' : 'outline'"
-          color="neutral"
-          size="sm"
-          @click="toggleFilter = !toggleFilter"
-        >
-          Filter
-        </UButton>
-
-        <USelect
-          v-model="selectedLevels"
-          :items="levelFilterItems"
-          value-key="value"
-          label-key="label"
-          multiple
-          size="sm"
-          icon="i-lucide-list-filter"
-          class="w-44 shrink-0 sm:w-48"
-          :ui="{ content: 'min-w-48' }"
-        >
-          <template #default>{{ levelFilterLabel }}</template>
-        </USelect>
-
-        <UButton
-          icon="i-lucide-wrap-text"
-          :variant="wrapLines ? 'soft' : 'outline'"
-          color="neutral"
-          size="sm"
-          @click="wrapLines = !wrapLines"
-        >
-          Wrap
-        </UButton>
-
-        <UTooltip text="Delete logfile.">
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-trash-2"
-            @click="deleteFile"
-          >
-            Delete
-          </UButton>
-        </UTooltip>
-
-        <UTooltip text="Download file.">
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-download"
-            :loading="isDownloading"
-            @click="downloadFile"
-          >
-            Download
-          </UButton>
-        </UTooltip>
-
-        <UTooltip text="Copy text">
-          <UDropdownMenu :items="copyMenuItems" :content="{ align: 'end' }" :modal="false">
+  <main class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader v-bind="pageShell" description="">
+      <template #icon>
+        <UIcon :name="pageShell.icon" :class="['size-4', stream ? 'animate-spin' : '']" />
+      </template>
+      <template #kicker>
+        <span>{{ pageShell.sectionLabel }}</span>
+        <span>/</span>
+        <NuxtLink to="/logs" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
+        <span>/</span>
+        <span class="truncate text-highlighted normal-case tracking-normal">{{ filename }}</span>
+      </template>
+      <template #actions>
+        <template v-if="!error">
+          <UTooltip v-if="!autoScroll" text="Go to bottom">
             <UButton
               color="neutral"
               variant="outline"
               size="sm"
-              icon="i-lucide-copy"
-              trailing-icon="i-lucide-chevron-down"
+              icon="i-lucide-chevron-down"
+              @click="scrollToBottom"
             >
-              Copy
+              Bottom
             </UButton>
-          </UDropdownMenu>
-        </UTooltip>
+          </UTooltip>
 
-        <UButton
-          icon="i-lucide-refresh-cw"
-          color="neutral"
-          variant="outline"
-          size="sm"
-          @click="reloadLog"
-        >
-          Refresh
-        </UButton>
-      </div>
-    </div>
+          <UInput
+            v-if="toggleFilter"
+            v-model.lazy="query"
+            type="search"
+            placeholder="Filter log entries"
+            icon="i-lucide-filter"
+            autofocus
+            size="sm"
+            class="w-full sm:w-72"
+          />
+
+          <UButton
+            icon="i-lucide-filter"
+            :variant="toggleFilter ? 'soft' : 'outline'"
+            color="neutral"
+            size="sm"
+            @click="toggleFilter = !toggleFilter"
+          >
+            Filter
+          </UButton>
+
+          <USelect
+            v-model="selectedLevels"
+            :items="levelFilterItems"
+            value-key="value"
+            label-key="label"
+            multiple
+            size="sm"
+            icon="i-lucide-list-filter"
+            class="w-44 shrink-0 sm:w-48"
+            :ui="{ content: 'min-w-48' }"
+          >
+            <template #default>{{ levelFilterLabel }}</template>
+          </USelect>
+
+          <UButton
+            icon="i-lucide-wrap-text"
+            :variant="wrapLines ? 'soft' : 'outline'"
+            color="neutral"
+            size="sm"
+            @click="wrapLines = !wrapLines"
+          >
+            Wrap
+          </UButton>
+
+          <UTooltip text="Delete logfile.">
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-trash-2"
+              @click="deleteFile"
+            >
+              Delete
+            </UButton>
+          </UTooltip>
+
+          <UTooltip text="Download file.">
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-download"
+              :loading="isDownloading"
+              @click="downloadFile"
+            >
+              Download
+            </UButton>
+          </UTooltip>
+
+          <UTooltip text="Copy text">
+            <UDropdownMenu :items="copyMenuItems" :content="{ align: 'end' }" :modal="false">
+              <UButton
+                color="neutral"
+                variant="outline"
+                size="sm"
+                icon="i-lucide-copy"
+                trailing-icon="i-lucide-chevron-down"
+              >
+                Copy
+              </UButton>
+            </UDropdownMenu>
+          </UTooltip>
+
+          <UButton
+            icon="i-lucide-refresh-cw"
+            color="neutral"
+            variant="outline"
+            size="sm"
+            @click="reloadLog"
+          >
+            Refresh
+          </UButton>
+        </template>
+      </template>
+    </PageHeader>
 
     <UAlert
       v-if="error"
@@ -246,6 +243,7 @@ import { fetchEventSource } from '@microsoft/fetch-event-source';
 import moment from 'moment';
 import EventView from '~/components/EventView.vue';
 import LogDetailsModal from '~/components/LogDetailsModal.vue';
+import PageHeader from '~/components/PageHeader.vue';
 import StructuredLogLine from '~/components/StructuredLogLine.vue';
 import { useDialog } from '~/composables/useDialog';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';

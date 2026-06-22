@@ -92,7 +92,7 @@
         @update:open="(open) => (false === open ? (error = null) : null)"
       />
 
-      <UCard class="border border-default/70 shadow-sm" :ui="cardUi">
+      <UCard class="shadow-sm" :ui="cardUi">
         <template #header>
           <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
             <UIcon name="i-lucide-plug-zap" class="size-4 text-toned" />
@@ -258,7 +258,7 @@
         </div>
       </UCard>
 
-      <UCard v-if="stage >= 1" class="border border-default/70 shadow-sm" :ui="cardUi">
+      <UCard v-if="stage >= 1" class="shadow-sm" :ui="cardUi">
         <template #header>
           <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
             <UIcon name="i-lucide-link" class="size-4 text-toned" />
@@ -368,7 +368,7 @@
         </div>
       </UCard>
 
-      <UCard v-if="stage >= 2" class="border border-default/70 shadow-sm" :ui="cardUi">
+      <UCard v-if="stage >= 2" class="shadow-sm" :ui="cardUi">
         <template #header>
           <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
             <UIcon name="i-lucide-fingerprint" class="size-4 text-toned" />
@@ -409,7 +409,7 @@
         </UFormField>
       </UCard>
 
-      <UCard v-if="stage >= 3" class="border border-default/70 shadow-sm" :ui="cardUi">
+      <UCard v-if="stage >= 3" class="shadow-sm" :ui="cardUi">
         <template #header>
           <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
             <UIcon name="i-lucide-user-round-cog" class="size-4 text-toned" />
@@ -451,7 +451,7 @@
         </UFormField>
       </UCard>
 
-      <UCard v-if="stage >= 4" class="border border-default/70 shadow-sm" :ui="cardUi">
+      <UCard v-if="stage >= 4" class="shadow-sm" :ui="cardUi">
         <template #header>
           <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
             <UIcon name="i-lucide-repeat-2" class="size-4 text-toned" />
@@ -677,7 +677,7 @@ type NotificationType = 'info' | 'success' | 'warning' | 'error';
 const accessTokenResponse = ref<BackendAccessTokenResponse | null>(null);
 
 const cardUi = {
-  root: 'border border-default/70 shadow-sm',
+  root: 'shadow-sm',
   header: 'px-5 py-4 sm:px-6',
   body: 'px-5 pb-5 sm:px-6 sm:pb-6',
   footer: 'px-5 py-4 sm:px-6',

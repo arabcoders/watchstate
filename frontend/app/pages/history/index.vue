@@ -1,18 +1,7 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-4">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-      <div class="min-w-0 space-y-1">
-        <div
-          class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-        >
-          <UIcon :name="pageShell.icon" class="size-4" />
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
-          <span>{{ pageShell.pageLabel }}</span>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center justify-end gap-2">
+  <main class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader v-bind="pageShell">
+      <template #actions>
         <UInput
           v-if="showFilter"
           id="filter"
@@ -78,10 +67,10 @@
         >
           <span class="hidden sm:inline">Reload</span>
         </UButton>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
-    <UCard v-if="searchForm" class="border border-default/70 shadow-sm" :ui="panelCardUi">
+    <UCard v-if="searchForm" class="ws-card shadow-sm" :ui="panelCardUi">
       <template #header>
         <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
           <UIcon name="i-lucide-search" class="size-4 text-toned" />
@@ -185,7 +174,7 @@
 
     <div
       v-if="selected_ids.length > 0"
-      class="flex flex-wrap items-center justify-between gap-3 rounded-md border border-default bg-default px-3 py-3"
+      class="ws-card flex flex-wrap items-center justify-between gap-3 px-3 py-3"
     >
       <div class="flex flex-wrap items-center gap-2">
         <UBadge color="neutral" variant="soft" size="sm">{{ selected_ids.length }}</UBadge>
@@ -286,8 +275,8 @@
         class="min-h-65"
       >
         <UCard
-          class="h-full border border-default/70 shadow-sm"
-          :class="item.watched ? 'bg-default/90 ring-1 ring-success/20' : 'bg-default/90'"
+          class="h-full shadow-sm"
+          :class="item.watched ? 'ring-1 ring-success/20' : ''"
           :ui="historyCardUi"
         >
           <template #header>
@@ -495,6 +484,7 @@ import Lazy from '~/components/Lazy.vue';
 import Pager from '~/components/Pager.vue';
 import { NuxtLink } from '#components';
 import FloatingImage from '~/components/FloatingImage.vue';
+import PageHeader from '~/components/PageHeader.vue';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import {
   request,

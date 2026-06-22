@@ -1,18 +1,7 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-4">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-      <div class="min-w-0 space-y-1">
-        <div
-          class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-        >
-          <UIcon :name="pageShell.icon" class="size-4" />
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
-          <span>{{ pageShell.pageLabel }}</span>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center justify-end gap-2">
+  <main class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader v-bind="pageShell">
+      <template #actions>
         <form v-if="showDisplayFilter" class="w-full sm:w-72" @submit.prevent="void loadContent(1)">
           <UInput
             id="display-filter"
@@ -65,10 +54,10 @@
           @click="() => void loadContent(page, false)"
           label="Reload"
         />
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
-    <UCard v-if="showSearchPanel" class="border border-default/70 shadow-sm" :ui="searchCardUi">
+    <UCard v-if="showSearchPanel" class="ws-card shadow-sm" :ui="searchCardUi">
       <template #header>
         <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
           <UIcon name="i-lucide-search" class="size-4 text-toned" />
@@ -204,12 +193,7 @@
     </UAlert>
 
     <div v-else class="grid gap-4 xl:grid-cols-2">
-      <UCard
-        v-for="item in filteredRows"
-        :key="item.id"
-        class="h-full border border-default/70 shadow-sm"
-        :ui="eventCardUi"
-      >
+      <UCard v-for="item in filteredRows" :key="item.id" class="h-full shadow-sm" :ui="eventCardUi">
         <template #header>
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0 flex-1">
@@ -378,7 +362,7 @@
       <div class="text-xs text-toned">Page {{ page }} of {{ last_page }}</div>
     </div>
 
-    <UCard class="border border-default/70 shadow-sm" :ui="tipsCardUi">
+    <UCard class="shadow-sm" :ui="tipsCardUi">
       <template #header>
         <button
           type="button"
@@ -434,7 +418,7 @@
           </div>
 
           <label
-            class="flex items-start gap-3 rounded-md border border-default bg-default px-4 py-3 text-sm text-default"
+            class="flex items-start gap-3 rounded-md border border-default bg-elevated/30 px-4 py-3 text-sm text-default"
           >
             <UCheckbox v-model="deleteIncludePending" color="warning" />
             <span class="font-medium text-highlighted">Also delete pending events</span>
@@ -476,6 +460,7 @@ import { useHead, useRoute, useRouter } from '#app';
 import { useStorage } from '@vueuse/core';
 import moment from 'moment';
 import EventView from '~/components/EventView.vue';
+import PageHeader from '~/components/PageHeader.vue';
 import Pager from '~/components/Pager.vue';
 import { useDialog } from '~/composables/useDialog';
 import type { EventsItem, GenericError, GenericResponse } from '~/types';

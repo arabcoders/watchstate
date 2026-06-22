@@ -19,7 +19,6 @@ WatchState HTTP API reference. Examples use the default `/v1/api` prefix.
       - [GET|POST /v1/api/backends/users/{type}](#getpost-v1apibackendsuserstype)
       - [GET|POST /v1/api/backends/discover/{type}](#getpost-v1apibackendsdiscovertype)
       - [POST /v1/api/backends/accesstoken/{type}](#post-v1apibackendsaccesstokentype)
-      - [POST /v1/api/backends/validate/token/{type}](#post-v1apibackendsvalidatetokentype)
       - [POST /v1/api/backends/plex/generate](#post-v1apibackendsplexgenerate)
       - [POST /v1/api/backends/plex/check](#post-v1apibackendsplexcheck)
     - [Configured Backend Endpoints](#configured-backend-endpoints)
@@ -452,35 +451,6 @@ Generates a Jellyfin or Emby access token using username/password credentials.
 **Errors**:
 - `400 Bad Request` if credentials are missing or the backend type is unsupported.
 - `500 Internal Server Error` if token generation fails.
-
----
-
-#### POST /v1/api/backends/validate/token/{type}
-Validates a Plex token.
-
-**Path**:
-- `type`: Must resolve to the Plex client.
-
-**Body**:
-```json
-{
-  "token": "plex-token"
-}
-```
-
-**Response**:
-```json
-{
-  "info": {
-    "code": 200,
-    "message": "Token is valid."
-  }
-}
-```
-
-**Errors**:
-- `400 Bad Request` if the endpoint is used with a non-Plex backend or if `token` is missing.
-- `401 Unauthorized` if the token is rejected.
 
 ---
 

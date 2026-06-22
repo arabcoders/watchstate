@@ -166,6 +166,15 @@ export type PlayerSubtitleDeliveryFormat = 'vtt' | 'ass';
 
 export type PlayerSubtitleDeliveryMode = 'burned' | 'soft';
 
+export interface WatchStatePageHeaderProps {
+  icon?: string;
+  sectionLabel?: string;
+  pageLabel?: string;
+  description?: string;
+  contentClass?: string;
+  headingClass?: string;
+}
+
 export interface PlayerSubtitleTrack {
   id: string;
   source: string;

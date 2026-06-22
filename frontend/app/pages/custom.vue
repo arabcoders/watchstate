@@ -1,22 +1,7 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-4">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-      <div class="min-w-0 space-y-1">
-        <div
-          class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-        >
-          <UIcon :name="pageShell.icon" class="size-4" />
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
-          <span>{{ pageShell.pageLabel }}</span>
-        </div>
-
-        <div>
-          <p class="mt-1 text-sm text-toned">User defined custom GUIDs and client mapping links.</p>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center justify-end gap-2">
+  <main class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader v-bind="pageShell">
+      <template #actions>
         <UButton
           color="neutral"
           variant="outline"
@@ -45,8 +30,8 @@
           @click="loadContent"
           label="Reload"
         />
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <UAlert
       v-if="isLoading"
@@ -64,7 +49,7 @@
           <UCard
             v-for="(guid, index) in guids"
             :key="guid.name"
-            class="h-full border border-default/70 shadow-sm"
+            class="h-full shadow-sm"
             :ui="itemCardUi"
           >
             <template #header>
@@ -116,7 +101,7 @@
           <UCard
             v-for="(link, index) in links"
             :key="link.id"
-            class="h-full border border-default/70 shadow-sm"
+            class="h-full shadow-sm"
             :ui="itemCardUi"
           >
             <template #header>
@@ -230,7 +215,7 @@
         />
       </section>
 
-      <UCard class="border border-default/70 shadow-sm" :ui="tipsCardUi">
+      <UCard class="shadow-sm" :ui="tipsCardUi">
         <template #header>
           <button
             type="button"
@@ -349,6 +334,7 @@ import { useHead } from '#app';
 import { useStorage } from '@vueuse/core';
 import CustomGuidForm from '~/components/CustomGuidForm.vue';
 import CustomLinkForm from '~/components/CustomLinkForm.vue';
+import PageHeader from '~/components/PageHeader.vue';
 import { useDirtyCloseGuard } from '~/composables/useDirtyCloseGuard';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import { request, makeConsoleCommand, notification, parse_api_response, ucFirst } from '~/utils';

@@ -1,18 +1,7 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-4">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-      <div class="min-w-0 space-y-1">
-        <div
-          class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-        >
-          <UIcon :name="pageShell.icon" class="size-4" />
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
-          <span>{{ pageShell.pageLabel }}</span>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center justify-end gap-2">
+  <main class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader v-bind="pageShell">
+      <template #actions>
         <UInput
           v-if="toggleFilter || query"
           id="filter"
@@ -49,8 +38,8 @@
             <span class="hidden sm:inline">Reload</span>
           </UButton>
         </UTooltip>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <UAlert
       v-if="isLoading"
@@ -84,7 +73,7 @@
       <UCard
         v-for="item in filterItems"
         :key="item.filename"
-        class="h-full border border-default/70 shadow-sm"
+        class="ws-card h-full shadow-sm"
         :ui="logCardUi"
       >
         <template #header>
@@ -137,6 +126,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useHead, useRoute } from '#app';
 import moment from 'moment';
+import PageHeader from '~/components/PageHeader.vue';
 import type { LogItem } from '~/types';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import {

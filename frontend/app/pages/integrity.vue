@@ -1,85 +1,73 @@
 <template>
   <div class="space-y-6">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-      <div class="space-y-1">
-        <div
-          class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-        >
-          <UIcon :name="pageShell.icon" class="size-4" />
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
-          <span>{{ pageShell.pageLabel }}</span>
-        </div>
+    <PageHeader
+      v-bind="pageShell"
+      description="This page will show records with files that no longer exist on the system."
+    >
+      <template #actions>
+        <template v-if="isLoaded">
+          <UInput
+            v-if="showFilter"
+            id="filter"
+            v-model.lazy="filter"
+            type="search"
+            icon="i-lucide-filter"
+            placeholder="Filter displayed results."
+            size="sm"
+            class="w-full sm:w-72"
+          />
 
-        <div>
-          <p class="mt-1 text-sm text-toned">
-            This page will show records with files that no longer exist on the system.
-          </p>
-        </div>
-      </div>
+          <UButton
+            color="neutral"
+            :variant="showFilter ? 'soft' : 'outline'"
+            size="sm"
+            icon="i-lucide-filter"
+            @click="toggleFilter"
+          >
+            <span class="hidden sm:inline">Filter</span>
+          </UButton>
 
-      <div v-if="isLoaded" class="flex flex-wrap items-center justify-end gap-2">
-        <UInput
-          v-if="showFilter"
-          id="filter"
-          v-model.lazy="filter"
-          type="search"
-          icon="i-lucide-filter"
-          placeholder="Filter displayed results."
-          size="sm"
-          class="w-full sm:w-72"
-        />
+          <UButton
+            color="neutral"
+            :variant="selectAll ? 'soft' : 'outline'"
+            size="sm"
+            :icon="!selectAll ? 'i-lucide-square-check' : 'i-lucide-square'"
+            @click="selectAll = !selectAll"
+          >
+            <span class="hidden sm:inline">{{ !selectAll ? 'Select' : 'Unselect' }}</span>
+          </UButton>
 
-        <UButton
-          color="neutral"
-          :variant="showFilter ? 'soft' : 'outline'"
-          size="sm"
-          icon="i-lucide-filter"
-          @click="toggleFilter"
-        >
-          <span class="hidden sm:inline">Filter</span>
-        </UButton>
+          <UTooltip v-if="isCached" text="Empty cache.">
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-archive"
+              :disabled="isDeleting || isLoading"
+              @click="emptyCache"
+            >
+              <span class="hidden sm:inline">Empty Cache</span>
+            </UButton>
+          </UTooltip>
 
-        <UButton
-          color="neutral"
-          :variant="selectAll ? 'soft' : 'outline'"
-          size="sm"
-          :icon="!selectAll ? 'i-lucide-square-check' : 'i-lucide-square'"
-          @click="selectAll = !selectAll"
-        >
-          <span class="hidden sm:inline">{{ !selectAll ? 'Select' : 'Unselect' }}</span>
-        </UButton>
-
-        <UTooltip v-if="isCached" text="Empty cache.">
           <UButton
             color="neutral"
             variant="outline"
             size="sm"
-            icon="i-lucide-archive"
-            :disabled="isDeleting || isLoading"
-            @click="emptyCache"
+            icon="i-lucide-refresh-cw"
+            :loading="isLoading"
+            :disabled="isLoading"
+            @click.prevent="loadContent"
           >
-            <span class="hidden sm:inline">Empty Cache</span>
+            <span class="hidden sm:inline">Reload</span>
           </UButton>
-        </UTooltip>
-
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="sm"
-          icon="i-lucide-refresh-cw"
-          :loading="isLoading"
-          :disabled="isLoading"
-          @click.prevent="loadContent"
-        >
-          <span class="hidden sm:inline">Reload</span>
-        </UButton>
-      </div>
-    </div>
+        </template>
+      </template>
+    </PageHeader>
 
     <div
       v-if="selected_ids.length > 0"
-      class="flex flex-wrap items-center justify-between gap-3 rounded-md border border-default bg-default px-3 py-3"
+      class="flex flex-wrap items-center justify-between gap-3 rounded-md border border-default bg-elevated/30 px-3 py-3"
     >
       <div class="flex flex-wrap items-center gap-2">
         <UBadge color="neutral" variant="soft" size="sm">{{ selected_ids.length }}</UBadge>
@@ -319,7 +307,7 @@
                     v-for="reportedBackend in item.reported_by"
                     :key="`${item.id}-rb-${reportedBackend}`"
                     :to="'/backend/' + reportedBackend"
-                    class="inline-flex items-center gap-1.5 rounded-md border border-default bg-default/60 px-2.5 py-1 text-xs font-medium text-default"
+                    class="inline-flex items-center gap-1.5 rounded-md border border-default bg-elevated/40 px-2.5 py-1 text-xs font-medium text-default"
                   >
                     <UIcon name="i-lucide-server" class="size-3.5" />
                     {{ reportedBackend }}
@@ -355,7 +343,7 @@
                       class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium"
                       :class="
                         record.status
-                          ? 'border border-default bg-default/60 text-default'
+                          ? 'border border-default bg-elevated/40 text-default'
                           : 'border border-error/30 bg-error/10 text-error'
                       "
                     >
@@ -419,6 +407,7 @@ import {
 } from '~/utils';
 import moment from 'moment';
 import Lazy from '~/components/Lazy.vue';
+import PageHeader from '~/components/PageHeader.vue';
 import { useSessionCache } from '~/utils/cache';
 import type { IntegrityItem } from '~/types';
 import { useDialog } from '~/composables/useDialog';

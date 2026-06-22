@@ -1,25 +1,10 @@
 <template>
   <div class="space-y-6">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-      <div class="space-y-1">
-        <div
-          class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-        >
-          <UIcon :name="pageShell.icon" class="size-4" />
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
-          <span>{{ pageShell.pageLabel }}</span>
-        </div>
-
-        <div>
-          <p class="mt-1 text-sm text-toned">
-            This page shows local database records not being reported by the specified number of
-            backends.
-          </p>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center justify-end gap-2">
+    <PageHeader
+      v-bind="pageShell"
+      description="This page shows local database records not being reported by the specified number of backends."
+    >
+      <template #actions>
         <UInput
           v-if="showFilter"
           id="filter"
@@ -87,8 +72,8 @@
         >
           <span class="hidden sm:inline">Reload</span>
         </UButton>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <Pager
       v-if="total && last_page > 1"
@@ -100,7 +85,7 @@
 
     <div
       v-if="selected_ids.length > 0"
-      class="flex flex-wrap items-center justify-between gap-3 rounded-md border border-default bg-default px-3 py-3"
+      class="flex flex-wrap items-center justify-between gap-3 rounded-md border border-default bg-elevated/30 px-3 py-3"
     >
       <div class="flex flex-wrap items-center gap-2">
         <UBadge color="neutral" variant="soft" size="sm">{{ selected_ids.length }}</UBadge>
@@ -170,8 +155,8 @@
         class="block"
       >
         <UCard
-          class="h-full border shadow-sm"
-          :class="item.watched ? 'border-success/40' : 'border-default/70'"
+          class="h-full shadow-sm"
+          :class="item.watched ? 'ring-1 ring-success/20' : ''"
           :ui="itemCardUi"
         >
           <template #header>
@@ -214,72 +199,80 @@
 
           <div class="space-y-3">
             <div
-              class="flex items-start gap-2 rounded-md border border-default bg-elevated/20 px-3 py-2 text-sm text-default"
+              class="flex items-start justify-between gap-3 rounded-md border border-default bg-elevated/40 px-3 py-2.5"
             >
-              <button
-                type="button"
-                class="mt-0.5 shrink-0 text-toned hover:text-primary"
+              <div
+                class="min-w-0 flex-1 cursor-pointer"
+                :class="
+                  item?.expand_title
+                    ? 'wrap-break-word'
+                    : 'overflow-hidden text-ellipsis whitespace-nowrap'
+                "
                 @click="item.expand_title = !item?.expand_title"
               >
-                <UIcon name="i-lucide-heading" class="size-4" />
-              </button>
-              <div
-                class="min-w-0 flex-1"
-                :class="item?.expand_title ? 'wrap-break-word' : 'truncate'"
-              >
-                <NuxtLink
-                  :to="makeSearchLink('subtitle', item?.content_title || item.title)"
-                  class="hover:text-primary"
-                >
-                  {{ item?.content_title || item.title }}
-                </NuxtLink>
+                <span class="inline-flex items-center gap-2 text-sm font-medium text-default">
+                  <UIcon name="i-lucide-heading" class="size-4 shrink-0 text-toned" />
+                  <NuxtLink
+                    :to="makeSearchLink('subtitle', item?.content_title || item.title)"
+                    class="hover:text-primary"
+                  >
+                    {{ item?.content_title || item.title }}
+                  </NuxtLink>
+                </span>
               </div>
-              <UButton
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                square
-                icon="i-lucide-copy"
-                @click="copyText(item?.content_title ?? item.title, false)"
-              />
+
+              <UTooltip text="Copy title">
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  square
+                  icon="i-lucide-copy"
+                  aria-label="Copy title"
+                  @click="copyText(item?.content_title ?? item.title, false)"
+                />
+              </UTooltip>
             </div>
 
             <div
-              class="flex items-start gap-2 rounded-md border border-default bg-elevated/20 px-3 py-2 text-sm text-default"
+              class="flex items-start justify-between gap-3 rounded-md border border-default bg-elevated/40 px-3 py-2.5"
             >
-              <button
-                type="button"
-                class="mt-0.5 shrink-0 text-toned hover:text-primary"
+              <div
+                class="min-w-0 flex-1 cursor-pointer"
+                :class="
+                  item?.expand_path
+                    ? 'wrap-break-word'
+                    : 'overflow-hidden text-ellipsis whitespace-nowrap'
+                "
                 @click="item.expand_path = !item?.expand_path"
               >
-                <UIcon name="i-lucide-file-text" class="size-4" />
-              </button>
-              <div
-                class="min-w-0 flex-1"
-                :class="item?.expand_path ? 'wrap-break-word' : 'truncate'"
-              >
-                <NuxtLink
-                  v-if="item?.content_path"
-                  :to="makeSearchLink('path', item.content_path)"
-                  class="hover:text-primary"
-                >
-                  {{ item.content_path }}
-                </NuxtLink>
-                <span v-else>No path found.</span>
+                <span class="inline-flex items-center gap-2 text-sm font-medium text-default">
+                  <UIcon name="i-lucide-file-text" class="size-4 shrink-0 text-toned" />
+                  <NuxtLink
+                    v-if="item?.content_path"
+                    :to="makeSearchLink('path', item.content_path)"
+                    class="hover:text-primary"
+                  >
+                    {{ item.content_path }}
+                  </NuxtLink>
+                  <span v-else>No path found.</span>
+                </span>
               </div>
-              <UButton
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                square
-                icon="i-lucide-copy"
-                @click="copyText(item?.content_path || '', false)"
-              />
+
+              <UTooltip text="Copy file path">
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  square
+                  icon="i-lucide-copy"
+                  aria-label="Copy file path"
+                  @click="copyText(item?.content_path || '', false)"
+                />
+              </UTooltip>
             </div>
 
-            <div
-              class="rounded-md border border-default bg-elevated/20 px-3 py-2 text-sm text-default"
-            >
+            <div class="rounded-md border border-default bg-elevated/40 px-3 py-2.5">
               <div class="mb-2 flex items-center gap-2 font-medium text-highlighted">
                 <UIcon name="i-lucide-server" class="size-4 text-toned" />
                 <span>Has metadata from</span>
@@ -290,7 +283,7 @@
                   v-for="reportedBackend in item.reported_by"
                   :key="`${item.id}-rb-${reportedBackend}`"
                   :to="'/backend/' + reportedBackend"
-                  class="inline-flex items-center gap-1.5 rounded-md border border-default bg-default/60 px-2.5 py-1 text-xs font-medium text-default"
+                  class="inline-flex items-center gap-1.5 rounded-md border border-default bg-elevated/40 px-2.5 py-1 text-xs font-medium text-default"
                 >
                   <UIcon name="i-lucide-server" class="size-3.5" />
                   {{ reportedBackend }}
@@ -309,9 +302,9 @@
           </div>
 
           <template #footer>
-            <div class="grid grid-cols-2 gap-2">
+            <div class="grid grid-cols-2 gap-2.5">
               <div
-                class="flex items-center justify-center gap-2 rounded-md border border-default bg-elevated/40 px-3 py-2 text-sm text-default"
+                class="flex items-center justify-center gap-2 rounded-md border border-default bg-elevated/40 px-3 py-2 text-center text-sm font-medium text-default"
               >
                 <UIcon
                   :name="item.watched ? 'i-lucide-eye' : 'i-lucide-eye-off'"
@@ -322,7 +315,7 @@
                 }}</span>
               </div>
               <div
-                class="flex items-center justify-center gap-2 rounded-md border border-default bg-elevated/40 px-3 py-2 text-sm text-default"
+                class="flex items-center justify-center gap-2 rounded-md border border-default bg-elevated/40 px-3 py-2 text-center text-sm font-medium text-default"
               >
                 <UIcon name="i-lucide-calendar" class="size-4 text-toned" />
                 <UTooltip
@@ -337,7 +330,7 @@
       </Lazy>
     </div>
 
-    <UCard class="border border-default/70 shadow-sm" :ui="tipsCardUi">
+    <UCard class="shadow-sm" :ui="tipsCardUi">
       <template #header>
         <button
           type="button"
@@ -395,6 +388,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useHead, useRoute, useRouter } from '#app';
 import { useStorage } from '@vueuse/core';
 import Lazy from '~/components/Lazy.vue';
+import PageHeader from '~/components/PageHeader.vue';
 import Pager from '~/components/Pager.vue';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import { useSessionCache } from '~/utils/cache';
@@ -456,7 +450,7 @@ const cache = useSessionCache(api_user.value);
 const itemCardUi = {
   header: 'p-4',
   body: 'px-4 pb-4 pt-0',
-  footer: 'border-t border-default px-4 py-4',
+  footer: 'px-4 pb-4 pt-0',
 };
 
 const tipsCardUi = {

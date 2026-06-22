@@ -1,27 +1,23 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-4">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-      <div class="min-w-0 space-y-1">
-        <div
-          class="flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
+  <main class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader v-bind="pageShell">
+      <template #kicker>
+        <span>{{ pageShell.sectionLabel }}</span>
+        <span>/</span>
+        <NuxtLink to="/backends" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
+        <span>/</span>
+        <NuxtLink
+          :to="`/backend/${backend}`"
+          class="hover:text-primary normal-case tracking-normal"
+          >{{ backend }}</NuxtLink
         >
-          <UIcon :name="pageShell.icon" class="size-4" />
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
-          <NuxtLink to="/backends" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
-          <span>/</span>
-          <NuxtLink
-            :to="`/backend/${backend}`"
-            class="hover:text-primary normal-case tracking-normal"
-            >{{ backend }}</NuxtLink
-          >
-          <span>/</span>
-          <span class="text-highlighted normal-case tracking-normal">Misidentified</span>
-        </div>
-      </div>
+        <span>/</span>
+        <span class="text-highlighted normal-case tracking-normal">Misidentified</span>
+      </template>
 
-      <div v-if="hasLooked" class="flex flex-wrap items-center justify-end gap-2">
+      <template #actions>
         <UButton
+          v-if="hasLooked"
           color="neutral"
           variant="outline"
           size="sm"
@@ -32,10 +28,10 @@
         >
           <span class="hidden sm:inline">Reload</span>
         </UButton>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
-    <UCard v-if="false === hasLooked" class="border border-default/70 shadow-sm" :ui="panelCardUi">
+    <UCard v-if="false === hasLooked" class="shadow-sm" :ui="panelCardUi">
       <template #header>
         <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
           <UIcon name="i-lucide-circle-check" class="size-4 text-toned" />
@@ -92,7 +88,7 @@
         <UCard
           v-for="item in items"
           :key="item.title + item.library"
-          class="h-full border border-default/70 shadow-sm"
+          class="h-full shadow-sm"
           :ui="resultCardUi"
         >
           <template #header>
@@ -216,7 +212,7 @@
       </div>
     </div>
 
-    <UCard class="border border-default/70 shadow-sm" :ui="panelCardUi">
+    <UCard class="shadow-sm" :ui="panelCardUi">
       <template #header>
         <button
           type="button"
@@ -252,6 +248,7 @@
 import { ref } from 'vue';
 import { useRoute, useHead } from '#app';
 import { useStorage } from '@vueuse/core';
+import PageHeader from '~/components/PageHeader.vue';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import { makeSearchLink, notification, request, parse_api_response } from '~/utils';
 import { useSessionCache } from '~/utils/cache';

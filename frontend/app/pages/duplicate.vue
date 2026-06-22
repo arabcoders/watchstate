@@ -1,25 +1,10 @@
 <template>
   <div class="space-y-6">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-      <div class="space-y-1">
-        <div
-          class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-        >
-          <UIcon :name="pageShell.icon" class="size-4" />
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
-          <span>{{ pageShell.pageLabel }}</span>
-        </div>
-
-        <div>
-          <p class="mt-1 text-sm text-toned">
-            This tool is useful to discover if your backends are reporting different metadata for
-            same files.
-          </p>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center justify-end gap-2">
+    <PageHeader
+      v-bind="pageShell"
+      description="This tool is useful to discover if your backends are reporting different metadata for same files."
+    >
+      <template #actions>
         <UInput
           v-if="showFilter"
           id="filter"
@@ -59,8 +44,8 @@
           @click.prevent="loadContent(page, true, true)"
           label="Reload"
         />
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <Pager
       v-if="total && last_page > 1"
@@ -297,7 +282,7 @@
                   v-for="backend in item.reported_by"
                   :key="`${item.id}-rb-${backend}`"
                   :to="`/backend/${backend}`"
-                  class="inline-flex items-center gap-1.5 rounded-md border border-default bg-default/60 px-2.5 py-1 text-xs font-medium text-default"
+                  class="inline-flex items-center gap-1.5 rounded-md border border-default bg-elevated/40 px-2.5 py-1 text-xs font-medium text-default"
                 >
                   <UIcon name="i-lucide-server" class="size-3.5" />
                   {{ backend }}
@@ -346,7 +331,7 @@
       </Lazy>
     </div>
 
-    <UCard class="border border-default/70 shadow-sm" :ui="tipsCardUi">
+    <UCard class="shadow-sm" :ui="tipsCardUi">
       <template #header>
         <button
           type="button"
@@ -395,6 +380,7 @@ import { useHead, useRoute, useRouter } from '#app';
 import { useBreakpoints, useStorage } from '@vueuse/core';
 import moment from 'moment';
 import Lazy from '~/components/Lazy.vue';
+import PageHeader from '~/components/PageHeader.vue';
 import FloatingImage from '~/components/FloatingImage.vue';
 import FileDiff from '~/components/FileDiff.vue';
 import Popover from '~/components/Popover.vue';

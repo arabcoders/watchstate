@@ -47,23 +47,16 @@
       </UModal>
 
       <section class="space-y-4">
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div class="space-y-1">
-            <div
-              class="flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-            >
-              <UIcon :name="pageShell.icon" class="size-4" />
-              <span>{{ pageShell.sectionLabel }}</span>
-              <span>/</span>
-              <NuxtLink to="/backends" class="hover:text-primary">{{
-                pageShell.pageLabel
-              }}</NuxtLink>
-              <span>/</span>
-              <span class="text-highlighted normal-case tracking-normal">{{ backend }}</span>
-            </div>
-          </div>
+        <PageHeader v-bind="pageShell">
+          <template #kicker>
+            <span>{{ pageShell.sectionLabel }}</span>
+            <span>/</span>
+            <NuxtLink to="/backends" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
+            <span>/</span>
+            <span class="text-highlighted normal-case tracking-normal">{{ backend }}</span>
+          </template>
 
-          <div class="flex flex-wrap items-center gap-2">
+          <template #actions>
             <UTooltip text="Delete Backend">
               <UButton
                 :to="`/backend/${backend}/delete`"
@@ -87,8 +80,8 @@
                 <span class="hidden sm:inline">Edit</span>
               </UButton>
             </UTooltip>
-          </div>
-        </div>
+          </template>
+        </PageHeader>
       </section>
 
       <section v-if="0 === bHistory.length">
@@ -115,8 +108,8 @@
           <UCard
             v-for="item in bHistory"
             :key="item.id"
-            class="h-full border border-default/70 shadow-sm"
-            :class="item.watched ? 'bg-default/90 ring-1 ring-success/20' : 'bg-default/90'"
+            class="h-full shadow-sm"
+            :class="item.watched ? 'ring-1 ring-success/20' : ''"
             :ui="historyCardUi"
           >
             <template #header>
@@ -229,7 +222,7 @@
       </section>
 
       <section v-if="info">
-        <UCard class="border border-default/70 shadow-sm" :ui="infoCardUi">
+        <UCard class="shadow-sm" :ui="infoCardUi">
           <template #header>
             <div class="space-y-2">
               <div class="flex items-start justify-between gap-3">
@@ -301,7 +294,7 @@
       </section>
 
       <section>
-        <UCard class="border border-default/70 shadow-sm" :ui="toolsCardUi">
+        <UCard class="shadow-sm" :ui="toolsCardUi">
           <template #header>
             <div class="space-y-1">
               <div class="flex items-center gap-2">
@@ -323,7 +316,7 @@
             >
               <div class="flex items-start gap-3">
                 <span
-                  class="inline-flex size-10 shrink-0 items-center justify-center rounded-md border border-default bg-default/70 text-toned transition group-hover:border-primary/30 group-hover:text-primary"
+                  class="inline-flex size-10 shrink-0 items-center justify-center rounded-md border border-default bg-elevated/40 text-toned transition group-hover:border-primary/30 group-hover:text-primary"
                 >
                   <UIcon :name="tool.icon" class="size-4.5" />
                 </span>
@@ -352,6 +345,7 @@ import { useHead, useRoute } from '#app';
 import { useStorage } from '@vueuse/core';
 import BackendEditForm from '~/components/BackendEditForm.vue';
 import FloatingImage from '~/components/FloatingImage.vue';
+import PageHeader from '~/components/PageHeader.vue';
 import { useDirtyCloseGuard } from '~/composables/useDirtyCloseGuard';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import {

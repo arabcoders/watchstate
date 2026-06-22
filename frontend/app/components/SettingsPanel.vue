@@ -20,7 +20,9 @@
           size="sm"
           square
           icon="i-lucide-x"
-          class="ml-auto shrink-0 sm:hidden"
+          aria-label="Close settings"
+          title="Close settings"
+          class="ml-auto shrink-0"
           @click="emit('close')"
         />
       </div>
@@ -28,7 +30,7 @@
 
     <template #body>
       <div class="space-y-5">
-        <UCard class="border border-default/70 shadow-sm" :ui="sectionCardUi">
+        <UCard class="ws-card shadow-sm" :ui="sectionCardUi">
           <template #header>
             <div class="flex items-center gap-2">
               <UIcon name="i-lucide-settings" class="size-5 text-toned" />
@@ -116,7 +118,7 @@
           </form>
         </UCard>
 
-        <UCard class="border border-default/70 shadow-sm" :ui="sectionCardUi">
+        <UCard class="ws-card shadow-sm" :ui="sectionCardUi">
           <template #header>
             <div class="flex items-center gap-2">
               <UIcon name="i-lucide-circle-help" class="size-5 text-toned" />
@@ -125,7 +127,7 @@
           </template>
 
           <div class="space-y-5">
-            <div class="rounded-md border border-default bg-elevated/30 px-3 py-3">
+            <div class="ws-card bg-elevated/30 px-3 py-3">
               <div class="flex items-center justify-between gap-3">
                 <div class="min-w-0">
                   <div class="text-sm font-medium text-highlighted">Show posters</div>
@@ -142,7 +144,7 @@
               </div>
             </div>
 
-            <div class="space-y-3 rounded-md border border-default bg-elevated/30 p-4">
+            <div class="ws-card space-y-3 bg-elevated/30 p-4">
               <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p class="font-medium text-default">Backgrounds from backends</p>
@@ -178,25 +180,25 @@
               </div>
             </div>
 
-            <div class="space-y-3 rounded-md border border-default bg-elevated/30 p-4">
+            <div class="ws-card space-y-3 bg-elevated/30 p-4">
               <div class="flex items-center justify-between gap-3">
                 <label class="text-sm font-medium text-default" for="random_bg_opacity">
                   Background visibility
                 </label>
-                <code>{{ (1.0 - parseFloat(String(bg_opacity))).toFixed(2) }}</code>
+                <code>{{ Math.round(bgVisibilityModel * 100) }}%</code>
               </div>
 
               <USlider
                 id="random_bg_opacity"
-                v-model="bg_opacity"
+                v-model="bgVisibilityModel"
                 color="primary"
-                :min="0.6"
-                :max="1"
+                :min="0"
+                :max="0.4"
                 :step="0.01"
               />
             </div>
 
-            <div class="space-y-3 rounded-md border border-default bg-elevated/30 p-4">
+            <div class="ws-card space-y-3 bg-elevated/30 p-4">
               <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p class="font-medium text-default">Date format</p>
@@ -277,6 +279,12 @@ const { username } = useAuthStore();
 const bg_enable = useStorage<boolean>('bg_enable', true);
 const poster_enable = useStorage<boolean>('poster_enable', true);
 const bg_opacity = useStorage<number>('bg_opacity', 0.95);
+const bgVisibilityModel = computed<number>({
+  get: () => Number((1 - Number(bg_opacity.value)).toFixed(2)),
+  set: (value) => {
+    bg_opacity.value = Number((1 - Number(value)).toFixed(2));
+  },
+});
 const tooltip_date_format = TOOLTIP_DATE_FORMAT;
 
 const tooltipDatePreview = computed(() => moment().format(tooltip_date_format.value));

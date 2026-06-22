@@ -1,24 +1,7 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-4">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-      <div class="space-y-1">
-        <div
-          class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-        >
-          <UIcon :name="pageShell.icon" class="size-4" />
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
-          <span>{{ pageShell.pageLabel }}</span>
-        </div>
-
-        <div>
-          <p class="mt-1 text-sm text-toned">
-            This page gives you overview of all the processes that are currently running.
-          </p>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center justify-end gap-2">
+  <main class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader v-bind="pageShell">
+      <template #actions>
         <UInput
           v-if="showFilter || filter"
           id="filter"
@@ -51,8 +34,8 @@
         >
           <span class="hidden sm:inline">Reload</span>
         </UButton>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <UAlert
       v-if="items.length < 1 || filteredItems.length < 1"
@@ -68,7 +51,7 @@
       :ui="isLoading ? { icon: 'animate-spin' } : undefined"
     />
 
-    <UCard v-else :ui="tableCardUi" class="border border-default/70 bg-default/90 shadow-sm">
+    <UCard v-else :ui="tableCardUi" class="shadow-sm">
       <UTable
         :data="filteredItems"
         :columns="columns"
@@ -100,6 +83,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useHead, useRoute } from '#app';
 import type { TableColumn } from '@nuxt/ui';
 import { UButton, UTooltip } from '#components';
+import PageHeader from '~/components/PageHeader.vue';
 import { useDialog } from '~/composables/useDialog';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import { awaitElement, notification, parse_api_response, request } from '~/utils';
