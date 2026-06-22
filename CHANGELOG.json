@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "69b66c11fa8f448818693169259efb70c1ed7425",
-    "date": "2026-06-21T18:52:27+00:00",
+    "full_sha": "e6e0e7060b7b204c6a48257084a363b58fb18408",
+    "date": "2026-06-22T00:54:41+00:00",
     "commits": [
+      {
+        "sha": "e6e0e706",
+        "full_sha": "e6e0e7060b7b204c6a48257084a363b58fb18408",
+        "message": "fix: tranucte better on mobile",
+        "author": "arabcoders",
+        "date": "2026-06-22T00:54:41+00:00"
+      },
       {
         "sha": "69b66c11",
         "full_sha": "69b66c11fa8f448818693169259efb70c1ed7425",
