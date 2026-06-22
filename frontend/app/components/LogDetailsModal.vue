@@ -225,7 +225,7 @@
             >
               <button
                 type="button"
-                class="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2 text-left sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]"
+                class="grid w-full grid-cols-[minmax(7rem,0.45fr)_minmax(0,1fr)] items-center gap-3 px-3 py-2 text-left sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]"
                 @click="toggleField(field.key)"
               >
                 <span class="min-w-0 truncate text-[11px] font-semibold tracking-wide text-toned">
