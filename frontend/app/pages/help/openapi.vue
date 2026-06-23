@@ -21,8 +21,24 @@
           color="neutral"
           variant="outline"
           size="sm"
-          class="w-full sm:w-44"
+          class="w-full sm:w-36"
           :disabled="isLoading"
+        />
+
+        <USelect
+          v-model="tryBackendName"
+          :items="tryBackendItems"
+          value-key="value"
+          label-key="label"
+          color="neutral"
+          variant="outline"
+          size="sm"
+          icon="i-lucide-server"
+          class="w-full sm:w-44"
+          :disabled="isLoading || tryBackendItems.length < 1"
+          :placeholder="
+            tryBackendItems.length < 1 ? 'No ' + selectedBackend + ' backend' : 'Test backend'
+          "
         />
 
         <UButton
@@ -87,70 +103,93 @@
       </UAlert>
 
       <div v-else class="grid items-start gap-4 xl:grid-cols-2">
-        <UCard v-for="route in filteredRoutes" :key="route.key" class="shadow-sm" :ui="cardUi">
+        <UCard
+          v-for="route in filteredRoutes"
+          :key="route.key"
+          class="shadow-sm"
+          :class="{ 'ring-1 ring-warning/40': route.deprecated }"
+          :ui="cardUi"
+        >
           <template #header>
-            <button
-              type="button"
-              class="flex w-full items-start gap-3 text-left"
-              :aria-expanded="isExpanded(route.key)"
-              @click="toggleExpanded(route.key)"
-            >
-              <UIcon
-                :name="isExpanded(route.key) ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
-                class="mt-1 size-4 shrink-0 text-toned"
-              />
+            <div class="flex w-full items-start gap-3">
+              <button
+                type="button"
+                class="flex min-w-0 flex-1 items-start gap-3 text-left"
+                :aria-expanded="isExpanded(route.key)"
+                @click="toggleExpanded(route.key)"
+              >
+                <UIcon
+                  :name="isExpanded(route.key) ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
+                  class="mt-1 size-4 shrink-0 text-toned"
+                />
 
-              <div class="min-w-0 flex-1 space-y-2">
-                <div class="flex flex-wrap items-center gap-2">
-                  <UBadge
-                    :color="methodColor(route.method)"
-                    variant="soft"
-                    size="sm"
-                    class="font-mono"
-                  >
-                    {{ route.method }}
-                  </UBadge>
+                <div class="min-w-0 flex-1 space-y-2">
+                  <div class="flex flex-nowrap items-center gap-2">
+                    <UBadge
+                      :color="methodColor(route.method)"
+                      variant="soft"
+                      size="sm"
+                      class="shrink-0 font-mono"
+                    >
+                      {{ route.method }}
+                    </UBadge>
 
-                  <div class="min-w-0 font-mono text-sm font-semibold text-highlighted">
-                    <span class="ws-wrap-anywhere">{{ route.path }}</span>
+                    <div
+                      class="min-w-0 truncate font-mono text-sm font-semibold text-highlighted"
+                      :class="{ 'text-toned line-through decoration-warning/50': route.deprecated }"
+                    >
+                      {{ route.path }}
+                    </div>
+
+                    <UBadge
+                      v-if="route.deprecated"
+                      color="warning"
+                      variant="soft"
+                      size="sm"
+                      icon="i-lucide-triangle-alert"
+                      class="shrink-0"
+                    >
+                      Deprecated
+                    </UBadge>
+                  </div>
+
+                  <p class="text-sm leading-6 text-default">{{ route.summary }}</p>
+
+                  <div class="flex flex-wrap items-center gap-2 text-xs text-toned">
+                    <UBadge
+                      v-for="tag in route.tags"
+                      :key="`${route.key}-${tag}`"
+                      color="neutral"
+                      variant="outline"
+                      size="sm"
+                    >
+                      {{ tag }}
+                    </UBadge>
+
+                    <UBadge
+                      v-if="route.operationId"
+                      color="neutral"
+                      variant="outline"
+                      size="sm"
+                      icon="i-lucide-braces"
+                    >
+                      {{ route.operationId }}
+                    </UBadge>
                   </div>
                 </div>
+              </button>
 
-                <p class="text-sm leading-6 text-default">{{ route.summary }}</p>
-
-                <div class="flex flex-wrap items-center gap-2 text-xs text-toned">
-                  <UBadge
-                    v-for="tag in route.tags"
-                    :key="`${route.key}-${tag}`"
-                    color="neutral"
-                    variant="outline"
-                    size="sm"
-                  >
-                    {{ tag }}
-                  </UBadge>
-
-                  <UBadge
-                    v-if="route.operationId"
-                    color="neutral"
-                    variant="outline"
-                    size="sm"
-                    icon="i-lucide-braces"
-                  >
-                    {{ route.operationId }}
-                  </UBadge>
-
-                  <UBadge
-                    v-if="route.deprecated"
-                    color="warning"
-                    variant="soft"
-                    size="sm"
-                    icon="i-lucide-triangle-alert"
-                  >
-                    Deprecated
-                  </UBadge>
-                </div>
-              </div>
-            </button>
+              <UButton
+                size="xs"
+                color="primary"
+                variant="outline"
+                icon="i-lucide-send"
+                class="mt-1 shrink-0"
+                @click="openTryIt(route)"
+              >
+                <span class="hidden sm:inline">Try it</span>
+              </UButton>
+            </div>
           </template>
 
           <div v-if="isExpanded(route.key)" class="space-y-3">
@@ -301,16 +340,20 @@
         </UCard>
       </div>
     </template>
+
+    <TryItModal v-model:open="tryOpen" :route="activeTryRoute" :backend="tryBackend" />
   </main>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useHead } from '#app';
 import PageHeader from '~/components/PageHeader.vue';
-import { awaitElement, parse_api_response } from '~/utils';
+import TryItModal from '~/components/TryItModal.vue';
+import { awaitElement, notification, parse_api_response, request } from '~/utils';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import type {
+  Backend,
   GenericError,
   OpenAPIDocument,
   OpenAPIMediaType,
@@ -320,6 +363,9 @@ import type {
   OpenAPIReference,
   OpenAPIRequestBody,
   OpenAPIResponse,
+  OpenAPIRouteEntry,
+  OpenAPIRouteParameter,
+  OpenAPIRouteRequestBody,
   OpenAPISchema,
 } from '~/types';
 
@@ -337,24 +383,6 @@ type BackendItem = {
   file: string;
 };
 
-type RouteParameterItem = {
-  key: string;
-  name: string;
-  location: string;
-  description: string;
-  required: boolean;
-  schemaSummary: string;
-  shape: string;
-};
-
-type RouteRequestBodyItem = {
-  description: string;
-  required: boolean;
-  mediaType: string;
-  schemaSummary: string;
-  shape: string;
-};
-
 type RouteResponseItem = {
   status: string;
   label: string;
@@ -365,16 +393,8 @@ type RouteResponseItem = {
   shape: string;
 };
 
-type RouteEntry = {
-  key: string;
+type RouteEntry = OpenAPIRouteEntry & {
   method: RouteMethod;
-  path: string;
-  summary: string;
-  operationId: string;
-  tags: Array<string>;
-  deprecated: boolean;
-  parameters: Array<RouteParameterItem>;
-  requestBody: RouteRequestBodyItem | null;
   responses: Array<RouteResponseItem>;
 };
 
@@ -422,6 +442,33 @@ const spec = ref<OpenAPIDocument | null>(null);
 const error = ref<string>('');
 const isLoading = ref<boolean>(true);
 const expandedRoutes = ref<Record<string, boolean>>({});
+const tryOpen = ref<boolean>(false);
+const activeTryRoute = ref<RouteEntry | null>(null);
+const configuredBackends = ref<Array<Backend>>([]);
+const tryBackendName = ref<string>('');
+
+type TryBackendOption = {
+  value: string;
+  label: string;
+};
+
+const tryBackendItems = computed<Array<TryBackendOption>>(() => {
+  return configuredBackends.value
+    .filter((backend) => backend.type === selectedBackend.value)
+    .map((backend) => ({ value: backend.name, label: backend.name }));
+});
+
+const tryBackend = computed<Backend | null>(() => {
+  if (!tryBackendName.value) {
+    return null;
+  }
+
+  return (
+    configuredBackends.value.find(
+      (backend) => backend.name === tryBackendName.value && backend.type === selectedBackend.value,
+    ) ?? null
+  );
+});
 
 const activeBackend = computed<BackendItem>(() => {
   const fallback: BackendItem = backendItems[0] as BackendItem;
@@ -751,11 +798,53 @@ const schemaShape = (
   return schemaTypeLabel(normalized);
 };
 
+const valueToExampleString = (value: unknown): string => {
+  if (value === null || typeof value === 'undefined') {
+    return '';
+  }
+
+  if ('string' === typeof value) {
+    return value;
+  }
+
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+};
+
+const schemaExampleString = (schema?: OpenAPISchema | OpenAPIReference | null): string => {
+  const resolved = resolveSchema(schema);
+  if (!resolved) {
+    return '';
+  }
+
+  return valueToExampleString(resolved.example);
+};
+
+const schemaEnumList = (schema?: OpenAPISchema | OpenAPIReference | null): Array<string> => {
+  const resolved = resolveSchema(schema);
+  if (!resolved?.enum || !Array.isArray(resolved.enum)) {
+    return [];
+  }
+
+  return resolved.enum.map((value) => String(value));
+};
+
+const schemaTypeOf = (schema?: OpenAPISchema | OpenAPIReference | null): string => {
+  return resolveSchema(schema)?.type ?? '';
+};
+
+const schemaFormatOf = (schema?: OpenAPISchema | OpenAPIReference | null): string => {
+  return resolveSchema(schema)?.format ?? '';
+};
+
 const summarizeParameter = (
   routeKey: string,
   parameter: OpenAPIParameter | OpenAPIReference,
   index: number,
-): RouteParameterItem | null => {
+): OpenAPIRouteParameter | null => {
   const resolved = resolveParameter(parameter);
   if (!resolved) {
     return null;
@@ -771,12 +860,16 @@ const summarizeParameter = (
     required: true === resolved.required,
     schemaSummary: schemaTypeLabel(resolved.schema ?? schema),
     shape: schemaShape(schema ?? resolved.schema),
+    schemaType: schemaTypeOf(schema ?? resolved.schema),
+    schemaFormat: schemaFormatOf(schema ?? resolved.schema),
+    schemaEnum: schemaEnumList(schema ?? resolved.schema),
+    example: valueToExampleString(resolved.example) || schemaExampleString(schema),
   };
 };
 
 const summarizeRequestBody = (
   requestBody?: OpenAPIRequestBody | OpenAPIReference,
-): RouteRequestBodyItem | null => {
+): OpenAPIRouteRequestBody | null => {
   const resolved = resolveRequestBody(requestBody);
   if (!resolved) {
     return null;
@@ -790,6 +883,7 @@ const summarizeRequestBody = (
       mediaType: 'none',
       schemaSummary: '',
       shape: '',
+      example: '',
     };
   }
 
@@ -801,6 +895,7 @@ const summarizeRequestBody = (
     mediaType: media.mediaType,
     schemaSummary: schemaTypeLabel(media.content.schema ?? schema),
     shape: schemaShape(schema ?? media.content.schema),
+    example: valueToExampleString(media.content.example) || schemaExampleString(schema),
   };
 };
 
@@ -861,7 +956,7 @@ const routeEntries = computed<Array<RouteEntry>>(() => {
         const routeKey = `${label}:${path}`;
         const parameters = [...(pathItem.parameters ?? []), ...(operation.parameters ?? [])]
           .map((parameter, index) => summarizeParameter(routeKey, parameter, index))
-          .filter((item): item is RouteParameterItem => null !== item);
+          .filter((item): item is OpenAPIRouteParameter => null !== item);
 
         const responses = Object.entries(operation.responses ?? {})
           .map(([status, response]) => summarizeResponse(status, response))
@@ -951,6 +1046,28 @@ const toggleExpanded = (key: string): void => {
   };
 };
 
+const openTryIt = (route: RouteEntry): void => {
+  activeTryRoute.value = route;
+  tryOpen.value = true;
+};
+
+const loadConfiguredBackends = async (): Promise<void> => {
+  try {
+    const resp = await request('/backends');
+    const json = await parse_api_response<Array<Backend>>(resp);
+
+    if ('error' in json) {
+      notification('error', 'Error', `Failed to load backends. ${json.error.message}`);
+      return;
+    }
+
+    configuredBackends.value = json;
+  } catch (caughtError) {
+    const message = caughtError instanceof Error ? caughtError.message : 'Unexpected error';
+    notification('error', 'Error', `Failed to load backends. ${message}`);
+  }
+};
+
 const shouldShowShape = (summary: string, shape: string): boolean => {
   if (!shape) {
     return false;
@@ -1029,4 +1146,19 @@ const responseColor = (status: string): 'success' | 'warning' | 'error' | 'neutr
 };
 
 watch(selectedBackend, async () => await loadSpec(), { immediate: true });
+
+watch(tryBackendItems, (items: Array<TryBackendOption>) => {
+  if (items.length > 0 && !items.some((item) => item.value === tryBackendName.value)) {
+    tryBackendName.value = items[0]?.value ?? '';
+  }
+});
+
+onMounted(async () => {
+  await loadConfiguredBackends();
+
+  const first = tryBackendItems.value[0];
+  if (first && !tryBackendName.value) {
+    tryBackendName.value = first.value;
+  }
+});
 </script>

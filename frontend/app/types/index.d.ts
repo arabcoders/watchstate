@@ -1488,6 +1488,84 @@ export interface OpenAPIPathItem {
 }
 
 /**
+ * Backend spec keys exposed by the OpenAPI browser.
+ */
+export type OpenAPIBackendKey = 'plex' | 'jellyfin' | 'emby';
+
+/**
+ * Summarized OpenAPI parameter used by the route browser and the "try it out" modal.
+ */
+export interface OpenAPIRouteParameter {
+  key: string;
+  name: string;
+  location: string;
+  description: string;
+  required: boolean;
+  schemaSummary: string;
+  shape: string;
+  schemaType: string;
+  schemaFormat: string;
+  schemaEnum: Array<string>;
+  example: string;
+}
+
+/**
+ * Summarized OpenAPI request body used by the route browser and the "try it out" modal.
+ */
+export interface OpenAPIRouteRequestBody {
+  description: string;
+  required: boolean;
+  mediaType: string;
+  schemaSummary: string;
+  shape: string;
+  example: string;
+}
+
+/**
+ * Flattened OpenAPI operation used by the route browser and the "try it out" modal.
+ */
+export interface OpenAPIRouteEntry {
+  key: string;
+  method: string;
+  path: string;
+  summary: string;
+  operationId: string;
+  tags: Array<string>;
+  deprecated: boolean;
+  parameters: Array<OpenAPIRouteParameter>;
+  requestBody: OpenAPIRouteRequestBody | null;
+}
+
+/**
+ * Request side of the proxy exchange envelope returned by /backend/{name}/proxy.
+ */
+export interface ProxyExchangeRequest {
+  method: string;
+  url: string;
+  headers: Record<string, string>;
+}
+
+/**
+ * Response side of the proxy exchange envelope returned by /backend/{name}/proxy.
+ */
+export interface ProxyExchangeResponse {
+  status: number;
+  headers: Record<string, string>;
+  body: string;
+}
+
+/**
+ * Exchange envelope returned by the backend proxy and the system URL checker.
+ *
+ * Matches the shape produced by {@link https://watchstate.dev/api POST /v1/api/backend/{name}/proxy}
+ * and POST /v1/api/system/url/check, so the same response viewer can render either payload.
+ */
+export interface ProxyExchange {
+  request: ProxyExchangeRequest;
+  response: ProxyExchangeResponse;
+}
+
+/**
  * System report response from /api/system/report endpoint.
  */
 export interface SystemReport {
