@@ -97,8 +97,8 @@
         class="block"
       >
         <UCard
-          class="h-full border shadow-sm"
-          :class="item.watched ? 'border-success/40' : 'border-default/70'"
+          class="h-full shadow-sm"
+          :class="item.watched ? 'ring-1 ring-success/20' : ''"
           :ui="itemCardUi"
         >
           <template #header>

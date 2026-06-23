@@ -221,38 +221,37 @@
             v-if="item.title"
             class="rounded-md border border-default bg-elevated/40 px-3 py-2.5"
           >
-            <div class="cursor-pointer text-sm font-medium text-default" @click="toggleOverflow">
-              <div class="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
-                <span class="inline-flex items-center gap-2">
-                  <UIcon name="i-lucide-heading" class="size-4 shrink-0 text-toned" />
-                  <NuxtLink
-                    :to="makeSearchLink('title', item.title)"
-                    class="text-highlighted hover:text-primary"
-                  >
-                    {{ item.title }}
-                  </NuxtLink>
-                </span>
-              </div>
+            <div
+              class="flex min-w-0 cursor-pointer items-start gap-2 text-sm font-medium text-default"
+              @click="item.expand_title = !item.expand_title"
+            >
+              <UIcon name="i-lucide-heading" class="mt-0.5 size-4 shrink-0 text-toned" />
+              <NuxtLink
+                :to="makeSearchLink('title', item.title)"
+                class="min-w-0 text-highlighted hover:text-primary"
+                :class="item.expand_title ? 'wrap-break-word' : 'truncate'"
+              >
+                {{ item.title }}
+              </NuxtLink>
             </div>
           </div>
 
           <div
             v-if="item.content_path"
-            class="cursor-pointer rounded-md border border-default bg-elevated/40 px-3 py-2.5"
-            @click="toggleFirstChildOverflow"
+            class="rounded-md border border-default bg-elevated/40 px-3 py-2.5"
           >
             <div
-              class="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium text-default"
+              class="flex min-w-0 cursor-pointer items-start gap-2 text-sm font-medium text-default"
+              @click="item.expand_path = !item.expand_path"
             >
-              <span class="inline-flex items-center gap-2">
-                <UIcon name="i-lucide-file-text" class="size-4 shrink-0 text-toned" />
-                <NuxtLink
-                  :to="makeSearchLink('path', item.content_path)"
-                  class="hover:text-primary"
-                >
-                  {{ item.content_path }}
-                </NuxtLink>
-              </span>
+              <UIcon name="i-lucide-file-text" class="mt-0.5 size-4 shrink-0 text-toned" />
+              <NuxtLink
+                :to="makeSearchLink('path', item.content_path)"
+                class="min-w-0 hover:text-primary"
+                :class="item.expand_path ? 'wrap-break-word' : 'truncate'"
+              >
+                {{ item.content_path }}
+              </NuxtLink>
             </div>
           </div>
         </div>
@@ -355,11 +354,12 @@ import {
   ag,
   parse_api_response,
 } from '~/utils';
-import type { SearchItem } from '~/types';
+import type { ExpandableUIState, SearchItem } from '~/types';
 
-type SearchItemWithUI = SearchItem & {
-  showItem?: boolean;
-};
+type SearchItemWithUI = SearchItem &
+  ExpandableUIState & {
+    showItem?: boolean;
+  };
 
 const route = useRoute();
 const router = useRouter();
@@ -451,20 +451,6 @@ const handleRawModalOpenChange = (open: boolean): void => {
   }
 
   selectedRawItem.value = null;
-};
-
-const toggleOverflow = (event: Event): void => {
-  (event.target as HTMLElement)?.classList?.toggle('overflow-hidden');
-  (event.target as HTMLElement)?.classList?.toggle('text-ellipsis');
-  (event.target as HTMLElement)?.classList?.toggle('whitespace-nowrap');
-};
-
-const toggleFirstChildOverflow = (event: Event): void => {
-  const target = event.target as HTMLElement | null;
-
-  target?.firstElementChild?.classList?.toggle('overflow-hidden');
-  target?.firstElementChild?.classList?.toggle('text-ellipsis');
-  target?.firstElementChild?.classList?.toggle('whitespace-nowrap');
 };
 
 const searchContent = async (fromPopState: boolean = false): Promise<void> => {

@@ -202,23 +202,17 @@
               class="flex items-start justify-between gap-3 rounded-md border border-default bg-elevated/40 px-3 py-2.5"
             >
               <div
-                class="min-w-0 flex-1 cursor-pointer"
-                :class="
-                  item?.expand_title
-                    ? 'wrap-break-word'
-                    : 'overflow-hidden text-ellipsis whitespace-nowrap'
-                "
+                class="flex min-w-0 flex-1 cursor-pointer items-start gap-2 text-sm font-medium text-default"
                 @click="item.expand_title = !item?.expand_title"
               >
-                <span class="inline-flex items-center gap-2 text-sm font-medium text-default">
-                  <UIcon name="i-lucide-heading" class="size-4 shrink-0 text-toned" />
-                  <NuxtLink
-                    :to="makeSearchLink('subtitle', item?.content_title || item.title)"
-                    class="hover:text-primary"
-                  >
-                    {{ item?.content_title || item.title }}
-                  </NuxtLink>
-                </span>
+                <UIcon name="i-lucide-heading" class="mt-0.5 size-4 shrink-0 text-toned" />
+                <NuxtLink
+                  :to="makeSearchLink('subtitle', item?.content_title || item.title)"
+                  class="min-w-0 hover:text-primary"
+                  :class="item?.expand_title ? 'wrap-break-word' : 'truncate'"
+                >
+                  {{ item?.content_title || item.title }}
+                </NuxtLink>
               </div>
 
               <UTooltip text="Copy title">
@@ -238,25 +232,19 @@
               class="flex items-start justify-between gap-3 rounded-md border border-default bg-elevated/40 px-3 py-2.5"
             >
               <div
-                class="min-w-0 flex-1 cursor-pointer"
-                :class="
-                  item?.expand_path
-                    ? 'wrap-break-word'
-                    : 'overflow-hidden text-ellipsis whitespace-nowrap'
-                "
+                class="flex min-w-0 flex-1 cursor-pointer items-start gap-2 text-sm font-medium text-default"
                 @click="item.expand_path = !item?.expand_path"
               >
-                <span class="inline-flex items-center gap-2 text-sm font-medium text-default">
-                  <UIcon name="i-lucide-file-text" class="size-4 shrink-0 text-toned" />
-                  <NuxtLink
-                    v-if="item?.content_path"
-                    :to="makeSearchLink('path', item.content_path)"
-                    class="hover:text-primary"
-                  >
-                    {{ item.content_path }}
-                  </NuxtLink>
-                  <span v-else>No path found.</span>
-                </span>
+                <UIcon name="i-lucide-file-text" class="mt-0.5 size-4 shrink-0 text-toned" />
+                <NuxtLink
+                  v-if="item?.content_path"
+                  :to="makeSearchLink('path', item.content_path)"
+                  class="min-w-0 hover:text-primary"
+                  :class="item?.expand_path ? 'wrap-break-word' : 'truncate'"
+                >
+                  {{ item.content_path }}
+                </NuxtLink>
+                <span v-else>No path found.</span>
               </div>
 
               <UTooltip text="Copy file path">
