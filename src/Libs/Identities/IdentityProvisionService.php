@@ -1021,7 +1021,7 @@ final class IdentityProvisionService
                     continue;
                 }
 
-                $this->logger->error("No other users were found that match '{identity.backend}: {identity.user}{real_name}'.", [
+                $this->logger->warning("No other users were found that match '{identity.backend}: {identity.user}{real_name}'.", [
                     'operation' => 'identity.match',
                     'error' => 'no_user_match',
                     'identity' => [
