@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "9b5ed8f941c3049a13ca06b91719c9a1efac9ffd",
-    "date": "2026-06-23T08:40:30+00:00",
+    "full_sha": "9266af5e0ff46cc83b2a4d8a02da37b567728eea",
+    "date": "2026-06-23T16:32:11+00:00",
     "commits": [
+      {
+        "sha": "9266af5e",
+        "full_sha": "9266af5e0ff46cc83b2a4d8a02da37b567728eea",
+        "message": "refactor: update authorization header format for MediaBrowser API calls",
+        "author": "arabcoders",
+        "date": "2026-06-23T16:32:11+00:00"
+      },
+      {
+        "sha": "d007f36d",
+        "full_sha": "d007f36d62ed649a22f43e4e91e3705345be4b1e",
+        "message": "refactor: reduce unknown identitiy match to warning level",
+        "author": "arabcoders",
+        "date": "2026-06-23T15:01:47+00:00"
+      },
       {
         "sha": "9b5ed8f9",
         "full_sha": "9b5ed8f941c3049a13ca06b91719c9a1efac9ffd",
