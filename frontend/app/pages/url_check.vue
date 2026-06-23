@@ -322,7 +322,7 @@ const templates = ref<Array<{ id: number; key: string; override: Item }>>([
       url: 'http://[ip:port]/system/Info',
       headers: [
         { key: 'Accept', value: 'application/json' },
-        { key: 'X-MediaBrowser-Token', value: '[API_KEY]' },
+        { key: 'Authorization', value: 'MediaBrowser Token="[API_KEY]"' },
       ],
     },
   },
@@ -379,7 +379,7 @@ const templates = ref<Array<{ id: number; key: string; override: Item }>>([
       url: 'http://[ip:port]/items',
       headers: [
         { key: 'Accept', value: 'application/json' },
-        { key: 'X-MediaBrowser-Token', value: '[API_KEY]' },
+        { key: 'Authorization', value: 'MediaBrowser Token="[API_KEY]"' },
       ],
     },
   },

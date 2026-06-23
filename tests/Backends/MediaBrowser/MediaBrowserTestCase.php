@@ -71,7 +71,10 @@ abstract class MediaBrowserTestCase extends TestCase
             backendId: 'backend-1',
             backendToken: 'token-1',
             backendUser: 'user-1',
-            backendHeaders: ['X-MediaBrowser-Token' => 'token-1'],
+            backendHeaders: [
+                'Accept' => 'application/json',
+                'Authorization' => 'MediaBrowser Token="token-1", UserId="user-1"',
+            ],
             trace: true === ($opts['trace'] ?? false),
             options: $opts,
         );
