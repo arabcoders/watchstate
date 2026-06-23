@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "9266af5e0ff46cc83b2a4d8a02da37b567728eea",
-    "date": "2026-06-23T16:32:11+00:00",
+    "full_sha": "6baec2bf0c2c6753b5e3a3057e26eb581d09542f",
+    "date": "2026-06-23T18:25:09+00:00",
     "commits": [
+      {
+        "sha": "6baec2bf",
+        "full_sha": "6baec2bf0c2c6753b5e3a3057e26eb581d09542f",
+        "message": "feat: add try it out modal for openapi specs.",
+        "author": "arabcoders",
+        "date": "2026-06-23T18:25:09+00:00"
+      },
       {
         "sha": "9266af5e",
         "full_sha": "9266af5e0ff46cc83b2a4d8a02da37b567728eea",
