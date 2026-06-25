@@ -4,9 +4,18 @@
 @import '@nuxt/ui';
 
 :root {
-  --ui-radius: 0.375rem;
+  --ui-radius: 0.5rem;
   --ui-container: 96rem;
   --ui-header-height: 4.25rem;
+  --ws-border-strong: var(--ui-border-accented);
+  --ws-surface-border-soft: var(--ui-border-accented);
+  --ws-surface-border-solid: var(--ui-border-accented);
+}
+
+.dark {
+  --ws-border-strong: var(--ui-border);
+  --ws-surface-border-soft: color-mix(in oklab, var(--ui-border) 70%, transparent);
+  --ws-surface-border-solid: var(--ui-border);
 }
 
 @layer base {
@@ -16,10 +25,20 @@
 
   .page-enter-active,
   .page-leave-active {
-    transition: opacity 0.2s ease;
+    transition:
+      opacity 0.25s ease,
+      transform 0.25s ease;
   }
 
-  .page-enter-from,
+  .page-enter-from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  .page-leave-active {
+    transition: opacity 0.1s ease;
+  }
+
   .page-leave-to {
     opacity: 0;
   }
@@ -54,6 +73,110 @@
       radial-gradient(circle at top left, rgb(99 102 241 / 0.14), transparent 26%),
       radial-gradient(circle at top right, rgb(245 158 11 / 0.08), transparent 20%),
       linear-gradient(180deg, rgb(9 12 18 / 0.98), rgb(17 24 39 / 0.98));
+  }
+
+  .ws-page-header {
+    @apply flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between;
+  }
+
+  .ws-page-heading {
+    @apply flex min-w-0 items-center gap-3;
+  }
+
+  .ws-page-kicker {
+    @apply flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned;
+  }
+
+  .ws-page-icon {
+    @apply inline-flex size-11 shrink-0 items-center justify-center rounded-md border bg-elevated/70 text-primary;
+    border-color: var(--ws-surface-border-solid);
+  }
+
+  .ws-section-icon {
+    @apply inline-flex size-10 shrink-0 items-center justify-center rounded-md border bg-elevated/70 text-primary;
+    border-color: var(--ws-surface-border-solid);
+  }
+
+  .ws-detail-icon {
+    @apply inline-flex size-9 shrink-0 items-center justify-center rounded-md border bg-elevated/70 text-primary;
+    border-color: var(--ws-surface-border-solid);
+  }
+
+  .ws-card {
+    @apply min-w-0 max-w-full rounded-lg border bg-elevated/20;
+    border-color: var(--ws-surface-border-soft);
+  }
+
+  .ws-card-padded {
+    @apply min-w-0 max-w-full rounded-lg border bg-elevated/20 p-4;
+    border-color: var(--ws-surface-border-soft);
+  }
+
+  .ws-card-padded-lg {
+    @apply min-w-0 max-w-full rounded-lg border bg-elevated/20 p-4 sm:p-5;
+    border-color: var(--ws-surface-border-soft);
+  }
+
+  .ws-panel {
+    @apply min-w-0 max-w-full rounded-lg border;
+    border-color: var(--ws-surface-border-soft);
+  }
+
+  .ws-panel-padded {
+    @apply min-w-0 max-w-full rounded-lg border p-4;
+    border-color: var(--ws-surface-border-soft);
+  }
+
+  .ws-panel-padded-lg {
+    @apply min-w-0 max-w-full rounded-lg border p-4 sm:p-5;
+    border-color: var(--ws-surface-border-soft);
+  }
+
+  .ws-table-surface {
+    @apply min-w-0 max-w-full rounded-sm border bg-elevated/20;
+    border-color: var(--ws-surface-border-solid);
+  }
+
+  .ws-floating-surface {
+    @apply border bg-default/95 shadow-xl backdrop-blur-md;
+    border-color: var(--ws-surface-border-solid);
+    box-shadow: 0 1rem 2rem rgb(15 23 42 / 0.1);
+  }
+
+  .ws-floating-surface [data-slot='item'][data-highlighted]::before,
+  .ws-floating-surface [data-slot='item'][data-state='open']::before,
+  .ws-floating-surface [data-slot='item']:hover::before {
+    background-color: color-mix(in oklab, var(--ui-primary) 11%, transparent) !important;
+  }
+
+  .ws-floating-surface [data-slot='item'][data-disabled]::before {
+    background-color: transparent !important;
+  }
+
+  .dark .ws-floating-surface {
+    background: color-mix(in oklab, var(--ui-bg) 92%, var(--ui-bg-elevated) 8%);
+    box-shadow: 0 1rem 2rem rgb(0 0 0 / 0.3);
+  }
+
+  .dark .ws-floating-surface [data-slot='item'][data-highlighted]::before,
+  .dark .ws-floating-surface [data-slot='item'][data-state='open']::before,
+  .dark .ws-floating-surface [data-slot='item']:hover::before {
+    background-color: color-mix(in oklab, var(--ui-primary) 16%, transparent) !important;
+  }
+
+  .ws-border-top-soft {
+    @apply border-t;
+    border-color: var(--ws-surface-border-soft);
+  }
+
+  .ws-border-bottom-soft {
+    @apply border-b;
+    border-color: var(--ws-surface-border-soft);
+  }
+
+  .ws-border-left-soft {
+    @apply border-l;
+    border-color: var(--ws-surface-border-soft);
   }
 
   .bg-fanart {

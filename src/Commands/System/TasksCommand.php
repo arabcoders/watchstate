@@ -304,6 +304,8 @@ final class TasksCommand extends Command
 
             if (false === ag_exists($tasks, $task)) {
                 $this->logger->error("Unknown task '{task}'. No task with that name registered.", [
+                    'operation' => 'task.run',
+                    'error' => 'unknown_task',
                     'task' => $task,
                 ]);
                 return self::FAILURE;
@@ -325,6 +327,7 @@ final class TasksCommand extends Command
 
         if (count($run) < 1) {
             $this->logger->debug("No task scheduled at '{datetime}'.", [
+                'operation' => 'task.run',
                 'datetime' => make_date(),
             ]);
 
@@ -519,6 +522,8 @@ final class TasksCommand extends Command
                     $stream->close();
                 } catch (Throwable $e) {
                     $this->logger->error("Failed to write to logfile '{file}': {exception.message}", [
+                        'operation' => 'task.logfile',
+                        'error' => 'write_failed',
                         'file' => Config::get('tasks.logfile'),
                         ...exception_log($e),
                     ]);

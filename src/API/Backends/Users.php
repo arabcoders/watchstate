@@ -49,7 +49,14 @@ final class Users
                 $users[] = $user;
             }
         } catch (Throwable $e) {
-            $logger->error($e->getMessage(), exception_log($e));
+            $logger->error(
+                "Failed to load users list from '{type}' backend. {exception.message}",
+                [
+                    'operation' => 'backends.users_list',
+                    'backend' => ['type' => $type],
+                    ...exception_log($e),
+                ],
+            );
             return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);
         }
 

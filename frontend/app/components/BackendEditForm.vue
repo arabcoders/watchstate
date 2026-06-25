@@ -52,7 +52,7 @@
     <form v-else id="backend_edit_form" class="space-y-6" @submit.prevent="saveContent">
       <div class="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
         <div class="space-y-6">
-          <UCard class="border border-default/70 shadow-sm" :ui="summaryCardUi">
+          <UCard class="shadow-sm" :ui="summaryCardUi">
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               <div class="rounded-md border border-default bg-elevated/20 px-3 py-3">
                 <div class="mb-1 inline-flex items-center gap-2 text-xs font-medium text-toned">
@@ -80,7 +80,7 @@
             </div>
           </UCard>
 
-          <UCard class="border border-default/70 shadow-sm" :ui="sectionCardUi">
+          <UCard class="shadow-sm" :ui="sectionCardUi">
             <template #header>
               <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
                 <UIcon name="i-lucide-link" class="size-4 text-toned" />
@@ -280,7 +280,7 @@
             </div>
           </UCard>
 
-          <UCard class="border border-default/70 shadow-sm" :ui="sectionCardUi">
+          <UCard class="shadow-sm" :ui="sectionCardUi">
             <template #header>
               <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
                 <UIcon name="i-lucide-fingerprint" class="size-4 text-toned" />
@@ -331,7 +331,7 @@
             </div>
           </UCard>
 
-          <UCard class="border border-default/70 shadow-sm" :ui="sectionCardUi">
+          <UCard class="shadow-sm" :ui="sectionCardUi">
             <template #header>
               <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
                 <UIcon name="i-lucide-user-round-cog" class="size-4 text-toned" />
@@ -419,7 +419,7 @@
             </div>
           </UCard>
 
-          <UCard class="border border-default/70 shadow-sm" :ui="sectionCardUi">
+          <UCard class="shadow-sm" :ui="sectionCardUi">
             <template #header>
               <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
                 <UIcon name="i-lucide-repeat-2" class="size-4 text-toned" />
@@ -479,7 +479,7 @@
         </div>
 
         <div class="space-y-6">
-          <UCard class="border border-default/70 shadow-sm" :ui="sectionCardUi">
+          <UCard class="shadow-sm" :ui="sectionCardUi">
             <template #header>
               <button
                 type="button"

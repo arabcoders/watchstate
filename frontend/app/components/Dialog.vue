@@ -37,6 +37,15 @@
         <template v-else-if="isConfirm || isPrompt">
           <UButton
             type="button"
+            color="neutral"
+            variant="outline"
+            icon="i-lucide-x"
+            @click="onCancel"
+          >
+            {{ cancelText }}
+          </UButton>
+          <UButton
+            type="button"
             icon="i-lucide-check"
             data-dialog-primary="true"
             :color="primaryButtonTheme.color"
@@ -45,16 +54,6 @@
             @click="onEnter"
           >
             {{ confirmText }}
-          </UButton>
-
-          <UButton
-            type="button"
-            color="neutral"
-            variant="outline"
-            icon="i-lucide-x"
-            @click="onCancel"
-          >
-            {{ cancelText }}
           </UButton>
         </template>
       </div>

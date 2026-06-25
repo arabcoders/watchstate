@@ -1,29 +1,14 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-4">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-      <div class="space-y-1">
-        <div
-          class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-        >
-          <UIcon :name="pageShell.icon" class="size-4" />
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
-          <NuxtLink to="/identities" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
-          <span>/</span>
-          <span class="text-highlighted normal-case tracking-normal">Match &amp; Provision</span>
-        </div>
-
-        <div>
-          <p class="mt-1 text-sm text-toned">
-            Drag and drop backend members into groups to build identity associations.
-            <template v-if="expires">
-              Cached results expire {{ moment(expires).fromNow() }}.
-            </template>
-          </p>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center justify-end gap-2">
+  <main class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader v-bind="pageShell" :description="headerDescription">
+      <template #kicker>
+        <span>{{ pageShell.sectionLabel }}</span>
+        <span>/</span>
+        <NuxtLink to="/identities" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
+        <span>/</span>
+        <span class="text-highlighted normal-case tracking-normal">Match &amp; Provision</span>
+      </template>
+      <template #actions>
         <UButton
           color="neutral"
           variant="outline"
@@ -53,8 +38,8 @@
           @click="loadContent(true)"
           label="Reload"
         />
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <UAlert
       v-if="isLoading"
@@ -401,7 +386,7 @@
       </template>
     </UCard>
 
-    <UCard class="border border-default/70 shadow-sm" :ui="tipsCardUi">
+    <UCard class="shadow-sm" :ui="tipsCardUi">
       <template #header>
         <button
           type="button"
@@ -487,6 +472,7 @@ import { navigateTo, useRoute } from '#app';
 import { NuxtLink } from '#components';
 import moment from 'moment';
 import draggable from 'vuedraggable';
+import PageHeader from '~/components/PageHeader.vue';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import { notification, parse_api_response, request } from '~/utils';
 import { useDialog } from '~/composables/useDialog';
@@ -529,6 +515,13 @@ const hasIdentities = ref<boolean>(false);
 const allowSingleBackendIdentities = ref<boolean>(false);
 const backendCount = ref<number>(0);
 const expires = ref<string | undefined>();
+const headerDescription = computed(() => {
+  let desc = 'Drag and drop backend members into groups to build identity associations.';
+  if (expires.value) {
+    desc += ` Cached results expire ${moment(expires.value).fromNow()}.`;
+  }
+  return desc;
+});
 const api_user = useStorage('api_user', 'main');
 const show_page_tips = useStorage('show_page_tips', true);
 

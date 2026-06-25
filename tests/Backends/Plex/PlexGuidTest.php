@@ -26,31 +26,6 @@ class PlexGuidTest extends TestCase
 {
     protected ?Logger $logger = null;
 
-    private function logged(Level $level, string $message, bool $clear = false): bool
-    {
-        try {
-            foreach ($this->handler->getRecords() as $record) {
-                if ($level !== $record->level) {
-                    continue;
-                }
-
-                if (null !== $record->formatted && true === str_contains($record->formatted, $message)) {
-                    return true;
-                }
-
-                if (true === str_contains($record->message, $message)) {
-                    return true;
-                }
-            }
-
-            return false;
-        } finally {
-            if (true === $clear) {
-                $this->handler->clear();
-            }
-        }
-    }
-
     private function getClass(): PlexGuid
     {
         $this->handler->clear();
@@ -91,7 +66,7 @@ class PlexGuidTest extends TestCase
             Config::save('guid.file', $tmpFile);
             $this->getClass();
             $this->assertTrue(
-                $this->logged(Level::Error, 'Failed to parse GUIDs file', true),
+                $this->loggedWith(Level::Error, ['operation' => 'guid.load_file', 'error' => 'file_parse_failed'], true),
                 'Assert message logged when the value type does not match the expected type.',
             );
         } finally {
@@ -147,7 +122,7 @@ class PlexGuidTest extends TestCase
         touch($tmpFile);
         $this->getClass()->parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Info, 'is empty', true),
+            $this->loggedWith(Level::Info, ['operation' => 'guid.load_file'], true),
             'Failed to assert that the GUID file is empty.',
         );
 
@@ -173,7 +148,7 @@ class PlexGuidTest extends TestCase
         file_put_contents($tmpFile, Yaml::dump(ag_set($yaml, 'links.0', 'ff')));
         $this->getClass()->parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'Value must be an object.', true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.link_map', 'error' => 'link_not_object'], true),
             'Assert link value is an object.',
         );
 
@@ -181,7 +156,7 @@ class PlexGuidTest extends TestCase
         file_put_contents($tmpFile, Yaml::dump($yaml));
         $this->getClass()->parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'replace value must be an object.', true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.link_map', 'error' => 'link_replace_not_object'], true),
             'Assert replace key is an object.',
         );
 
@@ -189,15 +164,15 @@ class PlexGuidTest extends TestCase
         file_put_contents($tmpFile, Yaml::dump($yaml));
         $this->getClass()->parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'options.replace.from field is empty or not a string.', true),
-            'Assert to field is a string.',
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.link_map', 'error' => 'link_from_missing'], true),
+            'Assert from field is a string.',
         );
 
         $yaml = ag_set($yaml, 'links.0.options.replace.from', 'foo');
         file_put_contents($tmpFile, Yaml::dump($yaml));
         $this->getClass()->parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'options.replace.to field is not a string.', true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.link_map', 'error' => 'link_to_not_string'], true),
             'Assert to field is a string.',
         );
 
@@ -213,7 +188,7 @@ class PlexGuidTest extends TestCase
         file_put_contents($tmpFile, Yaml::dump($yaml));
         $this->getClass()->parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'map value must be an object.', true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.link_map', 'error' => 'link_map_not_object'], true),
             'Assert map key is an object.',
         );
 
@@ -221,15 +196,15 @@ class PlexGuidTest extends TestCase
         file_put_contents($tmpFile, Yaml::dump($yaml));
         $this->getClass()->parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'map.from field is empty or not a string.', true),
-            'Assert to field is a string.',
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.link_map', 'error' => 'link_from_missing'], true),
+            'Assert from field is a string.',
         );
 
         $yaml = ag_set($yaml, 'links.0.map.from', 'foo');
         file_put_contents($tmpFile, Yaml::dump($yaml));
         $this->getClass()->parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'map.to field is empty or not a string.', true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.link_map', 'error' => 'link_to_missing'], true),
             'Assert to field is a string.',
         );
 
@@ -237,16 +212,16 @@ class PlexGuidTest extends TestCase
         file_put_contents($tmpFile, Yaml::dump($yaml));
         $this->getClass()->parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'field does not starts with', true),
-            'Assert to field is a string.',
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.link_map', 'error' => 'link_to_not_guid'], true),
+            'Assert to field starts with guid_.',
         );
 
         $yaml = ag_set($yaml, 'links.0.map.to', 'guid_foobar');
         file_put_contents($tmpFile, Yaml::dump($yaml));
         $this->getClass()->parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'map.to field is not a supported', true),
-            'Assert to field is a string.',
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.link_map', 'error' => 'link_to_not_supported'], true),
+            'Assert to field is a supported GUID type.',
         );
 
         $yaml = ag_set($yaml, 'links.0.map', [
@@ -256,8 +231,8 @@ class PlexGuidTest extends TestCase
         file_put_contents($tmpFile, Yaml::dump($yaml));
         $this->getClass()->parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'map.from already exists.', true),
-            'Assert to field is a string.',
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.link_map', 'error' => 'link_from_duplicate'], true),
+            'Assert from field already exists.',
         );
 
         $yaml = ag_set($yaml, 'links.0.map', [
@@ -400,7 +375,7 @@ class PlexGuidTest extends TestCase
         );
 
         $this->assertTrue(
-            $this->logged(Level::Info, 'Unable to parse', true),
+            $this->loggedWith(Level::Info, ['operation' => 'guid.parse', 'error' => 'unparseable_identifier'], true),
             'Assert that the invalid GUID is logged.',
         );
         $this->assertEquals(
@@ -418,7 +393,7 @@ class PlexGuidTest extends TestCase
         );
 
         $this->assertTrue(
-            $this->logged(Level::Info, 'reported conflicting', true),
+            $this->loggedWith(Level::Info, ['operation' => 'guid.parse', 'error' => 'conflicting_ids'], true),
             'Assert that a log is raised when multiple GUIDs for the same provider are found.',
         );
 
@@ -441,7 +416,7 @@ class PlexGuidTest extends TestCase
         );
 
         $this->assertFalse(
-            $this->logged(Level::Warning, 'reported multiple ids', true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.parse', 'error' => 'conflicting_ids'], true),
             'Assert identical canonical and NFO GUIDs do not raise duplicate warnings.',
         );
 
@@ -473,7 +448,7 @@ class PlexGuidTest extends TestCase
         );
 
         $this->assertTrue(
-            $this->logged(Level::Debug, 'Ignoring', true),
+            $this->loggedWith(Level::Debug, ['operation' => 'guid.parse', 'error' => 'ignored_by_user'], true),
             'Assert that a log is raised when the GUID is ignored by user choice.',
         );
     }

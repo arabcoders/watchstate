@@ -12,6 +12,7 @@ use App\Libs\Playlists\PlaylistSyncService;
 use App\Libs\TestCase;
 use App\Libs\UserContext;
 use Monolog\Handler\TestHandler;
+use Monolog\Level;
 use Monolog\Logger;
 use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -202,7 +203,14 @@ final class PlaylistCommandTest extends TestCase
         ]);
 
         self::assertSame(PlaylistCommand::FAILURE, $status);
-        self::assertTrue($handler->hasErrorThatContains("User 'ghost' not found."));
+        self::assertTrue(
+            $this->hasRecordWith(
+                $handler,
+                Level::Error,
+                ['operation' => 'playlist.resolve_users'],
+            ),
+            'Assert resolve-users error logged with operation token.',
+        );
     }
 
     /**

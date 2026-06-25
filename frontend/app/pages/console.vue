@@ -1,18 +1,7 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-4">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-      <div class="min-w-0 space-y-1">
-        <div
-          class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-        >
-          <UIcon :name="pageShell.icon" class="size-4" />
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
-          <span>{{ pageShell.pageLabel }}</span>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center justify-end gap-2">
+  <main class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader v-bind="pageShell">
+      <template #actions>
         <UButton
           color="neutral"
           variant="outline"
@@ -23,14 +12,14 @@
         >
           Clear output
         </UButton>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
-    <div class="overflow-hidden border border-default bg-elevated shadow-sm">
+    <div class="ws-card overflow-hidden bg-elevated shadow-sm">
       <div ref="outputConsole" class="min-h-[55vh] max-h-[55vh] overflow-hidden" />
     </div>
 
-    <div class="rounded-md border border-default bg-default shadow-sm">
+    <div class="ws-card bg-elevated/20 shadow-sm">
       <div
         class="flex flex-col gap-3 border-b border-default bg-muted/10 px-4 py-3 lg:flex-row lg:items-start lg:justify-between"
       >
@@ -141,10 +130,7 @@
               </UButton>
 
               <template #content>
-                <UCard
-                  class="w-[min(92vw,42rem)] border border-default/70 shadow-sm"
-                  :ui="historyCardUi"
-                >
+                <UCard class="w-[min(92vw,42rem)] shadow-sm" :ui="historyCardUi">
                   <div class="flex flex-wrap items-center justify-between gap-3">
                     <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
                       <UIcon name="i-lucide-history" class="size-4 text-toned" />
@@ -176,7 +162,7 @@
                   <div v-else class="space-y-4">
                     <div
                       v-if="recentRunEntries.length > 0"
-                      class="max-h-80 overflow-auto rounded-lg border border-default bg-default"
+                      class="max-h-80 overflow-auto rounded-lg border border-default bg-elevated/30"
                     >
                       <table class="w-full text-sm">
                         <tbody class="divide-y divide-default">
@@ -311,6 +297,7 @@ import { Terminal } from '@xterm/xterm';
 import type { ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
+import PageHeader from '~/components/PageHeader.vue';
 import {
   request,
   formatCommandEcho,

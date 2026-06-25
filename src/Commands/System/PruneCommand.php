@@ -133,6 +133,8 @@ class PruneCommand extends Command
 
             if (false === ag_exists($pruners, $prunerName)) {
                 $this->logger->warning("Unknown pruner '{pruner}'. No pruner with that name registered.", [
+                    'operation' => 'prune.run',
+                    'error' => 'unknown_pruner',
                     'pruner' => $prunerName,
                 ]);
 
@@ -160,6 +162,7 @@ class PruneCommand extends Command
 
         if (count($run) < 1) {
             $this->logger->debug("No pruners scheduled at '{datetime}'.", [
+                'operation' => 'prune.run',
                 'datetime' => make_date(),
             ]);
         }
@@ -237,6 +240,8 @@ class PruneCommand extends Command
     protected function reportPrunerError(array $pruner, Throwable $e, OutputInterface $output): void
     {
         $this->logger->warning("Skipping pruner '{name}'. {exception.message}", [
+            'operation' => 'prune.run',
+            'error' => 'pruner_failed',
             'name' => ag($pruner, 'name', 'unknown'),
             ...exception_log($e),
         ]);

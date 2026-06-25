@@ -96,7 +96,9 @@ final class PlexGuid implements iGuid
                 $this->parseGUIDFile($file);
             }
         } catch (Throwable $e) {
-            $this->logger->error("Failed to read or parse '{guid}' file. {exception.message}.", [
+            $this->logger->error("Failed to read or parse GUID file '{guid}'. {exception.message}", [
+                'operation' => 'guid.load_file',
+                'error' => 'file_parse_failed',
                 'guid' => $file,
                 ...exception_log($e),
             ]);
@@ -121,7 +123,10 @@ final class PlexGuid implements iGuid
         }
 
         if (filesize($file) < 1) {
-            $this->logger->info("The external GUID mapping file '{file}' is empty.", ['file' => $file]);
+            $this->logger->info("The external GUID mapping file '{file}' is empty.", [
+                'operation' => 'guid.load_file',
+                'file' => $file,
+            ]);
             return;
         }
 
@@ -169,7 +174,9 @@ final class PlexGuid implements iGuid
 
         foreach ($mapping as $key => $map) {
             if (false === is_array($map)) {
-                $this->logger->warning("Ignoring 'links.{key}'. Value must be an object. '{given}' is given.", [
+                $this->logger->warning("Ignoring link mapping '{key}'. Value must be an object. '{given}' given.", [
+                    'operation' => 'guid.link_map',
+                    'error' => 'link_not_object',
                     'key' => $key,
                     'given' => get_debug_type($map),
                 ]);
@@ -182,13 +189,12 @@ final class PlexGuid implements iGuid
 
             if (null !== ($replace = ag($map, 'options.replace', null))) {
                 if (false === is_array($replace)) {
-                    $this->logger->warning(
-                        "Ignoring 'links.{key}'. options.replace value must be an object. '{given}' is given.",
-                        [
-                            'key' => $key,
-                            'given' => get_debug_type($replace),
-                        ],
-                    );
+                    $this->logger->warning("Ignoring link mapping '{key}'. 'options.replace' value must be an object. '{given}' given.", [
+                        'operation' => 'guid.link_map',
+                        'error' => 'link_replace_not_object',
+                        'key' => $key,
+                        'given' => get_debug_type($replace),
+                    ]);
                     continue;
                 }
 
@@ -197,8 +203,10 @@ final class PlexGuid implements iGuid
 
                 if (empty($from) || false === is_string($from)) {
                     $this->logger->warning(
-                        "Ignoring 'links.{key}'. options.replace.from field is empty or not a string.",
+                        "Ignoring link mapping '{key}'. 'options.replace.from' field is empty or not a string.",
                         [
+                            'operation' => 'guid.link_map',
+                            'error' => 'link_from_missing',
                             'key' => $key,
                         ],
                     );
@@ -206,7 +214,9 @@ final class PlexGuid implements iGuid
                 }
 
                 if (false === is_string($to)) {
-                    $this->logger->warning("Ignoring 'links.{key}'. options.replace.to field is not a string.", [
+                    $this->logger->warning("Ignoring link mapping '{key}'. 'options.replace.to' field is not a string.", [
+                        'operation' => 'guid.link_map',
+                        'error' => 'link_to_not_string',
                         'key' => $key,
                     ]);
                     continue;
@@ -217,7 +227,9 @@ final class PlexGuid implements iGuid
 
             if (null !== ($mapper = ag($map, 'map', null))) {
                 if (false === is_array($mapper)) {
-                    $this->logger->warning("Ignoring 'links.{key}'. map value must be an object. '{given}' is given.", [
+                    $this->logger->warning("Ignoring link mapping '{key}'. 'map' value must be an object. '{given}' given.", [
+                        'operation' => 'guid.link_map',
+                        'error' => 'link_map_not_object',
                         'key' => $key,
                         'given' => get_debug_type($mapper),
                     ]);
@@ -228,14 +240,18 @@ final class PlexGuid implements iGuid
                 $to = ag($mapper, 'to', null);
 
                 if (empty($from) || false === is_string($from)) {
-                    $this->logger->warning("Ignoring 'links.{key}'. map.from field is empty or not a string.", [
+                    $this->logger->warning("Ignoring link mapping '{key}'. 'map.from' field is empty or not a string.", [
+                        'operation' => 'guid.link_map',
+                        'error' => 'link_from_missing',
                         'key' => $key,
                     ]);
                     continue;
                 }
 
                 if (empty($to) || false === is_string($to)) {
-                    $this->logger->warning("Ignoring 'links.{key}'. map.to field is empty or not a string.", [
+                    $this->logger->warning("Ignoring link mapping '{key}'. 'map.to' field is empty or not a string.", [
+                        'operation' => 'guid.link_map',
+                        'error' => 'link_to_missing',
                         'key' => $key,
                     ]);
                     continue;
@@ -243,8 +259,10 @@ final class PlexGuid implements iGuid
 
                 if (false === str_starts_with($to, 'guid_')) {
                     $this->logger->warning(
-                        "Ignoring 'links.{key}'. map.to '{to}' field does not starts with 'guid_'.",
+                        "Ignoring link mapping '{key}'. 'map.to' field does not starts with 'guid_', '{to}' given.",
                         [
+                            'operation' => 'guid.link_map',
+                            'error' => 'link_to_not_guid',
                             'key' => $key,
                             'to' => $to,
                         ],
@@ -253,7 +271,9 @@ final class PlexGuid implements iGuid
                 }
 
                 if (false === in_array($to, $supported, true)) {
-                    $this->logger->warning("Ignoring 'links.{key}'. map.to field is not a supported GUID type.", [
+                    $this->logger->warning("Ignoring link mapping '{key}'. 'map.to' field is not a supported GUID type, '{to}' given.", [
+                        'operation' => 'guid.link_map',
+                        'error' => 'link_to_not_supported',
                         'key' => $key,
                         'to' => $to,
                     ]);
@@ -266,7 +286,9 @@ final class PlexGuid implements iGuid
                 }
 
                 if (true === in_array($from, $this->guidLegacy, true)) {
-                    $this->logger->warning("Ignoring 'links.{key}'. map.from already exists.", [
+                    $this->logger->warning("Ignoring link mapping '{key}'. 'map.from' already exists, '{from}' given.", [
+                        'operation' => 'guid.link_map',
+                        'error' => 'link_from_duplicate',
                         'key' => $key,
                         'from' => $from,
                     ]);
@@ -367,6 +389,8 @@ final class PlexGuid implements iGuid
                 if (false === str_contains($val, '://')) {
                     if (true === $log) {
                         $this->logger->info("Unable to parse '{identity.backend}: {agent}' identifier.", [
+                            'operation' => 'guid.parse',
+                            'error' => 'unparseable_identifier',
                             'identity' => [
                                 'backend' => $this->context->backendName,
                             ],
@@ -389,6 +413,8 @@ final class PlexGuid implements iGuid
                         $this->logger->debug(
                             "Ignoring '{identity.client}: {identity.backend}' external id '{source}' for {item.type} '{item.id}: {item.title}' as requested.",
                             [
+                                'operation' => 'guid.parse',
+                                'error' => 'ignored_by_user',
                                 'identity' => [
                                     'client' => $this->context->clientName,
                                     'backend' => $bName,
@@ -415,6 +441,8 @@ final class PlexGuid implements iGuid
                         $this->logger->info(
                             "'{identity.client}: {identity.backend}' reported conflicting '{key}' external ids '{existing_id}' and '{new_id}' for {item.type} '{item.id}: {item.title}'.",
                             [
+                                'operation' => 'guid.parse',
+                                'error' => 'conflicting_ids',
                                 'identity' => [
                                     'client' => $this->context->clientName,
                                     'backend' => $this->context->backendName,
@@ -440,9 +468,10 @@ final class PlexGuid implements iGuid
             } catch (Throwable $e) {
                 if (true === $log) {
                     $this->logger->info(
-                        message: "{class}: Ignoring '{identity.user}@{identity.backend}' invalid GUID '{agent}' for {item.type} '{item.id}: {item.title}'.",
+                        message: "Ignoring '{identity.user}@{identity.backend}' invalid GUID '{agent}' for {item.type} '{item.id}: {item.title}'.",
                         context: [
-                            'class' => after_last(self::class, '\\'),
+                            'operation' => 'guid.parse',
+                            'error' => 'invalid_guid',
                             'identity' => [
                                 'user' => $this->context->userContext->name,
                                 'backend' => $this->context->backendName,
@@ -506,8 +535,10 @@ final class PlexGuid implements iGuid
         } catch (Throwable $e) {
             if (true === $log) {
                 $this->logger->error(
-                    message: "Failed during '{identity.client}: {identity.backend}' parsing legacy agent '{agent}' identifier. {exception.message}",
+                    message: "Failed to parse '{identity.client}: {identity.backend}' legacy agent '{agent}' identifier. {exception.message}",
                     context: [
+                        'operation' => 'guid.parse_legacy',
+                        'error' => 'legacy_parse_failed',
                         'identity' => [
                             'backend' => $this->context->backendName,
                             'client' => $this->context->clientName,
@@ -563,8 +594,10 @@ final class PlexGuid implements iGuid
         } catch (Throwable $e) {
             if (true === $log) {
                 $this->logger->error(
-                    message: "Failed during '{identity.client}: {identity.backend}' parsing NFO agent '{agent}' identifier. {exception.message}",
+                    message: "Failed to parse '{identity.client}: {identity.backend}' NFO agent '{agent}' identifier. {exception.message}",
                     context: [
+                        'operation' => 'guid.parse_nfo',
+                        'error' => 'nfo_parse_failed',
                         'identity' => [
                             'backend' => $this->context->backendName,
                             'client' => $this->context->clientName,

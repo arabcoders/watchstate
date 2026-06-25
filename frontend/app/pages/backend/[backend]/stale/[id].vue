@@ -1,26 +1,21 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-4">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-      <div class="min-w-0 space-y-1">
-        <div
-          class="flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
+  <main class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader v-bind="pageShell">
+      <template #kicker>
+        <span>{{ pageShell.sectionLabel }}</span>
+        <span>/</span>
+        <NuxtLink to="/backends" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
+        <span>/</span>
+        <NuxtLink
+          :to="`/backend/${backend}`"
+          class="hover:text-primary normal-case tracking-normal"
+          >{{ backend }}</NuxtLink
         >
-          <UIcon :name="pageShell.icon" class="size-4" />
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
-          <NuxtLink to="/backends" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
-          <span>/</span>
-          <NuxtLink
-            :to="`/backend/${backend}`"
-            class="hover:text-primary normal-case tracking-normal"
-            >{{ backend }}</NuxtLink
-          >
-          <span>/</span>
-          <span class="text-highlighted normal-case tracking-normal">Staleness</span>
-        </div>
-      </div>
+        <span>/</span>
+        <span class="text-highlighted normal-case tracking-normal">Staleness</span>
+      </template>
 
-      <div class="flex flex-wrap items-center justify-end gap-2">
+      <template #actions>
         <UButton
           color="neutral"
           variant="outline"
@@ -31,8 +26,8 @@
           @click="() => void loadContent()"
           label="Reload"
         />
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <UAlert
       v-if="0 < items.length"
@@ -55,8 +50,8 @@
     <div v-if="0 < items.length" class="grid gap-4 xl:grid-cols-2">
       <Lazy v-for="item in items" :key="item.id" :unrender="true" :min-height="343" class="block">
         <UCard
-          class="h-full border shadow-sm"
-          :class="item.watched ? 'border-success/40' : 'border-default/70'"
+          class="h-full shadow-sm"
+          :class="item.watched ? 'ring-1 ring-success/20' : ''"
           :ui="resultCardUi"
         >
           <template #header>
@@ -181,7 +176,7 @@
                   v-for="reportedBackend in item.reported_by"
                   :key="`${item.id}-rb-${reportedBackend}`"
                   :to="`/backend/${reportedBackend}`"
-                  class="inline-flex items-center gap-1.5 rounded-md border border-default bg-default/60 px-2.5 py-1 text-xs font-medium text-default"
+                  class="inline-flex items-center gap-1.5 rounded-md border border-default bg-elevated/40 px-2.5 py-1 text-xs font-medium text-default"
                 >
                   <UIcon name="i-lucide-server" class="size-3.5" />
                   {{ reportedBackend }}
@@ -260,7 +255,7 @@
       </template>
     </UAlert>
 
-    <UCard class="border border-default/70 shadow-sm" :ui="tipsCardUi">
+    <UCard class="shadow-sm" :ui="tipsCardUi">
       <template #header>
         <button
           type="button"
@@ -301,6 +296,7 @@ import { useStorage } from '@vueuse/core';
 import moment from 'moment';
 import FloatingImage from '~/components/FloatingImage.vue';
 import Lazy from '~/components/Lazy.vue';
+import PageHeader from '~/components/PageHeader.vue';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import {
   request,

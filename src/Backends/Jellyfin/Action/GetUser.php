@@ -9,6 +9,7 @@ use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
+use App\Libs\Config;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Options;
@@ -100,7 +101,17 @@ class GetUser
         $options = $context->getHttpOptions();
 
         if (count($options['headers']) < 1) {
-            $options['headers']['X-MediaBrowser-Token'] = $context->backendToken;
+            $options['headers']['Authorization'] = r(
+                'MediaBrowser Token="{token}", Client="{app}", Device="{os}", DeviceId="{id}", Version="{version}", UserId="{user}"',
+                [
+                    'token' => $context->backendToken,
+                    'app' => Config::get('name') . '/' . $context->clientName,
+                    'os' => PHP_OS,
+                    'id' => md5(Config::get('name') . '/' . $context->clientName),
+                    'version' => get_app_version(),
+                    'user' => $context->backendUser,
+                ],
+            );
         }
 
         $response = $this->http->request(Method::GET, (string) $url, $options);
@@ -112,7 +123,7 @@ class GetUser
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Request for '{identity.user}@{identity.backend}' user '{userId}' info returned with unexpected '{response.status_code}' status code.",
+                    message: "Request for '{identity.user}@{identity.backend}' user '{userId}' info returned HTTP {response.status_code}.",
                     context: [
                         ...$logContext,
                         'response' => [

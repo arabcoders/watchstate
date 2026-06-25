@@ -12,20 +12,40 @@
 
     <template v-else>
       <form id="identity_edit_form" class="space-y-6" @submit.prevent="saveContent">
-        <UCard class="border border-default/70 shadow-sm" :ui="cardUi">
+        <UCard class="shadow-sm" :ui="cardUi">
           <div class="space-y-5">
-            <UFormField
-              label="Mini command"
-              name="command_input"
-              description="Apply a focused JSON command before saving. Use `s/path/value/` or `d/path/`. Escape literal `/` as `\/`."
-            >
-              <UInput
-                v-model="commandInput"
-                icon="i-lucide-terminal"
-                class="w-full"
-                placeholder="s/backend1.import.enabled/false/"
-                @keydown.enter.prevent.stop="applyMiniCommand"
-              />
+            <UFormField name="command_input">
+              <template #label>
+                <div class="flex items-center gap-2">
+                  <UIcon name="i-lucide-terminal" class="size-4 text-toned" />
+                  <span>Mini command</span>
+                </div>
+              </template>
+
+              <div class="flex gap-2">
+                <UInput
+                  v-model="commandInput"
+                  icon="i-lucide-terminal"
+                  class="min-w-0 flex-1"
+                  placeholder="s/backend1.import.enabled/false/"
+                  @keydown.enter.prevent.stop="applyMiniCommand"
+                />
+
+                <UButton
+                  color="primary"
+                  variant="soft"
+                  icon="i-lucide-play"
+                  :disabled="!commandInput.trim()"
+                  @click="applyMiniCommand"
+                >
+                  Run
+                </UButton>
+              </div>
+
+              <p class="mt-2 text-sm text-toned">
+                Use <code>s/path/value/</code> or <code>d/path/</code>. Escape literal
+                <code>/</code> as <code>\/</code>.
+              </p>
 
               <p v-if="commandError" class="mt-2 text-sm text-error">
                 {{ commandError }}
@@ -61,7 +81,7 @@
               color="warning"
               variant="soft"
               icon="i-lucide-triangle-alert"
-              title="Warning"
+              title=""
               description="Do not edit the backend names, as indexing and data are keyed by them. This may lead to data loss."
             />
 
@@ -70,7 +90,7 @@
                 v-model="configContent"
                 rows="20"
                 placeholder="Enter server configuration in JSON format..."
-                class="min-h-96 w-full rounded-md border border-default bg-default px-3 py-2 font-mono text-sm text-default outline-none transition focus:border-primary"
+                class="min-h-96 w-full rounded-md border border-default bg-elevated/30 px-3 py-2 font-mono text-sm text-default outline-none transition focus:border-primary"
                 @blur="formatJSON"
               />
             </UFormField>
@@ -116,7 +136,7 @@
         </UCard>
       </form>
 
-      <UCard class="border border-default/70 shadow-sm" :ui="tipsCardUi">
+      <UCard class="shadow-sm" :ui="tipsCardUi">
         <ul class="list-disc space-y-2 pl-5 text-sm leading-6 text-default">
           <li>
             Each backend should have: name, type, url, token, uuid, user, import, export, and

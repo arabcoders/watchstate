@@ -49,7 +49,7 @@ final class PlexToken
         ]);
 
         if (Status::CREATED !== Status::from($req->getStatusCode())) {
-            $this->logger->error("Request for OAuth PIN returned with unexpected '{response.status_code}' status code.", [
+            $this->logger->error('Request for OAuth PIN returned HTTP {response.status_code}.', [
                 'response' => [
                     'status_code' => $req->getStatusCode(),
                     'parsed' => $req->toArray(false),
@@ -58,7 +58,7 @@ final class PlexToken
             ]);
             return api_error(
                 r(
-                    text: "Request for OAuth PIN returned with unexpected '{response.status_code}' status code.",
+                    text: 'Request for OAuth PIN returned HTTP {response.status_code}.',
                     context: ['response' => ['status_code' => $req->getStatusCode()]],
                 ),
                 Status::from($req->getStatusCode()),
@@ -98,7 +98,7 @@ final class PlexToken
         ]);
 
         if (Status::OK !== Status::from($req->getStatusCode())) {
-            $this->logger->error("Request for OAuth PIN check returned with unexpected '{response.status_code}' status code.", [
+            $this->logger->error('Request for OAuth PIN check returned HTTP {response.status_code}.', [
                 'response' => [
                     'status_code' => $req->getStatusCode(),
                     'parsed' => $req->toArray(false),
@@ -108,7 +108,7 @@ final class PlexToken
 
             return api_error(
                 r(
-                    text: "Request for OAuth PIN check returned with unexpected '{response.status_code}' status code.",
+                    text: 'Request for OAuth PIN check returned HTTP {response.status_code}.',
                     context: ['response' => ['status_code' => $req->getStatusCode()]],
                 ),
                 Status::from($req->getStatusCode()),

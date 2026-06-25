@@ -1,15 +1,6 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-4">
-    <div class="space-y-1">
-      <div
-        class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-      >
-        <UIcon :name="pageShell.icon" class="size-4" />
-        <span>{{ pageShell.sectionLabel }}</span>
-        <span>/</span>
-        <span>{{ pageShell.pageLabel }}</span>
-      </div>
-    </div>
+  <main class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader v-bind="pageShell" />
 
     <UAlert
       v-if="error"
@@ -35,7 +26,7 @@
       :ui="{ icon: 'animate-spin' }"
     />
 
-    <UCard class="border border-default/70 shadow-sm" :ui="panelCardUi">
+    <UCard class="shadow-sm" :ui="panelCardUi">
       <template #header>
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div class="min-w-0 flex-1 space-y-2">
@@ -74,6 +65,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { navigateTo, useHead, useRoute } from '#app';
+import PageHeader from '~/components/PageHeader.vue';
 import { useDialog } from '~/composables/useDialog';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import { notification, parse_api_response, request } from '~/utils';

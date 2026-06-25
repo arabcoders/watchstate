@@ -41,6 +41,7 @@ class FakeBackendClient implements ClientInterface
         'push' => [],
         'progress' => [],
         'update_state' => [],
+        'proxy' => [],
     ];
 
     /** @var array<string,array<string,mixed>|Throwable> */
@@ -54,6 +55,9 @@ class FakeBackendClient implements ClientInterface
 
     /** @var array<string,int> */
     private static array $queuedExportRequests = [];
+
+    /** @var array<string,Response|Throwable> */
+    private static array $proxyResponses = [];
 
     public function __construct()
     {
@@ -70,11 +74,13 @@ class FakeBackendClient implements ClientInterface
             'push' => [],
             'progress' => [],
             'update_state' => [],
+            'proxy' => [],
         ];
         self::$metadataResponses = [];
         self::$exportErrors = [];
         self::$skipBackupWrites = [];
         self::$queuedExportRequests = [];
+        self::$proxyResponses = [];
     }
 
     /**
@@ -107,6 +113,16 @@ class FakeBackendClient implements ClientInterface
     public static function setQueuedExportRequests(string $user, string $backend, int $count): void
     {
         self::$queuedExportRequests[self::exportKey($user, $backend)] = $count;
+    }
+
+    /**
+     * Register a fixture Response (or Throwable) to be returned by proxy() for the given user/backend pair.
+     *
+     * @param Response|Throwable $response the response to return or exception to throw.
+     */
+    public static function setProxyResponse(string $user, string $backend, Response|Throwable $response): void
+    {
+        self::$proxyResponses[self::exportKey($user, $backend)] = $response;
     }
 
     public function withContext(Context $context): ClientInterface
@@ -316,6 +332,27 @@ class FakeBackendClient implements ClientInterface
 
     public function proxy(Method $method, iUri $uri, array|iStream $body = [], array $opts = []): Response
     {
+        $context = $this->requireContext();
+
+        self::record('proxy', [
+            'backend' => $context->backendName,
+            'user' => $context->userContext->name,
+            'method' => $method->value,
+            'url' => (string) $uri,
+            'body' => is_array($body) ? $body : null,
+            'headers' => ag($opts, 'headers', []),
+        ]);
+
+        $fixture = self::$proxyResponses[self::exportKey($context->userContext->name, $context->backendName)] ?? null;
+
+        if ($fixture instanceof Throwable) {
+            throw $fixture;
+        }
+
+        if ($fixture instanceof Response) {
+            return $fixture;
+        }
+
         return new Response(status: true);
     }
 

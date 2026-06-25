@@ -26,31 +26,6 @@ class JellyfinGuidTest extends TestCase
 {
     protected ?Logger $logger = null;
 
-    private function logged(Level $level, string $message, bool $clear = false): bool
-    {
-        try {
-            foreach ($this->handler->getRecords() as $record) {
-                if ($level !== $record->level) {
-                    continue;
-                }
-
-                if (null !== $record->formatted && true === str_contains($record->formatted, $message)) {
-                    return true;
-                }
-
-                if (true === str_contains($record->message, $message)) {
-                    return true;
-                }
-            }
-
-            return false;
-        } finally {
-            if (true === $clear) {
-                $this->handler->clear();
-            }
-        }
-    }
-
     private function getClass(): JellyfinGuid
     {
         $this->handler->clear();
@@ -91,7 +66,7 @@ class JellyfinGuidTest extends TestCase
             Config::save('guid.file', $tmpFile);
             $this->getClass();
             $this->assertTrue(
-                $this->logged(Level::Error, 'Failed to parse GUIDs file', true),
+                $this->loggedWith(Level::Error, ['operation' => 'guid.load_file', 'error' => 'file_parse_failed'], true),
                 'Assert message logged when the value type does not match the expected type.',
             );
         } finally {
@@ -147,7 +122,7 @@ class JellyfinGuidTest extends TestCase
         touch($tmpFile);
         $this->getClass()->parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Info, 'is empty', true),
+            $this->loggedWith(Level::Info, ['operation' => 'guid.load_file'], true),
             'Failed to assert that the GUID file is empty.',
         );
 
@@ -172,7 +147,7 @@ class JellyfinGuidTest extends TestCase
         file_put_contents($tmpFile, Yaml::dump(ag_set($yaml, 'links.0', 'ff')));
         $this->getClass()->parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'Value must be an object.', true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.link_map', 'error' => 'link_not_object'], true),
             'Assert replace key is an object.',
         );
 
@@ -183,7 +158,7 @@ class JellyfinGuidTest extends TestCase
         file_put_contents($tmpFile, Yaml::dump($yaml));
         $this->getClass()->parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'map value must be an object.', true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.link_map', 'error' => 'link_map_not_object'], true),
             'Assert map key is an object.',
         );
 
@@ -191,7 +166,7 @@ class JellyfinGuidTest extends TestCase
         file_put_contents($tmpFile, Yaml::dump($yaml));
         $this->getClass()->parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'map.from field is empty or not a string.', true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.link_map', 'error' => 'link_from_missing'], true),
             'Assert to field is a string.',
         );
 
@@ -199,7 +174,7 @@ class JellyfinGuidTest extends TestCase
         file_put_contents($tmpFile, Yaml::dump($yaml));
         $this->getClass()->parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'map.to field is empty or not a string.', true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.link_map', 'error' => 'link_to_missing'], true),
             'Assert to field is a string.',
         );
 
@@ -207,7 +182,7 @@ class JellyfinGuidTest extends TestCase
         file_put_contents($tmpFile, Yaml::dump($yaml));
         $this->getClass()->parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'field does not starts with', true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.link_map', 'error' => 'link_to_not_guid'], true),
             'Assert to field is a string.',
         );
 
@@ -215,7 +190,7 @@ class JellyfinGuidTest extends TestCase
         file_put_contents($tmpFile, Yaml::dump($yaml));
         $this->getClass()->parseGUIDFile($tmpFile);
         $this->assertTrue(
-            $this->logged(Level::Warning, 'map.to field is not a supported', true),
+            $this->loggedWith(Level::Warning, ['operation' => 'guid.link_map', 'error' => 'link_to_not_supported'], true),
             'Assert to field is a string.',
         );
 
@@ -386,7 +361,7 @@ class JellyfinGuidTest extends TestCase
         );
 
         $this->assertTrue(
-            $this->logged(Level::Debug, 'JellyfinGuid: Ignoring', true),
+            $this->loggedWith(Level::Debug, ['operation' => 'guid.parse', 'error' => 'ignored_by_user'], true),
             'Assert that a log is raised when the GUID is ignored by user choice.',
         );
     }

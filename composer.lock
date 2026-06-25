@@ -3484,16 +3484,16 @@
     },
     {
       "name": "phpunit/phpunit",
-      "version": "13.2.0",
+      "version": "13.2.1",
       "source": {
         "type": "git",
         "url": "https://github.com/sebastianbergmann/phpunit.git",
-        "reference": "3796ea973f1e7698f0d432c1c66662af9764fd9a"
+        "reference": "60da0ff1e10a0f72ee18a24117ec3b613a346bba"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/3796ea973f1e7698f0d432c1c66662af9764fd9a",
-        "reference": "3796ea973f1e7698f0d432c1c66662af9764fd9a",
+        "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/60da0ff1e10a0f72ee18a24117ec3b613a346bba",
+        "reference": "60da0ff1e10a0f72ee18a24117ec3b613a346bba",
         "shasum": ""
       },
       "require": {
@@ -3507,7 +3507,7 @@
         "phar-io/manifest": "^2.0.4",
         "phar-io/version": "^3.2.1",
         "php": ">=8.4.1",
-        "phpunit/php-code-coverage": "^14.2",
+        "phpunit/php-code-coverage": "^14.2.2",
         "phpunit/php-file-iterator": "^7.0.0",
         "phpunit/php-invoker": "^7.0.0",
         "phpunit/php-text-template": "^6.0.0",
@@ -3564,7 +3564,7 @@
       "support": {
         "issues": "https://github.com/sebastianbergmann/phpunit/issues",
         "security": "https://github.com/sebastianbergmann/phpunit/security/policy",
-        "source": "https://github.com/sebastianbergmann/phpunit/tree/13.2.0"
+        "source": "https://github.com/sebastianbergmann/phpunit/tree/13.2.1"
       },
       "funding": [
         {
@@ -3572,7 +3572,7 @@
           "type": "other"
         }
       ],
-      "time": "2026-06-05T03:13:07+00:00"
+      "time": "2026-06-15T13:14:22+00:00"
     },
     {
       "name": "roave/security-advisories",
@@ -3580,12 +3580,12 @@
       "source": {
         "type": "git",
         "url": "https://github.com/Roave/SecurityAdvisories.git",
-        "reference": "810e1d8cfbc718df8dacf74b62b7b9a1780b9698"
+        "reference": "bfdbd26a02c71b3b00586f056c8cf5efea22a27a"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/810e1d8cfbc718df8dacf74b62b7b9a1780b9698",
-        "reference": "810e1d8cfbc718df8dacf74b62b7b9a1780b9698",
+        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/bfdbd26a02c71b3b00586f056c8cf5efea22a27a",
+        "reference": "bfdbd26a02c71b3b00586f056c8cf5efea22a27a",
         "shasum": ""
       },
       "conflict": {
@@ -3686,13 +3686,14 @@
         "bytefury/crater": "<6.0.2",
         "cachethq/cachet": "<2.5.1",
         "cadmium-org/cadmium-cms": "<=0.4.9",
+        "cakephp/authentication": "<3.3.6|>=4,<4.1.1",
         "cakephp/cakephp": "<3.10.3|>=4,<4.0.10|>=4.1,<4.1.4|>=4.2,<4.2.12|>=4.3,<4.3.11|>=4.4,<4.4.10|>=5.2.10,<5.2.12|==5.3",
         "cakephp/database": ">=4.2,<4.2.12|>=4.3,<4.3.11|>=4.4,<4.4.10",
         "cardgate/magento2": "<2.0.33",
         "cardgate/woocommerce": "<=3.1.15",
-        "cart2quote/module-quotation": ">=4.1.6,<=4.4.5|>=5,<5.4.4",
+        "cart2quote/module-quotation": ">=4.1.6,<4.4.6|>=5,<5.4.4",
         "cart2quote/module-quotation-encoded": ">=4.1.6,<=4.4.5|>=5,<5.4.4",
-        "cartalyst/sentry": "<=2.1.6",
+        "cartalyst/sentry": "<2.1.7",
         "catfan/medoo": "<1.7.5",
         "causal/oidc": "<4",
         "cecil/cecil": "<7.47.1",
@@ -3730,12 +3731,13 @@
         "coreshop/core-shop": "<4.1.9|==5",
         "corveda/phpsandbox": "<1.3.5",
         "cosenary/instagram": "<=2.3",
+        "cotonti/cotonti": "<=1",
         "couleurcitron/tarteaucitron-wp": "<0.3",
         "cpsit/typo3-mailqueue": "<0.4.5|>=0.5,<0.5.2",
         "craftcms/aws-s3": ">=2.0.2,<=2.2.4",
         "craftcms/azure-blob": ">=2.0.0.0-beta1,<=2.1",
-        "craftcms/cms": "<4.17.12|>=5,<5.9.18",
-        "craftcms/commerce": ">=4,<4.11|>=5,<5.6",
+        "craftcms/cms": "<4.18|>=5,<5.10",
+        "craftcms/commerce": ">=4,<=4.11.1|>=5,<=5.6.4",
         "craftcms/composer": ">=4.0.0.0-RC1-dev,<=4.10|>=5.0.0.0-RC1-dev,<=5.5.1",
         "craftcms/craft": ">=3.5,<=4.16.17|>=5.0.0.0-RC1-dev,<=5.8.21",
         "craftcms/google-cloud": ">=2.0.0.0-beta1,<=2.2",
@@ -3790,7 +3792,7 @@
         "drupal/commerce_alphabank_redirect": "<1.0.3",
         "drupal/commerce_eurobank_redirect": "<2.1.1",
         "drupal/config_split": "<1.10|>=2,<2.0.2",
-        "drupal/core": ">=6,<6.38|>=7,<7.103|>=8,<10.5.9|>=10.6,<10.6.7|>=11,<11.2.11|>=11.3,<11.3.7",
+        "drupal/core": ">=6,<6.38|>=7,<7.103|>=8,<10.5.10|>=10.6,<10.6.9|>=11,<11.2.12|>=11.3,<11.3.10",
         "drupal/core-recommended": ">=7,<7.102|>=8,<10.2.11|>=10.3,<10.3.9|>=11,<11.0.8",
         "drupal/currency": "<3.5",
         "drupal/drupal": ">=5,<5.11|>=6,<6.38|>=7,<7.102|>=8,<10.2.11|>=10.3,<10.3.9|>=11,<11.0.8",
@@ -3863,6 +3865,7 @@
         "fenom/fenom": "<=2.12.1",
         "filament/actions": ">=3.2,<3.2.123|>=4,<=4.11.3|>=5,<=5.6.3",
         "filament/filament": ">=4,<4.3.1",
+        "filament/forms": ">=3,<=3.3.52",
         "filament/infolists": ">=3,<3.2.115",
         "filament/tables": ">=3,<=3.3.50|>=4,<4.8.5|>=5,<5.3.5",
         "filegator/filegator": "<7.8",
@@ -3910,10 +3913,10 @@
         "georgringer/news": "<10.0.4|>=11,<11.4.4|>=12,<12.3.2|>=13,<13.0.2|>=14,<14.0.3",
         "geshi/geshi": "<=1.0.9.1",
         "getformwork/formwork": "<=2.3.3",
-        "getgrav/grav": "<=2.0.0.0-RC1",
+        "getgrav/grav": "<=2.0.0.0-RC8",
         "getgrav/grav-plugin-api": "<1.0.0.0-beta15",
         "getgrav/grav-plugin-form": "<9.1",
-        "getkirby/cms": "<=4.9|>=5,<=5.4",
+        "getkirby/cms": "<=4.9.3|>=5,<=5.4.3",
         "getkirby/kirby": "<3.9.8.3-dev|>=3.10,<3.10.1.2-dev|>=4,<4.7.1",
         "getkirby/panel": "<2.5.14",
         "getkirby/starterkit": "<=3.7.0.2",
@@ -3930,10 +3933,10 @@
         "gregwar/rst": "<1.0.3",
         "grumpydictator/firefly-iii": "<=6.6.2",
         "gugoan/economizzer": "<=0.9.0.0-beta1",
-        "guzzlehttp/guzzle": "<6.5.8|>=7,<7.4.5",
+        "guzzlehttp/guzzle": "<7.12.1",
         "guzzlehttp/guzzle-services": "<1.5.4",
         "guzzlehttp/oauth-subscriber": "<0.8.1",
-        "guzzlehttp/psr7": "<2.10.2",
+        "guzzlehttp/psr7": "<2.12.1",
         "haffner/jh_captcha": "<=2.1.3|>=3,<=3.0.2",
         "handcraftedinthealps/goodby-csv": "<1.4.3",
         "harvesthq/chosen": "<1.8.7",
@@ -3988,6 +3991,7 @@
         "jasig/phpcas": "<1.3.3",
         "jbartels/wec-map": "<3.0.3",
         "jcbrand/converse.js": "<3.3.3",
+        "jleehr/canto-saas-api": "<=2",
         "joedolson/my-calendar": "<3.7.7",
         "joelbutcher/socialstream": "<5.6|>=6,<6.2",
         "johnbillion/query-monitor": "<3.20.4",
@@ -4031,7 +4035,7 @@
         "lara-zeus/artemis": ">=1,<=1.0.6",
         "lara-zeus/dynamic-dashboard": ">=3,<=3.0.1",
         "laravel/fortify": "<1.11.1",
-        "laravel/framework": "<12.60|>=13,<13.10",
+        "laravel/framework": "<12.61.1|>=13,<13.12",
         "laravel/laravel": ">=5.4,<5.4.22",
         "laravel/passport": ">=13,<13.7.1",
         "laravel/pulse": "<1.3.1",
@@ -4122,6 +4126,7 @@
         "movim/moxl": ">=0.8,<=0.10",
         "movingbytes/social-network": "<=1.2.1",
         "mpdf/mpdf": "<=7.1.7",
+        "mtdowling/jmespath.php": "<2.9.1",
         "munkireport/comment": "<4",
         "munkireport/managedinstalls": "<2.6",
         "munkireport/munki_facts": "<1.5",
@@ -4208,7 +4213,7 @@
         "phenx/php-svg-lib": "<0.5.2",
         "php-censor/php-censor": "<2.0.13|>=2.1,<2.1.5",
         "php-mod/curl": "<2.3.2",
-        "phpbb/phpbb": "<3.3.11",
+        "phpbb/phpbb": "<3.3.16|==4.0.0.0-alpha1",
         "phpems/phpems": ">=6,<=6.1.3",
         "phpfastcache/phpfastcache": "<6.1.5|>=7,<7.1.2|>=8,<8.0.7",
         "phpmailer/phpmailer": "<6.5",
@@ -4220,7 +4225,7 @@
         "phpoffice/phpexcel": "<=1.8.2",
         "phpoffice/phpspreadsheet": "<=1.30.4|>=2,<=2.1.15|>=2.2,<=2.4.4|>=3,<=3.10.4|>=4,<=5.6",
         "phppgadmin/phppgadmin": "<=7.13",
-        "phpseclib/phpseclib": "<=2.0.53|>=3,<=3.0.51",
+        "phpseclib/phpseclib": "<=2.0.54|>=3,<=3.0.53",
         "phpservermon/phpservermon": "<3.6",
         "phpsysinfo/phpsysinfo": "<3.4.3",
         "phpunit/phpunit": "<8.5.52|>=9,<9.6.33|>=10,<10.5.62|>=11,<11.5.50|>=12,<12.5.8|>=12.5.21,<12.5.22|>=13.1.5,<13.1.6",
@@ -4236,7 +4241,7 @@
         "pimcore/demo": "<10.3",
         "pimcore/ecommerce-framework-bundle": "<1.0.10",
         "pimcore/perspective-editor": "<1.5.1",
-        "pimcore/pimcore": "<=12.3.6",
+        "pimcore/pimcore": "<=12.3.8",
         "pimcore/web2print-tools-bundle": "<=5.2.1|>=6.0.0.0-RC1-dev,<=6.1",
         "piwik/piwik": "<1.11",
         "pixelfed/pixelfed": "<0.12.5",
@@ -4260,8 +4265,8 @@
         "prestashop/ps_linklist": "<3.1",
         "privatebin/privatebin": "<1.4|>=1.5,<1.7.4|>=1.7.7,<2.0.3",
         "processwire/processwire": "<=3.0.255",
-        "propel/propel": ">=2.0.0.0-alpha1,<=2.0.0.0-alpha7",
-        "propel/propel1": ">=1,<=1.7.1",
+        "propel/propel": ">=2.0.0.0-alpha1,<2.0.0.0-alpha8",
+        "propel/propel1": ">=1,<1.7.2",
         "psy/psysh": "<=0.11.22|>=0.12,<=0.12.18",
         "pterodactyl/panel": "<1.12.3",
         "ptheofan/yii2-statemachine": ">=2.0.0.0-RC1-dev,<=2",
@@ -4324,7 +4329,7 @@
         "silverstripe/assets": "<2.4.5|>=3,<3.1.3",
         "silverstripe/cms": "<4.11.3",
         "silverstripe/comments": ">=1.3,<3.1.1",
-        "silverstripe/forum": "<=0.6.1|>=0.7,<=0.7.3",
+        "silverstripe/forum": "<0.6.2|>=0.7,<0.7.4",
         "silverstripe/framework": "<5.3.23",
         "silverstripe/graphql": ">=2,<2.0.5|>=3,<3.8.2|>=4,<4.3.7|>=5,<5.1.3",
         "silverstripe/hybridsessions": ">=1,<2.4.1|>=2.5,<2.5.1",
@@ -4368,6 +4373,7 @@
         "spencer14420/sp-php-email-handler": "<1",
         "spipu/html2pdf": "<5.2.8",
         "spiral/roadrunner": "<2025.1",
+        "spomky-labs/otphp": "<11.4.3",
         "spoon/library": "<1.4.1",
         "spoonity/tcpdf": "<6.2.22",
         "squizlabs/php_codesniffer": ">=1,<2.8.1|>=3,<3.0.1",
@@ -4441,7 +4447,9 @@
         "symfony/twig-bridge": ">=2,<4.4.51|>=5,<5.4.31|>=6,<6.3.8|>=6.4.24,<6.4.40",
         "symfony/twilio-notifier": ">=6.4,<6.4.40|>=7,<7.4.12|>=8,<8.0.12",
         "symfony/ux-autocomplete": "<2.36|>=3,<3.1",
+        "symfony/ux-icons": ">=2.17,<2.36.1|>=3,<3.2",
         "symfony/ux-live-component": "<2.36|>=3,<3.1",
+        "symfony/ux-toolkit": ">=2.32,<2.36.1|>=3,<3.2",
         "symfony/ux-twig-component": "<2.25.1",
         "symfony/validator": "<5.4.43|>=6,<6.4.11|>=7,<7.1.4",
         "symfony/var-exporter": ">=4.2,<4.2.12|>=4.3,<4.3.8",
@@ -4543,6 +4551,9 @@
         "web-auth/webauthn-lib": ">=4.5,<4.9|>=5.2,<5.2.4",
         "web-auth/webauthn-symfony-bundle": ">=5.2,<5.2.4",
         "web-feet/coastercms": "==5.5",
+        "web-token/jwt-experimental": "<=4.1.6",
+        "web-token/jwt-framework": "<=4.2.99",
+        "web-token/jwt-library": "<3.4.10|>=4,<4.0.7|>=4.1,<4.1.7",
         "web-tp3/wec_map": "<3.0.3",
         "webbuilders-group/silverstripe-kapost-bridge": "<0.4",
         "webcoast/deferred-image-processing": "<1.0.2",
@@ -4668,7 +4679,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2026-06-12T20:48:39+00:00"
+      "time": "2026-06-19T21:28:22+00:00"
     },
     {
       "name": "sebastian/cli-parser",

@@ -75,10 +75,10 @@ final class Index
             per_user_config($identityName);
             ensure_migration(get_user_db($identityName));
         } catch (Throwable $e) {
-            $this->logger->error(r('Failed to create identity {identity}: {exception.message}', [
-                'identity' => $identityName,
+            $this->logger->error("Failed to create identity '{identity.name}'. {exception.message}", [
+                'identity' => ['name' => $identityName],
                 ...exception_log($e),
-            ]));
+            ]);
 
             return api_error(
                 r('Failed to create identity {identity}', ['identity' => $identityName]),
@@ -113,10 +113,10 @@ final class Index
         try {
             delete_user_config($identity, $cache);
         } catch (Throwable $e) {
-            $this->logger->error(r('Failed to delete identity {identity}: {exception.message}', [
-                'identity' => $identity,
+            $this->logger->error("Failed to delete identity '{identity.name}'. {exception.message}", [
+                'identity' => ['name' => $identity],
                 ...exception_log($e),
-            ]));
+            ]);
 
             return api_error(
                 r('Failed to delete identity {identity}', ['identity' => $identity]),

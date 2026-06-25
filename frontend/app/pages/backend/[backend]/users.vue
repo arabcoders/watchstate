@@ -1,40 +1,37 @@
 <template>
   <div class="space-y-6">
     <section class="space-y-4">
-      <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div class="space-y-1">
-          <div
-            class="flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
+      <PageHeader v-bind="pageShell">
+        <template #kicker>
+          <span>{{ pageShell.sectionLabel }}</span>
+          <span>/</span>
+          <NuxtLink to="/backends" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
+          <span>/</span>
+          <NuxtLink
+            :to="`/backend/${backend}`"
+            class="hover:text-primary normal-case tracking-normal"
+            >{{ backend }}</NuxtLink
           >
-            <UIcon :name="pageShell.icon" class="size-4" />
-            <span>{{ pageShell.sectionLabel }}</span>
-            <span>/</span>
-            <NuxtLink to="/backends" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
-            <span>/</span>
-            <NuxtLink
-              :to="`/backend/${backend}`"
-              class="hover:text-primary normal-case tracking-normal"
-              >{{ backend }}</NuxtLink
-            >
-            <span>/</span>
-            <span class="text-highlighted normal-case tracking-normal">Users</span>
-          </div>
-        </div>
+          <span>/</span>
+          <span class="text-highlighted normal-case tracking-normal">Users</span>
+        </template>
 
-        <UTooltip text="Reload users">
-          <UButton
-            color="neutral"
-            variant="outline"
-            icon="i-lucide-refresh-cw"
-            :loading="isLoading"
-            :disabled="isLoading"
-            aria-label="Reload users"
-            @click="loadContent"
-          >
-            <span class="hidden sm:inline">Reload</span>
-          </UButton>
-        </UTooltip>
-      </div>
+        <template #actions>
+          <UTooltip text="Reload users">
+            <UButton
+              color="neutral"
+              variant="outline"
+              icon="i-lucide-refresh-cw"
+              :loading="isLoading"
+              :disabled="isLoading"
+              aria-label="Reload users"
+              @click="loadContent"
+            >
+              <span class="hidden sm:inline">Reload</span>
+            </UButton>
+          </UTooltip>
+        </template>
+      </PageHeader>
 
       <UAlert
         v-if="(!items || items.length < 1) && isLoading"
@@ -59,7 +56,7 @@
         <UCard
           v-for="item in items"
           :key="`users-${item.id}`"
-          class="h-full border border-default/70 shadow-sm"
+          class="h-full shadow-sm"
           :ui="cardUi"
         >
           <template #header>
@@ -172,7 +169,7 @@
       </div>
     </section>
 
-    <UCard class="border border-default/70 shadow-sm" :ui="tipsCardUi">
+    <UCard class="shadow-sm" :ui="tipsCardUi">
       <template #header>
         <button
           type="button"
@@ -211,6 +208,7 @@ import { onMounted, ref } from 'vue';
 import { useHead, useRoute } from '#app';
 import { useStorage } from '@vueuse/core';
 import moment from 'moment';
+import PageHeader from '~/components/PageHeader.vue';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import { notification, parse_api_response, request, TOOLTIP_DATE_FORMAT } from '~/utils';
 import type { BackendUserItem } from '~/types';

@@ -97,7 +97,6 @@ class JellyfinValidateContext
                 options: array_replace_recursive($context->getHttpOptions(), [
                     'headers' => [
                         'Accept' => 'application/json',
-                        'X-MediaBrowser-Token' => $context->backendToken,
                     ],
                 ]),
             );

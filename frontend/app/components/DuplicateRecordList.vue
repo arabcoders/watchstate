@@ -31,7 +31,7 @@
         <div
           v-for="(record, index) in records"
           :key="record.id"
-          class="space-y-2 rounded-md border border-default bg-default/80 p-3"
+          class="space-y-2 rounded-md border border-default bg-elevated/40 p-3"
         >
           <div class="flex items-start justify-between gap-3">
             <NuxtLink

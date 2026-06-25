@@ -254,7 +254,7 @@ class Export extends Import
 
                         if (Status::OK !== Status::tryFrom($statusCode)) {
                             $this->logger->error(
-                                message: "Request to change '{identity.user}@{identity.backend}' {item.type} '{item.title}' play state returned with unexpected '{response.status_code}' status code.",
+                                message: "Request to change '{identity.user}@{identity.backend}' {item.type} '{item.title}' play state returned HTTP {response.status_code}.",
                                 context: [
                                     ...$requestContext,
                                     'response' => ['status_code' => $statusCode],

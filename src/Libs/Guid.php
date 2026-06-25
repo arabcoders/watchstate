@@ -173,6 +173,8 @@ final class Guid implements JsonSerializable, Stringable
                 $this->getLogger()->info(
                     "Ignoring '{identity.backend}' {item.type} '{item.title}' '{key}' external id. Unexpected value type.",
                     [
+                        'operation' => 'guid.validate',
+                        'error' => 'unexpected_value_type',
                         'key' => $key,
                         'condition' => [
                             'expecting' => self::$supported[$key],
@@ -189,6 +191,8 @@ final class Guid implements JsonSerializable, Stringable
                     $this->getLogger()->info(
                         "Ignoring '{identity.backend}' {item.type} '{item.title}' '{key}' external id. Unexpected value '{given}'. Expecting '{expected}'.",
                         [
+                            'operation' => 'guid.validate',
+                            'error' => 'unexpected_value',
                             'key' => $key,
                             'expected' => self::$validateGuid[$key]['example'],
                             'given' => $value,
@@ -235,7 +239,10 @@ final class Guid implements JsonSerializable, Stringable
         }
 
         if (filesize($file) < 1) {
-            self::$logger?->info(r("The external GUID mapping file '{file}' is empty.", ['file' => $file]));
+            self::$logger?->info("The external GUID mapping file '{file}' is empty.", [
+                'operation' => 'guid.load_file',
+                'file' => $file,
+            ]);
             return;
         }
 
@@ -279,6 +286,8 @@ final class Guid implements JsonSerializable, Stringable
                 self::$logger?->warning(
                     "Ignoring 'guids.{key}'. Value must be an object. '{given}' is given.",
                     [
+                        'operation' => 'guid.definition',
+                        'error' => 'def_not_object',
                         'key' => $key,
                         'given' => get_debug_type($def),
                     ],
@@ -291,6 +300,8 @@ final class Guid implements JsonSerializable, Stringable
                 self::$logger?->warning(
                     "Ignoring 'guids.{key}'. name must start with 'guid_'. '{given}' is given.",
                     [
+                        'operation' => 'guid.definition',
+                        'error' => 'def_name_invalid',
                         'key' => $key,
                         'given' => $name ?? 'null',
                     ],
@@ -303,6 +314,8 @@ final class Guid implements JsonSerializable, Stringable
                 self::$logger?->warning(
                     "Ignoring 'guids.{key}.{name}'. type must be a string. '{given}' is given.",
                     [
+                        'operation' => 'guid.definition',
+                        'error' => 'def_type_not_string',
                         'key' => $key,
                         'name' => $name,
                         'given' => get_debug_type($type),
@@ -316,6 +329,8 @@ final class Guid implements JsonSerializable, Stringable
                 self::$logger?->warning(
                     "Ignoring 'guids.{key}.{name}'. validator key must be an object. '{given}' is given.",
                     [
+                        'operation' => 'guid.definition',
+                        'error' => 'def_validator_not_object',
                         'key' => $key,
                         'name' => $name,
                         'given' => get_debug_type($validator),
@@ -327,6 +342,8 @@ final class Guid implements JsonSerializable, Stringable
             $pattern = ag($validator, 'pattern');
             if (null === $pattern || false === @preg_match($pattern, '')) {
                 self::$logger?->warning("Ignoring 'guids.{key}.{name}'. validator.pattern is empty or invalid.", [
+                    'operation' => 'guid.definition',
+                    'error' => 'def_pattern_invalid',
                     'key' => $key,
                     'name' => $name,
                 ]);
@@ -337,6 +354,8 @@ final class Guid implements JsonSerializable, Stringable
 
             if (empty($example) || false === is_string($example)) {
                 self::$logger?->warning("Ignoring 'guids.{key}.{name}'. validator.example is empty or not a string.", [
+                    'operation' => 'guid.definition',
+                    'error' => 'def_example_missing',
                     'key' => $key,
                     'name' => $name,
                 ]);
@@ -346,6 +365,8 @@ final class Guid implements JsonSerializable, Stringable
             $tests = ag($validator, 'tests', []);
             if (empty($tests) || false === is_array($tests)) {
                 self::$logger?->warning("Ignoring 'guids.{key}.{name}'. validator.tests key must be an object.", [
+                    'operation' => 'guid.definition',
+                    'error' => 'def_tests_not_object',
                     'key' => $key,
                     'name' => $name,
                 ]);
@@ -355,6 +376,8 @@ final class Guid implements JsonSerializable, Stringable
             $valid = ag($tests, 'valid', []);
             if (empty($valid) || false === is_array($valid) || count($valid) < 1) {
                 self::$logger?->warning("Ignoring 'guids.{key}.{name}'. validator.tests.valid key must be an array.", [
+                    'operation' => 'guid.definition',
+                    'error' => 'def_valid_tests_not_array',
                     'key' => $key,
                     'name' => $name,
                 ]);
@@ -369,6 +392,8 @@ final class Guid implements JsonSerializable, Stringable
                 self::$logger?->warning(
                     "Ignoring 'guids.{key}.{name}'. validator.tests.valid value '{val}' does not match pattern.",
                     [
+                        'operation' => 'guid.definition',
+                        'error' => 'def_valid_test_no_match',
                         'key' => $key,
                         'name' => $name,
                         'val' => $val,
@@ -382,6 +407,8 @@ final class Guid implements JsonSerializable, Stringable
                 self::$logger?->warning(
                     "Ignoring 'guids.{key}.{name}'. validator.tests.invalid key must be an array.",
                     [
+                        'operation' => 'guid.definition',
+                        'error' => 'def_invalid_tests_not_array',
                         'key' => $key,
                         'name' => $name,
                     ],
@@ -397,6 +424,8 @@ final class Guid implements JsonSerializable, Stringable
                 self::$logger?->warning(
                     "Ignoring 'guids.{key}.{name}'. validator.tests.invalid value '{val}' matches pattern.",
                     [
+                        'operation' => 'guid.definition',
+                        'error' => 'def_invalid_test_matches',
                         'key' => $key,
                         'name' => $name,
                         'val' => $val,
@@ -576,7 +605,9 @@ final class Guid implements JsonSerializable, Stringable
                 self::parseGUIDFile($file);
             }
         } catch (Throwable $e) {
-            self::$logger?->error("Failed to read or parse '{guid}' file. Error '{exception.message}'.", [
+            self::$logger?->error("Failed to read or parse GUID file '{guid}'. Error '{exception.message}'.", [
+                'operation' => 'guid.load_file',
+                'error' => 'file_parse_failed',
                 'guid' => $file,
                 ...exception_log($e),
             ]);

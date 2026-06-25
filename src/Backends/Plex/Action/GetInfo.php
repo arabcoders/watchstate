@@ -78,7 +78,7 @@ final class GetInfo
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: "Request for '{identity.user}@{identity.backend}' get info returned with unexpected '{response.status_code}' status code.",
+                            message: "Request for '{identity.user}@{identity.backend}' get info returned HTTP {response.status_code}.",
                             context: [
                                 ...$logContext,
                                 'response' => [
@@ -99,7 +99,7 @@ final class GetInfo
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: "Request for '{identity.user}@{identity.backend}' get info returned with empty response.",
+                            message: "Request for '{identity.user}@{identity.backend}' get info returned an empty response.",
                             context: [...$logContext, 'response' => ['body' => $content]],
                             level: Levels::ERROR,
                         ),

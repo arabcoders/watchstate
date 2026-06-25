@@ -68,7 +68,7 @@ class GetPlaylist
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Request for '{identity.user}@{identity.backend}' playlist '{id}' returned with unexpected '{response.status_code}' status code.",
+                    message: "Request for '{identity.user}@{identity.backend}' playlist '{id}' returned HTTP {response.status_code}.",
                     context: [...$logContext, 'response' => ['status_code' => $detailResponse->getStatusCode()]],
                     level: Levels::ERROR,
                 ),
@@ -86,7 +86,7 @@ class GetPlaylist
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Request for '{identity.user}@{identity.backend}' playlist '{id}' items returned with unexpected '{response.status_code}' status code.",
+                    message: "Request for '{identity.user}@{identity.backend}' playlist '{id}' items returned HTTP {response.status_code}.",
                     context: [...$logContext, 'response' => ['status_code' => $itemsResponse->getStatusCode()]],
                     level: Levels::ERROR,
                 ),

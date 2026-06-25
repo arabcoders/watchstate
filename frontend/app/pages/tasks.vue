@@ -1,18 +1,7 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-4">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-      <div class="min-w-0 space-y-1">
-        <div
-          class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-        >
-          <UIcon :name="pageShell.icon" class="size-4" />
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
-          <span>{{ pageShell.pageLabel }}</span>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center justify-end gap-2">
+  <main class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader v-bind="pageShell">
+      <template #actions>
         <UTooltip text="Reload tasks">
           <UButton
             color="neutral"
@@ -27,15 +16,10 @@
             <span class="hidden sm:inline">Reload</span>
           </UButton>
         </UTooltip>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
-    <UCard
-      v-if="queued.length > 0"
-      id="queued_tasks"
-      class="border border-default/70 bg-default/90 shadow-sm"
-      :ui="queuedCardUi"
-    >
+    <UCard v-if="queued.length > 0" id="queued_tasks" class="shadow-sm" :ui="queuedCardUi">
       <template #header>
         <div class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
           <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin text-toned" />
@@ -53,7 +37,7 @@
             v-for="task in queued"
             :key="`queued-${task}`"
             :to="`#${task}`"
-            class="inline-flex items-center gap-1.5 rounded-md border border-default bg-default/60 px-2.5 py-1 text-xs font-medium text-default hover:bg-default/80"
+            class="inline-flex items-center gap-1.5 rounded-md border border-default bg-elevated/40 px-2.5 py-1 text-xs font-medium text-default hover:bg-elevated/60"
           >
             <UIcon name="i-lucide-clock-3" class="size-3.5" />
             <span class="capitalize">{{ task }}</span>
@@ -86,7 +70,7 @@
         v-for="task in tasks"
         :id="task.name"
         :key="task.name"
-        class="h-full border border-default/70 bg-default/90 shadow-sm"
+        class="h-full shadow-sm"
         :class="task.enabled ? '' : 'opacity-85'"
         :ui="taskCardUi"
       >
@@ -285,7 +269,7 @@
       </UCard>
     </div>
 
-    <UCard class="border border-default/70 bg-default/90 shadow-sm" :ui="tipsCardUi">
+    <UCard class="shadow-sm" :ui="tipsCardUi">
       <template #header>
         <button
           type="button"
@@ -347,6 +331,7 @@ import { useStorage } from '@vueuse/core';
 import cronstrue from 'cronstrue';
 import moment from 'moment';
 import EventView from '~/components/EventView.vue';
+import PageHeader from '~/components/PageHeader.vue';
 import { useDialog } from '~/composables/useDialog';
 import type { GenericError, GenericResponse, TaskItem } from '~/types';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';

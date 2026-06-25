@@ -19,7 +19,7 @@
       :description="error"
     />
 
-    <UCard v-else class="border border-default/70 shadow-sm" :ui="{ body: 'p-0' }">
+    <UCard v-else class="shadow-sm" :ui="{ body: 'p-0' }">
       <div ref="contentRoot" class="ws-markdown" v-html="content" />
     </UCard>
   </div>

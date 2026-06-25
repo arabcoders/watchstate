@@ -1,24 +1,8 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-4">
+  <main class="w-full min-w-0 max-w-full space-y-6">
     <section class="space-y-4">
-      <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-        <div class="space-y-1">
-          <div
-            id="env_page_title"
-            class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-          >
-            <UIcon :name="pageShell.icon" class="size-4" />
-            <span>{{ pageShell.sectionLabel }}</span>
-            <span>/</span>
-            <span>{{ pageShell.pageLabel }}</span>
-          </div>
-
-          <p class="text-sm text-toned">
-            This page lets you edit the environment variables used to configure the application.
-          </p>
-        </div>
-
-        <div class="flex flex-wrap items-center justify-end gap-2">
+      <PageHeader v-bind="pageShell">
+        <template #actions>
           <UInput
             v-if="toggleFilter || query"
             id="filter"
@@ -64,8 +48,8 @@
           >
             <span class="hidden sm:inline">Reload</span>
           </UButton>
-        </div>
-      </div>
+        </template>
+      </PageHeader>
 
       <UAlert
         v-if="filteredRows.length < 1 && isLoading"
@@ -112,7 +96,7 @@
         <UCard
           v-for="item in filteredRows"
           :key="item.key"
-          class="h-full border bg-default/90 shadow-sm"
+          class="h-full shadow-sm"
           :class="item?.danger ? 'border-error/70' : 'border-default/70'"
           :ui="itemCardUi"
         >
@@ -390,7 +374,7 @@
       </template>
     </UModal>
 
-    <UCard class="border border-default/70 bg-default/90 shadow-sm" :ui="tipsCardUi">
+    <UCard class="shadow-sm" :ui="tipsCardUi">
       <template #header>
         <button
           type="button"
@@ -436,6 +420,7 @@ import { useDirtyCloseGuard } from '~/composables/useDirtyCloseGuard';
 import { useDirtyState } from '~/composables/useDirtyState';
 import { useDialog } from '~/composables/useDialog';
 import { useStorage } from '@vueuse/core';
+import PageHeader from '~/components/PageHeader.vue';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import { copyText, notification, parse_api_response, request, ucFirst } from '~/utils';
 import type { EnvConfigValue, EnvVar, GenericResponse } from '~/types';

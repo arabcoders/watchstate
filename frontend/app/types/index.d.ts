@@ -166,6 +166,15 @@ export type PlayerSubtitleDeliveryFormat = 'vtt' | 'ass';
 
 export type PlayerSubtitleDeliveryMode = 'burned' | 'soft';
 
+export interface WatchStatePageHeaderProps {
+  icon?: string;
+  sectionLabel?: string;
+  pageLabel?: string;
+  description?: string;
+  contentClass?: string;
+  headingClass?: string;
+}
+
 export interface PlayerSubtitleTrack {
   id: string;
   source: string;
@@ -1476,4 +1485,186 @@ export interface OpenAPIPathItem {
   head?: OpenAPIOperation;
   patch?: OpenAPIOperation;
   trace?: OpenAPIOperation;
+}
+
+/**
+ * Backend spec keys exposed by the OpenAPI browser.
+ */
+export type OpenAPIBackendKey = 'plex' | 'jellyfin' | 'emby';
+
+/**
+ * Summarized OpenAPI parameter used by the route browser and the "try it out" modal.
+ */
+export interface OpenAPIRouteParameter {
+  key: string;
+  name: string;
+  location: string;
+  description: string;
+  required: boolean;
+  schemaSummary: string;
+  shape: string;
+  schemaType: string;
+  schemaFormat: string;
+  schemaEnum: Array<string>;
+  example: string;
+}
+
+/**
+ * Summarized OpenAPI request body used by the route browser and the "try it out" modal.
+ */
+export interface OpenAPIRouteRequestBody {
+  description: string;
+  required: boolean;
+  mediaType: string;
+  schemaSummary: string;
+  shape: string;
+  example: string;
+}
+
+/**
+ * Flattened OpenAPI operation used by the route browser and the "try it out" modal.
+ */
+export interface OpenAPIRouteEntry {
+  key: string;
+  method: string;
+  path: string;
+  summary: string;
+  operationId: string;
+  tags: Array<string>;
+  deprecated: boolean;
+  parameters: Array<OpenAPIRouteParameter>;
+  requestBody: OpenAPIRouteRequestBody | null;
+}
+
+/**
+ * Request side of the proxy exchange envelope returned by /backend/{name}/proxy.
+ */
+export interface ProxyExchangeRequest {
+  method: string;
+  url: string;
+  headers: Record<string, string>;
+}
+
+/**
+ * Response side of the proxy exchange envelope returned by /backend/{name}/proxy.
+ */
+export interface ProxyExchangeResponse {
+  status: number;
+  headers: Record<string, string>;
+  body: string;
+}
+
+/**
+ * Exchange envelope returned by the backend proxy and the system URL checker.
+ *
+ * Matches the shape produced by {@link https://watchstate.dev/api POST /v1/api/backend/{name}/proxy}
+ * and POST /v1/api/system/url/check, so the same response viewer can render either payload.
+ */
+export interface ProxyExchange {
+  request: ProxyExchangeRequest;
+  response: ProxyExchangeResponse;
+}
+
+/**
+ * System report response from /api/system/report endpoint.
+ */
+export interface SystemReport {
+  /** ISO 8601 generation timestamp */
+  generated_at: string;
+  /** System runtime information */
+  system: SystemReportSystem;
+  /** List of configured user names */
+  users: Array<string>;
+  /** Backend diagnostics */
+  backends: Array<SystemReportBackend>;
+  /** Log suppression rules */
+  suppression: SystemReportSuppression;
+  /** Scheduled tasks */
+  tasks: Array<SystemReportTask>;
+  /** Recent log entries grouped by type and day */
+  logs: Array<SystemReportLog>;
+}
+
+/**
+ * System runtime info block.
+ */
+export interface SystemReportSystem {
+  version: string;
+  php_version: string;
+  sapi: string;
+  timezone: string;
+  data_path: string;
+  temp_path: string;
+  database_migrated: boolean;
+  env_file_exists: boolean;
+  scheduler_running: boolean;
+  scheduler_message: string;
+  in_container: boolean;
+}
+
+/**
+ * Backend diagnostics entry.
+ */
+export interface SystemReportBackend {
+  name: string;
+  user: string;
+  type: string;
+  version: string | null;
+  https: boolean;
+  has_uuid: boolean;
+  has_user: boolean;
+  export: {
+    enabled: boolean;
+    last_sync: number | null;
+    playlist_last_sync: number | null;
+  };
+  import: {
+    enabled: boolean;
+    metadata_refresh: boolean;
+    last_sync: number | null;
+    playlist_last_sync: number | null;
+  };
+  options: Record<string, unknown>;
+  sample_entries?: Array<Record<string, unknown>>;
+}
+
+/**
+ * Log suppression rules block.
+ */
+export interface SystemReportSuppression {
+  file_exists: boolean;
+  rules: Record<string, unknown> | null;
+  error: string | null;
+}
+
+/**
+ * Scheduled task entry.
+ */
+export interface SystemReportTask {
+  name: string;
+  enabled: boolean;
+  args: string | null;
+  timer: string | null;
+  next_run: string | null;
+  error: string | null;
+}
+
+/**
+ * Log section grouped by type (merging today and yesterday).
+ */
+export interface SystemReportLog {
+  /** Log type: 'app', 'access', or 'task' */
+  type: string;
+  entries: Array<SystemReportLogEntry>;
+}
+
+/**
+ * Individual log entry in a report log section.
+ */
+export interface SystemReportLogEntry {
+  datetime: string;
+  level: string;
+  logger: string;
+  message: string;
+  separator?: boolean;
 }

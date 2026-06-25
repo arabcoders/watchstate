@@ -103,7 +103,7 @@ final class CreatePlaylist
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Request for '{identity.user}@{identity.backend}' playlist '{title}' returned with unexpected '{response.status_code}' status code.",
+                    message: "Request for '{identity.user}@{identity.backend}' playlist '{title}' returned HTTP {response.status_code}.",
                     context: [
                         ...$logContext,
                         'response' => ['status_code' => $response->getStatusCode()],

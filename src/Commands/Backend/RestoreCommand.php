@@ -137,13 +137,19 @@ class RestoreCommand extends Command
 
         $userName = $input->getOption('user');
         if (empty($userName)) {
-            $this->logger->warning('User not specified. Use [-u, --user].');
+            $this->logger->warning('User not specified. Use [-u, --user].', [
+                'operation' => 'restore.validate',
+                'error' => 'missing_user',
+            ]);
             return self::FAILURE;
         }
 
         $name = $input->getOption('select-backend');
         if (empty($name)) {
-            $this->logger->warning('Backend not specified. Use [-s, --select-backend].');
+            $this->logger->warning('Backend not specified. Use [-s, --select-backend].', [
+                'operation' => 'restore.validate',
+                'error' => 'missing_backend',
+            ]);
             return self::FAILURE;
         }
 
@@ -154,6 +160,8 @@ class RestoreCommand extends Command
 
             if (false === file_exists($newFile) || false === is_readable($newFile)) {
                 $this->logger->warning("Unable to read backup file '{file}'.", [
+                    'operation' => 'restore.validate',
+                    'error' => 'unreadable_backup_file',
                     'file' => $file,
                 ]);
                 return self::FAILURE;
@@ -169,7 +177,14 @@ class RestoreCommand extends Command
         try {
             $userContext = get_user_context(user: $userName, mapper: $mapper, logger: $this->logger);
         } catch (RuntimeException $e) {
-            $this->logger->error($e->getMessage(), exception_log($e));
+            $this->logger->error(
+                "Failed to load user '{user}' for restore. {exception.message}",
+                [
+                    'operation' => 'restore.load_user',
+                    'user' => $userName,
+                    ...exception_log($e),
+                ],
+            );
             return self::FAILURE;
         }
 
@@ -464,8 +479,9 @@ class RestoreCommand extends Command
             return self::SUCCESS;
         } catch (Throwable $e) {
             $this->logger->error(
-                "Failed during '{identity.user}@{identity.backend}' restore operation. {exception.message}",
+                "Failed to restore '{identity.user}@{identity.backend}'. {exception.message}",
                 [
+                    'operation' => 'restore.run',
                     'identity' => [
                         'user' => $userContext->name,
                         'backend' => $name,

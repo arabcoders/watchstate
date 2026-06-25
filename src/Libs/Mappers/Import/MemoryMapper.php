@@ -198,6 +198,8 @@ class MemoryMapper implements ImportInterface
                 "[N] Ignoring '#{history.id}: {history.title}' by '{identity.user}@{identity.backend}', not found locally and backend set as metadata source only.",
                 [
                     'mapper' => after_last(self::class, '\\'),
+                    'operation' => 'mapper.new',
+                    'error' => 'metadata_source_only',
                     'metaOnly' => true,
                     'history' => [
                         'id' => $entity->id ?? 'New',
@@ -320,6 +322,8 @@ class MemoryMapper implements ImportInterface
                 "[T] Ignoring '#{history.id}: {history.title}' by '{identity.user}@{identity.backend}', reported '{state}' vs local '{local_state}', state change ignored due to '{reasons}'.",
                 [
                     'mapper' => after_last(self::class, '\\'),
+                    'operation' => 'mapper.transition',
+                    'error' => 'state_change_ignored',
                     'history' => [
                         'id' => $this->objects[$pointer]->id ?? 'New',
                         'title' => $entity->getName(),
@@ -473,15 +477,20 @@ class MemoryMapper implements ImportInterface
         if ($entity->isWatched() !== $this->objects[$pointer]->isWatched()) {
             if ($this->inTraceMode()) {
                 $this->logger->debug(
-                    "[O] '#{history.id}: {history.title}' by '{identity.user}@{identity.backend}' is marked as '{state}' vs local '{local_state}', however due to the remote item date '{remote_date}' being older than the last backend sync date '{local_date}'. it was not considered as valid state.",
+                    "[O] '#{history.id}: {history.title}' by '{identity.user}@{identity.backend}' is marked as '{state}' vs local '{local_state}', however due to the remote item date '{comparison.remote_date}' being older than the last backend sync date '{comparison.local_date}'. it was not considered as valid state.",
                     [
                         'mapper' => after_last(self::class, '\\'),
+                        'operation' => 'mapper.old_entity',
+                        'error' => 'stale_remote_date',
                         'history' => [
                             'id' => $this->objects[$pointer]->id ?? 'New',
                             'title' => $entity->getName(),
                         ],
-                        'remote_date' => make_date($entity->updated),
-                        'local_date' => make_date($opts['after']),
+                        'comparison' => [
+                            'remote_date' => make_date($entity->updated),
+                            'local_date' => make_date($opts['after']),
+                            'delta_seconds' => $opts['after']->getTimestamp() - $entity->updated,
+                        ],
                         'state' => $entity->isWatched() ? 'played' : 'unplayed',
                         'local_state' => $this->objects[$pointer]->isWatched() ? 'played' : 'unplayed',
                         'identity' => [
@@ -521,6 +530,8 @@ class MemoryMapper implements ImportInterface
                 "[O] Ignoring '#{history.id}: {history.title}' by '{identity.user}@{identity.backend}', no external guids.",
                 [
                     'mapper' => after_last(self::class, '\\'),
+                    'operation' => 'mapper.add',
+                    'error' => 'no_external_guids',
                     'history' => [
                         'id' => $entity->id ?? 'New',
                         'title' => $entity->getName(),
@@ -540,6 +551,8 @@ class MemoryMapper implements ImportInterface
                 "[N] Ignoring '#{history.id}: {history.title}' by '{identity.user}@{identity.backend}', marked as episode but no episode number.",
                 [
                     'mapper' => after_last(self::class, '\\'),
+                    'operation' => 'mapper.add',
+                    'error' => 'no_episode_number',
                     'history' => [
                         'id' => $entity->id ?? ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                         'title' => $entity->getName(),

@@ -1,18 +1,7 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-4">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-      <div class="min-w-0 space-y-1">
-        <div
-          class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-        >
-          <UIcon :name="pageShell.icon" class="size-4" />
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
-          <span>{{ pageShell.pageLabel }}</span>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center justify-end gap-2">
+  <main class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader v-bind="pageShell">
+      <template #actions>
         <UInput
           v-if="showFilter"
           id="filter"
@@ -78,10 +67,10 @@
         >
           <span class="hidden sm:inline">Reload</span>
         </UButton>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
-    <UCard v-if="searchForm" class="border border-default/70 shadow-sm" :ui="panelCardUi">
+    <UCard v-if="searchForm" class="ws-card shadow-sm" :ui="panelCardUi">
       <template #header>
         <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
           <UIcon name="i-lucide-search" class="size-4 text-toned" />
@@ -185,7 +174,7 @@
 
     <div
       v-if="selected_ids.length > 0"
-      class="flex flex-wrap items-center justify-between gap-3 rounded-md border border-default bg-default px-3 py-3"
+      class="ws-card flex flex-wrap items-center justify-between gap-3 px-3 py-3"
     >
       <div class="flex flex-wrap items-center gap-2">
         <UBadge color="neutral" variant="soft" size="sm">{{ selected_ids.length }}</UBadge>
@@ -286,8 +275,8 @@
         class="min-h-65"
       >
         <UCard
-          class="h-full border border-default/70 shadow-sm"
-          :class="item.watched ? 'bg-default/90 ring-1 ring-success/20' : 'bg-default/90'"
+          class="h-full shadow-sm"
+          :class="item.watched ? 'ring-1 ring-success/20' : ''"
           :ui="historyCardUi"
         >
           <template #header>
@@ -351,19 +340,17 @@
               class="flex items-start justify-between gap-3 rounded-md border border-default bg-elevated/40 px-3 py-2.5"
             >
               <div
-                class="min-w-0 flex-1 cursor-pointer"
-                :class="item.expand_title ? '' : 'overflow-hidden text-ellipsis whitespace-nowrap'"
+                class="flex min-w-0 flex-1 cursor-pointer items-start gap-2 text-sm font-medium text-default"
                 @click="item.expand_title = !item.expand_title"
               >
-                <span class="inline-flex items-center gap-2 text-sm font-medium text-default">
-                  <UIcon name="i-lucide-heading" class="size-4 shrink-0 text-toned" />
-                  <NuxtLink
-                    :to="makeSearchLink('subtitle', item.content_title ?? '')"
-                    class="hover:text-primary"
-                  >
-                    {{ item.content_title }}
-                  </NuxtLink>
-                </span>
+                <UIcon name="i-lucide-heading" class="mt-0.5 size-4 shrink-0 text-toned" />
+                <NuxtLink
+                  :to="makeSearchLink('subtitle', item.content_title ?? '')"
+                  class="min-w-0 hover:text-primary"
+                  :class="item.expand_title ? 'wrap-break-word' : 'truncate'"
+                >
+                  {{ item.content_title }}
+                </NuxtLink>
               </div>
 
               <UTooltip text="Copy subtitle">
@@ -384,19 +371,17 @@
               class="flex items-start justify-between gap-3 rounded-md border border-default bg-elevated/40 px-3 py-2.5"
             >
               <div
-                class="min-w-0 flex-1 cursor-pointer"
-                :class="item.expand_path ? '' : 'overflow-hidden text-ellipsis whitespace-nowrap'"
+                class="flex min-w-0 flex-1 cursor-pointer items-start gap-2 text-sm font-medium text-default"
                 @click="item.expand_path = !item.expand_path"
               >
-                <span class="inline-flex items-center gap-2 text-sm font-medium text-default">
-                  <UIcon name="i-lucide-file-text" class="size-4 shrink-0 text-toned" />
-                  <NuxtLink
-                    :to="makeSearchLink('path', item.content_path ?? '')"
-                    class="hover:text-primary"
-                  >
-                    {{ item.content_path }}
-                  </NuxtLink>
-                </span>
+                <UIcon name="i-lucide-file-text" class="mt-0.5 size-4 shrink-0 text-toned" />
+                <NuxtLink
+                  :to="makeSearchLink('path', item.content_path ?? '')"
+                  class="min-w-0 hover:text-primary"
+                  :class="item.expand_path ? 'wrap-break-word' : 'truncate'"
+                >
+                  {{ item.content_path }}
+                </NuxtLink>
               </div>
 
               <UTooltip text="Copy file path">
@@ -495,6 +480,7 @@ import Lazy from '~/components/Lazy.vue';
 import Pager from '~/components/Pager.vue';
 import { NuxtLink } from '#components';
 import FloatingImage from '~/components/FloatingImage.vue';
+import PageHeader from '~/components/PageHeader.vue';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import {
   request,

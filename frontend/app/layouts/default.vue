@@ -259,7 +259,9 @@ type NavEntry = {
   id: string;
   label: string;
   icon: string;
+  description?: string;
   matchPath?: string;
+  additionalMatchPaths?: Array<string>;
   exactMatch?: boolean;
   excludeMatchPaths?: Array<string>;
   to?: string;
@@ -551,7 +553,15 @@ const isNavigationEntryActive = (entry: NavEntry) => {
     return current === target;
   }
 
-  return isPathActive(entry.matchPath);
+  if (isPathActive(entry.matchPath)) {
+    return true;
+  }
+
+  if (entry.additionalMatchPaths?.some((path) => isPathActive(path))) {
+    return true;
+  }
+
+  return false;
 };
 
 const topLevelNavigationEntries = computed(() =>
@@ -566,10 +576,12 @@ const topLevelNavEntries = computed<Array<NavEntry>>(() =>
     id: entry.id,
     label: entry.label,
     icon: entry.icon,
+    description: entry.description,
     to: entry.to,
     href: entry.href,
     target: entry.target,
     matchPath: entry.matchPath,
+    additionalMatchPaths: entry.additionalMatchPaths,
     exactMatch: entry.exactMatch,
     excludeMatchPaths: entry.excludeMatchPaths,
     onSelect:
@@ -660,7 +672,7 @@ const routeSearchGroups = computed<Array<SearchGroup>>(() => {
       label: section.label,
       items: section.items.flat().map((entry) => ({
         label: entry.label,
-        description: entry.href ?? entry.to,
+        description: entry.description ?? entry.href ?? entry.to,
         icon: entry.icon,
         onSelect: () => void handleRouteSelect(entry),
       })),

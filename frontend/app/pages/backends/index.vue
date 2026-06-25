@@ -1,19 +1,14 @@
 <template>
-  <div class="space-y-6">
+  <div class="w-full min-w-0 max-w-full space-y-6">
     <section class="space-y-4">
-      <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div class="space-y-1">
-          <div
-            class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-          >
-            <UIcon :name="pageShell.icon" class="size-4" />
-            <span>{{ pageShell.pageLabel }}</span>
-            <span v-if="api_user">/</span>
-            <span v-if="api_user">{{ ucFirst(api_user) }}</span>
-          </div>
-        </div>
+      <PageHeader v-bind="pageShell">
+        <template #kicker>
+          <span>{{ pageShell.pageLabel }}</span>
+          <span v-if="api_user">/</span>
+          <span v-if="api_user">{{ ucFirst(api_user) }}</span>
+        </template>
 
-        <div class="flex flex-wrap items-center gap-2">
+        <template #actions>
           <UButton
             color="neutral"
             variant="outline"
@@ -35,8 +30,8 @@
               @click="loadContent"
             />
           </UTooltip>
-        </div>
-      </div>
+        </template>
+      </PageHeader>
 
       <UModal
         :open="toggleForm"
@@ -164,7 +159,7 @@
         <UCard
           v-for="backend in backends"
           :key="backend.name"
-          class="h-full border border-default/70 shadow-sm"
+          class="h-full shadow-sm"
           :ui="backendCardUi"
         >
           <template #header>
@@ -364,6 +359,7 @@ import { useStorage } from '@vueuse/core';
 import moment from 'moment';
 import BackendAdd from '~/components/BackendAdd.vue';
 import BackendEditForm from '~/components/BackendEditForm.vue';
+import PageHeader from '~/components/PageHeader.vue';
 import { useDirtyCloseGuard } from '~/composables/useDirtyCloseGuard';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import {

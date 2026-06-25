@@ -19,7 +19,6 @@ WatchState HTTP API reference. Examples use the default `/v1/api` prefix.
       - [GET|POST /v1/api/backends/users/{type}](#getpost-v1apibackendsuserstype)
       - [GET|POST /v1/api/backends/discover/{type}](#getpost-v1apibackendsdiscovertype)
       - [POST /v1/api/backends/accesstoken/{type}](#post-v1apibackendsaccesstokentype)
-      - [POST /v1/api/backends/validate/token/{type}](#post-v1apibackendsvalidatetokentype)
       - [POST /v1/api/backends/plex/generate](#post-v1apibackendsplexgenerate)
       - [POST /v1/api/backends/plex/check](#post-v1apibackendsplexcheck)
     - [Configured Backend Endpoints](#configured-backend-endpoints)
@@ -452,35 +451,6 @@ Generates a Jellyfin or Emby access token using username/password credentials.
 **Errors**:
 - `400 Bad Request` if credentials are missing or the backend type is unsupported.
 - `500 Internal Server Error` if token generation fails.
-
----
-
-#### POST /v1/api/backends/validate/token/{type}
-Validates a Plex token.
-
-**Path**:
-- `type`: Must resolve to the Plex client.
-
-**Body**:
-```json
-{
-  "token": "plex-token"
-}
-```
-
-**Response**:
-```json
-{
-  "info": {
-    "code": 200,
-    "message": "Token is valid."
-  }
-}
-```
-
-**Errors**:
-- `400 Bad Request` if the endpoint is used with a non-Plex backend or if `token` is missing.
-- `401 Unauthorized` if the token is rejected.
 
 ---
 
@@ -2729,12 +2699,63 @@ Restarts the task scheduler.
 ---
 
 #### GET /v1/api/system/report
-Returns the output of the `system:report` command.
+Returns a structured diagnostic report.
 
 **Response**:
 ```json
 {
-  "...": "report payload"
+  "generated_at": "2024-01-01T12:00:00+00:00",
+  "system": {
+    "version": "v1.0.0",
+    "php_version": "8.4.0",
+    "sapi": "cli",
+    "timezone": "UTC",
+    "data_path": "/config",
+    "temp_path": "/tmp",
+    "database_migrated": true,
+    "env_file_exists": true,
+    "scheduler_running": true,
+    "scheduler_message": "OK",
+    "in_container": true
+  },
+  "users": ["main"],
+  "backends": [
+    {
+      "name": "plex_server",
+      "user": "main",
+      "type": "plex",
+      "version": "1.40.1",
+      "https": true,
+      "has_uuid": true,
+      "has_user": true,
+      "export": { "enabled": true, "last_sync": 1704110400, "playlist_last_sync": null },
+      "import": { "enabled": true, "metadata_refresh": true, "last_sync": 1704110400, "playlist_last_sync": null },
+      "options": {}
+    }
+  ],
+  "suppression": {
+    "file_exists": false,
+    "rules": null,
+    "error": null
+  },
+  "tasks": [
+    {
+      "name": "import",
+      "enabled": true,
+      "args": "-v",
+      "timer": "5 * * * *",
+      "next_run": "2024-01-01T13:00:00+00:00",
+      "error": null
+    }
+  ],
+  "logs": [
+    {
+      "type": "app",
+      "entries": [
+        { "datetime": "2024-01-01T12:00:00+00:00", "level": "INFO", "logger": "main", "message": "Application started" }
+      ]
+    }
+  ]
 }
 ```
 

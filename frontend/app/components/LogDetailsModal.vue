@@ -225,14 +225,14 @@
             >
               <button
                 type="button"
-                class="flex w-full items-center justify-between gap-3 px-3 py-2 text-left"
+                class="grid w-full grid-cols-[minmax(7rem,0.45fr)_minmax(0,1fr)] items-center gap-3 px-3 py-2 text-left sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]"
                 @click="toggleField(field.key)"
               >
-                <span class="text-[11px] font-semibold tracking-wide text-toned">
+                <span class="min-w-0 truncate text-[11px] font-semibold tracking-wide text-toned">
                   {{ field.label }}
                 </span>
-                <div class="flex items-center gap-2">
-                  <span v-if="field.preview" class="max-w-md truncate text-xs text-toned">
+                <div class="flex min-w-0 items-center justify-end gap-2">
+                  <span v-if="field.preview" class="min-w-0 truncate text-xs text-toned">
                     {{ field.preview }}
                   </span>
                   <UIcon

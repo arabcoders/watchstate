@@ -133,7 +133,13 @@ class ValidateCommand extends Command
                 select_users($input->getOption('user')),
             );
         } catch (RuntimeException $e) {
-            $this->logger->error($e->getMessage(), exception_log($e));
+            $this->logger->error(
+                'Failed to resolve validate users. {exception.message}',
+                [
+                    'operation' => 'validate.resolve_users',
+                    ...exception_log($e),
+                ],
+            );
 
             return self::FAILURE;
         }

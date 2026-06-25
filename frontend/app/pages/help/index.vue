@@ -1,23 +1,9 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-4">
-    <div class="space-y-1">
-      <div
-        class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-      >
-        <UIcon :name="pageShell.icon" class="size-4" />
-        <span>{{ pageShell.sectionLabel }}</span>
-        <span>/</span>
-        <span>{{ pageShell.pageLabel }}</span>
-      </div>
-    </div>
+  <main class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader v-bind="pageShell" />
 
     <div class="grid gap-4 xl:grid-cols-2">
-      <UCard
-        v-for="choice in choices"
-        :key="choice.number"
-        class="h-full border border-default/70 shadow-sm"
-        :ui="cardUi"
-      >
+      <UCard v-for="choice in choices" :key="choice.number" class="h-full shadow-sm" :ui="cardUi">
         <template #header>
           <div class="min-w-0 space-y-1">
             <div class="inline-flex items-center gap-2 text-base font-semibold text-highlighted">
@@ -53,6 +39,7 @@
 
 <script setup lang="ts">
 import { useHead } from '#app';
+import PageHeader from '~/components/PageHeader.vue';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 
 useHead({ title: 'WatchState Guides' });

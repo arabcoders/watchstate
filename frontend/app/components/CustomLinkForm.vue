@@ -56,7 +56,7 @@
     </div>
 
     <template v-if="'plex' === form.type && true === form.options.legacy">
-      <UCard class="border border-default/70 shadow-sm" :ui="nestedCardUi">
+      <UCard class="shadow-sm" :ui="nestedCardUi">
         <template #header>
           <button
             type="button"

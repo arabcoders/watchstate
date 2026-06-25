@@ -1,22 +1,7 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-4">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-      <div class="min-w-0 space-y-1">
-        <div
-          class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-        >
-          <UIcon :name="pageShell.icon" class="size-4" />
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
-          <span>{{ pageShell.pageLabel }}</span>
-        </div>
-
-        <div>
-          <p class="mt-1 text-sm text-toned">This page contains all of your backups.</p>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center justify-end gap-2">
+  <main class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader v-bind="pageShell">
+      <template #actions>
         <UButton
           color="neutral"
           :variant="queued ? 'soft' : 'outline'"
@@ -65,8 +50,8 @@
             <span class="hidden sm:inline">Reload</span>
           </UButton>
         </UTooltip>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <UAlert
       v-if="isLoading"
@@ -100,7 +85,7 @@
       <UCard
         v-for="item in filteredItems"
         :key="item.filename"
-        class="h-full border border-default/70 shadow-sm"
+        class="h-full shadow-sm"
         :ui="backupCardUi"
       >
         <template #header>
@@ -136,12 +121,12 @@
 
         <div class="space-y-4">
           <div class="flex gap-2 flex-row">
-            <USelect
+            <USelectMenu
               v-model="item.selected"
               :items="restoreTargetItems"
               value-key="value"
               placeholder="Restore to..."
-              icon="i-lucide-history"
+              :ui="{ item: 'pl-6' }"
               class="flex-1"
             />
 
@@ -188,7 +173,7 @@
       </UCard>
     </div>
 
-    <UCard class="border border-default/70 shadow-sm" :ui="tipsCardUi">
+    <UCard class="shadow-sm" :ui="tipsCardUi">
       <template #header>
         <button
           type="button"
@@ -247,6 +232,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { navigateTo, useHead, useRoute } from '#app';
 import { useStorage } from '@vueuse/core';
 import moment from 'moment';
+import PageHeader from '~/components/PageHeader.vue';
 import { useDialog } from '~/composables/useDialog';
 import type { BackupItem, GenericResponse, UILoadingState, IdentityBackends } from '~/types';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
@@ -269,6 +255,7 @@ type RestoreTargetItem = {
   label: string;
   value?: string;
   type?: 'label' | 'item';
+  disabled?: boolean;
 };
 
 type FilePickerOptions = {
@@ -308,11 +295,13 @@ const tipsCardUi = {
 const restoreTargetItems = computed<Array<Array<RestoreTargetItem>>>(() =>
   identities.value.map((identity) => [
     { label: `Identity: ${identity.identity}`, type: 'label' },
-    ...identity.backends.map((backend) => ({
-      label: backend,
-      value: `${identity.identity}@${backend}`,
-      type: 'item' as const,
-    })),
+    ...(identity.backends.length > 0
+      ? identity.backends.map((backend) => ({
+          label: backend,
+          value: `${identity.identity}@${backend}`,
+          type: 'item' as const,
+        }))
+      : [{ label: 'No backends', type: 'item' as const, disabled: true }]),
   ]),
 );
 

@@ -1,18 +1,7 @@
 <template>
   <div class="space-y-6">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-      <div class="space-y-1">
-        <div
-          class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
-        >
-          <UIcon :name="pageShell.icon" class="size-4" />
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
-          <span>{{ pageShell.pageLabel }}</span>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center justify-end gap-2">
+    <PageHeader v-bind="pageShell">
+      <template #actions>
         <UButton
           v-if="identities.length > 0"
           color="neutral"
@@ -54,8 +43,8 @@
           @click="loadContent"
           label="Reload"
         />
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <UModal
       :open="toggleForm"
@@ -176,7 +165,7 @@
       <UCard
         v-for="identity in identities"
         :key="identity.identity"
-        class="h-full border border-default/70 shadow-sm"
+        class="h-full shadow-sm"
         :ui="identityCardUi"
       >
         <template #header>
@@ -219,7 +208,7 @@
               v-for="backend in identity.backends"
               :key="backend"
               type="button"
-              class="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/15"
+              class="inline-flex items-center gap-1.5 rounded-md border border-default bg-elevated/40 px-2.5 py-1 text-xs font-medium text-default hover:bg-elevated/60"
               @click="identityLink(identity.identity, `/backend/${backend}`)"
             >
               <UIcon name="i-lucide-server" class="size-3.5 shrink-0 text-toned" />
@@ -227,7 +216,9 @@
             </button>
           </div>
 
-          <UBadge v-else color="warning" variant="soft">No backends configured</UBadge>
+          <UBadge v-else color="warning" variant="soft" icon="i-lucide-triangle-alert"
+            >No backends configured</UBadge
+          >
         </div>
       </UCard>
     </div>
@@ -276,6 +267,7 @@ import { computed, nextTick, onMounted, ref } from 'vue';
 import { navigateTo, useHead, useRoute } from '#app';
 import { useStorage } from '@vueuse/core';
 import IdentityEditForm from '~/components/IdentityEditForm.vue';
+import PageHeader from '~/components/PageHeader.vue';
 import { useDirtyCloseGuard } from '~/composables/useDirtyCloseGuard';
 import { useDirtyState } from '~/composables/useDirtyState';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';

@@ -43,6 +43,7 @@ class PlaylistSyncService
         $fetchTotals = $this->makeFetchStats();
 
         $this->logger->notice("Starting playlist reconciliation for '{identity.user}' across '{total}' backend clients.", [
+            'operation' => 'playlist.reconcile',
             'identity' => ['user' => $userContext->name],
             'total' => count($clients),
             'dry_run' => $dryRun,
@@ -215,6 +216,7 @@ class PlaylistSyncService
         $summary = $this->summarizeBackends($clients, $store, $results, $syncStats, false);
 
         $this->logger->notice("Playlist reconciliation for '{identity.user}' completed in '{duration}'s.", [
+            'operation' => 'playlist.reconcile',
             'identity' => ['user' => $userContext->name],
             'duration' => round(microtime(true) - $syncStart, 4),
             'results' => $this->summarizeResultTotals($summary),
@@ -496,11 +498,13 @@ class PlaylistSyncService
             $entity = $client->toEntity($item, [Options::NO_CACHE => true]);
         } catch (Throwable $e) {
             $this->logger->warning(
-                "Failed to map '{identity.backend}' playlist item '{title}'. {error}",
+                "Failed to map '{identity.backend}' playlist item '{title}'. {exception.message}",
                 [
+                    'operation' => 'playlist.fetch',
+                    'error' => 'item_map_failed',
                     'identity' => ['backend' => $client->getName()],
                     'title' => ag($item, ['title', 'Name', 'OriginalTitle'], 'unknown'),
-                    'error' => $e->getMessage(),
+                    ...exception_log($e),
                 ],
             );
 
@@ -777,7 +781,11 @@ class PlaylistSyncService
             if ('' === $createdId) {
                 $this->logger->warning(
                     "Backend '{identity.backend}' create request completed without a playlist id.",
-                    ['identity' => ['backend' => $backendName]],
+                    [
+                        'operation' => 'playlist.apply',
+                        'error' => 'missing_playlist_id',
+                        'identity' => ['backend' => $backendName],
+                    ],
                 );
                 $failedBackends[$backendName] = true;
                 continue;
@@ -1475,6 +1483,8 @@ class PlaylistSyncService
         $this->logger->error(
             "Failed to {action} for '{identity.backend}'. {exception.message}",
             [
+                'operation' => 'playlist.apply',
+                'error' => 'action_failed',
                 'action' => $action,
                 'identity' => ['backend' => $backendName],
                 ...exception_log($e),

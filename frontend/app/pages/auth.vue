@@ -198,7 +198,7 @@ const user = ref<UserCredentials>({ username: '', password: '' });
 const reset_cmd = ref<string>('docker exec -ti -- watchstate console system:resetpassword');
 
 const cardUi = {
-  root: 'border border-default/70 bg-default/80 shadow-xl backdrop-blur-sm',
+  root: 'bg-elevated/40 shadow-xl backdrop-blur-sm',
   header: 'px-5 py-4 sm:px-6',
   body: 'px-5 pb-5 sm:px-6 sm:pb-6',
   footer: 'px-5 py-4 sm:px-6',

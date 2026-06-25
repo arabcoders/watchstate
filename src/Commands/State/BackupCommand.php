@@ -233,11 +233,19 @@ class BackupCommand extends Command
                 select_users($input->getOption('user')),
             );
         } catch (RuntimeException $e) {
-            $this->logger->error($e->getMessage());
+            $this->logger->error(
+                'Failed to resolve backup users. {exception.message}',
+                [
+                    'operation' => 'backup.resolve_users',
+                    ...exception_log($e),
+                ],
+            );
             return self::FAILURE;
         }
 
-        $this->logger->notice('Using WatchState {full_version}', ['full_version' => get_app_version()]);
+        $this->logger->notice('Using WatchState {full_version}', [
+            'full_version' => get_full_version(),
+        ]);
         foreach ($users as $userContext) {
             try {
                 $this->process_backup($input, $userContext);
@@ -274,6 +282,8 @@ class BackupCommand extends Command
 
             if (!isset($supported[$type])) {
                 $this->logger->error("Ignoring '{identity.user}@{identity.backend}'. Unexpected type '{type}'.", [
+                    'operation' => 'command.backend_config',
+                    'error' => 'unexpected_backend_type',
                     'identity' => [
                         'user' => $userContext->name,
                         'backend' => $backendName,
@@ -286,6 +296,8 @@ class BackupCommand extends Command
 
             if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {
                 $this->logger->error("Ignoring '{identity.user}@{identity.backend}'. Invalid URL '{url}'.", [
+                    'operation' => 'command.backend_config',
+                    'error' => 'invalid_url',
                     'identity' => [
                         'user' => $userContext->name,
                         'backend' => $backendName,

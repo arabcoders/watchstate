@@ -184,7 +184,7 @@ class Import
                 }
 
                 $this->logger->error(
-                    message: "Request for '{identity.user}@{identity.backend}' libraries returned with unexpected '{response.status_code}' status code.",
+                    message: "Request for '{identity.user}@{identity.backend}' libraries returned HTTP {response.status_code}.",
                     context: $rContext,
                 );
 
@@ -202,7 +202,7 @@ class Import
 
             if (empty($listDirs)) {
                 $this->logger->warning(
-                    message: "Request for '{identity.user}@{identity.backend}' libraries returned with empty list.",
+                    message: "Request for '{identity.user}@{identity.backend}' libraries returned an empty list.",
                     context: [
                         ...$rContext,
                         'response' => ['body' => $payload],
@@ -214,7 +214,7 @@ class Import
         } catch (iException $e) {
             $this->logger->error(
                 ...lw(
-                    message: "Request for '{identity.user}@{identity.backend}' libraries has failed. {exception.message}",
+                    message: "Request for '{identity.user}@{identity.backend}' libraries failed. {exception.message}",
                     context: [...$rContext, ...exception_log($e)],
                     e: $e,
                 ),
@@ -224,7 +224,7 @@ class Import
         } catch (JsonException $e) {
             $this->logger->error(
                 ...lw(
-                    message: "Request for '{identity.user}@{identity.backend}' libraries returned with invalid body. {exception.message}",
+                    message: "Request for '{identity.user}@{identity.backend}' libraries returned invalid JSON. {exception.message}",
                     context: [...$rContext, ...exception_log($e)],
                     e: $e,
                 ),
@@ -347,7 +347,7 @@ class Import
             try {
                 if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
                     $this->logger->error(
-                        message: "Request for '{identity.user}@{identity.backend}' - '{library.title}' items count returned with unexpected '{response.status_code}' status code.",
+                        message: "Request for '{identity.user}@{identity.backend}' - '{library.title}' items count returned HTTP {response.status_code}.",
                         context: [
                             ...$logContext,
                             'response' => ['status_code' => $response->getStatusCode()],
@@ -362,7 +362,7 @@ class Import
 
                 if ($totalCount < 1) {
                     $this->logger->warning(
-                        message: "Request for '{identity.user}@{identity.backend}' - '{library.title}' items count returned with 0 or less.",
+                        message: "Request for '{identity.user}@{identity.backend}' - '{library.title}' items count returned 0 items.",
                         context: [
                             ...$logContext,
                             'response' => [
@@ -378,7 +378,7 @@ class Import
             } catch (iException $e) {
                 $this->logger->error(
                     ...lw(
-                        message: "Request for '{identity.user}@{identity.backend}' - '{library.title}' total items has failed. {exception.message}",
+                        message: "Request for '{identity.user}@{identity.backend}' - '{library.title}' total items failed. {exception.message}",
                         context: [...$logContext, ...exception_log($e)],
                         e: $e,
                     ),
@@ -625,7 +625,7 @@ class Import
     {
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             $this->logger->error(
-                message: "Request for '{identity.user}@{identity.backend}' - '{library.title} {segment.number}/{segment.of}' content returned with unexpected '{response.status_code}' status code.",
+                message: "Request for '{identity.user}@{identity.backend}' - '{library.title} {segment.number}/{segment.of}' content returned HTTP {response.status_code}.",
                 context: [
                     ...$logContext,
                     'response' => ['status_code' => $response->getStatusCode()],
@@ -898,9 +898,11 @@ class Import
 
             if (null === ag($item, $dateKey)) {
                 $this->logger->debug(
-                    message: "Ignoring '{identity.user}@{identity.backend}' - '{item.id}: {item.title}'. No date key '{date_key}' is set on object. '{response.body}'",
+                    message: "Ignoring '{identity.user}@{identity.backend}' - '{item.id}: {item.title}'. No date key '{date_key}' is set on object.",
                     context: [
                         'date_key' => $dateKey,
+                        'operation' => 'import.item_skip',
+                        'error' => 'no_date_set',
                         'response' => ['body' => $item],
                         ...$logContext,
                     ],

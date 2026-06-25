@@ -6,16 +6,21 @@ namespace App\API\System;
 
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Enums\Http\Status;
+use App\Libs\ReportGenerator;
 use Psr\Http\Message\ResponseInterface as iResponse;
 
 final class Report
 {
     public const string URL = '%{api.prefix}/system/report';
 
+    public function __construct(
+        private readonly ReportGenerator $generator,
+    ) {}
+
     #[Get(self::URL . '[/]', name: 'system.report')]
     public function basic_report(): iResponse
     {
-        return api_response(Status::OK, run_command('system:report', asArray: true));
+        return api_response(Status::OK, $this->generator->generate());
     }
 
     #[Get(self::URL . '/ini[/]', name: 'system.ini')]

@@ -1,5 +1,7 @@
 <template>
-  <div class="space-y-6">
+  <div class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader v-bind="pageShell" />
+
     <section class="space-y-4">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="space-y-1">
@@ -35,8 +37,8 @@
         <UCard
           v-for="item in lastHistory"
           :key="item.id"
-          class="h-full border border-default/70 shadow-sm"
-          :class="item.watched ? 'bg-default/90 ring-1 ring-success/20' : 'bg-default/90'"
+          class="h-full shadow-sm"
+          :class="item.watched ? 'ring-1 ring-success/20' : ''"
           :ui="historyCardUi"
         >
           <template #header>
@@ -334,6 +336,7 @@ import { NuxtLink } from '#components';
 import moment from 'moment';
 import EventView from '~/components/EventView.vue';
 import FloatingImage from '~/components/FloatingImage.vue';
+import PageHeader from '~/components/PageHeader.vue';
 import StructuredLogLine from '~/components/StructuredLogLine.vue';
 import LogDetailsModal from '~/components/LogDetailsModal.vue';
 import Popover from '~/components/Popover.vue';
@@ -350,6 +353,7 @@ import {
 } from '~/utils';
 import type { HistoryItem, JsonObject, LogEntry, ServerJsonLogEntry } from '~/types';
 import { normalizeStructuredEntry } from '~/utils/logs';
+import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 
 type IndexLogFile = {
   type: string;
@@ -363,6 +367,7 @@ type IndexLogFile = {
 useHead({ title: 'Index' });
 
 const route = useRoute();
+const pageShell = requireTopLevelPageShell('home');
 const poster_enable = useStorage('poster_enable', true);
 const autoReloadLogs = useStorage<boolean>('auto_reload_logs', true);
 const logWrap = useStorage<Record<string, boolean>>('index_logs_wrap', {});

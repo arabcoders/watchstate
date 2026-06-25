@@ -82,7 +82,7 @@
       </p>
     </div>
 
-    <UCard class="border border-default/70 shadow-sm" :ui="nestedCardUi">
+    <UCard class="shadow-sm" :ui="nestedCardUi">
       <template #header>
         <div class="space-y-2">
           <div class="flex items-start justify-between gap-3">
@@ -145,7 +145,7 @@
       </div>
     </UCard>
 
-    <UCard class="border border-default/70 shadow-sm" :ui="nestedCardUi">
+    <UCard class="shadow-sm" :ui="nestedCardUi">
       <template #header>
         <div class="space-y-2">
           <div class="flex items-start justify-between gap-3">

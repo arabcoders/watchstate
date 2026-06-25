@@ -145,7 +145,7 @@ final class Initializer
 
         set_exception_handler(static function (Throwable $e) use ($logger) {
             $logger->error(
-                message: '{exception.type}: {exception.message} ({exception.file}:{exception.line}).' . PHP_EOL,
+                message: 'Uncaught exception. {exception.message}',
                 context: exception_log($e),
             );
             exit(1);
@@ -160,7 +160,7 @@ final class Initializer
 
             $type = $error['type'] ?? 0;
 
-            $logger->error(message: "{exception.type}: {exception.message} at '{exception.file}:{exception.line}'. '{request.uri}'", context: [
+            $logger->error(message: 'Fatal error. {exception.message}', context: [
                 'exception' => [
                     'type' => match ($type) {
                         E_ERROR => 'E_ERROR',

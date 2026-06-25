@@ -23,7 +23,6 @@ type TopLevelEntryId =
   | 'duplicate'
   | 'url-check'
   | 'env'
-  | 'plex-token'
   | 'custom'
   | 'ignore'
   | 'suppression'
@@ -56,11 +55,13 @@ type TopLevelNavigationDefinition = {
   label: string;
   pageLabel?: string;
   breadcrumbSectionLabel?: string;
+  description?: string;
   icon: string;
   to?: string;
   href?: string;
   target?: string;
   matchPath?: string;
+  additionalMatchPaths?: Array<string>;
   exactMatch?: boolean;
   excludeMatchPaths?: Array<string>;
   visible?: (context: TopLevelNavigationContext) => boolean;
@@ -87,6 +88,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'Home',
     pageLabel: 'Home',
     breadcrumbSectionLabel: 'Overview',
+    description: 'Recent activities.',
     icon: 'i-lucide-house',
     to: '/',
     matchPath: '/',
@@ -97,6 +99,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'History',
     pageLabel: 'History',
     breadcrumbSectionLabel: 'Activity',
+    description: 'Tracked play-state changes across backends.',
     icon: 'i-lucide-history',
     to: '/history',
     matchPath: '/history',
@@ -107,6 +110,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'Events',
     pageLabel: 'Events',
     breadcrumbSectionLabel: 'Activity',
+    description: 'Inspect recent events and their status.',
     icon: 'i-lucide-calendar-days',
     to: '/events',
     matchPath: '/events',
@@ -117,9 +121,11 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'Backends',
     pageLabel: 'Backends',
     breadcrumbSectionLabel: 'Configuration',
+    description: 'Manage backend connections.',
     icon: 'i-lucide-server',
     to: '/backends',
     matchPath: '/backends',
+    additionalMatchPaths: ['/backend'],
   },
   {
     id: 'env',
@@ -127,6 +133,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'Environment',
     pageLabel: 'Environment',
     breadcrumbSectionLabel: 'Configuration',
+    description: 'Edit configuration variables.',
     icon: 'i-lucide-sliders-horizontal',
     to: '/env',
     matchPath: '/env',
@@ -137,6 +144,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'Custom GUIDs',
     pageLabel: 'Custom GUIDs',
     breadcrumbSectionLabel: 'Configuration',
+    description: 'Map custom GUIDs between backends.',
     icon: 'i-lucide-map',
     to: '/custom',
     matchPath: '/custom',
@@ -147,6 +155,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'Ignore Rules',
     pageLabel: 'Ignore Rules',
     breadcrumbSectionLabel: 'Configuration',
+    description: 'Exclude specific GUIDs from processing.',
     icon: 'i-lucide-ban',
     to: '/ignore',
     matchPath: '/ignore',
@@ -157,6 +166,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'Identities',
     pageLabel: 'Identities',
     breadcrumbSectionLabel: 'Configuration',
+    description: 'Manage user identities.',
     icon: 'i-lucide-users',
     to: '/identities',
     matchPath: '/identities',
@@ -167,6 +177,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'Tasks',
     pageLabel: 'Tasks',
     breadcrumbSectionLabel: 'Operations',
+    description: 'Run and inspect scheduled tasks.',
     icon: 'i-lucide-list-checks',
     to: '/tasks',
     matchPath: '/tasks',
@@ -177,6 +188,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'Logs',
     pageLabel: 'Logs',
     breadcrumbSectionLabel: 'Operations',
+    description: 'Application, task, and access logs.',
     icon: 'i-lucide-scroll-text',
     to: '/logs',
     matchPath: '/logs',
@@ -187,6 +199,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'Console',
     pageLabel: 'Console',
     breadcrumbSectionLabel: 'Operations',
+    description: 'Run CLI commands.',
     icon: 'i-lucide-terminal',
     to: '/console',
     matchPath: '/console',
@@ -197,6 +210,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'Backups',
     pageLabel: 'Backups',
     breadcrumbSectionLabel: 'Operations',
+    description: 'Download and restore database snapshots.',
     icon: 'i-lucide-hard-drive-download',
     to: '/backup',
     matchPath: '/backup',
@@ -207,6 +221,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'System Report',
     pageLabel: 'System Report',
     breadcrumbSectionLabel: 'Diagnostics',
+    description: 'Diagnostic report for submitting bugs.',
     icon: 'i-lucide-flag',
     to: '/report',
     matchPath: '/report',
@@ -217,6 +232,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'Data Parity',
     pageLabel: 'Data Parity',
     breadcrumbSectionLabel: 'Diagnostics',
+    description: 'Check data consistency across backends.',
     icon: 'i-lucide-database',
     to: '/parity',
     matchPath: '/parity',
@@ -227,6 +243,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'Files Integrity',
     pageLabel: 'Files Integrity',
     breadcrumbSectionLabel: 'Diagnostics',
+    description: 'Verify local media files still exist.',
     icon: 'i-lucide-file-check-2',
     to: '/integrity',
     matchPath: '/integrity',
@@ -237,6 +254,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'Duplicate Refs',
     pageLabel: 'Duplicate Refs',
     breadcrumbSectionLabel: 'Diagnostics',
+    description: 'Find duplicate history records.',
     icon: 'i-lucide-copy',
     to: '/duplicate',
     matchPath: '/duplicate',
@@ -247,19 +265,10 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'URL Checker',
     pageLabel: 'URL Checker',
     breadcrumbSectionLabel: 'Diagnostics',
+    description: 'Test WatchState reachability.',
     icon: 'i-lucide-link',
     to: '/url_check',
     matchPath: '/url_check',
-  },
-  {
-    id: 'plex-token',
-    section: 'diagnostics',
-    label: 'Plex Token',
-    pageLabel: 'Plex Token',
-    breadcrumbSectionLabel: 'Diagnostics',
-    icon: 'i-lucide-key-round',
-    to: '/tools/plex_token',
-    matchPath: '/tools/plex_token',
   },
   {
     id: 'processes',
@@ -267,6 +276,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'Processes',
     pageLabel: 'Processes',
     breadcrumbSectionLabel: 'System',
+    description: 'Show active processes.',
     icon: 'i-lucide-cpu',
     to: '/processes',
     matchPath: '/processes',
@@ -277,6 +287,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'Suppression',
     pageLabel: 'Suppression',
     breadcrumbSectionLabel: 'System',
+    description: 'Filter out noisy log entries.',
     icon: 'i-lucide-bug-off',
     to: '/suppression',
     matchPath: '/suppression',
@@ -287,6 +298,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'Purge Cache',
     pageLabel: 'Purge Cache',
     breadcrumbSectionLabel: 'System',
+    description: 'Clear cached data.',
     icon: 'i-lucide-trash-2',
     to: '/purge_cache',
     matchPath: '/purge_cache',
@@ -297,6 +309,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'Reset',
     pageLabel: 'Reset',
     breadcrumbSectionLabel: 'System',
+    description: 'Reset the application state.',
     icon: 'i-lucide-rotate-ccw',
     to: '/reset',
     matchPath: '/reset',
@@ -307,6 +320,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'Prune',
     pageLabel: 'Prune',
     breadcrumbSectionLabel: 'System',
+    description: 'Remove old or orphaned records.',
     icon: 'i-lucide-scissors',
     to: '/prune',
     matchPath: '/prune',
@@ -317,6 +331,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'Guides',
     pageLabel: 'Guides',
     breadcrumbSectionLabel: 'Help',
+    description: 'User guides and documentation.',
     icon: 'i-lucide-circle-help',
     to: '/help',
     matchPath: '/help',
@@ -328,6 +343,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'API',
     pageLabel: 'API',
     breadcrumbSectionLabel: 'Help',
+    description: 'WatchState API documentation.',
     icon: 'i-lucide-book-open',
     to: '/help/api',
     matchPath: '/help/api',
@@ -338,6 +354,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'OpenAPI',
     pageLabel: 'OpenAPI',
     breadcrumbSectionLabel: 'Help',
+    description: 'Media servers OpenAPI specification.',
     icon: 'i-lucide-braces',
     to: '/help/openapi',
     matchPath: '/help/openapi',
@@ -348,6 +365,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'README',
     pageLabel: 'README',
     breadcrumbSectionLabel: 'Help',
+    description: 'Project overview and setup instructions.',
     icon: 'i-lucide-file-text',
     to: '/help/readme',
     matchPath: '/help/readme',
@@ -358,6 +376,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'FAQ',
     pageLabel: 'FAQ',
     breadcrumbSectionLabel: 'Help',
+    description: 'Frequently asked questions.',
     icon: 'i-lucide-circle-help',
     to: '/help/faq',
     matchPath: '/help/faq',
@@ -368,6 +387,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'News',
     pageLabel: 'News',
     breadcrumbSectionLabel: 'Help',
+    description: 'Project news history.',
     icon: 'i-lucide-newspaper',
     to: '/help/news',
     matchPath: '/help/news',
@@ -378,6 +398,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'Changelog',
     pageLabel: 'Changelog',
     breadcrumbSectionLabel: 'Help',
+    description: 'Application changelog.',
     icon: 'i-lucide-scroll-text',
     to: '/changelog',
     matchPath: '/changelog',
@@ -388,6 +409,7 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     label: 'GitHub',
     pageLabel: 'GitHub',
     breadcrumbSectionLabel: 'Help',
+    description: 'Project source code and issue tracker.',
     icon: 'i-lucide-github',
     href: 'https://github.com/arabcoders/watchstate',
     target: '_blank',
@@ -442,6 +464,7 @@ export const getTopLevelPageShell = (
       icon: string;
       sectionLabel: string;
       pageLabel: string;
+      description: string;
     }
   | undefined => {
   const entry = getTopLevelNavigationEntryById(id, context);
@@ -453,6 +476,7 @@ export const getTopLevelPageShell = (
     icon: entry.icon,
     sectionLabel: entry.breadcrumbSectionLabel ?? entry.sectionLabel,
     pageLabel: entry.pageLabel ?? entry.label,
+    description: entry.description ?? '',
   };
 };
 
@@ -463,6 +487,7 @@ export const requireTopLevelPageShell = (
   icon: string;
   sectionLabel: string;
   pageLabel: string;
+  description: string;
 } => {
   const shell = getTopLevelPageShell(id, context);
 

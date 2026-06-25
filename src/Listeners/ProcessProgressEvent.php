@@ -139,6 +139,8 @@ final readonly class ProcessProgressEvent
 
             if (!isset($supported[$type])) {
                 $writer(Level::Error, "Ignoring '{identity.user}@{identity.backend}'. Invalid type '{type}'.", [
+                    'operation' => 'webhook.backend_config',
+                    'error' => 'unexpected_backend_type',
                     'type' => $type,
                     'condition' => [
                         'expected' => implode(', ', array_keys($supported)),
@@ -154,6 +156,8 @@ final readonly class ProcessProgressEvent
 
             if (null === ($url = ag($backend, 'url')) || false === is_valid_url($url)) {
                 $writer(Level::Error, "Ignoring '{identity.user}@{identity.backend}'. Invalid URL '{url}'.", [
+                    'operation' => 'webhook.backend_config',
+                    'error' => 'invalid_url',
                     'url' => $url ?? 'None',
                     'identity' => [
                         'backend' => $backendName,
@@ -285,7 +289,7 @@ final readonly class ProcessProgressEvent
                     if (false === in_array(Status::tryFrom($statusCode), [Status::OK, Status::NO_CONTENT], true)) {
                         $writer(
                             Level::Error,
-                            "Request to change '{identity.user}@{identity.backend}' - '#{id}: {history.title}' watch progress returned with unexpected '{response.status_code}' status code.",
+                            "Request to change '{identity.user}@{identity.backend}' - '#{id}: {history.title}' watch progress returned HTTP {response.status_code}.",
                             [
                                 ...$context,
                                 'response' => ['status_code' => $statusCode],

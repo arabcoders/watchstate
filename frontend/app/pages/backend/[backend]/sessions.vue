@@ -1,27 +1,22 @@
 <template>
   <div class="space-y-6">
     <section class="space-y-4">
-      <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div class="space-y-1">
-          <div
-            class="flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
+      <PageHeader v-bind="pageShell">
+        <template #kicker>
+          <span>{{ pageShell.sectionLabel }}</span>
+          <span>/</span>
+          <NuxtLink to="/backends" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
+          <span>/</span>
+          <NuxtLink
+            :to="`/backend/${backend}`"
+            class="hover:text-primary normal-case tracking-normal"
+            >{{ backend }}</NuxtLink
           >
-            <UIcon :name="pageShell.icon" class="size-4" />
-            <span>{{ pageShell.sectionLabel }}</span>
-            <span>/</span>
-            <NuxtLink to="/backends" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
-            <span>/</span>
-            <NuxtLink
-              :to="`/backend/${backend}`"
-              class="hover:text-primary normal-case tracking-normal"
-              >{{ backend }}</NuxtLink
-            >
-            <span>/</span>
-            <span class="text-highlighted normal-case tracking-normal">Sessions</span>
-          </div>
-        </div>
+          <span>/</span>
+          <span class="text-highlighted normal-case tracking-normal">Sessions</span>
+        </template>
 
-        <div class="flex flex-wrap items-center justify-end gap-2">
+        <template #actions>
           <UButton
             color="neutral"
             variant="outline"
@@ -34,8 +29,8 @@
           >
             <span class="hidden sm:inline">Reload</span>
           </UButton>
-        </div>
-      </div>
+        </template>
+      </PageHeader>
 
       <UAlert
         v-if="1 > items.length && isLoading"
@@ -67,12 +62,7 @@
         </div>
 
         <div class="grid gap-4 xl:grid-cols-2">
-          <UCard
-            v-for="item in items"
-            :key="item.id"
-            class="h-full border border-default/70 shadow-sm"
-            :ui="cardUi"
-          >
+          <UCard v-for="item in items" :key="item.id" class="h-full shadow-sm" :ui="cardUi">
             <template #header>
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0 flex-1">
@@ -173,6 +163,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useRoute } from '#app';
+import PageHeader from '~/components/PageHeader.vue';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import { formatDuration, notification, parse_api_response, request } from '~/utils';
 import type { SessionItem } from '~/types';
