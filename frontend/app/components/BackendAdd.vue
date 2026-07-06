@@ -159,7 +159,11 @@
                   :icon="!exposeToken ? 'i-lucide-eye' : 'i-lucide-eye-off'"
                   :aria-label="!exposeToken ? 'Show token' : 'Hide token'"
                   class="whitespace-nowrap"
-                  @click="exposeToken = !exposeToken"
+                  @click="
+                    () => {
+                      exposeToken = !exposeToken;
+                    }
+                  "
                 >
                   {{ exposeToken ? 'Hide' : 'Show' }}
                 </UButton>
@@ -584,7 +588,11 @@
             variant="outline"
             icon="i-lucide-chevron-left"
             class="justify-center"
-            @click="stage = stage - 1"
+            @click="
+              () => {
+                stage = stage - 1;
+              }
+            "
           >
             Previous Step
           </UButton>

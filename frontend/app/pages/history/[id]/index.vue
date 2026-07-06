@@ -47,7 +47,11 @@
                 variant="outline"
                 size="sm"
                 icon="i-lucide-bug"
-                @click="showRawData = true"
+                @click="
+                  () => {
+                    showRawData = true;
+                  }
+                "
               >
                 Raw Data
               </UButton>
@@ -120,7 +124,11 @@
             size="sm"
             :icon="headerOverviewExpanded ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
             class="shrink-0 self-start"
-            @click="headerOverviewExpanded = !headerOverviewExpanded"
+            @click="
+              () => {
+                headerOverviewExpanded = !headerOverviewExpanded;
+              }
+            "
           >
             {{ headerOverviewExpanded ? 'Show Less' : 'Show More' }}
           </UButton>

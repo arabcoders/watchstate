@@ -19,7 +19,11 @@
             :variant="toggleFilter ? 'soft' : 'outline'"
             size="sm"
             icon="i-lucide-filter"
-            @click="toggleFilter = !toggleFilter"
+            @click="
+              () => {
+                toggleFilter = !toggleFilter;
+              }
+            "
           >
             <span class="hidden sm:inline">Filter</span>
           </UButton>
@@ -151,7 +155,13 @@
                 <p
                   class="break-all overflow-hidden text-ellipsis whitespace-nowrap"
                   :class="item.displayMasked ? 'text-toned italic' : ''"
-                  @click="(event) => !item.displayMasked && toggleValueOverflow(event)"
+                  @click="
+                    (event) => {
+                      if (!item.displayMasked) {
+                        toggleValueOverflow(event);
+                      }
+                    }
+                  "
                 >
                   <UIcon v-if="item.displayMasked" name="i-lucide-lock" class="size-4 text-toned" />
                   {{ item.displayMasked ? 'Hidden' : item.value }}
@@ -168,7 +178,11 @@
                 variant="outline"
                 size="sm"
                 :icon="item.displayMasked ? 'i-lucide-lock-open' : 'i-lucide-lock'"
-                @click="item.displayMasked = !item.displayMasked"
+                @click="
+                  () => {
+                    item.displayMasked = !item.displayMasked;
+                  }
+                "
               >
                 {{ item.displayMasked ? 'Show' : 'Hide' }}
               </UButton>
@@ -275,7 +289,11 @@
                   :icon="!form_expose ? 'i-lucide-eye' : 'i-lucide-eye-off'"
                   :aria-label="!form_expose ? 'Show value' : 'Hide value'"
                   class="whitespace-nowrap"
-                  @click="form_expose = !form_expose"
+                  @click="
+                    () => {
+                      form_expose = !form_expose;
+                    }
+                  "
                 >
                   {{ form_expose ? 'Hide' : 'Show' }}
                 </UButton>

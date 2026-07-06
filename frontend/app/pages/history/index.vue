@@ -41,7 +41,11 @@
           :variant="searchForm ? 'soft' : 'outline'"
           size="sm"
           icon="i-lucide-search"
-          @click="searchForm = !searchForm"
+          @click="
+            () => {
+              searchForm = !searchForm;
+            }
+          "
         >
           <span class="hidden sm:inline">Search</span>
         </UButton>
@@ -51,7 +55,11 @@
           :variant="selectAll ? 'soft' : 'outline'"
           size="sm"
           :icon="selectAll ? 'i-lucide-square' : 'i-lucide-square-check-big'"
-          @click="selectAll = !selectAll"
+          @click="
+            () => {
+              selectAll = !selectAll;
+            }
+          "
         >
           <span class="hidden sm:inline">{{ selectAll ? 'Unselect' : 'Select' }}</span>
         </UButton>

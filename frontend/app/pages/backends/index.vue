@@ -14,7 +14,11 @@
             variant="outline"
             icon="i-lucide-plus"
             :disabled="isLoading"
-            @click="toggleForm = !toggleForm"
+            @click="
+              () => {
+                toggleForm = !toggleForm;
+              }
+            "
           >
             Add Backend
           </UButton>
@@ -182,7 +186,11 @@
                     variant="outline"
                     size="sm"
                     icon="i-lucide-webhook"
-                    @click="webhookBackend = backend"
+                    @click="
+                      () => {
+                        webhookBackend = backend;
+                      }
+                    "
                   >
                     <span class="hidden sm:inline">Add Webhook</span>
                   </UButton>

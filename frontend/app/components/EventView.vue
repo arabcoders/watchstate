@@ -150,7 +150,11 @@
               :variant="wrapData ? 'soft' : 'outline'"
               size="sm"
               icon="i-lucide-wrap-text"
-              @click="wrapData = !wrapData"
+              @click="
+                () => {
+                  wrapData = !wrapData;
+                }
+              "
             >
               <span class="hidden sm:inline">Wrap</span>
             </UButton>
@@ -218,7 +222,11 @@
               :variant="wrapLogs ? 'soft' : 'outline'"
               size="sm"
               icon="i-lucide-wrap-text"
-              @click="wrapLogs = !wrapLogs"
+              @click="
+                () => {
+                  wrapLogs = !wrapLogs;
+                }
+              "
             >
               <span class="hidden sm:inline">Wrap</span>
             </UButton>
@@ -327,7 +335,11 @@
               :variant="wrapOptions ? 'soft' : 'outline'"
               size="sm"
               icon="i-lucide-wrap-text"
-              @click="wrapOptions = !wrapOptions"
+              @click="
+                () => {
+                  wrapOptions = !wrapOptions;
+                }
+              "
             >
               <span class="hidden sm:inline">Wrap</span>
             </UButton>

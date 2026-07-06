@@ -75,7 +75,11 @@
                 variant="outline"
                 icon="i-lucide-pencil"
                 aria-label="Edit backend"
-                @click="editBackendOpen = true"
+                @click="
+                  () => {
+                    editBackendOpen = true;
+                  }
+                "
               >
                 <span class="hidden sm:inline">Edit</span>
               </UButton>
@@ -239,7 +243,11 @@
                     :variant="showRawInfo ? 'soft' : 'outline'"
                     size="sm"
                     :icon="showRawInfo ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-                    @click="showRawInfo = !showRawInfo"
+                    @click="
+                      () => {
+                        showRawInfo = !showRawInfo;
+                      }
+                    "
                   >
                     <span class="hidden sm:inline">{{
                       showRawInfo ? 'Hide Raw' : 'Show Raw'

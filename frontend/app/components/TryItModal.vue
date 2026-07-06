@@ -183,7 +183,11 @@
                 size="xs"
                 class="shrink-0"
                 :disabled="isLoading"
-                @click="headerRows.splice(index, 1)"
+                @click="
+                  () => {
+                    headerRows.splice(index, 1);
+                  }
+                "
               />
             </div>
           </div>
@@ -746,7 +750,7 @@ const buildCurlCommand = (): string => {
 
 const copyCurl = (): void => {
   try {
-    copyText(buildCurlCommand());
+    copyText(buildCurlCommand(), false);
     notification('success', 'Copied', 'cURL command copied to clipboard.');
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unexpected error';

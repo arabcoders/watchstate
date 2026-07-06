@@ -161,7 +161,11 @@
                       :icon="exposeToken ? 'i-lucide-eye-off' : 'i-lucide-eye'"
                       :aria-label="exposeToken ? 'Hide token' : 'Show token'"
                       class="whitespace-nowrap"
-                      @click="exposeToken = !exposeToken"
+                      @click="
+                        () => {
+                          exposeToken = !exposeToken;
+                        }
+                      "
                     >
                       {{ exposeToken ? 'Hide' : 'Show' }}
                     </UButton>

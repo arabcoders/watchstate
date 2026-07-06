@@ -87,7 +87,11 @@
             variant="soft"
             size="sm"
             icon="i-lucide-arrow-left"
-            @click="navigateTo('/backends')"
+            @click="
+              () => {
+                void navigateTo('/backends');
+              }
+            "
           >
             Back
           </UButton>

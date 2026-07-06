@@ -89,7 +89,11 @@
             variant="outline"
             block
             icon="i-lucide-arrow-left"
-            @click="forgot_password = false"
+            @click="
+              () => {
+                forgot_password = false;
+              }
+            "
           >
             Back to login
           </UButton>
@@ -144,7 +148,11 @@
                 :icon="form_expose ? 'i-lucide-eye-off' : 'i-lucide-eye'"
                 :aria-label="form_expose ? 'Hide password' : 'Show password'"
                 class="whitespace-nowrap"
-                @click="form_expose = !form_expose"
+                @click="
+                  () => {
+                    form_expose = !form_expose;
+                  }
+                "
               />
             </div>
           </UFormField>
@@ -161,7 +169,11 @@
               variant="soft"
               block
               icon="i-lucide-key-round"
-              @click="forgot_password = true"
+              @click="
+                () => {
+                  forgot_password = true;
+                }
+              "
             >
               Forgot your credentials?
             </UButton>

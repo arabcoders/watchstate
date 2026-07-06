@@ -32,7 +32,11 @@
             :variant="selectAll ? 'soft' : 'outline'"
             size="sm"
             :icon="!selectAll ? 'i-lucide-square-check' : 'i-lucide-square'"
-            @click="selectAll = !selectAll"
+            @click="
+              () => {
+                selectAll = !selectAll;
+              }
+            "
           >
             <span class="hidden sm:inline">{{ !selectAll ? 'Select' : 'Unselect' }}</span>
           </UButton>
