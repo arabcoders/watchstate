@@ -52,7 +52,7 @@ class DirectMapper implements ImportInterface
     protected array $changed = [];
 
     /**
-     * @var array<array-key,<string,int>> List of actions performed.
+     * @var array<array-key,array<string,int>> List of actions performed.
      */
     protected array $actions = [
         iState::TYPE_MOVIE => ['added' => 0, 'updated' => 0, 'failed' => 0],
