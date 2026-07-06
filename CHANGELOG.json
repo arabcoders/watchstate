@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "c36adde5f84925c4cbfe660a81694b1c3e061f73",
-    "date": "2026-07-06T06:34:03+00:00",
+    "full_sha": "ae7c5a00c02a6495f82803114e97ab46a1149ea8",
+    "date": "2026-07-06T17:17:57+00:00",
     "commits": [
+      {
+        "sha": "ae7c5a00",
+        "full_sha": "ae7c5a00c02a6495f82803114e97ab46a1149ea8",
+        "message": "chore: update external dependancies",
+        "author": "arabcoders",
+        "date": "2026-07-06T17:17:57+00:00"
+      },
+      {
+        "sha": "37c275b7",
+        "full_sha": "37c275b7a1f2a7280c132c5ca3320e8b55ead3cf",
+        "message": "fix: remove double notification for copy curl and fix lint issues",
+        "author": "arabcoders",
+        "date": "2026-07-06T17:16:21+00:00"
+      },
       {
         "sha": "c36adde5",
         "full_sha": "c36adde5f84925c4cbfe660a81694b1c3e061f73",
