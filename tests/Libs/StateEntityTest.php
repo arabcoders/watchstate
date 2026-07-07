@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Libs;
 
 use App\Libs\Config;
+use App\Libs\ConfigFile;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Extends\LogMessageProcessor;
@@ -810,19 +811,17 @@ class StateEntityTest extends TestCase
         );
     }
 
-    public function test_shouldMarkAsUnplayed_with_disable_flag(): void
+    public function test_mark_unplayed_disable(): void
     {
-        // -- Setup: Create updater entity that is unwatched
         $updater = new StateEntity($this->testMovie);
         $updater->watched = 0;
 
-        // -- Condition 8: DISABLE_MARK_UNPLAYED flag is set to true in UserContext
-        // Note: The key format is "{backend.via}.options.DISABLE_MARK_UNPLAYED"
+        $config = new ConfigFile(TESTS_PATH . '/Fixtures/test_servers.yaml', 'yaml', false, false, false);
+        $config->set('test_plex.options.' . Options::DISABLE_MARK_UNPLAYED, true);
+
         $userContext = $this->createUserContext(
-            name: 'test_backend',
-            data: [
-                'test_plex.options.' . Options::DISABLE_MARK_UNPLAYED => true,
-            ],
+            name: 'test_backend_disable_mark_unplayed',
+            configFile: $config,
         );
 
         $this->assertFalse(
@@ -830,12 +829,12 @@ class StateEntityTest extends TestCase
             'When DISABLE_MARK_UNPLAYED flag is set to true, shouldMarkAsUnplayed() returns false',
         );
 
-        // -- Test with flag set to false (should behave normally)
+        $configFalse = new ConfigFile(TESTS_PATH . '/Fixtures/test_servers.yaml', 'yaml', false, false, false);
+        $configFalse->set('test_plex.options.' . Options::DISABLE_MARK_UNPLAYED, false);
+
         $userContextFalse = $this->createUserContext(
-            name: 'test_backend_false',
-            data: [
-                'test_plex.options.' . Options::DISABLE_MARK_UNPLAYED => false,
-            ],
+            name: 'test_backend_allow_mark_unplayed',
+            configFile: $configFalse,
         );
 
         $this->assertTrue(

@@ -486,7 +486,7 @@ final class ProcessWebhookEvent
             }
         }
 
-        if (null !== ($lastSync = ag($userContext->get($entity->via, []), 'import.lastSync'))) {
+        if (null !== ($lastSync = ag($userContext->config->get($entity->via, []), 'import.lastSync'))) {
             $lastSync = make_date($lastSync);
         }
 
