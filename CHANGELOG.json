@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "ae7c5a00c02a6495f82803114e97ab46a1149ea8",
-    "date": "2026-07-06T17:17:57+00:00",
+    "full_sha": "345a3d63616bde3a2bafaadd39f6ae557d4bddde",
+    "date": "2026-07-07T04:31:22+00:00",
     "commits": [
+      {
+        "sha": "345a3d63",
+        "full_sha": "345a3d63616bde3a2bafaadd39f6ae557d4bddde",
+        "message": "refactor: update userContext access in StateEntity and ProcessWebhookEvent classes. Fixes #859",
+        "author": "arabcoders",
+        "date": "2026-07-07T04:31:22+00:00"
+      },
       {
         "sha": "ae7c5a00",
         "full_sha": "ae7c5a00c02a6495f82803114e97ab46a1149ea8",
