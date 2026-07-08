@@ -7,7 +7,11 @@
           variant="outline"
           size="sm"
           icon="i-lucide-plus"
-          @click="toggleForm = true"
+          @click="
+            () => {
+              toggleForm = true;
+            }
+          "
           label="Add"
         />
 
@@ -51,7 +55,11 @@
               size="sm"
               icon="i-lucide-plus"
               class="px-0"
-              @click="toggleForm = true"
+              @click="
+                () => {
+                  toggleForm = true;
+                }
+              "
             >
               Add a new rule
             </UButton>

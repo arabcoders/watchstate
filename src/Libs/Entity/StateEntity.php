@@ -606,7 +606,7 @@ final class StateEntity implements iState
 
         // -- Condition: 8
         $key = "{$backend->via}.options." . Options::DISABLE_MARK_UNPLAYED;
-        if ($userContext && true === $userContext->get($key, false)) {
+        if ($userContext && true === (bool) $userContext->config->get($key, false)) {
             return false;
         }
 

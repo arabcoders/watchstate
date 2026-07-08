@@ -41,7 +41,11 @@
             :variant="toggleFilter ? 'soft' : 'outline'"
             color="neutral"
             size="sm"
-            @click="toggleFilter = !toggleFilter"
+            @click="
+              () => {
+                toggleFilter = !toggleFilter;
+              }
+            "
           >
             Filter
           </UButton>
@@ -65,7 +69,11 @@
             :variant="wrapLines ? 'soft' : 'outline'"
             color="neutral"
             size="sm"
-            @click="wrapLines = !wrapLines"
+            @click="
+              () => {
+                wrapLines = !wrapLines;
+              }
+            "
           >
             Wrap
           </UButton>

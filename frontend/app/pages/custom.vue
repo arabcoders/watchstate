@@ -7,7 +7,11 @@
           variant="outline"
           size="sm"
           icon="i-lucide-plus"
-          @click="addGuidModalOpen = true"
+          @click="
+            () => {
+              addGuidModalOpen = true;
+            }
+          "
           label="Add GUID"
         />
 
@@ -16,7 +20,11 @@
           variant="outline"
           size="sm"
           icon="i-lucide-plus"
-          @click="addLinkModalOpen = true"
+          @click="
+            () => {
+              addLinkModalOpen = true;
+            }
+          "
           label="Add Link"
         />
 

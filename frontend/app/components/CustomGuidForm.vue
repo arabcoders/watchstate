@@ -96,7 +96,11 @@
               variant="outline"
               size="sm"
               icon="i-lucide-plus"
-              @click="form.validator.tests.valid.push('')"
+              @click="
+                () => {
+                  form.validator.tests.valid.push('');
+                }
+              "
             >
               Add
             </UButton>
@@ -130,7 +134,11 @@
             icon="i-lucide-trash-2"
             class="justify-center sm:shrink-0"
             :disabled="index < 1 || form.validator.tests.valid.length < 1"
-            @click="form.validator.tests.valid.splice(index, 1)"
+            @click="
+              () => {
+                form.validator.tests.valid.splice(index, 1);
+              }
+            "
           >
             <span class="hidden sm:inline">Remove</span>
           </UButton>
@@ -159,7 +167,11 @@
               variant="outline"
               size="sm"
               icon="i-lucide-plus"
-              @click="form.validator.tests.invalid.push('')"
+              @click="
+                () => {
+                  form.validator.tests.invalid.push('');
+                }
+              "
             >
               Add
             </UButton>
@@ -193,7 +205,11 @@
             icon="i-lucide-trash-2"
             class="justify-center sm:shrink-0"
             :disabled="index < 1 || form.validator.tests.invalid.length < 1"
-            @click="form.validator.tests.invalid.splice(index, 1)"
+            @click="
+              () => {
+                form.validator.tests.invalid.splice(index, 1);
+              }
+            "
           >
             <span class="hidden sm:inline">Remove</span>
           </UButton>

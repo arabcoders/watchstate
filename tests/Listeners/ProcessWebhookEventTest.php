@@ -195,6 +195,7 @@ final class ProcessWebhookEventTest extends TestCase
                         'uuid' => 's00000000000000000000000000000000000000p',
                         'import' => [
                             'enabled' => true,
+                            'lastSync' => 1_700_000_000,
                         ],
                         'export' => [
                             'enabled' => true,
@@ -235,6 +236,10 @@ final class ProcessWebhookEventTest extends TestCase
             self::assertSame('no', $fields['progress.status']);
             self::assertSame('req-3', $fields['request.id']);
             self::assertFalse($fields['flags.tainted']);
+
+            if ('full_second' === $fields['identity.backend']) {
+                self::assertNotEmpty($fields['sync.last_at']);
+            }
         }
 
         self::assertSame(['full_second', 'metadata_first'], $processingBackends);

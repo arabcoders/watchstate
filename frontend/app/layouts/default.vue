@@ -100,7 +100,11 @@
                       size="sm"
                       :color-mode="undefined"
                       class="hidden sm:inline-flex"
-                      @click="showScheduler = !showScheduler"
+                      @click="
+                        () => {
+                          showScheduler = !showScheduler;
+                        }
+                      "
                     >
                       <UIcon
                         name="i-lucide-cpu"
@@ -134,7 +138,11 @@
                       variant="ghost"
                       size="sm"
                       icon="i-lucide-users"
-                      @click="showIdentitySelection = true"
+                      @click="
+                        () => {
+                          showIdentitySelection = true;
+                        }
+                      "
                     >
                       <span class="hidden xl:inline">{{ apiUser }}</span>
                     </UButton>
@@ -158,7 +166,11 @@
                     variant="ghost"
                     size="sm"
                     icon="i-lucide-settings-2"
-                    @click="showSettings = true"
+                    @click="
+                      () => {
+                        showSettings = true;
+                      }
+                    "
                   >
                     <span class="hidden xl:inline">Settings</span>
                   </UButton>

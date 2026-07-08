@@ -28,7 +28,11 @@
           :variant="showSearchPanel ? 'soft' : 'outline'"
           size="sm"
           icon="i-lucide-search"
-          @click="showSearchPanel = !showSearchPanel"
+          @click="
+            () => {
+              showSearchPanel = !showSearchPanel;
+            }
+          "
           label="Search"
         />
 
@@ -433,7 +437,11 @@
             variant="outline"
             size="sm"
             :disabled="deleteSubmitting"
-            @click="deleteModalOpen = false"
+            @click="
+              () => {
+                deleteModalOpen = false;
+              }
+            "
           >
             Cancel
           </UButton>

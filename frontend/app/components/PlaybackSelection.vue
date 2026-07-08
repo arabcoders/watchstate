@@ -211,7 +211,11 @@
             :variant="showAdvanced ? 'soft' : 'outline'"
             size="sm"
             icon="i-lucide-settings"
-            @click="showAdvanced = !showAdvanced"
+            @click="
+              () => {
+                showAdvanced = !showAdvanced;
+              }
+            "
           >
             Advanced settings
           </UButton>

@@ -110,7 +110,11 @@
             variant="soft"
             size="sm"
             icon="i-lucide-arrow-left"
-            @click="navigateTo('/identities')"
+            @click="
+              () => {
+                void navigateTo('/identities');
+              }
+            "
           >
             Back
           </UButton>

@@ -113,7 +113,11 @@
                 icon="i-lucide-x"
                 class="shrink-0 whitespace-nowrap"
                 :disabled="is_loading"
-                @click="item.headers.splice(index, 1)"
+                @click="
+                  () => {
+                    item.headers.splice(index, 1);
+                  }
+                "
               >
                 Remove
               </UButton>
