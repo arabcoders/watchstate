@@ -44,14 +44,7 @@
           </div>
 
           <div class="flex flex-wrap items-center gap-2 text-xs text-toned">
-            <p>
-              <template v-if="allEnabled">
-                Shell commands are available when prefixed with <code>$</code>.
-              </template>
-              <template v-else>
-                Shell commands stay disabled unless <code>WS_CONSOLE_ENABLE_ALL</code> is enabled.
-              </template>
-            </p>
+            <p v-if="allEnabled">Shell commands are available when prefixed with <code>$</code>.</p>
             <UBadge :color="streamStatusColor" variant="soft" size="sm">
               <span v-if="streamStatusSpinning" class="inline-flex items-center gap-1.5">
                 <UIcon :name="streamStatusIcon" class="size-3.5 animate-spin" />
