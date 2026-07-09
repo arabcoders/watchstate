@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "96244a5bf2471844b03225d4b2da246eee89fe62",
-    "date": "2026-07-08T07:42:21+00:00",
+    "full_sha": "34f212779fab763be1098da797eda1598101585b",
+    "date": "2026-07-09T04:02:07+00:00",
     "commits": [
+      {
+        "sha": "34f21277",
+        "full_sha": "34f212779fab763be1098da797eda1598101585b",
+        "message": "refactor: move missing metadata alert to top",
+        "author": "arabcoders",
+        "date": "2026-07-09T04:02:07+00:00"
+      },
       {
         "sha": "96244a5b",
         "full_sha": "96244a5bf2471844b03225d4b2da246eee89fe62",
