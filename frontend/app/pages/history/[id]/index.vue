@@ -85,6 +85,30 @@
         </template>
       </PageHeader>
 
+      <UAlert
+        v-if="data?.not_reported_by && data.not_reported_by.length > 0"
+        color="warning"
+        variant="soft"
+        icon="i-lucide-triangle-alert"
+        title=""
+      >
+        <template #description>
+          <div class="space-y-2">
+            <p>
+              There are no metadata regarding this <strong>{{ data.type }}</strong> from:
+              <UBadge
+                v-for="backend in data.not_reported_by"
+                :key="`nr-${backend}`"
+                color="warning"
+                variant="soft"
+              >
+                <NuxtLink :to="`/backend/${backend}`">{{ backend }}</NuxtLink>
+              </UBadge>
+            </p>
+          </div>
+        </template>
+      </UAlert>
+
       <div
         v-if="
           data?.via &&
@@ -218,32 +242,6 @@
             </Popover>
             to see the other records.
           </span>
-        </template>
-      </UAlert>
-
-      <UAlert
-        v-if="data?.not_reported_by && data.not_reported_by.length > 0"
-        color="warning"
-        variant="soft"
-        icon="i-lucide-triangle-alert"
-        :title="`Missing metadata from ${ucFirst(data.type)}`"
-      >
-        <template #description>
-          <div class="space-y-2">
-            <p>
-              There are no metadata regarding this <strong>{{ data.type }}</strong> from:
-            </p>
-            <div class="flex flex-wrap gap-2">
-              <UBadge
-                v-for="backend in data.not_reported_by"
-                :key="`nr-${backend}`"
-                color="warning"
-                variant="soft"
-              >
-                <NuxtLink :to="`/backend/${backend}`">{{ backend }}</NuxtLink>
-              </UBadge>
-            </div>
-          </div>
         </template>
       </UAlert>
 
