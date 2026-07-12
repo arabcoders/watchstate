@@ -1,5 +1,19 @@
 [
   {
+    "tag": "Untagged",
+    "full_sha": "babffcfc7752266ea12aa26240db1949add94561",
+    "date": "2026-07-12T08:01:14+00:00",
+    "commits": [
+      {
+        "sha": "babffcfc",
+        "full_sha": "babffcfc7752266ea12aa26240db1949add94561",
+        "message": "refactor:  improve progress handling and session management across Emby and Jellyfin actions",
+        "author": "arabcoders",
+        "date": "2026-07-12T08:01:14+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v1.9.2",
     "full_sha": "9ac101a68b6aa17b8ac6537e1be22bafbdffe369",
     "date": "2026-07-11T15:07:49+00:00",
