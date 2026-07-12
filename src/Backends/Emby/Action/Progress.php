@@ -17,7 +17,6 @@ use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Exceptions\Backends\RuntimeException;
-use App\Libs\Extends\Date;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use DateTimeInterface;
@@ -199,10 +198,11 @@ class Progress
             $unwatchFirst = false;
 
             try {
+                $remoteData = $this->getItemDetails($context, $logContext['remote']['id'], [Options::NO_CACHE => true]);
                 $remoteItem = $this->createEntity(
                     $context,
                     $guid,
-                    $this->getItemDetails($context, $logContext['remote']['id'], [Options::NO_CACHE => true]),
+                    $remoteData,
                     ['latest_date' => true],
                 );
 
@@ -257,12 +257,19 @@ class Progress
             }
 
             try {
-                $url = $context->backendUrl->withPath(
-                    r('/Users/{user_id}/Items/{item_id}/UserData', [
+                $positionTicks = (string) floor($entity->getPlayProgress() * 1_00_00);
+                $url = $context
+                    ->backendUrl
+                    ->withPath(r('/Users/{user_id}/PlayingItems/{item_id}/Progress', [
                         'user_id' => $context->backendUser,
                         'item_id' => $logContext['remote']['id'],
-                    ]),
-                );
+                    ]))
+                    ->withQuery(http_build_query([
+                        'MediaSourceId' => ag($remoteData, ['MediaSources.0.Id', 'MediaSourceId', 'Id']),
+                        'PositionTicks' => $positionTicks,
+                        'IsPaused' => 'true',
+                        'PlayMethod' => 'DirectPlay',
+                    ]));
 
                 $logContext['request']['url'] = (string) $url;
 
@@ -271,8 +278,8 @@ class Progress
                     context: [
                         ...$logContext,
                         'progress' => format_duration($entity->getPlayProgress()),
-                        // -- convert secs to ms for emby to understand it.
-                        'time' => floor($entity->getPlayProgress() * 1_00_00),
+                        // -- convert milliseconds to ticks for Emby to understand it.
+                        'time' => $positionTicks,
                     ],
                 );
 
@@ -282,24 +289,10 @@ class Progress
                         'progress' => format_duration($entity->getPlayProgress()),
                     ];
 
-                    $json = [
-                        'PlaybackPositionTicks' => (string) floor($entity->getPlayProgress() * 1_00_00),
-                        'LastPlayedDate' => make_date($senderDate)->format(Date::ATOM),
-                    ];
-
-                    if (true === $unwatchFirst) {
-                        $json['Played'] = false;
-                    }
-
                     $progressRequest = new Request(
                         method: Method::POST,
                         url: $url,
-                        options: array_replace_recursive($context->getHttpOptions(), [
-                            'headers' => [
-                                'Content-Type' => 'application/json',
-                            ],
-                            'json' => $json,
-                        ]),
+                        options: $context->getHttpOptions(),
                         success: function (ResponseInterface $response) use ($requestContext): array {
                             $statusCode = $response->getStatusCode();
 

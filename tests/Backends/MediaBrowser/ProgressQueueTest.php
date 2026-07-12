@@ -92,6 +92,7 @@ class ProgressQueueTest extends MediaBrowserTestCase
             $this->assertTrue($result->isSuccessful());
             $this->assertSame(1, $queue->count());
             $this->assertContainsOnlyInstancesOf(Request::class, $queue->getQueue());
+            $this->assertProgressRequest($clientName, $queue->getQueue()[0], '700000000');
         }
     }
 
@@ -171,9 +172,24 @@ class ProgressQueueTest extends MediaBrowserTestCase
             $this->assertCount(1, $followUps);
             $this->assertContainsOnlyInstancesOf(Request::class, $followUps);
             $this->assertSame('POST', $followUps[0]->method->value);
-            $this->assertStringContainsString('/Users/user-1/Items/item-1/UserData', (string) $followUps[0]->url);
-            $this->assertFalse($followUps[0]->options['json']['Played']);
-            $this->assertSame('700000000', $followUps[0]->options['json']['PlaybackPositionTicks']);
+            $this->assertProgressRequest($clientName, $followUps[0], '700000000');
+        }
+    }
+
+    private function assertProgressRequest(string $clientName, Request $request, string $positionTicks): void
+    {
+        if ('Emby' === $clientName) {
+            $this->assertStringContainsString('/Users/user-1/PlayingItems/item-1/Progress', (string) $request->url);
+            $this->assertStringContainsString('PositionTicks=' . $positionTicks, (string) $request->url);
+            $this->assertStringContainsString('MediaSourceId=item-1', (string) $request->url);
+            return;
+        }
+
+        $this->assertStringContainsString('/Users/user-1/Items/item-1/UserData', (string) $request->url);
+        $this->assertSame($positionTicks, $request->options['json']['PlaybackPositionTicks']);
+
+        if (array_key_exists('Played', $request->options['json'])) {
+            $this->assertFalse($request->options['json']['Played']);
         }
     }
 

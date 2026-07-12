@@ -8,6 +8,7 @@ use App\Backends\Common\CommonTrait;
 use App\Backends\Common\Context;
 use App\Backends\Common\Request;
 use App\Backends\Common\Response;
+use App\Backends\Emby\EmbyClient;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Method;
@@ -80,6 +81,13 @@ class UpdateState
                         $url = $url->withQuery(
                             http_build_query([
                                 'DatePlayed' => make_date($entity->updated)->format(Date::ATOM),
+                            ]),
+                        );
+                    }
+                    if ($context->clientName === EmbyClient::CLIENT_NAME) {
+                        $url = $url->withQuery(
+                            http_build_query([
+                                'DatePlayed' => make_date($entity->updated)->format('YmdHis'),
                             ]),
                         );
                     }

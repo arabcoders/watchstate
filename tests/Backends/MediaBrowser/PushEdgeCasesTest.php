@@ -48,6 +48,7 @@ class PushEdgeCasesTest extends MediaBrowserTestCase
             $entity = $this->makeEntity($context, watched: 1);
             $payload = $this->fixture('metadata');
             $payload['UserData']['Played'] = true;
+            $payload['UserData']['PlaybackPositionTicks'] = 0;
 
             $action = new $actionClass($this->makeHttpWithPayload($payload), $this->logger);
             $result = $action($context, [$entity], $queue);

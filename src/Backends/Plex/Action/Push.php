@@ -199,6 +199,7 @@ final class Push
                 $isWatched = 0 === (int) ag($json, 'viewCount', 0) ? 0 : 1;
 
                 if ($entity->watched === $isWatched) {
+                    // NOTE: If Plex ever keeps a non-zero viewOffset on watched items, this skip path is where to add cleanup.
                     $this->logger->info(
                         message: "Ignoring '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}'. Play state is identical.",
                         context: [
