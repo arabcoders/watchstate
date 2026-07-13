@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "babffcfc7752266ea12aa26240db1949add94561",
-    "date": "2026-07-12T08:01:14+00:00",
+    "full_sha": "fd63181dd743e62846c3585c53a272112b0ef3a2",
+    "date": "2026-07-13T03:49:16+00:00",
     "commits": [
+      {
+        "sha": "fd63181d",
+        "full_sha": "fd63181dd743e62846c3585c53a272112b0ef3a2",
+        "message": "refactor: reduce log level from error to warning for some log entries",
+        "author": "arabcoders",
+        "date": "2026-07-13T03:49:16+00:00"
+      },
       {
         "sha": "babffcfc",
         "full_sha": "babffcfc7752266ea12aa26240db1949add94561",
