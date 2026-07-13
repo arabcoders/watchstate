@@ -222,7 +222,7 @@ final class Export extends Import
                         $statusCode = $response->getStatusCode();
 
                         if (Status::OK !== Status::tryFrom($statusCode)) {
-                            $this->logger->error(
+                            $this->logger->warning(
                                 message: "Request to change '{identity.user}@{identity.backend}' {item.type} '{item.title}' play state returned HTTP {response.status_code}.",
                                 context: [
                                     ...$requestContext,

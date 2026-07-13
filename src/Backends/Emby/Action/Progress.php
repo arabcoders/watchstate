@@ -297,7 +297,7 @@ class Progress
                             $statusCode = $response->getStatusCode();
 
                             if (false === in_array(Status::tryFrom($statusCode), [Status::OK, Status::NO_CONTENT], true)) {
-                                $this->logger->error(
+                                $this->logger->warning(
                                     message: "Request to change '{identity.user}@{identity.backend}' {history.type} '{history.title}' watch progress returned HTTP {response.status_code}.",
                                     context: [
                                         ...$requestContext,
