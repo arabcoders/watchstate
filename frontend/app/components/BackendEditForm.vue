@@ -941,7 +941,7 @@ const loadContent = async (): Promise<void> => {
       return;
     }
 
-    if (!json?.options || 'object' !== typeof json.options) {
+    if (!json?.options || 'object' !== typeof json.options || Array.isArray(json.options)) {
       json.options = {};
     }
 
