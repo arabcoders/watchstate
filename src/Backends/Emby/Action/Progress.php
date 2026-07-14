@@ -199,10 +199,11 @@ class Progress
             $unwatchFirst = false;
 
             try {
+                $remoteData = $this->getItemDetails($context, $logContext['remote']['id'], [Options::NO_CACHE => true]);
                 $remoteItem = $this->createEntity(
                     $context,
                     $guid,
-                    $this->getItemDetails($context, $logContext['remote']['id'], [Options::NO_CACHE => true]),
+                    $remoteData,
                     ['latest_date' => true],
                 );
 
@@ -271,7 +272,7 @@ class Progress
                     context: [
                         ...$logContext,
                         'progress' => format_duration($entity->getPlayProgress()),
-                        // -- convert secs to ms for emby to understand it.
+                        // -- convert milliseconds to ticks for Emby to understand it.
                         'time' => floor($entity->getPlayProgress() * 1_00_00),
                     ],
                 );
@@ -304,7 +305,7 @@ class Progress
                             $statusCode = $response->getStatusCode();
 
                             if (false === in_array(Status::tryFrom($statusCode), [Status::OK, Status::NO_CONTENT], true)) {
-                                $this->logger->error(
+                                $this->logger->warning(
                                     message: "Request to change '{identity.user}@{identity.backend}' {history.type} '{history.title}' watch progress returned HTTP {response.status_code}.",
                                     context: [
                                         ...$requestContext,

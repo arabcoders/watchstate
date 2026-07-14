@@ -8,7 +8,10 @@ use App\Backends\Common\CommonTrait;
 use App\Backends\Common\Context;
 use App\Backends\Common\Request;
 use App\Backends\Common\Response;
+use App\Backends\Emby\Action\GetSessions as EmbyGetSessions;
+use App\Backends\Emby\EmbyClient;
 use App\Backends\Jellyfin\JellyfinClient as JFC;
+use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
@@ -83,6 +86,7 @@ class Push
         ?DateTimeInterface $after = null,
     ): Response {
         $requests = [];
+        $sessions = $this->getActiveSessions($context);
 
         foreach ($entities as $key => $entity) {
             if (true !== $entity instanceof iState) {
@@ -220,6 +224,39 @@ class Push
                 $isWatched = (int) (bool) ag($json, 'UserData.Played', false);
 
                 if ($entity->watched === $isWatched) {
+                    $remoteProgress = (int) ag($json, 'UserData.PlaybackPositionTicks', 0);
+                    if (true === $entity->isWatched() && $remoteProgress > 0) {
+                        if (true === array_key_exists((string) ag($json, 'Id'), $sessions)) {
+                            $this->logger->notice(
+                                message: "Not clearing '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' watched item progress. The item is playing right now.",
+                                context: [
+                                    ...$logContext,
+                                    'operation' => 'push.skip',
+                                    'error' => 'currently_playing',
+                                ],
+                            );
+
+                            continue;
+                        }
+
+                        $lastPlayed = make_date($entity->updated)->format(Date::ATOM);
+                        $requestContext = $logContext + ['play_state' => 'Played'];
+
+                        $this->logger->debug(
+                            message: "Queuing request to clear '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' watched item progress.",
+                            context: [
+                                ...$requestContext,
+                                'progress' => format_duration((int) floor($remoteProgress / 1_00_00)),
+                            ],
+                        );
+
+                        if (false === (bool) ag($context->options, Options::DRY_RUN, false)) {
+                            $queue->add($this->createProgressResetRequest($context, $json, $lastPlayed));
+                        }
+
+                        continue;
+                    }
+
                     $this->logger->info(
                         message: "Ignoring '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}'. Play state is identical.",
                         context: [
@@ -281,6 +318,11 @@ class Push
                 if ($context->clientName === JFC::CLIENT_NAME) {
                     $url = $url->withQuery(http_build_query(['DatePlayed' => $lastPlayed]));
                 }
+                if ($context->clientName === EmbyClient::CLIENT_NAME) {
+                    $url = $url->withQuery(http_build_query([
+                        'DatePlayed' => make_date($entity->updated)->format('YmdHis'),
+                    ]));
+                }
 
                 $logContext['request']['url'] = (string) $url;
                 $playState = $entity->isWatched() ? 'Played' : 'Unplayed';
@@ -297,7 +339,7 @@ class Push
                             method: $entity->isWatched() ? Method::POST : Method::DELETE,
                             url: $url,
                             options: $context->getHttpOptions(),
-                            success: function (ResponseInterface $response) use ($context, $entity, $json, $lastPlayed): array {
+                            success: function (ResponseInterface $response) use ($context, $entity, $json, $lastPlayed, $sessions): array {
                                 if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
                                     return [];
                                 }
@@ -306,24 +348,12 @@ class Push
                                     return [];
                                 }
 
+                                if (true === array_key_exists((string) ag($json, 'Id'), $sessions)) {
+                                    return [];
+                                }
+
                                 return [
-                                    new Request(
-                                        method: Method::POST,
-                                        url: $context->backendUrl->withPath(r('/Users/{user}/Items/{id}/UserData', [
-                                            'user' => $context->backendUser,
-                                            'id' => ag($json, 'Id'),
-                                        ])),
-                                        options: $context->getHttpOptions()
-                                        + [
-                                            'json' => [
-                                                'Played' => true,
-                                                'PlaybackPositionTicks' => 0,
-                                                'LastPlayedDate' => $lastPlayed,
-                                            ],
-                                            'user_data' => [Options::NO_LOGGING => true],
-                                        ],
-                                        extras: [iHttp::class => $this->http],
-                                    ),
+                                    $this->createProgressResetRequest($context, $json, $lastPlayed),
                                 ];
                             },
                             extras: [
@@ -348,5 +378,76 @@ class Push
         }
 
         return new Response(status: true, response: $queue);
+    }
+
+    private function getActiveSessions(Context $context): array
+    {
+        $sessions = [];
+
+        try {
+            $action = EmbyClient::CLIENT_NAME === $context->clientName ? EmbyGetSessions::class : GetSessions::class;
+            $remoteSessions = Container::get($action)($context);
+            if (true !== $remoteSessions->status) {
+                return [];
+            }
+
+            foreach (ag($remoteSessions->response, 'sessions', []) as $session) {
+                $userId = ag($session, 'user_id', null);
+                if (!$userId || $context->backendUser !== $userId) {
+                    continue;
+                }
+
+                $sessions[(string) ag($session, 'item_id')] = ag($session, 'item_offset_at', 0);
+            }
+        } catch (Throwable) {
+            return [];
+        }
+
+        return $sessions;
+    }
+
+    private function createProgressResetRequest(Context $context, array $item, string $lastPlayed): Request
+    {
+        if (EmbyClient::CLIENT_NAME === $context->clientName) {
+            $url = $context
+                ->backendUrl
+                ->withPath(r('/Users/{user}/PlayingItems/{id}/Progress', [
+                    'user' => $context->backendUser,
+                    'id' => ag($item, 'Id'),
+                ]))
+                ->withQuery(http_build_query([
+                    'MediaSourceId' => ag($item, ['MediaSources.0.Id', 'MediaSourceId', 'Id']),
+                    'PositionTicks' => 0,
+                    'IsPaused' => 'true',
+                    'PlayMethod' => 'DirectPlay',
+                ]));
+
+            return new Request(
+                method: Method::POST,
+                url: $url,
+                options: array_replace_recursive($context->getHttpOptions(), [
+                    'user_data' => [Options::NO_LOGGING => true],
+                ]),
+                extras: [iHttp::class => $this->http],
+            );
+        }
+
+        return new Request(
+            method: Method::POST,
+            url: $context->backendUrl->withPath(r('/Users/{user}/Items/{id}/UserData', [
+                'user' => $context->backendUser,
+                'id' => ag($item, 'Id'),
+            ])),
+            options: $context->getHttpOptions()
+            + [
+                'json' => [
+                    'Played' => true,
+                    'PlaybackPositionTicks' => 0,
+                    'LastPlayedDate' => $lastPlayed,
+                ],
+                'user_data' => [Options::NO_LOGGING => true],
+            ],
+            extras: [iHttp::class => $this->http],
+        );
     }
 }

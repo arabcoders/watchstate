@@ -168,6 +168,7 @@ final class Export extends Import
             }
 
             if ($rItem->watched === $entity->watched) {
+                // NOTE: If Plex ever keeps a non-zero viewOffset on watched items, this skip path is where to add cleanup.
                 if (true === (bool) ag($context->options, Options::DEBUG_TRACE)) {
                     $this->logger->debug(
                         message: "Ignoring '{identity.client}: {identity.backend}' - '{item.title}'. {item.type} play state is identical.",
@@ -221,7 +222,7 @@ final class Export extends Import
                         $statusCode = $response->getStatusCode();
 
                         if (Status::OK !== Status::tryFrom($statusCode)) {
-                            $this->logger->error(
+                            $this->logger->warning(
                                 message: "Request to change '{identity.user}@{identity.backend}' {item.type} '{item.title}' play state returned HTTP {response.status_code}.",
                                 context: [
                                     ...$requestContext,

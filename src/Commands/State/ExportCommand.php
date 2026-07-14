@@ -554,7 +554,7 @@ class ExportCommand extends Command
                                 $context['response']['status_code'] = $response->getStatusCode();
 
                                 if (Status::OK !== Status::tryFrom($context['response']['status_code'])) {
-                                    $logger->error(
+                                    $logger->warning(
                                         "Request to change '{identity.user}@{identity.backend}' - '#{history.id}: {history.title}' play state returned HTTP {response.status_code}.",
                                         $context,
                                     );

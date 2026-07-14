@@ -288,7 +288,7 @@ final readonly class ProcessProgressEvent
 
                     if (false === in_array(Status::tryFrom($statusCode), [Status::OK, Status::NO_CONTENT], true)) {
                         $writer(
-                            Level::Error,
+                            Level::Warning,
                             "Request to change '{identity.user}@{identity.backend}' - '#{id}: {history.title}' watch progress returned HTTP {response.status_code}.",
                             [
                                 ...$context,

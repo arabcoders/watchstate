@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace Tests\Backends\MediaBrowser;
 
 use App\Backends\Common\Request;
+use App\Backends\Common\Response;
 use App\Backends\Emby\Action\Export as EmbyExport;
+use App\Backends\Emby\Action\GetSessions as EmbyGetSessions;
 use App\Backends\Emby\EmbyGuid;
 use App\Backends\Jellyfin\Action\Export as JellyfinExport;
+use App\Backends\Jellyfin\Action\GetSessions as JellyfinGetSessions;
 use App\Backends\Jellyfin\JellyfinGuid;
+use App\Libs\Container;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Extends\HttpClient;
@@ -56,11 +60,91 @@ class ExportFlowTest extends MediaBrowserTestCase
             $request = $queue->getQueue()[0];
             $this->assertSame('POST', $request->method->value);
             $this->assertStringContainsString('/Users/user-1/PlayedItems/item-1', (string) $request->url);
+            $this->assertStringContainsString('DatePlayed=', (string) $request->url);
 
             $followUps = ($request->success)(new MockResponse('', ['http_code' => 200]));
             $this->assertCount(1, $followUps);
             $this->assertContainsOnlyInstancesOf(Request::class, $followUps);
-            $this->assertStringContainsString('/Users/user-1/Items/item-1/UserData', (string) $followUps[0]->url);
+            $this->assertProgressResetRequest($clientName, $followUps[0]);
+        }
+    }
+
+    public function test_export_played_resets_progress(): void
+    {
+        foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass]) {
+            $context = $this->makeContext($clientName, [Options::IGNORE_DATE => true]);
+            $queue = new QueueRequests();
+
+            $localEntity = $this->makeLocalEntity($context, watched: 1, updated: 2000);
+            $mapper = $this->buildMapper($context, $localEntity);
+
+            $item = $this->fixture('metadata');
+            $item['UserData']['Played'] = true;
+            $item['UserData']['PlaybackPositionTicks'] = 900000000;
+            $item['UserData']['LastPlayedDate'] = '2024-01-02T00:00:00Z';
+
+            $action = new $actionClass($this->makeQueueHttp(), $this->logger);
+            $guid = new $guidClass($this->logger)->withContext($context);
+
+            $this->invokeProcess(
+                $action,
+                $context,
+                $guid,
+                $mapper,
+                $item,
+                ['library' => ['id' => 'lib-1']],
+                ['queue' => $queue],
+            );
+
+            $this->assertSame(1, $queue->count());
+            $this->assertContainsOnlyInstancesOf(Request::class, $queue->getQueue());
+            $this->assertProgressResetRequest($clientName, $queue->getQueue()[0]);
+        }
+    }
+
+    public function test_export_played_skips_active(): void
+    {
+        foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass, $sessionsClass]) {
+            Container::add($sessionsClass, fn() => new class() {
+                public function __invoke(): Response
+                {
+                    return new Response(status: true, response: [
+                        'sessions' => [
+                            [
+                                'item_id' => 'item-1',
+                                'item_offset_at' => 1000,
+                                'user_id' => 'user-1',
+                            ],
+                        ],
+                    ]);
+                }
+            });
+
+            $context = $this->makeContext($clientName, [Options::IGNORE_DATE => true]);
+            $queue = new QueueRequests();
+
+            $localEntity = $this->makeLocalEntity($context, watched: 1, updated: 2000);
+            $mapper = $this->buildMapper($context, $localEntity);
+
+            $item = $this->fixture('metadata');
+            $item['UserData']['Played'] = true;
+            $item['UserData']['PlaybackPositionTicks'] = 900000000;
+            $item['UserData']['LastPlayedDate'] = '2024-01-02T00:00:00Z';
+
+            $action = new $actionClass($this->makeQueueHttp(), $this->logger);
+            $guid = new $guidClass($this->logger)->withContext($context);
+
+            $this->invokeProcess(
+                $action,
+                $context,
+                $guid,
+                $mapper,
+                $item,
+                ['library' => ['id' => 'lib-1']],
+                ['queue' => $queue],
+            );
+
+            $this->assertSame(0, $queue->count());
         }
     }
 
@@ -75,6 +159,7 @@ class ExportFlowTest extends MediaBrowserTestCase
 
             $item = $this->fixture('metadata');
             $item['UserData']['Played'] = true;
+            $item['UserData']['PlaybackPositionTicks'] = 0;
             $item['UserData']['LastPlayedDate'] = '2024-01-02T00:00:00Z';
 
             $http = $this->makeQueueHttp();
@@ -107,6 +192,7 @@ class ExportFlowTest extends MediaBrowserTestCase
 
             $item = $this->fixture('metadata');
             $item['UserData']['Played'] = true;
+            $item['UserData']['PlaybackPositionTicks'] = 0;
             $item['UserData']['LastPlayedDate'] = '2024-01-02T00:00:00Z';
 
             $action = new $actionClass($this->makeQueueHttp(), $this->logger);
@@ -267,6 +353,20 @@ class ExportFlowTest extends MediaBrowserTestCase
         ));
     }
 
+    private function assertProgressResetRequest(string $clientName, Request $request): void
+    {
+        $this->assertSame('POST', $request->method->value);
+
+        if ('Emby' === $clientName) {
+            $this->assertStringContainsString('/Users/user-1/PlayingItems/item-1/Progress', (string) $request->url);
+            $this->assertStringContainsString('PositionTicks=0', (string) $request->url);
+            return;
+        }
+
+        $this->assertStringContainsString('/Users/user-1/Items/item-1/UserData', (string) $request->url);
+        $this->assertSame(0, $request->options['json']['PlaybackPositionTicks']);
+    }
+
     private function makeLocalEntity(\App\Backends\Common\Context $context, int $watched, int $updated): iState
     {
         return StateEntity::fromArray([
@@ -310,8 +410,8 @@ class ExportFlowTest extends MediaBrowserTestCase
     private function provideBackends(): array
     {
         return [
-            ['Jellyfin', JellyfinExport::class, JellyfinGuid::class],
-            ['Emby',     EmbyExport::class,     EmbyGuid::class],
+            ['Jellyfin', JellyfinExport::class, JellyfinGuid::class, JellyfinGetSessions::class],
+            ['Emby',     EmbyExport::class,     EmbyGuid::class,     EmbyGetSessions::class],
         ];
     }
 }
