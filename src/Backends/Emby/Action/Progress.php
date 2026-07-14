@@ -17,6 +17,7 @@ use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Exceptions\Backends\RuntimeException;
+use App\Libs\Extends\Date;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use DateTimeInterface;
@@ -257,19 +258,12 @@ class Progress
             }
 
             try {
-                $positionTicks = (string) floor($entity->getPlayProgress() * 1_00_00);
-                $url = $context
-                    ->backendUrl
-                    ->withPath(r('/Users/{user_id}/PlayingItems/{item_id}/Progress', [
+                $url = $context->backendUrl->withPath(
+                    r('/Users/{user_id}/Items/{item_id}/UserData', [
                         'user_id' => $context->backendUser,
                         'item_id' => $logContext['remote']['id'],
-                    ]))
-                    ->withQuery(http_build_query([
-                        'MediaSourceId' => ag($remoteData, ['MediaSources.0.Id', 'MediaSourceId', 'Id']),
-                        'PositionTicks' => $positionTicks,
-                        'IsPaused' => 'true',
-                        'PlayMethod' => 'DirectPlay',
-                    ]));
+                    ]),
+                );
 
                 $logContext['request']['url'] = (string) $url;
 
@@ -279,7 +273,7 @@ class Progress
                         ...$logContext,
                         'progress' => format_duration($entity->getPlayProgress()),
                         // -- convert milliseconds to ticks for Emby to understand it.
-                        'time' => $positionTicks,
+                        'time' => floor($entity->getPlayProgress() * 1_00_00),
                     ],
                 );
 
@@ -289,10 +283,24 @@ class Progress
                         'progress' => format_duration($entity->getPlayProgress()),
                     ];
 
+                    $json = [
+                        'PlaybackPositionTicks' => (string) floor($entity->getPlayProgress() * 1_00_00),
+                        'LastPlayedDate' => make_date($senderDate)->format(Date::ATOM),
+                    ];
+
+                    if (true === $unwatchFirst) {
+                        $json['Played'] = false;
+                    }
+
                     $progressRequest = new Request(
                         method: Method::POST,
                         url: $url,
-                        options: $context->getHttpOptions(),
+                        options: array_replace_recursive($context->getHttpOptions(), [
+                            'headers' => [
+                                'Content-Type' => 'application/json',
+                            ],
+                            'json' => $json,
+                        ]),
                         success: function (ResponseInterface $response) use ($requestContext): array {
                             $statusCode = $response->getStatusCode();
 

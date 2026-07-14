@@ -178,13 +178,6 @@ class ProgressQueueTest extends MediaBrowserTestCase
 
     private function assertProgressRequest(string $clientName, Request $request, string $positionTicks): void
     {
-        if ('Emby' === $clientName) {
-            $this->assertStringContainsString('/Users/user-1/PlayingItems/item-1/Progress', (string) $request->url);
-            $this->assertStringContainsString('PositionTicks=' . $positionTicks, (string) $request->url);
-            $this->assertStringContainsString('MediaSourceId=item-1', (string) $request->url);
-            return;
-        }
-
         $this->assertStringContainsString('/Users/user-1/Items/item-1/UserData', (string) $request->url);
         $this->assertSame($positionTicks, $request->options['json']['PlaybackPositionTicks']);
 
