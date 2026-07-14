@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "fd63181dd743e62846c3585c53a272112b0ef3a2",
-    "date": "2026-07-13T03:49:16+00:00",
+    "full_sha": "cb5032d58a7cb88cb9684257ee7aaf9c943a530a",
+    "date": "2026-07-14T04:49:40+00:00",
     "commits": [
+      {
+        "sha": "cb5032d5",
+        "full_sha": "cb5032d58a7cb88cb9684257ee7aaf9c943a530a",
+        "message": "fix: when options are empty the backend edit doesnt preserve the options. Fixes #862",
+        "author": "arabcoders",
+        "date": "2026-07-14T04:49:40+00:00"
+      },
       {
         "sha": "fd63181d",
         "full_sha": "fd63181dd743e62846c3585c53a272112b0ef3a2",
