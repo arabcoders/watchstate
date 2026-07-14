@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "cb5032d58a7cb88cb9684257ee7aaf9c943a530a",
-    "date": "2026-07-14T04:49:40+00:00",
+    "full_sha": "bf75493a6db2a0fa9146d53e5ce2e8c04807e60c",
+    "date": "2026-07-14T05:14:15+00:00",
     "commits": [
+      {
+        "sha": "bf75493a",
+        "full_sha": "bf75493a6db2a0fa9146d53e5ce2e8c04807e60c",
+        "message": "revert: change to plex progress sync endpoint",
+        "author": "arabcoders",
+        "date": "2026-07-14T05:14:15+00:00"
+      },
       {
         "sha": "cb5032d5",
         "full_sha": "cb5032d58a7cb88cb9684257ee7aaf9c943a530a",
