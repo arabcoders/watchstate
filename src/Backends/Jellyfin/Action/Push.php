@@ -94,7 +94,7 @@ class Push
             }
 
             if (null !== $after && false === (bool) ag($context->options, Options::IGNORE_DATE, false)) {
-                if ($after->getTimestamp() > $entity->updated_at) {
+                if ($after->getTimestamp() > $entity->updated) {
                     continue;
                 }
             }

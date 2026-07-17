@@ -77,7 +77,7 @@ class PushQueueTest extends MediaBrowserTestCase
         }
     }
 
-    public function test_push_row_date(): void
+    public function test_push_event_date(): void
     {
         $payload = [
             'Id' => 'item-1',
@@ -119,8 +119,7 @@ class PushQueueTest extends MediaBrowserTestCase
             $result = $action($context, [$entity], $queue, new DateTimeImmutable('@1500'));
 
             $this->assertTrue($result->isSuccessful());
-            $this->assertSame(1, $queue->count());
-            $this->assertContainsOnlyInstancesOf(Request::class, $queue->getQueue());
+            $this->assertSame(0, $queue->count());
         }
     }
 

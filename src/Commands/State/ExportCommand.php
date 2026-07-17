@@ -404,7 +404,15 @@ class ExportCommand extends Command
                             foreach ($backends as $backend) {
                                 $name = ag($backend, 'name');
 
+                                if (null === $name) {
+                                    continue;
+                                }
+
                                 if (null === ($lastSync = ag($backend, 'export.lastSync', null))) {
+                                    continue;
+                                }
+
+                                if (true === ag_exists($export, $name)) {
                                     continue;
                                 }
 
@@ -415,7 +423,7 @@ class ExportCommand extends Command
                                     );
                                     $extraMargin = (int) Config::get('export.not_found');
 
-                                    if (null === $addedDate || false === ctype_digit($addedDate)) {
+                                    if (null === $addedDate || false === is_int($addedDate) && false === ctype_digit((string) $addedDate)) {
                                         $this->logger->info(
                                             "Ignoring '{history.id}: {history.title}' for '{identity.user}@{identity.backend}' received invalid added_at '{added_at}' date.",
                                             [
@@ -434,6 +442,8 @@ class ExportCommand extends Command
                                         );
                                         continue;
                                     }
+
+                                    $addedDate = (int) $addedDate;
 
                                     if ($lastSync > ($addedDate + $extraMargin)) {
                                         $this->logger->info(
@@ -478,11 +488,10 @@ class ExportCommand extends Command
                                     );
 
                                     $export[$name] = $backend;
+                                    continue;
                                 }
 
-                                if (false === ag_exists($export, $name)) {
-                                    $push[ag($backend, 'name')] = $backend;
-                                }
+                                $push[$name] = $backend;
                             }
                         }
                     }
@@ -677,11 +686,16 @@ class ExportCommand extends Command
         ]);
 
         foreach ($backends as $backend) {
+            $name = ag($backend, 'name');
+            if (null === $name) {
+                continue;
+            }
+
             assert($backend['class'] instanceof ClientInterface, 'Backend class must implement ClientInterface.');
             $backend['class']->push(
                 entities: $entities,
                 queue: $this->queue,
-                after: make_date(ag($backend, 'export.lastSync')),
+                after: null,
             );
         }
 
