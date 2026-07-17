@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "bf75493a6db2a0fa9146d53e5ce2e8c04807e60c",
-    "date": "2026-07-14T05:14:15+00:00",
+    "full_sha": "db4b49954bf703ef6d905c8d49359378c20acb32",
+    "date": "2026-07-17T14:31:19+00:00",
     "commits": [
+      {
+        "sha": "db4b4995",
+        "full_sha": "db4b49954bf703ef6d905c8d49359378c20acb32",
+        "message": "Fix: possible fix for push export ignoring some records.",
+        "author": "arabcoders",
+        "date": "2026-07-17T14:31:19+00:00"
+      },
       {
         "sha": "bf75493a",
         "full_sha": "bf75493a6db2a0fa9146d53e5ce2e8c04807e60c",
