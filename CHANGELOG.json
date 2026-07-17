@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "db4b49954bf703ef6d905c8d49359378c20acb32",
-    "date": "2026-07-17T14:31:19+00:00",
+    "full_sha": "7721400f5d41be270dd291b2e5c776413897ea6e",
+    "date": "2026-07-17T16:20:45+00:00",
     "commits": [
+      {
+        "sha": "7721400f",
+        "full_sha": "7721400f5d41be270dd291b2e5c776413897ea6e",
+        "message": "fix: revert changes to use updated_at in export cmp",
+        "author": "arabcoders",
+        "date": "2026-07-17T16:20:45+00:00"
+      },
       {
         "sha": "db4b4995",
         "full_sha": "db4b49954bf703ef6d905c8d49359378c20acb32",
