@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "2dc47d75bde4a9bc62b7a12ad6f45804dd82138e",
-    "date": "2026-07-18T16:47:53+00:00",
+    "full_sha": "3275c2144789b4e54fa8b2e8bbfc42d0f375ca68",
+    "date": "2026-07-18T16:52:08+00:00",
     "commits": [
+      {
+        "sha": "3275c214",
+        "full_sha": "3275c2144789b4e54fa8b2e8bbfc42d0f375ca68",
+        "message": "ci: update php build matrix",
+        "author": "arabcoders",
+        "date": "2026-07-18T16:52:08+00:00"
+      },
       {
         "sha": "2dc47d75",
         "full_sha": "2dc47d75bde4a9bc62b7a12ad6f45804dd82138e",
