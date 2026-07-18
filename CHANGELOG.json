@@ -1,9 +1,30 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "7721400f5d41be270dd291b2e5c776413897ea6e",
-    "date": "2026-07-17T16:20:45+00:00",
+    "full_sha": "2dc47d75bde4a9bc62b7a12ad6f45804dd82138e",
+    "date": "2026-07-18T16:47:53+00:00",
     "commits": [
+      {
+        "sha": "2dc47d75",
+        "full_sha": "2dc47d75bde4a9bc62b7a12ad6f45804dd82138e",
+        "message": "chore: update external packages",
+        "author": "arabcoders",
+        "date": "2026-07-18T16:47:53+00:00"
+      },
+      {
+        "sha": "efc8dfc9",
+        "full_sha": "efc8dfc9d4828b4f913887551b56e5eba762cbb9",
+        "message": "refactor: fix footer spacing in some pages",
+        "author": "arabcoders",
+        "date": "2026-07-18T16:29:02+00:00"
+      },
+      {
+        "sha": "99742685",
+        "full_sha": "99742685f7243a655ba83ed2875a9f8a71837c6a",
+        "message": "docs: add faq entry about stale_database_date",
+        "author": "arabcoders",
+        "date": "2026-07-18T16:04:42+00:00"
+      },
       {
         "sha": "7721400f",
         "full_sha": "7721400f5d41be270dd291b2e5c776413897ea6e",
