@@ -188,6 +188,27 @@ This will sync your local database state to the backend, ignoring date compariso
 
 ----
 
+# Watch state changes skipped with `stale_database_date`?
+
+The usual log message
+
+```
+Ignoring 'main@backend' movie|episode '#0000: title (2025)'. Database date is older than backend date.
+```
+
+This usually means the backend is reporting the same event with a different time than WatchState. Make sure every
+component uses the same timezone and synchronized clock.
+
+* **WatchState**: set `WS_TZ` from `Configuration > Env`.
+* **Docker fallback**: set `TZ` only in `compose.yaml` / `docker run` if `WS_TZ` is not available.
+* **Plex / Jellyfin / Emby**: must use the same timezone as WatchState.
+* **Host**: make sure the clock is correct and NTP is enabled.
+
+After fixing the time settings, reset the local WatchState database and re-import. Existing data is tainted by the old
+time mismatch, so force export will **not** fix the underlying problem.
+
+----
+
 # Is there support for Multi-user setup?
 
 The tool is primarily designed for single-user use. Identity support is built on top of that.
