@@ -621,9 +621,9 @@ const panelCardUi = {
 };
 
 const historyCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-  footer: 'px-4 pb-4 pt-0',
+  header: 'p-4 sm:p-5',
+  body: 'px-4 pb-4 pt-0 sm:px-5 sm:pb-5',
+  footer: 'sm:p-6 px-4 pb-4 pt-0 sm:px-5 sm:pb-5',
 };
 
 const perPageItems = [50, 100, 200, 400, 500].map((value) => ({

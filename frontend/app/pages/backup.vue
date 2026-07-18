@@ -286,9 +286,9 @@ const toggleFilter = ref<boolean>(false);
 const dialog = useDialog();
 
 const backupCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-  footer: 'px-4 pb-4 pt-0',
+  header: 'p-4 sm:p-5',
+  body: 'px-4 pb-4 pt-0 sm:px-5 sm:pb-5',
+  footer: 'sm:p-6 px-4 pb-4 pt-0 sm:px-5 sm:pb-5',
 };
 
 const tipsCardUi = {

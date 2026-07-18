@@ -21,7 +21,7 @@
         "prepare:test": "nuxt prepare --envName=development"
     },
     "dependencies": {
-        "@iconify-json/lucide": "^1.2.116",
+        "@iconify-json/lucide": "^1.2.117",
         "@microsoft/fetch-event-source": "^2.0.1",
         "@noble/hashes": "^2.2.0",
         "@nuxt/eslint": "^1.16.0",
@@ -35,16 +35,16 @@
         "assjs": "^0.1.8",
         "cronstrue": "^3.24.0",
         "hls.js": "^1.6.16",
-        "marked": "^18.0.5",
+        "marked": "^18.0.6",
         "marked-alert": "^2.1.2",
-        "marked-base-url": "^1.1.9",
+        "marked-base-url": "^1.1.10",
         "marked-gfm-heading-id": "^4.1.4",
         "moment": "^2.30.1",
         "nuxt": "^4.4.8",
         "pinia": "^3.0.4",
         "tailwindcss": "^4.3.2",
         "vue": "^3.5.39",
-        "vue-router": "^5.1.0",
+        "vue-router": "^5.2.0",
         "vuedraggable": "^4.1.0"
     },
     "overrides": {
@@ -57,12 +57,12 @@
     "devDependencies": {
         "@types/bun": "^1.3.14",
         "@types/node": "26.1.0",
-        "@typescript-eslint/parser": "^8.62.1",
-        "eslint": "^10.6.0",
+        "@typescript-eslint/parser": "^8.64.0",
+        "eslint": "^10.7.0",
         "oxfmt": "^0.57.0",
         "typescript": "^6.0.3",
         "vue-eslint-parser": "^10.4.1",
-        "vue-tsc": "^3.3.6"
+        "vue-tsc": "^3.3.7"
     },
     "eslintIgnore": [
         ".gitignore"
