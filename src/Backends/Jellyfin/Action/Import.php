@@ -16,7 +16,6 @@ use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Extends\RetryableHttpClient;
-use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Message;
 use App\Libs\Options;
@@ -300,6 +299,7 @@ class Import
                         'recursive' => 'true',
                         'collapseBoxSetItems' => 'false',
                         'excludeLocationTypes' => 'Virtual',
+                        'Filters' => 'IsNotFolder',
                         'includeItemTypes' => implode(',', [JFC::TYPE_MOVIE, JFC::TYPE_EPISODE]),
                         'startIndex' => 0,
                         'limit' => 0,
@@ -448,6 +448,7 @@ class Import
                         'enableUserData' => 'false',
                         'enableImages' => 'false',
                         'includeItemTypes' => JFC::TYPE_SHOW,
+                        'Filters' => 'IsNotFolder',
                         'fields' => implode(',', JFC::EXTRA_FIELDS),
                         'excludeLocationTypes' => 'Virtual',
                     ]),
@@ -559,6 +560,7 @@ class Import
                                 'enableUserData' => 'true',
                                 'enableImages' => 'false',
                                 'excludeLocationTypes' => 'Virtual',
+                                'Filters' => 'IsNotFolder',
                                 'fields' => implode(',', JFC::EXTRA_FIELDS),
                                 'includeItemTypes' => implode(',', [JFC::TYPE_MOVIE, JFC::TYPE_EPISODE]),
                                 'limit' => $segmentSize,
@@ -667,6 +669,23 @@ class Import
                                     'message' => $entity->getErrorMessage(),
                                     'body' => $entity->getMalformedJson(),
                                 ],
+                            ],
+                        );
+                        continue;
+                    }
+
+                    if (true === (bool) ag($entity, 'IsFolder', false)) {
+                        $this->logger->debug(
+                            "Ignoring '{identity.user}@{identity.backend}' - '{library.title} {segment.number}/{segment.of}' folder '{item.id}: {item.title}'.",
+                            [
+                                'item' => [
+                                    'id' => ag($entity, 'Id'),
+                                    'title' => ag($entity, ['Name', 'OriginalTitle'], '??'),
+                                    'type' => ag($entity, 'Type'),
+                                ],
+                                'operation' => 'import.item_skip',
+                                'error' => 'folder_item',
+                                ...$logContext,
                             ],
                         );
                         continue;
