@@ -609,21 +609,6 @@ export interface MediaItemWithBackends extends BaseMediaItem {
   not_reported_by: Array<string>;
 }
 
-/**
- * /system/integrity API response item.
- */
-export interface IntegrityItem extends MediaItemWithBackends {
-  /** File integrity status per backend */
-  integrity?: Array<{
-    /** Backend name (e.g., 'plex', 'jellyfin', etc.) */
-    backend: string;
-    /** Status of the file (true = exists, false = missing) */
-    status: boolean;
-    /** Optional error or status message */
-    message?: string;
-  }>;
-}
-
 export interface GuidProvider {
   /** Provider name (e.g., 'tvdb', 'imdb') */
   guid: string;
@@ -656,10 +641,119 @@ export interface IgnoreItem {
   created: string;
 }
 
-/**
- * /system/parity API response item.
- */
-export type ParityItem = MediaItemWithBackends & {};
+export type MediaHealthStatus =
+  | 'healthy'
+  | 'file_missing'
+  | 'partial'
+  | 'duplicate_reference'
+  | 'guid_conflict'
+  | 'duplicate_guid'
+  | 'metadata_disagreement'
+  | 'path_disagreement'
+  | 'weak_match';
+
+export interface MediaHealthSummary {
+  total: number;
+  actionable_count: number;
+  statuses: Record<string, number>;
+  generated_at?: number;
+  completed_at?: number;
+  duration_seconds?: number;
+  memory_current_bytes?: number;
+  memory_peak_bytes?: number;
+  memory_peak_mb?: number;
+}
+
+export interface MediaHealthReport {
+  id: number;
+  status: string;
+  generated_at: number;
+  completed_at: number | null;
+  version: number;
+  state_count: number;
+  backend_count: number;
+  summary: MediaHealthSummary;
+  error?: string | null;
+}
+
+export interface MediaHealthSignals {
+  backends?: Array<string>;
+  backend_items?: Record<
+    string,
+    {
+      id?: string;
+      type?: string;
+      title?: string;
+      year?: number | null;
+      season?: number | null;
+      episode?: number | null;
+      path?: string;
+      webUrl?: string | null;
+    }
+  >;
+  missing_backends?: Array<string>;
+  paths?: Record<string, string>;
+  path_suffixes?: Record<string, string>;
+  file_checks?: Record<
+    string,
+    {
+      backend: string;
+      path: string;
+      status: boolean;
+      message: string;
+    }
+  >;
+  missing_files?: Array<{
+    backend: string;
+    path: string;
+    status: boolean;
+    message: string;
+  }>;
+  guids?: Record<string, string | number>;
+  guid_conflicts?: Record<string, Record<string, Array<string>>>;
+  metadata_conflicts?: Record<string, Record<string, Array<string>>>;
+  duplicate_guid?: {
+    key: string;
+    value: string | number;
+    state_ids: Array<number>;
+  };
+  duplicate_reference?: {
+    path: string;
+    state_ids: Array<number>;
+  };
+}
+
+export interface MediaHealthItem {
+  id: number;
+  report_id: number;
+  state_id: number;
+  type: string;
+  title: string;
+  year?: number | null;
+  season?: number | null;
+  episode?: number | null;
+  status: MediaHealthStatus;
+  severity: number;
+  confidence: number;
+  backend_count: number;
+  expected_backend_count: number;
+  reasons: Array<string>;
+  signals: MediaHealthSignals;
+}
+
+export interface MediaHealthResponse {
+  report: MediaHealthReport | null;
+  queued: boolean;
+  queued_event?: string | null;
+  stale: boolean;
+}
+
+export interface MediaHealthRunResponse {
+  queued: boolean;
+  running: boolean;
+  event_id?: string | null;
+  message: string;
+}
 
 /**
  * /changelog API response item.

@@ -714,6 +714,81 @@ class Import
                         );
                         continue;
                     }
+
+                    // Handle multi-episode Plex entries represented by one physical file.
+                    if (PlexClient::TYPE_EPISODE === ag($entity, 'type')) {
+                        $mediaPath = ag($entity, 'Media.0.Part.0.file');
+
+                        if (is_string($mediaPath) && '' !== trim($mediaPath)) {
+                            $episodeRange = parse_episode_range(basename($mediaPath));
+
+                            $plexSeason = (int) ag($entity, 'parentIndex', 0);
+                            $plexEpisode = (int) ag($entity, 'index', 0);
+
+                            if (
+                                true === $episodeRange['status']
+                                && true === $episodeRange['multi']
+                                && $episodeRange['season'] === $plexSeason
+                                && $episodeRange['start'] === $plexEpisode
+                            ) {
+                                $range = range($episodeRange['start'], $episodeRange['end']);
+
+                                $episodeRangeLimit = (int) ag($context->options, Options::MAX_EPISODE_RANGE, 5);
+
+                                if (count($range) > $episodeRangeLimit) {
+                                    $this->logger->warning(
+                                        "Ignoring '{identity.user}@{identity.backend}' - '{library.title} {segment.number}/{segment.of}' episode range for '{item.id}: {item.title}' {item.path} and treating it as a single episode. The file covers episodes '{item.start}-{item.end}', but the configured limit is '{item.limit}'.",
+                                        [
+                                            ...$logContext,
+                                            'item' => [
+                                                'id' => ag($entity, 'ratingKey'),
+                                                'path' => $mediaPath,
+                                                'title' => ag(
+                                                    $entity,
+                                                    ['grandparentTitle', 'originalTitle', 'title'],
+                                                    '??',
+                                                ),
+                                                'start' => $episodeRange['start'],
+                                                'end' => $episodeRange['end'],
+                                                'limit' => $episodeRangeLimit,
+                                            ],
+                                        ],
+                                    );
+
+                                    $callback(item: $entity, logContext: $logContext);
+                                    continue;
+                                }
+
+                                foreach ($range as $episode) {
+                                    $virtualEntity = $entity;
+                                    $virtualEntity['index'] = $episode;
+
+                                    $this->logger->debug(
+                                        "Making virtual episode for '{identity.client}:{identity.user}@{identity.backend}' - '{library.title} {segment.number}/{segment.of}' item '{item.id}: {item.title}', episode '{item.episode}' of range '{item.start}-{item.end}'.",
+                                        [
+                                            ...$logContext,
+                                            'item' => [
+                                                'id' => ag($entity, 'ratingKey'),
+                                                'title' => ag(
+                                                    $entity,
+                                                    ['grandparentTitle', 'originalTitle', 'title'],
+                                                    '??',
+                                                ),
+                                                'episode' => $episode,
+                                                'start' => $episodeRange['start'],
+                                                'end' => $episodeRange['end'],
+                                            ],
+                                        ],
+                                    );
+
+                                    $callback(item: $virtualEntity, logContext: $logContext);
+                                }
+
+                                continue;
+                            }
+                        }
+                    }
+
                     $callback(item: $entity, logContext: $logContext);
                 } catch (Throwable $e) {
                     $this->logger->error(

@@ -67,6 +67,11 @@ WatchState HTTP API reference. Examples use the default `/v1/api` prefix.
       - [GET /v1/api/player/segments/{token}/{segment}\[.{type}\]](#get-v1apiplayersegmentstokensegmenttype)
       - [GET /v1/api/player/subtitle/{token}/{type}.{source}{index}.m3u8](#get-v1apiplayersubtitletokentypesourceindexm3u8)
       - [GET /v1/api/player/subtitle/{token}/{source}{index}.{ext}](#get-v1apiplayersubtitletokensourceindexext)
+    - [State](#state)
+      - [GET /v1/api/state/media-health](#get-v1apistatemedia-health)
+      - [GET /v1/api/state/media-health/items](#get-v1apistatemedia-healthitems)
+      - [POST /v1/api/state/media-health/run](#post-v1apistatemedia-healthrun)
+      - [GET /v1/api/state/media-health/export/{format}](#get-v1apistatemedia-healthexportformat)
     - [System](#system)
       - [GET /v1/api/system/healthcheck](#get-v1apisystemhealthcheck)
       - [GET /v1/api/system/version](#get-v1apisystemversion)
@@ -117,12 +122,6 @@ WatchState HTTP API reference. Examples use the default `/v1/api` prefix.
       - [DELETE /v1/api/system/cache](#delete-v1apisystemcache)
       - [DELETE /v1/api/system/reset](#delete-v1apisystemreset)
       - [POST /v1/api/system/reset/opcache](#post-v1apisystemresetopcache)
-      - [GET /v1/api/system/integrity](#get-v1apisystemintegrity)
-      - [DELETE /v1/api/system/integrity](#delete-v1apisystemintegrity)
-      - [GET /v1/api/system/parity](#get-v1apisystemparity)
-      - [DELETE /v1/api/system/parity](#delete-v1apisystemparity)
-      - [GET /v1/api/system/duplicate](#get-v1apisystemduplicate)
-      - [DELETE /v1/api/system/duplicate](#delete-v1apisystemduplicate)
       - [GET /v1/api/system/suppressor](#get-v1apisystemsuppressor)
       - [POST /v1/api/system/suppressor](#post-v1apisystemsuppressor)
       - [GET /v1/api/system/suppressor/{id}](#get-v1apisystemsuppressorid)
@@ -220,7 +219,7 @@ Most routes require either an API key or a signed user token.
 
 - **Pagination**
   - Most paginated endpoints use `page` and `perpage`.
-  - History, parity, duplicate, and events responses include paging metadata.
+  - History, Media Health, and events responses include paging metadata.
 
 - **Raw Backend Responses**
   - Several backend endpoints accept `raw=true`.
@@ -1817,6 +1816,186 @@ Converts an external or internal subtitle track to WebVTT and streams it.
 
 ---
 
+### State
+
+State routes operate on the main state database unless stated otherwise.
+
+#### GET /v1/api/state/media-health
+Returns the latest cached media health report summary and queue state.
+
+**Response**:
+```json
+{
+  "report": {
+    "id": 1,
+    "status": "completed",
+    "generated_at": 1784520000,
+    "completed_at": 1784520010,
+    "version": 2,
+    "state_count": 130025,
+    "backend_count": 3,
+    "summary": {
+      "total": 130025,
+      "actionable_count": 59076,
+      "statuses": {
+        "guid_conflict": 10,
+        "healthy": 70949,
+        "partial": 58000
+      },
+      "duration_seconds": 10,
+      "memory_peak_bytes": 29360128,
+      "memory_peak_mb": 28
+    },
+    "error": null
+  },
+  "queued": false,
+  "queued_event": null,
+  "stale": false
+}
+```
+
+**Notes**:
+- `report` is `null` until the first successful audit completes.
+- `stale=true` means state data changed after the cached report was generated.
+
+---
+
+#### GET /v1/api/state/media-health/items
+Returns paginated media health report items for the latest completed report.
+
+**Query**:
+- `page` (optional) - Defaults to `1`.
+- `perpage` (optional) - Defaults to `50`, maximum `500`.
+- `unhealthy` (optional) - Use `1` to exclude `healthy` items.
+- `status` (optional) - Filter by status: `guid_conflict`, `file_missing`, `duplicate_guid`, `duplicate_reference`, `metadata_disagreement`, `partial`, `weak_match`, `path_disagreement`, or `healthy`.
+- `type` (optional) - Filter by item type: `movie` or `episode`.
+
+**Response**:
+```json
+{
+  "report": {
+    "id": 1,
+    "status": "completed",
+    "generated_at": 1784520000,
+    "completed_at": 1784520010,
+    "version": 2,
+    "state_count": 130025,
+    "backend_count": 3,
+    "summary": {
+      "total": 130025,
+      "actionable_count": 59076,
+      "statuses": {
+        "healthy": 70949,
+        "partial": 58000
+      }
+    },
+    "error": null
+  },
+  "items": [
+    {
+      "id": 100,
+      "report_id": 1,
+      "state_id": 12345,
+      "type": "movie",
+      "title": "Movie Title",
+      "year": 2024,
+      "season": null,
+      "episode": null,
+      "status": "guid_conflict",
+      "severity": 100,
+      "confidence": 0,
+      "backend_count": 3,
+      "expected_backend_count": 3,
+      "reasons": [
+        "Backends disagree on 'guid_tmdb' values '372767, 1545854'."
+      ],
+      "signals": {
+        "backends": ["emby_main", "jf_main"],
+        "missing_backends": [],
+        "backend_items": {
+          "emby_main": {
+            "id": "abc",
+            "type": "movie",
+            "title": "Movie Title",
+            "path": "/media/Movie Title.mkv",
+            "webUrl": "https://emby.example.com/web/index.html#!/item?id=abc"
+          }
+        },
+        "paths": {
+          "emby_main": "/media/Movie Title.mkv"
+        },
+        "guids": {
+          "guid_tmdb": "372767"
+        },
+        "guid_conflicts": {
+          "guid_tmdb": {
+            "372767": ["emby_main"],
+            "1545854": ["jf_main"]
+          }
+        }
+      }
+    }
+  ],
+  "paging": {
+    "total": 59076,
+    "perpage": 50,
+    "current_page": 1,
+    "first_page": 1,
+    "next_page": 2,
+    "prev_page": null,
+    "last_page": 1182,
+    "params": {
+      "status": null,
+      "unhealthy": "1",
+      "type": null
+    }
+  }
+}
+```
+
+**Errors**:
+- `404 Not Found` if no completed media health audit exists.
+
+**Notes**:
+- Results are cached, not a live scan.
+- `signals.backend_items.*.webUrl` is best-effort and may be `null` if the backend cannot produce a web URL.
+- `metadata_disagreement` items store conflicting `type`, `year`, `season`, or `episode` values under `signals.metadata_conflicts`, grouped by value and reporting backend.
+- Local filesystem checks are disabled by default. Enable `WS_MEDIA_HEALTH_CHECK_FILES` from the Environment page then file signals may appear.
+
+---
+
+#### POST /v1/api/state/media-health/run
+Queues a background task to regenerate the media health report.
+
+**Response**:
+```json
+{
+  "queued": true,
+  "running": false,
+  "event_id": "01J...",
+  "message": "Media health audit was queued."
+}
+```
+
+**Notes**:
+- If an audit is already queued or running, the response is `202 Accepted` with `queued=false` and the existing event ID.
+- The task runs `state:media-health` via the task dispatcher.
+
+---
+
+#### GET /v1/api/state/media-health/export/{format}
+Downloads a ZIP archive containing the latest completed report and all report items.
+
+**Path**:
+- `format` is `json`, `markdown`, or `csv`.
+
+**Notes**:
+- The export is a complete dump of all the data.
+- The archive contains files in the requested format.
+- Returns `404 Not Found` if no completed report exists.
+
+---
+
 ### System
 
 #### GET /v1/api/system/healthcheck
@@ -3049,165 +3228,6 @@ Resets PHP OPCache.
 
 **Notes**:
 - Affects PHP opcode cache for the running environment.
-
----
-
-#### GET /v1/api/system/integrity
-Finds history items whose media paths or parent directories no longer exist.
-
-**Query**:
-- `limit` (optional) - Maximum number of broken items to return. Defaults to `1000`.
-
-**Response**:
-```json
-{
-  "items": [
-    {
-      "id": 101,
-      "title": "Movie Title",
-      "integrity": [
-        {
-          "backend": "plex_main",
-          "path": "/media/missing/file.mkv",
-          "status": false,
-          "message": "File does not exist."
-        }
-      ]
-    }
-  ],
-  "total": 1,
-  "fromCache": false
-}
-```
-
-**Errors**:
-- `404 Not Found` if the user does not exist.
-
-**Notes**:
-- Directory and file existence checks are cached for 1 hour.
-
----
-
-#### DELETE /v1/api/system/integrity
-Clears the cached integrity scan state for the current user.
-
-**Response**:
-- `200 OK` with an empty body.
-
-**Errors**:
-- `404 Not Found` if the user does not exist.
-
----
-
-#### GET /v1/api/system/parity
-Returns records that are missing metadata on some configured backends.
-
-**Query**:
-- `page` (optional) - Defaults to `1`.
-- `perpage` (optional) - Defaults to `1000`.
-- `min` (optional) - Minimum number of backend metadata entries required. `0` means all configured backends.
-
-**Response**:
-```json
-{
-  "paging": {
-    "total": 12,
-    "perpage": 1000,
-    "current_page": 1,
-    "first_page": 1,
-    "next_page": null,
-    "prev_page": null,
-    "last_page": 1,
-    "params": {
-      "min": 3
-    }
-  },
-  "items": [
-    {
-      "id": 101,
-      "title": "Movie Title"
-    }
-  ]
-}
-```
-
-**Errors**:
-- `400 Bad Request` if `min` is greater than the number of backends.
-- `404 Not Found` if the user does not exist or the requested page is out of range.
-
----
-
-#### DELETE /v1/api/system/parity
-Deletes records that fall below a required metadata parity threshold.
-
-**Input**:
-- `min` is required in the parsed request data.
-
-**Response**:
-```json
-{
-  "deleted_records": 12
-}
-```
-
-**Errors**:
-- `400 Bad Request` if `min` is zero, invalid, or larger than the number of backends.
-- `404 Not Found` if the user does not exist.
-
----
-
-#### GET /v1/api/system/duplicate
-Finds duplicate local records that point at the same media path.
-
-**Query**:
-- `page` (optional) - Defaults to `1`.
-- `perpage` (optional) - Defaults to `50`.
-- `no_cache` (optional) - Rebuild the duplicate cache instead of using the 30 minute cached result.
-
-**Response**:
-```json
-{
-  "paging": {
-    "total": 3,
-    "perpage": 50,
-    "current_page": 1,
-    "first_page": 1,
-    "next_page": null,
-    "prev_page": null,
-    "last_page": 1,
-    "params": []
-  },
-  "items": [
-    {
-      "id": 101,
-      "title": "Movie Title",
-      "duplicate_reference_ids": [102]
-    }
-  ]
-}
-```
-
-**Errors**:
-- `400 Bad Request` if the page number is invalid.
-- `404 Not Found` if the user does not exist.
-
----
-
-#### DELETE /v1/api/system/duplicate
-Deletes the duplicate records found in the cached duplicate scan.
-
-**Response**:
-```json
-{
-  "deleted_records": 2
-}
-```
-
-**Errors**:
-- `404 Not Found` if the duplicate cache has expired or if no duplicates are cached.
-
-**Notes**:
-- This route deletes every cached duplicate record ID, so it is destructive and cache-dependent.
 
 ---
 

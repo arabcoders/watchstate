@@ -1,5 +1,11 @@
 # NEWS
 
+### 2026-04-30
+
+WatchState now uses the new versioned `v02` database schema. On first boot after updating, startup may take a bit longer than usual while legacy databases are imported, migrations are applied, and indexes are rebuilt.
+
+During that upgrade, the old database files are kept as `.migrated` safety copies. Once the first boot finishes and you have confirmed everything looks good, you can delete those `.migrated` files if you want to reclaim the space.
+
 ### 2026-04-26
 
 Cross-backend sync for playlists is now available as a **beta** feature. This is still early work, so expect some rough edges, 

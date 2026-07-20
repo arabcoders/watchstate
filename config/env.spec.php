@@ -622,7 +622,7 @@ return (function () {
     };
 
     // -- Do not forget to update the tasks list if you add a new task.
-    $tasks = ['import', 'playlist', 'export', 'backup', 'prune', 'indexes', 'validate', 'dispatch'];
+    $tasks = ['import', 'playlist', 'export', 'backup', 'prune', 'indexes', 'validate', 'media_health', 'dispatch'];
     $task_env = [
         [
             'key' => 'WS_CRON_{TASK}',
@@ -653,6 +653,20 @@ return (function () {
             $env[] = $info;
         }
     }
+
+    $env[] = [
+        'key' => 'WS_MEDIA_HEALTH_CHECK_FILES',
+        'config' => 'media_health.check_files',
+        'description' => 'Enable local filesystem existence checks in media health audits.',
+        'type' => 'bool',
+    ];
+
+    $env[] = [
+        'key' => 'WS_MEDIA_HEALTH_KEEP',
+        'config' => 'media_health.keep',
+        'description' => 'Number of media health audit reports to keep.',
+        'type' => 'int',
+    ];
 
     // -- sort based on the array name key
     $sorter = array_column($env, 'key');

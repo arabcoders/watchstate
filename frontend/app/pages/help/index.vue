@@ -118,5 +118,11 @@ const choices: Array<{ number: number; title: string; text: string; url: string 
     text: 'Requirements and known limitations for supported backends.',
     url: '/help/backend-limitations',
   },
+  {
+    number: 12,
+    title: 'Media Health',
+    text: 'Guide on how to use the Media Health feature.',
+    url: '/help/media-health',
+  },
 ];
 </script>

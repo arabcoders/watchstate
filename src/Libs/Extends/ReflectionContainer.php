@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Libs\Extends;
 
+use App\Libs\Attributes\DI\ForModel;
 use App\Libs\Attributes\DI\Inject;
+use arabcoders\database\Orm\EntityRepository;
+use arabcoders\database\Orm\OrmManager;
 use League\Container\Argument\ArgumentInterface;
 use League\Container\Argument\ArgumentResolverInterface;
 use League\Container\Argument\DefaultValueArgument;
@@ -201,6 +204,22 @@ class ReflectionContainer implements ArgumentResolverInterface, ContainerInterfa
                 continue;
             }
 
+            $forModelAttributes = $param->getAttributes(ForModel::class);
+            if (count($forModelAttributes) > 0) {
+                $forModel = $forModelAttributes[0]->newInstance();
+                assert($forModel instanceof ForModel, 'Expected ForModel attribute instance.');
+                $type = $param->getType();
+                if (!$type instanceof ReflectionNamedType) {
+                    throw new NotFoundException(r("Unable to resolve model repository for parameter '{param}' in '{method}'.", [
+                        'param' => $name,
+                        'method' => $method->getName(),
+                    ]));
+                }
+
+                $arguments[] = new LiteralArgument($this->resolveRepositoryForModel($type->getName(), $forModel));
+                continue;
+            }
+
             $attributes = $param->getAttributes(Inject::class);
             if (count($attributes) > 0) {
                 $injector = $attributes[0]->newInstance();
@@ -251,5 +270,35 @@ class ReflectionContainer implements ArgumentResolverInterface, ContainerInterfa
         }
 
         return $this->resolveArguments($arguments);
+    }
+
+    private function resolveRepositoryForModel(string $parameterType, ForModel $forModel): EntityRepository
+    {
+        $entityClass = trim($forModel->model);
+        if ('' === $entityClass || false === class_exists($entityClass)) {
+            throw new NotFoundException(r("Unable to resolve entity class '{class}' for #[ForModel].", [
+                'class' => $forModel->model,
+            ]));
+        }
+
+        try {
+            $orm = $this->getContainer()->get(OrmManager::class);
+        } catch (ContainerExceptionInterface|NotFoundExceptionInterface) {
+            throw new NotFoundException('Unable to resolve OrmManager for #[ForModel].');
+        }
+
+        if (!$orm instanceof OrmManager) {
+            throw new NotFoundException('Resolved OrmManager service is invalid.');
+        }
+
+        $repository = $orm->repository($entityClass);
+
+        if (EntityRepository::class !== $parameterType && false === is_a($repository, $parameterType)) {
+            throw new NotFoundException(r("#[ForModel] requires parameter type '{type}' to accept EntityRepository.", [
+                'type' => $parameterType,
+            ]));
+        }
+
+        return $repository;
     }
 }

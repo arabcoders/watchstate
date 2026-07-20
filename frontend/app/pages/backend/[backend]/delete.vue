@@ -71,7 +71,7 @@
                 </p>
                 <ul class="list-disc space-y-1 pl-5">
                   <li>Remove records metadata that references the given backend.</li>
-                  <li>Run data integrity check to remove no longer used records.</li>
+                  <li>Remove local records that no longer have backend metadata.</li>
                   <li>Update <code>servers.yaml</code> file and remove backend configuration.</li>
                 </ul>
               </div>

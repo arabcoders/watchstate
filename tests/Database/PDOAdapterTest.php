@@ -659,7 +659,7 @@ class PDOAdapterTest extends TestCase
         $migrations = new PackageMigrationFactory();
 
         self::assertTrue($migrations->isMigrated($pdo), 'Reset should preserve package migration state.');
-        self::assertSame('1', (string) $pdo->query('SELECT COUNT(*) FROM migration_version')?->fetchColumn());
+        self::assertSame('2', (string) $pdo->query('SELECT COUNT(*) FROM migration_version')?->fetchColumn());
         self::assertSame('0', (string) $pdo->query('SELECT COUNT(*) FROM migration_lock')?->fetchColumn());
     }
 
