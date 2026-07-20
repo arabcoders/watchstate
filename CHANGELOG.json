@@ -1,9 +1,37 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "b9352ac369fcd64242319211691a898c8ee86018",
-    "date": "2026-07-20T04:25:19+00:00",
+    "full_sha": "151da23b14a2a57dcdd9e2583130f631ad4d8495",
+    "date": "2026-07-20T18:48:56+00:00",
     "commits": [
+      {
+        "sha": "151da23b",
+        "full_sha": "151da23b14a2a57dcdd9e2583130f631ad4d8495",
+        "message": "Feat: add new media health report",
+        "author": "arabcoders",
+        "date": "2026-07-20T18:48:56+00:00"
+      },
+      {
+        "sha": "59ad7c52",
+        "full_sha": "59ad7c52a7c460370af85fea6c2cc9cf2e872a65",
+        "message": "refactor: remove the partial report views",
+        "author": "arabcoders",
+        "date": "2026-07-20T18:48:21+00:00"
+      },
+      {
+        "sha": "8bf07388",
+        "full_sha": "8bf073883086ed6ab188084990fdbe14e68b8866",
+        "message": "fix: plex mutli episode parser",
+        "author": "arabcoders",
+        "date": "2026-07-20T18:46:45+00:00"
+      },
+      {
+        "sha": "862fa3e0",
+        "full_sha": "862fa3e06a29edd0d92693f132c92cd6c5508e65",
+        "message": "feat: add model attr casting",
+        "author": "arabcoders",
+        "date": "2026-07-20T18:45:55+00:00"
+      },
       {
         "sha": "b9352ac3",
         "full_sha": "b9352ac369fcd64242319211691a898c8ee86018",
