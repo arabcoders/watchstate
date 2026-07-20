@@ -10,15 +10,16 @@ box, this tool supports `Jellyfin`, `Plex` and `Emby` media servers.
 
 # Updates
 
+### 2026-07-20
+
+Media Health is now the central place to audit media record problems. It replaces the 
+old separate parity, duplicate-reference, and file-integrity views with one report for backend 
+metadata coverage, GUID conflicts, duplicate GUIDs, duplicate file references, structural metadata disagreement, 
+path disagreement, weak matches, and optional local file checks. See the [Media Health guide](/guides/media-health.md) for details.
+
 ### 2026-05-25
 
 Path matching is now available in v1.8.5+. It lets items match using a GUID source derived from the media path, which helps when your backends share the same media files but have unreliable or inconsistent external IDs. See the [path matching guide](/guides/path-match.md) for setup and backfill instructions.
-
-### 2026-04-30
-
-WatchState now uses the new versioned `v02` database schema. On first boot after updating, startup may take a bit longer than usual while legacy databases are imported, migrations are applied, and indexes are rebuilt.
-
-During that upgrade, the old database files are kept as `.migrated` safety copies. Once the first boot finishes and you have confirmed everything looks good, you can delete those `.migrated` files if you want to reclaim the space.
 
 Please refer to [NEWS](/NEWS.md) for the latest updates and changes.
 
@@ -30,11 +31,9 @@ Please refer to [NEWS](/NEWS.md) for the latest updates and changes.
 * Sync backends play state (`many-to-many` or `one-way`).
 * Backup your backends play state into `portable` format.
 * Receive [webhook](guides/webhooks.md) events from media backends.
-* Find `un-matched` or `mis-matched` items.
+* Find record issues with [Media Health](guides/media-health.md).
 * Search your backend metadata.
-* Check if your media servers reporting same data via the parity checks.
 * Sync your watch [progress/play](FAQ.md#sync-watch-progress) state via webhooks or scheduled tasks.
-* Check if your media backends have stale references to old files.
 
 If you like my work, you might also like my other project [YTPTube](https://github.com/arabcoders/ytptube), which is
 simple and to the point yt-dlp frontend to help download content from all supported sites by yt-dlp.

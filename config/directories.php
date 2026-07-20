@@ -14,4 +14,5 @@ return [
     '{tmp_dir}/webhooks',
     '{tmp_dir}/debug',
     '{tmp_dir}/console',
+    '{tmp_dir}/media-health',
 ];

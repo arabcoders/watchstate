@@ -231,12 +231,12 @@
       <template #body>
         <form id="env_add_form" class="space-y-5" @submit.prevent="addVariable">
           <UFormField label="Environment key" name="form_key">
-            <USelect
+            <USelectMenu
               id="form_key"
               v-model="form_key"
               :items="formKeyItems"
               value-key="value"
-              placeholder="Select Key"
+              placeholder="Search or select key"
               icon="i-lucide-key-round"
               class="w-full"
               @update:model-value="keyChanged"
@@ -307,7 +307,7 @@
             </div>
 
             <div v-else class="space-y-3">
-              <USelect
+              <USelectMenu
                 v-if="form_choice && form_choice.length > 0"
                 id="form_value"
                 v-model="formSelectValue"

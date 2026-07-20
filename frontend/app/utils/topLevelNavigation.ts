@@ -18,9 +18,7 @@ type TopLevelEntryId =
   | 'processes'
   | 'backup'
   | 'report'
-  | 'parity'
-  | 'integrity'
-  | 'duplicate'
+  | 'media-health'
   | 'url-check'
   | 'env'
   | 'custom'
@@ -227,37 +225,15 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     matchPath: '/report',
   },
   {
-    id: 'parity',
+    id: 'media-health',
     section: 'diagnostics',
-    label: 'Data Parity',
-    pageLabel: 'Data Parity',
+    label: 'Media Health',
+    pageLabel: 'Media Health',
     breadcrumbSectionLabel: 'Diagnostics',
-    description: 'Check data consistency across backends.',
-    icon: 'i-lucide-database',
-    to: '/parity',
-    matchPath: '/parity',
-  },
-  {
-    id: 'integrity',
-    section: 'diagnostics',
-    label: 'Files Integrity',
-    pageLabel: 'Files Integrity',
-    breadcrumbSectionLabel: 'Diagnostics',
-    description: 'Verify local media files still exist.',
-    icon: 'i-lucide-file-check-2',
-    to: '/integrity',
-    matchPath: '/integrity',
-  },
-  {
-    id: 'duplicate',
-    section: 'diagnostics',
-    label: 'Duplicate Refs',
-    pageLabel: 'Duplicate Refs',
-    breadcrumbSectionLabel: 'Diagnostics',
-    description: 'Find duplicate history records.',
-    icon: 'i-lucide-copy',
-    to: '/duplicate',
-    matchPath: '/duplicate',
+    description: 'Find unhealthy media records.',
+    icon: 'i-lucide-radar',
+    to: '/media_health',
+    matchPath: '/media_health',
   },
   {
     id: 'url-check',

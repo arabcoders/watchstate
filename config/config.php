@@ -10,6 +10,7 @@ use App\Commands\Events\DispatchCommand;
 use App\Commands\State\BackupCommand;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
+use App\Commands\State\MediaHealthCommand;
 use App\Commands\State\PlaylistCommand;
 use App\Commands\State\ValidateCommand;
 use App\Commands\System\PruneCommand;
@@ -148,6 +149,12 @@ return (function () {
     $config['tmpDir'] = fix_path(env('WS_TMP_DIR', ag($config, 'path')));
 
     $dbFile = ag($config, 'path') . '/db/' . PdoFactory::DB_FILE;
+
+    $config['media_health'] = [
+        'keep' => max(1, (int) env('WS_MEDIA_HEALTH_KEEP', 3)),
+        'check_files' => (bool) env('WS_MEDIA_HEALTH_CHECK_FILES', false),
+        'path' => ag($config, 'tmpDir') . '/media-health',
+    ];
 
     $isMemory = 'MEMORY' === env('WS_DB_MODE', 'WAL');
     $pragma = [
@@ -412,6 +419,14 @@ return (function () {
                 'enabled' => (bool) env('WS_CRON_VALIDATE', false),
                 'timer' => $checkTaskTimer((string) env('WS_CRON_VALIDATE_AT', '0 4 */25 * *'), '0 4 */25 * *'),
                 'args' => env('WS_CRON_VALIDATE_ARGS', '-v'),
+            ],
+            MediaHealthCommand::TASK_NAME => [
+                'command' => MediaHealthCommand::ROUTE,
+                'name' => MediaHealthCommand::TASK_NAME,
+                'info' => 'Generate cached media health audit.',
+                'enabled' => (bool) env('WS_CRON_MEDIA_HEALTH', true),
+                'timer' => $checkTaskTimer((string) env('WS_CRON_MEDIA_HEALTH_AT', '0 5 * * *'), '0 5 * * *'),
+                'args' => env('WS_CRON_MEDIA_HEALTH_ARGS', '-v'),
             ],
             DispatchCommand::TASK_NAME => [
                 'command' => DispatchCommand::ROUTE,
