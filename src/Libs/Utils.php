@@ -1649,79 +1649,229 @@ if (!function_exists('exception_log')) {
 if (!function_exists('parse_episode_range')) {
     /**
      * Parse episode range from a file name.
+     * Supported examples:
+     *
+     * S01E01, S01E01-E02, S01E01-02, S01E01E02,S01E01-E02-E03,S01E01.S01E02
+     * E001, E001-E002, E001-002, 1x01, 1x01-02,
+     * Season 01 Episode 01, Season 01 Episode 01-02, Episode 01-02
      *
      * @param string $file The file name to parse.
      *
-     * @return array{status: bool, multi: bool, season: int, start: int, end: int} Returns an array with the parsing result.
+     * @return array{status:bool,multi:bool,season:int,start:int,end:int} Returns an array with the parsing result.
      */
     function parse_episode_range(string $file): array
     {
-        $file = trim($file);
-        if (empty($file)) {
-            return ['status' => false, 'multi' => false, 'season' => 0, 'start' => 0, 'end' => 0];
-        }
-
-        // Season (first Sxx found)
-        if (!preg_match('/S(\d{1,3})/i', $file, $season)) {
-            return ['status' => false, 'multi' => false, 'season' => 0, 'start' => 0, 'end' => 0];
-        }
-
-        $eps = [];
-
-        // 1) Explicit E-captures: E01, E02, ...
-        if (preg_match_all('/E(\d{1,3})/i', $file, $m1)) {
-            foreach ($m1[1] as $e) {
-                $eps[] = (int) $e;
-            }
-        }
-
-        // 2) Shorthand after delimiters: -03, .03, -E03 .E03
-        // Avoid matching resolution fragments like 108 from 1080p by ensuring the following
-        // character is not another digit.
-        if (preg_match_all('/[.\-](?:E)?(\d{1,3})(?!\d)/i', $file, $m2, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
-            foreach ($m2 as $match) {
-                [$_, $fullOffset] = $match[0];
-                [$value, $offset] = $match[1];
-                $nextIndex = (int) $offset + strlen($value);
-                $nextChar = $file[$nextIndex] ?? '';
-
-                if ('' !== $nextChar && ctype_alpha($nextChar)) {
-                    continue;
-                }
-
-                $prefix = substr($file, 0, (int) $fullOffset);
-                $lastEpisodeIndex = strripos($prefix, 'E');
-                if (false === $lastEpisodeIndex) {
-                    continue;
-                }
-
-                $context = substr($file, $lastEpisodeIndex, $fullOffset - $lastEpisodeIndex);
-                $context = preg_replace('/\s+/', '', $context);
-
-                if (!preg_match('/^E\d{1,3}(?:[.\-]\d{1,3})*$/i', $context)) {
-                    continue;
-                }
-
-                $eps[] = (int) $value;
-            }
-        }
-
-        // If nothing captured yet (edge case), try a final fallback: SxxEyy only
-        if (!$eps && preg_match('/S\d{1,3}E(\d{1,3})/i', $file, $m3)) {
-            $eps[] = (int) $m3[1];
-        }
-
-        if (!$eps) {
-            return ['status' => false, 'multi' => false, 'season' => (int) $season[1], 'start' => 0, 'end' => 0];
-        }
-
-        return [
-            'status' => true,
-            'multi' => count($eps) > 1,
-            'season' => (int) $season[1],
-            'start' => min($eps),
-            'end' => max($eps),
+        $failed = [
+            'status' => false,
+            'multi' => false,
+            'season' => 0,
+            'start' => 0,
+            'end' => 0,
         ];
+
+        if ('' === ($file = trim(basename($file)))) {
+            return $failed;
+        }
+
+        /**
+         * Convert an episode expression into episode numbers.
+         * Examples:
+         * 20                       => [20]
+         * 20.S01E21|20-21|20-E21   => [20, 21]
+         * 20E21E22                 => [20, 21, 22]
+         *
+         * @return list<int>
+         */
+        $parseEpisodes = static function (string $start, string $tail): array {
+            $episodes = [(int) $start];
+
+            if ('' === $tail) {
+                return $episodes;
+            }
+
+            preg_match_all('/ E(?<repeated>\d{1,4}) | [.-] (?:S\d{1,3})? E? (?<delimited>\d{1,4}) /ix', $tail, $matches, PREG_SET_ORDER);
+
+            foreach ($matches as $match) {
+                $value = '';
+
+                if (isset($match['repeated']) && '' !== $match['repeated']) {
+                    $value = $match['repeated'];
+                } elseif (isset($match['delimited']) && '' !== $match['delimited']) {
+                    $value = $match['delimited'];
+                }
+
+                if ('' !== $value) {
+                    $episodes[] = (int) $value;
+                }
+            }
+
+            return array_values(array_unique($episodes));
+        };
+
+        /**
+         * 1. Standard season/episode notation:
+         * S01E20, S01E20-E21, S01E20-21, S01E20E21, S01E20-E21-E22, S01E20.S01E21
+         * The tail must be contiguous. This is what prevents later filename fragments from being consumed.
+         */
+        if (preg_match(
+            '/
+                (?<![A-Z0-9])
+                S(?<season>\d{1,3})
+                E(?<start>\d{1,4})
+                (?<tail>
+                    (?:
+                        E\d{1,4}
+                        |
+                        [.-](?:S\d{1,3})?E?\d{1,4}
+                    )*
+                )
+            /ix',
+            $file,
+            $match,
+        )) {
+            $episodes = $parseEpisodes(start: $match['start'], tail: $match['tail'] ?? '');
+
+            return [
+                'status' => true,
+                'multi' => count($episodes) > 1,
+                'season' => (int) $match['season'],
+                'start' => min($episodes),
+                'end' => max($episodes),
+            ];
+        }
+
+        /**
+         * 2. Textual season/episode notation:
+         * Season 01 Episode 20, Season 01 Episode 20-21, Season 1 Ep 20-21
+         */
+        if (preg_match(
+            '/
+                (?<![A-Z0-9])
+                Season[\s._-]*
+                (?<season>\d{1,3})
+                [\s._-]+
+                (?:Episode|Ep)[\s._-]*
+                (?<start>\d{1,4})
+                (?<tail>
+                    (?:
+                        E\d{1,4}
+                        |
+                        [.-](?:E)?\d{1,4}
+                    )*
+                )
+            /ix',
+            $file,
+            $match,
+        )) {
+            $episodes = $parseEpisodes(start: $match['start'], tail: $match['tail'] ?? '');
+
+            return [
+                'status' => true,
+                'multi' => count($episodes) > 1,
+                'season' => (int) $match['season'],
+                'start' => min($episodes),
+                'end' => max($episodes),
+            ];
+        }
+
+        /**
+         * 3. NxM notation:
+         * 1x20, 1x20-21, 01x020-021
+         */
+        if (preg_match(
+            '/
+                (?<!\d)
+                (?<season>\d{1,3})
+                x
+                (?<start>\d{1,4})
+                (?<tail>
+                    (?:
+                        [.-]\d{1,4}
+                    )*
+                )
+                (?!\d)
+            /ix',
+            $file,
+            $match,
+        )) {
+            $episodes = $parseEpisodes(start: $match['start'], tail: $match['tail'] ?? '');
+
+            return [
+                'status' => true,
+                'multi' => count($episodes) > 1,
+                'season' => (int) $match['season'],
+                'start' => min($episodes),
+                'end' => max($episodes),
+            ];
+        }
+
+        /**
+         * 4. Seasonless explicit episode notation:
+         * E000, E020, E020-E021, E020-021, E020E021
+         * A separator or start-of-string must precede E. This avoids matching the
+         * E inside XXE2020, FOOE40536, WEBRip, and similar filename fragments.
+         */
+        if (preg_match(
+            '/
+                (?:
+                    ^
+                    |
+                    [\s._\-[\(]
+                )
+                E(?<start>\d{1,4})
+                (?<tail>
+                    (?:
+                        E\d{1,4}
+                        |
+                        [.-]E?\d{1,4}
+                    )*
+                )
+            /ix',
+            $file,
+            $match,
+        )) {
+            $episodes = $parseEpisodes(start: $match['start'], tail: $match['tail'] ?? '');
+            return [
+                'status' => true,
+                'multi' => count($episodes) > 1,
+                'season' => 0,
+                'start' => min($episodes),
+                'end' => max($episodes),
+            ];
+        }
+
+        /*
+         * 5. Seasonless textual notation:
+         * Episode 20, Episode 20-21, Episode 20-20, Ep 020-021
+         */
+        if (preg_match(
+            '/
+                (?<![A-Z0-9])
+                (?:Episode|Ep)[\s._-]*
+                (?<start>\d{1,4})
+                (?<tail>
+                    (?:
+                        E\d{1,4}
+                        |
+                        [.-]E?\d{1,4}
+                    )*
+                )
+            /ix',
+            $file,
+            $match,
+        )) {
+            $episodes = $parseEpisodes(start: $match['start'], tail: $match['tail'] ?? '');
+
+            return [
+                'status' => true,
+                'multi' => count($episodes) > 1,
+                'season' => 0,
+                'start' => min($episodes),
+                'end' => max($episodes),
+            ];
+        }
+
+        return $failed;
     }
 }
 
