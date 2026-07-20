@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "3275c2144789b4e54fa8b2e8bbfc42d0f375ca68",
-    "date": "2026-07-18T16:52:08+00:00",
+    "full_sha": "b9352ac369fcd64242319211691a898c8ee86018",
+    "date": "2026-07-20T04:25:19+00:00",
     "commits": [
+      {
+        "sha": "b9352ac3",
+        "full_sha": "b9352ac369fcd64242319211691a898c8ee86018",
+        "message": "refactor: ignore Folder type for media browsers. Fix #866",
+        "author": "arabcoders",
+        "date": "2026-07-20T04:25:19+00:00"
+      },
+      {
+        "sha": "50cc9ec6",
+        "full_sha": "50cc9ec6b5ead8f54f2783db10226c717823d7cf",
+        "message": "chore: update external packages",
+        "author": "arabcoders",
+        "date": "2026-07-20T04:24:44+00:00"
+      },
       {
         "sha": "3275c214",
         "full_sha": "3275c2144789b4e54fa8b2e8bbfc42d0f375ca68",
