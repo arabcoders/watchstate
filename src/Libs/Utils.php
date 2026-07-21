@@ -1890,7 +1890,7 @@ if (!function_exists('flat_array')) {
         $out = [];
 
         foreach ($obj as $key => $val) {
-            $path = $prefix ? "{$prefix}{$separator}{$key}" : $key;
+            $path = $prefix ? "{$prefix}{$separator}{$key}" : (string) $key;
 
             if ((is_array($val) || is_object($val)) && count((array) $val) > 0) {
                 $out = array_merge($out, flat_array((array) $val, $path, $separator));
