@@ -1,5 +1,19 @@
 [
   {
+    "tag": "Untagged",
+    "full_sha": "95b560a32ee4a805d8a5fc9ea33d125aeec95a2b",
+    "date": "2026-07-21T19:24:22+00:00",
+    "commits": [
+      {
+        "sha": "95b560a3",
+        "full_sha": "95b560a32ee4a805d8a5fc9ea33d125aeec95a2b",
+        "message": "Fix flat_array() type error when flattening a JSON list\n\nforeach over a list produces integer keys. When $prefix is empty,\n$path was assigned $key directly, so an int got passed as the\n$prefix argument on the next recursive call, which is typed string.\nThis throws a TypeError for any request body containing a JSON\narray (e.g. PUT /v1/api/identities/{id} with a backends array),\nsurfacing as a 503 in the API.\n\nFixes #869",
+        "author": "andrejkurlovic",
+        "date": "2026-07-21T19:24:22+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v1.10.0",
     "full_sha": "28177001c5c68d7d0bfffcc8a55d799740f29288",
     "date": "2026-07-20T19:14:58+00:00",
