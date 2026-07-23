@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "83d96a68ed04a67a4db266958a9b2795946e7924",
-    "date": "2026-07-23T23:19:28+00:00",
+    "full_sha": "52502c1ddca278a3aee4e2c6fb4f4a0d6f5898cc",
+    "date": "2026-07-23T23:40:41+00:00",
     "commits": [
+      {
+        "sha": "52502c1d",
+        "full_sha": "52502c1ddca278a3aee4e2c6fb4f4a0d6f5898cc",
+        "message": "fix: update checkout steps for conditional registry handling in build workflow",
+        "author": "arabcoders",
+        "date": "2026-07-23T23:40:41+00:00"
+      },
       {
         "sha": "83d96a68",
         "full_sha": "83d96a68ed04a67a4db266958a9b2795946e7924",
