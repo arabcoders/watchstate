@@ -53,7 +53,7 @@
   <button
     v-if="toggleable"
     type="button"
-    class="block min-w-0 flex-1 cursor-pointer text-left"
+    class="block min-w-0 flex-1 cursor-pointer select-text text-left"
     :aria-expanded="expanded || wrapped"
     @click="emit('toggleExpand')"
   >
@@ -71,7 +71,7 @@ import { useStorage } from '@vueuse/core';
 import { computed } from 'vue';
 import { useDialog } from '~/composables/useDialog';
 import type { ServerJsonLogEntry } from '~/types';
-import { goto_history_item, makeEventName } from '~/utils';
+import { copyText, goto_history_item, makeEventName } from '~/utils';
 import {
   getLogLevel,
   LOG_LEVEL_ICON,
@@ -185,6 +185,22 @@ const menuItems = computed<Array<Array<MenuItem>>>(() => {
       label: 'Log details',
       icon: 'i-lucide-panel-right-open',
       onSelect: () => emit('details', props.log),
+    },
+    {
+      label: 'Copy text',
+      icon: 'i-lucide-message-square-text',
+      onSelect: () => {
+        copyText(
+          `[${props.log.datetime}] ${props.log.level.toUpperCase()} [${props.log.logger}] ${props.log.message}`,
+        );
+      },
+    },
+    {
+      label: 'Copy raw',
+      icon: 'i-lucide-braces',
+      onSelect: () => {
+        copyText(JSON.stringify(props.log));
+      },
     },
   ];
 
