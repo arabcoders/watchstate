@@ -78,8 +78,15 @@ jobs:
       matrix:
         php: [8.5]
     steps:
-      - name: Checkout
+      - name: Checkout (GitHub)
+        if: env.REGISTRY == ''
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Checkout (Gitea)
+        if: env.REGISTRY != ''
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -199,8 +206,15 @@ jobs:
     env:
       ARCH: amd64
     steps:
-      - name: Checkout
+      - name: Checkout (GitHub)
+        if: env.REGISTRY == ''
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Checkout (Gitea)
+        if: env.REGISTRY != ''
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -297,8 +311,15 @@ jobs:
     env:
       ARCH: arm64
     steps:
-      - name: Checkout
+      - name: Checkout (GitHub)
+        if: env.REGISTRY == ''
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Checkout (Gitea)
+        if: env.REGISTRY != ''
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
