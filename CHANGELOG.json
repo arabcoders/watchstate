@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "95b560a32ee4a805d8a5fc9ea33d125aeec95a2b",
-    "date": "2026-07-21T19:24:22+00:00",
+    "full_sha": "83d96a68ed04a67a4db266958a9b2795946e7924",
+    "date": "2026-07-23T23:19:28+00:00",
     "commits": [
+      {
+        "sha": "83d96a68",
+        "full_sha": "83d96a68ed04a67a4db266958a9b2795946e7924",
+        "message": "fix: update action versions and improve StructuredLogLine component with copy options",
+        "author": "arabcoders",
+        "date": "2026-07-23T23:19:28+00:00"
+      },
       {
         "sha": "95b560a3",
         "full_sha": "95b560a32ee4a805d8a5fc9ea33d125aeec95a2b",
