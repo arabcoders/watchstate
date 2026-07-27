@@ -34,19 +34,14 @@
     </UDropdownMenu>
 
     <span
-      :class="[logLevelBadgeClass(getLogLevel(log.level)), compact ? 'w-16! text-[9px]' : '']"
+      :class="[
+        logLevelBadgeClass(getLogLevel(log.level)),
+        compact ? 'w-20! text-[10px]' : 'text-[11px]',
+      ]"
       @click="showDetails ? $emit('details', log) : undefined"
     >
-      <UIcon :name="LOG_LEVEL_ICON[getLogLevel(log.level)]" class="size-3" />
+      <UIcon :name="LOG_LEVEL_ICON[getLogLevel(log.level)]" class="size-3.5 shrink-0" />
       {{ getLogLevel(log.level) }}
-    </span>
-
-    <span
-      v-if="log.logger"
-      :title="log.logger"
-      class="inline-block max-w-[46vw] truncate align-middle text-[11px] font-semibold text-toned sm:max-w-104"
-    >
-      [{{ log.logger }}]
     </span>
   </span>
 
