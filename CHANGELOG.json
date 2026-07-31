@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "e48215ca3c200a7fbd22275e6de6afbbbd41b880",
-    "date": "2026-07-27T04:30:48+00:00",
+    "full_sha": "dce42713672a211b0cd40f71a72b39670dbf807e",
+    "date": "2026-07-31T19:12:13+00:00",
     "commits": [
+      {
+        "sha": "dce42713",
+        "full_sha": "dce42713672a211b0cd40f71a72b39670dbf807e",
+        "message": "docs: improve docs consistency.",
+        "author": "arabcoders",
+        "date": "2026-07-31T19:12:13+00:00"
+      },
+      {
+        "sha": "4314d813",
+        "full_sha": "4314d813e26646c2b26821c5acdf6a29a5e661e7",
+        "message": "refactor: expose the transport queue",
+        "author": "arabcoders",
+        "date": "2026-07-31T19:05:01+00:00"
+      },
       {
         "sha": "e48215ca",
         "full_sha": "e48215ca3c200a7fbd22275e6de6afbbbd41b880",
