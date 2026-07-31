@@ -1,26 +1,22 @@
 # Two-Way Sync
 
-Two-way sync in WatchState helps keep your `play progress` and `watch state` synchronized across multiple backends. It’s
-called "many-to-many" sync, meaning you can sync data between several backends, and they all stay up to date with each
-other. This sync is powered by WatchState's `import` and `export` features.
+Two-way sync lets WatchState exchange `play progress` and `watch state` between multiple backends. It uses the `import`
+and `export` features, so each backend can provide data and receive updates.
 
 # Use Cases
 
-- If you watch a show on Plex and want to continue it on Jellyfin or Emby, two-way sync ensures your progress is saved.
-- Keep your media backends synced so you always know where you left off.
+- If you watch a show on Plex and continue it on Jellyfin or Emby, two-way sync sends the progress between those
+  backends.
+- The configured backends exchange play state through the local WatchState database.
 
 # How Sync Works
 
-WatchState first pulls the latest play and progress information from your backends, then stores it locally this is the
-`import` process. The system checks to ensure the data is up-to-date, and older data is saved as metadata without
-overriding the most current watch state.
+WatchState first pulls play and progress information from the backends and stores it locally. This is the `import`
+process. Older data is retained as metadata and does not replace the latest local watch state.
 
-On the export side, we compare the backend's last sync date with any local changes. From there, we create a list of
-items that need updating for each backend. If there are only a few changes, we trigger a quick sync operation
-`push mode`. If the changes are more extensive, we perform a full export, which compares all remote data with the local
-data. This full export only happens when there are many changes and/or metadata is missing from the backend, which is
-why it's crucial to keep the `Enable Import` option enabled, or disable it only when you want that
-backend to stay in metadata-only mode.
+During export, WatchState compares the backend's last sync date with local changes and builds a list of updates for each
+backend. A small change uses `push mode`. Larger changes use a full export, which compares remote and local data. Keep
+`Enable Import` enabled unless the backend should remain in metadata-only mode.
 
 # Setting Up Two-Way Sync
 

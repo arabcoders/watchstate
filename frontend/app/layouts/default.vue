@@ -75,7 +75,7 @@
           <template #header>
             <UDashboardNavbar :toggle="false" :title="pageTitle" :ui="dashboardNavbarUi">
               <template #left>
-                <div class="flex min-w-0 items-center gap-2">
+                <div class="flex min-w-0 shrink-0 items-center gap-2">
                   <UDashboardSidebarToggle class="lg:hidden" />
                   <UButton
                     to="/"
@@ -92,7 +92,7 @@
               </template>
 
               <template #right>
-                <div class="flex items-center gap-1.5 sm:gap-2">
+                <div class="flex min-w-0 shrink items-center gap-0.5 sm:gap-2">
                   <UTooltip v-if="inContainer" text="Task Scheduler Status">
                     <UButton
                       color="neutral"
@@ -117,20 +117,10 @@
                     </UButton>
                   </UTooltip>
 
-                  <UButton
-                    to="/events"
-                    color="neutral"
-                    variant="ghost"
-                    size="sm"
-                    icon="i-lucide-calendar-days"
-                  >
-                    <span class="hidden xl:inline">Events</span>
-                    <StatusDots
-                      :stats="eventsStats.stats.value"
-                      v-if="!eventsStats.loading.value"
-                    />
-                    <UIcon v-else name="i-lucide-loader-circle" class="size-4 animate-spin" />
-                  </UButton>
+                  <HeaderStatus
+                    :stats="systemStats.stats.value"
+                    :loading="systemStats.loading.value"
+                  />
 
                   <UTooltip text="Change Identity" placement="bottom">
                     <UButton
@@ -263,9 +253,9 @@ import TaskScheduler from '~/components/TaskScheduler.vue';
 import NewVersion from '~/components/NewVersion.vue';
 import Dialog from '~/components/Dialog.vue';
 import SettingsPanel from '~/components/SettingsPanel.vue';
-import StatusDots from '~/components/StatusDots.vue';
+import HeaderStatus from '~/components/HeaderStatus.vue';
 import IdentitySelection from '~/components/IdentitySelection.vue';
-import useEventsStats from '~/composables/useEventsStats';
+import useSystemStats from '~/composables/useSystemStats';
 
 type NavEntry = {
   id: string;
@@ -329,7 +319,7 @@ registerToastController(useToast());
 const { newVersionIsAvailable } = useVersionUpdate();
 const auth = useAuthStore();
 const breakpoints = useBreakpoints({ mobile: 0, desktop: 640 });
-const eventsStats = useEventsStats(['pending']);
+const systemStats = useSystemStats();
 const { pageBackgroundOverride, requestPageBackgroundReload } = usePageBackground();
 
 const bgEnable = useStorage<boolean>('bg_enable', true);
@@ -760,7 +750,7 @@ const dashboardSidebarUi = {
 const dashboardNavbarUi = {
   root: 'border-b border-default bg-transparent px-4 py-3 sm:px-5 lg:px-6',
   title: 'text-sm font-semibold text-highlighted',
-  right: 'flex items-center shrink-0 gap-1.5',
+  right: 'flex min-w-0 shrink items-center gap-0.5 sm:gap-1.5',
 };
 
 const dashboardPanelUi = {
@@ -956,7 +946,7 @@ onMounted(async () => {
   });
   await getVersion();
   await loadImage();
-  eventsStats.start();
+  systemStats.start();
 });
 
 onBeforeUnmount(() => {

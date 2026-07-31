@@ -474,14 +474,16 @@ final class Initializer
                 ->pushHandler($wrap->withHandler($accessHandler));
 
             assert($this->accessLog instanceof Logger, 'Expected logger instance for access log.');
-            $this->accessLog->pushHandler($wrap->withHandler(
-                $this->createStreamHandler(
-                    'php://stderr',
-                    ag($accessContext, 'level', Level::Info),
-                    true,
-                    ag($accessContext, 'format', 'text'),
-                ),
-            ));
+            if (true === $inContainer) {
+                $this->accessLog->pushHandler($wrap->withHandler(
+                    $this->createStreamHandler(
+                        'php://stderr',
+                        ag($accessContext, 'level', Level::Info),
+                        true,
+                        ag($accessContext, 'format', 'text'),
+                    ),
+                ));
+            }
         }
 
         foreach ($loggers as $name => $context) {

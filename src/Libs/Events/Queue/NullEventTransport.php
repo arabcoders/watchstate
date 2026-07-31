@@ -44,4 +44,40 @@ final class NullEventTransport implements EventTransportInterface
     {
         return 0;
     }
+
+    /**
+     * @inheritdoc
+     */
+    public function inspect(
+        int $limit = 100,
+        int $offset = 0,
+        ?EventEnvelopeState $state = null,
+        ?string $filter = null,
+    ): array {
+        return [];
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function inspectCount(?EventEnvelopeState $state = null, ?string $filter = null): int
+    {
+        return 0;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function inspectOne(string $id): ?EventEnvelope
+    {
+        return null;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function inspectStates(): array
+    {
+        return [];
+    }
 }

@@ -494,6 +494,21 @@ export interface EventsItem {
 }
 
 /**
+ * Represents an item currently held by the transport queue.
+ */
+export interface TransportQueueItem {
+  id: string;
+  event: string;
+  state: 'pending' | 'processing' | 'failed';
+  created_at: string;
+}
+
+export interface TransportQueueDetail extends TransportQueueItem {
+  data: JsonObject;
+  options: JsonObject;
+}
+
+/**
  * Event statistics from /api/system/events/stats endpoint.
  */
 export interface EventsStats {
@@ -507,6 +522,15 @@ export interface EventsStats {
   failed: number;
   /** Number of cancelled events */
   cancelled: number;
+}
+
+export interface SystemStats {
+  events: PendingStats;
+  transport: PendingStats;
+}
+
+export interface PendingStats {
+  pending: number;
 }
 
 /**

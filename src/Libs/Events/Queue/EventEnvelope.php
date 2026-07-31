@@ -20,6 +20,7 @@ final class EventEnvelope
         public readonly array $opts,
         public readonly string $createdAt,
         public readonly mixed $ack = null,
+        public readonly EventEnvelopeState $state = EventEnvelopeState::PENDING,
     ) {}
 
     /**
@@ -82,6 +83,23 @@ final class EventEnvelope
             opts: $this->opts,
             createdAt: $this->createdAt,
             ack: $ack,
+            state: $this->state,
+        );
+    }
+
+    /**
+     * Return this envelope with its current transport state.
+     */
+    public function withState(EventEnvelopeState $state): self
+    {
+        return new self(
+            id: $this->id,
+            event: $this->event,
+            data: $this->data,
+            opts: $this->opts,
+            createdAt: $this->createdAt,
+            ack: $this->ack,
+            state: $state,
         );
     }
 

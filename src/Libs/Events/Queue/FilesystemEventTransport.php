@@ -128,6 +128,121 @@ final class FilesystemEventTransport implements EventTransportInterface
         return count($this->pendingFiles());
     }
 
+    /**
+     * @inheritdoc
+     */
+    public function inspect(
+        int $limit = 100,
+        int $offset = 0,
+        ?EventEnvelopeState $state = null,
+        ?string $filter = null,
+    ): array {
+        $this->reclaimStale();
+
+        if ('' === trim((string) $filter)) {
+            return $this->readInspectable(array_slice(
+                $this->inspectableFiles($state),
+                max(0, $offset),
+                max(1, $limit),
+            ));
+        }
+
+        return array_slice($this->inspectable($state, $filter), max(0, $offset), max(1, $limit));
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function inspectCount(?EventEnvelopeState $state = null, ?string $filter = null): int
+    {
+        $this->reclaimStale();
+
+        if ('' === trim((string) $filter)) {
+            return count($this->inspectableFiles($state));
+        }
+
+        return count($this->inspectable($state, $filter));
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function inspectOne(string $id): ?EventEnvelope
+    {
+        foreach ($this->inspectable(null, null) as $envelope) {
+            if ($envelope->id === $id) {
+                return $envelope;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function inspectStates(): array
+    {
+        return EventEnvelopeState::cases();
+    }
+
+    /**
+     * @return array<EventEnvelope>
+     */
+    private function inspectable(?EventEnvelopeState $requestedState, ?string $filter): array
+    {
+        $filter = strtolower(trim((string) $filter));
+        $items = $this->readInspectable($this->inspectableFiles($requestedState));
+
+        return array_values(array_filter(
+            $items,
+            static fn(EventEnvelope $envelope): bool => str_contains(
+                strtolower($envelope->id . ' ' . $envelope->event),
+                $filter,
+            ),
+        ));
+    }
+
+    /**
+     * @return array<array{state:string,path:string}>
+     */
+    private function inspectableFiles(?EventEnvelopeState $requestedState): array
+    {
+        $files = [];
+
+        foreach (EventEnvelopeState::cases() as $state) {
+            if (null !== $requestedState && $state !== $requestedState) {
+                continue;
+            }
+
+            foreach ($this->files($state->value) as $file) {
+                $files[] = ['state' => $state->value, 'path' => $this->dir($state->value) . '/' . $file];
+            }
+        }
+
+        return $files;
+    }
+
+    /**
+     * @param array<array{state:string,path:string}> $files
+     * @return array<EventEnvelope>
+     */
+    private function readInspectable(array $files): array
+    {
+        $items = [];
+
+        foreach ($files as $file) {
+            try {
+                $items[] = EventEnvelope::fromArray($this->readPayload($file['path']), $file['path'])
+                    ->withState(EventEnvelopeState::from($file['state']));
+            } catch (Throwable) {
+                continue;
+            }
+        }
+
+        return $items;
+    }
+
     private function ensureDirectories(): void
     {
         foreach (['pending', 'processing', 'failed', 'tmp'] as $dir) {
@@ -162,15 +277,23 @@ final class FilesystemEventTransport implements EventTransportInterface
      */
     private function pendingFiles(): array
     {
+        return $this->files('pending', self::EXTENSION);
+    }
+
+    /**
+     * @return array<string>
+     */
+    private function files(string $directory, ?string $suffix = null): array
+    {
         $files = [];
 
-        foreach (new DirectoryIterator($this->dir('pending')) as $file) {
+        foreach (new DirectoryIterator($this->dir($directory)) as $file) {
             if ($file->isDot() || false === $file->isFile()) {
                 continue;
             }
 
             $name = $file->getFilename();
-            if (false === str_ends_with($name, self::EXTENSION)) {
+            if (null !== $suffix && false === str_ends_with($name, $suffix)) {
                 continue;
             }
 

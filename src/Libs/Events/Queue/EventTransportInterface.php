@@ -37,4 +37,33 @@ interface EventTransportInterface
      * Count currently queued envelopes when supported by the transport.
      */
     public function count(): int;
+
+    /**
+     * Inspect envelopes currently held by the transport without claiming them.
+     *
+     * @return array<EventEnvelope>
+     */
+    public function inspect(
+        int $limit = 100,
+        int $offset = 0,
+        ?EventEnvelopeState $state = null,
+        ?string $filter = null,
+    ): array;
+
+    /**
+     * Count envelopes visible through transport inspection.
+     */
+    public function inspectCount(?EventEnvelopeState $state = null, ?string $filter = null): int;
+
+    /**
+     * Find one envelope by its exact identifier without claiming it.
+     */
+    public function inspectOne(string $id): ?EventEnvelope;
+
+    /**
+     * Return the states exposed by this transport.
+     *
+     * @return array<EventEnvelopeState>
+     */
+    public function inspectStates(): array;
 }

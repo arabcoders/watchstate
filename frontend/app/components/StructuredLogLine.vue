@@ -34,26 +34,21 @@
     </UDropdownMenu>
 
     <span
-      :class="[logLevelBadgeClass(getLogLevel(log.level)), compact ? 'w-16! text-[9px]' : '']"
+      :class="[
+        logLevelBadgeClass(getLogLevel(log.level)),
+        compact ? 'w-20! text-[10px]' : 'text-[11px]',
+      ]"
       @click="showDetails ? $emit('details', log) : undefined"
     >
-      <UIcon :name="LOG_LEVEL_ICON[getLogLevel(log.level)]" class="size-3" />
+      <UIcon :name="LOG_LEVEL_ICON[getLogLevel(log.level)]" class="size-3.5 shrink-0" />
       {{ getLogLevel(log.level) }}
-    </span>
-
-    <span
-      v-if="log.logger"
-      :title="log.logger"
-      class="inline-block max-w-[46vw] truncate align-middle text-[11px] font-semibold text-toned sm:max-w-104"
-    >
-      [{{ log.logger }}]
     </span>
   </span>
 
   <button
     v-if="toggleable"
     type="button"
-    class="block min-w-0 flex-1 cursor-pointer text-left"
+    class="block min-w-0 flex-1 cursor-pointer select-text text-left"
     :aria-expanded="expanded || wrapped"
     @click="emit('toggleExpand')"
   >
@@ -71,7 +66,7 @@ import { useStorage } from '@vueuse/core';
 import { computed } from 'vue';
 import { useDialog } from '~/composables/useDialog';
 import type { ServerJsonLogEntry } from '~/types';
-import { goto_history_item, makeEventName } from '~/utils';
+import { copyText, goto_history_item, makeEventName } from '~/utils';
 import {
   getLogLevel,
   LOG_LEVEL_ICON,
@@ -185,6 +180,22 @@ const menuItems = computed<Array<Array<MenuItem>>>(() => {
       label: 'Log details',
       icon: 'i-lucide-panel-right-open',
       onSelect: () => emit('details', props.log),
+    },
+    {
+      label: 'Copy text',
+      icon: 'i-lucide-message-square-text',
+      onSelect: () => {
+        copyText(
+          `[${props.log.datetime}] ${props.log.level.toUpperCase()} [${props.log.logger}] ${props.log.message}`,
+        );
+      },
+    },
+    {
+      label: 'Copy raw',
+      icon: 'i-lucide-braces',
+      onSelect: () => {
+        copyText(JSON.stringify(props.log));
+      },
     },
   ];
 

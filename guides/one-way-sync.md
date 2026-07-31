@@ -71,9 +71,8 @@ Do exactly as you did for the main backend, but make the following changes:
     - If you have multiple backends, keep this option disabled and proceed to Step 2.
 
 > [!IMPORTANT]  
-> Selecting the correct options is crucial to avoid altering the data in the main backend. When
-> *`Enable Import`* is disabled, WatchState automatically keeps metadata refresh
-> enabled for that backend.
+> These settings prevent this backend from importing data and changing the main backend. When *`Enable Import`* is
+> disabled, WatchState keeps metadata refresh enabled for that backend.
 
 ### Step 2
 
@@ -84,7 +83,7 @@ You have two options:
 Go to the <!--i:i-lucide-server--> **Backends** page, and under the backend, there is a `Quick operations` list. Select
 *`2. Force export local play state to this backend.`* Once selected, you'll be redirected to
 the **Operations** > <!--i:i-lucide-terminal--> **Console** page, where the command will be pre-filled
-for you. Just hit *Enter* or click the <!--i:i-lucide-terminal--> **Execute** button.
+for you. Press *Enter* or click the <!--i:i-lucide-terminal--> **Execute** button.
 
 ##### Option 2 (Multiple Backends)
 
