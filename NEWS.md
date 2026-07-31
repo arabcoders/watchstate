@@ -11,8 +11,8 @@ During that upgrade, the old database files are kept as `.migrated` safety copie
 Cross-backend sync for playlists is now available as a **beta** feature. This is still early work, so expect some rough edges, 
 backend-specific issues, and possible breaking changes as it matures. 
 
-Because playlist behavior differs across backends, the feature may change over time, and if it proves too unreliable to support consistently, 
-it may be reworked or removed. To enable it, simply go to Tasks and enable the `Playlist` task.
+Playlist behavior differs across backends, so this feature may change or be removed if consistent support is not
+possible. To enable it, go to Tasks and enable the `Playlist` task.
 
 ### 2026-04-23
 
@@ -31,27 +31,24 @@ support from WatchState. This change only effects external users, home/managed u
 
 ### 2025-10-29
 
-After more than **3.5 years**, **2.2k+ commits**, **900+ stars**, and **1 million+ downloads**, we’re happy to announce
-the first stable release of **WatchState v1.0.0**.
+After more than **3.5 years**, **2.2k+ commits**, **900+ stars**, and **1 million+ downloads**, **WatchState v1.0.0**
+is now available as the first stable release.
 
-This milestone marks the project’s maturity and reliability for production use. We extend our thanks to everyone who
-provided feedback, reported bugs, and helped refine the tool your input has been invaluable.
+This release closes the initial v1.0.0 feature set. Thanks to everyone who provided feedback and reported bugs.
 
-The current feature set and stability meet our goals, so future work will focus on **maintenance and bug fixes**.
-Feedback and suggestions remain welcome, but **major new features** may be limited as we prioritize **stability and
-long-term reliability**.
+Future work will focus on **maintenance and bug fixes**. Feedback and suggestions remain welcome, but **major new
+features** may be limited.
 
 ### 2025-08-18
 
-We have added the final feature before tagging `v1.0.0`, The new feature is a tool by which you can search your database
-for duplicate file references, this is useful if you have multiple backends that reference the same file, they are
-reporting different metadata for same file.
+We have added the final feature planned before tagging `v1.0.0`: a tool for finding duplicate file references in the
+database. It is useful when multiple backends reference the same file but report different metadata.
 
 To make it skip multi-episode items, go to backends page, and from quick operation list, select
 `Force metadata import from this backend.` this will recreate the metadata which we have included flag to mark
 multi-episode items.
 
-Subsequent updates will mostly focus on bug fixes and performance improvements, as well as documentation updates.
+Future updates will focus on bug fixes, performance improvements, and documentation updates.
 
 ### 2025-08-14
 
@@ -64,24 +61,21 @@ Please refer to [NEWS](/NEWS.md) for the latest updates and changes.
 
 ### 2025-05-30
 
-The new [webhooks](/guides/webhooks.md) system is now available, please start migrating your systems to use it as, we
-have deprecated the old webhook system, and it will be removed in the next release. The new system is more robust and
-user-friendly compared to the old one.
+The new [webhooks](/guides/webhooks.md) system is now available. The old webhook system is deprecated and will be
+removed in the next release. Migrate existing integrations to the new endpoint.
 
 ### 2025-05-23
 
-We have recently added new and improved webhook endpoint that can be used as generic endpoint for all users and
-backends, please head to [webhook-v2 guide](guides/webhooks-v2.md) for more information. Please note that the new
-webhook endpoint still in beta, and things might change/break in the future.
+The new webhook endpoint supports all users and backends. See the [webhook-v2 guide](guides/webhooks-v2.md) for setup
+instructions. The endpoint is still in beta and may change.
 
 ### 2025-05-14
 
-**Breaking change**, we have switched to using user/password form of authentication instead of API key for the WebUI,
-this will lead to better security and easier to use. The API key is still available for the API, but not for the WebUI.
+**Breaking change:** WebUI authentication now uses a username and password instead of an API key. API keys remain
+available for the API, but not for the WebUI.
 
-The first time you access the WebUI after the update, you will be asked to create a new system user/password. This is a
-one time operation. Sorry about that. if you somehow lost your password, you can reset it by running the following
-command from the host machine.
+The first time you access the WebUI after the update, you will be asked to create a system username and password. If you
+lose the password, reset it by running the following command from the host machine.
 
 ```bash
 # change docker to podman if you are using podman
@@ -90,10 +84,8 @@ $ docker exec watchstate console system:resetpassword
 
 ### 2025-05-05
 
-We’ve added a new feature that lets you send requests **sequentially** to the backends instead of using the default
-**parallel** mode. This can be especially helpful if you have very large libraries, slow disks, or simply want to avoid
-overloading the backends with too many concurrent requests. You can enable by enabling `WS_HTTP_SYNC_REQUESTS`
-environment variable. This mode only applies to `import`, `export`, and `backup` tasks at the moment.
+Requests can now be sent **sequentially** instead of using the default **parallel** mode. Set
+`WS_HTTP_SYNC_REQUESTS` to enable sequential requests. This applies to `import`, `export`, and `backup` tasks.
 
 Additionally, two command-line flags let you override the mode on the fly `--sync-requests` and `--async-requests`.
 
@@ -146,14 +138,12 @@ this is still in early stages, and might not work as expected. report any issues
 
 We have added initial support to browse the WebUI as sub user, it's still in early stages, only few Endpoints support
 it.
-We have also added support to webhooks to allow sub users, you simply have to add new hooks using `user@backend`. Please
-take look at [this FAQ](FAQ.md#how-to-add-webhooks) to learn how to use it for sub users.
+Webhooks now support sub-users. Add a hook using `user@backend`; see the [FAQ](FAQ.md#how-to-add-webhooks) for details.
 
 ### 2025-02-02
 
-We are happy to announce that we have merged in direct support for multi-user in `state:import` and `state:export`
-commands and tasks. Therefore, `state:sync` command has been removed. Once you generate the sub users configs. it will
-start working alongside the main user.
+`state:import` and `state:export` now support multiple users directly. The `state:sync` command has been removed. After
+generating the sub-user configuration, those commands run alongside the main user.
 
 ### 2025-02-01
 
@@ -268,9 +258,8 @@ without leaving the WebUI.
 
 ### 2024-08-01
 
-We recently enabled listening on tls connections via `8443` which can be controlled by `HTTPS_PORT` environment
-variable.
-Before today, we simply only exposed the port via the `Dockerfile`, but we weren't listening for connections on it.
+TLS connections are now available on port `8443`, controlled by the `HTTPS_PORT` environment variable.
+Previously, the `Dockerfile` exposed the port without listening for connections on it.
 
 However, please keep in mind that the certificate is self-signed, and you might get a warning from your browser. You can
 either accept the warning or add the certificate to your trusted certificates. We strongly recommend using a reverse
@@ -298,28 +287,20 @@ the [FAQ](FAQ.md#How-does-the-file-integrity-feature-works).
 
 ### 2024-07-06
 
-Recently we have introduced a new feature that allows you to use Jellyfin and Emby OAuth access tokens for syncing
-your play state. This is especially handy if you're not the server owner and can't create API keys. Please note, this
-feature is in its experimental phase, so you might encounter some issues as we yet to explorer the full depth of the
-implementation. We're actively working on making it better, If you have any feedback or suggestions, please let us know.
+Jellyfin and Emby OAuth access tokens can now be used to sync play state. This is useful when you cannot create API keys.
+The feature is experimental. Report any problems or feedback.
 
-Getting your OAuth token is easy. When prompted, simply enter your `username:password` in place of the API key through
-the `WebUI` or the `config:add/manage` command. `WatchState` will automatically contact the backend and generate the
-token for you, as this step is required to get more information like your `User ID` which is sadly inaccessible without
-us generating the token. Both Emby & Jellyfin doesn't provide an API endpoint to inquiry about the current user.
+When prompted, enter `username:password` instead of an API key in the `WebUI` or the `config:add/manage` command.
+WatchState contacts the backend and generates the token to obtain the `User ID`. Neither Emby nor Jellyfin provides an
+API endpoint for querying the current user.
 
-We have also added new `config:test` command to run functional tests on your backends, this will not alter your state,
-And it's quite useful to know if the tool is able to communicate with your backends. without problems, It will report
-the following, `OK` which mean the indicated test has passed, `FA` which mean the indicated test has failed. And `SK`
-which mean the indicated test has been skipped or not yet implemented.
+The new `config:test` command runs functional tests against your backends without changing their state. It reports
+`OK` for a passed test, `FA` for a failed test, and `SK` for a skipped or unimplemented test.
 
 ### 2024-06-23
 
-WE are happy to announce that the `WebUI` is ready for wider usage and we are planning to release it in the next few
-months.
-We are actively working on it to improve it. If you have any feedback or suggestions, please let us know. We feel it's
-almost future complete
-for the things that we want.
+The `WebUI` is ready for wider use. We planned a public release for the following months and continued testing it with
+user feedback.
 
 On another related news, we have added new environment variable `WS_API_AUTO` "disabled by default" which can be used
 to automatically expose your **API KEY/TOKEN**. This is useful for users who are using the `WebUI` from many different
@@ -336,19 +317,14 @@ can be used. This environment variable can be enabled by setting `WS_API_AUTO=tr
 
 ### 2024-05-14
 
-We are happy to announce the beta testing of the `WebUI`. To get started on using it you just need to visit the url
-`http://localhost:8080` We are supposed to
-enabled it by default tomorrow, but we decided to give you a head start. We are looking forward to your feedback. If you
-don't use the `WebUI` then you need to
-add the environment variable `WEBUI_ENABLED=0` in your `compose.yaml` file. and restart the container.
+The `WebUI` is now available for beta testing at `http://localhost:8080`. To disable it, set `WEBUI_ENABLED=0` in
+`compose.yaml` and restart the container.
 
 ### 2024-05-13
 
-In preparation for the beta testing of `WebUI` in two days, we have made little breaking change, we have changed the
-environment variable `WS_WEBUI_ENABLED` to just `WEBUI_ENABLED`, We made this change to make sure people don't disable
-the `WebUI`by mistake via the environment page in the `WebUI`. The `WebUI` will be enabled by default, in two days from
-now, to disable it from now add `WEBUI_ENABLED=false` to your `compose.yaml` file. As this environment variable is
-system level, it cannot be set via `.env` file.
+Before the `WebUI` beta, the environment variable changed from `WS_WEBUI_ENABLED` to `WEBUI_ENABLED`. The WebUI will be
+enabled by default. To disable it, set `WEBUI_ENABLED=false` in `compose.yaml`; this system-level variable cannot be set
+through `.env`.
 
 Note: `WS_WEBUI_ENABLED` will be gone in few weeks, However it will still work for now, if `WEBUI_ENABLED` is not set.
 
@@ -356,10 +332,8 @@ Note: `WS_WEBUI_ENABLED` will be gone in few weeks, However it will still work f
 
 **Edit** - We received requests that people are exposing watchstate externally, and there was concern that having open
 webhook endpoints might lead to abuse. As such, we have added a new environment variable `WS_SECURE_API_ENDPOINTS`.
-Simply set
-the environment variable to `1` to secure the webhook endpoint. This means you have to add `?apikey=yourapikey` to the
-end
-of the webhook endpoint.
+Set the environment variable to `1` to secure the webhook endpoint. Requests must then include
+`?apikey=yourapikey`.
 
 ----- 
 
@@ -372,8 +346,7 @@ set from the `compose.yaml` file itself.
 
 ### 2024-05-04
 
-The new webhook endpoint no longer requires a key, and it's now open to public you just need to specify the backend
-name.
+The new webhook endpoint does not require a key. Specify the backend name in the request.
 
 ### 2024-04-30 - [BREAKING CHANGE]
 
@@ -386,22 +359,16 @@ to.
 
 ### 2024-03-08
 
-This update include breaking changes to how we process commands, we have streamlined the command interface to accept
-some consistent flags and options. Notably, we have added `-s, --select-backend` flag to all commands that accept it.
-commands that were accepting comma separated list of backends now needs to be separate option call for example
+This update changes how commands accept flags and options. The `-s, --select-backend` flag is now available on every
+command that supports backend selection.
+Commands that accepted a comma-separated backend list now require one option per backend. For example, use
 `--select-backend home_plex --select-backend home_jellyfin` instead of `--select-backend home_plex,home_jellyfin`.
 
-All commands that was accepting backend name as argument now accepts `-s, --select-backend` flag. This change is to make
-the command interface more consistent and easier to use.
+Commands that accepted a backend name as an argument now accept the `-s, --select-backend` flag.
 
-Another breaking change is the removal of the `-c, --config` flag from all commands that was accepting it. This flag was
-used to override the default `servers.yaml` file. This was not working as expected as there are more than just the
-`servers.yaml`
-to consider like, the state of cache, and the state of the database. As such, we have removed this flag. However, we
-have
-added a new environment variable called `WS_BACKENDS_FILE` which can be used to override the default `servers.yaml`
-file.
-We strongly recommend not to use it as it might lead to unexpected behavior.
+The `-c, --config` flag has been removed. It only changed the `servers.yaml` path and did not change other state paths,
+such as the cache and database. Use `WS_BACKENDS_FILE` to override the default `servers.yaml` path. This setting can
+leave other state files in a different location, so use it only when those paths are configured separately.
 
 We started working on a `Web API` which hopefully will lead to a `web frontend` to manage the tool. This is a long
 term goal, and it's not expected to be ready soon. However, the `Web API` is expected within 3rd quarter of 2024.
@@ -428,8 +395,7 @@ called`WS_CRON_PROGRESS=1`.
 We push progress update every `45 minutes`, to change it like other features add `WS_CRON_PROGRESS_AT="*/45 * * * *"`
 This is the default timer.
 
-On another point, we have decided to enable backup by default. To disable it simply add new environment
-variable `WS_CRON_BACKUP=0`.
+Backups are now enabled by default. To disable them, set `WS_CRON_BACKUP=0`.
 
 ### 2023-10-31
 

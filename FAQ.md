@@ -11,7 +11,7 @@ For each backend:
 * **Import** allows WatchState to read data from that backend.
 * **Export** allows WatchState to write data to that backend.
 
-Put simply, **Import** controls what WatchState can use as a source, while **Export** controls what WatchState can update as a target.
+**Import** controls what WatchState can use as a source. **Export** controls what WatchState can update as a target.
 
 For example, if Plex should provide the data and Jellyfin should be updated to match it, enable:
 
@@ -113,7 +113,7 @@ Due to limitations on the Jellyfin/Emby side, our implementation requires you to
 `username:password` format. This is necessary because their API does not allow us to determine the currently
 authenticated user directly.
 
-When prompted for the API key, simply enter your credentials like this:
+When prompted for the API key, enter your credentials in this format:
 
 ```
 username:password
@@ -458,22 +458,22 @@ Click **<!--i:i-lucide-save--> Save Settings**.
 
 ## I Keep receiving 'jellyfin' item 'id: name' is marked as 'played' vs local state 'unplayed'
 
-Sadly, this is due to bug in jellyfin, where it marks the item as played without updating the LastPlayedDate, and as
-such, watchstate doesn't really know the item has changed since last sync. Unfortunately, there is no way to fix this
-issue from our side for the `state:import` task as it working as intended.
+Jellyfin can mark an item as played without updating `LastPlayedDate`. WatchState uses that date to detect changes, so
+the `state:import` task cannot detect this change from the backend response.
 
-### Workarounds.
+### Workarounds
 
-There are two possible workarounds:
+There are two workarounds:
 
 ### (1) Webhooks (Recommended)
 
-However, we managed implemented a workaround for this issue using the webhooks as workaround, until jellyfin devs fixes
-the issue. Please enable webhooks for your jellyfin backend to avoid this issue.
+Enable webhooks for the Jellyfin backend. Webhook events include the state change even when `LastPlayedDate` is not
+updated.
 
-### (1) by special handling
+### (2) Special handling
 
-We have added an experimental workaround for this issue in the `state:import` command. To enable it, add the env `WS_CLIENTS_JELLYFIN_FIX_PLAYED` via the `Configuration > Environment` page. It's turned off by default as it may cause some issues as it's untested in production, so please use it with caution and report any issues you find.
+The `state:import` command has an experimental workaround. Enable it by adding `WS_CLIENTS_JELLYFIN_FIX_PLAYED` on the
+`Configuration > Environment` page. It is disabled by default because it has not been tested in production.
 
 ## DM001 (`error: dm001_stale_date`) - Item queued for re-processing.
 

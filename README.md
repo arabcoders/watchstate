@@ -86,38 +86,36 @@ mkdir -p ./data && docker run -itd --name watchstate \
 ```
 
 > [!IMPORTANT]
-> It's really important to match the `user:`, `--user` to the owner of the `data` directory, the container is rootless,
-> as such it will crash if it's unable to write to the data directory.
+> Match `user:` and `--user` to the owner of the `data` directory. The container runs rootless and exits if it cannot
+> write to that directory.
 >
-> It's really not recommended to run containers as root, but if you fail to run the container you can try setting the
-`user: "0:0"` or `--user '0:0'` if that works it means you have permissions issues. refer to [FAQ](FAQ.md) to
-> troubleshoot the problem.
+> Running the container as root is not recommended. If the container fails to start, try `user: "0:0"` or
+> `--user '0:0'`. If that works, the problem is a permissions issue. See the [FAQ](FAQ.md) for troubleshooting steps.
 
 ### Unraid users
 
-For `Unraid` users You can install the `Community Applications` plugin, and search for  **watchstate** it comes
-preconfigured. Otherwise, to manually install it, you need to add value to the `Extra Parameters` section in advanced
-tab/view. add the following value `--user 99:100`.
+For `Unraid` users, install the `Community Applications` plugin and search for **watchstate**. It is preconfigured.
+To install it manually, add `--user 99:100` to the `Extra Parameters` section in the advanced tab.
 
-This has to happen before you start the container, otherwise it will have the old user id, and
-you then have to run the following command from terminal `chown -R 99:100 /mnt/user/appdata/watchstate`.
+Set this before starting the container. If the container already created files with another user ID, run
+`chown -R 99:100 /mnt/user/appdata/watchstate` from a terminal.
 
 ### Podman instead of docker
 
-To use this container with `podman` set `compose.yaml` `user` to `0:0`. it will appear to be working as root inside the
-container, but it will be mapped to the user in which the command was run under.
+To use this container with `podman`, set `user` to `0:0` in `compose.yaml`. The container appears to run as root, but
+Podman maps it to the user who ran the command.
 
 # Management
 
 After starting the container, you can access the WebUI by visiting `http://localhost:8080` in your browser.
 
 > [!NOTE]
-> Note, For the first time, you will be prompted to create a new system user, this is a one time operation.
+> On first access, you will be prompted to create a system user. This is a one-time operation.
 
 If you want WatchState to match items using local media paths, see the [path matching guide](guides/path-match.md).
 
-To add your backends, please click on the help button in the top right corner, and choose which method you
-want [one-way](guides/one-way-sync.md) or [two-way](guides/two-way-sync.md) sync. and follow the instructions.
+To add your backends, click the help button in the top-right corner and choose [one-way](guides/one-way-sync.md) or
+[two-way](guides/two-way-sync.md) sync. Follow the instructions in the selected guide.
 
 Once you have added your backends and imported your data you should see something like
 
@@ -128,16 +126,15 @@ Once you have added your backends and imported your data you should see somethin
 Currently, the tool supports three methods to import data from backends.
 
 - **Scheduled Tasks**.
-    - `A scheduled job that pull data from backends on a schedule.`
+    - `A scheduled job that pulls data from backends.`
 - **On demand**.
     - `Pull data from backends on demand. By running the import task manually.`
 - **Webhooks**.
     - `Receive events from backends and update the database accordingly.`
 
 > [!NOTE]
-> Even if all your backends support webhooks, you should keep import task enabled. This help keep healthy relationship
-> and pick up any missed events. For more information please check the [webhook guide](/guides/webhooks.md) to
-> understand webhooks limitations.
+> Keep the import task enabled even when all your backends support webhooks. It can pick up missed events. See the
+> [webhook guide](/guides/webhooks.md) for backend limitations.
 
 # FAQ
 
@@ -146,15 +143,13 @@ to configure things.
 
 # Social channels
 
-If you have quick questions or would like to chat with other users, you can join
-the [Discord server](https://discord.gg/haUXHJyj6Y). Please note that this is a solo project, so replies may take some
-time. I’m based in the `UTC+3` timezone.
+If you have questions or want to chat with other users, join the [Discord server](https://discord.gg/haUXHJyj6Y).
+This is a solo project, so replies may take some time. I’m based in the `UTC+3` timezone.
 
 # Donate
 
-If you’d like to show appreciation for my work, please note that I don’t accept donations. Instead, I encourage you to
-donate to a children’s charity of your choice. For
-example, [The International Make-A-Wish foundation](https://worldwish.org).
+I don’t accept donations. If you want to support the project, consider donating to a children’s charity such as
+[Make-A-Wish](https://worldwish.org).
 
 # Disclaimer
 

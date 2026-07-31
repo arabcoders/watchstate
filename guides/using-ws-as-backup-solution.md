@@ -53,8 +53,8 @@ After your backend is configured:
 
 ### Step 3: Run the initial import
 
-Now that you have added the all users, simply go to the <!--i:i-lucide-list-checks--> **Tasks** page and queue the `Import` task to
-start importing playstate. To bring all existing playstate into WatchState.
+After adding the users, go to the <!--i:i-lucide-list-checks--> **Tasks** page and queue the `Import` task. This imports
+the existing play state into WatchState.
 
 The task will take some time depending on your library size. Monitor progress at the <!--i:i-lucide-globe--> **Logs** page by
 checking the `task.YYYYMMDD.log` file. Once the task completed you should see something like

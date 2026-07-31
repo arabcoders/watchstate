@@ -237,13 +237,12 @@ Click *Save*.
 
 # Media Backends Webhook Limitations
 
-See the [backend limitations](/guides/backend-limitations.md) for a comprehensive list of per-backend requirements 
-and limitations, including webhook-specific event behaviour.
+See the [backend limitations](/guides/backend-limitations.md) for per-backend requirements and limitations, including
+webhook-specific event behavior.
 
 # Sometimes Newly Added Content Does Not Show Up
 
-As previously mentioned, webhooks aren't 100% reliable, thus it's recommended to enable **import/export tasks** to
-complement webhook functionality.
+Webhooks can miss events. Enable the **Import** and **Export** tasks as a second path for synchronizing changes.
 
-Simply go to the *Tasks* page and enable the *Import* and *Export* tasks. and set the schedule to `every 12 hours` or
-`every 24 hours` depending on your needs.
+Go to the *Tasks* page, enable the *Import* and *Export* tasks, and set the schedule to `every 12 hours` or
+`every 24 hours`.
