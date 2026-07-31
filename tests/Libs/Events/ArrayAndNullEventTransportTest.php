@@ -6,6 +6,7 @@ namespace Tests\Libs\Events;
 
 use App\Libs\Events\Queue\ArrayEventTransport;
 use App\Libs\Events\Queue\EventEnvelope;
+use App\Libs\Events\Queue\EventEnvelopeState;
 use App\Libs\Events\Queue\NullEventTransport;
 use App\Libs\TestCase;
 
@@ -35,6 +36,7 @@ final class ArrayAndNullEventTransportTest extends TestCase
 
         self::assertSame($envelope, $transport->enqueue($envelope));
         self::assertSame(1, $transport->count());
+        self::assertSame($envelope->id, $transport->inspectOne($envelope->id)?->id);
     }
 
     public function test_array_dequeue(): void
@@ -67,5 +69,23 @@ final class ArrayAndNullEventTransportTest extends TestCase
         $reclaimed = $transport->dequeue(10);
         self::assertCount(1, $reclaimed);
         self::assertSame($events[0]->id, $reclaimed[0]->id);
+    }
+
+    public function test_array_inspect(): void
+    {
+        $transport = new ArrayEventTransport();
+        $processing = EventEnvelope::create('on_webhook');
+        $pending = EventEnvelope::create('on_push');
+        $transport->enqueue($processing);
+        $transport->enqueue($pending);
+        $transport->dequeue(1);
+
+        $items = $transport->inspect(state: EventEnvelopeState::PROCESSING, filter: 'webhook');
+
+        self::assertTrue(array_is_list($items));
+        self::assertCount(1, $items);
+        self::assertSame($processing->id, $items[0]->id);
+        self::assertSame(EventEnvelopeState::PROCESSING, $items[0]->state);
+        self::assertSame(1, $transport->inspectCount(EventEnvelopeState::PROCESSING, 'webhook'));
     }
 }

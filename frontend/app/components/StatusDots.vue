@@ -11,9 +11,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { EventsStats } from '~/types';
+import type { PendingStats } from '~/types';
 
-const props = withDefaults(defineProps<{ stats: EventsStats; hideZero?: boolean }>(), {
+const props = withDefaults(defineProps<{ stats: PendingStats; hideZero?: boolean }>(), {
   hideZero: false,
 });
 

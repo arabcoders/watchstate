@@ -96,7 +96,10 @@ WatchState HTTP API reference. Examples use the default `/v1/api` prefix.
       - [DELETE /v1/api/system/guids/custom/{client}/{id}](#delete-v1apisystemguidscustomclientid)
       - [GET /v1/api/system/guids/custom/{client}/{index}](#get-v1apisystemguidscustomclientindex)
       - [GET /v1/api/system/events](#get-v1apisystemevents)
-      - [GET /v1/api/system/events/stats](#get-v1apisystemeventsstats)
+       - [GET /v1/api/system/events/stats](#get-v1apisystemeventsstats)
+       - [GET /v1/api/system/stats](#get-v1apisystemstats)
+       - [GET /v1/api/system/transport/queue](#get-v1apisystemtransportqueue)
+       - [GET /v1/api/system/transport/queue/{id}](#get-v1apisystemtransportqueueid)
       - [POST /v1/api/system/events](#post-v1apisystemevents)
       - [GET /v1/api/system/events/{id}](#get-v1apisystemeventsid)
       - [PATCH /v1/api/system/events/{id}](#patch-v1apisystemeventsid)
@@ -2581,6 +2584,85 @@ Returns event counts grouped by status.
 
 **Errors**:
 - `400 Bad Request` if any status name is invalid.
+
+---
+
+#### GET /v1/api/system/stats
+Returns the pending counts displayed in the global header.
+
+**Response**:
+```json
+{
+  "events": {
+    "pending": 3
+  },
+  "transport": {
+    "pending": 2
+  }
+}
+```
+
+---
+
+#### GET /v1/api/system/transport/queue
+Lists items currently held by the transport queue.
+
+**Query**:
+- `page` (optional) - Page number. Defaults to 1.
+- `perpage` (optional) - Items per page. Defaults to 25 and is limited to 100.
+- `state` (optional) - `pending`, `processing`, or `failed`.
+- `filter` (optional) - Match an envelope ID or event name.
+
+**Response**:
+```json
+{
+  "items": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "event": "on_webhook",
+      "state": "pending",
+      "created_at": "2026-03-28T12:00:00+00:00"
+    }
+  ],
+  "paging": {
+    "page": 1,
+    "total": 1,
+    "perpage": 25,
+    "next": null,
+    "previous": null
+  },
+  "filter": {
+    "state": "",
+    "filter": ""
+  },
+  "states": ["pending", "processing", "failed"]
+}
+```
+
+Queue item states are `pending`, `processing`, or `failed` when supported by the configured transport.
+
+**Errors**:
+- `400 Bad Request` if `state` is invalid.
+
+---
+
+#### GET /v1/api/system/transport/queue/{id}
+Returns one transport envelope by its exact identifier without claiming it.
+
+**Response**:
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "event": "on_webhook",
+  "state": "pending",
+  "created_at": "2026-03-28T12:00:00+00:00",
+  "data": {},
+  "options": {}
+}
+```
+
+**Errors**:
+- `404 Not Found` if the envelope is not currently visible in the transport.
 
 ---
 

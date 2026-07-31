@@ -12,6 +12,7 @@ type TopLevelEntryId =
   | 'backends'
   | 'history'
   | 'events'
+  | 'transport-queue'
   | 'tasks'
   | 'logs'
   | 'console'
@@ -112,6 +113,17 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     icon: 'i-lucide-calendar-days',
     to: '/events',
     matchPath: '/events',
+  },
+  {
+    id: 'transport-queue',
+    section: 'activity',
+    label: 'Transport',
+    pageLabel: 'Transport Queue',
+    breadcrumbSectionLabel: 'Activity',
+    description: 'Items in the transport queue.',
+    icon: 'i-lucide-inbox',
+    to: '/transport/queue',
+    matchPath: '/transport/queue',
   },
   {
     id: 'backends',

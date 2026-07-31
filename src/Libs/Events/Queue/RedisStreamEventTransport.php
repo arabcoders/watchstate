@@ -99,6 +99,139 @@ final class RedisStreamEventTransport implements EventTransportInterface
         return is_int($count) ? $count : 0;
     }
 
+    /**
+     * @inheritdoc
+     */
+    public function inspect(
+        int $limit = 100,
+        int $offset = 0,
+        ?EventEnvelopeState $state = null,
+        ?string $filter = null,
+    ): array {
+        if (null === $state && '' === trim((string) $filter)) {
+            $records = $this->readInspectable(max(1, $offset + $limit));
+            if ([] === $records) {
+                return [];
+            }
+
+            $ids = array_keys($records);
+            $items = $this->parseStreamEntries(
+                $records,
+                false,
+                $this->processingIds((string) reset($ids), (string) end($ids)),
+            );
+
+            return array_slice($items, max(0, $offset), max(1, $limit));
+        }
+
+        return array_slice($this->inspectable($state, $filter), max(0, $offset), max(1, $limit));
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function inspectCount(?EventEnvelopeState $state = null, ?string $filter = null): int
+    {
+        if (null === $state && '' === trim((string) $filter)) {
+            return $this->count();
+        }
+
+        return count($this->inspectable($state, $filter));
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function inspectOne(string $id): ?EventEnvelope
+    {
+        foreach ($this->inspectable(null, null) as $envelope) {
+            if ($envelope->id === $id) {
+                return $envelope;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function inspectStates(): array
+    {
+        return [EventEnvelopeState::PENDING, EventEnvelopeState::PROCESSING];
+    }
+
+    /**
+     * @return array<EventEnvelope>
+     */
+    private function inspectable(?EventEnvelopeState $state, ?string $filter): array
+    {
+        $records = $this->readInspectable();
+        $items = $this->parseStreamEntries($records, false, $this->processingIds());
+        $filter = strtolower(trim((string) $filter));
+
+        return array_values(array_filter($items, static function (EventEnvelope $envelope) use ($state, $filter): bool {
+            if (null !== $state && $envelope->state !== $state) {
+                return false;
+            }
+
+            return '' === $filter || str_contains(strtolower($envelope->id . ' ' . $envelope->event), $filter);
+        }));
+    }
+
+    /**
+     * @return array<string, true>
+     */
+    private function processingIds(string $start = '-', string $end = '+'): array
+    {
+        try {
+            $summary = $this->redis->rawCommand('XPENDING', $this->stream, $this->group);
+            $count = is_array($summary) && is_numeric($summary[0] ?? null) ? (int) $summary[0] : 0;
+            if ($count < 1) {
+                return [];
+            }
+
+            $records = $this->redis->rawCommand('XPENDING', $this->stream, $this->group, $start, $end, (string) $count);
+        } catch (Throwable $e) {
+            if (true === str_contains($e->getMessage(), 'NOGROUP')) {
+                return [];
+            }
+
+            throw $e;
+        }
+
+        if (false === is_array($records)) {
+            return [];
+        }
+
+        $ids = [];
+        foreach ($records as $record) {
+            if (false === is_array($record) || false === is_string($record[0] ?? null)) {
+                continue;
+            }
+
+            $ids[$record[0]] = true;
+        }
+
+        return $ids;
+    }
+
+    /**
+     * @return array<mixed>
+     */
+    private function readInspectable(?int $count = null): array
+    {
+        $records = null === $count
+            ? $this->redis->xRange($this->stream, '-', '+')
+            : $this->redis->xRange($this->stream, '-', '+', $count);
+
+        if (false === is_array($records)) {
+            throw new RuntimeException(r("Unable to inspect Redis stream '{stream}'.", ['stream' => $this->stream]));
+        }
+
+        return $records;
+    }
+
     private function createGroup(): void
     {
         if (true === $this->groupReady) {
@@ -173,9 +306,10 @@ final class RedisStreamEventTransport implements EventTransportInterface
 
     /**
      * @param array<mixed> $entries
+     * @param array<string, true> $processingIds
      * @return array<EventEnvelope>
      */
-    private function parseStreamEntries(array $entries): array
+    private function parseStreamEntries(array $entries, bool $cleanup = true, array $processingIds = []): array
     {
         $items = [];
 
@@ -196,16 +330,23 @@ final class RedisStreamEventTransport implements EventTransportInterface
 
             $data = json_decode($payload, true);
             if (false === is_array($data)) {
-                $this->redis->xAck($this->stream, $this->group, [$id]);
-                $this->redis->xDel($this->stream, [$id]);
+                if (true === $cleanup) {
+                    $this->redis->xAck($this->stream, $this->group, [$id]);
+                    $this->redis->xDel($this->stream, [$id]);
+                }
                 continue;
             }
 
             try {
-                $items[] = EventEnvelope::fromArray($data, $id);
+                $state = true === ($processingIds[$id] ?? false)
+                    ? EventEnvelopeState::PROCESSING
+                    : EventEnvelopeState::PENDING;
+                $items[] = EventEnvelope::fromArray($data, $id)->withState($state);
             } catch (Throwable) {
-                $this->redis->xAck($this->stream, $this->group, [$id]);
-                $this->redis->xDel($this->stream, [$id]);
+                if (true === $cleanup) {
+                    $this->redis->xAck($this->stream, $this->group, [$id]);
+                    $this->redis->xDel($this->stream, [$id]);
+                }
             }
         }
 
