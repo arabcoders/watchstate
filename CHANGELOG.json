@@ -1,5 +1,19 @@
 [
   {
+    "tag": "Untagged",
+    "full_sha": "0edad8a36c166ddaaa68ae6aa59c2c0ff55988fc",
+    "date": "2026-08-08T13:08:36+00:00",
+    "commits": [
+      {
+        "sha": "0edad8a3",
+        "full_sha": "0edad8a36c166ddaaa68ae6aa59c2c0ff55988fc",
+        "message": "fix: require authorization for backend webhook registration",
+        "author": "arabcoders",
+        "date": "2026-08-08T13:08:36+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v1.10.1",
     "full_sha": "07b3ef278247d2bc37983a34d169631a1c9826a2",
     "date": "2026-07-31T19:38:10+00:00",
