@@ -9,6 +9,7 @@ use App\API\Player\Index as PlayerIndex;
 use App\API\System\Auth;
 use App\API\System\HealthCheck;
 use App\API\System\StaticFiles;
+use App\API\WebHook;
 use App\Libs\Config;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
@@ -24,25 +25,29 @@ final class AuthorizationMiddleware implements MiddlewareInterface
     public const string KEY_NAME = 'apikey';
     public const string TOKEN_NAME = 'ws_token';
 
+    private const string MATCH_EXACT = 'exact';
+    private const string MATCH_PREFIX = 'prefix';
+
     /**
      * Public routes that are accessible without an API key. and must remain open.
      */
     private const array PUBLIC_ROUTES = [
-        PlayerIndex::URL,
-        PlexToken::URL,
-        StaticFiles::URL,
-        HealthCheck::URL,
-        Auth::URL . '/test',
-        Auth::URL . '/has_user',
-        Auth::URL . '/signup',
-        Auth::URL . '/login',
+        PlayerIndex::URL => self::MATCH_PREFIX,
+        StaticFiles::URL => self::MATCH_PREFIX,
+        PlexToken::URL . '/generate' => self::MATCH_EXACT,
+        PlexToken::URL . '/check' => self::MATCH_EXACT,
+        HealthCheck::URL => self::MATCH_EXACT,
+        Auth::URL . '/test' => self::MATCH_EXACT,
+        Auth::URL . '/has_user' => self::MATCH_EXACT,
+        Auth::URL . '/signup' => self::MATCH_EXACT,
+        Auth::URL . '/login' => self::MATCH_EXACT,
     ];
 
     /**
      * Routes that follow the open route policy. However, those routes are subject to user configuration.
      */
     private const array OPEN_ROUTES = [
-        '/webhook',
+        WebHook::URL => self::MATCH_EXACT,
     ];
 
     public function process(iRequest $request, iHandler $handler): iResponse
@@ -59,12 +64,17 @@ final class AuthorizationMiddleware implements MiddlewareInterface
 
         $openRoutes = self::PUBLIC_ROUTES;
         if (false === (bool) Config::get('api.secure', false)) {
-            $openRoutes = array_merge($openRoutes, self::OPEN_ROUTES);
+            $openRoutes += self::OPEN_ROUTES;
         }
 
-        foreach ($openRoutes as $route) {
+        foreach ($openRoutes as $route => $strategy) {
             $route = rtrim(parse_config_value($route), '/');
-            if (true === str_starts_with($requestPath, $route) || true === str_ends_with($requestPath, $route)) {
+            $matched = match ($strategy) {
+                self::MATCH_EXACT => $route === $requestPath,
+                self::MATCH_PREFIX => $route === $requestPath || true === str_starts_with($requestPath, $route . '/'),
+            };
+
+            if (true === $matched) {
                 return $handler->handle($request);
             }
         }
