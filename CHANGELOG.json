@@ -1,5 +1,26 @@
 [
   {
+    "tag": "Untagged",
+    "full_sha": "e81a6b7c78e4b27c94f23aa7f08f529d300311a6",
+    "date": "2026-08-09T19:10:38+00:00",
+    "commits": [
+      {
+        "sha": "e81a6b7c",
+        "full_sha": "e81a6b7c78e4b27c94f23aa7f08f529d300311a6",
+        "message": "refactor: remove pinia and rely on vue composables",
+        "author": "arabcoders",
+        "date": "2026-08-09T19:10:38+00:00"
+      },
+      {
+        "sha": "ee46f9f0",
+        "full_sha": "ee46f9f0ed2586e908c7b1e530145cc770ee07b0",
+        "message": "refactor: expose task failure errors",
+        "author": "arabcoders",
+        "date": "2026-08-09T18:43:10+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v1.10.2",
     "full_sha": "d8de53caed1cd85d25e194f36fd82e937b39aed4",
     "date": "2026-08-08T13:15:08+00:00",
