@@ -1,8 +1,6 @@
 import { abortNavigation, defineNuxtRouteMiddleware, navigateTo } from '#app';
-import { storeToRefs } from 'pinia';
-import { useStorage } from '@vueuse/core';
 import type { RouteLocationNormalized } from 'vue-router';
-import { useAuthStore } from '~/store/auth';
+import { useAuth } from '~/composables/useAuth';
 
 let next_check = 0;
 
@@ -26,9 +24,8 @@ export default defineNuxtRouteMiddleware(async (to: RouteLocationNormalized) => 
     return;
   }
 
-  const auth = useAuthStore();
-  const { authenticated, expiresAt } = storeToRefs(auth);
-  const token = useStorage<string | null>('token', null);
+  const auth = useAuth();
+  const { authenticated, expiresAt, token } = auth;
 
   if (token.value) {
     if (Date.now() > next_check) {

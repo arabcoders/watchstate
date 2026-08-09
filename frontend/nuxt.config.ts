@@ -65,7 +65,7 @@ export default defineNuxtConfig({
       linkActiveClass: 'is-selected',
     },
   },
-  modules: ['@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', '@nuxt/eslint'],
+  modules: ['@nuxt/ui', '@vueuse/nuxt', '@nuxt/eslint'],
   nitro: {
     sourceMap: isProd ? false : true,
     output: {

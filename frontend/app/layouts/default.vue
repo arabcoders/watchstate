@@ -239,7 +239,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, readonly, ref, watch } 
 import { useBreakpoints, useStorage } from '@vueuse/core';
 import { navigateTo } from '#app';
 import { useColorMode } from '#imports';
-import { useAuthStore } from '~/store/auth';
+import { useAuth } from '~/composables/useAuth';
 import { useMediaQuery } from '~/composables/useMediaQuery';
 import { usePageBackground } from '~/composables/usePageBackground';
 import { useDialog } from '~/composables/useDialog';
@@ -317,7 +317,7 @@ const route = useRoute();
 const colorMode = useColorMode();
 registerToastController(useToast());
 const { newVersionIsAvailable } = useVersionUpdate();
-const auth = useAuthStore();
+const auth = useAuth();
 const breakpoints = useBreakpoints({ mobile: 0, desktop: 640 });
 const systemStats = useSystemStats();
 const { pageBackgroundOverride, requestPageBackgroundReload } = usePageBackground();
