@@ -111,8 +111,7 @@
             v-if="exceptionOpen"
             class="ws-terminal ws-terminal-panel max-h-96 overflow-auto"
             :class="wrapException ? 'whitespace-pre-wrap wrap-break-word' : 'whitespace-pre'"
-            >{{ formatException(log.exception) }}</pre
-          >
+            >{{ formatException(log.exception) }}</pre>
         </section>
 
         <section v-if="detailRows.length > 0" class="space-y-3">
@@ -298,8 +297,7 @@
                   "
                   class="ws-terminal ws-terminal-panel max-h-96 overflow-auto"
                   :class="wrapFields ? 'whitespace-pre-wrap wrap-break-word' : 'whitespace-pre'"
-                  >{{ displayedFieldValue(field) }}</pre
-                >
+                  >{{ displayedFieldValue(field) }}</pre>
                 <p v-else class="wrap-break-word font-mono text-xs text-default">
                   {{ field.value }}
                 </p>
@@ -374,8 +372,7 @@
               v-if="!rawJsonQuery || filteredRawJsonLineCount > 0"
               class="ws-terminal ws-terminal-panel max-h-96 overflow-auto"
               :class="wrapRaw ? 'whitespace-pre-wrap wrap-break-word' : 'whitespace-pre'"
-              >{{ displayedRawJson }}</pre
-            >
+              >{{ displayedRawJson }}</pre>
           </div>
         </section>
       </div>

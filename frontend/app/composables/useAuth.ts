@@ -1,4 +1,3 @@
-import { defineStore } from 'pinia';
 import { useStorage } from '@vueuse/core';
 import { reactive, toRefs } from 'vue';
 import { request, parse_api_response } from '~/utils';
@@ -13,23 +12,23 @@ type LoginResponse = {
   token?: string;
 };
 
-export const useAuthStore = defineStore('auth', () => {
-  const state = reactive<{
-    token: string | null;
-    authenticated: boolean;
-    loading: boolean;
-    username: string | null;
-    expiresAt: string | null;
-  }>({
-    token: null,
-    authenticated: false,
-    loading: false,
-    username: null,
-    expiresAt: null,
-  });
+const state = reactive<{
+  token: string | null;
+  authenticated: boolean;
+  loading: boolean;
+  username: string | null;
+  expiresAt: string | null;
+}>({
+  token: null,
+  authenticated: false,
+  loading: false,
+  username: null,
+  expiresAt: null,
+});
 
-  const token = useStorage<string | null>('token', null);
+const token = useStorage<string | null>('token', null);
 
+export const useAuth = () => {
   const clearAuth = (): void => {
     state.token = null;
     state.authenticated = false;
@@ -77,7 +76,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (no_cache) {
       url += '?_=' + new Date().getTime();
     }
-    const req = await request(url);
+    const req = await request(url, no_cache ? { cache: 'no-store' } : {});
     const status = req.status === 200;
     if (req.ok && req) {
       const json = await parse_api_response<HasUserResponse>(req);
@@ -176,5 +175,5 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
-  return { ...toRefs(state), has_user, signup, login, logout, refresh, validate };
-});
+  return { ...toRefs(state), token, has_user, signup, login, logout, refresh, validate };
+};

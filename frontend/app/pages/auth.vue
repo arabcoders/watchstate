@@ -187,7 +187,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { navigateTo, useHead } from '#app';
-import { useAuthStore } from '~/store/auth';
+import { useAuth } from '~/composables/useAuth';
 import { copyText, notification } from '~/utils';
 
 type UserCredentials = {
@@ -202,7 +202,7 @@ const error = ref<string>('');
 const form_expose = ref<boolean>(false);
 const signup = ref<boolean>(false);
 
-const auth = useAuthStore();
+const auth = useAuth();
 const forgot_password = ref<boolean>(false);
 const polling_timer = ref<NodeJS.Timeout | null>(null);
 

@@ -25,6 +25,7 @@ use Monolog\Level;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
+use RuntimeException;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\ArrayInput;
@@ -384,6 +385,27 @@ final class TasksCommand extends Command
         return $this->runProcess($cmd, $input, $output, null);
     }
 
+    private static function failureReason(Process $process, int $exitCode, ?string $failureMessage): string
+    {
+        $reason = $process->getExitCodeText() ?? "exit code {$exitCode}";
+
+        try {
+            if ($process->hasBeenSignaled()) {
+                $reason .= " (signal {$process->getTermSignal()}, exit code {$exitCode})";
+            } else {
+                $reason .= " (exit code {$exitCode})";
+            }
+        } catch (RuntimeException) {
+            $reason .= " (exit code {$exitCode})";
+        }
+
+        if (null !== $failureMessage && '' !== trim($failureMessage)) {
+            $reason .= ': ' . trim($failureMessage);
+        }
+
+        return $reason;
+    }
+
     /**
      * Run a subprocess, routing all output through the logger via CaptureHandler.
      *
@@ -406,6 +428,7 @@ final class TasksCommand extends Command
             $process = Process::fromShellCommandline(implode(' ', $cmd), timeout: null);
             $started = make_date();
             $hadChildOutput = false;
+            $failureMessage = null;
 
             $process->start(function ($type, $out) use ($output, &$hadChildOutput) {
                 $out = trim((string) $out);
@@ -435,6 +458,7 @@ final class TasksCommand extends Command
                     $process->wait();
                 } catch (ProcessException $e) {
                     $process->stop();
+                    $failureMessage = $e->getMessage();
 
                     if (null !== $task) {
                         $this->logger->error("Task '{name}' failed: {exception.message}", [
@@ -455,19 +479,25 @@ final class TasksCommand extends Command
 
             if (false === $this->viaEvent && $hadChildOutput) {
                 $name = null !== $task ? $task['name'] : implode(' ', $cmd);
+                $duration = $ended->getTimestamp() - $started->getTimestamp();
+                $completionMessage = 0 === $exitCode
+                    ? "Task '{name}' succeeded in '{duration}'s."
+                    : "Task '{name}' failed after '{duration}'s: {reason}";
+                $completionContext = [
+                    'name' => $name,
+                    'command' => $process->getCommandLine(),
+                    'exit_code' => $exitCode,
+                    'status' => 0 === $exitCode ? 'Success' : 'Failed',
+                    'reason' => self::failureReason($process, $exitCode, $failureMessage),
+                    'started_at' => $started->format('D, H:i:s T'),
+                    'ended_at' => $ended->format('D, H:i:s T'),
+                    'duration' => $duration,
+                ];
 
                 $this->logger->log(
                     0 === $exitCode ? Level::Info : Level::Error,
-                    "Task '{name}' completed. ({status}) - Took {duration}s",
-                    [
-                        'name' => $name,
-                        'command' => $process->getCommandLine(),
-                        'exit_code' => $exitCode,
-                        'status' => 0 === $exitCode ? 'Success' : 'Failed',
-                        'started_at' => $started->format('D, H:i:s T'),
-                        'ended_at' => $ended->format('D, H:i:s T'),
-                        'duration' => $ended->getTimestamp() - $started->getTimestamp(),
-                    ],
+                    $completionMessage,
+                    $completionContext,
                 );
             }
 
@@ -501,12 +531,15 @@ final class TasksCommand extends Command
 
                 if ($this->viaEvent) {
                     $name = null !== $task ? $task['name'] : implode(' ', $cmd);
+                    $completionMessage = 0 === $exitCode
+                        ? "Task '{name}' succeeded in '{duration}'s."
+                        : "Task '{name}' failed after '{duration}'s: {reason}";
                     $lines[] = $this->jsonlFormatter->formatValues(
                         channel: $this->logger instanceof \Monolog\Logger ? $this->logger->getName() : 'task',
                         level: 0 === $exitCode ? Level::Info : Level::Error,
-                        message: r("Task '{name}' completed. ({status}) - Took {duration}s", [
+                        message: r($completionMessage, [
                             'name' => $name,
-                            'status' => 0 === $exitCode ? 'Success' : 'Failed',
+                            'reason' => self::failureReason($process, $exitCode, $failureMessage),
                             'duration' => $ended->getTimestamp() - $started->getTimestamp(),
                         ]),
                     );

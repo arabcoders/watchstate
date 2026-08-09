@@ -251,7 +251,7 @@ import { computed, ref } from 'vue';
 import { navigateTo } from '#app';
 import { useStorage } from '@vueuse/core';
 import { useDialog } from '~/composables/useDialog';
-import { useAuthStore } from '~/store/auth';
+import { useAuth } from '~/composables/useAuth';
 import type { GenericError, GenericResponse } from '~/types';
 import {
   DEFAULT_TOOLTIP_DATE_FORMAT,
@@ -274,7 +274,7 @@ const emit = defineEmits<{
   (e: 'close' | 'force_bg_reload'): void;
 }>();
 
-const { username } = useAuthStore();
+const { username } = useAuth();
 
 const bg_enable = useStorage<boolean>('bg_enable', true);
 const poster_enable = useStorage<boolean>('poster_enable', true);

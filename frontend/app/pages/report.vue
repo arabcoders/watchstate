@@ -255,8 +255,7 @@
                       <pre
                         v-if="isDetailOpen(`opts-${backend.user}@${backend.name}`)"
                         class="mt-2 overflow-x-auto rounded-md border border-default bg-elevated/40 p-2 text-xs text-default"
-                        >{{ JSON.stringify(backend.options, null, 2) }}</pre
-                      >
+                        >{{ JSON.stringify(backend.options, null, 2) }}</pre>
                     </div>
                   </div>
                 </article>
@@ -401,8 +400,7 @@
             <pre
               v-if="isDetailOpen('suppression-rules')"
               class="mt-2 overflow-x-auto rounded-md border border-default bg-elevated/40 p-2 text-xs text-default"
-              >{{ JSON.stringify(report.suppression.rules, null, 2) }}</pre
-            >
+              >{{ JSON.stringify(report.suppression.rules, null, 2) }}</pre>
           </div>
         </div>
       </section>

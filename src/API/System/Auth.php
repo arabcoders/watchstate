@@ -28,6 +28,12 @@ final class Auth
 
     public const string URL = '%{api.prefix}/system/auth';
 
+    private const array NO_CACHE_HEADERS = [
+        'Cache-Control' => 'no-store, no-cache, must-revalidate',
+        'Pragma' => 'no-cache',
+        'Expires' => '0',
+    ];
+
     #[Get(self::URL . '/test[/]', name: 'system.auth.test')]
     public function test_open(): iResponse
     {
@@ -41,27 +47,27 @@ final class Auth
         $password = Config::get('system.password');
 
         if (empty($user) || empty($password)) {
-            return api_response(Status::NO_CONTENT);
+            return api_response(Status::NO_CONTENT, headers: self::NO_CACHE_HEADERS);
         }
 
         $localNet = Config::get('trust.local_net', []);
         if (true !== (bool) Config::get('trust.local', false) || count($localNet) < 1) {
-            return api_response(Status::OK);
+            return api_response(Status::OK, headers: self::NO_CACHE_HEADERS);
         }
 
         $localAddress = get_client_ip($request);
 
         if (false === IpUtils::checkIp($localAddress, $localNet)) {
-            return api_response(Status::OK);
+            return api_response(Status::OK, headers: self::NO_CACHE_HEADERS);
         }
 
         try {
             $token = $this->makeToken((string) Config::get('system.user'));
         } catch (Throwable) {
-            return api_error('Failed to encode token.', Status::INTERNAL_SERVER_ERROR);
+            return api_error('Failed to encode token.', Status::INTERNAL_SERVER_ERROR, headers: self::NO_CACHE_HEADERS);
         }
 
-        return api_response(Status::OK, ['auto_login' => true, 'token' => $token]);
+        return api_response(Status::OK, ['auto_login' => true, 'token' => $token], self::NO_CACHE_HEADERS);
     }
 
     #[Get(self::URL . '/user[/]', name: 'system.auth.user')]
