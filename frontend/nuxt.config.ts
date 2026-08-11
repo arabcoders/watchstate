@@ -65,11 +65,25 @@ export default defineNuxtConfig({
       linkActiveClass: 'is-selected',
     },
   },
-  modules: ['@nuxt/ui', '@vueuse/nuxt', '@nuxt/eslint'],
+  modules: ['./modules/guide-icons', '@nuxt/ui', '@vueuse/nuxt', '@nuxt/eslint'],
   nitro: {
     sourceMap: isProd ? false : true,
     output: {
       publicDir: isProd ? __dirname + '/exported' : __dirname + '/dist',
+    },
+    rollupConfig: {
+      onLog(level, log, handler) {
+        if (
+          'warn' === level &&
+          'UNUSED_EXTERNAL_IMPORT' === log.code &&
+          log.message.includes('@nuxt/nitro-server/dist/h3.mjs') &&
+          log.message.includes('/h3/dist/index.mjs')
+        ) {
+          return;
+        }
+
+        handler(level, log);
+      },
     },
     ...extraNitro,
   },
@@ -105,10 +119,13 @@ export default defineNuxtConfig({
       allowedHosts: true,
     },
     build: {
-      chunkSizeWarningLimit: 2000,
+      chunkSizeWarningLimit: 550,
       rollupOptions: {
         onwarn(warning, warn) {
-          if ('SOURCEMAP_BROKEN' === warning.code) {
+          if (
+            'SOURCEMAP_BROKEN' === warning.code ||
+            'PLUGIN_TIMINGS' === warning.code
+          ) {
             return;
           }
 

@@ -316,7 +316,6 @@
 <script setup lang="ts">
 import { useStorage } from '@vueuse/core';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import Hls from 'hls.js';
 import { disableOpacity, enableOpacity, notification, request } from '~/utils';
 import { usePlayerShortcutHelp } from '~/composables/usePlayerShortcutHelp';
 import { usePlayerShortcuts } from '~/composables/usePlayerShortcuts';
@@ -350,6 +349,9 @@ interface HlsPlaybackState {
   progress: number | null;
   shouldPlay: boolean;
 }
+
+type HlsConstructor = (typeof import('hls.js'))['default'];
+type HlsInstance = InstanceType<HlsConstructor>;
 
 const SUBTITLE_SELECT_OFF_VALUE = '__off__';
 
@@ -493,7 +495,7 @@ let assLayoutRefreshFrame = 0;
 let controlsHideTimeout = 0;
 let pendingVideoClickTimeout = 0;
 let unbindMediaSession: null | (() => void) = null;
-let hls: Hls | null = null;
+let hls: HlsInstance | null = null;
 let posterObjectUrl = '';
 let hlsAttachGeneration = 0;
 let directPlayFallbackNotified = false;
@@ -702,11 +704,13 @@ function cleanupPosterUrl() {
   posterObjectUrl = '';
 }
 
-function configureSources() {
+async function configureSources() {
   hlsAttachGeneration += 1;
   sources.value = [];
   destroyHls();
   usingHls.value = false;
+  suppressMediaErrors = false;
+  directPlayFallbackInFlight = false;
   directPlayFallbackNotified = false;
   hlsErrorNotified = false;
 
@@ -718,13 +722,34 @@ function configureSources() {
     return;
   }
 
-  if (true === Hls.isSupported()) {
-    attach_hls(props.link);
-    return;
+  const attachGeneration = hlsAttachGeneration;
+  const link = props.link;
+
+  try {
+    const { default: Hls } = await import('hls.js');
+
+    if (
+      attachGeneration !== hlsAttachGeneration ||
+      true === isPlayerDestroyed() ||
+      link !== props.link
+    ) {
+      return;
+    }
+
+    if (true === Hls.isSupported()) {
+      await attach_hls(link, null, Hls);
+      return;
+    }
+  } catch (error) {
+    console.warn('Failed to load hls.js, falling back to native HLS playback', error);
+
+    if (attachGeneration !== hlsAttachGeneration || true === isPlayerDestroyed()) {
+      return;
+    }
   }
 
   sources.value.push({
-    src: props.link,
+    src: link,
     type: 'application/x-mpegURL',
     onerror: (event: Event) => void src_error(event),
   });
@@ -823,7 +848,7 @@ function switchToHls(playbackState: HlsPlaybackState, notify: boolean): void {
     notification('warning', 'Playback', 'Direct playback failed. Switching to transcoded stream.');
   }
 
-  attach_hls(props.m3u8 || '', playbackState);
+  void attach_hls(props.m3u8 || '', playbackState);
 }
 
 function handlePosterError() {
@@ -1341,10 +1366,6 @@ async function src_error(event: Event) {
     switchToHls(captureHlsPlaybackState(videoElement.value, true), true);
     return;
   }
-
-  if (false === props.directPlay && true === Hls.isSupported()) {
-    attach_hls(props.link);
-  }
 }
 
 function destroyHls() {
@@ -1377,7 +1398,11 @@ function resetVideoElementForHls() {
   }
 }
 
-function attach_hls(link: string, playbackState: HlsPlaybackState | null = null) {
+async function attach_hls(
+  link: string,
+  playbackState: HlsPlaybackState | null = null,
+  HlsClass: HlsConstructor | null = null,
+) {
   const element = videoElement.value;
   if (!element || !link) {
     directPlayFallbackInFlight = false;
@@ -1388,11 +1413,22 @@ function attach_hls(link: string, playbackState: HlsPlaybackState | null = null)
   sources.value = [];
   destroyHls();
   resetVideoElementForHls();
-
   const attachGeneration = hlsAttachGeneration;
 
   try {
-    hls = new Hls({
+    if (!HlsClass) {
+      ({ default: HlsClass } = await import('hls.js'));
+    }
+
+    if (
+      attachGeneration !== hlsAttachGeneration ||
+      true === isPlayerDestroyed() ||
+      element !== videoElement.value
+    ) {
+      return;
+    }
+
+    const instance = new HlsClass({
       debug: props.debug,
       enableWorker: true,
       lowLatencyMode: true,
@@ -1400,7 +1436,9 @@ function attach_hls(link: string, playbackState: HlsPlaybackState | null = null)
       fragLoadingTimeOut: 200000,
     });
 
-    hls.on(Hls.Events.ERROR, (_event, data) => {
+    hls = instance;
+
+    instance.on(HlsClass.Events.ERROR, (_event, data) => {
       if (attachGeneration !== hlsAttachGeneration || true === isPlayerDestroyed()) {
         return;
       }
@@ -1426,8 +1464,8 @@ function attach_hls(link: string, playbackState: HlsPlaybackState | null = null)
       }
     });
 
-    hls.on(Hls.Events.MANIFEST_PARSED, () => applyMediaSessionMetadata());
-    hls.on(Hls.Events.MANIFEST_PARSED, async () => {
+    instance.on(HlsClass.Events.MANIFEST_PARSED, () => applyMediaSessionMetadata());
+    instance.on(HlsClass.Events.MANIFEST_PARSED, async () => {
       if (attachGeneration !== hlsAttachGeneration || true === isPlayerDestroyed()) {
         return;
       }
@@ -1446,7 +1484,7 @@ function attach_hls(link: string, playbackState: HlsPlaybackState | null = null)
       element.addEventListener('loadedmetadata', onLoadedMetadata, { once: true });
     }
 
-    hls.on(Hls.Events.MEDIA_ATTACHED, async () => {
+    instance.on(HlsClass.Events.MEDIA_ATTACHED, async () => {
       if (attachGeneration !== hlsAttachGeneration || true === isPlayerDestroyed()) {
         return;
       }
@@ -1466,7 +1504,7 @@ function attach_hls(link: string, playbackState: HlsPlaybackState | null = null)
       }
     });
 
-    hls.on(Hls.Events.LEVEL_LOADED, () => {
+    instance.on(HlsClass.Events.LEVEL_LOADED, () => {
       if (attachGeneration !== hlsAttachGeneration || true === isPlayerDestroyed()) {
         return;
       }
@@ -1483,12 +1521,23 @@ function attach_hls(link: string, playbackState: HlsPlaybackState | null = null)
       }
     });
 
-    hls.loadSource(link);
-    hls.attachMedia(element);
+    instance.loadSource(link);
+    instance.attachMedia(element);
     usingHls.value = true;
     directPlayFallbackInFlight = false;
-  } finally {
+  } catch (error) {
+    if (attachGeneration !== hlsAttachGeneration || true === isPlayerDestroyed()) {
+      return;
+    }
+
+    destroyHls();
     suppressMediaErrors = false;
+    directPlayFallbackInFlight = false;
+    console.warn('Failed to attach hls.js', error);
+  } finally {
+    if (attachGeneration === hlsAttachGeneration || true === isPlayerDestroyed()) {
+      suppressMediaErrors = false;
+    }
   }
 }
 

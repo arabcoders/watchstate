@@ -122,7 +122,7 @@
           </div>
         </template>
 
-        <draggable
+        <Draggable
           v-model="group.members"
           :group="{ name: 'shared', pull: true, put: true }"
           animation="150"
@@ -166,7 +166,7 @@
               <span class="font-medium text-toned">Drop members here.</span>
             </div>
           </template>
-        </draggable>
+        </Draggable>
       </UCard>
     </div>
 
@@ -196,7 +196,7 @@
       </template>
 
       <template #default>
-        <draggable
+        <Draggable
           v-if="unmatched?.length > 0"
           v-model="unmatched"
           :group="{ name: 'shared', pull: true, put: true }"
@@ -238,7 +238,7 @@
               </span>
             </div>
           </template>
-        </draggable>
+        </Draggable>
 
         <UAlert
           v-if="unmatched?.length < 1"
@@ -471,7 +471,7 @@ import { useStorage } from '@vueuse/core';
 import { navigateTo, useRoute } from '#app';
 import { NuxtLink } from '#components';
 import moment from 'moment';
-import draggable from 'vuedraggable';
+import Draggable from 'vuedraggable';
 import PageHeader from '~/components/PageHeader.vue';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import { notification, parse_api_response, request } from '~/utils';

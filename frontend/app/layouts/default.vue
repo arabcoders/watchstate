@@ -200,9 +200,7 @@
               </div>
             </div>
 
-            <ClientOnly>
-              <Dialog />
-            </ClientOnly>
+            <Dialog v-if="hasOpenedDialog" />
 
             <UModal
               v-model:open="showIdentitySelection"
@@ -210,11 +208,15 @@
               :ui="identitySelectionModalUi"
             >
               <template #body>
-                <IdentitySelection @close="() => (showIdentitySelection = false)" />
+                <IdentitySelection
+                  v-if="hasOpenedIdentitySelection"
+                  @close="() => (showIdentitySelection = false)"
+                />
               </template>
             </UModal>
 
             <SettingsPanel
+              v-if="hasOpenedSettings"
               :isOpen="showSettings"
               @close="showSettings = false"
               @force_bg_reload="() => void forceBackgroundReload()"
@@ -235,7 +237,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, readonly, ref, watch } from 'vue';
+import {
+  computed,
+  defineAsyncComponent,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  readonly,
+  ref,
+  watch,
+} from 'vue';
 import { useBreakpoints, useStorage } from '@vueuse/core';
 import { navigateTo } from '#app';
 import { useColorMode } from '#imports';
@@ -251,11 +262,12 @@ import {
 import { dEvent, registerToastController, request, syncOpacity } from '~/utils';
 import TaskScheduler from '~/components/TaskScheduler.vue';
 import NewVersion from '~/components/NewVersion.vue';
-import Dialog from '~/components/Dialog.vue';
-import SettingsPanel from '~/components/SettingsPanel.vue';
 import HeaderStatus from '~/components/HeaderStatus.vue';
-import IdentitySelection from '~/components/IdentitySelection.vue';
 import useSystemStats from '~/composables/useSystemStats';
+
+const Dialog = defineAsyncComponent(() => import('~/components/Dialog.vue'));
+const IdentitySelection = defineAsyncComponent(() => import('~/components/IdentitySelection.vue'));
+const SettingsPanel = defineAsyncComponent(() => import('~/components/SettingsPanel.vue'));
 
 type NavEntry = {
   id: string;
@@ -321,6 +333,7 @@ const auth = useAuth();
 const breakpoints = useBreakpoints({ mobile: 0, desktop: 640 });
 const systemStats = useSystemStats();
 const { pageBackgroundOverride, requestPageBackgroundReload } = usePageBackground();
+const dialog = useDialog();
 
 const bgEnable = useStorage<boolean>('bg_enable', true);
 const bgOpacity = useStorage<number>('bg_opacity', 0.95);
@@ -333,6 +346,9 @@ const inContainer = ref(false);
 const showScheduler = ref(false);
 const showRouteSearch = ref(false);
 const showSidebar = ref(false);
+const hasOpenedDialog = ref(false);
+const hasOpenedIdentitySelection = ref(false);
+const hasOpenedSettings = ref(false);
 
 const swipeState = {
   mode: null as MobileSidebarSwipeMode | null,
@@ -864,6 +880,36 @@ watch(isMobile, (v) => {
   resetSwipe();
 });
 
+watch(
+  () => dialog.state.current,
+  (current) => {
+    if (null !== current) {
+      hasOpenedDialog.value = true;
+    }
+  },
+  { flush: 'sync', immediate: true },
+);
+
+watch(
+  showIdentitySelection,
+  (isOpen) => {
+    if (true === isOpen) {
+      hasOpenedIdentitySelection.value = true;
+    }
+  },
+  { flush: 'sync' },
+);
+
+watch(
+  showSettings,
+  (isOpen) => {
+    if (true === isOpen) {
+      hasOpenedSettings.value = true;
+    }
+  },
+  { flush: 'sync' },
+);
+
 const forceBackgroundReload = async (): Promise<void> => {
   if (pageBackgroundOverride.value?.id) {
     requestPageBackgroundReload(pageBackgroundOverride.value.id);
@@ -912,7 +958,7 @@ const loadImage = async (force = false): Promise<void> => {
 };
 
 const logout = async (): Promise<boolean> => {
-  const { status } = await useDialog().confirmDialog({
+  const { status } = await dialog.confirmDialog({
     title: 'Logout',
     message: 'Are you sure you want to logout?',
     confirmColor: 'error',
