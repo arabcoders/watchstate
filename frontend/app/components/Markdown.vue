@@ -33,20 +33,9 @@ import type { MarkedExtension, Tokens } from 'marked';
 import { baseUrl } from 'marked-base-url';
 import markedAlert from 'marked-alert';
 import { gfmHeadingId } from 'marked-gfm-heading-id';
-import lucideCollection from '@iconify-json/lucide/icons.json';
 import { parse_api_response } from '~/utils';
+import { GUIDE_ICONS_UPDATED_EVENT, renderGuideIcon } from '~/utils/guideIcons';
 import type { GenericError } from '~/types';
-
-type LucideIcon = {
-  body?: string;
-  width?: number;
-  height?: number;
-  parent?: string;
-};
-
-type LucideCollection = {
-  icons: Record<string, LucideIcon>;
-};
 
 const props = defineProps<{
   /** Path to the markdown file to load */
@@ -92,54 +81,6 @@ const rewriteGuideHref = (href: string): string => {
   url.pathname = `/guides${url.pathname}`;
 
   return url.toString().replace('/guides/', '/help/').replace('.md', '');
-};
-
-const resolveGuideIconName = (value: string): string => {
-  const normalized = value.trim();
-  const iconName = normalized.startsWith('i-lucide-') ? normalized : 'i-lucide-circle-help';
-
-  return iconName.replace(/^i-lucide-/, '');
-};
-
-const resolveGuideIconData = (value: string): LucideIcon | null => {
-  const collection = lucideCollection as LucideCollection;
-  const icons = collection.icons;
-  const fallbackName = 'circle-question-mark';
-  const resolvedName = icons[resolveGuideIconName(value)]
-    ? resolveGuideIconName(value)
-    : fallbackName;
-
-  let currentName: string | undefined = resolvedName;
-  const visited = new Set<string>();
-
-  while (currentName && !visited.has(currentName)) {
-    visited.add(currentName);
-
-    const current: LucideIcon | undefined = icons[currentName];
-    if (!current) {
-      break;
-    }
-
-    if (current.body) {
-      return current;
-    }
-
-    currentName = current.parent;
-  }
-
-  return icons[fallbackName] ?? null;
-};
-
-const renderGuideIcon = (value: string): string => {
-  const icon = resolveGuideIconData(value);
-  if (!icon?.body) {
-    return '';
-  }
-
-  const width = icon.width ?? 24;
-  const height = icon.height ?? 24;
-
-  return `<span class="ws-guide-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">${icon.body}</svg></span>`;
 };
 
 const handleClick = (e: MouseEvent): void => {
@@ -255,7 +196,18 @@ watch(
   { immediate: true },
 );
 
-onBeforeUnmount(() => removeListeners());
+const handleGuideIconsUpdate = (): void => {
+  void loadContent();
+};
+
+if (import.meta.hot) {
+  window.addEventListener(GUIDE_ICONS_UPDATED_EVENT, handleGuideIconsUpdate);
+}
+
+onBeforeUnmount(() => {
+  removeListeners();
+  window.removeEventListener(GUIDE_ICONS_UPDATED_EVENT, handleGuideIconsUpdate);
+});
 </script>
 
 <style>

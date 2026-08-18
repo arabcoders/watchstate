@@ -59,7 +59,7 @@ class TestCase extends \PHPUnit\Framework\TestCase
             return;
         }
 
-        self::$tmpPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'ws-tests' . DIRECTORY_SEPARATOR . uniqid();
+        self::$tmpPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'tests-watchstate' . DIRECTORY_SEPARATOR . uniqid();
         if (!is_dir(self::$tmpPath) && !mkdir(self::$tmpPath, 0o777, true) && !is_dir(self::$tmpPath)) {
             throw new \RuntimeException(sprintf('Directory "%s" was not created', self::$tmpPath));
         }
