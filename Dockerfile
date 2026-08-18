@@ -1,9 +1,11 @@
 FROM node:lts-alpine AS npm_builder
 
-WORKDIR /frontend
+WORKDIR /build/frontend
 COPY ./frontend ./
+COPY ./guides /build/guides
+COPY ./API.md ./FAQ.md ./NEWS.md ./README.md /build/
 ENV NODE_ENV=production
-RUN if [ ! -d "/frontend/exported" ]; then \
+RUN if [ ! -d "/build/frontend/exported" ]; then \
   npm install -g bun && \
   NODE_ENV=production bun install --frozen-lockfile --production && \
   bun run generate; \
@@ -49,7 +51,7 @@ COPY --chown=app:app --from=ghcr.io/arabcoders/jellyfin-ffmpeg /usr/bin/ffprobe 
 COPY ./ /opt/app
 
 # Copy frontend to public directory.
-COPY --chown=app:app --from=npm_builder /frontend/exported/ /opt/app/public/exported/
+COPY --chown=app:app --from=npm_builder /build/frontend/exported/ /opt/app/public/exported/
 
 # install composer & packages.
 #
