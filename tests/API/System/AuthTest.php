@@ -38,6 +38,18 @@ final class AuthTest extends TestCase
         $this->assertSame('0', $response->getHeaderLine('Expires'));
     }
 
+    public function test_has_user_missing(): void
+    {
+        Config::reset();
+
+        $response = new Auth()->has_user($this->getRequest());
+
+        $this->assertSame(Status::NO_CONTENT->value, $response->getStatusCode());
+        $this->assertSame('no-store, no-cache, must-revalidate', $response->getHeaderLine('Cache-Control'));
+        $this->assertSame('no-cache', $response->getHeaderLine('Pragma'));
+        $this->assertSame('0', $response->getHeaderLine('Expires'));
+    }
+
     public function test_refresh_near_expiry(): void
     {
         Config::save('system.user', 'admin');
