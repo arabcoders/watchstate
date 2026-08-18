@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "922a3a8b79825e4edda4d652458253525fa0a93e",
-    "date": "2026-08-18T18:55:15+00:00",
+    "full_sha": "fd9d6d62889c3f54bc5102a16c28da57bd915d96",
+    "date": "2026-08-18T19:09:24+00:00",
     "commits": [
+      {
+        "sha": "fd9d6d62",
+        "full_sha": "fd9d6d62889c3f54bc5102a16c28da57bd915d96",
+        "message": "fix: failing gitea frontend builds",
+        "author": "arabcoders",
+        "date": "2026-08-18T19:09:24+00:00"
+      },
       {
         "sha": "922a3a8b",
         "full_sha": "922a3a8b79825e4edda4d652458253525fa0a93e",
