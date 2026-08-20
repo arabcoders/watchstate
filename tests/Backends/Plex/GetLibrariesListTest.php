@@ -93,7 +93,6 @@ class GetLibrariesListTest extends TestCase
             $key = (int) ag($item, 'key');
             $type = ag($item, 'type', 'unknown');
             $agent = ag($item, 'agent', 'unknown');
-            $supportedType = PlexClient::TYPE_MOVIE === $type || PlexClient::TYPE_SHOW === $type;
             $webUrl = $this->context
                 ->backendUrl
                 ->withPath('/web/index.html')
@@ -109,7 +108,7 @@ class GetLibrariesListTest extends TestCase
                 'title' => ag($item, 'title'),
                 'type' => ucfirst($type),
                 'ignored' => false,
-                'supported' => $supportedType && true === in_array($agent, PlexClient::SUPPORTED_AGENTS),
+                'supported' => true === in_array($type, [PlexClient::TYPE_MOVIE, PlexClient::TYPE_SHOW], true),
                 'agent' => $agent,
                 'scanner' => ag($item, 'scanner'),
                 'contentType' => strtolower($type),
@@ -183,5 +182,26 @@ class GetLibrariesListTest extends TestCase
         $this->assertCount(2, $response->response);
         $this->assertTrue((bool) $response->response[0]['supported']);
         $this->assertTrue((bool) $response->response[1]['supported']);
+    }
+
+    public function test_unknown_agent(): void
+    {
+        $payload = [
+            'MediaContainer' => [
+                'Directory' => [
+                    ['key' => '1', 'title' => 'Movies', 'type' => 'movie', 'agent' => 'unknown.movie'],
+                    ['key' => '2', 'title' => 'Shows', 'type' => 'show', 'agent' => 'unknown.show'],
+                    ['key' => '3', 'title' => 'Music', 'type' => 'artist', 'agent' => 'unknown.artist'],
+                ],
+            ],
+        ];
+
+        $resp = new MockResponse(json_encode($payload), ['http_code' => 200]);
+        $client = new MockHttpClient($resp);
+        $response = (new GetLibrariesList($client, $this->logger))($this->context);
+
+        $this->assertTrue((bool) $response->response[0]['supported']);
+        $this->assertTrue((bool) $response->response[1]['supported']);
+        $this->assertFalse((bool) $response->response[2]['supported']);
     }
 }

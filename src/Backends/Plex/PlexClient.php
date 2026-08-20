@@ -92,25 +92,6 @@ class PlexClient implements iClient
     ];
 
     /**
-     * @var array List of supported agents.
-     */
-    public const array SUPPORTED_AGENTS = [
-        'com.plexapp.agents.imdb',
-        'com.plexapp.agents.tmdb',
-        'com.plexapp.agents.themoviedb',
-        'com.plexapp.agents.xbmcnfo',
-        'com.plexapp.agents.xbmcnfotv',
-        'com.plexapp.agents.thetvdb',
-        'com.plexapp.agents.hama',
-        'com.plexapp.agents.ytinforeader',
-        'com.plexapp.agents.cmdb',
-        'tv.plex.agents.movie',
-        'tv.plex.agents.series',
-        'tv.plex.agents.nfo.movie',
-        'tv.plex.agents.nfo.series',
-    ];
-
-    /**
      * @var mixed $context Backend context.
      */
     private Context $context;
