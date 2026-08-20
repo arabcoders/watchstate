@@ -13,9 +13,15 @@ class ConfigTest extends TestCase
 
     private array $envBackup = [];
 
+    private array $envEnvBackup = [];
+
     protected function setUp(): void
     {
         $this->envBackup['WS_LOGS_PRUNE_AFTER'] = getenv('WS_LOGS_PRUNE_AFTER');
+        $this->envBackup['WS_TRUST_LOCAL_NET'] = getenv('WS_TRUST_LOCAL_NET');
+        $this->envEnvBackup['WS_TRUST_LOCAL_NET'] = array_key_exists('WS_TRUST_LOCAL_NET', $_ENV)
+            ? $_ENV['WS_TRUST_LOCAL_NET']
+            : false;
         Config::init($this->data);
         parent::setUp();
     }
@@ -28,6 +34,18 @@ class ConfigTest extends TestCase
         } else {
             putenv('WS_LOGS_PRUNE_AFTER=' . $this->envBackup['WS_LOGS_PRUNE_AFTER']);
             $_ENV['WS_LOGS_PRUNE_AFTER'] = $this->envBackup['WS_LOGS_PRUNE_AFTER'];
+        }
+
+        if (false === $this->envBackup['WS_TRUST_LOCAL_NET']) {
+            putenv('WS_TRUST_LOCAL_NET');
+        } else {
+            putenv('WS_TRUST_LOCAL_NET=' . $this->envBackup['WS_TRUST_LOCAL_NET']);
+        }
+
+        if (false === $this->envEnvBackup['WS_TRUST_LOCAL_NET']) {
+            unset($_ENV['WS_TRUST_LOCAL_NET']);
+        } else {
+            $_ENV['WS_TRUST_LOCAL_NET'] = $this->envEnvBackup['WS_TRUST_LOCAL_NET'];
         }
 
         parent::tearDown();
@@ -149,5 +167,31 @@ class ConfigTest extends TestCase
         Config::init(require ROOT_PATH . '/config/config.php');
 
         $this->assertSame('-7 DAYS', Config::get('logs.prune.after'));
+    }
+
+    public function test_local_net_env(): void
+    {
+        putenv('WS_TRUST_LOCAL_NET= 10.0.0.0/8, , ::1, 192.168.1.1 ');
+        $_ENV['WS_TRUST_LOCAL_NET'] = ' 10.0.0.0/8, , ::1, 192.168.1.1 ';
+
+        Config::init(require ROOT_PATH . '/config/config.php');
+
+        $this->assertSame(
+            ['10.0.0.0/8', '::1', '192.168.1.1'],
+            Config::get('trust.local_net'),
+        );
+    }
+
+    public function test_local_net_default(): void
+    {
+        putenv('WS_TRUST_LOCAL_NET');
+        unset($_ENV['WS_TRUST_LOCAL_NET']);
+
+        Config::init(require ROOT_PATH . '/config/config.php');
+
+        $this->assertSame(
+            ['192.168.0.0/16', '127.0.0.1/32', '10.0.0.0/8', '::1/128', '172.16.0.0/12'],
+            Config::get('trust.local_net'),
+        );
     }
 }

@@ -602,17 +602,21 @@ WatchState, you can do so by setting the following environment variable to true.
     - Tells WatchState to trust the `X-Forwarded-For` header (or the one you set in `WS_TRUST_HEADER`) as the user IP.
 - `WS_TRUST_LOCAL`
     - Tells WatchState to trust all requests coming from local network addresses bypassing authentication.
+- `WS_TRUST_LOCAL_NET`
+    - Replaces the default trusted local networks with a comma-separated list of IPv4/IPv6 addresses or CIDR subnets used by `WS_TRUST_LOCAL`.
 
 You still have to create the initial admin user, however, once these settings are applied, anyone accessing WatchState
 from the trusted sources will be granted access without further authentication.
 
-## The supported local net addresses
+## The default trusted local networks
 
 - 10.0.0.0/8
 - 127.0.0.1/32
 - 172.16.0.0/12
 - 192.168.0.0/16
-- ::1/128'
+- ::1/128
+
+Set `WS_TRUST_LOCAL_NET` to replace these defaults. For example, `10.10.0.0/16, fd00::/8` trusts only the listed IPv4 and IPv6 networks when `WS_TRUST_LOCAL` is enabled.
 
 > [!IMPORTANT]
 > Setting both `WS_TRUST_PROXY` and `WS_TRUST_LOCAL` to true will disable all internal authentication mechanisms.

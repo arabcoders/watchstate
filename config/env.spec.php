@@ -132,6 +132,13 @@ return (function () {
             'danger' => true,
         ],
         [
+            'key' => 'WS_TRUST_LOCAL_NET',
+            'config' => 'trust.local_net',
+            'description' => 'Comma-separated list of trusted IPv4/IPv6 addresses or CIDR subnets used by WS_TRUST_LOCAL.',
+            'type' => 'string',
+            'danger' => true,
+        ],
+        [
             'key' => 'WS_TRUST_HEADER',
             'config' => 'trust.header',
             'description' => 'The header which contains the true user IP.',

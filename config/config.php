@@ -36,6 +36,21 @@ return (function () {
         $accessLogFormat = 'text';
     }
 
+    $defaultLocalNetworks = [
+        '192.168.0.0/16', // RFC-1918 A-block.
+        '127.0.0.1/32', // localhost IPv4
+        '10.0.0.0/8', // RFC-1918 C-block.
+        '::1/128', // localhost IPv6
+        '172.16.0.0/12', // RFC-1918 B-block.
+    ];
+    $localNetworks = env('WS_TRUST_LOCAL_NET');
+    $localNetworks = null === $localNetworks
+        ? $defaultLocalNetworks
+        : array_values(array_filter(
+            array_map('trim', explode(',', (string) $localNetworks)),
+            static fn(string $network): bool => '' !== $network,
+        ));
+
     $config = [
         'name' => 'WatchState',
         // -- Handled by the build system.
@@ -98,13 +113,7 @@ return (function () {
             'proxy' => (bool) env('WS_TRUST_PROXY', false),
             'header' => (string) env('WS_TRUST_HEADER', 'X-Forwarded-For'),
             'local' => (bool) env('WS_TRUST_LOCAL', false),
-            'local_net' => [
-                '192.168.0.0/16', // RFC-1918 A-block.
-                '127.0.0.1/32', // localhost IPv4
-                '10.0.0.0/8', // RFC-1918 C-block.
-                '::1/128', // localhost IPv6
-                '172.16.0.0/12', // RFC-1918 B-block.
-            ],
+            'local_net' => $localNetworks,
         ],
         'rate_limit' => [
             'enabled' => (bool) env('WS_RATE_LIMIT_ENABLED', true),
