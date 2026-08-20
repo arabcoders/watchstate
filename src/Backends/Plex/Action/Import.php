@@ -270,17 +270,6 @@ class Import
                 continue;
             }
 
-            if (false === in_array(ag($logContext, 'library.agent'), PlexClient::SUPPORTED_AGENTS, true)) {
-                $this->logger->notice(
-                    message: "Ignoring '{identity.user}@{identity.backend}' - '{library.title}' Unsupported agent type. '{agent}'.",
-                    context: [
-                        ...$logContext,
-                        'agent' => ag($logContext, 'library.agent', '??'),
-                    ],
-                );
-                continue;
-            }
-
             $isMovieLibrary = PlexClient::TYPE_MOVIE === ag($logContext, 'library.type');
 
             $url = $context
@@ -436,10 +425,6 @@ class Import
                 continue;
             }
 
-            if (!in_array(ag($section, 'agent'), PlexClient::SUPPORTED_AGENTS, true)) {
-                continue;
-            }
-
             if ($selectLibraryList && $inverseLibrarySelect === in_array($libraryId, $selectLibraryList, true)) {
                 continue;
             }
@@ -539,10 +524,6 @@ class Import
                     'type' => ag($section, 'type', 'unknown'),
                 ],
             ];
-
-            if (false === in_array(ag($section, 'agent'), PlexClient::SUPPORTED_AGENTS, true)) {
-                continue;
-            }
 
             if (true === in_array($libraryId, $ignoreIds ?? [], true)) {
                 $ignored++;

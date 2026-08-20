@@ -121,9 +121,6 @@ final class GetLibrariesList
         foreach ($listDirs as $section) {
             $key = (int) ag($section, 'key');
             $type = ag($section, 'type', 'unknown');
-            $agent = ag($section, 'agent', 'unknown');
-            $supportedType = PlexClient::TYPE_MOVIE === $type || PlexClient::TYPE_SHOW === $type;
-
             $webUrl = $context
                 ->backendUrl
                 ->withPath('/web/index.html')
@@ -145,7 +142,7 @@ final class GetLibrariesList
                 'title' => ag($section, 'title', '???'),
                 'type' => ucfirst($type),
                 'ignored' => true === in_array($key, $ignoreIds ?? [], true),
-                'supported' => $supportedType && true === in_array($agent, PlexClient::SUPPORTED_AGENTS, true),
+                'supported' => true === in_array($type, [PlexClient::TYPE_MOVIE, PlexClient::TYPE_SHOW], true),
                 'agent' => ag($section, 'agent'),
                 'scanner' => ag($section, 'scanner'),
                 'contentType' => $contentType,

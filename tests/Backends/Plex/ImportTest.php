@@ -137,4 +137,30 @@ class ImportTest extends PlexTestCase
         $logContext = $result->response[0]->extras['logContext'] ?? [];
         $this->assertSame(5, (int) ag($logContext, 'library.id'));
     }
+
+    public function test_unknown_agent(): void
+    {
+        $sections = [
+            'MediaContainer' => [
+                'Directory' => [
+                    ['key' => '6', 'title' => 'Shows', 'type' => 'show', 'agent' => 'unknown.show'],
+                ],
+            ],
+        ];
+        $http = $this->makeHttpClient(
+            $this->makeResponse($sections),
+            new MockResponse('', ['http_code' => 200, 'response_headers' => ['X-Plex-Container-Total-Size' => '1']]),
+            new MockResponse('', ['http_code' => 200, 'response_headers' => ['X-Plex-Container-Total-Size' => '1']]),
+        );
+        $context = $this->makeContext();
+        $action = new Import($http, $this->logger);
+        $result = $action($context, new PlexGuid($this->logger), $context->userContext->mapper);
+
+        $this->assertTrue($result->isSuccessful());
+        $this->assertCount(2, $result->response);
+        foreach ($result->response as $request) {
+            $logContext = $request->extras['logContext'] ?? [];
+            $this->assertSame(6, (int) ag($logContext, 'library.id'));
+        }
+    }
 }

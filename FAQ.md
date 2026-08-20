@@ -299,7 +299,9 @@ If there are no errors, the database has been repaired successfully. And you can
 
 ---
 
-# Which Providers id `GUIDs` supported by for PlexClient?
+# Which provider `GUIDs` does Plex support?
+
+WatchState parses the following Plex GUIDs:
 
 * tvdb://(id)
 * imdb://(id)
