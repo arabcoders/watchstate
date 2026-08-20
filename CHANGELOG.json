@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "fd9d6d62889c3f54bc5102a16c28da57bd915d96",
-    "date": "2026-08-18T19:09:24+00:00",
+    "full_sha": "44146828b43223e88e1a28369ac9bc5992638776",
+    "date": "2026-08-20T15:57:22+00:00",
     "commits": [
+      {
+        "sha": "44146828",
+        "full_sha": "44146828b43223e88e1a28369ac9bc5992638776",
+        "message": "chore: external packages update",
+        "author": "arabcoders",
+        "date": "2026-08-20T15:57:22+00:00"
+      },
+      {
+        "sha": "9862f440",
+        "full_sha": "9862f440fd0f9b1a2385541ea2d9b411f5b35b66",
+        "message": "feat: add WS_TRUST_LOCAL_NET for customizable trusted local networks",
+        "author": "arabcoders",
+        "date": "2026-08-20T15:55:07+00:00"
+      },
       {
         "sha": "fd9d6d62",
         "full_sha": "fd9d6d62889c3f54bc5102a16c28da57bd915d96",
