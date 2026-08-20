@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "44146828b43223e88e1a28369ac9bc5992638776",
-    "date": "2026-08-20T15:57:22+00:00",
+    "full_sha": "65d33e49ecd13b22f1a3d03b91b255f1197fc240",
+    "date": "2026-08-20T18:14:41+00:00",
     "commits": [
+      {
+        "sha": "65d33e49",
+        "full_sha": "65d33e49ecd13b22f1a3d03b91b255f1197fc240",
+        "message": "refactor: remove plex library agent gating",
+        "author": "arabcoders",
+        "date": "2026-08-20T18:14:41+00:00"
+      },
       {
         "sha": "44146828",
         "full_sha": "44146828b43223e88e1a28369ac9bc5992638776",
