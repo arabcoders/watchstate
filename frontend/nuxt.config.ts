@@ -1,4 +1,16 @@
 import { defineNuxtConfig } from 'nuxt/config';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+
+const faviconHash = createHash('sha256')
+  .update(readFileSync(new URL('./public/favicon.ico', import.meta.url)))
+  .digest('hex')
+  .slice(0, 12);
+
+const appleIconHash = createHash('sha256')
+  .update(readFileSync(new URL('./public/images/logo.png', import.meta.url)))
+  .digest('hex')
+  .slice(0, 12);
 
 let extraNitro = {};
 try {
@@ -55,6 +67,10 @@ export default defineNuxtConfig({
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1.0, maximum-scale=1.0' },
         { name: 'theme-color', content: '#000000' },
+      ],
+      link: [
+        { rel: 'icon', type: 'image/x-icon', href: `/favicon.ico?v=${faviconHash}` },
+        { rel: 'apple-touch-icon', sizes: '1024x1024', href: `/apple-touch-icon.${appleIconHash}.png` },
       ],
     },
     buildAssetsDir: 'assets',
