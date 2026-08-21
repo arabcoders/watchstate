@@ -1,5 +1,19 @@
 [
   {
+    "tag": "Untagged",
+    "full_sha": "97ea0cec8062821d4e1a75b7f2f587bdb6eb560a",
+    "date": "2026-08-21T15:22:48+00:00",
+    "commits": [
+      {
+        "sha": "97ea0cec",
+        "full_sha": "97ea0cec8062821d4e1a75b7f2f587bdb6eb560a",
+        "message": "Refactor ServeStatic file serving logic and add new favicon handling",
+        "author": "arabcoders",
+        "date": "2026-08-21T15:22:48+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v1.10.3",
     "full_sha": "f68d5286648c1c1d0581d17d77caf3a149c7f13a",
     "date": "2026-08-20T18:19:54+00:00",
