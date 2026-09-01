@@ -299,7 +299,7 @@ class MigrationsCommand extends Command
         OutputInterface $output,
     ): int {
         $apply = (bool) $input->getOption('execute');
-        $squasher = new MigrationSquasher($this->migrationDirectory());
+        $squasher = new MigrationSquasher($this->migrationDirectory(), $this->buildTemplate($input));
 
         try {
             $result = $squasher->squash($token, $apply);
