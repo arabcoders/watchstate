@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "97ea0cec8062821d4e1a75b7f2f587bdb6eb560a",
-    "date": "2026-08-21T15:22:48+00:00",
+    "full_sha": "fea1637008da9c2613de59d445385d50e280e8df",
+    "date": "2026-09-01T05:37:12+00:00",
     "commits": [
+      {
+        "sha": "fea16370",
+        "full_sha": "fea1637008da9c2613de59d445385d50e280e8df",
+        "message": "refactor: squash migrations and fix related test",
+        "author": "arabcoders",
+        "date": "2026-09-01T05:37:12+00:00"
+      },
+      {
+        "sha": "6a0acd1f",
+        "full_sha": "6a0acd1fa3eab48be41b1f8490988e666187ea6b",
+        "message": "chore: update external packages",
+        "author": "arabcoders",
+        "date": "2026-09-01T05:36:37+00:00"
+      },
       {
         "sha": "97ea0cec",
         "full_sha": "97ea0cec8062821d4e1a75b7f2f587bdb6eb560a",
