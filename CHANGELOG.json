@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "e5051df5b52268ff3ee4d332513a6d9e92e08c27",
-    "date": "2026-09-04T19:16:08+00:00",
+    "full_sha": "b0895beb07ddb627fefbe2c79230cc278b7d9887",
+    "date": "2026-09-04T19:37:35+00:00",
     "commits": [
+      {
+        "sha": "b0895beb",
+        "full_sha": "b0895beb07ddb627fefbe2c79230cc278b7d9887",
+        "message": "refactor: increase image timeout and improve error handling in image fetching",
+        "author": "arabcoders",
+        "date": "2026-09-04T19:37:35+00:00"
+      },
       {
         "sha": "e5051df5",
         "full_sha": "e5051df5b52268ff3ee4d332513a6d9e92e08c27",
