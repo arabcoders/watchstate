@@ -9,7 +9,9 @@ use App\Libs\Attributes\Route\Get;
 use App\Libs\Database\DBLayer;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Exceptions\DBLayerException;
 use App\Libs\Mappers\ImportInterface as iImport;
+use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use DateInterval;
 use Psr\Http\Message\ResponseInterface as iResponse;
@@ -40,7 +42,7 @@ final class Images
                 return api_response(Status::NO_CONTENT);
             }
             $resp = $this->getImage($db, $type, force: (bool) ag($request->getQueryParams(), 'force', false));
-        } catch (InvalidArgumentException|RuntimeException) {
+        } catch (DBLayerException|InvalidArgumentException|RuntimeException) {
             return api_response(Status::NO_CONTENT);
         }
 
@@ -69,7 +71,10 @@ final class Images
         if (null === $oldId && false === $force && $this->cache->has($cacheKey)) {
             $id = (int) $this->cache->get($cacheKey);
         } else {
-            $record = $db->query('SELECT id FROM "state" ORDER BY RANDOM() LIMIT 1');
+            $record = $db->query(
+                'SELECT id FROM "state" ORDER BY RANDOM() LIMIT 1',
+                options: [Options::FAIL_FAST_ON_LOCK => true],
+            );
             $id = $record->fetchColumn();
             if (empty($id)) {
                 throw new RuntimeException('No records found');

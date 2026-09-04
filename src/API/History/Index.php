@@ -34,6 +34,8 @@ use Throwable;
 
 final class Index
 {
+    private const float IMAGE_TIMEOUT_SECONDS = 5.0;
+
     use APITraits;
 
     /**
@@ -947,7 +949,18 @@ final class Index
         }
 
         try {
-            $client = $this->getClient(name: $item->via, userContext: $userContext);
+            $client = $this->getClient(
+                name: $item->via,
+                config: [
+                    'options' => [
+                        'client' => [
+                            'timeout' => self::IMAGE_TIMEOUT_SECONDS,
+                            'max_duration' => self::IMAGE_TIMEOUT_SECONDS,
+                        ],
+                    ],
+                ],
+                userContext: $userContext,
+            );
         } catch (RuntimeException $e) {
             return api_error($e->getMessage(), Status::NOT_FOUND);
         }

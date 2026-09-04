@@ -23,6 +23,7 @@ use Throwable;
 class DBLayerTest extends TestCase
 {
     private ?DBLayer $db = null;
+    private ?PDO $pdo = null;
     protected ?TestHandler $handler = null;
 
     protected function initTestSchema(PDO $pdo): void
@@ -58,10 +59,10 @@ class DBLayerTest extends TestCase
             ]);
         }
 
-        $pdo = new PDO(dsn: 'sqlite::memory:', options: Config::get('database.options.sqlite', []));
-        $this->db = new DBLayer($pdo);
+        $this->pdo = new PDO(dsn: 'sqlite::memory:', options: Config::get('database.options.sqlite', []));
+        $this->db = new DBLayer($this->pdo);
         $this->db->setLogger($logger);
-        $this->initTestSchema($pdo);
+        $this->initTestSchema($this->pdo);
 
         foreach (Config::get('database.exec.sqlite', []) as $cmd) {
             $this->db->exec($cmd);
@@ -450,6 +451,8 @@ class DBLayerTest extends TestCase
             exception: DBLayerException::class,
             exceptionMessage: 'database is locked',
         );
+        self::assertFalse($this->pdo->inTransaction(), 'An exhausted lock retry should roll back its transaction.');
+
         $this->checkException(
             closure: function () use ($random) {
                 $this->db->transactional(fn() => throw new PDOException('database is locked'), options: [
@@ -462,6 +465,7 @@ class DBLayerTest extends TestCase
             exception: DBLayerException::class,
             exceptionMessage: 'on_lock called',
         );
+        self::assertFalse($this->pdo->inTransaction(), 'A failed lock handler should roll back its transaction.');
 
         $this->checkException(
             closure: function () {
@@ -478,6 +482,7 @@ class DBLayerTest extends TestCase
             exception: DBLayerException::class,
             exceptionMessage: 'database is locked',
         );
+        self::assertFalse($this->pdo->inTransaction(), 'A fail-fast lock should roll back its transaction.');
     }
 
     public function test_condition_parser()

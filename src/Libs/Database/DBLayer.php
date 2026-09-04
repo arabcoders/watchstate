@@ -15,6 +15,7 @@ use PDOException;
 use PDOStatement;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
+use Throwable;
 
 final class DBLayer implements LoggerAwareInterface
 {
@@ -223,20 +224,27 @@ final class DBLayer implements LoggerAwareInterface
             };
         }
 
-        return $this->wrap(function (DBLayer $db, array $options = []) use ($callback, $autoStartTransaction) {
-            if (true === $autoStartTransaction) {
-                $db->start();
+        try {
+            return $this->wrap(function (DBLayer $db, array $options = []) use ($callback, $autoStartTransaction) {
+                if (true === $autoStartTransaction) {
+                    $db->start();
+                }
+
+                $result = $callback($this, $options);
+
+                if (true === $autoStartTransaction) {
+                    $db->commit();
+                }
+
+                $this->last = $db->getLastStatement();
+                return $result;
+            }, $options);
+        } catch (Throwable $e) {
+            if ($autoStartTransaction && $this->inTransaction()) {
+                $this->rollBack();
             }
-
-            $result = $callback($this, $options);
-
-            if (true === $autoStartTransaction) {
-                $db->commit();
-            }
-
-            $this->last = $db->getLastStatement();
-            return $result;
-        }, $options);
+            throw $e;
+        }
     }
 
     /**
@@ -958,10 +966,16 @@ final class DBLayer implements LoggerAwareInterface
             $attempts = (int) ag($options, 'attempts', 0);
             if (true === str_contains(strtolower($e->getMessage()), 'database is locked')) {
                 if ($failFast || $attempts >= $this->retry) {
-                    throw new DBLayerException($e->getMessage(), (int) $e->getCode(), $e)
+                    $exception = new DBLayerException($e->getMessage(), (int) $e->getCode(), $e)
                         ->setInfo($this->last['sql'], $this->last['bind'], $e->errorInfo ?? [], $e->getCode())
                         ->setFile($e->getFile())
                         ->setLine($e->getLine());
+
+                    if (null !== $errorHandler) {
+                        return $errorHandler($exception, $callback, $options);
+                    }
+
+                    throw $exception;
                 }
 
                 $sleep = (int) ag($options, 'max_sleep', rand(1, 4));
