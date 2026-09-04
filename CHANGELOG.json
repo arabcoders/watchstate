@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "fea1637008da9c2613de59d445385d50e280e8df",
-    "date": "2026-09-01T05:37:12+00:00",
+    "full_sha": "81d1bc90312284e5d0dfe711ca6f6f6201bddc38",
+    "date": "2026-09-04T17:33:57+00:00",
     "commits": [
+      {
+        "sha": "81d1bc90",
+        "full_sha": "81d1bc90312284e5d0dfe711ca6f6f6201bddc38",
+        "message": "refactor: harden web console process and support real resume",
+        "author": "arabcoders",
+        "date": "2026-09-04T17:33:57+00:00"
+      },
       {
         "sha": "fea16370",
         "full_sha": "fea1637008da9c2613de59d445385d50e280e8df",
