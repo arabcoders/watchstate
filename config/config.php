@@ -311,6 +311,10 @@ return (function () {
         ],
     ];
 
+    $config['worker'] = [
+        'pid_file' => env('WS_WORKER_PID_FILE', fn() => ag($config, 'tmpDir') . '/worker.pid'),
+    ];
+
     $config['php'] = [
         'ini' => [
             'disable_functions' => null,

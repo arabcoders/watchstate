@@ -421,70 +421,48 @@ if (!function_exists('load_env_file')) {
     }
 }
 
-if (!function_exists('is_scheduler_running')) {
-    /**
-     * Check if the task scheduler is running. This function is only available when running in a container.
-     *
-     * @param string $pidFile (Optional) The PID file to check.
-     * @param bool $ignoreContainer (Optional) Whether to ignore the container check.
-     *
-     * @return array{ status: bool, message: string }
-     */
-    function is_scheduler_running(string $pidFile = '/tmp/ws-job-runner.pid', bool $ignoreContainer = false): array
+if (!function_exists('get_worker_status')) {
+    /** @return array{status:bool,message:string,restartable:bool,pid?:string} */
+    function get_worker_status(): array
     {
-        if (false === $ignoreContainer && !in_container()) {
-            return [
-                'status' => true,
-                'restartable' => false,
-                'message' => 'We can only track the task scheduler status when running in a container.',
-            ];
-        }
-
-        if (true === (bool) env('DISABLE_CRON', false)) {
-            return [
-                'status' => false,
-                'restartable' => false,
-                'message' => "Task scheduler is disabled via 'DISABLE_CRON' environment variable.",
-            ];
-        }
-
+        $pidFile = (string) Config::get('worker.pid_file');
         if (!file_exists($pidFile)) {
             return [
                 'status' => false,
                 'restartable' => true,
-                'message' => 'No PID file was found - Likely means task scheduler failed to start.',
+                'message' => 'No worker PID file was found.',
             ];
         }
 
         try {
             $pid = trim((string) Stream::make($pidFile));
         } catch (Throwable $e) {
-            return ['status' => false, 'message' => $e->getMessage()];
+            return ['status' => false, 'restartable' => true, 'message' => $e->getMessage()];
+        }
+        if (!ctype_digit($pid) || 1 > (int) $pid) {
+            return [
+                'status' => false,
+                'restartable' => true,
+                'message' => 'Worker PID file is invalid.',
+            ];
         }
 
         if (true === str_starts_with(PHP_OS, 'WIN')) {
-            // Use tasklist to check if the process is running
             $output = [];
-            $iPid = (int) $pid;
-            exec("tasklist /FI \"PID eq {$iPid}\"", $output);
-            $found = false;
+            exec('tasklist /FI "PID eq ' . (int) $pid . '"', $output);
+            $running = false;
             foreach ($output as $line) {
-                if (true !== str_contains($line, $pid)) {
+                if (false === str_contains($line, $pid)) {
                     continue;
                 }
-
-                $found = true;
+                $running = true;
                 break;
             }
-
-            if (false === $found) {
+            if (false === $running) {
                 return [
                     'status' => false,
                     'restartable' => true,
-                    'message' => r(
-                        "Found PID '{pid}' in file, but it seems the process is not active.",
-                        ['pid' => $pid],
-                    ),
+                    'message' => r("Worker PID '{pid}' is not active.", ['pid' => $pid]),
                 ];
             }
         } else {
@@ -493,17 +471,16 @@ if (!function_exists('is_scheduler_running')) {
                 return [
                     'status' => false,
                     'restartable' => true,
-                    'message' => r("Found PID '{pid}' in file, but it seems the process is not active.", ['pid' => $pid]),
+                    'message' => r("Worker PID '{pid}' is not active.", ['pid' => $pid]),
                 ];
             }
 
-            // Check for zombie status
             $statusContent = Stream::make($statusFile, 'r')->getContents();
             if (0 !== preg_match('/^State:\s+Z\s+\(zombie\)/m', $statusContent)) {
                 return [
                     'status' => false,
                     'restartable' => true,
-                    'message' => r("Found PID '{pid}', but it is a zombie. Restart the process.", ['pid' => $pid]),
+                    'message' => r("Worker PID '{pid}' is a zombie.", ['pid' => $pid]),
                 ];
             }
         }
@@ -512,57 +489,33 @@ if (!function_exists('is_scheduler_running')) {
             'pid' => $pid,
             'status' => true,
             'restartable' => true,
-            'message' => 'Task scheduler is running.',
+            'message' => 'Worker is running.',
         ];
     }
 }
 
-if (!function_exists('restart_scheduler')) {
-    /**
-     * Restart the task scheduler.
-     *
-     * @param bool $ignoreContainer (Optional) Whether to ignore the container check.
-     * @param bool $force (Optional) Whether to force kill the task scheduler.
-     *
-     * @return array{ status: bool, message: string }
-     */
-    function restart_scheduler(bool $ignoreContainer = false, bool $force = false): array
+if (!function_exists('restart_worker')) {
+    /** @return array{status:bool,message:string,restartable:bool} */
+    function restart_worker(): array
     {
-        if (false === $ignoreContainer && !in_container()) {
+        $status = get_worker_status();
+        if (true === $status['status']) {
             return [
                 'status' => true,
-                'restartable' => false,
-                'message' => 'We can only restart the task scheduler when running in a container.',
+                'restartable' => true,
+                'message' => 'Worker is already running.',
             ];
         }
 
-        $pidFile = '/tmp/ws-job-runner.pid';
-
-        if (true === file_exists($pidFile)) {
-            try {
-                $pid = trim((string) Stream::make($pidFile));
-            } catch (Throwable $e) {
-                return ['status' => false, 'restartable' => true, 'message' => $e->getMessage()];
-            }
-
-            if (file_exists(r('/proc/{pid}/status', ['pid' => $pid]))) {
-                @posix_kill((int) $pid, $force ? 9 : 1);
-            }
-
-            clearstatcache(true, $pidFile);
-
-            if (true === file_exists($pidFile)) {
-                @unlink($pidFile);
-            }
-        }
-
-        $process = Process::fromShellCommandline('/opt/bin/console system:scheduler 2>&1 &');
+        @unlink((string) Config::get('worker.pid_file'));
+        $binary = escapeshellarg(ROOT_PATH . '/bin/console');
+        $process = Process::fromShellCommandline("{$binary} system:worker >/dev/null 2>&1 &");
         $process->run();
 
         return [
             'status' => $process->isSuccessful(),
             'restartable' => true,
-            'message' => $process->isSuccessful() ? 'The task scheduler restarted.' : $process->getErrorOutput(),
+            'message' => $process->isSuccessful() ? 'Worker restart requested.' : $process->getErrorOutput(),
         ];
     }
 }

@@ -349,20 +349,19 @@ with `WS_` is to use the `Env` page. It will do some validation for you and ensu
 
 to see list of loaded environment variables, click on `Env` page.
 
-## Container specific environment variables.
+## Container specific environment variable.
 
 > [!IMPORTANT]
-> These environment variables relates to the container itself, and MUST be added via container environment or by
+> This environment variable relates to the container itself, and MUST be added via container environment or by
 > the `compose.yaml` file.
 
-| Key           | Type    | Description                        | Default |
-| ------------- | ------- | ---------------------------------- | ------- |
-| DISABLE_CRON  | integer | Disable included `Task Scheduler`. | `0`     |
-| DISABLE_CACHE | integer | Disable included `Cache Server`.   | `0`     |
+| Key           | Type    | Description                      | Default |
+| ------------- | ------- | -------------------------------- | ------- |
+| DISABLE_CACHE | integer | Disable included `Cache Server`. | `0`     |
 
 > [!NOTE]
-> You need to restart the container after changing these environment variables. those variables are not managed by the
-> WatchState tool, they are managed by the container itself.
+> You need to restart the container after changing this environment variable. It is managed by the container, not the
+> WatchState tool.
 
 ---
 

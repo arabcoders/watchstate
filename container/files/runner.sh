@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
 while true; do
-    /opt/bin/console system:scheduler --pid-file /tmp/ws-job-runner.pid
-    sleep 60
+    /opt/bin/console system:worker -v
+    sleep 1
 done

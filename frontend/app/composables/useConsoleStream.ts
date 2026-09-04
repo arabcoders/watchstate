@@ -28,7 +28,18 @@ type ConsoleHistoryItem = {
   createdAt: string | null;
   finishedAt: string | null;
   availableUntil: string | null;
+  failureReason: string | null;
+  outcome: ConsoleOutcome | null;
 };
+
+type ConsoleOutcome =
+  | 'success'
+  | 'command_failure'
+  | 'timed_out'
+  | 'cancelled'
+  | 'worker_lost'
+  | 'process_start_failed'
+  | 'storage_failure';
 
 type PersistedConsoleView = {
   command: string;
@@ -53,9 +64,14 @@ type ConsoleStreamState = {
   error: string;
   chunks: Array<string>;
   lastSequence: number;
+  outcome: ConsoleOutcome | null;
+  failureReason: string | null;
+  retryCount: number;
+  lastConnectionError: string;
 };
 
 const MAX_CHUNKS = 4000;
+const MAX_PERSISTED_OUTPUT_BYTES = 512 * 1024;
 const RESTORE_EXPIRED = '__restore_expired__';
 const isExpiredStreamStatus = (status: number): boolean => [400, 404].includes(status);
 const ACTIVE_SESSION_STORAGE_KEY = 'consoleActiveSession';
@@ -69,7 +85,11 @@ const getConsoleStorage = (): Storage | null => {
     return null;
   }
 
-  return window.localStorage;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
 };
 
 const readConsoleStorageRaw = (key: string): string | null => {
@@ -77,7 +97,12 @@ const readConsoleStorageRaw = (key: string): string | null => {
 };
 
 const readConsoleStorage = <T>(key: string): T | null => {
-  const raw = readConsoleStorageRaw(key);
+  let raw: string | null;
+  try {
+    raw = readConsoleStorageRaw(key);
+  } catch {
+    return null;
+  }
   if (!raw) {
     return null;
   }
@@ -89,18 +114,22 @@ const readConsoleStorage = <T>(key: string): T | null => {
   }
 };
 
-const writeConsoleStorage = (key: string, value: unknown): void => {
+const writeConsoleStorage = (key: string, value: unknown): boolean => {
   const storage = getConsoleStorage();
   if (!storage) {
-    return;
+    return false;
   }
 
-  if (null === value) {
-    storage.removeItem(key);
-    return;
+  try {
+    if (null === value) {
+      storage.removeItem(key);
+      return true;
+    }
+    storage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
   }
-
-  storage.setItem(key, JSON.stringify(value));
 };
 
 const normalizeConsoleChunk = (input: unknown): string | null => {
@@ -188,6 +217,10 @@ const makeInitialState = (): ConsoleStreamState => ({
   error: '',
   chunks: [],
   lastSequence: 0,
+  outcome: null,
+  failureReason: null,
+  retryCount: 0,
+  lastConnectionError: '',
 });
 
 const trimChunks = (state: ConsoleStreamState): void => {
@@ -196,12 +229,36 @@ const trimChunks = (state: ConsoleStreamState): void => {
   }
 };
 
+const getPersistedChunks = (chunks: Array<string>): Array<string> => {
+  const persisted: Array<string> = [];
+  let bytes = 0;
+
+  for (let index = chunks.length - 1; index >= 0; index--) {
+    const chunk = chunks[index] ?? '';
+    const remainingBytes = MAX_PERSISTED_OUTPUT_BYTES - bytes;
+    if (remainingBytes < 1) {
+      break;
+    }
+
+    if (chunk.length * 2 > remainingBytes) {
+      persisted.unshift(chunk.slice(-Math.floor(remainingBytes / 2)));
+      break;
+    }
+
+    persisted.unshift(chunk);
+    bytes += chunk.length * 2;
+  }
+
+  return persisted;
+};
+
 const appendChunk = (state: ConsoleStreamState, value: string): void => {
   state.chunks.push(value);
   trimChunks(state);
 };
 
 let streamController: AbortController | null = null;
+let persistenceTimer: ReturnType<typeof setTimeout> | null = null;
 
 const rememberRun = (
   runs: Array<ConsoleHistoryItem>,
@@ -246,14 +303,14 @@ export function useConsoleStream() {
     streamController = null;
   };
 
-  const setPersistedSession = (session: PersistedConsoleSession | null): void => {
+  const setPersistedSession = (session: PersistedConsoleSession | null): boolean => {
     activeSession.value = session;
-    writeConsoleStorage(ACTIVE_SESSION_STORAGE_KEY, session);
+    return writeConsoleStorage(ACTIVE_SESSION_STORAGE_KEY, session);
   };
 
-  const setPersistedView = (view: PersistedConsoleView | null): void => {
+  const setPersistedView = (view: PersistedConsoleView | null): boolean => {
     persistedView.value = view;
-    writeConsoleStorage(ACTIVE_VIEW_STORAGE_KEY, view);
+    return writeConsoleStorage(ACTIVE_VIEW_STORAGE_KEY, view);
   };
 
   const normalizeDismissedRuns = (): Array<string> => {
@@ -295,6 +352,10 @@ export function useConsoleStream() {
   };
 
   const clearPersistedSession = (): void => {
+    if (persistenceTimer) {
+      clearTimeout(persistenceTimer);
+      persistenceTimer = null;
+    }
     setPersistedSession(null);
   };
 
@@ -316,23 +377,46 @@ export function useConsoleStream() {
     setRecentRuns([]);
   };
 
-  const syncPersistedView = (): void => {
+  const syncPersistedView = (): boolean => {
     if (!activeSession.value) {
-      return;
+      return false;
     }
 
-    setPersistedView({
+    return setPersistedView({
       command: state.value.command,
       displayCommand: state.value.displayCommand,
       exitCode: state.value.exitCode,
       lastSequence: state.value.lastSequence,
-      chunks: [...state.value.chunks],
+      chunks: getPersistedChunks(state.value.chunks),
     });
+  };
+
+  const schedulePersistedState = (): void => {
+    if (persistenceTimer) {
+      return;
+    }
+
+    persistenceTimer = setTimeout(() => {
+      persistenceTimer = null;
+      if (!activeSession.value) {
+        return;
+      }
+
+      if (!syncPersistedView()) {
+        state.value.lastConnectionError =
+          'Browser storage is unavailable; server replay remains available.';
+        return;
+      }
+
+      setPersistedSession({
+        ...activeSession.value,
+        lastSequence: state.value.lastSequence,
+      });
+    }, 250);
   };
 
   const appendStateChunk = (value: string): void => {
     appendChunk(state.value, value);
-    syncPersistedView();
   };
 
   const setFatalError = (message: string, clearSession: boolean = true): void => {
@@ -367,6 +451,8 @@ export function useConsoleStream() {
         createdAt: existing?.createdAt ?? null,
         finishedAt: existing?.finishedAt ?? new Date().toISOString(),
         availableUntil: existing?.availableUntil ?? null,
+        failureReason: state.value.failureReason,
+        outcome: state.value.outcome,
       });
     }
 
@@ -392,12 +478,7 @@ export function useConsoleStream() {
       return;
     }
 
-    setPersistedSession({
-      ...activeSession.value,
-      lastSequence: sequence,
-    });
-
-    syncPersistedView();
+    schedulePersistedState();
   };
 
   const clearOutput = (): void => {
@@ -440,6 +521,8 @@ export function useConsoleStream() {
             createdAt: item.created_at,
             finishedAt: item.finished_at,
             availableUntil: item.available_until,
+            failureReason: item.failure_reason,
+            outcome: item.outcome,
           }) satisfies ConsoleHistoryItem,
       );
 
@@ -463,6 +546,8 @@ export function useConsoleStream() {
     state.value.token = null;
     state.value.error = '';
     state.value.completedAt = 0;
+    state.value.outcome = null;
+    state.value.failureReason = null;
   };
 
   const connectToStream = async (mode: 'start' | 'restore'): Promise<ConsoleStreamRunResult> => {
@@ -501,6 +586,8 @@ export function useConsoleStream() {
           state.value.status = 'streaming';
           state.value.error = '';
           state.value.token = session.token;
+          state.value.retryCount = 0;
+          state.value.lastConnectionError = '';
 
           const existing = getRecentRun(session.token);
 
@@ -513,6 +600,8 @@ export function useConsoleStream() {
             createdAt: existing?.createdAt ?? null,
             finishedAt: existing?.finishedAt ?? null,
             availableUntil: existing?.availableUntil ?? null,
+            failureReason: existing?.failureReason ?? null,
+            outcome: existing?.outcome ?? null,
           });
 
           return;
@@ -541,46 +630,47 @@ export function useConsoleStream() {
         setFatalError(message);
         throw new FatalConsoleStreamError(message);
       },
-      onmessage: async (evt: ConsoleEventMessage): Promise<void> => {
+      onmessage: (evt: ConsoleEventMessage): void => {
         if (streamController !== controller) {
           return;
         }
 
-        syncSequence(normalizeSequence(evt.id));
+        if ('' === evt.id && '' === evt.event && '' === evt.data) {
+          return;
+        }
 
-        switch (evt.event) {
-          case 'data': {
-            const eventData = JSON.parse(evt.data) as { data: string };
-            appendStateChunk(eventData.data);
-            break;
+        try {
+          const sequence = normalizeSequence(evt.id);
+          if (sequence < 1 || !['cmd', 'cwd', 'data', 'exit_code', 'close'].includes(evt.event)) {
+            throw new Error('Malformed command stream event.');
           }
-          case 'exit_code': {
-            const exitCode = Number.parseInt(evt.data, 10);
-            state.value.exitCode = Number.isNaN(exitCode) ? 0 : exitCode;
-            syncPersistedView();
-
-            if (activeSession.value) {
-              const existing = getRecentRun(activeSession.value.token);
-
-              upsertRecentRun({
-                token: activeSession.value.token,
-                command: state.value.command,
-                displayCommand: state.value.displayCommand,
-                status: 'completed',
-                exitCode: state.value.exitCode,
-                createdAt: existing?.createdAt ?? null,
-                finishedAt: existing?.finishedAt ?? new Date().toISOString(),
-                availableUntil: existing?.availableUntil ?? null,
-              });
+          if ('data' === evt.event) {
+            const eventData: unknown = JSON.parse(evt.data);
+            if (
+              !eventData ||
+              'object' !== typeof eventData ||
+              'string' !== typeof Reflect.get(eventData, 'data')
+            ) {
+              throw new Error('Malformed command output event.');
             }
-            break;
-          }
-          case 'close':
+            appendStateChunk(Reflect.get(eventData, 'data') as string);
+          } else if ('exit_code' === evt.event) {
+            const exitCode = Number.parseInt(evt.data, 10);
+            if (Number.isNaN(exitCode)) {
+              throw new Error('Malformed command exit event.');
+            }
+            state.value.exitCode = exitCode;
+            syncPersistedView();
+          } else if ('close' === evt.event) {
             didReceiveClose = true;
             finalizeRun();
-            break;
-          default:
-            break;
+          }
+          syncSequence(sequence);
+        } catch (error: unknown) {
+          const message =
+            error instanceof Error ? error.message : 'Malformed command stream event.';
+          setFatalError(message, false);
+          throw new FatalConsoleStreamError(message);
         }
       },
       onclose: (): void => {
@@ -589,7 +679,7 @@ export function useConsoleStream() {
         }
 
         state.value.status = 'reconnecting';
-        state.value.error = '';
+        state.value.lastConnectionError = 'Command stream closed unexpectedly.';
         throw new Error('Command stream closed unexpectedly.');
       },
       onerror: (error: unknown): number | undefined => {
@@ -608,7 +698,9 @@ export function useConsoleStream() {
         }
 
         state.value.status = 'reconnecting';
-        state.value.error = '';
+        state.value.retryCount++;
+        state.value.lastConnectionError =
+          error instanceof Error ? error.message : 'Command stream failed.';
         return 1000;
       },
     }).catch((error: unknown) => {
@@ -632,7 +724,9 @@ export function useConsoleStream() {
 
       if (activeSession.value) {
         state.value.status = 'reconnecting';
-        state.value.error = '';
+        state.value.retryCount++;
+        state.value.lastConnectionError =
+          error instanceof Error ? error.message : 'Command stream failed.';
         return;
       }
 
@@ -658,6 +752,10 @@ export function useConsoleStream() {
     state.value.error = '';
     state.value.lastSequence = 0;
     state.value.completedAt = 0;
+    state.value.outcome = null;
+    state.value.failureReason = null;
+    state.value.retryCount = 0;
+    state.value.lastConnectionError = '';
 
     try {
       const body = JSON.stringify({ command });
@@ -710,6 +808,8 @@ export function useConsoleStream() {
         createdAt: new Date().toISOString(),
         finishedAt: null,
         availableUntil: null,
+        failureReason: null,
+        outcome: null,
       });
 
       state.value.token = json.token;
@@ -744,6 +844,9 @@ export function useConsoleStream() {
     state.value.lastSequence = view?.lastSequence ?? session.lastSequence;
     state.value.status = 'reconnecting';
     state.value.completedAt = 0;
+    const existing = getRecentRun(session.token);
+    state.value.outcome = existing?.outcome ?? null;
+    state.value.failureReason = existing?.failureReason ?? null;
 
     await connectToStream('restore');
     return true;

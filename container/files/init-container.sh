@@ -70,7 +70,6 @@ else
   echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] INFO: No environment file present at [${ENV_FILE}]."
 fi
 
-W_DISABLE_CRON=${DISABLE_CRON:-0}
 W_DISABLE_CACHE=${DISABLE_CACHE:-0}
 
 set -u
@@ -113,15 +112,8 @@ for ENV_NAME in "${sourced[@]}"; do
   fi
 done
 
-if [ 0 = "${W_DISABLE_CRON}" ]; then
-  if [ -f "/tmp/ws-job-runner.pid" ]; then
-    echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Found pre-existing tasks scheduler pid file. Removing it."
-    rm -f "/tmp/ws-job-runner.pid"
-  fi
-
-  echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Starting tasks scheduler."
-  /opt/bin/ws-runner &
-fi
+echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Starting worker."
+/opt/bin/ws-runner &
 
 echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Running - $(/opt/bin/console --version)"
 
