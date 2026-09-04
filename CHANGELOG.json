@@ -1,5 +1,19 @@
 [
   {
+    "tag": "Untagged",
+    "full_sha": "e5051df5b52268ff3ee4d332513a6d9e92e08c27",
+    "date": "2026-09-04T19:16:08+00:00",
+    "commits": [
+      {
+        "sha": "e5051df5",
+        "full_sha": "e5051df5b52268ff3ee4d332513a6d9e92e08c27",
+        "message": "refactor: improve error handling and during db lock",
+        "author": "arabcoders",
+        "date": "2026-09-04T19:16:08+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v1.10.4",
     "full_sha": "692652368d786543d877c54a49c540dbda9361a7",
     "date": "2026-09-04T19:01:14+00:00",
