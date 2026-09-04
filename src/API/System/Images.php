@@ -63,12 +63,13 @@ final class Images
 
     /**
      * @throws InvalidArgumentException
+     * @throws RuntimeException
      */
-    public function getImage(DBLayer $db, string $type, ?int $oldId = null, bool $force = false): APIResponse
+    public function getImage(DBLayer $db, string $type, bool $force = false): APIResponse
     {
         $cacheKey = r('system.images.{type}', ['type' => $type]);
 
-        if (null === $oldId && false === $force && $this->cache->has($cacheKey)) {
+        if (false === $force && $this->cache->has($cacheKey)) {
             $id = (int) $this->cache->get($cacheKey);
         } else {
             $record = $db->query(
@@ -86,10 +87,7 @@ final class Images
         $resp = api_request(Method::GET, r('/history/{id}/images/{type}', ['id' => $id, 'type' => $type]));
 
         if ($resp->status !== Status::OK) {
-            if ($id === $oldId) {
-                throw new RuntimeException('No record found.');
-            }
-            return $this->getImage($db, $type, $id);
+            throw new RuntimeException('Failed to fetch image.');
         }
 
         $this->cache->set($cacheKey, $id, new DateInterval('PT1H'));
