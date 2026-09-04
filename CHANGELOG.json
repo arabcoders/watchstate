@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "81d1bc90312284e5d0dfe711ca6f6f6201bddc38",
-    "date": "2026-09-04T17:33:57+00:00",
+    "full_sha": "e5615274c3fb0307121b759a359413ee900a6327",
+    "date": "2026-09-04T18:16:59+00:00",
     "commits": [
+      {
+        "sha": "e5615274",
+        "full_sha": "e5615274c3fb0307121b759a359413ee900a6327",
+        "message": "refactor: improve console session management with starting state and failure handling",
+        "author": "arabcoders",
+        "date": "2026-09-04T18:16:59+00:00"
+      },
       {
         "sha": "81d1bc90",
         "full_sha": "81d1bc90312284e5d0dfe711ca6f6f6201bddc38",
