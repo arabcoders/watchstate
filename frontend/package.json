@@ -31,7 +31,7 @@
         "@vueuse/nuxt": "^14.4.0",
         "@xterm/addon-fit": "^0.11.0",
         "@xterm/xterm": "^6.0.0",
-        "assjs": "^0.1.10",
+        "assjs": "0.1.10",
         "cronstrue": "^3.24.0",
         "hls.js": "^1.7.0",
         "marked": "^18.0.9",
@@ -64,5 +64,8 @@
     },
     "eslintIgnore": [
         ".gitignore"
-    ]
+    ],
+    "patchedDependencies": {
+        "assjs@0.1.10": "patches/assjs@0.1.10.patch"
+    }
 }

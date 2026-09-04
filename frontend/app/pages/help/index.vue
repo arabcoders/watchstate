@@ -124,5 +124,11 @@ const choices: Array<{ number: number; title: string; text: string; url: string 
     text: 'Guide on how to use the Media Health feature.',
     url: '/help/media-health',
   },
+  {
+    number: 13,
+    title: 'systemd services',
+    text: 'Run the unified WatchState worker as a system service.',
+    url: '/help/systemd-services',
+  },
 ];
 </script>

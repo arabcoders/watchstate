@@ -32,20 +32,59 @@ final class ServeStatic implements LoggerAwareInterface
     ];
 
     /**
-     * @var array<string, string> These files are served from outside the public directory.
+     * @var list<array{match:string,path:string,regex?:bool,static?: bool}>
      */
     private const array FILES = [
-        '/API.md' => __DIR__ . '/../../API.md',
-        '/README.md' => __DIR__ . '/../../README.md',
-        '/NEWS.md' => __DIR__ . '/../../NEWS.md',
-        '/FAQ.md' => __DIR__ . '/../../FAQ.md',
-        '/guides/API.md' => __DIR__ . '/../../API.md',
-        '/guides/README.md' => __DIR__ . '/../../README.md',
-        '/guides/NEWS.md' => __DIR__ . '/../../NEWS.md',
-        '/guides/FAQ.md' => __DIR__ . '/../../FAQ.md',
-        '/guides/openapi/plex.json' => __DIR__ . '/../Backends/Plex/plex-openai-stable.json',
-        '/guides/openapi/jellyfin.json' => __DIR__ . '/../Backends/Jellyfin/jellyfin-openapi-stable.json',
-        '/guides/openapi/emby.json' => __DIR__ . '/../Backends/Emby/emby-openapi-stable.json',
+        [
+            'match' => '/API.md',
+            'path' => __DIR__ . '/../../API.md',
+        ],
+        [
+            'match' => '/README.md',
+            'path' => __DIR__ . '/../../README.md',
+        ],
+        [
+            'match' => '/NEWS.md',
+            'path' => __DIR__ . '/../../NEWS.md',
+        ],
+        [
+            'match' => '/FAQ.md',
+            'path' => __DIR__ . '/../../FAQ.md',
+        ],
+        [
+            'match' => '/guides/API.md',
+            'path' => __DIR__ . '/../../API.md',
+        ],
+        [
+            'match' => '/guides/README.md',
+            'path' => __DIR__ . '/../../README.md',
+        ],
+        [
+            'match' => '/guides/NEWS.md',
+            'path' => __DIR__ . '/../../NEWS.md',
+        ],
+        [
+            'match' => '/guides/FAQ.md',
+            'path' => __DIR__ . '/../../FAQ.md',
+        ],
+        [
+            'match' => '/guides/openapi/plex.json',
+            'path' => __DIR__ . '/../Backends/Plex/plex-openapi-stable.json',
+        ],
+        [
+            'match' => '/guides/openapi/jellyfin.json',
+            'path' => __DIR__ . '/../Backends/Jellyfin/jellyfin-openapi-stable.json',
+        ],
+        [
+            'match' => '/guides/openapi/emby.json',
+            'path' => __DIR__ . '/../Backends/Emby/emby-openapi-stable.json',
+        ],
+        [
+            'match' => '#^/apple-touch-icon\.[a-f0-9]{12}\.png$#',
+            'path' => '/images/logo.png',
+            'regex' => true,
+            'static' => true,
+        ],
     ];
 
     private const array MD_IMAGES = [
@@ -84,8 +123,15 @@ final class ServeStatic implements LoggerAwareInterface
         $staticPath = $this->staticPath;
         $requestPath = $request->getUri()->getPath();
 
-        if (array_key_exists($requestPath, self::FILES)) {
-            return $this->serveFile($request, new SplFileInfo(self::FILES[$requestPath]));
+        foreach (self::FILES as $file) {
+            $matches = ag($file, 'regex', false) ? 1 === preg_match($file['match'], $requestPath) : $file['match'] === $requestPath;
+            if (false === $matches) {
+                continue;
+            }
+
+            $filePath = $file['static'] ?? false ? fix_path($staticPath . $file['path']) : $file['path'];
+
+            return $this->serveFile($request, new SplFileInfo($filePath));
         }
 
         // -- check if the request path is in the MD_IMAGES array
@@ -162,7 +208,12 @@ final class ServeStatic implements LoggerAwareInterface
         $stream = null;
 
         if ('GET' === $request->getMethod()) {
-            $headers['Cache-Control'] = 'public, max-age=31536000';
+            if ('html' === strtolower($file->getExtension())) {
+                $headers['Cache-Control'] = 'no-cache, must-revalidate';
+                $headers['Expires'] = '0';
+            } else {
+                $headers['Cache-Control'] = 'public, max-age=31536000';
+            }
             $stream = Stream::make($file->getRealPath());
         }
 

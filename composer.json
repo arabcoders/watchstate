@@ -66,7 +66,7 @@
         "halaxa/json-machine": "^1.2.6",
         "perftools/php-profiler": "^1.2.0",
         "firebase/php-jwt": "^7.0.3",
-        "arabcoders/database": "^1.0.0"
+        "arabcoders/database": "^1.0.8"
     },
     "require-dev": {
         "roave/security-advisories": "dev-latest",

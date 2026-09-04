@@ -1267,31 +1267,23 @@ class HelpersTest extends TestCase
         $this->assertSame([], get_env_spec('not_set'), 'It should return empty array when env is not set.');
     }
 
-    public function test_isTaskWorkerRunning()
+    public function test_worker_status()
     {
-        $_ENV['ONLY_ENV'] = true;
-        $_ENV['IN_CONTAINER'] = false;
-        $d = is_scheduler_running();
-        $this->assertTrue($d['status'], 'When not in container, and $ignoreContainer is false, it should return true.');
-        unset($_ENV['IN_CONTAINER']);
-
-        $_ENV['DISABLE_CRON'] = true;
-        $d = is_scheduler_running(ignoreContainer: true);
-        $this->assertFalse($d['status'], 'When DISABLE_CRON is set, it should return false.');
-        unset($_ENV['DISABLE_CRON']);
-
-        $d = is_scheduler_running(pidFile: __DIR__ . '/../Fixtures/worker.pid', ignoreContainer: true);
+        Config::save('worker.pid_file', __DIR__ . '/../Fixtures/worker.pid');
+        $d = get_worker_status();
         $this->assertFalse($d['status'], 'When pid file is not found, it should return false.');
 
         $tmpFile = self::$tmpPath . '/worker_' . uniqid();
         file_put_contents($tmpFile, getmypid());
-        $d = is_scheduler_running(pidFile: $tmpFile, ignoreContainer: true);
+        Config::save('worker.pid_file', $tmpFile);
+        $d = get_worker_status();
         $this->assertTrue($d['status'], 'When pid file is found, and process exists it should return true.');
 
         $tmpFile = self::$tmpPath . '/worker_' . uniqid();
         /** @noinspection PhpUnhandledExceptionInspection */
         file_put_contents($tmpFile, random_int(1, 9999) . getmypid());
-        $d = is_scheduler_running(pidFile: $tmpFile, ignoreContainer: true);
+        Config::save('worker.pid_file', $tmpFile);
+        $d = get_worker_status();
         $this->assertFalse(
             $d['status'],
             'When pid file is found, and process does not exists it should return false.',

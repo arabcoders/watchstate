@@ -34,6 +34,16 @@ export interface ConsoleSessionItem {
   expires_at: string | null;
   available_until: string | null;
   exit_code: number | null;
+  outcome:
+    | 'success'
+    | 'command_failure'
+    | 'timed_out'
+    | 'cancelled'
+    | 'worker_lost'
+    | 'process_start_failed'
+    | 'storage_failure'
+    | null;
+  failure_reason: string | null;
   last_sequence: number;
   connections: number;
 }

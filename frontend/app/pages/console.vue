@@ -15,7 +15,7 @@
       </template>
     </PageHeader>
 
-    <div class="ws-card overflow-hidden bg-elevated shadow-sm">
+    <div class="ws-card overflow-hidden rounded-none bg-elevated shadow-sm">
       <div ref="outputConsole" class="min-h-[55vh] max-h-[55vh] overflow-hidden" />
     </div>
 
@@ -67,6 +67,15 @@
           icon="i-lucide-triangle-alert"
           title="Command stream failed"
           :description="streamState.error"
+        />
+
+        <UAlert
+          v-else-if="'reconnecting' === streamState.status && streamState.lastConnectionError"
+          color="warning"
+          variant="soft"
+          icon="i-lucide-refresh-cw"
+          title="Reconnecting command output"
+          :description="`${streamState.lastConnectionError} Retry ${streamState.retryCount}.`"
         />
 
         <UAlert
@@ -205,6 +214,9 @@
                                       moment(item.finishedAt).fromNow()
                                     }}</span>
                                   </UTooltip>
+                                  <span v-if="item.failureReason" class="text-error">
+                                    {{ item.failureReason }}
+                                  </span>
                                 </div>
                               </div>
                             </td>
@@ -320,6 +332,8 @@ type RecentRunStatus = 'queued' | 'running' | 'completed';
 type RecentRunState = {
   status: RecentRunStatus;
   exitCode: number | null;
+  outcome: string | null;
+  failureReason: string | null;
 };
 
 let flushFrame: number | null = null;
@@ -479,7 +493,11 @@ const focusCommandInput = (): void => {
 };
 
 const isRecentRunFailed = (item: RecentRunState): boolean => {
-  return 'completed' === item.status && null !== item.exitCode && 0 !== item.exitCode;
+  return (
+    'completed' === item.status &&
+    ((null !== item.outcome && 'success' !== item.outcome) ||
+      (null !== item.exitCode && 0 !== item.exitCode))
+  );
 };
 
 const recentRunStatusLabel = (item: RecentRunState): string => {
@@ -686,7 +704,6 @@ const RunCommand = async (): Promise<void> => {
   const result = await startRun(commandBody.command, userCommand);
 
   if ('error' === result.status) {
-    notification('error', 'Error', result.message, 5000);
     focusCommandInput();
     return;
   }
@@ -738,7 +755,6 @@ const replayHistoryItem = async (item: (typeof recentRuns.value)[number]): Promi
   const result = await replayRun(item);
 
   if ('error' === result.status) {
-    notification('error', 'Error', result.message, 5000);
     focusCommandInput();
     return;
   }
@@ -881,7 +897,6 @@ watch(
       return;
     }
 
-    notification('error', 'Error', message, 5000);
     focusCommandInput();
   },
 );

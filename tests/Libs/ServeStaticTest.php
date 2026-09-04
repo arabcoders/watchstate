@@ -131,7 +131,7 @@ class ServeStaticTest extends TestCase
         $this->assertEquals(Status::OK->value, $response->getStatusCode());
         $this->assertEquals('application/json; charset=utf-8', $response->getHeaderLine('Content-Type'));
         $this->assertEquals(
-            file_get_contents(__DIR__ . '/../../src/Backends/Plex/plex-openai-stable.json'),
+            file_get_contents(__DIR__ . '/../../src/Backends/Plex/plex-openapi-stable.json'),
             (string) $response->getBody(),
         );
 
@@ -192,5 +192,31 @@ class ServeStaticTest extends TestCase
             $response->getStatusCode(),
             'If the date is invalid, the file should be served as normal.',
         );
+    }
+
+    public function test_favicon()
+    {
+        $response = $this->server->serve($this->createRequest('GET', '/favicon.ico'));
+
+        $this->assertEquals(Status::OK->value, $response->getStatusCode());
+        $this->assertEquals('image/x-icon', $response->getHeaderLine('Content-Type'));
+        $this->assertEquals("icon content\n", (string) $response->getBody());
+    }
+
+    public function test_apple_icon_rewrite()
+    {
+        $response = $this->server->serve($this->createRequest('GET', '/apple-touch-icon.deadbeef1234.png'));
+
+        $this->assertEquals(Status::OK->value, $response->getStatusCode());
+        $this->assertEquals("logo content\n", (string) $response->getBody());
+        $this->assertEquals('public, max-age=31536000', $response->getHeaderLine('Cache-Control'));
+    }
+
+    public function test_html_revalidates()
+    {
+        $response = $this->server->serve($this->createRequest('GET', '/test.html'));
+
+        $this->assertEquals('no-cache, must-revalidate', $response->getHeaderLine('Cache-Control'));
+        $this->assertEquals('0', $response->getHeaderLine('Expires'));
     }
 }

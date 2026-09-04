@@ -96,10 +96,10 @@ WatchState HTTP API reference. Examples use the default `/v1/api` prefix.
       - [DELETE /v1/api/system/guids/custom/{client}/{id}](#delete-v1apisystemguidscustomclientid)
       - [GET /v1/api/system/guids/custom/{client}/{index}](#get-v1apisystemguidscustomclientindex)
       - [GET /v1/api/system/events](#get-v1apisystemevents)
-       - [GET /v1/api/system/events/stats](#get-v1apisystemeventsstats)
-       - [GET /v1/api/system/stats](#get-v1apisystemstats)
-       - [GET /v1/api/system/transport/queue](#get-v1apisystemtransportqueue)
-       - [GET /v1/api/system/transport/queue/{id}](#get-v1apisystemtransportqueueid)
+      - [GET /v1/api/system/events/stats](#get-v1apisystemeventsstats)
+      - [GET /v1/api/system/stats](#get-v1apisystemstats)
+      - [GET /v1/api/system/transport/queue](#get-v1apisystemtransportqueue)
+      - [GET /v1/api/system/transport/queue/{id}](#get-v1apisystemtransportqueueid)
       - [POST /v1/api/system/events](#post-v1apisystemevents)
       - [GET /v1/api/system/events/{id}](#get-v1apisystemeventsid)
       - [PATCH /v1/api/system/events/{id}](#patch-v1apisystemeventsid)
@@ -2826,6 +2826,7 @@ If `X-Sign-With` is omitted, WatchState defaults to `api`.
 - `400 Bad Request` if the body is empty or `command` is missing/invalid.
 - `400 Bad Request` if the request signature is missing, malformed, or uses an unsupported verifier/algorithm.
 - `403 Forbidden` if the signature does not match the selected credential.
+- `503 Service Unavailable` if command execution is unavailable.
 
 ---
 
@@ -2848,6 +2849,8 @@ Lists recent command sessions that are still available for attach or replay.
       "expires_at": "2026-03-28T12:05:00+00:00",
       "available_until": "2026-03-29T12:02:00+00:00",
       "exit_code": 0,
+      "outcome": "success",
+      "failure_reason": null,
       "last_sequence": 42,
       "connections": 0
     }
@@ -2858,7 +2861,7 @@ Lists recent command sessions that are still available for attach or replay.
 **Notes**:
 - Queued and running sessions use `expires_at` as their availability window.
 - Completed sessions remain replayable for about 24 hours after `finished_at`.
-- Expired queued and completed sessions are eventually automatically pruned.
+- `outcome` identifies how the command ended.
 
 ---
 
@@ -2875,7 +2878,6 @@ Attaches to an available command session and streams or replays its output.
 - `cmd`
 - `cwd`
 - `data`
-- `ping`
 - `exit_code`
 - `close`
 
@@ -2914,15 +2916,14 @@ Requests cancellation for a queued or running command.
 - `404 Not Found` if the token is invalid/expired.
 
 **Notes**:
-- Queued sessions are removed immediately.
-- Expired queued or completed sessions return `404 Not Found` until prune removes the session directory.
-- Running sessions are marked for cancellation and stop as soon as the worker loop observes the cancel request.
+- Queued cancellations are retained as completed sessions with the `cancelled` outcome.
+- Running-command cancellation is asynchronous.
 - Completed sessions return `202 Accepted` with `Command has already completed.`
 
 ---
 
 #### GET /v1/api/system/scheduler
-Returns task scheduler status.
+Returns worker status.
 
 **Response**:
 ```json
@@ -2930,32 +2931,29 @@ Returns task scheduler status.
   "pid": "1234",
   "status": true,
   "restartable": true,
-  "message": "Task scheduler is running."
+  "message": "Worker is running."
 }
 ```
-
-**Notes**:
-- When not running in a container, the endpoint still returns status metadata explaining the limitation.
 
 ---
 
 #### POST /v1/api/system/scheduler/restart
-Restarts the task scheduler.
+Starts the worker when it is not running.
 
 **Response**:
 ```json
 {
   "status": true,
   "restartable": true,
-  "message": "Task scheduler restart has been requested."
+  "message": "Worker restart requested."
 }
 ```
 
 **Errors**:
-- `400 Bad Request` if `DISABLE_CRON` is set or WatchState is not running in a container.
+- `400 Bad Request` if WatchState is not running in a container.
 
 **Notes**:
-- Admin operation. Restarts the background scheduler inside the container.
+- Admin operation. Starts the background worker inside the container.
 
 ---
 

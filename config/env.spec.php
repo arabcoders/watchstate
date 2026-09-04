@@ -378,6 +378,12 @@ return (function () {
             'danger' => true,
         ],
         [
+            'key' => 'WS_WORKER_PID_FILE',
+            'config' => 'worker.pid_file',
+            'description' => 'Where to store the worker PID file.',
+            'type' => 'string',
+        ],
+        [
             'key' => 'WS_PROFILER_COLLECTOR',
             'config' => 'profiler.collector',
             'description' => 'The XHProf data collector URL to send the profiler data to.',

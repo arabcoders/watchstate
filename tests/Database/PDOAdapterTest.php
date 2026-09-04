@@ -652,14 +652,15 @@ class PDOAdapterTest extends TestCase
     public function test_reset_keeps_migration_metadata(): void
     {
         $this->seedEntities();
+        $pdo = $this->db->getDBLayer()->getBackend();
+        $metadata = $pdo->query('SELECT * FROM migration_version ORDER BY id')?->fetchAll(PDO::FETCH_ASSOC);
 
         $this->assertTrue($this->db->reset(), 'Reset should succeed for a migrated sqlite database.');
 
-        $pdo = $this->db->getDBLayer()->getBackend();
         $migrations = new PackageMigrationFactory();
 
         self::assertTrue($migrations->isMigrated($pdo), 'Reset should preserve package migration state.');
-        self::assertSame('2', (string) $pdo->query('SELECT COUNT(*) FROM migration_version')?->fetchColumn());
+        self::assertSame($metadata, $pdo->query('SELECT * FROM migration_version ORDER BY id')?->fetchAll(PDO::FETCH_ASSOC));
         self::assertSame('0', (string) $pdo->query('SELECT COUNT(*) FROM migration_lock')?->fetchColumn());
     }
 

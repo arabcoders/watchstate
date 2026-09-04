@@ -7,8 +7,11 @@ namespace Tests\API\System;
 use App\API\System\Command;
 use App\Libs\Attributes\Route\Post;
 use App\Libs\Config;
+use App\Libs\Console\ConsoleSessionService;
 use App\Libs\Enums\Http\Status;
 use App\Libs\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
+use Psr\Log\NullLogger;
 use Tests\Support\RequestResponseTrait;
 
 final class CommandTest extends TestCase
@@ -19,16 +22,27 @@ final class CommandTest extends TestCase
 
     private mixed $previousTmpDir;
 
+    private mixed $previousWorkerPidFile;
+
+    private string $workerPidFile;
+
+    private Command $commandHandler;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->initTempDir();
 
         $this->previousTmpDir = Config::get('tmpDir', null);
+        $this->previousWorkerPidFile = Config::get('worker.pid_file', null);
         $this->tmpDir = self::$tmpPath;
 
         mkdir($this->tmpDir . '/console', 0o755, true);
         Config::save('tmpDir', $this->tmpDir);
+        $this->workerPidFile = $this->tmpDir . '/console-worker.pid';
+        Config::save('worker.pid_file', $this->workerPidFile);
+        file_put_contents($this->workerPidFile, (string) getmypid());
+        $this->commandHandler = new Command(new ConsoleSessionService(new NullLogger()));
     }
 
     protected function tearDown(): void
@@ -39,12 +53,18 @@ final class CommandTest extends TestCase
             Config::save('tmpDir', $this->previousTmpDir);
         }
 
+        if (null === $this->previousWorkerPidFile) {
+            Config::remove('worker.pid_file');
+        } else {
+            Config::save('worker.pid_file', $this->previousWorkerPidFile);
+        }
+
         parent::tearDown();
     }
 
     public function test_queue(): void
     {
-        $handler = new Command();
+        $handler = $this->commandHandler;
         $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
 
         $this->assertSame(Status::CREATED->value, $response->getStatusCode());
@@ -66,9 +86,37 @@ final class CommandTest extends TestCase
         $this->assertSame(0, ag($state, 'connections'));
     }
 
+    public function test_queue_no_worker(): void
+    {
+        unlink($this->workerPidFile);
+
+        $response = $this->commandHandler->queue($this->getRequest(post: ['command' => 'system:tasks']));
+
+        $this->assertSame(Status::SERVICE_UNAVAILABLE->value, $response->getStatusCode());
+        $this->assertSame([], array_values(array_diff(scandir($this->tmpDir . '/console') ?: [], ['.', '..'])));
+    }
+
+    #[DataProvider('workerCommandProvider')]
+    public function test_queue_worker(string $command): void
+    {
+        $response = $this->commandHandler->queue($this->getRequest(post: ['command' => $command]));
+        $this->assertSame(Status::FORBIDDEN->value, $response->getStatusCode());
+    }
+
+    /** @return array<string,array{string}> */
+    public static function workerCommandProvider(): array
+    {
+        return [
+            'direct' => ['system:worker'],
+            'options' => ['system:worker --concurrency 1'],
+            'prefixed' => ['console system:worker'],
+            'shell' => ['$ bin/console system:worker'],
+        ];
+    }
+
     public function test_stream_done_old(): void
     {
-        $handler = new Command();
+        $handler = $this->commandHandler;
         $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
 
         $payload = json_decode((string) $response->getBody(), true);
@@ -91,7 +139,7 @@ final class CommandTest extends TestCase
 
     public function test_stream_queue_old(): void
     {
-        $handler = new Command();
+        $handler = $this->commandHandler;
         $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
 
         $payload = json_decode((string) $response->getBody(), true);
@@ -112,7 +160,7 @@ final class CommandTest extends TestCase
 
     public function test_stream_done_live(): void
     {
-        $handler = new Command();
+        $handler = $this->commandHandler;
         $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
 
         $payload = json_decode((string) $response->getBody(), true);
@@ -135,7 +183,7 @@ final class CommandTest extends TestCase
 
     public function test_list(): void
     {
-        $handler = new Command();
+        $handler = $this->commandHandler;
         $first = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
         $second = $handler->queue($this->getRequest(post: ['command' => 'db:index']));
 
@@ -167,7 +215,7 @@ final class CommandTest extends TestCase
 
     public function test_stream_done_gap(): void
     {
-        $handler = new Command();
+        $handler = $this->commandHandler;
         $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
 
         $payload = json_decode((string) $response->getBody(), true);
@@ -190,7 +238,7 @@ final class CommandTest extends TestCase
 
     public function test_cancel_done_old(): void
     {
-        $handler = new Command();
+        $handler = $this->commandHandler;
         $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
 
         $payload = json_decode((string) $response->getBody(), true);
@@ -213,7 +261,7 @@ final class CommandTest extends TestCase
 
     public function test_cancel_queue_old(): void
     {
-        $handler = new Command();
+        $handler = $this->commandHandler;
         $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
 
         $payload = json_decode((string) $response->getBody(), true);
@@ -234,7 +282,7 @@ final class CommandTest extends TestCase
 
     public function test_cancel_queue(): void
     {
-        $handler = new Command();
+        $handler = $this->commandHandler;
         $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
 
         $payload = json_decode((string) $response->getBody(), true);
@@ -245,13 +293,14 @@ final class CommandTest extends TestCase
         $cancelPayload = json_decode((string) $cancelResponse->getBody(), true);
 
         $this->assertSame(Status::ACCEPTED->value, $cancelResponse->getStatusCode());
-        $this->assertSame('Command cancellation requested.', ag($cancelPayload, 'message'));
-        $this->assertFalse(is_dir($sessionPath));
+        $this->assertSame('Command cancellation completed.', ag($cancelPayload, 'message'));
+        $this->assertTrue(is_dir($sessionPath));
+        $this->assertSame('cancelled', ag(json_decode((string) file_get_contents($sessionPath . '/state.json'), true), 'outcome'));
     }
 
     public function test_cancel_run(): void
     {
-        $handler = new Command();
+        $handler = $this->commandHandler;
         $response = $handler->queue($this->getRequest(post: ['command' => 'system:tasks']));
 
         $payload = json_decode((string) $response->getBody(), true);
@@ -268,7 +317,8 @@ final class CommandTest extends TestCase
         $cancelPayload = json_decode((string) $cancelResponse->getBody(), true);
 
         $this->assertSame(Status::ACCEPTED->value, $cancelResponse->getStatusCode());
-        $this->assertSame('Command cancellation requested.', ag($cancelPayload, 'message'));
-        $this->assertFileExists($sessionPath . '/cancel.flag');
+        $this->assertSame('Command cancellation completed.', ag($cancelPayload, 'message'));
+        $this->assertSame('completed', ag(json_decode((string) file_get_contents($statePath), true), 'status'));
+        $this->assertSame('worker_lost', ag(json_decode((string) file_get_contents($statePath), true), 'outcome'));
     }
 }

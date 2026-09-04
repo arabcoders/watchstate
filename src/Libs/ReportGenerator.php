@@ -78,7 +78,7 @@ final class ReportGenerator
      */
     private function getSystemInfo(): array
     {
-        $schedulerInfo = is_scheduler_running(ignoreContainer: true);
+        $schedulerInfo = get_worker_status();
 
         return [
             'version' => get_app_version(),
