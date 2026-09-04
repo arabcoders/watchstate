@@ -33,7 +33,7 @@ RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezo
     ARCH="$(dpkg --print-architecture)" && \
     if [ "$ARCH" = "amd64" ]; then PACKAGES="${PACKAGES} intel-media-va-driver i965-va-driver libmfx-gen1.2"; fi && \
     apt update && apt install -y --no-install-recommends nano curl procps net-tools iproute2 tzdata sqlite3 \
-    redis gettext ca-certificates fontconfig fonts-freefont-ttf fonts-noto fonts-terminus fonts-dejavu vainfo ${PACKAGES} && \
+    redis tini gettext ca-certificates fontconfig fonts-freefont-ttf fonts-noto fonts-terminus fonts-dejavu vainfo ${PACKAGES} && \
     # Delete unused users change users group gid to allow unRaid users to use gid 100 \
     deluser redis && groupmod -g 1588787 users && \
     # Create our own user. \
@@ -69,6 +69,7 @@ RUN echo '' && \
     # Copy configuration files to the expected directories.
     cp ${TOOL_PATH}/container/files/init-container.sh /opt/bin/init-container && \
     cp ${TOOL_PATH}/container/files/runner.sh /opt/bin/ws-runner && \
+    cp ${TOOL_PATH}/container/files/start-services.sh /opt/bin/start-services && \
     cp ${TOOL_PATH}/container/files/redis.conf /opt/config/redis.conf && \
     # Make sure /bin/* files are given executable flag.
     chmod +x /opt/bin/* && \
@@ -82,7 +83,7 @@ RUN echo '' && \
 
 # Set the entrypoint.
 #
-ENTRYPOINT ["/opt/bin/init-container"]
+ENTRYPOINT ["/usr/bin/tini", "-g", "--", "/opt/bin/init-container"]
 
 # Change working directory.
 #

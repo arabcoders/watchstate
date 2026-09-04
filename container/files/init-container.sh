@@ -71,6 +71,16 @@ else
 fi
 
 W_DISABLE_CACHE=${DISABLE_CACHE:-0}
+CACHE_PID=""
+
+stop_cache() {
+  if [ -n "${CACHE_PID}" ]; then
+    kill -TERM "${CACHE_PID}" 2>/dev/null || true
+    wait "${CACHE_PID}" 2>/dev/null || true
+  fi
+}
+
+trap stop_cache EXIT
 
 set -u
 
@@ -80,7 +90,17 @@ WS_CACHE_NULL=1 /opt/bin/console -q
 
 if [ 0 = "${W_DISABLE_CACHE}" ]; then
   echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Starting Cache Server."
-  redis-server "/opt/config/redis.conf"
+  redis-server "/opt/config/redis.conf" &
+  CACHE_PID=$!
+
+  until redis-cli -h 127.0.0.1 -p 6379 ping >/dev/null 2>&1; do
+    if ! kill -0 "${CACHE_PID}" 2>/dev/null; then
+      wait "${CACHE_PID}" 2>/dev/null || true
+      echo_err "ERROR: Cache Server failed to start."
+      exit 1
+    fi
+    sleep 0.1
+  done
 fi
 
 echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Caching tool routes."
@@ -112,9 +132,7 @@ for ENV_NAME in "${sourced[@]}"; do
   fi
 done
 
-echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Starting worker."
-/opt/bin/ws-runner &
-
 echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Running - $(/opt/bin/console --version)"
 
-exec "${@}"
+trap - EXIT
+source /opt/bin/start-services
