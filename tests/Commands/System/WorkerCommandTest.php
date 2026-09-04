@@ -10,8 +10,10 @@ use App\Libs\Console\ConsoleExecutionService;
 use App\Libs\Console\ConsoleSessionService;
 use App\Libs\TestCase;
 use Psr\Log\NullLogger;
+use ReflectionMethod;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
+use Symfony\Component\Process\Process;
 
 final class WorkerCommandTest extends TestCase
 {
@@ -54,6 +56,29 @@ final class WorkerCommandTest extends TestCase
         $tester = new CommandTester($this->command());
         self::assertSame(Command::SUCCESS, $tester->execute(['--token' => $token]));
         self::assertSame('success', ag($this->sessions->getState($token), 'outcome'));
+    }
+
+    public function test_child_command(): void
+    {
+        $token = $this->sessions->queue(
+            ['command' => '$ printf child-command', 'pty' => false, 'timeout' => 5],
+            make_date(strtotime('+5 minutes'))->format(DATE_ATOM),
+        );
+        $method = new ReflectionMethod(WorkerCommand::class, 'startSessionChild');
+        $process = $method->invoke($this->command(), $token);
+        $path = realpath(__DIR__ . '/../../../');
+
+        self::assertInstanceOf(Process::class, $process);
+        self::assertIsString($path);
+        self::assertSame($path, $process->getWorkingDirectory());
+        self::assertTrue($process->isOutputDisabled());
+        self::assertSame(
+            escapeshellarg("{$path}/bin/console") . ' ' . escapeshellarg(WorkerCommand::ROUTE) . ' ' . escapeshellarg('--token') . ' '
+                . escapeshellarg($token),
+            $process->getCommandLine(),
+        );
+
+        self::assertSame(Command::SUCCESS, $process->wait());
     }
 
     private function command(): WorkerCommand

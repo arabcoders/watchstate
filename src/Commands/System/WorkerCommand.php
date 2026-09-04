@@ -88,12 +88,19 @@ final class WorkerCommand extends Command
                         continue;
                     }
 
+                    $exitCode = $child->getExitCode() ?? self::FAILURE;
+                    $this->sessions->failUnclaimed(
+                        $sessionToken,
+                        $exitCode,
+                        'The console worker child exited before claiming the session.',
+                    );
+
                     $output->writeln(r(
                         "[{pid}] Console job '{session}' finished with exit code '{exit_code}'.",
                         [
                             'pid' => $workerPid,
                             'session' => substr(hash('sha256', $sessionToken), 0, 12),
-                            'exit_code' => $child->getExitCode() ?? self::FAILURE,
+                            'exit_code' => $exitCode,
                         ],
                     ), iOutput::VERBOSITY_VERBOSE);
                     unset($sessionChildren[$sessionToken]);
@@ -149,7 +156,15 @@ final class WorkerCommand extends Command
 
                 foreach ($this->sessions->getTokens() as $sessionToken) {
                     $state = $this->sessions->getState($sessionToken);
-                    if ('running' === ag($state, 'status')) {
+                    $status = ag($state, 'status');
+                    if ('starting' === $status) {
+                        if (false === isset($sessionChildren[$sessionToken])) {
+                            $this->sessions->recover($sessionToken);
+                        }
+                        continue;
+                    }
+
+                    if ('running' === $status) {
                         $this->sessions->recover($sessionToken);
                         continue;
                     }
@@ -162,7 +177,29 @@ final class WorkerCommand extends Command
                         continue;
                     }
 
-                    $child = $this->startSessionChild($sessionToken);
+                    if (false === $this->sessions->markStarting($sessionToken)) {
+                        continue;
+                    }
+
+                    try {
+                        $child = $this->startSessionChild($sessionToken);
+                    } catch (Throwable $e) {
+                        $this->sessions->failUnclaimed(
+                            $sessionToken,
+                            self::FAILURE,
+                            'The console worker could not start the session child process.',
+                        );
+                        $this->logger->error(
+                            "Unable to start console session '{session}' child process. {exception.message}",
+                            [
+                                'operation' => 'console.start',
+                                'error' => 'process_start_failed',
+                                'session' => substr(hash('sha256', $sessionToken), 0, 12),
+                                ...exception_log($e),
+                            ],
+                        );
+                        continue;
+                    }
                     $sessionChildren[$sessionToken] = $child;
                     $output->writeln(r(
                         "[{pid}] Picked up console job '{session}' with child PID '{child_pid}'.",
@@ -199,13 +236,15 @@ final class WorkerCommand extends Command
 
     private function startSessionChild(#[\SensitiveParameter] string $token): Process
     {
-        $binary = realpath(__DIR__ . '/../../../bin/console');
-        if (false === $binary) {
-            throw new \RuntimeException('Unable to resolve the console executable.');
+        $path = realpath(__DIR__ . '/../../../');
+        if (false === $path) {
+            throw new \RuntimeException('Unable to resolve the application path.');
         }
 
         $process = new Process(
-            command: [PHP_BINARY, $binary, self::ROUTE, '--token', $token],
+            command: ["{$path}/bin/console", self::ROUTE, '--token', $token],
+            cwd: $path,
+            env: $_ENV,
             timeout: null,
         );
         $process->disableOutput();
@@ -215,13 +254,15 @@ final class WorkerCommand extends Command
 
     private function startSchedulerChild(): Process
     {
-        $binary = realpath(__DIR__ . '/../../../bin/console');
-        if (false === $binary) {
-            throw new \RuntimeException('Unable to resolve the console executable.');
+        $path = realpath(__DIR__ . '/../../../');
+        if (false === $path) {
+            throw new \RuntimeException('Unable to resolve the application path.');
         }
 
         $process = new Process(
-            command: [PHP_BINARY, $binary, TasksCommand::ROUTE, '--run', '--save-log'],
+            command: ["{$path}/bin/console", TasksCommand::ROUTE, '--run', '--save-log'],
+            cwd: $path,
+            env: $_ENV,
             timeout: self::SCHEDULER_TIMEOUT_SECONDS,
         );
         $process->disableOutput();

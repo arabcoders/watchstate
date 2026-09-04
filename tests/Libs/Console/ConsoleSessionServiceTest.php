@@ -60,6 +60,34 @@ final class ConsoleSessionServiceTest extends TestCase
         $this->sessions->releaseLock($lock);
     }
 
+    public function test_start_once(): void
+    {
+        $token = $this->queue('$ printf starting');
+
+        self::assertTrue($this->sessions->markStarting($token));
+        self::assertFalse($this->sessions->markStarting($token));
+        self::assertSame('starting', ag($this->sessions->getState($token), 'status'));
+        self::assertSame('queued', ag($this->sessions->list()[0] ?? [], 'status'));
+
+        $lock = $this->sessions->claim($token);
+        self::assertIsResource($lock);
+        $this->sessions->releaseLock($lock);
+    }
+
+    public function test_fail_unclaimed(): void
+    {
+        $token = $this->queue('$ printf unclaimed');
+        self::assertTrue($this->sessions->markStarting($token));
+
+        self::assertTrue($this->sessions->failUnclaimed($token, 1, 'Child failed to start.'));
+        self::assertFalse($this->sessions->failUnclaimed($token, 1, 'Child failed again.'));
+
+        $state = $this->sessions->getState($token);
+        self::assertSame('completed', ag($state, 'status'));
+        self::assertSame('process_start_failed', ag($state, 'outcome'));
+        self::assertStringContainsString('Child failed to start.', (string) file_get_contents($this->path($token) . '/stream.log'));
+    }
+
     public function test_execute_output(): void
     {
         $token = $this->queue('$ printf worker-output');
@@ -133,6 +161,27 @@ final class ConsoleSessionServiceTest extends TestCase
         self::assertSame('completed', ag($state, 'status'));
         self::assertSame('worker_lost', ag($state, 'outcome'));
         self::assertStringContainsString('worker stopped', (string) file_get_contents($this->path($token) . '/stream.log'));
+    }
+
+    public function test_recover_starting(): void
+    {
+        $token = $this->queue('$ printf stale-start');
+        self::assertTrue($this->sessions->markStarting($token));
+
+        $statePath = $this->path($token) . '/state.json';
+        $state = json_decode((string) file_get_contents($statePath), true);
+        $state['launch_attempted_at'] = make_date(strtotime('-1 minute'))->format(DATE_ATOM);
+        file_put_contents($statePath, json_encode($state, JSON_PRETTY_PRINT | JSON_INVALID_UTF8_IGNORE));
+
+        self::assertTrue($this->sessions->recover($token));
+
+        $state = $this->sessions->getState($token);
+        self::assertSame('completed', ag($state, 'status'));
+        self::assertSame('process_start_failed', ag($state, 'outcome'));
+        self::assertStringContainsString(
+            'before the session child started',
+            (string) file_get_contents($this->path($token) . '/stream.log'),
+        );
     }
 
     public function test_append_failure(): void

@@ -18,8 +18,10 @@ final class ConsoleSessionService
     private const int COMPLETED_RETENTION_SECONDS = 86_400;
     private const int PING_INTERVAL_MICROSECONDS = 200_000;
     private const int PING_AFTER_ITERATIONS = 6;
+    private const int STARTING_TIMEOUT_SECONDS = 10;
 
     private const string STATUS_QUEUED = 'queued';
+    private const string STATUS_STARTING = 'starting';
     private const string STATUS_RUNNING = 'running';
     private const string STATUS_COMPLETED = 'completed';
 
@@ -77,6 +79,7 @@ final class ConsoleSessionService
                 'worker_pid' => null,
                 'child_pid' => null,
                 'worker_heartbeat_at' => null,
+                'launch_attempted_at' => null,
                 'timeout_seconds' => null,
                 'last_sequence' => 0,
                 'connection_seq' => 0,
@@ -150,10 +153,11 @@ final class ConsoleSessionService
                 continue;
             }
 
+            $status = (string) ag($state, 'status', self::STATUS_QUEUED);
             $items[] = [
                 'token' => $token,
                 'command' => $command,
-                'status' => (string) ag($state, 'status', self::STATUS_QUEUED),
+                'status' => self::STATUS_STARTING === $status ? self::STATUS_QUEUED : $status,
                 'cwd' => is_string(ag($state, 'cwd')) ? ag($state, 'cwd') : null,
                 'created_at' => $this->normalizeDate(ag($state, 'created_at')),
                 'updated_at' => $this->normalizeDate(ag($state, 'updated_at')),
@@ -272,7 +276,7 @@ final class ConsoleSessionService
         if (is_resource($writerLock)) {
             try {
                 $state = $this->getState($token);
-                if (self::STATUS_QUEUED === ag($state, 'status')) {
+                if (true === in_array(ag($state, 'status'), [self::STATUS_QUEUED, self::STATUS_STARTING], true)) {
                     $this->complete($token, 130, 'cancelled', 'Command was cancelled before execution.');
                     return 'Command cancellation completed.';
                 }
@@ -298,6 +302,36 @@ final class ConsoleSessionService
         return 'Command cancellation requested.';
     }
 
+    /**
+     * Mark a queued console session as selected for child process startup.
+     */
+    public function markStarting(#[\SensitiveParameter] string $token): bool
+    {
+        $writerLock = $this->acquireWriterLock($token);
+        if (!is_resource($writerLock)) {
+            return false;
+        }
+
+        try {
+            $state = $this->getState($token);
+            if (null === $state || self::STATUS_QUEUED !== ag($state, 'status') || $this->isExpired($state)) {
+                return false;
+            }
+
+            $state = $this->mutate($token, static function (array $state): array {
+                $now = make_date()->format(Date::ATOM);
+                $state['status'] = self::STATUS_STARTING;
+                $state['updated_at'] = $now;
+                $state['launch_attempted_at'] = $now;
+                return $state;
+            });
+
+            return null !== $state;
+        } finally {
+            $this->releaseLock($writerLock);
+        }
+    }
+
     /** @return resource|null */
     public function claim(#[\SensitiveParameter] string $token): mixed
     {
@@ -307,7 +341,11 @@ final class ConsoleSessionService
         }
 
         $state = $this->getState($token);
-        if (null === $state || self::STATUS_QUEUED !== ag($state, 'status') || $this->isExpired($state)) {
+        if (
+            null === $state
+            || false === in_array(ag($state, 'status'), [self::STATUS_QUEUED, self::STATUS_STARTING], true)
+            || $this->isExpired($state)
+        ) {
             $this->releaseLock($writerLock);
             return null;
         }
@@ -315,10 +353,37 @@ final class ConsoleSessionService
         return $writerLock;
     }
 
+    /**
+     * Complete a session whose worker child exited before claiming it.
+     */
+    public function failUnclaimed(
+        #[\SensitiveParameter]
+        string $token,
+        int $exitCode,
+        string $message,
+    ): bool {
+        $writerLock = $this->acquireWriterLock($token);
+        if (!is_resource($writerLock)) {
+            return false;
+        }
+
+        try {
+            $state = $this->getState($token);
+            if (null === $state || false === in_array(ag($state, 'status'), [self::STATUS_QUEUED, self::STATUS_STARTING], true)) {
+                return false;
+            }
+
+            $this->complete($token, $exitCode, 'process_start_failed', $message);
+            return true;
+        } finally {
+            $this->releaseLock($writerLock);
+        }
+    }
+
     public function recover(#[\SensitiveParameter] string $token): bool
     {
         $state = $this->getState($token);
-        if (null === $state || self::STATUS_RUNNING !== ag($state, 'status')) {
+        if (null === $state || false === in_array(ag($state, 'status'), [self::STATUS_STARTING, self::STATUS_RUNNING], true)) {
             return false;
         }
 
@@ -329,8 +394,24 @@ final class ConsoleSessionService
 
         try {
             $state = $this->getState($token);
-            if (null === $state || self::STATUS_RUNNING !== ag($state, 'status')) {
+            $status = ag($state, 'status');
+            if (null === $state || false === in_array($status, [self::STATUS_STARTING, self::STATUS_RUNNING], true)) {
                 return false;
+            }
+
+            if (self::STATUS_STARTING === $status) {
+                $attemptedAt = strtotime((string) ag($state, 'launch_attempted_at', ''));
+                if (false !== $attemptedAt && time() < ($attemptedAt + self::STARTING_TIMEOUT_SECONDS)) {
+                    return false;
+                }
+
+                $this->complete(
+                    $token,
+                    125,
+                    'process_start_failed',
+                    'The console worker stopped before the session child started.',
+                );
+                return true;
             }
 
             $this->complete($token, 125, 'worker_lost', 'The console worker stopped before the command completed.');
@@ -351,6 +432,7 @@ final class ConsoleSessionService
             $state['updated_at'] = $now;
             $state['worker_pid'] = $workerPid;
             $state['worker_heartbeat_at'] = $now;
+            $state['launch_attempted_at'] = null;
             $state['timeout_seconds'] = $timeoutSeconds;
             return $state;
         });
@@ -471,6 +553,7 @@ final class ConsoleSessionService
                     default => $outcome,
                 };
                 $state['worker_heartbeat_at'] = null;
+                $state['launch_attempted_at'] = null;
                 return $state;
             });
             if (null === $state) {
@@ -694,7 +777,7 @@ final class ConsoleSessionService
 
     private function isExpired(array $state): bool
     {
-        if (self::STATUS_QUEUED === ag($state, 'status')) {
+        if (true === in_array(ag($state, 'status'), [self::STATUS_QUEUED, self::STATUS_STARTING], true)) {
             $expiresAt = strtotime((string) ag($state, 'expires_at', ''));
             return false === $expiresAt || $expiresAt < time();
         }
