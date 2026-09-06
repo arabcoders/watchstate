@@ -24,7 +24,6 @@ ARG USER_ID=1000
 ENV IN_CONTAINER=1
 ENV PATH=/opt/bin:${PATH}
 ENV WS_DATA_PATH=/config
-ENV WS_TZ=UTC
 ENV PACKAGES=""
 
 # Setup the required environment.
