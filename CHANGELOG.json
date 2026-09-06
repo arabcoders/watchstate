@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "b0895beb07ddb627fefbe2c79230cc278b7d9887",
-    "date": "2026-09-04T19:37:35+00:00",
+    "full_sha": "1d243e9480a6e1083662b6698f0f97d76de489f6",
+    "date": "2026-09-06T06:08:10+00:00",
     "commits": [
+      {
+        "sha": "1d243e94",
+        "full_sha": "1d243e9480a6e1083662b6698f0f97d76de489f6",
+        "message": "fix: remove harded WS_TZ=UTC in dockerfile",
+        "author": "arabcoders",
+        "date": "2026-09-06T06:08:10+00:00"
+      },
       {
         "sha": "b0895beb",
         "full_sha": "b0895beb07ddb627fefbe2c79230cc278b7d9887",
