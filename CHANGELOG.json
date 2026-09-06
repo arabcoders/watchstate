@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "1d243e9480a6e1083662b6698f0f97d76de489f6",
-    "date": "2026-09-06T06:08:10+00:00",
+    "full_sha": "80520235c2fd71f355931c56799ce97002b9a9ae",
+    "date": "2026-09-06T15:16:04+00:00",
     "commits": [
+      {
+        "sha": "80520235",
+        "full_sha": "80520235c2fd71f355931c56799ce97002b9a9ae",
+        "message": "refactor: improve worker exit status handling and logging in runner script",
+        "author": "arabcoders",
+        "date": "2026-09-06T15:16:04+00:00"
+      },
       {
         "sha": "1d243e94",
         "full_sha": "1d243e9480a6e1083662b6698f0f97d76de489f6",
