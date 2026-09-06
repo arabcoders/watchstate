@@ -34,6 +34,8 @@ use Throwable;
 
 final class Index
 {
+    private const float IMAGE_TIMEOUT_SECONDS = 10.0;
+
     use APITraits;
 
     /**
@@ -947,12 +949,23 @@ final class Index
         }
 
         try {
-            $client = $this->getClient(name: $item->via, userContext: $userContext);
+            $client = $this->getClient(
+                name: $item->via,
+                config: [
+                    'options' => [
+                        'client' => [
+                            'timeout' => self::IMAGE_TIMEOUT_SECONDS,
+                            'max_duration' => self::IMAGE_TIMEOUT_SECONDS,
+                        ],
+                    ],
+                ],
+                userContext: $userContext,
+            );
+            $images = $client->getImagesUrl($rId);
         } catch (RuntimeException $e) {
-            return api_error($e->getMessage(), Status::NOT_FOUND);
+            return api_error('Failed to fetch image.', Status::BAD_REQUEST);
         }
 
-        $images = $client->getImagesUrl($rId);
         if (false === array_key_exists($type, $images)) {
             return api_error('Invalid image type.', Status::BAD_REQUEST);
         }
@@ -964,7 +977,6 @@ final class Index
         $apiRequest = $client->proxy(Method::GET, $images[$type]);
 
         if (false === $apiRequest->isSuccessful()) {
-            $this->logger->log($apiRequest->error->level(), $apiRequest->error->message, $apiRequest->error->context);
             return api_error('Failed to fetch image.', Status::BAD_REQUEST);
         }
 
