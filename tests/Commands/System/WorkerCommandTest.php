@@ -55,7 +55,39 @@ final class WorkerCommandTest extends TestCase
 
         $tester = new CommandTester($this->command());
         self::assertSame(Command::SUCCESS, $tester->execute(['--token' => $token]));
-        self::assertSame('success', ag($this->sessions->getState($token), 'outcome'));
+        $state = $this->sessions->getState($token);
+        self::assertIsArray($state);
+        self::assertSame('success', ag($state, 'outcome'));
+    }
+
+    public function test_incomplete_session(): void
+    {
+        $token = hash('sha256', 'incomplete-session');
+        mkdir(self::$tmpPath . '/console/' . $token);
+
+        $path = realpath(__DIR__ . '/../../../');
+        self::assertIsString($path);
+        $process = new Process(
+            command: ["{$path}/bin/console", WorkerCommand::ROUTE],
+            cwd: $path,
+            env: [
+                'WS_CACHE_NULL' => '1',
+                'WS_TMP_DIR' => self::$tmpPath,
+                'WS_WORKER_PID_FILE' => self::$tmpPath . '/worker-process.pid',
+            ],
+            timeout: 5,
+        );
+
+        try {
+            $process->start();
+            self::assertTrue($process->waitUntil(
+                static fn(string $type, string $output): bool => str_contains($output, 'Worker started and waiting for tasks.'),
+            ));
+            usleep(500_000);
+            self::assertTrue($process->isRunning(), $process->getErrorOutput());
+        } finally {
+            $process->stop(1, 9);
+        }
     }
 
     public function test_child_command(): void

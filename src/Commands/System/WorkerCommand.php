@@ -156,6 +156,10 @@ final class WorkerCommand extends Command
 
                 foreach ($this->sessions->getTokens() as $sessionToken) {
                     $state = $this->sessions->getState($sessionToken);
+                    if (null === $state) {
+                        continue;
+                    }
+
                     $status = ag($state, 'status');
                     if ('starting' === $status) {
                         if (false === isset($sessionChildren[$sessionToken])) {

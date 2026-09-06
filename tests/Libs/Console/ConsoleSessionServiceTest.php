@@ -66,7 +66,9 @@ final class ConsoleSessionServiceTest extends TestCase
 
         self::assertTrue($this->sessions->markStarting($token));
         self::assertFalse($this->sessions->markStarting($token));
-        self::assertSame('starting', ag($this->sessions->getState($token), 'status'));
+        $state = $this->sessions->getState($token);
+        self::assertIsArray($state);
+        self::assertSame('starting', ag($state, 'status'));
         self::assertSame('queued', ag($this->sessions->list()[0] ?? [], 'status'));
 
         $lock = $this->sessions->claim($token);
@@ -83,6 +85,7 @@ final class ConsoleSessionServiceTest extends TestCase
         self::assertFalse($this->sessions->failUnclaimed($token, 1, 'Child failed again.'));
 
         $state = $this->sessions->getState($token);
+        self::assertIsArray($state);
         self::assertSame('completed', ag($state, 'status'));
         self::assertSame('process_start_failed', ag($state, 'outcome'));
         self::assertStringContainsString('Child failed to start.', (string) file_get_contents($this->path($token) . '/stream.log'));
@@ -98,6 +101,7 @@ final class ConsoleSessionServiceTest extends TestCase
         self::assertSame(0, $execution->execute($token, $lock));
 
         $state = $this->sessions->getState($token);
+        self::assertIsArray($state);
         self::assertSame('completed', ag($state, 'status'));
         self::assertSame('success', ag($state, 'outcome'));
         self::assertSame(0, ag($state, 'exit_code'));
@@ -117,6 +121,7 @@ final class ConsoleSessionServiceTest extends TestCase
         self::assertSame(124, $execution->execute($token, $lock));
 
         $state = $this->sessions->getState($token);
+        self::assertIsArray($state);
         self::assertSame('completed', ag($state, 'status'));
         self::assertSame('timed_out', ag($state, 'outcome'));
         self::assertSame(124, ag($state, 'exit_code'));
@@ -133,6 +138,7 @@ final class ConsoleSessionServiceTest extends TestCase
         self::assertNotSame(0, $execution->execute($token, $lock));
 
         $state = $this->sessions->getState($token);
+        self::assertIsArray($state);
         self::assertSame('completed', ag($state, 'status'));
         self::assertSame('cancelled', ag($state, 'outcome'));
     }
@@ -142,7 +148,9 @@ final class ConsoleSessionServiceTest extends TestCase
         $token = $this->queue('$ printf cancelled');
 
         self::assertSame('Command cancellation completed.', $this->sessions->cancel($token));
-        self::assertSame('cancelled', ag($this->sessions->getState($token), 'outcome'));
+        $state = $this->sessions->getState($token);
+        self::assertIsArray($state);
+        self::assertSame('cancelled', ag($state, 'outcome'));
         self::assertFileExists($this->path($token) . '/stream.log');
     }
 
@@ -151,6 +159,7 @@ final class ConsoleSessionServiceTest extends TestCase
         $token = $this->queue('$ printf stale');
         $statePath = $this->path($token) . '/state.json';
         $state = json_decode((string) file_get_contents($statePath), true);
+        self::assertIsArray($state);
         $state['status'] = 'running';
         $state['started_at'] = make_date(strtotime('-1 hour'))->format(DATE_ATOM);
         file_put_contents($statePath, json_encode($state, JSON_PRETTY_PRINT | JSON_INVALID_UTF8_IGNORE));
@@ -158,6 +167,7 @@ final class ConsoleSessionServiceTest extends TestCase
         self::assertTrue($this->sessions->recover($token));
 
         $state = $this->sessions->getState($token);
+        self::assertIsArray($state);
         self::assertSame('completed', ag($state, 'status'));
         self::assertSame('worker_lost', ag($state, 'outcome'));
         self::assertStringContainsString('worker stopped', (string) file_get_contents($this->path($token) . '/stream.log'));
@@ -170,12 +180,14 @@ final class ConsoleSessionServiceTest extends TestCase
 
         $statePath = $this->path($token) . '/state.json';
         $state = json_decode((string) file_get_contents($statePath), true);
+        self::assertIsArray($state);
         $state['launch_attempted_at'] = make_date(strtotime('-1 minute'))->format(DATE_ATOM);
         file_put_contents($statePath, json_encode($state, JSON_PRETTY_PRINT | JSON_INVALID_UTF8_IGNORE));
 
         self::assertTrue($this->sessions->recover($token));
 
         $state = $this->sessions->getState($token);
+        self::assertIsArray($state);
         self::assertSame('completed', ag($state, 'status'));
         self::assertSame('process_start_failed', ag($state, 'outcome'));
         self::assertStringContainsString(
@@ -192,7 +204,9 @@ final class ConsoleSessionServiceTest extends TestCase
         mkdir($streamPath);
 
         self::assertFalse($this->sessions->append($token, 'data', 'broken'));
-        self::assertSame(0, ag($this->sessions->getState($token), 'last_sequence'));
+        $state = $this->sessions->getState($token);
+        self::assertIsArray($state);
+        self::assertSame(0, ag($state, 'last_sequence'));
     }
 
     private function queue(string $command): string

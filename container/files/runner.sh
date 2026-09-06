@@ -14,7 +14,7 @@ stop_runner() {
 trap stop_runner TERM INT
 
 while true; do
-  /opt/bin/console system:worker -v &
+  /opt/bin/console system:worker -v 2>&1 &
   CHILD_PID=$!
   status=0
   wait "${CHILD_PID}" || status=$?

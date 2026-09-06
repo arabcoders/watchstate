@@ -276,12 +276,17 @@ final class ConsoleSessionService
         if (is_resource($writerLock)) {
             try {
                 $state = $this->getState($token);
-                if (true === in_array(ag($state, 'status'), [self::STATUS_QUEUED, self::STATUS_STARTING], true)) {
+                if (null === $state) {
+                    return null;
+                }
+
+                $status = ag($state, 'status');
+                if (true === in_array($status, [self::STATUS_QUEUED, self::STATUS_STARTING], true)) {
                     $this->complete($token, 130, 'cancelled', 'Command was cancelled before execution.');
                     return 'Command cancellation completed.';
                 }
 
-                if (self::STATUS_RUNNING === ag($state, 'status')) {
+                if (self::STATUS_RUNNING === $status) {
                     $this->complete($token, 125, 'worker_lost', 'Command worker was lost before cancellation.');
                     return 'Command cancellation completed.';
                 }
@@ -394,8 +399,12 @@ final class ConsoleSessionService
 
         try {
             $state = $this->getState($token);
+            if (null === $state) {
+                return false;
+            }
+
             $status = ag($state, 'status');
-            if (null === $state || false === in_array($status, [self::STATUS_STARTING, self::STATUS_RUNNING], true)) {
+            if (false === in_array($status, [self::STATUS_STARTING, self::STATUS_RUNNING], true)) {
                 return false;
             }
 
