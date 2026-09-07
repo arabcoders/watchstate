@@ -75,7 +75,7 @@ class Import
             context: $context,
             fn: fn() => $this->getLibraries(
                 context: $context,
-                handle: fn(array $logContext = []) => fn(iResponse $response) => $this->handle(
+                handle: fn(array $logContext = []) => fn(iResponse $response, ?iterable $chunks = null) => $this->handle(
                     context: $context,
                     response: $response,
                     callback: fn(array $item, array $logContext = []) => $this->process(
@@ -87,6 +87,7 @@ class Import
                         opts: $opts + [Options::AFTER => $after],
                     ),
                     logContext: $logContext,
+                    chunks: $chunks,
                 ),
                 error: fn(array $logContext = []) => fn(Throwable $e) => $this->logger->error(
                     message: "Failed during '{identity.user}@{identity.backend}' library '{library.title}' request. {exception.message}",
@@ -639,11 +640,18 @@ class Import
     }
 
     /**
+     * @param iterable<string>|null $chunks Buffered response chunks.
+     *
      * @throws TransportExceptionInterface
      * @noinspection PhpUnusedParameterInspection
      */
-    protected function handle(Context $context, iResponse $response, Closure $callback, array $logContext = []): void
-    {
+    protected function handle(
+        Context $context,
+        iResponse $response,
+        Closure $callback,
+        array $logContext = [],
+        ?iterable $chunks = null,
+    ): void {
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             $this->logger->error(
                 message: "Request for '{identity.user}@{identity.backend}' - '{library.title} {segment.number}/{segment.of}' content returned HTTP {response.status_code}.",
@@ -668,7 +676,7 @@ class Import
 
         try {
             $it = Items::fromIterable(
-                iterable: http_client_chunks($this->http->stream($response)),
+                iterable: $chunks ?? http_client_chunks($this->http->stream($response)),
                 options: [
                     'pointer' => '/MediaContainer/Metadata',
                     'decoder' => new ErrorWrappingDecoder(

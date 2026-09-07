@@ -26,6 +26,28 @@ class DirectMapperTest extends MapperAbstract
         return $mapper;
     }
 
+    public function test_get_fully_loaded_conditions(): void
+    {
+        $movie = new StateEntity($this->testMovie);
+        $episode = new StateEntity($this->testEpisode);
+
+        $this->mapper->loadData();
+        $this->db->commit([$movie, $episode]);
+
+        self::assertSame($movie->id, $this->mapper->get(new StateEntity($this->testMovie))->id);
+        self::assertSame($episode->id, $this->mapper->get(new StateEntity($this->testEpisode))->id);
+    }
+
+    public function test_has_fully_loaded_conditions(): void
+    {
+        $episode = new StateEntity($this->testEpisode);
+
+        $this->mapper->loadData();
+        $this->db->commit([$episode]);
+
+        self::assertTrue($this->mapper->has(new StateEntity($this->testEpisode)));
+    }
+
     public function test_add_timestamps_now(): void
     {
         $before = time();
@@ -80,6 +102,20 @@ class DirectMapperTest extends MapperAbstract
             $storedProgress,
             'Progress should be saved to database when progress event is triggered',
         );
+    }
+
+    public function test_full_preload_matches_external_row(): void
+    {
+        $this->mapper->loadData();
+
+        $stored = new StateEntity($this->testMovie);
+        $this->db->commit([$stored]);
+
+        $this->mapper->add(new StateEntity($this->testMovie));
+
+        self::assertSame($stored->id, $this->mapper->get(new StateEntity($this->testMovie))->id);
+        self::assertSame(0, $this->mapper->commit()[iState::TYPE_MOVIE]['added']);
+        self::assertCount(1, $this->db->find($stored));
     }
 
     /**

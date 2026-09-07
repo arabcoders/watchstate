@@ -65,11 +65,6 @@ class DirectMapper implements ImportInterface
     protected array $options = [];
 
     /**
-     * @var bool $fullyLoaded Indicates whether the entire database loaded.
-     */
-    protected bool $fullyLoaded = false;
-
-    /**
      * @var array<string,iState> List of items with play progress.
      */
     protected array $progressItems = [];
@@ -187,8 +182,6 @@ class DirectMapper implements ImportInterface
      */
     public function loadData(?iDate $date = null): self
     {
-        $this->fullyLoaded = null === $date;
-
         $opts = [
             'class' => $this->options['class'] ?? null,
             'fields' => [
@@ -1251,7 +1244,6 @@ class DirectMapper implements ImportInterface
             iState::TYPE_EPISODE => ['added' => 0, 'updated' => 0, 'failed' => 0],
         ];
 
-        $this->fullyLoaded = false;
         $this->changed = $this->objects = $this->pointers = $this->progressItems = [];
 
         return $this;
@@ -1457,7 +1449,7 @@ class DirectMapper implements ImportInterface
             }
         }
 
-        if (false === $this->fullyLoaded && null !== ($lazyEntity = $this->db->get($entity))) {
+        if (null !== ($lazyEntity = $this->db->get($entity))) {
             $this->objects[$lazyEntity->id] = $lazyEntity->id;
 
             $this->addPointers($lazyEntity, $lazyEntity->id, true);

@@ -41,7 +41,7 @@ use Throwable;
  *
  * @package Your\Namespace
  */
-final class Initializer
+class Initializer
 {
     private Cli $cli;
     private ConsoleOutput $cliOutput;
