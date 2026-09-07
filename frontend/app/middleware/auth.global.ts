@@ -1,5 +1,4 @@
 import { abortNavigation, defineNuxtRouteMiddleware, navigateTo } from '#app';
-import type { RouteLocationNormalized } from 'vue-router';
 import { useAuth } from '~/composables/useAuth';
 
 let next_check = 0;
@@ -19,7 +18,7 @@ const getNextCheckAt = (expiresAt: string | null): number => {
   return Math.min(defaultNextCheck, expiresAtMs - 60_000);
 };
 
-export default defineNuxtRouteMiddleware(async (to: RouteLocationNormalized) => {
+export default defineNuxtRouteMiddleware(async (to) => {
   if (to.fullPath.startsWith('/auth') || to.fullPath.startsWith('/v1/api')) {
     return;
   }

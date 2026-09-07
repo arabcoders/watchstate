@@ -31,7 +31,7 @@ ENV PACKAGES=""
 RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone && \
     ARCH="$(dpkg --print-architecture)" && \
     if [ "$ARCH" = "amd64" ]; then PACKAGES="${PACKAGES} intel-media-va-driver i965-va-driver libmfx-gen1.2"; fi && \
-    apt update && apt install -y --no-install-recommends nano curl procps net-tools iproute2 tzdata sqlite3 \
+    apt update && apt install -y --no-install-recommends nano curl procps net-tools iproute2 tzdata sqlite3 ripgrep \
     redis tini gettext ca-certificates fontconfig fonts-freefont-ttf fonts-noto fonts-terminus fonts-dejavu vainfo ${PACKAGES} && \
     # Delete unused users change users group gid to allow unRaid users to use gid 100 \
     deluser redis && groupmod -g 1588787 users && \

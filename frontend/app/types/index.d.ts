@@ -22,6 +22,24 @@ export interface GenericResponse {
   };
 }
 
+export interface RelatedHistoryEvent {
+  id: string;
+  name: string;
+  status: number;
+  status_name: string;
+  timestamp: string;
+}
+
+export interface RelatedHistoryLog {
+  filename: string;
+  entry: ServerJsonLogEntry;
+}
+
+export interface RelatedHistoryResponse {
+  logs: Array<RelatedHistoryLog>;
+  events: Array<RelatedHistoryEvent>;
+}
+
 export interface ConsoleSessionItem {
   token: string;
   command: string;
