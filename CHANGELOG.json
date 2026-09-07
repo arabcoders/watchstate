@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "abe80bad0b84b247c3c88bc8721c0eeab4953b11",
-    "date": "2026-09-07T04:48:54+00:00",
+    "full_sha": "f8606535d6ce8843acd520bb978778202cd77e70",
+    "date": "2026-09-07T20:53:52+00:00",
     "commits": [
+      {
+        "sha": "f8606535",
+        "full_sha": "f8606535d6ce8843acd520bb978778202cd77e70",
+        "message": "feat: add related log lines and events to history id.",
+        "author": "arabcoders",
+        "date": "2026-09-07T20:53:52+00:00"
+      },
+      {
+        "sha": "6698f78d",
+        "full_sha": "6698f78d87d3a6a05447112179839a6f47279a37",
+        "message": "refactor: reduce lock window during import operations",
+        "author": "arabcoders",
+        "date": "2026-09-07T19:05:41+00:00"
+      },
       {
         "sha": "abe80bad",
         "full_sha": "abe80bad0b84b247c3c88bc8721c0eeab4953b11",
