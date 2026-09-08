@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "f8606535d6ce8843acd520bb978778202cd77e70",
-    "date": "2026-09-07T20:53:52+00:00",
+    "full_sha": "99f489531efe07eeb015f5980b661c12be450094",
+    "date": "2026-09-08T05:45:10+00:00",
     "commits": [
+      {
+        "sha": "99f48953",
+        "full_sha": "99f489531efe07eeb015f5980b661c12be450094",
+        "message": "refactor: improve events listing in history page.",
+        "author": "arabcoders",
+        "date": "2026-09-08T05:45:10+00:00"
+      },
       {
         "sha": "f8606535",
         "full_sha": "f8606535d6ce8843acd520bb978778202cd77e70",
