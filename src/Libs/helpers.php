@@ -37,6 +37,7 @@ use Psr\Http\Message\StreamInterface as iStream;
 use Psr\Http\Message\UriInterface as iUri;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
+use Symfony\Component\HttpClient\Response\StreamableInterface;
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
@@ -542,18 +543,44 @@ if (!function_exists('api_message')) {
 
 if (!function_exists('http_client_chunks')) {
     /**
-     * Handle response stream as chunks.
+     * Handle a streaming or buffered HTTP response as chunks.
      *
-     * @param ResponseStreamInterface $stream Response stream.
+     * Streaming response bodies may be downloaded while iterating. Only buffered
+     * responses can be replayed.
+     *
+     * @param ResponseStreamInterface|iHttpResponse $stream Response stream or response.
      *
      * @return Generator Generator that yields chunks.
      *
      * @throws TransportExceptionInterface if stream is not readable.
+     * @throws RuntimeException if the buffered response cannot be streamed or read.
      */
-    function http_client_chunks(ResponseStreamInterface $stream): Generator
+    function http_client_chunks(ResponseStreamInterface|iHttpResponse $stream): Generator
     {
-        foreach ($stream as $chunk) {
-            yield $chunk->getContent();
+        if (true === $stream instanceof ResponseStreamInterface) {
+            foreach ($stream as $chunk) {
+                yield $chunk->getContent();
+            }
+
+            return;
+        }
+
+        if (false === $stream instanceof StreamableInterface) {
+            throw new RuntimeException('HTTP response does not support streaming.');
+        }
+
+        $body = $stream->toStream(false);
+
+        while (false === feof($body)) {
+            $chunk = fread($body, 8192);
+
+            if (false === $chunk) {
+                throw new RuntimeException('Failed to read HTTP response stream.');
+            }
+
+            if ('' !== $chunk) {
+                yield $chunk;
+            }
         }
     }
 }

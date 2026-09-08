@@ -247,41 +247,44 @@
 
       <div class="space-y-4">
         <div v-if="data?.via" class="space-y-4">
-          <UCard
-            class="shadow-sm"
-            :class="[data.watched ? 'ring-1 ring-success/30' : '']"
-            :ui="detailCardUi"
-          >
-            <template #header>
-              <div class="flex items-start gap-3">
-                <div
-                  class="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-highlighted"
-                >
-                  <button
-                    type="button"
-                    class="inline-flex shrink-0 items-center"
-                    @click="data._toggle = !data._toggle"
-                  >
-                    <UIcon
-                      :name="data?._toggle ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-                      class="size-4 text-toned"
-                    />
-                  </button>
-
-                  <span>Latest local metadata via</span>
-
-                  <NuxtLink
-                    :to="`/backend/${data.via}`"
-                    class="inline-flex min-w-0 items-center gap-1 text-highlighted hover:text-primary"
-                  >
-                    <UIcon name="i-lucide-server" class="size-4 shrink-0 text-toned" />
-                    <span class="truncate">{{ data.via }}</span>
-                  </NuxtLink>
+          <section class="space-y-3">
+            <div class="flex w-full items-center justify-between gap-3">
+              <button
+                type="button"
+                class="flex min-w-0 flex-1 items-center gap-3 text-left"
+                @click="showLocalMetadata = !showLocalMetadata"
+              >
+                <div class="flex min-w-0 items-center gap-2 text-sm font-semibold text-highlighted">
+                  <UIcon name="i-lucide-database" class="size-4 shrink-0 text-toned" />
+                  <span>Latest Local Metadata</span>
                 </div>
-              </div>
-            </template>
+              </button>
+              <NuxtLink
+                :to="`/backend/${data.via}`"
+                class="inline-flex min-w-0 items-center gap-1 text-sm font-medium text-toned hover:text-primary"
+              >
+                <UIcon name="i-lucide-server" class="size-4 shrink-0" />
+                <span class="truncate">{{ data.via }}</span>
+              </NuxtLink>
+              <button
+                type="button"
+                class="inline-flex shrink-0 items-center"
+                :aria-label="
+                  showLocalMetadata ? 'Collapse local metadata' : 'Expand local metadata'
+                "
+                @click="showLocalMetadata = !showLocalMetadata"
+              >
+                <UIcon
+                  name="i-lucide-chevron-right"
+                  :class="[
+                    'size-4 text-toned transition-transform',
+                    showLocalMetadata ? 'rotate-90' : '',
+                  ]"
+                />
+              </button>
+            </div>
 
-            <div v-if="data?._toggle" class="space-y-5 text-sm leading-6 text-default">
+            <div v-if="showLocalMetadata" class="space-y-5 text-sm leading-6 text-default">
               <div class="grid grid-cols-2 gap-3">
                 <div
                   class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
@@ -643,7 +646,7 @@
                 </div>
               </div>
             </div>
-          </UCard>
+          </section>
 
           <div v-if="Object.keys(data.metadata).length > 0" class="space-y-4 xl:hidden">
             <div class="space-y-1">
@@ -1168,39 +1171,29 @@
             </div>
           </div>
 
-          <UCard
-            v-if="comparisonBackends.length > 0"
-            class="hidden shadow-sm xl:block"
-            :ui="detailCardUi"
-          >
-            <template #header>
-              <div class="space-y-2">
-                <div class="flex items-start gap-3">
-                  <div
-                    class="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-highlighted"
-                  >
-                    <button
-                      type="button"
-                      class="inline-flex shrink-0 items-center"
-                      @click="showComparison = !showComparison"
-                    >
-                      <UIcon
-                        :name="showComparison ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-                        class="size-4 text-toned"
-                      />
-                    </button>
-
-                    <UIcon name="i-lucide-panels-top-left" class="size-4 text-toned" />
-                    <span>Comparison</span>
-                  </div>
-                </div>
-
-                <p v-if="showComparison" class="text-sm text-toned">
-                  Backend values are compared against the local snapshot above. Highlighted cells
-                  differ from the local record.
-                </p>
+          <section v-if="comparisonBackends.length > 0" class="hidden space-y-3 xl:block">
+            <button
+              type="button"
+              class="flex w-full items-center justify-between gap-3 text-left"
+              @click="showComparison = !showComparison"
+            >
+              <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
+                <UIcon name="i-lucide-panels-top-left" class="size-4 text-toned" />
+                <span>Backend Comparison</span>
               </div>
-            </template>
+              <UIcon
+                name="i-lucide-chevron-right"
+                :class="[
+                  'size-4 text-toned transition-transform',
+                  showComparison ? 'rotate-90' : '',
+                ]"
+              />
+            </button>
+
+            <p v-if="showComparison" class="text-sm text-toned">
+              Backend values are compared against the local snapshot above. Highlighted cells differ
+              from the local record.
+            </p>
 
             <div v-if="showComparison" class="space-y-4">
               <section v-for="section in comparisonSections" :key="section.key" class="space-y-2">
@@ -1423,27 +1416,233 @@
                 </div>
               </section>
             </div>
-          </UCard>
+          </section>
         </div>
       </div>
 
-      <UCard class="shadow-sm" :ui="tipsCardUi">
-        <template #header>
-          <button
-            type="button"
-            class="flex items-center gap-2 text-left text-sm font-semibold text-highlighted"
-            @click="show_page_tips = !show_page_tips"
-          >
+      <section class="space-y-3">
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-3 text-left"
+          @click="toggleRelatedLogs"
+        >
+          <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
+            <UIcon name="i-lucide-logs" class="size-4 text-toned" />
+            <span>Related Logs</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <UBadge color="neutral" variant="outline" size="sm">
+              {{ relatedLoaded ? related.logs.length : '?' }}
+            </UBadge>
             <UIcon
-              :name="show_page_tips ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-              class="size-4 text-toned"
+              name="i-lucide-chevron-right"
+              :class="[
+                'size-4 text-toned transition-transform',
+                relatedLogsExpanded ? 'rotate-90' : '',
+              ]"
             />
+          </div>
+        </button>
+
+        <div v-if="relatedLogsExpanded">
+          <UAlert
+            v-if="relatedLoading"
+            color="info"
+            variant="soft"
+            icon="i-lucide-loader-circle"
+            title="Loading"
+            description="Finding related log lines..."
+            :ui="{ icon: 'animate-spin' }"
+          />
+          <UAlert v-else-if="relatedError" color="error" variant="soft" title="Error">
+            {{ relatedError }}
+          </UAlert>
+          <UAlert
+            v-else-if="relatedLoaded && related.logs.length < 1"
+            color="neutral"
+            variant="soft"
+            title="No related logs"
+          />
+          <div v-else-if="relatedLoaded" class="space-y-4">
+            <section v-for="group in relatedLogGroups" :key="group.filename" class="space-y-3">
+              <button
+                type="button"
+                class="flex w-full flex-wrap items-center justify-between gap-3 text-left"
+                @click="toggleRelatedLog(group.filename)"
+              >
+                <div class="flex items-center gap-3">
+                  <span
+                    class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-default bg-elevated/70 text-primary"
+                  >
+                    <UIcon :name="relatedLogTypeIcon(group.filename)" class="size-4" />
+                  </span>
+                  <div class="flex min-w-0 flex-wrap items-baseline gap-x-1">
+                    <span class="text-base font-semibold text-highlighted">
+                      {{ relatedLogTypeName(group.filename) }}
+                    </span>
+                    <NuxtLink
+                      :to="`/logs/${encodeURIComponent(group.filename)}`"
+                      class="min-w-0 truncate text-sm text-toned hover:text-primary"
+                      @click.stop
+                    >
+                      ({{ group.filename }})
+                    </NuxtLink>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <UIcon
+                    name="i-lucide-chevron-right"
+                    :class="[
+                      'size-4 text-toned transition-transform',
+                      isRelatedLogOpen(group.filename) ? 'rotate-90' : '',
+                    ]"
+                  />
+                </div>
+              </button>
+
+              <div
+                v-if="isRelatedLogOpen(group.filename)"
+                class="min-w-0 max-h-[35vh] overflow-y-auto overflow-x-hidden rounded-lg border border-default/70 bg-elevated/40 shadow-sm sm:max-h-[20vh]"
+              >
+                <article
+                  v-for="(log, index) in group.logs"
+                  :key="relatedLogKey(log, index)"
+                  :class="[
+                    'flex min-w-0 border-b border-default/40 bg-transparent last:border-b-0 hover:bg-elevated/70',
+                    1 === index % 2 ? 'bg-elevated/40' : '',
+                  ]"
+                >
+                  <div
+                    class="flex w-full min-w-0 flex-col gap-1 px-3 py-[0.65rem] leading-[1.6] md:flex-row md:items-start md:gap-2"
+                  >
+                    <StructuredLogLine
+                      :log="log.entry"
+                      :compact="true"
+                      :show-details="true"
+                      :expanded="isExpandedRelatedLog(relatedLogKey(log, index))"
+                      toggleable
+                      @details="openLogDetails"
+                      @open-event="openEventFromLog"
+                      @toggle-expand="toggleExpandedRelatedLog(relatedLogKey(log, index))"
+                    />
+                  </div>
+                </article>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="space-y-3">
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-3 text-left"
+          @click="toggleRelatedEvents"
+        >
+          <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
+            <UIcon name="i-lucide-activity" class="size-4 text-toned" />
+            <span>Related Events</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <UBadge color="neutral" variant="outline" size="sm">
+              {{ relatedLoaded ? related.events.length : '?' }}
+            </UBadge>
+            <UIcon
+              name="i-lucide-chevron-right"
+              :class="[
+                'size-4 text-toned transition-transform',
+                relatedEventsExpanded ? 'rotate-90' : '',
+              ]"
+            />
+          </div>
+        </button>
+
+        <div v-if="relatedEventsExpanded">
+          <UAlert
+            v-if="relatedLoading"
+            color="info"
+            variant="soft"
+            icon="i-lucide-loader-circle"
+            title="Loading"
+            description="Finding related events..."
+            :ui="{ icon: 'animate-spin' }"
+          />
+          <UAlert v-else-if="relatedError" color="error" variant="soft" title="Error">
+            {{ relatedError }}
+          </UAlert>
+          <UAlert
+            v-else-if="relatedLoaded && related.events.length < 1"
+            color="neutral"
+            variant="soft"
+            title="No related events"
+          />
+          <div
+            v-else-if="relatedLoaded"
+            class="overflow-hidden rounded-lg border border-default/70 bg-elevated/30 shadow-sm"
+          >
+            <article
+              v-for="event in related.events"
+              :key="event.id"
+              class="flex items-center justify-between gap-2 border-b border-default/50 px-3 py-2 last:border-b-0 hover:bg-elevated/60"
+            >
+              <div class="flex min-w-0 flex-1 items-center gap-2">
+                <span
+                  class="inline-flex size-7 shrink-0 items-center justify-center rounded-md border border-default bg-elevated/70 text-primary"
+                >
+                  <UIcon name="i-lucide-activity" class="size-3.5" />
+                </span>
+
+                <button
+                  type="button"
+                  class="min-w-0 truncate text-left text-sm font-semibold text-highlighted hover:text-primary"
+                  :title="event.name"
+                  @click="openEvent(event.id)"
+                >
+                  {{ event.name }}
+                </button>
+              </div>
+
+              <div class="flex shrink-0 items-center gap-2">
+                <UBadge :color="getEventStatusColor(event.status)" variant="soft" size="sm">
+                  <span class="inline-flex items-center gap-1">
+                    <UIcon
+                      :name="getEventStatusIcon(event.status)"
+                      :class="getEventStatusIconClass(event.status)"
+                    />
+                    <span>{{ event.status_name }}</span>
+                  </span>
+                </UBadge>
+
+                <UTooltip
+                  :text="`Created at: ${moment(event.timestamp).format(TOOLTIP_DATE_FORMAT)}`"
+                >
+                  <span class="cursor-help whitespace-nowrap text-xs text-toned">
+                    {{ moment(event.timestamp).fromNow() }}
+                  </span>
+                </UTooltip>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="space-y-3">
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-3 text-left"
+          @click="show_page_tips = !show_page_tips"
+        >
+          <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
             <UIcon name="i-lucide-info" class="size-4 text-toned" />
             <span>Tips</span>
-          </button>
-        </template>
+          </div>
+          <UIcon
+            name="i-lucide-chevron-right"
+            :class="['size-4 text-toned transition-transform', show_page_tips ? 'rotate-90' : '']"
+          />
+        </button>
 
-        <div v-if="show_page_tips" class="text-sm leading-6 text-default">
+        <div v-if="show_page_tips" class="ws-card p-4 text-sm leading-6 text-default shadow-sm">
           <ul class="list-disc space-y-2 pl-5">
             <li>
               To see if your media backends are reporting different metadata for the same file,
@@ -1471,8 +1670,29 @@
             </li>
           </ul>
         </div>
-      </UCard>
+      </section>
     </div>
+
+    <UModal v-model:open="eventViewOpen" :title="eventViewTitle" :ui="eventViewModalUi">
+      <template #body>
+        <EventView
+          v-if="selectedEventId"
+          :id="selectedEventId"
+          @open-event="(eventId) => (selectedEventId = eventId)"
+        />
+      </template>
+    </UModal>
+
+    <LogDetailsModal
+      v-model:open="detailsOpen"
+      :log="selectedLog"
+      @open-event="
+        (eventId) => {
+          detailsOpen = false;
+          selectedEventId = eventId;
+        }
+      "
+    />
   </main>
 </template>
 
@@ -1483,19 +1703,31 @@ import { NuxtLink } from '#components';
 import { useBreakpoints, useStorage } from '@vueuse/core';
 import moment from 'moment';
 import DuplicateRecordList from '~/components/DuplicateRecordList.vue';
+import EventView from '~/components/EventView.vue';
+import LogDetailsModal from '~/components/LogDetailsModal.vue';
 import PageHeader from '~/components/PageHeader.vue';
 import PlaybackSelection from '~/components/PlaybackSelection.vue';
 import Popover from '~/components/Popover.vue';
+import StructuredLogLine from '~/components/StructuredLogLine.vue';
 import TextModal from '~/components/TextModal.vue';
 import { useDialog } from '~/composables/useDialog';
 import { usePageBackground } from '~/composables/usePageBackground';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
-import type { GenericResponse, HistoryItem, JsonObject, MediaFile } from '~/types';
+import type {
+  GenericResponse,
+  HistoryItem,
+  JsonObject,
+  MediaFile,
+  RelatedHistoryLog,
+  RelatedHistoryResponse,
+  ServerJsonLogEntry,
+} from '~/types';
 import {
   ag,
   copyText,
   formatDuration,
   makeGUIDLink,
+  makeEventName,
   makeSearchLink,
   notification,
   parse_api_response,
@@ -1560,7 +1792,6 @@ type HistoryViewItem = {
   progress?: number | string;
   files: Array<MediaFile>;
   duplicate_reference_ids?: Array<number>;
-  _toggle?: boolean;
 };
 
 type ValidationResponse = Record<string, { status: boolean; message: string }>;
@@ -1623,11 +1854,17 @@ type ComparisonSection = {
 const route = useRoute();
 const idParam = Array.isArray(route.params.id) ? route.params.id[0] : route.params.id;
 const id = Number.parseInt(idParam ?? '0', 10);
+const currentHistoryId = computed<number>(() => {
+  const routeId = Array.isArray(route.params.id) ? route.params.id[0] : route.params.id;
+  return Number.parseInt(routeId ?? '0', 10);
+});
 const pageShell = requireTopLevelPageShell('history');
 
 useHead({ title: `History : ${id}` });
 
 const show_page_tips = useStorage('show_page_tips', true);
+const showLocalMetadata = useStorage<boolean>('history_local_metadata_open', true);
+const showComparison = useStorage<boolean>('history_comparison_open', true);
 const breakpoints = useBreakpoints({ mobile: 0, desktop: 640 });
 const dialog = useDialog();
 const {
@@ -1643,9 +1880,9 @@ const detailCardUi = {
   body: 'px-4 pb-4 pt-0',
 };
 
-const tipsCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
+const eventViewModalUi = {
+  content: 'max-w-5xl',
+  body: 'p-4 sm:p-5',
 };
 
 const playbackModalUi = {
@@ -1659,7 +1896,6 @@ const isLoading = ref(true);
 const showRawData = ref(false);
 const playbackModalOpen = ref(false);
 const isDeleting = ref(false);
-const showComparison = ref(true);
 const comparisonExpanded = ref<Record<string, boolean>>({});
 const expandLocalId = ref(false);
 const expandLocalTitle = ref(false);
@@ -1669,6 +1905,43 @@ const loadedImages = ref<Record<'poster' | 'background', string | null>>({
   background: null,
 });
 const headerOverviewExpanded = ref(false);
+const apiUser = useStorage<string>('api_user', 'main');
+const relatedLogsExpanded = ref(false);
+const relatedEventsExpanded = ref(false);
+const relatedLoading = ref(false);
+const relatedLoaded = ref(false);
+const relatedLoadedAt = ref<number | null>(null);
+const relatedError = ref('');
+const related = ref<RelatedHistoryResponse>({ logs: [], events: [] });
+const selectedEventId = ref<string | null>(null);
+const selectedLog = ref<ServerJsonLogEntry | null>(null);
+const detailsOpen = ref(false);
+const expandedRelatedLogs = ref<Set<string>>(new Set());
+const openRelatedLogFiles = ref<Record<string, boolean>>({});
+const eventViewOpen = computed({
+  get: (): boolean => null !== selectedEventId.value,
+  set: (open: boolean): void => {
+    if (false === open) {
+      selectedEventId.value = null;
+    }
+  },
+});
+const eventViewTitle = computed(() =>
+  null === selectedEventId.value ? 'Event' : `#${makeEventName(selectedEventId.value)}`,
+);
+const relatedLogGroups = computed<Array<{ filename: string; logs: Array<RelatedHistoryLog> }>>(
+  () => {
+    const groups = new Map<string, Array<RelatedHistoryLog>>();
+    for (const log of related.value.logs) {
+      const entries = groups.get(log.filename) ?? [];
+      entries.push(log);
+      groups.set(log.filename, entries);
+    }
+
+    return Array.from(groups, ([filename, logs]) => ({ filename, logs }));
+  },
+);
+let relatedLoadToken = 0;
 
 const data = ref<HistoryViewItem>({
   id,
@@ -2126,7 +2399,7 @@ const summaryBadges = computed<Array<SummaryBadge>>(() => {
 const rawData = computed<string>(() => {
   const dataRecord = data.value as unknown as JsonObject;
   const cleaned = Object.keys(dataRecord)
-    .filter((key) => !['files', 'hardware', 'content_exists', '_toggle'].includes(key))
+    .filter((key) => !['files', 'hardware', 'content_exists'].includes(key))
     .reduce((obj: JsonObject, key: string) => {
       obj[key] = dataRecord[key] ?? null;
       return obj;
@@ -2150,6 +2423,96 @@ const expandableBlockClass = (expanded?: boolean, allowBreakAll = false): string
   return 'ws-expandable-block';
 };
 
+const isExpandedRelatedLog = (key: string): boolean => expandedRelatedLogs.value.has(key);
+
+const relatedLogKey = (log: RelatedHistoryLog, index: number): string =>
+  `${log.filename}:${log.entry.id}:${index}`;
+
+const relatedLogTypeName = (filename: string): string => ucFirst(filename.split('.')[0] ?? 'Log');
+
+const relatedLogTypeIcon = (filename: string): string => {
+  switch (filename.split('.')[0]) {
+    case 'access':
+      return 'i-lucide-key-round';
+    case 'task':
+      return 'i-lucide-list-checks';
+    case 'app':
+      return 'i-lucide-bug';
+    default:
+      return 'i-lucide-book-open';
+  }
+};
+
+const isRelatedLogOpen = (filename: string): boolean => openRelatedLogFiles.value[filename] ?? true;
+
+const toggleRelatedLog = (filename: string): void => {
+  openRelatedLogFiles.value = {
+    ...openRelatedLogFiles.value,
+    [filename]: !isRelatedLogOpen(filename),
+  };
+};
+
+const toggleExpandedRelatedLog = (key: string): void => {
+  const next = new Set(expandedRelatedLogs.value);
+
+  if (true === next.has(key)) {
+    next.delete(key);
+  } else {
+    next.add(key);
+  }
+
+  expandedRelatedLogs.value = next;
+};
+
+const openLogDetails = (entry: ServerJsonLogEntry): void => {
+  selectedLog.value = entry;
+  detailsOpen.value = true;
+};
+
+const openEventFromLog = (eventId: string): void => {
+  selectedEventId.value = eventId;
+};
+
+const openEvent = (eventId: string): void => {
+  if ('' !== eventId) {
+    selectedEventId.value = eventId;
+  }
+};
+
+const getEventStatusColor = (status: number): 'error' | 'neutral' | 'success' | 'warning' => {
+  switch (status) {
+    case 1:
+      return 'warning';
+    case 2:
+      return 'success';
+    case 3:
+    case 4:
+      return 'error';
+    default:
+      return 'neutral';
+  }
+};
+
+const getEventStatusIcon = (status: number): string => {
+  switch (status) {
+    case 0:
+      return 'i-lucide-clock-3';
+    case 1:
+      return 'i-lucide-loader-circle';
+    case 2:
+      return 'i-lucide-circle-check';
+    case 3:
+      return 'i-lucide-circle-x';
+    case 4:
+      return 'i-lucide-ban';
+    default:
+      return 'i-lucide-circle-help';
+  }
+};
+
+const getEventStatusIconClass = (status: number): string =>
+  1 === status ? 'size-3.5 animate-spin' : 'size-3.5';
+
 const loadContent = async (historyId: number) => {
   isLoading.value = true;
 
@@ -2170,7 +2533,7 @@ const loadContent = async (historyId: number) => {
   }
 
   isLoading.value = false;
-  data.value = { ...json, _toggle: true };
+  data.value = { ...json };
 
   useHead({ title: `History : ${historyTitle.value}` });
   await loadImage();
@@ -2178,6 +2541,89 @@ const loadContent = async (historyId: number) => {
   await validateItem();
   await checkDuplicates();
 };
+
+const resetRelated = (): void => {
+  relatedLoadToken++;
+  relatedLogsExpanded.value = false;
+  relatedEventsExpanded.value = false;
+  relatedLoading.value = false;
+  relatedLoaded.value = false;
+  relatedLoadedAt.value = null;
+  relatedError.value = '';
+  related.value = { logs: [], events: [] };
+  selectedEventId.value = null;
+  selectedLog.value = null;
+  detailsOpen.value = false;
+  expandedRelatedLogs.value = new Set();
+  openRelatedLogFiles.value = {};
+};
+
+const loadRelated = async (): Promise<void> => {
+  const now = Date.now();
+  if (true === relatedLoaded.value) {
+    if (null !== relatedLoadedAt.value && now - relatedLoadedAt.value < 300_000) {
+      return;
+    }
+  }
+
+  if (true === relatedLoading.value) {
+    return;
+  }
+
+  const token = ++relatedLoadToken;
+  const historyId = currentHistoryId.value;
+  const user = apiUser.value;
+  relatedLoading.value = true;
+  relatedLoaded.value = false;
+  relatedLoadedAt.value = null;
+  relatedError.value = '';
+  related.value = { logs: [], events: [] };
+
+  try {
+    const response = await request(`/history/${historyId}/related`);
+    const json = await parse_api_response<RelatedHistoryResponse>(response);
+
+    const requestIsCurrent =
+      token === relatedLoadToken && historyId === currentHistoryId.value && user === apiUser.value;
+    if (false === requestIsCurrent) {
+      return;
+    }
+
+    if ('error' in json) {
+      relatedError.value = `${json.error.code}: ${json.error.message}`;
+      return;
+    }
+
+    related.value = json;
+    relatedLoaded.value = true;
+    relatedLoadedAt.value = Date.now();
+  } catch (error) {
+    if (token === relatedLoadToken) {
+      relatedError.value = error instanceof Error ? error.message : 'Request error.';
+    }
+  } finally {
+    if (token === relatedLoadToken) {
+      relatedLoading.value = false;
+    }
+  }
+};
+
+const toggleRelatedLogs = (): void => {
+  relatedLogsExpanded.value = !relatedLogsExpanded.value;
+  if (relatedLogsExpanded.value) {
+    void loadRelated();
+  }
+};
+
+const toggleRelatedEvents = (): void => {
+  relatedEventsExpanded.value = !relatedEventsExpanded.value;
+  if (relatedEventsExpanded.value) {
+    void loadRelated();
+  }
+};
+
+watch(apiUser, resetRelated);
+watch(() => currentHistoryId.value, resetRelated);
 
 watch(breakpoints.active(), async () => await loadImage());
 
@@ -2289,7 +2735,7 @@ const toggleWatched = async () => {
       return;
     }
 
-    data.value = { ...json, _toggle: data.value._toggle };
+    data.value = { ...json };
 
     notification(
       'success',

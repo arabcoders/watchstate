@@ -1,0 +1,124 @@
+#!/bin/sh
+set -eu
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$REPO_ROOT" || exit 1
+
+PIDS_FILE=$(mktemp)
+trap 'rm -f "$PIDS_FILE"' EXIT
+
+export CI=1
+checks_started=0
+run_step() {
+  local label="$1"
+  shift
+  checks_started=1
+  echo "Starting $label..." >&2
+  (
+    if ! "$@"; then
+      echo "[$label] failed. Commit aborted." >&2
+      exit 1
+    else
+      echo "[$label] passed." >&2
+    fi
+  ) &
+  echo $! >>"$PIDS_FILE"
+}
+
+run_extra_dir() {
+  local scope="$1"
+  local dir="$2"
+  for step in "$dir"/*; do
+    [ -f "$step" ] && [ -x "$step" ] || continue
+    run_step "Extra ($scope): $(basename "$step")" "$step"
+  done
+}
+
+echo "Running pre-commit checks... ${REPO_ROOT}" >&2
+staged_files=$(git diff --cached --name-only --diff-filter=ACMR)
+php_changed=0
+frontend_changed=0
+
+while IFS= read -r path; do
+  [ -n "$path" ] || continue
+  case "$path" in
+    src/* | tests/* | config/* | public/* | bin/* | composer.json | composer.lock | mago.toml | phpunit.xml.dist | pre_init.php | rector.php)
+      php_changed=1
+      ;;
+    .editorconfig)
+      php_changed=1
+      frontend_changed=1
+      ;;
+  esac
+  case "$path" in
+    frontend/*)
+      frontend_changed=1
+      ;;
+  esac
+done <<EOF
+$staged_files
+EOF
+
+if [ "$php_changed" -eq 1 ]; then
+  if [ -f "${REPO_ROOT}/vendor/bin/mago" ]; then
+    MAGO_BIN="${REPO_ROOT}/vendor/bin/mago"
+  elif command -v mago >/dev/null 2>&1; then
+    MAGO_BIN="mago"
+  else
+    echo "Mago is not installed. Install it via Composer." >&2
+    exit 1
+  fi
+
+  if [ -f "${REPO_ROOT}/vendor/bin/phpunit" ]; then
+    PHPUNIT_BIN="${REPO_ROOT}/vendor/bin/phpunit"
+  elif command -v phpunit >/dev/null 2>&1; then
+    PHPUNIT_BIN="phpunit"
+  else
+    echo "PHPUnit is not installed. Install it via Composer." >&2
+    exit 1
+  fi
+
+  run_step "PHP: Formatter" "$MAGO_BIN" format --check
+  run_step "PHP: Linter" "$MAGO_BIN" lint
+  run_step "PHP: Tests" "$PHPUNIT_BIN" --no-progress
+fi
+
+if [ "$frontend_changed" -eq 1 ]; then
+  if ! command -v bun >/dev/null 2>&1; then
+    echo "Bun is not installed." >&2
+    exit 1
+  fi
+
+  run_step "Frontend: Linter" bun --cwd=./frontend/ lint
+  run_step "Frontend: TSC" bun --cwd=./frontend/ lint:tsc
+  run_step "Frontend: Formatter" bun --cwd=./frontend/ format:check
+fi
+
+extra_dir=$(git rev-parse --git-path hooks)/pre-commit.d
+run_extra_dir "Global" "$extra_dir"
+if [ "$php_changed" -eq 1 ]; then
+  run_extra_dir "Backend" "$extra_dir/backend"
+fi
+if [ "$frontend_changed" -eq 1 ]; then
+  run_extra_dir "Frontend" "$extra_dir/frontend"
+fi
+
+if [ "$checks_started" -eq 0 ]; then
+  echo "No relevant checks for the staged files. Commit allowed."
+  exit 0
+fi
+
+fail=0
+while read -r pid; do
+  if ! wait "$pid"; then
+    fail=1
+  fi
+done <"$PIDS_FILE"
+
+if [ "$fail" -eq 1 ]; then
+  echo "One or more checks failed. Commit aborted." >&2
+  exit 1
+fi
+
+echo "All checks passed. Commit allowed."
+exit 0

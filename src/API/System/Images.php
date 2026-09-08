@@ -76,7 +76,11 @@ final class Images
                 'SELECT id FROM "state" ORDER BY RANDOM() LIMIT 1',
                 options: [Options::FAIL_FAST_ON_LOCK => true],
             );
-            $id = $record->fetchColumn();
+            try {
+                $id = $record->fetchColumn();
+            } finally {
+                $record->closeCursor();
+            }
             if (empty($id)) {
                 throw new RuntimeException('No records found');
             }

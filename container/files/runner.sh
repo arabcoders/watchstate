@@ -14,10 +14,13 @@ stop_runner() {
 trap stop_runner TERM INT
 
 while true; do
-  /opt/bin/console system:worker -v &
+  /opt/bin/console system:worker -v 2>&1 &
   CHILD_PID=$!
-  wait "${CHILD_PID}" || true
+  status=0
+  wait "${CHILD_PID}" || status=$?
   CHILD_PID=""
+
+  echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Worker exited with status '${status}'. Restarting in 1 second." >&2
 
   sleep 1 &
   CHILD_PID=$!

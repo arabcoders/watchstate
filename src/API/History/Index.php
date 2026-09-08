@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\API\History;
 
+use App\API\Logs\Index as LogsIndex;
 use App\API\Player\Subtitle;
 use App\Libs\APIResponse;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Delete;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Attributes\Route\Route;
+use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateEntity;
@@ -22,6 +24,7 @@ use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\Traits\APITraits;
+use App\Model\Events\EventsRepository;
 use DateInterval;
 use JsonException;
 use PDO;
@@ -30,11 +33,15 @@ use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
 use SplFileInfo;
+use SplFileObject;
+use Symfony\Component\Process\ExecutableFinder;
+use Symfony\Component\Process\Process;
 use Throwable;
 
 final class Index
 {
     private const float IMAGE_TIMEOUT_SECONDS = 10.0;
+    private const int RELATED_LOG_LIMIT = 10;
 
     use APITraits;
 
@@ -61,6 +68,7 @@ final class Index
         #[Inject(DirectMapper::class)]
         private iImport $mapper,
         private iLogger $logger,
+        private EventsRepository $events,
     ) {}
 
     #[Get(self::URL . '[/]', name: 'history.list')]
@@ -706,6 +714,250 @@ final class Index
         }
 
         return api_response(Status::OK, $entity);
+    }
+
+    /**
+     * Return logs and persisted events structurally related to a history record.
+     *
+     * @param iCache $cache The application cache.
+     * @param iRequest $request The HTTP request.
+     * @param string $id The local history record ID.
+     *
+     * @return iResponse The related link metadata response.
+     */
+    #[Get(self::URL . '/{id:\d+}/related[/]', name: 'history.related')]
+    public function related(iCache $cache, iRequest $request, string $id): iResponse
+    {
+        try {
+            $userContext = $this->getUserContext(request: $request, mapper: $this->mapper, logger: $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
+
+        $entity = Container::get(iState::class)::fromArray([iState::COLUMN_ID => $id]);
+        if (null === $userContext->db->get($entity)) {
+            return api_error('Not found', Status::NOT_FOUND);
+        }
+
+        $cacheKey = 'history_related_' . hash('sha256', $userContext->name . ':' . $id);
+        $result = cacheable_item(
+            $cacheKey,
+            fn(): array => $this->findRelated($id, $userContext->name),
+            new DateInterval('PT300S'),
+            opts: [iCache::class => $cache],
+        );
+
+        return api_response(Status::OK, $result);
+    }
+
+    /**
+     * @return array{logs: array<array{filename: string, entry: array<string, mixed>}>, events: array<array{id: string, name: string, status: int, status_name: string, timestamp: string}>}
+     */
+    private function findRelated(string $historyId, string $user): array
+    {
+        $logPath = realpath(fix_path((string) Config::get('tmpDir') . '/logs'));
+        $logs =
+            false === $logPath || false === is_dir($logPath)
+                ? []
+                : $this->findRelatedLogs($logPath, $historyId, $user);
+
+        $events = [];
+        foreach ($this->events->findRelatedHistory($historyId, $user) as $event) {
+            $events[] = [
+                'id' => (string) $event->id,
+                'name' => $event->event,
+                'status' => $event->status->value,
+                'status_name' => $event->getStatusText(),
+                'timestamp' => (string) $event->created_at,
+            ];
+        }
+
+        usort($logs, static function (array $left, array $right): int {
+            $dateComparison = strcmp(
+                (string) ag($right, 'entry.datetime', ''),
+                (string) ag($left, 'entry.datetime', ''),
+            );
+            if (0 !== $dateComparison) {
+                return $dateComparison;
+            }
+
+            $filenameComparison = strcmp((string) $left['filename'], (string) $right['filename']);
+            if (0 !== $filenameComparison) {
+                return $filenameComparison;
+            }
+
+            return strcmp((string) ag($left, 'entry.id', ''), (string) ag($right, 'entry.id', ''));
+        });
+
+        return [
+            'logs' => $logs,
+            'events' => $events,
+        ];
+    }
+
+    /**
+     * @return array<array{filename: string, entry: array<string, mixed>}>
+     */
+    private function findRelatedLogs(string $logPath, string $historyId, string $user): array
+    {
+        $logFiles = [];
+        $dates = [
+            make_date()->format('Ymd'),
+            make_date()->modify('-1 day')->format('Ymd'),
+        ];
+        foreach ($dates as $date) {
+            $files = glob($logPath . '/*.' . $date . '.jsonl');
+            if (false !== $files) {
+                array_push($logFiles, ...$files);
+            }
+        }
+
+        if ([] === $logFiles) {
+            return [];
+        }
+
+        $ripgrep = new ExecutableFinder()->find('rg');
+        if (null !== $ripgrep) {
+            try {
+                $logs = $this->findRelatedLogsWithRipgrep($ripgrep, $logFiles, $historyId, $user);
+            } catch (Throwable) {
+                $logs = null;
+            }
+            if (null !== $logs) {
+                return $logs;
+            }
+        }
+
+        return $this->findRelatedLogsWithPhp($logFiles, $historyId, $user);
+    }
+
+    /**
+     * @param array<string> $logFiles
+     * @return array<array{filename: string, entry: array<string, mixed>}>|null
+     */
+    private function findRelatedLogsWithRipgrep(
+        string $ripgrep,
+        array $logFiles,
+        string $historyId,
+        string $user,
+    ): ?array {
+        $pattern = '"history\\.id"\\s*:\\s*"?' . preg_quote($historyId, '/') . '"?\\s*[,}]';
+        $process = new Process([
+            $ripgrep,
+            '--json',
+            '--no-config',
+            '--no-messages',
+            '--regexp',
+            $pattern,
+            '--',
+            ...$logFiles,
+        ]);
+        $process->setTimeout(30);
+        $process->start();
+
+        $logs = [];
+        $buffer = '';
+        foreach ($process as $type => $chunk) {
+            if (Process::OUT !== $type) {
+                continue;
+            }
+
+            $buffer .= $chunk;
+            while (false !== ($position = strpos($buffer, "\n"))) {
+                $line = substr($buffer, 0, $position);
+                $buffer = substr($buffer, $position + 1);
+                $this->appendRipgrepMatch($logs, $line, $historyId, $user);
+            }
+        }
+
+        if ('' !== trim($buffer)) {
+            $this->appendRipgrepMatch($logs, $buffer, $historyId, $user);
+        }
+
+        return in_array($process->getExitCode(), [0, 1], true) ? $logs : null;
+    }
+
+    /**
+     * @param array<array{filename: string, entry: array<string, mixed>}> $logs
+     */
+    private function appendRipgrepMatch(array &$logs, string $line, string $historyId, string $user): void
+    {
+        $match = json_decode($line, true, 512, JSON_INVALID_UTF8_IGNORE);
+        if (false === is_array($match) || 'match' !== ($match['type'] ?? null)) {
+            return;
+        }
+
+        $payload = LogsIndex::decodeJsonlLine((string) ag($match, 'data.lines.text', ''));
+        $path = ag($match, 'data.path.text');
+        if (
+            null === $payload
+            || false === is_string($path)
+            || false === $this->matchesStructured($payload['fields'] ?? [], $historyId, $user)
+        ) {
+            return;
+        }
+
+        $logs[] = [
+            'filename' => basename($path),
+            'entry' => $payload,
+        ];
+    }
+
+    /**
+     * @param array<string> $logFiles
+     * @return array<array{filename: string, entry: array<string, mixed>}>
+     */
+    private function findRelatedLogsWithPhp(array $logFiles, string $historyId, string $user): array
+    {
+        $logs = [];
+        usort($logFiles, static fn(string $a, string $b): int => filemtime($b) <=> filemtime($a));
+
+        foreach ($logFiles as $filePath) {
+            $file = new SplFileObject($filePath, 'r');
+            $offset = $file->getSize();
+            $remainder = '';
+            while (0 < $offset) {
+                $length = min(8192, $offset);
+                $offset -= $length;
+                $file->fseek($offset);
+                $lines = explode("\n", $file->fread($length) . $remainder);
+                // Keep the partial leading line until its preceding chunk is read.
+                $remainder = 0 < $offset ? array_shift($lines) : '';
+
+                for ($index = count($lines) - 1; 0 <= $index; $index--) {
+                    $payload = LogsIndex::decodeJsonlLine(trim($lines[$index]));
+                    if (null === $payload || false === $this->matchesStructured($payload['fields'] ?? [], $historyId, $user)) {
+                        continue;
+                    }
+
+                    $logs[] = [
+                        'filename' => basename($filePath),
+                        'entry' => $payload,
+                    ];
+
+                    if (self::RELATED_LOG_LIMIT <= count($logs)) {
+                        return $logs;
+                    }
+                }
+            }
+        }
+
+        return $logs;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function matchesStructured(mixed $value, string $historyId, string $user): bool
+    {
+        if (false === is_array($value)) {
+            return false;
+        }
+
+        $history = $value['history.id'] ?? ag($value, 'history.id');
+        $identity = $value['identity.user'] ?? ag($value, 'identity.user');
+
+        return null !== $history && null !== $identity && (string) $history === $historyId && (string) $identity === $user;
     }
 
     #[Get(self::URL . '/{id:\d+}/duplicates[/]', name: 'history.duplicates')]

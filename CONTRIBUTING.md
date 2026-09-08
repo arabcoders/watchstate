@@ -88,6 +88,20 @@ Frontend expectations:
 
 Run the commands that match the parts of the project you changed.
 
+Install the repository's pre-commit hook:
+
+```bash
+./.githooks/install
+```
+
+Use `./.githooks/install --force` to replace an existing pre-commit hook.
+
+Add executable local checks to one of these directories:
+
+* `.git/hooks/pre-commit.d/` for all changes
+* `.git/hooks/pre-commit.d/backend/` for backend changes
+* `.git/hooks/pre-commit.d/frontend/` for frontend changes
+
 Backend:
 
 ```bash

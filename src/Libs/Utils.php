@@ -1627,6 +1627,12 @@ if (!function_exists('parse_episode_range')) {
         }
 
         /**
+         * Every tail below is all or nothing. It is taken only when it ends on a clean
+         * boundary, so a tag that starts with digits, such as .1080p, .10bit or -123group,
+         * drops the whole tail instead of being read as the end of the range.
+         */
+
+        /**
          * Convert an episode expression into episode numbers.
          * Examples:
          * 20                       => [20]
@@ -1673,10 +1679,13 @@ if (!function_exists('parse_episode_range')) {
                 E(?<start>\d{1,4})
                 (?<tail>
                     (?:
-                        E\d{1,4}
-                        |
-                        [.-](?:S\d{1,3})?E?\d{1,4}
-                    )*
+                        (?:
+                            E\d{1,4}
+                            |
+                            [.-](?:S\d{1,3})?E?\d{1,4}
+                        )+
+                        (?![\dA-Z])
+                    )?
                 )
             /ix',
             $file,
@@ -1707,10 +1716,13 @@ if (!function_exists('parse_episode_range')) {
                 (?<start>\d{1,4})
                 (?<tail>
                     (?:
-                        E\d{1,4}
-                        |
-                        [.-](?:E)?\d{1,4}
-                    )*
+                        (?:
+                            E\d{1,4}
+                            |
+                            [.-](?:E)?\d{1,4}
+                        )+
+                        (?![\dA-Z])
+                    )?
                 )
             /ix',
             $file,
@@ -1739,8 +1751,11 @@ if (!function_exists('parse_episode_range')) {
                 (?<start>\d{1,4})
                 (?<tail>
                     (?:
-                        [.-]\d{1,4}
-                    )*
+                        (?:
+                            [.-]\d{1,4}
+                        )+
+                        (?![\dA-Z])
+                    )?
                 )
                 (?!\d)
             /ix',
@@ -1774,10 +1789,13 @@ if (!function_exists('parse_episode_range')) {
                 E(?<start>\d{1,4})
                 (?<tail>
                     (?:
-                        E\d{1,4}
-                        |
-                        [.-]E?\d{1,4}
-                    )*
+                        (?:
+                            E\d{1,4}
+                            |
+                            [.-]E?\d{1,4}
+                        )+
+                        (?![\dA-Z])
+                    )?
                 )
             /ix',
             $file,
@@ -1804,10 +1822,13 @@ if (!function_exists('parse_episode_range')) {
                 (?<start>\d{1,4})
                 (?<tail>
                     (?:
-                        E\d{1,4}
-                        |
-                        [.-]E?\d{1,4}
-                    )*
+                        (?:
+                            E\d{1,4}
+                            |
+                            [.-]E?\d{1,4}
+                        )+
+                        (?![\dA-Z])
+                    )?
                 )
             /ix',
             $file,

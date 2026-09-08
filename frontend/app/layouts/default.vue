@@ -990,9 +990,9 @@ onMounted(async () => {
     passive: true,
     capture: true,
   });
+  systemStats.start();
   await getVersion();
   await loadImage();
-  systemStats.start();
 });
 
 onBeforeUnmount(() => {

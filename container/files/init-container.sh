@@ -90,7 +90,7 @@ WS_CACHE_NULL=1 /opt/bin/console -q
 
 if [ 0 = "${W_DISABLE_CACHE}" ]; then
   echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Starting Cache Server."
-  redis-server "/opt/config/redis.conf" &
+  redis-server "/opt/config/redis.conf" 2>&1 &
   CACHE_PID=$!
 
   until redis-cli -h 127.0.0.1 -p 6379 ping >/dev/null 2>&1; do

@@ -5,14 +5,91 @@ declare(strict_types=1);
 namespace Tests\Backends\Plex;
 
 use App\Backends\Common\Response;
+use App\Backends\Plex\Action\Backup;
+use App\Backends\Plex\Action\Export;
 use App\Backends\Plex\Action\GetMetaData;
 use App\Backends\Plex\Action\Import;
 use App\Backends\Plex\PlexGuid;
 use App\Libs\Container;
+use App\Libs\Extends\HttpClient;
+use App\Libs\Extends\MockHttpClient;
+use App\Libs\Extends\RetryableHttpClient;
+use PHPUnit\Framework\Attributes\DataProvider;
 use ReflectionMethod;
+use ReflectionProperty;
+use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Contracts\HttpClient\ResponseInterface as iResponse;
+use Symfony\Contracts\HttpClient\ResponseStreamInterface as iResponseStream;
 
 class ImportFlowTest extends PlexTestCase
 {
+    #[DataProvider('inheritedActions')]
+    public function test_inherited_handle_streams(string $actionClass): void
+    {
+        $source = new MockHttpClient(new MockResponse('{"MediaContainer":{"Metadata":[{"ratingKey":"1","type":"movie"}]}}'));
+        $http = new HttpClient($source);
+        $action = new $actionClass($http, $this->logger);
+        $items = [];
+        $response = $source->request('GET', 'http://plex.test');
+        $stream = $source->stream($response);
+        $retryable = $this->createMock(RetryableHttpClient::class);
+        $retryable->expects($this->once())->method('stream')->willReturn($stream);
+        new ReflectionProperty($action, 'http')->setValue($action, $retryable);
+
+        $this->invokeHandle($action, $this->makeContext(), $response, static function (array $item, array $logContext = []) use (
+            &$items,
+        ): void {
+            $items[] = $item;
+        });
+
+        $this->assertCount(1, $items);
+        $this->assertSame('1', $items[0]['ratingKey']);
+    }
+
+    public function test_import_handle_replays_buffered_response(): void
+    {
+        $http = new class(new MockHttpClient(
+            new MockResponse('{"MediaContainer":{"Metadata":[{"ratingKey":"1","type":"movie"}]}}'),
+        )) extends HttpClient {
+            public int $streamCalls = 0;
+
+            public function stream(iterable|iResponse $responses, ?float $timeout = null): iResponseStream
+            {
+                $this->streamCalls++;
+                return parent::stream($responses, $timeout);
+            }
+        };
+        $action = new Import($http, $this->logger);
+        $items = [];
+        $response = $http->request('GET', 'http://plex.test', [
+            'body' => json_encode([
+                'MediaContainer' => [
+                    'Metadata' => [['ratingKey' => '1', 'type' => 'movie']],
+                ],
+            ]),
+        ]);
+
+        $this->invokeHandle(
+            $action,
+            $this->makeContext(),
+            $response,
+            static function (array $item, array $logContext = []) use (&$items): void {
+                $items[] = $item;
+            },
+            [],
+            http_client_chunks($response),
+        );
+
+        $this->assertSame(0, $http->streamCalls);
+        $this->assertCount(1, $items);
+        $this->assertSame('1', $items[0]['ratingKey']);
+    }
+
+    public static function inheritedActions(): array
+    {
+        return [[Export::class], [Backup::class]];
+    }
+
     public function test_import_process_adds_items(): void
     {
         $context = $this->makeContext();
@@ -247,5 +324,29 @@ class ImportFlowTest extends PlexTestCase
     ): void {
         $method = new ReflectionMethod($action, 'processShow');
         $method->invoke($action, $context, $guid, $item, $logContext);
+    }
+
+    private function invokeHandle(
+        object $action,
+        \App\Backends\Common\Context $context,
+        iResponse $response,
+        callable $callback,
+        array $logContext = [],
+        ?iterable $chunks = null,
+    ): void {
+        $method = new ReflectionMethod($action, 'handle');
+        $method->invoke(
+            $action,
+            $context,
+            $response,
+            $callback,
+            $logContext
+            + [
+                'library' => ['title' => 'Movies'],
+                'segment' => ['number' => 1, 'of' => 1],
+                'identity' => ['user' => 'Plex', 'backend' => 'Plex'],
+            ],
+            $chunks,
+        );
     }
 }

@@ -31,6 +31,54 @@ class EventsRepository
     }
 
     /**
+     * Find events that explicitly reference a user-scoped history record.
+     *
+     * @return array<EntityItem>
+     */
+    public function findRelatedHistory(string $historyId, string $user): array
+    {
+        $sql = <<<'SQL'
+            SELECT DISTINCT events.*
+            FROM events
+            WHERE (
+                event IN ('on_push', 'on_progress')
+                AND CAST(json_extract(event_data, '$.id') AS TEXT) = :history_id
+                AND CAST(json_extract(options, '$.CONTEXT_USER') AS TEXT) = :user
+            ) OR (
+                CAST(COALESCE(
+                    json_extract(event_data, '$."history.id"'),
+                    json_extract(event_data, '$.history.id')
+                ) AS TEXT) = :history_id
+                AND CAST(COALESCE(
+                    json_extract(event_data, '$."identity.user"'),
+                    json_extract(event_data, '$.identity.user')
+                ) AS TEXT) = :user
+            ) OR EXISTS (
+                SELECT 1
+                FROM json_each(events.logs) AS event_log
+                WHERE json_valid(event_log.value)
+                  AND CAST(COALESCE(
+                      json_extract(event_log.value, '$.fields."history.id"'),
+                      json_extract(event_log.value, '$.fields.history.id')
+                  ) AS TEXT) = :history_id
+                  AND CAST(COALESCE(
+                      json_extract(event_log.value, '$.fields."identity.user"'),
+                      json_extract(event_log.value, '$.fields.identity.user')
+                  ) AS TEXT) = :user
+            )
+            ORDER BY created_at DESC
+            SQL;
+
+        $items = [];
+        $stmt = $this->db->query($sql, ['history_id' => $historyId, 'user' => $user]);
+        while (false !== ($row = $stmt->fetch())) {
+            $items[] = $this->getObject($row);
+        }
+
+        return $items;
+    }
+
+    /**
      * Will return the last event by reference.
      *
      * @param string|int $reference Reference to search by.

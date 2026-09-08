@@ -10,6 +10,7 @@ use App\Command;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
+use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\RetryableHttpClient;
@@ -28,6 +29,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
+use Symfony\Contracts\HttpClient\ResponseInterface as iResponse;
 use Throwable;
 
 /**
@@ -41,6 +43,18 @@ class ImportCommand extends Command
     public const string ROUTE = 'state:import';
 
     public const string TASK_NAME = 'import';
+
+    private ?iDB $importDb = null;
+
+    private ?iImport $importMapper = null;
+
+    /** @var array{count:int,total:float,max:float,failures:int} */
+    private array $transactionSummary = [
+        'count' => 0,
+        'total' => 0.0,
+        'max' => 0.0,
+        'failures' => 0,
+    ];
 
     /**
      * Class Constructor.
@@ -340,6 +354,9 @@ class ImportCommand extends Command
                 ],
             );
 
+            /** @var array<string,int> $syncDates */
+            $syncDates = [];
+
             foreach ($list as $name => &$backend) {
                 $metadata = true !== (bool) ag($backend, 'import.enabled');
                 $opts = ag($backend, 'options', []);
@@ -393,25 +410,7 @@ class ImportCommand extends Command
 
                 array_push($queue, ...$backend['class']->pull($userContext->mapper, $after));
 
-                $inDryMode = $userContext->mapper->inDryRunMode() || ag($backend, 'options.' . Options::DRY_RUN);
-
-                if (false === $inDryMode) {
-                    if (true === (bool) Message::get("{$name}.has_errors")) {
-                        $this->logger->warning(
-                            message: "Not updating '{identity.user}@{identity.backend}' import last sync date due to errors recorded during the operation.",
-                            context: [
-                                'operation' => 'import.sync_date',
-                                'error' => 'skipped_due_to_errors',
-                                'identity' => [
-                                    'user' => $userContext->name,
-                                    'backend' => $name,
-                                ],
-                            ],
-                        );
-                    } else {
-                        $userContext->config->set("{$name}.import.lastSync", time());
-                    }
-                }
+                $syncDates[$name] = time();
             }
 
             unset($backend);
@@ -429,9 +428,20 @@ class ImportCommand extends Command
                 ],
             ]);
 
+            $this->importDb = $userContext->db;
+            $this->importMapper = $userContext->mapper;
+            $this->transactionSummary = [
+                'count' => 0,
+                'total' => 0.0,
+                'max' => 0.0,
+                'failures' => 0,
+            ];
+            $outcome = 'completed';
+
             try {
-                $userContext->db->transactional(fn() => $this->sendRequests($queue, $syncRequests));
+                $this->sendRequests($queue, $syncRequests);
             } catch (Throwable $e) {
+                $outcome = 'failed';
                 $this->logger->error(
                     ...lw(
                         message: "Import requests for '{identity.user}' backends failed. {exception.message}",
@@ -446,6 +456,32 @@ class ImportCommand extends Command
                 );
 
                 throw $e;
+            } finally {
+                $transactionSummary = $this->transactionSummary;
+                $this->importDb = null;
+                $this->importMapper = null;
+                $this->transactionSummary = [
+                    'count' => 0,
+                    'total' => 0.0,
+                    'max' => 0.0,
+                    'failures' => 0,
+                ];
+                if (0 < $transactionSummary['count']) {
+                    $total = round($transactionSummary['total'], 4);
+                    $max = round($transactionSummary['max'], 4);
+                    $this->logger->info(
+                        "Import transactions for '{identity.user}': {transactions} transactions, {failures} failed, completed in {duration}s total; longest {max_duration}s; outcome {outcome}.",
+                        [
+                            'operation' => 'import.transaction.end',
+                            'identity' => ['user' => $userContext->name],
+                            'transactions' => $transactionSummary['count'],
+                            'failures' => $transactionSummary['failures'],
+                            'duration' => $total,
+                            'max_duration' => $max,
+                            'outcome' => $outcome,
+                        ],
+                    );
+                }
             }
 
             $this->logger->notice(
@@ -484,6 +520,32 @@ class ImportCommand extends Command
             }
 
             $operations = $userContext->mapper->commit();
+
+            foreach ($syncDates as $name => $timestamp) {
+                $backend = $list[$name];
+                $inDryMode = $userContext->mapper->inDryRunMode() || ag($backend, 'options.' . Options::DRY_RUN);
+
+                if (true === $inDryMode) {
+                    continue;
+                }
+
+                if (true === (bool) Message::get("{$name}.has_errors")) {
+                    $this->logger->warning(
+                        message: "Not updating '{identity.user}@{identity.backend}' import last sync date due to errors recorded during the operation.",
+                        context: [
+                            'operation' => 'import.sync_date',
+                            'error' => 'skipped_due_to_errors',
+                            'identity' => [
+                                'user' => $userContext->name,
+                                'backend' => $name,
+                            ],
+                        ],
+                    );
+                    continue;
+                }
+
+                $userContext->config->set("{$name}.import.lastSync", $timestamp);
+            }
 
             Message::reset();
             $userContext->mapper->reset();
@@ -562,7 +624,127 @@ class ImportCommand extends Command
      */
     protected function sendRequests(array $queue, bool $syncRequests): void
     {
-        send_requests(requests: $queue, client: $this->http, sync: $syncRequests, logger: $this->logger);
+        send_requests(
+            requests: array_map($this->bufferRequest(...), $queue),
+            client: $this->http,
+            sync: $syncRequests,
+            logger: $this->logger,
+        );
+    }
+
+    /**
+     * Buffer one response before processing it and apply the same boundary to follow-up requests.
+     *
+     * @param Request $request The request to wrap.
+     *
+     * @return Request The buffered request.
+     */
+    private function bufferRequest(Request $request): Request
+    {
+        $success = $request->success;
+        $error = $request->error;
+        $fatal = null;
+        $bufferFailure = null;
+        $options = $request->options;
+        $options['buffer'] = static function () use (&$bufferFailure) {
+            $stream = tmpfile();
+
+            if (false === $stream) {
+                $bufferFailure = new RuntimeException('Unable to create temporary HTTP response buffer.');
+                throw $bufferFailure;
+            }
+
+            return $stream;
+        };
+
+        return new Request(
+            method: $request->method,
+            url: $request->url,
+            options: $options,
+            success: function (iResponse $response) use ($success, &$fatal): mixed {
+                try {
+                    iterator_count(http_client_chunks($response));
+                } catch (Throwable $e) {
+                    $fatal = $e;
+                    throw $e;
+                }
+
+                $process = static fn(): mixed => null === $success
+                    ? null
+                    : $success($response, http_client_chunks($response));
+
+                if (null === $this->importDb || true === $this->importMapper?->inDryRunMode()) {
+                    try {
+                        $followUps = $process();
+                    } catch (Throwable $e) {
+                        $fatal = $e;
+                        throw $e;
+                    }
+                } else {
+                    $startedAt = null;
+                    try {
+                        $followUps = $this->importDb->transactional(
+                            static function () use (&$startedAt, $process): mixed {
+                                $startedAt = hrtime(true);
+
+                                return $process();
+                            },
+                        );
+                    } catch (Throwable $e) {
+                        $fatal = $e;
+                        throw $e;
+                    } finally {
+                        if (null !== $startedAt) {
+                            $duration = (hrtime(true) - $startedAt) / 1_000_000_000;
+                            $this->transactionSummary['count']++;
+                            $this->transactionSummary['total'] += $duration;
+                            $this->transactionSummary['max'] = max($this->transactionSummary['max'], $duration);
+                            if (null !== $fatal) {
+                                $this->transactionSummary['failures']++;
+                            }
+                        }
+                    }
+                }
+
+                if ($followUps instanceof Request) {
+                    return $this->bufferRequest($followUps);
+                }
+
+                if (true === is_array($followUps)) {
+                    return array_map(
+                        $this->bufferRequest(...),
+                        array_values(array_filter($followUps, static fn($item): bool => $item instanceof Request)),
+                    );
+                }
+
+                return $followUps;
+            },
+            error: function (Throwable $e) use ($error, &$fatal, &$bufferFailure): mixed {
+                if (null !== $fatal) {
+                    throw $fatal;
+                }
+
+                if (null !== $bufferFailure) {
+                    throw $bufferFailure;
+                }
+
+                $followUps = null === $error ? null : $error($e);
+
+                if ($followUps instanceof Request) {
+                    return $this->bufferRequest($followUps);
+                }
+
+                if (true === is_array($followUps)) {
+                    return array_map(
+                        $this->bufferRequest(...),
+                        array_values(array_filter($followUps, static fn($item): bool => $item instanceof Request)),
+                    );
+                }
+
+                return $followUps;
+            },
+            extras: $request->extras,
+        );
     }
 
     private function in_array(array $list, string $search): bool
