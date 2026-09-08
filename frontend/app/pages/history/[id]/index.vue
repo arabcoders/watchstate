@@ -252,7 +252,7 @@
               <button
                 type="button"
                 class="flex min-w-0 flex-1 items-center gap-3 text-left"
-                @click="data._toggle = !data._toggle"
+                @click="showLocalMetadata = !showLocalMetadata"
               >
                 <div class="flex min-w-0 items-center gap-2 text-sm font-semibold text-highlighted">
                   <UIcon name="i-lucide-database" class="size-4 shrink-0 text-toned" />
@@ -269,20 +269,22 @@
               <button
                 type="button"
                 class="inline-flex shrink-0 items-center"
-                :aria-label="data?._toggle ? 'Collapse local metadata' : 'Expand local metadata'"
-                @click="data._toggle = !data._toggle"
+                :aria-label="
+                  showLocalMetadata ? 'Collapse local metadata' : 'Expand local metadata'
+                "
+                @click="showLocalMetadata = !showLocalMetadata"
               >
                 <UIcon
                   name="i-lucide-chevron-right"
                   :class="[
                     'size-4 text-toned transition-transform',
-                    data?._toggle ? 'rotate-90' : '',
+                    showLocalMetadata ? 'rotate-90' : '',
                   ]"
                 />
               </button>
             </div>
 
-            <div v-if="data?._toggle" class="space-y-5 text-sm leading-6 text-default">
+            <div v-if="showLocalMetadata" class="space-y-5 text-sm leading-6 text-default">
               <div class="grid grid-cols-2 gap-3">
                 <div
                   class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
@@ -1574,51 +1576,52 @@
             variant="soft"
             title="No related events"
           />
-          <div v-else-if="relatedLoaded" class="grid gap-4 xl:grid-cols-2">
-            <UCard
+          <div
+            v-else-if="relatedLoaded"
+            class="overflow-hidden rounded-lg border border-default/70 bg-elevated/30 shadow-sm"
+          >
+            <article
               v-for="event in related.events"
               :key="event.id"
-              class="h-full shadow-sm"
-              :ui="eventCardUi"
+              class="flex items-center justify-between gap-2 border-b border-default/50 px-3 py-2 last:border-b-0 hover:bg-elevated/60"
             >
-              <template #header>
-                <div class="flex items-start justify-between gap-3">
-                  <button
-                    type="button"
-                    class="min-w-0 truncate text-left text-base font-semibold text-highlighted hover:text-primary"
-                    @click="openEvent(event.id)"
-                  >
-                    {{ event.name }}
-                  </button>
+              <div class="flex min-w-0 flex-1 items-center gap-2">
+                <span
+                  class="inline-flex size-7 shrink-0 items-center justify-center rounded-md border border-default bg-elevated/70 text-primary"
+                >
+                  <UIcon name="i-lucide-activity" class="size-3.5" />
+                </span>
 
-                  <UBadge :color="getEventStatusColor(event.status)" variant="soft">
-                    <span class="inline-flex items-center gap-1">
-                      <UIcon
-                        :name="getEventStatusIcon(event.status)"
-                        :class="getEventStatusIconClass(event.status)"
-                      />
-                      <span>{{ event.status_name }}</span>
-                    </span>
-                  </UBadge>
-                </div>
-              </template>
-
-              <div class="rounded-md border border-default bg-elevated/20 px-3 py-3">
-                <div class="flex items-center justify-between gap-3 text-sm">
-                  <span class="inline-flex items-center gap-2 text-xs font-medium text-toned">
-                    <UIcon name="i-lucide-calendar" class="size-4" />
-                    <span>Created</span>
-                  </span>
-                  <UTooltip
-                    :text="`Created at: ${moment(event.timestamp).format(TOOLTIP_DATE_FORMAT)}`"
-                  >
-                    <span class="cursor-help text-default">{{
-                      moment(event.timestamp).fromNow()
-                    }}</span>
-                  </UTooltip>
-                </div>
+                <button
+                  type="button"
+                  class="min-w-0 truncate text-left text-sm font-semibold text-highlighted hover:text-primary"
+                  :title="event.name"
+                  @click="openEvent(event.id)"
+                >
+                  {{ event.name }}
+                </button>
               </div>
-            </UCard>
+
+              <div class="flex shrink-0 items-center gap-2">
+                <UBadge :color="getEventStatusColor(event.status)" variant="soft" size="sm">
+                  <span class="inline-flex items-center gap-1">
+                    <UIcon
+                      :name="getEventStatusIcon(event.status)"
+                      :class="getEventStatusIconClass(event.status)"
+                    />
+                    <span>{{ event.status_name }}</span>
+                  </span>
+                </UBadge>
+
+                <UTooltip
+                  :text="`Created at: ${moment(event.timestamp).format(TOOLTIP_DATE_FORMAT)}`"
+                >
+                  <span class="cursor-help whitespace-nowrap text-xs text-toned">
+                    {{ moment(event.timestamp).fromNow() }}
+                  </span>
+                </UTooltip>
+              </div>
+            </article>
           </div>
         </div>
       </section>
@@ -1789,7 +1792,6 @@ type HistoryViewItem = {
   progress?: number | string;
   files: Array<MediaFile>;
   duplicate_reference_ids?: Array<number>;
-  _toggle?: boolean;
 };
 
 type ValidationResponse = Record<string, { status: boolean; message: string }>;
@@ -1861,6 +1863,8 @@ const pageShell = requireTopLevelPageShell('history');
 useHead({ title: `History : ${id}` });
 
 const show_page_tips = useStorage('show_page_tips', true);
+const showLocalMetadata = useStorage<boolean>('history_local_metadata_open', true);
+const showComparison = useStorage<boolean>('history_comparison_open', true);
 const breakpoints = useBreakpoints({ mobile: 0, desktop: 640 });
 const dialog = useDialog();
 const {
@@ -1872,11 +1876,6 @@ const {
 const backgroundOverrideId = `history:${id}`;
 
 const detailCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-};
-
-const eventCardUi = {
   header: 'p-4',
   body: 'px-4 pb-4 pt-0',
 };
@@ -1897,7 +1896,6 @@ const isLoading = ref(true);
 const showRawData = ref(false);
 const playbackModalOpen = ref(false);
 const isDeleting = ref(false);
-const showComparison = ref(true);
 const comparisonExpanded = ref<Record<string, boolean>>({});
 const expandLocalId = ref(false);
 const expandLocalTitle = ref(false);
@@ -2401,7 +2399,7 @@ const summaryBadges = computed<Array<SummaryBadge>>(() => {
 const rawData = computed<string>(() => {
   const dataRecord = data.value as unknown as JsonObject;
   const cleaned = Object.keys(dataRecord)
-    .filter((key) => !['files', 'hardware', 'content_exists', '_toggle'].includes(key))
+    .filter((key) => !['files', 'hardware', 'content_exists'].includes(key))
     .reduce((obj: JsonObject, key: string) => {
       obj[key] = dataRecord[key] ?? null;
       return obj;
@@ -2535,7 +2533,7 @@ const loadContent = async (historyId: number) => {
   }
 
   isLoading.value = false;
-  data.value = { ...json, _toggle: true };
+  data.value = { ...json };
 
   useHead({ title: `History : ${historyTitle.value}` });
   await loadImage();
@@ -2737,7 +2735,7 @@ const toggleWatched = async () => {
       return;
     }
 
-    data.value = { ...json, _toggle: data.value._toggle };
+    data.value = { ...json };
 
     notification(
       'success',

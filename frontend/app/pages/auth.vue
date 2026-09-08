@@ -131,30 +131,27 @@
           </UFormField>
 
           <UFormField label="Password" name="password" required>
-            <div class="flex items-center gap-2">
-              <UInput
-                id="user-password"
-                v-model="user.password"
-                class="w-full"
-                :type="form_expose ? 'text' : 'password'"
-                placeholder="Password"
-                autocomplete="current-password"
-              />
-
-              <UButton
-                type="button"
-                color="neutral"
-                variant="outline"
-                :icon="form_expose ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-                :aria-label="form_expose ? 'Hide password' : 'Show password'"
-                class="whitespace-nowrap"
-                @click="
-                  () => {
-                    form_expose = !form_expose;
-                  }
-                "
-              />
-            </div>
+            <UInput
+              id="user-password"
+              v-model="user.password"
+              class="w-full"
+              :type="form_expose ? 'text' : 'password'"
+              placeholder="Password"
+              autocomplete="current-password"
+            >
+              <template #trailing>
+                <UButton
+                  type="button"
+                  color="neutral"
+                  variant="ghost"
+                  square
+                  size="xs"
+                  :icon="form_expose ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                  :aria-label="form_expose ? 'Hide password' : 'Show password'"
+                  @click="form_expose = !form_expose"
+                />
+              </template>
+            </UInput>
           </UFormField>
 
           <div class="space-y-2 pt-1">
