@@ -1675,6 +1675,49 @@ class HelpersTest extends TestCase
                 'ShowTitle - S03E02 - REMUX-2160p [HEVC x265] [DTS-5.1].mkv',
                 ['status' => true, 'multi' => false, 'season' => 3, 'start' => 2, 'end' => 2],
             ],
+
+            // Scene style dot separated names.
+            // The resolution must not be read as part of the episode range.
+            [
+                'Show.S01E02.1080p.BluRay.DTS5.1.x264.mkv',
+                ['status' => true, 'multi' => false, 'season' => 1, 'start' => 2, 'end' => 2],
+            ],
+            [
+                'Show.S01E01.720p.WEB-DL.x264.mkv',
+                ['status' => true, 'multi' => false, 'season' => 1, 'start' => 1, 'end' => 1],
+            ],
+            [
+                'Show.S01E01.2160p.HDR.mkv',
+                ['status' => true, 'multi' => false, 'season' => 1, 'start' => 1, 'end' => 1],
+            ],
+            [
+                'Show.S01E02.1080p.BluRay.x264-123group.mkv',
+                ['status' => true, 'multi' => false, 'season' => 1, 'start' => 2, 'end' => 2],
+            ],
+
+            // Real episode ranges must still be found when a dot separated tail follows.
+            [
+                'Show.S01E01-E02.1080p.BluRay.x264.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 2],
+            ],
+            [
+                'Show.S01E01-02.1080p.WEB.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 2],
+            ],
+            [
+                'Show.S03E10E11.1080p.BluRay.x264.mkv',
+                ['status' => true, 'multi' => true, 'season' => 3, 'start' => 10, 'end' => 11],
+            ],
+
+            // Other tags that start with digits and follow the episode directly.
+            [
+                'Show.S01E02.10bit.x265.mkv',
+                ['status' => true, 'multi' => false, 'season' => 1, 'start' => 2, 'end' => 2],
+            ],
+            [
+                'Show.S01E02.4K.HDR.mkv',
+                ['status' => true, 'multi' => false, 'season' => 1, 'start' => 2, 'end' => 2],
+            ],
         ];
 
         foreach ($cases as [$filename, $expected]) {
