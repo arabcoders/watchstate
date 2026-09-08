@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "88fbd31453d4a0c191e6d74c20b2d4611e50c825",
-    "date": "2026-09-08T06:57:23+00:00",
+    "full_sha": "5daf47a3bd3f3078ec1c7e614e47aa2461eb0949",
+    "date": "2026-09-08T18:20:42+00:00",
     "commits": [
+      {
+        "sha": "5daf47a3",
+        "full_sha": "5daf47a3bd3f3078ec1c7e614e47aa2461eb0949",
+        "message": "fix: stop reading digit prefixed tags as part of the episode range",
+        "author": "Jellyfrog",
+        "date": "2026-09-08T18:20:42+00:00"
+      },
+      {
+        "sha": "f6b2addc",
+        "full_sha": "f6b2addc052528711b693162b85165687e9e6808",
+        "message": "test: add cases for episode range vs digit prefixed tags",
+        "author": "Jellyfrog",
+        "date": "2026-09-08T18:20:42+00:00"
+      },
       {
         "sha": "88fbd314",
         "full_sha": "88fbd31453d4a0c191e6d74c20b2d4611e50c825",
