@@ -1,0 +1,40 @@
+#!/bin/sh
+set -eu
+
+force=0
+if [ "${1:-}" = "--force" ]; then
+  force=1
+  shift
+fi
+
+if [ "$#" -ne 0 ]; then
+  echo "Usage: $0 [--force]" >&2
+  exit 2
+fi
+
+repo_root=$(git rev-parse --show-toplevel)
+hooks_dir=$(git rev-parse --git-path hooks)
+case "$hooks_dir" in
+  /*) ;;
+  *) hooks_dir="$repo_root/$hooks_dir" ;;
+esac
+
+source_hook="$repo_root/.githooks/pre-commit"
+installed_hook="$hooks_dir/pre-commit"
+
+mkdir -p "$hooks_dir/pre-commit.d/backend" "$hooks_dir/pre-commit.d/frontend"
+if [ -e "$installed_hook" ] || [ -L "$installed_hook" ]; then
+  if [ -L "$installed_hook" ] && [ "$(readlink "$installed_hook")" = "$source_hook" ]; then
+    echo "Pre-commit hook is already installed."
+    exit 0
+  fi
+  if [ "$force" -ne 1 ]; then
+    echo "A pre-commit hook already exists at $installed_hook." >&2
+    echo "Move it into $hooks_dir/pre-commit.d/ or rerun with --force." >&2
+    exit 1
+  fi
+  rm "$installed_hook"
+fi
+
+ln -s "$source_hook" "$installed_hook"
+echo "Installed pre-commit hook at $installed_hook."
