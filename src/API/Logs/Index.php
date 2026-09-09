@@ -21,7 +21,9 @@ use Psr\Log\LoggerInterface as iLogger;
 use Random\RandomException;
 use SplFileObject;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
+use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
+use Throwable;
 
 final class Index
 {
@@ -185,6 +187,18 @@ final class Index
         }
         if ($params->get('stream')) {
             return $this->stream($filePath);
+        }
+
+        $search = $params->get('search', '');
+        if (false === is_string($search)) {
+            return api_error('Search must be text.', Status::BAD_REQUEST);
+        }
+        if ('' !== trim($search)) {
+            $limit = filter_var($params->get('limit', 100), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if (false === $limit) {
+                return api_error('Limit must be a positive integer.', Status::BAD_REQUEST);
+            }
+            return $this->search($filePath, trim($search), $limit);
         }
 
         if (0 === ($offset = (int) $params->get('offset', 0)) || $offset < 0) {
@@ -359,6 +373,73 @@ final class Index
             'Connection' => 'keep-alive',
             'X-Accel-Buffering' => 'no',
         ]);
+    }
+
+    private function search(string $filePath, string $query, int $limit): iResponse
+    {
+        if ('jsonl' !== pathinfo($filePath, PATHINFO_EXTENSION)) {
+            return api_error('Search is only available for JSONL logs.', Status::BAD_REQUEST);
+        }
+
+        if (null === ($ripgrep = new ExecutableFinder()->find('rg'))) {
+            return api_error('Log search requires ripgrep.', Status::INTERNAL_SERVER_ERROR);
+        }
+
+        $lines = [];
+        try {
+            $process = new Process([
+                $ripgrep,
+                '--json',
+                '--no-config',
+                '--no-messages',
+                '--fixed-strings',
+                '--ignore-case',
+                '--max-count',
+                (string) $limit,
+                '--regexp',
+                $query,
+                '--',
+                $filePath,
+            ]);
+            $process->setTimeout(30);
+            $process->start();
+            $buffer = '';
+            foreach ($process as $type => $chunk) {
+                if (Process::OUT !== $type) {
+                    continue;
+                }
+                $buffer .= $chunk;
+                while (false !== ($position = strpos($buffer, "\n"))) {
+                    $match = json_decode(substr($buffer, 0, $position), true);
+                    $buffer = substr($buffer, $position + 1);
+                    if ('match' !== ($match['type'] ?? null)) {
+                        continue;
+                    }
+                    $entry = self::decodeJsonlLine((string) ag($match, 'data.lines.text', ''));
+                    if (null !== $entry) {
+                        $lines[] = $entry;
+                    }
+                }
+            }
+            if (false === in_array($process->getExitCode(), [0, 1], true)) {
+                return api_error('Log search failed.', Status::INTERNAL_SERVER_ERROR);
+            }
+        } catch (Throwable) {
+            return api_error('Log search failed or timed out.', Status::INTERNAL_SERVER_ERROR);
+        }
+
+        return api_response(
+            Status::OK,
+            [
+                'filename' => basename($filePath),
+                'offset' => 0,
+                'next' => null,
+                'max' => count($lines),
+                'lines' => $lines,
+                'parser' => 'jsonl',
+            ],
+            headers: ['X-No-AccessLog' => '1'],
+        );
     }
 
     private function getFile(string $file): ?string
