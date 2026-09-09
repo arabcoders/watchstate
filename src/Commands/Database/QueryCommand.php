@@ -11,9 +11,11 @@ use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
 use PDO;
 use Psr\Log\LoggerInterface as iLogger;
+use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Input\StreamableInputInterface;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
 use Throwable;
 
@@ -36,23 +38,33 @@ class QueryCommand extends Command
             ->setName(self::ROUTE)
             ->setDescription('Execute SQL against the selected user database.')
             ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select user.', 'main')
+            ->addOption('json', null, InputOption::VALUE_NONE, 'Output results as JSON.')
             ->addOption(
                 'param',
                 'p',
                 InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED,
                 'Bind SQL parameter. Named placeholders use key=value. Positional placeholders treat each value literally.',
             )
-            ->addArgument('sql', InputArgument::REQUIRED, 'SQL statement to execute.');
+            ->addArgument('sql', InputArgument::OPTIONAL, 'SQL statement to execute. Reads stdin when omitted.');
     }
 
     protected function runCommand(iInput $input, iOutput $output): int
     {
-        $mode = strtolower((string) $input->getOption('output'));
+        $mode = true === (bool) $input->getOption('json')
+            ? 'json'
+            : strtolower((string) $input->getOption('output'));
         if (!in_array($mode, self::DISPLAY_OUTPUT, true)) {
             $mode = 'table';
         }
 
         $sql = trim((string) $input->getArgument('sql'));
+        if ('' === $sql) {
+            $stream = $input instanceof StreamableInputInterface ? $input->getStream() : null;
+            $stream ??= STDIN;
+            if (false === stream_isatty($stream)) {
+                $sql = trim((string) stream_get_contents($stream));
+            }
+        }
 
         try {
             if ('' === $sql) {
@@ -71,7 +83,11 @@ class QueryCommand extends Command
                     return self::SUCCESS;
                 }
 
-                $this->displayContent($rows, $output, $mode);
+                if ('table' === $mode) {
+                    $this->renderRows($rows, $output);
+                } else {
+                    $this->displayContent($rows, $output, $mode);
+                }
                 return self::SUCCESS;
             }
 
@@ -123,6 +139,33 @@ class QueryCommand extends Command
         }
 
         return $params;
+    }
+
+    /**
+     * @param array<int,array<string,mixed>> $rows
+     */
+    private function renderRows(array $rows, iOutput $output): void
+    {
+        foreach ($rows as $index => $row) {
+            $output->writeln(r('<info>Row {number}</info>', ['number' => $index + 1]));
+
+            foreach ($row as $column => $value) {
+                $value = match (true) {
+                    null === $value => 'null',
+                    true === is_bool($value) => $value ? 'true' : 'false',
+                    true === is_scalar($value) => (string) $value,
+                    default => (string) json_encode(
+                        $value,
+                        JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE,
+                    ),
+                };
+                $output->writeln(OutputFormatter::escape((string) $column . ': ' . $value));
+            }
+
+            if (($index + 1) < count($rows)) {
+                $output->writeln('');
+            }
+        }
     }
 
     protected function hasNamedPlaceholders(string $sql): bool

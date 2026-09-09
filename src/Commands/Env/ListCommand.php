@@ -8,6 +8,7 @@ use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
+use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
@@ -22,12 +23,28 @@ final class ListCommand extends Command
         $this
             ->setName(self::ROUTE)
             ->setDescription('List environment keys.')
+            ->addOption(
+                'key',
+                'k',
+                InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY,
+                'Filter by exact environment key. Can be used multiple times.',
+            )
             ->addOption('set', 's', InputOption::VALUE_NONE, 'Only show keys that are currently set.')
             ->addOption('expose', 'x', InputOption::VALUE_NONE, 'Expose masked values in the output.');
     }
 
     protected function runCommand(iInput $input, iOutput $output): int
     {
+        $keys = array_map(
+            static fn(mixed $key): string => strtoupper(trim((string) $key)),
+            (array) $input->getOption('key'),
+        );
+        if (true === in_array('', $keys, true)) {
+            $output->writeln('<error>Environment key filter cannot be empty.</error>');
+            return self::FAILURE;
+        }
+        $keys = array_values(array_unique($keys));
+
         $response = api_request(
             method: Method::GET,
             path: '/system/env',
@@ -47,8 +64,16 @@ final class ListCommand extends Command
         }
 
         $mode = $input->getOption('output');
+        $items = (array) ag($response->body, 'data', []);
+        if ([] !== $keys) {
+            $selected = array_fill_keys($keys, true);
+            $items = array_values(array_filter(
+                $items,
+                static fn(array $item): bool => isset($selected[strtoupper((string) ag($item, 'key', ''))]),
+            ));
+        }
         $data = $this->sanitizeData(
-            items: ag($response->body, 'data', []),
+            items: $items,
             expose: (bool) $input->getOption('expose'),
         );
         $body = $response->body;
@@ -65,18 +90,22 @@ final class ListCommand extends Command
                 return self::SUCCESS;
             }
 
-            $this->displayContent(array_map(static function (array $item): array {
+            foreach (array_values($body['data']) as $index => $item) {
                 $value = ag($item, 'value', ag($item, 'config_value'));
 
-                if (is_bool($value)) {
-                    $value = $value ? 'true' : 'false';
-                }
+                $value = match (true) {
+                    null === $value => 'null',
+                    true === is_bool($value) => $value ? 'true' : 'false',
+                    default => (string) $value,
+                };
+                $output->writeln(OutputFormatter::escape(($index + 1) . '. ' . (string) ag($item, 'key', '?')));
+                $output->writeln('   ' . OutputFormatter::escape('value: ' . $value));
+                $output->writeln('   ' . OutputFormatter::escape('description: ' . (string) ag($item, 'description', '')));
 
-                return [
-                    'key' => ag($item, 'key'),
-                    'value' => $value,
-                ];
-            }, $body['data']), $output, $mode);
+                if (($index + 1) < count($body['data'])) {
+                    $output->writeln('');
+                }
+            }
             return self::SUCCESS;
         }
 

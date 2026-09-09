@@ -62,6 +62,58 @@ final class QueryCommandTest extends TestCase
         );
     }
 
+    public function test_reads_stdin(): void
+    {
+        $main = $this->makeUserContext('main');
+        $this->seedTable($main, [[
+            'id' => 1,
+            'name' => 'main-row',
+        ]]);
+
+        $tester = $this->makeTester(['main' => $main]);
+        $tester->setInputs(['SELECT id, name FROM sample ORDER BY id ASC']);
+        $status = $tester->execute(['--output' => 'json']);
+
+        self::assertSame(QueryCommand::SUCCESS, $status);
+        self::assertSame(
+            [['id' => 1, 'name' => 'main-row']],
+            json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR),
+        );
+    }
+
+    public function test_human_output(): void
+    {
+        $main = $this->makeUserContext('main');
+        $this->seedTable($main, [
+            ['id' => 1, 'name' => 'alpha'],
+            ['id' => 2, 'name' => 'beta'],
+        ]);
+
+        $tester = $this->makeTester(['main' => $main]);
+        $status = $tester->execute(['sql' => 'SELECT id, name FROM sample ORDER BY id ASC']);
+
+        self::assertSame(QueryCommand::SUCCESS, $status);
+        self::assertSame("Row 1\nid: 1\nname: alpha\n\nRow 2\nid: 2\nname: beta\n", $tester->getDisplay());
+    }
+
+    public function test_json_option(): void
+    {
+        $main = $this->makeUserContext('main');
+        $this->seedTable($main, [['id' => 1, 'name' => 'main-row']]);
+
+        $tester = $this->makeTester(['main' => $main]);
+        $status = $tester->execute([
+            '--json' => true,
+            'sql' => 'SELECT id, name FROM sample ORDER BY id ASC',
+        ]);
+
+        self::assertSame(QueryCommand::SUCCESS, $status);
+        self::assertSame(
+            [['id' => 1, 'name' => 'main-row']],
+            json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR),
+        );
+    }
+
     public function test_write_affected_rows(): void
     {
         $main = $this->makeUserContext('main');
