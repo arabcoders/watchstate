@@ -1,5 +1,33 @@
 [
   {
+    "tag": "Untagged",
+    "full_sha": "f4901bc9409614f3c9e61b94c8e2b07ebde50291",
+    "date": "2026-09-09T06:01:49+00:00",
+    "commits": [
+      {
+        "sha": "f4901bc9",
+        "full_sha": "f4901bc9409614f3c9e61b94c8e2b07ebde50291",
+        "message": "chore: external packages update",
+        "author": "arabcoders",
+        "date": "2026-09-09T06:01:49+00:00"
+      },
+      {
+        "sha": "ca6c744b",
+        "full_sha": "ca6c744b1c65c2742ae922b332f400c579231531",
+        "message": "feat: add search to logs",
+        "author": "arabcoders",
+        "date": "2026-09-09T05:42:44+00:00"
+      },
+      {
+        "sha": "00e7b6a5",
+        "full_sha": "00e7b6a58dcade91fed79a27540640b5c97f3c1b",
+        "message": "refactor: update log search",
+        "author": "arabcoders",
+        "date": "2026-09-09T05:19:59+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v1.10.5",
     "full_sha": "64e6f75a006cca60cedbff33d3e538544cd7d38c",
     "date": "2026-09-08T19:26:33+00:00",
