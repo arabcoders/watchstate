@@ -1,9 +1,37 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "f4901bc9409614f3c9e61b94c8e2b07ebde50291",
-    "date": "2026-09-09T06:01:49+00:00",
+    "full_sha": "a25301cb9f075eee1e741cf815fe86e195601a85",
+    "date": "2026-09-09T18:45:42+00:00",
     "commits": [
+      {
+        "sha": "a25301cb",
+        "full_sha": "a25301cb9f075eee1e741cf815fe86e195601a85",
+        "message": "refactor: cli to have only text and --json mode for display.",
+        "author": "arabcoders",
+        "date": "2026-09-09T18:45:42+00:00"
+      },
+      {
+        "sha": "2cb256d1",
+        "full_sha": "2cb256d1dac873ec0a8c45d976be1073547e1430",
+        "message": "refactor: move towards dropping table/yaml views in cli",
+        "author": "arabcoders",
+        "date": "2026-09-09T16:04:05+00:00"
+      },
+      {
+        "sha": "1c4af203",
+        "full_sha": "1c4af2035ae2f85f548033c7a9eceb46a9b771d3",
+        "message": "feat: add user watch report",
+        "author": "arabcoders",
+        "date": "2026-09-09T15:57:33+00:00"
+      },
+      {
+        "sha": "fcafa239",
+        "full_sha": "fcafa239c82c491fc92546b7970da484da51cd3e",
+        "message": "fix: update open releases handling in changelog",
+        "author": "arabcoders",
+        "date": "2026-09-09T08:16:44+00:00"
+      },
       {
         "sha": "f4901bc9",
         "full_sha": "f4901bc9409614f3c9e61b94c8e2b07ebde50291",
