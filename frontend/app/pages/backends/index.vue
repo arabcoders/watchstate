@@ -339,6 +339,31 @@
                 </div>
               </div>
             </div>
+
+            <div
+              v-if="backendReportSummary(backend.name)"
+              class="grid grid-cols-2 gap-3 lg:grid-cols-3"
+            >
+              <div
+                v-for="stat in backendReportCards(backend.name)"
+                :key="stat.label"
+                class="rounded-md border border-default bg-elevated/40 p-4 text-sm text-default"
+              >
+                <div
+                  class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
+                >
+                  <div
+                    class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
+                  >
+                    <UIcon :name="stat.icon" class="size-3.5 shrink-0" />
+                    <span>{{ stat.label }}</span>
+                  </div>
+                  <span :class="['font-semibold sm:ml-auto sm:text-right', stat.color]">
+                    {{ stat.value }}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <template #footer>
@@ -376,12 +401,20 @@ import {
   copyText,
   makeConsoleCommand,
   notification,
+  parse_api_response,
   queue_event,
   r,
   TOOLTIP_DATE_FORMAT,
   ucFirst,
 } from '~/utils';
-import type { Backend, JsonObject, JsonValue, UtilityCommand } from '~/types';
+import type {
+  Backend,
+  BackendReportBackendSummary,
+  BackendReportResponse,
+  JsonObject,
+  JsonValue,
+  UtilityCommand,
+} from '~/types';
 
 type UsefulCommand = UtilityCommand;
 
@@ -408,6 +441,7 @@ type SelectItem = {
 useHead({ title: 'Backends' });
 
 const backends = ref<Array<Backend>>([]);
+const backendReport = ref<BackendReportResponse | null>(null);
 const toggleForm = ref<boolean>(false);
 const backendAddDirty = ref<boolean>(false);
 const editBackendOpen = ref<boolean>(false);
@@ -416,6 +450,58 @@ const editBackendName = ref<string>('');
 const api_user = useStorage('api_user', 'main');
 const isLoading = ref<boolean>(false);
 const selectedCommand = ref<string>('');
+const formatReportNumber = (value: number): string => new Intl.NumberFormat().format(value);
+
+const backendReportSummary = (backend: string): BackendReportBackendSummary | null =>
+  backendReport.value?.report?.summary?.backends[backend] ?? null;
+
+const backendReportCards = (
+  backend: string,
+): Array<{ label: string; value: string; color: string; icon: string }> => {
+  const summary = backendReportSummary(backend);
+  if (null === summary) {
+    return [];
+  }
+
+  return [
+    {
+      label: 'Total',
+      value: formatReportNumber(summary.total),
+      color: 'text-highlighted',
+      icon: 'i-lucide-database',
+    },
+    {
+      label: 'Movies',
+      value: formatReportNumber(summary.types.movie.total),
+      color: 'text-highlighted',
+      icon: 'i-lucide-film',
+    },
+    {
+      label: 'Episodes',
+      value: formatReportNumber(summary.types.episode.total),
+      color: 'text-highlighted',
+      icon: 'i-lucide-clapperboard',
+    },
+    {
+      label: 'Watched',
+      value: formatReportNumber(summary.watched),
+      color: 'text-success',
+      icon: 'i-lucide-circle-check',
+    },
+    {
+      label: 'Unwatched',
+      value: formatReportNumber(summary.unwatched),
+      color: 'text-highlighted',
+      icon: 'i-lucide-circle',
+    },
+    {
+      label: 'In progress',
+      value: formatReportNumber(summary.in_progress),
+      color: 'text-info',
+      icon: 'i-lucide-clock-3',
+    },
+  ];
+};
 
 const webhookBackend = ref<Backend | null>(null);
 const webhookLoading = ref<boolean>(false);
@@ -543,14 +629,29 @@ const forwardCommand = async (backend: Backend): Promise<void> => {
 
 const loadContent = async (): Promise<void> => {
   backends.value = [];
+  backendReport.value = null;
   isLoading.value = true;
   try {
-    const response = await request('/backends');
-    const json = await response.json();
+    const [backendsResponse, reportResponse] = await Promise.all([
+      request('/backends'),
+      request('/state/backend-report'),
+    ]);
+    const json = await parse_api_response<Array<Backend>>(backendsResponse);
+    if ('error' in json) {
+      notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`);
+      return;
+    }
+
     if ('backends' !== useRoute().name) {
       return;
     }
     backends.value = json;
+
+    const reportJson = await parse_api_response<BackendReportResponse>(reportResponse);
+    if (!('error' in reportJson)) {
+      backendReport.value = reportJson;
+    }
+
     useHead({ title: `${ucFirst(api_user.value)} @ Backends` });
   } catch (e) {
     const error = e as Error;

@@ -635,7 +635,7 @@ return (function () {
     };
 
     // -- Do not forget to update the tasks list if you add a new task.
-    $tasks = ['import', 'playlist', 'export', 'backup', 'prune', 'indexes', 'validate', 'media_health', 'dispatch'];
+    $tasks = ['import', 'playlist', 'export', 'backup', 'prune', 'indexes', 'validate', 'media_health', 'backend_report', 'dispatch'];
     $task_env = [
         [
             'key' => 'WS_CRON_{TASK}',
@@ -678,6 +678,13 @@ return (function () {
         'key' => 'WS_MEDIA_HEALTH_KEEP',
         'config' => 'media_health.keep',
         'description' => 'Number of media health audit reports to keep.',
+        'type' => 'int',
+    ];
+
+    $env[] = [
+        'key' => 'WS_BACKEND_REPORT_KEEP',
+        'config' => 'backend_report.keep',
+        'description' => 'Number of backend media reports to keep.',
         'type' => 'int',
     ];
 
