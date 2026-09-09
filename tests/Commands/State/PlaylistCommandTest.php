@@ -229,7 +229,6 @@ final class PlaylistCommandTest extends TestCase
         ?TestHandler $handler = null,
     ): CommandTester {
         $application = new Application();
-        $application->getDefinition()->addOption(new InputOption('output', 'o', InputOption::VALUE_REQUIRED, '', 'table'));
         $application->getDefinition()->addOption(new InputOption('trace', null, InputOption::VALUE_NONE));
         $application->addCommand($this->makeCommand($service, $client, $backendName, $userNames, $handler));
 

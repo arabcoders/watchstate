@@ -84,7 +84,7 @@
           variant="soft"
           icon="i-lucide-triangle-alert"
           title="Remove the prefix"
-          description="Use the command directly, for example `db:list --output yaml`."
+          description="Use the command directly, for example `env:list --json`."
         />
 
         <UAlert

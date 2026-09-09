@@ -8,9 +8,9 @@ use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use Psr\SimpleCache\CacheInterface as iCache;
 use Psr\SimpleCache\InvalidArgumentException;
-use Symfony\Component\Console\Helper\Table;
-use Symfony\Component\Console\Helper\TableSeparator;
+use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
@@ -37,6 +37,12 @@ final class RoutesCommand extends Command
         $this
             ->setName(self::ROUTE)
             ->addOption('list', 'l', null, 'List all routes')
+            ->addOption(
+                'filter',
+                'f',
+                InputOption::VALUE_REQUIRED,
+                'Filter routes by exact, partial, or glob match.',
+            )
             ->setDescription('Generate routes')
             ->setHelp(
                 <<<HELP
@@ -73,18 +79,10 @@ final class RoutesCommand extends Command
      */
     protected function showHttp(InputInterface $input, OutputInterface $output): int
     {
-        $list = [];
-
-        $table = new Table($output);
-        $table->setHeaders(
-            [
-                'Method/s',
-                'Pattern',
-                'Callable',
-            ],
-        );
-
         $ar = $this->cache->get('routes_http', []);
+        if ([] === $ar) {
+            $ar = generate_routes('http', [iCache::class => $this->cache]);
+        }
 
         $fn = static function (mixed $val, $type = 'array'): string {
             if (is_string($val)) {
@@ -98,31 +96,82 @@ final class RoutesCommand extends Command
             return serialize($val);
         };
 
+        $filter = $input->getOption('filter');
+        if (null !== $filter) {
+            $filter = trim((string) $filter);
+            if ('' === $filter) {
+                $output->writeln('<error>Route filter cannot be empty.</error>');
+                return self::FAILURE;
+            }
+
+            $ar = $this->filterRoutes($ar, $filter, $fn);
+        }
+
         $hosts = array_column($ar, 'host');
         $paths = array_column($ar, 'path');
         array_multisort($hosts, SORT_ASC, $paths, SORT_ASC, $ar);
 
-        if ('json' === $input->getOption('output')) {
+        if ((bool) $input->getOption('json')) {
             $output->writeln((string) json_encode($ar, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
             return self::SUCCESS;
         }
 
-        foreach ($ar as $route) {
-            $list[] = [
-                $fn(ag($route, 'method')),
-                ag($route, 'path'),
-                $fn(ag($route, 'callable'), 'callable'),
-            ];
-
-            $list[] = new TableSeparator();
+        if ([] === $ar) {
+            $output->writeln('<comment>No routes found.</comment>');
+            return self::SUCCESS;
         }
 
-        array_pop($list);
+        foreach ($ar as $index => $route) {
+            $output->writeln('<info>' . ($index + 1) . '. ' . OutputFormatter::escape((string) ag($route, 'path')) . '</info>');
+            $output->writeln(OutputFormatter::escape('   methods: ' . $fn(ag($route, 'method'))));
+            $output->writeln(OutputFormatter::escape('   callable: ' . $fn(ag($route, 'callable'), 'callable')));
 
-        $table->setRows($list);
-
-        $table->render();
+            if (($index + 1) < count($ar)) {
+                $output->writeln('');
+            }
+        }
 
         return self::SUCCESS;
+    }
+
+    private function filterRoutes(array $routes, string $filter, callable $format): array
+    {
+        $filter = strtolower($filter);
+        $values = static fn(array $route): array => array_map(
+            strtolower(...),
+            [
+                $format(ag($route, 'method')),
+                (string) ag($route, 'path', ''),
+                (string) ag($route, 'host', ''),
+                $format(ag($route, 'callable'), 'callable'),
+            ],
+        );
+
+        $matches = array_values(array_filter(
+            $routes,
+            static fn(array $route): bool => in_array($filter, $values($route), true),
+        ));
+
+        if ([] === $matches) {
+            $matches = array_values(array_filter(
+                $routes,
+                static fn(array $route): bool => array_any(
+                    $values($route),
+                    static fn(string $value): bool => str_contains($value, $filter),
+                ),
+            ));
+        }
+
+        if ([] !== $matches) {
+            return $matches;
+        }
+
+        return array_values(array_filter(
+            $routes,
+            static fn(array $route): bool => array_any(
+                $values($route),
+                static fn(string $value): bool => fnmatch($filter, $value),
+            ),
+        ));
     }
 }

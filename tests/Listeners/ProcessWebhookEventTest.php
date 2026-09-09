@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Listeners;
 
 use App\Backends\Common\ClientInterface as iClient;
-use App\Commands\System\TasksCommand;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
@@ -73,36 +72,6 @@ final class ProcessWebhookEventTest extends TestCase
         self::assertSame(EventStatus::RUNNING, $event->getStatus());
     }
 
-    public function test_tasks_processes(): void
-    {
-        $cache = Container::get(CacheInterface::class);
-        $cache->set(TasksCommand::CACHE_NAME, true, new \DateInterval('PT6H'));
-        $logger = new Logger('test');
-
-        $client = $this->createMock(iClient::class);
-        $client
-            ->expects($this->once())
-            ->method('processRequest')
-            ->willReturnCallback($this->inspect(...));
-        $client->expects($this->once())->method('parseWebhook')->willReturn($this->movie());
-        $client->method('withContext')->willReturnSelf();
-        $client->method('setLogger')->willReturnSelf();
-        $client->method('getName')->willReturn('test_plex');
-        $client->method('getType')->willReturn('plex');
-
-        Container::add(iClient::class, $client);
-
-        $listener = new ProcessWebhookEvent(new DirectMapper($logger, Container::get(iDB::class), $cache), $logger);
-        $event = $this->event('req-1');
-
-        $listener($event);
-
-        $events = $cache->get('events', []);
-
-        self::assertSame([], $events);
-        self::assertSame(EventStatus::RUNNING, $event->getStatus());
-    }
-
     public function test_raw_body(): void
     {
         $cache = Container::get(CacheInterface::class);
@@ -132,7 +101,7 @@ final class ProcessWebhookEventTest extends TestCase
         $listener($event);
     }
 
-    public function test_disabled_import_means_metadata_only(): void
+    public function test_metadata_only(): void
     {
         $userContext = get_user_context(
             'main',

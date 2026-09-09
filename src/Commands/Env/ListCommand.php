@@ -27,7 +27,7 @@ final class ListCommand extends Command
                 'key',
                 'k',
                 InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY,
-                'Filter by exact environment key. Can be used multiple times.',
+                'Filter environment keys by exact, partial, or glob match. The WS_ prefix is optional.',
             )
             ->addOption('set', 's', InputOption::VALUE_NONE, 'Only show keys that are currently set.')
             ->addOption('expose', 'x', InputOption::VALUE_NONE, 'Expose masked values in the output.');
@@ -63,14 +63,10 @@ final class ListCommand extends Command
             return self::FAILURE;
         }
 
-        $mode = $input->getOption('output');
+        $json = (bool) $input->getOption('json');
         $items = (array) ag($response->body, 'data', []);
         if ([] !== $keys) {
-            $selected = array_fill_keys($keys, true);
-            $items = array_values(array_filter(
-                $items,
-                static fn(array $item): bool => isset($selected[strtoupper((string) ag($item, 'key', ''))]),
-            ));
+            $items = $this->filterItems($items, $keys);
         }
         $data = $this->sanitizeData(
             items: $items,
@@ -80,7 +76,7 @@ final class ListCommand extends Command
         $body['data'] = $data;
         $file = ag($response->body, 'file');
 
-        if ('table' === $mode) {
+        if (!$json) {
             if (!empty($file)) {
                 $output->writeln(r('<info>Env file:</info> <comment>{file}</comment>', ['file' => $file]));
             }
@@ -96,9 +92,13 @@ final class ListCommand extends Command
                 $value = match (true) {
                     null === $value => 'null',
                     true === is_bool($value) => $value ? 'true' : 'false',
+                    true === is_array($value) => (string) json_encode(
+                        $value,
+                        JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE,
+                    ),
                     default => (string) $value,
                 };
-                $output->writeln(OutputFormatter::escape(($index + 1) . '. ' . (string) ag($item, 'key', '?')));
+                $output->writeln('<info>' . ($index + 1) . '. ' . OutputFormatter::escape((string) ag($item, 'key', '?')) . '</info>');
                 $output->writeln('   ' . OutputFormatter::escape('value: ' . $value));
                 $output->writeln('   ' . OutputFormatter::escape('description: ' . (string) ag($item, 'description', '')));
 
@@ -109,7 +109,7 @@ final class ListCommand extends Command
             return self::SUCCESS;
         }
 
-        $this->displayContent($body, $output, $mode);
+        $this->displayContent($body, $output, true);
 
         return self::SUCCESS;
     }
@@ -135,5 +135,46 @@ final class ListCommand extends Command
 
             return $item;
         }, $items);
+    }
+
+    private function filterItems(array $items, array $keys): array
+    {
+        $selected = [];
+
+        foreach ($keys as $key) {
+            $key = str_starts_with($key, 'WS_') ? substr($key, 3) : $key;
+            $name = static function (array $item): string {
+                $candidate = strtoupper((string) ag($item, 'key', ''));
+
+                return str_starts_with($candidate, 'WS_') ? substr($candidate, 3) : $candidate;
+            };
+            $matches = array_values(array_filter(
+                $items,
+                static fn(array $item): bool => $name($item) === $key,
+            ));
+
+            if ([] === $matches) {
+                $matches = array_values(array_filter(
+                    $items,
+                    static fn(array $item): bool => str_contains($name($item), $key),
+                ));
+            }
+
+            if ([] === $matches) {
+                $matches = array_values(array_filter(
+                    $items,
+                    static fn(array $item): bool => fnmatch($key, $name($item)),
+                ));
+            }
+
+            foreach ($matches as $match) {
+                $selected[(string) ag($match, 'key', '')] = true;
+            }
+        }
+
+        return array_values(array_filter(
+            $items,
+            static fn(array $item): bool => isset($selected[(string) ag($item, 'key', '')]),
+        ));
     }
 }

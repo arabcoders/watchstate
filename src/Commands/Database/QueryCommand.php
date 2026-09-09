@@ -38,7 +38,6 @@ class QueryCommand extends Command
             ->setName(self::ROUTE)
             ->setDescription('Execute SQL against the selected user database.')
             ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select user.', 'main')
-            ->addOption('json', null, InputOption::VALUE_NONE, 'Output results as JSON.')
             ->addOption(
                 'param',
                 'p',
@@ -50,12 +49,7 @@ class QueryCommand extends Command
 
     protected function runCommand(iInput $input, iOutput $output): int
     {
-        $mode = true === (bool) $input->getOption('json')
-            ? 'json'
-            : strtolower((string) $input->getOption('output'));
-        if (!in_array($mode, self::DISPLAY_OUTPUT, true)) {
-            $mode = 'table';
-        }
+        $json = (bool) $input->getOption('json');
 
         $sql = trim((string) $input->getArgument('sql'));
         if ('' === $sql) {
@@ -78,15 +72,15 @@ class QueryCommand extends Command
             if ($statement->columnCount() > 0) {
                 $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-                if ([] === $rows && 'table' === $mode) {
+                if ([] === $rows && !$json) {
                     $output->writeln('<comment>No rows returned.</comment>');
                     return self::SUCCESS;
                 }
 
-                if ('table' === $mode) {
+                if (!$json) {
                     $this->renderRows($rows, $output);
                 } else {
-                    $this->displayContent($rows, $output, $mode);
+                    $this->displayContent($rows, $output, true);
                 }
                 return self::SUCCESS;
             }

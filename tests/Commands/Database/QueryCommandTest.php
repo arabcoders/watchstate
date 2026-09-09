@@ -46,7 +46,7 @@ final class QueryCommandTest extends TestCase
             'alice' => $other,
         ]);
         $status = $tester->execute([
-            '--output' => 'json',
+            '--json' => true,
             'sql' => 'SELECT id, name FROM sample ORDER BY id ASC',
         ]);
 
@@ -72,7 +72,7 @@ final class QueryCommandTest extends TestCase
 
         $tester = $this->makeTester(['main' => $main]);
         $tester->setInputs(['SELECT id, name FROM sample ORDER BY id ASC']);
-        $status = $tester->execute(['--output' => 'json']);
+        $status = $tester->execute(['--json' => true]);
 
         self::assertSame(QueryCommand::SUCCESS, $status);
         self::assertSame(
@@ -81,7 +81,7 @@ final class QueryCommandTest extends TestCase
         );
     }
 
-    public function test_human_output(): void
+    public function test_rows(): void
     {
         $main = $this->makeUserContext('main');
         $this->seedTable($main, [
@@ -163,7 +163,7 @@ final class QueryCommandTest extends TestCase
         ]);
         $status = $tester->execute([
             '--user' => 'alice',
-            '--output' => 'json',
+            '--json' => true,
             'sql' => 'SELECT id, name FROM sample ORDER BY id ASC',
         ]);
 
@@ -197,7 +197,7 @@ final class QueryCommandTest extends TestCase
             'main' => $main,
         ]);
         $status = $tester->execute([
-            '--output' => 'json',
+            '--json' => true,
             '--param' => ['name=beta'],
             'sql' => 'SELECT id, name FROM sample WHERE name = :name',
         ]);
@@ -254,7 +254,7 @@ final class QueryCommandTest extends TestCase
             'main' => $main,
         ]);
         $status = $tester->execute([
-            '--output' => 'json',
+            '--json' => true,
             '--param' => ['beta'],
             'sql' => 'SELECT id, name FROM sample WHERE name = ?',
         ]);
@@ -289,7 +289,7 @@ final class QueryCommandTest extends TestCase
             'main' => $main,
         ]);
         $status = $tester->execute([
-            '--output' => 'json',
+            '--json' => true,
             '--param' => ['alpha=beta'],
             'sql' => 'SELECT id, name FROM sample WHERE name = ?',
         ]);
@@ -384,8 +384,7 @@ final class QueryCommandTest extends TestCase
     private function makeTester(array $contexts): CommandTester
     {
         $application = new Application();
-        $application->getDefinition()->addOption(new InputOption('output', 'o', InputOption::VALUE_REQUIRED, '', 'table'));
-        $application->getDefinition()->addOption(new InputOption('param', 'p', InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED));
+        $application->getDefinition()->addOption(new InputOption('json', null, InputOption::VALUE_NONE));
         $bootstrapContext = $contexts['main'] ?? array_values($contexts)[0];
         assert($bootstrapContext instanceof UserContext, 'Expected bootstrap query user context.');
 

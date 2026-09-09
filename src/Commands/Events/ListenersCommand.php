@@ -7,6 +7,7 @@ namespace App\Commands\Events;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use Psr\EventDispatcher\EventDispatcherInterface as iDispatcher;
+use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
 use Symfony\Component\EventDispatcher\EventDispatcher;
@@ -29,7 +30,6 @@ final class ListenersCommand extends Command
 
     protected function runCommand(iInput $input, iOutput $output): int
     {
-        $mode = $input->getOption('output');
         $keys = [];
 
         assert($this->dispatcher instanceof EventDispatcher, 'Expected EventDispatcher for listeners list.');
@@ -43,17 +43,15 @@ final class ListenersCommand extends Command
             $keys[$key] = implode(', ', $listeners);
         }
 
-        if ('table' === $mode) {
-            $list = [];
-
-            foreach ($keys as $key => $val) {
-                $list[] = ['Event' => $key, 'value' => $val];
-            }
-
-            $keys = $list;
+        if ((bool) $input->getOption('json')) {
+            $this->displayContent($keys, $output, true);
+            return self::SUCCESS;
         }
 
-        $this->displayContent($keys, $output, $mode);
+        foreach ($keys as $key => $listeners) {
+            $output->writeln(r('<info>Event: {event}</info>', ['event' => $key]));
+            $output->writeln(OutputFormatter::escape('  Listeners: ' . $listeners));
+        }
 
         return self::SUCCESS;
     }

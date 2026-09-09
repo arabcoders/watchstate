@@ -151,7 +151,7 @@ class UsersCommand extends Command
             $output->writeln(str_repeat('-', 80));
         }
 
-        $this->displayContent($users, $output, 'table');
+        $this->displayContent($users, $output, (bool) $input->getOption('json'));
 
         return self::SUCCESS;
     }

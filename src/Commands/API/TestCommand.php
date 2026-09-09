@@ -18,7 +18,6 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
-use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
 #[Cli(command: self::ROUTE)]
@@ -106,15 +105,7 @@ final class TestCommand extends Command
         $requestPayload = $this->buildRequestPayload($method, $path, $headers, $query, $body);
         $responsePayload = $this->buildResponsePayload($response);
 
-        $outputMode = null;
-        if (true === $input->hasParameterOption(['--output', '-o'], true)) {
-            $outputMode = strtolower((string) $input->getOption('output'));
-            if (!in_array($outputMode, self::DISPLAY_OUTPUT, true)) {
-                $outputMode = 'table';
-            }
-        }
-
-        if (null === $outputMode) {
+        if (!(bool) $input->getOption('json')) {
             $output->writeln($this->formatHttpRequest($requestPayload, $pretty));
             $output->writeln('');
             $output->writeln($this->formatHttpResponse($responsePayload, $pretty));
@@ -127,22 +118,7 @@ final class TestCommand extends Command
             'response' => $responsePayload,
         ];
 
-        if ('yaml' === $outputMode) {
-            $output->writeln(Yaml::dump($payload, 10, 2, Yaml::DUMP_OBJECT_AS_MAP));
-        } elseif ('json' === $outputMode) {
-            $output->writeln(json_encode(
-                $payload,
-                JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE,
-            ));
-        } else {
-            $tablePayload = [
-                [
-                    'request' => json_encode($requestPayload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE),
-                    'response' => json_encode($responsePayload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE),
-                ],
-            ];
-            $this->displayContent($tablePayload, $output, 'table');
-        }
+        $this->displayContent($payload, $output, true);
 
         return $response->status->value >= 400 ? self::FAILURE : self::SUCCESS;
     }

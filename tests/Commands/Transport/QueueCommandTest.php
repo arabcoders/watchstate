@@ -30,7 +30,7 @@ final class QueueCommandTest extends TestCase
         $this->registerInitializer();
     }
 
-    public function test_list_table(): void
+    public function test_list(): void
     {
         $this->transport->enqueue(EventEnvelope::create('on_webhook'));
 
@@ -48,7 +48,7 @@ final class QueueCommandTest extends TestCase
         $this->transport->enqueue(EventEnvelope::create('on_push', ['ok' => true]));
 
         $tester = $this->makeTester();
-        $status = $tester->execute(['--output' => 'json']);
+        $status = $tester->execute(['--json' => true]);
         $payload = json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR);
 
         self::assertSame(QueueCommand::SUCCESS, $status);
@@ -77,7 +77,7 @@ final class QueueCommandTest extends TestCase
         $this->transport->enqueue($envelope);
 
         $application = new Application();
-        $application->getDefinition()->addOption(new InputOption('output', 'o', InputOption::VALUE_REQUIRED, '', 'table'));
+        $application->getDefinition()->addOption(new InputOption('json', null, InputOption::VALUE_NONE));
         $application->addCommand(new ViewCommand());
         $tester = new CommandTester($application->find(ViewCommand::ROUTE));
 
@@ -110,7 +110,7 @@ final class QueueCommandTest extends TestCase
     private function makeTester(): CommandTester
     {
         $application = new Application();
-        $application->getDefinition()->addOption(new InputOption('output', 'o', InputOption::VALUE_REQUIRED, '', 'table'));
+        $application->getDefinition()->addOption(new InputOption('json', null, InputOption::VALUE_NONE));
         $application->addCommand(new QueueCommand());
         $application->addCommand(new ViewCommand());
 

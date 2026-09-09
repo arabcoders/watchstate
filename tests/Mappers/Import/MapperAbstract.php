@@ -243,13 +243,14 @@ abstract class MapperAbstract extends TestCase
         $this->mapper->reset()->loadData();
 
         $testMovie->watched = 0;
-        $this->mapper->add($testMovie, ['after' => new \DateTimeImmutable('now')]);
+        $after = new \DateTimeImmutable('now');
+        $this->mapper->add($testMovie, ['after' => $after]);
         $this->mapper->commit();
         $this->mapper->reset()->loadData();
         $obj = $this->mapper->get($testMovie);
 
         $this->assertSame(0, $obj->watched, 'watched should be 0');
-        $this->assertSame($obj->updated, $obj->updated, 'updated should be 1');
+        $this->assertSame($after->getTimestamp(), $obj->updated, 'updated should match the after filter');
         $this->assertSame(
             0,
             (int) ag($obj->getMetadata($testMovie->via), iState::COLUMN_WATCHED),
@@ -632,12 +633,6 @@ abstract class MapperAbstract extends TestCase
             spl_object_hash($mapper),
             spl_object_hash($mapper->withOptions(['test' => 'test'])),
             'withOptions() Any mutation should return a new object. and the spl_object_hash() should not be the same.',
-        );
-
-        $this->assertNotSame(
-            spl_object_id($mapper),
-            spl_object_hash($mapper->withOptions(['test' => 'test'])),
-            'withOptions() Any mutation should return a new object. and the spl_object_id() should not be the same.',
         );
 
         $this->assertEmpty(

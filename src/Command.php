@@ -19,25 +19,15 @@ use Symfony\Component\Console\Command\Command as BaseCommand;
 use Symfony\Component\Console\Command\LockableTrait;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
-use Symfony\Component\Console\Helper\Table;
-use Symfony\Component\Console\Helper\TableSeparator;
+use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Input\InputInterface as iInput;
+use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
-use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
 class Command extends BaseCommand
 {
     use LockableTrait;
-
-    /**
-     * The DISPLAY_OUTPUT constant represents the available output formats for displaying data.
-     *
-     * It is an array containing three possible formats: table, json, and yaml.
-     *
-     * @var array<string>
-     */
-    public const array DISPLAY_OUTPUT = ['table', 'json', 'yaml'];
 
     /**
      * Execute the command.
@@ -74,6 +64,15 @@ class Command extends BaseCommand
 
         if ($output instanceof ConsoleOutput) {
             $output->syncJsonlMode($input);
+        }
+
+        if ($input->hasParameterOption(['--output', '-o'], true)) {
+            $warning = '<comment>--output/-o is deprecated and is ignored, and will be removed in a future version.</comment>';
+            if ($output instanceof ConsoleOutputInterface) {
+                $output->getErrorOutput()->writeln($warning);
+            } else {
+                $output->writeln($warning);
+            }
         }
 
         if (!$input->hasOption('profile') || !$input->getOption('profile')) {
@@ -215,64 +214,78 @@ class Command extends BaseCommand
      *
      * @param array $content The content to display.
      * @param iOutput $output The OutputInterface instance for writing output messages.
-     * @param string $mode The display mode. Default is 'json'.
+     * @param bool $json Whether to output JSON instead of human-readable text.
      */
-    protected function displayContent(array $content, iOutput $output, string $mode = 'json'): void
+    protected function displayContent(array $content, iOutput $output, bool $json = false): void
     {
-        switch ($mode) {
-            case 'json':
-                $output->writeln(
-                    json_encode(
-                        value: $content,
-                        flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE,
-                    ),
-                );
-                break;
-            case 'table':
-                $list = [];
-
-                foreach ($content as $_ => $item) {
-                    if (false === is_array($item)) {
-                        $item = [$_ => $item];
-                    }
-
-                    $subItem = [];
-
-                    foreach ($item as $key => $leaf) {
-                        if (true === is_array($leaf)) {
-                            continue;
-                        }
-
-                        $subItem[$key] = $leaf;
-
-                        if (ag_exists($item, 'type') && 'bool' === ag($item, 'type', 'string') && is_bool($leaf)) {
-                            $subItem[$key] = $leaf ? 'true' : 'false';
-                        }
-                    }
-
-                    $list[] = $subItem;
-                    $list[] = new TableSeparator();
-                }
-
-                if (!empty($list)) {
-                    array_pop($list);
-                    new Table($output)
-                        ->setStyle(name: 'box')
-                        ->setHeaders(
-                            array_map(
-                                callback: static fn($title) => is_string($title) ? ucfirst($title) : $title,
-                                array: array_keys($list[0]),
-                            ),
-                        )
-                        ->setRows(rows: $list)
-                        ->render();
-                }
-                break;
-            case 'yaml':
-            default:
-                $output->writeln(Yaml::dump(input: $content, inline: 8, indent: 2));
-                break;
+        if ($json) {
+            $output->writeln((string) json_encode(
+                value: $content,
+                flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE,
+            ));
+            return;
         }
+
+        $this->renderValues($content, $output);
+    }
+
+    private function renderValues(array $content, iOutput $output, int $indent = 0): void
+    {
+        $isList = array_is_list($content);
+        $prefix = str_repeat(' ', $indent);
+
+        foreach ($content as $index => $value) {
+            $label = $isList ? (string) ($index + 1) . '.' : (string) $index . ':';
+
+            if (is_array($value) && [] !== $value) {
+                $firstKey = array_key_first($value);
+                if ($isList && null !== $firstKey && !is_array($value[$firstKey])) {
+                    $output->writeln(
+                        $prefix . '<info>' . OutputFormatter::escape($label . ' ' . (string) $firstKey . ':') . '</info> '
+                            . OutputFormatter::escape($this->formatValue($value[$firstKey])),
+                    );
+                    unset($value[$firstKey]);
+                    if ([] !== $value) {
+                        $this->renderValues($value, $output, $indent + 3);
+                    }
+                    continue;
+                }
+
+                $output->writeln($prefix . '<info>' . OutputFormatter::escape($label) . '</info>');
+                $this->renderValues($value, $output, $indent + 3);
+                continue;
+            }
+
+            $output->writeln(
+                $prefix . '<info>' . OutputFormatter::escape($label) . '</info> ' . OutputFormatter::escape($this->formatValue($value)),
+            );
+        }
+    }
+
+    private function formatValue(mixed $value): string
+    {
+        if (null === $value) {
+            return 'null';
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+
+        if (is_scalar($value)) {
+            return (string) $value;
+        }
+
+        if (is_array($value)) {
+            return '[]';
+        }
+
+        $encoded = json_encode(
+            $value,
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE,
+        );
+
+        return false === $encoded ? get_debug_type($value) : $encoded;
     }
 
     /**
@@ -319,22 +332,6 @@ class Command extends BaseCommand
                 if (empty($currentValue) || str_starts_with($name, $currentValue)) {
                     $suggest[] = $name;
                 }
-            }
-
-            $suggestions->suggestValues($suggest);
-        }
-
-        if ($input->mustSuggestOptionValuesFor('output')) {
-            $currentValue = $input->getCompletionValue();
-
-            $suggest = [];
-
-            foreach (static::DISPLAY_OUTPUT as $name) {
-                if (!(empty($currentValue) || str_starts_with($name, $currentValue))) {
-                    continue;
-                }
-
-                $suggest[] = $name;
             }
 
             $suggestions->suggestValues($suggest);

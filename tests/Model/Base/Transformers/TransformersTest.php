@@ -37,8 +37,6 @@ final class TransformersTest extends TestCase
     public function test_json_transformer_create_factory(): void
     {
         $transformer = JSONTransformer::create(isAssoc: true, nullable: true);
-        $this->assertIsCallable($transformer);
-
         $this->assertNull($transformer(TransformType::ENCODE, null));
     }
 
@@ -71,8 +69,6 @@ final class TransformersTest extends TestCase
     public function test_array_transformer_create_factory(): void
     {
         $transformer = ArrayTransformer::create(nullable: true);
-        $this->assertIsCallable($transformer);
-
         $this->assertNull($transformer(TransformType::ENCODE, null));
     }
 
@@ -137,8 +133,6 @@ final class TransformersTest extends TestCase
     public function test_enum_transformer_create_factory(): void
     {
         $transformer = EnumTransformer::create(EventStatus::class);
-        $this->assertIsCallable($transformer);
-
         $decoded = $transformer(TransformType::DECODE, EventStatus::FAILED->value);
         $this->assertSame(EventStatus::FAILED, $decoded);
     }
@@ -161,7 +155,6 @@ final class TransformersTest extends TestCase
     public function test_scalar_transformer_create_factory(): void
     {
         $transformer = ScalarTransformer::create(ScalarType::INT);
-        $this->assertIsCallable($transformer);
         $this->assertSame(5, $transformer(TransformType::DECODE, '5'));
     }
 

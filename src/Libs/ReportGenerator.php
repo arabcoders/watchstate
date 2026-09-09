@@ -26,8 +26,10 @@ use Throwable;
  * tasks, suppression rules, and recent logs. Used by both the API
  * and CLI to ensure a single source of truth.
  */
-final class ReportGenerator
+class ReportGenerator
 {
+    public const array SECTIONS = ['system', 'backends', 'suppression', 'tasks', 'logs'];
+
     private const int DEFAULT_LIMIT = 10;
 
     /**
@@ -50,23 +52,38 @@ final class ReportGenerator
      *
      * @param int $logLimit Number of log lines to include per log type.
      * @param bool $includeDbSample Include sample database entries per backend.
+     * @param array<string> $sections Report sections to collect.
      *
      * @return array<string,mixed> The structured report data.
      */
-    public function generate(int $logLimit = self::DEFAULT_LIMIT, bool $includeDbSample = false): array
-    {
+    public function generate(
+        int $logLimit = self::DEFAULT_LIMIT,
+        bool $includeDbSample = false,
+        array $sections = self::SECTIONS,
+    ): array {
         $usersContext = get_users_context($this->mapper, $this->logger);
         $sensitive = $this->extractSensitive($usersContext);
 
         $data = [
             'generated_at' => gmdate(Date::ATOM),
-            'system' => $this->getSystemInfo(),
-            'users' => array_keys($usersContext),
-            'backends' => $this->getBackends($usersContext, $includeDbSample),
-            'suppression' => $this->getSuppression(),
-            'tasks' => $this->getTasks(),
-            'logs' => $this->getLogs($logLimit),
         ];
+
+        if (in_array('system', $sections, true)) {
+            $data['system'] = $this->getSystemInfo();
+        }
+        if (in_array('backends', $sections, true)) {
+            $data['users'] = array_keys($usersContext);
+            $data['backends'] = $this->getBackends($usersContext, $includeDbSample);
+        }
+        if (in_array('suppression', $sections, true)) {
+            $data['suppression'] = $this->getSuppression();
+        }
+        if (in_array('tasks', $sections, true)) {
+            $data['tasks'] = $this->getTasks();
+        }
+        if (in_array('logs', $sections, true)) {
+            $data['logs'] = $this->getLogs($logLimit);
+        }
 
         return $this->redactSensitive($data, $sensitive);
     }

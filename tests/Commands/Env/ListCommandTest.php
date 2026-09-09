@@ -40,12 +40,48 @@ final class ListCommandTest extends TestCase
         $tester = $this->makeTester();
         $status = $tester->execute([
             '--key' => ['ws_db_mode', 'WS_LOGGER_ACCESS_LEVEL'],
-            '--output' => 'json',
+            '--json' => true,
         ]);
 
         self::assertSame(ListCommand::SUCCESS, $status);
         $payload = json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR);
         self::assertSame(['WS_DB_MODE', 'WS_LOGGER_ACCESS_LEVEL'], array_column($payload['data'], 'key'));
+    }
+
+    public function test_key_short(): void
+    {
+        $tester = $this->makeTester();
+        $status = $tester->execute(['--key' => ['db_mode'], '--json' => true]);
+
+        self::assertSame(ListCommand::SUCCESS, $status);
+        $payload = json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertSame(['WS_DB_MODE'], array_column($payload['data'], 'key'));
+    }
+
+    public function test_key_partial(): void
+    {
+        $tester = $this->makeTester();
+        $status = $tester->execute(['--key' => ['logger_access'], '--json' => true]);
+
+        self::assertSame(ListCommand::SUCCESS, $status);
+        $payload = json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertSame(
+            ['WS_LOGGER_ACCESS_ENABLE', 'WS_LOGGER_ACCESS_FORMAT', 'WS_LOGGER_ACCESS_LEVEL'],
+            array_column($payload['data'], 'key'),
+        );
+    }
+
+    public function test_key_glob(): void
+    {
+        $tester = $this->makeTester();
+        $status = $tester->execute(['--key' => ['cron*'], '--json' => true]);
+
+        self::assertSame(ListCommand::SUCCESS, $status);
+        $payload = json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertNotEmpty($payload['data']);
+        foreach (array_column($payload['data'], 'key') as $key) {
+            self::assertStringStartsWith('WS_CRON', $key);
+        }
     }
 
     public function test_key_missing(): void
@@ -57,7 +93,7 @@ final class ListCommandTest extends TestCase
         self::assertStringContainsString('No environment keys matched.', $tester->getDisplay());
     }
 
-    public function test_key_human(): void
+    public function test_key(): void
     {
         $tester = $this->makeTester();
         $status = $tester->execute(['--key' => ['WS_DB_MODE']]);
@@ -65,7 +101,19 @@ final class ListCommandTest extends TestCase
         self::assertSame(ListCommand::SUCCESS, $status);
         self::assertStringContainsString("1. WS_DB_MODE\n   value: ", $tester->getDisplay());
         self::assertStringContainsString('description: DB journal mode.', $tester->getDisplay());
-        self::assertStringNotContainsString('┌', $tester->getDisplay());
+    }
+
+    public function test_array_value(): void
+    {
+        $tester = $this->makeTester();
+        $status = $tester->execute(['--key' => ['trust_local_net']]);
+
+        self::assertSame(ListCommand::SUCCESS, $status);
+        self::assertStringContainsString('1. WS_TRUST_LOCAL_NET', $tester->getDisplay());
+        self::assertStringContainsString(
+            'value: ["192.168.0.0/16","127.0.0.1/32","10.0.0.0/8","::1/128","172.16.0.0/12"]',
+            $tester->getDisplay(),
+        );
     }
 
     public function test_key_empty(): void
@@ -87,7 +135,7 @@ final class ListCommandTest extends TestCase
         $status = $tester->execute([
             '--key' => ['WS_CACHE_URL', 'WS_DB_MODE'],
             '--set' => true,
-            '--output' => 'json',
+            '--json' => true,
         ]);
 
         self::assertSame(ListCommand::SUCCESS, $status);
@@ -100,7 +148,7 @@ final class ListCommandTest extends TestCase
             '--key' => ['WS_CACHE_URL'],
             '--set' => true,
             '--expose' => true,
-            '--output' => 'json',
+            '--json' => true,
         ]);
 
         self::assertSame(ListCommand::SUCCESS, $status);
@@ -111,7 +159,7 @@ final class ListCommandTest extends TestCase
     private function makeTester(): CommandTester
     {
         $application = new Application();
-        $application->getDefinition()->addOption(new InputOption('output', 'o', InputOption::VALUE_REQUIRED, '', 'table'));
+        $application->getDefinition()->addOption(new InputOption('json', null, InputOption::VALUE_NONE));
         $application->addCommand(new ListCommand());
 
         return new CommandTester($application->find(ListCommand::ROUTE));
