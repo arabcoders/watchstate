@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "a25301cb9f075eee1e741cf815fe86e195601a85",
-    "date": "2026-09-09T18:45:42+00:00",
+    "full_sha": "f2f6a19e7f92483fb622a9407a1f4092cadeb11c",
+    "date": "2026-09-10T18:15:41+00:00",
     "commits": [
+      {
+        "sha": "f2f6a19e",
+        "full_sha": "f2f6a19e7f92483fb622a9407a1f4092cadeb11c",
+        "message": "refactor: add useStorage for history logs/events",
+        "author": "arabcoders",
+        "date": "2026-09-10T18:15:41+00:00"
+      },
       {
         "sha": "a25301cb",
         "full_sha": "a25301cb9f075eee1e741cf815fe86e195601a85",
