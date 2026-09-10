@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "f2f6a19e7f92483fb622a9407a1f4092cadeb11c",
-    "date": "2026-09-10T18:15:41+00:00",
+    "full_sha": "ca57cf737350cd45db1c98c7da47f3ef4e9686d7",
+    "date": "2026-09-10T20:42:14+00:00",
     "commits": [
+      {
+        "sha": "ca57cf73",
+        "full_sha": "ca57cf737350cd45db1c98c7da47f3ef4e9686d7",
+        "message": "refactor: lazy load logs/event",
+        "author": "arabcoders",
+        "date": "2026-09-10T20:42:14+00:00"
+      },
       {
         "sha": "f2f6a19e",
         "full_sha": "f2f6a19e7f92483fb622a9407a1f4092cadeb11c",
