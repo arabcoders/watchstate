@@ -1906,8 +1906,8 @@ const loadedImages = ref<Record<'poster' | 'background', string | null>>({
 });
 const headerOverviewExpanded = ref(false);
 const apiUser = useStorage<string>('api_user', 'main');
-const relatedLogsExpanded = ref(false);
-const relatedEventsExpanded = ref(false);
+const relatedLogsExpanded = useStorage<boolean>('history_related_logs_open', true);
+const relatedEventsExpanded = useStorage<boolean>('history_related_events_open', true);
 const relatedLoading = ref(false);
 const relatedLoaded = ref(false);
 const relatedLoadedAt = ref<number | null>(null);
@@ -2544,8 +2544,6 @@ const loadContent = async (historyId: number) => {
 
 const resetRelated = (): void => {
   relatedLoadToken++;
-  relatedLogsExpanded.value = false;
-  relatedEventsExpanded.value = false;
   relatedLoading.value = false;
   relatedLoaded.value = false;
   relatedLoadedAt.value = null;
@@ -2622,8 +2620,12 @@ const toggleRelatedEvents = (): void => {
   }
 };
 
-watch(apiUser, resetRelated);
-watch(() => currentHistoryId.value, resetRelated);
+watch([apiUser, currentHistoryId], () => {
+  resetRelated();
+  if (relatedLogsExpanded.value || relatedEventsExpanded.value) {
+    void loadRelated();
+  }
+});
 
 watch(breakpoints.active(), async () => await loadImage());
 
@@ -2834,5 +2836,8 @@ onUnmounted(() => {
 
 onMounted(async () => {
   await loadContent(id);
+  if (relatedLogsExpanded.value || relatedEventsExpanded.value) {
+    await loadRelated();
+  }
 });
 </script>
