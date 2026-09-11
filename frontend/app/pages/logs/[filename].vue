@@ -65,6 +65,16 @@
           </USelect>
 
           <UButton
+            color="neutral"
+            :variant="searchForm ? 'soft' : 'outline'"
+            size="sm"
+            icon="i-lucide-search"
+            @click="searchForm = !searchForm"
+          >
+            <span class="hidden sm:inline">Search</span>
+          </UButton>
+
+          <UButton
             icon="i-lucide-wrap-text"
             :variant="wrapLines ? 'soft' : 'outline'"
             color="neutral"
@@ -130,6 +140,67 @@
       </template>
     </PageHeader>
 
+    <UCard v-if="searchForm && !error" class="ws-card shadow-sm" :ui="panelCardUi">
+      <template #header>
+        <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
+          <UIcon name="i-lucide-search" class="size-4 text-toned" />
+          <span>Search Logs</span>
+        </div>
+      </template>
+
+      <form class="space-y-3" @submit.prevent="void searchLog()">
+        <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_8rem]">
+          <UFormField label="Search" name="search">
+            <UInput
+              v-model="searchQuery"
+              type="search"
+              placeholder="Search entire file"
+              icon="i-lucide-search"
+              size="sm"
+              class="w-full"
+              :disabled="isLoading"
+            />
+          </UFormField>
+          <UFormField label="Limit" name="limit">
+            <UInput
+              v-model.number="searchLimit"
+              type="number"
+              :min="1"
+              :step="1"
+              required
+              size="sm"
+              class="w-full"
+              :disabled="isLoading"
+            />
+          </UFormField>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-end gap-2">
+          <UButton
+            color="primary"
+            size="sm"
+            icon="i-lucide-search"
+            type="submit"
+            :disabled="isLoading || '' === searchQuery.trim()"
+            :loading="isLoading"
+          >
+            Search
+          </UButton>
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-x"
+            type="button"
+            :disabled="isLoading"
+            @click="clearSearch"
+          >
+            Reset
+          </UButton>
+        </div>
+      </form>
+    </UCard>
+
     <UAlert
       v-if="error"
       color="warning"
@@ -145,6 +216,9 @@
     </UAlert>
 
     <template v-else-if="!error">
+      <p v-if="activeSearch" class="text-sm text-toned">
+        {{ data.length }} matches for “{{ activeSearch }}” in this file.
+      </p>
       <div
         ref="logContainer"
         class="min-w-0 overflow-y-auto overflow-x-hidden border border-default bg-elevated/30 shadow-sm text-default"
@@ -152,7 +226,7 @@
         @scroll.passive="handleScroll"
       >
         <div
-          v-if="reachedEnd && !hasActiveFilter"
+          v-if="reachedEnd && !hasActiveFilter && !activeSearch"
           class="flex justify-center border-b border-default/40 px-4 py-3"
         >
           <div
@@ -290,6 +364,14 @@ const token = useStorage('token', '');
 const dialog = useDialog();
 
 const query = ref<string>('');
+const searchQuery = ref('');
+const searchLimit = ref(100);
+const searchForm = ref(false);
+const panelCardUi = {
+  header: 'p-4',
+  body: 'px-4 pb-4 pt-0',
+};
+const activeSearch = ref('');
 const data = ref<Array<ServerJsonLogEntry>>([]);
 const error = ref<string>('');
 const wrapLines = useStorage('logs_wrap_lines', false);
@@ -485,7 +567,7 @@ const applyLogBatch = (items: Array<unknown>, prepend = false): void => {
 };
 
 const loadContent = async (force = false): Promise<void> => {
-  if (isLoading.value) {
+  if (isLoading.value || activeSearch.value) {
     return;
   }
   if (hasActiveFilter.value && !force && data.value.length > 0) {
@@ -533,10 +615,68 @@ const loadContent = async (force = false): Promise<void> => {
   }
 };
 
+const searchLog = async (): Promise<void> => {
+  if (isLoading.value) {
+    return;
+  }
+  const term = searchQuery.value.trim();
+  if ('' === term) {
+    await clearSearch();
+    return;
+  }
+  closeStream();
+  isLoading.value = true;
+  try {
+    const params = new URLSearchParams({ search: term, limit: String(searchLimit.value) });
+    const response = await request(`/log/${encodeURIComponent(filename)}?${params}`);
+    const json = await parse_api_response<LogResponse>(response);
+    if ('error' in json) {
+      notification('error', 'Search failed', json.error.message);
+      return;
+    }
+    if (!response.ok) {
+      notification('error', 'Search failed', 'Unable to search this log file.');
+      return;
+    }
+    activeSearch.value = term;
+    data.value = [];
+    applyLogBatch(json.lines);
+    expandedLogRows.value = new Set();
+    reachedEnd.value = true;
+    autoScroll.value = true;
+    await nextTick();
+    scrollLogContainerToBottom('auto');
+  } catch (err) {
+    notification('error', 'Search failed', err instanceof Error ? err.message : 'Unexpected error');
+  } finally {
+    isLoading.value = false;
+    watchLog();
+  }
+};
+
+const clearSearch = async (): Promise<void> => {
+  if (isLoading.value) {
+    return;
+  }
+  searchQuery.value = '';
+  searchLimit.value = 100;
+  activeSearch.value = '';
+  query.value = '';
+  searchForm.value = false;
+  toggleFilter.value = false;
+  await reloadLog();
+};
+
 const reloadLog = async (): Promise<void> => {
   if (isLoading.value) {
     return;
   }
+  if (activeSearch.value) {
+    searchQuery.value = activeSearch.value;
+    await searchLog();
+    return;
+  }
+  closeStream();
   offset.value = 0;
   reachedEnd.value = false;
   data.value = [];
@@ -555,12 +695,18 @@ const emptyTitle = computed(() => {
     return 'No logs match these filters';
   }
   if (!isLoading.value) {
+    if (activeSearch.value) {
+      return 'No matching log entries';
+    }
     return 'No log lines available';
   }
   return 'Loading logs...';
 });
 
 const emptyDescription = computed(() => {
+  if (activeSearch.value) {
+    return 'Adjust your search or clear it to return to the log view.';
+  }
   if (hasActiveFilter.value) {
     return 'Adjust filters or load older lines into the current filter.';
   }
@@ -581,7 +727,7 @@ watch(detailsOpen, (open) => {
 });
 
 const handleScroll = (): void => {
-  if (!logContainer.value || hasActiveFilter.value) {
+  if (!logContainer.value || hasActiveFilter.value || activeSearch.value) {
     return;
   }
   const container = logContainer.value;
@@ -622,7 +768,7 @@ onUnmounted(async () => {
 });
 
 const watchLog = (): void => {
-  if (!isTodayLog.value || stream.value) {
+  if (!isTodayLog.value || stream.value || activeSearch.value || 'logs-filename' !== route.name) {
     return;
   }
 
@@ -632,7 +778,7 @@ const watchLog = (): void => {
 
   void fetchEventSource(`/v1/api/log/${filename}?stream=1`, {
     onmessage: async (evt) => {
-      if ('data' !== evt.event) {
+      if (controller.signal.aborted || 'data' !== evt.event) {
         return;
       }
       const lines = evt.data.split(/\n/g);
@@ -655,14 +801,18 @@ const watchLog = (): void => {
       }
     },
     onclose: () => {
-      stream.value = false;
-      streamController.value = null;
+      if (streamController.value === controller) {
+        stream.value = false;
+        streamController.value = null;
+      }
     },
     headers: { Authorization: `Token ${token.value}` },
     signal: controller.signal,
   }).catch(() => {
-    stream.value = false;
-    streamController.value = null;
+    if (streamController.value === controller) {
+      stream.value = false;
+      streamController.value = null;
+    }
   });
 };
 

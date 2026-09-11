@@ -57,9 +57,8 @@ final class ListCommand extends AbstractEventCommand
             return $this->apiError($output, $response);
         }
 
-        $mode = $this->outputMode($input);
-        if ('table' !== $mode) {
-            $this->displayContent($response->body, $output, $mode);
+        if ((bool) $input->getOption('json')) {
+            $this->displayContent($response->body, $output, true);
             return self::SUCCESS;
         }
 

@@ -28,6 +28,7 @@ use ReflectionUnionType;
 use Stringable;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
+use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
@@ -85,10 +86,7 @@ class TestCommand extends Command
 
     protected function runCommand(iInput $input, iOutput $output): int
     {
-        $mode = strtolower((string) $input->getOption('output'));
-        if (!in_array($mode, self::DISPLAY_OUTPUT, true)) {
-            $mode = 'table';
-        }
+        $json = (bool) $input->getOption('json');
 
         $inspect = (bool) $input->getOption('inspect');
 
@@ -103,7 +101,7 @@ class TestCommand extends Command
                     );
                 }
 
-                $this->displayActions($backend, $output, $mode);
+                $this->displayActions($backend, $output, $json);
                 return self::SUCCESS;
             }
 
@@ -111,7 +109,7 @@ class TestCommand extends Command
 
             if (true === $inspect) {
                 $inspection = $this->inspectAction($backend, $action);
-                $this->displayInspection($inspection, $output, $mode);
+                $this->displayInspection($inspection, $output, $json);
                 return self::SUCCESS;
             }
 
@@ -132,12 +130,12 @@ class TestCommand extends Command
             'result' => $normalized,
         ];
 
-        if ('table' !== $mode) {
-            $this->displayContent($payload, $output, $mode);
+        if ($json) {
+            $this->displayContent($payload, $output, true);
             return self::SUCCESS;
         }
 
-        $this->displayResultTable($normalized, $output);
+        $this->displayResult($normalized, $output);
 
         return self::SUCCESS;
     }
@@ -190,7 +188,7 @@ class TestCommand extends Command
         ], $methods);
     }
 
-    private function displayActions(iClient $backend, iOutput $output, string $mode): void
+    private function displayActions(iClient $backend, iOutput $output, bool $json): void
     {
         $payload = [
             'backend' => $backend->getName(),
@@ -198,12 +196,23 @@ class TestCommand extends Command
             'actions' => $this->getAvailableActions(),
         ];
 
-        if ('table' !== $mode) {
-            $this->displayContent($payload, $output, $mode);
+        if ($json) {
+            $this->displayContent($payload, $output, true);
             return;
         }
 
-        $this->displayContent($payload['actions'], $output, $mode);
+        $output->writeln(r('<info>Backend: {backend}</info> ({type})', [
+            'backend' => $payload['backend'],
+            'type' => $payload['type'],
+        ]));
+        foreach ($payload['actions'] as $index => $action) {
+            $output->writeln(r('<info>{number}. {action}</info>', [
+                'number' => $index + 1,
+                'action' => $action['action'],
+            ]));
+            $output->writeln(OutputFormatter::escape('   signature: ' . $action['signature']));
+            $output->writeln(OutputFormatter::escape('   returns: ' . $action['returns']));
+        }
     }
 
     /**
@@ -266,10 +275,10 @@ class TestCommand extends Command
     /**
      * @param array<string, mixed> $inspection
      */
-    private function displayInspection(array $inspection, iOutput $output, string $mode): void
+    private function displayInspection(array $inspection, iOutput $output, bool $json): void
     {
-        if ('table' !== $mode) {
-            $this->displayContent($inspection, $output, $mode);
+        if ($json) {
+            $this->displayContent($inspection, $output, true);
             return;
         }
 
@@ -293,7 +302,18 @@ class TestCommand extends Command
             return;
         }
 
-        $this->displayContent($inspection['parameters'], $output, 'table');
+        foreach ($inspection['parameters'] as $index => $parameter) {
+            $output->writeln(r('<info>{number}. {name}</info>', [
+                'number' => $index + 1,
+                'name' => $parameter['name'],
+            ]));
+            foreach ($parameter as $key => $value) {
+                if ('name' === $key) {
+                    continue;
+                }
+                $output->writeln(OutputFormatter::escape('   ' . $key . ': ' . (string) $value));
+            }
+        }
     }
 
     private function resolveActionName(string $action): string
@@ -867,25 +887,25 @@ class TestCommand extends Command
         return ['class' => $value::class];
     }
 
-    private function displayResultTable(mixed $result, iOutput $output): void
+    private function displayResult(mixed $result, iOutput $output): void
     {
-        $rows = $this->normalizeTableRows($result);
+        $rows = $this->normalizeRows($result);
 
         if ([] === $rows) {
             $output->writeln('<comment>No result returned.</comment>');
             return;
         }
 
-        $this->displayContent($rows, $output, 'table');
+        $this->displayContent($rows, $output);
     }
 
     /**
      * @return array<int, array<string, scalar|null>>
      */
-    private function normalizeTableRows(mixed $result): array
+    private function normalizeRows(mixed $result): array
     {
         if (!is_array($result)) {
-            return [['result' => $this->normalizeTableCell($result)]];
+            return [['result' => $this->normalizeCell($result)]];
         }
 
         if ([] === $result) {
@@ -893,17 +913,17 @@ class TestCommand extends Command
         }
 
         if (!array_is_list($result)) {
-            return [$this->flattenTableRow($result)];
+            return [$this->flattenRow($result)];
         }
 
         $rows = [];
         foreach ($result as $item) {
             if (is_array($item)) {
-                $rows[] = $this->flattenTableRow($item);
+                $rows[] = $this->flattenRow($item);
                 continue;
             }
 
-            $rows[] = ['result' => $this->normalizeTableCell($item)];
+            $rows[] = ['result' => $this->normalizeCell($item)];
         }
 
         return $rows;
@@ -914,18 +934,18 @@ class TestCommand extends Command
      *
      * @return array<string, scalar|null>
      */
-    private function flattenTableRow(array $row): array
+    private function flattenRow(array $row): array
     {
         $flat = [];
 
         foreach ($row as $key => $value) {
-            $flat[(string) $key] = $this->normalizeTableCell($value);
+            $flat[(string) $key] = $this->normalizeCell($value);
         }
 
         return $flat;
     }
 
-    private function normalizeTableCell(mixed $value): string|int|float|bool|null
+    private function normalizeCell(mixed $value): string|int|float|bool|null
     {
         $value = $this->normalizeValue($value);
 

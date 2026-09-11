@@ -14,6 +14,7 @@ use JsonMachine\Exception\InvalidArgumentException;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
+use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
@@ -185,19 +186,30 @@ final class DiffCommand extends Command
             $this->saveContent($data['changed'], $saveFile, $filter, $source);
         }
 
-        if ('table' === $input->getOption('output')) {
-            $newData = [];
-            foreach (ag($data, 'changed', []) as $row) {
-                $newData[] = [
-                    'Title' => $row['title'],
-                    '[O] Played' => $row['a'] ? 'Yes' : 'No',
-                    '[N] Played' => $row['b'] ? 'Yes' : 'No',
-                ];
-            }
-            $data = $newData;
+        if ((bool) $input->getOption('json')) {
+            $this->displayContent($data, $output, true);
+            return self::SUCCESS;
         }
 
-        $this->displayContent($data, $output, $input->getOption('output'));
+        foreach ($data as $section => $items) {
+            if ([] === $items) {
+                continue;
+            }
+
+            $output->writeln('<info>' . ucfirst((string) $section) . '</info>');
+            foreach ($items as $index => $item) {
+                $output->writeln(
+                    '<info>' . ($index + 1) . '. ' . OutputFormatter::escape((string) ag($item, 'title', '')) . '</info>',
+                );
+
+                if ('changed' === $section) {
+                    $output->writeln(OutputFormatter::escape('   [O] Played: ' . ($item['a'] ? 'Yes' : 'No')));
+                    $output->writeln(OutputFormatter::escape('   [N] Played: ' . ($item['b'] ? 'Yes' : 'No')));
+                } else {
+                    $output->writeln(OutputFormatter::escape('   Played: ' . ($item['status'] ? 'Yes' : 'No')));
+                }
+            }
+        }
 
         return self::SUCCESS;
     }

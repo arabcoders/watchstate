@@ -7,19 +7,11 @@ namespace App\Commands\Transport;
 use App\Command;
 use InvalidArgumentException;
 use Symfony\Component\Console\Formatter\OutputFormatter;
-use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 abstract class AbstractTransportCommand extends Command
 {
     protected const array STATES = ['pending', 'processing', 'failed'];
-
-    protected function outputMode(InputInterface $input): string
-    {
-        $mode = strtolower((string) $input->getOption('output'));
-
-        return in_array($mode, self::DISPLAY_OUTPUT, true) ? $mode : 'table';
-    }
 
     protected function apiError(OutputInterface $output, mixed $response): int
     {

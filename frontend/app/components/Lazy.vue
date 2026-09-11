@@ -9,7 +9,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onBeforeUnmount } from 'vue';
+import { ref, nextTick, onBeforeUnmount, watch } from 'vue';
 import { useIntersectionObserver } from '@vueuse/core';
 
 const props = defineProps<{
@@ -23,11 +23,21 @@ const props = defineProps<{
   unrenderDelay?: number;
 }>();
 
+const emit = defineEmits<{
+  (event: 'show'): void;
+}>();
+
 const shouldRender = ref<boolean>(false);
 const targetEl = ref<HTMLElement | null>(null);
 const fixedMinHeight = ref<number>(0);
 let unrenderTimer: ReturnType<typeof setTimeout> | undefined;
 let renderTimer: ReturnType<typeof setTimeout> | undefined;
+
+watch(shouldRender, (value) => {
+  if (value) {
+    emit('show');
+  }
+});
 
 function onIdle(cb: () => void = () => {}): void {
   if ('requestIdleCallback' in window) {

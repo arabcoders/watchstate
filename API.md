@@ -72,6 +72,9 @@ WatchState HTTP API reference. Examples use the default `/v1/api` prefix.
       - [GET /v1/api/state/media-health/items](#get-v1apistatemedia-healthitems)
       - [POST /v1/api/state/media-health/run](#post-v1apistatemedia-healthrun)
       - [GET /v1/api/state/media-health/export/{format}](#get-v1apistatemedia-healthexportformat)
+      - [GET /v1/api/state/backend-report](#get-v1apistatebackend-report)
+      - [POST /v1/api/state/backend-report/run](#post-v1apistatebackend-reportrun)
+      - [GET /v1/api/state/backend-report/export/{format}](#get-v1apistatebackend-reportexportformat)
     - [System](#system)
       - [GET /v1/api/system/healthcheck](#get-v1apisystemhealthcheck)
       - [GET /v1/api/system/version](#get-v1apisystemversion)
@@ -1995,6 +1998,126 @@ Downloads a ZIP archive containing the latest completed report and all report it
 **Notes**:
 - The export is a complete dump of all the data.
 - The archive contains files in the requested format.
+- Returns `404 Not Found` if no completed report exists.
+
+---
+
+#### GET /v1/api/state/backend-report
+Returns the latest cached backend report for the selected identity and its queue state.
+
+**Response**:
+```json
+{
+  "report": {
+    "id": 1,
+    "status": "completed",
+    "generated_at": 1784520000,
+    "completed_at": 1784520002,
+    "version": 1,
+    "backend_count": 1,
+    "identity": "main",
+    "summary": {
+      "total": 480,
+      "watched": 285,
+      "unwatched": 195,
+      "in_progress": 8,
+      "types": {
+        "movie": {
+          "total": 480,
+          "watched": 285,
+          "unwatched": 195,
+          "in_progress": 8
+        },
+        "episode": {
+          "total": 0,
+          "watched": 0,
+          "unwatched": 0,
+          "in_progress": 0
+        }
+      },
+      "backends": {
+        "plex": {
+          "total": 480,
+          "watched": 285,
+          "unwatched": 195,
+          "in_progress": 8,
+          "configured": true,
+          "types": {
+            "movie": {
+              "total": 480,
+              "watched": 285,
+              "unwatched": 195,
+              "in_progress": 8
+            },
+            "episode": {
+              "total": 0,
+              "watched": 0,
+              "unwatched": 0,
+              "in_progress": 0
+            }
+          },
+          "libraries": [
+            {
+              "id": "1",
+              "total": 480,
+              "watched": 285,
+              "unwatched": 195,
+              "in_progress": 8,
+              "title": "Movies",
+              "type": "movie"
+            }
+          ]
+        }
+      },
+      "origins": {}
+    },
+    "error": null
+  },
+  "queued": false,
+  "queued_event": null
+}
+```
+
+**Notes**:
+- `report` is `null` until the first successful report completes.
+- Reports are stored and retained separately for each identity.
+- `in_progress` is included in `unwatched`.
+- Counts come from local state records. Library names are resolved from each configured backend.
+- Library `type` is `movie`, `show`, or `mixed`.
+- If library metadata cannot be resolved, `type` is inferred from its local records.
+
+---
+
+#### POST /v1/api/state/backend-report/run
+Queues a background task to regenerate the backend report for the selected identity.
+
+**Response**:
+```json
+{
+  "queued": true,
+  "running": false,
+  "event_id": "01J...",
+  "message": "Backend report was queued."
+}
+```
+
+**Notes**:
+- If a report is already queued or running, the response is `202 Accepted` with `queued=false` and the existing event ID.
+- Manually queued reports are tracked separately for each identity; the scheduled all-identity task appears queued for every identity.
+- The task runs `state:backend-report` through the task dispatcher.
+
+---
+
+#### GET /v1/api/state/backend-report/export/{format}
+Downloads the latest completed backend report for the selected identity.
+
+**Path**:
+- `format` is `json`, `markdown`, or `csv`.
+
+**Notes**:
+- JSON contains the complete selected-identity summary.
+- CSV contains backend, library, and media-type counts.
+- Markdown contains headline and backend counts.
 - Returns `404 Not Found` if no completed report exists.
 
 ---

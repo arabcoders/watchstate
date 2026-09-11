@@ -23,7 +23,7 @@ final class TestCommandTest extends \PHPUnit\Framework\TestCase
         $tester = $this->makeTester($client);
         $status = $tester->execute([
             '--select-backend' => 'demo',
-            '--output' => 'json',
+            '--json' => true,
         ]);
 
         self::assertSame(TestCommand::SUCCESS, $status);
@@ -51,7 +51,7 @@ final class TestCommandTest extends \PHPUnit\Framework\TestCase
         $tester = $this->makeTester($client);
         $status = $tester->execute([
             '--select-backend' => 'demo',
-            '--output' => 'json',
+            '--json' => true,
             'action' => 'getPlaylistsList',
         ]);
 
@@ -65,6 +65,27 @@ final class TestCommandTest extends \PHPUnit\Framework\TestCase
             ],
             $payload['result'],
         );
+    }
+
+    public function test_result(): void
+    {
+        $client = $this->makeClientMock();
+        $client
+            ->expects(self::once())
+            ->method('getPlaylistsList')
+            ->with([])
+            ->willReturn([
+                ['id' => 'playlist-1', 'title' => 'Weekend Movies'],
+            ]);
+
+        $tester = $this->makeTester($client);
+        $status = $tester->execute([
+            '--select-backend' => 'demo',
+            'action' => 'getPlaylistsList',
+        ]);
+
+        self::assertSame(TestCommand::SUCCESS, $status);
+        self::assertSame("1. id: playlist-1\n   title: Weekend Movies\n", $tester->getDisplay());
     }
 
     public function test_invokes_routes_opts(): void
@@ -81,7 +102,7 @@ final class TestCommandTest extends \PHPUnit\Framework\TestCase
         $tester = $this->makeTester($client);
         $status = $tester->execute([
             '--select-backend' => 'demo',
-            '--output' => 'json',
+            '--json' => true,
             'action' => 'getUsersList',
             '--param' => ['foo=bar', 'aa=ff'],
         ]);
@@ -113,7 +134,7 @@ final class TestCommandTest extends \PHPUnit\Framework\TestCase
         $tester = $this->makeTester($client);
         $status = $tester->execute([
             '--select-backend' => 'demo',
-            '--output' => 'json',
+            '--json' => true,
             'action' => 'get-user-token',
             '--param' => [
                 'userId=7',
@@ -139,7 +160,7 @@ final class TestCommandTest extends \PHPUnit\Framework\TestCase
         $tester = $this->makeTester($client);
         $status = $tester->execute([
             '--select-backend' => 'demo',
-            '--output' => 'json',
+            '--json' => true,
             '--inspect' => true,
             'action' => 'getUserToken',
         ]);
@@ -178,7 +199,7 @@ final class TestCommandTest extends \PHPUnit\Framework\TestCase
     private function makeTester(iClient $client): CommandTester
     {
         $application = new Application();
-        $application->getDefinition()->addOption(new InputOption('output', 'o', InputOption::VALUE_REQUIRED, '', 'table'));
+        $application->getDefinition()->addOption(new InputOption('json', null, InputOption::VALUE_NONE));
         $application->addCommand($this->makeCommand($client));
 
         return new CommandTester($application->find(TestCommand::ROUTE));

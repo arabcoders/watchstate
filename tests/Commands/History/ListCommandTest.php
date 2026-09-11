@@ -34,7 +34,7 @@ final class ListCommandTest extends TestCase
         $this->registerInitializer();
     }
 
-    public function test_list_table(): void
+    public function test_list(): void
     {
         $main = $this->makeUserContext('main');
         $main->db->insert(new StateEntity($this->makeMovie(
@@ -65,7 +65,7 @@ final class ListCommandTest extends TestCase
 
         $tester = $this->makeTester();
         $status = $tester->execute([
-            '--output' => 'json',
+            '--json' => true,
         ]);
 
         self::assertSame(ListCommand::SUCCESS, $status);
@@ -146,7 +146,7 @@ final class ListCommandTest extends TestCase
         self::assertStringContainsString('cannot be used together', $tester->getDisplay());
     }
 
-    public function test_list_empty_table(): void
+    public function test_list_empty(): void
     {
         $tester = $this->makeTester();
         $status = $tester->execute([
@@ -162,7 +162,7 @@ final class ListCommandTest extends TestCase
         $tester = $this->makeTester();
         $status = $tester->execute([
             '--query' => ['metadata=1'],
-            '--output' => 'json',
+            '--json' => true,
         ]);
 
         self::assertSame(ListCommand::FAILURE, $status);
@@ -172,7 +172,7 @@ final class ListCommandTest extends TestCase
     private function makeTester(): CommandTester
     {
         $application = new Application();
-        $application->getDefinition()->addOption(new InputOption('output', 'o', InputOption::VALUE_REQUIRED, '', 'table'));
+        $application->getDefinition()->addOption(new InputOption('json', null, InputOption::VALUE_NONE));
         $application->addCommand(new ListCommand());
 
         return new CommandTester($application->find(ListCommand::ROUTE));

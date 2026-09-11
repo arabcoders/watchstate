@@ -181,8 +181,6 @@ class PruneCommand extends Command
     protected function listPruners(InputInterface $input, OutputInterface $output): void
     {
         $list = [];
-        $mode = $input->hasOption('output') ? (string) $input->getOption('output') : 'json';
-
         foreach ($this->resolvePruners($input) as $pruner) {
             $list[] = [
                 'name' => ag($pruner, 'name'),
@@ -194,7 +192,7 @@ class PruneCommand extends Command
             ];
         }
 
-        $this->displayContent($list, $output, $mode);
+        $this->displayContent($list, $output, $input->hasOption('json') && (bool) $input->getOption('json'));
     }
 
     protected function isPrunerDue(array $pruner): bool

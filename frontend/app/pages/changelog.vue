@@ -210,7 +210,7 @@ const isLoading = ref<boolean>(true);
 const query = ref<string>('');
 const toggleFilter = ref<boolean>(false);
 const latestOnly = useStorage<boolean>('changelog_latest_only', true);
-const openReleases = useStorage<string[]>('changelog_open_releases', []);
+const openReleases = ref<Array<string>>([]);
 
 watch(toggleFilter, () => {
   if (!toggleFilter.value) {
@@ -247,14 +247,6 @@ const filteredLogs = computed<Array<ChangeSet>>(() => {
       return null;
     })
     .filter((log): log is ChangeSet => log !== null);
-});
-
-watch(filteredLogs, (items) => {
-  if (openReleases.value.length > 0 || items.length < 1) {
-    return;
-  }
-
-  openReleases.value = items.slice(0, 3).map((log) => log.tag);
 });
 
 const isReleaseOpen = (tag: string): boolean => openReleases.value.includes(tag);
@@ -309,6 +301,13 @@ const isInstalled = (log: ChangeSet): boolean => {
   return false;
 };
 
+const openCurrentReleases = (): void => {
+  const installedIndex = logs.value.findIndex((log) => isInstalled(log));
+  const lastOpenIndex = installedIndex < 0 ? 0 : installedIndex;
+
+  openReleases.value = logs.value.slice(0, lastOpenIndex + 1).map((log) => log.tag);
+};
+
 const loadContent = async (): Promise<void> => {
   isLoading.value = true;
 
@@ -339,6 +338,8 @@ const loadContent = async (): Promise<void> => {
         await (await request('/system/static/CHANGELOG.json', { method: 'GET' })).json()
       ).slice(0, DEFAULT_LIMIT * 2) as Array<ChangeSet>;
     }
+
+    openCurrentReleases();
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
     notification('error', 'Error', `Failed to fetch changelog. ${message}`);

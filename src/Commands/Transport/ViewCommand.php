@@ -54,9 +54,8 @@ final class ViewCommand extends AbstractTransportCommand
             return $this->apiError($output, $response);
         }
 
-        $mode = $this->outputMode($input);
-        if ('table' !== $mode) {
-            $this->displayContent((array) $response->body, $output, $mode);
+        if ((bool) $input->getOption('json')) {
+            $this->displayContent((array) $response->body, $output, true);
             return self::SUCCESS;
         }
 

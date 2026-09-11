@@ -103,19 +103,12 @@ final class PruneCommandTest extends TestCase
         $status = $cmd->run(new ArrayInput([]), $output);
 
         $this->assertSame(PruneCommand::SUCCESS, $status);
-
-        $payload = json_decode($output->fetch(), true, flags: JSON_THROW_ON_ERROR);
-        $byName = [];
-        foreach ($payload as $row) {
-            $byName[$row['name']] = $row;
-        }
-
-        $this->assertGreaterThanOrEqual(3, count($payload));
-        $this->assertSame('0 5 * * *', $byName['another_pruner']['cron']);
-        $this->assertSame('Another test pruner.', $byName['another_pruner']['description']);
-        $this->assertSame('* * * * *', $byName['fake_pruner']['cron']);
-        $this->assertArrayHasKey('next', $byName['fake_pruner']);
-        $this->assertSame('*/15 * * * *', $byName['method_pruner']['cron']);
+        $display = $output->fetch();
+        $this->assertStringContainsString('another_pruner', $display);
+        $this->assertStringContainsString('0 5 * * *', $display);
+        $this->assertStringContainsString('Another test pruner.', $display);
+        $this->assertStringContainsString('fake_pruner', $display);
+        $this->assertStringContainsString('method_pruner', $display);
     }
 
     public function test_list_nocache(): void

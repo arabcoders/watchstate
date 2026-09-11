@@ -47,10 +47,8 @@ final class QueueCommand extends AbstractTransportCommand
             return self::FAILURE;
         }
 
-        $mode = strtolower((string) $input->getOption('output'));
-        $mode = in_array($mode, self::DISPLAY_OUTPUT, true) ? $mode : 'table';
-        if ('table' !== $mode) {
-            $this->displayContent($response->body, $output, $mode);
+        if ((bool) $input->getOption('json')) {
+            $this->displayContent($response->body, $output, true);
             return self::SUCCESS;
         }
 

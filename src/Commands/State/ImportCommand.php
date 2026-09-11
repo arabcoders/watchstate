@@ -593,7 +593,7 @@ class ImportCommand extends Command
                 $this->displayContent(
                     Message::getAll(),
                     $output,
-                    $input->getOption('output') === 'json' ? 'json' : 'yaml',
+                    (bool) $input->getOption('json'),
                 );
             }
         }

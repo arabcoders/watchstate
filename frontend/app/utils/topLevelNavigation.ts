@@ -20,6 +20,7 @@ type TopLevelEntryId =
   | 'backup'
   | 'report'
   | 'media-health'
+  | 'backend-report'
   | 'url-check'
   | 'env'
   | 'custom'
@@ -246,6 +247,17 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     icon: 'i-lucide-radar',
     to: '/media_health',
     matchPath: '/media_health',
+  },
+  {
+    id: 'backend-report',
+    section: 'diagnostics',
+    label: 'Backend Report',
+    pageLabel: 'Backend Report',
+    breadcrumbSectionLabel: 'Diagnostics',
+    description: 'Review user local state.',
+    icon: 'i-lucide-chart-no-axes-combined',
+    to: '/backend_report',
+    matchPath: '/backend_report',
   },
   {
     id: 'url-check',

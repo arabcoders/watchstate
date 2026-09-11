@@ -18,8 +18,7 @@ use App\Libs\UserContext;
 use Monolog\Level;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface as iLogger;
-use Symfony\Component\Console\Helper\Table;
-use Symfony\Component\Console\Helper\TableSeparator;
+use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
@@ -435,28 +434,13 @@ class ValidateCommand extends Command
                 'n' => $data['no_change'],
             ]);
 
-            $tbl = [];
-
-            $total = count($data['backends']);
-            $i = 0;
+            $output->writeln('<info>User: ' . OutputFormatter::escape($user) . '</info>');
             foreach ($data['backends'] as $backend => $backendData) {
-                $i++;
-                $tbl[] = [
-                    'Backend' => $backend,
-                    'Reference Found' => $backendData['found'],
-                    'Reference Removed' => $backendData['removed'],
-                ];
-                if ($i < $total) {
-                    $tbl[] = new TableSeparator();
-                }
+                $output->writeln(OutputFormatter::escape('  Backend: ' . $backend));
+                $output->writeln(OutputFormatter::escape('    Reference Found: ' . (string) $backendData['found']));
+                $output->writeln(OutputFormatter::escape('    Reference Removed: ' . (string) $backendData['removed']));
             }
 
-            $output->writeln('');
-            new Table($output)
-                ->setHeaders(array_keys($tbl[0]))
-                ->setStyle('box')
-                ->setRows(array_values($tbl))
-                ->render();
             $output->writeln('');
         }
     }

@@ -92,9 +92,9 @@ final class PurgeCommand extends AbstractEventCommand
             ));
         }
 
-        $mode = $this->outputMode($input);
+        $json = (bool) $input->getOption('json');
         if ((bool) $input->getOption('dry-run')) {
-            if ('table' !== $mode) {
+            if ($json) {
                 $this->displayContent(
                     [
                         'matched' => count($items),
@@ -104,7 +104,7 @@ final class PurgeCommand extends AbstractEventCommand
                         'dry_run' => true,
                     ],
                     $output,
-                    $mode,
+                    true,
                 );
                 return self::SUCCESS;
             }
@@ -134,8 +134,8 @@ final class PurgeCommand extends AbstractEventCommand
             return $this->apiError($output, $response);
         }
 
-        if ('table' !== $mode) {
-            $this->displayContent($response->body, $output, $mode);
+        if ($json) {
+            $this->displayContent($response->body, $output, true);
             return self::SUCCESS;
         }
 

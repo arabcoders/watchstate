@@ -49,13 +49,7 @@ final class AddCommand extends Command
             return self::FAILURE;
         }
 
-        $mode = $input->getOption('output');
-        if ('table' === $mode) {
-            $this->displayContent([$response->body], $output, $mode);
-            return self::SUCCESS;
-        }
-
-        $this->displayContent($response->body, $output, $mode);
+        $this->displayContent($response->body, $output, (bool) $input->getOption('json'));
 
         return self::SUCCESS;
     }

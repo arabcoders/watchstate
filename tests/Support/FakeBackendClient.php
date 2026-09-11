@@ -42,6 +42,7 @@ class FakeBackendClient implements ClientInterface
         'progress' => [],
         'update_state' => [],
         'proxy' => [],
+        'libraries' => [],
     ];
 
     /** @var array<string,array<string,mixed>|Throwable> */
@@ -59,6 +60,9 @@ class FakeBackendClient implements ClientInterface
     /** @var array<string,Response|Throwable> */
     private static array $proxyResponses = [];
 
+    /** @var array<string,array<int,array<string,mixed>>|Throwable> */
+    private static array $libraryResponses = [];
+
     public function __construct()
     {
         $this->guid = new FakeGuid();
@@ -75,12 +79,14 @@ class FakeBackendClient implements ClientInterface
             'progress' => [],
             'update_state' => [],
             'proxy' => [],
+            'libraries' => [],
         ];
         self::$metadataResponses = [];
         self::$exportErrors = [];
         self::$skipBackupWrites = [];
         self::$queuedExportRequests = [];
         self::$proxyResponses = [];
+        self::$libraryResponses = [];
     }
 
     /**
@@ -123,6 +129,14 @@ class FakeBackendClient implements ClientInterface
     public static function setProxyResponse(string $user, string $backend, Response|Throwable $response): void
     {
         self::$proxyResponses[self::exportKey($user, $backend)] = $response;
+    }
+
+    /**
+     * @param array<int,array<string,mixed>>|Throwable $response
+     */
+    public static function setLibraryResponse(string $user, string $backend, array|Throwable $response): void
+    {
+        self::$libraryResponses[self::exportKey($user, $backend)] = $response;
     }
 
     public function withContext(Context $context): ClientInterface
@@ -398,7 +412,21 @@ class FakeBackendClient implements ClientInterface
 
     public function listLibraries(array $opts = []): array
     {
-        return [];
+        $context = $this->requireContext();
+        self::record('libraries', [
+            'backend' => $context->backendName,
+            'user' => $context->userContext->name,
+        ]);
+        $response = self::$libraryResponses[self::exportKey(
+            $context->userContext->name,
+            $context->backendName,
+        )] ?? [];
+
+        if ($response instanceof Throwable) {
+            throw $response;
+        }
+
+        return $response;
     }
 
     public function fromRequest(array $config, iRequest $request): array

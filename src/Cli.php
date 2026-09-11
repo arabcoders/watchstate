@@ -91,11 +91,16 @@ class Cli extends Application
                 'output',
                 'o',
                 InputOption::VALUE_REQUIRED,
-                sprintf(
-                    'Change output display mode. Can be [%s]. <comment>Not all commands support this option.</comment>',
-                    '<info>' . implode('</info>,<info> ', Command::DISPLAY_OUTPUT) . '</info>',
-                ),
-                Command::DISPLAY_OUTPUT[0],
+                'Deprecated compatibility option. The value is ignored.',
+            ),
+        );
+
+        $definition->addOption(
+            new InputOption(
+                'json',
+                null,
+                InputOption::VALUE_NONE,
+                'Display output as JSON. <comment>Not all commands support this option.</comment>',
             ),
         );
 

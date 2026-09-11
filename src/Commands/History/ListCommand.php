@@ -10,6 +10,7 @@ use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
+use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
@@ -68,7 +69,7 @@ final class ListCommand extends Command
                         {cmd} <cmd>{route}</cmd>
                         {cmd} <cmd>{route}</cmd> <flag>--title</flag> <value>Foundation</value> <flag>--played</flag>
                         {cmd} <cmd>{route}</cmd> <flag>--query</flag> <value>parent=tvdb://121361</value> <flag>--query</flag> <value>season=1</value>
-                        {cmd} <cmd>{route}</cmd> <flag>--sort</flag> <value>updated_at:desc</value> <flag>--output</flag> <value>json</value>
+                        {cmd} <cmd>{route}</cmd> <flag>--sort</flag> <value>updated_at:desc</value> <flag>--json</flag>
 
                         HELP,
                     [
@@ -81,10 +82,7 @@ final class ListCommand extends Command
 
     protected function runCommand(iInput $input, iOutput $output): int
     {
-        $mode = strtolower((string) $input->getOption('output'));
-        if (!in_array($mode, self::DISPLAY_OUTPUT, true)) {
-            $mode = 'table';
-        }
+        $json = (bool) $input->getOption('json');
 
         try {
             $query = $this->buildQuery($input);
@@ -105,7 +103,7 @@ final class ListCommand extends Command
 
         $response = api_request(Method::GET, '/history', opts: $opts);
 
-        if (Status::NOT_FOUND === $response->status && 'table' === $mode) {
+        if (Status::NOT_FOUND === $response->status && !$json) {
             $output->writeln('<comment>No history items matched.</comment>');
             return self::SUCCESS;
         }
@@ -119,8 +117,8 @@ final class ListCommand extends Command
             return self::FAILURE;
         }
 
-        if ('table' !== $mode) {
-            $this->displayContent($response->body, $output, $mode);
+        if ($json) {
+            $this->displayContent($response->body, $output, true);
             return self::SUCCESS;
         }
 
@@ -130,7 +128,23 @@ final class ListCommand extends Command
             return self::SUCCESS;
         }
 
-        $this->displayContent(array_map($this->toTableRow(...), $history), $output, 'table');
+        foreach (array_values($history) as $index => $item) {
+            $row = $this->toRow($item);
+            $output->writeln(r('<info>{number}. {title}</info>', [
+                'number' => $index + 1,
+                'title' => (string) $row['title'],
+            ]));
+            foreach ($row as $key => $value) {
+                if ('title' === $key) {
+                    continue;
+                }
+                $output->writeln(OutputFormatter::escape('   ' . $key . ': ' . (string) $value));
+            }
+
+            if (($index + 1) < count($history)) {
+                $output->writeln('');
+            }
+        }
 
         return self::SUCCESS;
     }
@@ -259,7 +273,7 @@ final class ListCommand extends Command
      *
      * @return array<string,scalar|null>
      */
-    private function toTableRow(array $item): array
+    private function toRow(array $item): array
     {
         return [
             'id' => ag($item, 'id'),

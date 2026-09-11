@@ -807,6 +807,63 @@ export interface MediaHealthRunResponse {
   message: string;
 }
 
+export interface BackendReportCounts {
+  total: number;
+  watched: number;
+  unwatched: number;
+  in_progress: number;
+}
+
+export type BackendReportTypeSummary = BackendReportCounts;
+
+export interface BackendReportLibrarySummary extends BackendReportCounts {
+  id: string;
+  title?: string;
+  type: 'movie' | 'show' | 'mixed';
+}
+
+export interface BackendReportBackendSummary extends BackendReportCounts {
+  configured: boolean;
+  types: Record<'movie' | 'episode', BackendReportTypeSummary>;
+  libraries: Array<BackendReportLibrarySummary>;
+}
+
+export interface BackendReportOriginSummary extends BackendReportCounts {
+  types: Record<'movie' | 'episode', BackendReportTypeSummary>;
+}
+
+export interface BackendReportIdentitySummary extends BackendReportCounts {
+  duration_seconds: number;
+  types: Record<'movie' | 'episode', BackendReportTypeSummary>;
+  backends: Record<string, BackendReportBackendSummary>;
+  origins: Record<string, BackendReportOriginSummary>;
+}
+
+export interface BackendReport {
+  id: number;
+  status: string;
+  generated_at: number;
+  completed_at: number | null;
+  version: number;
+  backend_count: number;
+  identity: string;
+  summary: BackendReportIdentitySummary | null;
+  error: string | null;
+}
+
+export interface BackendReportResponse {
+  report: BackendReport | null;
+  queued: boolean;
+  queued_event?: string | null;
+}
+
+export interface BackendReportRunResponse {
+  queued: boolean;
+  running: boolean;
+  event_id?: string | null;
+  message: string;
+}
+
 /**
  * /changelog API response item.
  */

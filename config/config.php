@@ -7,6 +7,7 @@ use App\Backends\Jellyfin\JellyfinClient;
 use App\Backends\Plex\PlexClient;
 use App\Commands\Database\IndexCommand;
 use App\Commands\Events\DispatchCommand;
+use App\Commands\State\BackendReportCommand;
 use App\Commands\State\BackupCommand;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
@@ -163,6 +164,10 @@ return (function () {
         'keep' => max(1, (int) env('WS_MEDIA_HEALTH_KEEP', 3)),
         'check_files' => (bool) env('WS_MEDIA_HEALTH_CHECK_FILES', false),
         'path' => ag($config, 'tmpDir') . '/media-health',
+    ];
+
+    $config['backend_report'] = [
+        'keep' => max(1, (int) env('WS_BACKEND_REPORT_KEEP', 3)),
     ];
 
     $isMemory = 'MEMORY' === env('WS_DB_MODE', 'WAL');
@@ -440,6 +445,14 @@ return (function () {
                 'enabled' => (bool) env('WS_CRON_MEDIA_HEALTH', true),
                 'timer' => $checkTaskTimer((string) env('WS_CRON_MEDIA_HEALTH_AT', '0 5 * * *'), '0 5 * * *'),
                 'args' => env('WS_CRON_MEDIA_HEALTH_ARGS', '-v'),
+            ],
+            BackendReportCommand::TASK_NAME => [
+                'command' => BackendReportCommand::ROUTE,
+                'name' => BackendReportCommand::TASK_NAME,
+                'info' => 'Generate backend media report.',
+                'enabled' => (bool) env('WS_CRON_BACKEND_REPORT', true),
+                'timer' => $checkTaskTimer((string) env('WS_CRON_BACKEND_REPORT_AT', '20 5 * * *'), '20 5 * * *'),
+                'args' => env('WS_CRON_BACKEND_REPORT_ARGS', '-v'),
             ],
             DispatchCommand::TASK_NAME => [
                 'command' => DispatchCommand::ROUTE,

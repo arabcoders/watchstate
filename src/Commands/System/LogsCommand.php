@@ -230,7 +230,7 @@ final class LogsCommand extends Command
             $entry = self::parseJsonlLine($line);
 
             if (null !== $entry) {
-                if ('json' === $input->getOption('output')) {
+                if ((bool) $input->getOption('json')) {
                     $output->writeln((string) json_encode(
                         $entry,
                         JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE,
@@ -258,6 +258,7 @@ final class LogsCommand extends Command
         }
 
         $jsonlPassthrough = $input->hasParameterOption('--jsonl', true);
+        $json = (bool) $input->getOption('json');
         $lastPos = 0;
 
         while (true) {
@@ -287,7 +288,14 @@ final class LogsCommand extends Command
                         $entry = self::parseJsonlLine($line);
 
                         if (null !== $entry) {
-                            $output->writeln(self::formatEventLine($entry));
+                            $output->writeln(
+                                $json
+                                    ? (string) json_encode(
+                                        $entry,
+                                        JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE,
+                                    )
+                                    : self::formatEventLine($entry),
+                            );
                         }
                     }
 
@@ -404,7 +412,7 @@ final class LogsCommand extends Command
 
         $list = [];
 
-        $isTable = $input->getOption('output') === 'table';
+        $json = (bool) $input->getOption('json');
 
         foreach (glob($path . '/*.*.jsonl') as $file) {
             preg_match('/(\w+)\.(\w+)\.jsonl$/i', basename($file), $matches);
@@ -414,19 +422,33 @@ final class LogsCommand extends Command
             $builder = [
                 'type' => $matches[1] ?? '??',
                 'tag' => $matches[2] ?? '??',
-                'size' => $isTable ? fsize($size) : $size,
+                'size' => $json ? $size : fsize($size),
                 'modified' => make_date(filemtime($file))->format('Y-m-d H:i:s T'),
+                'file' => $file,
             ];
 
-            if (!$isTable) {
-                $builder['file'] = $file;
+            if ($json) {
                 $builder['modified'] = make_date(filemtime($file));
             }
 
             $list[] = $builder;
         }
 
-        $this->displayContent($list, $output, $input->getOption('output'));
+        if ($json) {
+            $this->displayContent($list, $output, true);
+            return self::SUCCESS;
+        }
+
+        foreach ($list as $index => $item) {
+            $output->writeln(r('<info>{number}. {type}.{tag}</info>', [
+                'number' => $index + 1,
+                'type' => $item['type'],
+                'tag' => $item['tag'],
+            ]));
+            $output->writeln(OutputFormatter::escape('   size: ' . $item['size']));
+            $output->writeln(OutputFormatter::escape('   modified: ' . $item['modified']));
+            $output->writeln(OutputFormatter::escape('   file: ' . $item['file']));
+        }
 
         return self::SUCCESS;
     }

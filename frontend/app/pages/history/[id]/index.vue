@@ -1420,211 +1420,215 @@
         </div>
       </div>
 
-      <section class="space-y-3">
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 text-left"
-          @click="toggleRelatedLogs"
-        >
-          <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
-            <UIcon name="i-lucide-logs" class="size-4 text-toned" />
-            <span>Related Logs</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <UBadge color="neutral" variant="outline" size="sm">
-              {{ relatedLoaded ? related.logs.length : '?' }}
-            </UBadge>
-            <UIcon
-              name="i-lucide-chevron-right"
-              :class="[
-                'size-4 text-toned transition-transform',
-                relatedLogsExpanded ? 'rotate-90' : '',
-              ]"
-            />
-          </div>
-        </button>
+      <Lazy v-if="data?.via && !isLoading" :min-height="120" @show.once="showRelated">
+        <div class="space-y-6">
+          <section class="space-y-3">
+            <button
+              type="button"
+              class="flex w-full items-center justify-between gap-3 text-left"
+              @click="toggleRelatedLogs"
+            >
+              <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
+                <UIcon name="i-lucide-logs" class="size-4 text-toned" />
+                <span>Related Logs</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <UBadge color="neutral" variant="outline" size="sm">
+                  {{ relatedLoaded ? related.logs.length : '?' }}
+                </UBadge>
+                <UIcon
+                  name="i-lucide-chevron-right"
+                  :class="[
+                    'size-4 text-toned transition-transform',
+                    relatedLogsExpanded ? 'rotate-90' : '',
+                  ]"
+                />
+              </div>
+            </button>
 
-        <div v-if="relatedLogsExpanded">
-          <UAlert
-            v-if="relatedLoading"
-            color="info"
-            variant="soft"
-            icon="i-lucide-loader-circle"
-            title="Loading"
-            description="Finding related log lines..."
-            :ui="{ icon: 'animate-spin' }"
-          />
-          <UAlert v-else-if="relatedError" color="error" variant="soft" title="Error">
-            {{ relatedError }}
-          </UAlert>
-          <UAlert
-            v-else-if="relatedLoaded && related.logs.length < 1"
-            color="neutral"
-            variant="soft"
-            title="No related logs"
-          />
-          <div v-else-if="relatedLoaded" class="space-y-4">
-            <section v-for="group in relatedLogGroups" :key="group.filename" class="space-y-3">
-              <button
-                type="button"
-                class="flex w-full flex-wrap items-center justify-between gap-3 text-left"
-                @click="toggleRelatedLog(group.filename)"
-              >
-                <div class="flex items-center gap-3">
-                  <span
-                    class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-default bg-elevated/70 text-primary"
+            <div v-if="relatedLogsExpanded">
+              <UAlert
+                v-if="relatedLoading"
+                color="info"
+                variant="soft"
+                icon="i-lucide-loader-circle"
+                title="Loading"
+                description="Finding related log lines..."
+                :ui="{ icon: 'animate-spin' }"
+              />
+              <UAlert v-else-if="relatedError" color="error" variant="soft" title="Error">
+                {{ relatedError }}
+              </UAlert>
+              <UAlert
+                v-else-if="relatedLoaded && related.logs.length < 1"
+                color="neutral"
+                variant="soft"
+                title="No related logs"
+              />
+              <div v-else-if="relatedLoaded" class="space-y-4">
+                <section v-for="group in relatedLogGroups" :key="group.filename" class="space-y-3">
+                  <button
+                    type="button"
+                    class="flex w-full flex-wrap items-center justify-between gap-3 text-left"
+                    @click="toggleRelatedLog(group.filename)"
                   >
-                    <UIcon :name="relatedLogTypeIcon(group.filename)" class="size-4" />
-                  </span>
-                  <div class="flex min-w-0 flex-wrap items-baseline gap-x-1">
-                    <span class="text-base font-semibold text-highlighted">
-                      {{ relatedLogTypeName(group.filename) }}
-                    </span>
-                    <NuxtLink
-                      :to="`/logs/${encodeURIComponent(group.filename)}`"
-                      class="min-w-0 truncate text-sm text-toned hover:text-primary"
-                      @click.stop
-                    >
-                      ({{ group.filename }})
-                    </NuxtLink>
-                  </div>
-                </div>
-                <div class="flex items-center gap-2">
-                  <UIcon
-                    name="i-lucide-chevron-right"
-                    :class="[
-                      'size-4 text-toned transition-transform',
-                      isRelatedLogOpen(group.filename) ? 'rotate-90' : '',
-                    ]"
-                  />
-                </div>
-              </button>
+                    <div class="flex items-center gap-3">
+                      <span
+                        class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-default bg-elevated/70 text-primary"
+                      >
+                        <UIcon :name="relatedLogTypeIcon(group.filename)" class="size-4" />
+                      </span>
+                      <div class="flex min-w-0 flex-wrap items-baseline gap-x-1">
+                        <span class="text-base font-semibold text-highlighted">
+                          {{ relatedLogTypeName(group.filename) }}
+                        </span>
+                        <NuxtLink
+                          :to="`/logs/${encodeURIComponent(group.filename)}`"
+                          class="min-w-0 truncate text-sm text-toned hover:text-primary"
+                          @click.stop
+                        >
+                          ({{ group.filename }})
+                        </NuxtLink>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <UIcon
+                        name="i-lucide-chevron-right"
+                        :class="[
+                          'size-4 text-toned transition-transform',
+                          isRelatedLogOpen(group.filename) ? 'rotate-90' : '',
+                        ]"
+                      />
+                    </div>
+                  </button>
 
+                  <div
+                    v-if="isRelatedLogOpen(group.filename)"
+                    class="min-w-0 max-h-[35vh] overflow-y-auto overflow-x-hidden rounded-lg border border-default/70 bg-elevated/40 shadow-sm sm:max-h-[20vh]"
+                  >
+                    <article
+                      v-for="(log, index) in group.logs"
+                      :key="relatedLogKey(log, index)"
+                      :class="[
+                        'flex min-w-0 border-b border-default/40 bg-transparent last:border-b-0 hover:bg-elevated/70',
+                        1 === index % 2 ? 'bg-elevated/40' : '',
+                      ]"
+                    >
+                      <div
+                        class="flex w-full min-w-0 flex-col gap-1 px-3 py-[0.65rem] leading-[1.6] md:flex-row md:items-start md:gap-2"
+                      >
+                        <StructuredLogLine
+                          :log="log.entry"
+                          :compact="true"
+                          :show-details="true"
+                          :expanded="isExpandedRelatedLog(relatedLogKey(log, index))"
+                          toggleable
+                          @details="openLogDetails"
+                          @open-event="openEventFromLog"
+                          @toggle-expand="toggleExpandedRelatedLog(relatedLogKey(log, index))"
+                        />
+                      </div>
+                    </article>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </section>
+
+          <section class="space-y-3">
+            <button
+              type="button"
+              class="flex w-full items-center justify-between gap-3 text-left"
+              @click="toggleRelatedEvents"
+            >
+              <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
+                <UIcon name="i-lucide-activity" class="size-4 text-toned" />
+                <span>Related Events</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <UBadge color="neutral" variant="outline" size="sm">
+                  {{ relatedLoaded ? related.events.length : '?' }}
+                </UBadge>
+                <UIcon
+                  name="i-lucide-chevron-right"
+                  :class="[
+                    'size-4 text-toned transition-transform',
+                    relatedEventsExpanded ? 'rotate-90' : '',
+                  ]"
+                />
+              </div>
+            </button>
+
+            <div v-if="relatedEventsExpanded">
+              <UAlert
+                v-if="relatedLoading"
+                color="info"
+                variant="soft"
+                icon="i-lucide-loader-circle"
+                title="Loading"
+                description="Finding related events..."
+                :ui="{ icon: 'animate-spin' }"
+              />
+              <UAlert v-else-if="relatedError" color="error" variant="soft" title="Error">
+                {{ relatedError }}
+              </UAlert>
+              <UAlert
+                v-else-if="relatedLoaded && related.events.length < 1"
+                color="neutral"
+                variant="soft"
+                title="No related events"
+              />
               <div
-                v-if="isRelatedLogOpen(group.filename)"
-                class="min-w-0 max-h-[35vh] overflow-y-auto overflow-x-hidden rounded-lg border border-default/70 bg-elevated/40 shadow-sm sm:max-h-[20vh]"
+                v-else-if="relatedLoaded"
+                class="overflow-hidden rounded-lg border border-default/70 bg-elevated/30 shadow-sm"
               >
                 <article
-                  v-for="(log, index) in group.logs"
-                  :key="relatedLogKey(log, index)"
-                  :class="[
-                    'flex min-w-0 border-b border-default/40 bg-transparent last:border-b-0 hover:bg-elevated/70',
-                    1 === index % 2 ? 'bg-elevated/40' : '',
-                  ]"
+                  v-for="event in related.events"
+                  :key="event.id"
+                  class="flex items-center justify-between gap-2 border-b border-default/50 px-3 py-2 last:border-b-0 hover:bg-elevated/60"
                 >
-                  <div
-                    class="flex w-full min-w-0 flex-col gap-1 px-3 py-[0.65rem] leading-[1.6] md:flex-row md:items-start md:gap-2"
-                  >
-                    <StructuredLogLine
-                      :log="log.entry"
-                      :compact="true"
-                      :show-details="true"
-                      :expanded="isExpandedRelatedLog(relatedLogKey(log, index))"
-                      toggleable
-                      @details="openLogDetails"
-                      @open-event="openEventFromLog"
-                      @toggle-expand="toggleExpandedRelatedLog(relatedLogKey(log, index))"
-                    />
+                  <div class="flex min-w-0 flex-1 items-center gap-2">
+                    <span
+                      class="inline-flex size-7 shrink-0 items-center justify-center rounded-md border border-default bg-elevated/70 text-primary"
+                    >
+                      <UIcon name="i-lucide-activity" class="size-3.5" />
+                    </span>
+
+                    <button
+                      type="button"
+                      class="min-w-0 truncate text-left text-sm font-semibold text-highlighted hover:text-primary"
+                      :title="event.name"
+                      @click="openEvent(event.id)"
+                    >
+                      {{ event.name }}
+                    </button>
+                  </div>
+
+                  <div class="flex shrink-0 items-center gap-2">
+                    <UBadge :color="getEventStatusColor(event.status)" variant="soft" size="sm">
+                      <span class="inline-flex items-center gap-1">
+                        <UIcon
+                          :name="getEventStatusIcon(event.status)"
+                          :class="getEventStatusIconClass(event.status)"
+                        />
+                        <span>{{ event.status_name }}</span>
+                      </span>
+                    </UBadge>
+
+                    <UTooltip
+                      :text="`Created at: ${moment(event.timestamp).format(TOOLTIP_DATE_FORMAT)}`"
+                    >
+                      <span class="cursor-help whitespace-nowrap text-xs text-toned">
+                        {{ moment(event.timestamp).fromNow() }}
+                      </span>
+                    </UTooltip>
                   </div>
                 </article>
               </div>
-            </section>
-          </div>
+            </div>
+          </section>
         </div>
-      </section>
-
-      <section class="space-y-3">
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 text-left"
-          @click="toggleRelatedEvents"
-        >
-          <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
-            <UIcon name="i-lucide-activity" class="size-4 text-toned" />
-            <span>Related Events</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <UBadge color="neutral" variant="outline" size="sm">
-              {{ relatedLoaded ? related.events.length : '?' }}
-            </UBadge>
-            <UIcon
-              name="i-lucide-chevron-right"
-              :class="[
-                'size-4 text-toned transition-transform',
-                relatedEventsExpanded ? 'rotate-90' : '',
-              ]"
-            />
-          </div>
-        </button>
-
-        <div v-if="relatedEventsExpanded">
-          <UAlert
-            v-if="relatedLoading"
-            color="info"
-            variant="soft"
-            icon="i-lucide-loader-circle"
-            title="Loading"
-            description="Finding related events..."
-            :ui="{ icon: 'animate-spin' }"
-          />
-          <UAlert v-else-if="relatedError" color="error" variant="soft" title="Error">
-            {{ relatedError }}
-          </UAlert>
-          <UAlert
-            v-else-if="relatedLoaded && related.events.length < 1"
-            color="neutral"
-            variant="soft"
-            title="No related events"
-          />
-          <div
-            v-else-if="relatedLoaded"
-            class="overflow-hidden rounded-lg border border-default/70 bg-elevated/30 shadow-sm"
-          >
-            <article
-              v-for="event in related.events"
-              :key="event.id"
-              class="flex items-center justify-between gap-2 border-b border-default/50 px-3 py-2 last:border-b-0 hover:bg-elevated/60"
-            >
-              <div class="flex min-w-0 flex-1 items-center gap-2">
-                <span
-                  class="inline-flex size-7 shrink-0 items-center justify-center rounded-md border border-default bg-elevated/70 text-primary"
-                >
-                  <UIcon name="i-lucide-activity" class="size-3.5" />
-                </span>
-
-                <button
-                  type="button"
-                  class="min-w-0 truncate text-left text-sm font-semibold text-highlighted hover:text-primary"
-                  :title="event.name"
-                  @click="openEvent(event.id)"
-                >
-                  {{ event.name }}
-                </button>
-              </div>
-
-              <div class="flex shrink-0 items-center gap-2">
-                <UBadge :color="getEventStatusColor(event.status)" variant="soft" size="sm">
-                  <span class="inline-flex items-center gap-1">
-                    <UIcon
-                      :name="getEventStatusIcon(event.status)"
-                      :class="getEventStatusIconClass(event.status)"
-                    />
-                    <span>{{ event.status_name }}</span>
-                  </span>
-                </UBadge>
-
-                <UTooltip
-                  :text="`Created at: ${moment(event.timestamp).format(TOOLTIP_DATE_FORMAT)}`"
-                >
-                  <span class="cursor-help whitespace-nowrap text-xs text-toned">
-                    {{ moment(event.timestamp).fromNow() }}
-                  </span>
-                </UTooltip>
-              </div>
-            </article>
-          </div>
-        </div>
-      </section>
+      </Lazy>
 
       <section class="space-y-3">
         <button
@@ -1704,6 +1708,7 @@ import { useBreakpoints, useStorage } from '@vueuse/core';
 import moment from 'moment';
 import DuplicateRecordList from '~/components/DuplicateRecordList.vue';
 import EventView from '~/components/EventView.vue';
+import Lazy from '~/components/Lazy.vue';
 import LogDetailsModal from '~/components/LogDetailsModal.vue';
 import PageHeader from '~/components/PageHeader.vue';
 import PlaybackSelection from '~/components/PlaybackSelection.vue';
@@ -1906,10 +1911,11 @@ const loadedImages = ref<Record<'poster' | 'background', string | null>>({
 });
 const headerOverviewExpanded = ref(false);
 const apiUser = useStorage<string>('api_user', 'main');
-const relatedLogsExpanded = ref(false);
-const relatedEventsExpanded = ref(false);
+const relatedLogsExpanded = useStorage<boolean>('history_related_logs_open', true);
+const relatedEventsExpanded = useStorage<boolean>('history_related_events_open', true);
 const relatedLoading = ref(false);
 const relatedLoaded = ref(false);
+const relatedVisible = ref(false);
 const relatedLoadedAt = ref<number | null>(null);
 const relatedError = ref('');
 const related = ref<RelatedHistoryResponse>({ logs: [], events: [] });
@@ -2544,8 +2550,6 @@ const loadContent = async (historyId: number) => {
 
 const resetRelated = (): void => {
   relatedLoadToken++;
-  relatedLogsExpanded.value = false;
-  relatedEventsExpanded.value = false;
   relatedLoading.value = false;
   relatedLoaded.value = false;
   relatedLoadedAt.value = null;
@@ -2622,8 +2626,19 @@ const toggleRelatedEvents = (): void => {
   }
 };
 
-watch(apiUser, resetRelated);
-watch(() => currentHistoryId.value, resetRelated);
+const showRelated = (): void => {
+  relatedVisible.value = true;
+  if (relatedLogsExpanded.value || relatedEventsExpanded.value) {
+    void loadRelated();
+  }
+};
+
+watch([apiUser, currentHistoryId], () => {
+  resetRelated();
+  if (relatedVisible.value && (relatedLogsExpanded.value || relatedEventsExpanded.value)) {
+    void loadRelated();
+  }
+});
 
 watch(breakpoints.active(), async () => await loadImage());
 
@@ -2832,7 +2847,5 @@ onUnmounted(() => {
   clearPageBackgroundOverride(backgroundOverrideId);
 });
 
-onMounted(async () => {
-  await loadContent(id);
-});
+onMounted(() => void loadContent(id));
 </script>

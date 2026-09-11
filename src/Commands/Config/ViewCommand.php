@@ -11,13 +11,11 @@ use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
-use Symfony\Component\Console\Helper\Table;
-use Symfony\Component\Console\Helper\TableSeparator;
+use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Yaml\Yaml;
 
 /**
  * Class ViewCommand
@@ -160,34 +158,23 @@ final class ViewCommand extends Command
             return self::FAILURE;
         }
 
-        $x = 0;
-        $count = count($list);
-
-        $rows = [];
-        foreach ($list as $backendName => $backend) {
-            $x++;
-            $rows[] = [
-                $backendName,
-                $this->filterData($backend, $filter),
-            ];
-
-            if ($x < $count) {
-                $rows[] = new TableSeparator();
-            }
+        if ((bool) $input->getOption('json')) {
+            $this->displayContent($list, $output, true);
+            return self::SUCCESS;
         }
 
-        $mode = $input->getOption('output');
+        foreach ($list as $backendName => $backend) {
+            $output->writeln(r('<info>Backend: {backend}</info>', ['backend' => $backendName]));
+            $data = $this->filterData($backend, $filter);
+            if (is_array($data)) {
+                $this->displayContent($data, $output);
+            } else {
+                $output->writeln(OutputFormatter::escape((string) $data));
+            }
 
-        if ('table' === $mode) {
-            new Table($output)
-                ->setStyle('box')
-                ->setHeaders(
-                    ['Backend', 'Data (Filter: ' . (empty($filter) ? 'None' : $filter) . ')'],
-                )
-                ->setRows($rows)
-                ->render();
-        } else {
-            $this->displayContent($list, $output, $mode);
+            if ($backendName !== array_key_last($list)) {
+                $output->writeln('');
+            }
         }
 
         return self::SUCCESS;
@@ -226,12 +213,12 @@ final class ViewCommand extends Command
      * @param array $backend The backend data to filter.
      * @param string|null $filter The filter criteria.
      *
-     * @return string The filtered data in YAML format.
+     * @return mixed The filtered backend data.
      */
-    private function filterData(array $backend, ?string $filter = null): string
+    private function filterData(array $backend, ?string $filter = null): mixed
     {
         if (null === $filter || false === str_contains($filter, ',')) {
-            return trim(Yaml::dump(ag($backend, $filter, 'Not configured, or invalid key.'), 8, 2));
+            return ag($backend, $filter, 'Not configured, or invalid key.');
         }
 
         $filters = array_map(trim(...), explode(',', $filter));
@@ -241,6 +228,6 @@ final class ViewCommand extends Command
             $list[$fil] = ag($backend, $fil, 'Not configured, or invalid key.');
         }
 
-        return trim(Yaml::dump($list, 8, 2));
+        return $list;
     }
 }

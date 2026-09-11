@@ -9,7 +9,6 @@ use App\Libs\Attributes\Route\Cli;
 use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Extends\Date;
 use App\Libs\ReportGenerator;
-use RuntimeException;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
@@ -63,6 +62,11 @@ final class ReportCommand extends Command
                 InputOption::VALUE_NONE,
                 'Include Some synced entries for backends.',
             )
+            ->addOption('no-system', null, InputOption::VALUE_NONE, 'Exclude basic system information.')
+            ->addOption('no-backends', null, InputOption::VALUE_NONE, 'Exclude backend information.')
+            ->addOption('no-suppression', null, InputOption::VALUE_NONE, 'Exclude log suppression rules.')
+            ->addOption('no-tasks', null, InputOption::VALUE_NONE, 'Exclude scheduled tasks.')
+            ->addOption('no-logs', null, InputOption::VALUE_NONE, 'Exclude recent logs.')
             ->setHelp(
                 <<<HELP
                     This command generate basic report to diagnose problems. it should be included in any
@@ -86,19 +90,32 @@ final class ReportCommand extends Command
      */
     protected function runCommand(iInput $input, iOutput $output): int
     {
-        assert($output instanceof ConsoleOutput, new RuntimeException('Expecting ConsoleOutput instance.'));
-        $this->output = $output->withNoSuppressor();
+        $this->output = $output instanceof ConsoleOutput ? $output->withNoSuppressor() : $output;
 
         $limit = (int) $input->getOption('limit');
         $includeSample = (bool) $input->getOption('include-db-sample');
+        $sections = array_values(array_filter(
+            ReportGenerator::SECTIONS,
+            static fn(string $section): bool => !(bool) $input->getOption('no-' . $section),
+        ));
 
-        $report = $this->generator->generate($limit, $includeSample);
+        $report = $this->generator->generate($limit, $includeSample, $sections);
 
-        $this->formatSystem(ag($report, 'system', []), (string) ag($report, 'generated_at', ''));
-        $this->formatBackends(ag($report, 'users', []), ag($report, 'backends', []));
-        $this->formatSuppression(ag($report, 'suppression', []));
-        $this->formatTasks(ag($report, 'tasks', []));
-        $this->formatLogs(ag($report, 'logs', []));
+        if (in_array('system', $sections, true)) {
+            $this->formatSystem(ag($report, 'system', []), (string) ag($report, 'generated_at', ''));
+        }
+        if (in_array('backends', $sections, true)) {
+            $this->formatBackends(ag($report, 'users', []), ag($report, 'backends', []));
+        }
+        if (in_array('suppression', $sections, true)) {
+            $this->formatSuppression(ag($report, 'suppression', []));
+        }
+        if (in_array('tasks', $sections, true)) {
+            $this->formatTasks(ag($report, 'tasks', []));
+        }
+        if (in_array('logs', $sections, true)) {
+            $this->formatLogs(ag($report, 'logs', []));
+        }
         $this->printFooter();
 
         return self::SUCCESS;
@@ -161,7 +178,7 @@ final class ReportCommand extends Command
             $version = ag($backend, 'version', 'Unknown') ?? 'Unknown';
             $this->line(r('[ <value>{type} ({version}) ==> {user}@{name}</value> ]' . PHP_EOL, [
                 'name' => ag($backend, 'name', ''),
-                'username' => ag($backend, 'user', ''),
+                'user' => ag($backend, 'user', ''),
                 'type' => ucfirst((string) ag($backend, 'type', '')),
                 'version' => $version,
             ]));

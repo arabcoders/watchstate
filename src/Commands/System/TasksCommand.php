@@ -181,8 +181,6 @@ final class TasksCommand extends Command
 
         $list = [];
 
-        $mode = $input->getOption('output');
-
         foreach (self::getTasks() as $task) {
             $list[] = [
                 'name' => $task['name'],
@@ -194,7 +192,7 @@ final class TasksCommand extends Command
             ];
         }
 
-        $this->displayContent($list, $output, $mode);
+        $this->displayContent($list, $output, (bool) $input->getOption('json'));
 
         return self::SUCCESS;
     }

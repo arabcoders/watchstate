@@ -28,12 +28,6 @@ abstract class AbstractEventCommand extends Command
         return (bool) $helper->ask($input, $output, new ConfirmationQuestion($question, $default));
     }
 
-    protected function outputMode(InputInterface $input): string
-    {
-        $mode = strtolower((string) $input->getOption('output'));
-        return in_array($mode, self::DISPLAY_OUTPUT, true) ? $mode : 'table';
-    }
-
     protected function normalizePositiveInteger(string $value, string $label): int
     {
         $value = trim($value);
