@@ -42,7 +42,7 @@ frontend_changed=0
 while IFS= read -r path; do
   [ -n "$path" ] || continue
   case "$path" in
-    src/* | tests/* | config/* | public/* | bin/* | composer.json | composer.lock | mago.toml | phpunit.xml.dist | pre_init.php | rector.php)
+    src/* | tests/* | config/* | public/* | bin/* | composer.json | composer.lock | mago.toml | phpunit.xml.dist | pre_init.php)
       php_changed=1
       ;;
     .editorconfig)

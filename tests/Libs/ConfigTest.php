@@ -19,8 +19,12 @@ class ConfigTest extends TestCase
     {
         $this->envBackup['WS_LOGS_PRUNE_AFTER'] = getenv('WS_LOGS_PRUNE_AFTER');
         $this->envBackup['WS_TRUST_LOCAL_NET'] = getenv('WS_TRUST_LOCAL_NET');
+        $this->envBackup['WS_GUID_PATH_ENABLED'] = getenv('WS_GUID_PATH_ENABLED');
         $this->envEnvBackup['WS_TRUST_LOCAL_NET'] = array_key_exists('WS_TRUST_LOCAL_NET', $_ENV)
             ? $_ENV['WS_TRUST_LOCAL_NET']
+            : false;
+        $this->envEnvBackup['WS_GUID_PATH_ENABLED'] = array_key_exists('WS_GUID_PATH_ENABLED', $_ENV)
+            ? $_ENV['WS_GUID_PATH_ENABLED']
             : false;
         Config::init($this->data);
         parent::setUp();
@@ -46,6 +50,18 @@ class ConfigTest extends TestCase
             unset($_ENV['WS_TRUST_LOCAL_NET']);
         } else {
             $_ENV['WS_TRUST_LOCAL_NET'] = $this->envEnvBackup['WS_TRUST_LOCAL_NET'];
+        }
+
+        if (false === $this->envBackup['WS_GUID_PATH_ENABLED']) {
+            putenv('WS_GUID_PATH_ENABLED');
+        } else {
+            putenv('WS_GUID_PATH_ENABLED=' . $this->envBackup['WS_GUID_PATH_ENABLED']);
+        }
+
+        if (false === $this->envEnvBackup['WS_GUID_PATH_ENABLED']) {
+            unset($_ENV['WS_GUID_PATH_ENABLED']);
+        } else {
+            $_ENV['WS_GUID_PATH_ENABLED'] = $this->envEnvBackup['WS_GUID_PATH_ENABLED'];
         }
 
         parent::tearDown();
@@ -193,5 +209,25 @@ class ConfigTest extends TestCase
             ['192.168.0.0/16', '127.0.0.1/32', '10.0.0.0/8', '::1/128', '172.16.0.0/12'],
             Config::get('trust.local_net'),
         );
+    }
+
+    public function test_path_guid_default(): void
+    {
+        putenv('WS_GUID_PATH_ENABLED');
+        unset($_ENV['WS_GUID_PATH_ENABLED']);
+
+        Config::init(require ROOT_PATH . '/config/config.php');
+
+        $this->assertTrue(Config::get('guid.path.enabled'));
+    }
+
+    public function test_path_guid_disabled(): void
+    {
+        putenv('WS_GUID_PATH_ENABLED=false');
+        $_ENV['WS_GUID_PATH_ENABLED'] = 'false';
+
+        Config::init(require ROOT_PATH . '/config/config.php');
+
+        $this->assertFalse(Config::get('guid.path.enabled'));
     }
 }

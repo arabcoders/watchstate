@@ -10,16 +10,16 @@ box, this tool supports `Jellyfin`, `Plex` and `Emby` media servers.
 
 # Updates
 
+### 2026-09-15
+
+Path matching is now enabled by default. WatchState will generate `guid_path` values for new and refreshed movie and episode records unless `WS_GUID_PATH_ENABLED` is explicitly disabled. Existing records still need a full import before they can match by path. See the [path matching guide](/guides/path-match.md) for details.
+
 ### 2026-07-20
 
 Media Health is now the central place to audit media record problems. It replaces the 
 old separate parity, duplicate-reference, and file-integrity views with one report for backend 
 metadata coverage, GUID conflicts, duplicate GUIDs, duplicate file references, structural metadata disagreement, 
 path disagreement, weak matches, and optional local file checks. See the [Media Health guide](/guides/media-health.md) for details.
-
-### 2026-05-25
-
-Path matching is now available in v1.8.5+. It lets items match using a GUID source derived from the media path, which helps when your backends share the same media files but have unreliable or inconsistent external IDs. See the [path matching guide](/guides/path-match.md) for setup and backfill instructions.
 
 Please refer to [NEWS](/NEWS.md) for the latest updates and changes.
 
@@ -112,7 +112,7 @@ After starting the container, you can access the WebUI by visiting `http://local
 > [!NOTE]
 > On first access, you will be prompted to create a system user. This is a one-time operation.
 
-If you want WatchState to match items using local media paths, see the [path matching guide](guides/path-match.md).
+WatchState matches items using local media paths by default. See the [path matching guide](guides/path-match.md) for details.
 
 To add your backends, click the help button in the top-right corner and choose [one-way](guides/one-way-sync.md) or
 [two-way](guides/two-way-sync.md) sync. Follow the instructions in the selected guide.

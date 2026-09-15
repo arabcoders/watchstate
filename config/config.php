@@ -146,7 +146,7 @@ return (function () {
             'episode' => (bool) env('WS_GUID_DISABLE_EPISODE', false),
         ],
         'path' => [
-            'enabled' => (bool) env('WS_GUID_PATH_ENABLED', false),
+            'enabled' => (bool) env('WS_GUID_PATH_ENABLED', true),
         ],
     ];
 

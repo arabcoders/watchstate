@@ -405,6 +405,36 @@ abstract class MapperAbstract extends TestCase
         }
     }
 
+    public function test_guid_conflict_prefers_strong(): void
+    {
+        $strong = $this->testMovie;
+        $strong[iState::COLUMN_TITLE] = 'Strong GUID match';
+        $strong[iState::COLUMN_GUIDS] = [
+            Guid::GUID_IMDB => 'tt1234567',
+            Guid::GUID_PATH => md5('movie:/strong/strong.mkv'),
+        ];
+
+        $path = $this->testMovie;
+        $path[iState::COLUMN_TITLE] = 'Path GUID match';
+        $path[iState::COLUMN_GUIDS] = [
+            Guid::GUID_IMDB => 'tt7654321',
+            Guid::GUID_PATH => md5('movie:/path/path.mkv'),
+        ];
+
+        $this->db->commit([new StateEntity($strong), new StateEntity($path)]);
+        $this->mapper->loadData();
+
+        $query = $strong;
+        $query[iState::COLUMN_ID] = null;
+        $query[iState::COLUMN_META_DATA] = [];
+        $query[iState::COLUMN_GUIDS][Guid::GUID_PATH] = $path[iState::COLUMN_GUIDS][Guid::GUID_PATH];
+
+        $found = $this->mapper->get(new StateEntity($query));
+
+        $this->assertInstanceOf(iState::class, $found);
+        $this->assertSame('Strong GUID match', $found->title);
+    }
+
     /**
      */
     public function test_get_fully_loaded_conditions(): void
