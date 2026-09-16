@@ -1,8 +1,8 @@
 # Path Matching
 
-Path matching adds a local GUID source named `guid_path`. When enabled, WatchState derives a stable hash from backend-reported media file paths and stores it alongside the normal GUIDs.
+Path matching adds a local GUID source named `guid_path`. WatchState derives a stable hash from backend-reported media file paths and stores it alongside the normal GUIDs.
 
-This feature becomes available in v1.8.5+ and is disabled by default for now.
+Path matching became available in v1.8.5 and was disabled by default. It is enabled by default starting with the v1.10.6.
 
 # When Path Matching Helps
 
@@ -22,19 +22,19 @@ Examples that do not match by path:
 /mnt/media/tv/Show Title (2024)/Season 1/Episode 01.mkv
 ```
 
-# Enable Path Matching
+# Disable Path Matching
 
-To enable path matching:
+Path matching should remain enabled for most installations. If different media items share the same normalized path suffix, you can disable it:
 
 1. Go to **Configuration** > <!--i:i-lucide-sliders-horizontal--> **Environment**.
 2. Click the <!--i:i-lucide-plus--> **Add** button.
 3. Select `WS_GUID_PATH_ENABLED`.
-4. Toggle the switch to enable.
+4. Toggle the switch to disable.
 5. Save the change.
 
 # Updating Existing Data
 
-Enabling path matching only affects entities created or refreshed after the setting is turned on. Existing rows keep their current data until they are imported again. Existing rows without `guid_path` continue to work, but they cannot match by path until refreshed.
+Path matching only affects entities created or refreshed while the setting is enabled. Existing rows keep their current data until they are imported again. Existing rows without `guid_path` continue to work, but they cannot match by path until forced metadata refresh happens.
 
 If all of your backends point to the same media files, it is usually enough to refresh just one backend. That one import seeds the local database with `guid_path`, and the other backends can continue operating in metadata-only mode while still matching against the stored path GUIDs.
 

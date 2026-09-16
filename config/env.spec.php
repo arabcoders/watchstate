@@ -578,7 +578,7 @@ return (function () {
         [
             'key' => 'WS_GUID_PATH_ENABLED',
             'config' => 'guid.path.enabled',
-            'description' => 'Enable generating path-derived local GUIDs for matching.',
+            'description' => 'Generate path-derived local GUIDs for matching. Disable only when media path suffixes are not unique.',
             'type' => 'bool',
         ],
         [

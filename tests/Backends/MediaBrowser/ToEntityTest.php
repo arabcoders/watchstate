@@ -71,8 +71,9 @@ class ToEntityTest extends MediaBrowserTestCase
         }
     }
 
-    public function test_to_entity_path_guid(): void
+    public function test_path_guid(): void
     {
+        $enabled = Config::get('guid.path.enabled', true);
         Config::save('guid.path.enabled', true);
 
         try {
@@ -102,7 +103,27 @@ class ToEntityTest extends MediaBrowserTestCase
                 );
             }
         } finally {
-            Config::save('guid.path.enabled', false);
+            Config::save('guid.path.enabled', $enabled);
+        }
+    }
+
+    public function test_path_guid_disabled(): void
+    {
+        $enabled = Config::get('guid.path.enabled', true);
+        Config::save('guid.path.enabled', false);
+
+        try {
+            foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass]) {
+                $context = $this->makeContext($clientName);
+                $guid = new $guidClass($this->logger);
+                $action = new $actionClass($guid);
+                $result = $action($context, $this->fixture('metadata'));
+
+                $this->assertTrue($result->isSuccessful());
+                $this->assertArrayNotHasKey(Guid::GUID_PATH, $result->response->guids);
+            }
+        } finally {
+            Config::save('guid.path.enabled', $enabled);
         }
     }
 

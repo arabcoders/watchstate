@@ -148,8 +148,9 @@ class ToEntityTest extends PlexTestCase
         $this->assertSame('72408', $result->response->parent['guid_tvdb'] ?? null);
     }
 
-    public function test_to_entity_path_guid(): void
+    public function test_path_guid(): void
     {
+        $enabled = Config::get('guid.path.enabled', true);
         Config::save('guid.path.enabled', true);
 
         try {
@@ -193,7 +194,25 @@ class ToEntityTest extends PlexTestCase
                 $episodeResult->response->parent[Guid::GUID_PATH] ?? null,
             );
         } finally {
-            Config::save('guid.path.enabled', false);
+            Config::save('guid.path.enabled', $enabled);
+        }
+    }
+
+    public function test_path_guid_disabled(): void
+    {
+        $enabled = Config::get('guid.path.enabled', true);
+        Config::save('guid.path.enabled', false);
+
+        try {
+            $context = $this->makeContext();
+            $action = new ToEntity(new PlexGuid($this->logger));
+            $movie = ag($this->fixture('library_movie_get_200'), 'response.body.MediaContainer.Metadata.0');
+            $result = $action($context, $movie);
+
+            $this->assertTrue($result->isSuccessful());
+            $this->assertArrayNotHasKey(Guid::GUID_PATH, $result->response->guids);
+        } finally {
+            Config::save('guid.path.enabled', $enabled);
         }
     }
 }
