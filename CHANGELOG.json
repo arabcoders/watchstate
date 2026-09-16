@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "d65cddf45cc50858f663bc4b5911ad258941e3cd",
-    "date": "2026-09-15T18:40:16+00:00",
+    "full_sha": "6394430e9191f8ba4a56f5d231a1be1208ecb2f9",
+    "date": "2026-09-16T17:03:58+00:00",
     "commits": [
+      {
+        "sha": "6394430e",
+        "full_sha": "6394430e9191f8ba4a56f5d231a1be1208ecb2f9",
+        "message": "feat: OIDC support",
+        "author": "arabcoders",
+        "date": "2026-09-16T17:03:58+00:00"
+      },
       {
         "sha": "d65cddf4",
         "full_sha": "d65cddf45cc50858f663bc4b5911ad258941e3cd",
