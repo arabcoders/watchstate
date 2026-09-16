@@ -81,6 +81,16 @@ export interface AuthRefreshResponse {
   refreshed: boolean;
 }
 
+export interface AuthHasUserResponse {
+  token?: string;
+  auto_login?: boolean;
+  oidc_available?: boolean;
+}
+
+export interface AuthTokenResponse {
+  token?: string;
+}
+
 export type JsonPrimitive = string | number | boolean | null;
 
 export type JsonValue = JsonPrimitive | Array<JsonValue> | JsonObject;

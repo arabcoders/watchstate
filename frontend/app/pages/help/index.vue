@@ -130,5 +130,11 @@ const choices: Array<{ number: number; title: string; text: string; url: string 
     text: 'Run the unified WatchState worker as a system service.',
     url: '/help/systemd-services',
   },
+  {
+    number: 14,
+    title: 'Authentication',
+    text: 'Configure authentication methods.',
+    url: '/help/authentication',
+  },
 ];
 </script>

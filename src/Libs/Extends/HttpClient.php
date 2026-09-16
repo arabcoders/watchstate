@@ -22,12 +22,18 @@ use Symfony\Contracts\Service\ResetInterface as iReset;
 class HttpClient implements iHttp, iLoggerAware, iReset
 {
     /**
-     * @var array $blacklisted An array containing the names of blacklisted headers.
+     * @var array $blacklisted Request fields that must not be logged.
      */
     private array $blacklisted = [
         'x-plex-token',
         'x-mediabrowser-token',
         'authorization',
+        'client_secret',
+        'code',
+        'code_verifier',
+        'access_token',
+        'refresh_token',
+        'id_token',
     ];
 
     private ?iLogger $logger = null;
@@ -72,6 +78,17 @@ class HttpClient implements iHttp, iLoggerAware, iReset
                 $headers[$key] = in_array(strtolower($key), $this->blacklisted, true) ? '**hidden**' : $value;
             }
 
+            $body = $options['body'] ?? [];
+            if (is_array($body)) {
+                foreach ($body as $key => $value) {
+                    $body[$key] = in_array(strtolower((string) $key), $this->blacklisted, true)
+                        ? '**hidden**'
+                        : $value;
+                }
+            } elseif ('' !== (string) $body) {
+                $body = '**hidden**';
+            }
+
             $rUrl = new Uri($url);
             $query = $rUrl->getQuery();
             if (!empty($query)) {
@@ -94,6 +111,8 @@ class HttpClient implements iHttp, iLoggerAware, iReset
                 'url' => (string) $rUrl,
                 'options' => array_replace_recursive($options, [
                     'headers' => $headers,
+                    'auth_basic' => '**hidden**',
+                    'body' => $body,
                     'user_data' => [
                         'ok' => 'callable',
                         'error' => 'callable',
