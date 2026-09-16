@@ -160,6 +160,18 @@
             </UButton>
 
             <UButton
+              v-if="!signup && auth.oidcAvailable"
+              type="button"
+              color="neutral"
+              variant="soft"
+              block
+              icon="i-lucide-log-in"
+              @click="auth.startOidcLogin"
+            >
+              Sign in with OIDC
+            </UButton>
+
+            <UButton
               v-if="!signup"
               type="button"
               color="neutral"
@@ -241,6 +253,22 @@ const stopPolling = (): void => {
 };
 
 onMounted(async (): Promise<void> => {
+  const hash = window.location.hash;
+  const oidcCode = new URLSearchParams(hash.slice(1)).get('oidc_code');
+  if (oidcCode) {
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    try {
+      if (await auth.exchangeOidc(oidcCode)) {
+        notification('success', 'Success', 'Login successful. Redirecting...');
+        await navigateTo('/');
+        return;
+      }
+      throw new Error('OIDC login failed.');
+    } catch (e) {
+      error.value = (e as Error).message;
+      notification('error', 'Authentication error', error.value);
+    }
+  }
   signup.value = false === (await auth.has_user());
   if (auth.authenticated) {
     await navigateTo('/');

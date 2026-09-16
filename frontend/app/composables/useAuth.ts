@@ -1,16 +1,14 @@
 import { useStorage } from '@vueuse/core';
 import { reactive, toRefs } from 'vue';
 import { request, parse_api_response } from '~/utils';
-import type { AuthRefreshResponse, AuthUserResponse, GenericError, GenericResponse } from '~/types';
-
-type HasUserResponse = {
-  token?: string;
-  auto_login?: boolean;
-};
-
-type LoginResponse = {
-  token?: string;
-};
+import type {
+  AuthHasUserResponse,
+  AuthRefreshResponse,
+  AuthTokenResponse,
+  AuthUserResponse,
+  GenericError,
+  GenericResponse,
+} from '~/types';
 
 const state = reactive<{
   token: string | null;
@@ -18,12 +16,14 @@ const state = reactive<{
   loading: boolean;
   username: string | null;
   expiresAt: string | null;
+  oidcAvailable: boolean;
 }>({
   token: null,
   authenticated: false,
   loading: false,
   username: null,
   expiresAt: null,
+  oidcAvailable: false,
 });
 
 const token = useStorage<string | null>('token', null);
@@ -79,10 +79,11 @@ export const useAuth = () => {
     const req = await request(url, no_cache ? { cache: 'no-store' } : {});
     const status = req.status === 200;
     if (req.ok && req) {
-      const json = await parse_api_response<HasUserResponse>(req);
+      const json = await parse_api_response<AuthHasUserResponse>(req);
       if ('error' in json) {
         return status;
       }
+      state.oidcAvailable = json.oidc_available ?? false;
       if (json.token && json.auto_login) {
         state.token = json.token;
         token.value = json.token;
@@ -91,6 +92,29 @@ export const useAuth = () => {
       }
     }
     return status;
+  };
+
+  const startOidcLogin = (): void => {
+    window.location.href = '/v1/api/system/auth/oidc/login';
+  };
+
+  const exchangeOidc = async (code: string): Promise<boolean> => {
+    const response = await request('/system/auth/oidc/exchange', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
+    const json = await parse_api_response<AuthTokenResponse>(response);
+    if (response.status !== 200) {
+      if ('error' in json) {
+        throw new Error(json.error.message);
+      }
+      throw new Error('OIDC login failed');
+    }
+    if ('error' in json || !json.token) {
+      throw new Error('Error. API did not return an OIDC token.');
+    }
+    token.value = json.token;
+    return await validate(json.token);
   };
 
   const signup = async (username: string, password: string): Promise<boolean> => {
@@ -124,7 +148,7 @@ export const useAuth = () => {
         method: 'POST',
         body: JSON.stringify({ username, password }),
       });
-      const json = await parse_api_response<LoginResponse>(response);
+      const json = await parse_api_response<AuthTokenResponse>(response);
       if (response.status !== 200) {
         if ('error' in json) {
           const errorJson = json as GenericError;
@@ -146,9 +170,12 @@ export const useAuth = () => {
     return true;
   };
 
-  const validate = async (): Promise<boolean> => {
+  const validate = async (nextToken: string | null = null): Promise<boolean> => {
     try {
-      const response = await request('/system/auth/user');
+      const response = await request(
+        '/system/auth/user',
+        null === nextToken ? {} : { headers: { Authorization: 'Token ' + nextToken } },
+      );
 
       const json = await parse_api_response<AuthUserResponse>(response);
 
@@ -175,5 +202,16 @@ export const useAuth = () => {
     }
   };
 
-  return { ...toRefs(state), token, has_user, signup, login, logout, refresh, validate };
+  return {
+    ...toRefs(state),
+    token,
+    has_user,
+    signup,
+    login,
+    logout,
+    refresh,
+    validate,
+    startOidcLogin,
+    exchangeOidc,
+  };
 };

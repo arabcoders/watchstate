@@ -116,7 +116,7 @@ while read -r pid; do
 done <"$PIDS_FILE"
 
 if [ "$fail" -eq 1 ]; then
-  echo "One or more checks failed. Commit aborted." >&2
+  echo "[X] One or more checks failed. Commit aborted." >&2
   exit 1
 fi
 

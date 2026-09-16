@@ -13,6 +13,7 @@ use App\API\WebHook;
 use App\Libs\Config;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
+use App\Libs\IpUtils;
 use App\Libs\TokenUtil;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
@@ -41,6 +42,9 @@ final class AuthorizationMiddleware implements MiddlewareInterface
         Auth::URL . '/has_user' => self::MATCH_EXACT,
         Auth::URL . '/signup' => self::MATCH_EXACT,
         Auth::URL . '/login' => self::MATCH_EXACT,
+        Auth::URL . '/oidc/login' => self::MATCH_EXACT,
+        Auth::URL . '/oidc/callback' => self::MATCH_EXACT,
+        Auth::URL . '/oidc/exchange' => self::MATCH_EXACT,
     ];
 
     /**
@@ -81,6 +85,10 @@ final class AuthorizationMiddleware implements MiddlewareInterface
 
         $tokens = self::parseAuthTokens($request);
 
+        if (true === self::hasTrustedRemoteUser($request)) {
+            return $handler->handle($request);
+        }
+
         if (count($tokens) < 1) {
             return api_error('Authorization is required to access the API.', Status::BAD_REQUEST);
         }
@@ -90,6 +98,45 @@ final class AuthorizationMiddleware implements MiddlewareInterface
         }
 
         return api_error('Incorrect authorization credentials.', Status::UNAUTHORIZED);
+    }
+
+    /**
+     * Check whether a trusted proxy supplied a configured remote user.
+     *
+     * @param iRequest $request The incoming request.
+     *
+     * @return bool Whether the request has trusted remote-user authentication.
+     */
+    public static function hasTrustedRemoteUser(iRequest $request): bool
+    {
+        if (false === (bool) Config::get('auth.remote_user.enabled', false)) {
+            return false;
+        }
+
+        $header = trim((string) Config::get('auth.remote_user.header', 'Remote-User'));
+        $trustedProxies = Config::get('auth.remote_user.trusted_proxies', []);
+        $remoteAddress = (string) ($request->getServerParams()['REMOTE_ADDR'] ?? '');
+
+        if (
+            '' === $header
+            || 1 !== preg_match("/^[!#$%&'*+\\-.^_`|~0-9A-Za-z]+$/", $header)
+            || !is_array($trustedProxies)
+            || 0 === count($trustedProxies)
+            || '' === $remoteAddress
+        ) {
+            return false;
+        }
+
+        if (false === IpUtils::checkIp($remoteAddress, $trustedProxies)) {
+            return false;
+        }
+
+        $user = Config::get('system.user');
+        $password = Config::get('system.password');
+
+        $values = $request->getHeader($header);
+
+        return !empty($user) && !empty($password) && 1 === count($values) && '' !== trim($values[0]);
     }
 
     private function validate(string $type, #[\SensitiveParameter] ?string $token): bool

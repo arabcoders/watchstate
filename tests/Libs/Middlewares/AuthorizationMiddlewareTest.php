@@ -38,6 +38,144 @@ class AuthorizationMiddlewareTest extends TestCase
         $this->assertSame(200, $result->getStatusCode(), 'Internal request failed');
     }
 
+    public function test_remote_user_trusted(): void
+    {
+        Config::save('system.user', 'admin');
+        Config::save('system.password', 'password');
+        Config::save('auth.remote_user.enabled', true);
+        Config::save('auth.remote_user.header', 'Remote-User');
+        Config::save('auth.remote_user.trusted_proxies', ['192.0.2.0/24']);
+
+        $result = new AuthorizationMiddleware()->process(
+            $this->getRequest(
+                headers: ['Remote-User' => 'proxy-user', 'X-Remote-User' => 'proxy-user'],
+                server: ['REMOTE_ADDR' => '192.0.2.10', 'HTTP_X_FORWARDED_FOR' => '192.0.2.10'],
+            ),
+            $this->getHandler(),
+        );
+
+        $this->assertSame(Status::OK, Status::from($result->getStatusCode()));
+    }
+
+    public function test_remote_user_default_header(): void
+    {
+        Config::save('system.user', 'admin');
+        Config::save('system.password', 'password');
+        Config::save('auth.remote_user.enabled', true);
+        Config::save('auth.remote_user.trusted_proxies', ['192.0.2.0/24']);
+
+        $this->assertTrue(AuthorizationMiddleware::hasTrustedRemoteUser($this->getRequest(
+            headers: ['Remote-User' => 'proxy-user'],
+            server: ['REMOTE_ADDR' => '192.0.2.10', 'HTTP_X_FORWARDED_FOR' => '198.51.100.10'],
+        )));
+    }
+
+    public function test_remote_user_disabled(): void
+    {
+        Config::save('system.user', 'admin');
+        Config::save('system.password', 'password');
+        Config::save('auth.remote_user.trusted_proxies', ['192.0.2.0/24']);
+
+        $this->assertFalse(AuthorizationMiddleware::hasTrustedRemoteUser($this->getRequest(
+            headers: ['Remote-User' => 'proxy-user'],
+            server: ['REMOTE_ADDR' => '192.0.2.10'],
+        )));
+    }
+
+    public function test_remote_user_custom_header(): void
+    {
+        Config::save('system.user', 'admin');
+        Config::save('system.password', 'password');
+        Config::save('auth.remote_user.enabled', true);
+        Config::save('auth.remote_user.header', 'X-Remote-User');
+        Config::save('auth.remote_user.trusted_proxies', ['192.0.2.0/24']);
+
+        $request = $this->getRequest(
+            headers: ['X-Remote-User' => 'proxy-user', 'Remote-User' => 'proxy-user'],
+            server: ['REMOTE_ADDR' => '192.0.2.10'],
+        );
+        $this->assertTrue(AuthorizationMiddleware::hasTrustedRemoteUser($request));
+        $this->assertFalse(AuthorizationMiddleware::hasTrustedRemoteUser($request->withoutHeader('X-Remote-User')));
+    }
+
+    public function test_remote_user_ipv6_trusted(): void
+    {
+        Config::save('system.user', 'admin');
+        Config::save('system.password', 'password');
+        Config::save('auth.remote_user.enabled', true);
+        Config::save('auth.remote_user.trusted_proxies', ['2001:db8::/32']);
+
+        $this->assertTrue(AuthorizationMiddleware::hasTrustedRemoteUser($this->getRequest(
+            headers: ['Remote-User' => 'proxy-user'],
+            server: ['REMOTE_ADDR' => '2001:db8::10'],
+        )));
+    }
+
+    public function test_remote_user_missing_credentials(): void
+    {
+        Config::save('auth.remote_user.enabled', true);
+        Config::save('auth.remote_user.trusted_proxies', ['192.0.2.0/24']);
+        $request = $this->getRequest(
+            headers: ['Remote-User' => 'proxy-user'],
+            server: ['REMOTE_ADDR' => '192.0.2.10'],
+        );
+
+        $this->assertFalse(AuthorizationMiddleware::hasTrustedRemoteUser($request));
+        Config::save('system.user', 'admin');
+        $this->assertFalse(AuthorizationMiddleware::hasTrustedRemoteUser($request));
+        Config::reset();
+        Config::save('auth.remote_user.enabled', true);
+        Config::save('auth.remote_user.trusted_proxies', ['192.0.2.0/24']);
+        Config::save('system.password', 'password');
+        $this->assertFalse(AuthorizationMiddleware::hasTrustedRemoteUser($request));
+    }
+
+    public function test_remote_user_duplicate_header(): void
+    {
+        Config::save('system.user', 'admin');
+        Config::save('system.password', 'password');
+        Config::save('auth.remote_user.enabled', true);
+        Config::save('auth.remote_user.trusted_proxies', ['192.0.2.0/24']);
+
+        $this->assertFalse(AuthorizationMiddleware::hasTrustedRemoteUser($this->getRequest(
+            headers: ['Remote-User' => ['proxy-user', 'proxy-user']],
+            server: ['REMOTE_ADDR' => '192.0.2.10'],
+        )));
+    }
+
+    public function test_remote_user_rejects_untrusted_input(): void
+    {
+        Config::save('system.user', 'admin');
+        Config::save('system.password', 'password');
+        Config::save('auth.remote_user.enabled', true);
+        Config::save('auth.remote_user.header', 'Remote-User');
+        Config::save('auth.remote_user.trusted_proxies', ['192.0.2.0/24']);
+
+        $this->assertFalse(AuthorizationMiddleware::hasTrustedRemoteUser($this->getRequest(
+            headers: ['Remote-User' => 'proxy-user'],
+            server: ['REMOTE_ADDR' => '198.51.100.10', 'HTTP_X_FORWARDED_FOR' => '192.0.2.10'],
+        )));
+        Config::save('auth.remote_user.trusted_proxies', []);
+        $this->assertFalse(AuthorizationMiddleware::hasTrustedRemoteUser($this->getRequest(
+            headers: ['Remote-User' => 'proxy-user'],
+            server: ['REMOTE_ADDR' => '192.0.2.10'],
+        )));
+    }
+
+    public function test_remote_user_rejects_invalid_configuration(): void
+    {
+        Config::save('system.user', 'admin');
+        Config::save('system.password', 'password');
+        Config::save('auth.remote_user.enabled', true);
+        Config::save('auth.remote_user.header', 'Remote User');
+        Config::save('auth.remote_user.trusted_proxies', ['192.0.2.0/24']);
+
+        $this->assertFalse(AuthorizationMiddleware::hasTrustedRemoteUser($this->getRequest(
+            headers: ['Remote-User' => 'proxy-user'],
+            server: ['REMOTE_ADDR' => '192.0.2.10'],
+        )));
+    }
+
     public function test_options_request()
     {
         $result = new AuthorizationMiddleware()->process(
@@ -58,6 +196,9 @@ class AuthorizationMiddlewareTest extends TestCase
             Auth::URL . '/has_user',
             Auth::URL . '/signup',
             Auth::URL . '/login',
+            Auth::URL . '/oidc/login',
+            Auth::URL . '/oidc/callback',
+            Auth::URL . '/oidc/exchange',
             PlayerIndex::URL . '/stream/token',
             PlexToken::URL . '/generate',
             PlexToken::URL . '/check',
@@ -170,6 +311,9 @@ class AuthorizationMiddlewareTest extends TestCase
 
         $routes = [
             Auth::URL . '/login/admin',
+            Auth::URL . '/oidc/login/admin',
+            Auth::URL . '/oidc/callback/admin',
+            Auth::URL . '/oidc/exchange/admin',
             PlayerIndex::URL . '-admin',
             PlexToken::URL . '/generate/admin',
             StaticFiles::URL . '-private',

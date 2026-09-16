@@ -123,6 +123,11 @@ return (function () {
             'ban' => (int) env('WS_RATE_LIMIT_BAN', 900),
         ],
         'auth' => [
+            'remote_user' => [
+                'enabled' => false,
+                'header' => 'Remote-User',
+                'trusted_proxies' => [],
+            ],
             'token_expiry' => $tokenExpiry,
             'token_refresh_window' => max(
                 1,

@@ -15,10 +15,12 @@ use App\Libs\Enums\Http\Status;
 use App\Libs\IpUtils;
 use App\Libs\Middlewares\AuthorizationMiddleware;
 use App\Libs\Middlewares\RateLimitMiddleware;
+use App\Libs\OidcService;
 use App\Libs\TokenUtil;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Log\LoggerInterface as iLogger;
 use SensitiveParameter;
 use Throwable;
 
@@ -41,7 +43,7 @@ final class Auth
     }
 
     #[Get(self::URL . '/has_user[/]', name: 'system.auth.has_user')]
-    public function has_user(iRequest $request): iResponse
+    public function has_user(iRequest $request, OidcService $oidc): iResponse
     {
         $user = Config::get('system.user');
         $password = Config::get('system.password');
@@ -50,15 +52,29 @@ final class Auth
             return api_response(Status::NO_CONTENT, headers: self::NO_CACHE_HEADERS);
         }
 
+        if (true === AuthorizationMiddleware::hasTrustedRemoteUser($request)) {
+            try {
+                $token = $this->makeToken((string) $user);
+            } catch (Throwable) {
+                return api_error('Failed to encode token.', Status::INTERNAL_SERVER_ERROR, headers: self::NO_CACHE_HEADERS);
+            }
+
+            return api_response(
+                Status::OK,
+                ['auto_login' => true, 'token' => $token, 'oidc_available' => $oidc->isAvailable()],
+                self::NO_CACHE_HEADERS,
+            );
+        }
+
         $localNet = Config::get('trust.local_net', []);
         if (true !== (bool) Config::get('trust.local', false) || count($localNet) < 1) {
-            return api_response(Status::OK, headers: self::NO_CACHE_HEADERS);
+            return api_response(Status::OK, ['oidc_available' => $oidc->isAvailable()], self::NO_CACHE_HEADERS);
         }
 
         $localAddress = get_client_ip($request);
 
         if (false === IpUtils::checkIp($localAddress, $localNet)) {
-            return api_response(Status::OK, headers: self::NO_CACHE_HEADERS);
+            return api_response(Status::OK, ['oidc_available' => $oidc->isAvailable()], self::NO_CACHE_HEADERS);
         }
 
         try {
@@ -67,7 +83,11 @@ final class Auth
             return api_error('Failed to encode token.', Status::INTERNAL_SERVER_ERROR, headers: self::NO_CACHE_HEADERS);
         }
 
-        return api_response(Status::OK, ['auto_login' => true, 'token' => $token], self::NO_CACHE_HEADERS);
+        return api_response(
+            Status::OK,
+            ['auto_login' => true, 'token' => $token, 'oidc_available' => $oidc->isAvailable()],
+            self::NO_CACHE_HEADERS,
+        );
     }
 
     #[Get(self::URL . '/user[/]', name: 'system.auth.user')]
@@ -196,6 +216,84 @@ final class Auth
         }
 
         return api_response(Status::OK, ['token' => $token]);
+    }
+
+    /**
+     * Start an OIDC login.
+     */
+    #[Get(self::URL . '/oidc/login[/]', middleware: RateLimitMiddleware::class, name: 'system.auth.oidc.login')]
+    public function oidc_login(OidcService $oidc): iResponse
+    {
+        try {
+            if (false === $oidc->isAvailable()) {
+                return api_error('OIDC login is unavailable.', Status::NOT_FOUND);
+            }
+            return api_response(Status::FOUND, headers: ['Location' => $oidc->authorization()['url']]);
+        } catch (Throwable) {
+            return api_error('OIDC login is unavailable.', Status::SERVICE_UNAVAILABLE);
+        }
+    }
+
+    /**
+     * Handle the OIDC provider callback.
+     */
+    #[Get(self::URL . '/oidc/callback[/]', name: 'system.auth.oidc.callback')]
+    public function oidc_callback(iRequest $request, OidcService $oidc, iLogger $logger): iResponse
+    {
+        $query = $request->getQueryParams();
+        if (!empty($query['error'])) {
+            if (is_string($query['state'] ?? null)) {
+                $oidc->cancel((string) $query['state']);
+            }
+            return api_error('OIDC authentication was not completed.', Status::UNAUTHORIZED);
+        }
+        $code = $query['code'] ?? null;
+        $state = $query['state'] ?? null;
+        if (!is_string($code) || '' === trim($code) || !is_string($state) || '' === trim($state)) {
+            return api_error('OIDC callback is missing required parameters.', Status::BAD_REQUEST);
+        }
+        try {
+            $exchange = $oidc->callback($code, $state);
+            return api_response(Status::FOUND, headers: ['Location' => '/auth#oidc_code=' . rawurlencode($exchange)]);
+        } catch (Throwable $e) {
+            $logger->error('OIDC authentication failed. {exception.message}', [
+                'operation' => 'auth.oidc_callback',
+                'error' => 'oidc_callback_failed',
+                ...exception_log($e),
+            ]);
+            return api_error('OIDC authentication failed.', Status::UNAUTHORIZED);
+        }
+    }
+
+    /**
+     * Exchange a validated OIDC login code for a WatchState token.
+     */
+    #[Post(self::URL . '/oidc/exchange[/]', middleware: RateLimitMiddleware::class, name: 'system.auth.oidc.exchange')]
+    public function oidc_exchange(iRequest $request, OidcService $oidc, iLogger $logger): iResponse
+    {
+        $data = DataUtil::fromRequest($request);
+        $exchange = $data->get('code', $data->get('oidc_code'));
+        if (!is_string($exchange) || '' === trim($exchange)) {
+            return api_error('OIDC code is required.', Status::BAD_REQUEST);
+        }
+        try {
+            if (null === $oidc->consume($exchange)) {
+                return api_error('Invalid or expired OIDC code.', Status::UNAUTHORIZED);
+            }
+            $systemUser = Config::get('system.user');
+            $systemPass = Config::get('system.password');
+            if (empty($systemUser) || empty($systemPass)) {
+                return api_error('System user or password is not configured.', Status::INTERNAL_SERVER_ERROR);
+            }
+            return api_response(Status::OK, ['token' => $this->makeToken((string) $systemUser)]);
+        } catch (Throwable $e) {
+            $logger->error('OIDC exchange failed. {exception.message}', [
+                'operation' => 'auth.oidc_exchange',
+                'error' => 'oidc_exchange_failed',
+                ...exception_log($e),
+            ]);
+            return api_error('OIDC exchange failed.', Status::UNAUTHORIZED);
+        }
     }
 
     #[Post(self::URL . '/refresh[/]', name: 'system.auth.refresh')]
