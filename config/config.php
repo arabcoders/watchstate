@@ -26,10 +26,18 @@ return (function () {
     $progressToMS = fn(int $v): int => $v < 60 ? $v * 1_000 : 60_000;
     $tokenExpiry = max(1, (int) env('WS_AUTH_TOKEN_EXPIRY', 2 * 24 * 60 * 60));
     $defaultRefreshWindow = max(60, min(24 * 60 * 60, max(60, intdiv($tokenExpiry, 4))));
-    $logsPruneAfter = (string) env('WS_LOGS_PRUNE_AFTER', '-7 DAYS');
-    $logsPruneAfterUnix = strtotime($logsPruneAfter);
-    if ('' === trim($logsPruneAfter) || false === $logsPruneAfterUnix || $logsPruneAfterUnix >= time()) {
-        $logsPruneAfter = '-7 DAYS';
+    $logsPruneAfter = env('WS_LOGS_PRUNE_AFTER', 7);
+    if (false === is_numeric($logsPruneAfter) || 1 > (int) $logsPruneAfter) {
+        $logsPruneAfter = 7;
+    } else {
+        $logsPruneAfter = (int) $logsPruneAfter;
+    }
+
+    $backupPruneAfter = env('WS_BACKUP_PRUNE_AFTER', 90);
+    if (false === is_numeric($backupPruneAfter) || 7 >= (int) $backupPruneAfter) {
+        $backupPruneAfter = 90;
+    } else {
+        $backupPruneAfter = (int) $backupPruneAfter;
     }
 
     $accessLogFormat = strtolower(trim((string) env('WS_LOGGER_ACCESS_FORMAT', 'text')));
@@ -66,6 +74,11 @@ return (function () {
             'context' => (bool) env('WS_LOGS_CONTEXT', false),
             'prune' => [
                 'after' => $logsPruneAfter,
+            ],
+        ],
+        'backup' => [
+            'prune' => [
+                'after' => $backupPruneAfter,
             ],
         ],
         'api' => [

@@ -18,6 +18,7 @@ class ConfigTest extends TestCase
     protected function setUp(): void
     {
         $this->envBackup['WS_LOGS_PRUNE_AFTER'] = getenv('WS_LOGS_PRUNE_AFTER');
+        $this->envBackup['WS_BACKUP_PRUNE_AFTER'] = getenv('WS_BACKUP_PRUNE_AFTER');
         $this->envBackup['WS_TRUST_LOCAL_NET'] = getenv('WS_TRUST_LOCAL_NET');
         $this->envBackup['WS_GUID_PATH_ENABLED'] = getenv('WS_GUID_PATH_ENABLED');
         $this->envEnvBackup['WS_TRUST_LOCAL_NET'] = array_key_exists('WS_TRUST_LOCAL_NET', $_ENV)
@@ -38,6 +39,14 @@ class ConfigTest extends TestCase
         } else {
             putenv('WS_LOGS_PRUNE_AFTER=' . $this->envBackup['WS_LOGS_PRUNE_AFTER']);
             $_ENV['WS_LOGS_PRUNE_AFTER'] = $this->envBackup['WS_LOGS_PRUNE_AFTER'];
+        }
+
+        if (false === $this->envBackup['WS_BACKUP_PRUNE_AFTER']) {
+            putenv('WS_BACKUP_PRUNE_AFTER');
+            unset($_ENV['WS_BACKUP_PRUNE_AFTER']);
+        } else {
+            putenv('WS_BACKUP_PRUNE_AFTER=' . $this->envBackup['WS_BACKUP_PRUNE_AFTER']);
+            $_ENV['WS_BACKUP_PRUNE_AFTER'] = $this->envBackup['WS_BACKUP_PRUNE_AFTER'];
         }
 
         if (false === $this->envBackup['WS_TRUST_LOCAL_NET']) {
@@ -172,17 +181,67 @@ class ConfigTest extends TestCase
 
         Config::init(require ROOT_PATH . '/config/config.php');
 
-        $this->assertSame('-7 DAYS', Config::get('logs.prune.after'));
+        $this->assertSame(7, Config::get('logs.prune.after'));
     }
 
-    public function test_logs_future(): void
+    public function test_logs_expression(): void
     {
         putenv('WS_LOGS_PRUNE_AFTER=+30 DAYS');
         $_ENV['WS_LOGS_PRUNE_AFTER'] = '+30 DAYS';
 
         Config::init(require ROOT_PATH . '/config/config.php');
 
-        $this->assertSame('-7 DAYS', Config::get('logs.prune.after'));
+        $this->assertSame(7, Config::get('logs.prune.after'));
+    }
+
+    public function test_logs_env(): void
+    {
+        putenv('WS_LOGS_PRUNE_AFTER=30');
+        $_ENV['WS_LOGS_PRUNE_AFTER'] = '30';
+
+        Config::init(require ROOT_PATH . '/config/config.php');
+
+        $this->assertSame(30, Config::get('logs.prune.after'));
+    }
+
+    public function test_backup_default(): void
+    {
+        putenv('WS_BACKUP_PRUNE_AFTER');
+        unset($_ENV['WS_BACKUP_PRUNE_AFTER']);
+
+        Config::init(require ROOT_PATH . '/config/config.php');
+
+        $this->assertSame(90, Config::get('backup.prune.after'));
+    }
+
+    public function test_backup_env(): void
+    {
+        putenv('WS_BACKUP_PRUNE_AFTER=30');
+        $_ENV['WS_BACKUP_PRUNE_AFTER'] = '30';
+
+        Config::init(require ROOT_PATH . '/config/config.php');
+
+        $this->assertSame(30, Config::get('backup.prune.after'));
+    }
+
+    public function test_backup_invalid(): void
+    {
+        putenv('WS_BACKUP_PRUNE_AFTER=invalid');
+        $_ENV['WS_BACKUP_PRUNE_AFTER'] = 'invalid';
+
+        Config::init(require ROOT_PATH . '/config/config.php');
+
+        $this->assertSame(90, Config::get('backup.prune.after'));
+    }
+
+    public function test_backup_minimum(): void
+    {
+        putenv('WS_BACKUP_PRUNE_AFTER=7');
+        $_ENV['WS_BACKUP_PRUNE_AFTER'] = '7';
+
+        Config::init(require ROOT_PATH . '/config/config.php');
+
+        $this->assertSame(90, Config::get('backup.prune.after'));
     }
 
     public function test_local_net_env(): void

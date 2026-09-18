@@ -19,6 +19,7 @@ final class FilePruner
     public function __invoke(bool $execute): void
     {
         $time = time();
+        $logsPruneAfter = (int) Config::get('logs.prune.after', 7);
 
         $directories = [
             [
@@ -26,7 +27,7 @@ final class FilePruner
                 'path' => Config::get('tmpDir') . '/logs',
                 'base' => Config::get('tmpDir'),
                 'filter' => '/\.(?:log|jsonl)$/',
-                'time' => strtotime((string) Config::get('logs.prune.after', '-7 DAYS'), $time),
+                'time' => strtotime(sprintf('-%d DAYS', $logsPruneAfter), $time),
             ],
             [
                 'name' => 'webhooks_remover',
@@ -59,7 +60,7 @@ final class FilePruner
                     '/^(\w+\.)?\w+\.\d{8}\.json(\.zip)?$/i',
                     $file->getBasename(),
                 ),
-                'time' => strtotime('-90 DAYS', $time),
+                'time' => strtotime(sprintf('-%d DAYS', (int) Config::get('backup.prune.after', 90)), $time),
             ],
         ];
 
