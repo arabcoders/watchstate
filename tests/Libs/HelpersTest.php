@@ -1718,6 +1718,127 @@ class HelpersTest extends TestCase
                 'Show.S01E02.4K.HDR.mkv',
                 ['status' => true, 'multi' => false, 'season' => 1, 'start' => 2, 'end' => 2],
             ],
+
+            // A bare year that follows the episode is a tag, not the end of a range.
+            [
+                'ShowTitle.S02E25.1994.WEBRip.10Bit.1080p.DDP5.1.H265-grp.mkv',
+                ['status' => true, 'multi' => false, 'season' => 2, 'start' => 25, 'end' => 25],
+            ],
+            [
+                'Show.S01E01.2019.mkv',
+                ['status' => true, 'multi' => false, 'season' => 1, 'start' => 1, 'end' => 1],
+            ],
+            // A year straight after a hyphen is the one case the dot rule cannot catch. It
+            // reads as a range, because a four digit number there is indistinguishable from
+            // an episode and absolute numbering does reach that far. Write S01E01-E2019 to
+            // be explicit. This case records that limitation, it is not a wanted result.
+            [
+                'Show.S01E01-2019.WEB.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 2019],
+            ],
+            [
+                'Show.1x20.1994.WEBRip.mkv',
+                ['status' => true, 'multi' => false, 'season' => 1, 'start' => 20, 'end' => 20],
+            ],
+            [
+                'Show.Season 01 Episode 20.1994.WEBRip.mkv',
+                ['status' => true, 'multi' => false, 'season' => 1, 'start' => 20, 'end' => 20],
+            ],
+            [
+                'Show.E020.1994.WEBRip.mkv',
+                ['status' => true, 'multi' => false, 'season' => 0, 'start' => 20, 'end' => 20],
+            ],
+            [
+                'Show.Episode 20.1994.WEBRip.mkv',
+                ['status' => true, 'multi' => false, 'season' => 0, 'start' => 20, 'end' => 20],
+            ],
+            // A real range that is followed by a year still keeps the range.
+            [
+                'Show.S01E01-02.1994.WEB.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 2],
+            ],
+
+            // An explicit E prefix still marks a four digit absolute episode number.
+            [
+                'Show.S01E1001-E1002.1080p.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1001, 'end' => 1002],
+            ],
+
+            // Underscore carries an E prefixed continuation, like the dot does.
+            [
+                'Series_Name_S01E01_E02.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 2],
+            ],
+            [
+                'Series_Name_S01E01-02.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 2],
+            ],
+            [
+                'Series_Name_S01E01_E02_E03.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 3],
+            ],
+            [
+                'Series_Name_1x01-02.mkv',
+                ['status' => true, 'multi' => true, 'season' => 1, 'start' => 1, 'end' => 2],
+            ],
+            [
+                'Show_E020-021.mkv',
+                ['status' => true, 'multi' => true, 'season' => 0, 'start' => 20, 'end' => 21],
+            ],
+            // Both tail guards still hold when the separator is an underscore.
+            [
+                'Series_Name_S01E01_1994_WEB.mkv',
+                ['status' => true, 'multi' => false, 'season' => 1, 'start' => 1, 'end' => 1],
+            ],
+            [
+                'Series_Name_S01E01_1080p.mkv',
+                ['status' => true, 'multi' => false, 'season' => 1, 'start' => 1, 'end' => 1],
+            ],
+            // Only a hyphen carries a bare continuation. Plex and jellyfin document sXXeYY-eZZ,
+            // so a bare number after a dot or an underscore is a release tag, not an episode.
+            [
+                'ShowTitle.S02E25.50.hello.there.mkv',
+                ['status' => true, 'multi' => false, 'season' => 2, 'start' => 25, 'end' => 25],
+            ],
+            [
+                'ShowTitle.S02E25.26.hello.there.mkv',
+                ['status' => true, 'multi' => false, 'season' => 2, 'start' => 25, 'end' => 25],
+            ],
+            [
+                'ShowTitle.S02E25-50.hello.there.mkv',
+                ['status' => true, 'multi' => true, 'season' => 2, 'start' => 25, 'end' => 50],
+            ],
+            [
+                'Series_Name_S01E01_02.mkv',
+                ['status' => true, 'multi' => false, 'season' => 1, 'start' => 1, 'end' => 1],
+            ],
+            // Audio channel tags are bare numbers after a dot, so they are no longer a range.
+            [
+                'Show.S01E01.2.0.mkv',
+                ['status' => true, 'multi' => false, 'season' => 1, 'start' => 1, 'end' => 1],
+            ],
+            [
+                'Show.S01E01.7.1.Atmos.mkv',
+                ['status' => true, 'multi' => false, 'season' => 1, 'start' => 1, 'end' => 1],
+            ],
+            [
+                'Show.S01E01.720.mkv',
+                ['status' => true, 'multi' => false, 'season' => 1, 'start' => 1, 'end' => 1],
+            ],
+
+            // A split part marker is not an episode range, plex and jellyfin both use these.
+            [
+                'Series Name S01E01_pt2.mkv',
+                ['status' => true, 'multi' => false, 'season' => 1, 'start' => 1, 'end' => 1],
+            ],
+            [
+                'Series Name S01E01-cd1.mkv',
+                ['status' => true, 'multi' => false, 'season' => 1, 'start' => 1, 'end' => 1],
+            ],
+            [
+                'Greys Anatomy (2005) - s01e01 - disc2.avi',
+                ['status' => true, 'multi' => false, 'season' => 1, 'start' => 1, 'end' => 1],
+            ],
         ];
 
         foreach ($cases as [$filename, $expected]) {

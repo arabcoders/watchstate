@@ -1630,7 +1630,27 @@ if (!function_exists('parse_episode_range')) {
          * Every tail below is all or nothing. It is taken only when it ends on a clean
          * boundary, so a tag that starts with digits, such as .1080p, .10bit or -123group,
          * drops the whole tail instead of being read as the end of the range.
+         *
+         * Plex and jellyfin both document a range as sXXeYY-eZZ, a hyphen with the second
+         * number carrying an E. A number without an E is only taken after a hyphen, so the
+         * documented S01E01-02 still reads as a range while S01E01.50, S01E01.2.0 and
+         * S01E01_02 are treated as release tags. A number with an E is taken after any
+         * separator, which keeps S01E01.S01E02 and S01E01_E02 working.
+         *
+         * The hyphen rule leaves one case open. A year written straight after a hyphen,
+         * as in S01E01-2019, still reads as a range. A four digit number cannot be told
+         * apart from an episode there, and absolute numbering does reach that far, so the
+         * hyphen is taken at its word. Write S01E01-E2019 to be explicit.
          */
+
+        /**
+         * The three tail shapes, in order of how much they accept. $tailSeason also takes a
+         * repeated season, as in S01E01.S01E02. $tailEpisode drops that. $tailBare has no E
+         * form at all, because 1x01E02 is not a notation any backend writes.
+         */
+        $tailSeason = '(?:(?:E\d{1,4}|[._-](?:S\d{1,3})?E\d{1,4}|-\d{1,4})+(?![\dA-Z]))?';
+        $tailEpisode = '(?:(?:E\d{1,4}|[._-]E\d{1,4}|-\d{1,4})+(?![\dA-Z]))?';
+        $tailBare = '(?:(?:-\d{1,4})+(?![\dA-Z]))?';
 
         /**
          * Convert an episode expression into episode numbers.
@@ -1648,20 +1668,19 @@ if (!function_exists('parse_episode_range')) {
                 return $episodes;
             }
 
-            preg_match_all('/ E(?<repeated>\d{1,4}) | [.-] (?:S\d{1,3})? E? (?<delimited>\d{1,4}) /ix', $tail, $matches, PREG_SET_ORDER);
+            preg_match_all(
+                '/
+                    E(?<repeated>\d{1,4})
+                    |
+                    (?: [._-] (?:S\d{1,3})? E | - ) (?<delimited>\d{1,4})
+                /ix',
+                $tail,
+                $matches,
+                PREG_SET_ORDER | PREG_UNMATCHED_AS_NULL,
+            );
 
             foreach ($matches as $match) {
-                $value = '';
-
-                if (isset($match['repeated']) && '' !== $match['repeated']) {
-                    $value = $match['repeated'];
-                } elseif (isset($match['delimited']) && '' !== $match['delimited']) {
-                    $value = $match['delimited'];
-                }
-
-                if ('' !== $value) {
-                    $episodes[] = (int) $value;
-                }
+                $episodes[] = (int) ($match['repeated'] ?? $match['delimited']);
             }
 
             return array_values(array_unique($episodes));
@@ -1677,16 +1696,7 @@ if (!function_exists('parse_episode_range')) {
                 (?<![A-Z0-9])
                 S(?<season>\d{1,3})
                 E(?<start>\d{1,4})
-                (?<tail>
-                    (?:
-                        (?:
-                            E\d{1,4}
-                            |
-                            [.-](?:S\d{1,3})?E?\d{1,4}
-                        )+
-                        (?![\dA-Z])
-                    )?
-                )
+                (?<tail>' . $tailSeason . ')
             /ix',
             $file,
             $match,
@@ -1714,16 +1724,7 @@ if (!function_exists('parse_episode_range')) {
                 [\s._-]+
                 (?:Episode|Ep)[\s._-]*
                 (?<start>\d{1,4})
-                (?<tail>
-                    (?:
-                        (?:
-                            E\d{1,4}
-                            |
-                            [.-](?:E)?\d{1,4}
-                        )+
-                        (?![\dA-Z])
-                    )?
-                )
+                (?<tail>' . $tailEpisode . ')
             /ix',
             $file,
             $match,
@@ -1749,14 +1750,7 @@ if (!function_exists('parse_episode_range')) {
                 (?<season>\d{1,3})
                 x
                 (?<start>\d{1,4})
-                (?<tail>
-                    (?:
-                        (?:
-                            [.-]\d{1,4}
-                        )+
-                        (?![\dA-Z])
-                    )?
-                )
+                (?<tail>' . $tailBare . ')
                 (?!\d)
             /ix',
             $file,
@@ -1787,16 +1781,7 @@ if (!function_exists('parse_episode_range')) {
                     [\s._\-[\(]
                 )
                 E(?<start>\d{1,4})
-                (?<tail>
-                    (?:
-                        (?:
-                            E\d{1,4}
-                            |
-                            [.-]E?\d{1,4}
-                        )+
-                        (?![\dA-Z])
-                    )?
-                )
+                (?<tail>' . $tailEpisode . ')
             /ix',
             $file,
             $match,
@@ -1820,16 +1805,7 @@ if (!function_exists('parse_episode_range')) {
                 (?<![A-Z0-9])
                 (?:Episode|Ep)[\s._-]*
                 (?<start>\d{1,4})
-                (?<tail>
-                    (?:
-                        (?:
-                            E\d{1,4}
-                            |
-                            [.-]E?\d{1,4}
-                        )+
-                        (?![\dA-Z])
-                    )?
-                )
+                (?<tail>' . $tailEpisode . ')
             /ix',
             $file,
             $match,
