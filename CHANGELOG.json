@@ -1,5 +1,19 @@
 [
   {
+    "tag": "Untagged",
+    "full_sha": "41f78f08b4fb31a2e9735c4cdf4d94f2a4e3cb24",
+    "date": "2026-09-18T15:49:12+00:00",
+    "commits": [
+      {
+        "sha": "41f78f08",
+        "full_sha": "41f78f08b4fb31a2e9735c4cdf4d94f2a4e3cb24",
+        "message": "refactor: make backup retention days configurable.",
+        "author": "arabcoders",
+        "date": "2026-09-18T15:49:12+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v1.10.6",
     "full_sha": "23a7fb2eff8fe268974f2ac3bd97616d9e4c179c",
     "date": "2026-09-16T17:43:43+00:00",
