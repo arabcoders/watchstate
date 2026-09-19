@@ -1,15 +1,15 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "b51fae0af3e20ec8c304d471ebef3e92256caea5",
-    "date": "2026-09-19T15:31:35+00:00",
+    "full_sha": "25d1d20e28c9b7e8bcf16f1b20b038cca087f6b4",
+    "date": "2026-09-19T15:38:29+00:00",
     "commits": [
       {
-        "sha": "b51fae0a",
-        "full_sha": "b51fae0af3e20ec8c304d471ebef3e92256caea5",
+        "sha": "25d1d20e",
+        "full_sha": "25d1d20e28c9b7e8bcf16f1b20b038cca087f6b4",
         "message": "refactor(ci): improve gitea CI",
         "author": "arabcoders",
-        "date": "2026-09-19T15:31:35+00:00"
+        "date": "2026-09-19T15:38:29+00:00"
       },
       {
         "sha": "41f78f08",
