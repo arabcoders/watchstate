@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "25d1d20e28c9b7e8bcf16f1b20b038cca087f6b4",
-    "date": "2026-09-19T15:38:29+00:00",
+    "full_sha": "de1bfed234a9e4bb9a5e2d3eaeec0de63fe97857",
+    "date": "2026-09-20T20:12:50+00:00",
     "commits": [
+      {
+        "sha": "de1bfed2",
+        "full_sha": "de1bfed234a9e4bb9a5e2d3eaeec0de63fe97857",
+        "message": "refactor: state the episode range grammar once\n\nHoisting the tail shapes stopped one step short. Three things still restated\nwhat the tails had already decided.",
+        "author": "Jellyfrog",
+        "date": "2026-09-20T20:12:50+00:00"
+      },
+      {
+        "sha": "8901e3fe",
+        "full_sha": "8901e3fe147be9a1dd3be89a461e98a89d9f8bec",
+        "message": "fix: only treat the documented episode range syntax as a range\n\nFollow up to #886. Plex and jellyfin both document a range as sXXeYY-eZZ, so a\nbare number is only taken after a hyphen. S01E01.50, S01E01.2.0 and S01E01_02\nare release tags now, not ranges. An E prefix is still honoured after any\nseparator, so S01E01-E02, S01E01.S01E02 and E1001-E1002 keep working.\n\nFixes names such as s05e07.10.chefs.compete.avi, where the episode title starts\nwith a number. That parsed as episodes 7-10, which fits under the range limit,\nso the importer silently fabricated three episodes that do not exist.",
+        "author": "Jellyfrog",
+        "date": "2026-09-20T20:12:50+00:00"
+      },
       {
         "sha": "25d1d20e",
         "full_sha": "25d1d20e28c9b7e8bcf16f1b20b038cca087f6b4",
