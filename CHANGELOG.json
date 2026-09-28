@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "de1bfed234a9e4bb9a5e2d3eaeec0de63fe97857",
-    "date": "2026-09-20T20:12:50+00:00",
+    "full_sha": "44f84309dce5e2bd2b80b5d485e7d1775d00ed43",
+    "date": "2026-09-28T17:49:11+00:00",
     "commits": [
+      {
+        "sha": "44f84309",
+        "full_sha": "44f84309dce5e2bd2b80b5d485e7d1775d00ed43",
+        "message": "refactor: remove oidc discovery cache and support HS256",
+        "author": "arabcoders",
+        "date": "2026-09-28T17:49:11+00:00"
+      },
       {
         "sha": "de1bfed2",
         "full_sha": "de1bfed234a9e4bb9a5e2d3eaeec0de63fe97857",
