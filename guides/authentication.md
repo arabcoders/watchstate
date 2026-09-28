@@ -32,7 +32,12 @@ In your identity provider, create a confidential OIDC client for WatchState. Set
 https://watchstate.example.com/v1/api/system/auth/oidc/callback
 ```
 
-The provider client must allow the `openid`, `profile`, and `email` scopes.
+The provider client must allow the `openid`, `profile`, and `email` scopes. WatchState accepts HS256, RS256, RS384,
+RS512, PS256, PS384, PS512, ES256, ES384, and ES512 for ID tokens. 
+
+> [!NOTE]
+> For HS256, set a client secret of at least 32 bytes  in the provider and WatchState. Alternatively, configure a 
+> signing certificate for an asymmetric algorithm such as RS256.
 
 ### 2. Add the four OIDC fields
 
@@ -115,6 +120,8 @@ by the proxy. Local credentials remain available.
 - **The provider rejects the callback:** compare the provider's registered URI with the `auth.oidc.redirect_uri` value 
   in `{DATA_PATH}/config/config.yaml`.
 - **State, nonce, or PKCE errors appear:** start a new login from the login page. Do not reuse an old callback or an expired callback.
+- **An unsupported OIDC signing algorithm appears in the logs:** check the provider's ID-token signing algorithm against
+  the supported list above. For HS256, use a client secret of at least 32 bytes.
 - **Proxy login does not start:** check the raw `REMOTE_ADDR`, the `trusted_proxies` CIDR, the header name, and whether the proxy sends a non-empty value.
 - **The proxy identity can be spoofed:** block direct origin access and verify that the proxy removes client-supplied identity headers before setting its own.
 - **Local login fails:** confirm the original local WatchState account still exists and use its local credentials.

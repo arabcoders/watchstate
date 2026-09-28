@@ -6,6 +6,7 @@ namespace App\Libs;
 
 use Firebase\JWT\JWK;
 use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 use Psr\SimpleCache\CacheInterface;
 use RuntimeException;
 use SensitiveParameter;
@@ -174,12 +175,7 @@ final class OidcService
      */
     private function discovery(string $issuer): array
     {
-        $key = 'oidc.discovery.' . hash('sha256', $issuer);
-        $data = $this->cache->get($key);
-        if (!is_array($data)) {
-            $data = $this->http->request('GET', rtrim($issuer, '/') . '/.well-known/openid-configuration')->toArray();
-            $this->cache->set($key, $data, 3600);
-        }
+        $data = $this->http->request('GET', rtrim($issuer, '/') . '/.well-known/openid-configuration')->toArray();
         foreach (['issuer', 'authorization_endpoint', 'token_endpoint', 'jwks_uri'] as $required) {
             if (!is_string($data[$required] ?? null) || '' === trim($data[$required])) {
                 throw new RuntimeException('OIDC discovery document is missing a required endpoint.');
@@ -210,7 +206,7 @@ final class OidcService
             throw new RuntimeException('Invalid OIDC token header.');
         }
         $header = json_decode($headerJson, true);
-        $supportedAlgorithms = ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512'];
+        $supportedAlgorithms = ['HS256', 'RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512'];
         if (isset($discovery['id_token_signing_alg_values_supported'])) {
             $supportedAlgorithms = array_values(array_intersect(
                 $supportedAlgorithms,
@@ -222,23 +218,18 @@ final class OidcService
         if (!is_array($header) || !in_array($header['alg'] ?? '', $supportedAlgorithms, true)) {
             throw new RuntimeException('Unsupported OIDC signing algorithm.');
         }
-        $jwksKey = 'oidc.jwks.' . hash('sha256', (string) $discovery['jwks_uri']);
-        $jwks = $this->cache->get($jwksKey);
-        if (!is_array($jwks)) {
-            $jwks = $this->http->request('GET', $discovery['jwks_uri'])->toArray();
-            $this->cache->set($jwksKey, $jwks, 3600);
+        if ('HS256' === $header['alg'] && strlen($config['client_secret']) < 32) {
+            throw new RuntimeException('OIDC client secret must be at least 32 bytes for HS256.');
         }
         try {
-            $claims = (array) JWT::decode($token, JWK::parseKeySet($jwks));
-        } catch (Throwable $e) {
-            // Providers may rotate signing keys while the cached JWKS is still fresh.
-            $jwks = $this->http->request('GET', $discovery['jwks_uri'])->toArray();
-            $this->cache->set($jwksKey, $jwks, 3600);
-            try {
+            if ('HS256' === $header['alg']) {
+                $claims = (array) JWT::decode($token, new Key($config['client_secret'], 'HS256'));
+            } else {
+                $jwks = $this->http->request('GET', $discovery['jwks_uri'])->toArray();
                 $claims = (array) JWT::decode($token, JWK::parseKeySet($jwks));
-            } catch (Throwable $refreshException) {
-                throw new RuntimeException('Invalid OIDC ID token.', 0, $refreshException);
             }
+        } catch (Throwable $e) {
+            throw new RuntimeException('Invalid OIDC ID token.', 0, $e);
         }
         $audience = $claims['aud'] ?? null;
         $audienceValid = $audience === $config['client_id'] || is_array($audience) && in_array($config['client_id'], $audience, true);

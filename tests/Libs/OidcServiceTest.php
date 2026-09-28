@@ -9,6 +9,7 @@ use App\Libs\OidcService;
 use App\Libs\TestCase;
 use Firebase\JWT\JWT;
 use PHPUnit\Framework\Attributes\DataProvider;
+use RuntimeException;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -75,6 +76,122 @@ class OidcServiceTest extends TestCase
         $this->assertNull($service->consume($exchange));
     }
 
+    public function test_provider_signing_change(): void
+    {
+        Config::save('auth.oidc', $this->config());
+        $cache = new Psr16Cache(new ArrayAdapter());
+        $key = $this->keys();
+        $claims = ['iss' => self::ISSUER, 'aud' => self::CLIENT, 'nonce' => 'nonce', 'sub' => 'user'];
+        $http = new MockHttpClient([
+            new MockResponse($this->discovery('HS256')),
+            new MockResponse($this->discovery('HS256')),
+            new MockResponse(json_encode(['id_token' => JWT::encode(
+                $claims + ['iat' => time(), 'exp' => time() + 300],
+                str_repeat('s', 32),
+                'HS256',
+            )], JSON_THROW_ON_ERROR)),
+            new MockResponse($this->discovery()),
+            new MockResponse($this->discovery()),
+            new MockResponse(json_encode(['id_token' => $this->token($key['private'], $claims)], JSON_THROW_ON_ERROR)),
+            new MockResponse(json_encode(['keys' => [$key['jwk']]], JSON_THROW_ON_ERROR)),
+        ]);
+        $service = $this->service($cache, $http);
+
+        $service->authorization();
+        $cache->set('oidc.pending.' . hash('sha256', 'first'), ['nonce' => 'nonce', 'verifier' => 'verifier']);
+        $first = $service->callback('code', 'first');
+        $this->assertSame('user', $service->consume($first)['sub']);
+
+        $service->authorization();
+        $cache->set('oidc.pending.' . hash('sha256', 'second'), ['nonce' => 'nonce', 'verifier' => 'verifier']);
+        $exchange = $service->callback('code', 'second');
+
+        $this->assertSame('user', $service->consume($exchange)['sub']);
+        $this->assertNull($cache->get('oidc.discovery.' . hash('sha256', self::ISSUER)));
+        $this->assertNull($cache->get('oidc.jwks.' . hash('sha256', self::ISSUER . '/keys')));
+    }
+
+    public function test_hs256_invalid_signature(): void
+    {
+        Config::save('auth.oidc', $this->config());
+        $cache = new Psr16Cache(new ArrayAdapter());
+        $token = JWT::encode(
+            [
+                'iss' => self::ISSUER,
+                'aud' => self::CLIENT,
+                'nonce' => 'nonce',
+                'sub' => 'user',
+                'iat' => time(),
+                'exp' => time() + 300,
+            ],
+            str_repeat('x', 32),
+            'HS256',
+        );
+        $service = $this->service($cache, new MockHttpClient([
+            new MockResponse($this->discovery('HS256')),
+            new MockResponse(json_encode(['id_token' => $token], JSON_THROW_ON_ERROR)),
+        ]));
+        $cache->set('oidc.pending.' . hash('sha256', 'state'), ['nonce' => 'nonce', 'verifier' => 'verifier']);
+
+        $this->expectExceptionMessage('Invalid OIDC ID token.');
+        $service->callback('code', 'state');
+    }
+
+    public function test_hs256_short_secret(): void
+    {
+        $config = $this->config();
+        $config['client_secret'] = 'short';
+        Config::save('auth.oidc', $config);
+        $cache = new Psr16Cache(new ArrayAdapter());
+        $token = JWT::encode(['sub' => 'user'], str_repeat('s', 32), 'HS256');
+        $service = $this->service($cache, new MockHttpClient([
+            new MockResponse($this->discovery('HS256')),
+            new MockResponse(json_encode(['id_token' => $token], JSON_THROW_ON_ERROR)),
+        ]));
+        $cache->set('oidc.pending.' . hash('sha256', 'state'), ['nonce' => 'nonce', 'verifier' => 'verifier']);
+
+        $this->expectExceptionMessage('OIDC client secret must be at least 32 bytes for HS256.');
+        $service->callback('code', 'state');
+    }
+
+    public function test_hs256_unadvertised(): void
+    {
+        Config::save('auth.oidc', $this->config());
+        $cache = new Psr16Cache(new ArrayAdapter());
+        $token = JWT::encode(['sub' => 'user'], str_repeat('s', 32), 'HS256');
+        $service = $this->service($cache, new MockHttpClient([
+            new MockResponse($this->discovery('RS256')),
+            new MockResponse(json_encode(['id_token' => $token], JSON_THROW_ON_ERROR)),
+        ]));
+        $cache->set('oidc.pending.' . hash('sha256', 'state'), ['nonce' => 'nonce', 'verifier' => 'verifier']);
+
+        $this->expectExceptionMessage('Unsupported OIDC signing algorithm.');
+        $service->callback('code', 'state');
+    }
+
+    public function test_provider_key_change(): void
+    {
+        Config::save('auth.oidc', $this->config());
+        $cache = new Psr16Cache(new ArrayAdapter());
+        $first = $this->keys();
+        $second = $this->keys();
+        $claims = ['iss' => self::ISSUER, 'aud' => self::CLIENT, 'nonce' => 'nonce', 'sub' => 'user'];
+        $service = $this->service($cache, new MockHttpClient([
+            new MockResponse($this->discovery()),
+            new MockResponse(json_encode(['id_token' => $this->token($first['private'], $claims)], JSON_THROW_ON_ERROR)),
+            new MockResponse(json_encode(['keys' => [$first['jwk']]], JSON_THROW_ON_ERROR)),
+            new MockResponse($this->discovery()),
+            new MockResponse(json_encode(['id_token' => $this->token($second['private'], $claims)], JSON_THROW_ON_ERROR)),
+            new MockResponse(json_encode(['keys' => [$second['jwk']]], JSON_THROW_ON_ERROR)),
+        ]));
+
+        foreach (['first', 'second'] as $state) {
+            $cache->set('oidc.pending.' . hash('sha256', $state), ['nonce' => 'nonce', 'verifier' => 'verifier']);
+            $exchange = $service->callback('code', $state);
+            $this->assertSame('user', $service->consume($exchange)['sub']);
+        }
+    }
+
     public function test_state_replay(): void
     {
         Config::save('auth.oidc', $this->config());
@@ -111,10 +228,9 @@ class OidcServiceTest extends TestCase
             new MockResponse($this->discovery()),
             new MockResponse(json_encode(['id_token' => $this->token($private, $claims)], JSON_THROW_ON_ERROR)),
             new MockResponse(json_encode(['keys' => [$key['jwk']]], JSON_THROW_ON_ERROR)),
-            new MockResponse(json_encode(['keys' => [$key['jwk']]], JSON_THROW_ON_ERROR)),
         ]));
         $cache->set('oidc.pending.' . hash('sha256', 'state'), ['nonce' => 'nonce', 'verifier' => 'verifier']);
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         $service->callback('code', 'state');
     }
 
@@ -128,18 +244,19 @@ class OidcServiceTest extends TestCase
         return [
             'issuer' => self::ISSUER,
             'client_id' => self::CLIENT,
-            'client_secret' => 'secret',
+            'client_secret' => str_repeat('s', 32),
             'redirect_uri' => 'https://app.example/callback',
         ];
     }
 
-    private function discovery(): string
+    private function discovery(string $algorithm = 'RS256'): string
     {
         return json_encode([
             'issuer' => self::ISSUER,
             'authorization_endpoint' => self::ISSUER . '/authorize',
             'token_endpoint' => self::ISSUER . '/token',
             'jwks_uri' => self::ISSUER . '/keys',
+            'id_token_signing_alg_values_supported' => [$algorithm],
         ], JSON_THROW_ON_ERROR);
     }
 
