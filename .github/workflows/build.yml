@@ -70,6 +70,7 @@ jobs:
   test:
     name: Tests & Frontend Build
     runs-on: ubuntu-latest
+    container: shivammathur/node:php-8.5-24.04-amd64
     needs: [validate-build-config]
     permissions:
       contents: read
@@ -102,7 +103,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: pdo, mbstring, ctype, curl, sqlite3
+          extensions: pdo, mbstring, ctype, curl, sqlite3, redis
           coverage: none
           tools: composer:v2
 
@@ -173,6 +174,7 @@ jobs:
         run: bun run generate
 
       - name: Set up Python
+        id: setup-python
         if: env.REGISTRY == '' && github.event_name != 'pull_request'
         uses: actions/setup-python@v7
         with:
@@ -180,16 +182,25 @@ jobs:
 
       - name: Install GitPython
         if: env.REGISTRY == '' && github.event_name != 'pull_request'
-        run: pip install gitpython
+        run: '"${{ steps.setup-python.outputs.python-path }}" -m pip install gitpython'
 
       - name: Generate CHANGELOG.json
         if: env.REGISTRY == '' && github.event_name != 'pull_request'
         run: |
-          python3 .github/scripts/generate_changelog.py -p . -f ./frontend/exported/CHANGELOG.json
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          "${{ steps.setup-python.outputs.python-path }}" .github/scripts/generate_changelog.py -p . -f ./frontend/exported/CHANGELOG.json
 
-      - name: Upload frontend build
+      - name: Upload frontend build (GitHub)
         if: env.REGISTRY == '' && github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7
+        with:
+          name: frontend-build
+          path: frontend/exported/
+          retention-days: 1
+
+      - name: Upload frontend build (Gitea)
+        if: env.REGISTRY != '' && github.event_name != 'pull_request'
+        uses: ChristopherHX/gitea-upload-artifact@v4
         with:
           name: frontend-build
           path: frontend/exported/
@@ -218,9 +229,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download frontend build
+      - name: Download frontend build (GitHub)
         if: env.REGISTRY == ''
         uses: actions/download-artifact@v8
+        with:
+          name: frontend-build
+          path: frontend/exported/
+
+      - name: Download frontend build (Gitea)
+        if: env.REGISTRY != ''
+        uses: ChristopherHX/gitea-download-artifact@v4
         with:
           name: frontend-build
           path: frontend/exported/
@@ -233,6 +251,7 @@ jobs:
           VERSION="${GITHUB_REF##*/}"
           SHA=$(git rev-parse HEAD)
           BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          BRANCH_ESCAPED=$(printf '%s' "${BRANCH}" | sed 's/[\/&]/\\&/g')
           DATE=$(date -u +"%Y%m%d")
 
           echo "Current version: ${VERSION}, SHA: ${SHA}, Date: ${DATE}"
@@ -246,7 +265,7 @@ jobs:
           -e "s/'version' => 'dev-master'/'version' => '${VERSION}'/" \
           -e "s/'version_sha' => 'unknown'/'version_sha' => '${SHA}'/" \
           -e "s/'version_build' => 'unknown'/'version_build' => '${DATE}'/" \
-          -e "s/'version_branch' => 'unknown'/'version_branch' => '${BRANCH}'/" \
+          -e "s/'version_branch' => 'unknown'/'version_branch' => '${BRANCH_ESCAPED}'/" \
           config/config.php
 
       - name: Docker meta
@@ -296,8 +315,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ github.workflow_ref }}-${{ env.ARCH }}
-          cache-to: type=gha,mode=max,scope=${{ github.workflow_ref }}-${{ env.ARCH }}
+          cache-from: type=gha,scope=container-${{ github.ref_name }}-${{ env.ARCH }}
+          cache-to: type=gha,mode=max,scope=container-${{ github.ref_name }}-${{ env.ARCH }}
           provenance: true
 
   docker-build-arm64:
@@ -323,9 +342,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download frontend build
+      - name: Download frontend build (GitHub)
         if: env.REGISTRY == ''
         uses: actions/download-artifact@v8
+        with:
+          name: frontend-build
+          path: frontend/exported/
+
+      - name: Download frontend build (Gitea)
+        if: env.REGISTRY != ''
+        uses: ChristopherHX/gitea-download-artifact@v4
         with:
           name: frontend-build
           path: frontend/exported/
@@ -338,6 +364,7 @@ jobs:
           VERSION="${GITHUB_REF##*/}"
           SHA=$(git rev-parse HEAD)
           BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          BRANCH_ESCAPED=$(printf '%s' "${BRANCH}" | sed 's/[\/&]/\\&/g')
           DATE=$(date -u +"%Y%m%d")
 
           echo "Current version: ${VERSION}, SHA: ${SHA}, Date: ${DATE}"
@@ -351,7 +378,7 @@ jobs:
           -e "s/'version' => 'dev-master'/'version' => '${VERSION}'/" \
           -e "s/'version_sha' => 'unknown'/'version_sha' => '${SHA}'/" \
           -e "s/'version_build' => 'unknown'/'version_build' => '${DATE}'/" \
-          -e "s/'version_branch' => 'unknown'/'version_branch' => '${BRANCH}'/" \
+          -e "s/'version_branch' => 'unknown'/'version_branch' => '${BRANCH_ESCAPED}'/" \
           config/config.php
 
       - name: Docker meta
@@ -401,8 +428,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ github.workflow }}-${{ env.ARCH }}
-          cache-to: type=gha,mode=max,scope=${{ github.workflow }}-${{ env.ARCH }}
+          cache-from: type=gha,scope=container-${{ github.ref_name }}-${{ env.ARCH }}
+          cache-to: type=gha,mode=max,scope=container-${{ github.ref_name }}-${{ env.ARCH }}
           provenance: true
 
   docker-publish-manifest:

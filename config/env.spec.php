@@ -179,24 +179,24 @@ return (function () {
         [
             'key' => 'WS_LOGS_PRUNE_AFTER',
             'config' => 'logs.prune.after',
-            'description' => 'Prune logs after this past relative time expression. For example, "-7 DAYS".',
-            'type' => 'string',
-            'validate' => function (mixed $value, array $spec = []): string {
-                if (!is_string($value) || '' === trim($value)) {
-                    throw new ValidationException('Invalid prune time. Empty value.');
+            'description' => 'Number of days to keep logs. Must be at least 1.',
+            'type' => 'int',
+            'validate' => function (mixed $value, array $spec = []): int {
+                if (!is_int($value) || 1 > $value) {
+                    throw new ValidationException('Invalid log retention. Must be at least 1 day.');
                 }
 
-                $now = time();
-                $parsed = strtotime($value, $now);
-
-                if (false === $parsed) {
-                    throw new ValidationException(r('Invalid prune time expression. {value}', [
-                        'value' => $value,
-                    ]));
-                }
-
-                if ($parsed >= $now) {
-                    throw new ValidationException('Invalid prune time expression. It must resolve to a time in the past.');
+                return $value;
+            },
+        ],
+        [
+            'key' => 'WS_BACKUP_PRUNE_AFTER',
+            'config' => 'backup.prune.after',
+            'description' => 'Number of days to keep backups. Must be greater than 7.',
+            'type' => 'int',
+            'validate' => function (mixed $value, array $spec = []): int {
+                if (!is_int($value) || 7 >= $value) {
+                    throw new ValidationException('Invalid backup retention. Must be greater than 7 days.');
                 }
 
                 return $value;
