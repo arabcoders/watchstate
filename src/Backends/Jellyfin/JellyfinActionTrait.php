@@ -6,6 +6,7 @@ namespace App\Backends\Jellyfin;
 
 use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
+use App\Backends\Emby\EmbyClient;
 use App\Backends\Jellyfin\Action\GetLibrariesList;
 use App\Backends\Jellyfin\Action\GetMetaData;
 use App\Backends\Jellyfin\Action\GetWebUrl;
@@ -271,7 +272,8 @@ trait JellyfinActionTrait
         $enabled = Config::get('clients.' . strtolower($context->clientName) . '.fix_played', false);
         if ($enabled && $isPlayed) {
             $uPositionTicks = 0 === (int) ag($item, 'UserData.PlaybackPositionTicks', -1);
-            $uPlayCount = (int) ag($item, 'UserData.PlayCount', -1) >= 1;
+            // Emby's list API can report zero plays for completed items even when the item API reports one.
+            $uPlayCount = EmbyClient::CLIENT_NAME === $context->clientName || (int) ag($item, 'UserData.PlayCount', -1) >= 1;
             $uIsPlayed = true === (bool) ag($item, 'UserData.Played', false);
             if ($uIsPlayed && $uPlayCount && $uPositionTicks) {
                 $entity = $entity->setContext('should_mark', true);

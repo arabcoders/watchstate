@@ -20,7 +20,7 @@ class PlayedDateTest extends MediaBrowserTestCase
     public function test_stale_played(
         string $client,
         bool $enabled,
-        int $playCount,
+        ?int $playCount,
         ?int $position,
         bool $expected,
     ): void {
@@ -50,7 +50,11 @@ class PlayedDateTest extends MediaBrowserTestCase
 
             $item['UserData']['Played'] = true;
             $item['UserData']['LastPlayedDate'] = '2024-01-01T00:00:00Z';
-            $item['UserData']['PlayCount'] = $playCount;
+            if (null === $playCount) {
+                unset($item['UserData']['PlayCount']);
+            } else {
+                $item['UserData']['PlayCount'] = $playCount;
+            }
             if (null === $position) {
                 unset($item['UserData']['PlaybackPositionTicks']);
             } else {
@@ -77,7 +81,7 @@ class PlayedDateTest extends MediaBrowserTestCase
     }
 
     /**
-     * @return array<string,array{string,bool,int,?int,bool}>
+     * @return array<string,array{string,bool,?int,?int,bool}>
      */
     public static function playedCases(): array
     {
@@ -85,10 +89,14 @@ class PlayedDateTest extends MediaBrowserTestCase
             'emby_enabled' => ['Emby', true, 1, 0, true],
             'emby_disabled' => ['Emby', false, 1, 0, false],
             'emby_progress' => ['Emby', true, 1, 900000000, false],
-            'emby_no_count' => ['Emby', true, 0, 0, false],
+            'emby_zero_count' => ['Emby', true, 0, 0, true],
+            'emby_no_count' => ['Emby', true, null, 0, true],
+            'emby_disabled_zero_count' => ['Emby', false, 0, 0, false],
             'emby_no_position' => ['Emby', true, 1, null, false],
             'jellyfin_enabled' => ['Jellyfin', true, 1, 0, true],
             'jellyfin_disabled' => ['Jellyfin', false, 1, 0, false],
+            'jellyfin_zero_count' => ['Jellyfin', true, 0, 0, false],
+            'jellyfin_no_count' => ['Jellyfin', true, null, 0, false],
         ];
     }
 }
