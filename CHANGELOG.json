@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "a3153c649949b5283f27af6d42415169590d5fec",
-    "date": "2026-10-01T14:10:11+00:00",
+    "full_sha": "c0f67ecde78b6a572b9497d6775309f73d6eebc9",
+    "date": "2026-10-01T21:22:51+00:00",
     "commits": [
+      {
+        "sha": "c0f67ecd",
+        "full_sha": "c0f67ecde78b6a572b9497d6775309f73d6eebc9",
+        "message": "fix: possible fix for emby playCount:0",
+        "author": "arabcoders",
+        "date": "2026-10-01T21:22:51+00:00"
+      },
       {
         "sha": "a3153c64",
         "full_sha": "a3153c649949b5283f27af6d42415169590d5fec",
