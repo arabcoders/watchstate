@@ -1,5 +1,19 @@
 [
   {
+    "tag": "Untagged",
+    "full_sha": "a3153c649949b5283f27af6d42415169590d5fec",
+    "date": "2026-10-01T14:10:11+00:00",
+    "commits": [
+      {
+        "sha": "a3153c64",
+        "full_sha": "a3153c649949b5283f27af6d42415169590d5fec",
+        "message": "workaround: extends jellyfin play date work around to cover emby",
+        "author": "arabcoders",
+        "date": "2026-10-01T14:10:11+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v1.10.7",
     "full_sha": "7034ac597fc9ec7ac83f558ea6751654c265a71b",
     "date": "2026-09-28T18:18:34+00:00",
