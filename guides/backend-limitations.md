@@ -60,3 +60,7 @@ Each backend has specific requirements and limitations to be aware of before add
 
 - Only **movie** and **show** libraries are imported for play state. Music, photos, and other library types are skipped.
 - The **webhook test event** previously contained no data, but this issue appears to be fixed in version `4.9.0.37+`. To verify if your Emby webhook setup works, try playing or marking an item as played/unplayed and check if the changes appear in the database.
+
+### Experimental Workaround
+
+- If scheduled imports report a played item with a date older than the previous sync and leave it unplayed locally, enable `WS_CLIENTS_EMBY_FIX_PLAYED` and run `state:import`. This opt-in workaround accepts the played flag when the play count is positive and the playback position is zero. It advances the item's local date past the previous sync, which can override newer local state during bidirectional syncing.

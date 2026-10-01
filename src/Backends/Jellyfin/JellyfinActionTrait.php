@@ -267,14 +267,9 @@ trait JellyfinActionTrait
 
         $entity = Container::get(iState::class)::fromArray($builder);
 
-        /**
-         * Jellyfin has this weird bug where it mark item as played without updating the
-         * Last played date. Which cause issues for our prefered way of handling state update.
-         * This workaround shall be preserved until jellyfin devs fix the API.
-         * For reference check {@see \App\Libs\Mappers\Import\DirectMapper::handleOldEntity()}
-         */
-        $enabled = Config::get('clients.jellyfin.fix_played', false);
-        if ($enabled && JellyfinClient::CLIENT_NAME === $context->clientName && $isPlayed) {
+        // Opt-in workaround for played flags returned without a fresh last-played date.
+        $enabled = Config::get('clients.' . strtolower($context->clientName) . '.fix_played', false);
+        if ($enabled && $isPlayed) {
             $uPositionTicks = 0 === (int) ag($item, 'UserData.PlaybackPositionTicks', -1);
             $uPlayCount = (int) ag($item, 'UserData.PlayCount', -1) >= 1;
             $uIsPlayed = true === (bool) ag($item, 'UserData.Played', false);

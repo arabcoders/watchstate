@@ -754,20 +754,14 @@ class DirectMapper implements ImportInterface
 
         $hasAfter = null !== ($opts[Options::AFTER] ?? null) && true === $opts[Options::AFTER] instanceof iDate;
         if ($entity->isWatched() !== $local->isWatched() && $hasAfter) {
-            /**
-             * Jellyfin has this weird bug where it mark item as played without updating the
-             * Last played date. Which cause issues for our prefered way of handling state update.
-             * This workaround shall be preserved until jellyfin devs fix the API.
-             * For reference check {@see App\Backends\Jellyfin\JellyfinClient::createEntity}
-             */
-            $enable = Config::get('clients.jellyfin.fix_played', false);
-            if ($enable && $entity->isWatched() && true === $entity->getContext('should_mark', false)) {
+            // The backend sets this marker only when its played-date workaround is enabled.
+            if ($entity->isWatched() && true === $entity->getContext('should_mark', false)) {
                 $this->logger->notice(
-                    "[O] '#{history.id}: {history.title}' by '{identity.user}@{identity.backend}' date '{comparison.remote_date}' is older than last sync date '{comparison.local_date}'. Jellyfin API bug workaround applied to mark as played.",
+                    "[O] '#{history.id}: {history.title}' by '{identity.user}@{identity.backend}' date '{comparison.remote_date}' is older than last sync date '{comparison.local_date}'. Played-date workaround applied to mark as played.",
                     [
                         'mapper' => after_last(self::class, '\\'),
                         'operation' => 'mapper.old_entity',
-                        'error' => 'jellyfin_played_bug',
+                        'error' => 'stale_played_date',
                         'history' => [
                             'id' => $cloned->id ?? 'New',
                             'title' => $entity->getName(),
