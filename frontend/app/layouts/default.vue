@@ -57,18 +57,6 @@
               </div>
             </div>
           </template>
-
-          <template #footer="{ collapsed }">
-            <div class="flex w-full flex-col gap-3">
-              <div
-                v-if="!collapsed"
-                class="rounded-md border border-default bg-elevated/70 px-3 py-2 text-xs text-toned"
-              >
-                <span v-if="apiVersion">v{{ apiVersion }}</span>
-                <span v-else>Loading version...</span>
-              </div>
-            </div>
-          </template>
         </UDashboardSidebar>
 
         <UDashboardPanel class="min-w-0 bg-transparent" :ui="dashboardPanelUi">
@@ -198,6 +186,28 @@
               >
                 <NuxtPage />
               </div>
+
+              <footer
+                class="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 px-1 text-xs text-toned"
+              >
+                <NuxtLink
+                  href="https://github.com/arabcoders/watchstate"
+                  target="_blank"
+                  class="font-semibold text-highlighted hover:underline"
+                >
+                  WatchState
+                </NuxtLink>
+                <UTooltip
+                  :text="`Full SHA: ${apiVersionSha ?? 'Unknown'} · Branch: ${apiVersionBranch ?? 'Unknown'}`"
+                >
+                  <span class="cursor-help">
+                    {{ apiVersion ? `v${apiVersion}` : 'Loading version...' }}
+                    · {{ apiVersionDate ?? 'Unknown' }} ·
+                    {{ apiVersionSha ? apiVersionSha.slice(0, 7) : 'Unknown' }} ·
+                    {{ apiVersionBranch ?? 'Unknown' }}
+                  </span>
+                </UTooltip>
+              </footer>
             </div>
 
             <Dialog v-if="hasOpenedDialog" />

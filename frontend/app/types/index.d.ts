@@ -1803,6 +1803,9 @@ export interface SystemReport {
  */
 export interface SystemReportSystem {
   version: string;
+  sha: string;
+  build: string;
+  branch: string;
   php_version: string;
   sapi: string;
   timezone: string;
