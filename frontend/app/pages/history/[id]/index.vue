@@ -1423,28 +1423,47 @@
       <Lazy v-if="data?.via && !isLoading" :min-height="120" @show.once="showRelated">
         <div class="space-y-6">
           <section class="space-y-3">
-            <button
-              type="button"
-              class="flex w-full items-center justify-between gap-3 text-left"
-              @click="toggleRelatedLogs"
-            >
-              <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
+            <div class="flex w-full items-center justify-between gap-3 text-left">
+              <button
+                type="button"
+                class="flex min-w-0 flex-1 items-center gap-2 text-left"
+                @click="toggleRelatedLogs"
+              >
                 <UIcon name="i-lucide-logs" class="size-4 text-toned" />
-                <span>Related Logs</span>
-              </div>
+                <span class="text-sm font-semibold text-highlighted">Related Logs</span>
+              </button>
               <div class="flex items-center gap-2">
+                <UDropdownMenu
+                  v-if="relatedLogsExpanded && relatedLoaded && related.logs.length > 0"
+                  :items="relatedLogCopyMenuItems(related.logs)"
+                  :content="{ align: 'end' }"
+                  :modal="false"
+                >
+                  <UButton
+                    color="neutral"
+                    variant="outline"
+                    size="xs"
+                    icon="i-lucide-copy"
+                    trailing-icon="i-lucide-chevron-down"
+                    @click.stop
+                  >
+                    Copy
+                  </UButton>
+                </UDropdownMenu>
                 <UBadge color="neutral" variant="outline" size="sm">
                   {{ relatedLoaded ? related.logs.length : '?' }}
                 </UBadge>
-                <UIcon
-                  name="i-lucide-chevron-right"
-                  :class="[
-                    'size-4 text-toned transition-transform',
-                    relatedLogsExpanded ? 'rotate-90' : '',
-                  ]"
-                />
+                <button type="button" aria-label="Toggle related logs" @click="toggleRelatedLogs">
+                  <UIcon
+                    name="i-lucide-chevron-right"
+                    :class="[
+                      'size-4 text-toned transition-transform',
+                      relatedLogsExpanded ? 'rotate-90' : '',
+                    ]"
+                  />
+                </button>
               </div>
-            </button>
+            </div>
 
             <div v-if="relatedLogsExpanded">
               <UAlert
@@ -1467,40 +1486,48 @@
               />
               <div v-else-if="relatedLoaded" class="space-y-4">
                 <section v-for="group in relatedLogGroups" :key="group.filename" class="space-y-3">
-                  <button
-                    type="button"
-                    class="flex w-full flex-wrap items-center justify-between gap-3 text-left"
-                    @click="toggleRelatedLog(group.filename)"
-                  >
-                    <div class="flex items-center gap-3">
-                      <span
-                        class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-default bg-elevated/70 text-primary"
-                      >
-                        <UIcon :name="relatedLogTypeIcon(group.filename)" class="size-4" />
-                      </span>
-                      <div class="flex min-w-0 flex-wrap items-baseline gap-x-1">
-                        <span class="text-base font-semibold text-highlighted">
-                          {{ relatedLogTypeName(group.filename) }}
-                        </span>
-                        <NuxtLink
-                          :to="`/logs/${encodeURIComponent(group.filename)}`"
-                          class="min-w-0 truncate text-sm text-toned hover:text-primary"
-                          @click.stop
+                  <div class="flex w-full flex-wrap items-center justify-between gap-3 text-left">
+                    <button
+                      type="button"
+                      class="flex min-w-0 flex-1 flex-wrap items-center gap-3 text-left"
+                      @click="toggleRelatedLog(group.filename)"
+                    >
+                      <div class="flex items-center gap-3">
+                        <span
+                          class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-default bg-elevated/70 text-primary"
                         >
-                          ({{ group.filename }})
-                        </NuxtLink>
+                          <UIcon :name="relatedLogTypeIcon(group.filename)" class="size-4" />
+                        </span>
+                        <div class="flex min-w-0 flex-wrap items-baseline gap-x-1">
+                          <span class="text-base font-semibold text-highlighted">
+                            {{ relatedLogTypeName(group.filename) }}
+                          </span>
+                          <NuxtLink
+                            :to="`/logs/${encodeURIComponent(group.filename)}`"
+                            class="min-w-0 truncate text-sm text-toned hover:text-primary"
+                            @click.stop
+                          >
+                            ({{ group.filename }})
+                          </NuxtLink>
+                        </div>
                       </div>
-                    </div>
+                    </button>
                     <div class="flex items-center gap-2">
-                      <UIcon
-                        name="i-lucide-chevron-right"
-                        :class="[
-                          'size-4 text-toned transition-transform',
-                          isRelatedLogOpen(group.filename) ? 'rotate-90' : '',
-                        ]"
-                      />
+                      <button
+                        type="button"
+                        :aria-label="`Toggle ${relatedLogTypeName(group.filename)} logs`"
+                        @click="toggleRelatedLog(group.filename)"
+                      >
+                        <UIcon
+                          name="i-lucide-chevron-right"
+                          :class="[
+                            'size-4 text-toned transition-transform',
+                            isRelatedLogOpen(group.filename) ? 'rotate-90' : '',
+                          ]"
+                        />
+                      </button>
                     </div>
-                  </button>
+                  </div>
 
                   <div
                     v-if="isRelatedLogOpen(group.filename)"
@@ -2448,6 +2475,32 @@ const relatedLogTypeIcon = (filename: string): string => {
       return 'i-lucide-book-open';
   }
 };
+
+const relatedLogCopyMenuItems = (logs: Array<RelatedHistoryLog>) => [
+  [
+    {
+      label: 'Copy text',
+      icon: 'i-lucide-message-square-text',
+      onSelect: () => {
+        copyText(
+          logs
+            .map(
+              ({ entry }) =>
+                `[${entry.datetime}] ${entry.level.toUpperCase()} [${entry.logger}] ${entry.message}`,
+            )
+            .join('\n'),
+        );
+      },
+    },
+    {
+      label: 'Copy raw',
+      icon: 'i-lucide-braces',
+      onSelect: () => {
+        copyText(logs.map(({ entry }) => JSON.stringify(entry)).join('\n'));
+      },
+    },
+  ],
+];
 
 const isRelatedLogOpen = (filename: string): boolean => openRelatedLogFiles.value[filename] ?? true;
 
