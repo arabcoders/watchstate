@@ -1,5 +1,19 @@
 [
   {
+    "tag": "Untagged",
+    "full_sha": "5ba65c7533548c6a428d4a73ab04f80161ea5fc4",
+    "date": "2026-10-02T18:42:30+00:00",
+    "commits": [
+      {
+        "sha": "5ba65c75",
+        "full_sha": "5ba65c7533548c6a428d4a73ab04f80161ea5fc4",
+        "message": "Update API version display format",
+        "author": "Sean Kelly",
+        "date": "2026-10-02T18:42:30+00:00"
+      }
+    ]
+  },
+  {
     "tag": "v1.10.8",
     "full_sha": "64344dada59dd4db90eaae578a86f5cf47ff9401",
     "date": "2026-10-02T14:36:22+00:00",
