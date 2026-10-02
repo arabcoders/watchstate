@@ -201,7 +201,7 @@
                   :text="`Full SHA: ${apiVersionSha ?? 'Unknown'} · Branch: ${apiVersionBranch ?? 'Unknown'}`"
                 >
                   <span class="cursor-help">
-                    {{ apiVersion ? `v${apiVersion}` : 'Loading version...' }}
+                    {{ apiVersion ? `${apiVersion}` : 'Loading version...' }}
                     · {{ apiVersionDate ?? 'Unknown' }} ·
                     {{ apiVersionSha ? apiVersionSha.slice(0, 7) : 'Unknown' }} ·
                     {{ apiVersionBranch ?? 'Unknown' }}
