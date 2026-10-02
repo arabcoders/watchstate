@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "c0f67ecde78b6a572b9497d6775309f73d6eebc9",
-    "date": "2026-10-01T21:22:51+00:00",
+    "full_sha": "67e865f9151c38dd27b85a0a6802d4be9d9ae2c4",
+    "date": "2026-10-02T14:14:25+00:00",
     "commits": [
+      {
+        "sha": "67e865f9",
+        "full_sha": "67e865f9151c38dd27b85a0a6802d4be9d9ae2c4",
+        "message": "refactor: expose commit sha, build and branch versioning",
+        "author": "arabcoders",
+        "date": "2026-10-02T14:14:25+00:00"
+      },
       {
         "sha": "c0f67ecd",
         "full_sha": "c0f67ecde78b6a572b9497d6775309f73d6eebc9",
