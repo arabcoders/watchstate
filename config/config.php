@@ -321,7 +321,9 @@ return (function () {
 
     $config['clients'] = [
         strtolower(PlexClient::CLIENT_NAME) => [],
-        strtolower(EmbyClient::CLIENT_NAME) => [],
+        strtolower(EmbyClient::CLIENT_NAME) => [
+            'fix_played' => (bool) env('WS_CLIENTS_EMBY_FIX_PLAYED', false),
+        ],
         strtolower(JellyfinClient::CLIENT_NAME) => [
             'fix_played' => (bool) env('WS_CLIENTS_JELLYFIN_FIX_PLAYED', false),
         ],

@@ -605,6 +605,12 @@ return (function () {
             },
         ],
         [
+            'key' => 'WS_CLIENTS_EMBY_FIX_PLAYED',
+            'config' => 'clients.emby.fix_played',
+            'description' => 'Enable partial fix for Emby marking items as played with stale dates.',
+            'type' => 'bool',
+        ],
+        [
             'key' => 'WS_CLIENTS_JELLYFIN_FIX_PLAYED',
             'config' => 'clients.jellyfin.fix_played',
             'description' => 'Enable partial fix for Jellyfin marking items as played.',
