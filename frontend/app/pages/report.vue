@@ -406,23 +406,33 @@
       </section>
 
       <section class="space-y-3">
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 text-left"
-          @click="toggleSection('logs')"
-        >
+        <div class="flex w-full items-center justify-between gap-3 text-left">
           <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
             <UIcon name="i-lucide-scroll-text" class="size-4 text-toned" />
             <span>Recent Logs</span>
           </div>
-          <UIcon
-            name="i-lucide-chevron-right"
-            :class="[
-              'size-4 text-toned transition-transform',
-              isSectionOpen('logs') ? 'rotate-90' : '',
-            ]"
-          />
-        </button>
+          <div class="flex items-center gap-2">
+            <UButton
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              icon="i-lucide-copy"
+              :disabled="totalLogEntries === 0"
+              @click="copyRecentLogs"
+            >
+              Copy
+            </UButton>
+            <button type="button" aria-label="Toggle recent logs" @click="toggleSection('logs')">
+              <UIcon
+                name="i-lucide-chevron-right"
+                :class="[
+                  'size-4 text-toned transition-transform',
+                  isSectionOpen('logs') ? 'rotate-90' : '',
+                ]"
+              />
+            </button>
+          </div>
+        </div>
 
         <div
           v-if="isSectionOpen('logs')"
@@ -587,6 +597,27 @@ const runtimeCards = computed<Array<StatusCard>>(() => {
       color: 'neutral',
     },
     {
+      label: 'Commit SHA',
+      value: sys.sha,
+      hint: 'Build commit.',
+      icon: 'i-lucide-git-commit-horizontal',
+      color: 'neutral',
+    },
+    {
+      label: 'Build date',
+      value: sys.build,
+      hint: 'Build timestamp.',
+      icon: 'i-lucide-calendar',
+      color: 'neutral',
+    },
+    {
+      label: 'Branch',
+      value: sys.branch,
+      hint: 'Build branch.',
+      icon: 'i-lucide-git-branch',
+      color: 'neutral',
+    },
+    {
       label: 'PHP',
       value: `${sys.sapi}/${sys.php_version}`,
       hint: 'Runtime.',
@@ -715,6 +746,9 @@ const shareText = computed(() => {
     '',
     'System Status',
     `- Version: ${r.system.version}`,
+    `- Branch: ${r.system.branch}`,
+    `- Build: ${r.system.build}`,
+    `- SHA: ${r.system.sha}`,
     `- PHP: ${r.system.sapi}/${r.system.php_version}`,
     `- Timezone: ${r.system.timezone}`,
     `- Data path: ${r.system.data_path}`,
@@ -808,6 +842,23 @@ const copyReport = async (): Promise<void> => {
   }
 
   copyText(shareText.value);
+};
+
+const copyRecentLogs = (): void => {
+  const lines: Array<string> = [];
+
+  for (const group of logGroups.value) {
+    lines.push(`---  ${group.type} logs ---`);
+    for (const entry of group.entries) {
+      lines.push(
+        entry.separator
+          ? '.....'
+          : `${entry.datetime} ${entry.level} [${entry.logger}] ${entry.message}`,
+      );
+    }
+  }
+
+  copyText(lines.join('\n'));
 };
 
 onMounted(() => {

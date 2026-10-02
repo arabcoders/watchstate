@@ -99,6 +99,9 @@ class ReportGenerator
 
         return [
             'version' => get_app_version(),
+            'sha' => Config::get('version_sha'),
+            'build' => Config::get('version_build'),
+            'branch' => Config::get('version_branch'),
             'php_version' => PHP_VERSION,
             'sapi' => PHP_SAPI,
             'timezone' => Config::get('tz', 'UTC'),
