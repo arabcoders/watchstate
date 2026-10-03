@@ -7,12 +7,34 @@
           <div
             :class="valueWrap ? 'space-y-1 cursor-help' : 'flex cursor-help items-baseline gap-1.5'"
           >
-            <span class="text-sm font-semibold text-highlighted">{{ value }}</span>
+            <a
+              v-if="valueLink"
+              :href="valueLink"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-sm font-semibold text-highlighted hover:text-primary hover:underline"
+            >
+              {{ value }}
+            </a>
+            <span v-else class="text-sm font-semibold text-highlighted">{{ value }}</span>
             <span v-if="hint" class="truncate text-xs text-toned">{{ hint }}</span>
           </div>
         </UTooltip>
         <div v-else :class="valueWrap ? 'space-y-1' : 'flex items-baseline gap-1.5'">
+          <a
+            v-if="valueLink"
+            :href="valueLink"
+            target="_blank"
+            rel="noopener noreferrer"
+            :class="[
+              'text-sm font-semibold text-highlighted hover:text-primary hover:underline',
+              valueWrap ? 'block wrap-break-word' : '',
+            ]"
+          >
+            {{ value }}
+          </a>
           <span
+            v-else
             :class="[
               'text-sm font-semibold text-highlighted',
               valueWrap ? 'block wrap-break-word' : '',
@@ -47,10 +69,11 @@ const props = withDefaults(
     icon: string;
     hint?: string;
     tooltip?: string;
+    valueLink?: string;
     color?: Color;
     valueWrap?: boolean;
   }>(),
-  { color: 'primary', hint: '', tooltip: '', valueWrap: false },
+  { color: 'primary', hint: '', tooltip: '', valueLink: '', valueWrap: false },
 );
 
 const TILE_BG: Record<Color, string> = {

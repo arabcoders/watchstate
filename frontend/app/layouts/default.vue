@@ -203,7 +203,17 @@
                   <span class="cursor-help">
                     {{ apiVersion ? `${apiVersion}` : 'Loading version...' }}
                     · {{ apiVersionDate ?? 'Unknown' }} ·
-                    {{ apiVersionSha ? apiVersionSha.slice(0, 7) : 'Unknown' }} ·
+                    <NuxtLink
+                      v-if="apiVersionSha"
+                      :href="`https://github.com/arabcoders/watchstate/commit/${apiVersionSha}`"
+                      target="_blank"
+                      class="hover:text-primary hover:underline"
+                      @click.stop
+                    >
+                      {{ apiVersionSha.slice(0, 7) }}
+                    </NuxtLink>
+                    <span v-else>Unknown</span>
+                    ·
                     {{ apiVersionBranch ?? 'Unknown' }}
                   </span>
                 </UTooltip>
@@ -526,7 +536,7 @@ const scheduler = ref<{ status: boolean; message: string; restartable: boolean }
 });
 
 const apiVersion = ref<string | undefined>();
-const apiVersionSha = ref<string | undefined>();
+const apiVersionSha = ref<string>('');
 const apiVersionDate = ref<string | undefined>();
 const apiVersionBranch = ref<string | undefined>();
 const bgImage = ref<{ src: string; type: string }>({ src: '', type: '' });

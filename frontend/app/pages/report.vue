@@ -108,6 +108,7 @@
             :label="item.label"
             :value="item.value"
             :hint="item.hint"
+            :valueLink="item.valueLink"
             :icon="item.icon"
             color="neutral"
             value-wrap
@@ -534,6 +535,7 @@ type StatusCard = {
   hint: string;
   icon: string;
   color: 'success' | 'error' | 'warning' | 'neutral';
+  valueLink?: string;
 };
 
 type ChipInfo = {
@@ -602,6 +604,7 @@ const runtimeCards = computed<Array<StatusCard>>(() => {
       hint: 'Build commit.',
       icon: 'i-lucide-git-commit-horizontal',
       color: 'neutral',
+      valueLink: `https://github.com/arabcoders/watchstate/commit/${sys.sha}`,
     },
     {
       label: 'Build date',
