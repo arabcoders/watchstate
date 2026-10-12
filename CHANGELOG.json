@@ -1,9 +1,23 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "3fc50e30ece46445ce7e4388a226e49bdec48b39",
-    "date": "2026-10-03T15:34:48+00:00",
+    "full_sha": "c42dc007ecc21fb42978563b1347798a74445a0d",
+    "date": "2026-10-12T09:46:00+00:00",
     "commits": [
+      {
+        "sha": "c42dc007",
+        "full_sha": "c42dc007ecc21fb42978563b1347798a74445a0d",
+        "message": "fix: entirely gate DirectMapper progress events.",
+        "author": "arabcoders",
+        "date": "2026-10-12T09:46:00+00:00"
+      },
+      {
+        "sha": "410f0fd0",
+        "full_sha": "410f0fd0a5dc6e5026919229b64788f5a9f54ae7",
+        "message": "fix: fallback for copy diganostics",
+        "author": "arabcoders",
+        "date": "2026-10-12T09:45:18+00:00"
+      },
       {
         "sha": "3fc50e30",
         "full_sha": "3fc50e30ece46445ce7e4388a226e49bdec48b39",
