@@ -1,4 +1,5 @@
 import { reactive, readonly } from 'vue';
+import { useState } from '#app';
 
 export type DialogResult<T = string | null> = { status: boolean; value: T };
 
@@ -66,7 +67,10 @@ export type ConfirmOptions = BaseOptions & {
   cancelText?: string;
 };
 
-export type AlertOptions = BaseOptions & {};
+export type AlertOptions = BaseOptions & {
+  text?: string;
+  selectText?: boolean;
+};
 
 export type QueueItem = {
   type: 'prompt' | 'confirm' | 'alert';

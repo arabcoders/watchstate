@@ -347,36 +347,58 @@ const formatDuration = (milliseconds: number): string => {
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 };
 
-const copyText = (str: string | number, showNotification: boolean = true): void => {
-  if (navigator.clipboard) {
-    navigator.clipboard
-      .writeText(String(str))
-      .then(() => {
-        if (!showNotification) {
-          return;
+const copyText = async (str: string | number, showNotification: boolean = true): Promise<void> => {
+  const text = String(str);
+
+  try {
+    let copied = false;
+
+    if (navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(text);
+        copied = true;
+      } catch {}
+    }
+
+    if (false === copied) {
+      const activeElement = document.activeElement;
+      const el = document.createElement('textarea');
+      el.value = text;
+      el.readOnly = true;
+      el.style.position = 'fixed';
+      el.style.opacity = '0';
+      const parent = activeElement?.closest('[role="dialog"]') ?? document.body;
+      parent.appendChild(el);
+
+      try {
+        el.focus({ preventScroll: true });
+        el.select();
+        if (true !== document.execCommand('copy')) {
+          throw new Error('Failed to copy text to clipboard.');
         }
-        notification('success', 'Success', 'Text copied to clipboard.');
-      })
-      .catch((error) => {
-        console.error('Failed to copy: ', error);
-        if (!showNotification) {
-          return;
+      } finally {
+        el.remove();
+        if (activeElement instanceof HTMLElement) {
+          activeElement.focus({ preventScroll: true });
         }
-        notification('error', 'Error', 'Failed to copy text to clipboard.');
-      });
+      }
+    }
+  } catch (error: unknown) {
+    console.error('Failed to copy: ', error);
+    await useDialog().alertDialog({
+      title: 'Copy manually',
+      message: 'Automatic copying failed. Press Ctrl+C or Cmd+C to copy the selected text.',
+      text,
+      selectText: true,
+      confirmText: 'Close',
+      confirmColor: 'neutral',
+    });
     return;
   }
 
-  const el = document.createElement('textarea');
-  el.value = String(str);
-  document.body.appendChild(el);
-  el.select();
-  document.execCommand('copy');
-  document.body.removeChild(el);
-  if (!showNotification) {
-    return;
+  if (true === showNotification) {
+    notification('success', 'Success', 'Text copied to clipboard.');
   }
-  notification('success', 'Success', 'Text copied to clipboard.');
 };
 
 const makeConsoleCommand = (cmd: string): string => {
