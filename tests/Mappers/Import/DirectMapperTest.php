@@ -14,6 +14,7 @@ use App\Libs\Options;
 use App\Listeners\ProcessProgressEvent;
 use App\Model\Events\EventsRepository;
 use App\Model\Events\EventsTable;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Cache\Adapter\NullAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 
@@ -64,7 +65,7 @@ class DirectMapperTest extends MapperAbstract
         self::assertGreaterThanOrEqual($before, $stored->updated_at);
     }
 
-    public function test_skip_state_no_progress(): void
+    public function test_tainted_progress(): void
     {
         $this->testMovie[iState::COLUMN_WATCHED] = 0;
         $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_META_DATA_PROGRESS] = 100;
@@ -82,7 +83,7 @@ class DirectMapperTest extends MapperAbstract
         $updatedMovie = clone $testMovie;
         $updatedMovie->watched = 0;
         $metadata = $updatedMovie->getMetadata();
-        $metadata[$testMovie->via][iState::COLUMN_META_DATA_PROGRESS] = 150;
+        $metadata[$testMovie->via][iState::COLUMN_META_DATA_PROGRESS] = 120000;
         $updatedMovie->metadata = $metadata;
         $updatedMovie->setIsTainted(true);
 
@@ -98,10 +99,97 @@ class DirectMapperTest extends MapperAbstract
         $stored = $this->mapper->get($updatedMovie);
         $storedProgress = (int) ag($stored->getMetadata($testMovie->via), iState::COLUMN_META_DATA_PROGRESS, 0);
         $this->assertSame(
-            150,
+            120000,
             $storedProgress,
             'Progress should be saved to database when progress event is triggered',
         );
+    }
+
+    #[DataProvider('progressCases')]
+    public function test_progress_minimum(string $mode, int $minimum, bool $expected): void
+    {
+        Config::save('progress.minimum', $minimum);
+        $this->testMovie[iState::COLUMN_WATCHED] = 0;
+        $this->testMovie[iState::COLUMN_UPDATED] = 200;
+        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_WATCHED] = 0;
+        $this->testMovie[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_META_DATA_PROGRESS] = 0;
+        $entity = new StateEntity($this->testMovie);
+
+        if ('new' !== $mode) {
+            $this->db->commit([$entity]);
+            $this->mapper->loadData();
+        }
+
+        $entity = clone $entity;
+        $entity->updated = 'old' === $mode ? 100 : 300;
+        $entity->setMeta(iState::COLUMN_META_DATA_PROGRESS, 1852000);
+        $entity->setIsTainted('tainted' === $mode);
+        $calls = 0;
+
+        $this->mapper->add($entity, [
+            Options::STATE_PROGRESS_EVENT => static function () use (&$calls): void {
+                $calls++;
+            },
+        ]);
+        $this->mapper->commit();
+
+        self::assertSame($expected ? 1 : 0, $calls);
+        self::assertCount(
+            $expected ? 1 : 0,
+            Container::get(EventsRepository::class)->findAll([
+                EventsTable::COLUMN_EVENT => ProcessProgressEvent::NAME,
+            ]),
+        );
+    }
+
+    /**
+     * @return array<string,array{string,int,bool}>
+     */
+    public static function progressCases(): array
+    {
+        $cases = [];
+        foreach (['new', 'old', 'current', 'tainted'] as $mode) {
+            $cases[$mode . '_allowed'] = [$mode, 60000, true];
+            $cases[$mode . '_below'] = [$mode, 43200000, false];
+            $cases[$mode . '_at_minimum'] = [$mode, 1852000, false];
+        }
+
+        return $cases;
+    }
+
+    public function test_minimum_keeps_watched_sync(): void
+    {
+        Config::save('progress.minimum', 43200000);
+        $this->testMovie[iState::COLUMN_WATCHED] = 0;
+        $this->testMovie[iState::COLUMN_UPDATED] = 200;
+        $entity = new StateEntity($this->testMovie);
+        $this->db->commit([$entity]);
+        $this->mapper->loadData();
+
+        $entity = clone $entity;
+        $entity->watched = 1;
+        $entity->updated = 300;
+        $entity->setMeta(iState::COLUMN_WATCHED, 1);
+        $entity->setMeta(iState::COLUMN_META_DATA_PROGRESS, 1852000);
+        $states = 0;
+        $progress = 0;
+
+        $this->mapper->add($entity, [
+            Options::STATE_UPDATE_EVENT => static function () use (&$states): void {
+                $states++;
+            },
+            Options::STATE_PROGRESS_EVENT => static function () use (&$progress): void {
+                $progress++;
+            },
+        ]);
+        $this->mapper->commit();
+
+        self::assertSame(1, $states);
+        self::assertSame(0, $progress);
+        self::assertTrue($this->db->get($entity)->isWatched());
+        self::assertCount(0, Container::get(EventsRepository::class)->findAll([
+            EventsTable::COLUMN_EVENT => ProcessProgressEvent::NAME,
+        ]));
     }
 
     public function test_full_preload_matches_external_row(): void
@@ -195,13 +283,15 @@ class DirectMapperTest extends MapperAbstract
         );
     }
 
-    public function test_watched_progress_replay(): void
+    #[DataProvider('replayCases')]
+    public function test_watched_progress_replay(int $minimum, bool $expected): void
     {
         $threshold = Config::get('progress.threshold');
         $minThreshold = Config::get('progress.minThreshold');
 
         Config::save('progress.threshold', 180);
         Config::save('progress.minThreshold', 180);
+        Config::save('progress.minimum', $minimum);
 
         try {
             $now = time();
@@ -252,24 +342,42 @@ class DirectMapperTest extends MapperAbstract
             $result = $this->mapper->get($updatedMovie);
 
             $this->assertNotNull($result);
-            $this->assertSame(0, $result->watched);
-            $this->assertSame('0', (string) ag($result->getMetadata($updatedMovie->via), iState::COLUMN_WATCHED));
+            $this->assertSame($expected ? 0 : 1, $result->watched);
+            $this->assertSame($expected ? '0' : '1', (string) ag($result->getMetadata($updatedMovie->via), iState::COLUMN_WATCHED));
             $this->assertSame(120000, (int) ag($result->getMetadata($updatedMovie->via), iState::COLUMN_META_DATA_PROGRESS));
             $this->assertSame(0, $stateCalls);
-            $this->assertSame(1, $progressCalls);
-            $this->assertInstanceOf(iState::class, $progressEntity);
-            $this->assertTrue($progressEntity->getContext(Options::REPLAY_PROGRESS, false));
+            $this->assertSame($expected ? 1 : 0, $progressCalls);
+            if (true === $expected) {
+                $this->assertInstanceOf(iState::class, $progressEntity);
+                $this->assertTrue($progressEntity->getContext(Options::REPLAY_PROGRESS, false));
+            } else {
+                $this->assertNull($progressEntity);
+            }
 
             $events = Container::get(EventsRepository::class)->findAll([
                 EventsTable::COLUMN_EVENT => ProcessProgressEvent::NAME,
             ]);
 
-            $this->assertCount(1, $events);
-            $this->assertTrue((bool) ag($events[0]->options, Options::REPLAY_PROGRESS, false));
+            $this->assertCount($expected ? 1 : 0, $events);
+            if (true === $expected) {
+                $this->assertTrue((bool) ag($events[0]->options, Options::REPLAY_PROGRESS, false));
+            }
         } finally {
             Config::save('progress.threshold', $threshold);
             Config::save('progress.minThreshold', $minThreshold);
         }
+    }
+
+    /**
+     * @return array<string,array{int,bool}>
+     */
+    public static function replayCases(): array
+    {
+        return [
+            'allowed' => [60000, true],
+            'below' => [43200000, false],
+            'at_minimum' => [120000, false],
+        ];
     }
 
     /**
