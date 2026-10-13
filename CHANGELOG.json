@@ -1,9 +1,16 @@
 [
   {
     "tag": "Untagged",
-    "full_sha": "c42dc007ecc21fb42978563b1347798a74445a0d",
-    "date": "2026-10-12T09:46:00+00:00",
+    "full_sha": "e70368381f6e1dd750a74d7066fb7190e8d50599",
+    "date": "2026-10-13T01:03:37+00:00",
     "commits": [
+      {
+        "sha": "e7036838",
+        "full_sha": "e70368381f6e1dd750a74d7066fb7190e8d50599",
+        "message": "fix: config value parser for min_progress",
+        "author": "arabcoders",
+        "date": "2026-10-13T01:03:37+00:00"
+      },
       {
         "sha": "c42dc007",
         "full_sha": "c42dc007ecc21fb42978563b1347798a74445a0d",
