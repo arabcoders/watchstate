@@ -23,7 +23,6 @@ use Monolog\Level;
 return (function () {
     $inContainer = in_container();
     $progressTimeCheck = fn(int $v, int $d): int => 0 === $v || $v >= 180 ? $v : $d;
-    $progressToMS = fn(int $v): int => $v < 60 ? $v * 1_000 : 60_000;
     $tokenExpiry = max(1, (int) env('WS_AUTH_TOKEN_EXPIRY', 2 * 24 * 60 * 60));
     $defaultRefreshWindow = max(60, min(24 * 60 * 60, max(60, intdiv($tokenExpiry, 4))));
     $logsPruneAfter = env('WS_LOGS_PRUNE_AFTER', 7);
@@ -153,7 +152,7 @@ return (function () {
             // -- Minimum time to consider item as progress sync-able.
             'minThreshold' => 180,
             // -- Minimum time to consider item as progress sync-able in milliseconds.
-            'minimum' => $progressToMS((int) env('WS_PROGRESS_MINIMUM', 60)),
+            'minimum' => max(60, (int) env('WS_PROGRESS_MINIMUM', 60)) * 1_000,
         ],
     ];
 
