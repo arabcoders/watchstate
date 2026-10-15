@@ -12,6 +12,37 @@ use App\Libs\Options;
 
 class ImportTest extends MediaBrowserTestCase
 {
+    public function test_raw_pages(): void
+    {
+        foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass]) {
+            $http = $this->makeHttpClient(
+                $this->makeResponse(['Items' => [['Id' => 'lib-1', 'Name' => 'Movies', 'CollectionType' => 'movies']]]),
+                $this->makeResponse(['TotalRecordCount' => 3]),
+                $this->makeResponse(['Items' => [['Id' => '501', 'Type' => 'Movie'], ['Id' => '502', 'Type' => 'Movie']]]),
+                $this->makeResponse(['Items' => [['Id' => '503', 'Type' => 'Movie']]]),
+            );
+            $context = $this->makeContext($clientName, [Options::LIBRARY_SEGMENT => 2]);
+            $ids = [];
+
+            $result = (new $actionClass($http, $this->logger))(
+                context: $context,
+                guid: new $guidClass($this->logger),
+                mapper: $context->userContext->mapper,
+                opts: [
+                    Options::RAW_RESPONSE_CALLBACK => static function (array $item, array $logContext = []) use (&$ids): void {
+                        $ids[] = $item['Id'];
+                    },
+                ],
+            );
+
+            self::assertCount(2, $result->response);
+            send_requests($result->response, $http);
+
+            self::assertSame(['501', '502', '503'], $ids);
+            self::assertSame(0, $context->userContext->mapper->commit()['movie']['added']);
+        }
+    }
+
     public function test_import_select_includes(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass]) {

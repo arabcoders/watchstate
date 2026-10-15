@@ -262,13 +262,14 @@ class JellyfinClient implements iClient
     /**
      * @inheritdoc
      */
-    public function pull(iImport $mapper, ?iDate $after = null): array
+    public function pull(iImport $mapper, ?iDate $after = null, array $opts = []): array
     {
         $response = Container::get(Import::class)(
             context: $this->context,
             guid: $this->guid,
             mapper: $mapper,
             after: $after,
+            opts: $opts,
         );
 
         if ($response->hasError()) {

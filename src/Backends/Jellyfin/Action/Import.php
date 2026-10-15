@@ -89,6 +89,8 @@ class Import
         ?iDate $after = null,
         array $opts = [],
     ): Response {
+        $callback = ag($opts, Options::RAW_RESPONSE_CALLBACK);
+
         return $this->tryResponse(
             context: $context,
             fn: fn() => $this->getLibraries(
@@ -96,14 +98,16 @@ class Import
                 handle: fn(array $logContext = []) => fn(iResponse $response, ?iterable $chunks = null) => $this->handle(
                     context: $context,
                     response: $response,
-                    callback: fn(array $item, array $logContext = []) => $this->process(
-                        context: $context,
-                        guid: $guid,
-                        mapper: $mapper,
-                        item: $item,
-                        logContext: $logContext,
-                        opts: $opts + [Options::AFTER => $after],
-                    ),
+                    callback: true === $callback instanceof Closure
+                        ? $callback
+                        : fn(array $item, array $logContext = []) => $this->process(
+                            context: $context,
+                            guid: $guid,
+                            mapper: $mapper,
+                            item: $item,
+                            logContext: $logContext,
+                            opts: $opts + [Options::AFTER => $after],
+                        ),
                     logContext: $logContext,
                     chunks: $chunks,
                 ),

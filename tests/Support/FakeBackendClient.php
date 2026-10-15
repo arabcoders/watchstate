@@ -17,6 +17,7 @@ use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use App\Libs\Uri;
+use Closure;
 use DateTimeInterface as iDate;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Http\Message\StreamInterface as iStream;
@@ -47,6 +48,9 @@ class FakeBackendClient implements ClientInterface
 
     /** @var array<string,array<string,mixed>|Throwable> */
     private static array $metadataResponses = [];
+
+    /** @var array<string,array<int,array<string,mixed>>> */
+    private static array $pullItems = [];
 
     /** @var array<string,Throwable> */
     private static array $exportErrors = [];
@@ -82,6 +86,7 @@ class FakeBackendClient implements ClientInterface
             'libraries' => [],
         ];
         self::$metadataResponses = [];
+        self::$pullItems = [];
         self::$exportErrors = [];
         self::$skipBackupWrites = [];
         self::$queuedExportRequests = [];
@@ -109,6 +114,14 @@ class FakeBackendClient implements ClientInterface
     public static function setExportError(string $user, string $backend, Throwable $error): void
     {
         self::$exportErrors[self::exportKey($user, $backend)] = $error;
+    }
+
+    /**
+     * @param array<int,array<string,mixed>> $items
+     */
+    public static function setPullItems(string $user, string $backend, array $items): void
+    {
+        self::$pullItems[self::exportKey($user, $backend)] = $items;
     }
 
     public static function setSkipBackupWrite(string $user, string $backend, bool $skip = true): void
@@ -190,7 +203,12 @@ class FakeBackendClient implements ClientInterface
         return StateEntity::fromArray($this->makeEntityData());
     }
 
-    public function pull(iImport $mapper, ?iDate $after = null): array
+    /**
+     * @param array<string,mixed> $opts
+     *
+     * @return array<Request>
+     */
+    public function pull(iImport $mapper, ?iDate $after = null, array $opts = []): array
     {
         $context = $this->requireContext();
 
@@ -199,6 +217,12 @@ class FakeBackendClient implements ClientInterface
             'user' => $context->userContext->name,
             'after' => null === $after ? null : $after->getTimestamp(),
         ]);
+
+        if (true === ($callback = $opts[Options::RAW_RESPONSE_CALLBACK] ?? null) instanceof Closure) {
+            foreach (self::$pullItems[self::exportKey($context->userContext->name, $context->backendName)] ?? [] as $item) {
+                $callback($item);
+            }
+        }
 
         return [];
     }

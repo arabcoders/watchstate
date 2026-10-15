@@ -1,10 +1,40 @@
 #!/bin/sh
 set -eu
 
+usage() {
+  echo "usage: pre-commit [--unstaged | --all]" >&2
+  echo "  (no args)  check staged files" >&2
+  echo "  --unstaged check unstaged and untracked files instead" >&2
+  echo "  --all      check all tracked files" >&2
+}
+
 REPO_ROOT=$(git rev-parse --show-toplevel)
 cd "$REPO_ROOT" || exit 1
 
-PIDS_FILE=$(mktemp)
+case "${1:-}" in
+  "")
+    selected_files=$(git diff --cached --name-only --diff-filter=ACMR)
+    mode_label="staged"
+    ;;
+  --unstaged)
+    selected_files=$(git diff --name-only --diff-filter=ACMR)
+    selected_files="$selected_files
+$(git ls-files --others --exclude-standard)"
+    mode_label="unstaged"
+    ;;
+  --all)
+    selected_files=$(git ls-files)
+    mode_label="all"
+    ;;
+  *)
+    usage
+    exit 1
+    ;;
+esac
+
+TMP_ROOT=${TMPDIR:-/tmp}/tests-watchstate
+mkdir -p "$TMP_ROOT"
+PIDS_FILE=$(mktemp "$TMP_ROOT/watchstate-precommit.XXXXXX")
 trap 'rm -f "$PIDS_FILE"' EXIT
 
 export CI=1
@@ -16,7 +46,7 @@ run_step() {
   echo "Starting $label..." >&2
   (
     if ! "$@"; then
-      echo "[$label] failed. Commit aborted." >&2
+      echo "[$label] failed. $mode_label run failed." >&2
       exit 1
     else
       echo "[$label] passed." >&2
@@ -34,8 +64,7 @@ run_extra_dir() {
   done
 }
 
-echo "Running pre-commit checks... ${REPO_ROOT}" >&2
-staged_files=$(git diff --cached --name-only --diff-filter=ACMR)
+echo "Running pre-commit checks ($mode_label)... ${REPO_ROOT}" >&2
 php_changed=0
 frontend_changed=0
 
@@ -56,7 +85,7 @@ while IFS= read -r path; do
       ;;
   esac
 done <<EOF
-$staged_files
+$selected_files
 EOF
 
 if [ "$php_changed" -eq 1 ]; then
@@ -104,7 +133,7 @@ if [ "$frontend_changed" -eq 1 ]; then
 fi
 
 if [ "$checks_started" -eq 0 ]; then
-  echo "No relevant checks for the staged files. Commit allowed."
+  echo "No checks apply to the $mode_label files."
   exit 0
 fi
 
@@ -116,9 +145,9 @@ while read -r pid; do
 done <"$PIDS_FILE"
 
 if [ "$fail" -eq 1 ]; then
-  echo "[X] One or more checks failed. Commit aborted." >&2
+  echo "[X] One or more checks failed. $mode_label run failed." >&2
   exit 1
 fi
 
-echo "All checks passed. Commit allowed."
+echo "All checks passed."
 exit 0
