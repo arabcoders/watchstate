@@ -35,8 +35,10 @@ Please refer to [NEWS](/NEWS.md) for the latest updates and changes.
 * Search your backend metadata.
 * Sync your watch [progress/play](FAQ.md#sync-watch-progress) state via webhooks or scheduled tasks.
 
-If you like my work, you might also like my other project [YTPTube](https://github.com/arabcoders/ytptube), which is
-simple and to the point yt-dlp frontend to help download content from all supported sites by yt-dlp.
+### If you like my work, you might also like my other projects:
+
+* [YTPTube](https://github.com/arabcoders/ytptube): Media download manager, automation interface, and media library preparation layer for yt-dlp.
+* [Millwright](https://github.com/arabcoders/millwright): is a self-hosted automation interface for FFmpeg.
 
 # Install
 
