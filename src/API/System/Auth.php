@@ -443,7 +443,6 @@ final class Auth
             [$type, $value] = explode(' ', $auth, 2);
             $type = strtolower(trim($type));
 
-            // @mago-expect lint:no-insecure-comparison
             if ('token' !== $type) {
                 continue;
             }

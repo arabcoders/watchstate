@@ -84,10 +84,11 @@ interface ClientInterface
      *
      * @param iImport $mapper mapper to use.
      * @param iDate|null $after only import items after this date.
+     * @param array $opts Import options. RAW_RESPONSE_CALLBACK receives each raw item instead of mapping it.
      *
      * @return array<array-key,Request> responses.
      */
-    public function pull(iImport $mapper, ?iDate $after = null): array;
+    public function pull(iImport $mapper, ?iDate $after = null, array $opts = []): array;
 
     /**
      * Backup play state from backend.

@@ -675,7 +675,6 @@ final class IdentityProvisionService
                 }
 
                 try {
-                    /* @mago-expect lint:no-insecure-comparison */
                     if (true === $request->regenerateTokens || 'reuse_or_generate_token' === ag($clientData, 'token')) {
                         $client = ag($backend, 'client_data.class');
                         assert($client instanceof iClient, 'Expected backend client instance.');

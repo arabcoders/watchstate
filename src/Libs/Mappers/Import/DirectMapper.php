@@ -1500,6 +1500,10 @@ class DirectMapper implements ImportInterface
         }
 
         $newPlayProgress = (int) ag($new->getMetadata($new->via), iState::COLUMN_META_DATA_PROGRESS);
+        if ($newPlayProgress <= $this->getProgressMinimum()) {
+            return false;
+        }
+
         $oldPlayProgress = (int) ag($old->getMetadata($new->via), iState::COLUMN_META_DATA_PROGRESS);
         $playChanged = $newPlayProgress > ($oldPlayProgress + 10);
 
@@ -1544,7 +1548,7 @@ class DirectMapper implements ImportInterface
         $newPlayProgress = (int) ag($new->getMetadata($new->via), iState::COLUMN_META_DATA_PROGRESS, 0);
         $oldPlayProgress = (int) ag($old->getMetadata($new->via), iState::COLUMN_META_DATA_PROGRESS, 0);
 
-        if ($newPlayProgress < $this->getProgressMinimum() || $newPlayProgress <= ($oldPlayProgress + 10)) {
+        if ($newPlayProgress <= $this->getProgressMinimum() || $newPlayProgress <= ($oldPlayProgress + 10)) {
             return false;
         }
 

@@ -237,13 +237,14 @@ class EmbyClient implements iClient
     /**
      * @inheritdoc
      */
-    public function pull(iImport $mapper, ?iDate $after = null): array
+    public function pull(iImport $mapper, ?iDate $after = null, array $opts = []): array
     {
         $response = Container::get(Import::class)(
             context: $this->context,
             guid: $this->guid,
             mapper: $mapper,
             after: $after,
+            opts: $opts,
         );
 
         if ($response->hasError()) {
@@ -312,7 +313,7 @@ class EmbyClient implements iClient
         $http = Container::get(iHttp::class);
         assert($http instanceof iHttp, 'Expected HTTP client for push request preparation.');
 
-        $response = (new Push($http, $this->logger))(
+        $response = new Push($http, $this->logger)(
             context: $this->context,
             entities: $entities,
             queue: $queue,
@@ -338,7 +339,7 @@ class EmbyClient implements iClient
         $http = Container::get(iHttp::class);
         assert($http instanceof iHttp, 'Expected HTTP client for progress request preparation.');
 
-        $response = (new Progress($http, $this->logger))(
+        $response = new Progress($http, $this->logger)(
             context: $this->context,
             guid: $this->guid,
             entities: $entities,

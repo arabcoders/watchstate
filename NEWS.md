@@ -1,5 +1,12 @@
 # NEWS
 
+### 2026-07-20
+
+Media Health is now the central place to audit media record problems. It replaces the 
+old separate parity, duplicate-reference, and file-integrity views with one report for backend 
+metadata coverage, GUID conflicts, duplicate GUIDs, duplicate file references, structural metadata disagreement, 
+path disagreement, weak matches, and optional local file checks. See the [Media Health guide](/guides/media-health.md) for details.
+
 ### 2026-05-25
 
 Path matching is now available in v1.8.5+. It lets items match using a GUID source derived from the media path, which helps when your backends share the same media files but have unreliable or inconsistent external IDs. See the [path matching guide](/guides/path-match.md) for setup and backfill instructions.

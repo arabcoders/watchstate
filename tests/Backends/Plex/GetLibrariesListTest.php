@@ -80,7 +80,7 @@ class GetLibrariesListTest extends TestCase
         ]);
 
         $client = new MockHttpClient($resp);
-        $response = (new GetLibrariesList($client, $this->logger))($this->context);
+        $response = new GetLibrariesList($client, $this->logger)($this->context);
 
         $this->assertTrue($response->status);
         $this->assertNull($response->error);
@@ -176,7 +176,7 @@ class GetLibrariesListTest extends TestCase
 
         $resp = new MockResponse(json_encode($payload), ['http_code' => 200]);
         $client = new MockHttpClient($resp);
-        $response = (new GetLibrariesList($client, $this->logger))($this->context);
+        $response = new GetLibrariesList($client, $this->logger)($this->context);
 
         $this->assertTrue($response->status);
         $this->assertCount(2, $response->response);
@@ -198,7 +198,7 @@ class GetLibrariesListTest extends TestCase
 
         $resp = new MockResponse(json_encode($payload), ['http_code' => 200]);
         $client = new MockHttpClient($resp);
-        $response = (new GetLibrariesList($client, $this->logger))($this->context);
+        $response = new GetLibrariesList($client, $this->logger)($this->context);
 
         $this->assertTrue((bool) $response->response[0]['supported']);
         $this->assertTrue((bool) $response->response[1]['supported']);

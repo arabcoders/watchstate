@@ -34,7 +34,7 @@ class StreamTest extends TestCase
         $request = new ServerRequest('GET', new Uri('http://localhost/v1/api/player/stream/' . $token))
             ->withHeader('Range', 'bytes=1-3');
 
-        $response = (new Stream($cache))($request, $token);
+        $response = new Stream($cache)($request, $token);
         $out = '';
 
         new Emitter()
@@ -70,7 +70,7 @@ class StreamTest extends TestCase
         $request = new ServerRequest('GET', new Uri('http://localhost/v1/api/player/stream/' . $token))
             ->withHeader('Range', 'bytes=10-20');
 
-        $response = (new Stream($cache))($request, $token);
+        $response = new Stream($cache)($request, $token);
 
         $this->assertSame(Status::REQUESTED_RANGE_NOT_SATISFIABLE, Status::from($response->getStatusCode()));
         $this->assertSame('bytes */6', $response->getHeaderLine('Content-Range'));

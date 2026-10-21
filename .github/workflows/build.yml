@@ -180,15 +180,11 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Install GitPython
-        if: env.REGISTRY == '' && github.event_name != 'pull_request'
-        run: '"${{ steps.setup-python.outputs.python-path }}" -m pip install gitpython'
-
       - name: Generate CHANGELOG.json
         if: env.REGISTRY == '' && github.event_name != 'pull_request'
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          "${{ steps.setup-python.outputs.python-path }}" .github/scripts/generate_changelog.py -p . -f ./frontend/exported/CHANGELOG.json
+          "${{ steps.setup-python.outputs.python-path }}" .github/scripts/generate_changelog.py --output ./frontend/exported/CHANGELOG.json
 
       - name: Upload frontend build (GitHub)
         if: env.REGISTRY == '' && github.event_name != 'pull_request'

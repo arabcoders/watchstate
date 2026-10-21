@@ -52,23 +52,24 @@ final class OidcService
         $this->cache->set('oidc.pending.' . hash('sha256', $state), compact('nonce', 'verifier'), 300);
 
         return [
-            'url' => $discovery['authorization_endpoint']
-                . '?'
-                . http_build_query(
-                    [
-                        'response_type' => 'code',
-                        'client_id' => $config['client_id'],
-                        'redirect_uri' => $config['redirect_uri'],
-                        'scope' => self::SCOPES,
-                        'state' => $state,
-                        'nonce' => $nonce,
-                        'code_challenge' => $challenge,
-                        'code_challenge_method' => 'S256',
-                    ],
-                    '',
-                    '&',
-                    PHP_QUERY_RFC3986,
-                ),
+            'url' =>
+                $discovery['authorization_endpoint']
+                    . '?'
+                    . http_build_query(
+                        [
+                            'response_type' => 'code',
+                            'client_id' => $config['client_id'],
+                            'redirect_uri' => $config['redirect_uri'],
+                            'scope' => self::SCOPES,
+                            'state' => $state,
+                            'nonce' => $nonce,
+                            'code_challenge' => $challenge,
+                            'code_challenge_method' => 'S256',
+                        ],
+                        '',
+                        '&',
+                        PHP_QUERY_RFC3986,
+                    ),
         ];
     }
 

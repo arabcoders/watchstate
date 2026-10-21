@@ -244,6 +244,29 @@ class ConfigTest extends TestCase
         $this->assertSame(90, Config::get('backup.prune.after'));
     }
 
+    /**
+     * Verify the progress minimum floor without capping larger values.
+     */
+    public function test_progress_env(): void
+    {
+        $previous = $_ENV['WS_PROGRESS_MINIMUM'] ?? null;
+
+        try {
+            foreach ([30 => 60000, 60 => 60000, 43200 => 43200000] as $seconds => $milliseconds) {
+                $_ENV['WS_PROGRESS_MINIMUM'] = (string) $seconds;
+                Config::init(require ROOT_PATH . '/config/config.php');
+
+                self::assertSame($milliseconds, Config::get('progress.minimum'));
+            }
+        } finally {
+            if (null === $previous) {
+                unset($_ENV['WS_PROGRESS_MINIMUM']);
+            } else {
+                $_ENV['WS_PROGRESS_MINIMUM'] = $previous;
+            }
+        }
+    }
+
     public function test_local_net_env(): void
     {
         putenv('WS_TRUST_LOCAL_NET= 10.0.0.0/8, , ::1, 192.168.1.1 ');

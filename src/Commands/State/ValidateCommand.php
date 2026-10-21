@@ -7,12 +7,14 @@ namespace App\Commands\State;
 use App\Command;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
+use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\StreamLogHandler;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
+use App\Libs\Options;
 use App\Libs\Stream;
 use App\Libs\UserContext;
 use Monolog\Level;
@@ -23,6 +25,7 @@ use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 use Throwable;
 
 /**
@@ -37,11 +40,6 @@ class ValidateCommand extends Command
     public const string ROUTE = 'state:validate';
 
     public const string TASK_NAME = 'validate';
-
-    /**
-     * @var array<array-key,array<string,bool>> Store the status of item from backend in-case we have multiple identities.
-     */
-    private array $cache = [];
 
     private const array TO_VERBOSITY = [
         Level::Emergency->value => iOutput::VERBOSITY_SILENT,
@@ -85,6 +83,7 @@ class ValidateCommand extends Command
             ->setName(self::ROUTE)
             ->setDescription('Validate stored backends reference id against the backends.')
             ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select user. Default is all users.')
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
             ->addOption(
                 'logfile',
                 null,
@@ -126,6 +125,12 @@ class ValidateCommand extends Command
             $io = new SymfonyStyle($input, $output->section());
         }
 
+        $dryRun = true === (bool) $input->getOption('dry-run');
+
+        if (true === $dryRun) {
+            $this->output(Level::Notice, 'Dry run mode. No changes will be committed.', ['dry_run' => true], $logIO);
+        }
+
         try {
             $users = array_map(
                 fn(string $user): UserContext => get_user_context($user, $this->mapper, $this->logger),
@@ -159,7 +164,7 @@ class ValidateCommand extends Command
                 $logIO,
             );
 
-            $this->validate($userContext, $io, $logIO);
+            $this->validate($userContext, $io, $logIO, $dryRun);
 
             $this->output(
                 Level::Notice,
@@ -183,7 +188,7 @@ class ValidateCommand extends Command
             $logIO,
         );
 
-        $this->renderStatus($output);
+        $this->renderStatus($output, $dryRun);
 
         return self::SUCCESS;
     }
@@ -192,10 +197,20 @@ class ValidateCommand extends Command
         UserContext $userContext,
         ?SymfonyStyle $progBar = null,
         ?SymfonyStyle $logIO = null,
+        bool $dryRun = false,
     ): void {
         $clients = [];
+        $cache = [];
+        $removeReference = true === $dryRun ? 'Would remove reference ID.' : 'Removing reference ID.';
+        $removeRecord = true === $dryRun ? 'Would remove record.' : 'Removing record.';
 
         foreach ($userContext->config->getAll() as $backend => $config) {
+            unset(
+                $config['options'][Options::IGNORE],
+                $config['options'][Options::LIBRARY_SELECT],
+                $config['options'][Options::LIBRARY_INVERSE],
+            );
+
             $clients[$backend] = make_backend($config, $backend, [UserContext::class => $userContext]);
         }
 
@@ -222,7 +237,7 @@ class ValidateCommand extends Command
                 if (count($item->getMetadata()) < 1) {
                     $this->output(
                         Level::Warning,
-                        "No metadata found for item '{identity.user}: #{id}' Removing record.",
+                        "No metadata found for item '{identity.user}: #{id}' {$removeRecord}",
                         [
                             'id' => $item->id,
                             'identity' => [
@@ -231,7 +246,10 @@ class ValidateCommand extends Command
                         ],
                         $logIO,
                     );
-                    $userContext->db->remove($item);
+                    if (false === $dryRun) {
+                        $userContext->db->remove($item);
+                    }
+
                     $ref['removed']++;
                     continue;
                 }
@@ -274,7 +292,7 @@ class ValidateCommand extends Command
                     if (null === $id) {
                         $this->output(
                             Level::Notice,
-                            "No reference ID found for item '{identity.user}@{identity.backend}: #{id}' Removing reference ID.",
+                            "No reference ID found for item '{identity.user}@{identity.backend}: #{id}' {$removeReference}",
                             [
                                 'id' => $item->id,
                                 'identity' => [
@@ -292,7 +310,7 @@ class ValidateCommand extends Command
                     if (null === ($clients[$backend] ?? null)) {
                         $this->output(
                             Level::Warning,
-                            "'{identity.user}: #{id}' has reference to '{identity.backend}' which doesn't exists. Removing reference ID.",
+                            "'{identity.user}: #{id}' has reference to '{identity.backend}' which doesn't exists. {$removeReference}",
                             [
                                 'id' => $item->id,
                                 'identity' => [
@@ -308,24 +326,37 @@ class ValidateCommand extends Command
 
                     $sub_ref = &$this->perRun[$userContext->name]['backends'][$backend];
 
-                    $cacheKey = $clients[$backend]->getContext()->backendUrl . $id;
-
                     try {
-                        if (isset($this->cache[$cacheKey])) {
-                            $data = $this->cache[$cacheKey];
-                        } else {
-                            $data = $clients[$backend]->getMetadata($id);
-                            $data = !(count($data) < 1);
-                            $this->cache[$cacheKey] = $data;
+                        if (false === isset($cache[$backend])) {
+                            $cache[$backend] = [];
+                            $requests = $clients[$backend]->pull(
+                                mapper: $userContext->mapper,
+                                opts: [
+                                    Options::RAW_RESPONSE_CALLBACK => static function (array $item, array $logContext = []) use (
+                                        &$cache,
+                                        $backend,
+                                    ): void {
+                                        $cache[$backend][(string) ag($item, ['ratingKey', 'Id'])] = true;
+                                    },
+                                ],
+                            );
+
+                            send_requests(
+                                requests: $requests,
+                                client: Container::get(iHttp::class),
+                                logger: $this->logger,
+                            );
                         }
 
-                        if (false === $data) {
+                        if (false === isset($cache[$backend][(string) $id])) {
                             $this->output(
                                 Level::Notice,
-                                "Request for '{identity.user}@{identity.backend}: #{history.id} - {item.id}' didnt return any data. Removing reference ID.",
+                                "Reference '{identity.user}@{identity.backend}: #{history.id} - {item.id}' '{history.title}' was not found in backend libraries. {$removeReference}",
                                 [
-                                    'history' => ['id' => $item->id],
+                                    'history' => ['id' => $item->id, 'title' => $item->getName()],
                                     'item' => ['id' => $id],
+                                    'operation' => 'validate.reference',
+                                    'error' => 'missing_reference',
                                     'identity' => [
                                         'user' => $userContext->name,
                                         'backend' => $backend,
@@ -342,7 +373,7 @@ class ValidateCommand extends Command
                     } catch (Throwable $e) {
                         $this->output(
                             Level::Notice,
-                            "Request for '{identity.user}@{identity.backend}: #{history.id} - {item.id}'. returned with error. {error}. Removing reference ID.",
+                            "Request for '{identity.user}@{identity.backend}: #{history.id} - {item.id}'. returned with error. {error}. {$removeReference}",
                             [
                                 'history' => ['id' => $item->id],
                                 'item' => ['id' => $id],
@@ -355,7 +386,6 @@ class ValidateCommand extends Command
                             $logIO,
                         );
                         $sub_ref['removed']++;
-                        $this->cache[$cacheKey] = false;
                         $item->removeMetadata($backend);
                         continue;
                     }
@@ -364,7 +394,7 @@ class ValidateCommand extends Command
                 if (count($item->metadata) < 1) {
                     $this->output(
                         Level::Notice,
-                        "Item '{identity.user}: #{id}' no longer have any reference ID. Removing record.",
+                        "Item '{identity.user}: #{id}' no longer have any reference ID. {$removeRecord}",
                         [
                             'id' => $item->id,
                             'identity' => [
@@ -375,13 +405,19 @@ class ValidateCommand extends Command
                     );
 
                     $ref['removed']++;
-                    $userContext->db->remove($item);
+                    if (false === $dryRun) {
+                        $userContext->db->remove($item);
+                    }
+
                     continue;
                 }
 
-                if ($item->diff()) {
+                if ($meta !== $item->getMetadata()) {
                     $ref['updated']++;
-                    $userContext->db->update($item);
+
+                    if (false === $dryRun) {
+                        $userContext->db->update($item);
+                    }
                 } else {
                     $ref['no_change']++;
                 }
@@ -422,23 +458,29 @@ class ValidateCommand extends Command
         $this->logger->log($level, $message, $context);
     }
 
-    private function renderStatus(iOutput $output): void
+    private function renderStatus(iOutput $output, bool $dryRun = false): void
     {
         foreach ($this->perRun as $user => $data) {
-            $this->logger->notice("User '{identity.user}' local database, had {u} updated, {r} removed, {n} no change.", [
+            $message = true === $dryRun
+                ? "User '{identity.user}' local database, would have {u} updated, {r} removed, {n} no change."
+                : "User '{identity.user}' local database, had {u} updated, {r} removed, {n} no change.";
+
+            $this->logger->notice($message, [
                 'identity' => [
                     'user' => $user,
                 ],
                 'u' => $data['updated'],
                 'r' => $data['removed'],
                 'n' => $data['no_change'],
+                'dry_run' => $dryRun,
             ]);
 
-            $output->writeln('<info>User: ' . OutputFormatter::escape($user) . '</info>');
+            $output->writeln('<info>User: ' . OutputFormatter::escape($user) . (true === $dryRun ? ' (dry run)' : '') . '</info>');
             foreach ($data['backends'] as $backend => $backendData) {
                 $output->writeln(OutputFormatter::escape('  Backend: ' . $backend));
                 $output->writeln(OutputFormatter::escape('    Reference Found: ' . (string) $backendData['found']));
-                $output->writeln(OutputFormatter::escape('    Reference Removed: ' . (string) $backendData['removed']));
+                $label = true === $dryRun ? '    Reference To Remove: ' : '    Reference Removed: ';
+                $output->writeln(OutputFormatter::escape($label . (string) $backendData['removed']));
             }
 
             $output->writeln('');

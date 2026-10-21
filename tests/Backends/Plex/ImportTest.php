@@ -11,6 +11,43 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 class ImportTest extends PlexTestCase
 {
+    public function test_raw_pages(): void
+    {
+        $http = $this->makeHttpClient(
+            $this->makeResponse([
+                'MediaContainer' => [
+                    'Directory' => [['key' => '1', 'title' => 'Movies', 'type' => 'movie']],
+                ],
+            ]),
+            new MockResponse('', ['http_code' => 200, 'response_headers' => ['X-Plex-Container-Total-Size' => '3']]),
+            $this->makeResponse([
+                'MediaContainer' => [
+                    'Metadata' => [['ratingKey' => '501', 'type' => 'movie'], ['ratingKey' => '502', 'type' => 'movie']],
+                ],
+            ]),
+            $this->makeResponse(['MediaContainer' => ['Metadata' => [['ratingKey' => '503', 'type' => 'movie']]]]),
+        );
+        $context = $this->makeContext([Options::LIBRARY_SEGMENT => 2]);
+        $ids = [];
+
+        $result = new Import($http, $this->logger)(
+            context: $context,
+            guid: new PlexGuid($this->logger),
+            mapper: $context->userContext->mapper,
+            opts: [
+                Options::RAW_RESPONSE_CALLBACK => static function (array $item, array $logContext = []) use (&$ids): void {
+                    $ids[] = $item['ratingKey'];
+                },
+            ],
+        );
+
+        self::assertCount(2, $result->response);
+        send_requests($result->response, $http);
+
+        self::assertSame(['501', '502', '503'], $ids);
+        self::assertSame(0, $context->userContext->mapper->commit()['movie']['added']);
+    }
+
     public function test_import_select_includes(): void
     {
         $sections = ag($this->fixture('sections_get_200'), 'response.body');

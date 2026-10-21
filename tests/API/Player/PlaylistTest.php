@@ -58,7 +58,7 @@ class PlaylistTest extends TestCase
         $cache->set(md5($path . filesize($path)), $ffprobe);
 
         $request = new ServerRequest('GET', new Uri('http://localhost/v1/api/player/playlist/' . $token));
-        $response = (new Playlist($cache, $logger))($request, $token);
+        $response = new Playlist($cache, $logger)($request, $token);
 
         self::assertSame(Status::OK, Status::from($response->getStatusCode()));
 
@@ -118,7 +118,7 @@ class PlaylistTest extends TestCase
         $cache->set(md5($path . filesize($path)), $ffprobe);
 
         $request = new ServerRequest('GET', new Uri('http://localhost/v1/api/player/playlist/' . $token));
-        $response = (new Playlist($cache, $logger))($request, $token);
+        $response = new Playlist($cache, $logger)($request, $token);
 
         self::assertSame(Status::OK, Status::from($response->getStatusCode()));
         self::assertStringContainsString('/' . $token . '/webvtt.x0.m3u8', (string) $response->getBody());

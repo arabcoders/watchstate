@@ -47,14 +47,14 @@ final class IndexTest extends TestCase
 
     public function test_ready(): void
     {
-        $response = (new WebHook())($this->getRequest(method: Method::GET, uri: '/v1/api/webhook'));
+        $response = new WebHook()($this->getRequest(method: Method::GET, uri: '/v1/api/webhook'));
 
         self::assertSame(200, $response->getStatusCode());
     }
 
     public function test_queue(): void
     {
-        $response = (new WebHook())($this->getWebhookRequest('req-1'));
+        $response = new WebHook()($this->getWebhookRequest('req-1'));
 
         self::assertSame(200, $response->getStatusCode());
 
@@ -79,7 +79,7 @@ final class IndexTest extends TestCase
 
     public function test_raw_queue(): void
     {
-        $response = (new WebHook())($this->getWebhookRequest('req-1')->withParsedBody(null));
+        $response = new WebHook()($this->getWebhookRequest('req-1')->withParsedBody(null));
 
         self::assertSame(200, $response->getStatusCode());
 

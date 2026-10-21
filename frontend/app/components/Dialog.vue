@@ -16,6 +16,16 @@
             @keydown.enter.stop.prevent="onEnter"
           />
         </UFormField>
+
+        <UTextarea
+          v-if="undefined !== alertOptions?.text"
+          ref="textEl"
+          :model-value="alertOptions.text"
+          readonly
+          :rows="10"
+          class="w-full"
+          aria-label="Dialog text"
+        />
       </div>
     </template>
 
@@ -63,6 +73,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
+import UTextarea from '@nuxt/ui/components/Textarea.vue';
 import {
   useDialog,
   type AlertOptions,
@@ -86,6 +97,7 @@ const { state, confirm, cancel } = useDialog();
 
 const localInput = ref('');
 const inputEl = ref<InputExpose | null>(null);
+const textEl = ref<{ textareaRef: HTMLTextAreaElement | null } | null>(null);
 
 const modalUi = {
   overlay: 'z-[120]',
@@ -259,6 +271,15 @@ async function focusTarget(): Promise<void> {
   await nextTick();
 
   requestAnimationFrame(() => {
+    if (undefined !== alertOptions.value?.text) {
+      const textarea = textEl.value?.textareaRef;
+      textarea?.focus({ preventScroll: true });
+      if (true === alertOptions.value.selectText) {
+        textarea?.select();
+      }
+      return;
+    }
+
     if (isPrompt.value) {
       inputEl.value?.inputRef?.focus({ preventScroll: true });
       return;

@@ -191,7 +191,7 @@
                 variant="outline"
                 size="sm"
                 icon="i-lucide-search"
-                :to="`https://www.imdb.com/find/?q=${fixTitle(item.title)}`"
+                :to="imdbSearchLink(item.title)"
                 target="_blank"
               >
                 IMDb
@@ -202,7 +202,7 @@
                 variant="outline"
                 size="sm"
                 icon="i-lucide-search"
-                :to="`https://www.themoviedb.org/search?query=${fixTitle(item.title)}`"
+                :to="tmdbSearchLink(item.title)"
                 target="_blank"
               >
                 TMDB
@@ -213,7 +213,7 @@
                 variant="outline"
                 size="sm"
                 icon="i-lucide-search"
-                :to="`https://thetvdb.com/search?query=${fixTitle(item.title)}`"
+                :to="tvdbSearchLink(item.title)"
                 target="_blank"
               >
                 TVDB
@@ -308,4 +308,12 @@ const fixTitle = (title: string): string =>
     .replace(/[[(].*?[\])]/g, '')
     .replace(/-\w+$/, '')
     .trim();
+
+const imdbSearchLink = (title: string): string => `https://www.imdb.com/find/?q=${fixTitle(title)}`;
+
+const tmdbSearchLink = (title: string): string =>
+  `https://www.themoviedb.org/search?query=${fixTitle(title)}`;
+
+const tvdbSearchLink = (title: string): string =>
+  `https://thetvdb.com/search?query=${fixTitle(title)}`;
 </script>

@@ -48,7 +48,7 @@ class GetVersion
         return $this->tryResponse(
             context: $context,
             fn: function () use ($context, $opts) {
-                $info = (new GetInfo($this->http, $this->logger))(context: $context, opts: $opts);
+                $info = new GetInfo($this->http, $this->logger)(context: $context, opts: $opts);
 
                 if (false === $info->status) {
                     return $info;

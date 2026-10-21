@@ -124,7 +124,7 @@
                 <NuxtLink
                   class="block font-medium text-primary underline underline-offset-2"
                   target="_blank"
-                  :to="`https://crontab.guru/#${task.timer.replace(/ /g, '_')}`"
+                  :to="makeCronLink(task.timer)"
                 >
                   {{ cronstrue.toString(task.timer) }}
                 </NuxtLink>
@@ -516,6 +516,8 @@ const queueTask = async (task: TaskItem): Promise<void> => {
     notification('error', 'Error', `Request error. ${message}`);
   }
 };
+
+const makeCronLink = (timer: string): string => `https://crontab.guru/#${timer.replace(/ /g, '_')}`;
 
 const makeEnvLink = (key: string, val: string | null = null): string => {
   const search = new URLSearchParams();
