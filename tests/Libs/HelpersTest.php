@@ -18,7 +18,9 @@ use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\MockHttpClient;
 use App\Libs\Extends\ReflectionContainer;
+use App\Libs\Extends\RetryableHttpClient;
 use App\Libs\TestCase;
+use Generator;
 use JsonMachine\Items;
 use JsonMachine\JsonDecoder\ErrorWrappingDecoder;
 use JsonMachine\JsonDecoder\ExtJsonDecoder;
@@ -30,6 +32,7 @@ use Psr\SimpleCache\CacheInterface;
 use Stringable;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\Yaml\Yaml;
+use Throwable;
 use TypeError;
 
 class HelpersTest extends TestCase
@@ -540,6 +543,45 @@ class HelpersTest extends TestCase
             ],
             $calls,
         );
+    }
+
+    public function test_send_abort(): void
+    {
+        $downloaded = false;
+        $client = new RetryableHttpClient(
+            new MockHttpClient(static function (string $method, string $url) use (&$downloaded): MockResponse {
+                if (str_ends_with($url, '/failed')) {
+                    throw new RuntimeException('request failed');
+                }
+
+                return new MockResponse(
+                    (static function () use (&$downloaded): Generator {
+                        $downloaded = true;
+                        yield 'body';
+                    })(),
+                    ['http_code' => 502],
+                );
+            }),
+            maxRetries: 0,
+        );
+
+        $this->checkException(
+            static fn() => send_requests([
+                new Request(Method::GET, 'https://example.test/pending'),
+                new Request(
+                    method: Method::GET,
+                    url: 'https://example.test/failed',
+                    error: static function (Throwable $e): never {
+                        throw $e;
+                    },
+                ),
+            ], $client),
+            'Expected the request failure, not the pending response error.',
+            RuntimeException::class,
+            'request failed',
+        );
+
+        self::assertFalse($downloaded);
     }
 
     public function test_string_helpers(): void

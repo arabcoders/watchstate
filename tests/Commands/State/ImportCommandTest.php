@@ -17,6 +17,7 @@ use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Extends\RetryableHttpClient;
 use App\Libs\Guid;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\ImportInterface as iImport;
@@ -465,6 +466,44 @@ final class ImportCommandTest extends TestCase
         self::assertSame('import.transaction.end', $transactions[0]->context['operation']);
         self::assertGreaterThanOrEqual(0.0, $transactions[0]->context['duration']);
         self::assertGreaterThanOrEqual(0.0, $transactions[0]->context['max_duration']);
+    }
+
+    public function test_pending_error(): void
+    {
+        $logger = $this->initFakeBackendApp($this->fakeBackendConfig('pending_error'));
+        $tester = $this->makeRequestCommand(
+            $logger,
+            new RetryableHttpClient(
+                new MockHttpClient(
+                    static fn(string $method, string $url): MockResponse => new MockResponse('body', [
+                        'http_code' => str_ends_with($url, '/pending') ? 502 : 200,
+                    ]),
+                ),
+                maxRetries: 0,
+            ),
+            static fn(iImport $mapper): array => [
+                new Request(
+                    method: Method::GET,
+                    url: 'https://example.test/first',
+                    success: static function (): void {
+                        throw new RuntimeException('first page failed');
+                    },
+                ),
+                new Request(method: Method::GET, url: 'https://example.test/pending'),
+            ],
+        );
+
+        $this->checkException(
+            fn(): int => $tester->execute(['--async-requests' => true]),
+            'Expected the original page failure, not the pending response error.',
+            RuntimeException::class,
+            'first page failed',
+        );
+
+        unset($tester);
+        gc_collect_cycles();
+        $saved = Yaml::parseFile((string) Config::get('backends_file'));
+        self::assertSame(1_700_000_000, ag($saved, 'pending_error.import.lastSync'));
     }
 
     public function test_user_page(): void
