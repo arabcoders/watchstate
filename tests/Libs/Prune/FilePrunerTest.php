@@ -22,7 +22,7 @@ final class FilePrunerTest extends TestCase
         touch($file, strtotime('-60 DAYS'));
         Config::save('backup.prune.after', 30);
 
-        (new FilePruner(new NullLogger()))(true);
+        new FilePruner(new NullLogger())(true);
 
         self::assertFileDoesNotExist($file);
     }
@@ -38,7 +38,7 @@ final class FilePrunerTest extends TestCase
         touch($file, strtotime('-10 DAYS'));
         Config::save('logs.prune.after', 8);
 
-        (new FilePruner(new NullLogger()))(true);
+        new FilePruner(new NullLogger())(true);
 
         self::assertFileDoesNotExist($file);
     }

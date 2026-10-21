@@ -24,7 +24,7 @@ class ImportTest extends MediaBrowserTestCase
             $context = $this->makeContext($clientName, [Options::LIBRARY_SEGMENT => 2]);
             $ids = [];
 
-            $result = (new $actionClass($http, $this->logger))(
+            $result = new $actionClass($http, $this->logger)(
                 context: $context,
                 guid: new $guidClass($this->logger),
                 mapper: $context->userContext->mapper,

@@ -1,0 +1,53 @@
+name: Publish commit history
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master, dev]
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: changelog-pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.server_url == 'https://github.com'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Generate commit history
+        run: >-
+          python .github/scripts/generate_changelog.py
+          --ref origin/master
+          --include-ref origin/dev
+          --output "${{ runner.temp }}/changelog/CHANGELOG.json"
+
+      - name: Upload commit history
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ${{ runner.temp }}/changelog
+
+      - name: Publish commit history
+        id: deployment
+        uses: actions/deploy-pages@v5

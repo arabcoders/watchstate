@@ -203,12 +203,13 @@ final class Uri implements UriInterface, Stringable
                 throw new InvalidArgumentException('Password must be a string');
             }
 
-            $info .= ':'
-            . preg_replace_callback(
-                '/[' . self::CHAR_GEN_DELIMS . self::CHAR_SUB_DELIMS . ']++/',
-                static fn(array $match): string => rawurlencode($match[0]),
-                $password,
-            );
+            $info .=
+                ':'
+                . preg_replace_callback(
+                    '/[' . self::CHAR_GEN_DELIMS . self::CHAR_SUB_DELIMS . ']++/',
+                    static fn(array $match): string => rawurlencode($match[0]),
+                    $password,
+                );
         }
 
         if ($this->userInfo === $info) {

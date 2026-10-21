@@ -88,7 +88,7 @@
                   <NuxtLink
                     class="block font-medium text-primary underline underline-offset-2"
                     target="_blank"
-                    :to="`https://crontab.guru/#${pruner.cron.replace(/ /g, '_')}`"
+                    :to="makeCronLink(pruner.cron)"
                   >
                     {{ cronstrue.toString(pruner.cron) }}
                   </NuxtLink>
@@ -272,6 +272,8 @@ const loadContent = async (): Promise<void> => {
 };
 
 onMounted(() => void loadContent());
+
+const makeCronLink = (timer: string): string => `https://crontab.guru/#${timer.replace(/ /g, '_')}`;
 
 const toConsoleCmd = async (pruner: PrunerItem, execute: boolean): Promise<void> => {
   const base = `system:prune --run --prune "${pruner.name}"`;

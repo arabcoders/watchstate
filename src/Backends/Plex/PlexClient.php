@@ -331,7 +331,7 @@ class PlexClient implements iClient
         $http = Container::get(iHttp::class);
         assert($http instanceof iHttp, 'Expected HTTP client for push request preparation.');
 
-        $response = (new Push($http, $this->logger))(
+        $response = new Push($http, $this->logger)(
             context: $this->context,
             entities: $entities,
             queue: $queue,
@@ -357,7 +357,7 @@ class PlexClient implements iClient
         $http = Container::get(iHttp::class);
         assert($http instanceof iHttp, 'Expected HTTP client for progress request preparation.');
 
-        $response = (new Progress($http, $this->logger))(
+        $response = new Progress($http, $this->logger)(
             context: $this->context,
             guid: $this->guid,
             entities: $entities,

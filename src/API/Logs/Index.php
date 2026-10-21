@@ -298,33 +298,31 @@ final class Index
                 $process->start(callback: function ($type, $data) use ($process) {
                     echo "event: data\n";
                     $data = trim((string) $data);
-                    echo
-                        implode(
-                            PHP_EOL,
-                            array_map(
-                                static function ($line) {
-                                    if (!is_string($line)) {
-                                        return null;
-                                    }
-
-                                    $line = trim($line);
-
-                                    if ('' === $line) {
-                                        return null;
-                                    }
-
-                                    $entry = self::decodeJsonlLine($line);
-
-                                    if (null !== $entry) {
-                                        return 'data: ' . json_encode($entry);
-                                    }
-
+                    echo implode(
+                        PHP_EOL,
+                        array_map(
+                            static function ($line) {
+                                if (!is_string($line)) {
                                     return null;
-                                },
-                                (array) preg_split("/\R/", $data),
-                            ),
-                        )
-                    ;
+                                }
+
+                                $line = trim($line);
+
+                                if ('' === $line) {
+                                    return null;
+                                }
+
+                                $entry = self::decodeJsonlLine($line);
+
+                                if (null !== $entry) {
+                                    return 'data: ' . json_encode($entry);
+                                }
+
+                                return null;
+                            },
+                            (array) preg_split("/\R/", $data),
+                        ),
+                    );
                     echo "\n\n";
 
                     flush();

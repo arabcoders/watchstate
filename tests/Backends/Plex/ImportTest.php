@@ -30,7 +30,7 @@ class ImportTest extends PlexTestCase
         $context = $this->makeContext([Options::LIBRARY_SEGMENT => 2]);
         $ids = [];
 
-        $result = (new Import($http, $this->logger))(
+        $result = new Import($http, $this->logger)(
             context: $context,
             guid: new PlexGuid($this->logger),
             mapper: $context->userContext->mapper,
