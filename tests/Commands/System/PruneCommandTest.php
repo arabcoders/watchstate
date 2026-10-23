@@ -140,24 +140,45 @@ final class PruneCommandTest extends TestCase
 
     public function test_run_due(): void
     {
-        TestablePruneCommand::$due = [
-            'events_remover' => true,
-            'logs_remover' => false,
-        ];
-        $cmd = new TestablePruneCommand(self::prunersFixture());
-
-        $status = $cmd->run(new ArrayInput([
-            '--run' => true,
-        ]), new BufferedOutput());
-
-        $this->assertSame(PruneCommand::SUCCESS, $status);
-        $this->assertSame(
+        $pruners = self::prunersFixture();
+        $pruners['events_remover']['cron'] = '13 5 * * *';
+        $cmd = new FixturePruneCommand($pruners);
+        $environment = $_ENV;
+        $windows = [
             [
-                ['always_pruner',  false],
-                ['events_remover', false],
+                '05:05',
+                '05:15',
+                [
+                    ['always_pruner',  false],
+                    ['events_remover', false],
+                    ['logs_remover',   false],
+                ],
             ],
-            self::$calls,
-        );
+            ['05:15', '05:16', [['always_pruner', false]]],
+            [
+                '05:12',
+                '05:13',
+                [
+                    ['always_pruner',  false],
+                    ['events_remover', false],
+                ],
+            ],
+        ];
+
+        try {
+            foreach ($windows as [$from, $to, $expected]) {
+                $_ENV['WS_TASK_SCHEDULE_FROM'] = (string) make_date('2026-10-23 ' . $from)->getTimestamp();
+                $_ENV['WS_TASK_SCHEDULE_TO'] = (string) make_date('2026-10-23 ' . $to)->getTimestamp();
+                self::$calls = [];
+
+                $status = $cmd->run(new ArrayInput(['--run' => true]), new BufferedOutput());
+
+                $this->assertSame(PruneCommand::SUCCESS, $status);
+                $this->assertSame($expected, self::$calls);
+            }
+        } finally {
+            $_ENV = $environment;
+        }
     }
 
     public function test_run_exec(): void
