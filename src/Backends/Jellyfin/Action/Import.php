@@ -89,6 +89,7 @@ class Import
         ?iDate $after = null,
         array $opts = [],
     ): Response {
+        $this->failedSeries = null;
         $callback = ag($opts, Options::RAW_RESPONSE_CALLBACK);
 
         return $this->tryResponse(
@@ -851,12 +852,16 @@ class Import
         array $logContext = [],
         array $opts = [],
     ): void {
+        $this->failedSeries ??= [];
         if (JFC::TYPE_SHOW === ($type = ag($item, 'Type'))) {
             $this->processShow(context: $context, guid: $guid, item: $item, logContext: $logContext);
             return;
         }
 
         $mappedType = JFC::TYPE_MAPPER[$type] ?? $type;
+        $seriesKey = JFC::TYPE_EPISODE === $type
+            ? $context->userContext->name . '@' . $context->backendName . ':' . ag($item, 'SeriesId', '')
+            : '';
 
         try {
             if ($context->trace) {
@@ -939,6 +944,10 @@ class Import
                 );
 
                 Message::increment("{$context->backendName}.{$mappedType}.ignored_no_date_is_set");
+                return;
+            }
+
+            if (!empty($seriesKey) && isset($this->failedSeries[$seriesKey])) {
                 return;
             }
 
