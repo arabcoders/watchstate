@@ -4,14 +4,25 @@ declare(strict_types=1);
 
 namespace Tests\Commands\System;
 
+use App\Commands\System\TasksCommand;
 use App\Commands\System\WorkerCommand;
 use App\Libs\Config;
 use App\Libs\Console\ConsoleExecutionService;
 use App\Libs\Console\ConsoleSessionService;
+use App\Libs\LogSuppressor;
 use App\Libs\TestCase;
+use App\Model\Events\EventsRepository;
+use Monolog\Handler\NullHandler;
+use Monolog\Logger;
 use Psr\Log\NullLogger;
 use ReflectionMethod;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\BufferedOutput;
+use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\Process\Process;
 
@@ -111,6 +122,76 @@ final class WorkerCommandTest extends TestCase
         );
 
         self::assertSame(Command::SUCCESS, $process->wait());
+
+        $now = time();
+        $since = $now - (14 * 60);
+        $timer = make_date($now - (2 * 60))->format('i G') . ' * * *';
+        Config::save('tasks.list', [
+            'missed' => ['name' => 'missed', 'command' => 'test:missed', 'enabled' => true, 'timer' => $timer],
+            'prune' => [
+                'name' => 'prune',
+                'command' => 'system:prune',
+                'enabled' => true,
+                'timer' => make_date($now - (10 * 60))->format('i') . ',' . make_date($now - (5 * 60))->format('i') . ' * * * *',
+            ],
+            'later' => [
+                'name' => 'later',
+                'command' => 'test:later',
+                'enabled' => true,
+                'timer' => make_date($now + (20 * 60))->format('i G') . ' * * *',
+            ],
+        ]);
+        $cache = new Psr16Cache(new ArrayAdapter());
+        $cache->set('tasks.schedule', ['missed' => $since, 'prune' => $since]);
+        $scheduler = new class(
+            $this->createStub(EventsRepository::class),
+            new LogSuppressor([]),
+            $cache,
+            new Logger('test', [new NullHandler()]),
+        ) extends TasksCommand {
+            /** @var array<array<string,mixed>> */
+            public array $calls = [];
+
+            protected function runTask(array $task, InputInterface $input, OutputInterface $output): int
+            {
+                $this->calls[] = $task;
+
+                return self::FAILURE;
+            }
+        };
+        $tester = new CommandTester($scheduler);
+
+        self::assertSame(Command::SUCCESS, $tester->execute(['--run' => true]));
+        self::assertSame(['missed', 'prune'], array_column($scheduler->calls, 'name'));
+        $until = $scheduler->calls[0]['schedule']['to'];
+        self::assertSame(['from' => $since, 'to' => $until], $scheduler->calls[1]['schedule']);
+        self::assertGreaterThanOrEqual($now, $until);
+        self::assertLessThanOrEqual(time(), $until);
+        $checkpoints = $cache->get('tasks.schedule');
+        self::assertSame($until, $checkpoints['missed']);
+        self::assertSame($until, $checkpoints['prune']);
+        self::assertIsInt($checkpoints['later']);
+
+        self::assertSame(Command::SUCCESS, $tester->execute(['--run' => true]));
+        self::assertCount(2, $scheduler->calls);
+        self::assertSame(Command::SUCCESS, $tester->execute(['--run' => true, '--task' => 'missed']));
+        self::assertCount(3, $scheduler->calls);
+        self::assertArrayNotHasKey('schedule', $scheduler->calls[2]);
+        self::assertSame($checkpoints, $cache->get('tasks.schedule'));
+
+        $runProcess = new ReflectionMethod(TasksCommand::class, 'runProcess');
+        $input = new ArrayInput([], $scheduler->getDefinition());
+        $output = new BufferedOutput();
+        $cmd = [
+            escapeshellarg(PHP_BINARY),
+            '-r',
+            escapeshellarg('echo getenv("WS_TASK_SCHEDULE_FROM"), ":", getenv("WS_TASK_SCHEDULE_TO");'),
+            '--',
+        ];
+        self::assertSame(Command::SUCCESS, $runProcess->invoke($scheduler, $cmd, $input, $output, $scheduler->calls[1]));
+        self::assertSame($since . ':' . $until . PHP_EOL, $output->fetch());
+        self::assertSame(Command::SUCCESS, $runProcess->invoke($scheduler, $cmd, $input, $output));
+        self::assertSame(':' . PHP_EOL, $output->fetch());
     }
 
     private function command(): WorkerCommand

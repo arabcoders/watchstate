@@ -1485,6 +1485,7 @@ if (!function_exists('send_requests')) {
     ): void {
         $ok = $opts['ok'] ?? null;
         $error = $opts['error'] ?? null;
+        $responses = [];
 
         $normalize = static function (mixed $result): array {
             if ($result instanceof Request) {
@@ -1602,6 +1603,13 @@ if (!function_exists('send_requests')) {
                     gc_collect_cycles();
                 }
             }
+        } catch (Throwable $e) {
+            // Pending responses must not replace the original failure during destruction.
+            foreach ($responses as $entry) {
+                $entry['response']->cancel();
+            }
+
+            throw $e;
         } finally {
             gc_collect_cycles();
         }

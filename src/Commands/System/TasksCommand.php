@@ -42,7 +42,7 @@ use Throwable;
  * Automates the runs of scheduled tasks.
  */
 #[Cli(command: self::ROUTE)]
-final class TasksCommand extends Command
+class TasksCommand extends Command
 {
     public const string NAME = 'run_task';
     public const string CNAME = 'run_console';
@@ -52,6 +52,8 @@ final class TasksCommand extends Command
 
     public const string CACHE_NAME = 'tasks.running';
     public const string CACHE_TIME = 'PT6H';
+
+    private const string CACHE_SCHEDULE = 'tasks.schedule';
 
     private bool $viaEvent = false;
     private ?DataEvent $dispatchEvent = null;
@@ -294,9 +296,12 @@ final class TasksCommand extends Command
      */
     private function runTasks(iInput $input, iOutput $output): int
     {
+        $scheduledAt = make_date();
+        $until = $scheduledAt->getTimestamp();
         $cacheTTL = new DateInterval(self::CACHE_TIME);
         $run = [];
         $tasks = self::getTasks();
+        $lastRuns = [];
 
         if (null !== ($task = $input->getOption('task'))) {
             $task = strtolower($task);
@@ -312,16 +317,23 @@ final class TasksCommand extends Command
 
             $run[] = ag($tasks, $task);
         } else {
+            $lastRuns = $this->cache->get(self::CACHE_SCHEDULE, []);
+
             foreach ($tasks as $task) {
                 if (false === (bool) ag($task, 'enabled')) {
                     continue;
                 }
 
                 assert($task['timer'] instanceof CronExpression, 'Expected CronExpression for task timer.');
-                if ($task['timer']->isDue('now')) {
+                $since = $lastRuns[$task['name']] ??= $until - (int) $scheduledAt->format('s') - 1;
+
+                if ($since < $task['timer']->getPreviousRunDate($scheduledAt, allowCurrentDate: true)->getTimestamp()) {
+                    $task['schedule'] = ['from' => $since, 'to' => $until];
                     $run[] = $task;
                 }
             }
+
+            $this->cache->set(self::CACHE_SCHEDULE, $lastRuns);
         }
 
         if (count($run) < 1) {
@@ -338,6 +350,11 @@ final class TasksCommand extends Command
         try {
             foreach ($run as $task) {
                 $this->runTask($task, $input, $output);
+
+                if (isset($task['schedule'])) {
+                    $lastRuns[$task['name']] = $until;
+                    $this->cache->set(self::CACHE_SCHEDULE, $lastRuns);
+                }
             }
         } finally {
             $this->cache->delete(self::CACHE_NAME);
@@ -346,7 +363,8 @@ final class TasksCommand extends Command
         return self::SUCCESS;
     }
 
-    private function runTask(array $task, iInput $input, iOutput $output): int
+    /** @param array{name:string,command:string,args?:string,schedule?:array{from:int,to:int}} $task */
+    protected function runTask(array $task, iInput $input, iOutput $output): int
     {
         $cmd = [];
 
@@ -408,7 +426,7 @@ final class TasksCommand extends Command
      * Run a subprocess, routing all output through the logger via CaptureHandler.
      *
      * @param array<string> $cmd
-     * @param array{name: string, command: string, args?: string}|null $task
+     * @param array{name:string,command:string,args?:string,schedule?:array{from:int,to:int}}|null $task
      *
      * @return int Exit code.
      */
@@ -423,7 +441,14 @@ final class TasksCommand extends Command
         $this->logger->pushHandler($capture);
 
         try {
-            $process = Process::fromShellCommandline(implode(' ', $cmd), timeout: null);
+            $process = Process::fromShellCommandline(
+                implode(' ', $cmd),
+                env: [
+                    'WS_TASK_SCHEDULE_FROM' => isset($task['schedule']) ? (string) $task['schedule']['from'] : false,
+                    'WS_TASK_SCHEDULE_TO' => isset($task['schedule']) ? (string) $task['schedule']['to'] : false,
+                ],
+                timeout: null,
+            );
             $started = make_date();
             $hadChildOutput = false;
             $failureMessage = null;

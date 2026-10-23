@@ -195,8 +195,7 @@ final class FilePruner
                 ],
             );
 
-            if (true === $execute) {
-                @unlink($entry->getRealPath());
+            if (true === $execute && true === @unlink($entry->getRealPath())) {
                 $removed++;
             }
         }

@@ -13,7 +13,10 @@ use App\Backends\Jellyfin\Action\GetMetaData as JellyfinGetMetaData;
 use App\Backends\Jellyfin\Action\Import as JellyfinImport;
 use App\Backends\Jellyfin\JellyfinGuid;
 use App\Libs\Container;
+use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Message;
 use App\Libs\Options;
+use Monolog\Level;
 use ReflectionMethod;
 
 class ImportFlowTest extends MediaBrowserTestCase
@@ -127,7 +130,7 @@ class ImportFlowTest extends MediaBrowserTestCase
 
     public function test_import_episode_adds(): void
     {
-        foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass, $metaClass]) {
+        foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass]) {
             $context = $this->makeContext($clientName);
             $mapper = $context->userContext->mapper;
 
@@ -144,19 +147,48 @@ class ImportFlowTest extends MediaBrowserTestCase
                 'ProviderIds' => ['Imdb' => 'tt123'],
             ];
 
-            Container::add($metaClass, fn() => new class($showPayload) {
+            $metadata = new class($showPayload) {
+                public int $calls = 0;
+                public bool $failing = true;
+
                 public function __construct(
                     private array $payload,
                 ) {}
 
                 public function __invoke(\App\Backends\Common\Context $context, string|int $id, array $opts = []): Response
                 {
+                    $this->calls++;
+                    if (true === $this->failing) {
+                        throw new RuntimeException('Series unavailable');
+                    }
+
                     return new Response(status: true, response: $this->payload);
                 }
-            });
+            };
+            Container::getContainer()->add(JellyfinGetMetaData::class, fn() => $metadata, overwrite: true);
 
-            $action = new $actionClass($this->makeHttpClient(), $this->logger);
+            $action = new $actionClass($this->makeHttpClient(
+                $this->makeResponse(['Items' => []]),
+                $this->makeResponse(['Items' => []]),
+            ), $this->logger);
             $guid = new $guidClass($this->logger)->withContext($context);
+            $action($context, $guid, $mapper);
+            $this->handler->clear();
+            Message::reset();
+
+            foreach (['episode-1', 'episode-2'] as $id) {
+                $item['Id'] = $id;
+                $this->invokeProcess($action, $context, $guid, $mapper, $item, ['library' => ['id' => 'lib-2']], []);
+                self::assertFalse(Message::get("{$clientName}.has_errors", false));
+            }
+
+            self::assertSame(1, $metadata->calls);
+            self::assertSame(0, $mapper->commit()['episode']['added']);
+            self::assertCount(1, array_filter($this->handler->getRecords(), static fn($record): bool => Level::Error === $record->level));
+            self::assertFalse($context->cache->has('Series.series-1'));
+
+            $metadata->failing = false;
+            $action($context, $guid, $mapper);
 
             $this->invokeProcess(
                 $action,
@@ -171,6 +203,8 @@ class ImportFlowTest extends MediaBrowserTestCase
             $result = $mapper->commit();
 
             $this->assertSame(1, $result['episode']['added']);
+            self::assertSame(2, $metadata->calls);
+            Message::reset();
         }
     }
 

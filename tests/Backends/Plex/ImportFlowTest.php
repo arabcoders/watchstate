@@ -11,9 +11,12 @@ use App\Backends\Plex\Action\GetMetaData;
 use App\Backends\Plex\Action\Import;
 use App\Backends\Plex\PlexGuid;
 use App\Libs\Container;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\HttpClient;
 use App\Libs\Extends\MockHttpClient;
 use App\Libs\Extends\RetryableHttpClient;
+use App\Libs\Message;
+use Monolog\Level;
 use PHPUnit\Framework\Attributes\DataProvider;
 use ReflectionMethod;
 use ReflectionProperty;
@@ -174,19 +177,48 @@ class ImportFlowTest extends PlexTestCase
             ],
         ];
 
-        Container::add(GetMetaData::class, fn() => new class($showPayload) {
+        $metadata = new class($showPayload) {
+            public int $calls = 0;
+            public bool $failing = true;
+
             public function __construct(
                 private array $payload,
             ) {}
 
             public function __invoke(\App\Backends\Common\Context $context, string|int $id, array $opts = []): Response
             {
+                $this->calls++;
+                if (true === $this->failing) {
+                    throw new RuntimeException('Series unavailable');
+                }
+
                 return new Response(status: true, response: $this->payload);
             }
-        });
+        };
+        Container::add(GetMetaData::class, fn() => $metadata);
 
-        $action = new Import($this->makeHttpClient(), $this->logger);
+        $action = new Import($this->makeHttpClient(
+            $this->makeResponse(['MediaContainer' => ['Directory' => []]]),
+            $this->makeResponse(['MediaContainer' => ['Directory' => []]]),
+        ), $this->logger);
         $guid = new PlexGuid($this->logger)->withContext($context);
+        $action($context, $guid, $mapper);
+        $this->handler->clear();
+        Message::reset();
+
+        foreach (['11', '12'] as $id) {
+            $item['ratingKey'] = $id;
+            $this->invokeProcess($action, $context, $guid, $mapper, $item, ['library' => ['id' => 1]], []);
+            self::assertFalse(Message::get('Plex.has_errors', false));
+        }
+
+        self::assertSame(1, $metadata->calls);
+        self::assertSame(0, $mapper->commit()['episode']['added']);
+        self::assertCount(1, array_filter($this->handler->getRecords(), static fn($record): bool => Level::Error === $record->level));
+        self::assertFalse($context->cache->has('show.show-1'));
+
+        $metadata->failing = false;
+        $action($context, $guid, $mapper);
 
         $this->invokeProcess(
             $action,
@@ -201,6 +233,8 @@ class ImportFlowTest extends PlexTestCase
         $result = $mapper->commit();
 
         $this->assertSame(1, $result['episode']['added']);
+        self::assertSame(2, $metadata->calls);
+        Message::reset();
     }
 
     public function test_import_prefetched_genres(): void

@@ -8,6 +8,7 @@ use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use Cron\CronExpression;
+use DateTimeInterface as iDate;
 use DateTimeZone;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
@@ -124,6 +125,8 @@ class PruneCommand extends Command
 
     protected function runPruners(InputInterface $input, OutputInterface $output): int
     {
+        $until = make_date((int) env('WS_TASK_SCHEDULE_TO', time()));
+        $since = (int) env('WS_TASK_SCHEDULE_FROM', $until->getTimestamp() - (int) $until->format('s') - 1);
         $execute = (bool) $input->getOption('execute');
         $run = [];
         $pruners = $this->resolvePruners($input);
@@ -149,7 +152,7 @@ class PruneCommand extends Command
                 }
 
                 try {
-                    if (false === $this->isPrunerDue($pruner)) {
+                    if (false === $this->isPrunerDue($pruner, $since, $until)) {
                         continue;
                     }
 
@@ -195,13 +198,15 @@ class PruneCommand extends Command
         $this->displayContent($list, $output, $input->hasOption('json') && (bool) $input->getOption('json'));
     }
 
-    protected function isPrunerDue(array $pruner): bool
+    protected function isPrunerDue(array $pruner, int $since, iDate $until): bool
     {
         if (null === ($cron = ag($pruner, 'cron'))) {
             return true;
         }
 
-        return new CronExpression((string) $cron)->isDue('now');
+        return $since < new CronExpression((string) $cron)
+            ->getPreviousRunDate($until, allowCurrentDate: true)
+            ->getTimestamp();
     }
 
     protected function nextRunFor(array $pruner): ?string
