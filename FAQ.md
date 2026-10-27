@@ -619,6 +619,11 @@ from the trusted sources will be granted access without further authentication.
 
 Set `WS_TRUST_LOCAL_NET` to replace these defaults. For example, `10.10.0.0/16, fd00::/8` trusts only the listed IPv4 and IPv6 networks when `WS_TRUST_LOCAL` is enabled.
 
+> [!WARNING]
+> Docker port forwarding can make outside callers appear to come from the bridge gateway. If that address is in
+> `WS_TRUST_LOCAL_NET`, `WS_TRUST_LOCAL` logs them in without a password. Do not enable it on a publicly reachable port
+> unless another access control protects the port.
+
 > [!IMPORTANT]
 > Setting both `WS_TRUST_PROXY` and `WS_TRUST_LOCAL` to true will disable all internal authentication mechanisms.
 > Ensure that your external auth layer is secure and properly configured to prevent unauthorized access. Your entire
