@@ -6,6 +6,7 @@ namespace Tests\fixtures\Commands\System;
 
 use App\Commands\System\PruneCommand;
 use App\Libs\Extends\LogMessageProcessor;
+use DateTimeInterface as iDate;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use Symfony\Component\Console\Input\InputInterface;
@@ -43,7 +44,7 @@ final class TestablePruneCommand extends PruneCommand
         return [] !== self::$paths ? $this->loadPruners(true, self::$paths) : parent::resolvePruners($input);
     }
 
-    protected function isPrunerDue(array $pruner): bool
+    protected function isPrunerDue(array $pruner, int $since, iDate $until): bool
     {
         $name = (string) ag($pruner, 'name', 'unknown');
 

@@ -20,6 +20,7 @@ use App\Libs\Options;
 use App\Libs\PathGuid;
 use Psr\Http\Message\UriInterface as iUri;
 use Psr\SimpleCache\CacheInterface as iCache;
+use Throwable;
 
 /**
  * Trait JellyfinActionTrait
@@ -31,6 +32,9 @@ trait JellyfinActionTrait
     private const string SHOW_CACHE_KEY_PREFIX = JellyfinClient::TYPE_SHOW . '.';
     private const string SHOW_CACHE_KEY_GUIDS = 'guids';
     private const string SHOW_CACHE_KEY_GENRES = 'genres';
+
+    /** @var array<string,true>|null */
+    private ?array $failedSeries = null;
 
     /**
      * Create {@see iState} Object based on given data.
@@ -156,32 +160,39 @@ trait JellyfinActionTrait
             $builder[iState::COLUMN_TITLE] = $metadata[iState::COLUMN_TITLE];
 
             if (null !== $parentId) {
-                $builder[iState::COLUMN_PARENT] = $this->getEpisodeParent(
-                    context: $context,
-                    guid: $guid,
-                    id: $parentId,
-                    opts: $opts,
-                );
+                try {
+                    $builder[iState::COLUMN_PARENT] = $this->getEpisodeParent(
+                        context: $context,
+                        guid: $guid,
+                        id: $parentId,
+                        opts: $opts,
+                    );
 
-                $metadata[iState::COLUMN_PARENT] = $builder[iState::COLUMN_PARENT];
+                    $metadata[iState::COLUMN_PARENT] = $builder[iState::COLUMN_PARENT];
 
-                if (count($metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES]) < 1) {
-                    $showMetadata = $this->getCachedShowMetadata(context: $context, id: $parentId);
+                    if (count($metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES]) < 1) {
+                        $showMetadata = $this->getCachedShowMetadata(context: $context, id: $parentId);
 
-                    if ([] === $showMetadata || false === array_key_exists(self::SHOW_CACHE_KEY_GENRES, $showMetadata)) {
-                        $showMetadata = $this->cacheShowMetadata(
-                            context: $context,
-                            guid: $guid,
-                            item: $this->getItemDetails(context: $context, id: $parentId, opts: $opts),
-                            logContext: $logContext,
+                        if ([] === $showMetadata || false === array_key_exists(self::SHOW_CACHE_KEY_GENRES, $showMetadata)) {
+                            $showMetadata = $this->cacheShowMetadata(
+                                context: $context,
+                                guid: $guid,
+                                item: $this->getItemDetails(context: $context, id: $parentId, opts: $opts),
+                                logContext: $logContext,
+                            );
+                        }
+
+                        $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = ag(
+                            $showMetadata,
+                            self::SHOW_CACHE_KEY_GENRES,
+                            [],
                         );
                     }
-
-                    $metadataExtra[iState::COLUMN_META_DATA_EXTRA_GENRES] = ag(
-                        $showMetadata,
-                        self::SHOW_CACHE_KEY_GENRES,
-                        [],
-                    );
+                } catch (Throwable $e) {
+                    if (null !== $this->failedSeries) {
+                        $this->failedSeries[$context->userContext->name . '@' . $context->backendName . ':' . $parentId] = true;
+                    }
+                    throw $e;
                 }
             }
         }

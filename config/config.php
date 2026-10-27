@@ -362,6 +362,10 @@ return (function () {
             'short_open_tag' => 0,
             'opcache.jit' => 'disabled',
             'opcache.jit_buffer_size' => 0,
+            // PHP CVE 2026-1096(18|19|60)
+            'session.upload_progress.enabled' => 0,
+            'session.use_strict_mode' => 1,
+            // -- End PHP CVE mitigation
             // @TODO: keep jit disabled for now, as it is not stable yet,. and we haven't tested it with frankenphp
             //'opcache.jit' => $inContainer ? 'tracing' : 'disabled',
             //'opcache.jit_buffer_size' => $inContainer ? '128M' : 0,
