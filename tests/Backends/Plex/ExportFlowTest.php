@@ -18,6 +18,28 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 class ExportFlowTest extends PlexTestCase
 {
+    /**
+     * Clear resume progress even when both sides are watched.
+     */
+    public function test_export_cleanup(): void
+    {
+        $context = $this->makeContext();
+        $entity = $this->makeLocalEntity($context, watched: 1, updated: 2000);
+        $mapper = $this->buildMapper($context, $entity);
+        $item = array_replace(
+            ag($this->fixture('library_movie_get_200'), 'response.body.MediaContainer.Metadata.0'),
+            ['ratingKey' => '1', 'viewCount' => 1, 'viewOffset' => 70000, 'addedAt' => 500, 'lastViewedAt' => 1000],
+        );
+        $action = new Export($this->makeCleanupHttp($item), $this->logger);
+        $guid = new PlexGuid($this->logger)->withContext($context);
+        $queue = new QueueRequests();
+
+        $this->invokeProcess($action, $context, $guid, $mapper, $item, ['library' => ['id' => 1]], ['queue' => $queue]);
+
+        $this->assertSame(1, $queue->count());
+        $this->assertSame('/:/scrobble', $queue->getQueue()[0]->url->getPath());
+    }
+
     public function test_export_queues_requests(): void
     {
         $context = $this->makeContext([Options::IGNORE_DATE => true]);

@@ -26,6 +26,7 @@ class GetSessionsTest extends MediaBrowserTestCase
             $this->assertTrue($result->isSuccessful());
             $this->assertCount(1, $result->response['sessions']);
             $this->assertSame('item-1', $result->response['sessions'][0]['item_id']);
+            $this->assertSame($result, $action($context));
         }
     }
 

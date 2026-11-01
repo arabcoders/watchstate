@@ -9,6 +9,7 @@ use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Response;
 use App\Backends\Plex\Action\GetLibrariesList;
 use App\Backends\Plex\Action\GetMetaData;
+use App\Backends\Plex\Action\GetSessions;
 use App\Backends\Plex\Action\GetWebUrl;
 use App\Libs\Config;
 use App\Libs\Container;
@@ -37,6 +38,40 @@ trait PlexActionTrait
         PlexClient::TYPE_MOVIE => iState::TYPE_MOVIE,
         PlexClient::TYPE_EPISODE => iState::TYPE_EPISODE,
     ];
+
+    /**
+     * @return array<int|string,true>|null Null when active playback cannot be checked.
+     */
+    protected function getActiveSessions(Context $context): ?array
+    {
+        try {
+            $response = Container::get(GetSessions::class)($context);
+            if (false === $response->isSuccessful()) {
+                return null;
+            }
+
+            $sessions = [];
+            $configuredUuid = ag($context->options, 'plex_user_uuid');
+            foreach (ag($response->response, 'sessions', []) as $session) {
+                $userId = ag($session, 'user_id');
+                $userUuid = ag($session, 'user_uuid');
+                $matchesId = null !== $context->backendUser && null !== $userId && (string) $context->backendUser === (string) $userId;
+                $matchesUuid = null !== $userUuid && $configuredUuid === $userUuid;
+                // Plex can report the admin ID as 1; unresolved owner sessions are unsafe to clear.
+                $unresolvedOwner = 1 === (int) $userId && (empty($userUuid) || empty($configuredUuid));
+
+                if (false === $matchesId && false === $matchesUuid && false === $unresolvedOwner) {
+                    continue;
+                }
+
+                $sessions[(string) ag($session, 'item_id')] = true;
+            }
+
+            return $sessions;
+        } catch (Throwable) {
+            return null;
+        }
+    }
 
     /**
      * Create {@see StateEntity} Object based on given data.

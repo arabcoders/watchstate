@@ -21,6 +21,9 @@ final class GetSessions
 
     private string $action = 'plex.getSessions';
 
+    /** @var array<string,array{expires:float,response:Response}> */
+    private static array $sessionsCache = [];
+
     /**
      * Class Constructor.
      *
@@ -42,7 +45,13 @@ final class GetSessions
      */
     public function __invoke(Context $context, array $opts = []): Response
     {
-        return $this->tryResponse(
+        $key = $context->userContext->name . '@' . $context->backendName;
+
+        if ([] === $opts && isset(self::$sessionsCache[$key]) && self::$sessionsCache[$key]['expires'] > microtime(true)) {
+            return self::$sessionsCache[$key]['response'];
+        }
+
+        $result = $this->tryResponse(
             context: $context,
             fn: function () use ($context, $opts) {
                 $url = $context->backendUrl->withPath('/status/sessions');
@@ -156,5 +165,11 @@ final class GetSessions
             },
             action: $this->action,
         );
+
+        if ([] === $opts) {
+            self::$sessionsCache[$key] = ['expires' => microtime(true) + 10, 'response' => $result];
+        }
+
+        return $result;
     }
 }

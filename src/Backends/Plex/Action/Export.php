@@ -33,6 +33,13 @@ final class Export extends Import
         array $logContext = [],
         array $opts = [],
     ): void {
+        $logContext['action'] = $this->action;
+        $logContext['identity'] = [
+            'client' => $context->clientName,
+            'backend' => $context->backendName,
+            'user' => $context->userContext->name,
+        ];
+
         $queue = ag($opts, 'queue', static fn() => Container::get(QueueRequests::class));
         $after = ag($opts, 'after', null);
         $library = ag($logContext, 'library.id');
@@ -167,8 +174,9 @@ final class Export extends Import
                 return;
             }
 
-            if ($rItem->watched === $entity->watched) {
-                // NOTE: If Plex ever keeps a non-zero viewOffset on watched items, this skip path is where to add cleanup.
+            $clearProgress = true === $entity->isWatched() && true === $rItem->isWatched() && 0 < (int) ag($item, 'viewOffset', 0);
+
+            if ($rItem->watched === $entity->watched && false === $clearProgress) {
                 if (true === (bool) ag($context->options, Options::DEBUG_TRACE)) {
                     $this->logger->debug(
                         message: "Ignoring '{identity.client}: {identity.backend}' - '{item.title}'. {item.type} play state is identical.",
@@ -194,6 +202,26 @@ final class Export extends Import
                 return;
             }
 
+            if (true === $clearProgress) {
+                $sessions = $this->getActiveSessions($context);
+
+                if (null === $sessions) {
+                    $this->logger->warning(
+                        message: "Not clearing '{identity.user}@{identity.backend}' {item.type} '{item.title}' watched item progress. Active playback could not be checked.",
+                        context: [...$logContext, 'operation' => 'export.skip', 'error' => 'sessions_unavailable'],
+                    );
+                    return;
+                }
+
+                if (true === array_key_exists((string) ag($item, 'ratingKey'), $sessions)) {
+                    $this->logger->notice(
+                        message: "Not clearing '{identity.user}@{identity.backend}' {item.type} '{item.title}' watched item progress. The item has an active playback session.",
+                        context: [...$logContext, 'operation' => 'export.skip', 'error' => 'currently_playing'],
+                    );
+                    return;
+                }
+            }
+
             $url = $context->backendUrl->withPath('/:' . ($entity->isWatched() ? '/scrobble' : '/unscrobble'));
             $url = $url->withQuery(
                 http_build_query(['identifier' => 'com.plexapp.plugins.library', 'key' => $item['ratingKey']]),
@@ -203,7 +231,18 @@ final class Export extends Import
 
             Message::increment("{$context->userContext->name}.{$context->backendName}.export");
 
-            $requestContext = $logContext + ['play_state' => $entity->isWatched() ? 'Played' : 'Unplayed'];
+            $requestContext = $logContext
+            + [
+                'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                'operation' => $clearProgress ? 'export.progress_reset' : 'export.state',
+            ];
+
+            if (true === $clearProgress) {
+                $this->logger->debug(
+                    message: "Queuing request to clear '{identity.user}@{identity.backend}' {item.type} '{item.title}' watched item progress.",
+                    context: $requestContext,
+                );
+            }
 
             if (true === (bool) ag($context->options, Options::DRY_RUN, false)) {
                 $this->logger->notice(

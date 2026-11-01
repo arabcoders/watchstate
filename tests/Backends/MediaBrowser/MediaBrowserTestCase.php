@@ -6,6 +6,7 @@ namespace Tests\Backends\MediaBrowser;
 
 use App\Backends\Common\Cache;
 use App\Backends\Common\Context;
+use App\Backends\Jellyfin\Action\GetSessions;
 use App\Libs\ConfigFile;
 use App\Libs\Container;
 use App\Libs\Database\PDO\PDOAdapter;
@@ -20,6 +21,7 @@ use App\Libs\UserContext;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface;
+use ReflectionProperty;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -34,6 +36,8 @@ abstract class MediaBrowserTestCase extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        new ReflectionProperty(GetSessions::class, 'sessionsCache')->setValue(null, []);
 
         $this->handler = new TestHandler();
         $this->logger = new Logger('test', [$this->handler], [new LogMessageProcessor()]);
