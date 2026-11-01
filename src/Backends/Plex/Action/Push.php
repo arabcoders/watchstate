@@ -8,6 +8,7 @@ use App\Backends\Common\CommonTrait;
 use App\Backends\Common\Context;
 use App\Backends\Common\Request;
 use App\Backends\Common\Response;
+use App\Backends\Plex\PlexActionTrait;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
@@ -22,6 +23,7 @@ use Throwable;
 final class Push
 {
     use CommonTrait;
+    use PlexActionTrait;
 
     private string $action = 'plex.push';
 
@@ -197,9 +199,9 @@ final class Push
                 }
 
                 $isWatched = 0 === (int) ag($json, 'viewCount', 0) ? 0 : 1;
+                $clearProgress = 1 === $isWatched && true === $entity->isWatched() && 0 < (int) ag($json, 'viewOffset', 0);
 
-                if ($entity->watched === $isWatched) {
-                    // NOTE: If Plex ever keeps a non-zero viewOffset on watched items, this skip path is where to add cleanup.
+                if ($entity->watched === $isWatched && false === $clearProgress) {
                     $this->logger->info(
                         message: "Ignoring '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}'. Play state is identical.",
                         context: [
@@ -251,6 +253,26 @@ final class Push
                     }
                 }
 
+                if (true === $clearProgress) {
+                    $sessions = $this->getActiveSessions($context);
+
+                    if (null === $sessions) {
+                        $this->logger->warning(
+                            message: "Not clearing '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' watched item progress. Active playback could not be checked.",
+                            context: [...$logContext, 'operation' => 'push.skip', 'error' => 'sessions_unavailable'],
+                        );
+                        continue;
+                    }
+
+                    if (true === array_key_exists((string) ag($json, 'ratingKey'), $sessions)) {
+                        $this->logger->notice(
+                            message: "Not clearing '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' watched item progress. The item has an active playback session.",
+                            context: [...$logContext, 'operation' => 'push.skip', 'error' => 'currently_playing'],
+                        );
+                        continue;
+                    }
+                }
+
                 $url = $context
                     ->backendUrl
                     ->withPath($entity->isWatched() ? '/:/scrobble' : '/:/unscrobble')
@@ -264,10 +286,16 @@ final class Push
                     );
 
                 $logContext['request']['url'] = $url;
-                $requestContext = $logContext + ['play_state' => $entity->isWatched() ? 'Played' : 'Unplayed'];
+                $requestContext = $logContext
+                + [
+                    'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                    'operation' => $clearProgress ? 'push.progress_reset' : 'push.state',
+                ];
 
                 $this->logger->debug(
-                    message: "Queuing request to change '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' play state to '{play_state}'.",
+                    message: $clearProgress
+                        ? "Queuing request to clear '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' watched item progress."
+                        : "Queuing request to change '{identity.user}@{identity.backend}' {history.type} '#{history.id}: {history.title}' play state to '{play_state}'.",
                     context: $requestContext,
                 );
 

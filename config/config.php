@@ -360,7 +360,7 @@ return (function () {
             'date.timezone' => ag($config, 'tz', 'UTC'),
             'zend.assertions' => -1,
             'short_open_tag' => 0,
-            'opcache.jit' => 'disabled',
+            'opcache.jit' => 'off',
             'opcache.jit_buffer_size' => 0,
             // PHP CVE 2026-1096(18|19|60)
             'session.upload_progress.enabled' => 0,

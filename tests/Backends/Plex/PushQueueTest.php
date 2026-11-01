@@ -16,6 +16,40 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 class PushQueueTest extends PlexTestCase
 {
+    /**
+     * Clear resume progress even when both sides are watched.
+     */
+    public function test_push_cleanup(): void
+    {
+        $item = [
+            'ratingKey' => '1',
+            'type' => 'movie',
+            'title' => 'Test Movie',
+            'viewCount' => 1,
+            'viewOffset' => 70000,
+            'addedAt' => 500,
+            'lastViewedAt' => 1000,
+        ];
+        $context = $this->makeContext();
+        $entity = StateEntity::fromArray([
+            iState::COLUMN_ID => 10,
+            iState::COLUMN_TYPE => iState::TYPE_MOVIE,
+            iState::COLUMN_UPDATED => 2000,
+            iState::COLUMN_WATCHED => 1,
+            iState::COLUMN_VIA => 'Emby',
+            iState::COLUMN_TITLE => 'Test Movie',
+            iState::COLUMN_META_DATA => [$context->backendName => [iState::COLUMN_ID => '1']],
+        ]);
+        $queue = new QueueRequests();
+        $action = new Push($this->makeCleanupHttp($item), $this->logger);
+
+        $result = $action($context, [$entity], $queue);
+
+        $this->assertTrue($result->isSuccessful());
+        $this->assertSame(1, $queue->count());
+        $this->assertSame('/:/scrobble', $queue->getQueue()[0]->url->getPath());
+    }
+
     public function test_push_queues_state_change(): void
     {
         $payload = [

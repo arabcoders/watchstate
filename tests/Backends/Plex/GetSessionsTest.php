@@ -40,6 +40,7 @@ class GetSessionsTest extends PlexTestCase
         $this->assertTrue($result->isSuccessful());
         $this->assertCount(1, $result->response['sessions']);
         $this->assertSame('uuid-1', $result->response['sessions'][0]['user_uuid']);
+        $this->assertSame($result, $action($context));
     }
 
     public function test_get_sessions_empty_response(): void
@@ -53,6 +54,7 @@ class GetSessionsTest extends PlexTestCase
 
         $this->assertFalse($result->isSuccessful());
         $this->assertNotNull($result->error);
+        $this->assertSame($result, $action($context));
     }
 
     public function test_get_sessions_error_status(): void

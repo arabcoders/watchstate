@@ -6,6 +6,7 @@ namespace Tests\Backends\Plex;
 
 use App\Backends\Common\Cache;
 use App\Backends\Common\Context;
+use App\Backends\Plex\Action\GetSessions;
 use App\Libs\ConfigFile;
 use App\Libs\Container;
 use App\Libs\Entity\StateEntity;
@@ -19,6 +20,7 @@ use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
+use ReflectionProperty;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -33,6 +35,8 @@ abstract class PlexTestCase extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        new ReflectionProperty(GetSessions::class, 'sessionsCache')->setValue(null, []);
 
         $this->handler = new TestHandler();
         $this->logger = new Logger('test', [$this->handler]);
@@ -76,6 +80,27 @@ abstract class PlexTestCase extends TestCase
             backendToken: 'token-1',
             options: $options,
         );
+    }
+
+    protected function makeCleanupHttp(array $item): HttpClient
+    {
+        $http = new HttpClient(new MockHttpClient(
+            function (string $method, string $url, array $options) use ($item): MockResponse {
+                $isSessions = '/status/sessions' === parse_url($url, PHP_URL_PATH);
+
+                return new MockResponse(
+                    json_encode(['MediaContainer' => ['Metadata' => $isSessions ? [] : [$item]]]),
+                    [
+                        'http_code' => 200,
+                        'user_data' => $options['user_data'] ?? null,
+                    ],
+                );
+            },
+        ));
+
+        Container::add(GetSessions::class, fn() => new GetSessions($http, $this->logger));
+
+        return $http;
     }
 
     protected function fixture(string $key): array
