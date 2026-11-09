@@ -48,7 +48,7 @@
       color="info"
       variant="soft"
       icon="i-lucide-clock-3"
-      description="Statistics are generated. Reload after a few minutes."
+      description="Statistics are being generated. Reload after a few minutes."
     />
 
     <UAlert
