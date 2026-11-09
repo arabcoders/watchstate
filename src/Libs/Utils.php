@@ -1365,7 +1365,12 @@ if (!function_exists('per_user_cache_adapter')) {
         }
 
         if (true === (defined('IN_TEST_MODE') && true === IN_TEST_MODE)) {
-            return new Psr16Cache(new ArrayAdapter());
+            $service = 'test.user_cache.' . $user;
+            if (false === Container::has($service)) {
+                Container::add($service, new Psr16Cache(new ArrayAdapter()));
+            }
+
+            return Container::get($service);
         }
 
         $ns = get_app_version();

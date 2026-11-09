@@ -134,6 +134,25 @@ final class Index
             $filters[iState::COLUMN_WATCHED] = $data->get(iState::COLUMN_WATCHED);
         }
 
+        if ($data->get('in_progress')) {
+            $where[] = $es(iState::COLUMN_WATCHED) . ' = 0';
+            $where[] = <<<'SQL'
+                EXISTS (
+                    SELECT 1 FROM json_each(metadata) AS progress_metadata
+                    WHERE CASE WHEN progress_metadata.type IN ('object', 'array') THEN
+                        CAST(COALESCE(json_extract(progress_metadata.value, '$.progress'), 0) AS INTEGER) > :progress_minimum
+                        AND (
+                            CAST(:progress_threshold AS INTEGER) >= 1
+                            OR CAST(COALESCE(json_extract(progress_metadata.value, '$.watched'), 0) AS INTEGER) = 0
+                        )
+                    ELSE 0 END
+                )
+                SQL;
+            $params['progress_minimum'] = (int) Config::get('progress.minimum', 60_000);
+            $params['progress_threshold'] = (int) Config::get('progress.threshold', 0);
+            $filters['in_progress'] = $data->get('in_progress');
+        }
+
         if ($data->get(iState::COLUMN_ID)) {
             $where[] = $es(iState::COLUMN_ID) . ' = :' . iState::COLUMN_ID;
             $params[iState::COLUMN_ID] = $data->get(iState::COLUMN_ID);
@@ -453,6 +472,12 @@ final class Index
                     'key' => 'watched',
                     'description' => 'Search using watched status.',
                     'type' => ['0', '1'],
+                ],
+                [
+                    'key' => 'in_progress',
+                    'display' => 'In progress',
+                    'description' => 'Show movies or episodes you have started but not finished.',
+                    'type' => ['1'],
                 ],
                 [
                     'key' => 'via',

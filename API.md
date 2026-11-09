@@ -75,6 +75,9 @@ WatchState HTTP API reference. Examples use the default `/v1/api` prefix.
       - [GET /v1/api/state/backend-report](#get-v1apistatebackend-report)
       - [POST /v1/api/state/backend-report/run](#post-v1apistatebackend-reportrun)
       - [GET /v1/api/state/backend-report/export/{format}](#get-v1apistatebackend-reportexportformat)
+      - [GET /v1/api/state/user-statistics](#get-v1apistateuser-statistics)
+      - [POST /v1/api/state/user-statistics/run](#post-v1apistateuser-statisticsrun)
+      - [GET /v1/api/state/user-statistics/export/{format}](#get-v1apistateuser-statisticsexportformat)
     - [System](#system)
       - [GET /v1/api/system/healthcheck](#get-v1apisystemhealthcheck)
       - [GET /v1/api/system/version](#get-v1apisystemversion)
@@ -1218,6 +1221,7 @@ Searches and paginates the local history database.
   - `sort` (optional, repeatable or array-style) - Sort expressions such as `updated_at:desc`.
 - Filters:
   - `watched`
+  - `in_progress`
   - `id`
   - `via`
   - `year`
@@ -2118,6 +2122,118 @@ Downloads the latest completed backend report for the selected identity.
 - JSON contains the complete selected-identity summary.
 - CSV contains backend, library, and media-type counts.
 - Markdown contains headline and backend counts.
+
+---
+
+#### GET /v1/api/state/user-statistics
+Returns the latest cached user statistics for the selected identity and its queue state.
+
+**Response**:
+```json
+{
+  "report": {
+    "version": 1,
+    "generated_at": 1784520000,
+    "completed_at": 1784520002,
+    "summary": {
+      "movies": {
+        "total": 0,
+        "watched": 0,
+        "in_progress": 0
+      },
+      "episodes": {
+        "total": 2,
+        "watched": 1,
+        "in_progress": 1
+      },
+      "shows": {
+        "total": 1,
+        "started": 1,
+        "in_progress": 1,
+        "fully_watched": 0
+      }
+    },
+    "genres": [
+      {
+        "name": "drama",
+        "movies": 0,
+        "shows": 1,
+        "total": 1
+      }
+    ],
+    "shows": [
+      {
+        "title": "Example Series",
+        "year": null,
+        "total": 2,
+        "watched": 1,
+        "in_progress": 1,
+        "status": "in_progress",
+        "last_played_at": 1784510000,
+        "history_id": 1
+      }
+    ],
+    "in_progress": {
+      "movies": [],
+      "episodes": [
+        {
+          "title": "Example Series",
+          "type": "episode",
+          "year": 2020,
+          "season": 1,
+          "episode": 2,
+          "progress": 123000,
+          "history_id": 2
+        }
+      ]
+    },
+    "recent": [
+      {
+        "title": "Example Series",
+        "type": "episode",
+        "year": 2020,
+        "season": 1,
+        "episode": 1,
+        "played_at": 1784510000,
+        "history_id": 1
+      }
+    ]
+  },
+  "queued": false,
+  "queued_event": null,
+  "stale": false
+}
+```
+
+**Notes**:
+- `report` is `null` until the first successful report completes.
+- `recent` contains up to 20 watched records with recorded play dates.
+
+---
+
+#### POST /v1/api/state/user-statistics/run
+Queues a background task to regenerate user statistics for the selected identity.
+
+**Response**:
+```json
+{
+  "queued": true,
+  "running": false,
+  "event_id": "01J...",
+  "message": "User statistics were queued."
+}
+```
+
+---
+
+#### GET /v1/api/state/user-statistics/export/{format}
+Downloads the latest completed user statistics for the selected identity.
+
+**Path**:
+- `format` is `json` or `markdown`.
+
+**Notes**:
+- Exports ignore WebUI filters and pagination.
 - Returns `404 Not Found` if no completed report exists.
 
 ---

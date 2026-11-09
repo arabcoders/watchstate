@@ -33,6 +33,7 @@ Please refer to [NEWS](/NEWS.md) for the latest updates and changes.
 * Backup your backends play state into `portable` format.
 * Receive [webhook](guides/webhooks.md) events from media backends.
 * Find record issues with [Media Health](guides/media-health.md).
+* View local user statistics and export them as Markdown or JSON.
 * Search your backend metadata.
 * Sync your watch [progress/play](FAQ.md#sync-watch-progress) state via webhooks or scheduled tasks.
 

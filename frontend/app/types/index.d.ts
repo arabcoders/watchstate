@@ -1,3 +1,69 @@
+export interface UserStatisticsCounts {
+  total: number;
+  watched: number;
+  in_progress: number;
+}
+
+export interface UserStatisticsShow extends UserStatisticsCounts {
+  title: string;
+  year: number | null;
+  status: 'not_started' | 'in_progress' | 'fully_watched';
+  last_played_at: number | null;
+  history_id: number;
+}
+
+export type UserStatisticsShowFilter = 'all' | UserStatisticsShow['status'];
+
+export interface UserStatisticsItem {
+  title: string;
+  type: 'movie' | 'episode';
+  year: number | null;
+  season: number | null;
+  episode: number | null;
+  history_id: number;
+}
+
+export interface UserStatisticsProgressItem extends UserStatisticsItem {
+  progress: number;
+}
+
+export interface UserStatisticsReport {
+  version: number;
+  generated_at: number;
+  completed_at: number;
+  summary: {
+    movies: UserStatisticsCounts;
+    episodes: UserStatisticsCounts;
+    shows: {
+      total: number;
+      started: number;
+      in_progress: number;
+      fully_watched: number;
+    };
+  };
+  genres: Array<{ name: string; movies: number; shows: number; total: number }>;
+  shows: Array<UserStatisticsShow>;
+  in_progress: {
+    movies: Array<UserStatisticsProgressItem>;
+    episodes: Array<UserStatisticsProgressItem>;
+  };
+  recent: Array<UserStatisticsItem & { played_at: number }>;
+}
+
+export interface UserStatisticsResponse {
+  report: UserStatisticsReport | null;
+  queued: boolean;
+  queued_event: string | null;
+  stale: boolean;
+}
+
+export interface UserStatisticsRunResponse {
+  queued: boolean;
+  running: boolean;
+  event_id: string;
+  message: string;
+}
+
 /**
  * Common error structure for API responses.
  */

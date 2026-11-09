@@ -548,6 +548,12 @@ const items = ref<Array<HistoryItemWithUIState>>([]);
 const searchable = ref<Array<HistorySearchableField>>([
   { key: 'id', description: 'Search using local history id.', type: 'int' },
   { key: 'watched', description: 'Search using watched status.', type: ['0', '1'] },
+  {
+    key: 'in_progress',
+    display: 'In progress',
+    description: 'Show movies or episodes you have started but not finished.',
+    type: ['1'],
+  },
   { key: 'via', display: 'Backend', description: 'Search using the backend name.', type: 'string' },
   { key: 'year', description: 'Search using the year.', type: 'int' },
   { key: 'type', description: 'Search using the content type.', type: ['movie', 'episode'] },

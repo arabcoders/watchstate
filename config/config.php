@@ -13,6 +13,7 @@ use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
 use App\Commands\State\MediaHealthCommand;
 use App\Commands\State\PlaylistCommand;
+use App\Commands\State\UserStatisticsCommand;
 use App\Commands\State\ValidateCommand;
 use App\Commands\System\PruneCommand;
 use App\Libs\Database\PdoFactory;
@@ -476,6 +477,14 @@ return (function () {
                 'enabled' => (bool) env('WS_CRON_BACKEND_REPORT', true),
                 'timer' => $checkTaskTimer((string) env('WS_CRON_BACKEND_REPORT_AT', '20 5 * * *'), '20 5 * * *'),
                 'args' => env('WS_CRON_BACKEND_REPORT_ARGS', '-v'),
+            ],
+            UserStatisticsCommand::TASK_NAME => [
+                'command' => UserStatisticsCommand::ROUTE,
+                'name' => UserStatisticsCommand::TASK_NAME,
+                'info' => 'Generate local user statistics.',
+                'enabled' => (bool) env('WS_CRON_USER_STATISTICS', true),
+                'timer' => $checkTaskTimer((string) env('WS_CRON_USER_STATISTICS_AT', '40 5 * * *'), '40 5 * * *'),
+                'args' => env('WS_CRON_USER_STATISTICS_ARGS', '-v'),
             ],
             DispatchCommand::TASK_NAME => [
                 'command' => DispatchCommand::ROUTE,
