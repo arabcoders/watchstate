@@ -394,7 +394,7 @@ const loadContent = async (): Promise<void> => {
   historyLoading.value = true;
 
   try {
-    const response = await request('/history?perpage=12', {
+    const response = await request('/history?perpage=10', {
       headers: { 'X-User': selectedUser },
     });
 
