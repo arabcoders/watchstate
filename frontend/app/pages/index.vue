@@ -33,140 +33,14 @@
         description="The database has no recent history records yet."
       />
 
-      <div v-else class="grid gap-4 xl:grid-cols-2">
-        <UCard
-          v-for="item in lastHistory"
-          :key="item.id"
-          class="h-full shadow-sm"
-          :class="item.watched ? 'ring-1 ring-success/20' : ''"
-          :ui="historyCardUi"
-        >
-          <template #header>
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0 flex-1">
-                <div
-                  class="flex min-w-0 items-start gap-2 text-base font-semibold leading-6 text-highlighted"
-                >
-                  <UIcon
-                    :name="'episode' === item.type ? 'i-lucide-tv' : 'i-lucide-film'"
-                    class="mt-0.5 size-4 shrink-0 text-toned"
-                  />
-
-                  <div class="min-w-0 flex-1">
-                    <FloatingImage
-                      v-if="poster_enable"
-                      :image="`/history/${item.id}/images/poster`"
-                    >
-                      <UTooltip
-                        :text="String(item.full_title || makeName(item as unknown as JsonObject))"
-                      >
-                        <ULink
-                          :to="`/history/${item.id}`"
-                          class="block truncate text-highlighted hover:text-primary"
-                        >
-                          {{ item.full_title || makeName(item as unknown as JsonObject) }}
-                        </ULink>
-                      </UTooltip>
-                    </FloatingImage>
-
-                    <UTooltip
-                      v-else
-                      :text="String(item.full_title || makeName(item as unknown as JsonObject))"
-                    >
-                      <ULink
-                        :to="`/history/${item.id}`"
-                        class="block truncate text-highlighted hover:text-primary"
-                      >
-                        {{ item.full_title || makeName(item as unknown as JsonObject) }}
-                      </ULink>
-                    </UTooltip>
-                  </div>
-                </div>
-              </div>
-
-              <div class="flex shrink-0 items-center gap-2">
-                <Popover
-                  v-if="(item.duplicate_reference_ids?.length ?? 0) > 0"
-                  placement="top"
-                  :trigger="duplicatePopoverTrigger"
-                  :show-delay="200"
-                  :hide-delay="200"
-                  :offset="8"
-                  content-class="p-0"
-                >
-                  <template #trigger>
-                    <UBadge color="warning" variant="soft" class="cursor-pointer font-medium">
-                      <span class="inline-flex items-center gap-1">
-                        <UIcon name="i-lucide-layers-3" class="size-3.5" />
-                        <span>{{ item.duplicate_reference_ids?.length }}</span>
-                      </span>
-                    </UBadge>
-                  </template>
-
-                  <template #content>
-                    <DuplicateRecordList :ids="item.duplicate_reference_ids ?? []" />
-                  </template>
-                </Popover>
-              </div>
-            </div>
-          </template>
-
-          <div
-            :class="['grid grid-cols-2 gap-3', item.progress ? 'xl:grid-cols-4' : 'xl:grid-cols-3']"
-          >
-            <div
-              v-if="item.updated_at"
-              class="flex items-center justify-center gap-2 rounded-md border border-default bg-elevated/40 px-3 py-2 text-center text-sm font-medium text-default"
-            >
-              <UIcon name="i-lucide-calendar" class="size-4 shrink-0 text-toned" />
-              <UTooltip
-                :text="`Record updated at: ${moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`"
-              >
-                <span class="cursor-help">{{ moment.unix(item.updated_at).fromNow() }}</span>
-              </UTooltip>
-            </div>
-
-            <div
-              class="flex items-center justify-center gap-2 rounded-md border border-default bg-elevated/40 px-3 py-2 text-center text-sm font-medium text-default"
-            >
-              <UIcon name="i-lucide-server" class="size-4 shrink-0 text-toned" />
-              <div>
-                <NuxtLink :to="`/backend/${item.via}`" class="hover:text-primary">{{
-                  item.via
-                }}</NuxtLink>
-                <UTooltip
-                  v-if="item.metadata && Object.keys(item.metadata).length > 1"
-                  :text="`Also reported by: ${Object.keys(item.metadata)
-                    .filter((backend) => backend !== item.via)
-                    .join(', ')}.`"
-                >
-                  <span class="ml-1 cursor-help text-toned">
-                    (+{{ Object.keys(item.metadata).length - 1 }})
-                  </span>
-                </UTooltip>
-              </div>
-            </div>
-
-            <div
-              :class="[
-                'flex items-center justify-center gap-2 rounded-md border border-default bg-elevated/40 px-3 py-2 text-center text-sm font-medium text-default',
-                item.updated_at && !item.progress ? 'col-span-2 xl:col-span-1' : '',
-              ]"
-            >
-              <UIcon name="i-lucide-mail" class="size-4 shrink-0 text-toned" />
-              <span>{{ item.event }}</span>
-            </div>
-
-            <div
-              v-if="item.progress"
-              class="flex items-center justify-center gap-2 rounded-md border border-default bg-elevated/40 px-3 py-2 text-center text-sm font-medium text-default"
-            >
-              <UIcon name="i-lucide-gauge" class="size-4 shrink-0 text-toned" />
-              <span>{{ formatDuration(item.progress as number) }}</span>
-            </div>
-          </div>
-        </UCard>
-      </div>
+      <RecentHistoryCards
+        v-else
+        :key="apiUser"
+        :items="recentCards"
+        :user="apiUser"
+        :poster-enable="posterEnable"
+        aria-label="Recent history titles"
+      />
     </section>
 
     <section v-if="logs.length > 0" class="space-y-4">
@@ -329,29 +203,26 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import { useHead, useRoute } from '#app';
-import { useBreakpoints, useStorage } from '@vueuse/core';
-import { NuxtLink } from '#components';
+import { useStorage } from '@vueuse/core';
+import { NuxtLink, UAlert, UButton, UDropdownMenu, UIcon, UModal, UTooltip } from '#components';
 import moment from 'moment';
 import EventView from '~/components/EventView.vue';
-import FloatingImage from '~/components/FloatingImage.vue';
 import PageHeader from '~/components/PageHeader.vue';
+import RecentHistoryCards from '~/components/RecentHistoryCards.vue';
 import StructuredLogLine from '~/components/StructuredLogLine.vue';
 import LogDetailsModal from '~/components/LogDetailsModal.vue';
-import Popover from '~/components/Popover.vue';
-import DuplicateRecordList from '~/components/DuplicateRecordList.vue';
 import {
   copyText,
-  formatDuration,
   makeEventName,
-  makeName,
+  notification,
   parse_api_response,
   request,
   ucFirst,
   TOOLTIP_DATE_FORMAT,
 } from '~/utils';
-import type { HistoryItem, JsonObject, LogEntry, ServerJsonLogEntry } from '~/types';
+import type { HistoryItem, LogEntry, RecentHistoryCard, ServerJsonLogEntry } from '~/types';
 import { normalizeStructuredEntry } from '~/utils/logs';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 
@@ -368,12 +239,26 @@ useHead({ title: 'Index' });
 
 const route = useRoute();
 const pageShell = requireTopLevelPageShell('home');
-const poster_enable = useStorage('poster_enable', true);
+const apiUser = useStorage<string>('api_user', 'main');
+const posterEnable = useStorage<boolean>('poster_enable', true);
 const autoReloadLogs = useStorage<boolean>('auto_reload_logs', true);
 const logWrap = useStorage<Record<string, boolean>>('index_logs_wrap', {});
-const breakpoints = useBreakpoints({ mobile: 0, desktop: 640 });
 
-const lastHistory = ref<Array<HistoryItem>>([]);
+const lastHistory = shallowRef<Array<HistoryItem>>([]);
+const recentCards = computed<Array<RecentHistoryCard>>(() =>
+  lastHistory.value.map((item) => ({
+    history_id: item.id,
+    type: 'episode' === item.type ? 'episode' : 'movie',
+    title: item.title,
+    year: item.year ?? null,
+    season: item.season ?? null,
+    episode: item.episode ?? null,
+    timestamp: item.updated_at || null,
+    timestampTooltip: `Record updated at: ${moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT.value)}`,
+    progress: Number(item.progress ?? 0),
+    watched: item.watched,
+  })),
+);
 const logs = ref<Array<IndexLogFile>>([]);
 const reloadingLogs = ref<boolean>(false);
 const historyLoading = ref<boolean>(true);
@@ -490,16 +375,6 @@ const getCopyMenuItems = (log: IndexLogFile) => [
   ],
 ];
 
-const duplicatePopoverTrigger = computed<'click' | 'hover'>(() =>
-  'mobile' === breakpoints.active().value ? 'click' : 'hover',
-);
-
-const historyCardUi = {
-  header: 'p-4 sm:p-5',
-  body: 'px-4 pb-4 pt-0 sm:px-5 sm:pb-5',
-  footer: 'px-4 pb-4 pt-0 sm:px-5 sm:pb-5',
-};
-
 const logTypeIcon = (type: string): string => {
   switch (type) {
     case 'access':
@@ -513,49 +388,15 @@ const logTypeIcon = (type: string): string => {
   }
 };
 
-const checkDuplicates = async (
-  historyItems: Array<HistoryItem>,
-  loadToken: number,
-): Promise<void> => {
-  await Promise.allSettled(
-    historyItems.map(async (item) => {
-      if ((item.duplicate_reference_ids?.length ?? 0) > 0) {
-        return;
-      }
-
-      const duplicatesResponse = await request(`/history/${item.id}/duplicates`);
-      if (!duplicatesResponse.ok) {
-        return;
-      }
-
-      const duplicatePayload = await parse_api_response<{
-        duplicate_reference_ids: Array<number>;
-      }>(duplicatesResponse);
-
-      if ('error' in duplicatePayload || 'index' !== route.name || loadToken !== historyLoadToken) {
-        return;
-      }
-
-      for (const entry of lastHistory.value) {
-        if (entry.id !== item.id) {
-          continue;
-        }
-
-        entry.duplicate_reference_ids = duplicatePayload.duplicate_reference_ids;
-        break;
-      }
-    }),
-  );
-};
-
 const loadContent = async (): Promise<void> => {
   const loadToken = ++historyLoadToken;
+  const selectedUser = apiUser.value;
+  historyLoading.value = true;
 
   try {
-    const response = await request('/history?perpage=4');
-    if (!response.ok) {
-      return;
-    }
+    const response = await request('/history?perpage=12', {
+      headers: { 'X-User': selectedUser },
+    });
 
     const historyResponse = await parse_api_response<{
       history: Array<HistoryItem>;
@@ -564,31 +405,39 @@ const loadContent = async (): Promise<void> => {
       perpage: number;
     }>(response);
 
-    if ('error' in historyResponse || 'index' !== route.name) {
+    if (
+      'index' !== route.name ||
+      loadToken !== historyLoadToken ||
+      selectedUser !== apiUser.value
+    ) {
       return;
     }
 
-    const historyItems = historyResponse.history;
-
-    for (const item of historyItems) {
-      item.duplicate_reference_ids = item.duplicate_reference_ids ?? [];
+    if ('error' in historyResponse) {
+      throw new Error(`${historyResponse.error.code}: ${historyResponse.error.message}`);
     }
 
-    lastHistory.value = historyItems;
+    if (false === response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
 
-    historyLoading.value = false;
-    await nextTick();
-
-    window.setTimeout(() => {
-      if ('index' !== route.name || loadToken !== historyLoadToken) {
-        return;
-      }
-
-      void checkDuplicates(historyItems, loadToken);
-    }, 0);
-  } catch {
+    lastHistory.value = historyResponse.history;
+  } catch (cause: unknown) {
+    if (
+      'index' === route.name &&
+      loadToken === historyLoadToken &&
+      selectedUser === apiUser.value
+    ) {
+      notification(
+        'error',
+        'Recent History',
+        cause instanceof Error ? cause.message : String(cause),
+      );
+    }
   } finally {
-    historyLoading.value = false;
+    if (loadToken === historyLoadToken && selectedUser === apiUser.value) {
+      historyLoading.value = false;
+    }
   }
 };
 
@@ -676,6 +525,15 @@ watch(detailsOpen, (open) => {
     selectedLog.value = null;
   }
 });
+
+watch(
+  apiUser,
+  () => {
+    lastHistory.value = [];
+    void loadContent();
+  },
+  { flush: 'sync' },
+);
 
 onBeforeUnmount(() => stopLogsAutoReload());
 </script>

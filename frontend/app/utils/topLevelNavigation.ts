@@ -11,6 +11,7 @@ type TopLevelEntryId =
   | 'home'
   | 'backends'
   | 'history'
+  | 'user-statistics'
   | 'events'
   | 'transport-queue'
   | 'tasks'
@@ -103,6 +104,16 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     icon: 'i-lucide-history',
     to: '/history',
     matchPath: '/history',
+  },
+  {
+    id: 'user-statistics',
+    section: 'activity',
+    label: 'User Statistics',
+    pageLabel: 'User Statistics',
+    description: 'Your watch journey.',
+    icon: 'i-lucide-chart-no-axes-combined',
+    to: '/user_statistics',
+    matchPath: '/user_statistics',
   },
   {
     id: 'events',

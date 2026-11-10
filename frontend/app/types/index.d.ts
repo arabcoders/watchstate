@@ -1,3 +1,82 @@
+export interface UserStatisticsCounts {
+  total: number;
+  watched: number;
+  in_progress: number;
+}
+
+export interface UserStatisticsShow extends UserStatisticsCounts {
+  title: string;
+  year: number | null;
+  status: 'not_started' | 'in_progress' | 'fully_watched';
+  last_played_at: number | null;
+  history_id: number;
+}
+
+export type UserStatisticsShowFilter = 'all' | UserStatisticsShow['status'];
+
+export interface UserStatisticsItem {
+  title: string;
+  type: 'movie' | 'episode';
+  year: number | null;
+  season: number | null;
+  episode: number | null;
+  history_id: number;
+}
+
+export interface UserStatisticsProgressItem extends UserStatisticsItem {
+  progress: number;
+}
+
+export interface RecentHistoryCard extends UserStatisticsItem {
+  timestamp: number | null;
+  timestampTooltip: string;
+  progress?: number;
+  watched?: boolean;
+}
+
+export interface RecentHistoryCardsProps {
+  items: Array<RecentHistoryCard>;
+  user: string;
+  posterEnable: boolean;
+}
+
+export interface UserStatisticsReport {
+  version: number;
+  generated_at: number;
+  completed_at: number;
+  summary: {
+    movies: UserStatisticsCounts;
+    episodes: UserStatisticsCounts;
+    shows: {
+      total: number;
+      started: number;
+      in_progress: number;
+      fully_watched: number;
+    };
+  };
+  genres: Array<{ name: string; movies: number; shows: number; total: number }>;
+  shows: Array<UserStatisticsShow>;
+  in_progress: {
+    movies: Array<UserStatisticsProgressItem>;
+    episodes: Array<UserStatisticsProgressItem>;
+  };
+  recent: Array<UserStatisticsItem & { played_at: number }>;
+}
+
+export interface UserStatisticsResponse {
+  report: UserStatisticsReport | null;
+  queued: boolean;
+  queued_event: string | null;
+  stale: boolean;
+}
+
+export interface UserStatisticsRunResponse {
+  queued: boolean;
+  running: boolean;
+  event_id: string;
+  message: string;
+}
+
 /**
  * Common error structure for API responses.
  */
@@ -1140,6 +1219,73 @@ export interface HistoryItem {
   files?: Array<MediaFile>;
   /** IDs of records referencing the same content path */
   duplicate_reference_ids?: Array<number>;
+}
+
+export type HistoryListItem = Omit<
+  HistoryItem,
+  'metadata' | 'extra' | 'files' | 'parent' | 'rguids'
+> & {
+  metadata?: Record<string, { via?: string }>;
+  extra?: Record<string, unknown>;
+  files?: Array<unknown>;
+  parent?: Record<string, string>;
+  rguids?: Record<string, string>;
+  full_title?: string;
+  showRawData?: boolean;
+  expand_title?: boolean;
+  expand_path?: boolean;
+};
+
+export interface HistoryViewProps {
+  items: Array<HistoryListItem>;
+  selectedIds: Array<number>;
+  posterEnable: boolean;
+  user: string;
+}
+
+export interface HistorySearchableField {
+  key: string;
+  display?: string;
+  description?: string;
+  type?: string | Array<string>;
+}
+
+export interface HistorySearchFilter {
+  id: number;
+  field: string;
+  value: string;
+}
+
+export type HistoryFilterQuery = Record<string, string | Array<string>>;
+export type HistoryExportFilters = Record<string, string | number | Array<string>>;
+
+export interface HistoryFilterOptions {
+  genres: Array<string>;
+  libraries: Array<{ value: string; label: string }>;
+}
+
+export interface HistoryFiltersProps {
+  query: HistoryFilterQuery;
+  searchable: Array<HistorySearchableField>;
+  options: HistoryFilterOptions;
+  loading: boolean;
+}
+
+export interface HistoryExportChoice {
+  scope: 'matching' | 'selected';
+  group: 'records' | 'titles';
+  format: 'json' | 'markdown';
+}
+
+export interface HistoryExportModalProps {
+  open: boolean;
+  matchingCount: number;
+  selectedCount: number;
+  matchingEnabled: boolean;
+  selectedEnabled: boolean;
+  exporting: boolean;
+  pageFilterActive: boolean;
+  blocked: boolean;
 }
 
 /**
