@@ -231,11 +231,83 @@ final class WorkflowTest extends TestCase
         self::assertSame(404, $this->export(['filters' => []], 'csv')->getStatusCode());
     }
 
+    public function test_choice_limit(): void
+    {
+        foreach (['genres' => 'drama', 'library' => 'alpha://1'] as $field => $value) {
+            foreach ([101, 980] as $count) {
+                $filters = [$field => array_fill(0, $count, $value)];
+
+                foreach ([
+                    $this->api->list($this->getRequest(query: $filters)),
+                    $this->export(['filters' => $filters, 'group' => 'records']),
+                ] as $response) {
+                    self::assertSame(400, $response->getStatusCode());
+                    $payload = json_decode((string) $response->getBody(), true, flags: JSON_THROW_ON_ERROR);
+                    self::assertSame("History filter '{$field}' accepts at most 100 choices.", $payload['error']['message']);
+                }
+            }
+        }
+    }
+
+    public function test_choice_boundary(): void
+    {
+        $this->record('Drama', ['alpha' => ['library' => '1', 'extra' => ['genres' => ['drama']]]]);
+
+        foreach ([0, 1, 100] as $count) {
+            $filters = [
+                'genres' => array_fill(0, $count, 'drama'),
+                'library' => array_fill(0, $count, 'alpha://1'),
+            ];
+            $list = $this->json($this->api->list($this->getRequest(query: $filters)));
+            $export = $this->json($this->export(['filters' => $filters, 'group' => 'records']));
+
+            self::assertSame(1, $list['paging']['total']);
+            self::assertSame(1, $export['count']);
+            self::assertSame('Drama', $export['items'][0]['title']);
+        }
+    }
+
+    /** @param array<string,mixed> $filters */
+    #[DataProvider('invalid_strings')]
+    public function test_string_types(array $filters): void
+    {
+        self::assertSame(400, $this->api->list($this->getRequest(query: $filters))->getStatusCode());
+        $request = $this->getRequest(
+            method: 'POST',
+            headers: ['Content-Type' => 'application/json'],
+            body: Stream::create(json_encode(['filters' => $filters, 'group' => 'records'], JSON_THROW_ON_ERROR)),
+        );
+        $response = new ParseJsonBodyMiddleware()->process(
+            $request,
+            $this->getHandler(fn(iRequest $parsed): iResponse => $this->api->export($parsed, 'json', $this->exporter)),
+        );
+
+        self::assertSame(400, $response->getStatusCode());
+    }
+
+    /** @return iterable<string,array{array<string,mixed>}> */
+    public static function invalid_strings(): iterable
+    {
+        foreach (['rguid', 'parent', 'guids', 'metadata', 'extra'] as $field) {
+            foreach ([123, 1.5, true, false] as $index => $value) {
+                $filters = in_array($field, ['metadata', 'extra'], true)
+                    ? [$field => 1, 'key' => $value, 'value' => 'x']
+                    : [$field => $value];
+
+                yield $field . ':' . $index => [$filters];
+            }
+        }
+    }
+
     public function test_json_body(): void
     {
-        $id = $this->record('Selected');
+        $id = $this->record('Selected', ['alpha' => ['id' => 123]]);
         $stream = Stream::make('php://temp', 'w+b');
-        $stream->write(json_encode(['filters' => ['title' => 'Selected'], 'ids' => [$id], 'group' => 'records'], JSON_THROW_ON_ERROR));
+        $stream->write(json_encode([
+            'filters' => ['title' => 'Selected', 'metadata' => true, 'key' => 'alpha.id', 'value' => 123],
+            'ids' => [$id],
+            'group' => 'records',
+        ], JSON_THROW_ON_ERROR));
         $stream->rewind();
         $request = $this->getRequest(method: 'POST', headers: ['Content-Type' => 'application/json'], body: $stream);
         $response = new ParseJsonBodyMiddleware()->process(

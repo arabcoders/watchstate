@@ -1240,8 +1240,8 @@ Searches and paginates the local history database.
   - `extra` with companion `key`, `value`, and optional `exact`
   - `path`
   - `subtitle`
-  - `genres` (string or array; array values match any selected genre)
-  - `library` (string or array of `backend://libraryID` values)
+  - `genres` (string or array of up to 100 choices; array values match any selected genre)
+  - `library` (string or array of up to 100 `backend://libraryID` values)
 
 **Response**:
 ```json

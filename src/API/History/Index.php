@@ -45,6 +45,9 @@ final class Index
 {
     private const float IMAGE_TIMEOUT_SECONDS = 10.0;
 
+    // Keep combined genre/library predicates below SQLite's expression-depth limit.
+    private const int MAX_FILTER_CHOICES = 100;
+
     use APITraits;
 
     /**
@@ -84,11 +87,25 @@ final class Index
                 if (false === is_string($value) && false === is_array($value) && null !== $value) {
                     return api_error('Invalid history filter.', Status::BAD_REQUEST);
                 }
-                if (is_array($value) && false === array_is_list($value)) {
-                    return api_error('History filter choices must be lists.', Status::BAD_REQUEST);
+                if (is_array($value)) {
+                    if (false === array_is_list($value)) {
+                        return api_error('History filter choices must be lists.', Status::BAD_REQUEST);
+                    }
+                    if (in_array($key, ['genres', 'library'], true) && self::MAX_FILTER_CHOICES < count($value)) {
+                        return api_error(r("History filter '{filter}' accepts at most {limit} choices.", [
+                            'filter' => $key,
+                            'limit' => self::MAX_FILTER_CHOICES,
+                        ]), Status::BAD_REQUEST);
+                    }
+                    if (false === array_all($value, static fn(mixed $choice): bool => is_string($choice))) {
+                        return api_error('Invalid history filter choice.', Status::BAD_REQUEST);
+                    }
                 }
-                if (is_array($value) && false === array_all($value, static fn(mixed $choice): bool => is_string($choice))) {
-                    return api_error('Invalid history filter choice.', Status::BAD_REQUEST);
+            } elseif (in_array($key, ['rguid', 'parent', 'guids', 'key'], true)) {
+                if (null !== $value && false === is_string($value)) {
+                    return api_error(r("History filter '{filter}' must be a string.", [
+                        'filter' => $key,
+                    ]), Status::BAD_REQUEST);
                 }
             } elseif (false === is_scalar($value) && null !== $value) {
                 return api_error('Invalid history filter.', Status::BAD_REQUEST);
