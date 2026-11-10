@@ -3,15 +3,35 @@
     ref="target"
     class="relative aspect-2/3 overflow-hidden rounded-md bg-elevated ring-1 ring-inset ring-default"
   >
-    <img
+    <UPopover
       v-if="url"
-      :src="url"
-      :alt="title"
-      loading="lazy"
-      decoding="async"
-      class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-      @error="imageError"
-    />
+      mode="hover"
+      :open-delay="400"
+      :close-delay="100"
+      :content="{ side: 'right', sideOffset: 12, collisionPadding: 12 }"
+      :ui="{
+        content: 'w-auto overflow-hidden rounded-md border border-default bg-default p-1 shadow-xl',
+      }"
+    >
+      <img
+        :src="url"
+        :alt="title"
+        loading="lazy"
+        decoding="async"
+        class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+        @error="imageError"
+      />
+
+      <template #content>
+        <img
+          :src="url"
+          :alt="title"
+          decoding="async"
+          class="block max-h-[75vh] w-72 max-w-[70vw] rounded-sm object-contain"
+          @error="imageError"
+        />
+      </template>
+    </UPopover>
     <div
       v-else
       class="flex h-full flex-col items-center justify-center gap-2 p-3 text-center text-dimmed"
@@ -28,7 +48,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref } from 'vue';
 import { useIntersectionObserver } from '@vueuse/core';
-import { UIcon } from '#components';
+import { UIcon, UPopover } from '#components';
 import { request } from '~/utils';
 import { useSessionCache } from '~/utils/cache';
 

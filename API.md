@@ -46,6 +46,8 @@ WatchState HTTP API reference. Examples use the default `/v1/api` prefix.
       - [DELETE /v1/api/backend/{name}/ignore](#delete-v1apibackendnameignore)
     - [History](#history)
       - [GET /v1/api/history](#get-v1apihistory)
+      - [GET /v1/api/history/options](#get-v1apihistoryoptions)
+      - [POST /v1/api/history/export/{format}](#post-v1apihistoryexportformat)
       - [GET /v1/api/history/{id}](#get-v1apihistoryid)
       - [GET /v1/api/history/{id}/duplicates](#get-v1apihistoryidduplicates)
       - [DELETE /v1/api/history/{id}](#delete-v1apihistoryid)
@@ -1222,9 +1224,11 @@ Searches and paginates the local history database.
 - Filters:
   - `watched`
   - `in_progress`
+  - `status` (`watched`, `in_progress`, or `not_started`)
   - `id`
   - `via`
   - `year`
+  - `year_min`, `year_max` (inclusive)
   - `type` (`movie` or `episode`)
   - `title`
   - `season`
@@ -1236,7 +1240,8 @@ Searches and paginates the local history database.
   - `extra` with companion `key`, `value`, and optional `exact`
   - `path`
   - `subtitle`
-  - `genres`
+  - `genres` (string or array; array values match any selected genre)
+  - `library` (string or array of `backend://libraryID` values)
 
 **Response**:
 ```json
@@ -1290,6 +1295,60 @@ Searches and paginates the local history database.
 **Notes**:
 - `metadata`, `extra`, `path`, `subtitle`, and `genres` searches can be slow.
 - The normalized item format includes extra fields such as `content_path`, `content_title`, `content_overview`, `content_genres`, `reported_by`, `not_reported_by`, and `isTainted`.
+- Filters on different fields are combined before counting and pagination.
+
+---
+
+#### GET /v1/api/history/options
+Returns genre and library choices for the selected identity's history.
+
+**Response**:
+```json
+{
+  "genres": ["comedy", "drama"],
+  "libraries": [
+    {
+      "value": "plex_main://1",
+      "label": "plex_main / Movies"
+    }
+  ]
+}
+```
+
+---
+
+#### POST /v1/api/history/export/{format}
+Downloads matching or selected history records as a title list or individual records.
+
+**Path**:
+- `format` is `json` or `markdown`.
+
+**Body**:
+```json
+{
+  "filters": {
+    "status": "watched",
+    "genres": ["drama"],
+    "library": ["plex_main://1"]
+  },
+  "group": "titles"
+}
+```
+
+**Response**:
+- A `.json` or `.md` attachment.
+- JSON contains `version`, `count`, `grouping`, and `items`.
+
+**Notes**:
+- `filters` accepts the same search filters as `GET /history`. Pagination does not limit exports.
+- Supply `ids` as an array of positive record IDs to export a selection within those filters. Omit it to export all matches.
+- `group` is `titles` for movies and grouped shows, or `records` for individual movies and episodes.
+- Grouped show progress counts all episodes in the user's history, not only the selected episodes.
+- Exported items exclude internal record IDs, paths, server URLs, and credentials.
+
+**Errors**:
+- `400 Bad Request` for invalid filters, grouping, or an empty or invalid `ids` array.
+- `404 Not Found` if no records match.
 
 ---
 

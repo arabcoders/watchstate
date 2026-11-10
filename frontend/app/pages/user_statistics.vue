@@ -165,54 +165,14 @@
         >
           <UIcon name="i-lucide-history" class="size-4 text-primary" />Recently watched
         </h2>
-        <ul
+        <RecentHistoryCards
           v-if="report.recent.length"
-          class="flex gap-3 overflow-x-auto pb-3"
+          :key="apiUser"
+          :items="recentCards"
+          :user="apiUser"
+          :poster-enable="posterEnable"
           aria-label="Recently watched titles"
-          tabindex="0"
-        >
-          <li
-            v-for="item in report.recent"
-            :key="`${apiUser}:${item.history_id}`"
-            class="group ws-card w-36 shrink-0 space-y-2 p-2 sm:w-40"
-          >
-            <NuxtLink
-              :to="`/history/${item.history_id}`"
-              class="block"
-              :aria-label="
-                'episode' === item.type && null !== item.season && null !== item.episode
-                  ? `View ${item.title}, season ${item.season}, episode ${item.episode}`
-                  : `View ${item.title}`
-              "
-            >
-              <StatisticsPoster
-                v-if="posterEnable"
-                :history-id="item.history_id"
-                :title="item.title"
-                :user="apiUser"
-              />
-              <p
-                class="mt-2 line-clamp-2 min-h-10 text-sm font-medium leading-5 text-highlighted hover:text-primary"
-                :title="item.title"
-              >
-                {{ item.title }}
-              </p>
-            </NuxtLink>
-            <div class="flex items-center justify-between gap-2 text-xs text-toned">
-              <span v-if="'movie' === item.type">Movie</span>
-              <span v-else-if="null !== item.season && null !== item.episode" class="font-mono">
-                {{ item.season }}x{{ String(item.episode).padStart(2, '0') }}
-              </span>
-              <span v-else>Episode</span>
-              <span v-if="item.year">{{ item.year }}</span>
-            </div>
-            <UTooltip :text="formatDate(item.played_at)"
-              ><p class="truncate pb-1 text-xs text-dimmed">
-                {{ moment.unix(item.played_at).fromNow() }}
-              </p></UTooltip
-            >
-          </li>
-        </ul>
+        />
         <UAlert
           v-else
           color="warning"
@@ -475,10 +435,12 @@ import {
 } from '#components';
 import PageHeader from '~/components/PageHeader.vue';
 import Pager from '~/components/Pager.vue';
+import RecentHistoryCards from '~/components/RecentHistoryCards.vue';
 import StatCard from '~/components/StatCard.vue';
 import StatisticsPoster from '~/components/StatisticsPoster.vue';
 import { useUserStatistics } from '~/composables/useUserStatistics';
 import type {
+  RecentHistoryCard,
   UserStatisticsProgressItem,
   UserStatisticsShow,
   UserStatisticsShowFilter,
@@ -507,6 +469,14 @@ const page = ref(1);
 const showAllGenres = ref(false);
 const formatNumber = (value: number): string => new Intl.NumberFormat().format(value);
 const formatDate = (value: number): string => moment.unix(value).format('YYYY-MM-DD HH:mm:ss Z');
+
+const recentCards = computed<Array<RecentHistoryCard>>(() =>
+  (report.value?.recent ?? []).map(({ played_at, ...item }) => ({
+    ...item,
+    timestamp: played_at,
+    timestampTooltip: formatDate(played_at),
+  })),
+);
 
 useHead(() => ({ title: `${ucFirst(apiUser.value)} @ User Statistics` }));
 

@@ -10,6 +10,7 @@ use App\Libs\APIResponse;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Delete;
 use App\Libs\Attributes\Route\Get;
+use App\Libs\Attributes\Route\Post;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\Config;
 use App\Libs\Container;
@@ -20,10 +21,13 @@ use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Guid;
+use App\Libs\HistoryExport;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
+use App\Libs\Stream;
 use App\Libs\Traits\APITraits;
+use App\Libs\UserContext;
 use App\Model\Events\EventsRepository;
 use DateInterval;
 use JsonException;
@@ -69,40 +73,41 @@ final class Index
         private EventsRepository $events,
     ) {}
 
-    #[Get(self::URL . '[/]', name: 'history.list')]
-    public function list(iRequest $request): iResponse
+    /**
+     * @param array<int>|null $ids
+     * @return array{sql:string,params:array<string,mixed>,filters:array<string,mixed>,data:DataUtil}|iResponse
+     */
+    private function buildQuery(DataUtil $data, UserContext $userContext, ?array $ids = null): array|iResponse
     {
-        try {
-            $userContext = $this->getUserContext(request: $request, mapper: $this->mapper, logger: $this->logger);
-        } catch (RuntimeException $e) {
-            return api_error($e->getMessage(), Status::NOT_FOUND);
+        foreach ($data->getAll() as $key => $value) {
+            if (in_array($key, ['genres', 'library', 'sort'], true)) {
+                if (false === is_string($value) && false === is_array($value) && null !== $value) {
+                    return api_error('Invalid history filter.', Status::BAD_REQUEST);
+                }
+                if (is_array($value) && false === array_is_list($value)) {
+                    return api_error('History filter choices must be lists.', Status::BAD_REQUEST);
+                }
+                if (is_array($value) && false === array_all($value, static fn(mixed $choice): bool => is_string($choice))) {
+                    return api_error('Invalid history filter choice.', Status::BAD_REQUEST);
+                }
+            } elseif (false === is_scalar($value) && null !== $value) {
+                return api_error('Invalid history filter.', Status::BAD_REQUEST);
+            }
         }
 
         $db = $userContext->db->getDBLayer();
-
-        $data = DataUtil::fromArray($request->getQueryParams());
-
         $es = static fn(string $val) => $db->escapeIdentifier($val, true);
         $filters = [];
-
-        $page = (int) $data->get('page', 1);
-        $perpage = (int) $data->get('perpage', 12);
-        $customView = $data->get('view', null);
-
-        if ($page < 1 || 1 === $page) {
-            $start = 0;
-        } elseif (2 === $page) {
-            $start = $perpage;
-        } else {
-            $start = $perpage * ($page - 1);
-        }
-
         $params = [];
-        $total = null;
 
-        $sql = $where = $or = [];
+        $sql = $where = [];
 
         $sql[] = sprintf('FROM %s', $es('state'));
+
+        if (null !== $ids) {
+            $where[] = 'id IN (SELECT value FROM json_each(:selection_ids))';
+            $params['selection_ids'] = json_encode($ids, JSON_THROW_ON_ERROR);
+        }
 
         // -- search relative guids.
         if ($data->get('rguid')) {
@@ -134,9 +139,18 @@ final class Index
             $filters[iState::COLUMN_WATCHED] = $data->get(iState::COLUMN_WATCHED);
         }
 
-        if ($data->get('in_progress')) {
+        $status = $data->get('status');
+        if (null !== $status && '' !== $status && 'all' !== $status) {
+            if (false === in_array($status, ['watched', 'in_progress', 'not_started'], true)) {
+                return api_error('Invalid history status.', Status::BAD_REQUEST);
+            }
+            $where[] = 'watched = ' . ('watched' === $status ? '1' : '0');
+            $filters['status'] = $status;
+        }
+
+        if ($data->get('in_progress') || in_array($status, ['in_progress', 'not_started'], true)) {
             $where[] = $es(iState::COLUMN_WATCHED) . ' = 0';
-            $where[] = <<<'SQL'
+            $progressSql = <<<'SQL'
                 EXISTS (
                     SELECT 1 FROM json_each(metadata) AS progress_metadata
                     WHERE CASE WHEN progress_metadata.type IN ('object', 'array') THEN
@@ -148,9 +162,57 @@ final class Index
                     ELSE 0 END
                 )
                 SQL;
+            $where[] = 'not_started' === $status ? 'NOT ' . $progressSql : $progressSql;
+            if ($data->get('in_progress') && 'not_started' === $status) {
+                $where[] = $progressSql;
+            }
             $params['progress_minimum'] = (int) Config::get('progress.minimum', 60_000);
             $params['progress_threshold'] = (int) Config::get('progress.threshold', 0);
-            $filters['in_progress'] = $data->get('in_progress');
+            if ($data->get('in_progress')) {
+                $filters['in_progress'] = $data->get('in_progress');
+            }
+        }
+
+        foreach (['year_min' => '>=', 'year_max' => '<='] as $key => $operator) {
+            if (null === $data->get($key) || '' === $data->get($key)) {
+                continue;
+            }
+            $year = filter_var($data->get($key), FILTER_VALIDATE_INT);
+            if (false === $year || 1 > $year || 9999 < $year) {
+                return api_error('Invalid year range.', Status::BAD_REQUEST);
+            }
+            $where[] = 'year ' . $operator . ' :' . $key;
+            $params[$key] = $year;
+            $filters[$key] = $year;
+        }
+        if (isset($params['year_min'], $params['year_max']) && $params['year_min'] > $params['year_max']) {
+            return api_error('Invalid year range.', Status::BAD_REQUEST);
+        }
+
+        if (null !== ($libraries = $data->get('library'))) {
+            $libraries = is_array($libraries) ? $libraries : [$libraries];
+            $choices = [];
+            foreach (array_values($libraries) as $index => $library) {
+                if (false === is_string($library) || 1 !== preg_match('~^(.+?)://(.+)$~s', $library, $parts)) {
+                    return api_error('Invalid library source.', Status::BAD_REQUEST);
+                }
+                $choices[] =
+                    '(library_metadata.key = :library_backend_'
+                    . $index
+                    . ' AND CAST(json_extract(library_metadata.value, \'$.library\') AS TEXT) = :library_id_'
+                    . $index
+                    . ')';
+                $params['library_backend_' . $index] = $parts[1];
+                $params['library_id_' . $index] = $parts[2];
+            }
+            if ([] !== $choices) {
+                $where[] =
+                    'EXISTS (SELECT 1 FROM json_each(metadata) AS library_metadata WHERE CASE '
+                    . "WHEN library_metadata.type IN ('object', 'array') THEN ("
+                    . implode(' OR ', $choices)
+                    . ') ELSE 0 END)';
+                $filters['library'] = $libraries;
+            }
         }
 
         if ($data->get(iState::COLUMN_ID)) {
@@ -263,33 +325,32 @@ final class Index
             ];
         }
 
-        if ($data->get(iState::COLUMN_META_PATH)) {
-            foreach (array_keys($userContext->config->getAll()) as $bName) {
-                if ($data->get('exact')) {
-                    $or[] = 'json_extract(' . iState::COLUMN_META_DATA . ",'$.{$bName}.path') = :path_{$bName}";
-                } else {
-                    $or[] = 'json_extract(' . iState::COLUMN_META_DATA . ",'$.{$bName}.path') LIKE \"%\" || :path_{$bName} || \"%\"";
-                }
-
-                $params["path_{$bName}"] = $data->get(iState::COLUMN_META_PATH);
+        foreach (['path' => '$.path', 'subtitle' => '$.extra.title'] as $field => $jsonPath) {
+            if (false === (bool) $data->get($field)) {
+                continue;
             }
-
-            $filters[iState::COLUMN_META_PATH] = $data->get(iState::COLUMN_META_PATH);
-        }
-
-        if ($data->get('subtitle')) {
-            foreach (array_keys($userContext->config->getAll()) as $bName) {
-                if ($data->get('exact')) {
-                    $or[] = 'json_extract(' . iState::COLUMN_META_DATA . ",'$.{$bName}.extra.title') = :subtitle_{$bName}";
-                } else {
-                    $or[] =
-                        'json_extract(' . iState::COLUMN_META_DATA . ",'$.{$bName}.extra.title') LIKE \"%\" || :subtitle_{$bName} || \"%\"";
-                }
-
-                $params["subtitle_{$bName}"] = $data->get('subtitle');
+            $backendKeys = [];
+            foreach (array_keys($userContext->config->getAll()) as $index => $backend) {
+                $key = $field . '_backend_' . $index;
+                $backendKeys[] = ':' . $key;
+                $params[$key] = $backend;
             }
-
-            $filters['subtitle'] = $data->get('subtitle');
+            if ([] === $backendKeys) {
+                $where[] = '0 = 1';
+            } else {
+                $comparison = $data->get('exact') ? '= :' . $field . '_value' : "LIKE '%' || :" . $field . "_value || '%'";
+                $where[] =
+                    'EXISTS (SELECT 1 FROM json_each(metadata) AS search_metadata WHERE search_metadata.key IN ('
+                    . implode(',', $backendKeys)
+                    . ") AND CASE WHEN search_metadata.type IN ('object', 'array') THEN "
+                    . "json_extract(search_metadata.value, '"
+                    . $jsonPath
+                    . "') "
+                    . $comparison
+                    . ' ELSE 0 END)';
+                $params[$field . '_value'] = $data->get($field);
+            }
+            $filters[$field] = $data->get($field);
         }
 
         if ($data->get(iState::COLUMN_EXTRA)) {
@@ -324,60 +385,42 @@ final class Index
         }
 
         if (null !== ($genre = $data->get(iState::COLUMN_META_DATA_EXTRA_GENRES))) {
-            $genreFilter = $data->get('exact') ? '= :genre' : "LIKE '%' || :genre || '%'";
-            $genre = strtolower($genre);
-
-            /** @noinspection SqlType */
-            $stmt = $db->prepare(
-                "SELECT COUNT(DISTINCT t.id) FROM state AS t, json_each(t.metadata) AS _b,
-                              json_each(json_extract(_b.value, '$.extra.genres')) AS _g WHERE _g.value {$genreFilter}",
-            );
-            $stmt->execute(['genre' => $genre]);
-            $total = $stmt->fetchColumn();
-
-            /** @noinspection SqlType */
-            $stmt = $db->prepare(
-                "SELECT DISTINCT t.id FROM state AS t, json_each(t.metadata) AS _b,
-                json_each(json_extract(_b.value, '$.extra.genres')) AS _g WHERE _g.value {$genreFilter}
-                LIMIT :start, :perpage",
-            );
-            $stmt->execute(['genre' => $genre, 'start' => $start, 'perpage' => $perpage]);
-            $genres_ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
-            $where[] = 'id IN (' . implode(',', count($genres_ids) > 0 ? $genres_ids : [-1]) . ')';
+            $exact = is_array($genre) || $data->get('exact');
+            $genres = is_array($genre) ? $genre : [$genre];
+            $choices = [];
+            foreach (array_values($genres) as $index => $name) {
+                if (false === is_string($name)) {
+                    return api_error('Invalid genre.', Status::BAD_REQUEST);
+                }
+                $name = mb_strtolower(trim($name));
+                $genres[$index] = $name;
+                $choices[] =
+                    'LOWER(TRIM(genre_value.value)) ' . ($exact ? '= :genre_' . $index : "LIKE '%' || :genre_" . $index . " || '%'");
+                $params['genre_' . $index] = $name;
+            }
+            if ([] !== $choices) {
+                $where[] =
+                    'EXISTS (SELECT 1 FROM json_each(metadata) AS genre_metadata, json_each(CASE '
+                    . "WHEN genre_metadata.type IN ('object', 'array') THEN CASE WHEN json_type(genre_metadata.value, '$.extra.genres') = 'array' "
+                    . "THEN json_extract(genre_metadata.value, '$.extra.genres') ELSE NULL END ELSE NULL END) AS genre_value "
+                    . "WHERE genre_value.type = 'text' AND ("
+                    . implode(' OR ', $choices)
+                    . '))';
+            }
             $filters[iState::COLUMN_META_DATA_EXTRA_GENRES] = [
                 'key' => iState::COLUMN_META_DATA_EXTRA_GENRES,
-                'value' => $genre,
-                'exact' => $data->get('exact'),
+                'value' => is_array($genre) ? $genres : $genres[0] ?? '',
+                'exact' => is_array($genre) ? true : $data->get('exact'),
             ];
-        }
-
-        if (count($or) >= 1) {
-            $where[] = '( ' . implode(' OR ', $or) . ' )';
         }
 
         if (count($where) >= 1) {
             $sql[] = 'WHERE ' . implode(' AND ', $where);
         }
 
-        if (null === $total) {
-            $stmt = $db->prepare('SELECT COUNT(*) ' . implode(' ', array_map('trim', $sql)));
-            $stmt->execute($params);
-            $total = $stmt->fetchColumn();
-        }
-
-        if (0 === $total) {
-            $message = 'No Results.';
-
-            if (true === count($filters) >= 1) {
-                $message .= ' Probably invalid filters values were used.';
-            }
-
-            return api_error($message, Status::NOT_FOUND, ['filters' => $filters]);
-        }
-
         $sorts = [];
 
-        foreach ($data->get('sort', []) as $sort) {
+        foreach ((array) $data->get('sort', []) as $sort) {
             if (1 !== preg_match('/(?P<field>\w+)(:(?P<dir>\w+))?/', $sort, $matches)) {
                 continue;
             }
@@ -408,13 +451,44 @@ final class Index
         }
 
         $sql[] = 'ORDER BY ' . implode(', ', $sorts);
-        if (null === $genre) {
-            $params['_start'] = $start;
-            $params['_limit'] = $perpage <= 0 ? 20 : $perpage;
-            $sql[] = 'LIMIT :_start,:_limit';
+
+        return ['sql' => implode(' ', array_map('trim', $sql)), 'params' => $params, 'filters' => $filters, 'data' => $data];
+    }
+
+    /**
+     * List the active user's history using combined filters and pagination.
+     */
+    #[Get(self::URL . '[/]', name: 'history.list')]
+    public function list(iRequest $request): iResponse
+    {
+        try {
+            $userContext = $this->getUserContext(request: $request, mapper: $this->mapper, logger: $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
         }
 
-        $stmt = $db->prepare('SELECT * ' . implode(' ', array_map('trim', $sql)));
+        $query = $this->buildQuery(DataUtil::fromArray($request->getQueryParams()), $userContext);
+        if ($query instanceof iResponse) {
+            return $query;
+        }
+        ['sql' => $sql, 'params' => $params, 'filters' => $filters, 'data' => $data] = $query;
+        $db = $userContext->db->getDBLayer();
+        $stmt = $db->prepare('SELECT COUNT(*) ' . $sql);
+        $stmt->execute($params);
+        $total = (int) $stmt->fetchColumn();
+        if (0 === $total) {
+            return api_error('No Results.' . ([] !== $filters ? ' Probably invalid filters values were used.' : ''), Status::NOT_FOUND, [
+                'filters' => $filters,
+            ]);
+        }
+
+        $page = max(1, (int) $data->get('page', 1));
+        $perpage = (int) $data->get('perpage', 12);
+        $perpage = 0 < $perpage ? $perpage : 20;
+        $customView = $data->get('view');
+        $params['_start'] = $perpage * ($page - 1);
+        $params['_limit'] = $perpage;
+        $stmt = $db->prepare('SELECT * ' . $sql . ' LIMIT :_start,:_limit');
         $stmt->execute($params);
 
         $getUri = $request->getUri()->withHost('')->withPort(0)->withScheme('');
@@ -561,7 +635,9 @@ final class Index
         ];
 
         while ($row = $stmt->fetch()) {
-            $entity = $this->formatEntity($row, userContext: $userContext);
+            $record = StateEntity::fromArray($row);
+            $record->metadata = array_filter($record->metadata, is_array(...));
+            $entity = $this->formatEntity($record, userContext: $userContext);
             $entity['duplicate_reference_ids'] = [];
 
             if (null !== $customView) {
@@ -604,6 +680,191 @@ final class Index
         }
 
         return api_response(Status::OK, $response);
+    }
+
+    /**
+     * Return genres and library sources present in the active user's local records.
+     */
+    #[Get(self::URL . '/options[/]', name: 'history.options')]
+    public function options(iRequest $request): iResponse
+    {
+        try {
+            $context = $this->getUserContext($request, $this->mapper, $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
+
+        $cacheKey = 'history_options_' . hash('sha256', $context->name);
+        $cached = $context->cache->get($cacheKey);
+        if (is_array($cached)) {
+            return api_response(Status::OK, $cached);
+        }
+
+        $genres = [];
+        $sources = [];
+        foreach ($context->db->getDBLayer()->query('SELECT metadata FROM state') as $row) {
+            $entity = StateEntity::fromArray($row);
+            foreach (HistoryExport::genres($entity) as $genre) {
+                $genres[$genre] = $genre;
+            }
+            foreach ($entity->getMetadata() as $backend => $metadata) {
+                if (false === is_array($metadata)) {
+                    continue;
+                }
+                $id = $metadata[iState::COLUMN_META_LIBRARY] ?? null;
+                if (false === is_scalar($id) || '' === trim((string) $id)) {
+                    continue;
+                }
+                $sources[(string) $backend][(string) $id] = (string) $id;
+            }
+        }
+
+        $libraries = [];
+        foreach ($sources as $backend => $ids) {
+            $namesKey = 'history_library_names_' . hash('sha256', $context->name . ':' . $backend);
+            $names = $context->cache->get($namesKey);
+            if (false === is_array($names)) {
+                $names = [];
+                if (null !== $context->config->get($backend)) {
+                    try {
+                        $client = $this->getClient(
+                            $backend,
+                            [
+                                'options' => ['client' => ['timeout' => 2.0, 'max_duration' => 3.0]],
+                            ],
+                            $context,
+                        );
+                        foreach ($client->listLibraries() as $library) {
+                            $id = $library['id'] ?? null;
+                            $title = $library['title'] ?? null;
+                            if (is_scalar($id) && is_string($title) && '' !== trim($title)) {
+                                $names[(string) $id] = $title;
+                            }
+                        }
+                    } catch (Throwable $e) {
+                        $this->logger->warning(
+                            "Could not resolve library names for '{identity.user}@{identity.backend}': {exception.message}",
+                            [
+                                'identity' => ['user' => $context->name, 'backend' => $backend],
+                                'operation' => 'history.library_options',
+                                'error' => 'library_names_unavailable',
+                                ...exception_log($e),
+                            ],
+                        );
+                    }
+                }
+                $context->cache->set($namesKey, $names, 300);
+            }
+            foreach ($ids as $id) {
+                $libraries[] = [
+                    'value' => $backend . '://' . $id,
+                    'label' => $backend . ' / ' . ($names[$id] ?? $id),
+                ];
+            }
+        }
+        $genres = array_values($genres);
+        sort($genres, SORT_NATURAL | SORT_FLAG_CASE);
+        usort($libraries, static fn(array $left, array $right): int => strnatcasecmp($left['label'], $right['label']));
+        $result = ['genres' => $genres, 'libraries' => $libraries];
+        $context->cache->set($cacheKey, $result, 120);
+
+        return api_response(Status::OK, $result);
+    }
+
+    /**
+     * Export all matching records, optionally intersected with an explicit selection.
+     */
+    #[Post(self::URL . '/export/{format:json|markdown}[/]', name: 'history.export')]
+    public function export(iRequest $request, string $format, HistoryExport $exporter): iResponse
+    {
+        if (false === in_array($format, ['json', 'markdown'], true)) {
+            return api_error('Export format not found.', Status::NOT_FOUND);
+        }
+        try {
+            $context = $this->getUserContext($request, $this->mapper, $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
+
+        $body = $request->getParsedBody();
+        if (
+            false === is_array($body)
+            || false === is_array($body['filters'] ?? null)
+            || [] !== $body['filters'] && array_is_list($body['filters'])
+        ) {
+            return api_error('Expected an export object with filters.', Status::BAD_REQUEST);
+        }
+        $grouping = $body['group'] ?? 'titles';
+        if (false === in_array($grouping, ['records', 'titles'], true)) {
+            return api_error('Invalid export grouping.', Status::BAD_REQUEST);
+        }
+        $ids = null;
+        if (array_key_exists('ids', $body)) {
+            $ids = $body['ids'];
+            if (
+                false === is_array($ids)
+                || [] === $ids
+                || false === array_is_list($ids)
+                || false === array_all($ids, static fn(mixed $id): bool => is_int($id) && 0 < $id)
+            ) {
+                return api_error('Selection must be a nonempty list of positive integer IDs.', Status::BAD_REQUEST);
+            }
+            $ids = array_values(array_unique($ids));
+        }
+        $filters = array_intersect_key($body['filters'], array_flip([
+            'rguid',
+            'watched',
+            'in_progress',
+            'id',
+            'via',
+            'year',
+            'type',
+            'title',
+            'season',
+            'episode',
+            'parent',
+            'guids',
+            'metadata',
+            'key',
+            'value',
+            'exact',
+            'path',
+            'subtitle',
+            'extra',
+            'genres',
+            'status',
+            'library',
+            'year_min',
+            'year_max',
+            'sort',
+        ]));
+        $query = $this->buildQuery(DataUtil::fromArray($filters), $context, $ids);
+        if ($query instanceof iResponse) {
+            return $query;
+        }
+        $stmt = $context
+            ->db
+            ->getDBLayer()
+            ->prepare(
+                'SELECT type, updated, watched, title, year, season, episode, parent, metadata, extra ' . $query['sql'],
+            );
+        $stmt->execute($query['params']);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        $stream = Stream::make('php://temp', 'w+b');
+        $count = $exporter->write($stream, $exporter->items($stmt, $context, $grouping), $grouping, $format);
+        $stmt->closeCursor();
+        if (0 === $count) {
+            $stream->close();
+            return api_error('No matching history records.', Status::NOT_FOUND);
+        }
+        $stream->rewind();
+        $extension = 'json' === $format ? 'json' : 'md';
+
+        return api_response(Status::OK, $stream, headers: [
+            'Content-Type' => 'json' === $format ? 'application/json' : 'text/markdown; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="history-' . time() . '.' . $extension . '"',
+            'Cache-Control' => 'private, no-store',
+        ]);
     }
 
     #[Get(self::URL . '/{id:\d+}[/]', name: 'history.read')]

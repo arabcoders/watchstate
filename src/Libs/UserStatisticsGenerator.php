@@ -115,7 +115,7 @@ final class UserStatisticsGenerator
                 continue;
             }
 
-            $tokens = $this->showTokens($entity);
+            $tokens = ShowIdentity::tokens($entity);
             if ([] === $tokens) {
                 continue;
             }
@@ -124,7 +124,7 @@ final class UserStatisticsGenerator
             $parents[$first] ??= $first;
             foreach ($tokens as $token) {
                 $parents[$token] ??= $token;
-                $parents[$this->root($parents, $token)] = $this->root($parents, $first);
+                $parents[ShowIdentity::root($parents, $token)] = ShowIdentity::root($parents, $first);
             }
 
             $episodes[] = [
@@ -140,7 +140,7 @@ final class UserStatisticsGenerator
 
         $shows = [];
         foreach ($episodes as $episode) {
-            $key = $this->root($parents, $episode['token']);
+            $key = ShowIdentity::root($parents, $episode['token']);
             $shows[$key] ??= [
                 'title' => $episode['title'],
                 'year' => null,
@@ -447,46 +447,6 @@ final class UserStatisticsGenerator
         }
 
         return 0 < $playedAt ? $playedAt : null;
-    }
-
-    /** @return array<string> */
-    private function showTokens(StateEntity $entity): array
-    {
-        $tokens = [];
-        $parentSets = [$entity->getParentGuids()];
-        foreach ($entity->getMetadata() as $backend => $metadata) {
-            if (false === is_array($metadata)) {
-                continue;
-            }
-            $parentSets[] = (array) ag($metadata, iState::COLUMN_PARENT, []);
-            $id = trim((string) ag($metadata, iState::COLUMN_META_SHOW, ''));
-            if ('' !== $id && false === in_array(mb_strtolower($id), ['??', '0', '-1', 'unknown'], true)) {
-                $tokens[] = json_encode(['backend', (string) $backend, $id], JSON_THROW_ON_ERROR);
-            }
-        }
-        foreach ($parentSets as $parents) {
-            foreach (array_intersect_key($parents, Guid::getSupported()) as $source => $id) {
-                if (false === is_scalar($id)) {
-                    continue;
-                }
-                $id = trim((string) $id);
-                if ('' !== $id && false === in_array(mb_strtolower($id), ['??', '0', '-1', 'unknown'], true)) {
-                    $tokens[] = json_encode(['guid', $source, $id], JSON_THROW_ON_ERROR);
-                }
-            }
-        }
-
-        return array_values(array_unique($tokens));
-    }
-
-    /** @param array<string,string> $parents */
-    private function root(array &$parents, string $alias): string
-    {
-        if ($parents[$alias] !== $alias) {
-            $parents[$alias] = $this->root($parents, $parents[$alias]);
-        }
-
-        return $parents[$alias];
     }
 
     /**

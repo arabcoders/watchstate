@@ -27,6 +27,19 @@ export interface UserStatisticsProgressItem extends UserStatisticsItem {
   progress: number;
 }
 
+export interface RecentHistoryCard extends UserStatisticsItem {
+  timestamp: number | null;
+  timestampTooltip: string;
+  progress?: number;
+  watched?: boolean;
+}
+
+export interface RecentHistoryCardsProps {
+  items: Array<RecentHistoryCard>;
+  user: string;
+  posterEnable: boolean;
+}
+
 export interface UserStatisticsReport {
   version: number;
   generated_at: number;
@@ -1206,6 +1219,73 @@ export interface HistoryItem {
   files?: Array<MediaFile>;
   /** IDs of records referencing the same content path */
   duplicate_reference_ids?: Array<number>;
+}
+
+export type HistoryListItem = Omit<
+  HistoryItem,
+  'metadata' | 'extra' | 'files' | 'parent' | 'rguids'
+> & {
+  metadata?: Record<string, { via?: string }>;
+  extra?: Record<string, unknown>;
+  files?: Array<unknown>;
+  parent?: Record<string, string>;
+  rguids?: Record<string, string>;
+  full_title?: string;
+  showRawData?: boolean;
+  expand_title?: boolean;
+  expand_path?: boolean;
+};
+
+export interface HistoryViewProps {
+  items: Array<HistoryListItem>;
+  selectedIds: Array<number>;
+  posterEnable: boolean;
+  user: string;
+}
+
+export interface HistorySearchableField {
+  key: string;
+  display?: string;
+  description?: string;
+  type?: string | Array<string>;
+}
+
+export interface HistorySearchFilter {
+  id: number;
+  field: string;
+  value: string;
+}
+
+export type HistoryFilterQuery = Record<string, string | Array<string>>;
+export type HistoryExportFilters = Record<string, string | number | Array<string>>;
+
+export interface HistoryFilterOptions {
+  genres: Array<string>;
+  libraries: Array<{ value: string; label: string }>;
+}
+
+export interface HistoryFiltersProps {
+  query: HistoryFilterQuery;
+  searchable: Array<HistorySearchableField>;
+  options: HistoryFilterOptions;
+  loading: boolean;
+}
+
+export interface HistoryExportChoice {
+  scope: 'matching' | 'selected';
+  group: 'records' | 'titles';
+  format: 'json' | 'markdown';
+}
+
+export interface HistoryExportModalProps {
+  open: boolean;
+  matchingCount: number;
+  selectedCount: number;
+  matchingEnabled: boolean;
+  selectedEnabled: boolean;
+  exporting: boolean;
+  pageFilterActive: boolean;
+  blocked: boolean;
 }
 
 /**
