@@ -10,19 +10,7 @@ box, this tool supports `Jellyfin`, `Plex` and `Emby` media servers.
 
 # Updates
 
-### 2026-10-21
-
-**Updating to WatchState v1.10.9 or later is recommended** following the PHP2Shell disclosure
-([CVE-2026-109618](https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w) and
-[CVE-2026-109619](https://github.com/php/php-src/security/advisories/GHSA-6wmf-4rv5-p3rp)). These vulnerabilities affect
-the PHP runtime and can allow unauthenticated remote code execution; they are not bugs in WatchState itself.
-Pull the updated container image and recreate the container, as restarting alone does not update the bundled runtime.
-
-### 2026-09-15
-
-Path matching is now enabled by default. WatchState will generate `guid_path` values for new and refreshed movie and episode records unless `WS_GUID_PATH_ENABLED` is explicitly disabled. Existing records still need a full import before they can match by path. See the [path matching guide](/guides/path-match.md) for details.
-
-Please refer to [NEWS](/NEWS.md) for the latest updates and changes.
+Please refer to [NEWS](/NEWS.md) for the latest important updates and changes.
 
 ------
 
@@ -40,7 +28,8 @@ Please refer to [NEWS](/NEWS.md) for the latest updates and changes.
 ### If you like my work, you might also like my other projects:
 
 * [YTPTube](https://github.com/arabcoders/ytptube): Media download manager, automation interface, and media library preparation layer for yt-dlp.
-* [Millwright](https://github.com/arabcoders/millwright): is a self-hosted automation interface for FFmpeg.
+* [Millwright](https://github.com/arabcoders/millwright): Automation interface for FFmpeg.
+* [DCompose](https://github.com/arabcoders/dcompose): Manage your servers/nodes compose stacks from one WebUI.
 
 # Install
 
