@@ -313,7 +313,7 @@ const last_page = computed<number>(() => Math.ceil(total.value / perpage.value))
 const isLoading = ref(false);
 const filter = ref<string>((route.query.filter as string) || '');
 const showFilter = ref<boolean>(Boolean(filter.value));
-const showFilters = ref(true);
+const showFilters = ref(false);
 const massActionInProgress = ref(false);
 const query = shallowRef<HistoryFilterQuery>({});
 const draftBlocked = ref(false);
@@ -620,7 +620,7 @@ const stateCallBack = async (event: Event): Promise<void> => {
   if (state?.clear) {
     filter.value = '';
     showFilter.value = false;
-    showFilters.value = true;
+    showFilters.value = false;
     query.value = {};
     draftBlocked.value = false;
     await loadContent(1);
