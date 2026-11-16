@@ -28,6 +28,7 @@ WatchState HTTP API reference. Examples use the default `/v1/api` prefix.
       - [DELETE /v1/api/backend/{name}](#delete-v1apibackendname)
       - [GET /v1/api/backend/{name}/info](#get-v1apibackendnameinfo)
       - [GET /v1/api/backend/{name}/version](#get-v1apibackendnameversion)
+      - [GET /v1/api/backend/{name}/proxy/{url}](#get-v1apibackendnameproxyurl)
       - [POST /v1/api/backend/{name}/webhook](#post-v1apibackendnamewebhook)
       - [GET /v1/api/backend/{name}/users](#get-v1apibackendnameusers)
       - [POST /v1/api/backend/{name}/accesstoken](#post-v1apibackendnameaccesstoken)
@@ -699,6 +700,24 @@ Returns the backend server version.
 **Errors**:
 - `404 Not Found` if the user or backend does not exist.
 - `500 Internal Server Error` if the backend request fails.
+
+---
+
+#### GET /v1/api/backend/{name}/proxy/{url}
+Fetches a relative backend path using the selected identity's stored backend credentials.
+
+**Path**:
+- `name`: Saved backend name.
+- `url`: Relative backend path, including nested segments, such as `library/metadata/42/thumb`.
+
+**Errors**:
+- `400 Bad Request` for empty, absolute, protocol-relative, or unsafe encoded paths.
+- `404 Not Found` if the user or backend does not exist.
+- `502 Bad Gateway` if the backend request fails without an HTTP response.
+
+**Notes**:
+- Backend headers other than `Content-Type` are not forwarded. Redirect statuses and bodies are preserved.
+- Backend requests have a 10-second timeout and maximum duration.
 
 ---
 

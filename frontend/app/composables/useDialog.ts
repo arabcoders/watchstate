@@ -10,16 +10,7 @@ export type DialogConfirmColor =
   | 'info'
   | 'warning'
   | 'error'
-  | 'neutral'
-  | 'is-danger'
-  | 'is-primary'
-  | 'is-link'
-  | 'is-info'
-  | 'is-success'
-  | 'is-warning'
-  | 'is-light'
-  | 'is-dark'
-  | 'is-white';
+  | 'neutral';
 
 type BaseOptions = {
   /**
@@ -35,7 +26,7 @@ type BaseOptions = {
    */
   confirmText?: string;
   /**
-   * Color class for the confirm button (e.g., 'is-primary', 'is-danger')
+   * Nuxt UI color for the confirm button.
    */
   confirmColor?: DialogConfirmColor;
 };

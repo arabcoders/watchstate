@@ -1,32 +1,41 @@
 <template>
-  <ul class="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" aria-label="History records">
-    <li
-      v-for="item in items"
-      :key="`${user}:${item.id}`"
-      class="ws-card flex min-w-0 items-start gap-3 overflow-hidden p-3"
-    >
+  <ul
+    class="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+    aria-label="History records"
+  >
+    <li v-for="item in items" :key="`${user}:${item.id}`" class="group min-w-0 space-y-3">
       <NuxtLink
         v-if="posterEnable"
         :to="`/history/${item.id}`"
         :aria-label="`View ${item.title}`"
-        class="group block w-16 shrink-0"
+        class="block rounded-lg outline-offset-4"
       >
         <HistoryPoster
           :history-id="item.id"
           :title="item.title"
           :user="user"
-          class="h-24 w-16 [&>div]:p-1"
+          class="w-full rounded-lg transition-shadow group-hover:ring-primary/50"
         />
       </NuxtLink>
 
-      <div class="min-w-0 flex-1 space-y-1.5">
-        <NuxtLink
-          :to="`/history/${item.id}`"
-          :title="item.title || item.full_title"
-          class="line-clamp-2 wrap-break-word text-sm font-semibold leading-5 text-highlighted hover:text-primary"
-        >
-          {{ item.title || item.full_title }}
-        </NuxtLink>
+      <div class="min-w-0 space-y-2">
+        <div class="flex items-start gap-2">
+          <NuxtLink
+            :to="`/history/${item.id}`"
+            :title="item.title || item.full_title"
+            class="line-clamp-2 min-w-0 flex-1 wrap-break-word text-sm font-semibold leading-5 text-highlighted hover:text-primary"
+          >
+            {{ item.title || item.full_title }}
+          </NuxtLink>
+          <UCheckbox
+            :model-value="selectedIds.includes(item.id)"
+            :disabled="selectionDisabled"
+            :aria-label="`Select ${item.full_title || item.title}`"
+            color="primary"
+            class="mt-0.5 shrink-0"
+            @update:model-value="emit('select', item.id, $event)"
+          />
+        </div>
         <p
           v-if="item.content_title?.trim() && item.title.trim() !== item.content_title.trim()"
           :title="item.content_title"
@@ -54,7 +63,7 @@
           <UBadge
             :color="item.watched ? 'success' : 0 < Number(item.progress) ? 'info' : 'neutral'"
             variant="soft"
-            size="sm"
+            size="xs"
           >
             <span class="inline-flex items-center gap-1">
               <UIcon
@@ -72,28 +81,17 @@
               }}</span>
             </span>
           </UBadge>
-          <UBadge
+          <span
             v-if="0 < Number(item.progress)"
-            color="neutral"
-            variant="soft"
-            size="sm"
+            class="text-xs tabular-nums text-toned"
             :aria-label="`Playback position ${formatDuration(Number(item.progress))}`"
           >
             <span class="inline-flex items-center gap-1 tabular-nums">
-              <UIcon name="i-lucide-gauge" class="size-3.5" />
               <span>{{ formatDuration(Number(item.progress)) }}</span>
             </span>
-          </UBadge>
+          </span>
         </div>
       </div>
-
-      <UCheckbox
-        :model-value="selectedIds.includes(item.id)"
-        :aria-label="`Select ${item.title}`"
-        color="primary"
-        class="mt-0.5 shrink-0"
-        @update:model-value="emit('select', item.id, $event)"
-      />
     </li>
   </ul>
 </template>
@@ -104,6 +102,8 @@ import HistoryPoster from '~/components/StatisticsPoster.vue';
 import type { HistoryViewProps } from '~/types';
 import { formatDuration } from '~/utils';
 
-defineProps<HistoryViewProps>();
+withDefaults(defineProps<HistoryViewProps & { selectionDisabled?: boolean }>(), {
+  selectionDisabled: false,
+});
 const emit = defineEmits<{ select: [id: number, value: boolean | 'indeterminate'] }>();
 </script>

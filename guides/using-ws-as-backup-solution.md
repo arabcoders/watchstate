@@ -28,24 +28,27 @@ First, go to <!--i:i-lucide-server--> **Backends** and click on the <!--i:i-luci
 interactive setup guide. Configure your media server backend (Plex, Jellyfin, or Emby) with the following settings:
 
 - *`Enable Import`*: **Yes**
-- *`Enable export`*: **No**
-- *`Create backup for this backend data: Yes`*: **No**
-- *`Force one time import from this backend: Yes`*: **No**
+- *`Enable Export`*: **No**
+- *`Create backup for this backend data`*: **No**
+- *`Force one time import from this backend`*: **No**
+
+These switches are in the add-backend wizard's **Sync & One-Time Operations** section. For an existing backend,
+click **Edit**, open **Sync direction**, enable **Import** and disable **Export**, then click **Save settings**.
 
 > [!NOTE]
-> If using **Plex**, ensure your token is admin-level. Verify it at
-> **Diagnostics** > <!--i:i-lucide-key-round--> **Plex Token**. For **Jellyfin** or **Emby**, use an API key from
-> your server settings.
+> If using **Plex**, use an admin-level token. Open **Backends**, click the backend name, then open **Users**
+> to check that WatchState can load the expected users. Limited Plex tokens cannot load this list.
+> For **Jellyfin** or **Emby**, use an API key from your server settings.
 
 ### Step 2: Enable single backend mode for identities
 
 After your backend is configured:
 
-1. Navigate to **Configuration** > <!--i:i-lucide-users--> **Identities** > **Match & Provision**.
-2. You should see an **"Allow single backend identities"** switch.
+1. Open **Settings** > <!--i:i-lucide-users--> **Identities** in the sidebar, then click **Match & Provision**.
+2. Under **Execution options**, find **Allow single backend identities**.
 3. Check this option to enable single backend mode.
 4. Disable the option *`Generate remote backups`*.
-5. All users from that backend (except the main identity) will be created as individual identities.
+5. Click **Create identities**. Users from that backend (except the main identity) will be created as individual identities.
 
 > [!NOTE]
 > Single backend mode still respects PIN settings for protected Plex users. You can set PINs by clicking the lock icon
@@ -53,25 +56,32 @@ After your backend is configured:
 
 ### Step 3: Run the initial import
 
-After adding the users, go to the <!--i:i-lucide-list-checks--> **Tasks** page and queue the `Import` task. This imports
-the existing play state into WatchState.
+After adding the users, open **Activity** > <!--i:i-lucide-list-checks--> **Tasks** and click **Run** for
+the `Import` task. Choose **Queue task** in the dialog to import the existing play state into WatchState.
 
-The task will take some time depending on your library size. Monitor progress at the <!--i:i-lucide-globe--> **Logs** page by
-checking the `task.YYYYMMDD.log` file. Once the task completed you should see something like
+The task will take some time depending on your library size. To monitor it, open **Activity** >
+<!--i:i-lucide-scroll-text--> **Logs**, select **Task** under **Type**, and click the
+`task.YYYYMMDD.jsonl` filename. Check for failures before continuing. A completion summary looks like this:
 
 ```
-[DD/MM HH:MM:SS]: SYSTEM: Import process completed in 'XXX's for all users.
+Import process completed in 'XXX's for all users.
 ```
 
 # Backing up your data
 
-Once WatchState has imported your playstate, make sure to keep both import task and backup task enabled. by visiting
-the <!--i:i-lucide-list-checks--> **Tasks** page and toggling the switches next to `Import` and `Backup`.
+Once WatchState has imported your playstate, keep both import and backup tasks enabled. Open **Activity** >
+<!--i:i-lucide-list-checks--> **Tasks** and turn on **Enabled** for `Import` and `Backup`. These schedules apply across identities.
 
 ### Automatic backups
 
 WatchState creates automatic backups if you enabled the *`backup`* task. To access and use these backups go
-to **Operations** > <!--i:i-lucide-hard-drive-download--> **Backups**.
+to **Settings** > <!--i:i-lucide-hard-drive-download--> **Backups**.
+
+Click a filename to download a copy. Scheduled cleanup removes automatic backups according to `WS_BACKUP_PRUNE_AFTER`,
+so download files you want to keep.
+
+Click **Queue backup** to queue the global backup task.
+While it is pending, **Cancel queued backup** cancels the queued task, not a running backup.
 
 ### Manual backups
 
@@ -84,19 +94,26 @@ If your server fails or data is lost, you have two options for restoring the pla
 
 ### Option 1: Restore from automatic backups
 
-1. Go to **Operations** > <!--i:i-lucide-hard-drive-download--> **Backups**.
-2. Select the desired backup from the list.
-3. From the dropdown list select which users you want to restore the backup to.
-4. Click the **Go** button.
+1. Open **Settings** > <!--i:i-lucide-hard-drive-download--> **Backups**.
+2. Find the desired backup using **Type** or **Find files**.
+3. Click **Prepare restore** for that file.
+4. In the dialog's **Restore to** picker, select the target backend under the desired identity.
+5. Click **Continue to Console** to open **Activity > Console** with a prefilled restore command. Nothing runs yet.
+6. Review the file, identity, and backend, then click **Run command** to change playstate on the selected media server.
+
+Use this option to restore playstate on the media server you selected, not to recover your WatchState installation.
+If **Import** is enabled, later imports can bring the restored state into WatchState and sync it to other backends
+for that identity.
 
 ### Option 2: Restore from active db
 
-1. From the header select <!--i:i-lucide-users--> identities icon.
-2. Select the desired identity you want to restore.
+1. Click the <!--i:i-lucide-users--> **Identity** button in the header to open **Change Identity**.
+2. Select the desired identity under **Browse as**.
 3. Click on the **Reload** button to switch to that identity context.
 4. Go to the <!--i:i-lucide-server--> **Backends** page.
-5. Under your backend in the `Quick operations` list, select *`3. Force export local playstate to this backend.`*
-6. Execute the command to push all restored playstate to your server.
+5. Under your backend in the **Quick operations** list, select **3. Force export local play state to this backend.**
+6. **Activity > Console** opens with a prefilled export command. Review the identity and backend, then click **Run command**
+   to push the local playstate to your server.
 7. Repeat for each identity you want to restore.
 
 # Multi-Backend Sync vs. Single Backend Backup

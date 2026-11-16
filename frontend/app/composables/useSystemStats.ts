@@ -8,31 +8,35 @@ export default function useSystemStats() {
     transport: { pending: 0 },
   });
   const loading = ref<boolean>(true);
+  const error = ref('');
+  const lastUpdated = ref<number | null>(null);
   const intervalRef = ref<ReturnType<typeof setInterval> | null>(null);
   const frequency = 60000;
 
   const load = async (): Promise<void> => {
+    loading.value = true;
     try {
       const response = await request('/system/stats');
-      if (!response.ok) {
-        return;
-      }
-
       const json = await parse_api_response<SystemStats>(response);
       if ('error' in json) {
-        return;
+        throw new Error(json.error.message);
+      }
+      if (false === response.ok) {
+        throw new Error(`Unable to load pending work (HTTP ${response.status}).`);
       }
 
       stats.value = json;
-    } catch {
-      // Ignore background polling failures.
+      lastUpdated.value = Date.now();
+      error.value = '';
+    } catch (cause: unknown) {
+      error.value = cause instanceof Error ? cause.message : 'Unable to load pending work.';
     } finally {
       loading.value = false;
     }
   };
 
   const start = (): void => {
-    if (intervalRef.value !== null) {
+    if (null !== intervalRef.value) {
       return;
     }
 
@@ -41,7 +45,7 @@ export default function useSystemStats() {
   };
 
   const stop = (): void => {
-    if (intervalRef.value === null) {
+    if (null === intervalRef.value) {
       return;
     }
 
@@ -51,5 +55,5 @@ export default function useSystemStats() {
 
   onBeforeUnmount(() => stop());
 
-  return { stats, loading, load, start, stop };
+  return { stats, loading, error, lastUpdated, load, start, stop };
 }

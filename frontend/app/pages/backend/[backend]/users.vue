@@ -1,10 +1,8 @@
 <template>
-  <div class="space-y-6">
-    <section class="space-y-4">
-      <PageHeader v-bind="pageShell">
+  <div class="w-full min-w-0 max-w-full space-y-6">
+    <section aria-label="Backend users" :aria-busy="isLoading" class="space-y-4">
+      <PageHeader v-bind="pageShell" page-label="Users" description="">
         <template #kicker>
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
           <NuxtLink to="/backends" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
           <span>/</span>
           <NuxtLink
@@ -12,202 +10,114 @@
             class="hover:text-primary normal-case tracking-normal"
             >{{ backend }}</NuxtLink
           >
-          <span>/</span>
-          <span class="text-highlighted normal-case tracking-normal">Users</span>
         </template>
 
         <template #actions>
-          <UTooltip text="Reload users">
+          <UTooltip text="Refresh users">
             <UButton
               color="neutral"
               variant="outline"
               icon="i-lucide-refresh-cw"
               :loading="isLoading"
               :disabled="isLoading"
-              aria-label="Reload users"
+              aria-label="Refresh users"
               @click="loadContent"
             >
-              <span class="hidden sm:inline">Reload</span>
+              Refresh
             </UButton>
           </UTooltip>
         </template>
       </PageHeader>
 
       <UAlert
-        v-if="(!items || items.length < 1) && isLoading"
+        v-if="(!items || 1 > items.length) && isLoading"
         color="info"
         variant="soft"
         icon="i-lucide-loader-circle"
-        title="Loading"
-        description="Loading users list. Please wait..."
+        title="Loading backend users"
         :ui="{ icon: 'animate-spin' }"
       />
 
       <UAlert
-        v-else-if="!items || items.length < 1"
-        color="warning"
+        v-else-if="loadError"
+        color="error"
         variant="soft"
         icon="i-lucide-triangle-alert"
-        title="Warning"
-        description="WatchState was unable to get any users from the backend. This is expected if the backend is plex and the token is limited."
+        title="Couldn't load users"
+        :description="loadError"
       />
 
-      <div v-else class="grid gap-4 xl:grid-cols-2">
-        <UCard
-          v-for="item in items"
-          :key="`users-${item.id}`"
-          class="h-full shadow-sm"
-          :ui="cardUi"
-        >
-          <template #header>
-            <div class="flex items-start gap-3">
-              <div class="min-w-0 flex-1">
-                <div
-                  class="flex min-w-0 items-start gap-2 text-base font-semibold leading-6 text-highlighted"
-                >
-                  <UIcon name="i-lucide-user" class="mt-0.5 size-4 shrink-0 text-toned" />
-                  <UTooltip :text="String(item.name)">
-                    <span class="block truncate">{{ item.name }}</span>
-                  </UTooltip>
-                </div>
-              </div>
-            </div>
-          </template>
+      <UEmpty
+        v-else-if="items && 0 === items.length"
+        icon="i-lucide-users"
+        title="No users found"
+        description="Plex tokens with limited access may not list users."
+      />
 
-          <div class="grid grid-cols-2 gap-3">
-            <div
-              class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-            >
-              <div
-                class="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
+      <div v-else-if="items && 0 < items.length" class="ws-card divide-y divide-default">
+        <Lazy v-for="item in items" :key="`users-${item.id}`" :unrender="true" :min-height="112">
+          <article
+            :aria-labelledby="`user-${item.id}`"
+            class="grid gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,0.8fr)]"
+          >
+            <div class="min-w-0 space-y-1">
+              <h2
+                :id="`user-${item.id}`"
+                class="flex items-start gap-2 text-base font-semibold text-highlighted"
               >
-                <UIcon name="i-lucide-shield-check" class="size-3.5" />
-                <span>Admin</span>
-              </div>
-              <div class="mt-1 font-medium text-highlighted">{{ item.admin ? 'Yes' : 'No' }}</div>
+                <UIcon name="i-lucide-user" class="mt-0.5 size-4 shrink-0 text-toned" />
+                <span class="min-w-0 wrap-anywhere">{{ item.name }}</span>
+              </h2>
+              <p class="wrap-anywhere text-xs text-muted">ID {{ item.id }}</p>
             </div>
 
-            <div
-              v-if="undefined !== item?.guest"
-              class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-            >
-              <div
-                class="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-              >
-                <UIcon name="i-lucide-user-round-plus" class="size-3.5" />
-                <span>Guest</span>
+            <dl class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 xl:grid-cols-5">
+              <div class="space-y-1">
+                <dt class="text-xs text-muted">Admin</dt>
+                <dd>{{ item.admin ? 'Yes' : 'No' }}</dd>
               </div>
-              <div class="mt-1 font-medium text-highlighted">{{ item.guest ? 'Yes' : 'No' }}</div>
-            </div>
+              <div v-if="undefined !== item.guest" class="space-y-1">
+                <dt class="text-xs text-muted">Guest</dt>
+                <dd>{{ item.guest ? 'Yes' : 'No' }}</dd>
+              </div>
+              <div v-if="undefined !== item.hidden" class="space-y-1">
+                <dt class="text-xs text-muted">Hidden</dt>
+                <dd>{{ item.hidden ? 'Yes' : 'No' }}</dd>
+              </div>
+              <div v-if="undefined !== item.restricted" class="space-y-1">
+                <dt class="text-xs text-muted">Restricted</dt>
+                <dd>{{ item.restricted ? 'Yes' : 'No' }}</dd>
+              </div>
+              <div v-if="undefined !== item.disabled" class="space-y-1">
+                <dt class="text-xs text-muted">Disabled</dt>
+                <dd>{{ item.disabled ? 'Yes' : 'No' }}</dd>
+              </div>
+            </dl>
 
-            <div
-              v-if="undefined !== item?.hidden"
-              class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-            >
-              <div
-                class="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-              >
-                <UIcon name="i-lucide-eye-off" class="size-3.5" />
-                <span>Hidden</span>
-              </div>
-              <div class="mt-1 font-medium text-highlighted">{{ item.hidden ? 'Yes' : 'No' }}</div>
-            </div>
-
-            <div
-              v-if="item?.updatedAt"
-              class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-            >
-              <div
-                class="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-              >
-                <UIcon name="i-lucide-calendar" class="size-3.5" />
-                <span>Updated</span>
-              </div>
-              <div class="mt-1">
-                <span v-if="item.updatedAt === 'external_user' || item.updatedAt === 'never'">
-                  <span class="font-medium text-highlighted">{{ item.updatedAt }}</span>
+            <dl v-if="item.updatedAt" class="min-w-0 space-y-1 text-sm">
+              <dt class="text-xs text-muted">Updated</dt>
+              <dd class="wrap-anywhere">
+                <span v-if="'external_user' === item.updatedAt || 'never' === item.updatedAt">
+                  {{ item.updatedAt }}
                 </span>
                 <UTooltip v-else :text="moment(item.updatedAt).format(TOOLTIP_DATE_FORMAT)">
-                  <span class="cursor-help font-medium text-highlighted">{{
-                    moment(item.updatedAt).fromNow()
-                  }}</span>
+                  <span class="cursor-help">{{ moment(item.updatedAt).fromNow() }}</span>
                 </UTooltip>
-              </div>
-            </div>
-
-            <div
-              v-if="undefined !== item?.restricted"
-              class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-            >
-              <div
-                class="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-              >
-                <UIcon name="i-lucide-lock" class="size-3.5" />
-                <span>Restricted</span>
-              </div>
-              <div class="mt-1 font-medium text-highlighted">
-                {{ item.restricted ? 'Yes' : 'No' }}
-              </div>
-            </div>
-
-            <div
-              v-if="undefined !== item?.disabled"
-              class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-            >
-              <div
-                class="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-              >
-                <UIcon name="i-lucide-ban" class="size-3.5" />
-                <span>Disabled</span>
-              </div>
-              <div class="mt-1 font-medium text-highlighted">
-                {{ item.disabled ? 'Yes' : 'No' }}
-              </div>
-            </div>
-          </div>
-        </UCard>
+              </dd>
+            </dl>
+          </article>
+        </Lazy>
       </div>
     </section>
-
-    <UCard class="shadow-sm" :ui="tipsCardUi">
-      <template #header>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 text-left"
-          @click="show_page_tips = !show_page_tips"
-        >
-          <span class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
-            <UIcon name="i-lucide-info" class="size-4 text-toned" />
-            <span>Tips</span>
-          </span>
-
-          <span class="inline-flex items-center gap-1 text-xs font-medium text-toned">
-            <UIcon
-              :name="show_page_tips ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-              class="size-4"
-            />
-            <span>{{ show_page_tips ? 'Hide' : 'Show' }}</span>
-          </span>
-        </button>
-      </template>
-
-      <div v-if="show_page_tips" class="text-sm leading-6 text-default">
-        <ul class="list-disc space-y-2 pl-5">
-          <li>
-            For <code>Plex</code> backends, if the <code>X-Plex-Token</code> is limited one, the
-            users will not show up. This is a limitation of the Plex API.
-          </li>
-        </ul>
-      </div>
-    </UCard>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useHead, useRoute } from '#app';
-import { useStorage } from '@vueuse/core';
+import { NuxtLink, UAlert, UButton, UEmpty, UIcon, UTooltip } from '#components';
 import moment from 'moment';
+import Lazy from '~/components/Lazy.vue';
 import PageHeader from '~/components/PageHeader.vue';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import { notification, parse_api_response, request, TOOLTIP_DATE_FORMAT } from '~/utils';
@@ -218,22 +128,12 @@ const backend = route.params.backend as string;
 const pageShell = requireTopLevelPageShell('backends');
 const items = ref<Array<BackendUserItem> | null>(null);
 const isLoading = ref<boolean>(false);
-const show_page_tips = useStorage('show_page_tips', true);
-
-const cardUi = {
-  header: 'p-5',
-  body: 'p-5',
-};
-
-const tipsCardUi = {
-  header: 'p-4',
-  body: 'p-5 pt-0',
-};
-
+const loadError = ref('');
 useHead({ title: `${backend} - Users` });
 
 const loadContent = async (): Promise<void> => {
-  items.value = [];
+  items.value = null;
+  loadError.value = '';
 
   try {
     isLoading.value = true;
@@ -242,14 +142,19 @@ const loadContent = async (): Promise<void> => {
     const data = await parse_api_response<Array<BackendUserItem>>(response);
 
     if ('error' in data) {
-      notification('error', 'Error', `${data.error.code}: ${data.error.message}`);
+      loadError.value = `${data.error.code}: ${data.error.message}`;
+      notification(
+        'error',
+        'Backend users unavailable',
+        `${data.error.code}: ${data.error.message}`,
+      );
       return;
     }
 
     items.value = data;
   } catch (e) {
-    const error = e as Error;
-    notification('error', 'Error', error.message);
+    loadError.value = e instanceof Error ? e.message : 'Unknown error occurred';
+    notification('error', 'Backend users unavailable', loadError.value);
   } finally {
     isLoading.value = false;
   }

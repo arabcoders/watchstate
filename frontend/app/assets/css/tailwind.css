@@ -7,6 +7,7 @@
   --ui-radius: 0.5rem;
   --ui-container: 96rem;
   --ui-header-height: 4.25rem;
+  --ws-artwork-opacity: 0.05;
   --ws-border-strong: var(--ui-border-accented);
   --ws-surface-border-soft: var(--ui-border-accented);
   --ws-surface-border-solid: var(--ui-border-accented);
@@ -42,54 +43,47 @@
   .page-leave-to {
     opacity: 0;
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    .page-enter-active,
+    .page-leave-active {
+      transition: none;
+    }
+  }
 }
 
 @layer components {
   .ws-shell-surface {
-    background:
-      radial-gradient(circle at top left, rgb(99 102 241 / 0.12), transparent 28%),
-      radial-gradient(circle at top right, rgb(245 158 11 / 0.08), transparent 22%),
-      linear-gradient(180deg, rgb(248 250 252 / 0.96), rgb(241 245 249 / 0.98));
-  }
-
-  .dark .ws-shell-surface {
-    background:
-      radial-gradient(circle at top left, rgb(99 102 241 / 0.14), transparent 26%),
-      radial-gradient(circle at top right, rgb(245 158 11 / 0.08), transparent 20%),
-      linear-gradient(180deg, rgb(9 12 18 / 0.98), rgb(17 24 39 / 0.98));
+    background: var(--ui-bg);
   }
 
   .ws-shell {
     min-height: 100vh;
     min-height: 100dvh;
-    background:
-      radial-gradient(circle at top left, rgb(99 102 241 / 0.12), transparent 28%),
-      radial-gradient(circle at top right, rgb(245 158 11 / 0.08), transparent 22%),
-      linear-gradient(180deg, rgb(248 250 252 / 0.94), rgb(241 245 249 / 0.98));
+    background: var(--ui-bg);
   }
 
-  .dark .ws-shell {
-    background:
-      radial-gradient(circle at top left, rgb(99 102 241 / 0.14), transparent 26%),
-      radial-gradient(circle at top right, rgb(245 158 11 / 0.08), transparent 20%),
-      linear-gradient(180deg, rgb(9 12 18 / 0.98), rgb(17 24 39 / 0.98));
+  .ws-header-artwork {
+    opacity: var(--ws-artwork-opacity);
+    background-position: center 35%;
+    background-size: cover;
+    mask-image: linear-gradient(to bottom, black, transparent);
   }
 
   .ws-page-header {
-    @apply flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between;
+    @apply flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between;
   }
 
   .ws-page-heading {
-    @apply flex min-w-0 items-center gap-3;
+    @apply flex min-w-0 items-start gap-4;
   }
 
   .ws-page-kicker {
-    @apply flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned;
+    @apply flex flex-wrap items-center gap-2 text-xs font-medium text-muted;
   }
 
   .ws-page-icon {
-    @apply inline-flex size-11 shrink-0 items-center justify-center rounded-md border bg-elevated/70 text-primary;
-    border-color: var(--ws-surface-border-solid);
+    @apply inline-flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary;
   }
 
   .ws-section-icon {
@@ -103,17 +97,17 @@
   }
 
   .ws-card {
-    @apply min-w-0 max-w-full rounded-lg border bg-elevated/20;
+    @apply min-w-0 max-w-full rounded-xl border bg-default;
     border-color: var(--ws-surface-border-soft);
   }
 
   .ws-card-padded {
-    @apply min-w-0 max-w-full rounded-lg border bg-elevated/20 p-4;
+    @apply min-w-0 max-w-full rounded-xl border bg-default p-4;
     border-color: var(--ws-surface-border-soft);
   }
 
   .ws-card-padded-lg {
-    @apply min-w-0 max-w-full rounded-lg border bg-elevated/20 p-4 sm:p-5;
+    @apply min-w-0 max-w-full rounded-xl border bg-default p-4 sm:p-5;
     border-color: var(--ws-surface-border-soft);
   }
 
@@ -133,7 +127,7 @@
   }
 
   .ws-table-surface {
-    @apply min-w-0 max-w-full rounded-sm border bg-elevated/20;
+    @apply min-w-0 max-w-full rounded-lg border bg-default;
     border-color: var(--ws-surface-border-solid);
   }
 
@@ -232,6 +226,10 @@
 
   .ws-wrap-anywhere {
     overflow-wrap: anywhere;
+  }
+
+  .ws-log-line {
+    @apply flex w-full min-w-0 flex-col gap-1 px-3 py-[0.65rem] leading-[1.6] md:flex-row md:items-start md:gap-2;
   }
 
   .ws-log-message-collapsed {

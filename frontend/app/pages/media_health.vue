@@ -1,219 +1,232 @@
 <template>
-  <div class="space-y-6">
-    <PageHeader v-bind="pageShell" description="Review media health across configured backends.">
-      <template #actions>
-        <UInput
-          v-if="showFilter"
-          id="filter"
-          v-model.lazy="filter"
-          type="search"
-          icon="i-lucide-filter"
-          placeholder="Filter displayed results."
-          size="sm"
-          class="w-full sm:w-72"
-        />
-
-        <USelect
-          v-if="report"
-          v-model="status"
-          :items="statusOptions"
-          value-key="value"
-          label-key="label"
-          size="sm"
-          class="w-42"
-          :disabled="isLoading"
-        />
-
-        <USelect
-          v-if="report"
-          v-model="type"
-          :items="typeOptions"
-          value-key="value"
-          label-key="label"
-          size="sm"
-          class="w-32"
-          :disabled="isLoading"
-        />
-
-        <UButton
-          color="neutral"
-          :variant="showFilter ? 'soft' : 'outline'"
-          size="sm"
-          icon="i-lucide-filter"
-          @click="toggleFilter"
-        >
-          <span class="hidden sm:inline">Filter</span>
-        </UButton>
-
-        <UButton
-          v-if="report && (UNHEALTHY_FILTER_VALUE !== status || ALL_FILTER_VALUE !== type)"
-          color="neutral"
-          variant="outline"
-          size="sm"
-          icon="i-lucide-filter-x"
-          :disabled="isLoading"
-          @click="clearFilters"
-        >
-          <span class="hidden sm:inline">Clear</span>
-        </UButton>
-
-        <UButton
-          v-if="report"
-          color="neutral"
-          :variant="selectAll ? 'soft' : 'outline'"
-          size="sm"
-          :icon="!selectAll ? 'i-lucide-square-check' : 'i-lucide-square'"
-          :disabled="isLoading || massActionInProgress || filteredItems.length < 1"
-          @click="selectAll = !selectAll"
-        >
-          <span class="hidden sm:inline">{{ !selectAll ? 'Select' : 'Unselect' }}</span>
-        </UButton>
-
-        <UButton
-          v-if="report"
-          color="neutral"
-          variant="outline"
-          size="sm"
-          icon="i-lucide-trash-2"
-          :loading="massActionInProgress"
-          :disabled="isLoading || massActionInProgress || selected_ids.length < 1"
-          @click="massDelete"
-        >
-          <span class="hidden sm:inline">Delete</span>
-        </UButton>
-
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="sm"
-          icon="i-lucide-refresh-cw"
-          :loading="isLoading"
-          :disabled="isLoading"
-          @click="loadContent(page)"
-        >
-          <span class="hidden sm:inline">Reload</span>
-        </UButton>
-
-        <UDropdownMenu
-          v-if="report"
-          :items="exportMenuItems"
-          :content="{ align: 'end' }"
-          :modal="false"
-        >
+  <div
+    class="space-y-6"
+    @click.capture="openMainLink"
+    @auxclick.capture="openMainLink"
+    @contextmenu.capture="openMainLink"
+  >
+    <div class="space-y-4">
+      <PageHeader v-bind="pageShell">
+        <template #actions>
           <UButton
             color="neutral"
             variant="outline"
             size="sm"
-            icon="i-lucide-download"
-            trailing-icon="i-lucide-chevron-down"
-            :loading="null !== exporting"
-            :disabled="null !== exporting"
+            icon="i-lucide-refresh-cw"
+            :loading="isLoading"
+            :disabled="isLoading || isQueueing || massActionInProgress"
+            @click="loadContent(page)"
           >
-            <span class="hidden sm:inline">Export</span>
+            Reload
           </UButton>
-        </UDropdownMenu>
 
-        <UButton
-          color="primary"
-          variant="solid"
-          size="sm"
-          icon="i-lucide-play"
-          :loading="isQueueing"
-          :disabled="isQueueing || reportState?.queued"
-          @click="queueReport"
-        >
-          <span class="hidden sm:inline">{{ reportState?.queued ? 'Queued' : 'Queue Audit' }}</span>
-        </UButton>
-      </template>
-    </PageHeader>
+          <UDropdownMenu
+            v-if="report"
+            :items="exportMenuItems"
+            :content="{ align: 'end' }"
+            :modal="false"
+          >
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-download"
+              trailing-icon="i-lucide-chevron-down"
+              :loading="null !== exporting"
+              :disabled="null !== exporting"
+            >
+              Export
+            </UButton>
+          </UDropdownMenu>
+
+          <UButton
+            color="primary"
+            variant="solid"
+            size="sm"
+            icon="i-lucide-play"
+            :loading="isQueueing"
+            :disabled="isLoading || isQueueing || massActionInProgress || reportState?.queued"
+            @click="queueReport"
+          >
+            {{ reportState?.queued ? 'Queued' : report ? 'Queue refresh' : 'Generate audit' }}
+          </UButton>
+        </template>
+      </PageHeader>
+
+      <dl class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-toned">
+        <div class="flex min-w-0 items-center gap-2">
+          <dt>Database:</dt>
+          <dd class="font-medium text-default">Main</dd>
+        </div>
+        <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <dt>Last completed:</dt>
+          <dd>
+            <UTooltip
+              v-if="report && 'completed' === report.status && report.completed_at"
+              :text="relativeDate(report.completed_at)"
+            >
+              <time :datetime="moment.unix(report.completed_at).toISOString()" class="cursor-help">
+                {{ formatDate(report.completed_at) }}
+              </time>
+            </UTooltip>
+            <span v-else>{{ report ? 'Unknown' : 'No report loaded' }}</span>
+          </dd>
+        </div>
+      </dl>
+    </div>
 
     <UAlert
       v-if="reportState?.queued"
       color="info"
       variant="soft"
       icon="i-lucide-clock-3"
-      title="Audit queued"
-      description="Media health audit is queued or running in the background. Reload this page after the task completes."
+      title="Report queued"
+      description="Reload to check for a completed report."
+    />
+
+    <UEmpty
+      v-if="!isLoading && !loadError && reportState && !reportState.queued && !report"
+      icon="i-lucide-file-search"
+      title="No audit found"
+      description="Use Generate audit to check records in the main database."
     />
 
     <UAlert
-      v-if="reportState?.stale"
-      color="warning"
+      v-if="loadError"
+      color="error"
       variant="soft"
       icon="i-lucide-triangle-alert"
-      title="Audit may be stale"
-      description="State data changed after this report was generated. Queue a new report for fresh results."
+      title="Couldn't load media health"
+      :description="loadError"
     />
 
-    <UAlert
-      v-if="!isLoading && !report"
-      color="warning"
-      variant="soft"
-      icon="i-lucide-file-warning"
-      title="No audit found"
-      description="Queue a media health audit to inspect records health."
-    />
+    <div v-if="report" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <StatCard
+        label="Actionable"
+        :value="formatNumber(report.summary.actionable_count)"
+        icon="i-lucide-triangle-alert"
+        color="warning"
+      />
+      <StatCard
+        label="Healthy"
+        :value="formatNumber(statusCount('healthy'))"
+        icon="i-lucide-check-circle"
+        color="success"
+      />
+      <StatCard
+        label="Records"
+        :value="formatNumber(report.state_count)"
+        icon="i-lucide-library"
+        color="neutral"
+      />
+      <StatCard
+        label="Backends"
+        :value="formatNumber(report.backend_count)"
+        icon="i-lucide-server"
+        color="neutral"
+      />
+    </div>
 
-    <div
-      v-if="selected_ids.length > 0"
-      class="flex flex-wrap items-center justify-between gap-3 rounded-md border border-default bg-elevated/30 px-3 py-3"
-    >
-      <div class="flex flex-wrap items-center gap-2">
-        <UBadge color="neutral" variant="soft" size="sm">{{ selected_ids.length }}</UBadge>
-
+    <section v-if="report" class="ws-panel-padded space-y-3">
+      <div class="flex flex-wrap items-end gap-3">
+        <UFormField label="Status" name="status">
+          <USelect
+            v-model="status"
+            :items="statusOptions"
+            value-key="value"
+            label-key="label"
+            class="w-48"
+            :disabled="isLoading || isQueueing || massActionInProgress"
+          />
+        </UFormField>
+        <UFormField label="Type" name="type">
+          <USelect
+            v-model="type"
+            :items="typeOptions"
+            value-key="value"
+            label-key="label"
+            class="w-36"
+            :disabled="isLoading || isQueueing || massActionInProgress"
+          />
+        </UFormField>
+        <UFormField label="Filter this page" name="filter" class="min-w-0 flex-1">
+          <UInput
+            id="filter"
+            v-model.lazy="filter"
+            type="search"
+            icon="i-lucide-search"
+            placeholder="Title, backend, or file path"
+            class="w-full"
+            :disabled="isLoading || isQueueing || massActionInProgress"
+          />
+        </UFormField>
         <UButton
+          v-if="UNHEALTHY_FILTER_VALUE !== status || ALL_FILTER_VALUE !== type || filter"
+          color="neutral"
+          variant="outline"
+          icon="i-lucide-filter-x"
+          :disabled="isLoading || isQueueing || massActionInProgress"
+          @click="clearFilters"
+        >
+          Clear filters
+        </UButton>
+      </div>
+
+      <p class="text-xs text-toned">
+        {{ formatNumber(filteredItems.length) }} shown on this page;
+        {{ formatNumber(total) }} records match Status and Type.
+      </p>
+
+      <div class="flex flex-wrap items-center justify-between gap-3 border-t border-default pt-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-square-check"
+            :disabled="
+              isLoading ||
+              isQueueing ||
+              massActionInProgress ||
+              !!loadError ||
+              1 > filteredItems.length
+            "
+            @click="selected_ids = filteredItems.map((item) => item.state_id)"
+          >
+            Select page
+          </UButton>
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-square"
+            :disabled="isLoading || isQueueing || massActionInProgress || 1 > selected_ids.length"
+            @click="selected_ids = []"
+          >
+            Unselect page
+          </UButton>
+          <span class="text-sm text-toned">{{ selected_ids.length }} selected</span>
+        </div>
+        <UButton
+          v-if="0 < selected_ids.length"
           color="neutral"
           variant="outline"
           size="sm"
           icon="i-lucide-trash-2"
           :loading="massActionInProgress"
-          :disabled="massActionInProgress"
+          :disabled="isLoading || isQueueing || massActionInProgress || !!loadError"
           @click="massDelete"
         >
-          Delete
+          Delete selected
         </UButton>
       </div>
-
-      <div class="text-xs text-toned">{{ filteredItems.length }} displayed</div>
-    </div>
-
-    <div v-if="report" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <div class="rounded-md border border-default bg-elevated/40 px-3 py-2">
-        <div class="text-xs font-medium uppercase tracking-[0.16em] text-toned">Actionable</div>
-        <div class="text-xl font-semibold text-warning">
-          {{ formatNumber(report.summary.actionable_count) }}
-        </div>
-      </div>
-
-      <div class="rounded-md border border-default bg-elevated/40 px-3 py-2">
-        <div class="text-xs font-medium uppercase tracking-[0.16em] text-toned">Healthy</div>
-        <div class="text-xl font-semibold text-success">
-          {{ formatNumber(statusCount('healthy')) }}
-        </div>
-      </div>
-
-      <div class="rounded-md border border-default bg-elevated/40 px-3 py-2">
-        <div class="text-xs font-medium uppercase tracking-[0.16em] text-toned">Records</div>
-        <div class="text-xl font-semibold text-highlighted">
-          {{ formatNumber(report.state_count) }}
-        </div>
-      </div>
-
-      <div class="rounded-md border border-default bg-elevated/40 px-3 py-2">
-        <div class="text-xs font-medium uppercase tracking-[0.16em] text-toned">Generated</div>
-        <UTooltip :text="formatDate(report.completed_at)">
-          <div class="cursor-help text-sm font-semibold text-highlighted">
-            {{ relativeDate(report.completed_at) }}
-          </div>
-        </UTooltip>
-      </div>
-    </div>
+    </section>
 
     <Pager
       v-if="total && last_page > 1"
       :page="page"
       :last_page="last_page"
-      :is-loading="isLoading"
+      :is-loading="isLoading || isQueueing || massActionInProgress"
       @navigate="loadContent"
     />
 
@@ -222,31 +235,26 @@
       color="info"
       variant="soft"
       icon="i-lucide-loader-circle"
-      title="Loading"
-      description="Loading report data. Please wait..."
+      title="Loading media health"
       :ui="{ icon: 'animate-spin' }"
     />
 
-    <UAlert
-      v-else-if="filteredItems.length < 1 && filter && items.length > 0"
-      color="warning"
-      variant="soft"
-      icon="i-lucide-circle-check"
-      title="Information"
+    <UEmpty
+      v-if="!isLoading && !loadError && filteredItems.length < 1 && filter && items.length > 0"
+      icon="i-lucide-search"
+      title="No items found"
     >
       <template #description>
-        <p class="text-sm text-default">
-          The filter <code>{{ filter }}</code> did not match any records on this page.
-        </p>
+        The filter <code>{{ filter }}</code> did not match any records on this page.
       </template>
-    </UAlert>
+    </UEmpty>
 
-    <div v-else-if="filteredItems.length > 0" class="grid gap-4 xl:grid-cols-2">
+    <div v-else-if="filteredItems.length > 0" class="space-y-3">
       <Lazy
         v-for="item in filteredItems"
         :key="item.id"
         :unrender="true"
-        :min-height="380"
+        :min-height="200"
         class="block"
       >
         <UCard
@@ -255,14 +263,14 @@
           :ui="itemCardUi"
         >
           <template #header>
-            <div class="flex items-start justify-between gap-3">
+            <div class="flex flex-wrap items-start justify-between gap-3">
               <div class="min-w-0 flex flex-1 items-start gap-2">
                 <UIcon :name="mediaIcon(item.type)" class="mt-0.5 size-4 shrink-0 text-toned" />
 
                 <div class="min-w-0 flex-1 text-base font-semibold text-highlighted">
                   <FloatingImage
-                    :image="`/history/${item.state_id}/images/poster`"
-                    v-if="poster_enable"
+                    :image="`/history/${item.state_id}/images/poster?user=main`"
+                    v-if="poster_enable && 'main' === apiUser"
                   >
                     <UTooltip :text="String(makeName(item as unknown as JsonObject))">
                       <NuxtLink
@@ -285,23 +293,22 @@
                 </div>
               </div>
 
-              <div class="flex shrink-0 items-center gap-2">
+              <div class="flex flex-wrap items-center gap-2">
                 <UBadge :color="severityColor(item.severity)" variant="outline">
-                  {{ item.severity }}
+                  {{ statusLabel(item.status) }}
                 </UBadge>
-                <UBadge
-                  :color="
-                    item.backend_count === item.expected_backend_count ? 'success' : 'warning'
-                  "
-                  variant="soft"
-                >
-                  {{ item.backend_count }}/{{ item.expected_backend_count }}
-                </UBadge>
+                <UTooltip :text="`Severity ${item.severity}`">
+                  <UBadge :color="severityColor(item.severity)" variant="soft">
+                    {{ item.severity }}
+                  </UBadge>
+                </UTooltip>
                 <UTooltip
                   :text="selected_ids.includes(item.state_id) ? 'Unselect item' : 'Select item'"
                 >
                   <UCheckbox
                     color="primary"
+                    :aria-label="`Select ${item.title}`"
+                    :disabled="isLoading || isQueueing || massActionInProgress || !!loadError"
                     :model-value="selected_ids.includes(item.state_id)"
                     @update:model-value="toggleSelected(item.state_id, $event)"
                   />
@@ -311,14 +318,35 @@
           </template>
 
           <div class="space-y-3">
-            <div class="rounded-md border border-default bg-elevated/40 px-3 py-2.5">
+            <div class="flex flex-wrap items-center gap-2 text-xs text-toned">
+              <span>{{ item.backend_count }}/{{ item.expected_backend_count }} backends</span>
+              <BackendItemLink
+                v-for="backend in backendNames(item)"
+                :key="`${item.id}-backend-${backend}`"
+                :backend="backend"
+                :url="backendItemUrl(item, backend)"
+                color="neutral"
+              />
+              <span v-if="0 < missingBackendNames(item).length">
+                Missing: {{ missingBackendNames(item).join(', ') }}
+              </span>
+            </div>
+
+            <div>
               <div class="mb-1 flex items-center gap-2 font-medium text-highlighted">
                 <UIcon :name="statusIcon(item.status)" class="size-4 text-toned" />
                 <span>{{ statusActionTitle(item.status) }}</span>
               </div>
-              <p class="text-sm leading-6 text-default">{{ statusActionText(item.status) }}</p>
+              <p class="text-sm text-toned">{{ statusActionText(item.status) }}</p>
             </div>
+          </div>
 
+          <details
+            :open="item.show_details"
+            class="mt-3 space-y-3 border-t border-default pt-3"
+            @toggle="item.show_details = ($event.target as HTMLDetailsElement).open"
+          >
+            <summary class="cursor-pointer text-sm font-medium text-highlighted">Details</summary>
             <div
               v-if="guidConflictEntries(item).length > 0"
               class="rounded-md border border-error/30 bg-error/5 px-3 py-2.5"
@@ -415,13 +443,16 @@
                 <div
                   class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 text-sm text-default"
                 >
-                  <button
-                    type="button"
-                    class="mt-0.5 shrink-0 text-toned hover:text-primary"
-                    @click="item.expand_duplicate_path = !item.expand_duplicate_path"
-                  >
-                    <UIcon name="i-lucide-file-text" class="size-4" />
-                  </button>
+                  <UTooltip text="Toggle duplicate path wrapping">
+                    <button
+                      type="button"
+                      class="mt-0.5 shrink-0 text-toned hover:text-primary"
+                      aria-label="Toggle duplicate path wrapping"
+                      @click="item.expand_duplicate_path = !item.expand_duplicate_path"
+                    >
+                      <UIcon name="i-lucide-file-text" class="size-4" />
+                    </button>
+                  </UTooltip>
                   <NuxtLink
                     :to="makeSearchLink('path', item.signals.duplicate_reference.path)"
                     class="min-w-0 flex-1 hover:text-primary"
@@ -429,15 +460,17 @@
                   >
                     {{ item.signals.duplicate_reference.path }}
                   </NuxtLink>
-                  <UButton
-                    color="neutral"
-                    variant="ghost"
-                    size="xs"
-                    square
-                    icon="i-lucide-copy"
-                    aria-label="Copy duplicate path"
-                    @click="copyText(item.signals.duplicate_reference?.path ?? '', false)"
-                  />
+                  <UTooltip text="Copy duplicate path">
+                    <UButton
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      square
+                      icon="i-lucide-copy"
+                      aria-label="Copy duplicate path"
+                      @click="copyText(item.signals.duplicate_reference?.path ?? '', false)"
+                    />
+                  </UTooltip>
                 </div>
 
                 <div class="flex flex-wrap gap-1.5">
@@ -513,13 +546,16 @@
                     :url="backendItemUrl(item, check.backend)"
                     color="error"
                   />
-                  <button
-                    type="button"
-                    class="mt-0.5 shrink-0 text-toned hover:text-primary"
-                    @click="item.expand_file_checks = !item.expand_file_checks"
-                  >
-                    <UIcon name="i-lucide-file-x-2" class="size-4" />
-                  </button>
+                  <UTooltip text="Toggle missing file path wrapping">
+                    <button
+                      type="button"
+                      class="mt-0.5 shrink-0 text-toned hover:text-primary"
+                      aria-label="Toggle missing file path wrapping"
+                      @click="item.expand_file_checks = !item.expand_file_checks"
+                    >
+                      <UIcon name="i-lucide-file-x-2" class="size-4" />
+                    </button>
+                  </UTooltip>
                   <NuxtLink
                     v-if="check.path"
                     :to="makeSearchLink('path', check.path)"
@@ -529,16 +565,17 @@
                     {{ check.path }}
                   </NuxtLink>
                   <span v-else class="min-w-0 flex-1 truncate text-toned">No path</span>
-                  <UButton
-                    v-if="check.path"
-                    color="neutral"
-                    variant="ghost"
-                    size="xs"
-                    square
-                    icon="i-lucide-copy"
-                    aria-label="Copy missing file path"
-                    @click="copyText(check.path, false)"
-                  />
+                  <UTooltip v-if="check.path" text="Copy missing file path">
+                    <UButton
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      square
+                      icon="i-lucide-copy"
+                      aria-label="Copy missing file path"
+                      @click="copyText(check.path, false)"
+                    />
+                  </UTooltip>
                 </div>
               </div>
             </div>
@@ -564,7 +601,7 @@
             </div>
 
             <div
-              v-if="pathRows(item).length > 1"
+              v-if="0 < pathRows(item).length"
               class="rounded-md border border-default bg-elevated/40 px-3 py-2.5"
             >
               <div class="mb-2 flex items-center gap-2 font-medium text-highlighted">
@@ -587,13 +624,16 @@
                       color="neutral"
                     />
                   </div>
-                  <button
-                    type="button"
-                    class="mt-0.5 shrink-0 text-toned hover:text-primary"
-                    @click="item.expand_paths = !item.expand_paths"
-                  >
-                    <UIcon name="i-lucide-file-text" class="size-4" />
-                  </button>
+                  <UTooltip text="Toggle backend path wrapping">
+                    <button
+                      type="button"
+                      class="mt-0.5 shrink-0 text-toned hover:text-primary"
+                      aria-label="Toggle backend path wrapping"
+                      @click="item.expand_paths = !item.expand_paths"
+                    >
+                      <UIcon name="i-lucide-file-text" class="size-4" />
+                    </button>
+                  </UTooltip>
                   <UTooltip v-if="group.path" :text="group.path">
                     <NuxtLink
                       v-if="group.path"
@@ -605,16 +645,17 @@
                     </NuxtLink>
                   </UTooltip>
                   <span v-else class="min-w-0 flex-1 truncate text-toned">No metadata</span>
-                  <UButton
-                    v-if="group.path"
-                    color="neutral"
-                    variant="ghost"
-                    size="xs"
-                    square
-                    icon="i-lucide-copy"
-                    aria-label="Copy backend path"
-                    @click="copyText(group.path, false)"
-                  />
+                  <UTooltip v-if="group.path" text="Copy backend path">
+                    <UButton
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      square
+                      icon="i-lucide-copy"
+                      aria-label="Copy backend path"
+                      @click="copyText(group.path, false)"
+                    />
+                  </UTooltip>
                 </div>
               </div>
             </div>
@@ -647,45 +688,48 @@
               </div>
             </div>
 
-            <div v-if="showReasonDetails(item)">
-              <button
-                type="button"
-                class="flex items-center gap-1.5 text-xs font-medium text-toned hover:text-default"
-                @click="item.show_reasons = !item.show_reasons"
-              >
-                <UIcon
-                  name="i-lucide-chevron-right"
-                  :class="['size-3.5 transition-transform', item.show_reasons ? 'rotate-90' : '']"
-                />
-                <span>Details ({{ item.reasons.length }})</span>
-              </button>
-
-              <ul
-                v-if="item.show_reasons"
-                class="mt-2 list-disc space-y-1 rounded-md border border-default bg-elevated/40 px-6 py-2 text-sm leading-6 text-default"
-              >
-                <li v-for="reason in item.reasons" :key="reason">{{ reason }}</li>
-              </ul>
-            </div>
-          </div>
+            <ul
+              v-if="0 < item.reasons.length"
+              class="list-disc space-y-1 pl-5 text-sm text-default"
+            >
+              <li v-for="reason in item.reasons" :key="reason">{{ reason }}</li>
+            </ul>
+          </details>
         </UCard>
       </Lazy>
     </div>
 
-    <UAlert
-      v-else-if="report"
-      color="success"
-      variant="soft"
+    <UEmpty
+      v-else-if="!isLoading && report && !loadError && 0 === report.summary.total"
+      icon="i-lucide-library"
+      title="No records audited"
+    />
+
+    <UEmpty
+      v-else-if="
+        report &&
+        !isLoading &&
+        !loadError &&
+        UNHEALTHY_FILTER_VALUE === status &&
+        ALL_FILTER_VALUE === type &&
+        !filter &&
+        report.summary.total === statusCount('healthy')
+      "
       icon="i-lucide-check-circle"
-      title="No items found"
-      description="No report items match the selected filters."
+      title="No unhealthy records"
+    />
+
+    <UEmpty
+      v-else-if="!isLoading && report && !loadError"
+      icon="i-lucide-search"
+      title="No records match these filters"
     />
 
     <Pager
       v-if="total && last_page > 1"
       :page="page"
       :last_page="last_page"
-      :is-loading="isLoading"
+      :is-loading="isLoading || isQueueing || massActionInProgress"
       @navigate="loadContent"
     />
 
@@ -714,9 +758,8 @@
         <li>Backend names open the exact remote item when the backend supplied a source ID.</li>
         <li>Use record links to compare duplicate GUID or file reference records in history.</li>
         <li>
-          After changing metadata in a backends, force import metadata from the effected backends,
-          and then queue a new audit report to see the updated results. The report is a snapshot of
-          the state at the time it was generated.
+          After correcting backend metadata, force a metadata import from the affected backends,
+          then queue a new audit.
         </li>
       </ul>
     </UCard>
@@ -724,17 +767,32 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
-import { useHead, useRoute, useRouter } from '#app';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { navigateTo, useHead, useRoute, useRouter } from '#app';
 import { useStorage } from '@vueuse/core';
 import moment from 'moment';
-import { NuxtLink, UIcon } from '#components';
+import {
+  NuxtLink,
+  UAlert,
+  UBadge,
+  UButton,
+  UCard,
+  UCheckbox,
+  UDropdownMenu,
+  UEmpty,
+  UFormField,
+  UIcon,
+  UInput,
+  USelect,
+  UTooltip,
+} from '#components';
 import FloatingImage from '~/components/FloatingImage.vue';
 import BackendItemLink from '~/components/BackendItemLink.vue';
 import HistoryRecordLink from '~/components/HistoryRecordLink.vue';
 import Lazy from '~/components/Lazy.vue';
 import PageHeader from '~/components/PageHeader.vue';
 import Pager from '~/components/Pager.vue';
+import StatCard from '~/components/StatCard.vue';
 import { useDialog } from '~/composables/useDialog';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import {
@@ -760,6 +818,8 @@ import type {
 const pageShell = requireTopLevelPageShell('media-health');
 const route = useRoute();
 const router = useRouter();
+const apiUser = useStorage<string>('api_user', 'main', undefined, { flush: 'sync' });
+let pendingMainPath: string | null = null;
 
 useHead({ title: 'Media Health' });
 
@@ -772,7 +832,7 @@ type MediaHealthItemWithUI = MediaHealthItem & {
   expand_duplicate_path?: boolean;
   expand_file_checks?: boolean;
   expand_paths?: boolean;
-  show_reasons?: boolean;
+  show_details?: boolean;
 };
 
 type MediaHealthFileCheck = {
@@ -792,7 +852,7 @@ const UNHEALTHY_FILTER_VALUE = 'unhealthy';
 const show_page_tips = useStorage('show_page_tips', true);
 const poster_enable = useStorage('poster_enable', true);
 const reportState = ref<MediaHealthResponse | null>(null);
-const report = computed<MediaHealthReport | null>(() => reportState.value?.report ?? null);
+const report = ref<MediaHealthReport | null>(null);
 const items = ref<Array<MediaHealthItemWithUI>>([]);
 const page = ref<number>(Number(route.query.page ?? 1));
 const perpage = ref<number>(Number(route.query.perpage ?? 50));
@@ -803,13 +863,64 @@ const routeType = Array.isArray(route.query.type) ? route.query.type[0] : route.
 const status = ref<string>(routeStatus ? String(routeStatus) : UNHEALTHY_FILTER_VALUE);
 const type = ref<string>(routeType ? String(routeType) : ALL_FILTER_VALUE);
 const filter = ref<string>(String(route.query.filter ?? ''));
-const showFilter = ref<boolean>(!!filter.value);
 const isLoading = ref<boolean>(false);
+const loadError = ref('');
 const isQueueing = ref<boolean>(false);
-const selectAll = ref<boolean>(false);
 const selected_ids = ref<Array<number>>([]);
 const massActionInProgress = ref<boolean>(false);
 const exporting = ref<'markdown' | 'json' | 'csv' | null>(null);
+let loadRequest = 0;
+
+watch(
+  () => router.currentRoute.value.path,
+  (path) => {
+    if (pendingMainPath && pendingMainPath === path) {
+      apiUser.value = 'main';
+      pendingMainPath = null;
+    }
+  },
+  { flush: 'sync' },
+);
+
+const openMainLink = async (event: MouseEvent): Promise<void> => {
+  const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;
+  if (!(anchor instanceof HTMLAnchorElement)) {
+    return;
+  }
+
+  const target = new URL(anchor.href, window.location.href);
+  if (
+    window.location.origin !== target.origin ||
+    !/^\/(?:history(?:\/|$)|backend\/)/.test(target.pathname) ||
+    'main' === apiUser.value
+  ) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  if ('auxclick' === event.type || 'contextmenu' === event.type) {
+    notification(
+      'info',
+      'Main database link',
+      'Select the main identity before opening this link in another tab.',
+    );
+    return;
+  }
+  if (pendingMainPath) {
+    return;
+  }
+
+  pendingMainPath = target.pathname;
+  try {
+    await navigateTo(`${target.pathname}${target.search}${target.hash}`);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unexpected navigation error';
+    notification('error', 'Could not open main database link', message);
+  } finally {
+    pendingMainPath = null;
+  }
+};
 
 const itemCardUi = {
   header: 'p-4',
@@ -862,10 +973,6 @@ const filteredItems = computed<Array<MediaHealthItemWithUI>>(() => {
   });
 });
 
-watch(selectAll, (value) => {
-  selected_ids.value = value ? filteredItems.value.map((item) => item.state_id) : [];
-});
-
 const toggleSelected = (id: number, value: boolean | 'indeterminate'): void => {
   if (true === value) {
     if (!selected_ids.value.includes(id)) {
@@ -877,29 +984,36 @@ const toggleSelected = (id: number, value: boolean | 'indeterminate'): void => {
   selected_ids.value = selected_ids.value.filter((itemId) => itemId !== id);
 };
 
-const loadSummary = async (): Promise<void> => {
+const loadSummary = async (): Promise<MediaHealthResponse> => {
   const response = await request('/state/media-health');
   const json = await parse_api_response<MediaHealthResponse>(response);
   if ('error' in json) {
-    notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`);
-    return;
+    throw new Error(`${json.error.code}: ${json.error.message}`);
   }
 
-  reportState.value = json;
+  return json;
 };
 
 const loadContent = async (pageNumber: number): Promise<void> => {
   pageNumber = Number(pageNumber);
-  if (Number.isNaN(pageNumber) || pageNumber < 1) {
+  if (Number.isNaN(pageNumber) || 1 > pageNumber) {
     pageNumber = 1;
   }
 
+  const requestId = ++loadRequest;
   isLoading.value = true;
-  page.value = pageNumber;
+  loadError.value = '';
+  selected_ids.value = [];
 
   try {
-    await loadSummary();
-    if (!report.value) {
+    const summary = await loadSummary();
+    if (requestId !== loadRequest) {
+      return;
+    }
+
+    reportState.value = summary;
+    if (!summary.report) {
+      report.value = null;
       items.value = [];
       total.value = 0;
       return;
@@ -916,112 +1030,170 @@ const loadContent = async (pageNumber: number): Promise<void> => {
     if (ALL_FILTER_VALUE !== type.value) {
       search.set('type', type.value);
     }
-    if ('' !== filter.value.trim()) {
-      search.set('filter', filter.value.trim());
-    }
 
     const response = await request(`/state/media-health/items?${search.toString()}`);
     const json = await parse_api_response<ItemsResponse>(response);
+    if (requestId !== loadRequest) {
+      return;
+    }
     if ('error' in json) {
-      notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`);
+      loadError.value = `${json.error.code}: ${json.error.message}`;
+      notification('error', 'Audit not loaded', `${json.error.code}: ${json.error.message}`);
       return;
     }
 
+    report.value = json.report;
+    reportState.value = { ...summary, report: json.report };
     items.value = json.items;
     page.value = json.paging.current_page;
     perpage.value = json.paging.perpage;
     total.value = json.paging.total;
 
-    await router.replace({ path: '/media_health', query: Object.fromEntries(search) });
+    await router.replace({
+      path: '/media_health',
+      query: {
+        ...Object.fromEntries(search),
+        page: String(page.value),
+        status: status.value,
+        type: type.value,
+        filter: filter.value.trim() || undefined,
+      },
+    });
   } catch (e: unknown) {
-    const error = e as Error;
-    notification('error', 'Error', `Request error. ${error.message}`);
+    if (requestId !== loadRequest) {
+      return;
+    }
+    loadError.value = e instanceof Error ? e.message : 'Unknown error occurred';
+    notification('error', 'Audit not loaded', loadError.value);
   } finally {
-    isLoading.value = false;
-    selectAll.value = false;
-    selected_ids.value = [];
+    if (requestId === loadRequest) {
+      isLoading.value = false;
+    }
   }
 };
 
 const massDelete = async (): Promise<void> => {
-  if (selected_ids.value.length < 1) {
+  if (
+    !report.value ||
+    'completed' !== report.value.status ||
+    isLoading.value ||
+    isQueueing.value ||
+    massActionInProgress.value ||
+    loadError.value ||
+    1 > selected_ids.value.length
+  ) {
     return;
   }
 
+  const ids = [...selected_ids.value];
+  const reportId = report.value.id;
+  const requestId = loadRequest;
   const { status: confirmStatus } = await useDialog().confirmDialog({
-    title: 'Confirm Deletion',
-    message: `Delete '${selected_ids.value.length}' item/s?`,
+    title: 'Delete selected records?',
+    confirmText: 'Delete',
+    message: `Delete ${ids.length} selected records from main database history? Backend items and media files are not deleted.`,
     confirmColor: 'error',
   });
 
-  if (true !== confirmStatus) {
+  if (
+    true !== confirmStatus ||
+    reportId !== report.value?.id ||
+    requestId !== loadRequest ||
+    isLoading.value ||
+    isQueueing.value ||
+    massActionInProgress.value ||
+    loadError.value ||
+    ids.length !== selected_ids.value.length ||
+    !ids.every((id) => selected_ids.value.includes(id)) ||
+    !ids.every((id) =>
+      filteredItems.value.some((item) => id === item.state_id && reportId === item.report_id),
+    )
+  ) {
     return;
   }
 
   massActionInProgress.value = true;
 
   try {
-    const ids = [...selected_ids.value];
-    notification(
-      'success',
-      'Action in progress',
-      `Deleting '${ids.length}' item/s. Please wait...`,
-    );
+    notification('success', 'Deleting records', `Deleting ${ids.length} selected records.`);
 
     const requests = await Promise.all(
-      ids.map((id) => request(`/history/${id}`, { method: 'DELETE' })),
+      ids.map((id) =>
+        request(`/history/${id}`, {
+          method: 'DELETE',
+          headers: { 'X-User': 'main' },
+        }),
+      ),
     );
 
     if (!requests.every((response) => 200 === response.status)) {
-      notification(
-        'error',
-        'Error',
-        'Some delete requests failed. Please check the console for more details.',
-      );
+      notification('error', 'Some records were not deleted', 'Reload before trying again.');
       return;
     }
 
     items.value = items.value.filter((item) => !ids.includes(item.state_id));
     total.value = Math.max(0, total.value - ids.length);
-    notification('success', 'Success', `Deleting '${ids.length}' item/s completed.`);
+    notification(
+      'success',
+      'Records deleted',
+      `Deleted ${ids.length} records from the main database.`,
+    );
   } catch (e: unknown) {
     const error = e as Error;
-    notification('error', 'Error', `Request error. ${error.message}`);
+    notification('error', 'Records not deleted', error.message);
   } finally {
     massActionInProgress.value = false;
     selected_ids.value = [];
-    selectAll.value = false;
   }
 };
 
 const queueReport = async (): Promise<void> => {
+  if (
+    isLoading.value ||
+    isQueueing.value ||
+    massActionInProgress.value ||
+    reportState.value?.queued
+  ) {
+    return;
+  }
+
   isQueueing.value = true;
   try {
     const response = await request('/state/media-health/run', { method: 'POST' });
     const json = await parse_api_response<MediaHealthRunResponse>(response);
     if ('error' in json) {
-      notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`);
+      notification('error', 'Audit not queued', `${json.error.code}: ${json.error.message}`);
       return;
     }
 
     notification(json.queued ? 'success' : 'info', 'Media Health', json.message);
-    await loadSummary();
+    reportState.value = {
+      report: report.value,
+      stale: reportState.value?.stale ?? false,
+      queued: true,
+      queued_event: json.event_id,
+    };
+    reportState.value = await loadSummary();
   } catch (e: unknown) {
     const error = e as Error;
-    notification('error', 'Error', `Request error. ${error.message}`);
+    notification('error', 'Audit not queued', error.message);
   } finally {
     isQueueing.value = false;
   }
 };
 
 const exportReport = async (format: 'markdown' | 'json' | 'csv'): Promise<void> => {
+  if (null !== exporting.value) {
+    return;
+  }
+
   exporting.value = format;
   try {
     const response = await request(`/state/media-health/export/${format}`);
     if (!response.ok) {
       const json = await parse_api_response<MediaHealthResponse>(response);
       if ('error' in json) {
-        notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`);
+        notification('error', 'Audit not exported', `${json.error.code}: ${json.error.message}`);
       }
       return;
     }
@@ -1037,7 +1209,7 @@ const exportReport = async (format: 'markdown' | 'json' | 'csv'): Promise<void> 
     URL.revokeObjectURL(url);
   } catch (e: unknown) {
     const error = e as Error;
-    notification('error', 'Error', `Request error. ${error.message}`);
+    notification('error', 'Audit not exported', error.message);
   } finally {
     exporting.value = null;
   }
@@ -1072,21 +1244,10 @@ const exportMenuItems = computed(() => [
   ],
 ]);
 
-const clearFilters = async (): Promise<void> => {
-  if (UNHEALTHY_FILTER_VALUE === status.value && ALL_FILTER_VALUE === type.value) {
-    await loadContent(1);
-    return;
-  }
-
+const clearFilters = (): void => {
   status.value = UNHEALTHY_FILTER_VALUE;
   type.value = ALL_FILTER_VALUE;
-};
-
-const toggleFilter = (): void => {
-  showFilter.value = !showFilter.value;
-  if (!showFilter.value && '' !== filter.value) {
-    filter.value = '';
-  }
+  filter.value = '';
 };
 
 const statusCount = (key: string): number => report.value?.summary.statuses[key] ?? 0;
@@ -1175,7 +1336,7 @@ const statusActionText = (value: MediaHealthStatus): string => {
     return 'Check the listed backend path, restore the media file, or point it to the correct one.';
   }
   if ('guid_conflict' === value) {
-    return 'Click the backend names below and make the affected backends use the same GUID ID. A small number of mismatched GUIDs is usually harmless; however, if no matching record is found, a duplicate record may have been created.';
+    return 'Compare external IDs on the linked backend items and correct any mismatch.';
   }
   if ('duplicate_guid' === value) {
     return 'Compare the linked history records and remove or refresh the record that is mapped to the wrong external ID.';
@@ -1235,23 +1396,6 @@ const metadataConflictEntries = (
   item: MediaHealthItem,
 ): Array<[string, Record<string, Array<string>>]> => objectEntries(item.signals.metadata_conflicts);
 
-const showReasonDetails = (item: MediaHealthItem): boolean => {
-  if (item.reasons.length < 1) {
-    return false;
-  }
-
-  return (
-    guidConflictEntries(item).length < 1 &&
-    metadataConflictEntries(item).length < 1 &&
-    !item.signals.duplicate_guid &&
-    !item.signals.duplicate_reference &&
-    missingFileChecks(item).length < 1 &&
-    missingBackendNames(item).length < 1 &&
-    pathRows(item).length < 2 &&
-    objectEntries(item.signals.guids).length < 1
-  );
-};
-
 const pathGroups = (item: MediaHealthItem): Array<{ path: string; backends: Array<string> }> => {
   const groups = new Map<string, Array<string>>();
 
@@ -1298,7 +1442,21 @@ const guidLink = (item: MediaHealthItem, key: string, value: string): string => 
 };
 
 watch([status, type], async () => await loadContent(1));
-watch(filter, async () => await loadContent(1));
+watch(filter, async () => {
+  selected_ids.value = [];
+  await router.replace({
+    path: '/media_health',
+    query: {
+      ...route.query,
+      filter: filter.value.trim() || undefined,
+    },
+  });
+});
 
 onMounted(async () => await loadContent(page.value));
+
+onBeforeUnmount(() => {
+  pendingMainPath = null;
+  loadRequest++;
+});
 </script>

@@ -153,6 +153,8 @@ final class Mismatched
             return [];
         }
 
+        $builder['poster'] = $this->getBackendPosterUrl($client, $builder, $item[Options::RAW_RESPONSE]);
+
         if (count($item['guids']) < 1) {
             $item['guids'] = 'None';
         }

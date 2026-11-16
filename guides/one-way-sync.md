@@ -16,44 +16,33 @@ environment without modifying the original data.
 ### Adding your backend with has the most accurate data
 
 First, go to <!--i:i-lucide-server--> **Backends** and click on the <!--i:i-lucide-plus--> **Add Backend** button. Follow the
-interactive setup guide. When you reach the step asking *`Enable export`*, disable it,
-this applies to
-your main backend as you don’t want to alter its data. Keep *`Enable Import`*
-enabled, which will allow
-you to import data from the backend.
+interactive setup guide. In **Sync & One-Time Operations**, disable *`Enable Export`*
+for your main backend so its data isn't changed. Keep *`Enable Import`*
+enabled to import data from the backend.
 
-Enable the *`Force one time import from this backend: Yes`* option to import your current data into WatchState. This will
-bring all the data from the backend into WatchState.
+Enable the *`Force one time import from this backend`* switch to import all current data from the backend into WatchState.
 
 > [!NOTE]
-> It’s recommended to keep *`Create backup for this backend data: Yes`* enabled. This will create a
+> It’s recommended to keep *`Create backup for this backend data`* enabled. This will create a
 > snapshot of your backend data so you can restore it if anything goes wrong. You can access
-> backups from **Operations** > <!--i:i-lucide-hard-drive-download--> **Backups**.
+> backups from **Settings** > <!--i:i-lucide-hard-drive-download--> **Backups**.
 
 # Importing the Data
 
-The import process may take some time, depending on the size of your library. To check the import status, go to
-the <!--i:i-lucide-server--> **Backends** page and check the `last import date` for the backend. If it shows the current time,
-the import is finished.
+The import process may take some time, depending on the size of your library. The <!--i:i-lucide-server--> **Backends**
+page shows the recorded import time under **Last Import (Full)**. A recent time alone doesn't confirm completion.
 
-Alternatively, visit the **Operations** > <!--i:i-lucide-scroll-text--> **Logs** page and look at the `task.YYYYMMDD.log` file, or go to
-the **Activity** > <!--i:i-lucide-calendar-days--> **Events** page and look for the *`run_console`*
-events. The logs page is updated more frequently, so we recommend using it. Once the import is complete, you should see
-a message like this:
+To check completion or failure, visit **Activity** > <!--i:i-lucide-scroll-text--> **Logs**, select **Task** under **Type**,
+and click the `task.YYYYMMDD.jsonl` filename. Or open **Activity** > <!--i:i-lucide-calendar-days--> **Events**, set **Status** to
+**Any status**, open **Search events**, enter `run_console` under **Event name**, then click **Apply search**.
+Click the event name to inspect its status and saved logs. Check the user and backend to confirm it belongs to your import.
+Check the outcome and any reported failures before continuing. A completion summary looks like this:
 
 ```text
-[DD/MM HH:mm:SS]: NOTICE: SYSTEM: Completed 'XXX' requests in 'XXX.XXX's for 'main' backends.
-
-┌─────────┬───────┬─────────┬────────┐
-│ Type    │ Added │ Updated │ Failed │
-├─────────┼───────┼─────────┼────────┤
-│ Movie   │ XXX   │ XXX     │ XXX    │
-├─────────┼───────┼─────────┼────────┤
-│ Episode │ XXX   │ XXX     │ XXX    │
-└─────────┴───────┴─────────┴────────┘
+Import process completed in 'XXX's for all users.
 ```
 
-Once the import is done, go to the <!--i:i-lucide-history--> **History** page to view the imported items. You can also
+Once the import is done, go to <!--i:i-lucide-history--> **History** > **Records** to view the imported items. You can also
 navigate through the data to check its accuracy. Once satisfied, proceed to the next step.
 
 # Adding Other Backends
@@ -65,9 +54,9 @@ For each backend, follow these steps:
 Do exactly as you did for the main backend, but make the following changes:
 
 - *`Enable Import`*: No
-- *`Enable export`*: Yes
-- *`Force export local data to this backend: Yes`*: This depends on your setup:
-    - If you have only one extra backend and have already imported your main backend data, select *Yes* and skip Step 2.
+- *`Enable Export`*: Yes
+- *`Force export local data to this backend`*: This depends on your setup:
+    - If you have only one extra backend and have already imported your main backend data, enable this switch and skip Step 2.
     - If you have multiple backends, keep this option disabled and proceed to Step 2.
 
 > [!IMPORTANT]  
@@ -81,14 +70,14 @@ You have two options:
 ##### Option 1 (One Extra Backend)
 
 Go to the <!--i:i-lucide-server--> **Backends** page, and under the backend, there is a `Quick operations` list. Select
-*`2. Force export local play state to this backend.`* Once selected, you'll be redirected to
-the **Operations** > <!--i:i-lucide-terminal--> **Console** page, where the command will be pre-filled
-for you. Press *Enter* or click the <!--i:i-lucide-terminal--> **Execute** button.
+*`3. Force export local play state to this backend.`* Once selected, you'll be redirected to
+the **Activity** > <!--i:i-lucide-terminal--> **Console** page, where the command will be pre-filled
+for you. Press *Enter* or click the <!--i:i-lucide-send--> **Run command** button.
 
 ##### Option 2 (Multiple Backends)
 
 If you have multiple backends, skip Step 2 for now and add all your backends. Once all backends are added, go to
-the **Operations** > <!--i:i-lucide-terminal--> **Console** page and run the following command:
+the **Activity** > <!--i:i-lucide-terminal--> **Console** page and run the following command:
 
 ```bash
 state:export -fi -v -u main
@@ -99,14 +88,12 @@ proceed to the next step.
 
 # Enable Scheduled Tasks
 
-If you’re happy with the setup and want to automate the process, go to the <!--i:i-lucide-list-checks--> **Tasks** page. Enable the
-two tasks by toggling the switches next to *`Import`* and *`Export`*.
+If you’re happy with the setup and want to automate the process, go to **Activity** > <!--i:i-lucide-list-checks--> **Tasks**. Turn on the
+**Enabled** switches for the *`Import`* and *`Export`* tasks. These schedules apply across identities.
 
-To adjust how often the tasks run, go to the **Configuration** > <!--i:i-lucide-sliders-horizontal--> **Environment** page, click on the <!--i:i-lucide-plus--> **Add**
-button, and select the relevant environment variables: `WS_CRON_EXPORT_AT` and `WS_CRON_IMPORT_AT`. These variables
-accept CRON timer expressions. For example, to run the export task every 6 hours, set `WS_CRON_EXPORT_AT` to
-`0 */6 * * *`.  
-For more info about CRON expressions, visit [crontab.guru](https://crontab.guru/).
+Click a task's **Timer** value to edit `WS_CRON_EXPORT_AT` or `WS_CRON_IMPORT_AT` in **Settings > Environment**.
+For example, to run the export task every 6 hours, set `WS_CRON_EXPORT_AT` to `0 */6 * * *`, then click **Save**.
+The **Schedule** link opens [crontab.guru](https://crontab.guru/) for help with cron expressions.
 
 > [!IMPORTANT]  
 > The `Import` task can be resource-intensive, especially for large libraries. It may take some time to complete and

@@ -12,7 +12,7 @@ Each backend has specific requirements and limitations to be aware of before add
 
 ### Limitations
 
-- **Limited tokens** cannot list or impersonate users. The users list will be empty, and you must enter the user UUID manually.
+- **Limited tokens** cannot list or impersonate users. The users list will be empty, and you must enter the user UUID manually. When editing a backend, use **Backends** > **Edit** > **Remote account** > **Remote user ID**, then click **Save settings**.
 - **.plex.direct URLs** often fail in Docker. Add your custom domain via **Plex Settings > Network > Custom server access URLs**.
 - Only **movie** and **show** libraries are imported for play state. Music, photos, and other library types are skipped.
 

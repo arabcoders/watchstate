@@ -82,6 +82,7 @@ final class Unmatched
                 }
 
                 $builder = $entity->getAll();
+                $builder['poster'] = $this->getBackendPosterUrl($client, $builder, $item[Options::RAW_RESPONSE]);
 
                 try {
                     $builder['webUrl'] = (string) $client->getWebUrl(

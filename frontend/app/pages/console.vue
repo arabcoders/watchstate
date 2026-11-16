@@ -1,108 +1,33 @@
 <template>
   <main class="w-full min-w-0 max-w-full space-y-6">
-    <PageHeader v-bind="pageShell">
-      <template #actions>
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="sm"
-          icon="i-lucide-eraser"
-          aria-label="Clear terminal output"
-          @click="clearOutput"
-        >
-          Clear output
-        </UButton>
-      </template>
-    </PageHeader>
+    <PageHeader v-bind="pageShell" />
 
-    <div class="ws-card overflow-hidden rounded-none bg-elevated shadow-sm">
-      <div ref="outputConsole" class="min-h-[55vh] max-h-[55vh] overflow-hidden" />
-    </div>
+    <section aria-label="Command" class="space-y-4">
+      <UAlert
+        v-if="hasPrefix"
+        color="warning"
+        variant="soft"
+        icon="i-lucide-triangle-alert"
+        title="Remove the prefix"
+        description="Use the command directly, for example `env:list --json`."
+      />
 
-    <div class="ws-card bg-elevated/20 shadow-sm">
-      <div
-        class="flex flex-col gap-3 border-b border-default bg-muted/10 px-4 py-3 lg:flex-row lg:items-start lg:justify-between"
+      <UAlert
+        v-if="hasPlaceholder"
+        color="warning"
+        variant="soft"
+        icon="i-lucide-triangle-alert"
+        title="Placeholder values found"
       >
-        <div class="min-w-0 flex-1 space-y-1">
-          <div class="flex items-center justify-between gap-3">
-            <div class="flex min-w-0 items-center gap-2 text-sm font-semibold text-highlighted">
-              <UIcon name="i-lucide-send" class="size-4 shrink-0 text-toned" />
-              <span>Command</span>
-            </div>
+        <template #description>
+          <p class="text-sm text-default">
+            Replace any <code>[...]</code> placeholders with real values before running the command.
+          </p>
+        </template>
+      </UAlert>
 
-            <UButton
-              color="neutral"
-              variant="outline"
-              size="sm"
-              icon="i-lucide-circle-help"
-              class="shrink-0"
-              :disabled="isLoading"
-              @click="showHelp"
-            >
-              Help
-            </UButton>
-          </div>
-
-          <div class="flex flex-wrap items-center gap-2 text-xs text-toned">
-            <p v-if="allEnabled">Shell commands are available when prefixed with <code>$</code>.</p>
-            <UBadge :color="streamStatusColor" variant="soft" size="sm">
-              <span v-if="streamStatusSpinning" class="inline-flex items-center gap-1.5">
-                <UIcon :name="streamStatusIcon" class="size-3.5 animate-spin" />
-                <span>{{ streamStatusLabel }}</span>
-              </span>
-              <span v-else class="inline-flex items-center gap-1.5">
-                <UIcon :name="streamStatusIcon" class="size-3.5" />
-                <span>{{ streamStatusLabel }}</span>
-              </span>
-            </UBadge>
-          </div>
-        </div>
-      </div>
-
-      <div class="space-y-3 px-4 py-4">
-        <UAlert
-          v-if="streamState.error"
-          color="error"
-          variant="soft"
-          icon="i-lucide-triangle-alert"
-          title="Command stream failed"
-          :description="streamState.error"
-        />
-
-        <UAlert
-          v-else-if="'reconnecting' === streamState.status && streamState.lastConnectionError"
-          color="warning"
-          variant="soft"
-          icon="i-lucide-refresh-cw"
-          title="Reconnecting command output"
-          :description="`${streamState.lastConnectionError} Retry ${streamState.retryCount}.`"
-        />
-
-        <UAlert
-          v-if="hasPrefix"
-          color="warning"
-          variant="soft"
-          icon="i-lucide-triangle-alert"
-          title="Remove the prefix"
-          description="Use the command directly, for example `env:list --json`."
-        />
-
-        <UAlert
-          v-if="hasPlaceholder"
-          color="warning"
-          variant="soft"
-          icon="i-lucide-triangle-alert"
-          title="Placeholder values found"
-        >
-          <template #description>
-            <p class="text-sm text-default">
-              Replace <code>[...]</code> with the intended value if applicable before running the
-              command.
-            </p>
-          </template>
-        </UAlert>
-
-        <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-end">
+      <div class="grid items-end gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
+        <UFormField id="command" label="Command &amp; arguments" name="command" class="min-w-0">
           <UInput
             ref="commandInput"
             v-model="command"
@@ -117,168 +42,195 @@
             class="ws-console-input w-full"
             @keydown.enter="RunCommand"
           />
+        </UFormField>
 
-          <div class="flex flex-wrap items-center justify-end gap-2 xl:self-end">
-            <UPopover :content="{ side: 'top', align: 'end', sideOffset: 8 }">
-              <UButton
-                color="neutral"
-                variant="outline"
-                size="lg"
-                icon="i-lucide-history"
-                trailing-icon="i-lucide-chevron-up"
-                class="flex-1 justify-center sm:flex-none sm:min-w-36"
-              >
-                History
-              </UButton>
+        <div class="flex flex-wrap items-center justify-end gap-2">
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="lg"
+            icon="i-lucide-circle-help"
+            :disabled="isLoading"
+            @click="showHelp"
+          >
+            Help
+          </UButton>
 
-              <template #content>
-                <UCard class="w-[min(92vw,42rem)] shadow-sm" :ui="historyCardUi">
-                  <div class="flex flex-wrap items-center justify-between gap-3">
-                    <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
-                      <UIcon name="i-lucide-history" class="size-4 text-toned" />
-                      <span>Recent runs</span>
+          <UPopover
+            :content="{ side: 'bottom', align: 'end', sideOffset: 8 }"
+            :ui="{ content: 'bg-elevated/80 dark:bg-elevated/30 backdrop-blur-md ring-0' }"
+          >
+            <UButton color="neutral" variant="outline" size="lg" icon="i-lucide-history">
+              History
+            </UButton>
+
+            <template #content>
+              <div class="w-[min(92vw,42rem)] space-y-3 p-4">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <h2 class="text-sm font-semibold text-highlighted">Recent runs</h2>
+                  <UButton
+                    color="neutral"
+                    variant="outline"
+                    size="sm"
+                    icon="i-lucide-eye-off"
+                    :disabled="1 > recentRunEntries.length"
+                    @click="hideRecentRuns"
+                  >
+                    Hide recent runs
+                  </UButton>
+                </div>
+
+                <UEmpty
+                  v-if="1 > recentRunEntries.length"
+                  size="sm"
+                  variant="naked"
+                  icon="i-lucide-clock-3"
+                  title="No recent runs"
+                />
+
+                <ul v-else class="max-h-80 divide-y divide-default overflow-auto">
+                  <li
+                    v-for="item in recentRunEntries"
+                    :key="item.token"
+                    class="flex flex-wrap items-center justify-between gap-3 py-3"
+                  >
+                    <div class="min-w-0 flex-1 space-y-2">
+                      <button
+                        type="button"
+                        class="block w-full wrap-anywhere text-left font-mono text-xs text-default hover:text-highlighted"
+                        :aria-label="`Replay output for ${item.displayCommand}`"
+                        @click="replayHistoryItem(item)"
+                      >
+                        {{ item.displayCommand }}
+                      </button>
+
+                      <div class="flex flex-wrap items-center gap-2 text-xs text-toned">
+                        <UBadge :color="recentRunStatusColor(item)" variant="soft" size="sm">
+                          <UIcon
+                            :name="recentRunStatusIcon(item)"
+                            class="size-3.5"
+                            :class="{ 'animate-spin': recentRunStatusSpinning(item) }"
+                          />
+                          {{ recentRunStatusLabel(item) }}
+                        </UBadge>
+                        <UTooltip
+                          v-if="item.finishedAt"
+                          :text="`Completed at: ${moment(item.finishedAt).format(TOOLTIP_DATE_FORMAT)}`"
+                        >
+                          <span class="cursor-help">{{ moment(item.finishedAt).fromNow() }}</span>
+                        </UTooltip>
+                        <span v-if="item.failureReason" class="text-error">
+                          {{ item.failureReason }}
+                        </span>
+                      </div>
                     </div>
 
-                    <div class="flex flex-wrap items-center justify-end gap-2">
+                    <div class="flex shrink-0 items-center gap-2">
                       <UButton
                         color="neutral"
                         variant="outline"
-                        size="sm"
-                        icon="i-lucide-eye-off"
-                        :disabled="recentRunEntries.length < 1"
-                        @click="hideRecentRuns"
+                        size="xs"
+                        icon="i-lucide-terminal"
+                        @click="loadCommand(item.command)"
                       >
-                        Hide recent runs
+                        Fill
+                      </UButton>
+                      <UButton
+                        color="neutral"
+                        variant="outline"
+                        size="xs"
+                        icon="i-lucide-x"
+                        @click="removeRecentRun(item.token)"
+                      >
+                        Remove
                       </UButton>
                     </div>
-                  </div>
+                  </li>
+                </ul>
+              </div>
+            </template>
+          </UPopover>
 
-                  <UAlert
-                    v-if="recentRunEntries.length < 1"
-                    color="info"
-                    variant="soft"
-                    icon="i-lucide-clock-3"
-                    title="No recent console sessions"
-                  />
+          <UButton
+            v-if="isLoading"
+            color="neutral"
+            variant="outline"
+            size="lg"
+            icon="i-lucide-square"
+            @click="closeOutput"
+          >
+            Stop command
+          </UButton>
 
-                  <div v-else class="space-y-4">
-                    <div
-                      v-if="recentRunEntries.length > 0"
-                      class="max-h-80 overflow-auto rounded-lg border border-default bg-elevated/30"
-                    >
-                      <table class="w-full text-sm">
-                        <tbody class="divide-y divide-default">
-                          <tr
-                            v-for="item in recentRunEntries"
-                            :key="item.token"
-                            class="hover:bg-muted/20"
-                          >
-                            <td class="px-3 py-3 align-middle">
-                              <div class="space-y-2">
-                                <button
-                                  type="button"
-                                  class="block w-full text-left font-mono text-xs text-default hover:text-highlighted"
-                                  @click="replayHistoryItem(item)"
-                                >
-                                  {{ item.displayCommand }}
-                                </button>
-
-                                <div
-                                  class="flex flex-wrap items-center gap-2 text-[11px] text-toned"
-                                >
-                                  <UBadge
-                                    :color="recentRunStatusColor(item)"
-                                    variant="soft"
-                                    size="sm"
-                                  >
-                                    <span
-                                      v-if="recentRunStatusSpinning(item)"
-                                      class="inline-flex items-center gap-1.5"
-                                    >
-                                      <UIcon
-                                        :name="recentRunStatusIcon(item)"
-                                        class="size-3.5 animate-spin"
-                                      />
-                                      <span>{{ recentRunStatusLabel(item) }}</span>
-                                    </span>
-                                    <span v-else class="inline-flex items-center gap-1.5">
-                                      <UIcon :name="recentRunStatusIcon(item)" class="size-3.5" />
-                                      <span>{{ recentRunStatusLabel(item) }}</span>
-                                    </span>
-                                  </UBadge>
-                                  <UTooltip
-                                    v-if="item.finishedAt"
-                                    :text="`Completed at: ${moment(item.finishedAt).format(TOOLTIP_DATE_FORMAT)}`"
-                                  >
-                                    <span class="cursor-help">{{
-                                      moment(item.finishedAt).fromNow()
-                                    }}</span>
-                                  </UTooltip>
-                                  <span v-if="item.failureReason" class="text-error">
-                                    {{ item.failureReason }}
-                                  </span>
-                                </div>
-                              </div>
-                            </td>
-
-                            <td class="w-24 px-3 py-3 text-center align-middle whitespace-nowrap">
-                              <div class="flex items-center justify-end gap-1">
-                                <UButton
-                                  color="neutral"
-                                  variant="ghost"
-                                  size="xs"
-                                  icon="i-lucide-terminal"
-                                  @click="loadCommand(item.command)"
-                                >
-                                  Fill
-                                </UButton>
-                                <UButton
-                                  color="neutral"
-                                  variant="ghost"
-                                  size="xs"
-                                  icon="i-lucide-x"
-                                  square
-                                  @click="removeRecentRun(item.token)"
-                                />
-                              </div>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </UCard>
-              </template>
-            </UPopover>
-
-            <UButton
-              v-if="isLoading"
-              color="neutral"
-              variant="outline"
-              size="lg"
-              icon="i-lucide-power"
-              class="flex-1 justify-center sm:flex-none sm:min-w-36"
-              @click="closeOutput"
-            >
-              Close output
-            </UButton>
-
-            <UButton
-              v-else
-              color="primary"
-              variant="solid"
-              size="lg"
-              icon="i-lucide-send"
-              :disabled="hasPrefix || !hasRunnableCommand"
-              class="flex-1 justify-center sm:flex-none sm:min-w-36"
-              @click="RunCommand"
-            >
-              Run command
-            </UButton>
-          </div>
+          <UButton
+            v-else
+            color="primary"
+            variant="solid"
+            size="lg"
+            icon="i-lucide-play"
+            :disabled="hasPrefix || !hasRunnableCommand"
+            @click="RunCommand"
+          >
+            Run command
+          </UButton>
         </div>
       </div>
-    </div>
+
+      <p v-if="allEnabled" class="text-xs text-toned">
+        Shell commands are available when prefixed with <code>$</code>.
+      </p>
+    </section>
+
+    <section
+      aria-labelledby="console-output-heading"
+      class="space-y-4 border-t border-default pt-6"
+    >
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <h2 id="console-output-heading" class="text-lg font-semibold text-highlighted">Output</h2>
+          <UBadge :color="streamStatusColor" variant="soft" size="sm" role="status">
+            <UIcon
+              :name="streamStatusIcon"
+              class="size-3.5"
+              :class="{ 'animate-spin': streamStatusSpinning }"
+            />
+            {{ streamStatusLabel }}
+          </UBadge>
+        </div>
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          icon="i-lucide-eraser"
+          aria-label="Clear terminal output"
+          @click="clearOutput"
+        >
+          Clear output
+        </UButton>
+      </div>
+
+      <UAlert
+        v-if="streamState.error"
+        color="error"
+        variant="soft"
+        icon="i-lucide-triangle-alert"
+        title="Command stream failed"
+        :description="streamState.error"
+      />
+
+      <UAlert
+        v-else-if="'reconnecting' === streamState.status && streamState.lastConnectionError"
+        color="warning"
+        variant="soft"
+        icon="i-lucide-refresh-cw"
+        title="Reconnecting command output"
+        :description="`${streamState.lastConnectionError} Retry ${streamState.retryCount}.`"
+      />
+
+      <div class="overflow-hidden rounded-md bg-elevated">
+        <div ref="outputConsole" class="min-h-[55vh] max-h-[55vh] overflow-hidden" />
+      </div>
+    </section>
   </main>
 </template>
 
@@ -297,6 +249,17 @@ import '@xterm/xterm/css/xterm.css';
 import moment from 'moment';
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useHead, useRoute, useRouter } from '#app';
+import {
+  UAlert,
+  UBadge,
+  UButton,
+  UEmpty,
+  UFormField,
+  UIcon,
+  UInput,
+  UPopover,
+  UTooltip,
+} from '#components';
 import { useColorMode } from '#imports';
 import { Terminal } from '@xterm/xterm';
 import type { ITheme } from '@xterm/xterm';
@@ -306,8 +269,6 @@ import PageHeader from '~/components/PageHeader.vue';
 import {
   request,
   formatCommandEcho,
-  disableOpacity,
-  enableOpacity,
   notification,
   parse_api_response,
   TOOLTIP_DATE_FORMAT,
@@ -484,10 +445,6 @@ const hasPlaceholder = computed(() => command.value && command.value.match(/\[.*
 const hasRunnableCommand = computed(() => Boolean(command.value.trim()));
 const allEnabled = ref<boolean>(false);
 
-const historyCardUi = {
-  body: 'space-y-3 p-4',
-};
-
 const focusCommandInput = (): void => {
   commandInput.value?.inputRef?.focus({ preventScroll: true });
 };
@@ -656,14 +613,21 @@ const RunCommand = async (): Promise<void> => {
   let userCommand: string = command.value;
 
   if (userCommand.startsWith('console') || userCommand.startsWith('docker')) {
-    notification('info', 'Warning', 'Removing leading prefix command from the input.', 2000);
+    notification(
+      'info',
+      'Command prefix removed',
+      'Running without the console or Docker prefix.',
+      2000,
+    );
     userCommand = userCommand.replace(/^(console|docker exec -ti watchstate)/i, '');
   }
 
   if (userCommand.match(/\[.*]/)) {
     const { status } = await useDialog().confirmDialog({
       title: 'Confirm command',
-      message: 'The command contains placeholders "[...]". Are you sure you want to run as it is?',
+      message: 'The command may contain [...] placeholders. Run it unchanged?',
+      confirmText: 'Run command',
+      confirmColor: 'primary',
     });
 
     if (true !== status) {
@@ -690,7 +654,7 @@ const RunCommand = async (): Promise<void> => {
 
   if (userCommand.startsWith('$')) {
     if (!allEnabled.value) {
-      notification('error', 'Error', 'The option to execute all commands is disabled.');
+      notification('error', 'Command blocked', 'Shell commands are disabled.');
       focusCommandInput();
       return;
     }
@@ -742,7 +706,7 @@ const showHelp = async (): Promise<void> => {
     return;
   }
 
-  command.value = '';
+  command.value = 'list';
   await RunCommand();
 };
 
@@ -776,10 +740,10 @@ const hideRecentRuns = async (): Promise<void> => {
   }
 
   const { status } = await useDialog().confirmDialog({
-    title: 'Confirm Action',
-    message: 'Hide the current recent runs from this browser?',
+    title: 'Hide recent runs?',
+    message: 'Hide these runs from this browser?',
     confirmText: 'Hide runs',
-    confirmColor: 'error',
+    confirmColor: 'neutral',
   });
 
   if (true !== status) {
@@ -809,12 +773,9 @@ onUnmounted(() => {
     fitFrame = null;
   }
   stopStream();
-  enableOpacity();
 });
 
 onMounted(async () => {
-  disableOpacity();
-
   window.addEventListener('resize', reSizeTerminal);
   window.addEventListener('pagehide', handlePageLeave);
   window.addEventListener('beforeunload', handlePageLeave);

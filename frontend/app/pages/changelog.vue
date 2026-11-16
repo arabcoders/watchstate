@@ -1,193 +1,198 @@
 <template>
   <main class="w-full min-w-0 max-w-full space-y-6">
-    <PageHeader v-bind="pageShell">
-      <template #actions>
-        <UButton
-          v-if="logs.length > 0"
-          color="neutral"
-          :variant="toggleFilter ? 'soft' : 'outline'"
-          size="sm"
-          icon="i-lucide-filter"
-          @click="
-            () => {
-              toggleFilter = !toggleFilter;
-            }
-          "
-        >
-          <span>Filter</span>
-        </UButton>
+    <PageHeader v-bind="pageShell" />
+
+    <section aria-label="Release history" :aria-busy="isLoading" class="space-y-4">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div class="w-full space-y-1.5 sm:max-w-md">
+          <label for="changelog-filter" class="block text-xs font-medium text-toned">
+            Search changelog
+          </label>
+          <UInput
+            id="changelog-filter"
+            v-model.lazy="query"
+            type="search"
+            placeholder="Release, change, author or commit"
+            icon="i-lucide-search"
+            size="sm"
+            class="w-full"
+          />
+        </div>
 
         <USwitch
           v-model="latestOnly"
           color="primary"
           size="sm"
-          :label="latestOnly ? 'Latest Only' : 'All Loaded'"
+          label="Latest only"
+          :description="`${DEFAULT_LIMIT} most recent releases`"
           :ui="{ root: 'items-center gap-2', wrapper: 'ms-0 text-xs text-toned' }"
         />
+      </div>
 
-        <UInput
-          v-if="toggleFilter && logs.length > 0"
-          id="filter"
-          v-model.lazy="query"
-          type="search"
-          placeholder="Filter changelog entries"
-          icon="i-lucide-filter"
-          size="sm"
-          class="order-last w-full sm:order-first sm:w-80"
+      <UAlert
+        v-if="isLoading"
+        color="info"
+        variant="soft"
+        icon="i-lucide-loader-circle"
+        title="Loading changelog"
+        :ui="{ icon: 'animate-spin' }"
+      />
+
+      <template v-else>
+        <UAlert
+          v-if="loadError"
+          color="error"
+          variant="soft"
+          icon="i-lucide-triangle-alert"
+          title="Unable to load changelog"
+          :description="loadError"
         />
-      </template>
-    </PageHeader>
 
-    <UAlert
-      v-if="isLoading"
-      color="info"
-      variant="soft"
-      icon="i-lucide-loader-circle"
-      title="Loading"
-      description="Loading data. Please wait..."
-      :ui="{ icon: 'animate-spin' }"
-    />
-
-    <template v-else>
-      <div v-if="filteredLogs.length > 0" class="space-y-5">
-        <section v-for="log in filteredLogs" :key="log.tag" class="space-y-3">
-          <button
-            type="button"
-            class="flex w-full flex-wrap items-center justify-between gap-3 text-left"
-            @click="toggleRelease(log.tag)"
+        <div v-if="0 < filteredLogs.length" class="divide-y divide-default border-y border-default">
+          <section
+            v-for="(log, index) in filteredLogs"
+            :key="log.tag"
+            :aria-labelledby="`changelog-release-${index}`"
+            class="py-5"
           >
-            <div class="flex min-w-0 items-center gap-3">
-              <span class="ws-section-icon">
-                <UIcon
-                  :name="isInstalled(log) ? 'i-lucide-badge-check' : 'i-lucide-git-branch'"
-                  class="size-5"
-                />
-              </span>
-
-              <div class="min-w-0 space-y-1">
-                <h2 class="truncate text-base font-semibold text-highlighted">
-                  {{ log.tag }}
-                </h2>
-
-                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-toned">
-                  <UTooltip v-if="log.date" :text="`Release Date: ${log.date}`">
-                    <span class="inline-flex cursor-help items-center gap-1.5">
-                      <UIcon name="i-lucide-calendar-days" class="size-3.5 text-muted" />
-                      <span>{{ moment(log.date).fromNow() }}</span>
-                    </span>
-                  </UTooltip>
-                </div>
-              </div>
-            </div>
-
-            <div class="flex shrink-0 items-center gap-2">
-              <UBadge
-                v-if="isInstalled(log)"
-                color="success"
-                variant="soft"
-                size="sm"
-                icon="i-lucide-check"
+            <h2>
+              <button
+                :id="`changelog-release-${index}`"
+                type="button"
+                :aria-expanded="isReleaseOpen(log.tag)"
+                :aria-controls="`changelog-commits-${index}`"
+                class="group flex w-full items-start gap-3 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                @click="toggleRelease(log.tag)"
               >
-                Installed
-              </UBadge>
+                <UIcon
+                  name="i-lucide-chevron-right"
+                  :class="[
+                    'mt-0.5 size-5 shrink-0 text-muted transition-transform',
+                    isReleaseOpen(log.tag) ? 'rotate-90' : '',
+                  ]"
+                  aria-hidden="true"
+                />
+                <span
+                  class="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-6 gap-y-2"
+                >
+                  <span class="flex min-w-0 flex-wrap items-center gap-2">
+                    <span
+                      class="wrap-anywhere font-mono text-base font-semibold text-highlighted transition-colors group-hover:text-primary"
+                    >
+                      {{ log.tag }}
+                    </span>
+                    <UBadge
+                      v-if="isInstalled(log)"
+                      color="success"
+                      variant="soft"
+                      size="sm"
+                      icon="i-lucide-check"
+                    >
+                      Installed
+                    </UBadge>
+                  </span>
+                  <span class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-toned">
+                    <time v-if="log.date" :datetime="log.date" :title="log.date">
+                      {{ moment(log.date).format('MMM D, YYYY') }}
+                    </time>
+                    <span class="tabular-nums">
+                      {{ log.commits?.length || 0 }}
+                      {{ 1 === log.commits?.length ? 'commit' : 'commits' }}
+                    </span>
+                  </span>
+                </span>
+              </button>
+            </h2>
 
-              <UBadge color="neutral" variant="outline" size="sm" icon="i-lucide-list">
-                {{ log.commits?.length || 0 }} commits
-              </UBadge>
+            <div
+              :id="`changelog-commits-${index}`"
+              :hidden="!isReleaseOpen(log.tag)"
+              class="mt-4 sm:ml-8"
+            >
+              <ul v-if="isReleaseOpen(log.tag)" class="divide-y divide-default">
+                <li v-for="commit in log.commits" :key="commit.sha">
+                  <Lazy :unrender="true" :min-height="80">
+                    <article class="space-y-2 py-3">
+                      <NuxtLink
+                        :to="`${REPO}/commit/${commit.full_sha}`"
+                        target="_blank"
+                        class="block wrap-anywhere text-sm font-medium leading-6 text-highlighted transition-colors hover:text-primary focus-visible:outline-none focus-visible:underline"
+                      >
+                        {{ formatCommitMessage(commit.message) }}
+                      </NuxtLink>
 
-              <UIcon
-                name="i-lucide-chevron-right"
-                :class="[
-                  'size-4 text-toned transition-transform',
-                  isReleaseOpen(log.tag) ? 'rotate-90' : '',
-                ]"
+                      <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-toned">
+                        <span class="inline-flex min-w-0 items-center gap-1.5">
+                          <UIcon
+                            name="i-lucide-user"
+                            class="size-3.5 shrink-0 text-muted"
+                            aria-hidden="true"
+                          />
+                          <span class="wrap-anywhere">{{ commit.author }}</span>
+                        </span>
+
+                        <UTooltip :text="commit.date">
+                          <time :datetime="commit.date" class="cursor-help">
+                            {{ moment(commit.date).fromNow() }}
+                          </time>
+                        </UTooltip>
+
+                        <UTooltip :text="`Commit ${commit.full_sha}`">
+                          <NuxtLink
+                            :to="`${REPO}/commit/${commit.full_sha}`"
+                            target="_blank"
+                            :aria-label="`Commit ${commit.full_sha}`"
+                            class="inline-flex items-center gap-1.5 font-mono transition-colors hover:text-primary focus-visible:outline-none focus-visible:underline"
+                          >
+                            <UIcon
+                              name="i-lucide-git-commit-horizontal"
+                              class="size-3.5 text-muted"
+                              aria-hidden="true"
+                            />
+                            {{ commit.sha }}
+                          </NuxtLink>
+                        </UTooltip>
+
+                        <span
+                          v-if="isInstalledCommit(commit)"
+                          class="inline-flex items-center gap-1.5 font-medium text-success"
+                        >
+                          <UIcon name="i-lucide-check" class="size-3.5" aria-hidden="true" />
+                          Installed
+                        </span>
+                      </div>
+                    </article>
+                  </Lazy>
+                </li>
+              </ul>
+              <UEmpty
+                v-if="isReleaseOpen(log.tag) && 0 === (log.commits?.length ?? 0)"
+                size="sm"
+                variant="naked"
+                icon="i-lucide-git-commit-horizontal"
+                title="No commits"
               />
             </div>
-          </button>
+          </section>
+        </div>
 
-          <div v-if="isReleaseOpen(log.tag)" class="space-y-2">
-            <article
-              v-for="commit in log.commits"
-              :key="commit.sha"
-              class="rounded-md border border-default bg-elevated/20 px-3 py-3 transition-colors hover:bg-elevated/35"
-            >
-              <NuxtLink
-                :to="`${REPO}/commit/${commit.full_sha}`"
-                target="_blank"
-                class="block min-w-0 text-sm font-medium leading-5 text-highlighted transition hover:text-primary"
-              >
-                {{ formatCommitMessage(commit.message) }}
-              </NuxtLink>
-
-              <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-toned">
-                <span
-                  class="inline-flex items-center gap-1 rounded-sm border border-default px-2 py-1"
-                >
-                  <UIcon name="i-lucide-user" class="size-3.5 text-muted" />
-                  <span>{{ commit.author }}</span>
-                </span>
-
-                <UTooltip :text="`Date: ${commit.date}`">
-                  <time
-                    class="inline-flex cursor-help items-center gap-1 rounded-sm border border-default px-2 py-1"
-                  >
-                    <UIcon name="i-lucide-clock-3" class="size-3.5 text-muted" />
-                    <span>{{ moment(commit.date).fromNow() }}</span>
-                  </time>
-                </UTooltip>
-
-                <UTooltip :text="`SHA: ${commit.full_sha}`">
-                  <NuxtLink
-                    :to="`${REPO}/commit/${commit.full_sha}`"
-                    target="_blank"
-                    class="inline-flex items-center gap-1 rounded-sm border border-default px-2 py-1 font-mono transition hover:border-primary hover:text-primary"
-                  >
-                    <UIcon name="i-lucide-git-commit-horizontal" class="size-3.5 text-muted" />
-                    <span>{{ commit.sha }}</span>
-                  </NuxtLink>
-                </UTooltip>
-
-                <span
-                  v-if="isInstalledCommit(commit)"
-                  class="inline-flex items-center gap-1 rounded-sm border border-default px-2 py-1 font-medium"
-                >
-                  <UIcon name="i-lucide-check" class="size-3.5 text-success" />
-                  <span>Installed</span>
-                </span>
-              </div>
-            </article>
-          </div>
-        </section>
-      </div>
-
-      <div v-else class="space-y-3">
-        <UAlert
-          v-if="query"
-          color="warning"
-          variant="soft"
-          icon="i-lucide-search"
-          title="No Results"
-          :description="`No changelog entries found for the query: ${query}.`"
+        <UEmpty
+          v-else-if="!loadError"
+          :icon="query ? 'i-lucide-search' : 'i-lucide-scroll-text'"
+          :title="query ? 'No matching changelog entries' : 'No changelog entries'"
         />
-
-        <UAlert
-          v-else
-          color="warning"
-          variant="soft"
-          icon="i-lucide-circle-alert"
-          title="No changelog entries"
-          description="No changelog data is available right now."
-        />
-      </div>
-    </template>
+      </template>
+    </section>
   </main>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import { useHead } from '#app';
+import { NuxtLink, UAlert, UBadge, UEmpty, UIcon, UInput, USwitch, UTooltip } from '#components';
 import { useStorage } from '@vueuse/core';
 import moment from 'moment';
+import Lazy from '~/components/Lazy.vue';
 import PageHeader from '~/components/PageHeader.vue';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import { notification, parse_api_response, request, ucFirst } from '~/utils';
@@ -207,16 +212,10 @@ const DEFAULT_LIMIT = 10;
 const logs = ref<Array<ChangeSet>>([]);
 const api_version_sha = ref<string>('unknown');
 const isLoading = ref<boolean>(true);
+const loadError = ref<string>('');
 const query = ref<string>('');
-const toggleFilter = ref<boolean>(false);
 const latestOnly = useStorage<boolean>('changelog_latest_only', true);
 const openReleases = ref<Array<string>>([]);
-
-watch(toggleFilter, () => {
-  if (!toggleFilter.value) {
-    query.value = '';
-  }
-});
 
 const visibleLogs = computed<Array<ChangeSet>>(() =>
   latestOnly.value ? logs.value.slice(0, DEFAULT_LIMIT) : logs.value,
@@ -240,13 +239,13 @@ const filteredLogs = computed<Array<ChangeSet>>(() => {
             commit.full_sha.toLowerCase().includes(search),
         ) ?? [];
 
-      if (tagMatches || filteredCommits.length > 0) {
+      if (tagMatches || 0 < filteredCommits.length) {
         return { ...log, commits: tagMatches ? log.commits : filteredCommits };
       }
 
       return null;
     })
-    .filter((log): log is ChangeSet => log !== null);
+    .filter((log): log is ChangeSet => null !== log);
 });
 
 const isReleaseOpen = (tag: string): boolean => openReleases.value.includes(tag);
@@ -303,13 +302,14 @@ const isInstalled = (log: ChangeSet): boolean => {
 
 const openCurrentReleases = (): void => {
   const installedIndex = logs.value.findIndex((log) => isInstalled(log));
-  const lastOpenIndex = installedIndex < 0 ? 0 : installedIndex;
+  const lastOpenIndex = 0 > installedIndex ? 0 : installedIndex;
 
   openReleases.value = logs.value.slice(0, lastOpenIndex + 1).map((log) => log.tag);
 };
 
 const loadContent = async (): Promise<void> => {
   isLoading.value = true;
+  loadError.value = '';
 
   try {
     const response = await request('/system/version');
@@ -342,7 +342,8 @@ const loadContent = async (): Promise<void> => {
     openCurrentReleases();
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
-    notification('error', 'Error', `Failed to fetch changelog. ${message}`);
+    loadError.value = message;
+    notification('error', 'Unable to load changelog', message);
   } finally {
     isLoading.value = false;
   }

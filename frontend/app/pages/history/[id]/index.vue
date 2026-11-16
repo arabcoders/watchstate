@@ -22,26 +22,28 @@
                 variant="outline"
                 size="sm"
                 icon="i-lucide-play"
-                :disabled="!data.content_exists"
+                :disabled="!data.content_exists || isLoading || isDeleting || isMutating"
                 @click="openPlaybackModal"
               >
                 Play
               </UButton>
             </UTooltip>
 
-            <UTooltip text="Toggle watch state">
+            <UTooltip text="Change this record's watch state">
               <UButton
                 color="neutral"
-                :variant="data.watched ? 'soft' : 'outline'"
+                variant="outline"
                 size="sm"
                 :icon="data.watched ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                :disabled="isLoading || isMutating || isDeleting"
+                :loading="isMutating"
                 @click="toggleWatched"
               >
-                {{ data.watched ? 'Unwatched' : 'Watched' }}
+                {{ data.watched ? 'Mark unwatched' : 'Mark watched' }}
               </UButton>
             </UTooltip>
 
-            <UTooltip text="View raw record payload">
+            <UTooltip text="View raw data">
               <UButton
                 color="neutral"
                 variant="outline"
@@ -63,7 +65,7 @@
                 variant="outline"
                 size="sm"
                 icon="i-lucide-trash-2"
-                :disabled="isDeleting || isLoading"
+                :disabled="isDeleting || isLoading || isMutating"
                 :loading="isDeleting"
                 @click="deleteItem"
               >
@@ -77,7 +79,8 @@
               size="sm"
               icon="i-lucide-refresh-cw"
               :loading="isLoading"
-              @click="() => void loadContent(id)"
+              :disabled="isMutating || isDeleting"
+              @click="() => void loadContent()"
             >
               Reload
             </UButton>
@@ -86,7 +89,7 @@
       </PageHeader>
 
       <UAlert
-        v-if="data?.not_reported_by && data.not_reported_by.length > 0"
+        v-if="data?.via && data.not_reported_by.length > 0"
         color="warning"
         variant="soft"
         icon="i-lucide-triangle-alert"
@@ -95,7 +98,7 @@
         <template #description>
           <div class="space-y-2">
             <p>
-              There are no metadata regarding this <strong>{{ data.type }}</strong> from:
+              Not reported by:
               <UBadge
                 v-for="backend in data.not_reported_by"
                 :key="`nr-${backend}`"
@@ -109,82 +112,119 @@
         </template>
       </UAlert>
 
-      <div
-        v-if="
-          data?.via &&
-          (data?.content_title ||
-            data?.content_overview ||
-            summaryBadges.length > 0 ||
-            (data?.content_genres && data.content_genres.length > 0))
-        "
-        class="w-full space-y-3 rounded-md border border-default bg-elevated/30 p-4 shadow-sm"
+      <section
+        v-if="data?.via"
+        aria-labelledby="media-heading"
+        class="flex min-w-0 gap-4 rounded-xl bg-elevated/50 p-4 sm:gap-6 sm:p-6"
       >
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div class="min-w-0 space-y-2">
-            <div
-              v-if="data.content_title"
-              class="flex min-w-0 items-center gap-2 text-lg font-semibold text-highlighted"
-            >
-              <UIcon
-                :name="'episode' === data.type ? 'i-lucide-tv' : 'i-lucide-film'"
-                class="size-4 shrink-0 text-toned"
-              />
-              <span class="truncate">{{ data.content_title }}</span>
+        <StatisticsPoster
+          v-if="posterEnable"
+          :key="`${apiUser}:${id}`"
+          :history-id="data.id"
+          :title="historyTitle"
+          :user="apiUser"
+          class="w-24 shrink-0 self-start sm:w-36"
+        />
+        <div class="min-w-0 flex-1 space-y-4">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div class="min-w-0 space-y-2">
+              <p class="text-xs font-medium uppercase tracking-wider text-primary">Watch state</p>
+              <h2
+                id="media-heading"
+                class="wrap-break-word text-2xl font-semibold leading-tight text-highlighted sm:text-3xl"
+              >
+                {{ data.title }}
+              </h2>
+              <p
+                v-if="data.content_title && data.content_title !== data.title"
+                class="wrap-break-word text-base text-default"
+              >
+                {{ data.content_title }}
+              </p>
+              <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                <span
+                  :class="data.watched ? 'text-success' : 'text-default'"
+                  class="inline-flex items-center gap-2 font-medium"
+                >
+                  <UIcon
+                    :name="data.watched ? 'i-lucide-eye' : 'i-lucide-eye-off'"
+                    class="size-4"
+                  />
+                  {{ data.watched ? 'Watched' : 'Unwatched' }}
+                </span>
+                <span class="text-toned"
+                  >Position:
+                  {{
+                    0 < Number(data.progress) ? formatDuration(Number(data.progress)) : 'None'
+                  }}</span
+                >
+              </div>
+              <p class="text-sm leading-6 text-toned">
+                Via
+                <NuxtLink
+                  :to="`/backend/${data.via}`"
+                  class="font-medium text-default hover:text-primary"
+                >
+                  {{ data.via }}
+                </NuxtLink>
+              </p>
+
+              <p
+                v-if="data.content_overview"
+                class="text-sm leading-6 text-default"
+                :class="expandableBlockClass(headerOverviewExpanded)"
+              >
+                {{ data.content_overview }}
+              </p>
             </div>
 
-            <p
+            <UButton
               v-if="data.content_overview"
-              class="text-sm leading-6 text-default"
-              :class="expandableBlockClass(headerOverviewExpanded)"
+              color="neutral"
+              :variant="headerOverviewExpanded ? 'soft' : 'outline'"
+              size="sm"
+              :icon="headerOverviewExpanded ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+              class="shrink-0 self-start"
+              @click="
+                () => {
+                  headerOverviewExpanded = !headerOverviewExpanded;
+                }
+              "
             >
-              {{ data.content_overview }}
-            </p>
+              {{ headerOverviewExpanded ? 'Show Less' : 'Show More' }}
+            </UButton>
           </div>
 
-          <UButton
-            v-if="data.content_overview"
-            color="neutral"
-            :variant="headerOverviewExpanded ? 'soft' : 'outline'"
-            size="sm"
-            :icon="headerOverviewExpanded ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-            class="shrink-0 self-start"
-            @click="
-              () => {
-                headerOverviewExpanded = !headerOverviewExpanded;
-              }
+          <div
+            v-if="
+              summaryBadges.length > 0 || (data.content_genres && data.content_genres.length > 0)
             "
+            class="flex flex-wrap items-center gap-2"
           >
-            {{ headerOverviewExpanded ? 'Show Less' : 'Show More' }}
-          </UButton>
-        </div>
+            <UBadge
+              v-for="badge in summaryBadges"
+              :key="`${badge.icon}-${badge.label}`"
+              color="neutral"
+              :variant="badge.variant ?? 'outline'"
+              class="gap-1"
+            >
+              <UIcon :name="badge.icon" class="size-3" />
+              <span>{{ badge.label }}</span>
+            </UBadge>
 
-        <div
-          v-if="summaryBadges.length > 0 || (data.content_genres && data.content_genres.length > 0)"
-          class="flex flex-wrap items-center gap-2"
-        >
-          <UBadge
-            v-for="badge in summaryBadges"
-            :key="`${badge.icon}-${badge.label}`"
-            color="neutral"
-            :variant="badge.variant ?? 'outline'"
-            class="gap-1"
-          >
-            <UIcon :name="badge.icon" class="size-3" />
-            <span>{{ badge.label }}</span>
-          </UBadge>
-
-          <UBadge
-            v-for="(genre, genreIndex) in data.content_genres"
-            :key="`head-genre-${genreIndex}`"
-            color="neutral"
-            variant="soft"
-            class="gap-1"
-          >
-            <UIcon name="i-lucide-tag" class="size-3" />
-            <span class="capitalize">{{ genre }}</span>
-          </UBadge>
+            <UBadge
+              v-for="(genre, genreIndex) in data.content_genres"
+              :key="`head-genre-${genreIndex}`"
+              color="neutral"
+              variant="soft"
+              class="gap-1"
+            >
+              <UIcon name="i-lucide-tag" class="size-3" />
+              <span class="capitalize">{{ genre }}</span>
+            </UBadge>
+          </div>
         </div>
-      </div>
+      </section>
     </div>
 
     <TextModal v-model:open="showRawData" :title="historyTitle" :text="rawData" />
@@ -193,55 +233,79 @@
       <template #body>
         <PlaybackSelection
           v-if="playbackModalOpen"
+          :key="`${apiUser}:${data.id}`"
           :id="data.id"
+          :actions-target="`#${playbackActionsId}`"
           @watched-change="handlePlaybackWatchedChange"
         />
+      </template>
+      <template #footer>
+        <div :id="playbackActionsId" class="w-full" />
       </template>
     </UModal>
 
     <div class="space-y-4">
       <UAlert
+        v-if="contentError"
+        color="error"
+        variant="soft"
+        title="Could not load this record"
+        :description="contentError"
+      >
+        <template #actions>
+          <UButton
+            color="neutral"
+            variant="outline"
+            icon="i-lucide-refresh-cw"
+            label="Retry"
+            @click="() => void loadContent()"
+          />
+        </template>
+      </UAlert>
+
+      <UAlert
         v-if="!data?.via && isLoading"
         color="info"
         variant="soft"
         icon="i-lucide-loader-circle"
-        title="Loading"
-        description="Loading data. Please wait..."
+        title="Loading record"
         :ui="{ icon: 'animate-spin' }"
       />
 
       <UAlert
-        v-if="(data?.duplicate_reference_ids?.length ?? 0) > 0"
+        v-if="data?.via && (data.duplicate_reference_ids?.length ?? 0) > 0"
         color="info"
         variant="soft"
         icon="i-lucide-info"
         title="Duplicate file references"
       >
         <template #description>
-          <span>
-            This record shares the same file path with other records.
-            <Popover
-              placement="bottom"
-              trigger="click"
-              :show-delay="0"
-              :hide-delay="200"
-              :offset="8"
-              content-class="p-0"
-            >
-              <template #trigger>
-                <button
-                  type="button"
-                  class="font-semibold text-primary underline underline-offset-2"
-                >
-                  Click here
-                </button>
-              </template>
-              <template #content>
-                <DuplicateRecordList :ids="data.duplicate_reference_ids ?? []" />
-              </template>
-            </Popover>
-            to see the other records.
-          </span>
+          <span>This record shares the same file path with other records.</span>
+        </template>
+        <template #actions>
+          <Popover
+            placement="bottom"
+            trigger="click"
+            :show-delay="0"
+            :hide-delay="200"
+            :offset="8"
+            content-class="p-0"
+          >
+            <template #trigger>
+              <UButton
+                type="button"
+                color="neutral"
+                variant="outline"
+                size="sm"
+                icon="i-lucide-files"
+              >
+                Related records
+              </UButton>
+            </template>
+            <template #content>
+              <DuplicateRecordList :ids="data.duplicate_reference_ids ?? []" />
+            </template>
+          </Popover>
         </template>
       </UAlert>
 
@@ -249,16 +313,25 @@
         <div v-if="data?.via" class="space-y-4">
           <section class="space-y-3">
             <div class="flex w-full items-center justify-between gap-3">
-              <button
-                type="button"
-                class="flex min-w-0 flex-1 items-center gap-3 text-left"
-                @click="showLocalMetadata = !showLocalMetadata"
-              >
-                <div class="flex min-w-0 items-center gap-2 text-sm font-semibold text-highlighted">
+              <h2 class="min-w-0 flex-1">
+                <button
+                  type="button"
+                  class="flex min-w-0 items-center gap-2 text-left text-sm font-semibold text-highlighted"
+                  :aria-expanded="showLocalMetadata"
+                  aria-controls="history-local-metadata"
+                  @click="showLocalMetadata = !showLocalMetadata"
+                >
                   <UIcon name="i-lucide-database" class="size-4 shrink-0 text-toned" />
-                  <span>Latest Local Metadata</span>
-                </div>
-              </button>
+                  <span>Details</span>
+                  <UIcon
+                    name="i-lucide-chevron-right"
+                    :class="[
+                      'size-4 text-toned transition-transform',
+                      showLocalMetadata ? 'rotate-90' : '',
+                    ]"
+                  />
+                </button>
+              </h2>
               <NuxtLink
                 :to="`/backend/${data.via}`"
                 class="inline-flex min-w-0 items-center gap-1 text-sm font-medium text-toned hover:text-primary"
@@ -266,29 +339,15 @@
                 <UIcon name="i-lucide-server" class="size-4 shrink-0" />
                 <span class="truncate">{{ data.via }}</span>
               </NuxtLink>
-              <button
-                type="button"
-                class="inline-flex shrink-0 items-center"
-                :aria-label="
-                  showLocalMetadata ? 'Collapse local metadata' : 'Expand local metadata'
-                "
-                @click="showLocalMetadata = !showLocalMetadata"
-              >
-                <UIcon
-                  name="i-lucide-chevron-right"
-                  :class="[
-                    'size-4 text-toned transition-transform',
-                    showLocalMetadata ? 'rotate-90' : '',
-                  ]"
-                />
-              </button>
             </div>
 
-            <div v-if="showLocalMetadata" class="space-y-5 text-sm leading-6 text-default">
-              <div class="grid grid-cols-2 gap-3">
-                <div
-                  class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-                >
+            <div
+              id="history-local-metadata"
+              v-if="showLocalMetadata"
+              class="space-y-5 text-sm leading-6 text-default"
+            >
+              <div class="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+                <div class="py-2 text-sm text-default">
                   <div
                     class="flex min-w-0 cursor-pointer flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
                     @click="expandLocalId = !expandLocalId"
@@ -308,9 +367,7 @@
                   </div>
                 </div>
 
-                <div
-                  class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-                >
+                <div class="py-2 text-sm text-default">
                   <div
                     class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
                   >
@@ -324,14 +381,12 @@
                       <span>Status</span>
                     </span>
                     <span class="min-w-0 font-medium text-highlighted sm:ml-auto sm:text-right">{{
-                      data.watched ? 'Played' : 'Unplayed'
+                      data.watched ? 'Watched' : 'Unwatched'
                     }}</span>
                   </div>
                 </div>
 
-                <div
-                  class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-                >
+                <div class="py-2 text-sm text-default">
                   <div
                     class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
                   >
@@ -347,9 +402,7 @@
                   </div>
                 </div>
 
-                <div
-                  class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-                >
+                <div class="py-2 text-sm text-default">
                   <div
                     class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
                   >
@@ -372,10 +425,7 @@
                   </div>
                 </div>
 
-                <div
-                  v-if="data.created_at"
-                  class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-                >
+                <div v-if="data.created_at" class="py-2 text-sm text-default">
                   <div
                     class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
                   >
@@ -383,12 +433,12 @@
                       class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
                     >
                       <UIcon name="i-lucide-database" class="size-4 shrink-0" />
-                      <span>Created</span>
+                      <span>Added to WatchState</span>
                     </span>
 
                     <div class="min-w-0 sm:ml-auto sm:text-right">
                       <UTooltip
-                        :text="`DB record created at: ${moment.unix(data.created_at).format(TOOLTIP_DATE_FORMAT)}`"
+                        :text="`Added to WatchState at: ${moment.unix(data.created_at).format(TOOLTIP_DATE_FORMAT)}`"
                       >
                         <span class="cursor-help font-medium text-highlighted">{{
                           moment.unix(data.created_at).fromNow()
@@ -398,10 +448,7 @@
                   </div>
                 </div>
 
-                <div
-                  v-if="data.updated_at"
-                  class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-                >
+                <div v-if="data.updated_at" class="py-2 text-sm text-default">
                   <div
                     class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
                   >
@@ -409,12 +456,12 @@
                       class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
                     >
                       <UIcon name="i-lucide-database" class="size-4 shrink-0" />
-                      <span>Updated</span>
+                      <span>Updated in WatchState</span>
                     </span>
 
                     <div class="min-w-0 sm:ml-auto sm:text-right">
                       <UTooltip
-                        :text="`DB record updated at: ${moment.unix(data.updated_at).format(TOOLTIP_DATE_FORMAT)}`"
+                        :text="`Updated in WatchState at: ${moment.unix(data.updated_at).format(TOOLTIP_DATE_FORMAT)}`"
                       >
                         <span class="cursor-help font-medium text-highlighted">{{
                           moment.unix(data.updated_at).fromNow()
@@ -652,10 +699,10 @@
             <div class="space-y-1">
               <div class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
                 <UIcon name="i-lucide-panels-top-left" class="size-4 text-toned" />
-                <span>Backend Reports</span>
+                <h2>Backend reports</h2>
               </div>
               <p class="text-sm text-toned">
-                Compare metadata reported by each backend side by side.
+                Compare the last reported watch state from each backend.
               </p>
             </div>
 
@@ -672,16 +719,25 @@
                     <div
                       class="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-highlighted"
                     >
-                      <button
-                        type="button"
-                        class="inline-flex shrink-0 items-center"
-                        @click="item._toggle = !item._toggle"
+                      <UTooltip
+                        :text="
+                          item._toggle ? 'Collapse backend metadata' : 'Expand backend metadata'
+                        "
                       >
-                        <UIcon
-                          :name="item?._toggle ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-                          class="size-4 text-toned"
-                        />
-                      </button>
+                        <button
+                          type="button"
+                          class="inline-flex shrink-0 items-center"
+                          :aria-label="
+                            item._toggle ? 'Collapse backend metadata' : 'Expand backend metadata'
+                          "
+                          @click="item._toggle = !item._toggle"
+                        >
+                          <UIcon
+                            :name="item?._toggle ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+                            class="size-4 text-toned"
+                          />
+                        </button>
+                      </UTooltip>
                       <UIcon
                         :name="
                           undefined === item?.validated
@@ -699,7 +755,7 @@
                               : 'text-error',
                         ]"
                       />
-                      <UTooltip :text="Number(item.watched) ? 'Played' : 'Unplayed'">
+                      <UTooltip :text="Number(item.watched) ? 'Watched' : 'Unwatched'">
                         <UIcon
                           :name="Number(item.watched) ? 'i-lucide-eye' : 'i-lucide-eye-off'"
                           :class="[
@@ -723,25 +779,31 @@
                         variant="outline"
                         size="sm"
                         icon="i-lucide-trash-2"
+                        :disabled="isMutating || isLoading"
                         @click="
                           Object.keys(data.metadata).length > 1 ? deleteMetadata(key) : deleteItem()
                         "
                       >
-                        <span class="hidden sm:inline">Delete</span>
+                        Delete
                       </UButton>
                     </div>
                   </div>
                 </template>
 
-                <div v-if="item?._toggle" class="space-y-5 text-sm leading-6 text-default">
-                  <p
-                    v-if="false === item?.validated && item.validated_message"
-                    class="rounded-md border border-error/30 bg-error/10 px-3 py-2 text-sm text-error"
-                  >
-                    {{ item.validated_message }}
-                  </p>
+                <p class="mb-3 text-sm text-toned">
+                  Availability:
+                  {{
+                    undefined === item.validated
+                      ? 'Checking'
+                      : item.validated
+                        ? 'Available'
+                        : 'Not confirmed'
+                  }}.
+                  <span v-if="item.validated_message">{{ item.validated_message }}</span>
+                </p>
 
-                  <div class="grid grid-cols-2 gap-3">
+                <div v-if="item?._toggle" class="space-y-5 text-sm leading-6 text-default">
+                  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div
                       class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
                     >
@@ -790,7 +852,7 @@
                         </span>
                         <span
                           class="min-w-0 font-medium text-highlighted sm:ml-auto sm:text-right"
-                          >{{ Number(item.watched) ? 'Played' : 'Unplayed' }}</span
+                          >{{ Number(item.watched) ? 'Watched' : 'Unwatched' }}</span
                         >
                       </div>
                     </div>
@@ -846,17 +908,21 @@
                           class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
                         >
                           <UIcon name="i-lucide-calendar" class="size-4 shrink-0" />
-                          <span>Source Updated</span>
+                          <span>Last report</span>
                         </span>
 
                         <div class="min-w-0 sm:ml-auto sm:text-right">
                           <UTooltip
-                            :text="`Backend last activity: ${getMoment(ag(data.extra, `${key}.received_at`, data.updated)).format(TOOLTIP_DATE_FORMAT)}`"
+                            :text="
+                              ag(data.extra, `${key}.received_at`, null)
+                                ? `Last reported at: ${getMoment(ag(data.extra, `${key}.received_at`, 0)).format(TOOLTIP_DATE_FORMAT)}`
+                                : 'Unknown'
+                            "
                           >
                             <span class="cursor-help font-medium text-highlighted">{{
-                              getMoment(
-                                ag(data.extra, `${key}.received_at`, data.updated),
-                              ).fromNow()
+                              ag(data.extra, `${key}.received_at`, null)
+                                ? getMoment(ag(data.extra, `${key}.received_at`, 0)).fromNow()
+                                : 'Unknown'
                             }}</span>
                           </UTooltip>
                         </div>
@@ -1172,32 +1238,34 @@
           </div>
 
           <section v-if="comparisonBackends.length > 0" class="hidden space-y-3 xl:block">
-            <button
-              type="button"
-              class="flex w-full items-center justify-between gap-3 text-left"
-              @click="showComparison = !showComparison"
-            >
-              <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
-                <UIcon name="i-lucide-panels-top-left" class="size-4 text-toned" />
-                <span>Backend Comparison</span>
-              </div>
-              <UIcon
-                name="i-lucide-chevron-right"
-                :class="[
-                  'size-4 text-toned transition-transform',
-                  showComparison ? 'rotate-90' : '',
-                ]"
-              />
-            </button>
+            <h2>
+              <button
+                type="button"
+                class="flex w-full items-center justify-between gap-3 text-left"
+                :aria-expanded="showComparison"
+                @click="showComparison = !showComparison"
+              >
+                <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
+                  <UIcon name="i-lucide-panels-top-left" class="size-4 text-toned" />
+                  <span>Backend comparison</span>
+                </div>
+                <UIcon
+                  name="i-lucide-chevron-right"
+                  :class="[
+                    'size-4 text-toned transition-transform',
+                    showComparison ? 'rotate-90' : '',
+                  ]"
+                />
+              </button>
+            </h2>
 
             <p v-if="showComparison" class="text-sm text-toned">
-              Backend values are compared against the local snapshot above. Highlighted cells differ
-              from the local record.
+              Highlighted values differ from WatchState.
             </p>
 
             <div v-if="showComparison" class="space-y-4">
               <section v-for="section in comparisonSections" :key="section.key" class="space-y-2">
-                <div class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
+                <h3 class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
                   <UIcon
                     :name="
                       'identity' === section.key
@@ -1211,20 +1279,23 @@
                     class="size-4 shrink-0 text-toned"
                   />
                   <span>{{ section.label }}</span>
-                </div>
+                </h3>
 
-                <div class="overflow-hidden rounded-md border border-default">
+                <div class="overflow-x-auto rounded-lg bg-elevated/20">
                   <div class="grid" :style="comparisonGridStyle">
                     <div
-                      class="border border-default/60 bg-elevated/20 px-3 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-toned"
+                      class="border-b border-default bg-elevated/40 px-3 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-toned"
                     >
                       Field
+                    </div>
+                    <div class="border-b border-default bg-primary/5 px-3 py-3">
+                      <p class="text-sm font-semibold text-primary">WatchState</p>
                     </div>
 
                     <div
                       v-for="backend in comparisonBackends"
                       :key="`${section.key}-${backend.key}`"
-                      class="border border-default/60 bg-elevated/20 px-3 py-3"
+                      class="border-b border-default bg-elevated/40 px-3 py-3"
                     >
                       <div class="flex items-start justify-between gap-2">
                         <div class="min-w-0">
@@ -1262,6 +1333,7 @@
                           variant="outline"
                           size="xs"
                           icon="i-lucide-trash-2"
+                          :disabled="isMutating || isLoading"
                           @click="
                             Object.keys(data.metadata).length > 1
                               ? deleteMetadata(backend.key)
@@ -1271,6 +1343,19 @@
                           Delete
                         </UButton>
                       </div>
+                      <p class="mt-2 text-xs leading-5 text-toned">
+                        Availability:
+                        {{
+                          undefined === backend.item.validated
+                            ? 'Checking'
+                            : backend.item.validated
+                              ? 'Available'
+                              : 'Not confirmed'
+                        }}.
+                        <span v-if="backend.item.validated_message">{{
+                          backend.item.validated_message
+                        }}</span>
+                      </p>
                     </div>
 
                     <div
@@ -1279,7 +1364,7 @@
                       class="contents group/row"
                     >
                       <div
-                        class="border border-default/50 px-3 py-3 text-sm text-default transition-colors"
+                        class="border-b border-default/50 px-3 py-3 text-sm text-default transition-colors"
                         :class="[
                           0 === rowIndex % 2 ? 'bg-elevated/40' : 'bg-elevated/20',
                           'group-hover/row:bg-elevated/50',
@@ -1310,7 +1395,7 @@
                       <div
                         v-for="entry in row.cells"
                         :key="`${row.key}:${entry.backend}`"
-                        class="border border-default/50 px-3 py-3 text-sm text-default transition-colors"
+                        class="border-b border-default/50 px-3 py-3 text-sm text-default transition-colors"
                         :class="[
                           false !== row.compareDiffs && entry.differs
                             ? 'bg-warning/10 ring-1 ring-inset ring-warning/20'
@@ -1423,16 +1508,46 @@
       <Lazy v-if="data?.via && !isLoading" :min-height="120" @show.once="showRelated">
         <div class="space-y-6">
           <section class="space-y-3">
-            <div class="flex w-full items-center justify-between gap-3 text-left">
-              <button
-                type="button"
-                class="flex min-w-0 flex-1 items-center gap-2 text-left"
-                @click="toggleRelatedLogs"
-              >
-                <UIcon name="i-lucide-logs" class="size-4 text-toned" />
-                <span class="text-sm font-semibold text-highlighted">Related Logs</span>
-              </button>
+            <div class="flex w-full flex-wrap items-center justify-between gap-3 text-left">
+              <h2 class="min-w-0 basis-full sm:basis-0 sm:flex-1">
+                <button
+                  type="button"
+                  class="flex items-center gap-2 text-left text-sm font-semibold text-highlighted"
+                  :aria-expanded="relatedLogsExpanded"
+                  @click="toggleRelatedLogs"
+                >
+                  <UIcon name="i-lucide-logs" class="size-4 text-toned" />
+                  <span>Related logs</span>
+                </button>
+              </h2>
               <div class="flex items-center gap-2">
+                <template v-if="relatedLogsExpanded && relatedLoaded && 0 < related.logs.length">
+                  <UButton
+                    color="neutral"
+                    :variant="wrapRelatedLogs ? 'soft' : 'outline'"
+                    size="xs"
+                    icon="i-lucide-wrap-text"
+                    :aria-pressed="wrapRelatedLogs"
+                    @click="wrapRelatedLogs = !wrapRelatedLogs"
+                  >
+                    Wrap
+                  </UButton>
+                  <UDropdownMenu
+                    :items="relatedLogFiles"
+                    :content="{ align: 'end' }"
+                    :modal="false"
+                  >
+                    <UButton
+                      color="neutral"
+                      variant="outline"
+                      size="xs"
+                      icon="i-lucide-file-text"
+                      trailing-icon="i-lucide-chevron-down"
+                    >
+                      Files
+                    </UButton>
+                  </UDropdownMenu>
+                </template>
                 <UDropdownMenu
                   v-if="relatedLogsExpanded && relatedLoaded && related.logs.length > 0"
                   :items="relatedLogCopyMenuItems(related.logs)"
@@ -1453,15 +1568,19 @@
                 <UBadge color="neutral" variant="outline" size="sm">
                   {{ relatedLoaded ? related.logs.length : '?' }}
                 </UBadge>
-                <button type="button" aria-label="Toggle related logs" @click="toggleRelatedLogs">
-                  <UIcon
-                    name="i-lucide-chevron-right"
-                    :class="[
-                      'size-4 text-toned transition-transform',
-                      relatedLogsExpanded ? 'rotate-90' : '',
-                    ]"
-                  />
-                </button>
+                <UTooltip
+                  :text="relatedLogsExpanded ? 'Collapse related logs' : 'Expand related logs'"
+                >
+                  <button type="button" aria-label="Toggle related logs" @click="toggleRelatedLogs">
+                    <UIcon
+                      name="i-lucide-chevron-right"
+                      :class="[
+                        'size-4 text-toned transition-transform',
+                        relatedLogsExpanded ? 'rotate-90' : '',
+                      ]"
+                    />
+                  </button>
+                </UTooltip>
               </div>
             </div>
 
@@ -1478,113 +1597,68 @@
               <UAlert v-else-if="relatedError" color="error" variant="soft" title="Error">
                 {{ relatedError }}
               </UAlert>
-              <UAlert
+              <UEmpty
                 v-else-if="relatedLoaded && related.logs.length < 1"
-                color="neutral"
-                variant="soft"
-                title="No related logs"
+                size="sm"
+                variant="naked"
+                icon="i-lucide-logs"
+                title="No related logs found"
               />
-              <div v-else-if="relatedLoaded" class="space-y-4">
-                <section v-for="group in relatedLogGroups" :key="group.filename" class="space-y-3">
-                  <div class="flex w-full flex-wrap items-center justify-between gap-3 text-left">
-                    <button
-                      type="button"
-                      class="flex min-w-0 flex-1 flex-wrap items-center gap-3 text-left"
-                      @click="toggleRelatedLog(group.filename)"
-                    >
-                      <div class="flex items-center gap-3">
-                        <span
-                          class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-default bg-elevated/70 text-primary"
-                        >
-                          <UIcon :name="relatedLogTypeIcon(group.filename)" class="size-4" />
-                        </span>
-                        <div class="flex min-w-0 flex-wrap items-baseline gap-x-1">
-                          <span class="text-base font-semibold text-highlighted">
-                            {{ relatedLogTypeName(group.filename) }}
-                          </span>
-                          <NuxtLink
-                            :to="`/logs/${encodeURIComponent(group.filename)}`"
-                            class="min-w-0 truncate text-sm text-toned hover:text-primary"
-                            @click.stop
-                          >
-                            ({{ group.filename }})
-                          </NuxtLink>
-                        </div>
-                      </div>
-                    </button>
-                    <div class="flex items-center gap-2">
-                      <button
-                        type="button"
-                        :aria-label="`Toggle ${relatedLogTypeName(group.filename)} logs`"
-                        @click="toggleRelatedLog(group.filename)"
-                      >
-                        <UIcon
-                          name="i-lucide-chevron-right"
-                          :class="[
-                            'size-4 text-toned transition-transform',
-                            isRelatedLogOpen(group.filename) ? 'rotate-90' : '',
-                          ]"
-                        />
-                      </button>
-                    </div>
+              <div
+                v-else-if="relatedLoaded"
+                ref="relatedLogsContainer"
+                class="max-h-96 min-w-0 overflow-y-auto overflow-x-hidden rounded-xl border border-default"
+                tabindex="0"
+                aria-label="Related logs"
+              >
+                <article
+                  v-for="(log, index) in related.logs"
+                  :key="relatedLogKey(log, index)"
+                  class="flex min-w-0 border-b border-default/50 last:border-b-0 hover:bg-elevated/30"
+                >
+                  <div class="ws-log-line">
+                    <StructuredLogLine
+                      :log="log.entry"
+                      :show-details="true"
+                      :wrapped="wrapRelatedLogs"
+                      :expanded="isExpandedRelatedLog(relatedLogKey(log, index))"
+                      toggleable
+                      @details="openLogDetails"
+                      @open-event="openEventFromLog"
+                      @toggle-expand="toggleExpandedRelatedLog(relatedLogKey(log, index))"
+                    />
                   </div>
-
-                  <div
-                    v-if="isRelatedLogOpen(group.filename)"
-                    class="min-w-0 max-h-[35vh] overflow-y-auto overflow-x-hidden rounded-lg border border-default/70 bg-elevated/40 shadow-sm sm:max-h-[20vh]"
-                  >
-                    <article
-                      v-for="(log, index) in group.logs"
-                      :key="relatedLogKey(log, index)"
-                      :class="[
-                        'flex min-w-0 border-b border-default/40 bg-transparent last:border-b-0 hover:bg-elevated/70',
-                        1 === index % 2 ? 'bg-elevated/40' : '',
-                      ]"
-                    >
-                      <div
-                        class="flex w-full min-w-0 flex-col gap-1 px-3 py-[0.65rem] leading-[1.6] md:flex-row md:items-start md:gap-2"
-                      >
-                        <StructuredLogLine
-                          :log="log.entry"
-                          :compact="true"
-                          :show-details="true"
-                          :expanded="isExpandedRelatedLog(relatedLogKey(log, index))"
-                          toggleable
-                          @details="openLogDetails"
-                          @open-event="openEventFromLog"
-                          @toggle-expand="toggleExpandedRelatedLog(relatedLogKey(log, index))"
-                        />
-                      </div>
-                    </article>
-                  </div>
-                </section>
+                </article>
               </div>
             </div>
           </section>
 
           <section class="space-y-3">
-            <button
-              type="button"
-              class="flex w-full items-center justify-between gap-3 text-left"
-              @click="toggleRelatedEvents"
-            >
-              <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
-                <UIcon name="i-lucide-activity" class="size-4 text-toned" />
-                <span>Related Events</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <UBadge color="neutral" variant="outline" size="sm">
-                  {{ relatedLoaded ? related.events.length : '?' }}
-                </UBadge>
-                <UIcon
-                  name="i-lucide-chevron-right"
-                  :class="[
-                    'size-4 text-toned transition-transform',
-                    relatedEventsExpanded ? 'rotate-90' : '',
-                  ]"
-                />
-              </div>
-            </button>
+            <h2>
+              <button
+                type="button"
+                class="flex w-full items-center justify-between gap-3 text-left"
+                :aria-expanded="relatedEventsExpanded"
+                @click="toggleRelatedEvents"
+              >
+                <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
+                  <UIcon name="i-lucide-activity" class="size-4 text-toned" />
+                  <span>Related events</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <UBadge color="neutral" variant="outline" size="sm">
+                    {{ relatedLoaded ? related.events.length : '?' }}
+                  </UBadge>
+                  <UIcon
+                    name="i-lucide-chevron-right"
+                    :class="[
+                      'size-4 text-toned transition-transform',
+                      relatedEventsExpanded ? 'rotate-90' : '',
+                    ]"
+                  />
+                </div>
+              </button>
+            </h2>
 
             <div v-if="relatedEventsExpanded">
               <UAlert
@@ -1599,15 +1673,18 @@
               <UAlert v-else-if="relatedError" color="error" variant="soft" title="Error">
                 {{ relatedError }}
               </UAlert>
-              <UAlert
+              <UEmpty
                 v-else-if="relatedLoaded && related.events.length < 1"
-                color="neutral"
-                variant="soft"
+                size="sm"
+                variant="naked"
+                icon="i-lucide-activity"
                 title="No related events"
               />
               <div
                 v-else-if="relatedLoaded"
-                class="overflow-hidden rounded-lg border border-default/70 bg-elevated/30 shadow-sm"
+                class="max-h-96 min-w-0 overflow-y-auto overflow-x-hidden rounded-lg border border-default/70 bg-elevated/30 shadow-sm"
+                tabindex="0"
+                aria-label="Related events"
               >
                 <article
                   v-for="event in related.events"
@@ -1675,28 +1752,18 @@
 
         <div v-if="show_page_tips" class="ws-card p-4 text-sm leading-6 text-default shadow-sm">
           <ul class="list-disc space-y-2 pl-5">
+            <li>Follow the file path link to compare records that reference the same file.</li>
             <li>
-              To see if your media backends are reporting different metadata for the same file,
-              click on the file link which will filter your history based on that file.
+              Source IDs open items on their backend. GUIDs &amp; series GUIDs open their external
+              provider pages.
             </li>
-            <li>
-              Clicking on the ID in <code>metadata via</code> boxes will take you directly to the
-              item in the source backend. While clicking on the GUIDs will take you to that source
-              link, similarly clicking on the series GUIDs will take you to the series link that was
-              provided by the external source.
-            </li>
-            <li>
-              <code>rGUIDSs</code> are relative globally unique identifiers for episodes based on
-              <code>series GUID</code>.
-            </li>
+            <li><code>rGUIDs</code> identify episodes relative to a <code>series GUID</code>.</li>
             <li v-if="data?.not_reported_by && data.not_reported_by.length > 0">
-              The warning on top of the page usually is accurate, and it is recommended to check the
-              backend metadata for the item.
+              Check the metadata for any backend listed as not reporting this item.
               <template v-if="'episode' === data.type">
-                For episodes, we use <code>rGUIDs</code> to identify the episode, and
-                <strong>important part</strong> of that GUID is the <code>series GUID</code>. We
-                need at least one reported series GUIDs to match between your backends. If none are
-                matching, it will be treated as separate series.
+                Matching episodes by <code>rGUID</code> needs at least one shared
+                <code>series GUID</code> between backends. Otherwise, their relative episode
+                identifiers won't match.
               </template>
             </li>
           </ul>
@@ -1708,14 +1775,19 @@
       <template #body>
         <EventView
           v-if="selectedEventId"
+          :key="selectedEventId"
           :id="selectedEventId"
+          :actions-target="`#${eventActionsId}`"
           @open-event="(eventId) => (selectedEventId = eventId)"
         />
+      </template>
+      <template #footer>
+        <div :id="eventActionsId" class="w-full" />
       </template>
     </UModal>
 
     <LogDetailsModal
-      v-model:open="detailsOpen"
+      v-model="detailsOpen"
       :log="selectedLog"
       @open-event="
         (eventId) => {
@@ -1728,9 +1800,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, useId, watch } from 'vue';
 import { navigateTo, useHead, useRoute } from '#app';
-import { NuxtLink } from '#components';
+import {
+  NuxtLink,
+  UAlert,
+  UBadge,
+  UButton,
+  UCard,
+  UDropdownMenu,
+  UEmpty,
+  UIcon,
+  UModal,
+  UTooltip,
+} from '#components';
 import { useBreakpoints, useStorage } from '@vueuse/core';
 import moment from 'moment';
 import DuplicateRecordList from '~/components/DuplicateRecordList.vue';
@@ -1741,6 +1824,7 @@ import PageHeader from '~/components/PageHeader.vue';
 import PlaybackSelection from '~/components/PlaybackSelection.vue';
 import Popover from '~/components/Popover.vue';
 import StructuredLogLine from '~/components/StructuredLogLine.vue';
+import StatisticsPoster from '~/components/StatisticsPoster.vue';
 import TextModal from '~/components/TextModal.vue';
 import { useDialog } from '~/composables/useDialog';
 import { usePageBackground } from '~/composables/usePageBackground';
@@ -1884,18 +1968,14 @@ type ComparisonSection = {
 };
 
 const route = useRoute();
-const idParam = Array.isArray(route.params.id) ? route.params.id[0] : route.params.id;
-const id = Number.parseInt(idParam ?? '0', 10);
-const currentHistoryId = computed<number>(() => {
+const id = computed<number>(() => {
   const routeId = Array.isArray(route.params.id) ? route.params.id[0] : route.params.id;
   return Number.parseInt(routeId ?? '0', 10);
 });
 const pageShell = requireTopLevelPageShell('history');
 
-useHead({ title: `History : ${id}` });
-
 const show_page_tips = useStorage('show_page_tips', true);
-const showLocalMetadata = useStorage<boolean>('history_local_metadata_open', true);
+const showLocalMetadata = useStorage<boolean>('history_local_metadata_open', false);
 const showComparison = useStorage<boolean>('history_comparison_open', true);
 const breakpoints = useBreakpoints({ mobile: 0, desktop: 640 });
 const dialog = useDialog();
@@ -1905,29 +1985,34 @@ const {
   setPageBackgroundOverride,
   clearPageBackgroundOverride,
 } = usePageBackground();
-const backgroundOverrideId = `history:${id}`;
+const backgroundOverrideId = computed(() => `history:${apiUser.value}:${id.value}`);
 
 const detailCardUi = {
   header: 'p-4',
   body: 'px-4 pb-4 pt-0',
 };
 
+const eventActionsId = useId();
 const eventViewModalUi = {
   content: 'max-w-5xl',
   body: 'p-4 sm:p-5',
 };
 
+const playbackActionsId = useId();
 const playbackModalUi = {
   content: 'max-w-6xl overflow-visible',
   header: 'border-b border-default px-4 py-4 sm:px-5 pe-14 sm:pe-16',
   title: 'pr-2 wrap-break-word',
-  body: 'p-0',
+  body: 'p-0 sm:p-0',
+  footer: 'sm:px-5 [&:not(:has(button))]:hidden',
 } as const;
 
 const isLoading = ref(true);
+const contentError = ref('');
 const showRawData = ref(false);
 const playbackModalOpen = ref(false);
 const isDeleting = ref(false);
+const isMutating = ref(false);
 const comparisonExpanded = ref<Record<string, boolean>>({});
 const expandLocalId = ref(false);
 const expandLocalTitle = ref(false);
@@ -1938,6 +2023,7 @@ const loadedImages = ref<Record<'poster' | 'background', string | null>>({
 });
 const headerOverviewExpanded = ref(false);
 const apiUser = useStorage<string>('api_user', 'main');
+const posterEnable = useStorage<boolean>('poster_enable', true);
 const relatedLogsExpanded = useStorage<boolean>('history_related_logs_open', true);
 const relatedEventsExpanded = useStorage<boolean>('history_related_events_open', true);
 const relatedLoading = ref(false);
@@ -1946,11 +2032,19 @@ const relatedVisible = ref(false);
 const relatedLoadedAt = ref<number | null>(null);
 const relatedError = ref('');
 const related = ref<RelatedHistoryResponse>({ logs: [], events: [] });
+const relatedLogFiles = computed(() =>
+  [...new Set(related.value.logs.map((log) => log.filename))].map((filename) => ({
+    label: filename,
+    icon: 'i-lucide-file-text',
+    to: `/logs/${encodeURIComponent(filename)}`,
+  })),
+);
 const selectedEventId = ref<string | null>(null);
 const selectedLog = ref<ServerJsonLogEntry | null>(null);
 const detailsOpen = ref(false);
 const expandedRelatedLogs = ref<Set<string>>(new Set());
-const openRelatedLogFiles = ref<Record<string, boolean>>({});
+const wrapRelatedLogs = useStorage<boolean>('history_related_logs_wrap', false);
+const relatedLogsContainer = ref<HTMLElement | null>(null);
 const eventViewOpen = computed({
   get: (): boolean => null !== selectedEventId.value,
   set: (open: boolean): void => {
@@ -1962,27 +2056,17 @@ const eventViewOpen = computed({
 const eventViewTitle = computed(() =>
   null === selectedEventId.value ? 'Event' : `#${makeEventName(selectedEventId.value)}`,
 );
-const relatedLogGroups = computed<Array<{ filename: string; logs: Array<RelatedHistoryLog> }>>(
-  () => {
-    const groups = new Map<string, Array<RelatedHistoryLog>>();
-    for (const log of related.value.logs) {
-      const entries = groups.get(log.filename) ?? [];
-      entries.push(log);
-      groups.set(log.filename, entries);
-    }
-
-    return Array.from(groups, ([filename, logs]) => ({ filename, logs }));
-  },
-);
 let relatedLoadToken = 0;
+let contentLoadToken = 0;
+let imageLoadToken = 0;
 
 const data = ref<HistoryViewItem>({
-  id,
+  id: id.value,
   type: 'movie',
   updated: 0,
   watched: false,
   via: '',
-  title: `${id}`,
+  title: `${id.value}`,
   guids: {},
   parent: {},
   rguids: {},
@@ -2035,7 +2119,7 @@ const comparisonBackends = computed<Array<ComparisonBackend>>(() =>
 );
 
 const comparisonGridStyle = computed<Record<string, string>>(() => ({
-  gridTemplateColumns: `minmax(9rem, 10rem) repeat(${comparisonBackends.value.length}, minmax(0, 1fr))`,
+  gridTemplateColumns: `minmax(9rem, 10rem) repeat(${comparisonBackends.value.length + 1}, minmax(12rem, 1fr))`,
 }));
 
 const isComparisonRowExpanded = (rowKey: string): boolean =>
@@ -2213,7 +2297,7 @@ const makeComparisonRow = (
     expandable:
       Boolean(baseline.expandable) || cells.some((entry) => Boolean(entry.cell.expandable)),
     compareDiffs: options.compareDiffs,
-    cells,
+    cells: [{ backend: 'LOCAL', cell: baseline, differs: false }, ...cells],
   };
 };
 
@@ -2275,8 +2359,8 @@ const comparisonSections = computed<Array<ComparisonSection>>(() => {
       'status',
       'Status',
       'i-lucide-eye',
-      makeTextCell(data.value.watched ? 'Played' : 'Unplayed'),
-      ({ item }) => makeTextCell(Number(item.watched) ? 'Played' : 'Unplayed'),
+      makeTextCell(data.value.watched ? 'Watched' : 'Unwatched'),
+      ({ item }) => makeTextCell(Number(item.watched) ? 'Watched' : 'Unwatched'),
     ),
     makeComparisonRow(
       'progress',
@@ -2300,10 +2384,26 @@ const comparisonSections = computed<Array<ComparisonSection>>(() => {
     ),
     makeComparisonRow(
       'updated',
-      'Updated',
+      'Backend updated',
       'i-lucide-calendar',
       makeDateCell(data.value.updated),
-      ({ key }) => makeDateCell(ag(data.value.extra, `${key}.received_at`, data.value.updated)),
+      () => makeTextCell('', { emptyLabel: 'N/A' }),
+      { compareDiffs: false },
+    ),
+    makeComparisonRow(
+      'received',
+      'Last report',
+      'i-lucide-inbox',
+      makeTextCell('', { emptyLabel: 'N/A' }),
+      ({ key }) => makeDateCell(ag(data.value.extra, `${key}.received_at`, null)),
+      { compareDiffs: false },
+    ),
+    makeComparisonRow(
+      'db-updated',
+      'Updated in WatchState',
+      'i-lucide-database',
+      makeDateCell(data.value.updated_at),
+      () => makeTextCell('', { emptyLabel: 'N/A' }),
       { compareDiffs: false },
     ),
   ].filter((row): row is ComparisonRow => row !== null);
@@ -2357,14 +2457,14 @@ const comparisonSections = computed<Array<ComparisonSection>>(() => {
   ].filter((row): row is ComparisonRow => row !== null);
 
   return [
-    { key: 'identity', label: 'Identity', rows: identityRows },
     { key: 'playback', label: 'Playback', rows: playbackRows },
     { key: 'content', label: 'Content', rows: contentRows },
+    { key: 'identity', label: 'Identifiers', rows: identityRows },
   ].filter((section) => section.rows.length > 0);
 });
 
 const historyTitle = computed<string>(() => {
-  const baseTitle = data.value.title ?? id.toString();
+  const baseTitle = data.value.title ?? id.value.toString();
   if (
     'episode' === data.value.type &&
     data.value.season !== undefined &&
@@ -2419,13 +2519,6 @@ const summaryBadges = computed<Array<SummaryBadge>>(() => {
     });
   }
 
-  if (Number(data.value.progress) > 0) {
-    badges.push({
-      icon: 'i-lucide-clock-3',
-      label: formatDuration(Number(data.value.progress ?? 0)),
-    });
-  }
-
   return badges;
 });
 
@@ -2461,21 +2554,6 @@ const isExpandedRelatedLog = (key: string): boolean => expandedRelatedLogs.value
 const relatedLogKey = (log: RelatedHistoryLog, index: number): string =>
   `${log.filename}:${log.entry.id}:${index}`;
 
-const relatedLogTypeName = (filename: string): string => ucFirst(filename.split('.')[0] ?? 'Log');
-
-const relatedLogTypeIcon = (filename: string): string => {
-  switch (filename.split('.')[0]) {
-    case 'access':
-      return 'i-lucide-key-round';
-    case 'task':
-      return 'i-lucide-list-checks';
-    case 'app':
-      return 'i-lucide-bug';
-    default:
-      return 'i-lucide-book-open';
-  }
-};
-
 const relatedLogCopyMenuItems = (logs: Array<RelatedHistoryLog>) => [
   [
     {
@@ -2501,15 +2579,6 @@ const relatedLogCopyMenuItems = (logs: Array<RelatedHistoryLog>) => [
     },
   ],
 ];
-
-const isRelatedLogOpen = (filename: string): boolean => openRelatedLogFiles.value[filename] ?? true;
-
-const toggleRelatedLog = (filename: string): void => {
-  openRelatedLogFiles.value = {
-    ...openRelatedLogFiles.value,
-    [filename]: !isRelatedLogOpen(filename),
-  };
-};
 
 const toggleExpandedRelatedLog = (key: string): void => {
   const next = new Set(expandedRelatedLogs.value);
@@ -2572,33 +2641,49 @@ const getEventStatusIcon = (status: number): string => {
 const getEventStatusIconClass = (status: number): string =>
   1 === status ? 'size-3.5 animate-spin' : 'size-3.5';
 
-const loadContent = async (historyId: number) => {
+const loadContent = async (): Promise<void> => {
+  const token = ++contentLoadToken;
+  const historyId = id.value;
+  const user = apiUser.value;
   isLoading.value = true;
+  contentError.value = '';
 
-  const response = await request(`/history/${historyId}?files=true`);
-  const json = await parse_api_response<HistoryViewItem>(response);
+  try {
+    const response = await request(`/history/${historyId}?files=true`, {
+      headers: { 'X-User': user },
+    });
+    const json = await parse_api_response<HistoryViewItem>(response);
 
-  if (route.name !== 'history-id') {
-    return;
-  }
-
-  if ('error' in json) {
-    isLoading.value = false;
-    notification('Error', 'Error loading data', `${json.error.code}: ${json.error.message}`);
-    if (404 === response.status) {
-      await navigateTo({ name: 'history' });
+    if (token !== contentLoadToken || historyId !== id.value || user !== apiUser.value) {
+      return;
     }
-    return;
+
+    if ('error' in json) {
+      contentError.value = `${json.error.code}: ${json.error.message}`;
+      notification('error', 'Error loading data', `${json.error.code}: ${json.error.message}`);
+      if (404 === response.status) {
+        await navigateTo({ name: 'history' });
+      }
+      return;
+    }
+
+    data.value = { ...json };
+    isLoading.value = false;
+    await Promise.all([
+      loadImage(),
+      validateItem(historyId, user, token),
+      checkDuplicates(historyId, user, token),
+    ]);
+  } catch (error: unknown) {
+    if (token === contentLoadToken) {
+      contentError.value = error instanceof Error ? error.message : 'Request error.';
+      notification('error', 'Error loading data', contentError.value);
+    }
+  } finally {
+    if (token === contentLoadToken) {
+      isLoading.value = false;
+    }
   }
-
-  isLoading.value = false;
-  data.value = { ...json };
-
-  useHead({ title: `History : ${historyTitle.value}` });
-  await loadImage();
-  await nextTick();
-  await validateItem();
-  await checkDuplicates();
 };
 
 const resetRelated = (): void => {
@@ -2612,7 +2697,6 @@ const resetRelated = (): void => {
   selectedLog.value = null;
   detailsOpen.value = false;
   expandedRelatedLogs.value = new Set();
-  openRelatedLogFiles.value = {};
 };
 
 const loadRelated = async (): Promise<void> => {
@@ -2628,7 +2712,7 @@ const loadRelated = async (): Promise<void> => {
   }
 
   const token = ++relatedLoadToken;
-  const historyId = currentHistoryId.value;
+  const historyId = id.value;
   const user = apiUser.value;
   relatedLoading.value = true;
   relatedLoaded.value = false;
@@ -2637,11 +2721,13 @@ const loadRelated = async (): Promise<void> => {
   related.value = { logs: [], events: [] };
 
   try {
-    const response = await request(`/history/${historyId}/related`);
+    const response = await request(`/history/${historyId}/related`, {
+      headers: { 'X-User': user },
+    });
     const json = await parse_api_response<RelatedHistoryResponse>(response);
 
     const requestIsCurrent =
-      token === relatedLoadToken && historyId === currentHistoryId.value && user === apiUser.value;
+      token === relatedLoadToken && historyId === id.value && user === apiUser.value;
     if (false === requestIsCurrent) {
       return;
     }
@@ -2686,17 +2772,20 @@ const showRelated = (): void => {
   }
 };
 
-watch([apiUser, currentHistoryId], () => {
-  resetRelated();
-  if (relatedVisible.value && (relatedLogsExpanded.value || relatedEventsExpanded.value)) {
-    void loadRelated();
-  }
-});
+watch(
+  relatedLogsContainer,
+  (container) => {
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+  },
+  { flush: 'post' },
+);
 
 watch(breakpoints.active(), async () => await loadImage());
 
 watch(pageBackgroundReloadToken, async () => {
-  if (pageBackgroundOverride.value?.id !== backgroundOverrideId) {
+  if (pageBackgroundOverride.value?.id !== backgroundOverrideId.value) {
     return;
   }
 
@@ -2704,6 +2793,10 @@ watch(pageBackgroundReloadToken, async () => {
 });
 
 const loadImage = async (force = false, imageType: 'poster' | 'background' | null = null) => {
+  const token = ++imageLoadToken;
+  const historyId = id.value;
+  const user = apiUser.value;
+  const overrideId = backgroundOverrideId.value;
   try {
     const activeBreakpoint = breakpoints.active().value;
     const bgType =
@@ -2711,92 +2804,148 @@ const loadImage = async (force = false, imageType: 'poster' | 'background' | nul
 
     if (false === force && loadedImages.value[bgType]) {
       setPageBackgroundOverride({
-        id: backgroundOverrideId,
+        id: overrideId,
         src: loadedImages.value[bgType] ?? '',
       });
       return;
     }
 
-    let url = `/history/${id}/images/${bgType}`;
+    let url = `/history/${historyId}/images/${bgType}`;
     if (force) {
       url += `?t=${Date.now()}`;
     }
 
-    const imgRequest = await request(url);
+    const imgRequest = await request(url, { headers: { 'X-User': user } });
+    if (token !== imageLoadToken || historyId !== id.value || user !== apiUser.value) {
+      return;
+    }
     if (!imgRequest.ok) {
-      clearPageBackgroundOverride(backgroundOverrideId);
+      clearPageBackgroundOverride(overrideId);
       return;
     }
 
-    loadedImages.value[bgType] = URL.createObjectURL(await imgRequest.blob());
+    const blob = await imgRequest.blob();
+    if (token !== imageLoadToken || historyId !== id.value || user !== apiUser.value) {
+      return;
+    }
+    const previousUrl = loadedImages.value[bgType];
+    if (previousUrl) {
+      URL.revokeObjectURL(previousUrl);
+    }
+    loadedImages.value[bgType] = URL.createObjectURL(blob);
     setPageBackgroundOverride({
-      id: backgroundOverrideId,
+      id: overrideId,
       src: loadedImages.value[bgType] ?? '',
     });
   } catch {
-    clearPageBackgroundOverride(backgroundOverrideId);
+    if (token === imageLoadToken) {
+      clearPageBackgroundOverride(overrideId);
+    }
   }
 };
 
 const deleteItem = async () => {
-  if (isDeleting.value) {
+  if (isDeleting.value || isLoading.value || isMutating.value) {
     return;
   }
+  const historyId = id.value;
+  const user = apiUser.value;
+  const token = contentLoadToken;
+  const title = historyTitle.value;
 
   const { status: confirmStatus } = await dialog.confirmDialog({
-    message: `Delete '${historyTitle.value}' local record?`,
+    message: `Delete the local record for '${historyTitle.value}'?`,
+    confirmText: 'Delete',
     confirmColor: 'error',
   });
 
-  if (true !== confirmStatus) {
+  if (
+    true !== confirmStatus ||
+    token !== contentLoadToken ||
+    historyId !== id.value ||
+    user !== apiUser.value
+  ) {
     return;
   }
 
   isDeleting.value = true;
 
   try {
-    const response = await request(`/history/${id}`, { method: 'DELETE' });
+    const response = await request(`/history/${historyId}`, {
+      method: 'DELETE',
+      headers: { 'X-User': user },
+    });
     const json = await parse_api_response<GenericResponse>(response);
+    if (token !== contentLoadToken || historyId !== id.value || user !== apiUser.value) {
+      return;
+    }
 
     if ('error' in json) {
       notification('error', 'Error', `${json.error.code}: ${json.error.message}`);
       return;
     }
 
-    notification('success', 'Success!', `Deleted '${historyTitle.value}'.`);
+    notification('success', 'Record deleted', `Deleted '${title}'.`);
     await navigateTo({ name: 'history' });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Request error.';
-    notification('error', 'Error', message);
+    if (token === contentLoadToken) {
+      const message = error instanceof Error ? error.message : 'Request error.';
+      notification('error', 'Error', message);
+    }
   } finally {
-    isDeleting.value = false;
+    if (token === contentLoadToken) {
+      isDeleting.value = false;
+    }
   }
 };
 
 const openPlaybackModal = (): void => {
+  if (isLoading.value || isMutating.value || isDeleting.value) {
+    return;
+  }
   playbackModalOpen.value = true;
 };
 
 const handlePlaybackWatchedChange = async (watched: boolean): Promise<void> => {
+  if (isLoading.value || false === playbackModalOpen.value) {
+    return;
+  }
   data.value.watched = watched;
-  await loadContent(id);
+  await loadContent();
 };
 
 const toggleWatched = async () => {
+  if (isLoading.value || isMutating.value || isDeleting.value) {
+    return;
+  }
+  const historyId = id.value;
+  const user = apiUser.value;
+  const token = contentLoadToken;
+  const watched = data.value.watched;
   const { status: confirmStatus } = await dialog.confirmDialog({
-    message: `Mark '${historyTitle.value}' as ${data.value.watched ? 'unplayed' : 'played'}?`,
+    message: `Mark '${historyTitle.value}' ${data.value.watched ? 'unwatched' : 'watched'} in WatchState?`,
   });
 
-  if (true !== confirmStatus) {
+  if (
+    true !== confirmStatus ||
+    token !== contentLoadToken ||
+    historyId !== id.value ||
+    user !== apiUser.value
+  ) {
     return;
   }
 
+  isMutating.value = true;
   try {
-    const response = await request(`/history/${data.value.id}/watch`, {
-      method: data.value.watched ? 'DELETE' : 'POST',
+    const response = await request(`/history/${historyId}/watch`, {
+      method: watched ? 'DELETE' : 'POST',
+      headers: { 'X-User': user },
     });
 
     const json = await parse_api_response<HistoryViewItem>(response);
+    if (token !== contentLoadToken || historyId !== id.value || user !== apiUser.value) {
+      return;
+    }
 
     if ('error' in json) {
       notification('error', 'Error', `${json.error.code}: ${json.error.message}`);
@@ -2807,26 +2956,40 @@ const toggleWatched = async () => {
 
     notification(
       'success',
-      '',
-      `Marked '${historyTitle.value}' as ${data.value.watched ? 'played' : 'unplayed'}`,
+      'Local state updated',
+      `Marked '${historyTitle.value}' ${data.value.watched ? 'watched' : 'unwatched'}.`,
     );
-    await validateItem();
+    await Promise.all([
+      validateItem(historyId, user, token),
+      checkDuplicates(historyId, user, token),
+    ]);
   } catch (error) {
-    notification('error', 'Error', `Request error. ${String(error)}`);
+    if (token === contentLoadToken) {
+      notification('error', 'Error', `Request error. ${String(error)}`);
+    }
+  } finally {
+    if (token === contentLoadToken) {
+      isMutating.value = false;
+    }
   }
 };
 
-const validateItem = async () => {
+const validateItem = async (historyId: number, user: string, token: number) => {
   try {
-    const response = await request(`/history/${id}/validate`);
-
-    if (!response.ok) {
+    const response = await request(`/history/${historyId}/validate`, {
+      headers: { 'X-User': user },
+    });
+    const json = await parse_api_response<ValidationResponse>(response);
+    if (token !== contentLoadToken || historyId !== id.value || user !== apiUser.value) {
       return;
     }
-
-    const json = await parse_api_response<ValidationResponse>(response);
     if ('error' in json) {
-      return;
+      throw new Error(json.error.message);
+    }
+
+    for (const item of Object.values(data.value.metadata)) {
+      item.validated = false;
+      item.validated_message = 'Availability could not be checked.';
     }
 
     for (const [backend, item] of Object.entries(json)) {
@@ -2837,44 +3000,83 @@ const validateItem = async () => {
       data.value.metadata[backend].validated = item.status;
       data.value.metadata[backend].validated_message = item.message;
     }
-  } catch {}
+  } catch (error: unknown) {
+    if (token !== contentLoadToken || historyId !== id.value || user !== apiUser.value) {
+      return;
+    }
+    for (const item of Object.values(data.value.metadata)) {
+      item.validated = false;
+      item.validated_message = `Could not check availability: ${error instanceof Error ? error.message : 'Request error.'}`;
+    }
+  }
 };
 
 const deleteMetadata = async (backend: string) => {
+  if (isLoading.value || isMutating.value || isDeleting.value) {
+    return;
+  }
+  const historyId = id.value;
+  const user = apiUser.value;
+  const token = contentLoadToken;
   const { status: confirmStatus } = await dialog.confirmDialog({
-    message: `Remove '${backend}' metadata from '${historyTitle.value}' data?`,
+    message: `Remove '${backend}' metadata from '${historyTitle.value}'?`,
+    confirmText: 'Remove',
     confirmColor: 'error',
   });
 
-  if (true !== confirmStatus) {
+  if (
+    true !== confirmStatus ||
+    token !== contentLoadToken ||
+    historyId !== id.value ||
+    user !== apiUser.value
+  ) {
     return;
   }
 
+  isMutating.value = true;
   try {
-    const response = await request(`/history/${id}/metadata/${backend}`, { method: 'DELETE' });
+    const response = await request(`/history/${historyId}/metadata/${backend}`, {
+      method: 'DELETE',
+      headers: { 'X-User': user },
+    });
     const json = await parse_api_response<GenericResponse>(response);
+    if (token !== contentLoadToken || historyId !== id.value || user !== apiUser.value) {
+      return;
+    }
 
     if ('error' in json) {
       notification('error', 'Error', `${json.error.code}: ${json.error.message}`);
       return;
     }
 
-    notification('success', 'Success!', `Deleted '${backend}' metadata.`);
-    await loadContent(id);
+    notification('success', 'Metadata deleted', `Deleted '${backend}' metadata.`);
+    isMutating.value = false;
+    await loadContent();
   } catch (error) {
-    notification('error', 'Error', `Request error. ${String(error)}`);
+    if (token === contentLoadToken) {
+      notification('error', 'Error', `Request error. ${String(error)}`);
+    }
+  } finally {
+    if (token === contentLoadToken) {
+      isMutating.value = false;
+    }
   }
 };
 
-const checkDuplicates = async () => {
+const checkDuplicates = async (historyId: number, user: string, token: number) => {
   try {
-    const response = await request(`/history/${id}/duplicates`);
+    const response = await request(`/history/${historyId}/duplicates`, {
+      headers: { 'X-User': user },
+    });
 
     if (!response.ok) {
       return;
     }
 
     const json = await parse_api_response<DuplicateResponse>(response);
+    if (token !== contentLoadToken || historyId !== id.value || user !== apiUser.value) {
+      return;
+    }
     if ('error' in json) {
       return;
     }
@@ -2894,11 +3096,66 @@ const checkDuplicates = async () => {
 
 const getMoment = (time: number | string) =>
   time.toString().length < 13 ? moment.unix(Number(time)) : moment(time);
-const headerTitle = computed<string>(() => (isLoading.value ? id.toString() : historyTitle.value));
+const headerTitle = computed<string>(() =>
+  isLoading.value ? id.value.toString() : historyTitle.value,
+);
+
+useHead(() => ({ title: `History : ${headerTitle.value}` }));
+
+watch(
+  [apiUser, id],
+  (_current, previous) => {
+    imageLoadToken++;
+    if (previous) {
+      clearPageBackgroundOverride(`history:${previous[0]}:${previous[1]}`);
+    }
+    for (const url of Object.values(loadedImages.value)) {
+      if (url) {
+        URL.revokeObjectURL(url);
+      }
+    }
+    loadedImages.value = { poster: null, background: null };
+    data.value = {
+      id: id.value,
+      type: 'movie',
+      watched: false,
+      via: '',
+      title: String(id.value),
+      guids: {},
+      metadata: {},
+      extra: {},
+      reported_by: [],
+      not_reported_by: [],
+      files: [],
+      duplicate_reference_ids: [],
+    };
+    comparisonExpanded.value = {};
+    expandLocalId.value = false;
+    expandLocalTitle.value = false;
+    expandLocalPath.value = false;
+    headerOverviewExpanded.value = false;
+    showRawData.value = false;
+    playbackModalOpen.value = false;
+    isDeleting.value = false;
+    isMutating.value = false;
+    resetRelated();
+    void loadContent();
+    if (relatedVisible.value && (relatedLogsExpanded.value || relatedEventsExpanded.value)) {
+      void loadRelated();
+    }
+  },
+  { immediate: true, flush: 'sync' },
+);
 
 onUnmounted(() => {
-  clearPageBackgroundOverride(backgroundOverrideId);
+  contentLoadToken++;
+  relatedLoadToken++;
+  imageLoadToken++;
+  clearPageBackgroundOverride(backgroundOverrideId.value);
+  for (const url of Object.values(loadedImages.value)) {
+    if (url) {
+      URL.revokeObjectURL(url);
+    }
+  }
 });
-
-onMounted(() => void loadContent(id));
 </script>

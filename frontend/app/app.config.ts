@@ -9,7 +9,7 @@ export default defineAppConfig({
     },
     formField: {
       slots: {
-        label: 'block font-bold text-default',
+        label: 'block font-medium text-default',
       },
     },
     tooltip: {
@@ -19,18 +19,18 @@ export default defineAppConfig({
     },
     card: {
       slots: {
-        root: 'min-w-0 max-w-full rounded-lg overflow-hidden',
+        root: 'min-w-0 max-w-full rounded-xl overflow-hidden',
       },
       variants: {
         variant: {
           outline: {
-            root: 'border border-default/70 bg-elevated/20 divide-y divide-default',
+            root: 'border border-default/70 bg-default divide-y divide-default',
           },
           soft: {
-            root: 'bg-elevated/20 divide-y divide-default',
+            root: 'bg-muted divide-y divide-default',
           },
           subtle: {
-            root: 'border border-default/70 bg-elevated/20 divide-y divide-default',
+            root: 'border border-default/70 bg-default divide-y divide-default',
           },
         },
       },

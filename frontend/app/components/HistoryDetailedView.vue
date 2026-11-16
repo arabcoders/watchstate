@@ -1,217 +1,186 @@
 <template>
-  <div class="grid gap-4 xl:grid-cols-2">
+  <section
+    class="overflow-hidden rounded-xl border border-default bg-default"
+    aria-label="History inspection"
+  >
     <Lazy
       v-for="item in items"
       :key="`${user}:${item.id}`"
       :unrender="true"
-      :min-height="260"
-      class="min-h-65"
+      :min-height="152"
+      class="border-b border-default last:border-b-0"
     >
-      <UCard
-        class="h-full shadow-sm"
-        :class="item.watched ? 'ring-1 ring-success/20' : ''"
-        :ui="historyCardUi"
-      >
-        <template #header>
-          <div class="flex items-start justify-between gap-3">
+      <article class="flex items-start gap-3 p-4">
+        <HistoryPoster
+          v-if="posterEnable"
+          preview
+          :history-id="item.id"
+          :title="item.title"
+          :user="user"
+          class="hidden w-16 shrink-0 sm:block"
+        />
+        <div class="min-w-0 flex-1 space-y-3">
+          <div class="flex items-start gap-3">
             <div class="min-w-0 flex-1">
-              <div
-                class="flex min-w-0 items-start gap-2 text-base font-semibold leading-6 text-highlighted"
-              >
-                <UIcon
-                  :name="'episode' === item.type ? 'i-lucide-tv' : 'i-lucide-film'"
-                  class="mt-0.5 size-4 shrink-0 text-toned"
-                />
-
-                <div class="min-w-0 flex-1">
-                  <FloatingImage v-if="posterEnable" :image="`/history/${item.id}/images/poster`">
-                    <UTooltip
-                      :text="String(item.full_title || makeName(item as unknown as JsonObject))"
-                    >
-                      <NuxtLink
-                        :to="`/history/${item.id}`"
-                        class="block truncate text-highlighted hover:text-primary"
-                      >
-                        {{ item.full_title || makeName(item as unknown as JsonObject) }}
-                      </NuxtLink>
-                    </UTooltip>
-                  </FloatingImage>
-
-                  <UTooltip
-                    v-else
-                    :text="String(item.full_title || makeName(item as unknown as JsonObject))"
-                  >
-                    <NuxtLink
-                      :to="`/history/${item.id}`"
-                      class="block truncate text-highlighted hover:text-primary"
-                    >
-                      {{ item.full_title || makeName(item as unknown as JsonObject) }}
-                    </NuxtLink>
-                  </UTooltip>
-                </div>
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span class="font-mono text-xs text-dimmed">#{{ item.id }}</span>
+                <UBadge :color="item.watched ? 'success' : 'neutral'" variant="soft" size="xs">
+                  {{
+                    item.watched
+                      ? 'Watched'
+                      : 0 < Number(item.progress)
+                        ? 'In progress'
+                        : 'Unwatched'
+                  }}
+                </UBadge>
+                <span class="inline-flex items-center gap-1 text-xs text-toned">
+                  <UIcon
+                    :name="'episode' === item.type ? 'i-lucide-tv' : 'i-lucide-film'"
+                    class="size-3.5"
+                  />
+                  {{ 'episode' === item.type ? 'Episode' : 'Movie' }}
+                </span>
               </div>
+              <NuxtLink
+                :to="`/history/${item.id}`"
+                :title="item.full_title || item.title"
+                class="mt-1 line-clamp-2 text-sm font-semibold text-highlighted hover:text-primary"
+              >
+                {{ item.full_title || makeName(item as unknown as JsonObject) }}
+              </NuxtLink>
             </div>
+            <UCheckbox
+              color="primary"
+              class="mt-1 shrink-0"
+              :model-value="selectedIds.includes(item.id)"
+              :disabled="selectionDisabled"
+              :aria-label="`Select ${item.full_title || item.title}`"
+              @update:model-value="emit('select', item.id, $event)"
+            />
+          </div>
 
-            <div class="flex shrink-0 items-center gap-2">
-              <UTooltip :text="selectedIds.includes(item.id) ? 'Unselect item' : 'Select item'">
-                <UCheckbox
-                  color="primary"
-                  :model-value="selectedIds.includes(item.id)"
-                  @update:model-value="emit('select', item.id, $event)"
+          <dl
+            v-if="item.content_title || item.content_path"
+            class="space-y-1 rounded-md bg-muted/50 px-3 py-2 text-xs"
+          >
+            <div v-if="item.content_title" class="flex items-start gap-2">
+              <dt class="w-12 shrink-0 py-1 text-dimmed">Subtitle</dt>
+              <dd class="flex min-w-0 flex-1 items-start gap-1">
+                <NuxtLink
+                  :to="makeSearchLink('subtitle', item.content_title)"
+                  :title="item.content_title"
+                  class="min-w-0 flex-1 py-1 text-toned hover:text-primary"
+                  :class="item.expand_title ? 'wrap-break-word' : 'truncate'"
+                >
+                  {{ item.content_title }}
+                </NuxtLink>
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  :icon="item.expand_title ? 'i-lucide-minimize-2' : 'i-lucide-maximize-2'"
+                  :aria-label="`${item.expand_title ? 'Collapse' : 'Expand'} subtitle for ${item.title}`"
+                  :title="item.expand_title ? 'Collapse subtitle' : 'Expand subtitle'"
+                  :aria-expanded="!!item.expand_title"
+                  @click="emit('expand', item.id, 'expand_title')"
                 />
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  icon="i-lucide-copy"
+                  :aria-label="`Copy subtitle for ${item.title}`"
+                  title="Copy subtitle"
+                  @click="() => void copyText(item.content_title ?? '', false)"
+                />
+              </dd>
+            </div>
+            <div v-if="item.content_path" class="flex items-start gap-2">
+              <dt class="w-12 shrink-0 py-1 text-dimmed">Path</dt>
+              <dd class="flex min-w-0 flex-1 items-start gap-1">
+                <NuxtLink
+                  :to="makeSearchLink('path', item.content_path)"
+                  :title="item.content_path"
+                  class="min-w-0 flex-1 py-1 font-mono text-toned hover:text-primary"
+                  :class="item.expand_path ? 'wrap-break-word' : 'truncate'"
+                >
+                  {{ item.content_path }}
+                </NuxtLink>
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  :icon="item.expand_path ? 'i-lucide-minimize-2' : 'i-lucide-maximize-2'"
+                  :aria-label="`${item.expand_path ? 'Collapse' : 'Expand'} path for ${item.title}`"
+                  :title="item.expand_path ? 'Collapse path' : 'Expand path'"
+                  :aria-expanded="!!item.expand_path"
+                  @click="emit('expand', item.id, 'expand_path')"
+                />
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  icon="i-lucide-copy"
+                  :aria-label="`Copy file path for ${item.title}`"
+                  title="Copy file path"
+                  @click="() => void copyText(item.content_path ?? '', false)"
+                />
+              </dd>
+            </div>
+          </dl>
+
+          <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-toned">
+            <UTooltip
+              :text="`Record updated at: ${moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`"
+            >
+              <span class="inline-flex cursor-help items-center gap-1.5">
+                <UIcon name="i-lucide-clock" class="size-3.5" />
+                {{ moment.unix(item.updated_at).fromNow() }}
+              </span>
+            </UTooltip>
+            <span class="inline-flex items-center gap-1.5">
+              <UIcon name="i-lucide-server" class="size-3.5" />
+              <NuxtLink :to="`/backend/${item.via}`" class="hover:text-primary">
+                {{ item.via }}
+              </NuxtLink>
+              <UTooltip
+                v-if="item.metadata && 1 < Object.keys(item.metadata).length"
+                :text="`Also reported by: ${Object.keys(item.metadata)
+                  .filter((backend) => item.via !== backend)
+                  .join(', ')}.`"
+              >
+                <span class="cursor-help">(+{{ Object.keys(item.metadata).length - 1 }})</span>
               </UTooltip>
-            </div>
-          </div>
-        </template>
-
-        <div class="space-y-3">
-          <div
-            v-if="item.content_title"
-            class="flex items-start justify-between gap-3 rounded-md border border-default bg-elevated/40 px-3 py-2.5"
-          >
-            <div
-              class="flex min-w-0 flex-1 cursor-pointer items-start gap-2 text-sm font-medium text-default"
-              @click="emit('expand', item.id, 'expand_title')"
-            >
-              <UIcon name="i-lucide-heading" class="mt-0.5 size-4 shrink-0 text-toned" />
-              <NuxtLink
-                :to="makeSearchLink('subtitle', item.content_title ?? '')"
-                class="min-w-0 hover:text-primary"
-                :class="item.expand_title ? 'wrap-break-word' : 'truncate'"
-              >
-                {{ item.content_title }}
-              </NuxtLink>
-            </div>
-
-            <UTooltip text="Copy subtitle">
-              <UButton
-                color="neutral"
-                variant="ghost"
-                size="sm"
-                square
-                icon="i-lucide-copy"
-                aria-label="Copy subtitle"
-                @click="() => void copyText(item.content_title ?? '', false)"
-              />
-            </UTooltip>
-          </div>
-
-          <div
-            v-if="item.content_path"
-            class="flex items-start justify-between gap-3 rounded-md border border-default bg-elevated/40 px-3 py-2.5"
-          >
-            <div
-              class="flex min-w-0 flex-1 cursor-pointer items-start gap-2 text-sm font-medium text-default"
-              @click="emit('expand', item.id, 'expand_path')"
-            >
-              <UIcon name="i-lucide-file-text" class="mt-0.5 size-4 shrink-0 text-toned" />
-              <NuxtLink
-                :to="makeSearchLink('path', item.content_path ?? '')"
-                class="min-w-0 hover:text-primary"
-                :class="item.expand_path ? 'wrap-break-word' : 'truncate'"
-              >
-                {{ item.content_path }}
-              </NuxtLink>
-            </div>
-
-            <UTooltip text="Copy file path">
-              <UButton
-                color="neutral"
-                variant="ghost"
-                size="sm"
-                square
-                icon="i-lucide-copy"
-                aria-label="Copy file path"
-                @click="() => void copyText(item.content_path ?? '', false)"
-              />
-            </UTooltip>
+            </span>
+            <span class="inline-flex items-center gap-1.5">
+              <UIcon name="i-lucide-mail" class="size-3.5" />
+              <span>Event: {{ item.event ?? '-' }}</span>
+            </span>
+            <span v-if="item.progress" class="inline-flex items-center gap-1.5 tabular-nums">
+              <UIcon name="i-lucide-gauge" class="size-3.5" />
+              <span>Position: {{ formatDuration(Number(item.progress)) }}</span>
+            </span>
           </div>
         </div>
-
-        <template #footer>
-          <div
-            :class="[
-              'grid grid-cols-2 gap-2.5',
-              item.progress ? 'xl:grid-cols-4' : 'xl:grid-cols-3',
-            ]"
-          >
-            <div
-              class="flex items-center justify-center gap-2 rounded-md border border-default bg-elevated/40 px-3 py-2 text-center text-sm font-medium text-default"
-            >
-              <UIcon name="i-lucide-calendar" class="size-4 shrink-0 text-toned" />
-              <UTooltip
-                :text="`Record updated at: ${moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`"
-              >
-                <span class="cursor-help">{{ moment.unix(item.updated_at).fromNow() }}</span>
-              </UTooltip>
-            </div>
-
-            <div
-              class="flex items-center justify-center gap-2 rounded-md border border-default bg-elevated/40 px-3 py-2 text-center text-sm font-medium text-default"
-            >
-              <UIcon name="i-lucide-server" class="size-4 shrink-0 text-toned" />
-              <div>
-                <NuxtLink :to="`/backend/${item.via}`" class="hover:text-primary">{{
-                  item.via
-                }}</NuxtLink>
-                <UTooltip
-                  v-if="item.metadata && Object.keys(item.metadata).length > 1"
-                  :text="`Also reported by: ${Object.keys(item.metadata)
-                    .filter((i) => i !== item.via)
-                    .join(', ')}.`"
-                >
-                  <span class="ml-1 cursor-help text-toned">
-                    (+{{ Object.keys(item.metadata).length - 1 }})
-                  </span>
-                </UTooltip>
-              </div>
-            </div>
-
-            <div
-              :class="[
-                'flex items-center justify-center gap-2 rounded-md border border-default bg-elevated/40 px-3 py-2 text-center text-sm font-medium text-default',
-                item.updated_at && !item.progress ? 'col-span-2 xl:col-span-1' : '',
-              ]"
-            >
-              <UIcon name="i-lucide-mail" class="size-4 shrink-0 text-toned" />
-              <span>{{ item.event ?? '-' }}</span>
-            </div>
-
-            <div
-              v-if="item.progress"
-              :class="[
-                'flex items-center justify-center gap-2 rounded-md border border-default bg-elevated/40 px-3 py-2 text-center text-sm font-medium text-default',
-                !item.updated_at ? 'col-span-2 xl:col-span-1' : '',
-              ]"
-            >
-              <UIcon name="i-lucide-gauge" class="size-4 shrink-0 text-toned" />
-              <span>{{ formatDuration(item.progress as number) }}</span>
-            </div>
-          </div>
-        </template>
-      </UCard>
+      </article>
     </Lazy>
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">
 import moment from 'moment';
-import { NuxtLink, UButton, UCard, UCheckbox, UIcon, UTooltip } from '#components';
-import FloatingImage from '~/components/FloatingImage.vue';
+import { NuxtLink, UBadge, UButton, UCheckbox, UIcon, UTooltip } from '#components';
+import HistoryPoster from '~/components/StatisticsPoster.vue';
 import Lazy from '~/components/Lazy.vue';
 import { copyText, formatDuration, makeName, makeSearchLink, TOOLTIP_DATE_FORMAT } from '~/utils';
 import type { HistoryViewProps, JsonObject } from '~/types';
 
-defineProps<HistoryViewProps>();
+withDefaults(defineProps<HistoryViewProps & { selectionDisabled?: boolean }>(), {
+  selectionDisabled: false,
+});
 
 const emit = defineEmits<{
   select: [id: number, value: boolean | 'indeterminate'];
   expand: [id: number, field: 'expand_title' | 'expand_path'];
 }>();
-
-const historyCardUi = {
-  header: 'p-4 sm:p-5',
-  body: 'px-4 pb-4 pt-0 sm:px-5 sm:pb-5',
-  footer: 'sm:p-6 px-4 pb-4 pt-0 sm:px-5 sm:pb-5',
-};
 </script>

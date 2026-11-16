@@ -1,18 +1,7 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-6">
+  <main :aria-busy="isLoading" class="w-full min-w-0 max-w-full space-y-6">
     <PageHeader v-bind="pageShell">
       <template #actions>
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="sm"
-          icon="i-lucide-copy"
-          :disabled="null === report || isLoading"
-          @click="copyReport"
-        >
-          Copy
-        </UButton>
-
         <UButton
           color="neutral"
           variant="outline"
@@ -24,24 +13,31 @@
         >
           Refresh
         </UButton>
+
+        <UButton
+          color="primary"
+          variant="solid"
+          size="sm"
+          icon="i-lucide-copy"
+          :disabled="null === report || isLoading"
+          @click="copyReport"
+        >
+          Copy report
+        </UButton>
       </template>
     </PageHeader>
 
-    <div
-      v-if="null === report && isLoading"
-      class="ws-card flex min-h-72 items-center justify-center"
-    >
-      <div class="flex flex-col items-center gap-3 text-center text-toned">
-        <UIcon name="i-lucide-loader-circle" class="size-10 animate-spin text-info" />
-        <div class="space-y-1">
-          <p class="text-sm font-medium text-default">Loading</p>
-          <p class="text-xs">Collecting system, backend, and task diagnostics.</p>
-        </div>
-      </div>
-    </div>
+    <UAlert
+      v-if="isLoading"
+      color="info"
+      variant="soft"
+      icon="i-lucide-loader-circle"
+      title="Loading system report"
+      :ui="{ icon: 'animate-spin' }"
+    />
 
     <UAlert
-      v-else-if="null === report && null !== error"
+      v-if="null !== error"
       color="error"
       variant="soft"
       icon="i-lucide-triangle-alert"
@@ -49,16 +45,21 @@
       :description="error"
     />
 
-    <template v-else-if="null !== report">
+    <template v-if="null !== report">
+      <p class="text-xs text-toned">
+        Generated <time :datetime="report.generated_at">{{ report.generated_at }}</time>
+      </p>
       <section class="space-y-3">
         <button
           type="button"
           class="flex w-full items-center justify-between gap-3 text-left"
+          :aria-expanded="isSectionOpen('system')"
+          aria-controls="report-system"
           @click="toggleSection('system')"
         >
           <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
             <UIcon name="i-lucide-gauge" class="size-4 text-toned" />
-            <span>System Status</span>
+            <span>System status</span>
           </div>
           <UIcon
             name="i-lucide-chevron-right"
@@ -69,7 +70,11 @@
           />
         </button>
 
-        <div v-if="isSectionOpen('system')" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div
+          id="report-system"
+          v-if="isSectionOpen('system')"
+          class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+        >
           <StatCard
             v-for="item in statusCards"
             :key="item.label"
@@ -86,6 +91,8 @@
         <button
           type="button"
           class="flex w-full items-center justify-between gap-3 text-left"
+          :aria-expanded="isSectionOpen('runtime')"
+          aria-controls="report-runtime"
           @click="toggleSection('runtime')"
         >
           <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
@@ -101,25 +108,39 @@
           />
         </button>
 
-        <div v-if="isSectionOpen('runtime')" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          <StatCard
+        <dl
+          id="report-runtime"
+          v-if="isSectionOpen('runtime')"
+          class="ws-card grid divide-y divide-default md:grid-cols-2"
+        >
+          <div
             v-for="item in runtimeCards"
             :key="item.label"
-            :label="item.label"
-            :value="item.value"
-            :hint="item.hint"
-            :valueLink="item.valueLink"
-            :icon="item.icon"
-            color="neutral"
-            value-wrap
-          />
-        </div>
+            class="grid min-w-0 gap-1 px-4 py-3 sm:grid-cols-[7rem_minmax(0,1fr)]"
+          >
+            <dt class="text-xs text-muted">{{ item.label }}</dt>
+            <dd class="min-w-0 wrap-anywhere text-sm text-default">
+              <NuxtLink
+                v-if="item.valueLink"
+                :to="item.valueLink"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="hover:text-primary"
+              >
+                {{ item.value }}
+              </NuxtLink>
+              <span v-else>{{ item.value }}</span>
+            </dd>
+          </div>
+        </dl>
       </section>
 
-      <section v-if="report.backends.length > 0" class="space-y-4">
+      <section class="space-y-4">
         <button
           type="button"
           class="flex w-full items-center justify-between gap-3 text-left"
+          :aria-expanded="isSectionOpen('backends')"
+          aria-controls="report-backends"
           @click="toggleSection('backends')"
         >
           <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
@@ -135,11 +156,19 @@
           />
         </button>
 
-        <div v-if="isSectionOpen('backends')" class="space-y-4">
+        <div id="report-backends" v-if="isSectionOpen('backends')" class="space-y-4">
+          <UEmpty
+            v-if="0 === backendsByUser.length"
+            size="sm"
+            variant="naked"
+            icon="i-lucide-server-off"
+            title="No backends configured"
+          />
           <div v-for="group in backendsByUser" :key="group.user" class="space-y-3">
             <button
               type="button"
               class="flex w-full items-center justify-between gap-3 text-left"
+              :aria-expanded="isUserOpen(group.user)"
               @click="toggleUser(group.user)"
             >
               <div class="flex items-center gap-2">
@@ -159,20 +188,19 @@
             </button>
 
             <div v-if="isUserOpen(group.user)" class="space-y-3">
-              <UAlert
-                v-if="group.backends.length === 0"
-                color="warning"
-                variant="soft"
+              <UEmpty
+                v-if="0 === group.backends.length"
+                size="sm"
+                variant="naked"
                 icon="i-lucide-server-off"
                 title="No backends configured"
-                description=""
               />
 
-              <div v-else class="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+              <div v-else class="ws-card divide-y divide-default">
                 <article
                   v-for="backend in group.backends"
                   :key="`${backend.user}@${backend.name}`"
-                  class="ws-card p-4 shadow-sm"
+                  class="min-w-0 p-4"
                 >
                   <div class="space-y-3">
                     <div class="flex flex-wrap items-center justify-between gap-2">
@@ -183,18 +211,17 @@
                           <UIcon name="i-lucide-server" class="size-4 text-toned" />
                         </span>
                         <div class="min-w-0">
-                          <p class="text-sm font-semibold text-default">{{ backend.name }}</p>
+                          <p class="wrap-anywhere text-sm font-semibold text-default">
+                            {{ backend.name }}
+                          </p>
                           <p class="text-xs text-toned">{{ ucFirst(backend.type) }}</p>
                         </div>
                       </div>
 
-                      <span
-                        class="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium"
-                        :class="
-                          null !== backend.version
-                            ? 'border-success/30 bg-success/10 text-success'
-                            : 'border-error/30 bg-error/10 text-error'
-                        "
+                      <UBadge
+                        :color="null !== backend.version ? 'success' : 'error'"
+                        variant="soft"
+                        size="sm"
                       >
                         <UIcon
                           :name="
@@ -205,19 +232,20 @@
                           class="size-3"
                         />
                         {{ null !== backend.version ? backend.version : 'Unreachable' }}
-                      </span>
+                      </UBadge>
                     </div>
 
                     <div class="flex flex-wrap gap-1.5">
-                      <span
+                      <UBadge
                         v-for="chip in backendChips(backend)"
                         :key="chip.label"
-                        class="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs"
-                        :class="chip.class"
+                        color="neutral"
+                        variant="outline"
+                        size="sm"
                       >
                         <UIcon :name="chip.icon" class="size-3" />
                         {{ chip.label }}
-                      </span>
+                      </UBadge>
                     </div>
 
                     <div
@@ -242,6 +270,7 @@
                       <button
                         type="button"
                         class="flex items-center gap-1.5 text-xs font-medium text-toned hover:text-default"
+                        :aria-expanded="isDetailOpen(`opts-${backend.user}@${backend.name}`)"
                         @click="toggleDetail(`opts-${backend.user}@${backend.name}`)"
                       >
                         <UIcon
@@ -266,10 +295,12 @@
         </div>
       </section>
 
-      <section v-if="report.tasks.length > 0" class="space-y-3">
+      <section class="space-y-3">
         <button
           type="button"
           class="flex w-full items-center justify-between gap-3 text-left"
+          :aria-expanded="isSectionOpen('tasks')"
+          aria-controls="report-tasks"
           @click="toggleSection('tasks')"
         >
           <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
@@ -285,31 +316,37 @@
           />
         </button>
 
-        <div v-if="isSectionOpen('tasks')" class="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-          <article v-for="task in report.tasks" :key="task.name" class="ws-card p-4 shadow-sm">
+        <div
+          id="report-tasks"
+          v-if="isSectionOpen('tasks')"
+          class="ws-card divide-y divide-default"
+        >
+          <UEmpty
+            v-if="0 === report.tasks.length"
+            size="sm"
+            variant="naked"
+            icon="i-lucide-list-checks"
+            title="No scheduled tasks"
+          />
+          <article v-for="task in report.tasks" :key="task.name" class="p-4">
             <div class="space-y-3">
               <div class="flex flex-wrap items-center justify-between gap-2">
-                <p class="text-sm font-semibold text-default">{{ ucFirst(task.name) }}</p>
-                <span
-                  class="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium"
-                  :class="
-                    task.enabled
-                      ? 'border-success/30 bg-success/10 text-success'
-                      : 'border-default bg-elevated/40 text-toned'
-                  "
-                >
+                <p class="text-sm font-semibold text-default">
+                  {{ task.name.split('_').map(ucFirst).join(' ') }}
+                </p>
+                <UBadge :color="task.enabled ? 'success' : 'neutral'" variant="soft" size="sm">
                   <UIcon
                     :name="task.enabled ? 'i-lucide-check' : 'i-lucide-minus'"
                     class="size-3"
                   />
                   {{ task.enabled ? 'Enabled' : 'Disabled' }}
-                </span>
+                </UBadge>
               </div>
 
-              <div v-if="task.enabled" class="space-y-1.5 text-xs text-toned">
+              <div v-if="task.enabled" class="flex flex-wrap gap-x-6 gap-y-2 text-xs text-toned">
                 <div v-if="task.args" class="flex items-center gap-2">
                   <UIcon name="i-lucide-terminal" class="size-3.5 shrink-0" />
-                  <code class="text-default">{{ task.args }}</code>
+                  <code class="wrap-anywhere text-default">{{ task.args }}</code>
                 </div>
                 <div v-if="task.timer" class="flex items-center gap-2">
                   <UIcon name="i-lucide-clock" class="size-3.5 shrink-0" />
@@ -321,13 +358,13 @@
                 </div>
               </div>
 
-              <div
+              <UAlert
                 v-if="task.error"
-                class="flex items-center gap-2 rounded-md border border-error/30 bg-error/10 px-3 py-2 text-xs text-error"
-              >
-                <UIcon name="i-lucide-circle-alert" class="size-3.5 shrink-0" />
-                <span>{{ task.error }}</span>
-              </div>
+                color="error"
+                variant="soft"
+                icon="i-lucide-circle-alert"
+                :description="task.error"
+              />
             </div>
           </article>
         </div>
@@ -337,11 +374,13 @@
         <button
           type="button"
           class="flex w-full items-center justify-between gap-3 text-left"
+          :aria-expanded="isSectionOpen('suppression')"
+          aria-controls="report-suppression"
           @click="toggleSection('suppression')"
         >
           <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
             <UIcon name="i-lucide-filter-off" class="size-4 text-toned" />
-            <span>Log Suppression</span>
+            <span>Log suppression</span>
           </div>
           <UIcon
             name="i-lucide-chevron-right"
@@ -352,7 +391,11 @@
           />
         </button>
 
-        <div v-if="isSectionOpen('suppression')" class="ws-card p-4 shadow-sm">
+        <div
+          id="report-suppression"
+          v-if="isSectionOpen('suppression')"
+          class="ws-card space-y-3 p-4"
+        >
           <div class="flex items-center justify-between gap-4">
             <div class="flex items-center gap-2">
               <span
@@ -364,29 +407,33 @@
                 {{ report.suppression.file_exists ? 'exists' : 'does not exist' }}
               </p>
             </div>
-            <span
+            <UBadge
               v-if="report.suppression.rules && Object.keys(report.suppression.rules).length > 0"
-              class="inline-flex items-center gap-1 rounded-md border border-default bg-elevated/40 px-2 py-1 text-xs text-toned"
+              color="neutral"
+              variant="outline"
+              size="sm"
             >
-              {{ Object.keys(report.suppression.rules).length }} rule(s)
-            </span>
+              {{ Object.keys(report.suppression.rules).length }}
+              {{ 1 === Object.keys(report.suppression.rules).length ? 'rule' : 'rules' }}
+            </UBadge>
           </div>
 
-          <div
+          <UAlert
             v-if="report.suppression.error"
-            class="mt-3 flex items-center gap-2 rounded-md border border-error/30 bg-error/10 px-3 py-2 text-xs text-error"
-          >
-            <UIcon name="i-lucide-circle-alert" class="size-3.5 shrink-0" />
-            <span>{{ report.suppression.error }}</span>
-          </div>
+            color="error"
+            variant="soft"
+            icon="i-lucide-circle-alert"
+            :description="report.suppression.error"
+          />
 
           <div
             v-if="report.suppression.rules && Object.keys(report.suppression.rules).length > 0"
-            class="mt-3"
+            class="space-y-2"
           >
             <button
               type="button"
               class="flex items-center gap-1.5 text-xs font-medium text-toned hover:text-default"
+              :aria-expanded="isDetailOpen('suppression-rules')"
               @click="toggleDetail('suppression-rules')"
             >
               <UIcon
@@ -396,7 +443,7 @@
                   isDetailOpen('suppression-rules') ? 'rotate-90' : '',
                 ]"
               />
-              View rules
+              Rules
             </button>
             <pre
               v-if="isDetailOpen('suppression-rules')"
@@ -410,53 +457,93 @@
         <div class="flex w-full items-center justify-between gap-3 text-left">
           <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
             <UIcon name="i-lucide-scroll-text" class="size-4 text-toned" />
-            <span>Recent Logs</span>
+            <span>Recent logs</span>
           </div>
           <div class="flex items-center gap-2">
             <UButton
               color="neutral"
-              variant="ghost"
+              variant="outline"
               size="xs"
               icon="i-lucide-copy"
-              :disabled="totalLogEntries === 0"
+              :disabled="0 === totalLogEntries"
               @click="copyRecentLogs"
             >
               Copy
             </UButton>
-            <button type="button" aria-label="Toggle recent logs" @click="toggleSection('logs')">
-              <UIcon
-                name="i-lucide-chevron-right"
-                :class="[
-                  'size-4 text-toned transition-transform',
-                  isSectionOpen('logs') ? 'rotate-90' : '',
-                ]"
-              />
-            </button>
+            <UTooltip :text="isSectionOpen('logs') ? 'Collapse recent logs' : 'Expand recent logs'">
+              <UButton
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                :aria-label="isSectionOpen('logs') ? 'Collapse recent logs' : 'Expand recent logs'"
+                :aria-expanded="isSectionOpen('logs')"
+                aria-controls="report-logs"
+                @click="toggleSection('logs')"
+              >
+                <UIcon
+                  name="i-lucide-chevron-right"
+                  :class="[
+                    'size-4 text-toned transition-transform',
+                    isSectionOpen('logs') ? 'rotate-90' : '',
+                  ]"
+                />
+              </UButton>
+            </UTooltip>
           </div>
         </div>
 
         <div
-          v-if="isSectionOpen('logs')"
-          class="ws-card ws-terminal-panel ws-terminal-panel-lg bg-elevated"
+          id="report-logs"
+          v-if="isSectionOpen('logs') && 0 < totalLogEntries"
+          class="grid min-w-0 gap-4 xl:grid-cols-2"
         >
-          <template v-for="group in logGroups" :key="group.type">
-            <div class="border-b border-default/50 px-4 py-1.5 text-xs font-medium text-toned">
-              --- {{ group.type }} logs ---
+          <section
+            v-for="group in logGroups"
+            :key="group.type"
+            class="ws-card min-w-0 overflow-hidden"
+          >
+            <h3 class="border-b border-default px-4 py-3 text-sm font-semibold text-highlighted">
+              {{ ucFirst(group.type) }} logs
+            </h3>
+            <div
+              class="max-h-96 overflow-x-hidden overflow-y-auto"
+              tabindex="0"
+              :aria-label="`${ucFirst(group.type)} log entries`"
+            >
+              <template v-for="(entry, i) in group.entries" :key="i">
+                <div
+                  v-if="entry.separator"
+                  class="border-b border-default/50 px-4 py-2 text-xs text-dimmed"
+                >
+                  .....
+                </div>
+                <article
+                  v-else-if="entry.log"
+                  class="flex min-w-0 border-b border-default/50 last:border-b-0 hover:bg-elevated/30"
+                >
+                  <div class="ws-log-line">
+                    <StructuredLogLine
+                      :log="entry.log"
+                      :expanded="true === expandedLogRows[`${group.type}:${i}`]"
+                      toggleable
+                      @toggle-expand="
+                        expandedLogRows[`${group.type}:${i}`] =
+                          !expandedLogRows[`${group.type}:${i}`]
+                      "
+                    />
+                  </div>
+                </article>
+              </template>
             </div>
-            <pre
-              class="whitespace-pre-wrap wrap-break-word px-4 py-2 text-xs leading-5 text-default"
-            ><code><span
-  v-for="(entry, i) in group.entries"
-  :key="i"
-  class="block"
-  :class="{ 'text-toned': entry.separator }"
->{{ entry.separator ? '.....' : `${entry.datetime} ${entry.level} [${entry.logger}] ${entry.message}` }}</span></code></pre>
-          </template>
-
-          <div v-if="totalLogEntries === 0" class="px-4 py-8 text-center text-sm text-toned">
-            No log entries found.
-          </div>
+          </section>
         </div>
+        <UEmpty
+          v-else-if="isSectionOpen('logs')"
+          size="sm"
+          variant="naked"
+          icon="i-lucide-scroll-text"
+          title="No log entries found"
+        />
       </section>
     </template>
   </main>
@@ -465,8 +552,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useHead } from '#app';
+import { NuxtLink, UAlert, UBadge, UButton, UEmpty, UIcon, UTooltip } from '#components';
 import PageHeader from '~/components/PageHeader.vue';
 import StatCard from '~/components/StatCard.vue';
+import StructuredLogLine from '~/components/StructuredLogLine.vue';
 import { useDialog } from '~/composables/useDialog';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import type { SystemReport, SystemReportBackend } from '~/types';
@@ -484,6 +573,7 @@ const error = ref<string | null>(null);
 const collapsedUsers = ref<Record<string, boolean>>({});
 const collapsedSections = ref<Record<string, boolean>>({});
 const expandedDetails = ref<Record<string, boolean>>({});
+const expandedLogRows = ref<Record<string, boolean>>({});
 
 const isSectionOpen = (id: string): boolean => !collapsedSections.value[id];
 const toggleSection = (id: string): void => {
@@ -522,6 +612,7 @@ const load = async (force: boolean = false): Promise<void> => {
     }
 
     report.value = json;
+    expandedLogRows.value = {};
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to load report.';
   } finally {
@@ -535,13 +626,11 @@ type StatusCard = {
   hint: string;
   icon: string;
   color: 'success' | 'error' | 'warning' | 'neutral';
-  valueLink?: string;
 };
 
 type ChipInfo = {
   label: string;
   icon: string;
-  class: string;
 };
 
 const statusCards = computed<Array<StatusCard>>(() => {
@@ -563,27 +652,27 @@ const statusCards = computed<Array<StatusCard>>(() => {
       label: 'Database',
       value: sys.database_migrated ? 'Migrated' : 'Pending',
       hint: sys.database_migrated ? 'Schema up to date.' : 'Migrations pending.',
-      icon: sys.database_migrated ? 'i-lucide-database' : 'i-lucide-database',
+      icon: 'i-lucide-database',
       color: sys.database_migrated ? 'success' : 'error',
     },
     {
       label: 'Config',
       value: sys.env_file_exists ? '.env found' : 'No .env',
-      hint: sys.env_file_exists ? 'Environment file loaded.' : 'Using default configuration.',
+      hint: '',
       icon: 'i-lucide-file-cog',
       color: sys.env_file_exists ? 'success' : 'warning',
     },
     {
       label: 'Container',
-      value: sys.in_container ? 'Yes' : 'No',
-      hint: sys.in_container ? 'Running in container.' : 'Running natively.',
+      value: sys.in_container ? 'Container' : 'Native',
+      hint: '',
       icon: sys.in_container ? 'i-lucide-box' : 'i-lucide-monitor',
       color: 'neutral',
     },
   ];
 });
 
-const runtimeCards = computed<Array<StatusCard>>(() => {
+const runtimeCards = computed(() => {
   if (null === report.value) {
     return [];
   }
@@ -594,66 +683,35 @@ const runtimeCards = computed<Array<StatusCard>>(() => {
     {
       label: 'Version',
       value: sys.version,
-      hint: 'WatchState build.',
-      icon: 'i-lucide-tag',
-      color: 'neutral',
     },
     {
-      label: 'Commit SHA',
+      label: 'Commit',
       value: sys.sha,
-      hint: 'Build commit.',
-      icon: 'i-lucide-git-commit-horizontal',
-      color: 'neutral',
       valueLink: `https://github.com/arabcoders/watchstate/commit/${sys.sha}`,
     },
     {
       label: 'Build date',
       value: sys.build,
-      hint: 'Build timestamp.',
-      icon: 'i-lucide-calendar',
-      color: 'neutral',
     },
     {
       label: 'Branch',
       value: sys.branch,
-      hint: 'Build branch.',
-      icon: 'i-lucide-git-branch',
-      color: 'neutral',
     },
     {
       label: 'PHP',
       value: `${sys.sapi}/${sys.php_version}`,
-      hint: 'Runtime.',
-      icon: 'i-lucide-code',
-      color: 'neutral',
     },
     {
       label: 'Timezone',
       value: sys.timezone,
-      hint: 'Server timezone.',
-      icon: 'i-lucide-globe',
-      color: 'neutral',
     },
     {
       label: 'Data path',
       value: sys.data_path,
-      hint: 'Config and database.',
-      icon: 'i-lucide-folder',
-      color: 'neutral',
     },
     {
       label: 'Temp path',
       value: sys.temp_path,
-      hint: 'Logs and cache.',
-      icon: 'i-lucide-folder-open',
-      color: 'neutral',
-    },
-    {
-      label: 'Generated at',
-      value: report.value.generated_at,
-      hint: 'Report timestamp.',
-      icon: 'i-lucide-clock',
-      color: 'neutral',
     },
   ];
 });
@@ -674,7 +732,15 @@ const logGroups = computed(() => {
     return [];
   }
 
-  return report.value.logs.filter((group) => group.entries.length > 0);
+  return report.value.logs
+    .filter((group) => 0 < group.entries.length)
+    .map((group) => ({
+      ...group,
+      entries: group.entries.toReversed().map((entry, index) => ({
+        ...entry,
+        log: entry.separator ? null : { ...entry, id: `${group.type}:${index}` },
+      })),
+    }));
 });
 
 const totalLogEntries = computed(() => {
@@ -701,37 +767,29 @@ const formatDate = (timestamp: number): string => {
 const backendChips = (backend: SystemReportBackend): Array<ChipInfo> => {
   const chips: Array<ChipInfo> = [];
 
-  const onClass = 'border-success/30 bg-success/10 text-success';
-  const offClass = 'border-default bg-elevated/40 text-toned';
-
   chips.push({
     label: backend.https ? 'HTTPS' : 'HTTP',
     icon: backend.https ? 'i-lucide-lock' : 'i-lucide-unlock',
-    class: backend.https ? onClass : offClass,
   });
 
   chips.push({
     label: backend.has_uuid ? 'UUID' : 'No UUID',
-    icon: backend.has_uuid ? 'i-lucide-fingerprint' : 'i-lucide-fingerprint',
-    class: backend.has_uuid ? onClass : offClass,
+    icon: 'i-lucide-fingerprint',
   });
 
   chips.push({
     label: backend.has_user ? 'User' : 'No User',
     icon: backend.has_user ? 'i-lucide-user-check' : 'i-lucide-user-x',
-    class: backend.has_user ? onClass : offClass,
   });
 
   chips.push({
     label: backend.export.enabled ? 'Export' : 'No Export',
-    icon: backend.export.enabled ? 'i-lucide-upload' : 'i-lucide-upload',
-    class: backend.export.enabled ? onClass : offClass,
+    icon: 'i-lucide-upload',
   });
 
   chips.push({
     label: backend.import.enabled ? 'Import' : 'No Import',
-    icon: backend.import.enabled ? 'i-lucide-download' : 'i-lucide-download',
-    class: backend.import.enabled ? onClass : offClass,
+    icon: 'i-lucide-download',
   });
 
   return chips;
@@ -794,10 +852,18 @@ const shareText = computed(() => {
       lines.push(`[ ${ucFirst(t.name)} ]`);
       lines.push(`- Enabled: ${t.enabled ? 'Yes' : 'No'}`);
       if (t.enabled) {
-        if (t.args) lines.push(`- Args: ${t.args}`);
-        if (t.timer) lines.push(`- Timer: ${t.timer}`);
-        if (t.next_run) lines.push(`- Next run: ${t.next_run}`);
-        if (t.error) lines.push(`- Error: ${t.error}`);
+        if (t.args) {
+          lines.push(`- Args: ${t.args}`);
+        }
+        if (t.timer) {
+          lines.push(`- Timer: ${t.timer}`);
+        }
+        if (t.next_run) {
+          lines.push(`- Next run: ${t.next_run}`);
+        }
+        if (t.error) {
+          lines.push(`- Error: ${t.error}`);
+        }
       }
     }
   }
@@ -833,11 +899,10 @@ const copyReport = async (): Promise<void> => {
   }
 
   const { status } = await dialog.confirmDialog({
-    title: 'Copy Report',
-    confirmText: 'Copy Report',
-    confirmColor: 'warning',
-    message:
-      'While we try to make sure no sensitive information is leaked via the report, it is possible that something might be missed. Please review the report before posting it.',
+    title: 'Copy report?',
+    confirmText: 'Copy report',
+    confirmColor: 'primary',
+    message: 'The report can include sensitive details. Review it before sharing.',
   });
 
   if (true !== status) {

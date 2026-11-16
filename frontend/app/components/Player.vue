@@ -100,6 +100,7 @@
         type="button"
         class="absolute inset-0 z-10"
         :aria-label="controlsVisible ? 'Hide controls' : 'Show controls'"
+        :title="controlsVisible ? 'Hide controls' : 'Show controls'"
         @click="toggleControls"
       />
 
@@ -137,11 +138,12 @@
               <div class="flex min-w-0 items-center gap-2">
                 <UButton
                   color="neutral"
-                  variant="soft"
+                  :variant="paused ? 'outline' : 'soft'"
                   size="sm"
                   class="opacity-75 transition-opacity hover:opacity-100 focus-visible:opacity-100"
                   :icon="paused ? 'i-lucide-play' : 'i-lucide-pause'"
                   :aria-label="paused ? 'Play video' : 'Pause video'"
+                  :title="paused ? 'Play video' : 'Pause video'"
                   @click="togglePlayback"
                 />
                 <div class="min-w-0 whitespace-nowrap text-xs font-medium text-white/70">
@@ -149,14 +151,17 @@
                 </div>
               </div>
               <div class="flex items-center gap-2">
-                <UTooltip v-if="canSwitchToHls" text="Trouble playing? switch to HLS stream.">
+                <UTooltip
+                  v-if="canSwitchToHls"
+                  text="Trouble playing? Switch to compatibility playback."
+                >
                   <UButton
                     color="neutral"
-                    variant="soft"
+                    variant="outline"
                     size="sm"
                     class="opacity-75 transition-opacity hover:opacity-100 focus-visible:opacity-100"
                     icon="i-lucide-refresh-cw"
-                    aria-label="Switch to HLS stream"
+                    aria-label="Switch to compatibility playback"
                     @click="forceSwitchToHls"
                   />
                 </UTooltip>
@@ -187,11 +192,12 @@
                 </USelect>
                 <UButton
                   color="neutral"
-                  variant="soft"
+                  :variant="0 >= effectiveVolume ? 'soft' : 'outline'"
                   size="sm"
                   class="opacity-75 transition-opacity hover:opacity-100 focus-visible:opacity-100"
                   :icon="effectiveVolume <= 0 ? 'i-lucide-volume-x' : 'i-lucide-volume-2'"
                   :aria-label="effectiveVolume <= 0 ? 'Unmute video' : 'Mute video'"
+                  :title="0 >= effectiveVolume ? 'Unmute video' : 'Mute video'"
                   @click="toggleMute"
                 />
                 <input
@@ -207,11 +213,12 @@
                 />
                 <UButton
                   color="neutral"
-                  variant="soft"
+                  :variant="isFullscreen ? 'soft' : 'outline'"
                   size="sm"
                   class="opacity-75 transition-opacity hover:opacity-100 focus-visible:opacity-100"
                   :icon="isFullscreen ? 'i-lucide-minimize' : 'i-lucide-maximize'"
                   :aria-label="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
+                  :title="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
                   @click="toggleFullscreen"
                 />
               </div>
@@ -316,6 +323,7 @@
 <script setup lang="ts">
 import { useStorage } from '@vueuse/core';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { UButton, UIcon, UModal, USelect, UTooltip } from '#components';
 import { disableOpacity, enableOpacity, notification, request } from '~/utils';
 import { usePlayerShortcutHelp } from '~/composables/usePlayerShortcutHelp';
 import { usePlayerShortcuts } from '~/composables/usePlayerShortcuts';
@@ -845,7 +853,11 @@ function switchToHls(playbackState: HlsPlaybackState, notify: boolean): void {
 
   if (true === notify && false === directPlayFallbackNotified) {
     directPlayFallbackNotified = true;
-    notification('warning', 'Playback', 'Direct playback failed. Switching to transcoded stream.');
+    notification(
+      'warning',
+      'Playback',
+      'Direct playback failed. Switching to compatibility playback.',
+    );
   }
 
   void attach_hls(props.m3u8 || '', playbackState);
@@ -1456,11 +1468,7 @@ async function attach_hls(
 
       if (false === hlsErrorNotified) {
         hlsErrorNotified = true;
-        notification(
-          'warning',
-          'Playback',
-          'The compatibility stream hit an error during playback.',
-        );
+        notification('warning', 'Playback', 'Compatibility playback failed.');
       }
     });
 
@@ -1547,7 +1555,7 @@ function forceSwitchToHls() {
   }
 
   if (false === hasVideo.value) {
-    notification('warning', 'Playback', 'Cannot switch to HLS: stream has no video track.');
+    notification('warning', 'Playback', 'Cannot switch to compatibility playback: no video track.');
     return;
   }
 

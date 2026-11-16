@@ -1,13 +1,16 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-6">
-    <PageHeader v-bind="pageShell" />
+  <main :aria-busy="isResetting" class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader
+      v-bind="pageShell"
+      description="Delete WatchState's local records without changing your media servers."
+    />
 
     <UAlert
       v-if="error"
       color="error"
       variant="soft"
       icon="i-lucide-triangle-alert"
-      title="Error"
+      title="Reset failed"
       :description="`${error.error.code}: ${error.error.message}`"
       :close="{
         onClick: () => {
@@ -18,54 +21,67 @@
 
     <UAlert
       v-if="isResetting"
-      color="warning"
+      color="info"
       variant="soft"
       icon="i-lucide-loader-circle"
       title="Reset in progress"
-      description="Removing local state and clearing sync markers. Please wait..."
       :ui="{ icon: 'animate-spin' }"
     />
 
-    <UCard class="shadow-sm" :ui="panelCardUi">
-      <template #header>
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div class="min-w-0 flex-1 space-y-2">
-            <div class="flex flex-wrap items-center gap-2">
-              <h1 class="text-base font-semibold text-highlighted">Local State Reset</h1>
-              <UBadge color="error" variant="soft">Irreversible</UBadge>
-              <UBadge color="warning" variant="soft">All users</UBadge>
-            </div>
+    <UAlert
+      color="warning"
+      variant="soft"
+      icon="i-lucide-triangle-alert"
+      title="Local records are permanently deleted"
+      description="Let queued work finish first. Events held in the Redis queue are also removed."
+    />
 
-            <p class="text-sm leading-6 text-default">
-              Remove local WatchState state for every configured user.
-            </p>
-          </div>
-        </div>
-      </template>
+    <dl class="grid gap-6 md:grid-cols-2">
+      <div class="space-y-2">
+        <dt class="text-sm font-semibold text-highlighted">What changes</dt>
+        <dd>
+          <ul class="list-disc space-y-2 pl-5 text-sm leading-6 text-toned">
+            <li>
+              All local database records are deleted, including play state, playlists, events &amp;
+              reports.
+            </li>
+            <li>Import &amp; export sync dates are cleared.</li>
+            <li>Cached data is cleared.</li>
+          </ul>
+        </dd>
+      </div>
 
-      <template #body></template>
-      <template #footer>
-        <div class="flex flex-wrap items-center justify-end gap-2">
-          <UButton
-            color="error"
-            variant="solid"
-            size="sm"
-            icon="i-lucide-rotate-ccw"
-            :loading="isResetting"
-            :disabled="isResetting"
-            @click="resetSystem"
-          >
-            Perform local state reset
-          </UButton>
-        </div>
-      </template>
-    </UCard>
+      <div class="space-y-2">
+        <dt class="text-sm font-semibold text-highlighted">What stays</dt>
+        <dd>
+          <ul class="list-disc space-y-2 pl-5 text-sm leading-6 text-toned">
+            <li>Identity &amp; backend settings.</li>
+            <li>Media files, playlists &amp; watched status on your media servers.</li>
+          </ul>
+        </dd>
+      </div>
+    </dl>
+
+    <div class="flex justify-end">
+      <UButton
+        color="error"
+        variant="solid"
+        size="sm"
+        icon="i-lucide-rotate-ccw"
+        :loading="isResetting"
+        :disabled="isPending"
+        @click="resetSystem"
+      >
+        Reset local state
+      </UButton>
+    </div>
   </main>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onScopeDispose, ref } from 'vue';
 import { navigateTo, useHead, useRoute } from '#app';
+import { UAlert, UButton } from '#components';
 import PageHeader from '~/components/PageHeader.vue';
 import { useDialog } from '~/composables/useDialog';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
@@ -79,59 +95,81 @@ const pageShell = requireTopLevelPageShell('reset');
 
 const route = useRoute();
 const error = ref<GenericError | null>(null);
-const isResetting = ref<boolean>(false);
+const isResetting = ref(false);
+const isPending = ref(false);
+let disposed = false;
 
-const panelCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-  footer: 'px-4 pb-4 pt-0',
-};
+onScopeDispose(() => {
+  disposed = true;
+});
 
 const resetSystem = async (): Promise<void> => {
-  const { status } = await useDialog().confirmDialog({
-    title: 'Confirm local state reset',
-    message:
-      'This will delete all local WatchState state for every user and cannot be undone. Do you want to continue?',
-    confirmText: 'Reset local state',
-    confirmColor: 'error',
-  });
-
-  if (true !== status) {
+  if (isPending.value || disposed || 'reset' !== route.name) {
     return;
   }
 
-  isResetting.value = true;
-  error.value = null;
+  isPending.value = true;
 
   try {
+    const { status } = await useDialog().confirmDialog({
+      title: 'Reset local state?',
+      message:
+        'Delete local history, playlists, events, reports, and other local records for every identity? Sync dates and cached data will also be cleared, including Redis-queued events. Your media servers and backend connections are unchanged. This cannot be undone.',
+      confirmText: 'Reset local state',
+      confirmColor: 'error',
+    });
+
+    if (true !== status || disposed || 'reset' !== route.name) {
+      return;
+    }
+
+    isResetting.value = true;
+    error.value = null;
+
     const response = await request('/system/reset', { method: 'DELETE' });
     const json = await parse_api_response<{ message?: string }>(response);
 
-    if ('reset' !== route.name) {
+    if (disposed || 'reset' !== route.name) {
       return;
     }
 
     if ('error' in json) {
       error.value = json;
+      notification('error', 'Reset failed', `${json.error.code}: ${json.error.message}`);
       return;
     }
 
     if (true !== response.ok) {
       error.value = { error: { code: response.status, message: response.statusText } };
+      notification('error', 'Reset failed', `${response.status}: ${response.statusText}`);
       return;
     }
 
-    notification('success', 'Success', json.message ?? 'System has been successfully reset.');
-    await navigateTo('/');
+    notification('success', 'Success', json.message ?? 'Local state has been reset.');
 
     try {
       useSessionCache().clear();
     } catch {}
+
+    try {
+      await navigateTo('/');
+    } catch (cause: unknown) {
+      if (!disposed) {
+        const message = cause instanceof Error ? cause.message : 'Unexpected navigation error';
+        notification('error', 'Could not open Overview', message);
+      }
+    }
   } catch (e: unknown) {
+    if (disposed || 'reset' !== route.name) {
+      return;
+    }
+
     const message = e instanceof Error ? e.message : 'Unexpected error';
     error.value = { error: { code: 500, message } };
+    notification('error', 'Reset failed', message);
   } finally {
     isResetting.value = false;
+    isPending.value = false;
   }
 };
 </script>

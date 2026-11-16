@@ -14,7 +14,7 @@
         <UTooltip v-if="isPlaying" text="Return to playback settings">
           <UButton
             color="neutral"
-            variant="outline"
+            variant="ghost"
             size="sm"
             icon="i-lucide-arrow-left"
             @click="closeStream"
@@ -31,7 +31,7 @@
             :icon="item.watched ? 'i-lucide-eye-off' : 'i-lucide-eye'"
             @click="toggleWatched"
           >
-            {{ item.watched ? 'Unwatched' : 'Watched' }}
+            {{ item.watched ? 'Mark unwatched' : 'Mark watched' }}
           </UButton>
         </UTooltip>
       </div>
@@ -43,18 +43,16 @@
         color="info"
         variant="soft"
         icon="i-lucide-loader-circle"
-        title="Loading"
-        description="Loading data. Please wait..."
+        title="Loading playback settings"
         :ui="{ icon: 'animate-spin' }"
       />
 
-      <UAlert
+      <UEmpty
         v-else-if="isLoaded && (item.files?.length ?? 0) < 1"
-        color="warning"
-        variant="soft"
-        icon="i-lucide-triangle-alert"
-        title="Warning"
-        description="No video URLs were found."
+        size="sm"
+        variant="naked"
+        icon="i-lucide-file-video"
+        title="No media files"
       />
     </template>
 
@@ -73,8 +71,6 @@
 
     <template v-else-if="isLoaded && (item.files?.length ?? 0) > 0">
       <div class="space-y-5">
-        <div class="text-base font-semibold text-highlighted">Select playback settings.</div>
-
         <UFormField label="Source file" name="play_source">
           <USelect
             v-model="selectedPath"
@@ -98,12 +94,7 @@
           />
         </UFormField>
 
-        <UFormField
-          v-if="subtitleItems.length > 0"
-          label="Subtitle"
-          name="play_subtitle"
-          description="Choose subtitle."
-        >
+        <UFormField v-if="subtitleItems.length > 0" label="Subtitle" name="play_subtitle">
           <USelect
             v-model="selectedSubtitleValue"
             :items="subtitleItems"
@@ -118,7 +109,7 @@
           v-if="showSubtitleDeliveryMode"
           label="Subtitle delivery"
           name="subtitle_delivery_mode"
-          description="Choose whether subtitles stay selectable in the player or are added into the video."
+          description="Soft subtitles stay selectable in the player. Burned-in subtitles become part of the video."
         >
           <USelect
             v-model="subtitle_delivery_mode"
@@ -134,16 +125,7 @@
           variant="soft"
           icon="i-lucide-image"
           title="This subtitle needs compatibility playback"
-          description="This subtitle format needs to be added into the video before playback starts."
-        />
-
-        <UAlert
-          v-if="selectedSubtitleRequiresTranscode"
-          color="info"
-          variant="soft"
-          icon="i-lucide-refresh-cw"
-          title="Switched to compatibility playback"
-          description="Your subtitle choice needs a more compatible playback mode, so the player will prepare a version that works reliably in the browser."
+          description="This subtitle format must be burned into the video, which requires compatibility playback."
         />
 
         <UAlert
@@ -152,14 +134,14 @@
           variant="soft"
           icon="i-lucide-audio-lines"
           title="Switched to compatibility playback"
-          description="Choosing a different audio track uses the browser-compatible playback mode so the selected track plays correctly."
+          description="A different audio track requires compatibility playback."
         />
 
         <template v-if="showAdvanced">
           <UFormField
             label="Video transcoding codec"
             name="video_codec"
-            description="We do not pre-check codec support, so hardware options may still fail on hosts that do not support them."
+            description="Hardware encoders can fail if your host doesn't support the selected codec."
           >
             <USelect
               v-model="video_codec"
@@ -197,7 +179,7 @@
                   Include debug information in response headers
                 </div>
                 <p class="mt-1 text-sm text-toned">
-                  Useful for reviewing ffmpeg options and the active transcode path.
+                  Shows ffmpeg options &amp; the active transcode path.
                 </p>
               </div>
 
@@ -211,6 +193,7 @@
             :variant="showAdvanced ? 'soft' : 'outline'"
             size="sm"
             icon="i-lucide-settings"
+            :aria-pressed="showAdvanced"
             @click="
               () => {
                 showAdvanced = !showAdvanced;
@@ -219,27 +202,35 @@
           >
             Advanced settings
           </UButton>
-
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-play"
-            :loading="isGenerating"
-            :disabled="isGenerating"
-            @click="generateToken"
-          >
-            Play
-          </UButton>
         </div>
       </div>
     </template>
+
+    <Teleport defer :to="props.actionsTarget || 'body'" :disabled="!props.actionsTarget">
+      <div
+        v-if="!isPlaying && isLoaded && (item.files?.length ?? 0) > 0 && selectedPath"
+        class="flex flex-wrap items-center justify-end gap-2"
+      >
+        <UButton
+          color="primary"
+          variant="solid"
+          size="sm"
+          icon="i-lucide-play"
+          :loading="isGenerating"
+          :disabled="isGenerating"
+          @click="generateToken"
+        >
+          Play
+        </UButton>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useStorage } from '@vueuse/core';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { UAlert, UButton, UEmpty, UFormField, USelect, USwitch, UTooltip } from '#components';
 import Player from '~/components/Player.vue';
 import { useDialog } from '~/composables/useDialog';
 import type { PlayerSubtitleDeliveryMode, PlayerSubtitleTrack } from '~/types';
@@ -315,6 +306,7 @@ const SUBTITLE_NONE_VALUE = '__none__';
 
 const props = defineProps<{
   id: string | number;
+  actionsTarget?: string;
 }>();
 
 const emit = defineEmits<{
@@ -865,8 +857,9 @@ const closeStream = (): void => {
 
 const toggleWatched = async (): Promise<void> => {
   const { status } = await dialog.confirmDialog({
-    title: 'Confirm',
-    message: `Mark '${displayName.value}' as ${item.value.watched ? 'unplayed' : 'played'}?`,
+    title: 'Change watch status?',
+    message: `Mark '${displayName.value}' as ${item.value.watched ? 'unwatched' : 'watched'} in WatchState?`,
+    confirmText: item.value.watched ? 'Mark unwatched' : 'Mark watched',
   });
 
   if (true !== status) {
@@ -889,7 +882,7 @@ const toggleWatched = async (): Promise<void> => {
     notification(
       'success',
       '',
-      `Marked '${displayName.value}' as ${item.value.watched ? 'played' : 'unplayed'}`,
+      `Marked '${displayName.value}' as ${item.value.watched ? 'watched' : 'unwatched'}.`,
     );
   } catch (error: unknown) {
     notification('error', 'Error', `Request error. ${String(error)}`);

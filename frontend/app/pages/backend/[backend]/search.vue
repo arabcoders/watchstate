@@ -1,305 +1,268 @@
 <template>
   <main class="w-full min-w-0 max-w-full space-y-6">
-    <PageHeader v-bind="pageShell">
+    <PageHeader v-bind="pageShell" page-label="Search" description="Search media on this backend.">
       <template #kicker>
-        <span>{{ pageShell.sectionLabel }}</span>
-        <span>/</span>
-        <NuxtLink to="/backends" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
+        <NuxtLink to="/backends" class="hover:text-primary">Backends</NuxtLink>
         <span>/</span>
         <NuxtLink
           :to="`/backend/${backend}`"
           class="hover:text-primary normal-case tracking-normal"
           >{{ backend }}</NuxtLink
         >
-        <span>/</span>
-        <span class="text-highlighted normal-case tracking-normal">Search</span>
       </template>
     </PageHeader>
 
-    <UCard class="shadow-sm" :ui="panelCardUi">
-      <template #header>
-        <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
-          <UIcon name="i-lucide-search" class="size-4 text-toned" />
-          <span>Search Remote Content</span>
-        </div>
-      </template>
+    <form
+      :aria-busy="isLoading"
+      class="grid items-end gap-3 lg:grid-cols-[10rem_8rem_minmax(0,1fr)_auto]"
+      @submit.prevent="void searchContent(false)"
+    >
+      <UFormField label="Search field" name="search_field">
+        <USelect
+          v-model="searchField"
+          :items="searchFieldItems"
+          value-key="value"
+          label-key="label"
+          color="neutral"
+          variant="outline"
+          size="sm"
+          placeholder="Select field"
+          icon="i-lucide-folder-tree"
+          class="w-full"
+          :disabled="isLoading"
+        />
+      </UFormField>
 
-      <form class="space-y-5" @submit.prevent="void searchContent(false)">
-        <div class="grid gap-4 lg:grid-cols-[14rem_10rem_minmax(0,1fr)]">
-          <UFormField label="Search field" name="search_field">
-            <USelect
-              v-model="searchField"
-              :items="searchFieldItems"
-              value-key="value"
-              label-key="label"
-              color="neutral"
-              variant="outline"
-              size="sm"
-              placeholder="Select field"
-              icon="i-lucide-folder-tree"
-              class="w-full"
-              :disabled="isLoading"
-            />
-          </UFormField>
+      <UFormField label="Result limit" name="search_limit">
+        <USelect
+          v-model="limit"
+          :items="limitItems"
+          value-key="value"
+          label-key="label"
+          color="neutral"
+          variant="outline"
+          size="sm"
+          placeholder="Select limit"
+          icon="i-lucide-list"
+          class="w-full"
+          :disabled="isLoading"
+        />
+      </UFormField>
 
-          <UFormField label="Result limit" name="search_limit">
-            <USelect
-              v-model="limit"
-              :items="limitItems"
-              value-key="value"
-              label-key="label"
-              color="neutral"
-              variant="outline"
-              size="sm"
-              placeholder="Select limit"
-              icon="i-lucide-list"
-              class="w-full"
-              :disabled="isLoading"
-            />
-          </UFormField>
+      <UFormField label="Query" name="search_query">
+        <UInput
+          v-model="query"
+          type="search"
+          :placeholder="'id' === searchField ? 'Backend item ID' : 'Title'"
+          icon="i-lucide-search"
+          size="sm"
+          class="w-full"
+          :disabled="'' === searchField || isLoading"
+        />
+      </UFormField>
+      <div class="flex justify-end gap-2">
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          icon="i-lucide-rotate-ccw"
+          type="button"
+          class="justify-center"
+          :disabled="isLoading"
+          @click="clearSearch"
+        >
+          Reset
+        </UButton>
 
-          <UFormField label="Query" name="search_query">
-            <UInput
-              v-model="query"
-              type="search"
-              placeholder="Search..."
-              icon="i-lucide-search"
-              size="sm"
-              class="w-full"
-              :disabled="'' === searchField || isLoading"
-            />
-          </UFormField>
-        </div>
-
-        <div class="flex gap-3 flex-row justify-end">
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-x"
-            type="button"
-            class="justify-center"
-            :disabled="isLoading"
-            @click="clearSearch"
-          >
-            Reset
-          </UButton>
-
-          <UButton
-            color="primary"
-            size="sm"
-            icon="i-lucide-search"
-            type="submit"
-            class="justify-center"
-            :disabled="!query || '' === searchField || isLoading"
-            :loading="isLoading"
-          >
-            Search
-          </UButton>
-        </div>
-      </form>
-    </UCard>
+        <UButton
+          color="primary"
+          variant="solid"
+          size="sm"
+          icon="i-lucide-search"
+          type="submit"
+          class="justify-center"
+          :disabled="!query || '' === searchField || isLoading"
+          :loading="isLoading"
+        >
+          Search
+        </UButton>
+      </div>
+    </form>
 
     <UAlert
       v-if="isLoading && items.length < 1 && hasSearched"
       color="info"
       variant="soft"
       icon="i-lucide-loader-circle"
-      title="Loading"
-      description="Loading data please wait..."
+      title="Searching backend content"
       :ui="{ icon: 'animate-spin' }"
     />
 
     <UAlert
-      v-else-if="items.length < 1 && hasSearched"
-      color="warning"
+      v-else-if="items.length < 1 && hasSearched && error.message"
+      color="error"
       variant="soft"
       icon="i-lucide-triangle-alert"
-      title="No items found"
+      title="Search failed"
+      :description="error.message"
       close
       @update:open="(open) => (!open ? clearSearch() : undefined)"
-    >
-      <template #description>
-        <div class="space-y-2 text-sm text-default">
-          <p v-if="error?.message">{{ error.message }}</p>
-          <p v-else>
-            No items found.
-            <span v-if="query">
-              Search query
-              <code
-                ><strong>{{ searchField }}</strong
-                >: <strong>{{ query }}</strong></code
-              >
-            </span>
-          </p>
-        </div>
-      </template>
-    </UAlert>
+    />
 
-    <div v-else-if="items.length > 0" class="grid gap-4 xl:grid-cols-2">
-      <UCard
+    <UEmpty
+      v-else-if="items.length < 1 && hasSearched"
+      icon="i-lucide-search"
+      title="No items found"
+    />
+
+    <div v-else-if="0 < items.length" class="ws-card divide-y divide-default">
+      <Lazy
         v-for="item in items"
-        :key="item.id"
-        class="h-full shadow-sm"
-        :class="item.watched ? 'ring-1 ring-success/20' : ''"
-        :ui="resultCardUi"
+        :key="`${item.via}:${item.type}:${ag(item, `metadata.${item.via}.id`, item.id)}:${item.content_path ?? item.title}`"
+        :unrender="true"
+        :min-height="176"
       >
-        <template #header>
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0 flex-1">
-              <div
-                class="flex min-w-0 items-start gap-2 text-base font-semibold leading-6 text-highlighted"
-              >
-                <UIcon
-                  :name="getItemTypeIcon(item.type)"
-                  class="mt-0.5 size-4 shrink-0 text-toned"
-                />
-
-                <div class="min-w-0 flex-1">
-                  <FloatingImage :image="`/history/${item.id}/images/poster`" v-if="poster_enable">
-                    <NuxtLink
-                      v-if="item.webUrl"
-                      :to="item.webUrl"
-                      target="_blank"
-                      class="block truncate text-highlighted hover:text-primary"
-                    >
-                      <UTooltip :text="String(makeName(item))">
-                        <span class="block truncate">{{ makeName(item) }}</span>
-                      </UTooltip>
-                    </NuxtLink>
-                    <UTooltip v-else :text="String(makeName(item))">
-                      <span class="block truncate text-highlighted">{{ makeName(item) }}</span>
-                    </UTooltip>
-                  </FloatingImage>
-
-                  <template v-else>
-                    <NuxtLink
-                      v-if="item.webUrl"
-                      :to="item.webUrl"
-                      target="_blank"
-                      class="block truncate text-highlighted hover:text-primary"
-                    >
-                      <UTooltip :text="String(makeName(item))">
-                        <span class="block truncate">{{ makeName(item) }}</span>
-                      </UTooltip>
-                    </NuxtLink>
-                    <UTooltip v-else :text="String(makeName(item))">
-                      <span class="block truncate text-highlighted">{{ makeName(item) }}</span>
-                    </UTooltip>
-                  </template>
+        <article class="flex items-start gap-3 p-4 sm:p-5">
+          <StatisticsPoster
+            v-if="poster_enable"
+            :key="`${apiUser}:${item.poster ?? item.id}`"
+            :image="item.poster"
+            :history-id="item.id ? Number(item.id) : undefined"
+            :title="String(makeName(item))"
+            :user="apiUser"
+            preview
+            class="hidden w-16 shrink-0 sm:block"
+          />
+          <div class="min-w-0 flex-1 space-y-4">
+            <div class="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-3">
+              <div class="w-full min-w-0 space-y-2 sm:w-auto sm:flex-1">
+                <h2 class="flex min-w-0 items-start gap-2 text-sm font-semibold text-highlighted">
+                  <UIcon
+                    :name="getItemTypeIcon(item.type)"
+                    class="mt-0.5 size-4 shrink-0 text-toned"
+                  />
+                  <NuxtLink
+                    v-if="item.webUrl"
+                    :to="item.webUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="wrap-anywhere hover:text-primary"
+                  >
+                    {{ makeName(item) }}
+                  </NuxtLink>
+                  <span v-else class="wrap-anywhere">{{ makeName(item) }}</span>
+                </h2>
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-toned">
+                  <UBadge :color="item.watched ? 'success' : 'neutral'" variant="soft" size="xs">
+                    {{ item.watched ? 'Watched' : 'Unwatched' }}
+                  </UBadge>
+                  <span>{{ item.id ? 'Imported locally' : 'Not imported' }}</span>
+                  <UTooltip
+                    v-if="getItemTimestamp(item)"
+                    :text="moment.unix(getItemTimestamp(item)).format(TOOLTIP_DATE_FORMAT)"
+                  >
+                    <span class="cursor-help">{{
+                      moment.unix(getItemTimestamp(item)).fromNow()
+                    }}</span>
+                  </UTooltip>
                 </div>
               </div>
-            </div>
-
-            <div class="flex shrink-0 items-center gap-2">
-              <UButton
-                color="neutral"
-                variant="outline"
-                size="sm"
-                icon="i-lucide-bug"
-                @click="openRawData(item)"
-              >
-                <span class="hidden sm:inline">Raw Data</span>
-              </UButton>
-
-              <UButton
-                v-if="'show' !== item.type && item.id"
-                color="neutral"
-                variant="outline"
-                size="sm"
-                icon="i-lucide-history"
-                :to="`/history/${item.id}`"
-              >
-                <span class="hidden sm:inline">Local</span>
-              </UButton>
-            </div>
-          </div>
-        </template>
-
-        <div class="space-y-3">
-          <div
-            v-if="item.title"
-            class="rounded-md border border-default bg-elevated/40 px-3 py-2.5"
-          >
-            <div
-              class="flex min-w-0 cursor-pointer items-start gap-2 text-sm font-medium text-default"
-              @click="item.expand_title = !item.expand_title"
-            >
-              <UIcon name="i-lucide-heading" class="mt-0.5 size-4 shrink-0 text-toned" />
-              <NuxtLink
-                :to="makeSearchLink('title', item.title)"
-                class="min-w-0 text-highlighted hover:text-primary"
-                :class="item.expand_title ? 'wrap-break-word' : 'truncate'"
-              >
-                {{ item.title }}
-              </NuxtLink>
-            </div>
-          </div>
-
-          <div
-            v-if="item.content_path"
-            class="rounded-md border border-default bg-elevated/40 px-3 py-2.5"
-          >
-            <div
-              class="flex min-w-0 cursor-pointer items-start gap-2 text-sm font-medium text-default"
-              @click="item.expand_path = !item.expand_path"
-            >
-              <UIcon name="i-lucide-file-text" class="mt-0.5 size-4 shrink-0 text-toned" />
-              <NuxtLink
-                :to="makeSearchLink('path', item.content_path)"
-                class="min-w-0 hover:text-primary"
-                :class="item.expand_path ? 'wrap-break-word' : 'truncate'"
-              >
-                {{ item.content_path }}
-              </NuxtLink>
-            </div>
-          </div>
-        </div>
-
-        <template #footer>
-          <div class="space-y-3">
-            <div class="grid grid-cols-2 gap-2.5">
-              <div
-                class="flex items-center justify-center gap-2 rounded-md border border-default bg-elevated/40 px-3 py-2 text-center text-sm font-medium text-default"
-              >
-                <UIcon name="i-lucide-calendar" class="size-4 shrink-0 text-toned" />
-                <UTooltip :text="moment.unix(getItemTimestamp(item)).format(TOOLTIP_DATE_FORMAT)">
-                  <span class="cursor-help">{{
-                    moment.unix(getItemTimestamp(item)).fromNow()
-                  }}</span>
-                </UTooltip>
-              </div>
-
-              <div
-                class="flex items-center justify-center gap-2 rounded-md border border-default bg-elevated/40 px-3 py-2 text-center text-sm font-medium text-default"
-              >
-                <UIcon name="i-lucide-database" class="size-4 shrink-0 text-toned" />
-                <span :class="item.id ? '' : 'text-error'">{{
-                  item.id ? 'Imported locally' : 'Not imported'
-                }}</span>
+              <div class="flex flex-wrap gap-2">
+                <UButton
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                  icon="i-lucide-braces"
+                  @click="openRawData(item)"
+                >
+                  Raw data
+                </UButton>
+                <UButton
+                  v-if="'show' !== item.type && item.id"
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  icon="i-lucide-history"
+                  :to="`/history/${item.id}`"
+                >
+                  Local record
+                </UButton>
+                <UButton
+                  v-if="'show' === item.type"
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  icon="i-lucide-link"
+                  :to="
+                    makeSearchLink(
+                      'metadata',
+                      `${item.via}.show://${ag(item, `metadata.${item.via}.id`)}`,
+                    )
+                  "
+                >
+                  Linked items
+                </UButton>
               </div>
             </div>
 
-            <div class="flex items-center justify-end gap-2">
-              <UButton
-                v-if="'show' === item.type"
-                color="neutral"
-                variant="outline"
-                size="sm"
-                icon="i-lucide-link"
-                :to="
-                  makeSearchLink(
-                    'metadata',
-                    `${item.via}.show://${ag(item, `metadata.${item.via}.id`)}`,
-                  )
-                "
+            <dl class="min-w-0 space-y-2 text-sm">
+              <div
+                v-if="item.title"
+                class="grid min-w-0 gap-1 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-start"
               >
-                View linked items
-              </UButton>
-            </div>
+                <dt class="text-xs text-muted">Title</dt>
+                <dd class="flex min-w-0 items-start gap-2">
+                  <NuxtLink
+                    :to="makeSearchLink('title', item.title)"
+                    class="min-w-0 flex-1 hover:text-primary"
+                    :class="item.expand_title ? 'wrap-anywhere' : 'truncate'"
+                  >
+                    {{ item.title }}
+                  </NuxtLink>
+                  <UTooltip :text="item.expand_title ? 'Collapse title' : 'Expand title'">
+                    <UButton
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      square
+                      :icon="item.expand_title ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+                      :aria-label="item.expand_title ? 'Collapse title' : 'Expand title'"
+                      :aria-expanded="!!item.expand_title"
+                      @click="item.expand_title = !item.expand_title"
+                    />
+                  </UTooltip>
+                </dd>
+              </div>
+              <div
+                v-if="item.content_path"
+                class="grid min-w-0 gap-1 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-start"
+              >
+                <dt class="text-xs text-muted">File</dt>
+                <dd class="flex min-w-0 items-start gap-2">
+                  <NuxtLink
+                    :to="makeSearchLink('path', item.content_path)"
+                    class="min-w-0 flex-1 font-mono text-xs hover:text-primary"
+                    :class="item.expand_path ? 'wrap-anywhere' : 'truncate'"
+                    >{{ item.content_path }}</NuxtLink
+                  >
+                  <UTooltip :text="item.expand_path ? 'Collapse file path' : 'Expand file path'">
+                    <UButton
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      square
+                      :icon="item.expand_path ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+                      :aria-label="item.expand_path ? 'Collapse file path' : 'Expand file path'"
+                      :aria-expanded="!!item.expand_path"
+                      @click="item.expand_path = !item.expand_path"
+                    />
+                  </UTooltip>
+                </dd>
+              </div>
+            </dl>
           </div>
-        </template>
-      </UCard>
+        </article>
+      </Lazy>
     </div>
 
     <TextModal
@@ -308,39 +271,27 @@
       :text="selectedRawText"
       @update:open="handleRawModalOpenChange"
     />
-
-    <UCard class="shadow-sm" :ui="panelCardUi">
-      <template #header>
-        <button
-          type="button"
-          class="flex items-center gap-2 text-left text-sm font-semibold text-highlighted"
-          @click="show_page_tips = !show_page_tips"
-        >
-          <UIcon
-            :name="show_page_tips ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-            class="size-4 text-toned"
-          />
-          <UIcon name="i-lucide-info" class="size-4 text-toned" />
-          <span>Tips</span>
-        </button>
-      </template>
-
-      <div v-if="show_page_tips" class="text-sm leading-6 text-default">
-        <ul class="list-disc space-y-2 pl-5">
-          <li>Items marked as <code>Not imported</code> are not yet in the local database.</li>
-          <li>The items shown here come from remote backend data queried directly.</li>
-          <li>Clicking an item title opens the item page on the backend itself.</li>
-        </ul>
-      </div>
-    </UCard>
   </main>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter, useHead } from '#app';
+import {
+  NuxtLink,
+  UAlert,
+  UBadge,
+  UButton,
+  UEmpty,
+  UFormField,
+  UIcon,
+  UInput,
+  USelect,
+  UTooltip,
+} from '#components';
 import { useStorage } from '@vueuse/core';
-import FloatingImage from '~/components/FloatingImage.vue';
+import StatisticsPoster from '~/components/StatisticsPoster.vue';
+import Lazy from '~/components/Lazy.vue';
 import PageHeader from '~/components/PageHeader.vue';
 import TextModal from '~/components/TextModal.vue';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
@@ -364,17 +315,7 @@ type SearchItemWithUI = SearchItem &
 const route = useRoute();
 const router = useRouter();
 const poster_enable = useStorage('poster_enable', true);
-
-const panelCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-};
-
-const resultCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-  footer: 'border-t border-default/70 px-4 py-4',
-};
+const apiUser = useStorage<string>('api_user', 'main');
 
 const items = ref<Array<SearchItemWithUI>>([]);
 const limits = [25, 50, 100, 250, 500];
@@ -387,7 +328,6 @@ const searchField = ref<string>((route.query.key as string) ?? 'title');
 const isLoading = ref<boolean>(false);
 const hasSearched = ref<boolean>(false);
 const error = ref<{ message?: string; code?: number }>({});
-const show_page_tips = useStorage('show_page_tips', true);
 const selectedRawItem = ref<SearchItemWithUI | null>(null);
 
 const limitItems = computed<Array<{ label: string; value: number }>>(() =>
@@ -395,7 +335,7 @@ const limitItems = computed<Array<{ label: string; value: number }>>(() =>
 );
 
 const searchFieldItems = computed<Array<{ label: string; value: string }>>(() =>
-  searchable.map((item) => ({ label: item, value: item })),
+  searchable.map((item) => ({ label: 'id' === item ? 'Backend ID' : 'Title', value: item })),
 );
 
 useHead({ title: `Backends: ${backend} - Search` });
@@ -457,7 +397,7 @@ const searchContent = async (fromPopState: boolean = false): Promise<void> => {
   const search = new URLSearchParams();
 
   if (!query.value || '' === searchField.value) {
-    notification('error', 'Error', 'Search field and query are required.');
+    notification('error', 'Search incomplete', 'Search field and query are required.');
     return;
   }
 
@@ -496,7 +436,8 @@ const searchContent = async (fromPopState: boolean = false): Promise<void> => {
     items.value = data;
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : 'Unknown error occurred';
-    notification('error', 'Error', `Request error. ${errorMessage}`);
+    error.value = { message: errorMessage };
+    notification('error', 'Backend search failed', errorMessage);
   } finally {
     isLoading.value = false;
   }

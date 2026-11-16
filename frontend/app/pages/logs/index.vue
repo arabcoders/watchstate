@@ -2,133 +2,205 @@
   <main class="w-full min-w-0 max-w-full space-y-6">
     <PageHeader v-bind="pageShell">
       <template #actions>
-        <UInput
-          v-if="toggleFilter || query"
-          id="filter"
-          v-model.lazy="query"
-          type="search"
-          placeholder="Filter displayed content"
-          icon="i-lucide-filter"
-          size="sm"
-          class="w-full sm:w-72"
-        />
-
-        <UTooltip text="Filter files.">
-          <UButton
-            color="neutral"
-            :variant="toggleFilter ? 'soft' : 'outline'"
-            size="sm"
-            icon="i-lucide-filter"
-            @click="
-              () => {
-                toggleFilter = !toggleFilter;
-              }
-            "
-          >
-            <span class="hidden sm:inline">Filter</span>
-          </UButton>
-        </UTooltip>
-
-        <UTooltip text="Reload logs">
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-refresh-cw"
-            :loading="isLoading"
-            :disabled="isLoading"
-            @click="loadContent"
-          >
-            <span class="hidden sm:inline">Reload</span>
-          </UButton>
-        </UTooltip>
+        <UButton
+          color="neutral"
+          variant="outline"
+          icon="i-lucide-refresh-cw"
+          :loading="isLoading"
+          :disabled="isLoading"
+          @click="loadContent"
+        >
+          Refresh
+        </UButton>
       </template>
     </PageHeader>
 
-    <UAlert
-      v-if="isLoading"
-      color="info"
-      variant="soft"
-      icon="i-lucide-loader-circle"
-      title="Loading"
-      description="Loading data. Please wait..."
-      :ui="{ icon: 'animate-spin' }"
-    />
-
-    <UAlert
-      v-else-if="filterItems.length < 1"
-      :title="query ? 'No results' : 'No logs found'"
-      color="warning"
-      variant="soft"
-      icon="i-lucide-triangle-alert"
-    >
-      <template #description>
-        <div class="space-y-2 text-sm text-default">
-          <p v-if="query">
-            No results found for <strong>{{ query }}</strong
-            >.
-          </p>
-          <p v-else>No logs found.</p>
+    <section aria-label="Log file filters" class="space-y-3">
+      <div class="flex flex-wrap items-end gap-3">
+        <div class="w-full space-y-1.5 sm:w-44">
+          <label for="log-type" class="text-xs font-medium text-toned">Type</label>
+          <USelect
+            id="log-type"
+            v-model="selectedType"
+            :items="typeItems"
+            icon="i-lucide-filter"
+            class="w-full"
+          />
         </div>
-      </template>
-    </UAlert>
+        <div class="min-w-0 flex-1 basis-full space-y-1.5 sm:basis-64">
+          <label for="log-filter" class="text-xs font-medium text-toned">Find files</label>
+          <UInput
+            id="log-filter"
+            v-model="query"
+            type="search"
+            placeholder="Filename"
+            icon="i-lucide-search"
+            class="w-full"
+          />
+        </div>
+      </div>
 
-    <div v-else class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-      <UCard
-        v-for="item in filterItems"
-        :key="item.filename"
-        class="ws-card h-full shadow-sm"
-        :ui="logCardUi"
+      <div
+        v-if="query.trim() || '__all__' !== selectedType"
+        class="flex flex-wrap items-center gap-2"
+        aria-label="Active filters"
       >
-        <template #header>
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0 flex-1">
-              <UTooltip :text="String(item.filename ?? item.date)">
-                <NuxtLink
-                  :to="`/logs/${item.filename}`"
-                  class="block truncate text-base font-semibold text-highlighted hover:text-primary"
-                >
-                  {{ item.filename ?? item.date }}
-                </NuxtLink>
-              </UTooltip>
-            </div>
+        <span class="text-xs text-muted">Applied</span>
+        <UButton
+          v-if="'__all__' !== selectedType"
+          color="neutral"
+          variant="soft"
+          size="xs"
+          trailing-icon="i-lucide-x"
+          aria-label="Remove type filter"
+          @click="selectedType = '__all__'"
+        >
+          Type: {{ typeLabels[selectedType] ?? ucFirst(selectedType) }}
+        </UButton>
+        <UButton
+          v-if="query.trim()"
+          color="neutral"
+          variant="soft"
+          size="xs"
+          trailing-icon="i-lucide-x"
+          aria-label="Remove filename filter"
+          class="max-w-full"
+          @click="query = ''"
+        >
+          <span class="truncate">Filename: {{ query.trim() }}</span>
+        </UButton>
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="xs"
+          icon="i-lucide-x"
+          @click="clearFilters"
+        >
+          Clear all
+        </UButton>
+      </div>
+    </section>
 
+    <section aria-label="Log files" :aria-busy="isLoading" class="space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3" aria-live="polite">
+        <p v-if="hasResults" class="text-sm text-toned">
+          <strong class="font-medium text-highlighted">{{ filteredLogs.length }}</strong>
+          {{ filteredLogs.length === logs.length ? 'files' : `of ${logs.length} files` }}
+        </p>
+        <p v-if="isLoading && hasResults" role="status" class="text-xs text-muted">
+          Refreshing log files…
+        </p>
+      </div>
+
+      <UAlert
+        v-if="loadError"
+        color="error"
+        variant="soft"
+        icon="i-lucide-circle-alert"
+        :title="hasResults ? 'Log files could not be refreshed' : 'Log files could not be loaded'"
+      >
+        <template #description>
+          <p class="wrap-break-word">{{ loadError }}</p>
+          <p v-if="hasResults" class="mt-2">These results may be out of date.</p>
+        </template>
+        <template #actions>
+          <UButton
+            color="neutral"
+            variant="outline"
+            icon="i-lucide-refresh-cw"
+            :loading="isLoading"
+            @click="loadContent"
+          >
+            Retry
+          </UButton>
+        </template>
+      </UAlert>
+
+      <div
+        v-if="isLoading && !hasResults"
+        role="status"
+        aria-label="Loading log files"
+        class="ws-card divide-y divide-default"
+      >
+        <div v-for="index in 4" :key="index" class="flex items-center gap-4 px-4 py-4">
+          <USkeleton class="size-9 shrink-0" />
+          <USkeleton class="h-4 w-52 max-w-full" />
+        </div>
+      </div>
+
+      <UEmpty
+        v-if="!isLoading && !loadError && 0 === filteredLogs.length"
+        :icon="
+          query.trim() || '__all__' !== selectedType ? 'i-lucide-search' : 'i-lucide-scroll-text'
+        "
+        :title="query.trim() || '__all__' !== selectedType ? 'No matching files' : 'No log files'"
+        :description="
+          query.trim() || '__all__' !== selectedType
+            ? 'Try another filename or log type.'
+            : 'Check logging settings in Environment if expected files are missing.'
+        "
+      >
+        <template v-if="query.trim() || '__all__' !== selectedType" #actions>
+          <UButton color="neutral" variant="outline" icon="i-lucide-x" @click="clearFilters">
+            Clear all
+          </UButton>
+        </template>
+      </UEmpty>
+
+      <ul v-if="0 < filteredLogs.length" class="ws-card divide-y divide-default overflow-hidden">
+        <li
+          v-for="item in filteredLogs"
+          :key="item.filename"
+          class="grid min-w-0 gap-3 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center lg:grid-cols-[minmax(0,1fr)_7rem_7rem_11rem]"
+        >
+          <div class="flex min-w-0 items-center gap-3">
+            <span class="ws-detail-icon">
+              <UIcon :name="getLogTypeIcon(item.type)" class="size-4" />
+            </span>
+            <NuxtLink
+              :to="`/logs/${encodeURIComponent(item.filename)}`"
+              class="min-w-0 wrap-anywhere text-sm font-semibold text-highlighted hover:text-primary focus-visible:outline-primary"
+            >
+              {{ item.filename }}
+            </NuxtLink>
+          </div>
+          <div>
             <UBadge color="neutral" variant="soft">
-              <span class="inline-flex items-center gap-1">
-                <UIcon :name="getLogTypeIcon(item.type)" class="size-3.5" />
-                <span class="capitalize">{{ item.type }}</span>
-              </span>
+              {{ typeLabels[item.type] ?? ucFirst(item.type) }}
             </UBadge>
           </div>
-        </template>
-
-        <template #footer>
-          <div class="grid grid-cols-2 gap-2.5">
-            <div
-              class="flex items-center justify-center gap-2 rounded-md border border-default bg-elevated/40 px-3 py-2 text-center text-sm font-medium text-default"
-            >
-              <UIcon name="i-lucide-calendar" class="size-4 shrink-0 text-toned" />
-              <UTooltip :text="`Last Update: ${moment(item.modified).format(TOOLTIP_DATE_FORMAT)}`">
-                <span class="cursor-help">{{ moment(item.modified).fromNow() }}</span>
-              </UTooltip>
-            </div>
-
-            <div
-              class="flex items-center justify-center gap-2 rounded-md border border-default bg-elevated/40 px-3 py-2 text-center text-sm font-medium text-default"
-            >
-              <UIcon name="i-lucide-hard-drive" class="size-4 shrink-0 text-toned" />
-              <span>{{ humanFileSize(item.size) }}</span>
-            </div>
+          <p class="text-xs tabular-nums text-toned">
+            <span class="sr-only">Size </span>{{ humanFileSize(item.size) }}
+          </p>
+          <div class="text-xs text-toned">
+            <span class="text-muted">Updated </span>
+            <UTooltip :text="moment(item.modified).format(TOOLTIP_DATE_FORMAT)">
+              <time :datetime="moment(item.modified).toISOString()" class="cursor-help">
+                {{ moment(item.modified).fromNow() }}
+              </time>
+            </UTooltip>
           </div>
-        </template>
-      </UCard>
-    </div>
+        </li>
+      </ul>
+    </section>
   </main>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
-import { useHead, useRoute } from '#app';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { useHead } from '#app';
+import {
+  NuxtLink,
+  UAlert,
+  UBadge,
+  UButton,
+  UEmpty,
+  UIcon,
+  UInput,
+  USelect,
+  USkeleton,
+  UTooltip,
+} from '#components';
 import moment from 'moment';
 import PageHeader from '~/components/PageHeader.vue';
 import type { LogItem } from '~/types';
@@ -139,37 +211,48 @@ import {
   parse_api_response,
   request,
   TOOLTIP_DATE_FORMAT,
+  ucFirst,
 } from '~/utils';
 
 useHead({ title: 'Logs' });
 
 const pageShell = requireTopLevelPageShell('logs');
-
-const route = useRoute();
-const query = ref<string>('');
+const query = ref('');
+const selectedType = ref('__all__');
 const logs = ref<Array<LogItem>>([]);
-const isLoading = ref<boolean>(false);
-const toggleFilter = ref<boolean>(false);
+const isLoading = ref(true);
+const hasResults = ref(false);
+const loadError = ref('');
+let loadVersion = 0;
 
-const logCardUi = {
-  header: 'p-4 sm:p-5',
-  body: 'px-4 pb-4 pt-0 sm:px-5 sm:pb-5',
-  footer: 'sm:p-6 px-4 pb-4 pt-0 sm:px-5 sm:pb-5',
+const typeLabels: Record<string, string> = {
+  app: 'Application',
+  task: 'Task',
+  access: 'Access',
+  request: 'Request',
 };
 
-watch(toggleFilter, () => {
-  if (!toggleFilter.value) {
-    query.value = '';
-  }
-});
+const typeItems = computed(() => [
+  { label: 'All types', value: '__all__' },
+  ...Array.from(
+    new Set([
+      ...logs.value.map((item) => item.type),
+      ...('__all__' !== selectedType.value ? [selectedType.value] : []),
+    ]),
+  )
+    .sort()
+    .map((type) => ({
+      label: typeLabels[type] ?? ucFirst(type),
+      value: type,
+    })),
+]);
 
-const filterItems = computed<Array<LogItem>>(() => {
-  if (!query.value) {
-    return logs.value;
-  }
-
-  return logs.value.filter((item) =>
-    item.filename.toLowerCase().includes(query.value.toLowerCase()),
+const filteredLogs = computed<Array<LogItem>>(() => {
+  const search = query.value.trim().toLowerCase();
+  return logs.value.filter(
+    (item) =>
+      ('__all__' === selectedType.value || selectedType.value === item.type) &&
+      item.filename.toLowerCase().includes(search),
   );
 });
 
@@ -188,32 +271,48 @@ const getLogTypeIcon = (type: string): string => {
   }
 };
 
+const clearFilters = (): void => {
+  query.value = '';
+  selectedType.value = '__all__';
+};
+
 const loadContent = async (): Promise<void> => {
-  logs.value = [];
+  const version = ++loadVersion;
   isLoading.value = true;
+  loadError.value = '';
 
   try {
     const response = await request('/logs');
     const data = await parse_api_response<Array<LogItem>>(response);
-
-    if ('logs' !== route.name) {
+    if (version !== loadVersion) {
       return;
     }
-
     if ('error' in data) {
-      notification('error', 'Error', data.error.message);
-      return;
+      throw new Error(data.error.message);
+    }
+    if (!response.ok) {
+      throw new Error(`${response.status}: ${response.statusText}`);
     }
 
-    data.sort((a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime());
-    logs.value = data;
+    logs.value = data.sort(
+      (a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime(),
+    );
+    hasResults.value = true;
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    notification('error', 'Error', message);
+    if (version === loadVersion) {
+      loadError.value =
+        error instanceof Error ? error.message : 'Try refreshing the log files again.';
+      notification('error', 'Log files could not be loaded', loadError.value);
+    }
   } finally {
-    isLoading.value = false;
+    if (version === loadVersion) {
+      isLoading.value = false;
+    }
   }
 };
 
 onMounted(() => void loadContent());
+onBeforeUnmount(() => {
+  ++loadVersion;
+});
 </script>

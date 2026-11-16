@@ -1,10 +1,10 @@
 <template>
   <div
     ref="target"
-    class="relative aspect-2/3 overflow-hidden rounded-md bg-elevated ring-1 ring-inset ring-default"
+    class="@container relative aspect-2/3 overflow-hidden rounded-md bg-elevated ring-1 ring-inset ring-default"
   >
     <UPopover
-      v-if="url"
+      v-if="url && preview"
       mode="hover"
       :open-delay="400"
       :close-delay="100"
@@ -32,15 +32,26 @@
         />
       </template>
     </UPopover>
+    <img
+      v-else-if="url"
+      :src="url"
+      :alt="title"
+      loading="lazy"
+      decoding="async"
+      class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+      @error="imageError"
+    />
     <div
       v-else
-      class="flex h-full flex-col items-center justify-center gap-2 p-3 text-center text-dimmed"
+      class="flex h-full flex-col items-center justify-center gap-2 p-1 text-center text-dimmed @min-[5rem]:p-3"
     >
       <UIcon
         :name="isLoading ? 'i-lucide-loader-circle' : 'i-lucide-image-off'"
-        :class="['size-7', isLoading ? 'animate-spin' : '']"
+        :class="['size-4 @min-[5rem]:size-7', isLoading ? 'animate-spin' : '']"
       />
-      <span class="text-xs">{{ isLoading ? 'Loading poster' : 'No poster' }}</span>
+      <span class="hidden text-xs @min-[5rem]:block">{{
+        isLoading ? 'Loading poster' : 'No poster'
+      }}</span>
     </div>
   </div>
 </template>
@@ -51,17 +62,23 @@ import { useIntersectionObserver } from '@vueuse/core';
 import { UIcon, UPopover } from '#components';
 import { request } from '~/utils';
 import { useSessionCache } from '~/utils/cache';
+import type { StatisticsPosterProps } from '~/types';
 
-const props = defineProps<{ historyId: number; title: string; user: string }>();
+const props = withDefaults(defineProps<StatisticsPosterProps>(), { preview: false });
 const target = ref<HTMLElement | null>(null);
 const url = ref<string | null>(null);
 const isLoading = ref(false);
 const cache = useSessionCache(`artwork:${props.user}`);
-const path = `/history/${props.historyId}/images/poster`;
+const path =
+  props.image ?? (undefined !== props.historyId ? `/history/${props.historyId}/images/poster` : '');
 const controller = new AbortController();
 let fromCache = false;
 
 const load = async (): Promise<void> => {
+  if (!path) {
+    return;
+  }
+
   isLoading.value = true;
 
   try {

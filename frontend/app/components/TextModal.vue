@@ -11,21 +11,15 @@
           class="w-full"
         />
 
-        <UAlert
+        <UEmpty
           v-if="query && 0 === filteredLineCount"
-          color="warning"
-          variant="soft"
+          size="sm"
+          variant="naked"
           icon="i-lucide-filter"
           title="No matching lines"
-        >
-          <template #description>
-            <p class="text-sm text-default">
-              No lines match this filter: <u>{{ query }}</u>
-            </p>
-          </template>
-        </UAlert>
+        />
 
-        <div class="overflow-hidden rounded-md border border-default bg-elevated/60">
+        <div v-else class="overflow-hidden rounded-md border border-default bg-elevated/60">
           <code
             class="ws-terminal ws-terminal-panel ws-terminal-panel-lg whitespace-pre-wrap text-sm"
             >{{ displayedText }}</code
@@ -45,10 +39,6 @@
         >
           {{ props.copyLabel }}
         </UButton>
-
-        <UButton color="neutral" variant="outline" size="sm" icon="i-lucide-x" @click="close">
-          {{ props.closeLabel }}
-        </UButton>
       </div>
     </template>
   </UModal>
@@ -56,6 +46,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { UButton, UEmpty, UInput, UModal } from '#components';
 import { copyText } from '~/utils';
 
 const props = withDefaults(
@@ -64,12 +55,10 @@ const props = withDefaults(
     title?: string;
     text: string | number;
     copyLabel?: string;
-    closeLabel?: string;
   }>(),
   {
     title: 'Text',
     copyLabel: 'Copy',
-    closeLabel: 'Close',
   },
 );
 
@@ -116,9 +105,5 @@ const handleOpenChange = (open: boolean): void => {
 
 const copyCurrentText = (): void => {
   copyText(displayedText.value);
-};
-
-const close = (): void => {
-  emit('update:open', false);
 };
 </script>

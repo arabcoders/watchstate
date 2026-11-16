@@ -1,44 +1,108 @@
 <template>
   <USlideover
     :open="isOpen"
+    title="WebUI settings"
     side="right"
     :dismissible="true"
     :overlay="true"
     :ui="slideoverUi"
     @update:open="(open) => !open && emit('close')"
   >
-    <template #header>
-      <div class="flex w-full items-start gap-3">
-        <div class="min-w-0 flex-1">
-          <p class="text-base font-semibold text-highlighted">WebUI Settings</p>
-          <p class="text-sm text-toned">Adjust interface behavior.</p>
-        </div>
-
-        <UButton
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          square
-          icon="i-lucide-x"
-          aria-label="Close settings"
-          title="Close settings"
-          class="ml-auto shrink-0"
-          @click="emit('close')"
-        />
-      </div>
-    </template>
-
     <template #body>
-      <div class="space-y-5">
-        <UCard class="ws-card shadow-sm" :ui="sectionCardUi">
-          <template #header>
-            <div class="flex items-center gap-2">
-              <UIcon name="i-lucide-settings" class="size-5 text-toned" />
-              <span class="font-semibold text-highlighted">Password & Sessions</span>
-            </div>
-          </template>
+      <div class="divide-y divide-default">
+        <section class="space-y-5 pb-6">
+          <h2 class="flex items-center gap-2 font-semibold text-highlighted">
+            <UIcon name="i-lucide-image" class="size-5 text-toned" />
+            Appearance
+          </h2>
 
-          <form class="space-y-4">
+          <div class="flex items-center justify-between gap-3">
+            <span class="text-sm font-medium text-highlighted">Show posters</span>
+            <USwitch v-model="poster_enable" color="neutral" aria-label="Show posters" />
+          </div>
+
+          <div class="space-y-4">
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-sm font-medium text-highlighted">Show header artwork</span>
+              <USwitch v-model="bg_enable" color="neutral" aria-label="Show header artwork" />
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <label class="text-sm font-medium text-default" for="random_bg_opacity">
+                Header artwork visibility
+              </label>
+              <code class="text-sm text-toned">{{ Math.round(bgVisibilityModel * 100) }}%</code>
+            </div>
+
+            <USlider
+              id="random_bg_opacity"
+              v-model="bgVisibilityModel"
+              color="primary"
+              :min="0"
+              :max="0.4"
+              :step="0.01"
+            />
+
+            <UButton
+              v-if="bg_enable"
+              type="button"
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-refresh-cw"
+              @click="emit('force_bg_reload')"
+            >
+              Reload artwork
+            </UButton>
+          </div>
+        </section>
+
+        <section class="space-y-4 py-6">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <h2 class="flex items-center gap-2 font-semibold text-highlighted">
+              <UIcon name="i-lucide-calendar-clock" class="size-5 text-toned" />
+              Date format
+            </h2>
+            <UButton
+              type="button"
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-rotate-ccw"
+              @click="resetTooltipDateFormat"
+            >
+              Reset
+            </UButton>
+          </div>
+
+          <UFormField id="tooltip_date_format" label="Tooltip format" name="tooltip_date_format">
+            <UInput
+              v-model="tooltip_date_format"
+              icon="i-lucide-calendar-clock"
+              class="w-full"
+              :placeholder="DEFAULT_TOOLTIP_DATE_FORMAT"
+            />
+          </UFormField>
+
+          <div class="space-y-1 text-sm text-toned">
+            <p>
+              Default:
+              <code>{{ DEFAULT_TOOLTIP_DATE_FORMAT }}</code>
+            </p>
+            <p>
+              Preview:
+              <code>{{ tooltipDatePreview }}</code>
+            </p>
+          </div>
+        </section>
+
+        <section class="space-y-5 pt-6">
+          <h2 class="flex items-center gap-2 font-semibold text-highlighted">
+            <UIcon name="i-lucide-user-round" class="size-5 text-toned" />
+            Account
+          </h2>
+
+          <form :id="passwordFormId" class="space-y-4" @submit.prevent="change_password">
             <input
               type="text"
               class="hidden"
@@ -47,9 +111,8 @@
               :value="username"
             />
 
-            <UFormField label="Current password" name="current_password">
+            <UFormField id="current_password" label="Current password" name="current_password">
               <UInput
-                id="current_password"
                 v-model="user.current_password"
                 type="password"
                 icon="i-lucide-lock"
@@ -61,9 +124,8 @@
               />
             </UFormField>
 
-            <UFormField label="New password" name="new_password">
+            <UFormField id="new_password" label="New password" name="new_password">
               <UInput
-                id="new_password"
                 v-model="user.new_password"
                 type="password"
                 icon="i-lucide-lock"
@@ -75,9 +137,12 @@
               />
             </UFormField>
 
-            <UFormField label="Confirm new password" name="new_password_confirm">
+            <UFormField
+              id="new_password_confirm"
+              label="Confirm new password"
+              name="new_password_confirm"
+            >
               <UInput
-                id="new_password_confirm"
                 v-model="user.new_password_confirm"
                 type="password"
                 icon="i-lucide-lock"
@@ -88,158 +153,37 @@
                 required
               />
             </UFormField>
-
-            <div class="flex flex-col gap-2 sm:flex-row">
-              <UButton
-                type="button"
-                color="primary"
-                variant="solid"
-                icon="i-lucide-key-round"
-                class="w-full justify-center"
-                :loading="isLoading"
-                :disabled="isLoading"
-                @click="change_password"
-              >
-                Change Password
-              </UButton>
-
-              <UButton
-                type="button"
-                color="neutral"
-                variant="outline"
-                icon="i-lucide-user-round-x"
-                class="w-full justify-center"
-                :disabled="isLoading"
-                @click="invalidate_sessions"
-              >
-                Invalidate Sessions
-              </UButton>
-            </div>
           </form>
-        </UCard>
+        </section>
+      </div>
+    </template>
 
-        <UCard class="ws-card shadow-sm" :ui="sectionCardUi">
-          <template #header>
-            <div class="flex items-center gap-2">
-              <UIcon name="i-lucide-circle-help" class="size-5 text-toned" />
-              <span class="font-semibold text-highlighted">WebUI Look & Feel</span>
-            </div>
-          </template>
+    <template #footer>
+      <div class="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <UButton
+          type="button"
+          color="neutral"
+          variant="outline"
+          icon="i-lucide-user-round-x"
+          class="justify-center"
+          :disabled="isLoading"
+          @click="invalidate_sessions"
+        >
+          Invalidate sessions
+        </UButton>
 
-          <div class="space-y-5">
-            <div class="ws-card bg-elevated/30 px-3 py-3">
-              <div class="flex items-center justify-between gap-3">
-                <div class="min-w-0">
-                  <div class="text-sm font-medium text-highlighted">Show posters</div>
-                  <p class="mt-1 text-sm text-toned">
-                    {{
-                      poster_enable
-                        ? 'Poster artwork is currently visible.'
-                        : 'Poster artwork is currently hidden.'
-                    }}
-                  </p>
-                </div>
-
-                <USwitch v-model="poster_enable" color="neutral" />
-              </div>
-            </div>
-
-            <div class="ws-card space-y-3 bg-elevated/30 p-4">
-              <div class="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p class="font-medium text-default">Backgrounds from backends</p>
-                  <p class="text-sm text-toned">Use backend fanart as page background.</p>
-                </div>
-
-                <UButton
-                  v-if="bg_enable"
-                  type="button"
-                  color="neutral"
-                  variant="ghost"
-                  size="sm"
-                  icon="i-lucide-refresh-cw"
-                  @click="emit('force_bg_reload')"
-                >
-                  Reload
-                </UButton>
-              </div>
-
-              <div class="flex items-center justify-between gap-3">
-                <div class="min-w-0">
-                  <div class="text-sm font-medium text-highlighted">Backgrounds enabled</div>
-                  <p class="mt-1 text-sm text-toned">
-                    {{
-                      bg_enable
-                        ? 'Fanart backgrounds are active.'
-                        : 'Fanart backgrounds are disabled.'
-                    }}
-                  </p>
-                </div>
-
-                <USwitch v-model="bg_enable" color="neutral" />
-              </div>
-            </div>
-
-            <div class="ws-card space-y-3 bg-elevated/30 p-4">
-              <div class="flex items-center justify-between gap-3">
-                <label class="text-sm font-medium text-default" for="random_bg_opacity">
-                  Background visibility
-                </label>
-                <code>{{ Math.round(bgVisibilityModel * 100) }}%</code>
-              </div>
-
-              <USlider
-                id="random_bg_opacity"
-                v-model="bgVisibilityModel"
-                color="primary"
-                :min="0"
-                :max="0.4"
-                :step="0.01"
-              />
-            </div>
-
-            <div class="ws-card space-y-3 bg-elevated/30 p-4">
-              <div class="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p class="font-medium text-default">Date format</p>
-                  <p class="text-sm text-toned">Used to format timestamps across the WebUI.</p>
-                </div>
-
-                <UButton
-                  type="button"
-                  color="neutral"
-                  variant="outline"
-                  size="sm"
-                  icon="i-lucide-rotate-ccw"
-                  @click="resetTooltipDateFormat"
-                >
-                  Reset
-                </UButton>
-              </div>
-
-              <UFormField label="Format" name="tooltip_date_format">
-                <UInput
-                  id="tooltip_date_format"
-                  v-model="tooltip_date_format"
-                  icon="i-lucide-calendar-clock"
-                  class="w-full"
-                  :placeholder="DEFAULT_TOOLTIP_DATE_FORMAT"
-                />
-              </UFormField>
-
-              <div class="space-y-1 text-sm text-toned">
-                <p>
-                  Default:
-                  <code>{{ DEFAULT_TOOLTIP_DATE_FORMAT }}</code>
-                </p>
-                <p>
-                  Preview:
-                  <code>{{ tooltipDatePreview }}</code>
-                </p>
-              </div>
-            </div>
-          </div>
-        </UCard>
+        <UButton
+          type="submit"
+          :form="passwordFormId"
+          color="primary"
+          variant="solid"
+          icon="i-lucide-key-round"
+          class="justify-center"
+          :loading="isLoading"
+          :disabled="isLoading"
+        >
+          Change password
+        </UButton>
       </div>
     </template>
   </USlideover>
@@ -247,7 +191,8 @@
 
 <script setup lang="ts">
 import moment from 'moment';
-import { computed, ref } from 'vue';
+import { computed, ref, useId } from 'vue';
+import { UButton, UFormField, UIcon, UInput, USlideover, USlider, USwitch } from '#components';
 import { navigateTo } from '#app';
 import { useStorage } from '@vueuse/core';
 import { useDialog } from '~/composables/useDialog';
@@ -275,6 +220,7 @@ const emit = defineEmits<{
 }>();
 
 const { username } = useAuth();
+const passwordFormId = useId();
 
 const bg_enable = useStorage<boolean>('bg_enable', true);
 const poster_enable = useStorage<boolean>('poster_enable', true);
@@ -292,11 +238,6 @@ const tooltipDatePreview = computed(() => moment().format(tooltip_date_format.va
 const slideoverUi = {
   content: 'ws-settings-panel w-full sm:max-w-2xl',
   body: 'p-4 sm:p-5',
-};
-
-const sectionCardUi = {
-  header: 'p-4 sm:p-5',
-  body: 'px-4 pb-4 pt-0 sm:px-5 sm:pb-5',
 };
 
 const defaultValues = () => ({
@@ -363,9 +304,9 @@ const change_password = async (): Promise<void> => {
 
 const invalidate_sessions = async (): Promise<void> => {
   const { status } = await useDialog().confirmDialog({
-    title: 'Invalidate All Sessions',
-    message:
-      'This will log out all users including yourself. You will need to log in again. Do you want to continue?',
+    title: 'Invalidate all sessions?',
+    message: 'Everyone, including you, will be signed out.',
+    confirmText: 'Invalidate sessions',
     confirmColor: 'error',
   });
 

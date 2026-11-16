@@ -2,55 +2,38 @@
   <UModal v-model:open="open" title="Log details" :ui="modalUi">
     <template #body>
       <div v-if="log" class="space-y-5">
-        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <StatCard
-            label="Level"
-            :value="getLogLevel(log.level)"
-            :icon="LOG_LEVEL_ICON[getLogLevel(log.level)]"
-            :color="LOG_LEVEL_COLOR[getLogLevel(log.level)]"
-          />
-          <StatCard v-if="log.logger" label="Logger" :value="log.logger" icon="i-lucide-tag" />
-          <StatCard
-            label="Date"
-            :value="moment(log.datetime).fromNow()"
-            icon="i-lucide-clock"
-            :tooltip="moment(log.datetime).format(TOOLTIP_DATE_FORMAT)"
-          />
-        </div>
-        <div class="flex flex-wrap items-center justify-end gap-2">
-          <UDropdownMenu
-            v-if="quickActions.length > 0"
-            :items="[quickActions]"
-            :content="{ align: 'end' }"
-            :modal="false"
-          >
-            <UButton
-              color="neutral"
-              variant="outline"
-              size="sm"
-              icon="i-lucide-arrow-up-right-from-square"
-              trailing-icon="i-lucide-chevron-down"
-            >
-              Open
-            </UButton>
-          </UDropdownMenu>
-          <UDropdownMenu :items="copyMenuItems" :content="copyMenuContent" :modal="false">
-            <UButton
-              color="neutral"
-              variant="outline"
-              size="sm"
-              icon="i-lucide-copy"
-              trailing-icon="i-lucide-chevron-down"
-            >
-              Copy
-            </UButton>
-          </UDropdownMenu>
-        </div>
+        <dl class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+          <div class="flex items-center gap-2">
+            <dt class="sr-only">Level</dt>
+            <dd>
+              <UBadge
+                :color="LOG_LEVEL_COLOR[getLogLevel(log.level)]"
+                :icon="LOG_LEVEL_ICON[getLogLevel(log.level)]"
+                variant="soft"
+              >
+                {{ getLogLevel(log.level) }}
+              </UBadge>
+            </dd>
+          </div>
+          <div v-if="log.logger" class="flex min-w-0 items-baseline gap-2">
+            <dt class="text-muted">Logger</dt>
+            <dd class="min-w-0 wrap-break-word font-mono text-xs">{{ log.logger }}</dd>
+          </div>
+          <div class="flex items-baseline gap-2">
+            <dt class="text-muted">Date</dt>
+            <dd>
+              <UTooltip :text="moment(log.datetime).format(TOOLTIP_DATE_FORMAT)">
+                <time :datetime="log.datetime">
+                  {{ moment(log.datetime).fromNow() }}
+                </time>
+              </UTooltip>
+            </dd>
+          </div>
+        </dl>
         <UAlert
           :color="LOG_LEVEL_COLOR[getLogLevel(log.level)]"
           variant="soft"
           :icon="LOG_LEVEL_ICON[getLogLevel(log.level)]"
-          title=""
           class="min-w-0"
         >
           <template #description>
@@ -60,25 +43,32 @@
           </template>
         </UAlert>
 
-        <section v-if="log.exception" class="space-y-3">
-          <button
-            type="button"
-            class="flex w-full flex-wrap items-center justify-between gap-3 text-left"
-            @click="exceptionOpen = !exceptionOpen"
-          >
-            <div class="flex items-center gap-3">
-              <span
-                class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-error/30 bg-error/5 text-error"
+        <section v-if="log.exception" class="space-y-3 border-t border-default pt-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <h3 class="min-w-0 flex-1">
+              <button
+                type="button"
+                class="flex w-full items-center gap-2 py-1 text-left text-sm font-semibold text-highlighted"
+                :aria-expanded="exceptionOpen"
+                :aria-controls="`${detailsId}-exception`"
+                @click="exceptionOpen = !exceptionOpen"
               >
-                <UIcon name="i-lucide-bug" class="size-4" />
-              </span>
-              <p class="text-base font-semibold text-highlighted">Exception</p>
-            </div>
-            <div class="flex items-center gap-2" @click.stop>
+                <UIcon
+                  name="i-lucide-chevron-right"
+                  :class="[
+                    'size-4 shrink-0 text-toned transition-transform',
+                    exceptionOpen ? 'rotate-90' : '',
+                  ]"
+                />
+                <span>Exception</span>
+              </button>
+            </h3>
+            <div class="flex items-center gap-2">
               <UButton
                 size="sm"
                 color="neutral"
                 :variant="wrapException ? 'soft' : 'outline'"
+                :aria-pressed="wrapException"
                 icon="i-lucide-wrap-text"
                 @click="
                   () => {
@@ -86,102 +76,103 @@
                   }
                 "
               >
-                <span class="hidden sm:inline">Wrap</span>
+                Wrap
               </UButton>
-              <UButton
-                size="sm"
-                color="neutral"
-                variant="outline"
-                icon="i-lucide-copy"
-                @click="copyText(formatException(log.exception), true)"
-              >
-                Copy
-              </UButton>
-              <UIcon
-                name="i-lucide-chevron-right"
-                :class="[
-                  'size-4 text-toned transition-transform',
-                  exceptionOpen ? 'rotate-90' : '',
-                ]"
-              />
+              <UTooltip text="Copy exception">
+                <UButton
+                  size="sm"
+                  color="neutral"
+                  variant="outline"
+                  icon="i-lucide-copy"
+                  aria-label="Copy exception"
+                  @click="copyText(formatException(log.exception), true)"
+                />
+              </UTooltip>
             </div>
-          </button>
+          </div>
 
           <pre
             v-if="exceptionOpen"
+            :id="`${detailsId}-exception`"
             class="ws-terminal ws-terminal-panel max-h-96 overflow-auto"
             :class="wrapException ? 'whitespace-pre-wrap wrap-break-word' : 'whitespace-pre'"
             >{{ formatException(log.exception) }}</pre>
         </section>
 
-        <section v-if="detailRows.length > 0" class="space-y-3">
-          <button
-            type="button"
-            class="flex w-full flex-wrap items-center justify-between gap-3 text-left"
-            @click="sourceOpen = !sourceOpen"
-          >
-            <div class="flex items-center gap-3">
-              <span
-                class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-default bg-elevated/70 text-primary"
+        <section v-if="detailRows.length > 0" class="space-y-3 border-t border-default pt-4">
+          <div class="flex items-center gap-3">
+            <h3 class="min-w-0 flex-1">
+              <button
+                type="button"
+                class="flex w-full items-center gap-2 py-1 text-left text-sm font-semibold text-highlighted"
+                :aria-expanded="sourceOpen"
+                :aria-controls="`${detailsId}-source`"
+                @click="sourceOpen = !sourceOpen"
               >
-                <UIcon name="i-lucide-file-code" class="size-4" />
-              </span>
-              <p class="text-base font-semibold text-highlighted">Source</p>
-            </div>
-            <div class="flex items-center gap-2" @click.stop>
+                <UIcon
+                  name="i-lucide-chevron-right"
+                  :class="[
+                    'size-4 shrink-0 text-toned transition-transform',
+                    sourceOpen ? 'rotate-90' : '',
+                  ]"
+                />
+                <span>Source</span>
+              </button>
+            </h3>
+            <UTooltip text="Copy source">
               <UButton
                 size="sm"
                 color="neutral"
                 variant="outline"
                 icon="i-lucide-copy"
+                aria-label="Copy source"
                 @click="copyText(sourceJson, true)"
-              >
-                Copy
-              </UButton>
-              <UIcon
-                name="i-lucide-chevron-right"
-                :class="['size-4 text-toned transition-transform', sourceOpen ? 'rotate-90' : '']"
               />
-            </div>
-          </button>
+            </UTooltip>
+          </div>
 
-          <dl v-if="sourceOpen" class="grid gap-2 sm:grid-cols-2">
+          <dl v-if="sourceOpen" :id="`${detailsId}-source`" class="space-y-2">
             <div
               v-for="row in detailRows"
               :key="row.label"
-              class="rounded-sm border border-default bg-elevated/40 p-3"
+              class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-3"
             >
-              <dt
-                class="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-toned"
-              >
+              <dt class="inline-flex items-center gap-1.5 text-xs text-muted">
                 <UIcon :name="row.icon" class="size-3.5" />
                 <span>{{ row.label }}</span>
               </dt>
 
-              <dd class="mt-1 wrap-break-word font-mono text-xs text-default">{{ row.value }}</dd>
+              <dd class="wrap-break-word font-mono text-xs text-default">{{ row.value }}</dd>
             </div>
           </dl>
         </section>
 
-        <section v-if="fieldRows.length > 0" class="space-y-3">
-          <button
-            type="button"
-            class="flex w-full flex-wrap items-center justify-between gap-3 text-left"
-            @click="fieldsOpen = !fieldsOpen"
-          >
-            <div class="flex items-center gap-3">
-              <span
-                class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-default bg-elevated/70 text-primary"
+        <section v-if="fieldRows.length > 0" class="space-y-3 border-t border-default pt-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <h3 class="min-w-0 flex-1">
+              <button
+                type="button"
+                class="flex w-full items-center gap-2 py-1 text-left text-sm font-semibold text-highlighted"
+                :aria-expanded="fieldsOpen"
+                :aria-controls="`${detailsId}-fields`"
+                @click="fieldsOpen = !fieldsOpen"
               >
-                <UIcon name="i-lucide-tags" class="size-4" />
-              </span>
-              <p class="text-base font-semibold text-highlighted">Fields</p>
-            </div>
-            <div class="flex items-center gap-2" @click.stop>
+                <UIcon
+                  name="i-lucide-chevron-right"
+                  :class="[
+                    'size-4 shrink-0 text-toned transition-transform',
+                    fieldsOpen ? 'rotate-90' : '',
+                  ]"
+                />
+                <span>Fields</span>
+              </button>
+            </h3>
+            <div class="flex items-center gap-2">
               <UButton
                 size="sm"
                 color="neutral"
                 :variant="wrapFields ? 'soft' : 'outline'"
+                :aria-pressed="wrapFields"
                 icon="i-lucide-wrap-text"
                 @click="
                   () => {
@@ -189,25 +180,22 @@
                   }
                 "
               >
-                <span class="hidden sm:inline">Wrap</span>
+                Wrap
               </UButton>
-              <UButton
-                size="sm"
-                color="neutral"
-                variant="outline"
-                icon="i-lucide-copy"
-                @click="copyText(displayedFieldsJson, true)"
-              >
-                Copy
-              </UButton>
-              <UIcon
-                name="i-lucide-chevron-right"
-                :class="['size-4 text-toned transition-transform', fieldsOpen ? 'rotate-90' : '']"
-              />
+              <UTooltip text="Copy fields">
+                <UButton
+                  size="sm"
+                  color="neutral"
+                  variant="outline"
+                  icon="i-lucide-copy"
+                  aria-label="Copy fields"
+                  @click="copyText(displayedFieldsJson, true)"
+                />
+              </UTooltip>
             </div>
-          </button>
+          </div>
 
-          <div v-if="fieldsOpen" class="space-y-2">
+          <div v-if="fieldsOpen" :id="`${detailsId}-fields`" class="space-y-2">
             <UInput
               v-model="fieldsQuery"
               type="search"
@@ -217,28 +205,30 @@
               class="w-full"
             />
 
-            <UAlert
+            <UEmpty
               v-if="fieldsQuery && 0 === visibleFieldRows.length"
-              color="warning"
-              variant="soft"
+              size="sm"
+              variant="naked"
               icon="i-lucide-filter"
               title="No matching fields"
             />
 
             <div
-              v-for="field in visibleFieldRows"
+              v-for="(field, fieldIndex) in visibleFieldRows"
               :key="field.key"
-              class="rounded-sm border border-default bg-elevated/40"
+              class="border-b border-default last:border-b-0"
             >
               <button
                 type="button"
-                class="grid w-full grid-cols-[minmax(7rem,0.45fr)_minmax(0,1fr)] items-center gap-3 px-3 py-2 text-left sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]"
+                class="grid w-full grid-cols-[minmax(7rem,0.45fr)_minmax(0,1fr)] items-center gap-3 py-2 text-left sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]"
+                :aria-expanded="fieldOpen(field.key)"
+                :aria-controls="`${detailsId}-field-${fieldIndex}`"
                 @click="toggleField(field.key)"
               >
                 <span class="min-w-0 truncate text-[11px] font-semibold tracking-wide text-toned">
                   {{ field.label }}
                 </span>
-                <div class="flex min-w-0 items-center justify-end gap-2">
+                <span class="flex min-w-0 items-center justify-end gap-2">
                   <span v-if="field.preview" class="min-w-0 truncate text-xs text-toned">
                     {{ field.preview }}
                   </span>
@@ -249,11 +239,15 @@
                       fieldOpen(field.key) ? 'rotate-90' : '',
                     ]"
                   />
-                </div>
+                </span>
               </button>
 
-              <div v-if="fieldOpen(field.key)" class="border-t border-default/70 px-3 py-3">
-                <div class="mb-3 flex items-center justify-between gap-3">
+              <div
+                v-if="fieldOpen(field.key)"
+                :id="`${detailsId}-field-${fieldIndex}`"
+                class="pb-3 pt-1"
+              >
+                <div class="mb-3 flex items-center justify-end gap-3">
                   <div v-if="field.kind !== 'scalar'" class="w-full">
                     <UInput
                       v-model="fieldFilters[field.key]"
@@ -264,22 +258,24 @@
                       class="w-full"
                     />
                   </div>
-                  <UButton
-                    size="sm"
-                    color="neutral"
-                    variant="outline"
-                    icon="i-lucide-copy"
-                    @click="copyText(displayedFieldValue(field), true)"
-                  />
+                  <UTooltip :text="`Copy ${field.label}`">
+                    <UButton
+                      size="sm"
+                      color="neutral"
+                      variant="outline"
+                      icon="i-lucide-copy"
+                      :aria-label="`Copy ${field.label}`"
+                      @click="copyText(displayedFieldValue(field), true)"
+                    />
+                  </UTooltip>
                 </div>
 
-                <UAlert
+                <UEmpty
                   v-if="fieldFilter(field.key) && 0 === filteredFieldLineCount(field)"
-                  color="warning"
-                  variant="soft"
+                  size="sm"
+                  variant="naked"
                   icon="i-lucide-filter"
                   title="No matching lines"
-                  class="mb-3"
                 />
 
                 <pre
@@ -306,25 +302,32 @@
           </div>
         </section>
 
-        <section class="space-y-3">
-          <button
-            type="button"
-            class="flex w-full flex-wrap items-center justify-between gap-3 text-left"
-            @click="rawJsonOpen = !rawJsonOpen"
-          >
-            <div class="flex items-center gap-3">
-              <span
-                class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-default bg-elevated/70 text-primary"
+        <section class="space-y-3 border-t border-default pt-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <h3 class="min-w-0 flex-1">
+              <button
+                type="button"
+                class="flex w-full items-center gap-2 py-1 text-left text-sm font-semibold text-highlighted"
+                :aria-expanded="rawJsonOpen"
+                :aria-controls="`${detailsId}-raw`"
+                @click="rawJsonOpen = !rawJsonOpen"
               >
-                <UIcon name="i-lucide-braces" class="size-4" />
-              </span>
-              <p class="text-base font-semibold text-highlighted">Raw Data</p>
-            </div>
-            <div class="flex items-center gap-2" @click.stop>
+                <UIcon
+                  name="i-lucide-chevron-right"
+                  :class="[
+                    'size-4 shrink-0 text-toned transition-transform',
+                    rawJsonOpen ? 'rotate-90' : '',
+                  ]"
+                />
+                <span>Raw JSON</span>
+              </button>
+            </h3>
+            <div class="flex items-center gap-2">
               <UButton
                 size="sm"
                 color="neutral"
                 :variant="wrapRaw ? 'soft' : 'outline'"
+                :aria-pressed="wrapRaw"
                 icon="i-lucide-wrap-text"
                 @click="
                   () => {
@@ -332,25 +335,22 @@
                   }
                 "
               >
-                <span class="hidden sm:inline">Wrap</span>
+                Wrap
               </UButton>
-              <UButton
-                size="sm"
-                color="neutral"
-                variant="outline"
-                icon="i-lucide-copy"
-                @click="copyText(displayedRawJson, true)"
-              >
-                Copy
-              </UButton>
-              <UIcon
-                name="i-lucide-chevron-right"
-                :class="['size-4 text-toned transition-transform', rawJsonOpen ? 'rotate-90' : '']"
-              />
+              <UTooltip text="Copy raw JSON">
+                <UButton
+                  size="sm"
+                  color="neutral"
+                  variant="outline"
+                  icon="i-lucide-copy"
+                  aria-label="Copy raw JSON"
+                  @click="copyText(displayedRawJson, true)"
+                />
+              </UTooltip>
             </div>
-          </button>
+          </div>
 
-          <div v-if="rawJsonOpen" class="space-y-3">
+          <div v-if="rawJsonOpen" :id="`${detailsId}-raw`" class="space-y-3">
             <UInput
               v-model="rawJsonQuery"
               type="search"
@@ -360,10 +360,10 @@
               class="w-full"
             />
 
-            <UAlert
+            <UEmpty
               v-if="rawJsonQuery && 0 === filteredRawJsonLineCount"
-              color="warning"
-              variant="soft"
+              size="sm"
+              variant="naked"
               icon="i-lucide-filter"
               title="No matching lines"
             />
@@ -377,17 +377,58 @@
         </section>
       </div>
     </template>
+    <template #footer>
+      <div v-if="log" class="flex w-full flex-wrap justify-end gap-2">
+        <UDropdownMenu
+          v-if="quickActions.length > 0"
+          :items="[quickActions]"
+          :content="{ align: 'end' }"
+          :modal="false"
+        >
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-arrow-up-right-from-square"
+            trailing-icon="i-lucide-chevron-down"
+          >
+            Open
+          </UButton>
+        </UDropdownMenu>
+        <UDropdownMenu :items="copyMenuItems" :content="copyMenuContent" :modal="false">
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-copy"
+            trailing-icon="i-lucide-chevron-down"
+          >
+            Copy
+          </UButton>
+        </UDropdownMenu>
+      </div>
+    </template>
   </UModal>
 </template>
 
 <script setup lang="ts">
 import { navigateTo } from '#app';
 import { useStorage } from '@vueuse/core';
-import { computed, ref } from 'vue';
+import { computed, ref, useId } from 'vue';
+import {
+  UAlert,
+  UBadge,
+  UButton,
+  UDropdownMenu,
+  UEmpty,
+  UIcon,
+  UInput,
+  UModal,
+  UTooltip,
+} from '#components';
 import { copyText, goto_history_item, makeEventName, TOOLTIP_DATE_FORMAT } from '~/utils';
 import { useDialog } from '~/composables/useDialog';
 import moment from 'moment';
-import StatCard from '~/components/StatCard.vue';
 import type { ServerJsonLogEntry, ServerJsonLogException } from '~/types';
 import { filterLogTextLines, getLogLevel, LOG_LEVEL_ICON } from '~/utils/logs';
 import type { LogLevel } from '~/utils/logs';
@@ -419,6 +460,7 @@ const emit = defineEmits<{
 
 const dialog = useDialog();
 const apiUser = useStorage('api_user', 'main');
+const detailsId = useId();
 
 const open = computed({
   get: () => props.modelValue ?? false,
@@ -524,8 +566,9 @@ const switchIdentity = async (identity: string): Promise<boolean> => {
   }
 
   const { status } = await dialog.confirmDialog({
-    title: 'Switch Identity',
-    message: `This log is related to identity '${identity}'. You are currently using '${apiUser.value}'. Do you want to switch to view it?`,
+    title: 'Switch identity?',
+    message: `Switch from '${apiUser.value}' to '${identity}' to open this item?`,
+    confirmText: 'Switch identity',
   });
 
   if (true !== status) {

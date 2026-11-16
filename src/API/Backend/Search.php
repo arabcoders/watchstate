@@ -62,6 +62,7 @@ final class Search
                 $data = $backend->searchId($id, [Options::RAW_RESPONSE => $raw]);
                 if (!empty($data)) {
                     $item = $this->formatEntity($data, userContext: $userContext);
+                    $item['poster'] = $this->getBackendPosterUrl($backend, $data, ag($data, Options::RAW_RESPONSE, []));
                     if (true === $raw) {
                         $item[Options::RAW_RESPONSE] = ag($data, Options::RAW_RESPONSE, []);
                     }
@@ -75,6 +76,7 @@ final class Search
                 );
                 foreach ($data as $entity) {
                     $item = $this->formatEntity($entity, userContext: $userContext);
+                    $item['poster'] = $this->getBackendPosterUrl($backend, $entity, ag($entity, Options::RAW_RESPONSE, []));
                     if (true === $raw) {
                         $item[Options::RAW_RESPONSE] = ag($entity, Options::RAW_RESPONSE, []);
                     }

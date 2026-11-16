@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full min-w-0 max-w-full space-y-6">
+  <div class="w-full min-w-0 max-w-full space-y-8">
     <section class="space-y-4">
       <PageHeader v-bind="pageShell">
         <template #kicker>
@@ -10,30 +10,25 @@
 
         <template #actions>
           <UButton
-            color="neutral"
-            variant="outline"
+            color="primary"
+            variant="solid"
             icon="i-lucide-plus"
             :disabled="isLoading"
-            @click="
-              () => {
-                toggleForm = !toggleForm;
-              }
-            "
+            @click="toggleForm = true"
           >
             Add Backend
           </UButton>
 
-          <UTooltip text="Reload backends">
-            <UButton
-              color="neutral"
-              variant="outline"
-              icon="i-lucide-refresh-cw"
-              :loading="isLoading"
-              :disabled="isLoading"
-              aria-label="Reload backends"
-              @click="loadContent"
-            />
-          </UTooltip>
+          <UButton
+            color="neutral"
+            variant="outline"
+            icon="i-lucide-refresh-cw"
+            :loading="isLoading"
+            :disabled="isLoading"
+            @click="loadContent"
+          >
+            Refresh
+          </UButton>
         </template>
       </PageHeader>
 
@@ -47,13 +42,16 @@
           <BackendAdd
             v-if="toggleForm"
             :backends="backends"
+            :actions-target="`#${backendAddFooterId}`"
             @backupData="(e) => handleEvents('backupData', e)"
             @forceExport="(e) => handleEvents('forceExport', e)"
             @addBackend="(e) => handleEvents('addBackend', e)"
             @forceImport="(e) => handleEvents('forceImport', e)"
-            @close="() => void requestCloseBackendAdd()"
             @dirty-change="(dirty) => (backendAddDirty = dirty)"
           />
+        </template>
+        <template #footer>
+          <div :id="backendAddFooterId" class="w-full" />
         </template>
       </UModal>
 
@@ -67,10 +65,13 @@
           <BackendEditForm
             v-if="editBackendOpen && editBackendName"
             :backend-name="editBackendName"
-            @close="() => void requestCloseBackendEdit()"
-            @saved="(backend) => void handleBackendEdited(backend)"
+            :actions-target="`#${backendEditFooterId}`"
+            @saved="void handleBackendEdited()"
             @dirty-change="(dirty) => (backendEditDirty = dirty)"
           />
+        </template>
+        <template #footer>
+          <div :id="backendEditFooterId" class="w-full" />
         </template>
       </UModal>
 
@@ -82,14 +83,12 @@
         <template #body>
           <div v-if="null !== webhookBackend" class="space-y-3">
             <p class="text-sm text-toned">
-              Add or update the webhook URL on the remote backend. The request fails if any of the
-              following happens:
+              Send watch changes to WatchState as they happen. Webhook setup requires:
             </p>
             <ul class="list-disc pl-5 text-sm text-toned">
-              <li>The webhook plugin is not installed.</li>
-              <li>The backend is not reachable.</li>
-              <li>Adding to Emby/Plex without PlexPass or Emby Premiere.</li>
-              <li>The token has insufficient permissions.</li>
+              <li>A reachable backend and a token with permission to manage webhooks.</li>
+              <li>The webhook plugin for Jellyfin.</li>
+              <li>Plex Pass for Plex, or Emby Premiere for Emby.</li>
             </ul>
             <UInput
               :model-value="webhookFullUrl"
@@ -107,10 +106,7 @@
               variant="outline"
               size="sm"
               icon="i-lucide-copy"
-              @click="
-                copyUrl(webhookBackend);
-                webhookBackend = null;
-              "
+              @click="copyUrl(webhookBackend)"
             >
               Copy URL
             </UButton>
@@ -127,267 +123,293 @@
           </div>
         </template>
       </UModal>
+    </section>
 
-      <UAlert
-        v-if="0 === backends.length && isLoading"
-        color="info"
-        variant="soft"
-        icon="i-lucide-loader-circle"
-        title="Loading"
-        description="Loading backends. Please wait..."
-        :ui="{ icon: 'animate-spin' }"
-      />
+    <section aria-label="Backend connections" :aria-busy="isLoading" class="space-y-4">
+      <div v-if="0 < backends.length" class="flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-toned">
+          {{ backends.length }} {{ 1 === backends.length ? 'backend' : 'backends' }}
+          <span class="text-muted">for {{ api_user }}</span>
+        </p>
+        <UInput
+          v-model="search"
+          icon="i-lucide-search"
+          placeholder="Find a backend…"
+          aria-label="Find a backend by name or server type"
+          class="w-full sm:w-72"
+        />
+      </div>
 
-      <UAlert
-        v-else-if="0 === backends.length"
-        color="warning"
-        variant="soft"
-        icon="i-lucide-triangle-alert"
-        title="No backends found"
+      <div
+        v-if="loadError"
+        role="alert"
+        class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-error/30 bg-error/5 p-4"
       >
-        <template #description>
-          <div class="space-y-2 text-sm text-default">
-            <p>
-              No backends found. Please add new backends to start using the tool. You can add a new
-              backend by
-              <button type="button" class="font-medium text-primary" @click="toggleForm = true">
-                clicking here
-              </button>
-              or by using the add button above.
+        <div class="min-w-0 space-y-1">
+          <p class="text-sm font-medium text-highlighted">
+            {{
+              0 < backends.length
+                ? 'Backends could not be refreshed'
+                : 'Backends could not be loaded'
+            }}
+          </p>
+          <p class="wrap-break-word text-sm text-toned">{{ loadError }}</p>
+          <p v-if="0 < backends.length" class="text-xs text-toned">
+            These settings may be out of date.
+          </p>
+        </div>
+        <UButton
+          color="neutral"
+          variant="outline"
+          icon="i-lucide-refresh-cw"
+          :loading="isLoading"
+          @click="loadContent"
+        >
+          Retry
+        </UButton>
+      </div>
+
+      <div
+        v-if="isLoading && 0 === backends.length"
+        role="status"
+        aria-label="Loading backends"
+        class="space-y-4"
+      >
+        <div v-for="index in 2" :key="index" class="ws-card-padded-lg space-y-5">
+          <USkeleton class="h-6 w-40" />
+          <div class="grid gap-4 sm:grid-cols-2">
+            <USkeleton class="h-20" />
+            <USkeleton class="h-20" />
+          </div>
+        </div>
+      </div>
+
+      <UEmpty
+        v-else-if="0 === backends.length && !loadError"
+        icon="i-lucide-server"
+        title="No backends yet"
+        :description="`Add a Plex, Jellyfin, or Emby connection to start syncing watch history for ${api_user}.`"
+      >
+        <template #actions>
+          <UButton color="primary" variant="solid" icon="i-lucide-plus" @click="toggleForm = true">
+            Add Backend
+          </UButton>
+        </template>
+      </UEmpty>
+
+      <UEmpty
+        v-else-if="0 < backends.length && 0 === filteredBackends.length"
+        icon="i-lucide-search"
+        title="No matching backends"
+        description="Try another name or server type."
+      >
+        <template #actions>
+          <UButton color="neutral" variant="outline" icon="i-lucide-x" @click="search = ''">
+            Clear search
+          </UButton>
+        </template>
+      </UEmpty>
+
+      <article
+        v-for="backend in filteredBackends"
+        :key="backend.name"
+        :aria-labelledby="`backend-${backend.name}`"
+        class="ws-card overflow-hidden"
+      >
+        <div class="flex flex-wrap items-start justify-between gap-4 p-4 sm:p-5">
+          <div class="flex min-w-0 items-start gap-3">
+            <span class="ws-section-icon">
+              <UIcon name="i-lucide-server" class="size-5" />
+            </span>
+            <div class="min-w-0 space-y-1">
+              <h2 :id="`backend-${backend.name}`" class="text-lg font-semibold text-highlighted">
+                <NuxtLink
+                  :to="`/backend/${backend.name}`"
+                  class="wrap-anywhere hover:text-primary focus-visible:outline-primary"
+                  >{{ backend.name }}</NuxtLink
+                >
+              </h2>
+              <p class="text-sm text-muted">{{ ucFirst(backend.type) }}</p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <UButton
+              color="neutral"
+              variant="outline"
+              icon="i-lucide-pencil"
+              @click="openBackendEdit(backend.name)"
+              >Edit</UButton
+            >
+            <UButton
+              v-if="'main' === api_user && backend.urls?.webhook"
+              color="neutral"
+              variant="outline"
+              icon="i-lucide-webhook"
+              @click="webhookBackend = backend"
+              >Add Webhook</UButton
+            >
+            <UButton
+              :to="`/backend/${backend.name}/delete?redirect=/backends`"
+              color="neutral"
+              variant="outline"
+              icon="i-lucide-trash-2"
+              :aria-label="`Delete ${backend.name}`"
+            >
+              Delete
+            </UButton>
+          </div>
+        </div>
+
+        <div class="grid gap-6 px-4 pb-5 sm:px-5 lg:grid-cols-2 lg:gap-10">
+          <div class="min-w-0 space-y-3">
+            <USwitch
+              :model-value="backend.import.enabled"
+              :color="backend.import.enabled ? 'success' : 'warning'"
+              :disabled="isLoading || !!loadError || updatingBackends.includes(backend.name)"
+              label="Enable Import"
+              :aria-label="`Enable Import for ${backend.name}`"
+              :description="
+                backend.import.enabled
+                  ? 'Bring watch state, progress, playlists & metadata into WatchState.'
+                  : 'Metadata only. Watch state, progress & playlists stay unchanged.'
+              "
+              @update:model-value="
+                (value) => void updateValue(backend, 'import.enabled', Boolean(value))
+              "
+            />
+            <p class="flex flex-wrap items-center gap-2 text-xs text-muted">
+              <span>Last Import ({{ backend.import.enabled ? 'Full' : 'Basic' }})</span>
+              <UTooltip
+                v-if="backend.import.lastSync"
+                :text="moment(backend.import.lastSync).format(TOOLTIP_DATE_FORMAT)"
+              >
+                <span class="cursor-help text-toned">{{
+                  moment(backend.import.lastSync).fromNow()
+                }}</span>
+              </UTooltip>
+              <span v-else>Never</span>
             </p>
           </div>
-        </template>
-      </UAlert>
 
-      <div v-else class="grid gap-4 xl:grid-cols-2">
-        <UCard
-          v-for="backend in backends"
-          :key="backend.name"
-          class="h-full shadow-sm"
-          :ui="backendCardUi"
-        >
-          <template #header>
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0 flex-1">
-                <UTooltip :text="String(backend.name)">
-                  <NuxtLink
-                    :to="`/backend/${backend.name}`"
-                    class="block truncate text-base font-semibold text-highlighted hover:text-primary"
-                  >
-                    {{ backend.name }}
-                  </NuxtLink>
-                </UTooltip>
-              </div>
-
-              <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                <UTooltip v-if="'main' === api_user && backend.urls?.webhook" text="Webhook">
-                  <UButton
-                    color="neutral"
-                    variant="outline"
-                    size="sm"
-                    icon="i-lucide-webhook"
-                    @click="
-                      () => {
-                        webhookBackend = backend;
-                      }
-                    "
-                  >
-                    <span class="hidden sm:inline">Add Webhook</span>
-                  </UButton>
-                </UTooltip>
-
-                <UTooltip text="Edit backend settings">
-                  <UButton
-                    color="neutral"
-                    variant="outline"
-                    size="sm"
-                    icon="i-lucide-settings"
-                    @click="openBackendEdit(backend.name)"
-                  >
-                    <span class="hidden sm:inline">Edit</span>
-                  </UButton>
-                </UTooltip>
-
-                <UTooltip text="Delete backend">
-                  <UButton
-                    :to="`/backend/${backend.name}/delete?redirect=/backends`"
-                    color="neutral"
-                    variant="outline"
-                    size="sm"
-                    icon="i-lucide-trash-2"
-                  >
-                    <span class="hidden sm:inline">Delete</span>
-                  </UButton>
-                </UTooltip>
-              </div>
-            </div>
-          </template>
-
-          <div class="space-y-4">
-            <div class="grid gap-3 lg:grid-cols-2">
-              <div class="rounded-md border border-default bg-elevated/30 p-4">
-                <div class="flex items-start justify-between gap-4">
-                  <div class="min-w-0">
-                    <p class="text-sm font-medium text-highlighted">Enable Export</p>
-                    <p class="mt-1 text-sm text-toned">Send state updates to this backend.</p>
-                  </div>
-
-                  <USwitch
-                    :model-value="backend.export.enabled"
-                    :color="backend.export.enabled ? 'success' : 'neutral'"
-                    @update:model-value="
-                      (value) => updateValue(backend, 'export.enabled', Boolean(value))
-                    "
-                  />
-                </div>
-              </div>
-
-              <div class="rounded-md border border-default bg-elevated/30 p-4">
-                <div class="flex items-start justify-between gap-4">
-                  <div class="min-w-0">
-                    <p class="text-sm font-medium text-highlighted">Enable Import</p>
-                    <p class="mt-1 text-sm">
-                      Get
-                      <template v-if="backend.import.enabled">
-                        <UTooltip text="Watched status, playlists, progress and metadata">
-                          <span class="text-success underline cursor-help">everything</span>
-                        </UTooltip>
-                      </template>
-                      <template v-else>
-                        <UTooltip
-                          text="Import only metadata no watched status, playlists or progress will be imported"
-                        >
-                          <span class="text-error underline cursor-help">metadata</span>
-                        </UTooltip>
-                      </template>
-                      from this backend.
-                    </p>
-                  </div>
-
-                  <USwitch
-                    :model-value="backend.import.enabled"
-                    :color="backend.import.enabled ? 'success' : 'warning'"
-                    @update:model-value="
-                      (value) => updateValue(backend, 'import.enabled', Boolean(value))
-                    "
-                  />
-                </div>
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div class="rounded-md border border-default bg-elevated/40 p-4 text-sm text-default">
-                <div
-                  class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-                >
-                  <div
-                    class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-                  >
-                    <UIcon name="i-lucide-upload" class="size-3.5 shrink-0" />
-                    <span>Last Export</span>
-                  </div>
-
-                  <div class="min-w-0 sm:ml-auto sm:text-right">
-                    <template v-if="backend.export.enabled">
-                      <UTooltip
-                        v-if="backend.export.lastSync"
-                        :text="moment(backend.export.lastSync).format(TOOLTIP_DATE_FORMAT)"
-                      >
-                        <span class="cursor-help font-medium text-highlighted">{{
-                          moment(backend.export.lastSync).fromNow()
-                        }}</span>
-                      </UTooltip>
-                      <span v-else class="font-medium text-highlighted">Never</span>
-                    </template>
-
-                    <UTooltip v-else text="Local database is not being sync to this backend.">
-                      <UBadge color="error" variant="soft">Disabled</UBadge>
-                    </UTooltip>
-                  </div>
-                </div>
-              </div>
-
-              <div class="rounded-md border border-default bg-elevated/40 p-4 text-sm text-default">
-                <div
-                  class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-                >
-                  <div
-                    class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-                  >
-                    <UIcon name="i-lucide-download" class="size-3.5 shrink-0" />
-                    <span>Last Import ({{ backend.import.enabled ? 'Full' : 'Basic' }})</span>
-                  </div>
-
-                  <div class="min-w-0 sm:ml-auto sm:text-right">
-                    <template v-if="backend.import">
-                      <div class="flex flex-wrap items-center gap-2 sm:justify-end">
-                        <UTooltip
-                          v-if="backend.import.lastSync"
-                          :text="moment(backend.import.lastSync).format(TOOLTIP_DATE_FORMAT)"
-                        >
-                          <span class="cursor-help font-medium text-highlighted">{{
-                            moment(backend.import.lastSync).fromNow()
-                          }}</span>
-                        </UTooltip>
-                        <span v-else class="font-medium text-highlighted">Never</span>
-                      </div>
-                    </template>
-
-                    <UTooltip v-else text="All data import from this backend is disabled.">
-                      <UBadge color="error" variant="soft">Disabled</UBadge>
-                    </UTooltip>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div
-              v-if="backendReportSummary(backend.name)"
-              class="grid grid-cols-2 gap-3 lg:grid-cols-3"
-            >
-              <div
-                v-for="stat in backendReportCards(backend.name)"
-                :key="stat.label"
-                class="rounded-md border border-default bg-elevated/40 p-4 text-sm text-default"
+          <div class="min-w-0 space-y-3">
+            <USwitch
+              :model-value="backend.export.enabled"
+              :color="backend.export.enabled ? 'success' : 'neutral'"
+              :disabled="isLoading || !!loadError || updatingBackends.includes(backend.name)"
+              label="Enable Export"
+              :aria-label="`Enable Export for ${backend.name}`"
+              description="Send WatchState's watch state & progress to this backend."
+              @update:model-value="
+                (value) => void updateValue(backend, 'export.enabled', Boolean(value))
+              "
+            />
+            <p class="flex flex-wrap items-center gap-2 text-xs text-muted">
+              <span>Last Export</span>
+              <UTooltip
+                v-if="backend.export.lastSync"
+                :text="moment(backend.export.lastSync).format(TOOLTIP_DATE_FORMAT)"
               >
-                <div
-                  class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-                >
-                  <div
-                    class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-                  >
-                    <UIcon :name="stat.icon" class="size-3.5 shrink-0" />
-                    <span>{{ stat.label }}</span>
-                  </div>
-                  <span :class="['font-semibold sm:ml-auto sm:text-right', stat.color]">
-                    {{ stat.value }}
-                  </span>
-                </div>
-              </div>
-            </div>
+                <span class="cursor-help text-toned">{{
+                  moment(backend.export.lastSync).fromNow()
+                }}</span>
+              </UTooltip>
+              <span v-else>Never</span>
+              <UBadge v-if="!backend.export.enabled" color="neutral" variant="soft" size="sm">
+                Disabled
+              </UBadge>
+            </p>
           </div>
+        </div>
 
-          <template #footer>
-            <div>
-              <USelect
-                v-model="selectedCommand"
-                :items="getUsefulCommandItems(backend)"
-                value-key="value"
-                placeholder="Quick operations"
-                icon="i-lucide-terminal"
-                class="w-full"
-                @update:model-value="() => void forwardCommand(backend)"
-              />
+        <div
+          v-if="backendReportSummary(backend.name)"
+          class="border-t border-default bg-elevated/20 px-4 py-3 sm:px-5"
+        >
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h3 class="text-xs font-medium text-toned">Local records</h3>
+            <UTooltip
+              v-if="backendReport?.report?.completed_at"
+              :text="moment.unix(backendReport.report.completed_at).format(TOOLTIP_DATE_FORMAT)"
+            >
+              <span class="cursor-help text-xs text-muted">
+                Report {{ moment.unix(backendReport.report.completed_at).fromNow() }}
+              </span>
+            </UTooltip>
+          </div>
+          <dl class="mt-3 grid grid-cols-3 gap-x-4 gap-y-3 sm:grid-cols-6">
+            <div v-for="stat in backendReportCards(backend.name)" :key="stat.label">
+              <dt class="text-xs text-muted">{{ stat.label }}</dt>
+              <dd :class="['mt-1 text-sm font-semibold tabular-nums', stat.color]">
+                {{ stat.value }}
+              </dd>
             </div>
-          </template>
-        </UCard>
-      </div>
+          </dl>
+        </div>
+
+        <div
+          class="flex flex-wrap items-center justify-between gap-3 border-t border-default px-4 py-3 sm:px-5"
+        >
+          <UButton
+            :to="`/backend/${backend.name}/libraries`"
+            color="neutral"
+            variant="ghost"
+            icon="i-lucide-library-big"
+            >Libraries</UButton
+          >
+          <USelect
+            v-model="selectedCommand"
+            :items="getUsefulCommandItems(backend)"
+            value-key="value"
+            placeholder="Quick operations"
+            :aria-label="`Quick operations for ${backend.name}`"
+            icon="i-lucide-terminal"
+            :disabled="isLoading || !!loadError || updatingBackends.includes(backend.name)"
+            class="w-full sm:w-96"
+            @update:model-value="() => void forwardCommand(backend)"
+          />
+        </div>
+      </article>
+
+      <p v-if="reportError && 0 < backends.length" role="alert" class="text-sm text-toned">
+        Local record counts are unavailable. {{ reportError }}
+        <NuxtLink to="/backend_report" class="font-medium text-primary"
+          >Open Backend Report</NuxtLink
+        >
+      </p>
+      <p
+        v-else-if="!isLoading && 0 < backends.length && !backendReport?.report?.summary"
+        class="text-sm text-toned"
+      >
+        {{
+          backendReport?.queued
+            ? 'Local record counts are being prepared.'
+            : 'No local record counts yet.'
+        }}
+        <NuxtLink to="/backend_report" class="font-medium text-primary"
+          >Open Backend Report</NuxtLink
+        >
+      </p>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue';
-import { navigateTo, useHead, useRoute } from '#app';
+import { onBeforeUnmount, onMounted, ref, computed, useId, watch } from 'vue';
+import { navigateTo, useHead } from '#app';
+import {
+  NuxtLink,
+  UBadge,
+  UButton,
+  UEmpty,
+  UIcon,
+  UInput,
+  UModal,
+  USelect,
+  USkeleton,
+  USwitch,
+  UTooltip,
+} from '#components';
 import { useStorage } from '@vueuse/core';
 import moment from 'moment';
 import BackendAdd from '~/components/BackendAdd.vue';
@@ -419,6 +441,8 @@ import type {
 type UsefulCommand = UtilityCommand;
 
 const pageShell = requireTopLevelPageShell('backends');
+const backendAddFooterId = useId();
+const backendEditFooterId = useId();
 
 type UsefulCommands = Record<string, UsefulCommand>;
 
@@ -438,8 +462,6 @@ type SelectItem = {
   disabled?: boolean;
 };
 
-useHead({ title: 'Backends' });
-
 const backends = ref<Array<Backend>>([]);
 const backendReport = ref<BackendReportResponse | null>(null);
 const toggleForm = ref<boolean>(false);
@@ -448,8 +470,23 @@ const editBackendOpen = ref<boolean>(false);
 const backendEditDirty = ref<boolean>(false);
 const editBackendName = ref<string>('');
 const api_user = useStorage('api_user', 'main');
-const isLoading = ref<boolean>(false);
+const isLoading = ref<boolean>(true);
 const selectedCommand = ref<string>('');
+const search = ref('');
+const loadError = ref('');
+const reportError = ref('');
+const updatingBackends = ref<Array<string>>([]);
+let loadVersion = 0;
+
+useHead(() => ({ title: `${ucFirst(api_user.value)} @ Backends` }));
+
+const filteredBackends = computed(() => {
+  const query = search.value.trim().toLowerCase();
+  return backends.value.filter((backend) =>
+    `${backend.name} ${backend.type}`.toLowerCase().includes(query),
+  );
+});
+
 const formatReportNumber = (value: number): string => new Intl.NumberFormat().format(value);
 
 const backendReportSummary = (backend: string): BackendReportBackendSummary | null =>
@@ -457,7 +494,7 @@ const backendReportSummary = (backend: string): BackendReportBackendSummary | nu
 
 const backendReportCards = (
   backend: string,
-): Array<{ label: string; value: string; color: string; icon: string }> => {
+): Array<{ label: string; value: string; color: string }> => {
   const summary = backendReportSummary(backend);
   if (null === summary) {
     return [];
@@ -468,37 +505,31 @@ const backendReportCards = (
       label: 'Total',
       value: formatReportNumber(summary.total),
       color: 'text-highlighted',
-      icon: 'i-lucide-database',
     },
     {
       label: 'Movies',
       value: formatReportNumber(summary.types.movie.total),
       color: 'text-highlighted',
-      icon: 'i-lucide-film',
     },
     {
       label: 'Episodes',
       value: formatReportNumber(summary.types.episode.total),
       color: 'text-highlighted',
-      icon: 'i-lucide-clapperboard',
     },
     {
       label: 'Watched',
       value: formatReportNumber(summary.watched),
       color: 'text-success',
-      icon: 'i-lucide-circle-check',
     },
     {
       label: 'Unwatched',
       value: formatReportNumber(summary.unwatched),
       color: 'text-highlighted',
-      icon: 'i-lucide-circle',
     },
     {
       label: 'In progress',
       value: formatReportNumber(summary.in_progress),
       color: 'text-info',
-      icon: 'i-lucide-clock-3',
     },
   ];
 };
@@ -514,12 +545,6 @@ const webhookFullUrl = computed((): string => {
   return window.origin + urls.webhook;
 });
 
-const backendCardUi = {
-  header: 'p-5',
-  body: 'p-5',
-  footer: 'p-5 border-t border-default',
-};
-
 const backendAddModalUi = {
   content: 'max-w-5xl',
   body: 'p-4 sm:p-5',
@@ -530,22 +555,20 @@ const backendEditModalUi = {
   body: 'p-4 sm:p-5',
 };
 
-const { handleOpenChange: handleBackendAddOpenChange, requestClose: requestCloseBackendAdd } =
-  useDirtyCloseGuard(toggleForm, {
-    dirty: backendAddDirty,
-    onDiscard: async () => {
-      backendAddDirty.value = false;
-    },
-  });
+const { handleOpenChange: handleBackendAddOpenChange } = useDirtyCloseGuard(toggleForm, {
+  dirty: backendAddDirty,
+  onDiscard: async () => {
+    backendAddDirty.value = false;
+  },
+});
 
-const { handleOpenChange: handleBackendEditOpenChange, requestClose: requestCloseBackendEdit } =
-  useDirtyCloseGuard(editBackendOpen, {
-    dirty: backendEditDirty,
-    onDiscard: async () => {
-      backendEditDirty.value = false;
-      editBackendName.value = '';
-    },
-  });
+const { handleOpenChange: handleBackendEditOpenChange } = useDirtyCloseGuard(editBackendOpen, {
+  dirty: backendEditDirty,
+  onDiscard: async () => {
+    backendEditDirty.value = false;
+    editBackendName.value = '';
+  },
+});
 
 const usefulCommands: UsefulCommands = {
   export_now: {
@@ -628,47 +651,93 @@ const forwardCommand = async (backend: Backend): Promise<void> => {
 };
 
 const loadContent = async (): Promise<void> => {
-  backends.value = [];
-  backendReport.value = null;
+  const version = ++loadVersion;
+  const user = api_user.value;
   isLoading.value = true;
+  loadError.value = '';
+  reportError.value = '';
+
   try {
-    const [backendsResponse, reportResponse] = await Promise.all([
-      request('/backends'),
-      request('/state/backend-report'),
+    const [backendsResult, reportResult] = await Promise.allSettled([
+      request('/backends', { headers: { 'X-User': user } }).then((response) =>
+        parse_api_response<Array<Backend>>(response),
+      ),
+      request('/state/backend-report', { headers: { 'X-User': user } }).then((response) =>
+        parse_api_response<BackendReportResponse>(response),
+      ),
     ]);
-    const json = await parse_api_response<Array<Backend>>(backendsResponse);
-    if ('error' in json) {
-      notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`);
+
+    if (version !== loadVersion || user !== api_user.value) {
       return;
     }
 
-    if ('backends' !== useRoute().name) {
-      return;
+    if ('rejected' === backendsResult.status) {
+      throw backendsResult.reason;
+    }
+
+    const json = backendsResult.value;
+    if ('error' in json) {
+      throw new Error(`${json.error.code}: ${json.error.message}`);
     }
     backends.value = json;
 
-    const reportJson = await parse_api_response<BackendReportResponse>(reportResponse);
-    if (!('error' in reportJson)) {
-      backendReport.value = reportJson;
+    if ('rejected' === reportResult.status) {
+      backendReport.value = null;
+      reportError.value =
+        reportResult.reason instanceof Error
+          ? reportResult.reason.message
+          : 'Could not load Backend Report.';
+    } else if ('error' in reportResult.value) {
+      backendReport.value = null;
+      reportError.value = reportResult.value.error.message;
+    } else {
+      backendReport.value = reportResult.value;
+    }
+  } catch (e) {
+    if (version !== loadVersion || user !== api_user.value) {
+      return;
     }
 
-    useHead({ title: `${ucFirst(api_user.value)} @ Backends` });
-  } catch (e) {
-    const error = e as Error;
-    notification('error', 'Error', `Failed to load backends. ${error.message}`);
+    loadError.value = e instanceof Error ? e.message : 'Could not load backends.';
+    notification('error', 'Backends could not be loaded', loadError.value);
   } finally {
-    isLoading.value = false;
+    if (version === loadVersion) {
+      isLoading.value = false;
+    }
   }
 };
 
 onMounted((): void => {
-  loadContent();
+  void loadContent();
+});
+
+watch(
+  api_user,
+  () => {
+    backends.value = [];
+    backendReport.value = null;
+    search.value = '';
+    webhookBackend.value = null;
+    toggleForm.value = false;
+    editBackendOpen.value = false;
+    editBackendName.value = '';
+    backendAddDirty.value = false;
+    backendEditDirty.value = false;
+    void loadContent();
+  },
+  { flush: 'sync' },
+);
+
+onBeforeUnmount(() => {
+  ++loadVersion;
 });
 
 const copyUrl = (b: Backend): void => {
   if (b.urls?.webhook) {
     copyText(window.origin + b.urls.webhook);
   }
+
+  webhookBackend.value = null;
 };
 
 const handleWebhookModalClose = (): void => {
@@ -690,21 +759,17 @@ const addWebhook = async (b: Backend): Promise<void> => {
       body: JSON.stringify({ webhook_url: webhookUrl }),
     });
 
-    if (false === response.ok) {
-      const json = (await response.json()) as { error?: { message?: string } };
-      notification(
-        'error',
-        'Error',
-        json?.error?.message ?? `Failed to configure webhook for '${b.name}'.`,
-      );
+    const json = await parse_api_response<{ message: string }>(response);
+    if ('error' in json) {
+      notification('error', 'Webhook could not be configured', json.error.message);
       return;
     }
 
-    notification('success', 'Success', `Webhook configured for '${b.name}'.`);
+    notification('success', 'Webhook configured', `Configured for '${b.name}'.`);
     webhookBackend.value = null;
   } catch (e) {
     const error = e as Error;
-    notification('error', 'Error', `Failed to configure webhook: ${error.message}`);
+    notification('error', 'Webhook could not be configured', error.message);
   } finally {
     webhookLoading.value = false;
   }
@@ -716,35 +781,53 @@ const openBackendEdit = (backendName: string): void => {
   editBackendOpen.value = true;
 };
 
-const handleBackendEdited = async (backend: Backend): Promise<void> => {
+const handleBackendEdited = async (): Promise<void> => {
   backendEditDirty.value = false;
   editBackendOpen.value = false;
   editBackendName.value = '';
 
-  const index = backends.value.findIndex((current) => current.name === backend.name);
-  if (-1 !== index) {
-    await loadContent();
-    return;
-  }
-
   await loadContent();
 };
 
-const updateValue = async (backend: Backend, key: string, newValue: boolean): Promise<void> => {
-  const response = await request(`/backend/${backend.name}`, {
-    method: 'PATCH',
-    body: JSON.stringify([
-      {
-        key: key,
-        value: newValue,
-      },
-    ]),
-  });
+const updateValue = async (
+  backend: Backend,
+  key: 'import.enabled' | 'export.enabled',
+  newValue: boolean,
+): Promise<void> => {
+  if (updatingBackends.value.includes(backend.name)) {
+    return;
+  }
 
-  const updatedBackend = (await response.json()) as Backend;
-  const index = backends.value.findIndex((b) => b.name === backend.name);
-  if (-1 !== index) {
-    backends.value[index] = updatedBackend;
+  const user = api_user.value;
+  updatingBackends.value.push(backend.name);
+
+  try {
+    const response = await request(`/backend/${backend.name}`, {
+      method: 'PATCH',
+      headers: { 'X-User': user },
+      body: JSON.stringify([{ key, value: newValue }]),
+    });
+    const updatedBackend = await parse_api_response<Backend>(response);
+    if ('error' in updatedBackend) {
+      throw new Error(updatedBackend.error.message);
+    }
+
+    if (user !== api_user.value) {
+      return;
+    }
+
+    const index = backends.value.findIndex((current) => current.name === backend.name);
+    if (-1 !== index) {
+      backends.value[index] = updatedBackend;
+    }
+  } catch (e) {
+    notification(
+      'error',
+      `Could not save ${backend.name}`,
+      e instanceof Error ? e.message : 'Try changing the setting again.',
+    );
+  } finally {
+    updatingBackends.value = updatingBackends.value.filter((name) => name !== backend.name);
   }
 };
 
@@ -764,15 +847,10 @@ const handleEvents = async (event: string, backend: Backend): Promise<void> => {
             '{user}.{backend}.{date}.initial_backup.json',
           ],
         });
-        notification(
-          'info',
-          'Info',
-          `We are going to initiate a backup for '${backend.name}' in little bit.`,
-          5000,
-        );
+        notification('info', 'Backup queued', `Queued for '${backend.name}'.`, 5000);
       } catch (e) {
         const error = e as Error;
-        notification('error', 'Error', `Failed to queue backup request. ${error.message}`);
+        notification('error', 'Backup not queued', error.message);
       }
       break;
     case 'forceExport':
@@ -786,15 +864,10 @@ const handleEvents = async (event: string, backend: Backend): Promise<void> => {
           300,
         );
 
-        notification(
-          'info',
-          'Info',
-          `Soon we are going to force export the local data to '${backend.name}'.`,
-          5000,
-        );
+        notification('info', 'Force export queued', `Queued for '${backend.name}'.`, 5000);
       } catch (e) {
         const error = e as Error;
-        notification('error', 'Error', `Failed to queue force export request. ${error.message}`);
+        notification('error', 'Force export not queued', error.message);
       }
       break;
     case 'forceImport':
@@ -808,10 +881,10 @@ const handleEvents = async (event: string, backend: Backend): Promise<void> => {
           300,
         );
 
-        notification('info', 'Info', `Soon we will import data from '${backend.name}'.`, 5000);
+        notification('info', 'Force import queued', `Queued for '${backend.name}'.`, 5000);
       } catch (e) {
         const error = e as Error;
-        notification('error', 'Error', `Failed to queue force export request. ${error.message}`);
+        notification('error', 'Force import not queued', error.message);
       }
       break;
     case 'addBackend':

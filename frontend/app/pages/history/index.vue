@@ -2,73 +2,6 @@
   <main class="w-full min-w-0 max-w-full space-y-6">
     <PageHeader v-bind="pageShell">
       <template #actions>
-        <UInput
-          v-if="showFilter"
-          id="filter"
-          v-model="filter"
-          type="search"
-          placeholder="Filter displayed results"
-          icon="i-lucide-filter"
-          size="sm"
-          class="w-full sm:w-72"
-        />
-
-        <UButton
-          color="neutral"
-          :variant="showFilter ? 'soft' : 'outline'"
-          size="sm"
-          icon="i-lucide-filter"
-          @click="toggleFilter"
-        >
-          <span class="hidden sm:inline">Page filter</span>
-        </UButton>
-
-        <USelect
-          v-model="historyView"
-          :items="historyViewItems"
-          value-key="value"
-          label-key="label"
-          color="neutral"
-          variant="outline"
-          size="sm"
-          class="w-36"
-          aria-label="History view"
-        />
-
-        <USelect
-          v-model="perpage"
-          :items="perPageItems"
-          value-key="value"
-          label-key="label"
-          color="neutral"
-          variant="outline"
-          size="sm"
-          class="w-40"
-          :disabled="isLoading"
-          @update:model-value="() => void loadContent(1)"
-        />
-
-        <UButton
-          color="neutral"
-          :variant="showFilters ? 'soft' : 'outline'"
-          size="sm"
-          icon="i-lucide-search"
-          @click="showFilters = !showFilters"
-        >
-          <span class="hidden sm:inline">Filters</span>
-        </UButton>
-
-        <UButton
-          color="neutral"
-          :variant="pageSelected ? 'soft' : 'outline'"
-          size="sm"
-          :icon="pageSelected ? 'i-lucide-square' : 'i-lucide-square-check-big'"
-          :disabled="isLoading || massActionInProgress || 0 === filteredItems.length"
-          @click="selectRecords(filteredItems, !pageSelected)"
-        >
-          <span class="hidden sm:inline">{{ pageSelected ? 'Unselect page' : 'Select page' }}</span>
-        </UButton>
-
         <UButton
           color="neutral"
           variant="outline"
@@ -85,34 +18,155 @@
           variant="outline"
           size="sm"
           icon="i-lucide-refresh-cw"
+          aria-label="Refresh history"
           :loading="isLoading"
           :disabled="isLoading"
-          @click="() => void loadContent(page)"
+          @click="() => void loadContent(requestedPage)"
         >
-          <span class="hidden sm:inline">Reload</span>
+          Refresh
         </UButton>
       </template>
     </PageHeader>
 
-    <HistoryFilters
-      v-show="showFilters"
-      :query="query"
-      :searchable="searchable"
-      :options="filterOptions"
-      :loading="isLoading || massActionInProgress"
-      @apply="applyFilters"
-      @draft-state="draftBlocked = !$event.valid || $event.dirty"
-    />
+    <section aria-label="History controls" class="space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div
+          role="group"
+          class="inline-flex items-center gap-1 rounded-lg bg-muted p-1"
+          aria-label="History view"
+        >
+          <UButton
+            color="neutral"
+            :variant="'compact' === historyView ? 'soft' : 'outline'"
+            icon="i-lucide-layout-grid"
+            :aria-pressed="'compact' === historyView"
+            size="sm"
+            @click="historyView = 'compact'"
+          >
+            Grid
+          </UButton>
+          <UButton
+            color="neutral"
+            :variant="'detailed' === historyView ? 'soft' : 'outline'"
+            icon="i-lucide-list"
+            :aria-pressed="'detailed' === historyView"
+            size="sm"
+            @click="historyView = 'detailed'"
+          >
+            List
+          </UButton>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <UButton
+            color="neutral"
+            :variant="showFilters ? 'soft' : 'outline'"
+            size="sm"
+            icon="i-lucide-search"
+            :aria-expanded="showFilters"
+            aria-controls="history-server-filters"
+            @click="showFilters = !showFilters"
+          >
+            Search history
+            <UBadge v-if="appliedFilters.length" color="neutral" variant="soft" size="xs">
+              {{ appliedFilters.length }}
+            </UBadge>
+          </UButton>
+          <UButton
+            color="neutral"
+            :variant="showFilter ? 'soft' : 'outline'"
+            size="sm"
+            icon="i-lucide-list-filter"
+            :aria-expanded="showFilter"
+            aria-controls="history-page-filter"
+            @click="toggleFilter"
+          >
+            Filter this page
+          </UButton>
+          <USelect
+            v-model="perpage"
+            :items="perPageItems"
+            value-key="value"
+            label-key="label"
+            color="neutral"
+            variant="outline"
+            size="sm"
+            class="w-36"
+            aria-label="Records per page"
+            :disabled="isLoading || massActionInProgress"
+            @update:model-value="() => void loadContent(1)"
+          />
+        </div>
+      </div>
 
-    <div class="flex flex-wrap items-center justify-between gap-2 text-sm text-toned">
-      <span
-        >{{ matchingCount }} matching records<span v-if="filter">
-          · {{ filteredItems.length }} displayed on this page</span
-        ></span
-      >
-      <span v-if="draftBlocked">Apply filters to update results &amp; export.</span>
-      <span v-else-if="filter">Matching export is disabled while the page filter is active.</span>
-    </div>
+      <div v-show="showFilters" id="history-server-filters">
+        <HistoryFilters
+          :query="query"
+          :searchable="searchable"
+          :options="filterOptions"
+          :loading="isLoading || massActionInProgress"
+          @apply="applyFilters"
+          @draft-state="draftBlocked = !$event.valid || $event.dirty"
+        />
+      </div>
+
+      <div v-if="showFilter" id="history-page-filter" class="flex flex-wrap items-center gap-3">
+        <UInput
+          id="filter"
+          v-model="filter"
+          type="search"
+          placeholder="Title, backend, or file path"
+          aria-label="Filter records on the current page"
+          icon="i-lucide-list-filter"
+          size="sm"
+          class="w-full sm:w-80"
+        />
+      </div>
+
+      <div v-if="appliedFilters.length || filter" class="flex flex-wrap items-center gap-2">
+        <span class="text-xs text-dimmed">Applied</span>
+        <UButton
+          v-for="chip in appliedFilters"
+          :key="`${chip.key}:${chip.value}`"
+          color="neutral"
+          variant="soft"
+          size="xs"
+          trailing-icon="i-lucide-x"
+          :aria-label="`Remove filter ${chip.label}`"
+          :disabled="isLoading || massActionInProgress"
+          @click="removeFilter(chip.key, chip.value)"
+        >
+          {{ chip.label }}
+        </UButton>
+        <UButton
+          v-if="filter"
+          color="neutral"
+          variant="soft"
+          size="xs"
+          trailing-icon="i-lucide-x"
+          :aria-label="`Remove page filter ${filter}`"
+          @click="filter = ''"
+        >
+          This page: {{ filter }}
+        </UButton>
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="xs"
+          icon="i-lucide-x"
+          :disabled="isLoading || massActionInProgress"
+          @click="clearFilters"
+        >
+          Clear all
+        </UButton>
+      </div>
+
+      <p v-if="draftBlocked" class="text-sm text-warning" role="status">
+        Apply your search changes to select, edit, or export records.
+      </p>
+      <p v-else-if="filter" class="text-xs text-toned">
+        Clear the page filter to export all search matches, or export selected records.
+      </p>
+    </section>
 
     <HistoryExportModal
       v-model:open="exportOpen"
@@ -126,130 +180,172 @@
       @export="downloadHistory"
     />
 
-    <div
-      v-if="selected_ids.length > 0"
-      class="ws-card flex flex-wrap items-center justify-between gap-3 px-3 py-3"
+    <section
+      v-if="0 < selected_ids.length"
+      class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3"
+      aria-label="Selected record actions"
     >
       <div class="flex flex-wrap items-center gap-2">
-        <UBadge color="neutral" variant="soft" size="sm">{{ selected_ids.length }}</UBadge>
-        <span class="text-xs text-toned">selected across pages</span>
+        <span class="text-sm font-medium text-highlighted">{{ selected_ids.length }} selected</span>
+        <span class="text-xs text-toned">across pages</span>
 
         <UButton
           color="neutral"
           variant="outline"
-          size="sm"
-          :disabled="massActionInProgress"
-          @click="clearSelection"
-          >Clear selection</UButton
-        >
-
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="sm"
-          icon="i-lucide-trash-2"
-          :loading="massActionInProgress"
-          :disabled="massActionInProgress || isLoading || draftBlocked"
-          @click="() => void massAction('delete')"
-        >
-          Delete
-        </UButton>
-
-        <UButton
-          color="neutral"
-          variant="soft"
           size="sm"
           icon="i-lucide-eye"
           :loading="massActionInProgress"
-          :disabled="massActionInProgress || isLoading || draftBlocked"
+          :disabled="exportBlocked || !selection.some((item) => !item.watched)"
           @click="() => void massAction('mark_played')"
         >
-          Mark Played
+          Mark watched
         </UButton>
 
         <UButton
           color="neutral"
-          variant="soft"
+          variant="outline"
           size="sm"
           icon="i-lucide-eye-off"
           :loading="massActionInProgress"
-          :disabled="massActionInProgress || isLoading || draftBlocked"
+          :disabled="exportBlocked || !selection.some((item) => item.watched)"
           @click="() => void massAction('mark_unplayed')"
         >
-          Mark Unplayed
+          Mark unwatched
         </UButton>
       </div>
 
-      <div class="text-xs text-toned">{{ filteredItems.length }} displayed</div>
-    </div>
+      <div class="flex items-center gap-2">
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          icon="i-lucide-download"
+          :disabled="!selectedEnabled || exporting"
+          @click="exportOpen = true"
+        >
+          Export selected
+        </UButton>
+        <UDropdownMenu :items="selectionActions">
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-ellipsis"
+            aria-label="More selected record actions"
+            :disabled="massActionInProgress"
+          >
+            More actions
+          </UButton>
+        </UDropdownMenu>
+      </div>
+    </section>
 
-    <div v-if="total && last_page > 1" class="flex flex-wrap items-center justify-between gap-3">
-      <Pager :page="page" :last_page="last_page" :is-loading="isLoading" @navigate="navigatePage" />
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="space-y-1 text-sm text-toned" aria-live="polite" aria-atomic="true">
+        <p v-if="hasResults">
+          <strong class="font-medium text-highlighted">{{ total.toLocaleString() }}</strong>
+          {{ appliedFilters.length ? 'matching records' : 'history records' }}
+          <span class="text-dimmed">
+            · {{ filteredItems.length }}{{ filter ? ` of ${items.length}` : '' }} on this page
+          </span>
+        </p>
+        <p v-if="isLoading" class="inline-flex items-center gap-1.5 text-xs">
+          <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
+          {{ hasResults ? 'Refreshing this page…' : 'Loading history…' }}
+        </p>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <UButton
+          color="neutral"
+          :variant="pageSelected ? 'soft' : 'outline'"
+          size="sm"
+          :icon="pageSelected ? 'i-lucide-square-minus' : 'i-lucide-square-check-big'"
+          :disabled="exportBlocked || 0 === filteredItems.length"
+          @click="selectRecords(filteredItems, !pageSelected)"
+        >
+          {{ pageSelected ? 'Unselect page' : 'Select page' }}
+        </UButton>
+        <Pager
+          v-if="total && 1 < last_page"
+          :page="page"
+          :last_page="last_page"
+          :is-loading="isLoading"
+          @navigate="navigatePage"
+        />
+      </div>
     </div>
 
     <UAlert
-      v-if="isLoading"
+      v-if="isLoading && !hasResults"
       color="info"
       variant="soft"
       icon="i-lucide-loader-circle"
-      title="Loading"
-      description="Loading data. Please wait..."
+      title="Loading history"
       :ui="{ icon: 'animate-spin' }"
     />
 
     <UAlert
-      v-else-if="filteredItems.length < 1"
-      color="warning"
+      v-if="error"
+      color="error"
       variant="soft"
-      icon="i-lucide-triangle-alert"
-      title="No items found"
+      icon="i-lucide-circle-alert"
+      title="History couldn't be loaded"
     >
       <template #description>
-        <div class="space-y-2 text-sm text-default">
-          <p>
-            No items found.
-            <span v-if="activeSearchSummary">
-              For
-              <code>{{ activeSearchSummary }}</code>
-            </span>
-            <span v-if="filter">
-              For
-              <code
-                ><strong>Filter</strong>: <strong>{{ filter }}</strong></code
-              >
-            </span>
+        <div class="space-y-3">
+          <p>{{ error }}</p>
+          <p v-if="hasResults">
+            These records may be out of date. Retry before changing or exporting them.
           </p>
-
-          <code
-            v-if="error"
-            class="block rounded-md border border-default bg-elevated/60 p-3 text-xs"
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-refresh-cw"
+            :disabled="isLoading"
+            @click="() => void loadContent(requestedPage)"
           >
-            {{ error }}
-          </code>
+            Retry
+          </UButton>
         </div>
       </template>
     </UAlert>
 
+    <UEmpty
+      v-if="!isLoading && !error && hasResults && 0 === filteredItems.length"
+      icon="i-lucide-search"
+      :title="filter || appliedFilters.length ? 'No matching records' : 'No history yet'"
+      :description="
+        filter
+          ? 'Clear the page filter or use Search history to search all pages.'
+          : appliedFilters.length
+            ? 'Try a broader search or remove an applied filter.'
+            : 'Check backend import settings or webhook setup to start collecting history.'
+      "
+    />
+
     <HistoryCompactView
-      v-else-if="'compact' === historyView"
+      v-if="0 < filteredItems.length && 'compact' === historyView"
       :items="filteredItems"
       :selected-ids="selected_ids"
+      :selection-disabled="exportBlocked"
       :poster-enable="poster_enable"
       :user="apiUser"
       @select="toggleSelected"
     />
 
     <HistoryDetailedView
-      v-else
+      v-else-if="0 < filteredItems.length"
       :items="filteredItems"
       :selected-ids="selected_ids"
+      :selection-disabled="exportBlocked"
       :poster-enable="poster_enable"
       :user="apiUser"
       @select="toggleSelected"
       @expand="toggleExpanded"
     />
 
-    <div v-if="total && last_page > 1" class="flex flex-wrap items-center justify-between gap-3">
+    <div v-if="total && 1 < last_page" class="flex flex-wrap items-center justify-between gap-3">
       <Pager :page="page" :last_page="last_page" :is-loading="isLoading" @navigate="navigatePage" />
       <div class="text-xs text-toned">Page {{ page }} of {{ last_page }}</div>
     </div>
@@ -261,7 +357,16 @@ import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue';
 import { useRoute, useRouter, useHead } from '#app';
 import { useStorage } from '@vueuse/core';
 import Pager from '~/components/Pager.vue';
-import { UAlert, UBadge, UButton, UInput, USelect } from '#components';
+import {
+  UAlert,
+  UBadge,
+  UButton,
+  UDropdownMenu,
+  UEmpty,
+  UIcon,
+  UInput,
+  USelect,
+} from '#components';
 import HistoryCompactView from '~/components/HistoryCompactView.vue';
 import HistoryDetailedView from '~/components/HistoryDetailedView.vue';
 import HistoryFilters from '~/components/HistoryFilters.vue';
@@ -296,16 +401,13 @@ useHead({ title: 'History' });
 const poster_enable = useStorage('poster_enable', true);
 const apiUser = useStorage<string>('api_user', 'main');
 const historyView = useStorage<'detailed' | 'compact'>('history_view', 'compact');
-const historyViewItems = [
-  { label: 'Detailed', value: 'detailed', icon: 'i-lucide-layout-grid' },
-  { label: 'Compact', value: 'compact', icon: 'i-lucide-list' },
-];
 
 const items = ref<Array<HistoryListItem>>([]);
 const searchable = ref<Array<HistorySearchableField>>([]);
 const error = ref('');
 
 const page = ref<number>(parseInt(route.query.page as string) || 1);
+const requestedPage = ref(page.value);
 const perpage = ref<number>(parseInt(route.query.perpage as string) || 50);
 const total = ref<number>(0);
 const last_page = computed<number>(() => Math.ceil(total.value / perpage.value));
@@ -320,7 +422,12 @@ const draftBlocked = ref(false);
 const hasResults = ref(false);
 const exportOpen = ref(false);
 const exportBlocked = computed(
-  () => isLoading.value || massActionInProgress.value || draftBlocked.value || !hasResults.value,
+  () =>
+    isLoading.value ||
+    massActionInProgress.value ||
+    draftBlocked.value ||
+    !hasResults.value ||
+    !!error.value,
 );
 const filterOptions = shallowRef<HistoryFilterOptions>({ genres: [], libraries: [] });
 const {
@@ -343,17 +450,89 @@ let optionsController = new AbortController();
 let bulkController = new AbortController();
 let loadId = 0;
 let writingRoute = false;
+let loadedRequest = '';
 
 const perPageItems = [50, 100, 200, 400, 500].map((value) => ({
   label: `${value} per page`,
   value,
 }));
 
-const activeSearchSummary = computed<string>(() => {
-  return Object.entries(query.value)
-    .map(([key, value]) => `${key}: ${value}`)
-    .join(', ');
-});
+const filterLabels: Record<string, string> = {
+  title: 'Title',
+  type: 'Type',
+  status: 'Watch status',
+  watched: 'Watched',
+  in_progress: 'In progress',
+  genres: 'Genre',
+  library: 'Library',
+  year_min: 'Year from',
+  year_max: 'Year to',
+  year: 'Year',
+  via: 'Backend',
+  id: 'History ID',
+  parent: 'Series GUID',
+  guids: 'Content GUID',
+  rguid: 'Relative GUID',
+  subtitle: 'Subtitle',
+  path: 'Path',
+  sort: 'Sort',
+  with_duplicates: 'Include duplicates',
+};
+
+const appliedFilters = computed(() =>
+  Object.entries(query.value).flatMap(([key, raw]) => {
+    const label =
+      filterLabels[key] ??
+      searchable.value.find((field) => key === field.key)?.display ??
+      key.replaceAll('_', ' ').replace(/^./, (letter) => letter.toUpperCase());
+    const values = Array.isArray(raw) ? raw : [raw];
+
+    return values.map((value) => {
+      let display = value;
+      if ('library' === key) {
+        display =
+          filterOptions.value.libraries.find((library) => value === library.value)?.label ?? value;
+      } else if (['watched', 'in_progress', 'with_duplicates'].includes(key)) {
+        display = '1' === value ? 'Yes' : '0' === value ? 'No' : value;
+      } else if (['status', 'type'].includes(key)) {
+        display =
+          (
+            {
+              watched: 'Watched',
+              in_progress: 'In progress',
+              not_started: 'Not started',
+              movie: 'Movies',
+              episode: 'Episodes',
+            } as Record<string, string>
+          )[value] ?? value;
+      }
+
+      return { key, value, label: `${label}: ${display}` };
+    });
+  }),
+);
+
+const activeSearchSummary = computed(() =>
+  appliedFilters.value.map((chip) => chip.label).join(', '),
+);
+
+const selectionActions = computed(() => [
+  {
+    label: 'Clear selection',
+    icon: 'i-lucide-square',
+    disabled: massActionInProgress.value,
+    onSelect: clearSelection,
+  },
+  {
+    label: 'Delete selected records',
+    icon: 'i-lucide-trash-2',
+    color: 'neutral' as const,
+    disabled: exportBlocked.value,
+    onSelect: (): void => {
+      void massAction('delete');
+    },
+  },
+]);
 
 const stringifyItem = (item: HistoryListItem): string => JSON.stringify(item).toLowerCase();
 
@@ -397,6 +576,24 @@ const applyFilters = (next: HistoryFilterQuery): void => {
   void loadContent(1);
 };
 
+const removeFilter = (key: string, value: string): void => {
+  const { [key]: _removed, ...next } = query.value;
+  const current = query.value[key];
+  if (Array.isArray(current)) {
+    const remaining = current.filter((entry) => value !== entry);
+    if (0 < remaining.length) {
+      next[key] = remaining;
+    }
+  }
+
+  applyFilters(next);
+};
+
+const clearFilters = (): void => {
+  filter.value = '';
+  applyFilters({});
+};
+
 const downloadHistory = async (choice: HistoryExportChoice): Promise<void> => {
   if (await exportHistory(choice)) {
     exportOpen.value = false;
@@ -419,11 +616,22 @@ const loadContent = async (pageNumber: number, fromPopState: boolean = false): P
       Array.isArray(value) ? [...value] : value,
     ]),
   );
+  requestedPage.value = pageNumber;
+  const requestKey = JSON.stringify([
+    selectedUser,
+    pageNumber,
+    perpage.value,
+    Object.entries(requestedQuery).sort(([left], [right]) => left.localeCompare(right)),
+  ]);
+
+  if (!hasResults.value || requestKey !== loadedRequest) {
+    hasResults.value = false;
+    items.value = [];
+    total.value = 0;
+  }
+
   isLoading.value = true;
-  hasResults.value = false;
   error.value = '';
-  items.value = [];
-  total.value = 0;
 
   const search = new URLSearchParams({ perpage: String(perpage.value), page: String(pageNumber) });
   try {
@@ -480,6 +688,13 @@ const loadContent = async (pageNumber: number, fromPopState: boolean = false): P
     searchable.value = json.searchable ?? [];
     applyQuery(filters, total.value, items.value);
     hasResults.value = true;
+    requestedPage.value = page.value;
+    loadedRequest = JSON.stringify([
+      selectedUser,
+      page.value,
+      perpage.value,
+      Object.entries(requestedQuery).sort(([left], [right]) => left.localeCompare(right)),
+    ]);
     useHead({
       title: `History: Page #${page.value}${activeSearchSummary.value ? `. (${activeSearchSummary.value})` : ''}`,
     });
@@ -536,13 +751,17 @@ const massAction = async (action: 'delete' | 'mark_played' | 'mark_unplayed'): P
 
   const title = {
     delete: 'Delete',
-    mark_played: 'Mark as played',
-    mark_unplayed: 'Mark as unplayed',
+    mark_played: 'Mark watched',
+    mark_unplayed: 'Mark unwatched',
   }[action];
 
   const { status: confirmStatus } = await useDialog().confirmDialog({
-    message: `Are you sure you want to '${title}' ${selected_ids.value.length} item/s?`,
-    confirmColor: 'delete' === action ? 'error' : 'primary',
+    message:
+      'delete' === action
+        ? `Delete ${selected_ids.value.length} selected ${1 === selected_ids.value.length ? 'record' : 'records'}? This can't be undone.`
+        : `Mark ${selected_ids.value.length} selected ${1 === selected_ids.value.length ? 'record' : 'records'} as ${'mark_played' === action ? 'watched' : 'unwatched'}?`,
+    confirmText: title,
+    confirmColor: 'delete' === action ? 'error' : 'neutral',
   });
 
   if (
@@ -575,11 +794,7 @@ const massAction = async (action: 'delete' | 'mark_played' | 'mark_unplayed'): P
   }
 
   try {
-    notification(
-      'success',
-      'Action in progress',
-      `Processing Mass '${title}' request. Please wait...`,
-    );
+    notification('success', 'Action in progress', 'Updating selected history records.');
 
     const requests = await Promise.all(urls.map((url) => request(url, opts)));
     if (active.signal.aborted || selectedUser !== apiUser.value) {
@@ -588,15 +803,17 @@ const massAction = async (action: 'delete' | 'mark_played' | 'mark_unplayed'): P
     const all_ok = requests.every((response) => 200 === response.status);
 
     if (!all_ok) {
-      notification(
-        'error',
-        'Error',
-        'Some requests failed. Please check the console for more details.',
-      );
+      notification('error', 'Error', 'Some actions failed. Refresh history before retrying.');
     }
 
     if (all_ok) {
-      notification('success', 'Success', `Mass '${title}' request completed.`);
+      notification(
+        'success',
+        'Action completed',
+        'delete' === action
+          ? 'Selected history records deleted.'
+          : `Selected history records marked as ${'mark_played' === action ? 'watched' : 'unwatched'}.`,
+      );
     }
   } catch (e) {
     if (!active.signal.aborted && selectedUser === apiUser.value) {
@@ -630,6 +847,10 @@ const stateCallBack = async (event: Event): Promise<void> => {
 watch(filter, (value: string) => {
   const currentRoute = useRoute();
   const currentRouter = useRouter();
+
+  if (JSON.stringify(readQuery(currentRoute.query)) !== JSON.stringify(query.value)) {
+    return;
+  }
 
   if (!value) {
     if (!currentRoute?.query.filter) {
@@ -727,6 +948,8 @@ watch(
     exportOpen.value = false;
     massActionInProgress.value = false;
     filterOptions.value = { genres: [], libraries: [] };
+    searchable.value = [];
+    loadedRequest = '';
     void loadFilterOptions();
     void loadContent(1);
   },

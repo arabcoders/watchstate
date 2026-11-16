@@ -21,16 +21,16 @@ Media Health can report these states. Each state includes an action hint in the 
 
 From the WebUI:
 
-1. Go to **Diagnostics** > <!--i:i-lucide-radar--> **Media Health**.
-2. Click **Queue Audit**.
+1. Open **Activity** > <!--i:i-lucide-radar--> **Media Health**.
+2. Click **Generate audit**, or **Queue refresh** if a report already exists.
 3. Wait for the background task to finish.
 4. Click **Reload**.
 
-The WebUI reads the latest completed report. If state data changed after the report was generated, 
-the page shows a stale warning and you should queue a fresh audit.
+**Last completed** shows when the displayed audit finished. Its results remain visible while a new audit is
+queued or running. **Reload** checks for a completed audit; it does not start another one.
 
-Use the **Export** menu to download the complete report. Exports include every cached item, not only 
-the current page or selected filter, so you can process the report with your own tools.
+Use **Export** to download the latest completed report. Exports include the whole report, not just the current page,
+filters, or selection.
 
 # File Checks Are Optional
 
@@ -44,8 +44,8 @@ Only enable file checks when both are true:
 
 To enable file checks globally:
 
-1. Go to **Configuration** > <!--i:i-lucide-sliders-horizontal--> **Environment**.
-2. Click the <!--i:i-lucide-plus--> **Add** button.
+1. Open **Settings** > <!--i:i-lucide-sliders-horizontal--> **Environment**.
+2. Click the <!--i:i-lucide-plus--> **Add variable** button.
 3. Select `WS_MEDIA_HEALTH_CHECK_FILES`.
 4. Toggle the switch to enable it.
 5. Save the change.
@@ -60,27 +60,30 @@ The default filter is **Unhealthy**, so healthy records are hidden. This keeps l
 
 Useful controls:
 
-- **Status filter** narrows the list to one health state.
-- **Type filter** limits results to movies or episodes.
-- **Filter** searches displayed records by title, status, backend name, GUID, path, file-check message, or reason.
+- **Status** narrows the audit to one health state.
+- **Type** limits audit results to movies or episodes.
+- **Filter this page** searches loaded records by title, status, backend name, GUID, path, file-check message, or reason.
+- **Select page** selects the displayed records. **Delete selected** removes only the selected main-identity history records
+  from WatchState; it does not repair metadata on your media servers.
 - Backend badges open the source backend item when WatchState can build a direct item URL.
-- Record badges open the linked WatchState history record.
-- Path rows are grouped so identical paths from multiple backends are shown once.
+- Record titles open the linked WatchState history record under the main identity.
+- Expand **Details** for GUIDs, metadata disagreements, file checks, and paths. Identical paths from multiple backends are grouped.
 
 # Fix And Refresh Workflow
 
 1. Start with the highest-priority records, usually GUID conflicts and duplicate GUIDs.
 2. Fix metadata in the backend that owns the bad item.
-3. If you fixed one backend, go to **Configuration** > <!--i:i-lucide-server--> **Backends**, open that backend actions menu, and run **9. Force metadata-only import from this backend.**
-4. If you fixed many backends, run one metadata-only import for all backends instead:
+3. If you fixed one backend, open <!--i:i-lucide-server--> **Backends** and select **9. Force metadata-only import from this backend**
+   from its **Quick operations** list. Review the prefilled command in **Activity > Console**, then click **Run command**.
+4. If you fixed many backends, open **Activity > Console** and run one metadata-only import for all backends instead:
 
 ```bash
 state:import -f -v --metadata-only
 ```
 
-5. Queue a new Media Health audit.
+5. Return to **Media Health** and click **Queue refresh**.
 6. Repeat until the remaining records are expected or harmless.
 
 # Main Database Only
 
-Media Health runs against the main user database. It is not generated separately for every identity. The report is meant to describe shared health, not per-user health.
+Media Health runs against the main WatchState database.

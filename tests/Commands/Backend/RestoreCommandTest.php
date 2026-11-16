@@ -65,9 +65,11 @@ final class RestoreCommandTest extends TestCase
         self::assertCount(0, $queue->getQueue());
     }
 
-    public function test_item_failures_keep_success(): void
+    public function test_item_failure(): void
     {
-        $logger = $this->initFakeBackendApp($this->fakeBackendConfig('fake_restore'));
+        $logger = $this->initFakeBackendApp($this->fakeBackendConfig('fake_restore', [
+            'export' => ['enabled' => false],
+        ]));
 
         $backupFile = self::$tmpPath . '/backup.json';
         file_put_contents($backupFile, json_encode(
@@ -113,9 +115,11 @@ final class RestoreCommandTest extends TestCase
         self::assertCount(0, $queue->getQueue());
     }
 
-    public function test_progress_flag_calls_progress(): void
+    public function test_progress(): void
     {
-        $logger = $this->initFakeBackendApp($this->fakeBackendConfig('fake_restore'));
+        $logger = $this->initFakeBackendApp($this->fakeBackendConfig('fake_restore', [
+            'export' => ['enabled' => false],
+        ]));
 
         $backupFile = self::$tmpPath . '/backup.json';
         file_put_contents($backupFile, json_encode(

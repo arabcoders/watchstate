@@ -1,72 +1,83 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-6">
-    <PageHeader v-bind="pageShell">
-      <template #kicker>
-        <span>{{ pageShell.sectionLabel }}</span>
-        <span>/</span>
-        <span>{{ pageShell.pageLabel }}</span>
-        <span>/</span>
-        <span class="text-highlighted">{{ ucFirst(apiUser) }}</span>
-      </template>
-      <template #actions>
-        <UButton
-          color="neutral"
-          variant="outline"
-          icon="i-lucide-refresh-cw"
-          :loading="isLoading"
-          :disabled="isLoading"
-          @click="loadReport"
-        >
-          Reload
-        </UButton>
-        <UDropdownMenu v-if="report" :items="exportItems" :content="{ align: 'end' }">
+  <main class="w-full min-w-0 max-w-full space-y-8">
+    <div class="space-y-4">
+      <PageHeader v-bind="pageShell">
+        <template #actions>
           <UButton
             color="neutral"
             variant="outline"
-            icon="i-lucide-download"
-            trailing-icon="i-lucide-chevron-down"
-            :loading="null !== exporting"
-            :disabled="null !== exporting"
+            size="sm"
+            icon="i-lucide-refresh-cw"
+            :loading="isLoading"
+            :disabled="isLoading || isQueueing"
+            @click="loadReport"
           >
-            Export
+            Reload
           </UButton>
-        </UDropdownMenu>
-        <UButton
-          color="primary"
-          icon="i-lucide-play"
-          :loading="isQueueing"
-          :disabled="isLoading || isQueueing || true === state?.queued"
-          @click="queueReport"
-        >
-          {{ state?.queued ? 'Queued' : report ? 'Refresh statistics' : 'Generate statistics' }}
-        </UButton>
-      </template>
-    </PageHeader>
+          <UDropdownMenu v-if="report" :items="exportItems" :content="{ align: 'end' }">
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-download"
+              trailing-icon="i-lucide-chevron-down"
+              :loading="null !== exporting"
+              :disabled="null !== exporting"
+            >
+              Export
+            </UButton>
+          </UDropdownMenu>
+          <UButton
+            color="primary"
+            variant="solid"
+            size="sm"
+            icon="i-lucide-play"
+            :loading="isQueueing"
+            :disabled="isLoading || isQueueing || true === state?.queued"
+            @click="queueReport"
+          >
+            {{ state?.queued ? 'Queued' : report ? 'Queue refresh' : 'Generate statistics' }}
+          </UButton>
+        </template>
+      </PageHeader>
+
+      <dl class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-toned">
+        <div class="flex min-w-0 items-center gap-2">
+          <dt>Identity:</dt>
+          <dd class="wrap-break-word font-medium text-default">{{ apiUser }}</dd>
+        </div>
+        <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <dt>Last completed:</dt>
+          <dd>
+            <UTooltip
+              v-if="report?.completed_at"
+              :text="moment.unix(report.completed_at).fromNow()"
+            >
+              <time :datetime="moment.unix(report.completed_at).toISOString()" class="cursor-help">
+                {{ formatDate(report.completed_at) }}
+              </time>
+            </UTooltip>
+            <span v-else>{{ report ? 'Unknown' : 'No report loaded' }}</span>
+          </dd>
+        </div>
+      </dl>
+    </div>
 
     <UAlert
       v-if="state?.queued"
       color="info"
       variant="soft"
       icon="i-lucide-clock-3"
-      description="Statistics are being generated. Reload after a few minutes."
+      title="Report queued"
+      description="Reload to check for a completed report."
     />
 
-    <UAlert
-      v-if="false === isLoading && !error && null === report"
-      color="warning"
-      variant="soft"
-      icon="i-lucide-file-warning"
-      title="No generated statistics found"
+    <UEmpty
+      v-if="false === isLoading && !error && !state?.queued && null === report"
+      icon="i-lucide-chart-no-axes-column"
+      title="No statistics yet"
     />
 
-    <UAlert
-      v-if="report && state?.stale"
-      color="warning"
-      variant="soft"
-      icon="i-lucide-refresh-cw"
-      title="Statistics need updating"
-      description="Refresh to see your latest watch progress."
-    />
     <UAlert
       v-if="error"
       color="error"
@@ -81,78 +92,92 @@
       variant="soft"
       icon="i-lucide-loader-circle"
       title="Loading statistics"
-      :description="`Loading statistics for ${ucFirst(apiUser)}.`"
       :ui="{ icon: 'animate-spin' }"
     />
 
     <template v-if="report">
       <section aria-labelledby="summary-heading" class="space-y-4">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <h2 id="summary-heading" class="text-base font-semibold text-highlighted">Summary</h2>
-          <UTooltip :text="formatDate(report.completed_at)">
-            <span class="text-xs text-toned"
-              >Updated {{ moment.unix(report.completed_at).fromNow() }}</span
-            >
-          </UTooltip>
-        </div>
-        <div class="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            label="Movies watched"
-            :value="formatNumber(report.summary.movies.watched)"
-            :hint="`of ${formatNumber(report.summary.movies.total)}`"
-            icon="i-lucide-film"
-            color="success"
-          />
-          <StatCard
-            label="Episodes watched"
-            :value="formatNumber(report.summary.episodes.watched)"
-            :hint="`of ${formatNumber(report.summary.episodes.total)}`"
-            icon="i-lucide-clapperboard"
-            color="success"
-          />
-          <StatCard
-            label="Shows started"
-            :value="formatNumber(report.summary.shows.started)"
-            :hint="`of ${formatNumber(report.summary.shows.total)}`"
-            icon="i-lucide-tv"
-            color="info"
-          />
-          <StatCard
-            label="Fully watched shows"
-            :value="formatNumber(report.summary.shows.fully_watched)"
-            icon="i-lucide-circle-check"
-            color="success"
-          />
-        </div>
-        <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-toned">
+        <h2 id="summary-heading" class="text-lg font-semibold text-highlighted">Summary</h2>
+        <dl
+          class="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-default bg-default min-[400px]:grid-cols-2 xl:grid-cols-4"
+        >
+          <div class="space-y-3 bg-elevated/20 p-4 sm:p-5">
+            <dt class="flex items-center gap-2 text-sm text-toned">
+              <UIcon name="i-lucide-film" class="size-4" />Movies watched
+            </dt>
+            <dd class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <span class="text-2xl font-semibold tabular-nums text-highlighted">
+                {{ formatNumber(report.summary.movies.watched) }}
+              </span>
+              <span class="text-xs tabular-nums text-toned">
+                of {{ formatNumber(report.summary.movies.total) }}
+              </span>
+            </dd>
+          </div>
+          <div class="space-y-3 bg-elevated/20 p-4 sm:p-5">
+            <dt class="flex items-center gap-2 text-sm text-toned">
+              <UIcon name="i-lucide-clapperboard" class="size-4" />Episodes watched
+            </dt>
+            <dd class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <span class="text-2xl font-semibold tabular-nums text-highlighted">
+                {{ formatNumber(report.summary.episodes.watched) }}
+              </span>
+              <span class="text-xs tabular-nums text-toned">
+                of {{ formatNumber(report.summary.episodes.total) }}
+              </span>
+            </dd>
+          </div>
+          <div class="space-y-3 bg-elevated/20 p-4 sm:p-5">
+            <dt class="flex items-center gap-2 text-sm text-toned">
+              <UIcon name="i-lucide-tv" class="size-4" />Shows started
+            </dt>
+            <dd class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <span class="text-2xl font-semibold tabular-nums text-highlighted">
+                {{ formatNumber(report.summary.shows.started) }}
+              </span>
+              <span class="text-xs tabular-nums text-toned">
+                of {{ formatNumber(report.summary.shows.total) }}
+              </span>
+            </dd>
+          </div>
+          <div class="space-y-3 bg-elevated/20 p-4 sm:p-5">
+            <dt class="flex items-center gap-2 text-sm text-toned">
+              <UIcon name="i-lucide-circle-check" class="size-4" />Fully watched shows
+            </dt>
+            <dd class="text-2xl font-semibold tabular-nums text-highlighted">
+              {{ formatNumber(report.summary.shows.fully_watched) }}
+            </dd>
+          </div>
+        </dl>
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-toned">
           <span class="inline-flex items-center gap-1.5"
-            ><UIcon name="i-lucide-circle-play" class="size-4 text-info" />In progress</span
+            ><UIcon name="i-lucide-circle-play" class="size-4" />In progress</span
           >
           <a
             href="#progress-heading"
-            class="text-primary hover:underline"
+            class="font-medium text-default hover:text-primary hover:underline"
             @click="showInProgress('movies')"
             >{{ formatNumber(report.summary.movies.in_progress) }} movies</a
           >
           <a
             href="#progress-heading"
-            class="text-primary hover:underline"
+            class="font-medium text-default hover:text-primary hover:underline"
             @click="showInProgress('episodes')"
             >{{ formatNumber(report.summary.episodes.in_progress) }} episodes</a
           >
           <a
             href="#progress-heading"
-            class="text-primary hover:underline"
+            class="font-medium text-default hover:text-primary hover:underline"
             @click="showInProgress('shows')"
             >{{ formatNumber(report.summary.shows.in_progress) }} shows</a
           >
         </div>
       </section>
 
-      <UAlert
+      <UEmpty
         v-if="0 === report.summary.movies.total + report.summary.episodes.total"
-        color="neutral"
-        variant="soft"
+        size="sm"
+        variant="naked"
         icon="i-lucide-library"
         title="Your library is empty"
         description="Sync your library, then refresh statistics."
@@ -161,9 +186,9 @@
       <section aria-labelledby="recent-heading" class="space-y-4">
         <h2
           id="recent-heading"
-          class="flex items-center gap-2 text-base font-semibold text-highlighted"
+          class="flex items-center gap-2 text-lg font-semibold text-highlighted"
         >
-          <UIcon name="i-lucide-history" class="size-4 text-primary" />Recently watched
+          <UIcon name="i-lucide-history" class="size-5 text-toned" />Recently watched
         </h2>
         <RecentHistoryCards
           v-if="report.recent.length"
@@ -173,29 +198,35 @@
           :poster-enable="posterEnable"
           aria-label="Recently watched titles"
         />
-        <UAlert
+        <UEmpty
           v-else
-          color="warning"
-          variant="soft"
-          icon="i-lucide-file-warning"
+          size="sm"
+          variant="naked"
+          icon="i-lucide-history"
           title="No watch dates available"
         />
       </section>
 
       <section aria-labelledby="progress-heading" class="space-y-4">
-        <div class="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+        <div class="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
           <div class="space-y-1">
             <h2
               id="progress-heading"
-              class="flex items-center gap-2 text-base font-semibold text-highlighted"
+              class="flex items-center gap-2 text-lg font-semibold text-highlighted"
             >
-              <UIcon name="i-lucide-tv" class="size-4 text-primary" />Watch progress
+              <UIcon name="i-lucide-tv" class="size-5 text-toned" />Watch progress
             </h2>
+            <p class="text-sm text-toned" aria-live="polite">
+              {{ formatNumber(progressPage.total) }}
+              {{ 1 === progressPage.total ? progressType.slice(0, -1) : progressType
+              }}{{ query ? ` matching “${query}”` : '' }}
+            </p>
           </div>
-          <div class="flex flex-col gap-2 sm:flex-row lg:shrink-0">
+          <div class="flex flex-col gap-2 sm:flex-row xl:shrink-0">
             <USelect
               v-model="progressType"
               :items="progressTypeItems"
+              size="sm"
               aria-label="Watch progress type"
               class="w-full sm:w-32"
             />
@@ -203,24 +234,21 @@
               v-model="query"
               type="search"
               icon="i-lucide-search"
+              size="sm"
               placeholder="Find a title"
               aria-label="Find a title"
-              class="w-full sm:w-48"
+              class="w-full sm:w-60"
             />
             <USelect
               v-if="'shows' === progressType"
               v-model="status"
               :items="statusItems"
+              size="sm"
               aria-label="Show progress filter"
               class="w-full sm:w-44"
             />
           </div>
         </div>
-        <p class="text-xs text-toned" aria-live="polite">
-          {{ formatNumber(progressPage.total) }}
-          {{ 1 === progressPage.total ? progressType.slice(0, -1) : progressType
-          }}{{ query ? ` matching “${query}”` : '' }}
-        </p>
         <div
           v-if="progressPage.items.length"
           class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6"
@@ -228,7 +256,7 @@
           <article
             v-for="item in progressPage.items"
             :key="`${apiUser}:${item.type}:${item.history_id}`"
-            class="group ws-card min-w-0 overflow-hidden bg-elevated/20"
+            class="ws-card min-w-0 overflow-hidden bg-elevated/20"
           >
             <NuxtLink
               v-if="posterEnable"
@@ -237,7 +265,7 @@
                   ? { path: '/history', query: { title: item.title, type: 'episode' } }
                   : `/history/${item.history_id}`
               "
-              class="relative block p-2 pb-0"
+              class="relative block rounded-t-lg p-2 pb-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               :aria-label="
                 'show' === item.type ? `View episodes of ${item.title}` : `View ${item.title}`
               "
@@ -333,23 +361,27 @@
             </div>
           </article>
         </div>
-        <UAlert
+        <UEmpty
           v-else
-          color="warning"
-          variant="soft"
-          icon="i-lucide-file-warning"
+          size="sm"
+          variant="naked"
+          icon="i-lucide-tv"
           :title="
-            progressItems.length
-              ? 'No titles match these filters.'
-              : `No ${progressType} to display.`
+            progressItems.length ? 'No titles match these filters' : `No ${progressType} to display`
           "
         >
           <template v-if="progressItems.length" #actions>
-            <UButton color="neutral" variant="ghost" size="sm" @click="clearProgressFilters">
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-filter-x"
+              @click="clearProgressFilters"
+            >
               Clear filters
             </UButton>
           </template>
-        </UAlert>
+        </UEmpty>
         <div
           v-if="1 < progressPage.lastPage"
           class="flex flex-wrap items-center justify-between gap-3"
@@ -366,13 +398,13 @@
         </div>
       </section>
 
-      <section aria-labelledby="genres-heading" class="ws-card space-y-5 p-4 sm:p-5">
+      <section aria-labelledby="genres-heading" class="space-y-4 border-t border-default pt-6">
         <div class="flex items-start justify-between gap-3">
           <h2
             id="genres-heading"
-            class="flex items-center gap-2 text-base font-semibold text-highlighted"
+            class="flex items-center gap-2 text-lg font-semibold text-highlighted"
           >
-            <UIcon name="i-lucide-tags" class="size-4 text-primary" />Genres
+            <UIcon name="i-lucide-tags" class="size-5 text-toned" />Genres
           </h2>
           <UBadge color="neutral" variant="soft" class="shrink-0"
             >{{ formatNumber(report.genres.length) }} genres</UBadge
@@ -397,15 +429,20 @@
             />
           </div>
         </div>
-        <p v-else class="py-4 text-sm text-toned">
-          No genres available for watched movies or shows.
-        </p>
+        <UEmpty
+          v-else
+          size="sm"
+          variant="naked"
+          icon="i-lucide-tags"
+          title="No genres available for watched movies or shows"
+        />
         <UButton
           v-if="10 < report.genres.length"
           color="neutral"
-          variant="ghost"
+          :variant="showAllGenres ? 'soft' : 'outline'"
           size="sm"
           :trailing-icon="showAllGenres ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+          :aria-expanded="showAllGenres"
           @click="showAllGenres = !showAllGenres"
           >{{
             showAllGenres ? 'Show top 10' : `Show all ${formatNumber(report.genres.length)} genres`
@@ -427,6 +464,7 @@ import {
   UBadge,
   UButton,
   UDropdownMenu,
+  UEmpty,
   UIcon,
   UInput,
   UProgress,
@@ -436,7 +474,6 @@ import {
 import PageHeader from '~/components/PageHeader.vue';
 import Pager from '~/components/Pager.vue';
 import RecentHistoryCards from '~/components/RecentHistoryCards.vue';
-import StatCard from '~/components/StatCard.vue';
 import StatisticsPoster from '~/components/StatisticsPoster.vue';
 import { useUserStatistics } from '~/composables/useUserStatistics';
 import type {

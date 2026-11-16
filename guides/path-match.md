@@ -26,11 +26,11 @@ Examples that do not match by path:
 
 Path matching should remain enabled for most installations. If different media items share the same normalized path suffix, you can disable it:
 
-1. Go to **Configuration** > <!--i:i-lucide-sliders-horizontal--> **Environment**.
-2. Click the <!--i:i-lucide-plus--> **Add** button.
-3. Select `WS_GUID_PATH_ENABLED`.
-4. Toggle the switch to disable.
-5. Save the change.
+1. Go to **Settings** > <!--i:i-lucide-sliders-horizontal--> **Environment**.
+2. Click the <!--i:i-lucide-plus--> **Add variable** button.
+3. Select `WS_GUID_PATH_ENABLED` under **Environment key**.
+4. Turn off the **Environment value** switch.
+5. Click **Save**.
 
 # Updating Existing Data
 
@@ -40,7 +40,7 @@ If all of your backends point to the same media files, it is usually enough to r
 
 For example:
 
-1. Go to **Operations** > <!--i:i-lucide-terminal--> **Console**.
+1. Go to **Activity** > <!--i:i-lucide-terminal--> **Console**.
 2. Run a full import for one backend that has the shared library:
 
 ```bash
@@ -53,14 +53,14 @@ If your backends do not all share the same media, run a full refresh across all 
 state:import -v --force-full
 ```
 
-Once the import is done, you can inspect the run log in **Operations** > <!--i:i-lucide-scroll-text--> **Logs**.
+Once the import is done, you can inspect the run log in **Activity** > <!--i:i-lucide-scroll-text--> **Logs**.
 
 # Notes
 
 > [!IMPORTANT]
 > Do not use `--metadata-only` for this refresh. metadata-only mode does not rewrite GUIDs for existing rows.
 > 
-> Backends with `Import` disabled are treated as metadata-only during `state:import`. That is usually fine when all backends share the same media, because one imported backend is enough to seed `guid_path` for the shared items. Only temporarily enable `Import` from the <!--i:i-lucide-server--> **Backends** page if that backend has items or media paths that are not covered by the backend you refreshed.
+> Backends with `Import` disabled are treated as metadata-only during `state:import`. That is usually fine when all backends share the same media, because one imported backend is enough to seed `guid_path` for the shared items. Only temporarily turn on **Enable Import** from the <!--i:i-lucide-server--> **Backends** page if that backend has items or media paths that are not covered by the backend you refreshed.
 
 > [!NOTE]
 > Once the backfill is done, future imports and webhook events will store the new GUID.

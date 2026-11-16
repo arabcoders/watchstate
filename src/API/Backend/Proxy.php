@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\API\Backend;
 
 use App\Libs\APIResponse;
+use App\Libs\Attributes\Route\Get;
 use App\Libs\Attributes\Route\Post;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Method;
@@ -30,6 +31,12 @@ use Throwable;
 final class Proxy
 {
     use APITraits;
+
+    private const array STREAM_HEADERS = [
+        'Cache-Control' => 'private, no-store',
+        'Content-Security-Policy' => "sandbox; default-src 'none'",
+        'X-Content-Type-Options' => 'nosniff',
+    ];
 
     /**
      * Caller-supplied headers that are stripped before forwarding.
@@ -188,6 +195,106 @@ final class Proxy
                 'body' => $bodyString,
             ],
         ]);
+    }
+
+    #[Get(Index::URL . '/{name:backend}/proxy/{url:.*}', name: 'backend.proxy.get')]
+    public function get(iRequest $request, string $name, string $url): iResponse
+    {
+        try {
+            $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+            $client = $this->getClient(
+                name: $name,
+                config: [
+                    'options' => [
+                        'client' => [
+                            'timeout' => 10.0,
+                            'max_duration' => 10.0,
+                            'max_redirects' => 0,
+                        ],
+                    ],
+                ],
+                userContext: $userContext,
+            );
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND, headers: self::STREAM_HEADERS);
+        }
+
+        $path = $url;
+
+        do {
+            if (
+                '' === trim($path)
+                || str_starts_with($path, '//')
+                || str_contains($path, '://')
+                || str_contains($path, '\\')
+                || 1 === preg_match('/[\x00-\x1f\x7f]|^\/?[a-z][a-z0-9+.-]*:|(?:^|\/)\.{1,2}(?:\/|$)/i', $path)
+            ) {
+                return api_error('A relative backend path is required.', Status::BAD_REQUEST, headers: self::STREAM_HEADERS);
+            }
+
+            $decoded = rawurldecode($path);
+            $changed = $decoded !== $path;
+            $path = $decoded;
+        } while (true === $changed);
+
+        $context = $client->getContext();
+        $query = [];
+
+        foreach (explode('&', $request->getUri()->getQuery()) as $parameter) {
+            parse_str($parameter, $parsed);
+
+            if (count(array_intersect(['user', 'apikey', 'ws_token'], array_keys($parsed))) > 0) {
+                continue;
+            }
+
+            $query[] = $parameter;
+        }
+
+        $uri = $this->buildUri($context->backendUrl, $url, [])->withQuery(implode('&', $query))->withFragment('');
+        $logContext = [
+            'operation' => 'backend.proxy.get',
+            'identity' => [
+                'user' => $context->userContext->name,
+                'backend' => $context->backendName,
+                'client' => $context->clientName,
+            ],
+            'request' => ['method' => Method::GET->value, 'url' => (string) $uri->withUserInfo('')],
+        ];
+
+        try {
+            $apiRequest = $client->proxy(method: Method::GET, uri: $uri);
+        } catch (Throwable $e) {
+            $this->logger->error(
+                message: "Proxy request to '{identity.user}@{identity.backend}' failed. {exception.message}",
+                context: [...$logContext, ...exception_log($e)],
+            );
+
+            return api_error('Backend proxy request failed.', Status::BAD_GATEWAY, headers: self::STREAM_HEADERS);
+        }
+
+        if (false === $apiRequest->isSuccessful() || false === $apiRequest->response instanceof APIResponse) {
+            $this->logger->error(
+                message: "Proxy request to '{identity.user}@{identity.backend}' did not return a backend response.",
+                context: $logContext,
+            );
+
+            return api_error('Backend proxy request failed.', Status::BAD_GATEWAY, headers: self::STREAM_HEADERS);
+        }
+
+        $response = $apiRequest->response;
+        $headers = self::STREAM_HEADERS;
+        $headers['Content-Type'] = 'application/octet-stream';
+
+        foreach ($response->headers as $header => $value) {
+            if ('content-type' !== strtolower($header)) {
+                continue;
+            }
+
+            $headers['Content-Type'] = $value;
+            break;
+        }
+
+        return api_response($response->status, body: $response->stream, headers: $headers);
     }
 
     /**

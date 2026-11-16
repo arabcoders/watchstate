@@ -107,8 +107,8 @@ After starting the container, you can access the WebUI by visiting `http://local
 
 WatchState matches items using local media paths by default. See the [path matching guide](guides/path-match.md) for details.
 
-To add your backends, click the help button in the top-right corner and choose [one-way](guides/one-way-sync.md) or
-[two-way](guides/two-way-sync.md) sync. Follow the instructions in the selected guide.
+For setup instructions, see the [one-way](guides/one-way-sync.md) and
+[two-way](guides/two-way-sync.md) sync guides.
 
 Once you have added your backends and imported your data you should see something like
 

@@ -1,4 +1,4 @@
-import { onBeforeRouteLeave, onBeforeRouteUpdate } from '#app';
+import { onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router';
 import { computed, onBeforeUnmount, toValue, type MaybeRefOrGetter, type Ref } from 'vue';
 import { useDialog } from '~/composables/useDialog';
 
@@ -27,7 +27,7 @@ export const useDirtyCloseGuard = (open: Ref<boolean>, options: DirtyCloseGuardO
 
     const { status } = await dialog.confirmDialog({
       title: options.title ?? 'Discard changes?',
-      message: options.message ?? 'You have unsaved changes. Do you want to discard them?',
+      message: options.message ?? 'Unsaved changes will be lost.',
       confirmText: options.confirmText ?? 'Discard changes',
       cancelText: options.cancelText ?? 'Keep editing',
       confirmColor: options.confirmColor ?? 'warning',
@@ -63,22 +63,20 @@ export const useDirtyCloseGuard = (open: Ref<boolean>, options: DirtyCloseGuardO
     await requestClose();
   };
 
-  onBeforeRouteLeave(async (_to, _from, next) => {
+  onBeforeRouteLeave(async () => {
     if (false === shouldGuard.value) {
-      next();
       return;
     }
 
-    next((await requestClose()) ? undefined : false);
+    return requestClose();
   });
 
-  onBeforeRouteUpdate(async (_to, _from, next) => {
+  onBeforeRouteUpdate(async () => {
     if (false === shouldGuard.value) {
-      next();
       return;
     }
 
-    next((await requestClose()) ? undefined : false);
+    return requestClose();
   });
 
   if ('undefined' !== typeof window) {

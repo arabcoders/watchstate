@@ -64,6 +64,7 @@
 import { navigateTo } from '#app';
 import { useStorage } from '@vueuse/core';
 import { computed } from 'vue';
+import { UButton, UDropdownMenu, UIcon, UTooltip } from '#components';
 import { useDialog } from '~/composables/useDialog';
 import type { ServerJsonLogEntry } from '~/types';
 import { copyText, goto_history_item, makeEventName } from '~/utils';
@@ -156,8 +157,9 @@ const switchIdentity = async (identity: string): Promise<boolean> => {
   }
 
   const { status } = await dialog.confirmDialog({
-    title: 'Switch Identity',
-    message: `This log is related to identity '${identity}'. You are currently using '${apiUser.value}'. Do you want to switch to view it?`,
+    title: 'Switch identity?',
+    message: `Switch from '${apiUser.value}' to '${identity}' to open this item?`,
+    confirmText: 'Switch identity',
   });
 
   if (true !== status) {

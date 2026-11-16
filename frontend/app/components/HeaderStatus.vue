@@ -6,11 +6,13 @@
       variant="ghost"
       size="sm"
       icon="i-lucide-calendar-days"
-      aria-label="Events"
+      :aria-label="error ? 'Pending events unavailable' : 'Pending events'"
+      :title="error ? 'Pending counts unavailable' : 'Pending events'"
     >
       <span class="hidden xl:inline">Events</span>
-      <StatusDots v-if="!loading" :stats="stats.events" />
-      <UIcon v-else name="i-lucide-loader-circle" class="size-4 animate-spin" />
+      <UIcon v-if="loading" name="i-lucide-loader-circle" class="size-4 animate-spin" />
+      <span v-else-if="error" class="text-muted">?</span>
+      <StatusDots v-else :stats="stats.events" />
     </UButton>
 
     <UButton
@@ -19,18 +21,20 @@
       variant="ghost"
       size="sm"
       icon="i-lucide-inbox"
-      aria-label="Transport Queue"
+      :aria-label="error ? 'Pending transport unavailable' : 'Pending transport'"
+      :title="error ? 'Pending counts unavailable' : 'Pending transport'"
     >
       <span class="hidden xl:inline">Transport</span>
-      <StatusDots v-if="!loading" :stats="stats.transport" />
-      <UIcon v-else name="i-lucide-loader-circle" class="size-4 animate-spin" />
+      <UIcon v-if="loading" name="i-lucide-loader-circle" class="size-4 animate-spin" />
+      <span v-else-if="error" class="text-muted">?</span>
+      <StatusDots v-else :stats="stats.transport" />
     </UButton>
   </div>
 </template>
 
 <script setup lang="ts">
 import StatusDots from '~/components/StatusDots.vue';
-import type { SystemStats } from '~/types';
+import type { HeaderStatusProps } from '~/types';
 
-defineProps<{ stats: SystemStats; loading: boolean }>();
+withDefaults(defineProps<HeaderStatusProps>(), { error: '' });
 </script>

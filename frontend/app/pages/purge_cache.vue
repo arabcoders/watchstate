@@ -1,13 +1,16 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-6">
-    <PageHeader v-bind="pageShell" />
+  <main :aria-busy="isPurging" class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader
+      v-bind="pageShell"
+      description="Clear cached data without resetting local history."
+    />
 
     <UAlert
       v-if="error"
       color="error"
       variant="soft"
       icon="i-lucide-triangle-alert"
-      title="Error"
+      title="Cache purge failed"
       :description="`${error.error.code}: ${error.error.message}`"
       :close="{
         onClick: () => {
@@ -18,53 +21,62 @@
 
     <UAlert
       v-if="isPurging"
-      color="warning"
+      color="info"
       variant="soft"
       icon="i-lucide-loader-circle"
       title="Cache purge in progress"
-      description="Removing cached runtime data. Please wait..."
       :ui="{ icon: 'animate-spin' }"
     />
 
-    <UCard class="shadow-sm" :ui="panelCardUi">
-      <template #header>
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div class="min-w-0 flex-1 space-y-2">
-            <div class="flex flex-wrap items-center gap-2">
-              <h1 class="text-base font-semibold text-highlighted">System Cache Purge</h1>
-              <UBadge color="error" variant="soft">Irreversible</UBadge>
-              <UBadge color="warning" variant="soft">All users</UBadge>
-            </div>
+    <UAlert
+      color="warning"
+      variant="soft"
+      icon="i-lucide-triangle-alert"
+      title="Let queued work finish first"
+      description="If you use the Redis event queue, purging also removes queued events."
+    />
 
-            <p class="text-sm leading-6 text-default">Clear cached data for every user.</p>
-          </div>
-        </div>
-      </template>
+    <dl class="grid gap-6 md:grid-cols-2">
+      <div class="space-y-2">
+        <dt class="text-sm font-semibold text-highlighted">What changes</dt>
+        <dd>
+          <ul class="list-disc space-y-2 pl-5 text-sm leading-6 text-toned">
+            <li>Shared cached data is cleared.</li>
+          </ul>
+        </dd>
+      </div>
 
-      <template #body></template>
+      <div class="space-y-2">
+        <dt class="text-sm font-semibold text-highlighted">What stays</dt>
+        <dd>
+          <ul class="list-disc space-y-2 pl-5 text-sm leading-6 text-toned">
+            <li>Local play state, playlists, event history &amp; sync dates.</li>
+            <li>Identity settings, backend settings &amp; media-server data.</li>
+          </ul>
+        </dd>
+      </div>
+    </dl>
 
-      <template #footer>
-        <div class="flex flex-wrap items-center justify-end gap-2">
-          <UButton
-            color="error"
-            variant="solid"
-            size="sm"
-            icon="i-lucide-trash-2"
-            :loading="isPurging"
-            :disabled="isPurging"
-            @click="purgeCache"
-          >
-            Purge cache
-          </UButton>
-        </div>
-      </template>
-    </UCard>
+    <div class="flex justify-end">
+      <UButton
+        color="error"
+        variant="solid"
+        size="sm"
+        icon="i-lucide-trash-2"
+        :loading="isPurging"
+        :disabled="isPending"
+        @click="purgeCache"
+      >
+        Purge cache
+      </UButton>
+    </div>
   </main>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onScopeDispose, ref } from 'vue';
 import { navigateTo, useHead, useRoute } from '#app';
+import { UAlert, UButton } from '#components';
 import PageHeader from '~/components/PageHeader.vue';
 import { useDialog } from '~/composables/useDialog';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
@@ -78,59 +90,81 @@ const pageShell = requireTopLevelPageShell('purge-cache');
 
 const route = useRoute();
 const error = ref<GenericError | null>(null);
-const isPurging = ref<boolean>(false);
+const isPurging = ref(false);
+const isPending = ref(false);
+let disposed = false;
 
-const panelCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-  footer: 'px-4 pb-4 pt-0',
-};
+onScopeDispose(() => {
+  disposed = true;
+});
 
 const purgeCache = async (): Promise<void> => {
-  const { status } = await useDialog().confirmDialog({
-    title: 'Confirm cache purge',
-    message:
-      'This will clear cached WatchState runtime data for every user. Do you want to continue?',
-    confirmText: 'Purge cache',
-    confirmColor: 'error',
-  });
-
-  if (true !== status) {
+  if (isPending.value || disposed || 'purge_cache' !== route.name) {
     return;
   }
 
-  isPurging.value = true;
-  error.value = null;
+  isPending.value = true;
 
   try {
+    const { status } = await useDialog().confirmDialog({
+      title: 'Purge cache?',
+      message:
+        'Purge shared cached data for every identity? Events in the Redis queue will be discarded. Local history, sync dates, and backend settings will be kept.',
+      confirmText: 'Purge cache',
+      confirmColor: 'error',
+    });
+
+    if (true !== status || disposed || 'purge_cache' !== route.name) {
+      return;
+    }
+
+    isPurging.value = true;
+    error.value = null;
+
     const response = await request('/system/cache', { method: 'DELETE' });
     const json = await parse_api_response<GenericResponse>(response);
 
-    if ('purge_cache' !== route.name) {
+    if (disposed || 'purge_cache' !== route.name) {
       return;
     }
 
     if ('error' in json) {
       error.value = json;
+      notification('error', 'Cache purge failed', `${json.error.code}: ${json.error.message}`);
       return;
     }
 
     if (true !== response.ok) {
       error.value = { error: { code: response.status, message: response.statusText } };
+      notification('error', 'Cache purge failed', `${response.status}: ${response.statusText}`);
       return;
     }
 
-    notification('success', 'Success', json.info?.message ?? 'System Cache has been purged.');
-    await navigateTo('/');
+    notification('success', 'Success', json.info?.message ?? 'Cache has been purged.');
 
     try {
       useSessionCache().clear();
     } catch {}
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Unexpected error';
+
+    try {
+      await navigateTo('/');
+    } catch (cause: unknown) {
+      if (!disposed) {
+        const message = cause instanceof Error ? cause.message : 'Unexpected navigation error';
+        notification('error', 'Could not open Overview', message);
+      }
+    }
+  } catch (e: unknown) {
+    if (disposed || 'purge_cache' !== route.name) {
+      return;
+    }
+
+    const message = e instanceof Error ? e.message : 'Unexpected error';
     error.value = { error: { code: 500, message } };
+    notification('error', 'Cache purge failed', message);
   } finally {
     isPurging.value = false;
+    isPending.value = false;
   }
 };
 </script>

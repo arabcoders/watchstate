@@ -24,10 +24,9 @@
     </template>
     <template #footer>
       <div class="flex w-full justify-end gap-2">
-        <UButton color="neutral" variant="outline" @click="emit('update:open', false)"
-          >Cancel</UButton
-        >
         <UButton
+          color="primary"
+          variant="solid"
           icon="i-lucide-download"
           :loading="exporting"
           :disabled="!canExport || exporting"

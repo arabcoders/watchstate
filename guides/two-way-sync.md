@@ -26,28 +26,30 @@ To set up two-way sync, follow the steps below:
 
 First, make sure you have completed the [one-way sync guide](/guides/one-way-sync.md) to get your backends synced.
 
-### Step 2: Enable Sync Sliders.
+<a id="step-2-enable-sync-sliders"></a>
 
-Go to the <!--i:i-lucide-server--> *Backends* page. Here, you'll see two switches for each backend: `Import` and `Export`.
+### Step 2: Enable Sync Switches.
 
-- The `Import` switch brings data from the backend into WatchState.
-- The `Export` switch sends data from WatchState to the backend.
+Go to the <!--i:i-lucide-server--> *Backends* page. Each backend entry has **Enable Import** and **Enable Export** switches.
 
-When you're sure the data looks correct, turn on the `Export` switch for your main backend and the `Import` switch for
+- The **Enable Import** switch brings data from the backend into WatchState.
+- The **Enable Export** switch sends data from WatchState to the backend.
+
+When you're sure the data looks correct, turn on **Enable Export** for your main backend and **Enable Import** for
 the others. This will keep your backends synced.
 
 # Enable Scheduled Tasks
 
 If everything looks good and you want WatchState to automatically sync your backends, do the following:
 
-Go to the <!--i:i-lucide-list-checks--> **Tasks** page. Enable the two tasks by toggling the switches next to `Import` and `Export`.
+Go to **Activity** > <!--i:i-lucide-list-checks--> **Tasks**. Turn on the **Enabled** switches for the `Import` and `Export`
+tasks. These schedules apply across identities.
 
 ### Tuning The run schedule
 
-To control how often these tasks run, go to the **Configuration** > <!--i:i-lucide-sliders-horizontal--> **Environment** page, click the <!--i:i-lucide-plus--> **Add**
-button, and select the environment variables `WS_CRON_EXPORT_AT` and `WS_CRON_IMPORT_AT`. These variables use CRON timer
-expressions. For example, if you want the export task to run every 6 hours, set `WS_CRON_EXPORT_AT` to `0 */6 * * *`.
-For more help with CRON expressions, visit [crontab.guru](https://crontab.guru/).
+Click a task's **Timer** value to edit `WS_CRON_EXPORT_AT` or `WS_CRON_IMPORT_AT` in **Settings > Environment**.
+For example, to run the export task every 6 hours, set `WS_CRON_EXPORT_AT` to `0 */6 * * *`, then click **Save**.
+The **Schedule** link opens [crontab.guru](https://crontab.guru/) for help with cron expressions.
 
 > [!IMPORTANT]  
 > The `Import` task can be resource-intensive, especially for large libraries. It may take some time to complete and

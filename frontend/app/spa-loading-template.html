@@ -2,35 +2,50 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0f172a" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1c1917" />
     <title>Loading | WatchState</title>
+    <script>
+      (() => {
+        const root = document.documentElement;
+
+        try {
+          const preference = window.localStorage.getItem('nuxt-color-mode') ?? 'dark';
+          const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? true;
+          root.dataset.theme =
+            'light' === preference || ('system' === preference && false === prefersDark)
+              ? 'light'
+              : 'dark';
+        } catch {
+          root.dataset.theme = 'dark';
+        }
+      })();
+    </script>
     <style>
       :root {
-        color-scheme: light dark;
-        --bg: #edf2f9;
-        --bg-deep: #dbe5f1;
-        --panel: rgb(255 255 255 / 0.84);
-        --border: rgb(15 23 42 / 0.1);
-        --shadow: rgb(15 23 42 / 0.14);
-        --text: #0f172a;
-        --muted: #5b6b80;
-        --accent: #dc2626;
-        --accent-soft: rgb(220 38 38 / 0.18);
+        color-scheme: dark;
+        --bg: #0c0a09;
+        --bg-deep: #1c1917;
+        --panel: rgb(28 25 23 / 0.84);
+        --border: rgb(168 162 158 / 0.16);
+        --shadow: rgb(12 10 9 / 0.45);
+        --text: #fafaf9;
+        --muted: #a8a29e;
+        --accent: #818cf8;
+        --accent-soft: rgb(129 140 248 / 0.18);
       }
 
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --bg: #08111d;
-          --bg-deep: #0f172a;
-          --panel: rgb(15 23 42 / 0.84);
-          --border: rgb(148 163 184 / 0.16);
-          --shadow: rgb(2 6 23 / 0.45);
-          --text: #e7eef9;
-          --muted: #9fb0c7;
-          --accent: #f87171;
-          --accent-soft: rgb(248 113 113 / 0.18);
-        }
+      html[data-theme='light'] {
+        color-scheme: light;
+        --bg: #fafaf9;
+        --bg-deep: #f5f5f4;
+        --panel: rgb(255 255 255 / 0.84);
+        --border: rgb(28 25 23 / 0.1);
+        --shadow: rgb(28 25 23 / 0.14);
+        --text: #1c1917;
+        --muted: #57534e;
+        --accent: #4f46e5;
+        --accent-soft: rgb(79 70 229 / 0.18);
       }
 
       * {
@@ -42,14 +57,19 @@
         min-height: 100%;
       }
 
+      html {
+        background-color: var(--bg-deep);
+      }
+
       body {
         margin: 0;
         min-height: 100vh;
         min-height: 100dvh;
-        padding: 1rem;
+        padding: calc(1rem + env(safe-area-inset-top)) calc(1rem + env(safe-area-inset-right))
+          calc(1rem + env(safe-area-inset-bottom)) calc(1rem + env(safe-area-inset-left));
         display: grid;
         place-items: center;
-        overflow: hidden;
+        overflow-x: hidden;
         color: var(--text);
         user-select: none;
         font-family:
@@ -164,14 +184,9 @@
       }
 
       @media (max-width: 560px) {
-        body {
-          padding-top: calc(1rem + env(safe-area-inset-top));
-          padding-bottom: calc(1rem + env(safe-area-inset-bottom));
-        }
-
         .loading-card {
+          min-width: min(400px, 100%);
           padding: 1.3rem;
-          transform: translateY(clamp(-2.75rem, -7vh, -1.5rem));
         }
 
         .brand {
@@ -204,10 +219,10 @@
         </div>
       </div>
 
-      <p class="description">Getting the UI ready.</p>
+      <p class="description">Getting the interface ready.</p>
 
       <div class="loader" aria-hidden="true"></div>
-      <p class="hint">Please wait...</p>
+      <p class="hint">Please wait.</p>
     </main>
   </body>
 </html>
